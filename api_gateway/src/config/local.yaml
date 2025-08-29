@@ -1,0 +1,6 @@
+app:
+  logging:
+    level: INFO
+  redis:
+    host: localhost
+    port: 6379

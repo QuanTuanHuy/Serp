@@ -1,0 +1,6 @@
+app:
+  logging:
+    level: INFO
+  redis:
+    host: ${REDIS_HOST}
+    port: ${REDIS_PORT}
