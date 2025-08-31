@@ -28,18 +28,19 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
 app:
-    filter:
-      publicUrls:
-        - first: /api/v1/auth/signup
-          second: POST
-        - first: /api/v1/auth/signin
-          second: POST
-        - first: /api/v1/auth/introspect
-          second: POST
-      protectedUrls:
-        - url-pattern: /api/public/v1/users
-          roles:
-            - ADMIN
+    security:
+      filter:
+        publicUrls:
+          - first: /api/v1/auth/register
+            second: POST
+          - first: /api/v1/auth/login
+            second: POST
+          - first: /api/v1/auth/introspect
+            second: POST
+        protectedUrls:
+          - url-pattern: /api/public/v1/users
+            roles:
+              - ADMIN
 
 server:
   port: 8081
