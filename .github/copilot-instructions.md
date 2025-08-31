@@ -1,11 +1,11 @@
-# Task Management System - AI Coding Guide
+# Smart ERP - AI Coding Guide
 
 ## Architecture Overview
 
 This is a **microservices architecture** with event-driven communication using **Kafka** and **clean architecture** patterns. The system consists of:
 
 - **api_gateway** (Go, port 8080) - API gateway/router with minimal endpoints  
-- **serp_web** (NextJS,Redux) - Frontend application
+- **serp_web** (NextJS,Redux,Shadcn,Tailwind CSS) - Frontend application
 
 ## Go Services Architecture Pattern
 
@@ -155,5 +155,7 @@ Events are produced in use cases and consumed by dedicated handlers. Each servic
 6. **Add service** for business rules in `core/service/`
 7. **Create use case** for orchestration in `core/usecase/`
 8. **Add controller** for HTTP endpoints in `ui/controller/`
+
+### Add (authors: QuanTuanHuy, Description: Part of Serp) to all relevant files
 
 The api_gateway acts as a simple API gateway - most business logic should be added to task_manager, schedule_plan, work_optimization, authentication_manager or appropriate domain services.

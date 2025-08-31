@@ -1,0 +1,7 @@
+// JetBrains
+.idea/
+
+// Env
+.env
+
+copilot-instructions.md
