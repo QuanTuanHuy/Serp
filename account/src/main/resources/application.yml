@@ -28,19 +28,26 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
 app:
-    security:
-      filter:
-        publicUrls:
-          - first: /api/v1/auth/register
-            second: POST
-          - first: /api/v1/auth/login
-            second: POST
-          - first: /api/v1/auth/introspect
-            second: POST
-        protectedUrls:
-          - url-pattern: /api/public/v1/users
-            roles:
-              - ADMIN
+  security:
+    jwt:
+      private-key: ${JWT_PRIVATE_KEY}
+      public-key: ${JWT_PUBLIC_KEY}
+      access-token-expiration: 604800000
+      refresh-token-expiration: 604800000
+      header: Authorization
+      prefix: Bearer
+    filter:
+      publicUrls:
+        - first: /api/v1/auth/login
+          second: POST
+        - first: /api/v1/auth/register
+          second: POST
+      protectedUrls:
+        - url-pattern: /api/public/v1/users/**
+          roles:
+            - ADMIN
+          permissions:
+
 
 server:
   port: 8081

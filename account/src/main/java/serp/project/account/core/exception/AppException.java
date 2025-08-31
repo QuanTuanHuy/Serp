@@ -1,3 +1,8 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
 package serp.project.account.core.exception;
 
 import lombok.Getter;

@@ -1,3 +1,8 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
 package serp.project.account.core.port.client;
 
 import serp.project.account.core.domain.callback.KafkaSendCallback;
