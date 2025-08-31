@@ -1,4 +1,4 @@
-# Smart ERP - AI Coding Guide
+# Smart ERP (Like Odoo) - AI Coding Guide
 
 ## Architecture Overview
 
@@ -158,4 +158,4 @@ Events are produced in use cases and consumed by dedicated handlers. Each servic
 
 ### Add (authors: QuanTuanHuy, Description: Part of Serp) to all relevant files
 
-The api_gateway acts as a simple API gateway - most business logic should be added to task_manager, schedule_plan, work_optimization, authentication_manager or appropriate domain services.
+The api_gateway acts as a simple API gateway - most business logic should be added to serp_account, crm, serp_notification, ptm_task_manager, ptm_schedule, sale, hr or appropriate domain services.
