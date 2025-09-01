@@ -1,3 +1,8 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
 package serp.project.account.kernel.property;
 
 import lombok.*;
@@ -23,6 +28,7 @@ public class RequestFilter {
     public static class ProtectedUrls{
         private String urlPattern;
         private List<String> roles;
+        private List<String> permissions;
     }
 
 }
