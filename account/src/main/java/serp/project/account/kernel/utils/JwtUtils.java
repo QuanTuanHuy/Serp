@@ -272,7 +272,6 @@ public class JwtUtils {
                 .replace("-----BEGIN PRIVATE KEY-----", "")
                 .replace("-----END PRIVATE KEY-----", "")
                 .replaceAll("\\s+", "");
-        log.info("Cleaned Private Key: {}", cleanPrivateKey);
 
         byte[] keyBytes = Base64.getDecoder().decode(cleanPrivateKey);
         PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
