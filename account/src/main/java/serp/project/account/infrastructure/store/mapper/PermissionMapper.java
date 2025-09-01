@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
+import serp.project.account.core.domain.dto.request.CreatePermissionDto;
 import serp.project.account.core.domain.entity.PermissionEntity;
 import serp.project.account.infrastructure.store.model.PermissionModel;
 
@@ -62,5 +63,12 @@ public class PermissionMapper extends BaseMapper {
         return entities.stream()
                 .map(this::toModel)
                 .collect(Collectors.toList());
+    }
+
+    public PermissionEntity createPermissionMapper(CreatePermissionDto request) {
+        return PermissionEntity.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .build();
     }
 }

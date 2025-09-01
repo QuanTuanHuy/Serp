@@ -39,4 +39,9 @@ public class PermissionAdapter implements IPermissionPort {
     public List<PermissionEntity> getAllPermissions() {
         return permissionMapper.toEntityList(permissionRepository.findAll());
     }
+
+    @Override
+    public List<PermissionEntity> getPermissionsByIds(List<Long> ids) {
+        return permissionMapper.toEntityList(permissionRepository.findByIdIn(ids));
+    }
 }
