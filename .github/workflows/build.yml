@@ -66,8 +66,8 @@ jobs:
           file: ./account/Dockerfile
           push: true
           tags: |
-            ${{ env.DOCKER_REGISTRY }}/serp-account:${{ env.IMAGE_TAG }}
-            ${{ env.DOCKER_REGISTRY }}/serp-account:latest
+            ${{ env.DOCKER_REGISTRY }}/serp-account-service:${{ env.IMAGE_TAG }}
+            ${{ env.DOCKER_REGISTRY }}/serp-account-service:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
