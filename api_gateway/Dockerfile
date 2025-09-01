@@ -19,8 +19,6 @@ WORKDIR /app
 
 COPY --from=builder /app/main .
 
-COPY --from=builder /app/src/.env .
-
 COPY --from=builder /app/src/config ./config
 
 EXPOSE 8082
