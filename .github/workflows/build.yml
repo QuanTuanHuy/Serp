@@ -88,7 +88,7 @@ jobs:
         run: |
           cd api_gateway
           go mod download
-          go test ./..
+          go test ./...
           go build -o main ./src
 
       - name: Set up Docker Buildx
