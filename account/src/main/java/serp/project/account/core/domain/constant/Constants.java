@@ -49,6 +49,10 @@ public class Constants {
         public static final String ONE_OR_MORE_PERMISSIONS_NOT_FOUND = "One or more permissions not found";
 
         public static final String ROLE_ALREADY_EXISTS = "Role already exists";
+
+        public static final String USER_ALREADY_EXISTS = "User already exists";
+
+        public static final String WRONG_EMAIL_OR_PASSWORD = "Wrong email or password";
     }
 
 }

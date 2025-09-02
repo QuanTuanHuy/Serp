@@ -60,6 +60,11 @@ public class RoleService implements IRoleService {
     }
 
     @Override
+    public RoleEntity getRoleByName(String name) {
+        return rolePort.getRoleByName(name);
+    }
+
+    @Override
     public List<RoleEntity> getAllRoles() {
         var roles = rolePort.getAllRoles();
         var permissions = permissionPort.getAllPermissions();

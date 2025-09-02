@@ -136,6 +136,7 @@ public class JwtUtils {
         return user.getRoles().stream()
                 .map(RoleEntity::getName)
                 .filter(Objects::nonNull)
+                .distinct()
                 .collect(Collectors.toList());
     }
 
@@ -161,8 +162,8 @@ public class JwtUtils {
                 .forEach(authorities::add);
 
         authorities.addAll(permissions);
-        
-        return authorities;
+        return authorities.stream().distinct()
+                .collect(Collectors.toList());
     }
 
     @SuppressWarnings("unchecked")

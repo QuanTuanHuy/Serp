@@ -12,20 +12,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
 @Builder
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class CreateUserDto {
-    @NotBlank
-    private String fullName;
+public class LoginRequest {
     @NotBlank
     private String email;
     @NotBlank
     private String password;
-
-    private List<Long> roleIds;
 }

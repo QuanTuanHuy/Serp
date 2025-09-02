@@ -13,4 +13,6 @@ import serp.project.account.infrastructure.store.model.UserRoleModel;
 @Repository
 public interface IUserRoleRepository extends IBaseRepository<UserRoleModel> {
     List<UserRoleModel> findByUserId(Long userId);
+
+    List<UserRoleModel> findByUserIdIn(List<Long> userIds);
 }

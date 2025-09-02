@@ -7,6 +7,7 @@ package serp.project.account.core.domain.entity;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,6 +21,7 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 public class UserEntity extends BaseEntity {
     private String email;
+    @JsonIgnore
     private String password;
     private String fullName;
 

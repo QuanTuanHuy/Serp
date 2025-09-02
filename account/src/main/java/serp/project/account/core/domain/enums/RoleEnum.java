@@ -1,3 +1,8 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
 package serp.project.account.core.domain.enums;
 
 import lombok.Getter;
@@ -5,7 +10,10 @@ import lombok.Getter;
 @Getter
 public enum RoleEnum {
     USER("USER"),
-    ADMIN("ADMIN");
+    MANAGER("MANAGER"),
+    COMPANY_ADMIN("COMPANY_ADMIN"),
+    ADMIN("ADMIN"),
+    SUPER_ADMIN("SUPER_ADMIN");
 
     private final String role;
 

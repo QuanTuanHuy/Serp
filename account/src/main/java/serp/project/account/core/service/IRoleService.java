@@ -13,5 +13,6 @@ import serp.project.account.core.domain.entity.RoleEntity;
 
 public interface IRoleService {
     RoleEntity createRole(CreateRoleDto request);
+    RoleEntity getRoleByName(String name);
     List<RoleEntity> getAllRoles();
 }
