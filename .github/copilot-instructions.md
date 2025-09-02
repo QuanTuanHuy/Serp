@@ -4,8 +4,10 @@
 
 This is a **microservices architecture** with event-driven communication using **Kafka** and **clean architecture** patterns. The system consists of:
 
-- **api_gateway** (Go, port 8080) - API gateway/router with minimal endpoints  
-- **serp_web** (NextJS,Redux,Shadcn,Tailwind CSS) - Frontend application
+- **api_gateway** (Go, port 8080) - API gateway/router with minimal endpoints
+- **account** (Java, Spring Boot, port 8081) - User account management service
+- **logging_tracker** (Java, Spring Boot, port 8082) - Track logging of microservices
+- **serp_web** (NextJS, Redux, Shadcn, Tailwind CSS) - Frontend application
 
 ## Go Services Architecture Pattern
 
@@ -103,8 +105,7 @@ docker-compose up -d
 cd api_gateway && go run src/main.go
 
 # Run Spring Boot services
-cd authentication_manager && ./mvnw spring-boot:run
-cd work_optimization && ./mvnw spring-boot:run
+cd account && ./mvnw spring-boot:run
 
 # Run React frontend
 cd serp_web && npm run dev
@@ -159,6 +160,6 @@ Events are produced in use cases and consumed by dedicated handlers. Each servic
 7. **Create use case** for orchestration in `core/usecase/`
 8. **Add controller** for HTTP endpoints in `ui/controller/`
 
-### Add (authors: QuanTuanHuy, Description: Part of Serp) to all relevant files
+### Add (authors: QuanTuanHuy, Description: Part of Serp Project) to all relevant files
 
 The api_gateway acts as a simple API gateway - most business logic should be added to serp_account, crm, serp_notification, ptm_task_manager, ptm_schedule, sale, hr or appropriate domain services.
