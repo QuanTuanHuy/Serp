@@ -4,6 +4,9 @@ app:
   redis:
     host: ${REDIS_HOST}
     port: ${REDIS_PORT}
+  security:
+    jwt:
+      publicKey: ${JWT_PUBLIC_KEY}
 
 external:
   services:

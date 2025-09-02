@@ -11,6 +11,8 @@ import (
 	golibgin "github.com/golibs-starter/golib-gin"
 	"github.com/serp/api-gateway/src/cmd/modules"
 	"github.com/serp/api-gateway/src/kernel/properties"
+	"github.com/serp/api-gateway/src/kernel/utils"
+	"github.com/serp/api-gateway/src/ui/middleware"
 	"github.com/serp/api-gateway/src/ui/router"
 	"go.uber.org/fx"
 )
@@ -42,6 +44,11 @@ func CoreInfrastructure() fx.Option {
 
 		// Provide app properties
 		golib.ProvideProps(properties.NewExternalServicePropeties),
+		golib.ProvideProps(properties.NewJwtProperties),
+
+		// Provide utilities
+		fx.Provide(utils.NewJWTUtils),
+		fx.Provide(middleware.NewJWTMiddleware),
 	)
 }
 

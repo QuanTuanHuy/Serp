@@ -22,6 +22,8 @@ type RegisterRoutersIn struct {
 	Actuator *actuator.Endpoint
 
 	AuthController *account.AuthController
+
+	JWTMiddleware *middleware.JWTMiddleware
 }
 
 func RegisterGinRouters(p RegisterRoutersIn) {
@@ -33,9 +35,8 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 	group.GET("/actuator/health", gin.WrapF(p.Actuator.Health))
 	group.GET("/actuator/info", gin.WrapF(p.Actuator.Info))
 
-	// apiV1 := group.Group("/api/v1")
-
 	if p.AuthController != nil {
 		RegisterAccountRoutes(group, p.AuthController)
 	}
+
 }
