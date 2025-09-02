@@ -4,3 +4,10 @@ app:
   redis:
     host: ${REDIS_HOST}
     port: ${REDIS_PORT}
+
+external:
+  services:
+    accountService:
+      host: ${ACCOUNT_SERVICE_HOST}
+      port: ${ACCOUNT_SERVICE_PORT}
+      timeout: 15s

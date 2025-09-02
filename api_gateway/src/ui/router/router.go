@@ -10,6 +10,7 @@ import (
 	"github.com/golibs-starter/golib"
 	"github.com/golibs-starter/golib/web/actuator"
 	"github.com/serp/api-gateway/src/kernel/properties"
+	account "github.com/serp/api-gateway/src/ui/controller/account"
 	"github.com/serp/api-gateway/src/ui/middleware"
 	"go.uber.org/fx"
 )
@@ -19,6 +20,8 @@ type RegisterRoutersIn struct {
 	App      *golib.App
 	Engine   *gin.Engine
 	Actuator *actuator.Endpoint
+
+	AuthController *account.AuthController
 }
 
 func RegisterGinRouters(p RegisterRoutersIn) {
@@ -26,7 +29,13 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 	p.Engine.Use(corsMiddleware.Handler())
 
 	group := p.Engine.Group(p.App.Path())
+
 	group.GET("/actuator/health", gin.WrapF(p.Actuator.Health))
 	group.GET("/actuator/info", gin.WrapF(p.Actuator.Info))
 
+	// apiV1 := group.Group("/api/v1")
+
+	if p.AuthController != nil {
+		RegisterAccountRoutes(group, p.AuthController)
+	}
 }

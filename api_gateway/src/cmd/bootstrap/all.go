@@ -1,14 +1,33 @@
+/*
+Author: QuanTuanHuy
+Description: Part of Serp Project
+*/
+
 package bootstrap
 
 import (
 	"github.com/golibs-starter/golib"
 	golibdata "github.com/golibs-starter/golib-data"
 	golibgin "github.com/golibs-starter/golib-gin"
+	"github.com/serp/api-gateway/src/cmd/modules"
+	"github.com/serp/api-gateway/src/kernel/properties"
 	"github.com/serp/api-gateway/src/ui/router"
 	"go.uber.org/fx"
 )
 
 func All() fx.Option {
+	return fx.Options(
+		CoreInfrastructure(),
+
+		// Business modules
+		modules.AccountModule(),
+
+		// HTTP server and routing
+		HttpServerModule(),
+	)
+}
+
+func CoreInfrastructure() fx.Option {
 	return fx.Options(
 		golib.AppOpt(),
 		golib.PropertiesOpt(),
@@ -21,12 +40,13 @@ func All() fx.Option {
 		// Provide datasource auto properties
 		golibdata.RedisOpt(),
 
-		// Provide adapter
+		// Provide app properties
+		golib.ProvideProps(properties.NewExternalServicePropeties),
+	)
+}
 
-		// Provide service
-
-		// Provide controller
-
+func HttpServerModule() fx.Option {
+	return fx.Options(
 		golibgin.GinHttpServerOpt(),
 		fx.Invoke(router.RegisterGinRouters),
 		golibgin.OnStopHttpServerOpt(),
