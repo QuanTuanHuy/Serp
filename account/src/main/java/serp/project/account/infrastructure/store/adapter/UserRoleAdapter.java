@@ -23,13 +23,18 @@ public class UserRoleAdapter implements IUserRolePort {
     private final UserRoleMapper userRoleMapper;
     
     @Override
-    public List<UserRoleEntity> saveAll(List<UserRoleEntity> userRoles) {
+    public void saveAll(List<UserRoleEntity> userRoles) {
         List<UserRoleModel> models = userRoleMapper.toModelList(userRoles);
-        return userRoleMapper.toEntityList(userRoleRepository.saveAll(models));
+        userRoleMapper.toEntityList(userRoleRepository.saveAll(models));
     }
 
     @Override
     public List<UserRoleEntity> getUserRolesByUserId(Long userId) {
         return userRoleMapper.toEntityList(userRoleRepository.findByUserId(userId));
+    }
+
+    @Override
+    public List<UserRoleEntity> getUserRolesByUserIds(List<Long> userIds) {
+        return userRoleMapper.toEntityList(userRoleRepository.findByUserIdIn(userIds));
     }
 }

@@ -4,3 +4,13 @@ app:
   redis:
     host: ${REDIS_HOST}
     port: ${REDIS_PORT}
+  security:
+    jwt:
+      publicKey: ${JWT_PUBLIC_KEY}
+
+external:
+  services:
+    accountService:
+      host: ${ACCOUNT_SERVICE_HOST}
+      port: ${ACCOUNT_SERVICE_PORT}
+      timeout: 15s

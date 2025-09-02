@@ -136,6 +136,7 @@ public class JwtUtils {
         return user.getRoles().stream()
                 .map(RoleEntity::getName)
                 .filter(Objects::nonNull)
+                .distinct()
                 .collect(Collectors.toList());
     }
 
@@ -161,8 +162,8 @@ public class JwtUtils {
                 .forEach(authorities::add);
 
         authorities.addAll(permissions);
-        
-        return authorities;
+        return authorities.stream().distinct()
+                .collect(Collectors.toList());
     }
 
     @SuppressWarnings("unchecked")
@@ -210,6 +211,16 @@ public class JwtUtils {
         return permissions.contains(permissionName);
     }
 
+    public Long getUserIdFromToken(String token) {
+        try {
+            JWTClaimsSet claimsSet = validateToken(token);
+            String sub = claimsSet.getSubject();
+            return Long.parseLong(sub);
+        } catch (Exception e) {
+            log.error("Error extracting user ID from token", e);
+            return null;
+        }
+    }
 
     public JWTClaimsSet validateToken(String token) {
         try {

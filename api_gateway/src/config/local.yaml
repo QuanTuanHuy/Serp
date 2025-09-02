@@ -4,3 +4,13 @@ app:
   redis:
     host: localhost
     port: 6379
+  security:
+    jwt:
+      publicKey: ${JWT_PUBLIC_KEY}
+
+external:
+  services:
+    accountService:
+      host: localhost
+      port: "8081"
+      timeout: 15s

@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
+import serp.project.account.core.domain.dto.request.CreateUserDto;
 import serp.project.account.core.domain.entity.UserEntity;
 import serp.project.account.infrastructure.store.model.UserModel;
 
@@ -64,5 +65,12 @@ public class UserMapper extends BaseMapper {
         return entities.stream()
                 .map(this::toModel)
                 .collect(Collectors.toList());
+    }
+
+    public UserEntity createUserMapper(CreateUserDto request) {
+        return UserEntity.builder()
+                .email(request.getEmail())
+                .fullName(request.getFullName())
+                .build();
     }
 }
