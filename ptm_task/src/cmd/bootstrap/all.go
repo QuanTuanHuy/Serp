@@ -4,6 +4,7 @@ import (
 	"github.com/golibs-starter/golib"
 	golibdata "github.com/golibs-starter/golib-data"
 	golibgin "github.com/golibs-starter/golib-gin"
+	"github.com/serp/ptm-task/src/infrastructure/store/adapter"
 	"github.com/serp/ptm-task/src/kernel/properties"
 	"github.com/serp/ptm-task/src/kernel/utils"
 	"github.com/serp/ptm-task/src/ui/middleware"
@@ -31,6 +32,12 @@ func All() fx.Option {
 		fx.Invoke(InitializeDB),
 
 		// Provide adapter
+		fx.Provide(adapter.NewDBTransactionAdapter),
+		fx.Provide(adapter.NewProjectStoreAdapter),
+		fx.Provide(adapter.NewGroupTaskStoreAdapter),
+		fx.Provide(adapter.NewTaskStoreAdapter),
+		fx.Provide(adapter.NewCommentStoreAdapter),
+		fx.Provide(adapter.NewNoteStoreAdapter),
 
 		// Provide service
 
