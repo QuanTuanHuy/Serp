@@ -1,3 +1,8 @@
+/*
+Author: QuanTuanHuy
+Description: Part of Serp Project
+*/
+
 package utils
 
 func StringPtr(s string) *string {
@@ -76,6 +81,13 @@ func Float32ValueWithDefault(f *float32, defaultValue float32) float32 {
 func Float64Value(f *float64) float64 {
 	if f == nil {
 		return 0
+	}
+	return *f
+}
+
+func Float64ValueWithDefault(f *float64, defaultValue float64) float64 {
+	if f == nil {
+		return defaultValue
 	}
 	return *f
 }
