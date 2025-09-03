@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.24-alpine AS builder
+FROM golang:1.25-alpine AS builder
 ARG BUILD_VERSION
 ARG BUILD_COMMIT_HASH
 ARG BUILD_TIME
@@ -21,6 +21,6 @@ COPY --from=builder /app/main .
 
 COPY --from=builder /app/src/config ./config
 
-EXPOSE 8080
+EXPOSE 8083
 
 CMD ["./main"]

@@ -1,0 +1,24 @@
+app:
+  logging:
+    level: INFO
+  datasource:
+    driver: postgres
+    host: localhost
+    port: 5432
+    database: serp_ptm_task
+    username: serp
+    password: serp
+    logLevel: INFO
+  redis:
+    host: localhost
+    port: 6379
+  security:
+    jwt:
+      publicKey: ${JWT_PUBLIC_KEY}
+
+external:
+  services:
+    accountService:
+      host: localhost
+      port: "8081"
+      timeout: 15s

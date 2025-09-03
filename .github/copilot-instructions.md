@@ -56,7 +56,7 @@ src/
 │   └── usecase/           # Application use cases (orchestration)
 ├── infrastructure/
 │   ├── store/adapter/     # Database implementations
-│   ├── store/model/       # Database models (TaskModel, CommentModel)
+│   ├── store/model/       # Database models (TaskModel, ProjectModel)
 │   ├── store/repository/  # Database repository (only for Java)
 │   ├── store/mapper/      # Database mappers (TaskModel <-> TaskEntity)
 │   └── client/            # External service clients, Redis client, Kafka producers
@@ -111,8 +111,8 @@ cd account && ./mvnw spring-boot:run
 cd serp_web && npm run dev
 ```
 
-### Service Ports & Communication
-- **Frontend** → **api_gateway:8080** → **backend services**
+### Service Communication
+- **Frontend** → **api_gateway** → **backend services**
 
 ### Frontend Configuration
 

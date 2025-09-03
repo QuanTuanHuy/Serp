@@ -17,7 +17,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/golibs-starter/golib/log"
-	"github.com/serp/api-gateway/src/kernel/properties"
+	"github.com/serp/ptm-task/src/kernel/properties"
 )
 
 type JWTUtils struct {
