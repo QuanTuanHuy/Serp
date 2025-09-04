@@ -8,6 +8,15 @@ app:
     jwt:
       publicKey: ${JWT_PUBLIC_KEY}
 
+  keycloak:
+    url: http://localhost:8180
+    realm: serp
+    client-id: serp-backend
+    client-secret: your-client-secret
+    jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
+    expected-issuer: http://localhost:8180/realms/serp
+    expected-audience: serp-backend
+
 external:
   services:
     accountService:

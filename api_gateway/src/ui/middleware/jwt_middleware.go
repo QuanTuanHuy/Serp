@@ -65,6 +65,8 @@ func (m *JWTMiddleware) AuthenticateJWT() gin.HandlerFunc {
 		c.Set("userID", claims.UserID)
 		c.Set("userEmail", claims.Email)
 		c.Set("userFullName", claims.FullName)
+		c.Set("preferredUsername", claims.PreferredUsername)
+		c.Set("emailVerified", claims.EmailVerified)
 		c.Set("token", token)
 
 		roles, err := m.jwtUtils.ExtractRoles(token)
@@ -74,15 +76,7 @@ func (m *JWTMiddleware) AuthenticateJWT() gin.HandlerFunc {
 		}
 		c.Set("roles", roles)
 
-		// Extract and set permissions
-		permissions, err := m.jwtUtils.ExtractPermissions(token)
-		if err != nil {
-			log.Warn(c, "Failed to extract permissions: ", err)
-			permissions = []string{}
-		}
-		c.Set("permissions", permissions)
-
-		log.Info(c, "JWT authentication successful for user: ", claims.UserID)
+		log.Info(c, "JWT authentication successful for user: ", claims.UserID, " (", claims.Email, ")")
 		c.Next()
 	}
 }
@@ -105,33 +99,6 @@ func (m *JWTMiddleware) RequireRole(roleName string) gin.HandlerFunc {
 		}
 
 		if !m.jwtUtils.HasRole(tokenStr, roleName) {
-			utils.AbortErrorHandle(c, constant.GeneralForbidden)
-			c.Abort()
-			return
-		}
-
-		c.Next()
-	}
-}
-
-// RequirePermission checks if user has specific permission
-func (m *JWTMiddleware) RequirePermission(permissionName string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		token, exists := c.Get("token")
-		if !exists {
-			utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
-			c.Abort()
-			return
-		}
-
-		tokenStr, ok := token.(string)
-		if !ok {
-			utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
-			c.Abort()
-			return
-		}
-
-		if !m.jwtUtils.HasPermission(tokenStr, permissionName) {
 			utils.AbortErrorHandle(c, constant.GeneralForbidden)
 			c.Abort()
 			return
@@ -176,8 +143,8 @@ func (m *JWTMiddleware) RequireAnyRole(roleNames ...string) gin.HandlerFunc {
 	}
 }
 
-// RequireAnyPermission checks if user has any of the specified permissions
-func (m *JWTMiddleware) RequireAnyPermission(permissionNames ...string) gin.HandlerFunc {
+// RequireRealmRole checks if user has specific realm role in Keycloak
+func (m *JWTMiddleware) RequireRealmRole(roleName string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token, exists := c.Get("token")
 		if !exists {
@@ -188,20 +155,39 @@ func (m *JWTMiddleware) RequireAnyPermission(permissionNames ...string) gin.Hand
 
 		tokenStr, ok := token.(string)
 		if !ok {
-			utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
+			utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
 			c.Abort()
 			return
 		}
 
-		hasAnyPermission := false
-		for _, permissionName := range permissionNames {
-			if m.jwtUtils.HasPermission(tokenStr, permissionName) {
-				hasAnyPermission = true
-				break
-			}
+		if !m.jwtUtils.HasRealmRole(tokenStr, roleName) {
+			utils.AbortErrorHandle(c, constant.GeneralForbidden)
+			c.Abort()
+			return
 		}
 
-		if !hasAnyPermission {
+		c.Next()
+	}
+}
+
+// RequireResourceRole checks if user has specific resource role for a client
+func (m *JWTMiddleware) RequireResourceRole(clientId string, roleName string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		token, exists := c.Get("token")
+		if !exists {
+			utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
+			c.Abort()
+			return
+		}
+
+		tokenStr, ok := token.(string)
+		if !ok {
+			utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
+			c.Abort()
+			return
+		}
+
+		if !m.jwtUtils.HasResourceRole(tokenStr, clientId, roleName) {
 			utils.AbortErrorHandle(c, constant.GeneralForbidden)
 			c.Abort()
 			return
@@ -242,15 +228,17 @@ func (m *JWTMiddleware) OptionalJWT() gin.HandlerFunc {
 		c.Set("userID", claims.UserID)
 		c.Set("userEmail", claims.Email)
 		c.Set("userFullName", claims.FullName)
+		c.Set("preferredUsername", claims.PreferredUsername)
+		c.Set("emailVerified", claims.EmailVerified)
 		c.Set("token", token)
 		c.Set("authenticated", true)
 
-		if roles, err := m.jwtUtils.ExtractRoles(token); err == nil {
-			c.Set("roles", roles)
+		if subject, err := m.jwtUtils.GetSubjectFromToken(token); err == nil {
+			c.Set("subject", subject)
 		}
 
-		if permissions, err := m.jwtUtils.ExtractPermissions(token); err == nil {
-			c.Set("permissions", permissions)
+		if roles, err := m.jwtUtils.ExtractRoles(token); err == nil {
+			c.Set("roles", roles)
 		}
 
 		c.Next()

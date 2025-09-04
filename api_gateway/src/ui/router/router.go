@@ -39,4 +39,7 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		RegisterAccountRoutes(group, p.AuthController)
 	}
 
+	// test
+	group.Use(p.JWTMiddleware.AuthenticateJWT()).GET("/actuator/test", gin.WrapF(p.Actuator.Health))
+
 }
