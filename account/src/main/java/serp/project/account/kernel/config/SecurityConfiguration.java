@@ -7,6 +7,9 @@ package serp.project.account.kernel.config;
 
 import lombok.RequiredArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import org.springframework.context.annotation.Bean;
@@ -15,9 +18,15 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import serp.project.account.core.domain.constant.Constants;
+import serp.project.account.core.domain.constant.KeyCloakConstants;
+import serp.project.account.kernel.property.KeycloakProperties;
 import serp.project.account.kernel.property.RequestFilter;
 
 @Configuration
@@ -26,7 +35,7 @@ import serp.project.account.kernel.property.RequestFilter;
 public class SecurityConfiguration {
     private final RequestFilter requestFilter;
 
-    private final CustomJwtDecoder customJwtDecoder;
+    private final KeycloakProperties keycloakProperties;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
@@ -57,9 +66,12 @@ public class SecurityConfiguration {
             request.anyRequest().authenticated();
         });
 
-        httpSecurity.oauth2ResourceServer(oauth2 -> oauth2.jwt(jwtConfigurer -> jwtConfigurer
-                .decoder(customJwtDecoder)
-                .jwtAuthenticationConverter(jwtAuthenticationConverter())));
+        httpSecurity.oauth2ResourceServer(oauth2 -> oauth2
+                .jwt(jwtConfigurer -> jwtConfigurer
+                        .decoder(jwtDecoder())
+                        .jwtAuthenticationConverter(jwtAuthenticationConverter())
+                )
+        );
 
         httpSecurity.csrf(AbstractHttpConfigurer::disable);
 
@@ -67,14 +79,40 @@ public class SecurityConfiguration {
     }
 
     @Bean
-    public JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        jwtGrantedAuthoritiesConverter.setAuthoritiesClaimName("scope");
-        jwtGrantedAuthoritiesConverter.setAuthorityPrefix("");
-
-        JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
-        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwtGrantedAuthoritiesConverter);
-
-        return jwtAuthenticationConverter;
+    public JwtDecoder jwtDecoder() {
+        return NimbusJwtDecoder
+                .withJwkSetUri(keycloakProperties.getJwkSetUri())
+                .build();
     }
-}
+
+    @Bean
+    @SuppressWarnings("unchecked")
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
+            Collection<GrantedAuthority> authorities = new ArrayList<>();
+
+            Map<String, Object> realmAccess = jwt.getClaimAsMap(KeyCloakConstants.REALM_ACCESS);
+            if (realmAccess != null && realmAccess.containsKey(KeyCloakConstants.ROLES_ATTRIBUTE)) {
+                Collection<String> realmRoles = (Collection<String>) realmAccess.get(KeyCloakConstants.ROLES_ATTRIBUTE);
+                realmRoles.forEach(role -> authorities.add(new SimpleGrantedAuthority(Constants.Security.ROLE_PREFIX + role)));
+            }
+
+            Map<String, Object> resourceAccess = jwt.getClaimAsMap(KeyCloakConstants.RESOURCE_ACCESS);
+            if (resourceAccess != null) {
+                resourceAccess.values().forEach(resource -> {
+                    if (resource instanceof Map) {
+                        Map<String, Object> resourceMap = (Map<String, Object>) resource;
+                        if (resourceMap.containsKey(KeyCloakConstants.ROLES_ATTRIBUTE)) {
+                            Collection<String> resourceRoles = (Collection<String>) resourceMap.get(KeyCloakConstants.ROLES_ATTRIBUTE);
+                            resourceRoles.forEach(role -> authorities.add(new SimpleGrantedAuthority(Constants.Security.ROLE_PREFIX + role)));
+                        }
+                    }
+                });
+            }
+
+            return authorities;
+        });
+        return converter;
+    }
+    }

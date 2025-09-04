@@ -29,4 +29,15 @@ public class RoleController {
         var response = roleUseCase.getAllRoles();
         return ResponseEntity.status(response.getCode()).body(response);
     }
+
+    @PostMapping("/realm")
+    public ResponseEntity<?> createRealmRole(@RequestBody CreateRoleDto request) {
+        var response = roleUseCase.createRealmRole(request);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PostMapping("/client")
+    public ResponseEntity<?> createClientRole(@Valid @RequestBody CreateRoleDto request) {
+        return null;
+    }
 }

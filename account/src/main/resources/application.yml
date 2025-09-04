@@ -27,7 +27,28 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
+          issuer-uri: http://localhost:8180/realms/serp
+
 app:
+  keycloak:
+    url: http://localhost:8180
+    jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
+    expected-issuer: "http://localhost:8180/realms/serp"
+    expected-audience: "account"
+    realm: serp
+    client-id: serp-account
+    client-secret: zZhdvlgJynkXIi9ZEBls4vnpsYokrLza
+
+    admin:
+      username: admin
+      password: admin
+      client-id: admin-cli
+
   security:
     admin:
       email: quan.tuan.huy@gmail.com
@@ -46,6 +67,8 @@ app:
         - first: /api/v1/auth/login
           second: POST
         - first: /api/v1/auth/register
+          second: POST
+        - first: /api/v1/auth/get-token
           second: POST
         - first: /api/v1/permissions/**
           second: GET

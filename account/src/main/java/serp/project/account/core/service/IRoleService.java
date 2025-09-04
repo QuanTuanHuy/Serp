@@ -15,4 +15,5 @@ public interface IRoleService {
     RoleEntity createRole(CreateRoleDto request);
     RoleEntity getRoleByName(String name);
     List<RoleEntity> getAllRoles();
+    RoleEntity createRealmRole(CreateRoleDto request);
 }

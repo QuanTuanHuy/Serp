@@ -55,4 +55,9 @@ public class Constants {
         public static final String WRONG_EMAIL_OR_PASSWORD = "Wrong email or password";
     }
 
+    @UtilityClass
+    public static class Security {
+        public static final String ROLE_PREFIX = "ROLE_";
+    }
+
 }

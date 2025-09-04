@@ -43,7 +43,17 @@ public class RoleUseCase {
             log.error("Error creating role: {}", e.getMessage());
             return responseUtils.error(e.getCode(), e.getMessage());
         } catch (Exception e) {
-            log.error("Error creating role: {}", e.getMessage());
+            log.error("Unexpected error when creating role: {}", e.getMessage());
+            return responseUtils.internalServerError(e.getMessage());
+        }
+    }
+
+    public GeneralResponse<?> createRealmRole(CreateRoleDto request) {
+        try {
+            var response = roleService.createRealmRole(request);
+            return responseUtils.success(response);
+        } catch (Exception e) {
+            log.error("Error create realm role: {}", e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
     }
