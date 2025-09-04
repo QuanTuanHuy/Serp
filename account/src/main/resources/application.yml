@@ -38,8 +38,8 @@ app:
   keycloak:
     url: http://localhost:8180
     jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
-    expected-issuer: "http://localhost:8180/realms/serp"
-    expected-audience: "account"
+    expected-issuer: http://localhost:8180/realms/serp
+    expected-audience: serp-account
     realm: serp
     client-id: serp-account
     client-secret: zZhdvlgJynkXIi9ZEBls4vnpsYokrLza
@@ -80,16 +80,13 @@ app:
         - url-pattern: /api/v1/users/**
           roles:
             - ADMIN
-            - SUPER_ADMIN
           permissions:
         - url-pattern: /api/v1/roles/**
           roles:
             - ADMIN
-            - SUPER_ADMIN
         - url-pattern: /api/v1/permissions/**
           roles:
             - ADMIN
-            - SUPER_ADMIN
 
 
 server:

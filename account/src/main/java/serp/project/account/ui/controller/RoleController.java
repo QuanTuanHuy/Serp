@@ -9,6 +9,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import serp.project.account.core.domain.dto.request.CreateClientRoleDto;
 import serp.project.account.core.domain.dto.request.CreateRoleDto;
 import serp.project.account.core.usecase.RoleUseCase;
 
@@ -37,7 +39,8 @@ public class RoleController {
     }
 
     @PostMapping("/client")
-    public ResponseEntity<?> createClientRole(@Valid @RequestBody CreateRoleDto request) {
-        return null;
+    public ResponseEntity<?> createClientRole(@Valid @RequestBody CreateClientRoleDto request) {
+        var response = roleUseCase.createClientRole(request);
+        return ResponseEntity.status(response.getCode()).body(response);
     }
 }

@@ -45,6 +45,8 @@ public class Constants {
         public static final String BAD_REQUEST = "Bad Request";
         public static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
 
+        public static final String CLIENT_NOT_FOUND = "Client not found";
+
         public static final String PERMISSION_ALREADY_EXISTS = "Permission already exists";
         public static final String ONE_OR_MORE_PERMISSIONS_NOT_FOUND = "One or more permissions not found";
 

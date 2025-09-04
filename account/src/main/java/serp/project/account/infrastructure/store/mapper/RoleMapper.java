@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
+import serp.project.account.core.domain.dto.request.CreateClientRoleDto;
 import serp.project.account.core.domain.dto.request.CreateRoleDto;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.infrastructure.store.model.RoleModel;
@@ -66,6 +67,13 @@ public class RoleMapper extends BaseMapper {
     }
 
     public RoleEntity createRoleMapper(CreateRoleDto request) {
+        return RoleEntity.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .build();
+    }
+
+    public RoleEntity createRoleMapper(CreateClientRoleDto request) {
         return RoleEntity.builder()
                 .name(request.getName())
                 .description(request.getDescription())

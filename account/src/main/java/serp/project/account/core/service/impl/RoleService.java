@@ -3,7 +3,6 @@
  * Description: Part of Serp Project
  */
 
-
 package serp.project.account.core.service.impl;
 
 import java.util.HashMap;
@@ -12,6 +11,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.keycloak.admin.client.Keycloak;
+import org.keycloak.admin.client.resource.ClientResource;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.admin.client.resource.RolesResource;
 import org.keycloak.representations.idm.RoleRepresentation;
@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.util.CollectionUtils;
 import serp.project.account.core.domain.constant.Constants;
+import serp.project.account.core.domain.dto.request.CreateClientRoleDto;
 import serp.project.account.core.domain.dto.request.CreateRoleDto;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.RolePermissionEntity;
@@ -43,7 +44,7 @@ public class RoleService implements IRoleService {
     private final KeycloakProperties keycloakProperties;
 
     private final RoleMapper roleMapper;
-    
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public RoleEntity createRole(CreateRoleDto request) {
@@ -87,8 +88,7 @@ public class RoleService implements IRoleService {
                 role.setPermissions(
                         permissions.stream()
                                 .filter(permission -> permissionIds.contains(permission.getId()))
-                                .toList()
-                );
+                                .toList());
             }
         });
         return roles;
@@ -109,6 +109,21 @@ public class RoleService implements IRoleService {
         return role;
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public RoleEntity createClientRole(CreateClientRoleDto request) {
+        var existedRole = rolePort.getRoleByName(request.getName());
+        if (existedRole != null) {
+            throw new AppException(Constants.ErrorMessage.ROLE_ALREADY_EXISTS);
+        }
+        var role = roleMapper.createRoleMapper(request);
+        role = rolePort.save(role);
+
+        createClientRole(role.getId(), request.getName(), request.getDescription(), request.getClientId());
+
+        return role;
+    }
+
     private void createRealmRole(Long roleId, String roleName, String description) {
         RealmResource realmResource = keycloakAdmin.realm(keycloakProperties.getRealm());
         RolesResource roleResource = realmResource.roles();
@@ -125,6 +140,35 @@ public class RoleService implements IRoleService {
         role.setAttributes(attributes);
 
         roleResource.create(role);
+    }
+
+    private void createClientRole(Long roleId, String roleName, String description, String clientId) {
+        RealmResource realmResource = keycloakAdmin.realm(keycloakProperties.getRealm());
+        String clientUuid = getClientUuid(clientId);
+
+        ClientResource clientResource = realmResource.clients().get(clientUuid);
+
+        RoleRepresentation role = new RoleRepresentation();
+        role.setName(roleName);
+        role.setDescription(description);
+        role.setComposite(false);
+
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put("role_id", List.of(String.valueOf(roleId)));
+        attributes.put("created_by", List.of(keycloakProperties.getClientId()));
+        attributes.put("created_at", List.of(String.valueOf(System.currentTimeMillis())));
+        role.setAttributes(attributes);
+
+        clientResource.roles().create(role);
+    }
+
+    private String getClientUuid(String clientId) {
+        RealmResource realmResource = keycloakAdmin.realm(keycloakProperties.getRealm());
+        var clients = realmResource.clients().findByClientId(clientId);
+        if (clients.isEmpty()) {
+            throw new AppException(Constants.ErrorMessage.CLIENT_NOT_FOUND);
+        }
+        return clients.getFirst().getId();
     }
 
 }
