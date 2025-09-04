@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
+import serp.project.account.core.domain.dto.request.CreateClientRoleDto;
 import serp.project.account.core.domain.dto.request.CreateRoleDto;
 import serp.project.account.core.domain.entity.PermissionEntity;
 import serp.project.account.core.exception.AppException;
@@ -43,7 +44,30 @@ public class RoleUseCase {
             log.error("Error creating role: {}", e.getMessage());
             return responseUtils.error(e.getCode(), e.getMessage());
         } catch (Exception e) {
-            log.error("Error creating role: {}", e.getMessage());
+            log.error("Unexpected error when creating role: {}", e.getMessage());
+            return responseUtils.internalServerError(e.getMessage());
+        }
+    }
+
+    public GeneralResponse<?> createRealmRole(CreateRoleDto request) {
+        try {
+            var response = roleService.createRealmRole(request);
+            return responseUtils.success(response);
+        } catch (Exception e) {
+            log.error("Error create realm role: {}", e.getMessage());
+            return responseUtils.internalServerError(e.getMessage());
+        }
+    }
+
+    public GeneralResponse<?> createClientRole(CreateClientRoleDto request) {
+        try {
+            var response = roleService.createClientRole(request);
+            return responseUtils.success(response);
+        } catch (AppException e) {
+            log.error("Error creating client role: {}", e.getMessage());
+            return responseUtils.error(e.getCode(), e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error when creating client role: {}", e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
     }

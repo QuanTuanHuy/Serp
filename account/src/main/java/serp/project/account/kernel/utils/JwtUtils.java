@@ -5,26 +5,16 @@
 
 package serp.project.account.kernel.utils;
 
-import com.nimbusds.jose.*;
-import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import serp.project.account.core.domain.constant.Constants;
-import serp.project.account.core.domain.entity.PermissionEntity;
-import serp.project.account.core.domain.entity.RoleEntity;
-import serp.project.account.core.domain.entity.UserEntity;
-import serp.project.account.kernel.property.JwtProperties;
 
-import java.security.KeyFactory;
-import java.security.interfaces.RSAPrivateKey;
+import serp.project.account.kernel.property.KeycloakProperties;
+
 import java.security.interfaces.RSAPublicKey;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -32,171 +22,44 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class JwtUtils {
-    private final JwtProperties jwtProperties;
-    
-    private RSAPrivateKey privateKey;
-    private RSAPublicKey publicKey;
-
-    @PostConstruct
-    public void init() {
-        try {
-            this.privateKey = loadPrivateKey(jwtProperties.getPrivateKey());
-            this.publicKey = loadPublicKey(jwtProperties.getPublicKey());
-            log.info("JWT keys loaded successfully");
-        } catch (Exception e) {
-            log.error("Failed to load JWT keys", e);
-            throw new RuntimeException("Failed to initialize JWT keys", e);
-        }
-    }
-
-    public String generateAccessTokenFromUser(UserEntity user) {
-        return generateAccessTokenFromUser(user, null);
-    }
-
-    public String generateAccessTokenFromUser(UserEntity user, Map<String, Object> additionalClaims) {
-        try {
-            Date now = new Date();
-            Date expiration = new Date(now.getTime() + jwtProperties.getAccessTokenExpiration());
-
-            // Extract roles and permissions
-            List<String> roles = extractRoles(user);
-            List<String> permissions = extractPermissions(user);
-            List<String> authorities = buildAuthorities(roles, permissions);
-
-            JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
-                    .subject(user.getId().toString())
-                    .claim("email", user.getEmail())
-                    .claim("full_name", user.getFullName())
-                    .claim("type", Constants.TokenType.ACCESS_TOKEN)
-                    .claim("user_id", user.getId())
-                    .issuer("serp-account-service")
-                    .audience("serp-services")
-                    .issueTime(now)
-                    .expirationTime(expiration)
-                    .claim("scope", String.join(" ", authorities))
-            ;
-
-            // Add custom claims
-            if (additionalClaims != null && !additionalClaims.isEmpty()) {
-                additionalClaims.forEach(claimsBuilder::claim);
-            }
-
-            JWTClaimsSet claimsSet = claimsBuilder.build();
-
-            SignedJWT signedJWT = new SignedJWT(
-                    new JWSHeader.Builder(JWSAlgorithm.RS256).build(),
-                    claimsSet
-            );
-
-            signedJWT.sign(new RSASSASigner(privateKey));
-            return signedJWT.serialize();
-
-        } catch (Exception e) {
-            log.error("Error generating access token from user", e);
-            throw new RuntimeException("Failed to generate access token from user", e);
-        }
-    }
-
-
-    public String generateRefreshTokenFromUser(UserEntity user) {
-        try {
-            Date now = new Date();
-            Date expiration = new Date(now.getTime() + jwtProperties.getRefreshTokenExpiration());
-
-            JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
-                    .subject(user.getId().toString())
-                    .claim("email", user.getEmail())
-                    .claim("type", Constants.TokenType.REFRESH_TOKEN)
-                    .claim("user_id", user.getId())
-                    .issuer(Constants.SERVICE_NAME)
-                    .audience("serp-services")
-                    .issueTime(now)
-                    .expirationTime(expiration)
-                    .build();
-
-            SignedJWT signedJWT = new SignedJWT(
-                    new JWSHeader.Builder(JWSAlgorithm.RS256).build(),
-                    claimsSet
-            );
-
-            signedJWT.sign(new RSASSASigner(privateKey));
-            return signedJWT.serialize();
-
-        } catch (Exception e) {
-            log.error("Error generating refresh token from user", e);
-            throw new RuntimeException("Failed to generate refresh token from user", e);
-        }
-    }
-
-    private List<String> extractRoles(UserEntity user) {
-        if (user.getRoles() == null || user.getRoles().isEmpty()) {
-            return Collections.emptyList();
-        }
-        
-        return user.getRoles().stream()
-                .map(RoleEntity::getName)
-                .filter(Objects::nonNull)
-                .distinct()
-                .collect(Collectors.toList());
-    }
-
-    private List<String> extractPermissions(UserEntity user) {
-        if (user.getRoles() == null || user.getRoles().isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        return user.getRoles().stream()
-                .filter(role -> role.getPermissions() != null)
-                .flatMap(role -> role.getPermissions().stream())
-                .map(PermissionEntity::getName)
-                .filter(Objects::nonNull)
-                .distinct()
-                .collect(Collectors.toList());
-    }
-
-    private List<String> buildAuthorities(List<String> roles, List<String> permissions) {
-        List<String> authorities = new ArrayList<>();
-
-        roles.stream()
-                .map(role -> "ROLE_" + role.toUpperCase())
-                .forEach(authorities::add);
-
-        authorities.addAll(permissions);
-        return authorities.stream().distinct()
-                .collect(Collectors.toList());
-    }
+    private final KeycloakJwksUtils keycloakJwksUtils;
+    private final KeycloakProperties keycloakProperties;
 
     @SuppressWarnings("unchecked")
     public List<String> getRolesFromToken(String token) {
         try {
             JWTClaimsSet claimsSet = validateToken(token);
-            Object scope = claimsSet.getClaim("scope");
-            if (scope instanceof List) {
-                return ((List<String>) scope).stream()
-                        .filter(role -> role.startsWith("ROLE_"))
-                        .map(role -> role.substring(5))
-                        .collect(Collectors.toList());
+            List<String> roles = new ArrayList<>();
+
+            Object realmAccess = claimsSet.getClaim("realm_access");
+            if (realmAccess instanceof Map) {
+                Map<String, Object> realmAccessMap = (Map<String, Object>) realmAccess;
+                Object realmRoles = realmAccessMap.get("roles");
+                if (realmRoles instanceof List) {
+                    roles.addAll((List<String>) realmRoles);
+                }
             }
-            return Collections.emptyList();
+
+            Object resourceAccess = claimsSet.getClaim("resource_access");
+            if (resourceAccess instanceof Map) {
+                Map<String, Object> resourceAccessMap = (Map<String, Object>) resourceAccess;
+                for (Object clientAccess : resourceAccessMap.values()) {
+                    if (clientAccess instanceof Map) {
+                        Map<String, Object> clientAccessMap = (Map<String, Object>) clientAccess;
+                        Object clientRoles = clientAccessMap.get("roles");
+                        if (clientRoles instanceof List) {
+                            roles.addAll((List<String>) clientRoles);
+                        }
+                    }
+                }
+            }
+
+            return roles.stream()
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .collect(Collectors.toList());
         } catch (Exception e) {
             log.error("Error extracting roles from token", e);
-            return Collections.emptyList();
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    public List<String> getPermissionsFromToken(String token) {
-        try {
-            JWTClaimsSet claimsSet = validateToken(token);
-            Object scope = claimsSet.getClaim("scope");
-            if (scope instanceof List) {
-                return ((List<String>) scope).stream()
-                        .filter(permission -> !permission.startsWith("ROLE_"))
-                        .collect(Collectors.toList());
-            }
-            return Collections.emptyList();
-        } catch (Exception e) {
-            log.error("Error extracting permissions from token", e);
             return Collections.emptyList();
         }
     }
@@ -206,43 +69,114 @@ public class JwtUtils {
         return roles.contains(roleName) || roles.contains(roleName.toUpperCase());
     }
 
-    public boolean hasPermission(String token, String permissionName) {
-        List<String> permissions = getPermissionsFromToken(token);
-        return permissions.contains(permissionName);
-    }
-
     public Long getUserIdFromToken(String token) {
         try {
             JWTClaimsSet claimsSet = validateToken(token);
-            String sub = claimsSet.getSubject();
-            return Long.parseLong(sub);
+
+            Object userIdClaim = claimsSet.getClaim("user_id");
+            if (userIdClaim instanceof Number) {
+                return ((Number) userIdClaim).longValue();
+            }
+            if (userIdClaim instanceof String) {
+                try {
+                    return Long.parseLong((String) userIdClaim);
+                } catch (NumberFormatException ignored) {
+                    log.warn("user_id claim is not a valid number: {}", userIdClaim);
+                }
+            }
+            return null;
         } catch (Exception e) {
             log.error("Error extracting user ID from token", e);
             return null;
         }
     }
 
+    public String getSubjectFromToken(String token) {
+        try {
+            JWTClaimsSet claimsSet = validateToken(token);
+            return claimsSet.getSubject();
+        } catch (Exception e) {
+            log.error("Error extracting subject from token", e);
+            return null;
+        }
+    }
+
+    public boolean isBearerToken(String token) {
+        try {
+            String typ = (String) extractClaim(token, "typ");
+            return "Bearer".equals(typ);
+        } catch (Exception e) {
+            log.error("Error extracting token type from token", e);
+            return false;
+        }
+    }
+
     public JWTClaimsSet validateToken(String token) {
         try {
             SignedJWT signedJWT = SignedJWT.parse(token);
-            
-            // Verify signature
-            RSASSAVerifier verifier = new RSASSAVerifier(publicKey);
-            if (!signedJWT.verify(verifier)) {
-                throw new RuntimeException("Invalid JWT signature");
-            }
-
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
-            
+
             if (claimsSet.getExpirationTime() != null && claimsSet.getExpirationTime().before(new Date())) {
                 throw new RuntimeException("JWT token has expired");
             }
 
+            if (claimsSet.getIssueTime() != null && claimsSet.getIssueTime().after(new Date())) {
+                throw new RuntimeException("JWT token not yet valid");
+            }
+
+            String issuer = claimsSet.getIssuer();
+            if (issuer == null || issuer.trim().isEmpty()) {
+                throw new RuntimeException("JWT token missing issuer");
+            }
+
+            if (keycloakProperties.getExpectedIssuer() != null &&
+                    !keycloakProperties.getExpectedIssuer().equals(issuer)) {
+                throw new RuntimeException("JWT token issuer mismatch. Expected: " +
+                        keycloakProperties.getExpectedIssuer() + ", Actual: " + issuer);
+            }
+
+            List<String> audiences = claimsSet.getAudience();
+            if (audiences == null || audiences.isEmpty()) {
+                log.warn("JWT token has no audience claim");
+            } else if (keycloakProperties.getExpectedAudience() != null &&
+                    !audiences.contains(keycloakProperties.getExpectedAudience())) {
+                throw new RuntimeException("JWT token audience mismatch. Expected: " +
+                        keycloakProperties.getExpectedAudience() + ", Actual: " + audiences);
+            }
+
+            return validateKeycloakToken(signedJWT, claimsSet);
+
+        } catch (Exception e) {
+            log.error("Error validating JWT token: {}", e.getMessage());
+            throw new RuntimeException("Invalid JWT token", e);
+        }
+    }
+
+    private JWTClaimsSet validateKeycloakToken(SignedJWT signedJWT, JWTClaimsSet claimsSet) {
+        try {
+            String keyId = signedJWT.getHeader().getKeyID();
+            if (keyId == null) {
+                log.warn("No key ID found in JWT header, skipping signature verification");
+                return claimsSet;
+            }
+
+            RSAPublicKey keycloakPublicKey = keycloakJwksUtils.getPublicKey(keyId);
+            if (keycloakPublicKey == null) {
+                log.warn("Could not find public key for key ID: {}, skipping signature verification", keyId);
+                return claimsSet;
+            }
+
+            RSASSAVerifier verifier = new RSASSAVerifier(keycloakPublicKey);
+            if (!signedJWT.verify(verifier)) {
+                throw new RuntimeException("Invalid Keycloak JWT signature");
+            }
+
+            log.debug("Successfully verified Keycloak token signature with key ID: {}", keyId);
             return claimsSet;
 
         } catch (Exception e) {
-            log.error("Error validating JWT token", e);
-            throw new RuntimeException("Invalid JWT token", e);
+            log.error("Error validating Keycloak token", e);
+            throw new RuntimeException("Invalid Keycloak token", e);
         }
     }
 
@@ -256,7 +190,6 @@ public class JwtUtils {
             return true;
         }
     }
-
 
     public JWTClaimsSet getClaimsFromToken(String token) {
         try {
@@ -273,54 +206,192 @@ public class JwtUtils {
             JWTClaimsSet claimsSet = validateToken(token);
             return claimsSet.getClaim(claimName);
         } catch (Exception e) {
-            log.error("Error extracting claim {} from token", claimName, e);
+            log.debug("Failed to validate token, trying without signature validation", e);
+            // Fallback to extraction without signature validation
+            return extractClaimWithoutValidation(token, claimName);
+        }
+    }
+
+    public String getEmailFromToken(String token) {
+        try {
+            return (String) extractClaim(token, "email");
+        } catch (Exception e) {
+            log.error("Error extracting email from token", e);
             return null;
         }
     }
 
-    public RSAPrivateKey loadPrivateKey(String privateKeyString) throws Exception {
-        String cleanPrivateKey = privateKeyString
-                .replace("-----BEGIN PRIVATE KEY-----", "")
-                .replace("-----END PRIVATE KEY-----", "")
-                .replaceAll("\\s+", "");
-
-        byte[] keyBytes = Base64.getDecoder().decode(cleanPrivateKey);
-        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        return (RSAPrivateKey) keyFactory.generatePrivate(spec);
-    }
-
-    public RSAPublicKey loadPublicKey(String publicKeyString) throws Exception {
-        String cleanPublicKey = publicKeyString
-                .replace("-----BEGIN PUBLIC KEY-----", "")
-                .replace("-----END PUBLIC KEY-----", "")
-                .replaceAll("\\s+", "");
-
-        byte[] keyBytes = Base64.getDecoder().decode(cleanPublicKey);
-        X509EncodedKeySpec spec = new X509EncodedKeySpec(keyBytes);
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        return (RSAPublicKey) keyFactory.generatePublic(spec);
-    }
-
-    public Optional<String> getTokenType(String token) {
+    public String getPreferredUsernameFromToken(String token) {
         try {
-            String type = (String) extractClaim(token, "type");
-            return Optional.ofNullable(type);
+            return (String) extractClaim(token, "preferred_username");
         } catch (Exception e) {
-            log.error("Error extracting token type from token", e);
-            return Optional.empty();
+            log.error("Error extracting preferred_username from token", e);
+            return null;
         }
     }
 
-    public boolean isAccessToken(String token) {
-        return getTokenType(token)
-                .map(Constants.TokenType.ACCESS_TOKEN::equals)
-                .orElse(false);
+    public String getFullNameFromToken(String token) {
+        try {
+            return (String) extractClaim(token, "name");
+        } catch (Exception e) {
+            log.error("Error extracting name from token", e);
+            return null;
+        }
     }
 
-    public boolean isRefreshToken(String token) {
-        return getTokenType(token)
-                .map(Constants.TokenType.REFRESH_TOKEN::equals)
-                .orElse(false);
+    public boolean isEmailVerifiedFromToken(String token) {
+        try {
+            Object emailVerified = extractClaim(token, "email_verified");
+            if (emailVerified instanceof Boolean) {
+                return (Boolean) emailVerified;
+            }
+            return false;
+        } catch (Exception e) {
+            log.error("Error extracting email_verified from token", e);
+            return false;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<String> getRolesFromResourceAccess(String token, String clientId) {
+        try {
+            JWTClaimsSet claimsSet = validateToken(token);
+            Object resourceAccess = claimsSet.getClaim("resource_access");
+            if (resourceAccess instanceof Map) {
+                Map<String, Object> resourceAccessMap = (Map<String, Object>) resourceAccess;
+                Object clientAccess = resourceAccessMap.get(clientId);
+                if (clientAccess instanceof Map) {
+                    Map<String, Object> clientAccessMap = (Map<String, Object>) clientAccess;
+                    Object roles = clientAccessMap.get("roles");
+                    if (roles instanceof List) {
+                        return new ArrayList<>((List<String>) roles);
+                    }
+                }
+            }
+            return Collections.emptyList();
+        } catch (Exception e) {
+            log.error("Error extracting roles from resource_access for client: {}", clientId, e);
+            return Collections.emptyList();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<String> getRealmRolesFromToken(String token) {
+        try {
+            JWTClaimsSet claimsSet = validateToken(token);
+            Object realmAccess = claimsSet.getClaim("realm_access");
+            if (realmAccess instanceof Map) {
+                Map<String, Object> realmAccessMap = (Map<String, Object>) realmAccess;
+                Object roles = realmAccessMap.get("roles");
+                if (roles instanceof List) {
+                    return new ArrayList<>((List<String>) roles);
+                }
+            }
+            return Collections.emptyList();
+        } catch (Exception e) {
+            log.error("Error extracting realm roles from token", e);
+            return Collections.emptyList();
+        }
+    }
+
+    public boolean hasRealmRole(String token, String roleName) {
+        List<String> realmRoles = getRealmRolesFromToken(token);
+        return realmRoles.contains(roleName);
+    }
+
+    public boolean hasResourceRole(String token, String clientId, String roleName) {
+        List<String> resourceRoles = getRolesFromResourceAccess(token, clientId);
+        return resourceRoles.contains(roleName);
+    }
+
+    /**
+     * Validates token without signature verification (for development/testing)
+     */
+    public JWTClaimsSet validateTokenWithoutSignature(String token) {
+        try {
+            SignedJWT signedJWT = SignedJWT.parse(token);
+            JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
+
+            if (claimsSet.getExpirationTime() != null && claimsSet.getExpirationTime().before(new Date())) {
+                throw new RuntimeException("JWT token has expired");
+            }
+
+            if (claimsSet.getIssueTime() != null && claimsSet.getIssueTime().after(new Date())) {
+                throw new RuntimeException("JWT token not yet valid");
+            }
+
+            return claimsSet;
+
+        } catch (Exception e) {
+            log.error("Error parsing JWT token", e);
+            throw new RuntimeException("Invalid JWT token format", e);
+        }
+    }
+
+    public Object extractClaimWithoutValidation(String token, String claimName) {
+        try {
+            JWTClaimsSet claimsSet = validateTokenWithoutSignature(token);
+            return claimsSet.getClaim(claimName);
+        } catch (Exception e) {
+            log.error("Error extracting claim {} from token without validation", claimName, e);
+            return null;
+        }
+    }
+
+    public boolean isTokenValid(String token) {
+        try {
+            validateToken(token);
+            return true;
+        } catch (Exception e) {
+            log.debug("Token validation failed: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean validateIssuer(String token, String expectedIssuer) {
+        try {
+            JWTClaimsSet claimsSet = getClaimsFromToken(token);
+            if (claimsSet == null)
+                return false;
+
+            String issuer = claimsSet.getIssuer();
+            return expectedIssuer.equals(issuer);
+        } catch (Exception e) {
+            log.error("Error validating issuer", e);
+            return false;
+        }
+    }
+
+    public boolean validateAudience(String token, String expectedAudience) {
+        try {
+            JWTClaimsSet claimsSet = getClaimsFromToken(token);
+            if (claimsSet == null)
+                return false;
+
+            List<String> audiences = claimsSet.getAudience();
+            return audiences != null && audiences.contains(expectedAudience);
+        } catch (Exception e) {
+            log.error("Error validating audience", e);
+            return false;
+        }
+    }
+
+
+    public String getAuthorizedPartyFromToken(String token) {
+        try {
+            return (String) extractClaim(token, "azp");
+        } catch (Exception e) {
+            log.error("Error extracting azp from token", e);
+            return null;
+        }
+    }
+
+    public String getSessionIdFromToken(String token) {
+        try {
+            return (String) extractClaim(token, "sid");
+        } catch (Exception e) {
+            log.error("Error extracting sid from token", e);
+            return null;
+        }
     }
 }

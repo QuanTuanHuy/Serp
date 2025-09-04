@@ -45,6 +45,8 @@ public class Constants {
         public static final String BAD_REQUEST = "Bad Request";
         public static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
 
+        public static final String CLIENT_NOT_FOUND = "Client not found";
+
         public static final String PERMISSION_ALREADY_EXISTS = "Permission already exists";
         public static final String ONE_OR_MORE_PERMISSIONS_NOT_FOUND = "One or more permissions not found";
 
@@ -53,6 +55,11 @@ public class Constants {
         public static final String USER_ALREADY_EXISTS = "User already exists";
 
         public static final String WRONG_EMAIL_OR_PASSWORD = "Wrong email or password";
+    }
+
+    @UtilityClass
+    public static class Security {
+        public static final String ROLE_PREFIX = "ROLE_";
     }
 
 }

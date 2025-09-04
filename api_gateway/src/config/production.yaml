@@ -4,9 +4,15 @@ app:
   redis:
     host: ${REDIS_HOST}
     port: ${REDIS_PORT}
-  security:
-    jwt:
-      publicKey: ${JWT_PUBLIC_KEY}
+  
+  keycloak:
+    url: ${KEYCLOAK_URL}
+    realm: serp
+    client-id: serp-api-gateway
+    client-secret: ${CLIENT_SECRET}
+    jwk-set-uri: ${KEYCLOAK_URL}/realms/serp/protocol/openid-connect/certs
+    expected-issuer: ${KEYCLOAK_URL}/realms/serp
+    expected-audience: 
 
 external:
   services:

@@ -1,7 +1,5 @@
 package serp.project.account.core.domain.dto.request;
 
-import java.util.List;
-
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,10 +10,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Data
 @Builder
-public class CreateRoleDto {
+public class CreateClientRoleDto {
     @NotBlank
     private String name;
+    @NotBlank
     private String description;
-
-    private List<Long> permissionIds;
+    @NotBlank
+    private String clientId;
 }

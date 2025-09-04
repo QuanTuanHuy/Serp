@@ -16,9 +16,9 @@ import serp.project.account.core.domain.dto.response.LoginResponse;
 import serp.project.account.core.domain.enums.RoleEnum;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.IRoleService;
+import serp.project.account.core.service.ITokenService;
 import serp.project.account.core.service.IUserService;
 import serp.project.account.kernel.utils.BcryptPasswordEncoder;
-import serp.project.account.kernel.utils.JwtUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
 
 import java.util.List;
@@ -29,9 +29,9 @@ import java.util.List;
 public class AuthUseCase {
     private final IUserService userService;
     private final IRoleService roleService;
+    private final ITokenService tokenService;
 
     private final ResponseUtils responseUtils;
-    private final JwtUtils jwtUtils;
 
     private final BcryptPasswordEncoder passwordEncoder;
 
@@ -66,12 +66,23 @@ public class AuthUseCase {
                 return responseUtils.badRequest(Constants.ErrorMessage.WRONG_EMAIL_OR_PASSWORD);
             }
             var loginResponse = LoginResponse.builder()
-                    .accessToken(jwtUtils.generateAccessTokenFromUser(user))
-                    .refreshToken(jwtUtils.generateRefreshTokenFromUser(user))
                     .build();
             return responseUtils.success(loginResponse);
         } catch (Exception e) {
             log.error("Login failed: {}", e.getMessage());
+            return responseUtils.internalServerError(e.getMessage());
+        }
+    }
+
+    public GeneralResponse<?> getUserToken(String username, String password) {
+        try {
+            var tokenResponse = tokenService.getUserToken(username, password);
+            return responseUtils.success(tokenResponse);
+        } catch (AppException e) {
+            log.error("Error getting user token: {}", e.getMessage());
+            return responseUtils.error(e.getCode(), e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error when getting user token: {}", e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
     }

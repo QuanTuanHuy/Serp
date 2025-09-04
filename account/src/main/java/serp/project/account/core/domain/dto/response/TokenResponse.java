@@ -1,9 +1,5 @@
-/**
- * Author: QuanTuanHuy
- * Description: Part of Serp Project
- */
-
 package serp.project.account.core.domain.dto.response;
+
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,11 +10,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Data
 @Builder
-public class LoginResponse {
+public class TokenResponse {
     private String accessToken;
     private String refreshToken;
     private Long expiresIn;
     private Long refreshExpiresIn;
-    @Builder.Default
-    public String tokenType = "Bearer";
+    public String tokenType;
 }

@@ -4,9 +4,15 @@ app:
   redis:
     host: localhost
     port: 6379
-  security:
-    jwt:
-      publicKey: ${JWT_PUBLIC_KEY}
+
+  keycloak:
+    url: http://localhost:8180
+    realm: serp
+    client-id: serp-api-gateway
+    client-secret: ${CLIENT_SECRET}
+    jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
+    expected-issuer: http://localhost:8180/realms/serp
+    expected-audience: 
 
 external:
   services:

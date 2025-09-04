@@ -8,10 +8,7 @@ package serp.project.account.ui.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import serp.project.account.core.domain.dto.request.CreateUserDto;
 import serp.project.account.core.domain.dto.request.LoginRequest;
 import serp.project.account.core.usecase.AuthUseCase;
@@ -31,6 +28,12 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         var response = authUseCase.login(request);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PostMapping("/get-token")
+    public ResponseEntity<?> getToken(@Valid @RequestBody LoginRequest request) {
+        var response = authUseCase.getUserToken(request.getEmail(), request.getPassword());
         return ResponseEntity.status(response.getCode()).body(response);
     }
 }
