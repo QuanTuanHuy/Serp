@@ -79,13 +79,7 @@ func (j *JWTUtils) ValidateToken(tokenString string) (*Claims, error) {
 		}
 
 		if j.keycloakProps.ExpectedAudience != "" {
-			audienceFound := false
-			for _, aud := range claims.Audience {
-				if aud == j.keycloakProps.ExpectedAudience {
-					audienceFound = true
-					break
-				}
-			}
+			audienceFound := slices.Contains(claims.Audience, j.keycloakProps.ExpectedAudience)
 			if !audienceFound {
 				log.Error("JWT token audience mismatch. Expected: ", j.keycloakProps.ExpectedAudience, ", Actual: ", claims.Audience)
 				return nil, errors.New("token audience mismatch")

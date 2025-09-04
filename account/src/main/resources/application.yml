@@ -42,7 +42,7 @@ app:
     expected-audience: serp-account
     realm: serp
     client-id: serp-account
-    client-secret: zZhdvlgJynkXIi9ZEBls4vnpsYokrLza
+    client-secret: ${CLIENT_SECRET}
 
     admin:
       username: admin
@@ -53,14 +53,6 @@ app:
     admin:
       email: quan.tuan.huy@gmail.com
       password: SuperAdmin@123
-
-    jwt:
-      private-key: ${JWT_PRIVATE_KEY}
-      public-key: ${JWT_PUBLIC_KEY}
-      access-token-expiration: 604800000
-      refresh-token-expiration: 604800000
-      header: Authorization
-      prefix: Bearer
 
     filter:
       publicUrls:

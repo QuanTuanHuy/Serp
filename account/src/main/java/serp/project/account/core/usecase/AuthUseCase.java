@@ -19,7 +19,6 @@ import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.ITokenService;
 import serp.project.account.core.service.IUserService;
 import serp.project.account.kernel.utils.BcryptPasswordEncoder;
-import serp.project.account.kernel.utils.JwtUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
 
 import java.util.List;
@@ -33,7 +32,6 @@ public class AuthUseCase {
     private final ITokenService tokenService;
 
     private final ResponseUtils responseUtils;
-    private final JwtUtils jwtUtils;
 
     private final BcryptPasswordEncoder passwordEncoder;
 
@@ -79,8 +77,6 @@ public class AuthUseCase {
     public GeneralResponse<?> getUserToken(String username, String password) {
         try {
             var tokenResponse = tokenService.getUserToken(username, password);
-            long userId = jwtUtils.getUserIdFromToken(tokenResponse.getAccessToken());
-            log.info("User ID from token: {}", userId);
             return responseUtils.success(tokenResponse);
         } catch (AppException e) {
             log.error("Error getting user token: {}", e.getMessage());
