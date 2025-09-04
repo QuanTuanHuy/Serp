@@ -186,7 +186,9 @@ func (j *JWTUtils) IsAccessToken(tokenString string) bool {
 	}
 
 	if tokenType, ok := token.Header["typ"].(string); ok {
-		return tokenType == "JWT" || tokenType == "Bearer"
+		if tokenType != "JWT" {
+			return false
+		}
 	}
 
 	if mapClaims, ok := token.Claims.(jwt.MapClaims); ok {
@@ -209,7 +211,9 @@ func (j *JWTUtils) IsRefreshToken(tokenString string) bool {
 	}
 
 	if tokenType, ok := token.Header["typ"].(string); ok {
-		return tokenType == "Refresh"
+		if tokenType != "JWT" {
+			return false
+		}
 	}
 
 	if mapClaims, ok := token.Claims.(jwt.MapClaims); ok {
