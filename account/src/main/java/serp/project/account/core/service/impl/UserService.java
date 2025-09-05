@@ -8,7 +8,6 @@ package serp.project.account.core.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.CreateUserDto;
 import serp.project.account.core.domain.dto.request.GetUserParams;
@@ -38,7 +37,6 @@ public class UserService implements IUserService {
     private final UserMapper userMapper;
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public UserEntity createUser(CreateUserDto request) {
         UserEntity existedUser = userPort.getUserByEmail(request.getEmail());
         if (existedUser != null) {

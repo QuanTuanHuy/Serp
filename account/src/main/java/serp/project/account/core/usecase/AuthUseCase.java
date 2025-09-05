@@ -8,15 +8,18 @@ package serp.project.account.core.usecase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.CreateUserDto;
 import serp.project.account.core.domain.dto.request.LoginRequest;
 import serp.project.account.core.domain.enums.RoleEnum;
 import serp.project.account.core.exception.AppException;
+import serp.project.account.core.service.IKeycloakUserService;
 import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.ITokenService;
 import serp.project.account.core.service.IUserService;
+import serp.project.account.infrastructure.store.mapper.UserMapper;
 import serp.project.account.kernel.utils.ResponseUtils;
 
 import java.util.List;
@@ -26,12 +29,16 @@ import java.util.List;
 @Slf4j
 public class AuthUseCase {
     private final IUserService userService;
+    private final IKeycloakUserService keycloakUserService;
     private final IRoleService roleService;
     private final ITokenService tokenService;
 
     private final ResponseUtils responseUtils;
 
+    private final UserMapper userMapper;
 
+
+    @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> registerUser(CreateUserDto request) {
         try {
             var role = roleService.getRoleByName(RoleEnum.USER.getRole());
@@ -43,6 +50,11 @@ public class AuthUseCase {
             request.setRoleIds(List.of(role.getId()));
             var user = userService.createUser(request);
             user.setRoles(List.of(role));
+
+            var createUserKeycloak = userMapper.createUserMapper(user, request);
+            String keycloakId = keycloakUserService.createUser(createUserKeycloak);
+            userService.updateKeycloakUser(user.getId(), keycloakId);
+
             return responseUtils.success(user);
         } catch (AppException e) {
             log.error("Register user failed: {}", e.getMessage());
