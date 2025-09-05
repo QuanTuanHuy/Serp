@@ -73,7 +73,7 @@ public class JwtUtils {
         try {
             JWTClaimsSet claimsSet = validateToken(token);
 
-            Object userIdClaim = claimsSet.getClaim("user_id");
+            Object userIdClaim = claimsSet.getClaim("uid");
             if (userIdClaim instanceof Number) {
                 return ((Number) userIdClaim).longValue();
             }
@@ -81,7 +81,7 @@ public class JwtUtils {
                 try {
                     return Long.parseLong((String) userIdClaim);
                 } catch (NumberFormatException ignored) {
-                    log.warn("user_id claim is not a valid number: {}", userIdClaim);
+                    log.warn("uid claim is not a valid number: {}", userIdClaim);
                 }
             }
             return null;

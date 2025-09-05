@@ -29,7 +29,7 @@ func NewJWTUtils(keycloakProps *properties.KeycloakProperties, keycloakJwksUtils
 }
 
 type Claims struct {
-	UserID            int64                  `json:"user_id"`
+	UserID            int64                  `json:"uid"`
 	Email             string                 `json:"email"`
 	FullName          string                 `json:"name"`
 	PreferredUsername string                 `json:"preferred_username"`

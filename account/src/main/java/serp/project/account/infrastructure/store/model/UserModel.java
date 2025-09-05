@@ -21,12 +21,15 @@ import jakarta.persistence.*;
 @Setter
 @SuperBuilder
 public class UserModel extends BaseModel {
-    @Column(name = "email", nullable = false, unique = true, length = 255)
+    @Column(name = "email", nullable = false, unique = true)
     private String email;
 
-    @Column(name = "password", nullable = false, length = 255)
-    private String password;
+    @Column(name = "first_name", nullable = false)
+    private String firstName;
 
-    @Column(name = "full_name", nullable = false, length = 255)
-    private String fullName;
+    @Column(name = "last_name", nullable = false)
+    private String lastName;
+
+    @Column(name = "keycloak_id")
+    private String keycloakId;
 }

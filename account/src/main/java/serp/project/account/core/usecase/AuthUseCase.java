@@ -12,13 +12,11 @@ import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.CreateUserDto;
 import serp.project.account.core.domain.dto.request.LoginRequest;
-import serp.project.account.core.domain.dto.response.LoginResponse;
 import serp.project.account.core.domain.enums.RoleEnum;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.ITokenService;
 import serp.project.account.core.service.IUserService;
-import serp.project.account.kernel.utils.BcryptPasswordEncoder;
 import serp.project.account.kernel.utils.ResponseUtils;
 
 import java.util.List;
@@ -33,7 +31,6 @@ public class AuthUseCase {
 
     private final ResponseUtils responseUtils;
 
-    private final BcryptPasswordEncoder passwordEncoder;
 
     public GeneralResponse<?> registerUser(CreateUserDto request) {
         try {
@@ -62,11 +59,7 @@ public class AuthUseCase {
             if (user == null) {
                 return responseUtils.badRequest(Constants.ErrorMessage.WRONG_EMAIL_OR_PASSWORD);
             }
-            if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-                return responseUtils.badRequest(Constants.ErrorMessage.WRONG_EMAIL_OR_PASSWORD);
-            }
-            var loginResponse = LoginResponse.builder()
-                    .build();
+            var loginResponse = tokenService.getUserToken(user.getEmail(), request.getPassword());
             return responseUtils.success(loginResponse);
         } catch (Exception e) {
             log.error("Login failed: {}", e.getMessage());

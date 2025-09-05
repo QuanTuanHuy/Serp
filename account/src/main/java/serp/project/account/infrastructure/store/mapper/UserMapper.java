@@ -25,8 +25,8 @@ public class UserMapper extends BaseMapper {
         return UserEntity.builder()
                 .id(model.getId())
                 .email(model.getEmail())
-                .password(model.getPassword())
-                .fullName(model.getFullName())
+                .firstName(model.getFirstName())
+                .lastName(model.getLastName())
                 .createdAt(localDateTimeToLong(model.getCreatedAt()))
                 .updatedAt(localDateTimeToLong(model.getUpdatedAt()))
                 .build();
@@ -40,8 +40,8 @@ public class UserMapper extends BaseMapper {
         return UserModel.builder()
                 .id(entity.getId())
                 .email(entity.getEmail())
-                .password(entity.getPassword())
-                .fullName(entity.getFullName())
+                .firstName(entity.getFirstName())
+                .lastName(entity.getLastName())
                 .createdAt(longToLocalDateTime(entity.getCreatedAt()))
                 .updatedAt(longToLocalDateTime(entity.getUpdatedAt()))
                 .build();
@@ -70,7 +70,8 @@ public class UserMapper extends BaseMapper {
     public UserEntity createUserMapper(CreateUserDto request) {
         return UserEntity.builder()
                 .email(request.getEmail())
-                .fullName(request.getFullName())
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
                 .build();
     }
 }
