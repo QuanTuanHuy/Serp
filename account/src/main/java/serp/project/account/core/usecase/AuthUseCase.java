@@ -37,7 +37,6 @@ public class AuthUseCase {
 
     private final UserMapper userMapper;
 
-
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> registerUser(CreateUserDto request) {
         try {
