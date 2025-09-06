@@ -52,15 +52,16 @@ public class AuthUseCase {
 
             var createUserKeycloak = userMapper.createUserMapper(user, request);
             String keycloakId = keycloakUserService.createUser(createUserKeycloak);
+            keycloakUserService.assignRoles(keycloakId, List.of(role.getName()));
             userService.updateKeycloakUser(user.getId(), keycloakId);
 
             return responseUtils.success(user);
         } catch (AppException e) {
             log.error("Register user failed: {}", e.getMessage());
-            return responseUtils.error(e.getCode(), e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Unexpected register user error: {}", e.getMessage());
-            return responseUtils.internalServerError(e.getMessage());
+            throw e;
         }
     }
 

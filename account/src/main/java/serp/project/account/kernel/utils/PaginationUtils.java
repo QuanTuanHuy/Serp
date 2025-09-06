@@ -17,7 +17,6 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class PaginationUtils {
-    private final DataUtils dataUtils;
 
     public static final int DEFAULT_PAGE = 0;
     public static final int DEFAULT_PAGE_SIZE = 10;
@@ -27,9 +26,9 @@ public class PaginationUtils {
         int size = (params.getPageSize() != null && params.getPageSize() > 0) ? params.getPageSize()
                 : DEFAULT_PAGE_SIZE;
 
-        String sortBy = (!dataUtils.isNullOrEmpty(params.getSortBy()) ? params.getSortBy() : "id");
+        String sortBy = (!DataUtils.isNullOrEmpty(params.getSortBy()) ? params.getSortBy() : "id");
 
-        Sort.Direction direction = (!dataUtils.isNullOrEmpty(params.getSortDirection()) ||
+        Sort.Direction direction = (!DataUtils.isNullOrEmpty(params.getSortDirection()) ||
                 params.getSortDirection().equalsIgnoreCase("desc"))
                         ? Sort.Direction.DESC
                         : Sort.Direction.ASC;
