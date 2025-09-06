@@ -15,5 +15,6 @@ import java.util.List;
 public interface IUserService {
     UserEntity createUser(CreateUserDto request);
     UserEntity getUserByEmail(String email);
+    void updateKeycloakUser(Long userId, String keycloakId);
     Pair<Long, List<UserEntity>> getUsers(GetUserParams params);
 }

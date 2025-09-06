@@ -39,18 +39,18 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void createSuperAdminUser() {
-        var roles = roleService.getAllRoles();
-        if (CollectionUtils.isEmpty(roles)) {
-            log.info("No roles found, need create roles ...");
-            return;
-        }
-        var createUserDto = CreateUserDto.builder()
-                .email(adminProperties.getEmail())
-                .password(adminProperties.getPassword())
-                .fullName("Serp Super Admin")
-                .roleIds(roles.stream().map(BaseEntity::getId).toList())
-                .build();
-        userService.createUser(createUserDto);
+        // var roles = roleService.getAllRoles();
+        // if (CollectionUtils.isEmpty(roles)) {
+        //     log.info("No roles found, need create roles ...");
+        //     return;
+        // }
+        // var createUserDto = CreateUserDto.builder()
+        //         .email(adminProperties.getEmail())
+        //         .password(adminProperties.getPassword())
+        //         .fullName("Serp Super Admin")
+        //         .roleIds(roles.stream().map(BaseEntity::getId).toList())
+        //         .build();
+        // userService.createUser(createUserDto);
         log.info("Super admin user created successfully.");
     }
 

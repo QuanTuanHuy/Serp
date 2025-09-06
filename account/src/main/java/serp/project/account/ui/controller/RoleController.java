@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import serp.project.account.core.domain.dto.request.CreateClientRoleDto;
+import serp.project.account.core.domain.dto.request.CreateRealmRoleDto;
 import serp.project.account.core.domain.dto.request.CreateRoleDto;
 import serp.project.account.core.usecase.RoleUseCase;
 
@@ -33,7 +34,7 @@ public class RoleController {
     }
 
     @PostMapping("/realm")
-    public ResponseEntity<?> createRealmRole(@RequestBody CreateRoleDto request) {
+    public ResponseEntity<?> createRealmRole(@Valid @RequestBody CreateRealmRoleDto request) {
         var response = roleUseCase.createRealmRole(request);
         return ResponseEntity.status(response.getCode()).body(response);
     }

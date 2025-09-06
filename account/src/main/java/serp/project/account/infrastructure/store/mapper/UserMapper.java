@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
+import serp.project.account.core.domain.dto.request.CreateKeycloakUserDto;
 import serp.project.account.core.domain.dto.request.CreateUserDto;
 import serp.project.account.core.domain.entity.UserEntity;
 import serp.project.account.infrastructure.store.model.UserModel;
@@ -25,8 +26,9 @@ public class UserMapper extends BaseMapper {
         return UserEntity.builder()
                 .id(model.getId())
                 .email(model.getEmail())
-                .password(model.getPassword())
-                .fullName(model.getFullName())
+                .firstName(model.getFirstName())
+                .lastName(model.getLastName())
+                .keycloakId(model.getKeycloakId())
                 .createdAt(localDateTimeToLong(model.getCreatedAt()))
                 .updatedAt(localDateTimeToLong(model.getUpdatedAt()))
                 .build();
@@ -40,8 +42,9 @@ public class UserMapper extends BaseMapper {
         return UserModel.builder()
                 .id(entity.getId())
                 .email(entity.getEmail())
-                .password(entity.getPassword())
-                .fullName(entity.getFullName())
+                .firstName(entity.getFirstName())
+                .lastName(entity.getLastName())
+                .keycloakId(entity.getKeycloakId())
                 .createdAt(longToLocalDateTime(entity.getCreatedAt()))
                 .updatedAt(longToLocalDateTime(entity.getUpdatedAt()))
                 .build();
@@ -70,7 +73,19 @@ public class UserMapper extends BaseMapper {
     public UserEntity createUserMapper(CreateUserDto request) {
         return UserEntity.builder()
                 .email(request.getEmail())
-                .fullName(request.getFullName())
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .build();
+    }
+
+    public CreateKeycloakUserDto createUserMapper(UserEntity entity, CreateUserDto request) {
+        return CreateKeycloakUserDto.builder()
+                .username(entity.getEmail())
+                .email(entity.getEmail())
+                .firstName(entity.getFirstName())
+                .lastName(entity.getLastName())
+                .password(request.getPassword())
+                .uid(entity.getId())
                 .build();
     }
 }

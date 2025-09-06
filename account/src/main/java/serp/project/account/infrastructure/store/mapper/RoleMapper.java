@@ -11,18 +11,19 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 import serp.project.account.core.domain.dto.request.CreateClientRoleDto;
+import serp.project.account.core.domain.dto.request.CreateRealmRoleDto;
 import serp.project.account.core.domain.dto.request.CreateRoleDto;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.infrastructure.store.model.RoleModel;
 
 @Component
 public class RoleMapper extends BaseMapper {
-    
+
     public RoleEntity toEntity(RoleModel model) {
         if (model == null) {
             return null;
         }
-        
+
         return RoleEntity.builder()
                 .id(model.getId())
                 .name(model.getName())
@@ -36,7 +37,7 @@ public class RoleMapper extends BaseMapper {
         if (entity == null) {
             return null;
         }
-        
+
         return RoleModel.builder()
                 .id(entity.getId())
                 .name(entity.getName())
@@ -50,7 +51,7 @@ public class RoleMapper extends BaseMapper {
         if (models == null) {
             return null;
         }
-        
+
         return models.stream()
                 .map(this::toEntity)
                 .collect(Collectors.toList());
@@ -60,7 +61,7 @@ public class RoleMapper extends BaseMapper {
         if (entities == null) {
             return null;
         }
-        
+
         return entities.stream()
                 .map(this::toModel)
                 .collect(Collectors.toList());
@@ -73,10 +74,24 @@ public class RoleMapper extends BaseMapper {
                 .build();
     }
 
-    public RoleEntity createRoleMapper(CreateClientRoleDto request) {
-        return RoleEntity.builder()
-                .name(request.getName())
-                .description(request.getDescription())
+
+    public CreateRoleDto toCreateRoleDto(CreateRealmRoleDto realmRoleDto) {
+        if (realmRoleDto == null) {
+            return null;
+        }
+        return CreateRoleDto.builder()
+                .name(realmRoleDto.getName())
+                .description(realmRoleDto.getDescription())
+                .build();
+    }
+
+    public CreateRoleDto toCreateRoleDto(CreateClientRoleDto clientRoleDto) {
+        if (clientRoleDto == null) {
+            return null;
+        }
+        return CreateRoleDto.builder()
+                .name(clientRoleDto.getName())
+                .description(clientRoleDto.getDescription())
                 .build();
     }
 }

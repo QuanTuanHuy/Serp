@@ -45,8 +45,8 @@ app:
     client-secret: ${CLIENT_SECRET}
 
     admin:
-      username: admin
-      password: admin
+      username: serp-admin
+      password: serp-admin
       client-id: admin-cli
 
   security:

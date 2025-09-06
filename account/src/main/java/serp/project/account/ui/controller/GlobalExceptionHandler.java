@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import serp.project.account.core.exception.AppException;
 import serp.project.account.kernel.utils.ResponseUtils;
 
 import java.util.stream.Collectors;
@@ -21,6 +22,14 @@ import java.util.stream.Collectors;
 @Slf4j
 public class GlobalExceptionHandler {
     private final ResponseUtils responseUtils;
+
+    @ExceptionHandler(AppException.class)
+    public ResponseEntity<?> handleAppException(AppException ex) {
+        log.warn("Application error: Code={}, Message={}", ex.getCode(), ex.getMessage());
+        
+        var response = responseUtils.error(ex.getCode(), ex.getMessage());
+        return ResponseEntity.status(ex.getCode()).body(response);
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<?> handleValidationErrors(MethodArgumentNotValidException ex) {

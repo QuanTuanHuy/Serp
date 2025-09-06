@@ -8,7 +8,6 @@ package serp.project.account.core.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.CreateUserDto;
 import serp.project.account.core.domain.dto.request.GetUserParams;
@@ -21,7 +20,6 @@ import serp.project.account.core.port.store.IUserRolePort;
 import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.IUserService;
 import serp.project.account.infrastructure.store.mapper.UserMapper;
-import serp.project.account.kernel.utils.BcryptPasswordEncoder;
 import serp.project.account.kernel.utils.CollectionUtils;
 
 import java.util.List;
@@ -36,11 +34,9 @@ public class UserService implements IUserService {
 
     private final IRoleService roleService;
 
-    private final BcryptPasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public UserEntity createUser(CreateUserDto request) {
         UserEntity existedUser = userPort.getUserByEmail(request.getEmail());
         if (existedUser != null) {
@@ -48,7 +44,6 @@ public class UserService implements IUserService {
         }
 
         UserEntity user = userMapper.createUserMapper(request);
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
         user = userPort.save(user);
         final long userId = user.getId();
 
@@ -75,6 +70,16 @@ public class UserService implements IUserService {
                 .collect(Collectors.toMap(BaseEntity::getId, Function.identity()));
         user.setRoles(userRoles.stream().map(ur -> roleMap.get(ur.getRoleId())).toList());
         return user;
+    }
+
+    @Override
+    public void updateKeycloakUser(Long userId, String keycloakId) {
+        UserEntity user = userPort.getUserById(userId);
+        if (user == null) {
+            throw new AppException(Constants.ErrorMessage.USER_NOT_FOUND);
+        }
+        user.setKeycloakId(keycloakId);
+        userPort.save(user);
     }
 
     @Override

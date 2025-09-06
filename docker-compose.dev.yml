@@ -22,25 +22,48 @@ services:
     networks:
       - serp-network
 
-  kafka:
+  serp-kafka:
     image: bitnami/kafka:3.9.0
     container_name: serp-kafka
-    hostname: kafka
+    hostname: serp-kafka
     ports:
       - '9092:9092'
       - '9094:9094'
     environment:
       - KAFKA_CFG_NODE_ID=0
       - KAFKA_CFG_PROCESS_ROLES=controller,broker
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@serp-kafka:9093
       - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://serp-kafka:9092,EXTERNAL://localhost:9094
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,PLAINTEXT:PLAINTEXT
       - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
     volumes:
       - kafka_data:/bitnami/kafka
     networks:
       - serp-network
+  
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.3.3
+    container_name: serp-keycloak
+    command: ["start-dev"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://serp-postgre-db:5432/keycloak
+      KC_DB_USERNAME: serp
+      KC_DB_PASSWORD: serp
+      KC_HOSTNAME: localhost
+
+      KC_BOOTSTRAP_ADMIN_USERNAME: serp-admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: serp-admin
+
+    ports:
+      - "8180:8080"
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+    networks:
+      - serp-network
+    depends_on:
+      - serp-postgre-db
 
 volumes:
   postgres-data:
@@ -48,6 +71,8 @@ volumes:
   redis-data:
     driver: local
   kafka_data:
+    driver: local
+  keycloak_data:
     driver: local
 
 networks:

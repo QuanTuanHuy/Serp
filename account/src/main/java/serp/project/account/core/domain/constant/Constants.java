@@ -10,7 +10,7 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public class Constants {
 
-    public static final String SERVICE_NAME = "account-service";
+    public static final String SERVICE_NAME = "serp-account";
 
     @UtilityClass
     public static class HttpStatus {
@@ -29,21 +29,16 @@ public class Constants {
     }
 
     @UtilityClass
-    public static class TokenType {
-        public static final String ACCESS_TOKEN = "access_token";
-        public static final String REFRESH_TOKEN = "refresh_token";
-    }
-
-    @UtilityClass
     public static class ErrorMessage {
         public static final String OK = "OK";
-        public static final String INVALID = "Invalid";
         public static final String NOT_FOUND = "Not Found";
-        public static final String ALREADY_EXISTS = "Already Exists";
         public static final String UNAUTHORIZED = "Unauthorized";
         public static final String FORBIDDEN = "Forbidden";
         public static final String BAD_REQUEST = "Bad Request";
         public static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
+        public static final String CONFLICT = "Conflict";
+        public static final String TOO_MANY_REQUESTS = "Too Many Requests";
+        public static final String UNKNOWN_ERROR = "Unknown Error";
 
         public static final String CLIENT_NOT_FOUND = "Client not found";
 
@@ -53,6 +48,8 @@ public class Constants {
         public static final String ROLE_ALREADY_EXISTS = "Role already exists";
 
         public static final String USER_ALREADY_EXISTS = "User already exists";
+        public static final String USER_NOT_FOUND = "User not found";
+        public static final String CREATE_USER_FAILED = "Create user failed";
 
         public static final String WRONG_EMAIL_OR_PASSWORD = "Wrong email or password";
     }
