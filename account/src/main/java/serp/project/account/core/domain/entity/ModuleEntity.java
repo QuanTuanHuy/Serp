@@ -1,9 +1,3 @@
-/**
- * Author: QuanTuanHuy
- * Description: Part of Serp Project
- */
-
-
 package serp.project.account.core.domain.entity;
 
 import lombok.AllArgsConstructor;
@@ -17,9 +11,8 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @Setter
 @SuperBuilder
-public class PermissionEntity extends BaseEntity {
-    private String name;
+public class ModuleEntity extends BaseEntity {
+    private String moduleName;
     private String description;
-    private String resource;
-    private String action;
+    private String keycloakClientId;
 }

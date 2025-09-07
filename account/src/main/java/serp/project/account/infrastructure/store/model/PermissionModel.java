@@ -26,4 +26,10 @@ public class PermissionModel extends BaseModel {
 
     @Column(name = "description", length = 500)
     private String description;
+
+    @Column(name = "resource", nullable = false, length = 100)
+    private String resource;
+
+    @Column(name = "action", nullable = false, length = 100)
+    private String action;
 }

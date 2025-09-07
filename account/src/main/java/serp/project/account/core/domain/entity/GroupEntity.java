@@ -1,4 +1,18 @@
 package serp.project.account.core.domain.entity;
 
-public class GroupEntity {
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
+
+@NoArgsConstructor
+@AllArgsConstructor
+@Getter
+@Setter
+@SuperBuilder
+public class GroupEntity extends BaseEntity {
+    private String groupName;
+    private String description;
+    private String keycloakGroupId;
 }

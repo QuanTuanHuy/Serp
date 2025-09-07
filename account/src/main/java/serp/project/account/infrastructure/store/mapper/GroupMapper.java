@@ -10,69 +10,59 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
-import serp.project.account.core.domain.dto.request.CreatePermissionDto;
-import serp.project.account.core.domain.entity.PermissionEntity;
-import serp.project.account.infrastructure.store.model.PermissionModel;
+import serp.project.account.core.domain.entity.GroupEntity;
+import serp.project.account.infrastructure.store.model.GroupModel;
 
 @Component
-public class PermissionMapper extends BaseMapper {
-    
-    public PermissionEntity toEntity(PermissionModel model) {
+public class GroupMapper extends BaseMapper {
+
+    public GroupEntity toEntity(GroupModel model) {
         if (model == null) {
             return null;
         }
-        
-        return PermissionEntity.builder()
+
+        return GroupEntity.builder()
                 .id(model.getId())
-                .name(model.getName())
+                .groupName(model.getGroupName())
                 .description(model.getDescription())
-                .resource(model.getResource())
-                .action(model.getAction())
+                .keycloakGroupId(model.getKeycloakGroupId())
                 .createdAt(localDateTimeToLong(model.getCreatedAt()))
                 .updatedAt(localDateTimeToLong(model.getUpdatedAt()))
                 .build();
     }
 
-    public PermissionModel toModel(PermissionEntity entity) {
+    public GroupModel toModel(GroupEntity entity) {
         if (entity == null) {
             return null;
         }
-        
-        return PermissionModel.builder()
+
+        return GroupModel.builder()
                 .id(entity.getId())
-                .name(entity.getName())
+                .groupName(entity.getGroupName())
                 .description(entity.getDescription())
-                .resource(entity.getResource())
-                .action(entity.getAction())
+                .keycloakGroupId(entity.getKeycloakGroupId())
                 .createdAt(longToLocalDateTime(entity.getCreatedAt()))
                 .updatedAt(longToLocalDateTime(entity.getUpdatedAt()))
                 .build();
     }
 
-    public List<PermissionEntity> toEntityList(List<PermissionModel> models) {
+    public List<GroupEntity> toEntityList(List<GroupModel> models) {
         if (models == null) {
             return null;
         }
-        
+
         return models.stream()
                 .map(this::toEntity)
                 .collect(Collectors.toList());
     }
 
-    public List<PermissionModel> toModelList(List<PermissionEntity> entities) {
+    public List<GroupModel> toModelList(List<GroupEntity> entities) {
         if (entities == null) {
             return null;
         }
-        
+
         return entities.stream()
                 .map(this::toModel)
                 .collect(Collectors.toList());
-    }
-
-    public PermissionEntity createPermissionMapper(CreatePermissionDto request) {
-        return PermissionEntity.builder()
-                .name(request.getName())
-                .description(request.getDescription())
-                .build();
     }
 }

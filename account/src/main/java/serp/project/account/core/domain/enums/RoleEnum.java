@@ -9,15 +9,17 @@ import lombok.Getter;
 
 @Getter
 public enum RoleEnum {
-    USER("USER"),
-    MANAGER("MANAGER"),
-    COMPANY_ADMIN("COMPANY_ADMIN"),
-    ADMIN("ADMIN"),
-    SUPER_ADMIN("SUPER_ADMIN");
+    SUPER_ADMIN("SUPER_ADMIN", 1),
+    ADMIN("ADMIN", 2),
+    MODERATOR("MODERATOR", 3),
+    USER("USER", 4),
+    ORGANIZATION_ADMIN("ORGANIZATION_ADMIN", 1);
 
     private final String role;
+    private final Integer priority;
 
-    RoleEnum(String role) {
+    RoleEnum(String role, Integer priority) {
         this.role = role;
+        this.priority = priority;
     }
 }

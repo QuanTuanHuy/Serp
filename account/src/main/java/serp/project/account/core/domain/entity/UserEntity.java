@@ -22,8 +22,10 @@ public class UserEntity extends BaseEntity {
     private String email;
     private String firstName;
     private String lastName;
+    private String phoneNumber;
 
     private String keycloakId;
 
     private List<RoleEntity> roles;
+    private List<OrganizationEntity> organizations;
 }

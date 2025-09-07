@@ -10,46 +10,43 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
-import serp.project.account.core.domain.dto.request.CreatePermissionDto;
-import serp.project.account.core.domain.entity.PermissionEntity;
-import serp.project.account.infrastructure.store.model.PermissionModel;
+import serp.project.account.core.domain.entity.OrganizationEntity;
+import serp.project.account.infrastructure.store.model.OrganizationModel;
 
 @Component
-public class PermissionMapper extends BaseMapper {
+public class OrganizationMapper extends BaseMapper {
     
-    public PermissionEntity toEntity(PermissionModel model) {
+    public OrganizationEntity toEntity(OrganizationModel model) {
         if (model == null) {
             return null;
         }
         
-        return PermissionEntity.builder()
+        return OrganizationEntity.builder()
                 .id(model.getId())
                 .name(model.getName())
                 .description(model.getDescription())
-                .resource(model.getResource())
-                .action(model.getAction())
+                .address(model.getAddress())
                 .createdAt(localDateTimeToLong(model.getCreatedAt()))
                 .updatedAt(localDateTimeToLong(model.getUpdatedAt()))
                 .build();
     }
 
-    public PermissionModel toModel(PermissionEntity entity) {
+    public OrganizationModel toModel(OrganizationEntity entity) {
         if (entity == null) {
             return null;
         }
         
-        return PermissionModel.builder()
+        return OrganizationModel.builder()
                 .id(entity.getId())
                 .name(entity.getName())
                 .description(entity.getDescription())
-                .resource(entity.getResource())
-                .action(entity.getAction())
+                .address(entity.getAddress())
                 .createdAt(longToLocalDateTime(entity.getCreatedAt()))
                 .updatedAt(longToLocalDateTime(entity.getUpdatedAt()))
                 .build();
     }
 
-    public List<PermissionEntity> toEntityList(List<PermissionModel> models) {
+    public List<OrganizationEntity> toEntityList(List<OrganizationModel> models) {
         if (models == null) {
             return null;
         }
@@ -59,7 +56,7 @@ public class PermissionMapper extends BaseMapper {
                 .collect(Collectors.toList());
     }
 
-    public List<PermissionModel> toModelList(List<PermissionEntity> entities) {
+    public List<OrganizationModel> toModelList(List<OrganizationEntity> entities) {
         if (entities == null) {
             return null;
         }
@@ -67,12 +64,5 @@ public class PermissionMapper extends BaseMapper {
         return entities.stream()
                 .map(this::toModel)
                 .collect(Collectors.toList());
-    }
-
-    public PermissionEntity createPermissionMapper(CreatePermissionDto request) {
-        return PermissionEntity.builder()
-                .name(request.getName())
-                .description(request.getDescription())
-                .build();
     }
 }

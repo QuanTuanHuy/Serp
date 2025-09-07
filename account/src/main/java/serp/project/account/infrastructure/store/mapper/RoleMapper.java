@@ -28,6 +28,8 @@ public class RoleMapper extends BaseMapper {
                 .id(model.getId())
                 .name(model.getName())
                 .description(model.getDescription())
+                .isRealmRole(model.getIsReamlRole())
+                .priority(model.getPriority())
                 .createdAt(localDateTimeToLong(model.getCreatedAt()))
                 .updatedAt(localDateTimeToLong(model.getUpdatedAt()))
                 .build();
@@ -42,6 +44,8 @@ public class RoleMapper extends BaseMapper {
                 .id(entity.getId())
                 .name(entity.getName())
                 .description(entity.getDescription())
+                .isReamlRole(entity.getIsRealmRole())
+                .priority(entity.getPriority())
                 .createdAt(longToLocalDateTime(entity.getCreatedAt()))
                 .updatedAt(longToLocalDateTime(entity.getUpdatedAt()))
                 .build();

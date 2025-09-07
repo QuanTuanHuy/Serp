@@ -10,46 +10,49 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
-import serp.project.account.core.domain.dto.request.CreatePermissionDto;
-import serp.project.account.core.domain.entity.PermissionEntity;
-import serp.project.account.infrastructure.store.model.PermissionModel;
+import serp.project.account.core.domain.entity.MenuDisplayEntity;
+import serp.project.account.infrastructure.store.model.MenuDisplayModel;
 
 @Component
-public class PermissionMapper extends BaseMapper {
+public class MenuDisplayMapper extends BaseMapper {
     
-    public PermissionEntity toEntity(PermissionModel model) {
+    public MenuDisplayEntity toEntity(MenuDisplayModel model) {
         if (model == null) {
             return null;
         }
         
-        return PermissionEntity.builder()
+        return MenuDisplayEntity.builder()
                 .id(model.getId())
                 .name(model.getName())
-                .description(model.getDescription())
-                .resource(model.getResource())
-                .action(model.getAction())
+                .path(model.getPath())
+                .icon(model.getIcon())
+                .order(model.getOrder())
+                .parentId(model.getParentId())
+                .moduleId(model.getModuleId())
                 .createdAt(localDateTimeToLong(model.getCreatedAt()))
                 .updatedAt(localDateTimeToLong(model.getUpdatedAt()))
                 .build();
     }
 
-    public PermissionModel toModel(PermissionEntity entity) {
+    public MenuDisplayModel toModel(MenuDisplayEntity entity) {
         if (entity == null) {
             return null;
         }
         
-        return PermissionModel.builder()
+        return MenuDisplayModel.builder()
                 .id(entity.getId())
                 .name(entity.getName())
-                .description(entity.getDescription())
-                .resource(entity.getResource())
-                .action(entity.getAction())
+                .path(entity.getPath())
+                .icon(entity.getIcon())
+                .order(entity.getOrder())
+                .parentId(entity.getParentId())
+                .moduleId(entity.getModuleId())
                 .createdAt(longToLocalDateTime(entity.getCreatedAt()))
                 .updatedAt(longToLocalDateTime(entity.getUpdatedAt()))
                 .build();
     }
 
-    public List<PermissionEntity> toEntityList(List<PermissionModel> models) {
+    public List<MenuDisplayEntity> toEntityList(List<MenuDisplayModel> models) {
         if (models == null) {
             return null;
         }
@@ -59,7 +62,7 @@ public class PermissionMapper extends BaseMapper {
                 .collect(Collectors.toList());
     }
 
-    public List<PermissionModel> toModelList(List<PermissionEntity> entities) {
+    public List<MenuDisplayModel> toModelList(List<MenuDisplayEntity> entities) {
         if (entities == null) {
             return null;
         }
@@ -67,12 +70,5 @@ public class PermissionMapper extends BaseMapper {
         return entities.stream()
                 .map(this::toModel)
                 .collect(Collectors.toList());
-    }
-
-    public PermissionEntity createPermissionMapper(CreatePermissionDto request) {
-        return PermissionEntity.builder()
-                .name(request.getName())
-                .description(request.getDescription())
-                .build();
     }
 }
