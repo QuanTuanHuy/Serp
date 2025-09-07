@@ -6,13 +6,12 @@
 package serp.project.account.core.service.impl;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.util.CollectionUtils;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.CreateRoleDto;
 import serp.project.account.core.domain.entity.RoleEntity;
@@ -23,6 +22,7 @@ import serp.project.account.core.port.store.IRolePermissionPort;
 import serp.project.account.core.port.store.IRolePort;
 import serp.project.account.core.service.IRoleService;
 import serp.project.account.infrastructure.store.mapper.RoleMapper;
+import serp.project.account.kernel.utils.CollectionUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -34,7 +34,6 @@ public class RoleService implements IRoleService {
     private final RoleMapper roleMapper;
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public RoleEntity createRole(CreateRoleDto request) {
         var existedRole = rolePort.getRoleByName(request.getName());
         if (existedRole != null) {
@@ -80,6 +79,29 @@ public class RoleService implements IRoleService {
             }
         });
         return roles;
+    }
+
+    @Override
+    public void addPermissionsToRole(Long roleId, List<Long> permissionIds) {
+        RoleEntity role = rolePort.getRoleById(roleId);
+        if (role == null) {
+            throw new AppException(Constants.ErrorMessage.ROLE_NOT_FOUND);
+        }
+        List<RolePermissionEntity> rolePermissions = rolePermissionPort.getRolePermissionsByRoleId(role.getId());
+        Set<Long> existingPermissionIds = rolePermissions.stream()
+                .map(RolePermissionEntity::getPermissionId)
+                .collect(Collectors.toSet());
+
+        List<RolePermissionEntity> newRolePermissions = permissionIds.stream()
+                .filter(permissionId -> !existingPermissionIds.contains(permissionId))
+                .map(permissionId -> RolePermissionEntity.builder()
+                        .roleId(role.getId())
+                        .permissionId(permissionId)
+                        .build())
+                .collect(Collectors.toList());
+        if (!CollectionUtils.isEmpty(newRolePermissions)) {
+            rolePermissionPort.saveAll(newRolePermissions);
+        }
     }
 
 }

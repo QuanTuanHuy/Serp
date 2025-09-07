@@ -3,11 +3,10 @@ package serp.project.account.core.usecase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
-import serp.project.account.core.domain.dto.request.CreateClientRoleDto;
-import serp.project.account.core.domain.dto.request.CreateRealmRoleDto;
 import serp.project.account.core.domain.dto.request.CreateRoleDto;
 import serp.project.account.core.domain.entity.PermissionEntity;
 import serp.project.account.core.exception.AppException;
@@ -15,6 +14,7 @@ import serp.project.account.core.service.IKeycloakRoleService;
 import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.impl.PermissionService;
 import serp.project.account.infrastructure.store.mapper.RoleMapper;
+import serp.project.account.kernel.utils.DataUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
 
 import java.util.ArrayList;
@@ -32,8 +32,11 @@ public class RoleUseCase {
 
     private final RoleMapper roleMapper;
 
+    @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> createRole(CreateRoleDto request) {
         try {
+            validateCreateRoleRequest(request);
+
             var permissionIds = request.getPermissionIds();
             List<PermissionEntity> permissions = new ArrayList<>();
             if (!CollectionUtils.isEmpty(permissionIds)) {
@@ -43,41 +46,37 @@ public class RoleUseCase {
                 }
             }
 
+            if (request.getIsRealmRole()) {
+                keycloakRoleService.createRealmRole(roleMapper.toCreateRealmRoleDto(request));
+            } else {
+                keycloakRoleService.createClientRole(roleMapper.toCreateClientRoleDto(request));
+            }
+
             var role = roleService.createRole(request);
             role.setPermissions(permissions);
             return responseUtils.success(role);
         } catch (AppException e) {
             log.error("Error creating role: {}", e.getMessage());
-            return responseUtils.error(e.getCode(), e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Unexpected error when creating role: {}", e.getMessage());
-            return responseUtils.internalServerError(e.getMessage());
+            throw e;
         }
     }
 
-    public GeneralResponse<?> createRealmRole(CreateRealmRoleDto request) {
+    public GeneralResponse<?> addPermissionsToRole(Long roleId, List<Long> permissionIds) {
         try {
-            keycloakRoleService.createRealmRole(request);
-            var createRoleDto = roleMapper.toCreateRoleDto(request);
-            var role = roleService.createRole(createRoleDto);
-            return responseUtils.success(role);
-        } catch (Exception e) {
-            log.error("Error create realm role: {}", e.getMessage());
-            return responseUtils.internalServerError(e.getMessage());
-        }
-    }
-
-    public GeneralResponse<?> createClientRole(CreateClientRoleDto request) {
-        try {
-            keycloakRoleService.createClientRole(request);
-            var createRoleDto = roleMapper.toCreateRoleDto(request);
-            var role = roleService.createRole(createRoleDto);
-            return responseUtils.success(role);
+            var permissions = permissionService.getPermissionsByIds(permissionIds);
+            if (permissions.size() != permissionIds.size()) {
+                return responseUtils.badRequest(Constants.ErrorMessage.ONE_OR_MORE_PERMISSIONS_NOT_FOUND);
+            }
+            roleService.addPermissionsToRole(roleId, permissionIds);
+            return responseUtils.success("Permissions added to role successfully");
         } catch (AppException e) {
-            log.error("Error creating client role: {}", e.getMessage());
-            return responseUtils.error(e.getCode(), e.getMessage());
+            log.error("Error adding permissions to role: {}", e.getMessage());
+            return responseUtils.badRequest(e.getMessage());
         } catch (Exception e) {
-            log.error("Unexpected error when creating client role: {}", e.getMessage());
+            log.error("Unexpected error when adding permissions to role: {}", e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
     }
@@ -89,6 +88,12 @@ public class RoleUseCase {
         } catch (Exception e) {
             log.error("Error getting all roles: {}", e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
+        }
+    }
+
+    private void validateCreateRoleRequest(CreateRoleDto request) {
+        if (request.getIsRealmRole() == false && DataUtils.isNullOrEmpty(request.getKeycloakClientId())) {
+            throw new AppException(Constants.ErrorMessage.CLIENT_NOT_FOUND);
         }
     }
 }

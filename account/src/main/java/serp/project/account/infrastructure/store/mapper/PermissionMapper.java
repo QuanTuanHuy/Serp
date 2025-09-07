@@ -73,6 +73,8 @@ public class PermissionMapper extends BaseMapper {
         return PermissionEntity.builder()
                 .name(request.getName())
                 .description(request.getDescription())
+                .resource(request.getResource())
+                .action(request.getAction())
                 .build();
     }
 }

@@ -31,7 +31,7 @@ public class MenuDisplayModel extends BaseModel {
     @Column(name = "icon", length = 100)
     private String icon;
 
-    @Column(name = "order")
+    @Column(name = "order_index")
     private Integer order;
 
     @Column(name = "parent_id")

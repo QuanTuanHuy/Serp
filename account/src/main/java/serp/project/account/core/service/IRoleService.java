@@ -16,4 +16,6 @@ public interface IRoleService {
     RoleEntity getRoleByName(String name);
 
     List<RoleEntity> getAllRoles();
+
+    void addPermissionsToRole(Long roleId, List<Long> permissionIds);
 }
