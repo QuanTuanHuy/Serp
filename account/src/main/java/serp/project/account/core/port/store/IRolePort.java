@@ -14,4 +14,5 @@ public interface IRolePort {
     RoleEntity getRoleByName(String name);
     List<RoleEntity> getAllRoles();
     List<RoleEntity> getRolesByIds(List<Long> roleIds);
+    RoleEntity getRoleById(Long roleId);
 }

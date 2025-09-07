@@ -10,8 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import serp.project.account.core.domain.dto.request.CreateClientRoleDto;
-import serp.project.account.core.domain.dto.request.CreateRealmRoleDto;
+import serp.project.account.core.domain.dto.request.AddPermissionToRoleDto;
 import serp.project.account.core.domain.dto.request.CreateRoleDto;
 import serp.project.account.core.usecase.RoleUseCase;
 
@@ -27,21 +26,18 @@ public class RoleController {
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
+    @PostMapping("/{roleId}/permissions")
+    public ResponseEntity<?> addPermissionsToRole(
+            @PathVariable Long roleId,
+            @Valid @RequestBody AddPermissionToRoleDto request) {
+        var response = roleUseCase.addPermissionsToRole(roleId, request.getPermissionIds());
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
     @GetMapping
     public ResponseEntity<?> getAllRoles() {
         var response = roleUseCase.getAllRoles();
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
-    @PostMapping("/realm")
-    public ResponseEntity<?> createRealmRole(@Valid @RequestBody CreateRealmRoleDto request) {
-        var response = roleUseCase.createRealmRole(request);
-        return ResponseEntity.status(response.getCode()).body(response);
-    }
-
-    @PostMapping("/client")
-    public ResponseEntity<?> createClientRole(@Valid @RequestBody CreateClientRoleDto request) {
-        var response = roleUseCase.createClientRole(request);
-        return ResponseEntity.status(response.getCode()).body(response);
-    }
 }

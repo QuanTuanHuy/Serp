@@ -22,6 +22,9 @@ import lombok.experimental.SuperBuilder;
 public class RoleEntity extends BaseEntity {
     private String name;
     private String description;
+    private Boolean isRealmRole;
+    private Integer priority;
 
     private List<PermissionEntity> permissions;
+    private List<MenuDisplayEntity> menuDisplays;
 }

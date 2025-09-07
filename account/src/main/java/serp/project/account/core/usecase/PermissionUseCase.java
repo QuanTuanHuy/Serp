@@ -25,7 +25,7 @@ public class PermissionUseCase {
             log.error("Error creating permission: {}", e.getMessage());
             return responseUtils.error(e.getCode(), e.getMessage());
         } catch (Exception e) {
-            log.error("Error creating permission: {}", e.getMessage());
+            log.error("Unexpected Error creating permission: {}", e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
     }

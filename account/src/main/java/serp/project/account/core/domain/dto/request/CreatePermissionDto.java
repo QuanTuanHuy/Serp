@@ -18,4 +18,8 @@ public class CreatePermissionDto {
     @NotBlank
     private String name;
     private String description;
+    @NotBlank
+    private String resource;
+    @NotBlank
+    private String action;
 }

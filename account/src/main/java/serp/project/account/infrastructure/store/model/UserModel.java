@@ -30,6 +30,9 @@ public class UserModel extends BaseModel {
     @Column(name = "last_name", nullable = false)
     private String lastName;
 
+    @Column(name = "phone_number")
+    private String phoneNumber;
+
     @Column(name = "keycloak_id")
     private String keycloakId;
 }

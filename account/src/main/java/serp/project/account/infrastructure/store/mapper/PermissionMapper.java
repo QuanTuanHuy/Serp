@@ -26,6 +26,8 @@ public class PermissionMapper extends BaseMapper {
                 .id(model.getId())
                 .name(model.getName())
                 .description(model.getDescription())
+                .resource(model.getResource())
+                .action(model.getAction())
                 .createdAt(localDateTimeToLong(model.getCreatedAt()))
                 .updatedAt(localDateTimeToLong(model.getUpdatedAt()))
                 .build();
@@ -40,6 +42,8 @@ public class PermissionMapper extends BaseMapper {
                 .id(entity.getId())
                 .name(entity.getName())
                 .description(entity.getDescription())
+                .resource(entity.getResource())
+                .action(entity.getAction())
                 .createdAt(longToLocalDateTime(entity.getCreatedAt()))
                 .updatedAt(longToLocalDateTime(entity.getUpdatedAt()))
                 .build();
@@ -69,6 +73,8 @@ public class PermissionMapper extends BaseMapper {
         return PermissionEntity.builder()
                 .name(request.getName())
                 .description(request.getDescription())
+                .resource(request.getResource())
+                .action(request.getAction())
                 .build();
     }
 }

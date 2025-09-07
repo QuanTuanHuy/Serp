@@ -20,4 +20,6 @@ import lombok.experimental.SuperBuilder;
 public class PermissionEntity extends BaseEntity {
     private String name;
     private String description;
+    private String resource;
+    private String action;
 }

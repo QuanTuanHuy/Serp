@@ -28,6 +28,8 @@ public class RoleMapper extends BaseMapper {
                 .id(model.getId())
                 .name(model.getName())
                 .description(model.getDescription())
+                .isRealmRole(model.getIsReamlRole())
+                .priority(model.getPriority())
                 .createdAt(localDateTimeToLong(model.getCreatedAt()))
                 .updatedAt(localDateTimeToLong(model.getUpdatedAt()))
                 .build();
@@ -42,6 +44,8 @@ public class RoleMapper extends BaseMapper {
                 .id(entity.getId())
                 .name(entity.getName())
                 .description(entity.getDescription())
+                .isReamlRole(entity.getIsRealmRole())
+                .priority(entity.getPriority())
                 .createdAt(longToLocalDateTime(entity.getCreatedAt()))
                 .updatedAt(longToLocalDateTime(entity.getUpdatedAt()))
                 .build();
@@ -71,27 +75,29 @@ public class RoleMapper extends BaseMapper {
         return RoleEntity.builder()
                 .name(request.getName())
                 .description(request.getDescription())
+                .isRealmRole(request.getIsRealmRole())
+                .priority(request.getPriority())
                 .build();
     }
 
-
-    public CreateRoleDto toCreateRoleDto(CreateRealmRoleDto realmRoleDto) {
-        if (realmRoleDto == null) {
+    public CreateRealmRoleDto toCreateRealmRoleDto(CreateRoleDto roleDto) {
+        if (roleDto == null) {
             return null;
         }
-        return CreateRoleDto.builder()
-                .name(realmRoleDto.getName())
-                .description(realmRoleDto.getDescription())
+        return CreateRealmRoleDto.builder()
+                .name(roleDto.getName())
+                .description(roleDto.getDescription())
                 .build();
     }
 
-    public CreateRoleDto toCreateRoleDto(CreateClientRoleDto clientRoleDto) {
-        if (clientRoleDto == null) {
+    public CreateClientRoleDto toCreateClientRoleDto(CreateRoleDto roleDto) {
+        if (roleDto == null) {
             return null;
         }
-        return CreateRoleDto.builder()
-                .name(clientRoleDto.getName())
-                .description(clientRoleDto.getDescription())
+        return CreateClientRoleDto.builder()
+                .name(roleDto.getName())
+                .description(roleDto.getDescription())
+                .clientId(roleDto.getKeycloakClientId())
                 .build();
     }
 }
