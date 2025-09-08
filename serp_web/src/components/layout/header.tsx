@@ -17,7 +17,7 @@ export function Header({ className }: HeaderProps) {
         className
       )}
     >
-      <div className='container flex h-16 items-center justify-between'>
+      <div className='container mx-auto flex h-16 items-center justify-between'>
         <div className='flex items-center space-x-6'>
           <Link href='/' className='flex items-center space-x-2'>
             <span className='font-bold text-xl'>SERP</span>

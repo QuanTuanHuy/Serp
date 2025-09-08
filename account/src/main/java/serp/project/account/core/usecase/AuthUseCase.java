@@ -13,16 +13,16 @@ import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.CreateUserDto;
 import serp.project.account.core.domain.dto.request.LoginRequest;
-import serp.project.account.core.domain.enums.RoleEnum;
+import serp.project.account.core.domain.entity.RoleEntity;
+import serp.project.account.core.domain.enums.GroupEnum;
 import serp.project.account.core.exception.AppException;
-import serp.project.account.core.service.IKeycloakUserService;
-import serp.project.account.core.service.IRoleService;
-import serp.project.account.core.service.ITokenService;
-import serp.project.account.core.service.IUserService;
+import serp.project.account.core.service.*;
+import serp.project.account.core.service.impl.GroupService;
 import serp.project.account.infrastructure.store.mapper.UserMapper;
+import serp.project.account.kernel.utils.CollectionUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
 
-import java.util.List;
+import java.util.Collections;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +32,8 @@ public class AuthUseCase {
     private final IKeycloakUserService keycloakUserService;
     private final IRoleService roleService;
     private final ITokenService tokenService;
+    private final GroupService groupService;
+    private final IKeycloakGroupService keycloakGroupService;
 
     private final ResponseUtils responseUtils;
 
@@ -40,20 +42,25 @@ public class AuthUseCase {
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> registerUser(CreateUserDto request) {
         try {
-            var role = roleService.getRoleByName(RoleEnum.USER.getRole());
-            if (role == null) {
-                log.error("Role USER not found");
+            var group = groupService.getGroupByName(GroupEnum.DEFAULT_SERP_GROUP.getName());
+            if (group == null) {
                 return responseUtils.internalServerError(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
             }
 
-            request.setRoleIds(List.of(role.getId()));
+            request.setRoleIds(Collections.emptyList());
             var user = userService.createUser(request);
-            user.setRoles(List.of(role));
 
             var createUserKeycloak = userMapper.createUserMapper(user, request);
-            String keycloakId = keycloakUserService.createUser(createUserKeycloak);
-            keycloakUserService.assignRoles(keycloakId, List.of(role.getName()));
-            userService.updateKeycloakUser(user.getId(), keycloakId);
+            String userKeycloakId = keycloakUserService.createUser(createUserKeycloak);
+            userService.updateKeycloakUser(user.getId(), userKeycloakId);
+
+            keycloakGroupService.addUserToGroup(userKeycloakId, group.getKeycloakGroupId());
+            groupService.addUserToGroup(user.getId(), group.getId());
+
+            var roles = roleService.getRolesByGroupId(group.getId());
+            if (!CollectionUtils.isEmpty(roles)) {
+                userService.addRolesToUser(user.getId(), roles.stream().map(RoleEntity::getId).toList());
+            }
 
             return responseUtils.success(user);
         } catch (AppException e) {

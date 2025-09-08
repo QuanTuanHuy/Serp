@@ -14,9 +14,11 @@ import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.CreateRoleDto;
+import serp.project.account.core.domain.entity.GroupRoleEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.RolePermissionEntity;
 import serp.project.account.core.exception.AppException;
+import serp.project.account.core.port.store.IGroupRolePort;
 import serp.project.account.core.port.store.IPermissionPort;
 import serp.project.account.core.port.store.IRolePermissionPort;
 import serp.project.account.core.port.store.IRolePort;
@@ -28,6 +30,7 @@ import serp.project.account.kernel.utils.CollectionUtils;
 @RequiredArgsConstructor
 public class RoleService implements IRoleService {
     private final IRolePort rolePort;
+    private final IGroupRolePort groupRolePort;
     private final IRolePermissionPort rolePermissionPort;
     private final IPermissionPort permissionPort;
 
@@ -64,6 +67,7 @@ public class RoleService implements IRoleService {
 
     @Override
     public List<RoleEntity> getAllRoles() {
+        // Need cache later
         var roles = rolePort.getAllRoles();
         var permissions = permissionPort.getAllPermissions();
         roles.forEach(role -> {
@@ -102,6 +106,17 @@ public class RoleService implements IRoleService {
         if (!CollectionUtils.isEmpty(newRolePermissions)) {
             rolePermissionPort.saveAll(newRolePermissions);
         }
+    }
+
+    @Override
+    public List<RoleEntity> getRolesByGroupId(Long groupId) {
+        List<Long> roleIds = groupRolePort.getByGroupId(groupId).stream()
+                .map(GroupRoleEntity::getRoleId)
+                .collect(Collectors.toList());
+        if (CollectionUtils.isEmpty(roleIds)) {
+            return List.of();
+        }
+        return rolePort.getRolesByIds(roleIds);
     }
 
 }

@@ -17,7 +17,7 @@ public class UserSpecification extends BaseSpecification<UserModel> {
     }
 
     public static Specification<UserModel> containsName(String name) {
-        return like("fullName", name);
+        return like("firstName", name);
     }
     
     public static Specification<UserModel> hasExactEmail(String email) {

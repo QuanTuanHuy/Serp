@@ -26,11 +26,11 @@ public class AppException extends RuntimeException {
 
     private Integer getCodeBaseOnMessage(String message) {
         return switch (message) {
-            case Constants.ErrorMessage.BAD_REQUEST ->  Constants.HttpStatusCode.BAD_REQUEST;
             case Constants.ErrorMessage.UNAUTHORIZED -> Constants.HttpStatusCode.UNAUTHORIZED;
             case Constants.ErrorMessage.FORBIDDEN -> Constants.HttpStatusCode.FORBIDDEN;
             case Constants.ErrorMessage.NOT_FOUND -> Constants.HttpStatusCode.NOT_FOUND;
-            default -> Constants.HttpStatusCode.INTERNAL_SERVER_ERROR;
+            case Constants.ErrorMessage.INTERNAL_SERVER_ERROR -> Constants.HttpStatusCode.INTERNAL_SERVER_ERROR;
+            default -> Constants.HttpStatusCode.BAD_REQUEST;
         };
     }
 }

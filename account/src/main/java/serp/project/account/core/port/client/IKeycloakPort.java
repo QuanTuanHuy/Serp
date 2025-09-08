@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface IKeycloakPort {
     String createUser(CreateKeycloakUserDto request);
-    void assignRoles(String userId, List<String> roleNames);
+    void assignRealmRoles(String userId, List<String> roleNames);
     void assignClientRoles(String userId, String clientId, List<String> roleNames);
     void deleteUser(String userId);
     boolean isUserExists(String username);

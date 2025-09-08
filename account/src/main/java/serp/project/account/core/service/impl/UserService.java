@@ -8,10 +8,12 @@ package serp.project.account.core.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.CreateUserDto;
 import serp.project.account.core.domain.dto.request.GetUserParams;
-import serp.project.account.core.domain.entity.BaseEntity;
+import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.UserEntity;
 import serp.project.account.core.domain.entity.UserRoleEntity;
 import serp.project.account.core.exception.AppException;
@@ -37,6 +39,7 @@ public class UserService implements IUserService {
     private final UserMapper userMapper;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public UserEntity createUser(CreateUserDto request) {
         UserEntity existedUser = userPort.getUserByEmail(request.getEmail());
         if (existedUser != null) {
@@ -67,12 +70,13 @@ public class UserService implements IUserService {
         }
         var userRoles = userRolePort.getUserRolesByUserId(user.getId());
         var roleMap = roleService.getAllRoles().stream()
-                .collect(Collectors.toMap(BaseEntity::getId, Function.identity()));
+                .collect(Collectors.toMap(RoleEntity::getId, Function.identity()));
         user.setRoles(userRoles.stream().map(ur -> roleMap.get(ur.getRoleId())).toList());
         return user;
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void updateKeycloakUser(Long userId, String keycloakId) {
         UserEntity user = userPort.getUserById(userId);
         if (user == null) {
@@ -94,7 +98,7 @@ public class UserService implements IUserService {
                 .map(UserEntity::getId).toList();
         var userRoles = userRolePort.getUserRolesByUserIds(userIds);
         var roleMap = roleService.getAllRoles().stream()
-                .collect(Collectors.toMap(BaseEntity::getId, Function.identity()));
+                .collect(Collectors.toMap(RoleEntity::getId, Function.identity()));
 
         users.forEach(user -> {
             var roles = userRoles.stream()
@@ -105,5 +109,37 @@ public class UserService implements IUserService {
         });
 
         return result;
+    }
+
+    @Override
+    public UserEntity getUserById(Long userId) {
+        return userPort.getUserById(userId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void addRolesToUser(Long userId, List<Long> roleIds) {
+        UserEntity user = userPort.getUserById(userId);
+        if (user == null) {
+            throw new AppException(Constants.ErrorMessage.USER_NOT_FOUND);
+        }
+
+        List<RoleEntity> roles = roleService.getAllRoles().stream()
+                .filter(role -> roleIds.contains(role.getId()))
+                .toList();
+
+        List<Long> existedRoleIds = userRolePort.getUserRolesByUserId(userId).stream()
+                .map(UserRoleEntity::getRoleId)
+                .toList();
+        List<UserRoleEntity> newUserRoles = roles.stream()
+                .filter(role -> !existedRoleIds.contains(role.getId()))
+                .map(role -> UserRoleEntity.builder()
+                        .userId(userId)
+                        .roleId(role.getId())
+                        .build())
+                .collect(Collectors.toList());
+        if (!CollectionUtils.isEmpty(newUserRoles)) {
+            userRolePort.saveAll(newUserRoles);
+        }
     }
 }
