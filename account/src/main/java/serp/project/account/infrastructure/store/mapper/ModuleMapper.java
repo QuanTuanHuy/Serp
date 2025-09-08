@@ -10,6 +10,8 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
+import serp.project.account.core.domain.dto.request.CreateModuleDto;
+import serp.project.account.core.domain.dto.request.UpdateModuleDto;
 import serp.project.account.core.domain.entity.ModuleEntity;
 import serp.project.account.infrastructure.store.model.ModuleModel;
 
@@ -64,5 +66,28 @@ public class ModuleMapper extends BaseMapper {
         return entities.stream()
                 .map(this::toModel)
                 .collect(Collectors.toList());
+    }
+
+    public ModuleEntity createModuleMapper(CreateModuleDto request) {
+        if (request == null) {
+            return null;
+        }
+
+        return ModuleEntity.builder()
+                .moduleName(request.getName())
+                .description(request.getDescription())
+                .keycloakClientId(request.getKeycloakClientId())
+                .build();
+    }
+
+    public ModuleEntity updateModuleMapper(ModuleEntity entity, UpdateModuleDto request) {
+        if (entity == null || request == null) {
+            return entity;
+        }
+
+        entity.setModuleName(request.getName());
+        entity.setDescription(request.getDescription());
+        entity.setKeycloakClientId(request.getKeycloakClientId());
+        return entity;
     }
 }

@@ -40,6 +40,9 @@ public class Constants {
         public static final String TOO_MANY_REQUESTS = "Too Many Requests";
         public static final String UNKNOWN_ERROR = "Unknown Error";
 
+        public static final String MODULE_ALREADY_EXISTS = "Module already exists";
+        public static final String MODULE_NOT_FOUND = "Module not found";
+
         public static final String CLIENT_NOT_FOUND = "Client not found";
 
         public static final String PERMISSION_ALREADY_EXISTS = "Permission already exists";

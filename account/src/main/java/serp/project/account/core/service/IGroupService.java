@@ -2,6 +2,7 @@
  * Author: QuanTuanHuy
  * Description: Part of Serp Project
  */
+
 package serp.project.account.core.service;
 
 import serp.project.account.core.domain.dto.request.CreateGroupDto;

@@ -74,6 +74,8 @@ app:
           second: GET
         - first: /api/v1/users/**
           second: GET
+        - first: /api/v1/modules/**
+          second: GET
       protectedUrls:
         - url-pattern: /api/v1/users/**
           roles:
@@ -86,6 +88,9 @@ app:
           roles:
             - ADMIN
         - url-pattern: /api/v1/groups/**
+          roles:
+            - ADMIN
+        - url-pattern: /api/v1/modules/**
           roles:
             - ADMIN
 
