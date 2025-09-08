@@ -60,6 +60,8 @@ public class Constants {
         public static final String CREATE_USER_FAILED = "Create user failed";
 
         public static final String WRONG_EMAIL_OR_PASSWORD = "Wrong email or password";
+        public static final String INVALID_REFRESH_TOKEN = "Invalid refresh token";
+        public static final String TOKEN_EXPIRED = "Token expired";
     }
 
     @UtilityClass

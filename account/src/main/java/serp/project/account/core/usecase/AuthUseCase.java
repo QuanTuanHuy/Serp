@@ -13,6 +13,8 @@ import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.CreateUserDto;
 import serp.project.account.core.domain.dto.request.LoginRequest;
+import serp.project.account.core.domain.dto.request.RefreshTokenRequest;
+import serp.project.account.core.domain.dto.request.RevokeTokenRequest;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.enums.GroupEnum;
 import serp.project.account.core.exception.AppException;
@@ -95,6 +97,32 @@ public class AuthUseCase {
             return responseUtils.error(e.getCode(), e.getMessage());
         } catch (Exception e) {
             log.error("Unexpected error when getting user token: {}", e.getMessage());
+            return responseUtils.internalServerError(e.getMessage());
+        }
+    }
+
+    public GeneralResponse<?> refreshToken(RefreshTokenRequest request) {
+        try {
+            var tokenResponse = tokenService.refreshToken(request.getRefreshToken());
+            return responseUtils.success(tokenResponse);
+        } catch (AppException e) {
+            log.error("Error refreshing token: {}", e.getMessage());
+            return responseUtils.error(e.getCode(), e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error when refreshing token: {}", e.getMessage());
+            return responseUtils.internalServerError(e.getMessage());
+        }
+    }
+
+    public GeneralResponse<?> revokeToken(RevokeTokenRequest request) {
+        try {
+            tokenService.revokeToken(request.getRefreshToken());
+            return responseUtils.success("Token revoked successfully");
+        } catch (AppException e) {
+            log.error("Error revoking token: {}", e.getMessage());
+            return responseUtils.error(e.getCode(), e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error when revoking token: {}", e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
     }

@@ -1,3 +1,8 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
 package serp.project.account.core.service.impl;
 
 import lombok.RequiredArgsConstructor;
@@ -55,7 +60,8 @@ public class KeycloakUserService implements IKeycloakUserService {
             log.error("Error assigning roles to user {} for client {}: {}", userId, clientId, e.getMessage());
             throw e;
         } catch (Exception e) {
-            log.error("Unexpected error assigning roles to user {} for client {}: {}", userId, clientId, e.getMessage());
+            log.error("Unexpected error assigning roles to user {} for client {}: {}", userId, clientId,
+                    e.getMessage());
             throw new AppException(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
         }
     }
