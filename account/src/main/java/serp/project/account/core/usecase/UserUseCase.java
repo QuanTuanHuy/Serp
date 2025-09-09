@@ -73,6 +73,19 @@ public class UserUseCase {
         }
     }
 
+    public GeneralResponse<?> getUserProfile(Long userId) {
+        try {
+            var user = userService.getUserProfile(userId);
+            if (user == null) {
+                return responseUtils.badRequest(Constants.ErrorMessage.USER_NOT_FOUND);
+            }
+            return responseUtils.success(user);
+        } catch (Exception e) {
+            log.error("Get user profile failed: {}", e.getMessage());
+            return responseUtils.internalServerError(e.getMessage());
+        }
+    }
+
     public GeneralResponse<?> getUsers(GetUserParams params) {
         try {
             var response = userService.getUsers(params);

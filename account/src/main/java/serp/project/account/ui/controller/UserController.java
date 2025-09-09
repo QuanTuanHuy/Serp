@@ -7,17 +7,27 @@ package serp.project.account.ui.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import java.util.Optional;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.AssignRoleToUserDto;
 import serp.project.account.core.domain.dto.request.GetUserParams;
 import serp.project.account.core.usecase.UserUseCase;
+import serp.project.account.kernel.utils.AuthUtils;
+import serp.project.account.kernel.utils.ResponseUtils;
 
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserController {
     private final UserUseCase userUseCase;
+
+    private final AuthUtils authUtils;
+    private final ResponseUtils responseUtil;
 
     @GetMapping
     public ResponseEntity<?> getUsers(
@@ -31,6 +41,17 @@ public class UserController {
                 .page(page).pageSize(pageSize).sortBy(sortBy).sortDirection(sortDir).search(search)
                 .build();
         var response = userUseCase.getUsers(params);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @GetMapping("/profile/me")
+    public ResponseEntity<?> getMyProfile() {
+        Optional<Long> userIdOpt = authUtils.getCurrentUserId();
+        if (userIdOpt.isEmpty()) {
+            var response = responseUtil.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
+            return ResponseEntity.status(response.getCode()).body(response);
+        }
+        var response = userUseCase.getUserProfile(userIdOpt.get());
         return ResponseEntity.status(response.getCode()).body(response);
     }
 

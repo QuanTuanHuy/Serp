@@ -17,6 +17,8 @@ import (
 type IAuthService interface {
 	Register(ctx context.Context, req *request.RegisterDTO) (*response.BaseResponse, error)
 	Login(ctx context.Context, req *request.LoginDTO) (*response.BaseResponse, error)
+	RefreshToken(ctx context.Context, req *request.RefreshTokenDTO) (*response.BaseResponse, error)
+	RevokeToken(ctx context.Context, req *request.RefreshTokenDTO) (*response.BaseResponse, error)
 }
 
 type AuthService struct {
@@ -36,6 +38,24 @@ func (a *AuthService) Register(ctx context.Context, req *request.RegisterDTO) (*
 	res, err := a.authClient.Register(ctx, req)
 	if err != nil {
 		log.Error(ctx, "AuthService: Register error: ", err.Error())
+		return nil, err
+	}
+	return res, nil
+}
+
+func (a *AuthService) RefreshToken(ctx context.Context, req *request.RefreshTokenDTO) (*response.BaseResponse, error) {
+	res, err := a.authClient.RefreshToken(ctx, req)
+	if err != nil {
+		log.Error(ctx, "AuthService: RefreshToken error: ", err.Error())
+		return nil, err
+	}
+	return res, nil
+}
+
+func (a *AuthService) RevokeToken(ctx context.Context, req *request.RefreshTokenDTO) (*response.BaseResponse, error) {
+	res, err := a.authClient.RevokeToken(ctx, req)
+	if err != nil {
+		log.Error(ctx, "AuthService: RevokeToken error: ", err.Error())
 		return nil, err
 	}
 	return res, nil

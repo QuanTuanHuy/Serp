@@ -34,8 +34,8 @@ func ToCommentEntity(commentModel *model.CommentModel) *entity.CommentEntity {
 	return &entity.CommentEntity{
 		BaseEntity: entity.BaseEntity{
 			ID:        commentModel.ID,
-			CreatedAt: commentModel.CreatedAt.Unix(),
-			UpdatedAt: commentModel.UpdatedAt.Unix(),
+			CreatedAt: commentModel.CreatedAt.UnixMilli(),
+			UpdatedAt: commentModel.UpdatedAt.UnixMilli(),
 		},
 		Content:      commentModel.Content,
 		TaskID:       commentModel.TaskID,

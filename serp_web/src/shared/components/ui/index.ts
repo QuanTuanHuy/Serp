@@ -6,6 +6,7 @@
 // Base UI Components
 export { Button, buttonVariants } from './button';
 export { Input } from './input';
+export { Label } from './label';
 export {
   Card,
   CardHeader,
@@ -21,3 +22,4 @@ export { ThemeToggle } from './theme-toggle';
 // Component Types
 export type { ButtonProps } from './button';
 export type { InputProps } from './input';
+export type { LabelProps } from './label';

@@ -5,3 +5,4 @@
 
 export { ThemeProvider } from './theme-provider';
 export { NotificationProvider } from './notification-provider';
+export { StoreProvider } from './StoreProvider';

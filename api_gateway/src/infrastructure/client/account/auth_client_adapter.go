@@ -80,6 +80,58 @@ func (a *AuthClientAdapter) Register(ctx context.Context, req *request.RegisterD
 	return &result, nil
 }
 
+func (a *AuthClientAdapter) RefreshToken(ctx context.Context, req *request.RefreshTokenDTO) (*response.BaseResponse, error) {
+	headers := utils.BuildDefaultHeaders()
+
+	var httpResponse *utils.HTTPResponse
+	err := a.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
+		var err error
+		httpResponse, err = a.apiClient.POST(ctx, "/api/v1/auth/refresh-token", req, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call refresh token API: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !a.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("RefreshToken API returned error status: %d", httpResponse.StatusCode))
+	}
+
+	var result response.BaseResponse
+	if err := a.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal refresh token response: %w", err)
+	}
+	return &result, nil
+}
+
+func (a *AuthClientAdapter) RevokeToken(ctx context.Context, req *request.RefreshTokenDTO) (*response.BaseResponse, error) {
+	headers := utils.BuildDefaultHeaders()
+
+	var httpResponse *utils.HTTPResponse
+	err := a.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
+		var err error
+		httpResponse, err = a.apiClient.POST(ctx, "/api/v1/auth/revoke-token", req, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call revoke token API: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !a.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("RevokeToken API returned error status: %d", httpResponse.StatusCode))
+	}
+
+	var result response.BaseResponse
+	if err := a.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal revoke token response: %w", err)
+	}
+	return &result, nil
+}
+
 func NewAuthClientAdapter(authProps *properties.ExternalServiceProperties) port.IAuthClientPort {
 	baseUrl := "http://" + authProps.AccountService.Host + ":" + authProps.AccountService.Port + "/account-service"
 	apiClient := utils.NewBaseAPIClient(baseUrl, authProps.AccountService.Timeout)
