@@ -4,3 +4,4 @@
  */
 
 export * from './ui';
+export { ReduxExample } from './ReduxExample';

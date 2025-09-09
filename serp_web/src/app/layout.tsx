@@ -1,7 +1,11 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 
-import { ThemeProvider, NotificationProvider } from '@/shared/providers';
+import {
+  ThemeProvider,
+  NotificationProvider,
+  StoreProvider,
+} from '@/shared/providers';
 
 import './globals.css';
 
@@ -34,9 +38,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider>
-          <NotificationProvider>{children}</NotificationProvider>
-        </ThemeProvider>
+        <StoreProvider>
+          <ThemeProvider>
+            <NotificationProvider>{children}</NotificationProvider>
+          </ThemeProvider>
+        </StoreProvider>
       </body>
     </html>
   );
