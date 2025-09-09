@@ -63,7 +63,7 @@ export const authApi = api.injectEndpoints({
     }),
 
     getCurrentUser: builder.query<UserProfileResponse, void>({
-      query: () => '/user/profile',
+      query: () => '/users/profile/me',
       providesTags: ['User'],
     }),
   }),

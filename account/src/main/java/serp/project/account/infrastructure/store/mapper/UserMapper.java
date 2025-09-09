@@ -104,6 +104,8 @@ public class UserMapper extends BaseMapper {
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .phoneNumber(user.getPhoneNumber())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
                 .roles(user.getRoles().stream().map(RoleEntity::getName).toList())
                 .build();
     }

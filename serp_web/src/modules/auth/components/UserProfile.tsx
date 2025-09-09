@@ -40,7 +40,9 @@ export const UserProfile: React.FC<UserProfileProps> = ({
           <div className='space-y-1'>
             <h3 className='font-semibold'>{user.fullName}</h3>
             <p className='text-sm text-muted-foreground'>{user.email}</p>
-            <p className='text-xs text-muted-foreground'>Role: {user.role}</p>
+            <p className='text-xs text-muted-foreground'>
+              Role: {user.roles.join(', ')}
+            </p>
             {user.organizationId && (
               <p className='text-xs text-muted-foreground'>
                 Org ID: {user.organizationId}
@@ -102,7 +104,7 @@ export const UserProfileCompact: React.FC = () => {
     <div className='flex items-center space-x-3'>
       <div className='text-right'>
         <p className='text-sm font-medium'>{user.fullName}</p>
-        <p className='text-xs text-muted-foreground'>{user.role}</p>
+        <p className='text-xs text-muted-foreground'>{user.roles.join(', ')}</p>
       </div>
       <Button variant='ghost' size='sm' onClick={() => logout()}>
         Logout

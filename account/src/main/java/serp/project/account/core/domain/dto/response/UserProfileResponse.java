@@ -24,6 +24,8 @@ public class UserProfileResponse {
     private String phoneNumber;
     private Long organizationId;
     private String organizationName;
+    private Long createdAt;
+    private Long updatedAt;
 
     private List<String> roles;
 }

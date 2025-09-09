@@ -88,8 +88,10 @@ export const useAuth = () => {
             const mockUser: User = {
               id: 1,
               email: credentials.email,
+              firstName: '',
+              lastName: '',
               fullName: 'User',
-              role: 'USER',
+              roles: ['USER'],
               isActive: true,
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
@@ -144,8 +146,10 @@ export const useAuth = () => {
             const mockUser: User = {
               id: 1,
               email: userData.email,
+              firstName: userData.firstName,
+              lastName: userData.lastName,
               fullName: `${userData.firstName} ${userData.lastName}`,
-              role: 'USER',
+              roles: ['USER'],
               isActive: true,
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),

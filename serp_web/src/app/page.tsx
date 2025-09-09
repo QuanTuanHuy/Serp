@@ -56,7 +56,7 @@ export default function Home() {
           <div className='flex items-center gap-4'>
             {user && (
               <div className='text-right'>
-                <p className='text-sm font-medium'>Welcome, {user.fullName}!</p>
+                <p className='text-sm font-medium'>Welcome, {user.firstName}!</p>
                 <p className='text-xs text-muted-foreground'>{user.email}</p>
               </div>
             )}
