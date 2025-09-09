@@ -1,22 +1,28 @@
+/**
+ * Theme Provider - Dark/Light Mode Support
+ * (authors: QuanTuanHuy, Description: Part of Serp Project)
+ */
+
 'use client';
 
 import { ThemeProvider as NextThemesProvider } from 'next-themes';
+import type { Attribute } from 'next-themes';
 import * as React from 'react';
 
-interface ThemeProviderProps {
+type ThemeProviderProps = {
   children: React.ReactNode;
-  attribute?: 'class' | 'data-theme';
+  attribute?: Attribute;
   defaultTheme?: string;
   enableSystem?: boolean;
   disableTransitionOnChange?: boolean;
-}
+};
 
 export function ThemeProvider({
   children,
   attribute = 'class',
   defaultTheme = 'system',
   enableSystem = true,
-  disableTransitionOnChange = false,
+  disableTransitionOnChange = true,
   ...props
 }: ThemeProviderProps) {
   return (
