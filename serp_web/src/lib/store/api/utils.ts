@@ -4,6 +4,7 @@
  */
 
 import type { ApiResponse, ApiError } from './types';
+import { epochToISOString } from '../../../shared/utils/dateTransformer';
 
 /**
  * Check if API response is successful
@@ -17,6 +18,54 @@ export const isSuccessResponse = (response: any): boolean => {
  */
 export const isErrorResponse = (response: any): response is ApiError => {
   return response?.code !== 200 || response?.status.toLowerCase() !== 'success';
+};
+
+/**
+ * Transform timestamp fields in API response data
+ * Converts epoch timestamps to ISO strings for frontend consistency
+ */
+export const transformTimestampFields = <T>(data: T): T => {
+  if (!data || typeof data !== 'object') {
+    return data;
+  }
+
+  if (Array.isArray(data)) {
+    return data.map((item) => transformTimestampFields(item)) as T;
+  }
+
+  const transformed = { ...data } as any;
+
+  const timestampFields = ['createdAt', 'updatedAt'];
+
+  timestampFields.forEach((field) => {
+    if (transformed[field] && typeof transformed[field] === 'number') {
+      transformed[field] = epochToISOString(transformed[field]);
+    }
+  });
+
+  Object.keys(transformed).forEach((key) => {
+    if (transformed[key] && typeof transformed[key] === 'object') {
+      transformed[key] = transformTimestampFields(transformed[key]);
+    }
+  });
+
+  return transformed;
+};
+
+/**
+ * Standard transform response for RTK Query endpoints
+ * Handles API response structure and timestamp transformation
+ */
+export const createRtkTransformResponse = () => {
+  return (response: any) => {
+    if (response?.code === 200 && response?.status === 'success') {
+      return {
+        ...response,
+        data: transformTimestampFields(response.data),
+      };
+    }
+    return response;
+  };
 };
 
 /**

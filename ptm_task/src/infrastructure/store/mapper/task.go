@@ -25,11 +25,11 @@ func ToTaskModel(task *entity.TaskEntity) *model.TaskModel {
 
 	var startDate, deadline *time.Time
 	if task.StartDate != nil {
-		startTime := time.Unix(*task.StartDate, 0)
+		startTime := time.UnixMilli(*task.StartDate)
 		startDate = &startTime
 	}
 	if task.Deadline != nil {
-		deadlineTime := time.Unix(*task.Deadline, 0)
+		deadlineTime := time.UnixMilli(*task.Deadline)
 		deadline = &deadlineTime
 	}
 
@@ -62,19 +62,19 @@ func ToTaskEntity(taskModel *model.TaskModel) *entity.TaskEntity {
 
 	var startDate, deadline *int64
 	if taskModel.StartDate != nil {
-		startUnix := taskModel.StartDate.Unix()
+		startUnix := taskModel.StartDate.UnixMilli()
 		startDate = &startUnix
 	}
 	if taskModel.Deadline != nil {
-		deadlineUnix := taskModel.Deadline.Unix()
+		deadlineUnix := taskModel.Deadline.UnixMilli()
 		deadline = &deadlineUnix
 	}
 
 	return &entity.TaskEntity{
 		BaseEntity: entity.BaseEntity{
 			ID:        taskModel.ID,
-			CreatedAt: taskModel.CreatedAt.Unix(),
-			UpdatedAt: taskModel.UpdatedAt.Unix(),
+			CreatedAt: taskModel.CreatedAt.UnixMilli(),
+			UpdatedAt: taskModel.UpdatedAt.UnixMilli(),
 		},
 		Title:        taskModel.Title,
 		Description:  taskModel.Description,

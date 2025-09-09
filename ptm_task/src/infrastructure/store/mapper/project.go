@@ -36,8 +36,8 @@ func ToProjectEntity(projectModel *model.ProjectModel) *entity.ProjectEntity {
 	return &entity.ProjectEntity{
 		BaseEntity: entity.BaseEntity{
 			ID:        projectModel.ID,
-			CreatedAt: projectModel.CreatedAt.Unix(),
-			UpdatedAt: projectModel.UpdatedAt.Unix(),
+			CreatedAt: projectModel.CreatedAt.UnixMilli(),
+			UpdatedAt: projectModel.UpdatedAt.UnixMilli(),
 		},
 		Name:         projectModel.Name,
 		Description:  projectModel.Description,

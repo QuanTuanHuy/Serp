@@ -19,8 +19,8 @@ func ToNoteEntity(note *model.NoteModel) *entity.NoteEntity {
 	return &entity.NoteEntity{
 		BaseEntity: entity.BaseEntity{
 			ID:        note.ID,
-			CreatedAt: note.CreatedAt.Unix(),
-			UpdatedAt: note.UpdatedAt.Unix(),
+			CreatedAt: note.CreatedAt.UnixMilli(),
+			UpdatedAt: note.UpdatedAt.UnixMilli(),
 		},
 		Name:               note.Name,
 		SummaryDisplayText: note.SummaryDisplayText,

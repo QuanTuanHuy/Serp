@@ -15,6 +15,7 @@ import {
   CardTitle,
   Button,
 } from '@/shared/components';
+import { formatDateTime } from '@/shared';
 
 interface UserProfileProps {
   showCard?: boolean;
@@ -48,6 +49,10 @@ export const UserProfile: React.FC<UserProfileProps> = ({
                 Org ID: {user.organizationId}
               </p>
             )}
+            <div className='pt-2 text-xs text-muted-foreground space-y-1'>
+              <div>Created: {formatDateTime(user.createdAt)}</div>
+              <div>Updated: {formatDateTime(user.updatedAt)}</div>
+            </div>
           </div>
           <div className='flex items-center space-x-1'>
             <div

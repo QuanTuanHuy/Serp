@@ -29,6 +29,21 @@ export function formatDate(date: Date | string): string {
 }
 
 /**
+ * Format date and time to readable string
+ * @param date - Date object or string
+ * @returns Formatted date and time string
+ */
+export function formatDateTime(date: Date | string): string {
+  return new Date(date).toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+/**
  * Format currency
  * @param amount - Amount to format
  * @param currency - Currency code (default: USD)

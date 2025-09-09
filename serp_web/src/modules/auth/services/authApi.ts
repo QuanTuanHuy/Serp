@@ -4,6 +4,7 @@
  */
 
 import { api } from '@/lib/store/api';
+import { createRtkTransformResponse } from '@/lib/store/api/utils';
 import type {
   LoginRequest,
   RegisterRequest,
@@ -65,6 +66,7 @@ export const authApi = api.injectEndpoints({
     getCurrentUser: builder.query<UserProfileResponse, void>({
       query: () => '/users/profile/me',
       providesTags: ['User'],
+      transformResponse: createRtkTransformResponse(),
     }),
   }),
   overrideExisting: false,
