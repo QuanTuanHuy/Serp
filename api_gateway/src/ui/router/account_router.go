@@ -15,5 +15,7 @@ func RegisterAccountRoutes(group *gin.RouterGroup, authController *account.AuthC
 	{
 		authV1.POST("/register", authController.Register)
 		authV1.POST("/login", authController.Login)
+		authV1.POST("/refresh-token", authController.RefreshToken)
+		authV1.POST("/revoke-token", authController.RevokeToken)
 	}
 }
