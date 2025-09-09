@@ -12,6 +12,8 @@ import org.springframework.stereotype.Component;
 
 import serp.project.account.core.domain.dto.request.CreateKeycloakUserDto;
 import serp.project.account.core.domain.dto.request.CreateUserDto;
+import serp.project.account.core.domain.dto.response.UserProfileResponse;
+import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.UserEntity;
 import serp.project.account.infrastructure.store.model.UserModel;
 
@@ -88,6 +90,21 @@ public class UserMapper extends BaseMapper {
                 .lastName(entity.getLastName())
                 .password(request.getPassword())
                 .uid(entity.getId())
+                .build();
+    }
+
+    public UserProfileResponse toProfileResponse(UserEntity user) {
+        if (user == null) {
+            return null;
+        }
+
+        return UserProfileResponse.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .phoneNumber(user.getPhoneNumber())
+                .roles(user.getRoles().stream().map(RoleEntity::getName).toList())
                 .build();
     }
 }

@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.CreateUserDto;
 import serp.project.account.core.domain.dto.request.GetUserParams;
+import serp.project.account.core.domain.dto.response.UserProfileResponse;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.UserEntity;
 import serp.project.account.core.domain.entity.UserRoleEntity;
@@ -113,7 +114,20 @@ public class UserService implements IUserService {
 
     @Override
     public UserEntity getUserById(Long userId) {
-        return userPort.getUserById(userId);
+        UserEntity user = userPort.getUserById(userId);
+        if (user == null) {
+            return null;
+        }
+        var userRoles = userRolePort.getUserRolesByUserId(user.getId());
+        var roleMap = roleService.getAllRoles().stream()
+                .collect(Collectors.toMap(RoleEntity::getId, Function.identity()));
+        user.setRoles(userRoles.stream().map(ur -> roleMap.get(ur.getRoleId())).toList());
+        return user;
+    }
+
+    @Override
+    public UserProfileResponse getUserProfile(Long userId) {
+        return userMapper.toProfileResponse(getUserById(userId));
     }
 
     @Override
