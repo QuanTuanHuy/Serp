@@ -17,5 +17,7 @@ public interface IRoleService {
 
     List<RoleEntity> getAllRoles();
 
+    List<RoleEntity> getRolesByGroupId(Long groupId);
+
     void addPermissionsToRole(Long roleId, List<Long> permissionIds);
 }

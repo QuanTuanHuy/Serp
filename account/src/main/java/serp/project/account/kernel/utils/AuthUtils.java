@@ -32,7 +32,7 @@ public class AuthUtils {
 
     public Optional<Long> getCurrentUserId() {
         return getCurrentJwt()
-                .map(jwt -> jwt.getClaimAsString("sub"))
+                .map(jwt -> jwt.getClaimAsString("uid"))
                 .filter(sub -> !sub.isEmpty())
                 .map(Long::valueOf);
     }
@@ -44,6 +44,6 @@ public class AuthUtils {
 
     public Optional<String> getCurrentUserFullName() {
         return getCurrentJwt()
-                .map(jwt -> jwt.getClaimAsString("full_name"));
+                .map(jwt -> jwt.getClaimAsString("name"));
     }
 }

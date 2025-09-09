@@ -28,7 +28,10 @@ public class RoleModel extends BaseModel {
     private String description;
 
     @Column(name = "is_realm_role", nullable = false)
-    private Boolean isReamlRole;
+    private Boolean isRealmRole;
+
+    @Column(name = "keycloak_client_id", length = 100)
+    private String keycloakClientId;
 
     @Column(name = "priority")
     private Integer priority;

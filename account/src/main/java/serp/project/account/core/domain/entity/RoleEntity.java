@@ -23,6 +23,7 @@ public class RoleEntity extends BaseEntity {
     private String name;
     private String description;
     private Boolean isRealmRole;
+    private String keycloakClientId;
     private Integer priority;
 
     private List<PermissionEntity> permissions;

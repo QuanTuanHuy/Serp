@@ -16,11 +16,14 @@ func AccountModule() fx.Option {
 	return fx.Module("account",
 		// Provide adapter
 		fx.Provide(adapter.NewAuthClientAdapter),
+		fx.Provide(adapter.NewUserClientAdapter),
 
 		// Provide service
 		fx.Provide(service.NewAuthService),
+		fx.Provide(service.NewUserService),
 
 		// Provide controller
 		fx.Provide(controller.NewAuthController),
+		fx.Provide(controller.NewUserController),
 	)
 }

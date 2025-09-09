@@ -51,8 +51,8 @@ app:
     client-secret: ${CLIENT_SECRET}
 
     admin:
-      username: serp-admin
-      password: serp-admin
+      username: ${KEYCLOAK_ADMIN_USER}
+      password: ${KEYCLOAK_ADMIN_PASSWORD}
       client-id: admin-cli
 
   security:
@@ -68,11 +68,17 @@ app:
           second: POST
         - first: /api/v1/auth/get-token
           second: POST
+        - first: /api/v1/auth/refresh-token
+          second: POST
+        - first: /api/v1/auth/revoke-token
+          second: POST
         - first: /api/v1/permissions/**
           second: GET
         - first: /api/v1/roles/**
           second: GET
         - first: /api/v1/users/**
+          second: GET
+        - first: /api/v1/modules/**
           second: GET
       protectedUrls:
         - url-pattern: /api/v1/users/**
@@ -83,6 +89,12 @@ app:
           roles:
             - ADMIN
         - url-pattern: /api/v1/permissions/**
+          roles:
+            - ADMIN
+        - url-pattern: /api/v1/groups/**
+          roles:
+            - ADMIN
+        - url-pattern: /api/v1/modules/**
           roles:
             - ADMIN
 

@@ -1,3 +1,8 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
 package serp.project.account.core.service.impl;
 
 import lombok.RequiredArgsConstructor;
@@ -35,14 +40,14 @@ public class KeycloakUserService implements IKeycloakUserService {
     }
 
     @Override
-    public void assignRoles(String userId, List<String> roleNames) {
+    public void assignRealmRoles(String userId, List<String> roleNames) {
         try {
-            keycloakPort.assignRoles(userId, roleNames);
+            keycloakPort.assignRealmRoles(userId, roleNames);
         } catch (AppException e) {
-            log.error("Error assigning roles to user {}: {}", userId, e.getMessage());
+            log.error("Error assigning realm roles to user {}: {}", userId, e.getMessage());
             throw e;
         } catch (Exception e) {
-            log.error("Unexpected error assigning roles to user {}: {}", userId, e.getMessage());
+            log.error("Unexpected error assigning realm roles to user {}: {}", userId, e.getMessage());
             throw new AppException(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
         }
     }
@@ -55,7 +60,8 @@ public class KeycloakUserService implements IKeycloakUserService {
             log.error("Error assigning roles to user {} for client {}: {}", userId, clientId, e.getMessage());
             throw e;
         } catch (Exception e) {
-            log.error("Unexpected error assigning roles to user {} for client {}: {}", userId, clientId, e.getMessage());
+            log.error("Unexpected error assigning roles to user {} for client {}: {}", userId, clientId,
+                    e.getMessage());
             throw new AppException(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
         }
     }

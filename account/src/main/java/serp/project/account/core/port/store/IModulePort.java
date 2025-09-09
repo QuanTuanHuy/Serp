@@ -6,6 +6,7 @@ import java.util.List;
 
 public interface IModulePort {
     ModuleEntity save(ModuleEntity module);
+    ModuleEntity getModuleById(Long moduleId);
     List<ModuleEntity> getAllModules();
     boolean existsByName(String name);
 }

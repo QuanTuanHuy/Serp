@@ -52,8 +52,8 @@ func ToGroupTaskEntity(groupTaskModel *model.GroupTaskModel) *entity.GroupTaskEn
 	return &entity.GroupTaskEntity{
 		BaseEntity: entity.BaseEntity{
 			ID:        groupTaskModel.ID,
-			CreatedAt: groupTaskModel.CreatedAt.Unix(),
-			UpdatedAt: groupTaskModel.UpdatedAt.Unix(),
+			CreatedAt: groupTaskModel.CreatedAt.UnixMilli(),
+			UpdatedAt: groupTaskModel.UpdatedAt.UnixMilli(),
 		},
 		Title:          groupTaskModel.Title,
 		Description:    groupTaskModel.Description,

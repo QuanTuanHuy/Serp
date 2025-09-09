@@ -29,6 +29,13 @@ public class ModuleAdapter implements IModulePort {
     }
 
     @Override
+    public ModuleEntity getModuleById(Long moduleId) {
+        return moduleRepository.findById(moduleId)
+                .map(moduleMapper::toEntity)
+                .orElse(null);
+    }
+
+    @Override
     public List<ModuleEntity> getAllModules() {
         return moduleMapper.toEntityList(moduleRepository.findAll());
     }

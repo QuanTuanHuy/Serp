@@ -7,6 +7,8 @@ This is a **microservices architecture** with event-driven communication using *
 - **api_gateway** (Go, port 8080) - API gateway/router with minimal endpoints
 - **account** (Java, Spring Boot, port 8081) - User account management service
 - **logging_tracker** (Java, Spring Boot, port 8082) - Track logging of microservices
+- **ptm_task** (Go, Gin port 8083) - Personal Task Management service
+- **ptm_schedule** (Go, Gin port 8084) - Personal Schedule/Calendar service
 - **serp_web** (NextJS, Redux, Shadcn, Tailwind CSS) - Frontend application
 
 ## Go Services Architecture Pattern
@@ -114,8 +116,6 @@ cd serp_web && npm run dev
 ### Service Communication
 - **Frontend** → **api_gateway** → **backend services**
 
-### Frontend Configuration
-
 ## Critical Patterns to Follow
 
 ### 1. Port Adapter Pattern
@@ -159,6 +159,54 @@ Events are produced in use cases and consumed by dedicated handlers. Each servic
 6. **Add service** for business rules in `core/service/`
 7. **Create use case** for orchestration in `core/usecase/`
 8. **Add controller** for HTTP endpoints in `ui/controller/`
+
+## Frontend Architecture
+- Modular Structure
+
+```
+src/
+├── app/                    # Next.js App Router
+│   ├── (dashboard)/        # Dashboard route group
+│   │   ├── crm/           # CRM module pages
+│   │   ├── accounting/    # Accounting module pages
+│   │   └── inventory/     # Inventory module pages
+│   └── layout.tsx
+├── modules/               # 🎯 Business Logic Modules
+│   ├── crm/
+│   │   ├── components/    # CRM-specific UI
+│   │   ├── hooks/         # CRM custom hooks
+│   │   ├── services/      # CRM API calls
+│   │   ├── store/         # CRM Redux slices
+│   │   ├── types/         # CRM TypeScript types
+│   │   └── index.ts       # ✅ Barrel exports
+│   ├── accounting/        # Same structure
+│   └── inventory/         # Same structure
+│   └── ptm/               # Same structure
+├── shared/                # 🔄 Cross-Module Resources
+│   ├── components/        # Reusable UI components
+│   ├── hooks/            # Common hooks
+│   ├── services/         # Shared API utilities
+│   ├── types/            # Common types
+│   └── utils/            # Helper functions
+└── lib/                  # 🔧 Core Configuration
+    ├── store.ts          # ✅ Redux store setup
+    └── api/              # API configuration
+```
+
+## **Key Principles for FE**
+
+### 1. **Module Independence**
+
+- Each module is self-contained
+- No direct imports between modules
+- Communication via shared state or events
+
+### 2. **Barrel Exports Pattern** ✅
+
+### 3. **Feature-Based Routing**
+
+### 4. **Shared Resources Strategy**
+
 
 ### Add (authors: QuanTuanHuy, Description: Part of Serp Project) to all relevant files
 

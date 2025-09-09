@@ -40,6 +40,9 @@ public class Constants {
         public static final String TOO_MANY_REQUESTS = "Too Many Requests";
         public static final String UNKNOWN_ERROR = "Unknown Error";
 
+        public static final String MODULE_ALREADY_EXISTS = "Module already exists";
+        public static final String MODULE_NOT_FOUND = "Module not found";
+
         public static final String CLIENT_NOT_FOUND = "Client not found";
 
         public static final String PERMISSION_ALREADY_EXISTS = "Permission already exists";
@@ -48,11 +51,17 @@ public class Constants {
         public static final String ROLE_ALREADY_EXISTS = "Role already exists";
         public static final String ROLE_NOT_FOUND = "Role not found";
 
+        public static final String GROUP_ALREADY_EXISTS = "Group already exists";
+        public static final String GROUP_NOT_FOUND = "Group not found";
+        public static final String CREATE_GROUP_KEYCLOAK_FAILED = "Create group in Keycloak failed";
+
         public static final String USER_ALREADY_EXISTS = "User already exists";
         public static final String USER_NOT_FOUND = "User not found";
         public static final String CREATE_USER_FAILED = "Create user failed";
 
         public static final String WRONG_EMAIL_OR_PASSWORD = "Wrong email or password";
+        public static final String INVALID_REFRESH_TOKEN = "Invalid refresh token";
+        public static final String TOKEN_EXPIRED = "Token expired";
     }
 
     @UtilityClass

@@ -67,7 +67,7 @@ public class KeycloakAdapter implements IKeycloakPort {
     }
 
     @Override
-    public void assignRoles(String userId, List<String> roleNames) {
+    public void assignRealmRoles(String userId, List<String> roleNames) {
         RealmResource realmResource = keycloakAdmin.realm(keycloakProperties.getRealm());
         UserResource user = realmResource.users().get(userId);
 

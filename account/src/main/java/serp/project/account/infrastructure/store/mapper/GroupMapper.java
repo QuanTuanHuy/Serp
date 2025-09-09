@@ -10,6 +10,8 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
+import serp.project.account.core.domain.dto.request.CreateGroupDto;
+import serp.project.account.core.domain.dto.request.CreateKeycloakGroupDto;
 import serp.project.account.core.domain.entity.GroupEntity;
 import serp.project.account.infrastructure.store.model.GroupModel;
 
@@ -64,5 +66,29 @@ public class GroupMapper extends BaseMapper {
         return entities.stream()
                 .map(this::toModel)
                 .collect(Collectors.toList());
+    }
+
+    public GroupEntity createGroupMapper(CreateGroupDto dto, String keycloakGroupId) {
+        if (dto == null) {
+            return null;
+        }
+
+        return GroupEntity.builder()
+                .groupName(dto.getGroupName())
+                .description(dto.getDescription())
+                .keycloakGroupId(keycloakGroupId)
+                .build();
+    }
+
+    public CreateKeycloakGroupDto toCreateKeycloakGroupDto(CreateGroupDto dto) {
+        if (dto == null) {
+            return null;
+        }
+
+        return CreateKeycloakGroupDto.builder()
+                .name(dto.getGroupName())
+                .description(dto.getDescription())
+                .parentGroupId(null)
+                .build();
     }
 }
