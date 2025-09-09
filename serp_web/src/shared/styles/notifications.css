@@ -1,0 +1,369 @@
+/**
+ * Modern Notification System Styles
+ * Authors: QuanTuanHuy, Description: Part of Serp Project
+ */
+
+/* CSS Variables in root scope */
+:root {
+  /* Container styles */
+  --notification-z-index: 9999;
+  --notification-border-radius: 0.875rem;
+  --notification-padding: 1.25rem;
+  --notification-max-width: 420px;
+  --notification-min-height: 64px;
+
+  /* Enhanced shadows with depth */
+  --notification-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.12), 0 10px 20px -8px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+
+  /* Glassmorphism effects */
+  --notification-backdrop-blur: 16px;
+  --notification-background-opacity: 0.95;
+  --notification-border-opacity: 0.18;
+
+  /* Enhanced color system with semantic meanings */
+  --notification-success: hsl(142 76% 36%);
+  --notification-success-bg: hsl(142 76% 36% / 0.08);
+  --notification-error: hsl(0 84% 60%);
+  --notification-error-bg: hsl(0 84% 60% / 0.08);
+  --notification-warning: hsl(38 92% 50%);
+  --notification-warning-bg: hsl(38 92% 50% / 0.08);
+  --notification-info: hsl(221 83% 53%);
+  --notification-info-bg: hsl(221 83% 53% / 0.08);
+
+  /* Typography with better hierarchy */
+  --notification-title-size: 0.9rem;
+  --notification-title-weight: 600;
+  --notification-description-size: 0.825rem;
+  --notification-description-weight: 400;
+  --notification-line-height: 1.5;
+
+  /* Animation system */
+  --notification-duration-fast: 0.2s;
+  --notification-duration-normal: 0.3s;
+  --notification-duration-slow: 0.5s;
+  --notification-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  --notification-easing-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  /* Interactive states */
+  --notification-hover-scale: 1.02;
+  --notification-press-scale: 0.98;
+}
+
+/* Dark mode enhancements */
+.dark {
+  --notification-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 10px 20px -8px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
+
+  --notification-background-opacity: 0.9;
+  --notification-border-opacity: 0.15;
+}
+
+/* Media queries for responsive design */
+@media (max-width: 640px) {
+  :root {
+    --notification-max-width: calc(100vw - 2rem);
+    --notification-padding: 1rem;
+    --notification-border-radius: 0.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --notification-duration-fast: 0.01s;
+    --notification-duration-normal: 0.01s;
+    --notification-duration-slow: 0.01s;
+    --notification-easing: linear;
+    --notification-hover-scale: 1;
+    --notification-press-scale: 1;
+  }
+}
+
+/* Modern toast overrides with glassmorphism */
+@layer components {
+  [data-sonner-toaster] {
+    z-index: var(--notification-z-index) !important;
+    position: fixed !important;
+  }
+
+  [data-sonner-toast] {
+    /* Enhanced glassmorphism effect */
+    backdrop-filter: blur(var(--notification-backdrop-blur)) saturate(180%) !important;
+    border-radius: var(--notification-border-radius) !important;
+    padding: var(--notification-padding) !important;
+    max-width: var(--notification-max-width) !important;
+    min-height: var(--notification-min-height) !important;
+
+    /* Typography */
+    font-size: var(--notification-title-size) !important;
+    font-weight: var(--notification-title-weight) !important;
+    line-height: var(--notification-line-height) !important;
+
+    /* Enhanced visual effects */
+    box-shadow: var(--notification-shadow) !important;
+    background: hsl(
+      var(--background) / var(--notification-background-opacity)
+    ) !important;
+    border: 1px solid hsl(var(--border) / var(--notification-border-opacity)) !important;
+
+    /* Smooth animations */
+    transition:
+      all var(--notification-duration-normal) var(--notification-easing),
+      transform var(--notification-duration-fast) var(--notification-easing) !important;
+
+    /* Interactive states */
+    cursor: pointer !important;
+    will-change: transform !important;
+  }
+
+  /* Hover effects for better interactivity */
+  [data-sonner-toast]:hover {
+    transform: scale(var(--notification-hover-scale)) !important;
+    box-shadow:
+      0 32px 64px -12px rgba(0, 0, 0, 0.15),
+      0 12px 24px -8px rgba(0, 0, 0, 0.1),
+      0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+  }
+
+  [data-sonner-toast]:active {
+    transform: scale(var(--notification-press-scale)) !important;
+  }
+
+  /* Type-specific styling with enhanced backgrounds */
+  [data-sonner-toast][data-type='success'] {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--background) / var(--notification-background-opacity)),
+      var(--notification-success-bg)
+    ) !important;
+    border-left: 3px solid var(--notification-success) !important;
+    border-color: hsl(142 76% 36% / 0.25) !important;
+  }
+
+  [data-sonner-toast][data-type='error'] {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--background) / var(--notification-background-opacity)),
+      var(--notification-error-bg)
+    ) !important;
+    border-left: 3px solid var(--notification-error) !important;
+    border-color: hsl(0 84% 60% / 0.25) !important;
+  }
+
+  [data-sonner-toast][data-type='warning'] {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--background) / var(--notification-background-opacity)),
+      var(--notification-warning-bg)
+    ) !important;
+    border-left: 3px solid var(--notification-warning) !important;
+    border-color: hsl(38 92% 50% / 0.25) !important;
+  }
+
+  [data-sonner-toast][data-type='info'] {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--background) / var(--notification-background-opacity)),
+      var(--notification-info-bg)
+    ) !important;
+    border-left: 3px solid var(--notification-info) !important;
+    border-color: hsl(221 83% 53% / 0.25) !important;
+  }
+
+  /* Enhanced icon styling with animations */
+  [data-sonner-toast][data-type='success'] [data-icon] {
+    color: var(--notification-success) !important;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1)) !important;
+    animation: pulse 2s infinite !important;
+  }
+
+  [data-sonner-toast][data-type='error'] [data-icon] {
+    color: var(--notification-error) !important;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1)) !important;
+    animation: shake 0.5s ease-in-out !important;
+  }
+
+  [data-sonner-toast][data-type='warning'] [data-icon] {
+    color: var(--notification-warning) !important;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1)) !important;
+    animation: wobble 1s ease-in-out !important;
+  }
+
+  [data-sonner-toast][data-type='info'] [data-icon] {
+    color: var(--notification-info) !important;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1)) !important;
+    animation: bounce 1s ease-in-out !important;
+  }
+
+  /* Enhanced content styling */
+  [data-sonner-toast] [data-title] {
+    font-weight: var(--notification-title-weight) !important;
+    font-size: var(--notification-title-size) !important;
+    margin-bottom: 0.375rem !important;
+    color: hsl(var(--foreground)) !important;
+    letter-spacing: -0.01em !important;
+    opacity: 1 !important;
+  }
+
+  [data-sonner-toast] [data-description] {
+    font-size: var(--notification-description-size) !important;
+    font-weight: var(--notification-description-weight) !important;
+    opacity: 0.95 !important;
+    line-height: var(--notification-line-height) !important;
+    color: hsl(var(--muted-foreground)) !important;
+    margin-top: 0.125rem !important;
+  }
+
+  /* Modern interactive elements - Close button only appears on hover */
+  [data-sonner-toast] [data-close-button] {
+    background: hsl(var(--muted) / 0.8) !important;
+    border: none !important;
+    border-radius: 0.5rem !important;
+    width: 1.5rem !important;
+    height: 1.5rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    opacity: 0 !important;
+    transition: all var(--notification-duration-normal)
+      var(--notification-easing) !important;
+    backdrop-filter: blur(8px) !important;
+    cursor: pointer !important;
+    transform: scale(0.8) !important;
+  }
+
+  /* Show close button on toast hover */
+  [data-sonner-toast]:hover [data-close-button] {
+    opacity: 0.8 !important;
+    transform: scale(1) !important;
+  }
+
+  [data-sonner-toast] [data-close-button]:hover {
+    opacity: 1 !important;
+    background: hsl(var(--muted)) !important;
+    transform: scale(1.1) !important;
+  }
+
+  [data-sonner-toast] [data-close-button]:active {
+    transform: scale(0.95) !important;
+  }
+
+  [data-sonner-toast] [data-button] {
+    background: hsl(var(--primary)) !important;
+    color: hsl(var(--primary-foreground)) !important;
+    border: none !important;
+    border-radius: 0.5rem !important;
+    padding: 0.5rem 1rem !important;
+    font-size: 0.8125rem !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    transition: all var(--notification-duration-fast) var(--notification-easing) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+    letter-spacing: -0.01em !important;
+  }
+
+  [data-sonner-toast] [data-button]:hover {
+    background: hsl(var(--primary) / 0.9) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+  }
+
+  [data-sonner-toast] [data-button]:active {
+    transform: translateY(0) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  /* Progress bar styling */
+  [data-sonner-toast] [data-progress] {
+    background: linear-gradient(
+      90deg,
+      var(--notification-success),
+      var(--notification-info)
+    ) !important;
+    height: 3px !important;
+    border-radius: 0 0 var(--notification-border-radius)
+      var(--notification-border-radius) !important;
+  }
+}
+
+/* Keyframe animations */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-2px);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(2px);
+  }
+}
+
+@keyframes wobble {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-2deg);
+  }
+  75% {
+    transform: rotate(2deg);
+  }
+}
+
+@keyframes bounce {
+  0%,
+  20%,
+  50%,
+  80%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-3px);
+  }
+  60% {
+    transform: translateY(-1px);
+  }
+}
+
+/* Slide-in animation for toast entrance */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%) scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Enhanced entrance animation */
+[data-sonner-toast] {
+  animation: slideIn var(--notification-duration-normal)
+    var(--notification-easing-bounce) !important;
+}

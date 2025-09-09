@@ -4,3 +4,4 @@
  */
 
 export { ThemeProvider } from './theme-provider';
+export { NotificationProvider } from './notification-provider';

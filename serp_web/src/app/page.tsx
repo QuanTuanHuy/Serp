@@ -1,3 +1,5 @@
+'use client';
+
 import {
   Button,
   Card,
@@ -8,11 +10,41 @@ import {
   ThemeToggle,
   Input,
 } from '@/shared/components';
+import { useNotification } from '@/shared/hooks';
 
 export default function Home() {
+  const notification = useNotification();
+
+  const handleSuccessNotification = () => {
+    notification.success('Operation completed successfully!', {
+      description: 'Your data has been saved to the database.',
+      duration: 3000,
+    });
+  };
+
+  const handleErrorNotification = () => {
+    notification.error('Something went wrong!', {
+      description: 'Please try again later or contact support.',
+      duration: 5000,
+    });
+  };
+
+  const handleWarningNotification = () => {
+    notification.warning('Please confirm your action', {
+      description: 'This action cannot be undone.',
+      duration: 6000,
+    });
+  };
+
+  const handleInfoNotification = () => {
+    notification.info('System Information', {
+      description: 'Your system is running optimally.',
+      duration: 5000,
+    });
+  };
+
   return (
     <div className='container mx-auto p-8 space-y-8'>
-      {/* Header with Theme Toggle */}
       <div className='flex justify-between items-center'>
         <h1 className='text-4xl font-bold'>
           SERP - Enterprise Resource Planning
@@ -20,13 +52,11 @@ export default function Home() {
         <ThemeToggle />
       </div>
 
-      {/* Welcome Card */}
       <Card className='max-w-2xl'>
         <CardHeader>
           <CardTitle>Welcome to SERP Web</CardTitle>
           <CardDescription>
-            Modern ERP system with modular architecture, built with Next.js and
-            TypeScript
+            Modern ERP system with modular architecture
           </CardDescription>
         </CardHeader>
         <CardContent className='space-y-4'>
@@ -34,52 +64,29 @@ export default function Home() {
             <Input placeholder='Search...' className='flex-1' />
             <Button>Search</Button>
           </div>
+
+          <div className='grid grid-cols-2 gap-2'>
+            <Button onClick={handleSuccessNotification} variant='default'>
+              ✅ Success
+            </Button>
+            <Button onClick={handleErrorNotification} variant='destructive'>
+              ❌ Error
+            </Button>
+            <Button onClick={handleWarningNotification} variant='outline'>
+              ⚠️ Warning
+            </Button>
+            <Button onClick={handleInfoNotification} variant='secondary'>
+              ℹ️ Info
+            </Button>
+          </div>
+
           <div className='flex gap-2'>
-            <Button variant='default'>CRM Module</Button>
+            <Button variant='outline'>CRM Module</Button>
             <Button variant='outline'>Accounting</Button>
-            <Button variant='secondary'>Inventory</Button>
+            <Button variant='outline'>Inventory</Button>
           </div>
         </CardContent>
       </Card>
-
-      {/* Modules Overview */}
-      <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-        <Card>
-          <CardHeader>
-            <CardTitle>CRM</CardTitle>
-            <CardDescription>Customer Relationship Management</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant='outline' className='w-full'>
-              Open CRM
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Accounting</CardTitle>
-            <CardDescription>Financial Management</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant='outline' className='w-full'>
-              Open Accounting
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Inventory</CardTitle>
-            <CardDescription>Stock Management</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant='outline' className='w-full'>
-              Open Inventory
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
