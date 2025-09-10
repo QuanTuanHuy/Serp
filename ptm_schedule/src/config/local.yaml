@@ -1,0 +1,34 @@
+app:
+  logging:
+    level: INFO
+  datasource:
+    driver: postgres
+    host: localhost
+    port: 5432
+    database: serp_ptm_schedule
+    username: serp
+    password: serp
+    logLevel: INFO
+  redis:
+    host: localhost
+    port: 6379
+
+  keycloak:
+    url: http://localhost:8180
+    realm: serp
+    client-id: serp-ptm
+    client-secret: ${CLIENT_SECRET}
+    jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
+    expected-issuer: http://localhost:8180/realms/serp
+    expected-audience:
+    
+  kafka:
+    producer:
+      bootstrapServers:
+        - localhost:9094
+      requireAcks: 1
+      maxMessageBytes: 1048576
+      retryMax: 3
+      retryBackoffMs: 100
+      flushFrequencyMs: 500
+      flushMessages: 100

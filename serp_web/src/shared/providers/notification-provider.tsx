@@ -16,7 +16,7 @@ export function NotificationProvider({
     <>
       {children}
       <Toaster
-        position='top-right'
+        position='bottom-right'
         offset={20}
         closeButton={true}
         richColors={true}

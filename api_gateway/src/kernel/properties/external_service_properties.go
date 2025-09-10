@@ -19,6 +19,7 @@ type ServiceProperty struct {
 
 type ExternalServiceProperties struct {
 	AccountService ServiceProperty
+	PTMTask        ServiceProperty
 }
 
 func (e ExternalServiceProperties) Prefix() string {

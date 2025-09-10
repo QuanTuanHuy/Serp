@@ -1,0 +1,29 @@
+app:
+  logging:
+    level: INFO
+  datasource:
+    driver: postgres
+    host: ${DB_HOST}
+    port: 5432
+    database: ${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    logLevel: INFO
+  redis:
+    host: ${REDIS_HOST}
+    port: ${REDIS_PORT}
+  keycloak:
+    url: ${KEYCLOAK_URL}
+    realm: serp
+    client-id: serp-ptm
+    client-secret: ${CLIENT_SECRET}
+    jwk-set-uri: ${KEYCLOAK_JWK_SET_URI}
+    expected-issuer: ${KEYCLOAK_EXPECTED_ISSUER}
+    expected-audience: 
+
+external:
+  services:
+    accountService:
+      host: ${ACCOUNT_SERVICE_HOST}
+      port: ${ACCOUNT_SERVICE_PORT}
+      timeout: 15s

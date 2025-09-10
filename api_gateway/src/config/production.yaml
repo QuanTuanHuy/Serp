@@ -20,3 +20,7 @@ external:
       host: ${ACCOUNT_SERVICE_HOST}
       port: ${ACCOUNT_SERVICE_PORT}
       timeout: 15s
+    ptmTask:
+      host: ${PTM_TASK_SERVICE_HOST}
+      port: ${PTM_TASK_SERVICE_PORT}
+      timeout: 15s
