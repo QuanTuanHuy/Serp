@@ -5,7 +5,7 @@ app:
     driver: postgres
     host: localhost
     port: 5432
-    database: serp_ptm_task
+    database: serp_ptm_schedule
     username: serp
     password: serp
     logLevel: INFO
@@ -21,7 +21,7 @@ app:
     jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
     expected-issuer: http://localhost:8180/realms/serp
     expected-audience:
-
+    
   kafka:
     producer:
       bootstrapServers:

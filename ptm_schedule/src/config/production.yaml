@@ -20,3 +20,10 @@ app:
     jwk-set-uri: ${KEYCLOAK_JWK_SET_URI}
     expected-issuer: ${KEYCLOAK_EXPECTED_ISSUER}
     expected-audience: 
+
+external:
+  services:
+    accountService:
+      host: ${ACCOUNT_SERVICE_HOST}
+      port: ${ACCOUNT_SERVICE_PORT}
+      timeout: 15s
