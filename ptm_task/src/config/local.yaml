@@ -12,6 +12,7 @@ app:
   redis:
     host: localhost
     port: 6379
+
   keycloak:
     url: http://localhost:8180
     realm: serp
@@ -19,7 +20,18 @@ app:
     client-secret: ${CLIENT_SECRET}
     jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
     expected-issuer: http://localhost:8180/realms/serp
-    expected-audience: 
+    expected-audience:
+    
+  kafka:
+    producer:
+      bootstrapServers:
+        - localhost:9094
+      requireAcks: 1
+      maxMessageBytes: 1048576
+      retryMax: 3
+      retryBackoffMs: 100
+      flushFrequencyMs: 500
+      flushMessages: 100
 
 external:
   services:

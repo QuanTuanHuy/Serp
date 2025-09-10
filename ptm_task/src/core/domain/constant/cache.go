@@ -1,10 +1,11 @@
 package constant
 
 const (
-	DefaultTTL = 3600
+	DefaultTTL = 60 * 60
+	ShortTTL   = 5 * 60
 )
 
 const (
 	ProjectsByUserID      = "ptm:users:%d:projects"
-	GroupTasksByProjectID = "ptm:projects:%d:group_tasks"
+	GroupTasksByProjectID = "ptm:projects:%d:group-tasks"
 )
