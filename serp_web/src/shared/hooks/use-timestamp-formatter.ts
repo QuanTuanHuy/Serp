@@ -91,7 +91,10 @@ function formatRelativeTime(date: Date): string {
 /**
  * Hook specifically for user account timestamps
  */
-export const useUserTimestamps = (user: { createdAt: string; updatedAt: string }) => {
+export const useUserTimestamps = (user: {
+  createdAt: string;
+  updatedAt: string;
+}) => {
   const { formatTimestamp } = useTimestampFormatter();
 
   const formattedCreatedAt = useMemo(() => {
