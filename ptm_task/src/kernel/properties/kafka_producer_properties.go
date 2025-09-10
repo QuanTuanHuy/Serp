@@ -1,15 +1,20 @@
+/*
+Author: QuanTuanHuy
+Description: Part of Serp Project
+*/
+
 package properties
 
 import "github.com/golibs-starter/golib/config"
 
 type KafkaProducerProperties struct {
-	BootstrapServers []string `default:"localhost:9094" mapstructure:"bootstrapServers"`
-	RequireAcks      int16    `default:"-1" mapstructure:"requireAcks"`
-	MaxMessageBytes  int      `default:"0" mapstructure:"maxMessageBytes"`
-	RetryMax         int      `default:"3" mapstructure:"retryMax"`
-	RetryBackoffMs   int      `default:"100" mapstructure:"retryBackoffMs"`
-	FlushFrequencyMs int      `default:"500" mapstructure:"flushFrequencyMs"`
-	FlushMessages    int      `default:"100" mapstructure:"flushMessages"`
+	BootstrapServers []string
+	RequireAcks      int16
+	MaxMessageBytes  int
+	RetryMax         int
+	RetryBackoffMs   int
+	FlushFrequencyMs int
+	FlushMessages    int
 }
 
 func (k KafkaProducerProperties) Prefix() string {

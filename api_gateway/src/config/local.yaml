@@ -20,3 +20,7 @@ external:
       host: localhost
       port: "8081"
       timeout: 15s
+    ptmTask:
+      host: localhost
+      port: "8083"
+      timeout: 15s
