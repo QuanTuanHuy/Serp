@@ -28,6 +28,7 @@ func All() fx.Option {
 
 		// Provide properties
 		golib.ProvideProps(properties.NewJwtProperties),
+		golib.ProvideProps(properties.NewKeycloakProperties),
 
 		fx.Invoke(InitializeDB),
 
@@ -46,6 +47,7 @@ func All() fx.Option {
 		// Provide controller
 
 		// Provide JWT components
+		fx.Provide(utils.NewKeycloakJwksUtils),
 		fx.Provide(utils.NewJWTUtils),
 		fx.Provide(middleware.NewJWTMiddleware),
 

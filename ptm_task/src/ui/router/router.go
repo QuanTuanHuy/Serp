@@ -28,4 +28,6 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 	group.GET("/actuator/health", gin.WrapF(p.Actuator.Health))
 	group.GET("/actuator/info", gin.WrapF(p.Actuator.Info))
 
+	requireAuthV1 := group.Group("/api/v1")
+	requireAuthV1.Use(p.JWTMiddleware.AuthenticateJWT())
 }

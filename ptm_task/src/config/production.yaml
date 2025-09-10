@@ -12,9 +12,14 @@ app:
   redis:
     host: ${REDIS_HOST}
     port: ${REDIS_PORT}
-  security:
-    jwt:
-      publicKey: ${JWT_PUBLIC_KEY}
+  keycloak:
+    url: ${KEYCLOAK_URL}
+    realm: serp
+    client-id: serp-ptm
+    client-secret: ${CLIENT_SECRET}
+    jwk-set-uri: ${KEYCLOAK_JWK_SET_URI}
+    expected-issuer: ${KEYCLOAK_EXPECTED_ISSUER}
+    expected-audience: 
 
 external:
   services:
