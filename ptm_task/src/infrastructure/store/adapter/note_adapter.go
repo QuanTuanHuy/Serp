@@ -19,7 +19,7 @@ type NoteStoreAdapter struct {
 	db *gorm.DB
 }
 
-func (n *NoteStoreAdapter) CreateNode(ctx context.Context, tx *gorm.DB, note *entity.NoteEntity) (*entity.NoteEntity, error) {
+func (n *NoteStoreAdapter) CreateNote(ctx context.Context, tx *gorm.DB, note *entity.NoteEntity) (*entity.NoteEntity, error) {
 	noteModel := mapper.ToNoteModel(note)
 	if err := tx.WithContext(ctx).Create(noteModel).Error; err != nil {
 		return nil, err

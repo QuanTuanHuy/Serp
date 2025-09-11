@@ -49,7 +49,7 @@ func (n *NoteService) CreateNote(ctx context.Context, tx *gorm.DB, userID int64,
 		note.Name = n.createNoteName()
 	}
 
-	note, err := n.notePort.CreateNode(ctx, tx, note)
+	note, err := n.notePort.CreateNote(ctx, tx, note)
 	if err != nil {
 		log.Error(ctx, "Failed to create note: ", err)
 		return nil, err
