@@ -8,11 +8,14 @@ package bootstrap
 import (
 	"log"
 
+	"github.com/serp/ptm-schedule/src/infrastructure/store/model"
 	"gorm.io/gorm"
 )
 
 func InitializeDB(db *gorm.DB) {
-	err := db.AutoMigrate()
+	err := db.AutoMigrate(
+		&model.SchedulePlanModel{},
+	)
 	if err != nil {
 		log.Fatal("Failed to run migrations: ", err)
 	}

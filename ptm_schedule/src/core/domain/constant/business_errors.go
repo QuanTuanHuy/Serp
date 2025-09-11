@@ -8,5 +8,10 @@ package constant
 const (
 	InvalidQueryParameters = "invalid query parameters"
 
-	SchedulePlanFound = "schedule plan not found"
+	SchedulePlanNotFound = "schedule plan not found"
+
+	ScheduleGroupNotFound        = "schedule group not found"
+	DeleteScheduleGroupForbidden = "delete schedule group forbidden"
+
+	ScheduleTaskNotFound = "schedule task not found"
 )

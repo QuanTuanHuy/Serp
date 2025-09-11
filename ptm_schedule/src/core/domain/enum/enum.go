@@ -30,3 +30,13 @@ const (
 	High   Priority = "HIGH"
 	Star   Priority = "STAR"
 )
+
+type RepeatLevel string
+
+const (
+	None    RepeatLevel = "NONE"
+	Daily   RepeatLevel = "DAILY"
+	Weekly  RepeatLevel = "WEEKLY"
+	Monthly RepeatLevel = "MONTHLY"
+	Yearly  RepeatLevel = "YEARLY"
+)

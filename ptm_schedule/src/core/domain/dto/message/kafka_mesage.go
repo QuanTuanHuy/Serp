@@ -41,9 +41,10 @@ func CreateKafkaMessageWithReplyTopic(cmd KafkaCommand, errorCode ErrorCode, err
 type KafkaCommand string
 
 const (
-	CREATE_TASK KafkaCommand = "taskManagerCreateTask"
-	UPDATE_TASK KafkaCommand = "taskManagerUpdateTask"
-	DELETE_TASK KafkaCommand = "taskManagerDeleteTask"
+	CREATE_TASK          KafkaCommand = "taskManagerCreateTask"
+	UPDATE_TASK          KafkaCommand = "taskManagerUpdateTask"
+	DELETE_TASK          KafkaCommand = "taskManagerDeleteTask"
+	CREATE_SCHEDULE_TASK KafkaCommand = "scheduleManagerCreateScheduleTask"
 )
 
 type ErrorCode string
