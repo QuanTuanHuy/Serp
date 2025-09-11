@@ -72,6 +72,21 @@ func ValidateAndBindJSON(c *gin.Context, req interface{}) bool {
 	return true
 }
 
+// ValidateAndBindQuery validates query parameters and returns validation errors
+func ValidateAndBindQuery(c *gin.Context, req interface{}) bool {
+	if err := c.ShouldBindQuery(req); err != nil {
+		AbortErrorHandleCustomMessage(c, constant.GeneralBadRequest, "Invalid query parameters: "+err.Error())
+		return false
+	}
+
+	if validationErrors := ValidateStruct(req); len(validationErrors) > 0 {
+		AbortValidationError(c, validationErrors)
+		return false
+	}
+
+	return true
+}
+
 // AbortValidationError handles validation errors
 func AbortValidationError(c *gin.Context, validationErrors []ValidationError) {
 	c.JSON(400, gin.H{

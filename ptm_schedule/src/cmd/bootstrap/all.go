@@ -51,9 +51,13 @@ func All() fx.Option {
 
 		// Provide usecase
 		fx.Provide(usecase.NewSchedulePlanUseCase),
+		fx.Provide(usecase.NewScheduleGroupUseCase),
+		fx.Provide(usecase.NewScheduleTaskUseCase),
 
 		// Provide controller
 		fx.Provide(controller.NewSchedulePlanController),
+		fx.Provide(controller.NewScheduleGroupController),
+		fx.Provide(controller.NewScheduleTaskController),
 
 		// Provide JWT components
 		fx.Provide(utils.NewKeycloakJwksUtils),

@@ -21,7 +21,9 @@ type RegisterRoutersIn struct {
 	Engine   *gin.Engine
 	Actuator *actuator.Endpoint
 
-	SchedulePlanController *controller.SchedulePlanController
+	SchedulePlanController  *controller.SchedulePlanController
+	ScheduleGroupController *controller.ScheduleGroupController
+	ScheduleTaskController  *controller.ScheduleTaskController
 
 	JWTMiddleware *middleware.JWTMiddleware
 }
@@ -38,6 +40,22 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		schedulePlanV1 := requiredAuthV1.Group("/schedule-plans")
 		{
 			schedulePlanV1.POST("", p.SchedulePlanController.CreateSchedulePlan)
+		}
+
+		scheduleGroupV1 := requiredAuthV1.Group("/schedule-groups")
+		{
+			scheduleGroupV1.GET("", p.ScheduleGroupController.GetScheduleGroupsByUserID)
+			scheduleGroupV1.POST("", p.ScheduleGroupController.CreateScheduleGroup)
+			scheduleGroupV1.GET("/:id", p.ScheduleGroupController.GetScheduleGroupByID)
+			scheduleGroupV1.DELETE("/:id", p.ScheduleGroupController.DeleteScheduleGroup)
+		}
+
+		scheduleTaskV1 := requiredAuthV1.Group("/schedule-tasks")
+		{
+			scheduleTaskV1.GET("/tasks", p.ScheduleTaskController.GetListTaskByUserID)
+			scheduleTaskV1.GET("/batch-tasks", p.ScheduleTaskController.GetBatchTasks)
+			scheduleTaskV1.POST("/choose-task-batch", p.ScheduleTaskController.ChooseTaskBatch)
+			scheduleTaskV1.GET("/detail", p.ScheduleTaskController.GetScheduleTaskDetail)
 		}
 	}
 

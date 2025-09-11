@@ -8,7 +8,6 @@ package usecase
 import (
 	"context"
 
-	"github.com/golibs-starter/golib/log"
 	"github.com/serp/ptm-schedule/src/core/domain/entity"
 	"github.com/serp/ptm-schedule/src/core/service"
 	"gorm.io/gorm"
@@ -32,7 +31,6 @@ func (s *SchedulePlanUseCase) CreateSchedulePlan(ctx context.Context, userID int
 		return schedulePlan, nil
 	})
 	if err != nil {
-		log.Error(ctx, "Failed to create schedule plan: ", err)
 		return nil, err
 	}
 	return schedulePlan.(*entity.SchedulePlanEntity), nil
