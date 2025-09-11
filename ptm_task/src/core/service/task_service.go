@@ -36,7 +36,6 @@ type ITaskService interface {
 type TaskService struct {
 	taskPort      port.ITaskPort
 	groupTaskPort port.IGroupTaskPort
-	dbTx          port.IDBTransactionPort
 	redisPort     port2.IRedisPort
 	kafkaProducer port2.IKafkaProducerPort
 }
