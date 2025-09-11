@@ -11,6 +11,7 @@ import (
 	golibgin "github.com/golibs-starter/golib-gin"
 	"github.com/serp/ptm-schedule/src/core/service"
 	"github.com/serp/ptm-schedule/src/core/usecase"
+	adapter2 "github.com/serp/ptm-schedule/src/infrastructure/client"
 	"github.com/serp/ptm-schedule/src/infrastructure/store/adapter"
 	"github.com/serp/ptm-schedule/src/kernel/properties"
 	"github.com/serp/ptm-schedule/src/kernel/utils"
@@ -36,12 +37,17 @@ func All() fx.Option {
 
 		// Provide properties
 		golib.ProvideProps(properties.NewKeycloakProperties),
+		golib.ProvideProps(properties.NewKafkaProducerProperties),
 
 		fx.Invoke(InitializeDB),
 
 		// Provide adapter
+		fx.Provide(adapter2.NewKafkaProducerAdapter),
+
 		fx.Provide(adapter.NewDBTransactionAdapter),
 		fx.Provide(adapter.NewSchedulePlanStoreAdapter),
+		fx.Provide(adapter.NewScheduleGroupStoreAdapter),
+		fx.Provide(adapter.NewScheduleTaskStoreAdapter),
 
 		// Provide service
 		fx.Provide(service.NewTransactionService),
