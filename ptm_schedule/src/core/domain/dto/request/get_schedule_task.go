@@ -1,3 +1,8 @@
+/*
+Author: QuanTuanHuy
+Description: Part of Serp Project
+*/
+
 package request
 
 type GetScheduleTaskRequest struct {

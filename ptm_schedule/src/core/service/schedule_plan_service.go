@@ -1,3 +1,8 @@
+/*
+Author: QuanTuanHuy
+Description: Part of Serp Project
+*/
+
 package service
 
 import (
@@ -15,8 +20,8 @@ import (
 type ISchedulePlanService interface {
 	CreateSchedulePlan(ctx context.Context, tx *gorm.DB, userID int64) (*entity.SchedulePlanEntity, error)
 	GetSchedulePlanByUserID(ctx context.Context, userID int64) (*entity.SchedulePlanEntity, error)
-	UpdateSchedulePlan(ctx context.Context, schedulePlan *entity.SchedulePlanEntity) (*entity.SchedulePlanEntity, error)
-	UpdateTaskBatch(ctx context.Context, schedulePlan *entity.SchedulePlanEntity, activeBatch int32, isActiveBatch bool) (*entity.SchedulePlanEntity, error)
+	UpdateSchedulePlan(ctx context.Context, tx *gorm.DB, schedulePlan *entity.SchedulePlanEntity) (*entity.SchedulePlanEntity, error)
+	UpdateTaskBatch(ctx context.Context, tx *gorm.DB, schedulePlan *entity.SchedulePlanEntity, activeBatch int32, isActiveBatch bool) (*entity.SchedulePlanEntity, error)
 }
 
 type SchedulePlanService struct {
@@ -57,33 +62,15 @@ func (s *SchedulePlanService) GetSchedulePlanByUserID(ctx context.Context, userI
 	return schedulePlan, nil
 }
 
-func (s *SchedulePlanService) UpdateTaskBatch(ctx context.Context, schedulePlan *entity.SchedulePlanEntity, activeBatch int32, isActiveBatch bool) (*entity.SchedulePlanEntity, error) {
+func (s *SchedulePlanService) UpdateTaskBatch(ctx context.Context, tx *gorm.DB, schedulePlan *entity.SchedulePlanEntity, activeBatch int32, isActiveBatch bool) (*entity.SchedulePlanEntity, error) {
 	schedulePlan.UpdateTaskBatch(activeBatch, isActiveBatch)
-	return s.UpdateSchedulePlan(ctx, schedulePlan)
+	return s.UpdateSchedulePlan(ctx, tx, schedulePlan)
 }
 
-func (s *SchedulePlanService) UpdateSchedulePlan(ctx context.Context, schedulePlan *entity.SchedulePlanEntity) (*entity.SchedulePlanEntity, error) {
-	var err error
-	tx := s.dbTxPort.StartTransaction()
-	defer func() {
-		if r := recover(); r != nil {
-			log.Error(ctx, "Recovered from panic in UpdateSchedulePlan ", "error ", r)
-			tx.Rollback()
-			return
-		}
-		if err != nil {
-			log.Error(ctx, "Error in UpdateSchedulePlan: ", "error", err)
-			tx.Rollback()
-		}
-	}()
-	schedulePlan, err = s.schedulePlanPort.UpdateSchedulePlan(ctx, tx, schedulePlan)
+func (s *SchedulePlanService) UpdateSchedulePlan(ctx context.Context, tx *gorm.DB, schedulePlan *entity.SchedulePlanEntity) (*entity.SchedulePlanEntity, error) {
+	schedulePlan, err := s.schedulePlanPort.UpdateSchedulePlan(ctx, tx, schedulePlan)
 	if err != nil {
 		log.Error(ctx, "Failed to update schedule plan: ", "error", err)
-		return nil, err
-	}
-	err = tx.Commit().Error
-	if err != nil {
-		log.Error(ctx, "Failed to commit transaction: ", "error", err)
 		return nil, err
 	}
 	return schedulePlan, nil

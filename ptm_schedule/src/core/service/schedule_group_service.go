@@ -1,3 +1,8 @@
+/*
+Author: QuanTuanHuy
+Description: Part of Serp Project
+*/
+
 package service
 
 import (
@@ -9,13 +14,14 @@ import (
 	"github.com/serp/ptm-schedule/src/core/domain/constant"
 	"github.com/serp/ptm-schedule/src/core/domain/entity"
 	port "github.com/serp/ptm-schedule/src/core/port/store"
+	"gorm.io/gorm"
 )
 
 type IScheduleGroupService interface {
-	CreateScheduleGroup(ctx context.Context, scheduleGroup *entity.ScheduleGroupEntity) (*entity.ScheduleGroupEntity, error)
+	CreateScheduleGroup(ctx context.Context, tx *gorm.DB, scheduleGroup *entity.ScheduleGroupEntity) (*entity.ScheduleGroupEntity, error)
 	GetScheduleGroupByID(ctx context.Context, ID int64) (*entity.ScheduleGroupEntity, error)
-	UpdateScheduleGroup(ctx context.Context, ID int64, scheduleGroup *entity.ScheduleGroupEntity) (*entity.ScheduleGroupEntity, error)
-	DeleteScheduleGroup(ctx context.Context, ID int64) error
+	UpdateScheduleGroup(ctx context.Context, tx *gorm.DB, ID int64, scheduleGroup *entity.ScheduleGroupEntity) (*entity.ScheduleGroupEntity, error)
+	DeleteScheduleGroup(ctx context.Context, tx *gorm.DB, ID int64) error
 	GetScheduleGroupBySPID(ctx context.Context, schedulePlanID int64) ([]*entity.ScheduleGroupEntity, error)
 	GetScheduleGroupsToCreateTask(ctx context.Context, date time.Time, limit int32) ([]*entity.ScheduleGroupEntity, error)
 }
@@ -26,28 +32,10 @@ type ScheduleGroupService struct {
 	dbTxPort          port.IDBTransactionPort
 }
 
-func (s *ScheduleGroupService) CreateScheduleGroup(ctx context.Context, scheduleGroup *entity.ScheduleGroupEntity) (*entity.ScheduleGroupEntity, error) {
-	var err error
-	tx := s.dbTxPort.StartTransaction()
-	defer func() {
-		if r := recover(); r != nil {
-			log.Error(ctx, "Recovered from panic in CreateScheduleGroup: %v", r)
-			s.dbTxPort.Rollback(tx)
-			return
-		}
-		if err != nil {
-			log.Error(ctx, "Error in CreateScheduleGroup: %v", err)
-			s.dbTxPort.Rollback(tx)
-		}
-	}()
+func (s *ScheduleGroupService) CreateScheduleGroup(ctx context.Context, tx *gorm.DB, scheduleGroup *entity.ScheduleGroupEntity) (*entity.ScheduleGroupEntity, error) {
 	sg, err := s.scheduleGroupPort.CreateScheduleGroup(ctx, tx, scheduleGroup)
 	if err != nil {
-		log.Error(ctx, "Error in CreateScheduleGroup: %v", err)
-		return nil, err
-	}
-	err = s.dbTxPort.Commit(tx)
-	if err != nil {
-		log.Error(ctx, "Error committing transaction in CreateScheduleGroup: %v", err)
+		log.Error(ctx, "Error in CreateScheduleGroup: ", err)
 		return nil, err
 	}
 	return sg, nil
@@ -56,7 +44,7 @@ func (s *ScheduleGroupService) CreateScheduleGroup(ctx context.Context, schedule
 func (s *ScheduleGroupService) GetScheduleGroupByID(ctx context.Context, ID int64) (*entity.ScheduleGroupEntity, error) {
 	sg, err := s.scheduleGroupPort.GetScheduleGroupByID(ctx, ID)
 	if err != nil {
-		log.Error(ctx, "Error in GetScheduleGroupByID: %v", err)
+		log.Error(ctx, "Error in GetScheduleGroupByID: ", err)
 		return nil, err
 	}
 	if sg == nil {
@@ -66,22 +54,8 @@ func (s *ScheduleGroupService) GetScheduleGroupByID(ctx context.Context, ID int6
 	return sg, nil
 }
 
-func (s *ScheduleGroupService) DeleteScheduleGroup(ctx context.Context, ID int64) error {
-	var err error
-	tx := s.dbTxPort.StartTransaction()
-	defer func() {
-		if r := recover(); r != nil {
-			log.Error(ctx, "Recovered from panic in DeleteScheduleGroup: ", r)
-			s.dbTxPort.Rollback(tx)
-			return
-		}
-		if err != nil {
-			log.Error(ctx, "Error in DeleteScheduleGroup: ", err)
-			s.dbTxPort.Rollback(tx)
-		}
-	}()
-
-	err = s.scheduleTaskPort.DeleteByScheduleGroupID(ctx, tx, ID)
+func (s *ScheduleGroupService) DeleteScheduleGroup(ctx context.Context, tx *gorm.DB, ID int64) error {
+	err := s.scheduleTaskPort.DeleteByScheduleGroupID(ctx, tx, ID)
 	if err != nil {
 		log.Error(ctx, "Error deleting tasks in DeleteScheduleGroup: ", err)
 		return err
@@ -91,36 +65,13 @@ func (s *ScheduleGroupService) DeleteScheduleGroup(ctx context.Context, ID int64
 		log.Error(ctx, "Error in DeleteScheduleGroup: ", err)
 		return err
 	}
-	err = s.dbTxPort.Commit(tx)
-	if err != nil {
-		log.Error(ctx, "Error committing transaction in DeleteScheduleGroup: ", err)
-		return err
-	}
 	return nil
 }
 
-func (s *ScheduleGroupService) UpdateScheduleGroup(ctx context.Context, ID int64, scheduleGroup *entity.ScheduleGroupEntity) (*entity.ScheduleGroupEntity, error) {
-	var err error
-	tx := s.dbTxPort.StartTransaction()
-	defer func() {
-		if r := recover(); r != nil {
-			log.Error(ctx, "Recovered from panic in UpdateScheduleGroup: ", r)
-			s.dbTxPort.Rollback(tx)
-			return
-		}
-		if err != nil {
-			log.Error(ctx, "Error in UpdateScheduleGroup: ", err)
-			s.dbTxPort.Rollback(tx)
-		}
-	}()
+func (s *ScheduleGroupService) UpdateScheduleGroup(ctx context.Context, tx *gorm.DB, ID int64, scheduleGroup *entity.ScheduleGroupEntity) (*entity.ScheduleGroupEntity, error) {
 	sg, err := s.scheduleGroupPort.UpdateScheduleGroup(ctx, tx, ID, scheduleGroup)
 	if err != nil {
 		log.Error(ctx, "Error in UpdateScheduleGroup: ", err)
-		return nil, err
-	}
-	err = s.dbTxPort.Commit(tx)
-	if err != nil {
-		log.Error(ctx, "Error committing transaction in UpdateScheduleGroup: ", err)
 		return nil, err
 	}
 	return sg, nil

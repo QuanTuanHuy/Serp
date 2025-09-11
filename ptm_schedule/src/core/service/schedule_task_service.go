@@ -1,3 +1,8 @@
+/*
+Author: QuanTuanHuy
+Description: Part of Serp Project
+*/
+
 package service
 
 import (
@@ -14,13 +19,14 @@ import (
 	"github.com/serp/ptm-schedule/src/core/domain/mapper"
 	port2 "github.com/serp/ptm-schedule/src/core/port/client"
 	port "github.com/serp/ptm-schedule/src/core/port/store"
+	"gorm.io/gorm"
 )
 
 type IScheduleTaskService interface {
-	CreateScheduleTask(ctx context.Context, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error)
+	CreateScheduleTask(ctx context.Context, tx *gorm.DB, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error)
 	PushCreateScheduleTaskMessage(ctx context.Context, scheduleTask *entity.ScheduleTaskEntity) error
-	UpdateScheduleTask(ctx context.Context, ID int64, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error)
-	DeleteScheduleTask(ctx context.Context, ID int64) error
+	UpdateScheduleTask(ctx context.Context, tx *gorm.DB, ID int64, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error)
+	DeleteScheduleTask(ctx context.Context, tx *gorm.DB, ID int64) error
 	GetScheduleTaskByID(ctx context.Context, ID int64) (*entity.ScheduleTaskEntity, error)
 	GetScheduleTaskByTaskID(ctx context.Context, taskID int64) (*entity.ScheduleTaskEntity, error)
 	GetByTaskBatch(ctx context.Context, schedulePlanID int64, taskBatch int32) ([]*entity.ScheduleTaskEntity, error)
@@ -43,7 +49,7 @@ func (s *ScheduleTaskService) PushCreateScheduleTaskMessage(ctx context.Context,
 func (s *ScheduleTaskService) GetScheduleTaskByID(ctx context.Context, ID int64) (*entity.ScheduleTaskEntity, error) {
 	scheduleTask, err := s.scheduleTaskPort.GetScheduleTaskByID(ctx, ID)
 	if err != nil {
-		log.Error(ctx, "Failed to get schedule task by ID: ", "error", err)
+		log.Error(ctx, "Failed to get schedule task by ID: ", err)
 		return nil, err
 	}
 	if scheduleTask == nil {
@@ -55,7 +61,7 @@ func (s *ScheduleTaskService) GetScheduleTaskByID(ctx context.Context, ID int64)
 func (s *ScheduleTaskService) GetScheduleTaskByTaskID(ctx context.Context, taskID int64) (*entity.ScheduleTaskEntity, error) {
 	scheduleTask, err := s.scheduleTaskPort.GetScheduleTaskByTaskID(ctx, taskID)
 	if err != nil {
-		log.Error(ctx, "Failed to get schedule task by task ID: ", taskID, "error", err)
+		log.Error(ctx, "Failed to get schedule task by task ID: ", taskID, err)
 		return nil, err
 	}
 	if scheduleTask == nil {
@@ -64,85 +70,28 @@ func (s *ScheduleTaskService) GetScheduleTaskByTaskID(ctx context.Context, taskI
 	return scheduleTask, nil
 }
 
-func (s *ScheduleTaskService) CreateScheduleTask(ctx context.Context, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error) {
-	var err error
-	tx := s.dbTxPort.StartTransaction()
-	defer func() {
-		if r := recover(); r != nil {
-			log.Error(ctx, "Recovered from panic in CreateScheduleTask ", r)
-			s.dbTxPort.Rollback(tx)
-			return
-		}
-		if err != nil {
-			log.Error(ctx, "Error in CreateScheduleTask: ", err)
-			s.dbTxPort.Rollback(tx)
-		}
-	}()
-
-	scheduleTask, err = s.scheduleTaskPort.CreateScheduleTask(ctx, tx, scheduleTask)
+func (s *ScheduleTaskService) CreateScheduleTask(ctx context.Context, tx *gorm.DB, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error) {
+	scheduleTask, err := s.scheduleTaskPort.CreateScheduleTask(ctx, tx, scheduleTask)
 	if err != nil {
-		log.Error(ctx, "Failed to create schedule task: ", "error", err)
-		return nil, err
-	}
-	err = s.PushCreateScheduleTaskMessage(ctx, scheduleTask)
-	if err != nil {
-		log.Error(ctx, "Failed to push create schedule task message: ", err)
-		return nil, err
-	}
-	err = tx.Commit().Error
-	if err != nil {
+		log.Error(ctx, "Failed to create schedule task: ", err)
 		return nil, err
 	}
 	return scheduleTask, nil
 }
 
-func (s *ScheduleTaskService) UpdateScheduleTask(ctx context.Context, ID int64, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error) {
-	var err error
-	tx := s.dbTxPort.StartTransaction()
-	defer func() {
-		if r := recover(); r != nil {
-			log.Error(ctx, "Recovered from panic in UpdateScheduleTask ", "error ", r)
-			s.dbTxPort.Rollback(tx)
-			return
-		}
-		if err != nil {
-			log.Error(ctx, "Error in UpdateScheduleTask: ", "error", err)
-			s.dbTxPort.Rollback(tx)
-		}
-	}()
-	scheduleTask, err = s.scheduleTaskPort.UpdateScheduleTask(ctx, tx, ID, scheduleTask)
+func (s *ScheduleTaskService) UpdateScheduleTask(ctx context.Context, tx *gorm.DB, ID int64, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error) {
+	scheduleTask, err := s.scheduleTaskPort.UpdateScheduleTask(ctx, tx, ID, scheduleTask)
 	if err != nil {
-		log.Error(ctx, "Failed to update schedule task: ", "error", err)
-		return nil, err
-	}
-	err = tx.Commit().Error
-	if err != nil {
+		log.Error(ctx, "Failed to update schedule task: ", err)
 		return nil, err
 	}
 	return scheduleTask, nil
 }
 
-func (s *ScheduleTaskService) DeleteScheduleTask(ctx context.Context, ID int64) error {
-	var err error
-	tx := s.dbTxPort.StartTransaction()
-	defer func() {
-		if r := recover(); r != nil {
-			log.Error(ctx, "Recovered from panic in DeleteScheduleTask ", "error ", r)
-			s.dbTxPort.Rollback(tx)
-			return
-		}
-		if err != nil {
-			log.Error(ctx, "Error in DeleteScheduleTask: ", "error", err)
-			s.dbTxPort.Rollback(tx)
-		}
-	}()
-	err = s.scheduleTaskPort.DeleteScheduleTask(ctx, tx, ID)
+func (s *ScheduleTaskService) DeleteScheduleTask(ctx context.Context, tx *gorm.DB, ID int64) error {
+	err := s.scheduleTaskPort.DeleteScheduleTask(ctx, tx, ID)
 	if err != nil {
-		log.Error(ctx, "Failed to delete schedule task: ", "error", err)
-		return err
-	}
-	err = tx.Commit().Error
-	if err != nil {
+		log.Error(ctx, "Failed to delete schedule task: ", err)
 		return err
 	}
 	return nil
@@ -151,7 +100,7 @@ func (s *ScheduleTaskService) DeleteScheduleTask(ctx context.Context, ID int64) 
 func (s *ScheduleTaskService) GetBySchedulePlanID(ctx context.Context, schedulePlanID int64) ([]*entity.ScheduleTaskEntity, error) {
 	scheduleTasks, err := s.scheduleTaskPort.GetBySchedulePlanID(ctx, schedulePlanID)
 	if err != nil {
-		log.Error(ctx, "Failed to get schedule tasks by schedule plan ID: ", "error", err)
+		log.Error(ctx, "Failed to get schedule tasks by schedule plan ID: ", err)
 		return nil, err
 	}
 	return scheduleTasks, nil
@@ -160,7 +109,7 @@ func (s *ScheduleTaskService) GetBySchedulePlanID(ctx context.Context, scheduleP
 func (s *ScheduleTaskService) GetByTaskBatch(ctx context.Context, schedulePlanID int64, taskBatch int32) ([]*entity.ScheduleTaskEntity, error) {
 	scheduleTasks, err := s.scheduleTaskPort.GetByTaskBatch(ctx, schedulePlanID, taskBatch)
 	if err != nil {
-		log.Error(ctx, "Failed to get schedule tasks by task batch: ", "error", err)
+		log.Error(ctx, "Failed to get schedule tasks by task batch: ", err)
 		return nil, err
 	}
 	return scheduleTasks, nil
