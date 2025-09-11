@@ -47,35 +47,30 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   const validateForm = (): boolean => {
     const errors: Partial<RegisterFormData> = {};
 
-    // First name validation
     if (!formData.firstName) {
       errors.firstName = 'First name is required';
     } else if (formData.firstName.length < 2) {
       errors.firstName = 'First name must be at least 2 characters';
     }
 
-    // Last name validation
     if (!formData.lastName) {
       errors.lastName = 'Last name is required';
     } else if (formData.lastName.length < 2) {
       errors.lastName = 'Last name must be at least 2 characters';
     }
 
-    // Email validation
     if (!formData.email) {
       errors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = 'Please enter a valid email';
     }
 
-    // Password validation
     if (!formData.password) {
       errors.password = 'Password is required';
     } else if (formData.password.length < 6) {
       errors.password = 'Password must be at least 6 characters';
     }
 
-    // Confirm password validation
     if (!formData.confirmPassword) {
       errors.confirmPassword = 'Please confirm your password';
     } else if (formData.password !== formData.confirmPassword) {
@@ -93,12 +88,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
 
-    // Clear validation error for this field
     if (validationErrors[field]) {
       setValidationErrors((prev) => ({ ...prev, [field]: undefined }));
     }
 
-    // Clear auth error
     if (error) {
       clearError();
     }

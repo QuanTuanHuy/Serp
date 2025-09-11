@@ -38,11 +38,13 @@ func All() fx.Option {
 		// Provide properties
 		golib.ProvideProps(properties.NewKeycloakProperties),
 		golib.ProvideProps(properties.NewKafkaProducerProperties),
+		golib.ProvideProps(properties.NewKafkaConsumerProperties),
 
 		fx.Invoke(InitializeDB),
 
 		// Provide adapter
 		fx.Provide(adapter2.NewKafkaProducerAdapter),
+		fx.Provide(adapter2.NewKafkaConsumer),
 
 		fx.Provide(adapter.NewDBTransactionAdapter),
 		fx.Provide(adapter.NewSchedulePlanStoreAdapter),
@@ -70,8 +72,12 @@ func All() fx.Option {
 		fx.Provide(utils.NewJWTUtils),
 		fx.Provide(middleware.NewJWTMiddleware),
 
+		// Http server
 		golibgin.GinHttpServerOpt(),
 		fx.Invoke(router.RegisterGinRouters),
 		golibgin.OnStopHttpServerOpt(),
+
+		// Kafka consumer
+		fx.Invoke(InitializeKafkaConsumer),
 	)
 }
