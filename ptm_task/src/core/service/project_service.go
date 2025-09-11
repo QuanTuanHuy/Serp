@@ -23,24 +23,24 @@ import (
 	"github.com/serp/ptm-task/src/core/domain/mapper"
 	port2 "github.com/serp/ptm-task/src/core/port/client"
 	port "github.com/serp/ptm-task/src/core/port/store"
+	"gorm.io/gorm"
 )
 
 type IProjectService interface {
-	CreateProject(ctx context.Context, userID int64, request *request.CreateProjectDTO) (*entity.ProjectEntity, error)
-	UpdateProject(ctx context.Context, userID, projectID int64, request *request.UpdateProjectDTO) (*entity.ProjectEntity, error)
+	CreateProject(ctx context.Context, tx *gorm.DB, userID int64, request *request.CreateProjectDTO) (*entity.ProjectEntity, error)
+	UpdateProject(ctx context.Context, tx *gorm.DB, userID, projectID int64, request *request.UpdateProjectDTO) (*entity.ProjectEntity, error)
 	GetProjectByID(ctx context.Context, ID int64) (*entity.ProjectEntity, error)
 	GetProjects(ctx context.Context, params *request.GetProjectParams) ([]*entity.ProjectEntity, int64, error)
 	GetProjectsByName(ctx context.Context, userID int64, searchName string, maxDistance int, limit int) ([]*entity.ProjectEntity, error)
 	GetProjectByName(ctx context.Context, userID int64, searchName string) (*entity.ProjectEntity, error)
 	GetProjectsByUserID(ctx context.Context, userID int64) ([]*entity.ProjectEntity, error)
-	ArchiveProject(ctx context.Context, userID, projectID int64) error
+	ArchiveProject(ctx context.Context, tx *gorm.DB, userID, projectID int64) error
 }
 
 type ProjectService struct {
 	projectPort   port.IProjectPort
 	groupTaskPort port.IGroupTaskPort
 	redisPort     port2.IRedisPort
-	dbTx          port.IDBTransactionPort
 }
 
 func (p *ProjectService) GetProjectsByUserID(ctx context.Context, userID int64) ([]*entity.ProjectEntity, error) {
@@ -163,7 +163,7 @@ func (p *ProjectService) GetProjectByID(ctx context.Context, ID int64) (*entity.
 	return project, nil
 }
 
-func (p *ProjectService) CreateProject(ctx context.Context, userID int64, request *request.CreateProjectDTO) (*entity.ProjectEntity, error) {
+func (p *ProjectService) CreateProject(ctx context.Context, tx *gorm.DB, userID int64, request *request.CreateProjectDTO) (*entity.ProjectEntity, error) {
 	var err error
 	hasDefaultProject, err := p.CheckDefaultProject(ctx, userID)
 	if err != nil {
@@ -174,28 +174,9 @@ func (p *ProjectService) CreateProject(ctx context.Context, userID int64, reques
 	}
 
 	project := mapper.CreateProjectMapper(request, userID)
-
-	tx := p.dbTx.StartTransaction()
-	defer func() {
-		if r := recover(); r != nil {
-			log.Error(ctx, "Panic occurred while creating project ", "error ", r)
-			p.dbTx.Rollback(tx)
-		}
-		if err != nil {
-			log.Error(ctx, "Failed to create project ", "error ", err)
-			p.dbTx.Rollback(tx)
-			return
-		}
-	}()
-
 	project, err = p.projectPort.CreateProject(ctx, tx, project)
 	if err != nil {
 		log.Error(ctx, "Failed to create project ", "error ", err)
-		return nil, err
-	}
-	err = p.dbTx.Commit(tx)
-	if err != nil {
-		log.Error(ctx, "Failed to commit transaction for project creation ", "error ", err)
 		return nil, err
 	}
 
@@ -209,7 +190,7 @@ func (p *ProjectService) CreateProject(ctx context.Context, userID int64, reques
 	return project, nil
 }
 
-func (p *ProjectService) UpdateProject(ctx context.Context, userID, projectID int64, request *request.UpdateProjectDTO) (*entity.ProjectEntity, error) {
+func (p *ProjectService) UpdateProject(ctx context.Context, tx *gorm.DB, userID, projectID int64, request *request.UpdateProjectDTO) (*entity.ProjectEntity, error) {
 	var err error
 	project, err := p.projectPort.GetProjectByID(ctx, projectID)
 	if err != nil {
@@ -223,7 +204,7 @@ func (p *ProjectService) UpdateProject(ctx context.Context, userID, projectID in
 	}
 
 	project = request.ToProjectEntity(project)
-	project, err = p.updateProject(ctx, projectID, project)
+	project, err = p.updateProject(ctx, tx, projectID, project)
 	if err != nil {
 		log.Error(ctx, "Failed to update project ", projectID, " error: ", err)
 		return nil, err
@@ -246,7 +227,7 @@ func (p *ProjectService) CheckDefaultProject(ctx context.Context, userID int64) 
 	return project != nil, nil
 }
 
-func (p *ProjectService) ArchiveProject(ctx context.Context, userID int64, projectID int64) error {
+func (p *ProjectService) ArchiveProject(ctx context.Context, tx *gorm.DB, userID int64, projectID int64) error {
 	var err error
 	project, err := p.projectPort.GetProjectByID(ctx, projectID)
 	if err != nil {
@@ -266,7 +247,7 @@ func (p *ProjectService) ArchiveProject(ctx context.Context, userID int64, proje
 	project.ActiveStatus = enum.Inactive
 	project.Status = enum.Archived
 
-	_, err = p.updateProject(ctx, projectID, project)
+	_, err = p.updateProject(ctx, tx, projectID, project)
 	if err != nil {
 		log.Error(ctx, "Failed to archive project ", projectID, " error: ", err)
 		return err
@@ -286,28 +267,10 @@ func (p *ProjectService) ArchiveProject(ctx context.Context, userID int64, proje
 	return nil
 }
 
-func (p *ProjectService) updateProject(ctx context.Context, projectID int64, project *entity.ProjectEntity) (*entity.ProjectEntity, error) {
-	var err error
-	tx := p.dbTx.StartTransaction()
-	defer func() {
-		if r := recover(); r != nil {
-			log.Error(ctx, "Panic occurred while updating project ", "error ", r)
-			p.dbTx.Rollback(tx)
-		}
-		if err != nil {
-			log.Error(ctx, "Failed to update project ", "error ", err)
-			p.dbTx.Rollback(tx)
-		}
-	}()
-
-	project, err = p.projectPort.UpdateProject(ctx, tx, projectID, project)
+func (p *ProjectService) updateProject(ctx context.Context, tx *gorm.DB, projectID int64, project *entity.ProjectEntity) (*entity.ProjectEntity, error) {
+	project, err := p.projectPort.UpdateProject(ctx, tx, projectID, project)
 	if err != nil {
 		log.Error(ctx, "Failed to update project ", "error ", err)
-		return nil, err
-	}
-	err = p.dbTx.Commit(tx)
-	if err != nil {
-		log.Error(ctx, "Failed to commit transaction for project update ", "error ", err)
 		return nil, err
 	}
 	return project, nil
@@ -316,12 +279,10 @@ func (p *ProjectService) updateProject(ctx context.Context, projectID int64, pro
 func NewProjectService(
 	projectPort port.IProjectPort,
 	groupTaskPort port.IGroupTaskPort,
-	redisPort port2.IRedisPort,
-	dbTx port.IDBTransactionPort) IProjectService {
+	redisPort port2.IRedisPort) IProjectService {
 	return &ProjectService{
 		projectPort:   projectPort,
 		groupTaskPort: groupTaskPort,
 		redisPort:     redisPort,
-		dbTx:          dbTx,
 	}
 }

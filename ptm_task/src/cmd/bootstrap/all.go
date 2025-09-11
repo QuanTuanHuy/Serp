@@ -60,6 +60,7 @@ func All() fx.Option {
 		fx.Provide(service.NewNoteService),
 
 		// Provide usecase
+		fx.Provide(service.NewTransactionService),
 		fx.Provide(usecase.NewProjectUseCase),
 		fx.Provide(usecase.NewGroupTaskUseCase),
 		fx.Provide(usecase.NewTaskUseCase),

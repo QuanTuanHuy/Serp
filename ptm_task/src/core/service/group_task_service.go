@@ -18,22 +18,22 @@ import (
 	"github.com/serp/ptm-task/src/core/domain/mapper"
 	port2 "github.com/serp/ptm-task/src/core/port/client"
 	port "github.com/serp/ptm-task/src/core/port/store"
+	"gorm.io/gorm"
 )
 
 type IGroupTaskService interface {
-	CreateGroupTask(ctx context.Context, projectID int64, request *request.CreateGroupTaskDTO) (*entity.GroupTaskEntity, error)
-	UpdateGroupTask(ctx context.Context, groupTaskID int64, groupTask *entity.GroupTaskEntity) (*entity.GroupTaskEntity, error)
+	CreateGroupTask(ctx context.Context, tx *gorm.DB, projectID int64, request *request.CreateGroupTaskDTO) (*entity.GroupTaskEntity, error)
+	UpdateGroupTask(ctx context.Context, tx *gorm.DB, groupTaskID int64, groupTask *entity.GroupTaskEntity) (*entity.GroupTaskEntity, error)
 	GetDefaultGroupTaskByProjectID(ctx context.Context, projectID int64) (*entity.GroupTaskEntity, error)
 	GetGroupTasksByProjectID(ctx context.Context, projectID int64) ([]*entity.GroupTaskEntity, error)
 	GetGroupTaskByID(ctx context.Context, groupTaskID int64) (*entity.GroupTaskEntity, error)
-	CalculateTasksInGroupTask(ctx context.Context, groupTaskID int64) (*entity.GroupTaskEntity, error)
+	CalculateTasksInGroupTask(ctx context.Context, tx *gorm.DB, groupTaskID int64) (*entity.GroupTaskEntity, error)
 }
 
 type GroupTaskService struct {
 	groupTaskPort port.IGroupTaskPort
 	taskPort      port.ITaskPort
 	redisPort     port2.IRedisPort
-	dbTx          port.IDBTransactionPort
 }
 
 func (g *GroupTaskService) GetGroupTaskByID(ctx context.Context, groupTaskID int64) (*entity.GroupTaskEntity, error) {
@@ -49,38 +49,20 @@ func (g *GroupTaskService) GetGroupTaskByID(ctx context.Context, groupTaskID int
 	return groupTask, nil
 }
 
-func (g *GroupTaskService) CreateGroupTask(ctx context.Context, projectID int64, request *request.CreateGroupTaskDTO) (*entity.GroupTaskEntity, error) {
+func (g *GroupTaskService) CreateGroupTask(ctx context.Context, tx *gorm.DB, projectID int64, request *request.CreateGroupTaskDTO) (*entity.GroupTaskEntity, error) {
 	var err error
 	defaultGroupTask, err := g.GetDefaultGroupTaskByProjectID(ctx, projectID)
 	if err != nil {
 		return nil, err
 	}
-
 	groupTask := mapper.CreateGroupTaskMapper(request)
 	if defaultGroupTask == nil {
 		groupTask.IsDefault = true
 	}
-	tx := g.dbTx.StartTransaction()
-
-	defer func() {
-		if r := recover(); r != nil {
-			log.Error(ctx, "Recovered from panic while creating group task: ", r)
-			g.dbTx.Rollback(tx)
-		}
-		if err != nil {
-			log.Error(ctx, "Failed to create group task: ", err)
-			g.dbTx.Rollback(tx)
-		}
-	}()
 
 	groupTask, err = g.groupTaskPort.CreateGroupTask(ctx, tx, groupTask)
 	if err != nil {
 		log.Error(ctx, "Failed to create group task: ", err)
-		return nil, err
-	}
-	err = g.dbTx.Commit(tx)
-	if err != nil {
-		log.Error(ctx, "Failed to commit transaction for group task creation: ", err)
 		return nil, err
 	}
 
@@ -94,30 +76,10 @@ func (g *GroupTaskService) CreateGroupTask(ctx context.Context, projectID int64,
 	return groupTask, nil
 }
 
-func (g *GroupTaskService) UpdateGroupTask(ctx context.Context, groupTaskID int64, groupTask *entity.GroupTaskEntity) (*entity.GroupTaskEntity, error) {
-	var err error
-	tx := g.dbTx.StartTransaction()
-
-	defer func() {
-		if r := recover(); r != nil {
-			log.Error(ctx, "Recovered from panic while updating group task: ", r)
-			g.dbTx.Rollback(tx)
-		}
-		if err != nil {
-			log.Error(ctx, "Failed to update group task: ", err)
-			g.dbTx.Rollback(tx)
-		}
-	}()
-
-	groupTask, err = g.groupTaskPort.UpdateGroupTask(ctx, tx, groupTaskID, groupTask)
+func (g *GroupTaskService) UpdateGroupTask(ctx context.Context, tx *gorm.DB, groupTaskID int64, groupTask *entity.GroupTaskEntity) (*entity.GroupTaskEntity, error) {
+	groupTask, err := g.groupTaskPort.UpdateGroupTask(ctx, tx, groupTaskID, groupTask)
 	if err != nil {
 		log.Error(ctx, "Failed to update group task ID ", groupTaskID, " error ", err)
-		return nil, err
-	}
-
-	err = g.dbTx.Commit(tx)
-	if err != nil {
-		log.Error(ctx, "Failed to commit transaction for group task update: ", err)
 		return nil, err
 	}
 
@@ -131,7 +93,7 @@ func (g *GroupTaskService) UpdateGroupTask(ctx context.Context, groupTaskID int6
 	return groupTask, nil
 }
 
-func (g *GroupTaskService) CalculateTasksInGroupTask(ctx context.Context, groupTaskID int64) (*entity.GroupTaskEntity, error) {
+func (g *GroupTaskService) CalculateTasksInGroupTask(ctx context.Context, tx *gorm.DB, groupTaskID int64) (*entity.GroupTaskEntity, error) {
 	groupTask, err := g.GetGroupTaskByID(ctx, groupTaskID)
 	if err != nil {
 		log.Error(ctx, "Failed to get group task by ID ", groupTaskID, " error ", err)
@@ -152,7 +114,7 @@ func (g *GroupTaskService) CalculateTasksInGroupTask(ctx context.Context, groupT
 		}
 	}
 	groupTask.CompletedTasks = doneTasks
-	groupTask, err = g.UpdateGroupTask(ctx, groupTaskID, groupTask)
+	groupTask, err = g.UpdateGroupTask(ctx, tx, groupTaskID, groupTask)
 	if err != nil {
 		log.Error(ctx, "Failed to update group task after calculating tasks: ", err)
 		return nil, err
@@ -199,12 +161,10 @@ func (g *GroupTaskService) GetDefaultGroupTaskByProjectID(ctx context.Context, p
 func NewGroupTaskService(
 	groupTaskPort port.IGroupTaskPort,
 	taskPort port.ITaskPort,
-	redisPort port2.IRedisPort,
-	dbTx port.IDBTransactionPort) IGroupTaskService {
+	redisPort port2.IRedisPort) IGroupTaskService {
 	return &GroupTaskService{
 		groupTaskPort: groupTaskPort,
 		taskPort:      taskPort,
 		redisPort:     redisPort,
-		dbTx:          dbTx,
 	}
 }

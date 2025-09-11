@@ -13,7 +13,7 @@ import (
 )
 
 type INotePort interface {
-	CreateNode(ctx context.Context, tx *gorm.DB, note *entity.NoteEntity) (*entity.NoteEntity, error)
+	CreateNote(ctx context.Context, tx *gorm.DB, note *entity.NoteEntity) (*entity.NoteEntity, error)
 	GetNotesByUserID(ctx context.Context, userID int64) ([]*entity.NoteEntity, error)
 	UpdateNote(ctx context.Context, tx *gorm.DB, note *entity.NoteEntity) (*entity.NoteEntity, error)
 	GetNoteByID(ctx context.Context, noteID int64) (*entity.NoteEntity, error)

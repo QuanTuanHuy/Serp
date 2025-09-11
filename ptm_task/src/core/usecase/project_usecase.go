@@ -11,6 +11,7 @@ import (
 	"github.com/serp/ptm-task/src/core/domain/dto/request"
 	"github.com/serp/ptm-task/src/core/domain/entity"
 	"github.com/serp/ptm-task/src/core/service"
+	"gorm.io/gorm"
 )
 
 type IProjectUseCase interface {
@@ -26,10 +27,13 @@ type IProjectUseCase interface {
 type ProjectUseCase struct {
 	projectService   service.IProjectService
 	groupTaskService service.IGroupTaskService
+	txService        service.ITransactionService
 }
 
 func (p *ProjectUseCase) ArchiveProject(ctx context.Context, userID int64, projectID int64) error {
-	return p.projectService.ArchiveProject(ctx, userID, projectID)
+	return p.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
+		return p.projectService.ArchiveProject(ctx, tx, userID, projectID)
+	})
 }
 
 func (p *ProjectUseCase) GetProjectsByUserID(ctx context.Context, userID int64) ([]*entity.ProjectEntity, error) {
@@ -54,20 +58,35 @@ func (p *ProjectUseCase) GetProjectByID(ctx context.Context, ID int64) (*entity.
 }
 
 func (p *ProjectUseCase) CreateProject(ctx context.Context, userID int64, request *request.CreateProjectDTO) (*entity.ProjectEntity, error) {
-	return p.projectService.CreateProject(ctx, userID, request)
+	result, err := p.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
+		return p.projectService.CreateProject(ctx, tx, userID, request)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*entity.ProjectEntity), nil
 }
 
 func (p *ProjectUseCase) UpdateProject(ctx context.Context, userID int64, projectID int64, request *request.UpdateProjectDTO) (*entity.ProjectEntity, error) {
-	return p.projectService.UpdateProject(ctx, userID, projectID, request)
+	result, err := p.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
+		return p.projectService.UpdateProject(ctx, tx, userID, projectID, request)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*entity.ProjectEntity), nil
 }
 
 func (p *ProjectUseCase) GetProjectsByName(ctx context.Context, userID int64, searchName string, maxDistance int, limit int) ([]*entity.ProjectEntity, error) {
 	return p.projectService.GetProjectsByName(ctx, userID, searchName, maxDistance, limit)
 }
 
-func NewProjectUseCase(projectService service.IProjectService, groupTaskService service.IGroupTaskService) IProjectUseCase {
+func NewProjectUseCase(projectService service.IProjectService,
+	groupTaskService service.IGroupTaskService,
+	txService service.ITransactionService) IProjectUseCase {
 	return &ProjectUseCase{
 		projectService:   projectService,
 		groupTaskService: groupTaskService,
+		txService:        txService,
 	}
 }

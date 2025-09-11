@@ -32,3 +32,14 @@ app:
       retryBackoffMs: 100
       flushFrequencyMs: 500
       flushMessages: 100
+    consumer:
+      bootstrapServers:
+        - localhost:9094
+      groupId: ptm-schedule-group
+      autoOffsetReset: earliest
+      enableAutoCommit: false
+      sessionTimeoutMs: 30000
+      heartbeatMs: 10000
+      maxPollRecords: 100
+      fetchMinBytes: 1
+      fetchMaxWaitMs: 500
