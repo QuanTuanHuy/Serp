@@ -15,6 +15,7 @@ import (
 	"github.com/serp/ptm-task/src/core/domain/entity"
 	"github.com/serp/ptm-task/src/core/domain/mapper"
 	"github.com/serp/ptm-task/src/core/service"
+	"gorm.io/gorm"
 )
 
 type INoteUseCase interface {
@@ -28,10 +29,21 @@ type INoteUseCase interface {
 
 type NoteUseCase struct {
 	noteService service.INoteService
+	txService   service.ITransactionService
 }
 
 func (n *NoteUseCase) CreateNote(ctx context.Context, userID int64, request *request.CreateNoteDTO) (*entity.NoteEntity, error) {
-	return n.noteService.CreateNote(ctx, userID, request)
+	result, err := n.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
+		note, err := n.noteService.CreateNote(ctx, tx, userID, request)
+		if err != nil {
+			return nil, err
+		}
+		return note, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*entity.NoteEntity), nil
 }
 
 func (n *NoteUseCase) DeleteNote(ctx context.Context, userID int64, noteID int64) error {
@@ -42,11 +54,9 @@ func (n *NoteUseCase) DeleteNote(ctx context.Context, userID int64, noteID int64
 	if note.OwnerID != userID {
 		return errors.New(constant.DeleteNoteForbidden)
 	}
-	err = n.noteService.DeleteNote(ctx, noteID)
-	if err != nil {
-		return err
-	}
-	return nil
+	return n.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
+		return n.noteService.DeleteNote(ctx, tx, noteID)
+	})
 }
 
 func (n *NoteUseCase) GetNoteByID(ctx context.Context, userID int64, noteID int64) (*entity.NoteEntity, error) {
@@ -75,12 +85,17 @@ func (n *NoteUseCase) UnlockNote(ctx context.Context, userID int64, noteID int64
 		return nil, errors.New(constant.NotePasswordMismatch)
 	}
 	note = mapper.UnlockNote(note)
-	note, err = n.noteService.UpdateNote(ctx, note)
+	result, err := n.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
+		updatedNote, err := n.noteService.UpdateNote(ctx, tx, note)
+		if err != nil {
+			return nil, err
+		}
+		return updatedNote, nil
+	})
 	if err != nil {
-		log.Error(ctx, "Failed to unlock note: ", err)
 		return nil, err
 	}
-	return note, nil
+	return result.(*entity.NoteEntity), nil
 }
 
 func (n *NoteUseCase) LockNote(ctx context.Context, userID, noteID int64, request *request.LockNoteDTO) (*entity.NoteEntity, error) {
@@ -93,16 +108,22 @@ func (n *NoteUseCase) LockNote(ctx context.Context, userID, noteID int64, reques
 		return nil, errors.New(constant.LockNoteForbidden)
 	}
 	note = mapper.LockNote(request, note)
-	note, err = n.noteService.UpdateNote(ctx, note)
+	result, err := n.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
+		updatedNote, err := n.noteService.UpdateNote(ctx, tx, note)
+		if err != nil {
+			return nil, err
+		}
+		return updatedNote, nil
+	})
 	if err != nil {
-		log.Error(ctx, "Failed to lock note: ", err)
 		return nil, err
 	}
-	return note, nil
+	return result.(*entity.NoteEntity), nil
 }
 
-func NewNoteUseCase(noteService service.INoteService) INoteUseCase {
+func NewNoteUseCase(noteService service.INoteService, txService service.ITransactionService) INoteUseCase {
 	return &NoteUseCase{
 		noteService: noteService,
+		txService:   txService,
 	}
 }

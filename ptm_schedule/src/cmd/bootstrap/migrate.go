@@ -15,6 +15,8 @@ import (
 func InitializeDB(db *gorm.DB) {
 	err := db.AutoMigrate(
 		&model.SchedulePlanModel{},
+		&model.ScheduleGroupModel{},
+		&model.ScheduleTaskModel{},
 	)
 	if err != nil {
 		log.Fatal("Failed to run migrations: ", err)

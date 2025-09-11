@@ -15,6 +15,7 @@ import (
 	"github.com/serp/ptm-task/src/core/domain/entity"
 	"github.com/serp/ptm-task/src/core/domain/mapper"
 	"github.com/serp/ptm-task/src/core/service"
+	"gorm.io/gorm"
 )
 
 type ICommentUseCase interface {
@@ -28,6 +29,7 @@ type ICommentUseCase interface {
 type CommentUseCase struct {
 	commentService service.ICommentService
 	taskService    service.ITaskService
+	txService      service.ITransactionService
 }
 
 func (c *CommentUseCase) GetCommentByID(ctx context.Context, userID int64, commentID int64) (*entity.CommentEntity, error) {
@@ -55,12 +57,17 @@ func (c *CommentUseCase) CreateComment(ctx context.Context, userID int64, reques
 		log.Error(ctx, "User ", userID, " does not have permission to comment on task ", request.TaskID)
 		return nil, errors.New(constant.CreateCommentForbidden)
 	}
-	comment, err := c.commentService.CreateComment(ctx, request)
+	result, err := c.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
+		comment, err := c.commentService.CreateComment(ctx, tx, request)
+		if err != nil {
+			return nil, err
+		}
+		return comment, nil
+	})
 	if err != nil {
-		log.Error(ctx, "Failed to create comment for task ", request.TaskID, " error: ", err)
 		return nil, err
 	}
-	return comment, nil
+	return result.(*entity.CommentEntity), nil
 }
 
 func (c *CommentUseCase) GetCommentsByTaskID(ctx context.Context, userID int64, taskID int64) ([]*entity.CommentEntity, error) {
@@ -95,12 +102,17 @@ func (c *CommentUseCase) UpdateComment(ctx context.Context, userID int64, commen
 		return nil, errors.New(constant.UpdateCommentForbidden)
 	}
 	comment = mapper.UpdateCommentMapper(request, comment)
-	comment, err = c.commentService.UpdateComment(ctx, commentID, comment)
+	result, err := c.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
+		comment, err := c.commentService.UpdateComment(ctx, tx, commentID, comment)
+		if err != nil {
+			return nil, err
+		}
+		return comment, nil
+	})
 	if err != nil {
-		log.Error(ctx, "Failed to update comment ID ", commentID, " error: ", err)
 		return nil, err
 	}
-	return comment, nil
+	return result.(*entity.CommentEntity), nil
 }
 
 func (c *CommentUseCase) DeleteComment(ctx context.Context, userID int64, commentID int64) error {
@@ -115,17 +127,17 @@ func (c *CommentUseCase) DeleteComment(ctx context.Context, userID int64, commen
 	if task.UserID != userID {
 		return errors.New(constant.DeleteCommentForbidden)
 	}
-	err = c.commentService.DeleteComment(ctx, commentID)
-	if err != nil {
-		log.Error(ctx, "Failed to delete comment ID ", commentID, " error: ", err)
-		return err
-	}
-	return nil
+	return c.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
+		return c.commentService.DeleteComment(ctx, tx, commentID)
+	})
 }
 
-func NewCommentUseCase(commentService service.ICommentService, taskService service.ITaskService) ICommentUseCase {
+func NewCommentUseCase(commentService service.ICommentService,
+	taskService service.ITaskService,
+	txService service.ITransactionService) ICommentUseCase {
 	return &CommentUseCase{
 		commentService: commentService,
 		taskService:    taskService,
+		txService:      txService,
 	}
 }
