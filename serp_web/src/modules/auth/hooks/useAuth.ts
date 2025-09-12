@@ -36,13 +36,11 @@ export const useAuth = () => {
   const user = useAppSelector(selectUser);
   const token = useAppSelector(selectToken);
 
-  // RTK Query mutations
   const [loginMutation] = useLoginMutation();
   const [registerMutation] = useRegisterMutation();
   const [refreshTokenMutation] = useRefreshTokenMutation();
   const [revokeTokenMutation] = useRevokeTokenMutation();
 
-  // Get current user query (only run if authenticated)
   const {
     data: currentUserData,
     isLoading: userLoading,
