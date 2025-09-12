@@ -47,7 +47,7 @@ export default function Home() {
   };
 
   return (
-    <ProtectedRoute roles={'USER'}>
+    <ProtectedRoute permissions={'test'}>
       <div className='container mx-auto p-8 space-y-8'>
         <div className='flex justify-between items-center'>
           <h1 className='text-4xl font-bold'>
