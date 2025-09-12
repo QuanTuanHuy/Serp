@@ -8,3 +8,4 @@ export { RegisterForm } from './RegisterForm';
 export { AuthLayout } from './AuthLayout';
 export { ProtectedRoute, withAuth } from './ProtectedRoute';
 export { UserProfile, UserProfileCompact } from './UserProfile';
+export { RoleGuard, withRoleGuard, type RoleGuardProps } from './RoleGuard';

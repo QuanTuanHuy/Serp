@@ -19,7 +19,3 @@ export {
 // Theme Components
 export { ThemeToggle } from './theme-toggle';
 
-// Component Types
-export type { ButtonProps } from './button';
-export type { InputProps } from './input';
-export type { LabelProps } from './label';

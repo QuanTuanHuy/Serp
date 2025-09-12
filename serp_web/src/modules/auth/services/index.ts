@@ -12,4 +12,6 @@ export {
   useRevokeTokenMutation,
   useGetCurrentUserQuery,
   useLazyGetCurrentUserQuery,
+  useGetUserPermissionsQuery,
+  useGetUserMenusQuery,
 } from './authApi';

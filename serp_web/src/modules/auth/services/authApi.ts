@@ -13,6 +13,8 @@ import type {
   AuthResponse,
   TokenResponse,
   UserProfileResponse,
+  PermissionsResponse,
+  MenusResponse,
 } from '../types';
 
 export const authApi = api.injectEndpoints({
@@ -68,6 +70,18 @@ export const authApi = api.injectEndpoints({
       providesTags: ['User'],
       transformResponse: createRtkTransformResponse(),
     }),
+
+    getUserPermissions: builder.query<PermissionsResponse, void>({
+      query: () => '/users/permissions/me',
+      providesTags: ['User'],
+      transformResponse: createRtkTransformResponse(),
+    }),
+
+    getUserMenus: builder.query<MenusResponse, void>({
+      query: () => '/users/menus/me',
+      providesTags: ['User'],
+      transformResponse: createRtkTransformResponse(),
+    }),
   }),
   overrideExisting: false,
 });
@@ -80,4 +94,6 @@ export const {
   useRevokeTokenMutation,
   useGetCurrentUserQuery,
   useLazyGetCurrentUserQuery,
+  useGetUserPermissionsQuery,
+  useGetUserMenusQuery,
 } = authApi;

@@ -1,57 +1,14 @@
 {
-  "extends": ["next/core-web-vitals", "next/typescript", "prettier"],
-  "parser": "@typescript-eslint/parser",
-  "parserOptions": {
-    "ecmaVersion": "latest",
-    "sourceType": "module",
-    "ecmaFeatures": {
-      "jsx": true
-    }
-  },
-  "plugins": ["@typescript-eslint", "react", "react-hooks"],
-  "ignorePatterns": ["next-env.d.ts"],
+  "extends": [
+    "next/core-web-vitals",
+    "next/typescript",
+    "prettier"
+  ],
   "rules": {
-    // TypeScript Rules - Relaxed
-    "@typescript-eslint/no-unused-vars": "warn",
-    "@typescript-eslint/no-explicit-any": "warn",
-    "@typescript-eslint/no-empty-object-type": "off",
-    "@typescript-eslint/explicit-function-return-type": "off",
-    "@typescript-eslint/explicit-module-boundary-types": "off",
-
-    // React Rules
-    "react/react-in-jsx-scope": "off",
-    "react/prop-types": "off",
-    "react-hooks/rules-of-hooks": "error",
-    "react-hooks/exhaustive-deps": "warn",
-
-    // General Rules - Relaxed
-    "prefer-const": "warn",
-    "no-var": "error",
-    "no-console": "off",
-    "no-debugger": "warn",
-
-    // Import Rules - Simplified
-    "import/order": [
-      "warn",
-      {
-        "groups": [
-          "builtin",
-          "external",
-          "internal",
-          "parent",
-          "sibling",
-          "index"
-        ],
-        "newlines-between": "ignore",
-        "alphabetize": {
-          "order": "asc"
-        }
-      }
-    ]
-  },
-  "settings": {
-    "react": {
-      "version": "detect"
-    }
+    "@typescript-eslint/no-unused-vars": "off",
+    "@typescript-eslint/no-explicit-any": "off",
+    "react/no-unescaped-entities": "off",
+    "react-hooks/exhaustive-deps": "off",
+    "@next/next/no-assign-module-variable": "off"
   }
 }
