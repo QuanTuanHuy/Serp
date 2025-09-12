@@ -7,6 +7,7 @@
 
 import React from 'react';
 import { useAuth, usePermissions } from '../hooks';
+import { AccessDenied } from './AccessDenied';
 
 export interface RoleGuardProps {
   children: React.ReactNode;
@@ -75,13 +76,21 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   // Not authenticated
   if (!isAuthenticated || !user) {
     if (hideOnNoAccess) return null;
-    return fallback || <div>Access denied: Authentication required</div>;
+    return (
+      fallback || (
+        <AccessDenied reason='authentication' variant='minimal' size='sm' />
+      )
+    );
   }
 
   // Check organization access
   if (organizationId && user.organizationId !== organizationId) {
     if (hideOnNoAccess) return null;
-    return fallback || <div>Access denied: Organization mismatch</div>;
+    return (
+      fallback || (
+        <AccessDenied reason='organization' variant='minimal' size='sm' />
+      )
+    );
   }
 
   // Use the simplified canAccess function
@@ -102,13 +111,41 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   // Custom validation
   if (customValidator && !customValidator(user, userPermissions)) {
     if (hideOnNoAccess) return null;
-    return fallback || <div>Access denied: Custom validation failed</div>;
+    return (
+      fallback || <AccessDenied reason='custom' variant='minimal' size='sm' />
+    );
   }
 
   // Final access check
   if (!hasAccess) {
     if (hideOnNoAccess) return null;
-    return fallback || <div>Access denied: Insufficient permissions</div>;
+
+    // Determine the most appropriate reason based on what was checked
+    let reason: 'role' | 'permission' | 'authorization' = 'authorization';
+    let requiredRoles: string[] | undefined;
+    let requiredPermissions: string[] | undefined;
+
+    if (roles) {
+      reason = 'role';
+      requiredRoles = Array.isArray(roles) ? roles : [roles];
+    } else if (permissions) {
+      reason = 'permission';
+      requiredPermissions = Array.isArray(permissions)
+        ? permissions
+        : [permissions];
+    }
+
+    return (
+      fallback || (
+        <AccessDenied
+          reason={reason}
+          variant='detailed'
+          size='sm'
+          requiredRoles={requiredRoles}
+          requiredPermissions={requiredPermissions}
+        />
+      )
+    );
   }
 
   return <>{children}</>;
