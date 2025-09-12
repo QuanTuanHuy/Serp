@@ -25,62 +25,34 @@ export interface RevokeTokenRequest {
   refreshToken: string;
 }
 
-// Response DTOs
-export interface AuthResponse {
-  code: number;
-  status: string;
-  message: string;
-  data: {
-    accessToken: string;
-    refreshToken: string;
-    tokenType: string;
-    expiresIn: number;
-    refreshExpiresIn: number;
-  };
+// Response Data DTOs
+export interface TokenData {
+  accessToken: string;
+  refreshToken: string;
+  tokenType: string;
+  expiresIn: number;
+  refreshExpiresIn: number;
 }
 
-export interface TokenResponse {
-  code: number;
-  status: string;
-  message: string;
-  data: {
-    accessToken: string;
-    refreshToken: string;
-    tokenType: string;
-    expiresIn: number;
-    refreshExpiresIn: number;
-  };
+export interface PermissionsData {
+  roles: string[];
+  permissions: string[];
+  features: FeatureAccess[];
+  organizationPermissions?: OrganizationPermission[];
 }
 
-export interface UserProfileResponse {
-  code: number;
-  status: string;
-  message: string;
-  data: User;
+export interface MenusData {
+  menus: MenuAccess[];
+  modules: ModuleAccess[];
 }
 
-export interface PermissionsResponse {
-  code: number;
-  status: string;
-  message: string;
-  data: {
-    roles: string[];
-    permissions: string[];
-    features: FeatureAccess[];
-    organizationPermissions?: OrganizationPermission[];
-  };
-}
+export type AuthResponse = ApiResponse<TokenData>;
+export type TokenResponse = ApiResponse<TokenData>;
+export type UserProfileResponse = ApiResponse<User>;
+export type PermissionsResponse = ApiResponse<PermissionsData>;
+export type MenusResponse = ApiResponse<MenusData>;
 
-export interface MenusResponse {
-  code: number;
-  status: string;
-  message: string;
-  data: {
-    menus: MenuAccess[];
-    modules: ModuleAccess[];
-  };
-}
-
+import { ApiResponse } from '@/lib';
 import type { User } from './auth';
 import type {
   FeatureAccess,

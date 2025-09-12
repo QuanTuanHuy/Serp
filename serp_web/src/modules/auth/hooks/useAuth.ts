@@ -15,7 +15,6 @@ import {
   useGetCurrentUserQuery,
 } from '../services/authApi';
 import {
-  setCredentials,
   setTokens,
   setUser,
   setError,
