@@ -9,6 +9,7 @@ export interface UserPermissions {
   permissions: string[];
   menus: MenuAccess[];
   features: FeatureAccess[];
+  modules: ModuleAccess[];
   organizationPermissions?: OrganizationPermission[];
 }
 
@@ -21,6 +22,13 @@ export interface MenuAccess {
   icon?: string;
   order?: number;
   children?: MenuAccess[];
+}
+
+// Module access control
+export interface ModuleAccess {
+  moduleKey: string;
+  moduleName: string;
+  isEnabled: boolean;
 }
 
 // Feature toggles
@@ -47,6 +55,7 @@ export interface AccessConfig {
   requireAllRoles?: boolean;
   requireAllPermissions?: boolean;
   menuKey?: string;
+  moduleKey?: string;
   featureKey?: string;
   organizationId?: number;
   organizationRole?: string;

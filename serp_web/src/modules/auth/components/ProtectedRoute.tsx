@@ -18,6 +18,7 @@ interface ProtectedRouteProps {
   roles?: string | string[];
   permissions?: string | string[];
   menuKey?: string;
+  moduleKey?: string;
   featureKey?: string;
   requireAllRoles?: boolean;
   requireAllPermissions?: boolean;
@@ -29,6 +30,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   roles,
   permissions,
   menuKey,
+  moduleKey,
   featureKey,
   requireAllRoles,
   requireAllPermissions,
@@ -59,6 +61,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       roles={roles}
       permissions={permissions}
       menuKey={menuKey}
+      moduleKey={moduleKey}
       featureKey={featureKey}
       requireAllRoles={requireAllRoles}
       requireAllPermissions={requireAllPermissions}
@@ -77,6 +80,7 @@ export const withAuth = <P extends object>(
     roles?: string | string[];
     permissions?: string | string[];
     menuKey?: string;
+    moduleKey?: string;
     featureKey?: string;
     requireAllRoles?: boolean;
     requireAllPermissions?: boolean;
@@ -89,6 +93,7 @@ export const withAuth = <P extends object>(
       roles={options?.roles}
       permissions={options?.permissions}
       menuKey={options?.menuKey}
+      moduleKey={options?.moduleKey}
       featureKey={options?.featureKey}
       requireAllRoles={options?.requireAllRoles}
       requireAllPermissions={options?.requireAllPermissions}

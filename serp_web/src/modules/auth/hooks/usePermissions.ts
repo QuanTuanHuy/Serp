@@ -37,6 +37,7 @@ export const usePermissions = () => {
       roles: permissionsData?.data?.roles || user?.roles || [],
       permissions: permissionsData?.data?.permissions || [],
       menus: menusData?.data?.menus || [],
+      modules: menusData?.data?.modules || [],
       features: permissionsData?.data?.features || [],
       organizationPermissions:
         permissionsData?.data?.organizationPermissions || [],
@@ -106,6 +107,17 @@ export const usePermissions = () => {
     [userPermissions.menus]
   );
 
+  // Module access checking
+  const hasModuleAccess = useCallback(
+    (moduleKey: string): boolean => {
+      const module = userPermissions.modules.find(
+        (m) => m.moduleKey === moduleKey
+      );
+      return module?.isEnabled ?? false;
+    },
+    [userPermissions.modules]
+  );
+
   // Feature access checking
   const hasFeatureAccess = useCallback(
     (featureKey: string): boolean => {
@@ -140,6 +152,7 @@ export const usePermissions = () => {
         requireAllRoles = false,
         requireAllPermissions = false,
         menuKey,
+        moduleKey,
         featureKey,
       } = config;
 
@@ -159,6 +172,8 @@ export const usePermissions = () => {
 
       if (menuKey && !hasMenuAccess(menuKey)) return false;
 
+      if (moduleKey && !hasModuleAccess(moduleKey)) return false;
+
       if (featureKey && !hasFeatureAccess(featureKey)) return false;
 
       return true;
@@ -169,6 +184,7 @@ export const usePermissions = () => {
       hasAllPermissions,
       hasAnyPermission,
       hasMenuAccess,
+      hasModuleAccess,
       hasFeatureAccess,
     ]
   );
@@ -188,8 +204,9 @@ export const usePermissions = () => {
     hasAnyPermission,
     hasAllPermissions,
 
-    // Menu/Feature functions
+    // Module/Menu/Feature functions
     hasMenuAccess,
+    hasModuleAccess,
     hasFeatureAccess,
 
     // Utility functions

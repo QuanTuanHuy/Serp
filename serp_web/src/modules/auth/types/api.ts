@@ -77,6 +77,7 @@ export interface MenusResponse {
   message: string;
   data: {
     menus: MenuAccess[];
+    modules: ModuleAccess[];
   };
 }
 
@@ -85,4 +86,5 @@ import type {
   FeatureAccess,
   OrganizationPermission,
   MenuAccess,
+  ModuleAccess,
 } from './permissions';

@@ -19,8 +19,9 @@ export interface RoleGuardProps {
   permissions?: string | string[];
   requireAllPermissions?: boolean;
 
-  // Menu/Feature visibility
+  // Module/Menu/Feature visibility
   menuKey?: string;
+  moduleKey?: string;
   featureKey?: string;
 
   // Organization/Tenant based
@@ -45,6 +46,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   permissions,
   requireAllPermissions = false,
   menuKey,
+  moduleKey,
   featureKey,
   organizationId,
   customValidator,
@@ -93,6 +95,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
     requireAllRoles,
     requireAllPermissions,
     menuKey,
+    moduleKey,
     featureKey,
   });
 
