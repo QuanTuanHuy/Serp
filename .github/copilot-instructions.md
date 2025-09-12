@@ -171,25 +171,25 @@ src/
 │   │   ├── accounting/    # Accounting module pages
 │   │   └── inventory/     # Inventory module pages
 │   └── layout.tsx
-├── modules/               # 🎯 Business Logic Modules
+├── modules/               # Business Logic Modules
 │   ├── crm/
 │   │   ├── components/    # CRM-specific UI
 │   │   ├── hooks/         # CRM custom hooks
 │   │   ├── services/      # CRM API calls
 │   │   ├── store/         # CRM Redux slices
 │   │   ├── types/         # CRM TypeScript types
-│   │   └── index.ts       # ✅ Barrel exports
+│   │   └── index.ts       # Barrel exports
 │   ├── accounting/        # Same structure
 │   └── inventory/         # Same structure
 │   └── ptm/               # Same structure
-├── shared/                # 🔄 Cross-Module Resources
+├── shared/                # Cross-Module Resources
 │   ├── components/        # Reusable UI components
 │   ├── hooks/            # Common hooks
 │   ├── services/         # Shared API utilities
 │   ├── types/            # Common types
 │   └── utils/            # Helper functions
-└── lib/                  # 🔧 Core Configuration
-    ├── store.ts          # ✅ Redux store setup
+└── lib/                  # Core Configuration
+    ├── store.ts          # Redux store setup
     └── api/              # API configuration
 ```
 
@@ -201,7 +201,7 @@ src/
 - No direct imports between modules
 - Communication via shared state or events
 
-### 2. **Barrel Exports Pattern** ✅
+### 2. **Barrel Exports Pattern**
 
 ### 3. **Feature-Based Routing**
 
