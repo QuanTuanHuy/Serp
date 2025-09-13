@@ -4,4 +4,5 @@
  */
 
 export * from './ui';
-export { ReduxExample } from './ReduxExample';
+export { Header } from './Header';
+export { AppsShowcase } from './AppsShowcase';
