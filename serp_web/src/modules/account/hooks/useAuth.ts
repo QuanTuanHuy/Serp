@@ -1,46 +1,52 @@
 /**
  * Authors: QuanTuanHuy
- * Description: Part of Serp Project - Authentication business logic hooks
+ * Description: Part of Serp Project - Authentication business logic orchestration hook
  */
 
 import { useCallback, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/shared/hooks';
 import { useNotification } from '@/shared/hooks';
-import { isSuccessResponse, getErrorMessage } from '@/lib/store/api';
+import { isSuccessResponse, getErrorMessage } from '@/lib/store';
 import {
   useLoginMutation,
   useRegisterMutation,
   useRefreshTokenMutation,
   useRevokeTokenMutation,
   useGetCurrentUserQuery,
-} from '../services/authApi';
+} from '../services';
 import {
-  setCredentials,
   setTokens,
-  setUser,
   setError,
   clearAuth,
   setLoading,
   selectAuth,
   selectIsAuthenticated,
-  selectUser,
   selectToken,
-} from '../store/authSlice';
+  selectUserProfile,
+  setProfile,
+  clearProfile,
+} from '../store';
 import type { LoginRequest, RegisterRequest, User } from '../types';
 
 export const useAuth = () => {
   const dispatch = useAppDispatch();
   const notification = useNotification();
+
+  // Auth state selectors
   const auth = useAppSelector(selectAuth);
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
-  const user = useAppSelector(selectUser);
   const token = useAppSelector(selectToken);
 
+  // User profile state selector
+  const user = useAppSelector(selectUserProfile);
+
+  // Mutations
   const [loginMutation] = useLoginMutation();
   const [registerMutation] = useRegisterMutation();
   const [refreshTokenMutation] = useRefreshTokenMutation();
   const [revokeTokenMutation] = useRevokeTokenMutation();
 
+  // Current user query
   const {
     data: currentUserData,
     isLoading: userLoading,
@@ -49,16 +55,18 @@ export const useAuth = () => {
     skip: !isAuthenticated || !token,
   });
 
-  // Update user data when query succeeds
+  // Sync user data to user slice when query succeeds
   useEffect(() => {
     if (
       isSuccessResponse(currentUserData) &&
       currentUserData?.data &&
       isAuthenticated
     ) {
-      dispatch(setUser(currentUserData.data));
+      dispatch(setProfile(currentUserData.data));
     }
   }, [currentUserData, isAuthenticated, dispatch]);
+
+  // === AUTHENTICATION ACTIONS ===
 
   const login = useCallback(
     async (credentials: LoginRequest) => {
@@ -94,7 +102,7 @@ export const useAuth = () => {
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             };
-            dispatch(setUser(mockUser));
+            dispatch(setProfile(mockUser));
           }
 
           notification.success('Login successful!', {
@@ -115,7 +123,7 @@ export const useAuth = () => {
         dispatch(setLoading(false));
       }
     },
-    [loginMutation, dispatch, notification]
+    [loginMutation, dispatch, notification, refetchUser]
   );
 
   const register = useCallback(
@@ -152,7 +160,7 @@ export const useAuth = () => {
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             };
-            dispatch(setUser(mockUser));
+            dispatch(setProfile(mockUser));
           }
 
           notification.success('Registration successful!', {
@@ -163,8 +171,7 @@ export const useAuth = () => {
           throw new Error(result.message);
         }
       } catch (error: any) {
-        const errorMessage =
-          error.data?.message || error.message || 'Registration failed';
+        const errorMessage = getErrorMessage(error);
         dispatch(setError(errorMessage));
         notification.error('Registration failed', {
           description: errorMessage,
@@ -174,7 +181,7 @@ export const useAuth = () => {
         dispatch(setLoading(false));
       }
     },
-    [registerMutation, dispatch, notification]
+    [registerMutation, dispatch, notification, refetchUser]
   );
 
   const logout = useCallback(
@@ -188,7 +195,10 @@ export const useAuth = () => {
       } catch (error) {
         console.warn('Token revoke failed:', error);
       } finally {
+        // Clear both auth and user slices
         dispatch(clearAuth());
+        dispatch(clearProfile());
+
         if (showNotification) {
           notification.success('Logged out successfully');
         }
@@ -200,6 +210,7 @@ export const useAuth = () => {
   const refreshToken = useCallback(async () => {
     if (!auth.refreshToken) {
       dispatch(clearAuth());
+      dispatch(clearProfile());
       return false;
     }
 
@@ -222,6 +233,7 @@ export const useAuth = () => {
     } catch (error) {
       console.error('Token refresh failed:', error);
       dispatch(clearAuth());
+      dispatch(clearProfile());
       return false;
     }
   }, [auth.refreshToken, refreshTokenMutation, dispatch]);

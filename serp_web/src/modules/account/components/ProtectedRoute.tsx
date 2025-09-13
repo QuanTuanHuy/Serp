@@ -35,9 +35,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireAllRoles,
   requireAllPermissions,
 }) => {
-  const { isAuthenticated, isLoading, token } = useAuth();
+  const { isAuthenticated, isUserLoading, token } = useAuth();
 
-  if (isLoading || (token && !isAuthenticated)) {
+  if (isUserLoading || (token && !isAuthenticated)) {
     return (
       <div className='min-h-screen flex items-center justify-center'>
         <div className='text-center space-y-4'>

@@ -1,17 +1,19 @@
 /**
  * Authors: QuanTuanHuy
- * Description: Part of Serp Project - Simple and efficient permissions hook
+ * Description: Part of Serp Project - Permissions business logic orchestration hook
  */
 
 import { useCallback, useMemo } from 'react';
 import { useAppSelector } from '@/shared/hooks';
-import { selectUser } from '../store';
+import { selectUserProfile } from '../store';
 import { useGetUserPermissionsQuery, useGetUserMenusQuery } from '../services';
+import { isSuccessResponse } from '@/lib/store';
 import type { UserPermissions, MenuAccess, AccessConfig } from '../types';
 
 export const usePermissions = () => {
-  const user = useAppSelector(selectUser);
+  const user = useAppSelector(selectUserProfile);
 
+  // API queries
   const {
     data: permissionsData,
     isLoading: permissionsLoading,
@@ -32,19 +34,46 @@ export const usePermissions = () => {
 
   const isLoading = permissionsLoading || menusLoading;
 
+  // Transform API data to normalized permissions object
   const userPermissions = useMemo<UserPermissions>(() => {
-    return {
-      roles: permissionsData?.data?.roles || user?.roles || [],
-      permissions: permissionsData?.data?.permissions || [],
-      menus: menusData?.data?.menus || [],
-      modules: menusData?.data?.modules || [],
-      features: permissionsData?.data?.features || [],
-      organizationPermissions:
-        permissionsData?.data?.organizationPermissions || [],
-    };
-  }, [permissionsData, menusData, user?.roles]);
+    const roles = user?.roles || [];
 
-  // Role checking
+    let permissions: string[] = [];
+    let menus: MenuAccess[] = [];
+    let modules: any[] = [];
+    let features: any[] = [];
+    let organizationPermissions: any[] = [];
+
+    // Extract permissions from API response
+    if (
+      permissionsData &&
+      isSuccessResponse(permissionsData) &&
+      permissionsData.data
+    ) {
+      permissions = permissionsData.data.permissions || [];
+      features = permissionsData.data.features || [];
+      organizationPermissions =
+        permissionsData.data.organizationPermissions || [];
+    }
+
+    // Extract menus from API response
+    if (menusData && isSuccessResponse(menusData) && menusData.data) {
+      menus = menusData.data.menus || [];
+      modules = menusData.data.modules || [];
+    }
+
+    return {
+      roles,
+      permissions,
+      menus,
+      modules,
+      features,
+      organizationPermissions,
+    };
+  }, [user?.roles, permissionsData, menusData]);
+
+  // === ROLE CHECKING ===
+
   const hasRole = useCallback(
     (role: string): boolean => {
       return userPermissions.roles.includes(role);
@@ -66,7 +95,8 @@ export const usePermissions = () => {
     [userPermissions.roles]
   );
 
-  // Permission checking
+  // === PERMISSION CHECKING ===
+
   const hasPermission = useCallback(
     (permission: string): boolean => {
       return userPermissions.permissions.includes(permission);
@@ -92,7 +122,8 @@ export const usePermissions = () => {
     [userPermissions.permissions]
   );
 
-  // Menu access checking
+  // === MENU ACCESS CHECKING ===
+
   const hasMenuAccess = useCallback(
     (menuKey: string): boolean => {
       const findMenu = (menus: MenuAccess[], key: string): boolean => {
@@ -107,29 +138,32 @@ export const usePermissions = () => {
     [userPermissions.menus]
   );
 
-  // Module access checking
+  // === MODULE ACCESS CHECKING ===
+
   const hasModuleAccess = useCallback(
     (moduleKey: string): boolean => {
       const module = userPermissions.modules.find(
-        (m) => m.moduleKey === moduleKey
+        (m: any) => m.moduleKey === moduleKey
       );
       return module?.isEnabled ?? false;
     },
     [userPermissions.modules]
   );
 
-  // Feature access checking
+  // === FEATURE ACCESS CHECKING ===
+
   const hasFeatureAccess = useCallback(
     (featureKey: string): boolean => {
       const feature = userPermissions.features.find(
-        (f) => f.featureKey === featureKey
+        (f: any) => f.featureKey === featureKey
       );
       return feature?.isEnabled ?? false;
     },
     [userPermissions.features]
   );
 
-  // Get accessible menus for navigation
+  // === UTILITY FUNCTIONS ===
+
   const getAccessibleMenus = useCallback((): MenuAccess[] => {
     const filterMenus = (menus: MenuAccess[]): MenuAccess[] => {
       return menus
@@ -143,7 +177,8 @@ export const usePermissions = () => {
     return filterMenus(userPermissions.menus);
   }, [userPermissions.menus]);
 
-  // All-in-one access checker
+  // === ALL-IN-ONE ACCESS CHECKER ===
+
   const canAccess = useCallback(
     (config: AccessConfig): boolean => {
       const {
