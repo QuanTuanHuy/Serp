@@ -12,7 +12,7 @@ import {
 } from '@/shared/components';
 import { ReduxExample } from '@/shared/components/ReduxExample';
 import { useNotification } from '@/shared/hooks';
-import { UserProfile, ProtectedRoute, useAuth } from '@/modules/auth';
+import { UserProfile, ProtectedRoute, useAuth } from '@/modules/account';
 
 export default function Home() {
   const notification = useNotification();
@@ -47,7 +47,7 @@ export default function Home() {
   };
 
   return (
-    <ProtectedRoute permissions={'test'}>
+    <ProtectedRoute roles={'USER'}>
       <div className='container mx-auto p-8 space-y-8'>
         <div className='flex justify-between items-center'>
           <h1 className='text-4xl font-bold'>

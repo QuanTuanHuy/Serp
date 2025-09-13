@@ -14,7 +14,7 @@ const baseQuery = fetchBaseQuery({
   baseUrl: `${API_BASE_URL}/api/v1`,
   prepareHeaders: (headers, { getState }) => {
     const state = getState() as RootState;
-    const token = state.auth?.token;
+    const token = state.account.auth?.token;
 
     if (token) {
       headers.set('authorization', `Bearer ${token}`);
@@ -32,7 +32,7 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
   // Handle 401 unauthorized - token refresh logic
   if (result.error && result.error.status === 401) {
     const state = api.getState() as RootState;
-    const refreshToken = state.auth?.refreshToken;
+    const refreshToken = state.account.auth?.refreshToken;
 
     if (refreshToken) {
       const refreshResult = await baseQuery(
@@ -47,7 +47,7 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
 
       if (refreshResult.data) {
         // Import setTokens action dynamically to avoid circular imports
-        const { setTokens } = await import('@/modules/auth/store/authSlice');
+        const { setTokens } = await import('@/modules/account/store/authSlice');
         const tokenData = refreshResult.data as any;
 
         if (
@@ -65,17 +65,19 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
           result = await baseQuery(args, api, extraOptions);
         } else {
           // Refresh response indicates failure
-          const { clearAuth } = await import('@/modules/auth/store/authSlice');
+          const { clearAuth } = await import(
+            '@/modules/account/store/authSlice'
+          );
           api.dispatch(clearAuth());
         }
       } else {
         // Refresh failed - clear auth state
-        const { clearAuth } = await import('@/modules/auth/store/authSlice');
+        const { clearAuth } = await import('@/modules/account/store/authSlice');
         api.dispatch(clearAuth());
       }
     } else {
       // No refresh token - clear auth state
-      const { clearAuth } = await import('@/modules/auth/store/authSlice');
+      const { clearAuth } = await import('@/modules/account/store/authSlice');
       api.dispatch(clearAuth());
     }
   }
@@ -107,11 +109,3 @@ export const api = createApi({
   // Define endpoints in separate files for each module
   endpoints: () => ({}),
 });
-
-// Export hooks for usage in functional components
-export const {
-  // Auth endpoints (will be injected)
-  // useLoginMutation,
-  // useLogoutMutation,
-  // useRefreshTokenMutation,
-} = api;

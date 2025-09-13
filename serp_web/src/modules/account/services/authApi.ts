@@ -64,24 +64,6 @@ export const authApi = api.injectEndpoints({
       }),
       invalidatesTags: ['User'],
     }),
-
-    getCurrentUser: builder.query<UserProfileResponse, void>({
-      query: () => '/users/profile/me',
-      providesTags: ['User'],
-      transformResponse: createRtkTransformResponse(),
-    }),
-
-    getUserPermissions: builder.query<PermissionsResponse, void>({
-      query: () => '/users/permissions/me',
-      providesTags: ['User'],
-      transformResponse: createRtkTransformResponse(),
-    }),
-
-    getUserMenus: builder.query<MenusResponse, void>({
-      query: () => '/users/menus/me',
-      providesTags: ['User'],
-      transformResponse: createRtkTransformResponse(),
-    }),
   }),
   overrideExisting: false,
 });
@@ -92,8 +74,4 @@ export const {
   useGetTokenMutation,
   useRefreshTokenMutation,
   useRevokeTokenMutation,
-  useGetCurrentUserQuery,
-  useLazyGetCurrentUserQuery,
-  useGetUserPermissionsQuery,
-  useGetUserMenusQuery,
 } = authApi;

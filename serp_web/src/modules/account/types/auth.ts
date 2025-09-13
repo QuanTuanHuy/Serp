@@ -17,9 +17,8 @@ export interface User {
   updatedAt: string;
 }
 
-// Auth state for Redux store
+// Auth state for Redux store - chỉ chứa authentication data
 export interface AuthState {
-  user: User | null;
   token: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;

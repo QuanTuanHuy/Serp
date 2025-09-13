@@ -6,7 +6,7 @@
 'use client';
 
 import React from 'react';
-import { useAuth, usePermissions } from '../hooks';
+import { useAuth, usePermissions, useUser } from '../hooks';
 import { AccessDenied } from './AccessDenied';
 
 export interface RoleGuardProps {
@@ -55,7 +55,8 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   loading,
   hideOnNoAccess = false,
 }) => {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+  const { user } = useUser();
   const {
     userPermissions,
     canAccess,

@@ -15,51 +15,36 @@ import {
   REGISTER,
 } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
-import { api } from './api/apiSlice';
+import { api } from './api';
 
 // Import feature slices
-import authSlice from '@/modules/auth/store/authSlice';
-// import ptmSlice from '@/modules/ptm/store/ptmSlice';
+import { authSlice, userSlice } from '@/modules/account/store';
 
 // Persist configuration
-const persistConfig = {
-  key: 'serp-root',
-  version: 1,
+const accountPersistConfig = {
+  key: 'account',
   storage,
-  // Whitelist - only persist specific reducers
-  whitelist: [
-    'auth', // Persist auth state
-    // 'user', // Persist user preferences
-  ],
-  // Blacklist - never persist these reducers
-  blacklist: [
-    'api', // Never persist API cache
-  ],
+  whitelist: ['auth', 'user'],
 };
 
-// Root reducer combining all feature reducers
-const rootReducer = combineReducers({
-  // RTK Query API slice
-  [api.reducerPath]: api.reducer,
-
-  // Feature slices
+// reducer
+const accountReducer = combineReducers({
   auth: authSlice,
-  // crm: crmSlice,
-  // ptm: ptmSlice,
-  // accounting: accountingSlice,
-  // inventory: inventorySlice,
+  user: userSlice,
 });
 
-// Persisted reducer
-const persistedReducer = persistReducer(persistConfig, rootReducer);
+// Root reducer
+const rootReducer = combineReducers({
+  [api.reducerPath]: api.reducer,
+  account: persistReducer(accountPersistConfig, accountReducer),
+});
 
 // Configure store
 export const store = configureStore({
-  reducer: persistedReducer,
+  reducer: rootReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
-        // Ignore these action types from redux-persist
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
       },
     })

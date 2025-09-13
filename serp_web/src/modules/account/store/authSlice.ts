@@ -5,10 +5,17 @@
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/lib/store';
-import type { AuthState, User } from '../types';
+
+// Simplified AuthState - chỉ chứa authentication data
+interface AuthState {
+  token: string | null;
+  refreshToken: string | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  error: string | null;
+}
 
 const initialState: AuthState = {
-  user: null,
   token: null,
   refreshToken: null,
   isAuthenticated: false,
@@ -17,7 +24,7 @@ const initialState: AuthState = {
 };
 
 const authSlice = createSlice({
-  name: 'auth',
+  name: 'account/auth',
   initialState,
   reducers: {
     setLoading: (state, action: PayloadAction<boolean>) => {
@@ -27,13 +34,11 @@ const authSlice = createSlice({
     setCredentials: (
       state,
       action: PayloadAction<{
-        user: User;
         token: string;
         refreshToken: string;
       }>
     ) => {
-      const { user, token, refreshToken } = action.payload;
-      state.user = user;
+      const { token, refreshToken } = action.payload;
       state.token = token;
       state.refreshToken = refreshToken;
       state.isAuthenticated = true;
@@ -53,22 +58,16 @@ const authSlice = createSlice({
       state.isAuthenticated = true;
     },
 
-    setUser: (state, action: PayloadAction<User>) => {
-      state.user = action.payload;
-      state.isAuthenticated = true;
-    },
-
-    setError: (state, action: PayloadAction<string | null>) => {
-      state.error = action.payload;
-      state.isLoading = false;
-    },
-
     clearAuth: (state) => {
-      state.user = null;
       state.token = null;
       state.refreshToken = null;
       state.isAuthenticated = false;
       state.error = null;
+      state.isLoading = false;
+    },
+
+    setError: (state, action: PayloadAction<string | null>) => {
+      state.error = action.payload;
       state.isLoading = false;
     },
 
@@ -82,7 +81,6 @@ export const {
   setLoading,
   setCredentials,
   setTokens,
-  setUser,
   setError,
   clearAuth,
   clearError,
@@ -91,10 +89,10 @@ export const {
 export default authSlice.reducer;
 
 // Selectors
-export const selectAuth = (state: RootState) => state.auth;
-export const selectUser = (state: RootState) => state.auth.user;
-export const selectToken = (state: RootState) => state.auth.token;
+export const selectAuth = (state: RootState) => state.account.auth;
+export const selectToken = (state: RootState) => state.account.auth.token;
 export const selectIsAuthenticated = (state: RootState) =>
-  state.auth.isAuthenticated;
-export const selectAuthLoading = (state: RootState) => state.auth.isLoading;
-export const selectAuthError = (state: RootState) => state.auth.error;
+  state.account.auth.isAuthenticated;
+export const selectAuthLoading = (state: RootState) =>
+  state.account.auth.isLoading;
+export const selectAuthError = (state: RootState) => state.account.auth.error;

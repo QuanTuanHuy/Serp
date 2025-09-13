@@ -174,8 +174,8 @@ src/
 ├── modules/               # Business Logic Modules
 │   ├── crm/
 │   │   ├── components/    # CRM-specific UI
-│   │   ├── hooks/         # CRM custom hooks
-│   │   ├── services/      # CRM API calls
+│   │   ├── hooks/         # CRM custom hooks (e.g. useAuth, useCustomers)
+│   │   ├── services/      # CRM API calls (using RTK Query)
 │   │   ├── store/         # CRM Redux slices
 │   │   ├── types/         # CRM TypeScript types
 │   │   └── index.ts       # Barrel exports
