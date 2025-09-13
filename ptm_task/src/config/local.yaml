@@ -3,29 +3,29 @@ app:
     level: INFO
   datasource:
     driver: postgres
-    host: localhost
-    port: 5432
-    database: serp_ptm_task
-    username: serp
-    password: serp
+    host: ${DB_HOST}
+    port: ${DB_PORT}
+    database: ${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     logLevel: INFO
   redis:
-    host: localhost
-    port: 6379
+    host: ${REDIS_HOST}
+    port: ${REDIS_PORT}
 
   keycloak:
-    url: http://localhost:8180
+    url: ${KEYCLOAK_URL}
     realm: serp
     client-id: serp-ptm
     client-secret: ${CLIENT_SECRET}
-    jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
-    expected-issuer: http://localhost:8180/realms/serp
-    expected-audience:
+    jwk-set-uri: ${KEYCLOAK_JWK_SET_URI}
+    expected-issuer: ${KEYCLOAK_EXPECTED_ISSUER}
+    expected-audience: ${KEYCLOAK_EXPECTED_AUDIENCE}
 
   kafka:
     producer:
       bootstrapServers:
-        - localhost:9094
+        - ${KAFKA_BOOTSTRAP_SERVERS}
       requireAcks: 1
       maxMessageBytes: 1048576
       retryMax: 3
