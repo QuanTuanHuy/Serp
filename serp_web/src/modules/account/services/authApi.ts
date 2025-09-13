@@ -4,7 +4,6 @@
  */
 
 import { api } from '@/lib/store/api';
-import { createRtkTransformResponse } from '@/lib/store/api/utils';
 import type {
   LoginRequest,
   RegisterRequest,
@@ -12,9 +11,6 @@ import type {
   RevokeTokenRequest,
   AuthResponse,
   TokenResponse,
-  UserProfileResponse,
-  PermissionsResponse,
-  MenusResponse,
 } from '../types';
 
 export const authApi = api.injectEndpoints({
@@ -25,7 +21,7 @@ export const authApi = api.injectEndpoints({
         method: 'POST',
         body: credentials,
       }),
-      invalidatesTags: ['User'],
+      invalidatesTags: ['account/auth', 'account/user'],
     }),
 
     login: builder.mutation<AuthResponse, LoginRequest>({
@@ -34,7 +30,7 @@ export const authApi = api.injectEndpoints({
         method: 'POST',
         body: credentials,
       }),
-      invalidatesTags: ['User'],
+      invalidatesTags: ['account/auth', 'account/user'],
     }),
 
     getToken: builder.mutation<TokenResponse, LoginRequest>({
@@ -62,7 +58,7 @@ export const authApi = api.injectEndpoints({
         method: 'POST',
         body: tokenData,
       }),
-      invalidatesTags: ['User'],
+      invalidatesTags: ['account/auth', 'account/user'],
     }),
   }),
   overrideExisting: false,

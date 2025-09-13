@@ -47,7 +47,7 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
 
       if (refreshResult.data) {
         // Import setTokens action dynamically to avoid circular imports
-        const { setTokens } = await import('@/modules/account/store/authSlice');
+        const { setTokens } = await import('@/modules/account/store');
         const tokenData = refreshResult.data as any;
 
         if (
@@ -65,19 +65,17 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
           result = await baseQuery(args, api, extraOptions);
         } else {
           // Refresh response indicates failure
-          const { clearAuth } = await import(
-            '@/modules/account/store/authSlice'
-          );
+          const { clearAuth } = await import('@/modules/account/store');
           api.dispatch(clearAuth());
         }
       } else {
         // Refresh failed - clear auth state
-        const { clearAuth } = await import('@/modules/account/store/authSlice');
+        const { clearAuth } = await import('@/modules/account/store');
         api.dispatch(clearAuth());
       }
     } else {
       // No refresh token - clear auth state
-      const { clearAuth } = await import('@/modules/account/store/authSlice');
+      const { clearAuth } = await import('@/modules/account/store');
       api.dispatch(clearAuth());
     }
   }
@@ -91,20 +89,7 @@ export const api = createApi({
   baseQuery: baseQueryWithReauth,
 
   // Tag types for cache invalidation
-  tagTypes: [
-    'User',
-    'Task',
-    'Project',
-    'Schedule',
-    'Customer',
-    'Lead',
-    'Contact',
-    'Product',
-    'Invoice',
-    'Order',
-    'Inventory',
-    'Organization',
-  ],
+  tagTypes: ['account/user', 'account/auth'],
 
   // Define endpoints in separate files for each module
   endpoints: () => ({}),

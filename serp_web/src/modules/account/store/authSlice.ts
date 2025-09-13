@@ -6,7 +6,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/lib/store';
 
-// Simplified AuthState - chỉ chứa authentication data
+// Simplified AuthState
 interface AuthState {
   token: string | null;
   refreshToken: string | null;
