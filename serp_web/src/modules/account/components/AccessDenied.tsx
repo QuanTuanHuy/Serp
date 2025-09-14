@@ -15,15 +15,16 @@ import {
   ArrowLeft,
   Home,
 } from 'lucide-react';
-import { Button } from '../../../shared/components';
+
 import {
+  Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../../../shared/components';
-import { cn } from '../../../shared/utils';
+} from '@/shared/components';
+import { cn } from '@/shared/utils';
 
 export type AccessDeniedReason =
   | 'authentication'
