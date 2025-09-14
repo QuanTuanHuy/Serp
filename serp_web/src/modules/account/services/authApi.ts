@@ -21,7 +21,7 @@ export const authApi = api.injectEndpoints({
         method: 'POST',
         body: credentials,
       }),
-      invalidatesTags: ['account/auth', 'account/user'],
+      invalidatesTags: [{ type: 'account/user', id: 'CURRENT_USER' }],
     }),
 
     login: builder.mutation<AuthResponse, LoginRequest>({
@@ -30,7 +30,7 @@ export const authApi = api.injectEndpoints({
         method: 'POST',
         body: credentials,
       }),
-      invalidatesTags: ['account/auth', 'account/user'],
+      invalidatesTags: [{ type: 'account/user', id: 'CURRENT_USER' }],
     }),
 
     getToken: builder.mutation<TokenResponse, LoginRequest>({
@@ -58,7 +58,7 @@ export const authApi = api.injectEndpoints({
         method: 'POST',
         body: tokenData,
       }),
-      invalidatesTags: ['account/auth', 'account/user'],
+      invalidatesTags: [{ type: 'account/user', id: 'CURRENT_USER' }],
     }),
   }),
   overrideExisting: false,
