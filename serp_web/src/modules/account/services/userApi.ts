@@ -15,19 +15,28 @@ export const userApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getCurrentUser: builder.query<UserProfileResponse, void>({
       query: () => '/users/profile/me',
-      providesTags: ['account/user'],
-      transformErrorResponse: createRtkTransformResponse(),
+      providesTags: [
+        { type: 'account/user', id: 'CURRENT_USER' },
+        'account/profile',
+      ],
+      transformResponse: createRtkTransformResponse(),
     }),
 
     getUserPermissions: builder.query<PermissionsResponse, void>({
       query: () => '/users/permissions/me',
-      providesTags: ['account/user'],
+      providesTags: [
+        { type: 'account/user', id: 'CURRENT_USER' },
+        'account/permissions',
+      ],
       transformResponse: createRtkTransformResponse(),
     }),
 
     getUserMenus: builder.query<MenusResponse, void>({
       query: () => '/users/menus/me',
-      providesTags: ['account/user'],
+      providesTags: [
+        { type: 'account/user', id: 'CURRENT_USER' },
+        'account/menus',
+      ],
       transformResponse: createRtkTransformResponse(),
     }),
   }),

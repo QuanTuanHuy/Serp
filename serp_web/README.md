@@ -5,10 +5,10 @@ Modern Enterprise Resource Planning (ERP) system built with Next.js 15, TypeScri
 ## 🛠️ Tech Stack
 
 - **Framework**: Next.js 15 with Turbopack
-- **Language**: TypeScript (strict mode)
+- **Language**: TypeScript
 - **Styling**: Tailwind CSS 4.0
 - **UI Components**: ShadCN UI
-- **State Management**: Redux Toolkit (already installed)
+- **State Management**: Redux Toolkit
 - **Theme**: next-themes for dark/light mode
 - **Icons**: Lucide React
 - **Development**: ESLint, Prettier, Husky
@@ -23,24 +23,25 @@ src/
 │   │   ├── accounting/    # Accounting module pages
 │   │   └── inventory/     # Inventory module pages
 │   └── layout.tsx
-├── modules/               # 🎯 Business Logic Modules
+├── modules/               # Business Logic Modules
 │   ├── crm/
 │   │   ├── components/    # CRM-specific UI
 │   │   ├── hooks/         # CRM custom hooks
 │   │   ├── services/      # CRM API calls
 │   │   ├── store/         # CRM Redux slices
 │   │   ├── types/         # CRM TypeScript types
-│   │   └── index.ts       # ✅ Barrel exports
+│   │   └── index.ts       # Barrel exports
 │   ├── accounting/        # Same structure
 │   └── inventory/         # Same structure
-├── shared/                # 🔄 Cross-Module Resources
+│   └── ptm/               # Same structure
+├── shared/                # Cross-Module Resources
 │   ├── components/        # Reusable UI components
 │   ├── hooks/            # Common hooks
 │   ├── services/         # Shared API utilities
 │   ├── types/            # Common types
 │   └── utils/            # Helper functions
-└── lib/                  # 🔧 Core Configuration
-    ├── store.ts          # ✅ Redux store setup
+└── lib/                  # Core Configuration
+    ├── store.ts          # Redux store setup
     └── api/              # API configuration
 ```
 
@@ -122,4 +123,4 @@ npm run type-check       # TypeScript type checking
 **Built with ❤️ using Next.js 15, TypeScript, and modern web technologies**
 
 **Author**: QuanTuanHuy  
-**Last Updated**: September 7, 2025
+**Last Updated**: September 14, 2025
