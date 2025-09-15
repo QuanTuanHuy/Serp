@@ -11,19 +11,16 @@ import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import serp.project.account.core.domain.dto.request.CreateUserDto;
-import serp.project.account.core.domain.entity.BaseEntity;
-import serp.project.account.core.service.impl.RoleService;
-import serp.project.account.core.service.impl.UserService;
+import serp.project.account.core.service.IRoleService;
+import serp.project.account.core.service.IUserService;
 import serp.project.account.kernel.property.AdminProperties;
-import serp.project.account.kernel.utils.CollectionUtils;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class DataInitializer implements CommandLineRunner {
-    private final UserService userService;
-    private final RoleService roleService;
+    private final IUserService userService;
+    private final IRoleService roleService;
 
     private final AdminProperties adminProperties;
 
@@ -51,7 +48,7 @@ public class DataInitializer implements CommandLineRunner {
         //         .roleIds(roles.stream().map(BaseEntity::getId).toList())
         //         .build();
         // userService.createUser(createUserDto);
-        log.info("Super admin user created successfully.");
+        // log.info("Super admin user created successfully.");
     }
 
 }

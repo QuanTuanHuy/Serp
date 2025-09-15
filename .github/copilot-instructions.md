@@ -75,7 +75,7 @@ src/
 ## Key Development Patterns
 
 ### 1. Security
-JWT (Public/Private Key) for secure communication between services.
+JWT (Keycloak) for secure communication between services.
 
 ### 2. Configuration Management
 **YAML-based with environment overrides:**
