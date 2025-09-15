@@ -67,6 +67,7 @@ public class Constants {
     @UtilityClass
     public static class Security {
         public static final String ROLE_PREFIX = "ROLE_";
+        public static final String SERP_SERVICES_ROLE = "SERP_SERVICES";
     }
 
 }
