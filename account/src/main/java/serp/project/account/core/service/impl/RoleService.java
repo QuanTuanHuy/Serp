@@ -9,15 +9,20 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
+import serp.project.account.core.domain.constant.CacheConstants;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.CreateRoleDto;
 import serp.project.account.core.domain.entity.GroupRoleEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.RolePermissionEntity;
 import serp.project.account.core.exception.AppException;
+import serp.project.account.core.port.client.ICachePort;
 import serp.project.account.core.port.store.IGroupRolePort;
 import serp.project.account.core.port.store.IPermissionPort;
 import serp.project.account.core.port.store.IRolePermissionPort;
@@ -28,13 +33,18 @@ import serp.project.account.kernel.utils.CollectionUtils;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class RoleService implements IRoleService {
     private final IRolePort rolePort;
     private final IGroupRolePort groupRolePort;
     private final IRolePermissionPort rolePermissionPort;
     private final IPermissionPort permissionPort;
 
+    private final ICachePort cachePort;
+
     private final RoleMapper roleMapper;
+
+    private final AsyncTaskExecutor asyncTaskExecutor;
 
     @Override
     public RoleEntity createRole(CreateRoleDto request) {
@@ -57,6 +67,8 @@ public class RoleService implements IRoleService {
             rolePermissionPort.saveAll(rolePermissions);
         }
 
+        clearCacheAllRoles();
+
         return role;
     }
 
@@ -67,7 +79,13 @@ public class RoleService implements IRoleService {
 
     @Override
     public List<RoleEntity> getAllRoles() {
-        // Need cache later
+        List<RoleEntity> cachedRoles = cachePort.getFromCache(CacheConstants.ALL_ROLES,
+                new ParameterizedTypeReference<>() {
+                });
+        if (!CollectionUtils.isEmpty(cachedRoles)) {
+            return cachedRoles;
+        }
+
         var roles = rolePort.getAllRoles();
         var permissions = permissionPort.getAllPermissions();
         roles.forEach(role -> {
@@ -82,6 +100,9 @@ public class RoleService implements IRoleService {
                                 .toList());
             }
         });
+
+        cacheAllRoles(roles);
+
         return roles;
     }
 
@@ -106,6 +127,8 @@ public class RoleService implements IRoleService {
         if (!CollectionUtils.isEmpty(newRolePermissions)) {
             rolePermissionPort.saveAll(newRolePermissions);
         }
+
+        clearCacheAllRoles();
     }
 
     @Override
@@ -117,6 +140,16 @@ public class RoleService implements IRoleService {
             return List.of();
         }
         return rolePort.getRolesByIds(roleIds);
+    }
+
+    public void cacheAllRoles(List<RoleEntity> roles) {
+        asyncTaskExecutor.execute(() ->
+                cachePort.setToCache(CacheConstants.ALL_ROLES, roles, CacheConstants.LONG_EXPIRATION));
+    }
+
+    public void clearCacheAllRoles() {
+        asyncTaskExecutor.execute(() ->
+                cachePort.deleteFromCache(CacheConstants.ALL_ROLES));
     }
 
 }
