@@ -53,6 +53,8 @@ func All() fx.Option {
 		fx.Provide(adapter.NewNoteStoreAdapter),
 
 		// Provide service
+		fx.Provide(service.NewTransactionService),
+		fx.Provide(service.NewUserTagService),
 		fx.Provide(service.NewProjectService),
 		fx.Provide(service.NewGroupTaskService),
 		fx.Provide(service.NewTaskService),
@@ -60,7 +62,7 @@ func All() fx.Option {
 		fx.Provide(service.NewNoteService),
 
 		// Provide usecase
-		fx.Provide(service.NewTransactionService),
+		fx.Provide(usecase.NewUserTagUseCase),
 		fx.Provide(usecase.NewProjectUseCase),
 		fx.Provide(usecase.NewGroupTaskUseCase),
 		fx.Provide(usecase.NewTaskUseCase),

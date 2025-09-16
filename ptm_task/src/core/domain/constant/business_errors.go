@@ -8,6 +8,10 @@ package constant
 const (
 	InvalidQueryParameters = "invalid query parameters"
 
+	TagNotFound        = "tag not found"
+	DeleteTagForbidden = "you do not have permission to delete this tag"
+	UpdateTagForbidden = "you do not have permission to update this tag"
+
 	ProjectNotFound         = "project not found"
 	UpdateProjectForbidden  = "you do not have permission to update this project"
 	ArchiveProjectForbidden = "you do not have permission to archive this project"
