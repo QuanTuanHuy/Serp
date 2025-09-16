@@ -26,7 +26,8 @@ type RegisterRoutersIn struct {
 	CommentController   *controller.CommentController
 	NoteController      *controller.NoteController
 
-	JWTMiddleware *middleware.JWTMiddleware
+	JWTMiddleware         *middleware.JWTMiddleware
+	InternalJWTMiddleware *middleware.InternalJWTMiddleware
 }
 
 func RegisterGinRouters(p RegisterRoutersIn) {

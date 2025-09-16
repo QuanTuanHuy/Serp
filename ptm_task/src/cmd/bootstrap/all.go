@@ -78,6 +78,7 @@ func All() fx.Option {
 		fx.Provide(utils.NewKeycloakJwksUtils),
 		fx.Provide(utils.NewJWTUtils),
 		fx.Provide(middleware.NewJWTMiddleware),
+		fx.Provide(middleware.NewInternalJWTMiddleware),
 
 		golibgin.GinHttpServerOpt(),
 		fx.Invoke(router.RegisterGinRouters),
