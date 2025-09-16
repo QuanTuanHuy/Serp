@@ -11,12 +11,14 @@ import (
 	"github.com/golibs-starter/golib/log"
 	"github.com/serp/ptm-schedule/src/core/domain/enum"
 	adapter "github.com/serp/ptm-schedule/src/infrastructure/client"
+	kafkahandler "github.com/serp/ptm-schedule/src/ui/kafka"
 	"go.uber.org/fx"
 )
 
 func InitializeKafkaConsumer(
 	lc fx.Lifecycle,
 	consumer *adapter.KafkaConsumer,
+	ptmTaskHandler *kafkahandler.PtmTaskHandler,
 ) {
 	var consumerCtx context.Context
 	var consumerCancel context.CancelFunc
@@ -32,6 +34,8 @@ func InitializeKafkaConsumer(
 				log.Error(ctx, "Failed to subscribe to topics: ", err)
 				return err
 			}
+
+			consumer.RegisterHandler(string(enum.TASK_MANAGER_TOPIC), ptmTaskHandler.HandleMessage)
 
 			consumerCtx, consumerCancel = context.WithCancel(context.Background())
 			if err := consumer.StartConsumer(consumerCtx); err != nil {

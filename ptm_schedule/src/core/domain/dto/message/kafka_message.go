@@ -5,7 +5,12 @@ Description: Part of Serp Project
 
 package message
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+
+	"github.com/golibs-starter/golib/log"
+)
 
 type KafkaMessage struct {
 	Cmd          KafkaCommand `json:"cmd"`
@@ -14,6 +19,7 @@ type KafkaMessage struct {
 	DisplayTime  int64        `json:"displayTime"`
 	Data         any          `json:"data"`
 	ReplyTopic   string       `json:"replyTopic,omitempty"`
+	Source       string       `json:"source,omitempty"`
 }
 
 func CreateKafkaMessage(cmd KafkaCommand, errorCode ErrorCode, errorMessage ErrorMsg, data any) *KafkaMessage {
@@ -22,6 +28,7 @@ func CreateKafkaMessage(cmd KafkaCommand, errorCode ErrorCode, errorMessage Erro
 		ErrorCode:    errorCode,
 		ErrorMessage: errorMessage,
 		DisplayTime:  time.Now().UnixMilli(),
+		Source:       "ptm-schedule",
 		ReplyTopic:   "",
 		Data:         data,
 	}
@@ -33,9 +40,23 @@ func CreateKafkaMessageWithReplyTopic(cmd KafkaCommand, errorCode ErrorCode, err
 		ErrorCode:    errorCode,
 		ErrorMessage: errorMessage,
 		DisplayTime:  time.Now().UnixMilli(),
+		Source:       "ptm-schedule",
 		ReplyTopic:   replyTopic,
 		Data:         data,
 	}
+}
+
+func BindData(k *KafkaMessage, dst any) error {
+	dataBytes, err := json.Marshal(k.Data)
+	if err != nil {
+		log.Error("Failed to marshal Kafka message data: ", err)
+		return err
+	}
+	if err := json.Unmarshal(dataBytes, dst); err != nil {
+		log.Error("Failed to unmarshal Kafka message data: ", err)
+		return err
+	}
+	return nil
 }
 
 type KafkaCommand string

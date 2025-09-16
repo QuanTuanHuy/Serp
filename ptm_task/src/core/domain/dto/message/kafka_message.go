@@ -13,6 +13,8 @@ type KafkaMessage struct {
 	ErrorMessage ErrorMsg     `json:"errorMessage"`
 	DisplayTime  int64        `json:"displayTime"`
 	Data         any          `json:"data"`
+	ReplyTopic   string       `json:"replyTopic,omitempty"`
+	Source       string       `json:"source,omitempty"`
 }
 
 func CreateKafkaMessage(cmd KafkaCommand, errorCode ErrorCode, errorMessage ErrorMsg, data any) *KafkaMessage {
@@ -21,6 +23,20 @@ func CreateKafkaMessage(cmd KafkaCommand, errorCode ErrorCode, errorMessage Erro
 		ErrorCode:    errorCode,
 		ErrorMessage: errorMessage,
 		DisplayTime:  time.Now().UnixMilli(),
+		Source:       "ptm-task",
+		ReplyTopic:   "",
+		Data:         data,
+	}
+}
+
+func CreateKafkaMessageWithReplyTopic(cmd KafkaCommand, errorCode ErrorCode, errorMessage ErrorMsg, data any, replyTopic string) *KafkaMessage {
+	return &KafkaMessage{
+		Cmd:          cmd,
+		ErrorCode:    errorCode,
+		ErrorMessage: errorMessage,
+		DisplayTime:  time.Now().UnixMilli(),
+		Source:       "ptm-task",
+		ReplyTopic:   replyTopic,
 		Data:         data,
 	}
 }
