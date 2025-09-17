@@ -16,6 +16,7 @@ import (
 	"github.com/serp/ptm-schedule/src/kernel/properties"
 	"github.com/serp/ptm-schedule/src/kernel/utils"
 	"github.com/serp/ptm-schedule/src/ui/controller"
+	kafkahandler "github.com/serp/ptm-schedule/src/ui/kafka"
 	"github.com/serp/ptm-schedule/src/ui/middleware"
 	"github.com/serp/ptm-schedule/src/ui/router"
 	"go.uber.org/fx"
@@ -78,6 +79,7 @@ func All() fx.Option {
 		golibgin.OnStopHttpServerOpt(),
 
 		// Kafka consumer
+		fx.Provide(kafkahandler.NewPtmTaskHandler),
 		fx.Invoke(InitializeKafkaConsumer),
 	)
 }

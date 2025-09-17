@@ -181,5 +181,6 @@ func NewScheduleTaskUseCase(scheduleTaskService service.IScheduleTaskService,
 	return &ScheduleTaskUseCase{
 		scheduleTaskService: scheduleTaskService,
 		schedulePlanService: schedulePlanService,
+		txService:           txService,
 	}
 }

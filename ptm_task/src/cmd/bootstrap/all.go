@@ -51,8 +51,11 @@ func All() fx.Option {
 		fx.Provide(adapter.NewTaskStoreAdapter),
 		fx.Provide(adapter.NewCommentStoreAdapter),
 		fx.Provide(adapter.NewNoteStoreAdapter),
+		fx.Provide(adapter.NewUserTagStoreAdapter),
 
 		// Provide service
+		fx.Provide(service.NewTransactionService),
+		fx.Provide(service.NewUserTagService),
 		fx.Provide(service.NewProjectService),
 		fx.Provide(service.NewGroupTaskService),
 		fx.Provide(service.NewTaskService),
@@ -60,7 +63,7 @@ func All() fx.Option {
 		fx.Provide(service.NewNoteService),
 
 		// Provide usecase
-		fx.Provide(service.NewTransactionService),
+		fx.Provide(usecase.NewUserTagUseCase),
 		fx.Provide(usecase.NewProjectUseCase),
 		fx.Provide(usecase.NewGroupTaskUseCase),
 		fx.Provide(usecase.NewTaskUseCase),
@@ -68,6 +71,7 @@ func All() fx.Option {
 		fx.Provide(usecase.NewNoteUseCase),
 
 		// Provide controller
+		fx.Provide(controller.NewUserTagController),
 		fx.Provide(controller.NewProjectController),
 		fx.Provide(controller.NewGroupTaskController),
 		fx.Provide(controller.NewTaskController),
@@ -78,6 +82,7 @@ func All() fx.Option {
 		fx.Provide(utils.NewKeycloakJwksUtils),
 		fx.Provide(utils.NewJWTUtils),
 		fx.Provide(middleware.NewJWTMiddleware),
+		fx.Provide(middleware.NewInternalJWTMiddleware),
 
 		golibgin.GinHttpServerOpt(),
 		fx.Invoke(router.RegisterGinRouters),

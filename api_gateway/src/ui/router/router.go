@@ -30,6 +30,7 @@ type RegisterRoutersIn struct {
 	TaskController      *ptm.TaskController
 	CommentController   *ptm.CommentController
 	NoteController      *ptm.NoteController
+	UserTagController   *ptm.UserTagController
 
 	JWTMiddleware *middleware.JWTMiddleware
 }
@@ -43,7 +44,19 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 	group.GET("/actuator/health", gin.WrapF(p.Actuator.Health))
 	group.GET("/actuator/info", gin.WrapF(p.Actuator.Info))
 
-	RegisterAccountRoutes(group, p.AuthController, p.UserController)
+	RegisterAccountRoutes(
+		group,
+		p.AuthController,
+		p.UserController,
+	)
 
-	RegisterPtmRoutes(group, p.ProjectController, p.GroupTaskController, p.TaskController, p.CommentController, p.NoteController)
+	RegisterPtmRoutes(
+		group,
+		p.ProjectController,
+		p.GroupTaskController,
+		p.TaskController,
+		p.CommentController,
+		p.NoteController,
+		p.UserTagController,
+	)
 }

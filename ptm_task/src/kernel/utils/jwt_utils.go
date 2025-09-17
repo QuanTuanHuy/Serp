@@ -367,3 +367,52 @@ func (j *JWTUtils) GetSessionIdFromToken(tokenString string) (string, error) {
 	}
 	return claims.SessionId, nil
 }
+
+// Internal token
+
+type InternalClaims struct {
+	ClientID        string `json:"client_id"`
+	AuthorizedParty string `json:"azp"`
+	jwt.RegisteredClaims
+}
+
+func (j *JWTUtils) ValidateInternalToken(tokenString string) (*InternalClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &InternalClaims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+
+		keyId, ok := token.Header["kid"].(string)
+		if !ok {
+			log.Warn("No key ID found in JWT header, skipping signature verification")
+			return nil, errors.New("no key ID in JWT header")
+		}
+
+		publicKey, err := j.keycloakJwksUtils.GetPublicKey(keyId)
+		if err != nil {
+			log.Warn("Could not find public key for key ID: ", keyId, ", error: ", err)
+			return nil, err
+		}
+
+		return publicKey, nil
+	})
+	if err != nil {
+		log.Error("Failed to parse JWT token: ", err)
+		return nil, err
+	}
+
+	if claims, ok := token.Claims.(*InternalClaims); ok && token.Valid {
+		if claims.ExpiresAt != nil && time.Now().After(claims.ExpiresAt.Time) {
+			log.Error("JWT token is expired")
+			return nil, errors.New("token is expired")
+		}
+
+		if j.keycloakProps.ExpectedIssuer != "" && claims.Issuer != j.keycloakProps.ExpectedIssuer {
+			log.Error("JWT token issuer mismatch. Expected: ", j.keycloakProps.ExpectedIssuer, ", Actual: ", claims.Issuer)
+			return nil, errors.New("token issuer mismatch")
+		}
+		return claims, nil
+	}
+
+	return nil, errors.New("invalid token")
+}

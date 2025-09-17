@@ -11,7 +11,14 @@ import (
 	"github.com/serp/api-gateway/src/ui/middleware"
 )
 
-func RegisterPtmRoutes(group *gin.RouterGroup, projectController *controller.ProjectController, groupTaskController *controller.GroupTaskController, taskController *controller.TaskController, commentController *controller.CommentController, noteController *controller.NoteController) {
+func RegisterPtmRoutes(
+	group *gin.RouterGroup,
+	projectController *controller.ProjectController,
+	groupTaskController *controller.GroupTaskController,
+	taskController *controller.TaskController,
+	commentController *controller.CommentController,
+	noteController *controller.NoteController,
+	userTagController *controller.UserTagController) {
 	ptmV1 := group.Group("/ptm/api/v1")
 
 	ptmV1.Use(middleware.AuthMiddleware())
@@ -59,6 +66,15 @@ func RegisterPtmRoutes(group *gin.RouterGroup, projectController *controller.Pro
 			noteV1.DELETE("/:id", noteController.DeleteNote)
 			noteV1.PUT("/:id/lock", noteController.LockNote)
 			noteV1.PUT("/:id/unlock", noteController.UnlockNote)
+		}
+
+		tagV1 := ptmV1.Group("/tags")
+		{
+			tagV1.POST("", userTagController.CreateUserTag)
+			tagV1.GET("", userTagController.GetUserTags)
+			tagV1.GET("/:id", userTagController.GetUserTagByID)
+			tagV1.PUT("/:id", userTagController.UpdateUserTag)
+			tagV1.DELETE("/:id", userTagController.DeleteUserTag)
 		}
 	}
 }
