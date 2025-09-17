@@ -51,6 +51,7 @@ func All() fx.Option {
 		fx.Provide(adapter.NewTaskStoreAdapter),
 		fx.Provide(adapter.NewCommentStoreAdapter),
 		fx.Provide(adapter.NewNoteStoreAdapter),
+		fx.Provide(adapter.NewUserTagStoreAdapter),
 
 		// Provide service
 		fx.Provide(service.NewTransactionService),
@@ -70,6 +71,7 @@ func All() fx.Option {
 		fx.Provide(usecase.NewNoteUseCase),
 
 		// Provide controller
+		fx.Provide(controller.NewUserTagController),
 		fx.Provide(controller.NewProjectController),
 		fx.Provide(controller.NewGroupTaskController),
 		fx.Provide(controller.NewTaskController),

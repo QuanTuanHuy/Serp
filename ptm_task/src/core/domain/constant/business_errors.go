@@ -9,6 +9,7 @@ const (
 	InvalidQueryParameters = "invalid query parameters"
 
 	TagNotFound        = "tag not found"
+	TagAlreadyInUse    = "tag is already in use"
 	DeleteTagForbidden = "you do not have permission to delete this tag"
 	UpdateTagForbidden = "you do not have permission to update this tag"
 

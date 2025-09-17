@@ -22,6 +22,7 @@ type IUserTagUsecase interface {
 	CreateUserTag(ctx context.Context, userID int64, req *request.CreateTagDTO) (*entity.UserTagEntity, error)
 	UpdateUserTag(ctx context.Context, userID, tagID int64, req *request.UpdateTagDTO) (*entity.UserTagEntity, error)
 	DeleteUserTag(ctx context.Context, userID, tagID int64) error
+	GetTagByID(ctx context.Context, userID, tagID int64) (*entity.UserTagEntity, error)
 	GetTagsByUserID(ctx context.Context, userID int64) ([]*entity.UserTagEntity, error)
 }
 
@@ -30,10 +31,26 @@ type UserTagUseCase struct {
 	txService      service.ITransactionService
 }
 
+func (u *UserTagUseCase) GetTagByID(ctx context.Context, userID int64, tagID int64) (*entity.UserTagEntity, error) {
+	tag, err := u.userTagService.GetTagByID(ctx, tagID)
+	if err != nil {
+		return nil, err
+	}
+	if tag.UserID != userID {
+		log.Error(ctx, "User ", userID, " does not have permission to access tag ", tagID)
+		return nil, errors.New(constant.TagNotFound)
+	}
+	return tag, nil
+}
+
 func (u *UserTagUseCase) CreateUserTag(ctx context.Context, userID int64, req *request.CreateTagDTO) (*entity.UserTagEntity, error) {
 	_, err := u.userTagService.GetTagByUserIDAndName(ctx, userID, req.Name)
 	if err != nil {
-		return nil, err
+		if err.Error() != constant.TagNotFound {
+			return nil, err
+		}
+	} else {
+		return nil, errors.New(constant.TagAlreadyInUse)
 	}
 	result, err := u.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
 		userTag, err := u.userTagService.CreateUserTag(ctx, tx, userID, req)

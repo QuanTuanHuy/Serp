@@ -25,6 +25,7 @@ type RegisterRoutersIn struct {
 	TaskController      *controller.TaskController
 	CommentController   *controller.CommentController
 	NoteController      *controller.NoteController
+	UserTagController   *controller.UserTagController
 
 	JWTMiddleware         *middleware.JWTMiddleware
 	InternalJWTMiddleware *middleware.InternalJWTMiddleware
@@ -82,6 +83,15 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 			noteV1.DELETE("/:id", p.NoteController.DeleteNote)
 			noteV1.PUT("/:id/lock", p.NoteController.LockNote)
 			noteV1.PUT("/:id/unlock", p.NoteController.UnlockNote)
+		}
+
+		tagV1 := requiredAuthV1.Group("/tags")
+		{
+			tagV1.POST("", p.UserTagController.CreateTag)
+			tagV1.GET("", p.UserTagController.GetTags)
+			tagV1.GET("/:id", p.UserTagController.GetTagByID)
+			tagV1.PUT("/:id", p.UserTagController.UpdateTag)
+			tagV1.DELETE("/:id", p.UserTagController.DeleteTag)
 		}
 	}
 }
