@@ -1,3 +1,9 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
+
 package serp.project.ptm_optimization.core.domain.constant;
 
 import lombok.experimental.UtilityClass;
@@ -13,4 +19,6 @@ public class ErrorMessage {
     public static final String CONFLICT = "Conflict";
     public static final String TOO_MANY_REQUESTS = "Too Many Requests";
     public static final String UNKNOWN_ERROR = "Unknown Error";
+
+    public static final String TASK_REGISTRATION_ALREADY_EXISTS = "Task registration already exists for user";
 }

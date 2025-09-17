@@ -51,10 +51,13 @@ app:
     client-secret: ${CLIENT_SECRET}
 
   security:
-
     filter:
       publicUrls:
       protectedUrls:
+        - url-pattern: /api/v1/task-registrations/**
+          roles:
+            - PTM_USER
+            - PTM_ADMIN
 
 
 server:
