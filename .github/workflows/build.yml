@@ -18,6 +18,7 @@ jobs:
       api-gateway: ${{ steps.changes.outputs.api-gateway }}
       ptm-task: ${{ steps.changes.outputs.ptm-task }}
       ptm-schedule: ${{ steps.changes.outputs.ptm-schedule }}
+      ptm-optimization: ${{ steps.changes.outputs.ptm-optimization }}
       serp-web: ${{ steps.changes.outputs.serp-web }}
     steps:
       - name: Checkout code
