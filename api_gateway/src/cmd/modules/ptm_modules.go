@@ -20,6 +20,7 @@ func PtmModule() fx.Option {
 		fx.Provide(adapter.NewTaskClientAdapter),
 		fx.Provide(adapter.NewCommentClientAdapter),
 		fx.Provide(adapter.NewNoteClientAdapter),
+		fx.Provide(adapter.NewUserTagClientAdapter),
 
 		// Provide service
 		fx.Provide(service.NewProjectService),
@@ -27,6 +28,7 @@ func PtmModule() fx.Option {
 		fx.Provide(service.NewTaskService),
 		fx.Provide(service.NewCommentService),
 		fx.Provide(service.NewNoteService),
+		fx.Provide(service.NewUserTagService),
 
 		// Provide controller
 		fx.Provide(controller.NewProjectController),
@@ -34,5 +36,6 @@ func PtmModule() fx.Option {
 		fx.Provide(controller.NewTaskController),
 		fx.Provide(controller.NewCommentController),
 		fx.Provide(controller.NewNoteController),
+		fx.Provide(controller.NewUserTagController),
 	)
 }
