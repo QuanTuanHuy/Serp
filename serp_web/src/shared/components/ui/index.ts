@@ -27,5 +27,11 @@ export {
 // Avatar Components
 export { Avatar, AvatarImage, AvatarFallback } from './avatar';
 
+// Badge Components
+export { Badge, badgeVariants } from './badge';
+
+// Layout Components
+export { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
+
 // Theme Components
 export { ThemeToggle } from './theme-toggle';

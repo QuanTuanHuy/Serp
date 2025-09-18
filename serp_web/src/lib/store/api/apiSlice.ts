@@ -95,6 +95,11 @@ export const api = createApi({
     'account/auth',
     'account/permissions',
     'account/menus',
+    'Customer',
+    'Lead',
+    'Opportunity',
+    'Activity',
+    'Analytics',
   ],
 
   // Define endpoints in separate files for each module
