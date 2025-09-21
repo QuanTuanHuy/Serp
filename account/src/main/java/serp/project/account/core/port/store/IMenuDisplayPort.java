@@ -6,5 +6,12 @@ import java.util.List;
 
 public interface IMenuDisplayPort {
     MenuDisplayEntity save(MenuDisplayEntity menuDisplay);
+
     List<MenuDisplayEntity> getByIds(List<Long> ids);
+
+    List<MenuDisplayEntity> getByModuleId(Long moduleId);
+
+    MenuDisplayEntity getByModuleIdAndName(Long moduleId, String name);
+
+    void deleteMenuDisplay(Long id);
 }

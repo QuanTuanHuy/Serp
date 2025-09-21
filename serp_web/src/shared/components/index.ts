@@ -6,3 +6,8 @@
 export * from './ui';
 export { Header } from './Header';
 export { AppsShowcase } from './AppsShowcase';
+export {
+  ErrorBoundary,
+  withErrorBoundary,
+  useErrorHandler,
+} from './error-boundary';
