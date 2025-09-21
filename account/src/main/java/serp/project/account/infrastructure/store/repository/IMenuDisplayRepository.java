@@ -14,4 +14,8 @@ import serp.project.account.infrastructure.store.model.MenuDisplayModel;
 @Repository
 public interface IMenuDisplayRepository extends IBaseRepository<MenuDisplayModel> {
     List<MenuDisplayModel> findByIdIn(List<Long> ids);
+
+    List<MenuDisplayModel> findByModuleId(Long moduleId);
+
+    MenuDisplayModel findByModuleIdAndName(Long moduleId, String name);
 }

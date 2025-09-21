@@ -62,6 +62,14 @@ public class Constants {
         public static final String WRONG_EMAIL_OR_PASSWORD = "Wrong email or password";
         public static final String INVALID_REFRESH_TOKEN = "Invalid refresh token";
         public static final String TOKEN_EXPIRED = "Token expired";
+
+        public static final String MENU_DISPLAY_ALREADY_EXISTS = "Menu display already exists";
+        public static final String MENU_DISPLAY_NOT_FOUND = "Menu display not found";
+        public static final String PARENT_MENU_DISPLAY_NOT_FOUND = "Parent menu display not found";
+        public static final String CREATE_MENU_DISPLAY_FAILED = "Create menu display failed";
+        public static final String UPDATE_MENU_DISPLAY_FAILED = "Update menu display failed";
+        public static final String DELETE_MENU_DISPLAY_FAILED = "Delete menu display failed";
+        public static final String GET_MENU_DISPLAY_FAILED = "Get menu display failed";
     }
 
     @UtilityClass

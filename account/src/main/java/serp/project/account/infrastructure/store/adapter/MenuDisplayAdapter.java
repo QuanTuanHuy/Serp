@@ -22,7 +22,7 @@ import serp.project.account.kernel.utils.CollectionUtils;
 public class MenuDisplayAdapter implements IMenuDisplayPort {
     private final IMenuDisplayRepository menuDisplayRepository;
     private final MenuDisplayMapper menuDisplayMapper;
-    
+
     @Override
     public MenuDisplayEntity save(MenuDisplayEntity menuDisplay) {
         MenuDisplayModel menuDisplayModel = menuDisplayMapper.toModel(menuDisplay);
@@ -39,5 +39,20 @@ public class MenuDisplayAdapter implements IMenuDisplayPort {
 
     private MenuDisplayEntity getById(Long id) {
         return menuDisplayMapper.toEntity(menuDisplayRepository.findById(id).orElse(null));
+    }
+
+    @Override
+    public List<MenuDisplayEntity> getByModuleId(Long moduleId) {
+        return menuDisplayMapper.toEntityList(menuDisplayRepository.findByModuleId(moduleId));
+    }
+
+    @Override
+    public MenuDisplayEntity getByModuleIdAndName(Long moduleId, String name) {
+        return menuDisplayMapper.toEntity(menuDisplayRepository.findByModuleIdAndName(moduleId, name));
+    }
+
+    @Override
+    public void deleteMenuDisplay(Long id) {
+        menuDisplayRepository.deleteById(id);
     }
 }

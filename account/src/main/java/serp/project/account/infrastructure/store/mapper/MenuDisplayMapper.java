@@ -10,17 +10,19 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
+import serp.project.account.core.domain.dto.request.CreateMenuDisplayDto;
+import serp.project.account.core.domain.dto.request.UpdateMenuDisplayDto;
 import serp.project.account.core.domain.entity.MenuDisplayEntity;
 import serp.project.account.infrastructure.store.model.MenuDisplayModel;
 
 @Component
 public class MenuDisplayMapper extends BaseMapper {
-    
+
     public MenuDisplayEntity toEntity(MenuDisplayModel model) {
         if (model == null) {
             return null;
         }
-        
+
         return MenuDisplayEntity.builder()
                 .id(model.getId())
                 .name(model.getName())
@@ -38,7 +40,7 @@ public class MenuDisplayMapper extends BaseMapper {
         if (entity == null) {
             return null;
         }
-        
+
         return MenuDisplayModel.builder()
                 .id(entity.getId())
                 .name(entity.getName())
@@ -56,7 +58,7 @@ public class MenuDisplayMapper extends BaseMapper {
         if (models == null) {
             return null;
         }
-        
+
         return models.stream()
                 .map(this::toEntity)
                 .collect(Collectors.toList());
@@ -66,9 +68,37 @@ public class MenuDisplayMapper extends BaseMapper {
         if (entities == null) {
             return null;
         }
-        
+
         return entities.stream()
                 .map(this::toModel)
                 .collect(Collectors.toList());
+    }
+
+    public MenuDisplayEntity createMenuDisplayMapper(CreateMenuDisplayDto request) {
+        if (request == null) {
+            return null;
+        }
+
+        return MenuDisplayEntity.builder()
+                .name(request.getName())
+                .path(request.getPath())
+                .icon(request.getIcon())
+                .order(request.getOrder())
+                .parentId(request.getParentId())
+                .moduleId(request.getModuleId())
+                .build();
+    }
+
+    public MenuDisplayEntity updateMenuDisplayMapper(MenuDisplayEntity entity, UpdateMenuDisplayDto request) {
+        if (entity == null || request == null) {
+            return entity;
+        }
+
+        entity.setName(request.getName());
+        entity.setPath(request.getPath());
+        entity.setIcon(request.getIcon());
+        entity.setOrder(request.getOrder());
+
+        return entity;
     }
 }
