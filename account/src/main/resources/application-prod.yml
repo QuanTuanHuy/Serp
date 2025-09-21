@@ -61,7 +61,7 @@ app:
           second: GET
         - first: /api/v1/modules/**
           second: GET
-        - first: /api/v1/menu-displays/get-by-module/**
+        - first: /api/v1/menu-displays/**
           second: GET
       protectedUrls:
         - url-pattern: /api/v1/users/**

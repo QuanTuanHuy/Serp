@@ -21,7 +21,7 @@ import serp.project.account.infrastructure.store.repository.IMenuDisplayRoleRepo
 public class MenuDisplayRoleAdapter implements IMenuDisplayRolePort {
     private final IMenuDisplayRoleRepository menuDisplayRoleRepository;
     private final MenuDisplayRoleMapper menuDisplayRoleMapper;
-    
+
     @Override
     public void save(List<MenuDisplayRoleEntity> menuDisplayRoles) {
         List<MenuDisplayRoleModel> models = menuDisplayRoleMapper.toModelList(menuDisplayRoles);
@@ -31,5 +31,10 @@ public class MenuDisplayRoleAdapter implements IMenuDisplayRolePort {
     @Override
     public List<MenuDisplayRoleEntity> getByRoleIds(List<Long> roleIds) {
         return menuDisplayRoleMapper.toEntityList(menuDisplayRoleRepository.findByRoleIdIn(roleIds));
+    }
+
+    @Override
+    public void deleteByIds(List<Long> ids) {
+        menuDisplayRoleRepository.deleteByIdIn(ids);
     }
 }
