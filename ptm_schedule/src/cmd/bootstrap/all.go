@@ -58,6 +58,7 @@ func All() fx.Option {
 		fx.Provide(service.NewSchedulePlanService),
 		fx.Provide(service.NewScheduleGroupService),
 		fx.Provide(service.NewScheduleTaskService),
+		fx.Provide(service.NewTimeBubblesService),
 
 		// Provide usecase
 		fx.Provide(usecase.NewSchedulePlanUseCase),
