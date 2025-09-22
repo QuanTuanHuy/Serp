@@ -68,13 +68,13 @@ func ToPriorityString(priorities []enum.Priority) []string {
 }
 
 var dayMaps = map[string]int32{
-	"sunday":    0,
-	"monday":    1,
-	"tuesday":   2,
-	"wednesday": 3,
-	"thursday":  4,
-	"friday":    5,
-	"saturday":  6,
+	"Sunday":    0,
+	"Monday":    1,
+	"Tuesday":   2,
+	"Wednesday": 3,
+	"Thursday":  4,
+	"Friday":    5,
+	"Saturday":  6,
 }
 
 func ConvertWeekday(weekdays []string) []int32 {
@@ -86,4 +86,13 @@ func ConvertWeekday(weekdays []string) []int32 {
 		}
 	}
 	return result
+}
+
+func ToDayOfWeekString(weekDay int) string {
+	for k, v := range dayMaps {
+		if int(v) == weekDay {
+			return k
+		}
+	}
+	return "Unknown"
 }

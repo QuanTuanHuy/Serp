@@ -51,6 +51,7 @@ func All() fx.Option {
 		fx.Provide(adapter.NewSchedulePlanStoreAdapter),
 		fx.Provide(adapter.NewScheduleGroupStoreAdapter),
 		fx.Provide(adapter.NewScheduleTaskStoreAdapter),
+		fx.Provide(adapter.NewTimeBubblesStoreAdapter),
 
 		// Provide service
 		fx.Provide(service.NewTransactionService),
