@@ -46,8 +46,9 @@ type Tag string
 
 const (
 	Work   Tag = "WORK"
-	EAT    Tag = "EAT"
-	SLEEP  Tag = "SLEEP"
-	TRAVEL Tag = "TRAVEL"
-	RELAX  Tag = "RELAX"
+	Eat    Tag = "EAT"
+	Sleep  Tag = "SLEEP"
+	Travel Tag = "TRAVEL"
+	Relax  Tag = "RELAX"
+	Other  Tag = "OTHER"
 )

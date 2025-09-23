@@ -18,6 +18,7 @@ func InitializeDB(db *gorm.DB) {
 		&model.ScheduleGroupModel{},
 		&model.ScheduleTaskModel{},
 		&model.TimeBubblesModel{},
+		&model.ScheduleDayModel{},
 	)
 	if err != nil {
 		log.Fatal("Failed to run migrations: ", err)
