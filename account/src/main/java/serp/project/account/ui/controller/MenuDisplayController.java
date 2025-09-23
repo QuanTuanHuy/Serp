@@ -3,17 +3,20 @@
  * Description: Part of Serp Project
  */
 
-
 package serp.project.account.ui.controller;
 
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import serp.project.account.core.domain.dto.request.AssignMenuDisplayToRoleDto;
 import serp.project.account.core.domain.dto.request.CreateMenuDisplayDto;
 import serp.project.account.core.domain.dto.request.UpdateMenuDisplayDto;
 import serp.project.account.core.usecase.MenuDisplayUseCase;
+
+import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -51,6 +54,25 @@ public class MenuDisplayController {
     @GetMapping("/get-by-module/{moduleId}")
     public ResponseEntity<?> getMenuDisplaysByModuleId(@PathVariable Long moduleId) {
         var response = menuDisplayUseCase.getMenuDisplaysByModuleId(moduleId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PostMapping("/assign-to-role")
+    public ResponseEntity<?> assignMenuDisplaysToRole(@Valid @RequestBody AssignMenuDisplayToRoleDto request) {
+        var response = menuDisplayUseCase.assignMenuDisplaysToRole(request.getRoleId(), request.getMenuDisplayIds());
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PostMapping("/unassign-from-role")
+    public ResponseEntity<?> unassignMenuDisplaysFromRole(@Valid @RequestBody AssignMenuDisplayToRoleDto request) {
+        var response = menuDisplayUseCase.unassignMenuDisplaysFromRole(request.getRoleId(),
+                request.getMenuDisplayIds());
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @GetMapping("/get-by-role-ids")
+    public ResponseEntity<?> getMenuDisplaysByRoleIds(@RequestParam List<Long> roleIds) {
+        var response = menuDisplayUseCase.getMenuDisplaysByRoleIds(roleIds);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 

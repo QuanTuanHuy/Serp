@@ -51,12 +51,15 @@ func All() fx.Option {
 		fx.Provide(adapter.NewSchedulePlanStoreAdapter),
 		fx.Provide(adapter.NewScheduleGroupStoreAdapter),
 		fx.Provide(adapter.NewScheduleTaskStoreAdapter),
+		fx.Provide(adapter.NewTimeBubblesStoreAdapter),
+		fx.Provide(adapter.NewScheduleDayStoreAdapter),
 
 		// Provide service
 		fx.Provide(service.NewTransactionService),
 		fx.Provide(service.NewSchedulePlanService),
 		fx.Provide(service.NewScheduleGroupService),
 		fx.Provide(service.NewScheduleTaskService),
+		fx.Provide(service.NewTimeBubblesService),
 
 		// Provide usecase
 		fx.Provide(usecase.NewSchedulePlanUseCase),

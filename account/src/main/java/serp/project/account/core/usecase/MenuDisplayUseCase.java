@@ -5,6 +5,8 @@
 
 package serp.project.account.core.usecase;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
@@ -16,6 +18,7 @@ import serp.project.account.core.domain.dto.request.UpdateMenuDisplayDto;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.IMenuDisplayService;
 import serp.project.account.core.service.IModuleService;
+import serp.project.account.core.service.IRoleService;
 import serp.project.account.kernel.utils.ResponseUtils;
 
 @Service
@@ -24,6 +27,7 @@ import serp.project.account.kernel.utils.ResponseUtils;
 public class MenuDisplayUseCase {
     private final IMenuDisplayService menuDisplayService;
     private final IModuleService moduleService;
+    private final IRoleService roleService;
 
     private final ResponseUtils responseUtils;
 
@@ -86,6 +90,65 @@ public class MenuDisplayUseCase {
             return responseUtils.error(e.getCode(), e.getMessage());
         } catch (Exception e) {
             log.error("Unexpected Error fetching menu displays: {}", e.getMessage());
+            return responseUtils.internalServerError(e.getMessage());
+        }
+    }
+
+    public GeneralResponse<?> assignMenuDisplaysToRole(Long roleId, List<Long> menuDisplayIds) {
+        try {
+            var role = roleService.getAllRoles().stream()
+                    .filter(r -> r.getId().equals(roleId))
+                    .findFirst()
+                    .orElse(null);
+            if (role == null) {
+                throw new AppException(Constants.ErrorMessage.ROLE_NOT_FOUND);
+            }
+
+            menuDisplayService.assignMenuDisplaysToRole(roleId, menuDisplayIds);
+            return responseUtils.success("Assigned menu displays successfully");
+        } catch (AppException e) {
+            return responseUtils.error(e.getCode(), e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected Error assigning menu displays to role: {}", e.getMessage());
+            return responseUtils.internalServerError(e.getMessage());
+        }
+    }
+
+    public GeneralResponse<?> unassignMenuDisplaysFromRole(Long roleId, List<Long> menuDisplayIds) {
+        try {
+            var role = roleService.getAllRoles().stream()
+                    .filter(r -> r.getId().equals(roleId))
+                    .findFirst()
+                    .orElse(null);
+            if (role == null) {
+                throw new AppException(Constants.ErrorMessage.ROLE_NOT_FOUND);
+            }
+
+            menuDisplayService.unassignMenuDisplaysFromRole(roleId, menuDisplayIds);
+            return responseUtils.success("Unassigned menu displays successfully");
+        } catch (AppException e) {
+            return responseUtils.error(e.getCode(), e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected Error unassigning menu displays from role: {}", e.getMessage());
+            return responseUtils.internalServerError(e.getMessage());
+        }
+    }
+
+    public GeneralResponse<?> getMenuDisplaysByRoleIds(List<Long> roleIds) {
+        try {
+            var roles = roleService.getAllRoles().stream()
+                    .filter(r -> roleIds.contains(r.getId()))
+                    .toList();
+            if (roles.size() != roleIds.size()) {
+                throw new AppException(Constants.ErrorMessage.ROLE_NOT_FOUND);
+            }
+
+            var menuDisplaysByRoleIds = menuDisplayService.getMenuDisplaysByRoleIds(roleIds);
+            return responseUtils.success(menuDisplaysByRoleIds);
+        } catch (AppException e) {
+            return responseUtils.error(e.getCode(), e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected Error fetching menu displays by role ids: {}", e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
     }

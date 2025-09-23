@@ -20,6 +20,7 @@ jobs:
       ptm-schedule: ${{ steps.changes.outputs.ptm-schedule }}
       ptm-optimization: ${{ steps.changes.outputs.ptm-optimization }}
       serp-web: ${{ steps.changes.outputs.serp-web }}
+      crm: ${{ steps.changes.outputs.crm }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -40,6 +41,8 @@ jobs:
               - 'ptm_optimization/**'
             serp-web:
               - 'serp_web/**'
+            crm:
+              - 'crm/**'
 
   build-account:
     needs: changes
@@ -282,3 +285,45 @@ jobs:
         run: |
           cd serp_web
           npm run build
+
+  build-crm:
+    needs: changes
+    if: ${{ needs.changes.outputs.crm == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: "maven"
+
+      - name: Build CRM Service
+        run: |
+          cd crm
+          chmod +x ./mvnw
+          ./mvnw clean package -DskipTests
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./crm
+          file: ./crm/Dockerfile
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY }}/serp-crm:${{ env.IMAGE_TAG }}
+            ${{ env.DOCKER_REGISTRY }}/serp-crm:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

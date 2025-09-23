@@ -10,6 +10,7 @@ This is a **microservices architecture** with event-driven communication using *
 - **ptm_task** (Go, Gin port 8083) - Personal Task Management service
 - **ptm_schedule** (Go, Gin port 8084) - Personal Schedule/Calendar service
 - **ptm_optimization** (Java, Spring Boot, port 8085) - Personal Task Optimization service
+- **crm** (Java, Spring Boot, port 8086) - Customer Relationship Management service
 - **serp_web** (NextJS, Redux, Shadcn UI, Tailwind CSS, Next Theme) - Frontend application
 
 ## Go Services Architecture Pattern

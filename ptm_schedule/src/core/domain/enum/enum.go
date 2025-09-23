@@ -20,6 +20,7 @@ type ActiveStatus string
 const (
 	Active   ActiveStatus = "ACTIVE"
 	Inactive ActiveStatus = "INACTIVE"
+	Draft    ActiveStatus = "DRAFT"
 )
 
 type Priority string
@@ -39,4 +40,15 @@ const (
 	Weekly  RepeatLevel = "WEEKLY"
 	Monthly RepeatLevel = "MONTHLY"
 	Yearly  RepeatLevel = "YEARLY"
+)
+
+type Tag string
+
+const (
+	Work   Tag = "WORK"
+	Eat    Tag = "EAT"
+	Sleep  Tag = "SLEEP"
+	Travel Tag = "TRAVEL"
+	Relax  Tag = "RELAX"
+	Other  Tag = "OTHER"
 )
