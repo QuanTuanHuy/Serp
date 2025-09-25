@@ -22,7 +22,7 @@ import serp.project.account.kernel.utils.CollectionUtils;
 public class OrganizationAdapter implements IOrganizationPort {
     private final IOrganizationRepository organizationRepository;
     private final OrganizationMapper organizationMapper;
-    
+
     @Override
     public OrganizationEntity save(OrganizationEntity organization) {
         OrganizationModel organizationModel = organizationMapper.toModel(organization);
@@ -38,7 +38,7 @@ public class OrganizationAdapter implements IOrganizationPort {
 
     @Override
     public boolean existsByCode(String code) {
-        return organizationRepository.findByName(code).isPresent();
+        return organizationRepository.findByCode(code).isPresent();
     }
 
     @Override
@@ -47,5 +47,12 @@ public class OrganizationAdapter implements IOrganizationPort {
             return List.of(getById(ids.getFirst()));
         }
         return organizationMapper.toEntityList(organizationRepository.findByIdIn(ids));
+    }
+
+    @Override
+    public OrganizationEntity getOrganizationByName(String name) {
+        return organizationRepository.findByName(name)
+                .map(organizationMapper::toEntity)
+                .orElse(null);
     }
 }

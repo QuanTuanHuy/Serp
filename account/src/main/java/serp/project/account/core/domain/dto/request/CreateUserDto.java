@@ -7,6 +7,7 @@ package serp.project.account.core.domain.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -28,6 +29,8 @@ public class CreateUserDto {
     private String email;
     @NotBlank
     private String password;
+    @NotNull
+    private CreateOrganizationDto organization;
 
     private List<Long> roleIds;
 }

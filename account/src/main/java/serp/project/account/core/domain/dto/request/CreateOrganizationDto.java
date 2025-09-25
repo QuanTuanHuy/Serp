@@ -1,3 +1,4 @@
+
 /**
  * Author: QuanTuanHuy
  * Description: Part of Serp Project
@@ -6,6 +7,7 @@
 package serp.project.account.core.domain.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,25 +19,7 @@ import lombok.NoArgsConstructor;
 @Data
 @Builder
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class CreateKeycloakUserDto {
+public class CreateOrganizationDto {
     @NotBlank
-    private String username;
-    @NotBlank
-    private String email;
-    @NotBlank
-    private String firstName;
-    @NotBlank
-    private String lastName;
-    @NotBlank
-    private String password;
-
-    private Long uid;
-
-    private Long orgId;
-
-    @Builder.Default
-    private boolean emailVerified = true;
-
-    @Builder.Default
-    private boolean temporaryPassword = false;
+    private String name;
 }

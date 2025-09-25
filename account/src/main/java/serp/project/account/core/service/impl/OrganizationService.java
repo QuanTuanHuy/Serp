@@ -1,0 +1,58 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
+package serp.project.account.core.service.impl;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import serp.project.account.core.domain.constant.Constants;
+import serp.project.account.core.domain.dto.request.CreateOrganizationDto;
+import serp.project.account.core.domain.entity.OrganizationEntity;
+import serp.project.account.core.exception.AppException;
+import serp.project.account.core.port.store.IOrganizationPort;
+import serp.project.account.core.port.store.IUserOrganizationPort;
+import serp.project.account.core.service.IOrganizationService;
+import serp.project.account.infrastructure.store.mapper.OrganizationMapper;
+import serp.project.account.infrastructure.store.mapper.UserOrganizationMapper;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class OrganizationService implements IOrganizationService {
+    private final IOrganizationPort organizationPort;
+    private final IUserOrganizationPort userOrganizationPort;
+
+    private final OrganizationMapper organizationMapper;
+    private final UserOrganizationMapper userOrganizationMapper;
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public OrganizationEntity createOrganization(CreateOrganizationDto request) {
+        var existed = organizationPort.getOrganizationByName(request.getName());
+        if (existed != null) {
+            log.error("Organization with name {} already exists", request.getName());
+            throw new AppException(Constants.ErrorMessage.ORGANIZATION_ALREADY_EXISTS);
+        }
+        var organization = organizationMapper.createOrganizationMapper(request);
+        return organizationPort.save(organization);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void assignOrganizationToUser(Long organizationId, Long userId, Long roleId) {
+        var existed = userOrganizationPort.getByUserIdAndOrganizationIdAndRoleId(userId, organizationId, roleId);
+        if (existed != null) {
+            log.warn("User with id {} already assigned to organization with id {} and role id {}", userId,
+                    organizationId, roleId);
+            return;
+        }
+        var userOrganization = userOrganizationMapper.assignUserOrganizationMapper(userId, organizationId, roleId);
+        userOrganizationPort.save(userOrganization);
+    }
+
+}

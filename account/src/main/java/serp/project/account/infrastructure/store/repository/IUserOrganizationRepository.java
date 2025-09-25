@@ -14,4 +14,6 @@ import serp.project.account.infrastructure.store.model.UserOrganizationModel;
 @Repository
 public interface IUserOrganizationRepository extends IBaseRepository<UserOrganizationModel> {
     List<UserOrganizationModel> findByUserId(Long userId);
+
+    UserOrganizationModel findByUserIdAndOrganizationIdAndRoleId(Long userId, Long organizationId, Long roleId);
 }

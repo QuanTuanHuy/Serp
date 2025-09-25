@@ -15,12 +15,12 @@ import serp.project.account.infrastructure.store.model.UserOrganizationModel;
 
 @Component
 public class UserOrganizationMapper extends BaseMapper {
-    
+
     public UserOrganizationEntity toEntity(UserOrganizationModel model) {
         if (model == null) {
             return null;
         }
-        
+
         return UserOrganizationEntity.builder()
                 .id(model.getId())
                 .userId(model.getUserId())
@@ -37,7 +37,7 @@ public class UserOrganizationMapper extends BaseMapper {
         if (entity == null) {
             return null;
         }
-        
+
         return UserOrganizationModel.builder()
                 .id(entity.getId())
                 .userId(entity.getUserId())
@@ -54,7 +54,7 @@ public class UserOrganizationMapper extends BaseMapper {
         if (models == null) {
             return null;
         }
-        
+
         return models.stream()
                 .map(this::toEntity)
                 .collect(Collectors.toList());
@@ -64,9 +64,22 @@ public class UserOrganizationMapper extends BaseMapper {
         if (entities == null) {
             return null;
         }
-        
+
         return entities.stream()
                 .map(this::toModel)
                 .collect(Collectors.toList());
+    }
+
+    public UserOrganizationEntity assignUserOrganizationMapper(Long userId, Long organizationId, Long roleId) {
+        if (userId == null || organizationId == null || roleId == null) {
+            return null;
+        }
+
+        return UserOrganizationEntity.builder()
+                .userId(userId)
+                .organizationId(organizationId)
+                .roleId(roleId)
+                .isDefault(false)
+                .build();
     }
 }

@@ -15,6 +15,8 @@ public interface IRoleService {
 
     RoleEntity getRoleByName(String name);
 
+    RoleEntity getOrCreateOrganizationRole(String roleName);
+
     List<RoleEntity> getAllRoles();
 
     List<RoleEntity> getRolesByGroupId(Long groupId);

@@ -10,20 +10,22 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
+import serp.project.account.core.domain.dto.request.CreateOrganizationDto;
 import serp.project.account.core.domain.entity.OrganizationEntity;
 import serp.project.account.infrastructure.store.model.OrganizationModel;
 
 @Component
 public class OrganizationMapper extends BaseMapper {
-    
+
     public OrganizationEntity toEntity(OrganizationModel model) {
         if (model == null) {
             return null;
         }
-        
+
         return OrganizationEntity.builder()
                 .id(model.getId())
                 .name(model.getName())
+                .code(model.getCode())
                 .description(model.getDescription())
                 .address(model.getAddress())
                 .createdAt(localDateTimeToLong(model.getCreatedAt()))
@@ -35,10 +37,11 @@ public class OrganizationMapper extends BaseMapper {
         if (entity == null) {
             return null;
         }
-        
+
         return OrganizationModel.builder()
                 .id(entity.getId())
                 .name(entity.getName())
+                .code(entity.getCode())
                 .description(entity.getDescription())
                 .address(entity.getAddress())
                 .createdAt(longToLocalDateTime(entity.getCreatedAt()))
@@ -50,7 +53,7 @@ public class OrganizationMapper extends BaseMapper {
         if (models == null) {
             return null;
         }
-        
+
         return models.stream()
                 .map(this::toEntity)
                 .collect(Collectors.toList());
@@ -60,9 +63,24 @@ public class OrganizationMapper extends BaseMapper {
         if (entities == null) {
             return null;
         }
-        
+
         return entities.stream()
                 .map(this::toModel)
                 .collect(Collectors.toList());
+    }
+
+    public OrganizationEntity createOrganizationMapper(CreateOrganizationDto request) {
+        if (request == null) {
+            return null;
+        }
+
+        return OrganizationEntity.builder()
+                .name(request.getName())
+                .code(getOrganizationCode(request.getName()))
+                .build();
+    }
+
+    private String getOrganizationCode(String name) {
+        return name.trim().toUpperCase().replaceAll("\\s+", "_");
     }
 }
