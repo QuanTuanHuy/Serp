@@ -52,7 +52,7 @@ public class KeycloakAdapter implements IKeycloakPort {
 
         Map<String, List<String>> attributes = new HashMap<>();
         attributes.put("uid", List.of(request.getUid().toString()));
-        attributes.put("orgId", List.of(request.getOrgId().toString()));
+        attributes.put("tenant_id", List.of(request.getOrgId().toString()));
         user.setAttributes(attributes);
 
         if (!StringUtils.isEmpty(request.getPassword())) {
