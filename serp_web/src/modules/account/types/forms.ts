@@ -15,7 +15,7 @@ export interface RegisterFormData {
   confirmPassword: string;
   firstName: string;
   lastName: string;
-  organizationId?: number;
+  organizationName: string;
 }
 
 // Validation error types

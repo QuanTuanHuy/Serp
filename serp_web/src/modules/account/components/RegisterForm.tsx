@@ -36,7 +36,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
     confirmPassword: '',
     firstName: '',
     lastName: '',
-    organizationId: undefined,
+    organizationName: '',
   });
 
   const [validationErrors, setValidationErrors] = useState<
@@ -110,7 +110,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       password: formData.password,
       firstName: formData.firstName,
       lastName: formData.lastName,
-      organizationId: formData.organizationId,
+      organization: {
+        name: formData.organizationName,
+      },
     });
 
     if (result.success) {
@@ -222,6 +224,29 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             {validationErrors.confirmPassword && (
               <p className='text-sm text-red-600'>
                 {validationErrors.confirmPassword}
+              </p>
+            )}
+          </div>
+
+          {/* Organization Name Field */}
+          <div className='space-y-2'>
+            <Label htmlFor='organizationName'>Organization Name</Label>
+            <Input
+              id='organizationName'
+              type='text'
+              placeholder='Enter your organization name'
+              value={formData.organizationName}
+              onChange={(e) =>
+                handleInputChange('organizationName', e.target.value)
+              }
+              className={
+                validationErrors.organizationName ? 'border-red-500' : ''
+              }
+              disabled={isLoading}
+            />
+            {validationErrors.organizationName && (
+              <p className='text-sm text-red-600'>
+                {validationErrors.organizationName}
               </p>
             )}
           </div>

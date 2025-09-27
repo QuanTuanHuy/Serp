@@ -9,7 +9,9 @@ export interface RegisterRequest {
   password: string;
   firstName: string;
   lastName: string;
-  organizationId?: number;
+  organization: {
+    name: string;
+  };
 }
 
 export interface LoginRequest {
