@@ -3,8 +3,9 @@
  * Description: Part of Serp Project
  */
 
-
 package serp.project.crm.core.domain.entity;
+
+import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -17,11 +18,11 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @Setter
 @SuperBuilder
-public class BaseEntity {
-    private Long id;
-    private Long tenantId;
-    private Long createdBy;
-    private Long createdAt;
-    private Long updatedBy;
-    private Long updatedAt;
+public class TeamEntity extends BaseEntity {
+    private String name;
+    private String description;
+    private Long leaderId;
+    private String notes;
+
+    private List<TeamMemberEntity> members;
 }

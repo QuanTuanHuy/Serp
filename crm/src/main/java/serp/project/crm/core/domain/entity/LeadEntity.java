@@ -1,4 +1,3 @@
-
 /**
  * Author: QuanTuanHuy
  * Description: Part of Serp Project
@@ -23,20 +22,25 @@ import serp.project.crm.core.domain.enums.LeadStatus;
 @Setter
 @SuperBuilder
 public class LeadEntity extends BaseEntity {
-    private String leadCode;
-    private String firstName;
-    private String lastName;
-    private String email;
-    private String phone;
     private String company;
-    private String jobTitle;
     private String industry;
     private String companySize;
+    private String website;
+
+    private String name;
+    private String email;
+    private String phone;
+    private String jobTitle;
+
+    private AddressEntity address;
+
     private LeadSource leadSource;
     private LeadStatus leadStatus;
+
     private Long assignedTo;
     private BigDecimal estimatedValue;
     private Integer probability;
+
     private LocalDate expectedCloseDate;
     private String notes;
 
@@ -95,14 +99,6 @@ public class LeadEntity extends BaseEntity {
     }
 
     // Helper method
-    public String getFullName() {
-        if (firstName == null && lastName == null) {
-            return company != null ? company : "";
-        }
-        return (firstName != null ? firstName : "") +
-                (lastName != null ? " " + lastName : "");
-    }
-
     public boolean isOverdue() {
         return expectedCloseDate != null &&
                 expectedCloseDate.isBefore(LocalDate.now()) &&
