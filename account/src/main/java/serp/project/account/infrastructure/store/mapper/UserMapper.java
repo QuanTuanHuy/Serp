@@ -82,7 +82,7 @@ public class UserMapper extends BaseMapper {
                 .build();
     }
 
-    public CreateKeycloakUserDto createUserMapper(UserEntity entity, CreateUserDto request) {
+    public CreateKeycloakUserDto createUserMapper(UserEntity entity, Long organizationId, CreateUserDto request) {
         return CreateKeycloakUserDto.builder()
                 .username(entity.getEmail())
                 .email(entity.getEmail())
@@ -90,6 +90,7 @@ public class UserMapper extends BaseMapper {
                 .lastName(entity.getLastName())
                 .password(request.getPassword())
                 .uid(entity.getId())
+                .orgId(organizationId)
                 .build();
     }
 

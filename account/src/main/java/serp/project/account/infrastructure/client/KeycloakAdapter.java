@@ -1,3 +1,8 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
 package serp.project.account.infrastructure.client;
 
 import io.micrometer.common.util.StringUtils;
@@ -47,6 +52,7 @@ public class KeycloakAdapter implements IKeycloakPort {
 
         Map<String, List<String>> attributes = new HashMap<>();
         attributes.put("uid", List.of(request.getUid().toString()));
+        attributes.put("tenant_id", List.of(request.getOrgId().toString()));
         user.setAttributes(attributes);
 
         if (!StringUtils.isEmpty(request.getPassword())) {

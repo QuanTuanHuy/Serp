@@ -27,5 +27,6 @@ public class UserEntity extends BaseEntity {
     private String keycloakId;
 
     private List<RoleEntity> roles;
-    private List<OrganizationEntity> organizations;
+    private List<UserOrganizationEntity> userOrganizations;
+    private OrganizationEntity organization;
 }

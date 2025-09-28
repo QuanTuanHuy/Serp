@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import serp.project.account.core.domain.constant.CacheConstants;
@@ -132,6 +133,20 @@ public class RoleService implements IRoleService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public RoleEntity getOrCreateOrganizationRole(String roleName) {
+        RoleEntity role = rolePort.getRoleByName(roleName);
+        if (role != null) {
+            return role;
+        }
+        RoleEntity newRole = RoleEntity.builder()
+                .name(roleName)
+                .isRealmRole(false)
+                .build();
+        return rolePort.save(newRole);
+    }
+
+    @Override
     public List<RoleEntity> getRolesByGroupId(Long groupId) {
         List<Long> roleIds = groupRolePort.getByGroupId(groupId).stream()
                 .map(GroupRoleEntity::getRoleId)
@@ -143,13 +158,12 @@ public class RoleService implements IRoleService {
     }
 
     public void cacheAllRoles(List<RoleEntity> roles) {
-        asyncTaskExecutor.execute(() ->
-                cachePort.setToCache(CacheConstants.ALL_ROLES, roles, CacheConstants.LONG_EXPIRATION));
+        asyncTaskExecutor
+                .execute(() -> cachePort.setToCache(CacheConstants.ALL_ROLES, roles, CacheConstants.LONG_EXPIRATION));
     }
 
     public void clearCacheAllRoles() {
-        asyncTaskExecutor.execute(() ->
-                cachePort.deleteFromCache(CacheConstants.ALL_ROLES));
+        asyncTaskExecutor.execute(() -> cachePort.deleteFromCache(CacheConstants.ALL_ROLES));
     }
 
 }

@@ -15,5 +15,8 @@ import serp.project.account.infrastructure.store.model.OrganizationModel;
 @Repository
 public interface IOrganizationRepository extends IBaseRepository<OrganizationModel> {
     Optional<OrganizationModel> findByName(String name);
+
+    Optional<OrganizationModel> findByCode(String code);
+
     List<OrganizationModel> findByIdIn(List<Long> ids);
 }

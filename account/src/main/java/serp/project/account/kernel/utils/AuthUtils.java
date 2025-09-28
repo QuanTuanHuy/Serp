@@ -37,6 +37,13 @@ public class AuthUtils {
                 .map(Long::valueOf);
     }
 
+    public Optional<Long> getCurrentTenantId() {
+        return getCurrentJwt()
+                .map(jwt -> jwt.getClaimAsString("tenant_id"))
+                .filter(tenant -> !tenant.isEmpty())
+                .map(Long::valueOf);
+    }
+
     public Optional<String> getCurrentUserEmail() {
         return getCurrentJwt()
                 .map(jwt -> jwt.getClaimAsString("email"));

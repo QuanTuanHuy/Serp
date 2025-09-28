@@ -32,4 +32,10 @@ public class UserOrganizationAdapter implements IUserOrganizationPort {
     public List<UserOrganizationEntity> getByUserId(Long userId) {
         return userOrganizationMapper.toEntityList(userOrganizationRepository.findByUserId(userId));
     }
+
+    @Override
+    public UserOrganizationEntity getByUserIdAndOrganizationIdAndRoleId(Long userId, Long organizationId, Long roleId) {
+        return userOrganizationMapper.toEntity(
+                userOrganizationRepository.findByUserIdAndOrganizationIdAndRoleId(userId, organizationId, roleId));
+    }
 }

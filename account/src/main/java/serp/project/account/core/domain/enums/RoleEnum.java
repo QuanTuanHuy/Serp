@@ -13,7 +13,8 @@ public enum RoleEnum {
     ADMIN("ADMIN", 2),
     MODERATOR("MODERATOR", 3),
     USER("USER", 4),
-    ORGANIZATION_ADMIN("ORGANIZATION_ADMIN", 1);
+    ORGANIZATION_OWNER("ORGANIZATION_OWNER", 1),
+    ORGANIZATION_MEMBER("ORGANIZATION_MEMBER", 2);
 
     private final String role;
     private final Integer priority;

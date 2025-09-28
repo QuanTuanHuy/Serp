@@ -17,6 +17,7 @@ import serp.project.account.core.domain.dto.request.RefreshTokenRequest;
 import serp.project.account.core.domain.dto.request.RevokeTokenRequest;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.enums.GroupEnum;
+import serp.project.account.core.domain.enums.RoleEnum;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.*;
 import serp.project.account.core.service.impl.GroupService;
@@ -31,6 +32,7 @@ import java.util.Collections;
 @Slf4j
 public class AuthUseCase {
     private final IUserService userService;
+    private final IOrganizationService organizationService;
     private final IKeycloakUserService keycloakUserService;
     private final IRoleService roleService;
     private final ITokenService tokenService;
@@ -52,7 +54,13 @@ public class AuthUseCase {
             request.setRoleIds(Collections.emptyList());
             var user = userService.createUser(request);
 
-            var createUserKeycloak = userMapper.createUserMapper(user, request);
+            var organization = organizationService.createOrganization(request.getOrganization());
+            var ownerRole = roleService.getOrCreateOrganizationRole(RoleEnum.ORGANIZATION_OWNER.getRole());
+            var memberRole = roleService.getOrCreateOrganizationRole(RoleEnum.ORGANIZATION_MEMBER.getRole());
+            organizationService.assignOrganizationToUser(organization.getId(), user.getId(), ownerRole.getId());
+            organizationService.assignOrganizationToUser(organization.getId(), user.getId(), memberRole.getId());
+
+            var createUserKeycloak = userMapper.createUserMapper(user, organization.getId(), request);
             String userKeycloakId = keycloakUserService.createUser(createUserKeycloak);
             userService.updateKeycloakUser(user.getId(), userKeycloakId);
 

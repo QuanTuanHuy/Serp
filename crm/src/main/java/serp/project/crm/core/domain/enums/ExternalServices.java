@@ -3,7 +3,6 @@
  * Description: Part of Serp Project
  */
 
-
 package serp.project.crm.core.domain.enums;
 
 import lombok.Getter;
