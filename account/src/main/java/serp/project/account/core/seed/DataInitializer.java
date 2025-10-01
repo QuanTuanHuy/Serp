@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.IUserService;
-import serp.project.account.kernel.property.AdminProperties;
 
 @Component
 @RequiredArgsConstructor
@@ -21,8 +20,6 @@ import serp.project.account.kernel.property.AdminProperties;
 public class DataInitializer implements CommandLineRunner {
     private final IUserService userService;
     private final IRoleService roleService;
-
-    private final AdminProperties adminProperties;
 
     @Override
     public void run(String... args) {
@@ -36,19 +33,6 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void createSuperAdminUser() {
-        // var roles = roleService.getAllRoles();
-        // if (CollectionUtils.isEmpty(roles)) {
-        //     log.info("No roles found, need create roles ...");
-        //     return;
-        // }
-        // var createUserDto = CreateUserDto.builder()
-        //         .email(adminProperties.getEmail())
-        //         .password(adminProperties.getPassword())
-        //         .fullName("Serp Super Admin")
-        //         .roleIds(roles.stream().map(BaseEntity::getId).toList())
-        //         .build();
-        // userService.createUser(createUserDto);
-        // log.info("Super admin user created successfully.");
     }
 
 }

@@ -23,6 +23,7 @@ import serp.project.account.core.service.IGroupService;
 import serp.project.account.infrastructure.store.mapper.GroupMapper;
 import serp.project.account.kernel.utils.CollectionUtils;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -111,6 +112,8 @@ public class GroupService implements IGroupService {
                     .map(role -> GroupRoleEntity.builder()
                             .groupId(groupId)
                             .roleId(role.getId())
+                            .createdAt(Instant.now().toEpochMilli())
+                            .updatedAt(Instant.now().toEpochMilli())
                             .build())
                     .collect(Collectors.toList());
             groupRolePort.saveAll(groupRoles);

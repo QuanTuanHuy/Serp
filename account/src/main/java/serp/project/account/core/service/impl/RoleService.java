@@ -5,6 +5,7 @@
 
 package serp.project.account.core.service.impl;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -63,6 +64,8 @@ public class RoleService implements IRoleService {
                     .map(permissionId -> RolePermissionEntity.builder()
                             .roleId(roleId)
                             .permissionId(permissionId)
+                            .createdAt(Instant.now().toEpochMilli())
+                            .updatedAt(Instant.now().toEpochMilli())
                             .build())
                     .collect(Collectors.toList());
             rolePermissionPort.saveAll(rolePermissions);
@@ -123,6 +126,8 @@ public class RoleService implements IRoleService {
                 .map(permissionId -> RolePermissionEntity.builder()
                         .roleId(role.getId())
                         .permissionId(permissionId)
+                        .createdAt(Instant.now().toEpochMilli())
+                        .updatedAt(Instant.now().toEpochMilli())
                         .build())
                 .collect(Collectors.toList());
         if (!CollectionUtils.isEmpty(newRolePermissions)) {
