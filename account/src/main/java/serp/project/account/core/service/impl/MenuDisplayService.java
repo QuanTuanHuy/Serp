@@ -5,6 +5,7 @@
 
 package serp.project.account.core.service.impl;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -132,6 +133,8 @@ public class MenuDisplayService implements IMenuDisplayService {
                         .map(menuDisplayId -> MenuDisplayRoleEntity.builder()
                                 .roleId(roleId)
                                 .menuDisplayId(menuDisplayId)
+                                .createdAt(Instant.now().toEpochMilli())
+                                .updatedAt(Instant.now().toEpochMilli())
                                 .build())
                         .collect(Collectors.toList());
                 menuDisplayRolePort.save(newMenuDisplayRoles);

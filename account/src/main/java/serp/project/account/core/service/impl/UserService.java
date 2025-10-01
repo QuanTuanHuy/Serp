@@ -25,6 +25,7 @@ import serp.project.account.core.service.IUserService;
 import serp.project.account.infrastructure.store.mapper.UserMapper;
 import serp.project.account.kernel.utils.CollectionUtils;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -150,6 +151,8 @@ public class UserService implements IUserService {
                 .map(role -> UserRoleEntity.builder()
                         .userId(userId)
                         .roleId(role.getId())
+                        .createdAt(Instant.now().toEpochMilli())
+                        .updatedAt(Instant.now().toEpochMilli())
                         .build())
                 .collect(Collectors.toList());
         if (!CollectionUtils.isEmpty(newUserRoles)) {

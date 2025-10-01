@@ -7,6 +7,7 @@ package serp.project.account.infrastructure.store.adapter;
 
 import java.util.List;
 
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
@@ -22,10 +23,22 @@ public class MenuDisplayRoleAdapter implements IMenuDisplayRolePort {
     private final IMenuDisplayRoleRepository menuDisplayRoleRepository;
     private final MenuDisplayRoleMapper menuDisplayRoleMapper;
 
+    private final JdbcTemplate jdbcTemplate;
+
     @Override
     public void save(List<MenuDisplayRoleEntity> menuDisplayRoles) {
         List<MenuDisplayRoleModel> models = menuDisplayRoleMapper.toModelList(menuDisplayRoles);
-        menuDisplayRoleRepository.saveAll(models);
+        String sql = """
+                INSERT INTO menu_display_roles (menu_display_id, role_id, created_at, updated_at)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT (menu_display_id, role_id) DO NOTHING
+                """;
+        jdbcTemplate.batchUpdate(sql, models, models.size(), (ps, argument) -> {
+            ps.setLong(1, argument.getMenuDisplayId());
+            ps.setLong(2, argument.getRoleId());
+            ps.setObject(3, argument.getCreatedAt());
+            ps.setObject(4, argument.getUpdatedAt());
+        });
     }
 
     @Override
