@@ -26,7 +26,7 @@ public class PageRequest {
     private String sortBy;
 
     @Builder.Default
-    private String sortDirection = "ASC";
+    private String sortDirection = "DESC";
 
     public void validate() {
         if (page == null || page < 1) {

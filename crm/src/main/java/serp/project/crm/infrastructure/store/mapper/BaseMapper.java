@@ -7,6 +7,11 @@ package serp.project.crm.infrastructure.store.mapper;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.util.Pair;
 import serp.project.crm.core.domain.entity.AddressEntity;
 
 import java.time.Instant;
@@ -82,5 +87,22 @@ public abstract class BaseMapper {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    public <T> Pair<List<T>, Long> pageToPair(Page<T> page) {
+        return Pair.of(page.getContent(), page.getTotalElements());
+    }
+
+    public Pageable toPageable(serp.project.crm.core.domain.dto.PageRequest pageRequest) {
+        pageRequest.validate();
+        Sort sort = Sort.unsorted();
+        if (pageRequest.getSortBy() != null && !pageRequest.getSortBy().isEmpty()) {
+            sort = Sort.by(
+                    pageRequest.getSortDirection().equalsIgnoreCase("DESC")
+                            ? Sort.Direction.DESC
+                            : Sort.Direction.ASC,
+                    pageRequest.getSortBy());
+        }
+        return PageRequest.of(pageRequest.getPage() - 1, pageRequest.getSize(), sort);
     }
 }

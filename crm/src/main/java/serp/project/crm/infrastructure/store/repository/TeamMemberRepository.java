@@ -23,7 +23,7 @@ public interface TeamMemberRepository extends JpaRepository<TeamMemberModel, Lon
 
     Page<TeamMemberModel> findByTenantId(Long tenantId, Pageable pageable);
 
-    List<TeamMemberModel> findByTenantIdAndTeamId(Long tenantId, Long teamId);
+    Page<TeamMemberModel> findByTenantIdAndTeamId(Long tenantId, Long teamId, Pageable pageable);
 
     List<TeamMemberModel> findByTenantIdAndUserId(Long tenantId, Long userId);
 
@@ -45,4 +45,7 @@ public interface TeamMemberRepository extends JpaRepository<TeamMemberModel, Lon
     long countByTenantIdAndTeamIdAndStatus(Long tenantId, Long teamId, String status);
 
     long countByTenantIdAndStatus(Long tenantId, String status);
+
+    void deleteByTeamIdAndTenantId(Long teamId, Long tenantId);
+
 }
