@@ -30,6 +30,21 @@ public class KafkaProducerConfig {
         configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         
+        // Reliability settings
+        configProps.put(ProducerConfig.ACKS_CONFIG, "all"); // Wait for all replicas
+        configProps.put(ProducerConfig.RETRIES_CONFIG, 3); // Retry up to 3 times
+        configProps.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, 1); // Ensure ordering
+        
+        // // Performance settings
+        // configProps.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "snappy"); // Compress messages
+        // configProps.put(ProducerConfig.BATCH_SIZE_CONFIG, 16384); // Batch size in bytes
+        // configProps.put(ProducerConfig.LINGER_MS_CONFIG, 10); // Wait 10ms to batch messages
+        // configProps.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432); // 32MB buffer
+        
+        // // Timeout settings
+        // configProps.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, 30000); // 30 seconds
+        // configProps.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, 120000); // 2 minutes
+        
         return new DefaultKafkaProducerFactory<>(configProps);
     }
 
