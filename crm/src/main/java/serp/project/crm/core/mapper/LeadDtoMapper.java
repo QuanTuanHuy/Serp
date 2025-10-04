@@ -6,12 +6,20 @@
 package serp.project.crm.core.mapper;
 
 import org.springframework.stereotype.Component;
+import serp.project.crm.core.domain.dto.request.ConvertLeadRequest;
 import serp.project.crm.core.domain.dto.request.CreateLeadRequest;
 import serp.project.crm.core.domain.dto.request.UpdateLeadRequest;
 import serp.project.crm.core.domain.dto.response.AddressResponse;
+import serp.project.crm.core.domain.dto.response.LeadConversionResponse;
 import serp.project.crm.core.domain.dto.response.LeadResponse;
 import serp.project.crm.core.domain.entity.AddressEntity;
+import serp.project.crm.core.domain.entity.ContactEntity;
+import serp.project.crm.core.domain.entity.CustomerEntity;
 import serp.project.crm.core.domain.entity.LeadEntity;
+import serp.project.crm.core.domain.entity.OpportunityEntity;
+import serp.project.crm.core.domain.enums.ActiveStatus;
+import serp.project.crm.core.domain.enums.ContactType;
+import serp.project.crm.core.domain.enums.OpportunityStage;
 
 @Component
 public class LeadDtoMapper {
@@ -124,6 +132,71 @@ public class LeadDtoMapper {
                 .updatedAt(entity.getUpdatedAt())
                 .createdBy(entity.getCreatedBy())
                 .updatedBy(entity.getUpdatedBy())
+                .build();
+    }
+
+    // ========== Conversion Mappers ==========
+
+    public CustomerEntity toCustomerEntity(LeadEntity lead) {
+        if (lead == null) {
+            return null;
+        }
+
+        return CustomerEntity.builder()
+                .name(lead.getCompany())
+                .industry(lead.getIndustry())
+                .companySize(lead.getCompanySize())
+                .website(lead.getWebsite())
+                .phone(lead.getPhone())
+                .email(lead.getEmail())
+                .address(lead.getAddress())
+                .activeStatus(ActiveStatus.ACTIVE)
+                .build();
+    }
+
+    public ContactEntity toContactEntity(LeadEntity lead, Long customerId) {
+        if (lead == null) {
+            return null;
+        }
+
+        return ContactEntity.builder()
+                .customerId(customerId)
+                .name(lead.getName())
+                .email(lead.getEmail())
+                .phone(lead.getPhone())
+                .jobPosition(lead.getJobTitle())
+                .contactType(ContactType.INDIVIDUAL)
+                .isPrimary(true)
+                .activeStatus(ActiveStatus.ACTIVE)
+                .build();
+    }
+
+    public OpportunityEntity toOpportunityEntity(LeadEntity lead, Long customerId, ConvertLeadRequest request) {
+        if (lead == null) {
+            return null;
+        }
+
+        return OpportunityEntity.builder()
+                .name(request.getOpportunityName() != null ? 
+                      request.getOpportunityName() : 
+                      lead.getCompany() + " - " + lead.getName())
+                .customerId(customerId)
+                .estimatedValue(request.getOpportunityAmount() != null ? 
+                        request.getOpportunityAmount() : 
+                        lead.getEstimatedValue())
+                .description(request.getOpportunityDescription())
+                .stage(OpportunityStage.PROSPECTING)
+                .expectedCloseDate(lead.getExpectedCloseDate())
+                .build();
+    }
+
+    public LeadConversionResponse toConversionResponse(Long leadId, Long customerId, Long opportunityId, Long contactId) {
+        return LeadConversionResponse.builder()
+                .leadId(leadId)
+                .customerId(customerId)
+                .opportunityId(opportunityId)
+                .contactId(contactId)
+                .message("Lead converted successfully")
                 .build();
     }
 }

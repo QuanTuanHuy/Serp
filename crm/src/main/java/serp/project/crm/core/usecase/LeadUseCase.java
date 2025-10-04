@@ -7,21 +7,21 @@ package serp.project.crm.core.usecase;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.crm.core.domain.dto.GeneralResponse;
 import serp.project.crm.core.domain.dto.PageRequest;
+import serp.project.crm.core.domain.dto.PageResponse;
 import serp.project.crm.core.domain.dto.request.ConvertLeadRequest;
 import serp.project.crm.core.domain.dto.request.CreateLeadRequest;
 import serp.project.crm.core.domain.dto.request.QualifyLeadRequest;
 import serp.project.crm.core.domain.dto.request.UpdateLeadRequest;
 import serp.project.crm.core.domain.dto.response.LeadConversionResponse;
 import serp.project.crm.core.domain.dto.response.LeadResponse;
-import serp.project.crm.core.domain.entity.*;
-import serp.project.crm.core.domain.enums.ActiveStatus;
-import serp.project.crm.core.domain.enums.ContactType;
-import serp.project.crm.core.domain.enums.OpportunityStage;
+import serp.project.crm.core.domain.entity.ContactEntity;
+import serp.project.crm.core.domain.entity.CustomerEntity;
+import serp.project.crm.core.domain.entity.LeadEntity;
+import serp.project.crm.core.domain.entity.OpportunityEntity;
 import serp.project.crm.core.mapper.LeadDtoMapper;
 import serp.project.crm.core.service.*;
 import serp.project.crm.kernel.utils.ResponseUtils;
@@ -123,13 +123,16 @@ public class LeadUseCase {
         try {
             log.info("Fetching all leads for tenant: {}", tenantId);
 
-            Pair<List<LeadEntity>, Long> result = leadService.getAllLeads(tenantId, pageRequest);
+            var result = leadService.getAllLeads(tenantId, pageRequest);
 
             List<LeadResponse> leadResponses = result.getFirst().stream()
                     .map(leadDtoMapper::toResponse)
                     .toList();
 
-            return responseUtils.success(Pair.of(leadResponses, result.getSecond()));
+            PageResponse<LeadResponse> pageResponse = PageResponse.of(
+                    leadResponses, pageRequest, result.getSecond());
+
+            return responseUtils.success(pageResponse);
 
         } catch (Exception e) {
             log.error("Error fetching leads: {}", e.getMessage(), e);
@@ -178,17 +181,8 @@ public class LeadUseCase {
             // 2. Create or use existing customer
             Long customerId;
             if (Boolean.TRUE.equals(request.getCreateNewCustomer())) {
-                // Create new customer from lead data
-                CustomerEntity customer = CustomerEntity.builder()
-                        .name(lead.getCompany())
-                        .industry(lead.getIndustry())
-                        .companySize(lead.getCompanySize())
-                        .website(lead.getWebsite())
-                        .phone(lead.getPhone())
-                        .email(lead.getEmail())
-                        .address(lead.getAddress())
-                        .activeStatus(ActiveStatus.ACTIVE)
-                        .build();
+                // Create new customer from lead data using mapper
+                CustomerEntity customer = leadDtoMapper.toCustomerEntity(lead);
                 
                 CustomerEntity createdCustomer = customerService.createCustomer(customer, tenantId);
                 customerId = createdCustomer.getId();
@@ -201,34 +195,14 @@ public class LeadUseCase {
                 log.info("Using existing customer ID: {}", customerId);
             }
 
-            // 3. Create contact from lead
-            ContactEntity contact = ContactEntity.builder()
-                    .customerId(customerId)
-                    .name(lead.getName())
-                    .email(lead.getEmail())
-                    .phone(lead.getPhone())
-                    .jobPosition(lead.getJobTitle())
-                    .contactType(ContactType.INDIVIDUAL)
-                    .isPrimary(true)
-                    .activeStatus(ActiveStatus.ACTIVE)
-                    .build();
+            // 3. Create contact from lead using mapper
+            ContactEntity contact = leadDtoMapper.toContactEntity(lead, customerId);
             
             ContactEntity createdContact = contactService.createContact(contact, tenantId);
             log.info("Created contact ID: {} from lead", createdContact.getId());
 
-            // 4. Create opportunity from lead
-            OpportunityEntity opportunity = OpportunityEntity.builder()
-                    .name(request.getOpportunityName() != null ? 
-                          request.getOpportunityName() : 
-                          lead.getCompany() + " - " + lead.getName())
-                    .customerId(customerId)
-                    .estimatedValue(request.getOpportunityAmount() != null ? 
-                            request.getOpportunityAmount() : 
-                            lead.getEstimatedValue())
-                    .description(request.getOpportunityDescription())
-                    .stage(OpportunityStage.PROSPECTING)
-                    .expectedCloseDate(lead.getExpectedCloseDate())
-                    .build();
+            // 4. Create opportunity from lead using mapper
+            OpportunityEntity opportunity = leadDtoMapper.toOpportunityEntity(lead, customerId, request);
             
             OpportunityEntity createdOpportunity = opportunityService.createOpportunity(opportunity, tenantId);
             log.info("Created opportunity ID: {} from lead", createdOpportunity.getId());
@@ -236,14 +210,9 @@ public class LeadUseCase {
             // 5. Convert the lead (marks it as CONVERTED)
             leadService.convertLead(request.getLeadId(), tenantId);
 
-            // 6. Build response
-            LeadConversionResponse response = LeadConversionResponse.builder()
-                    .leadId(request.getLeadId())
-                    .customerId(customerId)
-                    .opportunityId(createdOpportunity.getId())
-                    .contactId(createdContact.getId())
-                    .message("Lead converted successfully")
-                    .build();
+            // 6. Build response using mapper
+            LeadConversionResponse response = leadDtoMapper.toConversionResponse(
+                    request.getLeadId(), customerId, createdOpportunity.getId(), createdContact.getId());
 
             log.info("Lead conversion completed successfully");
             return responseUtils.success(response, "Lead converted successfully");
