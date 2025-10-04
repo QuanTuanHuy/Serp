@@ -66,4 +66,37 @@ public class ContactEntity extends BaseEntity {
         this.isPrimary = false;
         this.setUpdatedBy(updatedBy);
     }
+
+    // ========== Update Methods ==========
+
+    /**
+     * Update contact fields from another contact (for PATCH operations)
+     */
+    public void updateFrom(ContactEntity updates) {
+        if (updates.getName() != null) this.name = updates.getName();
+        if (updates.getEmail() != null) this.email = updates.getEmail();
+        if (updates.getPhone() != null) this.phone = updates.getPhone();
+        if (updates.getJobPosition() != null) this.jobPosition = updates.getJobPosition();
+        if (updates.getContactType() != null) this.contactType = updates.getContactType();
+        if (updates.getActiveStatus() != null) this.activeStatus = updates.getActiveStatus();
+        if (updates.getAddress() != null) this.address = updates.getAddress();
+        if (updates.getLinkedInUrl() != null) this.linkedInUrl = updates.getLinkedInUrl();
+        if (updates.getTwitterHandle() != null) this.twitterHandle = updates.getTwitterHandle();
+        if (updates.getNotes() != null) this.notes = updates.getNotes();
+    }
+
+    /**
+     * Set default values for new contact
+     */
+    public void setDefaults() {
+        if (this.activeStatus == null) {
+            this.activeStatus = ActiveStatus.ACTIVE;
+        }
+        if (this.isPrimary == null) {
+            this.isPrimary = false;
+        }
+        if (this.contactType == null) {
+            this.contactType = ContactType.INDIVIDUAL;
+        }
+    }
 }

@@ -112,4 +112,60 @@ public class OpportunityEntity extends BaseEntity {
                 break;
         }
     }
+
+    // ========== Additional Business Methods ==========
+
+    /**
+     * Update opportunity fields from another opportunity (for PATCH operations)
+     */
+    public void updateFrom(OpportunityEntity updates) {
+        if (this.isClosed()) {
+            throw new IllegalStateException("Cannot update closed opportunities");
+        }
+        
+        if (updates.getName() != null) this.name = updates.getName();
+        if (updates.getDescription() != null) this.description = updates.getDescription();
+        if (updates.getEstimatedValue() != null) this.estimatedValue = updates.getEstimatedValue();
+        if (updates.getProbability() != null) this.probability = updates.getProbability();
+        if (updates.getExpectedCloseDate() != null) this.expectedCloseDate = updates.getExpectedCloseDate();
+        if (updates.getAssignedTo() != null) this.assignedTo = updates.getAssignedTo();
+        if (updates.getNotes() != null) this.notes = updates.getNotes();
+    }
+
+    /**
+     * Close opportunity as won
+     */
+    public void closeAsWon() {
+        if (this.isClosed()) {
+            throw new IllegalStateException("Opportunity already closed");
+        }
+        this.stage = OpportunityStage.CLOSED_WON;
+        this.probability = 100;
+        this.actualCloseDate = LocalDate.now();
+    }
+
+    /**
+     * Close opportunity as lost
+     */
+    public void closeAsLost(String reason) {
+        if (this.isClosed()) {
+            throw new IllegalStateException("Opportunity already closed");
+        }
+        this.stage = OpportunityStage.CLOSED_LOST;
+        this.probability = 0;
+        this.actualCloseDate = LocalDate.now();
+        this.lossReason = reason;
+    }
+
+    /**
+     * Set default values for new opportunity
+     */
+    public void setDefaults() {
+        if (this.stage == null) {
+            this.stage = OpportunityStage.PROSPECTING;
+        }
+        if (this.probability == null) {
+            updateProbabilityForStage(this.stage);
+        }
+    }
 }

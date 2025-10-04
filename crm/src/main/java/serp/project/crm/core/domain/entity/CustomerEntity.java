@@ -85,4 +85,42 @@ public class CustomerEntity extends BaseEntity {
         this.setUpdatedBy(updatedBy);
     }
 
+    // ========== Update Methods ==========
+
+    /**
+     * Update customer fields from another customer (for PATCH operations)
+     */
+    public void updateFrom(CustomerEntity updates) {
+        if (updates.getName() != null) this.name = updates.getName();
+        if (updates.getPhone() != null) this.phone = updates.getPhone();
+        if (updates.getEmail() != null) this.email = updates.getEmail();
+        if (updates.getWebsite() != null) this.website = updates.getWebsite();
+        if (updates.getIndustry() != null) this.industry = updates.getIndustry();
+        if (updates.getCompanySize() != null) this.companySize = updates.getCompanySize();
+        if (updates.getTaxId() != null) this.taxId = updates.getTaxId();
+        if (updates.getCreditLimit() != null) this.creditLimit = updates.getCreditLimit();
+        if (updates.getActiveStatus() != null) this.activeStatus = updates.getActiveStatus();
+        if (updates.getAddress() != null) this.address = updates.getAddress();
+        if (updates.getNotes() != null) this.notes = updates.getNotes();
+        if (updates.getParentCustomerId() != null) this.parentCustomerId = updates.getParentCustomerId();
+    }
+
+    /**
+     * Set default values for new customer
+     */
+    public void setDefaults() {
+        if (this.activeStatus == null) {
+            this.activeStatus = ActiveStatus.ACTIVE;
+        }
+        if (this.totalRevenue == null) {
+            this.totalRevenue = BigDecimal.ZERO;
+        }
+        if (this.totalOpportunities == null) {
+            this.totalOpportunities = 0;
+        }
+        if (this.wonOpportunities == null) {
+            this.wonOpportunities = 0;
+        }
+    }
+
 }
