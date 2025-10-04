@@ -49,14 +49,9 @@ public class ContactService implements IContactService {
             throw new IllegalArgumentException("Invalid email format");
         }
 
-        // Set defaults
+        // Set defaults using entity method
         contact.setTenantId(tenantId);
-        if (contact.getActiveStatus() == null) {
-            contact.setActiveStatus(ActiveStatus.ACTIVE);
-        }
-        if (contact.getIsPrimary() == null) {
-            contact.setIsPrimary(false);
-        }
+        contact.setDefaults();
 
         // Save
         ContactEntity saved = contactPort.save(contact);
@@ -76,17 +71,8 @@ public class ContactService implements IContactService {
         ContactEntity existing = contactPort.findById(id, tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Contact not found"));
 
-        // Update fields
-        if (updates.getName() != null) existing.setName(updates.getName());
-        if (updates.getEmail() != null) existing.setEmail(updates.getEmail());
-        if (updates.getPhone() != null) existing.setPhone(updates.getPhone());
-        if (updates.getJobPosition() != null) existing.setJobPosition(updates.getJobPosition());
-        if (updates.getContactType() != null) existing.setContactType(updates.getContactType());
-        if (updates.getActiveStatus() != null) existing.setActiveStatus(updates.getActiveStatus());
-        if (updates.getLinkedInUrl() != null) existing.setLinkedInUrl(updates.getLinkedInUrl());
-        if (updates.getTwitterHandle() != null) existing.setTwitterHandle(updates.getTwitterHandle());
-        if (updates.getNotes() != null) existing.setNotes(updates.getNotes());
-        if (updates.getAddress() != null) existing.setAddress(updates.getAddress());
+        // Use entity method for update
+        existing.updateFrom(updates);
 
         // Save
         ContactEntity updated = contactPort.save(existing);
@@ -165,15 +151,15 @@ public class ContactService implements IContactService {
             throw new IllegalStateException("Contact must belong to a customer to be set as primary");
         }
 
-        // Remove primary flag from existing primary contact
+        // Remove primary flag from existing primary contact using entity method
         contactPort.findPrimaryContact(contact.getCustomerId(), tenantId)
                 .ifPresent(existing -> {
-                    existing.setIsPrimary(false);
+                    existing.removePrimaryStatus(tenantId);
                     contactPort.save(existing);
                 });
 
-        // Set as primary
-        contact.setIsPrimary(true);
+        // Set as primary using entity method
+        contact.setPrimaryContact(tenantId);
         ContactEntity updated = contactPort.save(contact);
 
         // Publish event
@@ -191,7 +177,8 @@ public class ContactService implements IContactService {
         ContactEntity contact = contactPort.findById(id, tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Contact not found"));
 
-        contact.setActiveStatus(ActiveStatus.INACTIVE);
+        // Use entity method
+        contact.deactivate(tenantId);
         contactPort.save(contact);
 
         // Publish event

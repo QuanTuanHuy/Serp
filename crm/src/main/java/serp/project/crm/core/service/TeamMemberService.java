@@ -50,11 +50,9 @@ public class TeamMemberService implements ITeamMemberService {
 
         // TODO: Validate user exists in account service
 
-        // Set defaults
+        // Set defaults using entity method
         teamMember.setTenantId(tenantId);
-        if (teamMember.getStatus() == null) {
-            teamMember.setStatus(TeamMemberStatus.CONFIRMED);
-        }
+        teamMember.setDefaults();
         if (teamMember.getRole() == null) {
             teamMember.setRole("MEMBER");
         }
@@ -77,12 +75,13 @@ public class TeamMemberService implements ITeamMemberService {
         TeamMemberEntity existing = teamMemberPort.findById(id, tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Team member not found"));
 
-        // Update fields
-        if (updates.getName() != null) existing.setName(updates.getName());
-        if (updates.getEmail() != null) existing.setEmail(updates.getEmail());
-        if (updates.getPhone() != null) existing.setPhone(updates.getPhone());
-        if (updates.getRole() != null) existing.setRole(updates.getRole());
-        if (updates.getStatus() != null) existing.setStatus(updates.getStatus());
+        // Use entity method for update (handles role)
+        existing.updateFrom(updates);
+        
+        // Handle status separately if provided
+        if (updates.getStatus() != null) {
+            existing.setStatus(updates.getStatus());
+        }
 
         // Save
         TeamMemberEntity updated = teamMemberPort.save(existing);
@@ -151,7 +150,8 @@ public class TeamMemberService implements ITeamMemberService {
             throw new IllegalArgumentException("Invalid role. Must be LEADER, MEMBER, or VIEWER");
         }
 
-        teamMember.setRole(newRole);
+        // Use entity method (will validate internally)
+        teamMember.changeRole(newRole, tenantId);
         TeamMemberEntity updated = teamMemberPort.save(teamMember);
 
         // Publish event
@@ -169,7 +169,13 @@ public class TeamMemberService implements ITeamMemberService {
         TeamMemberEntity teamMember = teamMemberPort.findById(id, tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Team member not found"));
 
-        teamMember.setStatus(newStatus);
+        // Use entity methods based on status transition
+        switch (newStatus) {
+            case CONFIRMED -> teamMember.confirmMember(tenantId);
+            case ARCHIVED -> teamMember.archiveMember(tenantId);
+            case INVITED -> teamMember.setStatus(TeamMemberStatus.INVITED);
+        }
+        
         TeamMemberEntity updated = teamMemberPort.save(teamMember);
 
         // Publish event

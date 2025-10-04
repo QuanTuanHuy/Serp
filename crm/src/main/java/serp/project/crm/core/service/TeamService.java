@@ -42,8 +42,9 @@ public class TeamService implements ITeamService {
 
         // TODO: Validate leader exists in account service
 
-        // Set defaults
+        // Set defaults using entity method
         team.setTenantId(tenantId);
+        team.setDefaults();
 
         // Save
         TeamEntity saved = teamPort.save(team);
@@ -68,13 +69,10 @@ public class TeamService implements ITeamService {
             if (teamPort.existsByName(updates.getName(), tenantId)) {
                 throw new IllegalArgumentException("Team with name " + updates.getName() + " already exists");
             }
-            existing.setName(updates.getName());
         }
 
-        // Update fields
-        if (updates.getDescription() != null) existing.setDescription(updates.getDescription());
-        if (updates.getLeaderId() != null) existing.setLeaderId(updates.getLeaderId());
-        if (updates.getNotes() != null) existing.setNotes(updates.getNotes());
+        // Use entity method for update
+        existing.updateFrom(updates);
 
         // Save
         TeamEntity updated = teamPort.save(existing);

@@ -44,14 +44,9 @@ public class ActivityService implements IActivityService {
             throw new IllegalArgumentException("Due date cannot be in the past");
         }
 
-        // Set defaults
+        // Set defaults using entity method
         activity.setTenantId(tenantId);
-        if (activity.getStatus() == null) {
-            activity.setStatus(ActivityStatus.PLANNED);
-        }
-        if (activity.getProgressPercent() == null) {
-            activity.setProgressPercent(0);
-        }
+        activity.setDefaults();
 
         // Save
         ActivityEntity saved = activityPort.save(activity);
@@ -71,24 +66,8 @@ public class ActivityService implements IActivityService {
         ActivityEntity existing = activityPort.findById(id, tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Activity not found"));
 
-        // Validation: Cannot update completed or cancelled activities
-        if (existing.isCompleted() || ActivityStatus.CANCELLED.equals(existing.getStatus())) {
-            throw new IllegalStateException("Cannot update completed or cancelled activities");
-        }
-
-        // Update fields
-        if (updates.getSubject() != null) existing.setSubject(updates.getSubject());
-        if (updates.getDescription() != null) existing.setDescription(updates.getDescription());
-        if (updates.getActivityType() != null) existing.setActivityType(updates.getActivityType());
-        if (updates.getStatus() != null) existing.setStatus(updates.getStatus());
-        if (updates.getLocation() != null) existing.setLocation(updates.getLocation());
-        if (updates.getAssignedTo() != null) existing.setAssignedTo(updates.getAssignedTo());
-        if (updates.getActivityDate() != null) existing.setActivityDate(updates.getActivityDate());
-        if (updates.getDueDate() != null) existing.setDueDate(updates.getDueDate());
-        if (updates.getReminderDate() != null) existing.setReminderDate(updates.getReminderDate());
-        if (updates.getDurationMinutes() != null) existing.setDurationMinutes(updates.getDurationMinutes());
-        if (updates.getPriority() != null) existing.setPriority(updates.getPriority());
-        if (updates.getProgressPercent() != null) existing.setProgressPercent(updates.getProgressPercent());
+        // Use entity method for update (will validate internally)
+        existing.updateFrom(updates);
 
         // Save
         ActivityEntity updated = activityPort.save(existing);
@@ -192,14 +171,8 @@ public class ActivityService implements IActivityService {
         ActivityEntity activity = activityPort.findById(id, tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Activity not found"));
 
-        // Validation: Cannot complete cancelled activities
-        if (ActivityStatus.CANCELLED.equals(activity.getStatus())) {
-            throw new IllegalStateException("Cannot complete cancelled activities");
-        }
-
-        // Update status
-        activity.setStatus(ActivityStatus.COMPLETED);
-        activity.setProgressPercent(100);
+        // Use entity method
+        activity.markAsCompleted(tenantId);
 
         ActivityEntity completed = activityPort.save(activity);
 
@@ -218,13 +191,8 @@ public class ActivityService implements IActivityService {
         ActivityEntity activity = activityPort.findById(id, tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Activity not found"));
 
-        // Validation: Cannot cancel completed activities
-        if (activity.isCompleted()) {
-            throw new IllegalStateException("Cannot cancel completed activities");
-        }
-
-        // Update status
-        activity.setStatus(ActivityStatus.CANCELLED);
+        // Use entity method (will validate internally)
+        activity.markAsCancelled(tenantId);
 
         ActivityEntity cancelled = activityPort.save(activity);
 
