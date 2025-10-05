@@ -22,9 +22,6 @@ import serp.project.crm.kernel.utils.ResponseUtils;
 
 import java.util.List;
 
-/**
- * Activity Use Case - Orchestrates activity management workflows
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -37,8 +34,6 @@ public class ActivityUseCase {
     @Transactional
     public GeneralResponse<?> createActivity(CreateActivityRequest request, Long tenantId) {
         try {
-            log.info("Creating activity: {}, tenant: {}", request.getSubject(), tenantId);
-
             ActivityEntity activityEntity = activityDtoMapper.toEntity(request);
             ActivityEntity createdActivity = activityService.createActivity(activityEntity, tenantId);
             ActivityResponse response = activityDtoMapper.toResponse(createdActivity);
@@ -58,8 +53,6 @@ public class ActivityUseCase {
     @Transactional
     public GeneralResponse<?> updateActivity(Long id, UpdateActivityRequest request, Long tenantId) {
         try {
-            log.info("Updating activity ID: {}, tenant: {}", id, tenantId);
-
             ActivityEntity updates = activityDtoMapper.toEntity(request);
             ActivityEntity updatedActivity = activityService.updateActivity(id, updates, tenantId);
             ActivityResponse response = activityDtoMapper.toResponse(updatedActivity);
@@ -79,8 +72,6 @@ public class ActivityUseCase {
     @Transactional
     public GeneralResponse<?> completeActivity(Long id, Long tenantId) {
         try {
-            log.info("Completing activity ID: {}, tenant: {}", id, tenantId);
-
             ActivityEntity activity = activityService.completeActivity(id, tenantId);
             ActivityResponse response = activityDtoMapper.toResponse(activity);
 
@@ -99,8 +90,6 @@ public class ActivityUseCase {
     @Transactional
     public GeneralResponse<?> cancelActivity(Long id, Long tenantId) {
         try {
-            log.info("Cancelling activity ID: {}, tenant: {}", id, tenantId);
-
             ActivityEntity activity = activityService.cancelActivity(id, tenantId);
             ActivityResponse response = activityDtoMapper.toResponse(activity);
 
@@ -119,8 +108,6 @@ public class ActivityUseCase {
     @Transactional(readOnly = true)
     public GeneralResponse<?> getActivityById(Long id, Long tenantId) {
         try {
-            log.info("Fetching activity ID: {}, tenant: {}", id, tenantId);
-
             ActivityEntity activity = activityService.getActivityById(id, tenantId)
                     .orElse(null);
 
@@ -140,8 +127,6 @@ public class ActivityUseCase {
     @Transactional(readOnly = true)
     public GeneralResponse<?> getAllActivities(Long tenantId, PageRequest pageRequest) {
         try {
-            log.info("Fetching all activities for tenant: {}", tenantId);
-
             var result = activityService.getAllActivities(tenantId, pageRequest);
 
             List<ActivityResponse> activityResponses = result.getFirst().stream()
@@ -162,8 +147,6 @@ public class ActivityUseCase {
     @Transactional
     public GeneralResponse<?> deleteActivity(Long id, Long tenantId) {
         try {
-            log.info("Deleting activity ID: {}, tenant: {}", id, tenantId);
-
             activityService.deleteActivity(id, tenantId);
 
             log.info("Activity deleted successfully: {}", id);

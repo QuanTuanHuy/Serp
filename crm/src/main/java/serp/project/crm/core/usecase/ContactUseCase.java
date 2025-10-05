@@ -22,9 +22,6 @@ import serp.project.crm.kernel.utils.ResponseUtils;
 
 import java.util.List;
 
-/**
- * Contact Use Case - Orchestrates contact management workflows
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -37,8 +34,6 @@ public class ContactUseCase {
     @Transactional
     public GeneralResponse<?> createContact(CreateContactRequest request, Long tenantId) {
         try {
-            log.info("Creating contact: {}, tenant: {}", request.getName(), tenantId);
-
             ContactEntity contactEntity = contactDtoMapper.toEntity(request);
             ContactEntity createdContact = contactService.createContact(contactEntity, tenantId);
             ContactResponse response = contactDtoMapper.toResponse(createdContact);
@@ -58,8 +53,6 @@ public class ContactUseCase {
     @Transactional
     public GeneralResponse<?> updateContact(Long id, UpdateContactRequest request, Long tenantId) {
         try {
-            log.info("Updating contact ID: {}, tenant: {}", id, tenantId);
-
             ContactEntity updates = contactDtoMapper.toEntity(request);
             ContactEntity updatedContact = contactService.updateContact(id, updates, tenantId);
             ContactResponse response = contactDtoMapper.toResponse(updatedContact);
@@ -79,8 +72,6 @@ public class ContactUseCase {
     @Transactional
     public GeneralResponse<?> setPrimaryContact(Long contactId, Long tenantId) {
         try {
-            log.info("Setting primary contact ID: {}, tenant: {}", contactId, tenantId);
-
             ContactEntity contact = contactService.setPrimaryContact(contactId, tenantId);
             ContactResponse response = contactDtoMapper.toResponse(contact);
 
@@ -99,8 +90,6 @@ public class ContactUseCase {
     @Transactional(readOnly = true)
     public GeneralResponse<?> getContactById(Long id, Long tenantId) {
         try {
-            log.info("Fetching contact ID: {}, tenant: {}", id, tenantId);
-
             ContactEntity contact = contactService.getContactById(id, tenantId)
                     .orElse(null);
 
@@ -120,8 +109,6 @@ public class ContactUseCase {
     @Transactional(readOnly = true)
     public GeneralResponse<?> getAllContacts(Long tenantId, PageRequest pageRequest) {
         try {
-            log.info("Fetching all contacts for tenant: {}", tenantId);
-
             var result = contactService.getAllContacts(tenantId, pageRequest);
 
             List<ContactResponse> contactResponses = result.getFirst().stream()
@@ -142,8 +129,6 @@ public class ContactUseCase {
     @Transactional
     public GeneralResponse<?> deleteContact(Long id, Long tenantId) {
         try {
-            log.info("Deleting contact ID: {}, tenant: {}", id, tenantId);
-
             contactService.deleteContact(id, tenantId);
 
             log.info("Contact deleted successfully: {}", id);

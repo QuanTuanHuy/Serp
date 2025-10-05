@@ -19,21 +19,19 @@ import java.math.BigDecimal;
 @Builder
 public class ConvertLeadRequest {
     private Long leadId;
-    
-    // Opportunity details for conversion
+
     @NotBlank(message = "Opportunity name is required")
     @Size(max = 255, message = "Opportunity name must not exceed 255 characters")
     private String opportunityName;
-    
+
     @DecimalMin(value = "0.0", inclusive = false, message = "Opportunity amount must be greater than 0")
     private BigDecimal opportunityAmount;
-    
+
     @Size(max = 1000, message = "Opportunity description must not exceed 1000 characters")
     private String opportunityDescription;
-    
-    // Customer details (if creating new customer)
+
     @NotNull(message = "Create new customer flag is required")
     private Boolean createNewCustomer;
-    
+
     private Long existingCustomerId;
 }

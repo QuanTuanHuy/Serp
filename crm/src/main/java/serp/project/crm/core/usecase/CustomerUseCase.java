@@ -22,9 +22,6 @@ import serp.project.crm.kernel.utils.ResponseUtils;
 
 import java.util.List;
 
-/**
- * Customer Use Case - Orchestrates customer management workflows
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -37,8 +34,6 @@ public class CustomerUseCase {
     @Transactional
     public GeneralResponse<?> createCustomer(CreateCustomerRequest request, Long tenantId) {
         try {
-            log.info("Creating customer: {}, tenant: {}", request.getName(), tenantId);
-
             CustomerEntity customerEntity = customerDtoMapper.toEntity(request);
             CustomerEntity createdCustomer = customerService.createCustomer(customerEntity, tenantId);
             CustomerResponse response = customerDtoMapper.toResponse(createdCustomer);
@@ -58,8 +53,6 @@ public class CustomerUseCase {
     @Transactional
     public GeneralResponse<?> updateCustomer(Long id, UpdateCustomerRequest request, Long tenantId) {
         try {
-            log.info("Updating customer ID: {}, tenant: {}", id, tenantId);
-
             CustomerEntity updates = customerDtoMapper.toEntity(request);
             CustomerEntity updatedCustomer = customerService.updateCustomer(id, updates, tenantId);
             CustomerResponse response = customerDtoMapper.toResponse(updatedCustomer);
@@ -79,8 +72,6 @@ public class CustomerUseCase {
     @Transactional(readOnly = true)
     public GeneralResponse<?> getCustomerById(Long id, Long tenantId) {
         try {
-            log.info("Fetching customer ID: {}, tenant: {}", id, tenantId);
-
             CustomerEntity customer = customerService.getCustomerById(id, tenantId)
                     .orElse(null);
 
@@ -100,8 +91,6 @@ public class CustomerUseCase {
     @Transactional(readOnly = true)
     public GeneralResponse<?> getAllCustomers(Long tenantId, PageRequest pageRequest) {
         try {
-            log.info("Fetching all customers for tenant: {}", tenantId);
-
             var result = customerService.getAllCustomers(tenantId, pageRequest);
 
             List<CustomerResponse> customerResponses = result.getFirst().stream()
@@ -122,8 +111,6 @@ public class CustomerUseCase {
     @Transactional
     public GeneralResponse<?> deleteCustomer(Long id, Long tenantId) {
         try {
-            log.info("Deleting customer ID: {}, tenant: {}", id, tenantId);
-
             customerService.deleteCustomer(id, tenantId);
 
             log.info("Customer deleted successfully: {}", id);

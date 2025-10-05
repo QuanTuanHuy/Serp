@@ -28,10 +28,6 @@ import serp.project.crm.kernel.utils.ResponseUtils;
 
 import java.util.List;
 
-/**
- * Lead Use Case - Orchestrates lead management workflows
- * Coordinates between multiple services for complex business operations
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -41,22 +37,15 @@ public class LeadUseCase {
     private final ICustomerService customerService;
     private final IOpportunityService opportunityService;
     private final IContactService contactService;
-    
+
     private final LeadDtoMapper leadDtoMapper;
     private final ResponseUtils responseUtils;
 
     @Transactional
     public GeneralResponse<?> createLead(CreateLeadRequest request, Long tenantId) {
         try {
-            log.info("Creating lead for company: {}, tenant: {}", request.getCompany(), tenantId);
-
-            // Map DTO to Entity
             LeadEntity leadEntity = leadDtoMapper.toEntity(request);
-
-            // Create lead using service
             LeadEntity createdLead = leadService.createLead(leadEntity, tenantId);
-
-            // Map Entity to Response DTO
             LeadResponse response = leadDtoMapper.toResponse(createdLead);
 
             log.info("Lead created successfully with ID: {}", createdLead.getId());
@@ -74,15 +63,8 @@ public class LeadUseCase {
     @Transactional
     public GeneralResponse<?> updateLead(Long id, UpdateLeadRequest request, Long tenantId) {
         try {
-            log.info("Updating lead ID: {}, tenant: {}", id, tenantId);
-
-            // Map DTO to Entity
             LeadEntity updates = leadDtoMapper.toEntity(request);
-
-            // Update lead using service
             LeadEntity updatedLead = leadService.updateLead(id, updates, tenantId);
-
-            // Map Entity to Response DTO
             LeadResponse response = leadDtoMapper.toResponse(updatedLead);
 
             log.info("Lead updated successfully: {}", id);
@@ -100,8 +82,6 @@ public class LeadUseCase {
     @Transactional(readOnly = true)
     public GeneralResponse<?> getLeadById(Long id, Long tenantId) {
         try {
-            log.info("Fetching lead ID: {}, tenant: {}", id, tenantId);
-
             LeadEntity lead = leadService.getLeadById(id, tenantId)
                     .orElse(null);
 
@@ -121,8 +101,6 @@ public class LeadUseCase {
     @Transactional(readOnly = true)
     public GeneralResponse<?> getAllLeads(Long tenantId, PageRequest pageRequest) {
         try {
-            log.info("Fetching all leads for tenant: {}", tenantId);
-
             var result = leadService.getAllLeads(tenantId, pageRequest);
 
             List<LeadResponse> leadResponses = result.getFirst().stream()
@@ -143,9 +121,6 @@ public class LeadUseCase {
     @Transactional
     public GeneralResponse<?> qualifyLead(QualifyLeadRequest request, Long tenantId) {
         try {
-            log.info("Qualifying lead ID: {}, tenant: {}", request.getLeadId(), tenantId);
-
-            // Qualify the lead
             LeadEntity qualifiedLead = leadService.qualifyLead(request.getLeadId(), tenantId);
 
             LeadResponse response = leadDtoMapper.toResponse(qualifiedLead);
@@ -165,52 +140,39 @@ public class LeadUseCase {
         }
     }
 
-    /**
-     * Convert lead to customer, opportunity, and contact
-     * This is a complex workflow involving multiple services
-     */
     @Transactional
     public GeneralResponse<?> convertLead(ConvertLeadRequest request, Long tenantId) {
         try {
-            log.info("Converting lead ID: {}, tenant: {}", request.getLeadId(), tenantId);
-
-            // 1. Fetch the lead
             LeadEntity lead = leadService.getLeadById(request.getLeadId(), tenantId)
                     .orElseThrow(() -> new IllegalArgumentException("Lead not found"));
 
-            // 2. Create or use existing customer
             Long customerId;
             if (Boolean.TRUE.equals(request.getCreateNewCustomer())) {
-                // Create new customer from lead data using mapper
                 CustomerEntity customer = leadDtoMapper.toCustomerEntity(lead);
-                
+
                 CustomerEntity createdCustomer = customerService.createCustomer(customer, tenantId);
                 customerId = createdCustomer.getId();
                 log.info("Created new customer ID: {} from lead", customerId);
             } else {
                 customerId = request.getExistingCustomerId();
                 if (customerId == null) {
-                    return responseUtils.badRequest("Either createNewCustomer must be true or existingCustomerId must be provided");
+                    return responseUtils
+                            .badRequest("Either createNewCustomer must be true or existingCustomerId must be provided");
                 }
                 log.info("Using existing customer ID: {}", customerId);
             }
 
-            // 3. Create contact from lead using mapper
             ContactEntity contact = leadDtoMapper.toContactEntity(lead, customerId);
-            
+
             ContactEntity createdContact = contactService.createContact(contact, tenantId);
             log.info("Created contact ID: {} from lead", createdContact.getId());
 
-            // 4. Create opportunity from lead using mapper
             OpportunityEntity opportunity = leadDtoMapper.toOpportunityEntity(lead, customerId, request);
-            
-            OpportunityEntity createdOpportunity = opportunityService.createOpportunity(opportunity, tenantId);
-            log.info("Created opportunity ID: {} from lead", createdOpportunity.getId());
 
-            // 5. Convert the lead (marks it as CONVERTED)
+            OpportunityEntity createdOpportunity = opportunityService.createOpportunity(opportunity, tenantId);
+
             leadService.convertLead(request.getLeadId(), tenantId);
 
-            // 6. Build response using mapper
             LeadConversionResponse response = leadDtoMapper.toConversionResponse(
                     request.getLeadId(), customerId, createdOpportunity.getId(), createdContact.getId());
 
@@ -232,8 +194,6 @@ public class LeadUseCase {
     @Transactional
     public GeneralResponse<?> deleteLead(Long id, Long tenantId) {
         try {
-            log.info("Deleting lead ID: {}, tenant: {}", id, tenantId);
-
             leadService.deleteLead(id, tenantId);
 
             log.info("Lead deleted successfully: {}", id);

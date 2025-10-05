@@ -23,9 +23,6 @@ import serp.project.crm.kernel.utils.ResponseUtils;
 
 import java.util.List;
 
-/**
- * Team Member Use Case - Orchestrates team member management workflows
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -38,8 +35,6 @@ public class TeamMemberUseCase {
     @Transactional
     public GeneralResponse<?> addTeamMember(CreateTeamMemberRequest request, Long tenantId) {
         try {
-            log.info("Adding team member to team: {}, tenant: {}", request.getTeamId(), tenantId);
-
             TeamMemberEntity teamMemberEntity = teamMemberDtoMapper.toEntity(request);
             TeamMemberEntity createdMember = teamMemberService.addTeamMember(teamMemberEntity, tenantId);
             TeamMemberResponse response = teamMemberDtoMapper.toResponse(createdMember);
@@ -59,8 +54,6 @@ public class TeamMemberUseCase {
     @Transactional
     public GeneralResponse<?> updateTeamMember(Long id, UpdateTeamMemberRequest request, Long tenantId) {
         try {
-            log.info("Updating team member ID: {}, tenant: {}", id, tenantId);
-
             TeamMemberEntity updates = teamMemberDtoMapper.toEntity(request);
             TeamMemberEntity updatedMember = teamMemberService.updateTeamMember(id, updates, tenantId);
             TeamMemberResponse response = teamMemberDtoMapper.toResponse(updatedMember);
@@ -80,8 +73,6 @@ public class TeamMemberUseCase {
     @Transactional(readOnly = true)
     public GeneralResponse<?> getTeamMemberById(Long id, Long tenantId) {
         try {
-            log.info("Fetching team member ID: {}, tenant: {}", id, tenantId);
-
             TeamMemberEntity teamMember = teamMemberService.getTeamMemberById(id, tenantId).orElse(null);
 
             if (teamMember == null) {
@@ -100,8 +91,6 @@ public class TeamMemberUseCase {
     @Transactional(readOnly = true)
     public GeneralResponse<?> getTeamMembersByTeam(Long teamId, Long tenantId, PageRequest pageRequest) {
         try {
-            log.info("Fetching team members for team: {}, tenant: {}", teamId, tenantId);
-
             var result = teamMemberService.getTeamMembersByTeam(teamId, tenantId, pageRequest);
 
             List<TeamMemberResponse> memberResponses = result.getFirst().stream()
@@ -122,8 +111,6 @@ public class TeamMemberUseCase {
     @Transactional
     public GeneralResponse<?> changeRole(Long id, String newRole, Long tenantId) {
         try {
-            log.info("Changing role for team member ID: {} to {}, tenant: {}", id, newRole, tenantId);
-
             TeamMemberEntity updatedMember = teamMemberService.changeRole(id, newRole, tenantId);
             TeamMemberResponse response = teamMemberDtoMapper.toResponse(updatedMember);
 
@@ -142,8 +129,6 @@ public class TeamMemberUseCase {
     @Transactional
     public GeneralResponse<?> changeStatus(Long id, TeamMemberStatus newStatus, Long tenantId) {
         try {
-            log.info("Changing status for team member ID: {} to {}, tenant: {}", id, newStatus, tenantId);
-
             TeamMemberEntity updatedMember = teamMemberService.changeStatus(id, newStatus, tenantId);
             TeamMemberResponse response = teamMemberDtoMapper.toResponse(updatedMember);
 
@@ -162,8 +147,6 @@ public class TeamMemberUseCase {
     @Transactional
     public GeneralResponse<?> removeTeamMember(Long id, Long tenantId) {
         try {
-            log.info("Removing team member ID: {}, tenant: {}", id, tenantId);
-
             teamMemberService.removeTeamMember(id, tenantId);
 
             log.info("Team member removed successfully: {}", id);

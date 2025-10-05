@@ -3,7 +3,7 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.crm.core.service;
+package serp.project.crm.core.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,14 +17,12 @@ import serp.project.crm.core.domain.enums.ActivityStatus;
 import serp.project.crm.core.domain.enums.ActivityType;
 import serp.project.crm.core.port.client.IKafkaPublisher;
 import serp.project.crm.core.port.store.IActivityPort;
+import serp.project.crm.core.service.IActivityService;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Activity Service - Business logic for activity and task management
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -36,46 +34,34 @@ public class ActivityService implements IActivityService {
     @Override
     @Transactional
     public ActivityEntity createActivity(ActivityEntity activity, Long tenantId) {
-        log.info("Creating activity {} for tenant {}", activity.getSubject(), tenantId);
-
-        // Validation: Due date cannot be in the past for new activities
-        Long now = System.currentTimeMillis() / 1000;
+        Long now = System.currentTimeMillis();
         if (activity.getDueDate() != null && activity.getDueDate() < now) {
             throw new IllegalArgumentException("Due date cannot be in the past");
         }
 
-        // Set defaults using entity method
         activity.setTenantId(tenantId);
         activity.setDefaults();
 
-        // Save
         ActivityEntity saved = activityPort.save(activity);
 
-        // Publish event
         publishActivityCreatedEvent(saved);
 
-        log.info("Activity created successfully with ID {}", saved.getId());
         return saved;
     }
 
     @Override
     @Transactional
     public ActivityEntity updateActivity(Long id, ActivityEntity updates, Long tenantId) {
-        log.info("Updating activity {} for tenant {}", id, tenantId);
 
         ActivityEntity existing = activityPort.findById(id, tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Activity not found"));
 
-        // Use entity method for update (will validate internally)
         existing.updateFrom(updates);
 
-        // Save
         ActivityEntity updated = activityPort.save(existing);
 
-        // Publish event
         publishActivityUpdatedEvent(updated);
 
-        log.info("Activity {} updated successfully", id);
         return updated;
     }
 
@@ -94,21 +80,24 @@ public class ActivityService implements IActivityService {
 
     @Override
     @Transactional(readOnly = true)
-    public Pair<List<ActivityEntity>, Long> getActivitiesByType(ActivityType type, Long tenantId, PageRequest pageRequest) {
+    public Pair<List<ActivityEntity>, Long> getActivitiesByType(ActivityType type, Long tenantId,
+            PageRequest pageRequest) {
         pageRequest.validate();
         return activityPort.findByActivityType(type, tenantId, pageRequest);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Pair<List<ActivityEntity>, Long> getActivitiesByStatus(ActivityStatus status, Long tenantId, PageRequest pageRequest) {
+    public Pair<List<ActivityEntity>, Long> getActivitiesByStatus(ActivityStatus status, Long tenantId,
+            PageRequest pageRequest) {
         pageRequest.validate();
         return activityPort.findByStatus(status, tenantId, pageRequest);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Pair<List<ActivityEntity>, Long> getActivitiesByAssignee(Long userId, Long tenantId, PageRequest pageRequest) {
+    public Pair<List<ActivityEntity>, Long> getActivitiesByAssignee(Long userId, Long tenantId,
+            PageRequest pageRequest) {
         pageRequest.validate();
         return activityPort.findByAssignedTo(userId, tenantId, pageRequest);
     }
@@ -122,21 +111,24 @@ public class ActivityService implements IActivityService {
 
     @Override
     @Transactional(readOnly = true)
-    public Pair<List<ActivityEntity>, Long> getActivitiesByCustomer(Long customerId, Long tenantId, PageRequest pageRequest) {
+    public Pair<List<ActivityEntity>, Long> getActivitiesByCustomer(Long customerId, Long tenantId,
+            PageRequest pageRequest) {
         pageRequest.validate();
         return activityPort.findByCustomerId(customerId, tenantId, pageRequest);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Pair<List<ActivityEntity>, Long> getActivitiesByOpportunity(Long opportunityId, Long tenantId, PageRequest pageRequest) {
+    public Pair<List<ActivityEntity>, Long> getActivitiesByOpportunity(Long opportunityId, Long tenantId,
+            PageRequest pageRequest) {
         pageRequest.validate();
         return activityPort.findByOpportunityId(opportunityId, tenantId, pageRequest);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Pair<List<ActivityEntity>, Long> getActivitiesByContact(Long contactId, Long tenantId, PageRequest pageRequest) {
+    public Pair<List<ActivityEntity>, Long> getActivitiesByContact(Long contactId, Long tenantId,
+            PageRequest pageRequest) {
         pageRequest.validate();
         return activityPort.findByContactId(contactId, tenantId, pageRequest);
     }
@@ -150,15 +142,15 @@ public class ActivityService implements IActivityService {
     @Override
     @Transactional(readOnly = true)
     public List<ActivityEntity> getUpcomingActivities(LocalDateTime startDate, LocalDateTime endDate, Long tenantId) {
-        // Port only accepts tenantId, so we filter manually
+        // Implement later
         List<ActivityEntity> allUpcoming = activityPort.findUpcomingActivities(tenantId);
-        
+
         Long startTimestamp = startDate.atZone(java.time.ZoneId.systemDefault()).toEpochSecond();
         Long endTimestamp = endDate.atZone(java.time.ZoneId.systemDefault()).toEpochSecond();
-        
+
         return allUpcoming.stream()
-                .filter(activity -> activity.getDueDate() != null 
-                        && activity.getDueDate() >= startTimestamp 
+                .filter(activity -> activity.getDueDate() != null
+                        && activity.getDueDate() >= startTimestamp
                         && activity.getDueDate() <= endTimestamp)
                 .toList();
     }
@@ -166,60 +158,44 @@ public class ActivityService implements IActivityService {
     @Override
     @Transactional
     public ActivityEntity completeActivity(Long id, Long tenantId) {
-        log.info("Completing activity {} for tenant {}", id, tenantId);
-
         ActivityEntity activity = activityPort.findById(id, tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Activity not found"));
 
-        // Use entity method
         activity.markAsCompleted(tenantId);
 
         ActivityEntity completed = activityPort.save(activity);
 
-        // Publish event
         publishActivityCompletedEvent(completed);
 
-        log.info("Activity {} completed successfully", id);
         return completed;
     }
 
     @Override
     @Transactional
     public ActivityEntity cancelActivity(Long id, Long tenantId) {
-        log.info("Cancelling activity {} for tenant {}", id, tenantId);
-
         ActivityEntity activity = activityPort.findById(id, tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Activity not found"));
 
-        // Use entity method (will validate internally)
         activity.markAsCancelled(tenantId);
 
         ActivityEntity cancelled = activityPort.save(activity);
 
-        // Publish event
         publishActivityCancelledEvent(cancelled);
 
-        log.info("Activity {} cancelled successfully", id);
         return cancelled;
     }
 
     @Override
     @Transactional
     public void deleteActivity(Long id, Long tenantId) {
-        log.info("Deleting activity {} for tenant {}", id, tenantId);
-
         ActivityEntity activity = activityPort.findById(id, tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Activity not found"));
 
         activityPort.deleteById(id, tenantId);
 
-        // Publish event
         publishActivityDeletedEvent(activity);
 
-        log.info("Activity {} deleted successfully", id);
     }
-
-    // ========== Event Publishing ==========
 
     private void publishActivityCreatedEvent(ActivityEntity activity) {
         // TODO: Implement event publishing

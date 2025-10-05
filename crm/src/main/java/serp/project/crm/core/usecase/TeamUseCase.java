@@ -22,9 +22,6 @@ import serp.project.crm.kernel.utils.ResponseUtils;
 
 import java.util.List;
 
-/**
- * Team Use Case - Orchestrates team management workflows
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -37,8 +34,6 @@ public class TeamUseCase {
     @Transactional
     public GeneralResponse<?> createTeam(CreateTeamRequest request, Long tenantId) {
         try {
-            log.info("Creating team: {}, tenant: {}", request.getName(), tenantId);
-
             TeamEntity teamEntity = teamDtoMapper.toEntity(request);
             TeamEntity createdTeam = teamService.createTeam(teamEntity, tenantId);
             TeamResponse response = teamDtoMapper.toResponse(createdTeam);
@@ -58,8 +53,6 @@ public class TeamUseCase {
     @Transactional
     public GeneralResponse<?> updateTeam(Long id, UpdateTeamRequest request, Long tenantId) {
         try {
-            log.info("Updating team ID: {}, tenant: {}", id, tenantId);
-
             TeamEntity updates = teamDtoMapper.toEntity(request);
             TeamEntity updatedTeam = teamService.updateTeam(id, updates, tenantId);
             TeamResponse response = teamDtoMapper.toResponse(updatedTeam);
@@ -79,8 +72,6 @@ public class TeamUseCase {
     @Transactional(readOnly = true)
     public GeneralResponse<?> getTeamById(Long id, Long tenantId) {
         try {
-            log.info("Fetching team ID: {}, tenant: {}", id, tenantId);
-
             TeamEntity team = teamService.getTeamById(id, tenantId).orElse(null);
 
             if (team == null) {
@@ -99,8 +90,6 @@ public class TeamUseCase {
     @Transactional(readOnly = true)
     public GeneralResponse<?> getAllTeams(Long tenantId, PageRequest pageRequest) {
         try {
-            log.info("Fetching all teams for tenant: {}", tenantId);
-
             var result = teamService.getAllTeams(tenantId, pageRequest);
 
             List<TeamResponse> teamResponses = result.getFirst().stream()
@@ -121,8 +110,6 @@ public class TeamUseCase {
     @Transactional
     public GeneralResponse<?> deleteTeam(Long id, Long tenantId) {
         try {
-            log.info("Deleting team ID: {}, tenant: {}", id, tenantId);
-
             teamService.deleteTeam(id, tenantId);
 
             log.info("Team deleted successfully: {}", id);

@@ -29,7 +29,6 @@ public class CreateActivityRequest {
     @NotNull(message = "Activity type is required")
     private ActivityType activityType;
 
-    @NotNull(message = "Status is required")
     private ActivityStatus status;
 
     @Size(max = 255, message = "Location must not exceed 255 characters")
@@ -51,7 +50,6 @@ public class CreateActivityRequest {
     @Min(value = 1, message = "Duration must be at least 1 minute")
     private Integer durationMinutes;
 
-    @NotNull(message = "Priority is required")
     private TaskPriority priority;
 
     @Min(value = 0, message = "Progress percent must be at least 0")

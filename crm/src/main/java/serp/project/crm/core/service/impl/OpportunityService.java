@@ -3,7 +3,7 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.crm.core.service;
+package serp.project.crm.core.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +16,8 @@ import serp.project.crm.core.domain.entity.OpportunityEntity;
 import serp.project.crm.core.domain.enums.OpportunityStage;
 import serp.project.crm.core.port.client.IKafkaPublisher;
 import serp.project.crm.core.port.store.IOpportunityPort;
+import serp.project.crm.core.service.ICustomerService;
+import serp.project.crm.core.service.IOpportunityService;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
