@@ -57,11 +57,11 @@ public class ActivityAdapter implements IActivityPort {
                 .stream()
                 .map(activityMapper::toEntity)
                 .collect(Collectors.toList());
-        
+
         int start = pageRequest.getOffset();
         int end = Math.min(start + pageRequest.getSize(), allActivities.size());
         List<ActivityEntity> pageContent = allActivities.subList(start, end);
-        
+
         return Pair.of(pageContent, (long) allActivities.size());
     }
 
@@ -71,25 +71,26 @@ public class ActivityAdapter implements IActivityPort {
                 .stream()
                 .map(activityMapper::toEntity)
                 .collect(Collectors.toList());
-        
+
         int start = pageRequest.getOffset();
         int end = Math.min(start + pageRequest.getSize(), allActivities.size());
         List<ActivityEntity> pageContent = allActivities.subList(start, end);
-        
+
         return Pair.of(pageContent, (long) allActivities.size());
     }
 
     @Override
-    public Pair<List<ActivityEntity>, Long> findByOpportunityId(Long opportunityId, Long tenantId, PageRequest pageRequest) {
+    public Pair<List<ActivityEntity>, Long> findByOpportunityId(Long opportunityId, Long tenantId,
+            PageRequest pageRequest) {
         List<ActivityEntity> allActivities = activityRepository.findByTenantIdAndOpportunityId(tenantId, opportunityId)
                 .stream()
                 .map(activityMapper::toEntity)
                 .collect(Collectors.toList());
-        
+
         int start = pageRequest.getOffset();
         int end = Math.min(start + pageRequest.getSize(), allActivities.size());
         List<ActivityEntity> pageContent = allActivities.subList(start, end);
-        
+
         return Pair.of(pageContent, (long) allActivities.size());
     }
 
@@ -99,11 +100,11 @@ public class ActivityAdapter implements IActivityPort {
                 .stream()
                 .map(activityMapper::toEntity)
                 .collect(Collectors.toList());
-        
+
         int start = pageRequest.getOffset();
         int end = Math.min(start + pageRequest.getSize(), allActivities.size());
         List<ActivityEntity> pageContent = allActivities.subList(start, end);
-        
+
         return Pair.of(pageContent, (long) allActivities.size());
     }
 
@@ -116,7 +117,8 @@ public class ActivityAdapter implements IActivityPort {
     }
 
     @Override
-    public Pair<List<ActivityEntity>, Long> findByActivityType(ActivityType activityType, Long tenantId, PageRequest pageRequest) {
+    public Pair<List<ActivityEntity>, Long> findByActivityType(ActivityType activityType, Long tenantId,
+            PageRequest pageRequest) {
         var pageable = activityMapper.toPageable(pageRequest);
         var page = activityRepository.findByTenantIdAndActivityType(tenantId, activityType.name(), pageable)
                 .map(activityMapper::toEntity);
@@ -124,7 +126,8 @@ public class ActivityAdapter implements IActivityPort {
     }
 
     @Override
-    public Pair<List<ActivityEntity>, Long> findByStatus(ActivityStatus status, Long tenantId, PageRequest pageRequest) {
+    public Pair<List<ActivityEntity>, Long> findByStatus(ActivityStatus status, Long tenantId,
+            PageRequest pageRequest) {
         var pageable = activityMapper.toPageable(pageRequest);
         var page = activityRepository.findByTenantIdAndStatus(tenantId, status.name(), pageable)
                 .map(activityMapper::toEntity);
@@ -132,7 +135,8 @@ public class ActivityAdapter implements IActivityPort {
     }
 
     @Override
-    public Pair<List<ActivityEntity>, Long> findByPriority(TaskPriority priority, Long tenantId, PageRequest pageRequest) {
+    public Pair<List<ActivityEntity>, Long> findByPriority(TaskPriority priority, Long tenantId,
+            PageRequest pageRequest) {
         // TODO: Add repository method for priority filtering
         return Pair.of(List.of(), 0L);
     }
@@ -151,7 +155,8 @@ public class ActivityAdapter implements IActivityPort {
     @Override
     public List<ActivityEntity> findUpcomingActivities(Long tenantId) {
         Long currentTimestamp = LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-        Long nextWeekTimestamp = LocalDateTime.now().plusDays(7).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+        Long nextWeekTimestamp = LocalDateTime.now().plusDays(7).atZone(ZoneId.systemDefault()).toInstant()
+                .toEpochMilli();
         return activityRepository.findUpcomingActivities(tenantId, currentTimestamp, nextWeekTimestamp)
                 .stream()
                 .map(activityMapper::toEntity)

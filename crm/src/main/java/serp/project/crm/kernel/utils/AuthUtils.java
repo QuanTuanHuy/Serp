@@ -46,4 +46,11 @@ public class AuthUtils {
         return getCurrentJwt()
                 .map(jwt -> jwt.getClaimAsString("name"));
     }
+
+    public Optional<Long> getCurrentTenantId() {
+        return getCurrentJwt()
+                .map(jwt -> jwt.getClaimAsString("tenant_id"))
+                .filter(tid -> !tid.isEmpty())
+                .map(Long::valueOf);
+    }
 }
