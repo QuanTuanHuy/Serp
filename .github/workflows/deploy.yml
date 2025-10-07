@@ -59,8 +59,7 @@ jobs:
           script: |
             cd ${{ secrets.DEPLOY_PATH }}/account
             docker compose pull
-            docker compose up -d
-            docker image prune -f
+            docker compose up -d --remove-orphans
 
   deploy-api-gateway:
     needs: check-changes
@@ -77,8 +76,7 @@ jobs:
           script: |
             cd ${{ secrets.DEPLOY_PATH }}/api_gateway
             docker compose pull
-            docker compose up -d
-            docker image prune -f
+            docker compose up -d --remove-orphans
 
   deploy-ptm-task:
     needs: check-changes
@@ -95,8 +93,7 @@ jobs:
           script: |
             cd ${{ secrets.DEPLOY_PATH }}/ptm_task
             docker compose pull
-            docker compose up -d
-            docker image prune -f
+            docker compose up -d --remove-orphans
 
   deploy-ptm-schedule:
     needs: check-changes
@@ -113,8 +110,7 @@ jobs:
           script: |
             cd ${{ secrets.DEPLOY_PATH }}/ptm_schedule
             docker compose pull
-            docker compose up -d
-            docker image prune -f
+            docker compose up -d --remove-orphans
 
   deploy-ptm-optimization:
     needs: check-changes
@@ -131,8 +127,7 @@ jobs:
           script: |
             cd ${{ secrets.DEPLOY_PATH }}/ptm_optimization
             docker compose pull
-            docker compose up -d
-            docker image prune -f
+            docker compose up -d --remove-orphans
 
   deploy-crm:
     needs: check-changes
@@ -149,8 +144,7 @@ jobs:
           script: |
             cd ${{ secrets.DEPLOY_PATH }}/crm
             docker compose pull
-            docker compose up -d
-            docker image prune -f
+            docker compose up -d --remove-orphans
 
   notify-deployment:
     needs: [check-changes, deploy-account, deploy-api-gateway, deploy-ptm-task, deploy-ptm-schedule, deploy-ptm-optimization, deploy-crm]
