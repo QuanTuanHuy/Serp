@@ -1,53 +1,22 @@
-# Smart ERP (Like Odoo) - AI Coding Guide
+# SERP - Smart ERP (Like Odoo) Microservices Architecture Guide
 
 ## Architecture Overview
 
-This is a **microservices architecture** with event-driven communication using **Kafka** and **clean architecture** patterns. The system consists of:
+Event-driven microservices ERP system using **Clean Architecture**, **Kafka messaging**, and **Keycloak authentication**. Services communicate through API Gateway with JWT tokens.
 
-- **api_gateway** (Go, port 8080) - API gateway/router with minimal endpoints
-- **account** (Java, Spring Boot, port 8081) - User account management service
-- **logging_tracker** (Java, Spring Boot, port 8082) - Track logging of microservices
-- **ptm_task** (Go, Gin port 8083) - Personal Task Management service
-- **ptm_schedule** (Go, Gin port 8084) - Personal Schedule/Calendar service
-- **ptm_optimization** (Java, Spring Boot, port 8085) - Personal Task Optimization service
-- **crm** (Java, Spring Boot, port 8086) - Customer Relationship Management service
-- **serp_web** (NextJS, Redux, Shadcn UI, Tailwind CSS, Next Theme) - Frontend application
+**Core Services:**
+- `api_gateway` (Go:8080) - Routes requests, validates JWT, minimal business logic
+- `account` (Java:8081) - User/auth/org/RBAC management, Keycloak integration
+- `crm` (Java:8086) - Customer/lead/opportunity/activity tracking
+- `ptm_task` (Go:8083), `ptm_schedule` (Go:8084), `ptm_optimization` (Java:8085) - Personal productivity
+- `logging_tracker` (Java:8082) - Centralized audit trails & monitoring
+- `serp_web` (Next.js 15) - Redux + Shadcn UI frontend
 
-## Go Services Architecture Pattern
+**Infrastructure:** PostgreSQL, Redis, Kafka, Keycloak (OAuth2/OIDC), Docker Compose
 
-### Dependency Injection with Uber FX
-All Go services use **Uber FX** for dependency injection. Each service follows this bootstrap pattern:
+## Critical Architecture Patterns
 
-```go
-// src/main.go
-func main() {
-    fx.New(bootstrap.All()).Run()
-}
-
-// src/cmd/bootstrap/all.go - Essential DI pattern
-fx.Options(
-    golib.AppOpt(),                    // Core app setup
-    golibdata.RedisOpt(),             // Redis connection
-    golibdata.DatasourceOpt(),        // PostgreSQL connection
-    fx.Provide(adapter.NewXXXAdapter), // Infrastructure layer
-    fx.Provide(service.NewXXXService), // Domain services  
-    fx.Provide(usecase.NewXXXUseCase), // Business logic
-    fx.Provide(controller.NewXXXController), // HTTP handlers
-)
-```
-
-## Java Services Architecture Pattern
-
-### Spring Boot with Clean Architecture
-use standard Spring patterns:
-- `@RestController` for HTTP endpoints with path `/api/v1/`
-- `@Service` classes for business logic 
-- `@Repository` interfaces with JPA
-- `@Configuration` classes for security and JWT setup
-- **Lombok** annotations (`@RequiredArgsConstructor`, `@Data`) throughout
-
-
-### Clean Architecture Layers
+### 1. Clean Architecture Layers (Backend Services)
 ```
 src/
 ├── core/
@@ -72,145 +41,170 @@ src/
 │   └── middleware/        # Authentication, logging middleware (Only for Go)
 └── kernel/
     ├── properties/       # Configuration properties (read from YAML files)
-    └── utils/            # Shared utilities
+    └── utils/            # Shared utilities (AuthUtils, ResponseUtils, etc)
 ```
+
+**Key Rule:** Controllers delegate to UseCases → UseCases orchestrate Services → Services contain business logic.
 
 ## Key Development Patterns
 
 ### 1. Security
 JWT (Keycloak) for secure communication between services.
 
-### 2. Configuration Management
-**YAML-based with environment overrides:**
-- Go: `config/{default,local,production}.yaml` + golib config binding
-- Java: `application.yaml` + `@ConfigurationProperties` classes
+### 2. Entity vs Model Separation
+- **Entities** (`core/domain/entity/`): Business models with domain types
+  - Go: `int64` IDs, `*int64` timestamps (Unix ms), enums as custom types
+  - Java: `Long` IDs, `LocalDateTime` timestamps, Lombok `@SuperBuilder/@Data`
+- **Models** (`infrastructure/store/model/`): DB persistence with ORM annotations
+  - Go: `time.Time` timestamps, GORM tags (`gorm:"not null;index"`)
+  - Java: `@Entity @Table`, JPA annotations, `LocalDateTime` with `@Column`
+- **Mappers** convert between layers: `TaskModelMapper.ToEntity(taskModel)`
 
-### 3. Error Handling & Permissions
-Business logic follows this pattern ():
-- Always validate request before operations
-- Handle errors gracefully and return appropriate HTTP responses
-
-### 4. Kafka Event Handling
-Message handlers in `ui/kafka/` follow this pattern:
+### 3. Uber FX Dependency Injection (Go Services)
+All Go services bootstrap with FX modules in `src/cmd/bootstrap/all.go`:
 ```go
-func (h *Handler) HandleMessage(ctx context.Context, topic string, key string, value []byte) error {
-    log.Info(ctx, "Handling message for topic: ", topic)
-    // Process event asynchronously
-}
+fx.Options(
+    golib.AppOpt(),                          // Base app
+    golibdata.DatasourceOpt(),              // PostgreSQL
+    golibdata.RedisOpt(),                   // Redis
+    fx.Provide(adapter.NewTaskAdapter),     // Infrastructure
+    fx.Provide(service.NewTaskService),     // Domain services
+    fx.Provide(usecase.NewTaskUseCase),     // Use cases
+    fx.Provide(controller.NewTaskController), // Controllers
+    fx.Invoke(router.RegisterRoutes),       // Route setup
+)
 ```
+**Always register new components here after creation.**
+
+### 4. Java Spring Boot Patterns
+- `@RestController` with `@RequestMapping("/api/v1/...")` for all endpoints
+- `@RequiredArgsConstructor` for constructor injection (final fields)
+- `@ConfigurationProperties(prefix = "app.keycloak")` for config binding
+- Service path: `/crm/api/v1/customers`, `/account/api/v1/users`
+
+### 5. Transaction Management
+Use `TransactionService.ExecuteInTransaction` in use cases for multi-step operations:
+```go
+// Go pattern
+result, err := t.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
+    task, err := t.taskService.CreateTask(ctx, tx, userID, request)
+    if err != nil { return nil, err }
+    err = t.taskService.PushCreateTaskToKafka(ctx, task) // Kafka after DB success
+    return task, err
+})
+```
+
+### 6. Kafka Event Pattern
+- **Produce** events in use cases (after successful DB commit) via `IKafkaProducerPort`
+- **Consume** events in `ui/kafka/` handlers with `HandleMessage(ctx, topic, key, value)`
+- Event topics: `TASK_TOPIC`, `USER_EVENT_TOPIC` (defined in `domain/constant/`)
+- Use async producers (`SendMessageAsync`) for non-critical events
+
+### 7. JWT Authentication Flow
+1. User logs in → Account service → Keycloak → JWT access token
+2. Frontend sends `Authorization: Bearer <token>` → API Gateway
+3. Gateway validates JWT via Keycloak JWKS → Extracts user ID → Forwards JWT to backend
+4. Backend services validate JWT via `JWTMiddleware` (Go) or Spring Security filter (Java)
+5. Controllers extract `userID`, `tenantID` from context: `utils.GetUserIDFromContext(c)` (Go) or `AuthUtils.getCurrentUserId()` (Java)
+
+**Service-to-service:** Use Keycloak service account tokens (client credentials flow).
 
 ## Development Workflows
 
-### Running Services
+### Running Services Locally
 ```bash
-# Start infrastructure (from project root)
-docker-compose up -d
+# 1. Start infrastructure (PostgreSQL, Redis, Kafka, Keycloak)
+docker-compose -f docker-compose.dev.yml up -d
 
-# Run Go services individually
-cd api_gateway && go run src/main.go
-
-# Run Spring Boot services
-cd account && ./mvnw spring-boot:run
-
-# Run React frontend
-cd serp_web && npm run dev
+# 2. Run services with environment variables from .env files
+cd account && ./run-dev.sh  # Java services use ./mvnw spring-boot:run
+cd ptm_task && ./run-dev.sh # Go services use go run src/main.go
+cd serp_web && npm run dev  # Frontend on :3000
 ```
 
-### Service Communication
-- **Frontend** → **api_gateway** → **backend services**
+**Environment Files:** Each service has `.env` with `DB_URL`, `REDIS_HOST`, `KAFKA_BOOTSTRAP_SERVERS`, `CLIENT_SECRET`
 
-## Critical Patterns to Follow
+### Adding New Features (Backend)
 
-### 1. Port Adapter Pattern
-Always implement port interfaces(redis, database store, message producer) in `core/port/` before creating adapters in `infrastructure/`
+**Go Services:**
+1. Define entity in `core/domain/entity/` (business fields, domain types)
+2. Define DTO in `core/domain/dto/request|response/`
+3. Create model in `infrastructure/store/model/` (GORM annotations)
+4. Create mapper in `infrastructure/store/mapper/` (ToEntity/ToModel)
+5. Create port interface in `core/port/store/` (`ITaskPort`)
+6. Implement adapter in `infrastructure/store/adapter/` (GORM queries)
+7. Add service in `core/service/` (validation, business rules)
+8. Add use case in `core/usecase/` (transaction orchestration, Kafka)
+9. Add controller in `ui/controller/` (HTTP handlers, response utils)
+10. Register route in `ui/router/` with middleware
+11. **Register all components in `cmd/bootstrap/all.go`**
 
-### 2. Use Case Orchestration  
-Business logic belongs in use cases, not controllers. Use cases coordinate between services and handle cross-cutting concerns like permissions.
+**Java Services:**
+1. Entity (`@SuperBuilder @Getter @Setter extends BaseEntity`)
+2. DTO (request/response with `@Valid` annotations)
+3. Model (`@Entity @Table` with JPA annotations)
+4. Mapper (MapStruct or manual methods)
+5. Repository (`extends JpaRepository<Model, Long>`)
+6. Port interface in `core/port/store/`
+7. Adapter implements port, uses repository
+8. Service (`@Service @RequiredArgsConstructor`, business logic)
+9. UseCase (orchestration, transaction, Kafka producer)
+10. Controller (`@RestController @RequestMapping`, delegates to UseCase)
 
-### 3. Entity Consistency
-Domain entities use consistent field patterns:
-- `ID int64` for primary keys
-- `CreatedAt, UpdatedAt int64` for timestamps  
-- `UserID int64` for ownership tracking
+**Key: Use cases orchestrate, controllers validate input, services enforce rules.**
 
-Model use consistent field patterns:
-- CreatedAt, UpdatedAt time.Time(for Golang) and LocalDateTime(for Java)
-
-### 4. Kafka Integration
-Events are produced in use cases and consumed by dedicated handlers. Each service can both produce and consume relevant domain events.
-
-## When Adding New Features
-
-### Go Services
-1. **Define entity** in `core/domain/entity/`
-2. **Create repository interface** in `core/port/store/`
-3. **Create model** in `core/port/store/model/`
-4. **Create mapper** in `core/port/store/mapper/`
-5. **Implement adapter** in `infrastructure/store/adapter/`
-6. **Add service** for business rules in `core/service/`
-7. **Create use case** for orchestration in `core/usecase/`
-8. **Add controller** for HTTP endpoints in `ui/controller/`
-9. **Register dependencies** in `cmd/bootstrap/all.go`
-10. **Add routes** in `ui/router/`
-
-### Java Services
-1. **Define entity** in `core/domain/entity/`
-2. **Create repository interface** in `core/port/store/`
-3. **Create model** in `core/port/store/model/`
-4. **Create mapper** in `core/port/store/mapper/`
-5. **Implement adapter** in `infrastructure/store/adapter/`
-6. **Add service** for business rules in `core/service/`
-7. **Create use case** for orchestration in `core/usecase/`
-8. **Add controller** for HTTP endpoints in `ui/controller/`
-
-## Frontend Architecture
-- Modular Structure
-
+### Frontend Structure (serp_web)
 ```
 src/
-├── app/                    # Next.js App Router
-│   ├── (dashboard)/        # Dashboard route group
-│   │   ├── crm/           # CRM module pages
-│   │   ├── accounting/    # Accounting module pages
-│   │   └── inventory/     # Inventory module pages
-│   └── layout.tsx
-├── modules/               # Business Logic Modules
+├── app/(dashboard)/          # Next.js App Router pages
+│   ├── crm/[customerId]/    # Dynamic routes
+│   └── ptm/tasks/           # Module pages
+├── modules/                  # Feature modules (self-contained)
 │   ├── crm/
-│   │   ├── components/    # CRM-specific UI
-│   │   ├── hooks/         # CRM custom hooks (e.g. useAuth, useCustomers)
-│   │   ├── services/      # CRM API calls (using RTK Query)
-│   │   ├── store/         # CRM Redux slices
-│   │   ├── types/         # CRM TypeScript types
-│   │   └── index.ts       # Barrel exports
-│   ├── accounting/        # Same structure
-│   └── inventory/         # Same structure
-│   └── ptm/               # Same structure
-├── shared/                # Cross-Module Resources
-│   ├── components/        # Reusable UI components
-│   ├── hooks/            # Common hooks
-│   ├── services/         # Shared API utilities
-│   ├── types/            # Common types
-│   └── utils/            # Helper functions
-└── lib/                  # Core Configuration
-    ├── store.ts          # Redux store setup
-    └── api/              # API configuration
+│   │   ├── components/      # CRM-specific UI (CustomerCard, LeadForm)
+│   │   ├── hooks/           # useCustomers(), useLeads() - RTK Query
+│   │   ├── services/        # crmApi.ts (RTK Query endpoints)
+│   │   ├── store/           # customerSlice.ts (Redux state)
+│   │   ├── types/           # Customer, Lead types
+│   │   └── index.ts         # Barrel exports
+│   └── ptm/                 # Same pattern
+├── shared/
+│   ├── components/ui/       # Shadcn components (Button, Card, Dialog)
+│   ├── hooks/               # useAuth(), useDebounce()
+│   ├── services/api/        # Base API config (RTK Query baseQuery)
+│   └── utils/               # formatDate(), cn() classnames
+└── lib/
+    └── store.ts             # Redux store with RTK Query middleware
 ```
 
-## **Key Principles for FE**
+**Rules:** Modules are isolated (no cross-imports), Barrel exports, communicate via Redux. Use Shadcn UI components. API calls via RTK Query.
 
-### 1. **Module Independence**
+## Common Gotchas & Solutions
 
-- Each module is self-contained
-- No direct imports between modules
-- Communication via shared state or events
+1. **Forgot to register FX module (Go)**: Build succeeds but runtime panic. → Check `cmd/bootstrap/all.go`
+2. **Port already in use**: Kill process or change port in `application.yml`/`default.yaml`
+3. **Keycloak token validation fails**: Check `jwk-set-uri` matches Keycloak realm URL
+4. **Kafka connection refused**: Ensure `KAFKA_BOOTSTRAP_SERVERS` is `localhost:9094` (external port)
+5. **Transaction not rolling back**: Use `txService.ExecuteInTransaction`, not manual `tx.Begin()`
+6. **Entity/Model field mismatch**: Mapper must handle all conversions (e.g., Unix ms ↔ `time.Time`)
 
-### 2. **Barrel Exports Pattern**
+## Testing & Debugging
 
-### 3. **Feature-Based Routing**
+- **Java tests**: Use `@SpringBootTest` with test database. See `account/src/test/`
+- **Go tests**: Table-driven tests with mocks. Use `testify/mock` for ports
+- **View logs**: `docker-compose -f docker-compose.dev.yml logs -f <service-name>`
+- **Database**: Connect to PostgreSQL at `localhost:5432` (user: serp, pass: serp)
+- **Keycloak admin**: `http://localhost:8180` (admin: serp-admin/serp-admin)
+- **Check Kafka topics**: Use Kafka UI or `kafka-console-consumer`
 
-### 4. **Shared Resources Strategy**
+## File Headers
+All Go/Java files must start with:
+```go
+/*
+Author: QuanTuanHuy
+Description: Part of Serp Project
+*/
+```
 
-
-### Add (authors: QuanTuanHuy, Description: Part of Serp Project) to all relevant files
-
-The api_gateway acts as a simple API gateway - most business logic should be added to serp_account, crm, serp_notification, ptm_task_manager, ptm_schedule, sale, hr or appropriate domain services.
+## API Gateway Philosophy
+API Gateway is minimal - only routing, auth, rate limiting. Business logic lives in domain services (account, crm, etc.). Do NOT add feature logic to gateway.
