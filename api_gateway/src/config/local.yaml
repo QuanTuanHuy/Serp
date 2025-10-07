@@ -29,7 +29,7 @@ app:
       - Content-Type
     allowCredentials: true
     maxAge: 3600
-    allowFiles: true 
+    allowFiles: false 
 
 external:
   services:
