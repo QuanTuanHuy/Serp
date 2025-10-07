@@ -80,6 +80,8 @@ app:
           second: GET
         - first: /api/v1/menu-displays/**
           second: GET
+        - first: /api/v1/keycloak/**
+          second: GET
       protectedUrls:
         - url-pattern: /api/v1/users/**
           roles:

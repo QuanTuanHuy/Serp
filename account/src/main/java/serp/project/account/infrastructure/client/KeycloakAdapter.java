@@ -143,4 +143,12 @@ public class KeycloakAdapter implements IKeycloakPort {
             throw new AppException(Constants.ErrorMessage.CLIENT_NOT_FOUND);
         }
     }
+
+    @Override
+    public String getClientSecret(String clientId) {
+        String clientUuid = getClientUuid(clientId);
+        RealmResource realmResource = keycloakAdmin.realm(keycloakProperties.getRealm());
+        ClientResource clientResource = realmResource.clients().get(clientUuid);
+        return clientResource.getSecret().getValue();
+    }
 }

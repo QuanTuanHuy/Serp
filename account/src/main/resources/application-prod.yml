@@ -10,13 +10,17 @@ spring:
     password: ${DB_PASSWORD}
     url: ${DB_URL}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 3
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: false
+    show-sql: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
   data:
     redis:
       host: ${REDIS_HOST}
@@ -27,19 +31,32 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://serp-keycloak:8180/realms/serp/protocol/openid-connect/certs
+          issuer-uri: http://serp-keycloak:8180/realms/serp
+
 app:
+  keycloak:
+    url: http://serp-keycloak:8180
+    jwk-set-uri: http://serp-keycloak:8180/realms/serp/protocol/openid-connect/certs
+    expected-issuer: http://serp-keycloak:8180/realms/serp
+    expected-audience: serp-account
+    realm: serp
+    client-id: serp-account
+    client-secret: ${CLIENT_SECRET}
+
+    admin:
+      username: ${KEYCLOAK_ADMIN_USER}
+      password: ${KEYCLOAK_ADMIN_PASSWORD}
+      client-id: admin-cli
+
   security:
     admin:
-      email: ${ADMIN_EMAIL}
-      password: ${ADMIN_PASSWORD}
-
-    jwt:
-      private-key: ${JWT_PRIVATE_KEY}
-      public-key: ${JWT_PUBLIC_KEY}
-      access-token-expiration: 604800000
-      refresh-token-expiration: 604800000
-      header: Authorization
-      prefix: Bearer
+      email: quan.tuan.huy@gmail.com
+      password: SuperAdmin@123
 
     filter:
       publicUrls:
@@ -63,6 +80,8 @@ app:
           second: GET
         - first: /api/v1/menu-displays/**
           second: GET
+        - first: /api/v1/keycloak/**
+          second: GET
       protectedUrls:
         - url-pattern: /api/v1/users/**
           roles:
@@ -83,7 +102,6 @@ app:
         - url-pattern: /api/v1/menu-displays/**
           roles:
             - ADMIN
-
 
 
 server:
