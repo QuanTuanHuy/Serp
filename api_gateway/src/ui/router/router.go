@@ -9,7 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golibs-starter/golib"
 	"github.com/golibs-starter/golib/web/actuator"
-	"github.com/serp/api-gateway/src/kernel/properties"
 	account "github.com/serp/api-gateway/src/ui/controller/account"
 	ptm "github.com/serp/api-gateway/src/ui/controller/ptm"
 	"github.com/serp/api-gateway/src/ui/middleware"
@@ -32,12 +31,12 @@ type RegisterRoutersIn struct {
 	NoteController      *ptm.NoteController
 	UserTagController   *ptm.UserTagController
 
-	JWTMiddleware *middleware.JWTMiddleware
+	JWTMiddleware  *middleware.JWTMiddleware
+	CorsMiddleware *middleware.CorsMiddleware
 }
 
 func RegisterGinRouters(p RegisterRoutersIn) {
-	corsMiddleware := middleware.NewCorsMiddleware(properties.NewDefaultCorsProperties())
-	p.Engine.Use(corsMiddleware.Handler())
+	p.Engine.Use(p.CorsMiddleware.Handler())
 
 	group := p.Engine.Group(p.App.Path())
 

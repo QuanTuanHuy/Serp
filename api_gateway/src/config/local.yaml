@@ -12,7 +12,24 @@ app:
     client-secret: ${CLIENT_SECRET}
     jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
     expected-issuer: http://localhost:8180/realms/serp
-    expected-audience: 
+    expected-audience:
+
+  cors:
+    allowedOrigins:
+      - http://localhost:3000
+      - https://serp-soict.vercel.app
+    allowedMethods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - OPTIONS
+    allowedHeaders:
+      - Authorization
+      - Content-Type
+    allowCredentials: true
+    maxAge: 3600
+    allowFiles: true 
 
 external:
   services:
