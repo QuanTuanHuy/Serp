@@ -26,16 +26,17 @@ public class TeamEntity extends BaseEntity {
 
     private List<TeamMemberEntity> members;
 
-    // ========== Business Methods ==========
-
     public void updateFrom(TeamEntity updates) {
-        if (updates.getName() != null) this.name = updates.getName();
-        if (updates.getDescription() != null) this.description = updates.getDescription();
-        if (updates.getLeaderId() != null) this.leaderId = updates.getLeaderId();
-        if (updates.getNotes() != null) this.notes = updates.getNotes();
+        if (updates.getName() != null)
+            this.name = updates.getName();
+        if (updates.getDescription() != null)
+            this.description = updates.getDescription();
+        if (updates.getLeaderId() != null)
+            this.leaderId = updates.getLeaderId();
+        if (updates.getNotes() != null)
+            this.notes = updates.getNotes();
     }
 
     public void setDefaults() {
-        // Simple entity, no complex defaults needed
     }
 }

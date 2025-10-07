@@ -80,33 +80,37 @@ public class ActivityEntity extends BaseEntity {
         this.setUpdatedBy(rescheduledBy);
     }
 
-    // ========== Update Methods ==========
-
-    /**
-     * Update activity fields from another activity (for PATCH operations)
-     */
     public void updateFrom(ActivityEntity updates) {
         if (this.isCompleted()) {
             throw new IllegalStateException("Cannot update completed activities");
         }
 
-        if (updates.getSubject() != null) this.subject = updates.getSubject();
-        if (updates.getDescription() != null) this.description = updates.getDescription();
-        if (updates.getActivityType() != null) this.activityType = updates.getActivityType();
-        if (updates.getStatus() != null) this.status = updates.getStatus();
-        if (updates.getLocation() != null) this.location = updates.getLocation();
-        if (updates.getAssignedTo() != null) this.assignedTo = updates.getAssignedTo();
-        if (updates.getActivityDate() != null) this.activityDate = updates.getActivityDate();
-        if (updates.getDueDate() != null) this.dueDate = updates.getDueDate();
-        if (updates.getReminderDate() != null) this.reminderDate = updates.getReminderDate();
-        if (updates.getDurationMinutes() != null) this.durationMinutes = updates.getDurationMinutes();
-        if (updates.getPriority() != null) this.priority = updates.getPriority();
-        if (updates.getProgressPercent() != null) this.progressPercent = updates.getProgressPercent();
+        if (updates.getSubject() != null)
+            this.subject = updates.getSubject();
+        if (updates.getDescription() != null)
+            this.description = updates.getDescription();
+        if (updates.getActivityType() != null)
+            this.activityType = updates.getActivityType();
+        if (updates.getStatus() != null)
+            this.status = updates.getStatus();
+        if (updates.getLocation() != null)
+            this.location = updates.getLocation();
+        if (updates.getAssignedTo() != null)
+            this.assignedTo = updates.getAssignedTo();
+        if (updates.getActivityDate() != null)
+            this.activityDate = updates.getActivityDate();
+        if (updates.getDueDate() != null)
+            this.dueDate = updates.getDueDate();
+        if (updates.getReminderDate() != null)
+            this.reminderDate = updates.getReminderDate();
+        if (updates.getDurationMinutes() != null)
+            this.durationMinutes = updates.getDurationMinutes();
+        if (updates.getPriority() != null)
+            this.priority = updates.getPriority();
+        if (updates.getProgressPercent() != null)
+            this.progressPercent = updates.getProgressPercent();
     }
 
-    /**
-     * Set default values for new activity
-     */
     public void setDefaults() {
         if (this.status == null) {
             this.status = ActivityStatus.PLANNED;

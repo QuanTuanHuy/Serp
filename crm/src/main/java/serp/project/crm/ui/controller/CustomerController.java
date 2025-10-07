@@ -16,9 +16,6 @@ import serp.project.crm.core.domain.dto.request.UpdateCustomerRequest;
 import serp.project.crm.core.usecase.CustomerUseCase;
 import serp.project.crm.kernel.utils.AuthUtils;
 
-/**
- * Customer Controller - REST API endpoints for customer management
- */
 @RestController
 @RequestMapping("/api/v1/customers")
 @RequiredArgsConstructor
@@ -33,7 +30,6 @@ public class CustomerController {
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new IllegalArgumentException("Tenant ID not found in token"));
         
-        log.info("POST /api/v1/customers - Creating customer for tenant: {}", tenantId);
         var response = customerUseCase.createCustomer(request, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
@@ -45,7 +41,6 @@ public class CustomerController {
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new IllegalArgumentException("Tenant ID not found in token"));
         
-        log.info("PUT /api/v1/customers/{} - Updating customer for tenant: {}", id, tenantId);
         var response = customerUseCase.updateCustomer(id, request, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
@@ -55,7 +50,6 @@ public class CustomerController {
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new IllegalArgumentException("Tenant ID not found in token"));
         
-        log.info("GET /api/v1/customers/{} - Fetching customer for tenant: {}", id, tenantId);
         var response = customerUseCase.getCustomerById(id, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
@@ -66,9 +60,7 @@ public class CustomerController {
             @RequestParam(defaultValue = "20") Integer size) {
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new IllegalArgumentException("Tenant ID not found in token"));
-        
-        log.info("GET /api/v1/customers - Fetching all customers for tenant: {}, page: {}, size: {}", tenantId, page, size);
-        
+                
         PageRequest pageRequest = PageRequest.builder()
                 .page(page)
                 .size(size)
@@ -83,7 +75,6 @@ public class CustomerController {
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new IllegalArgumentException("Tenant ID not found in token"));
         
-        log.info("DELETE /api/v1/customers/{} - Deleting customer for tenant: {}", id, tenantId);
         var response = customerUseCase.deleteCustomer(id, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }

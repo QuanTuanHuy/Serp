@@ -113,28 +113,27 @@ public class OpportunityEntity extends BaseEntity {
         }
     }
 
-    // ========== Additional Business Methods ==========
-
-    /**
-     * Update opportunity fields from another opportunity (for PATCH operations)
-     */
     public void updateFrom(OpportunityEntity updates) {
         if (this.isClosed()) {
             throw new IllegalStateException("Cannot update closed opportunities");
         }
-        
-        if (updates.getName() != null) this.name = updates.getName();
-        if (updates.getDescription() != null) this.description = updates.getDescription();
-        if (updates.getEstimatedValue() != null) this.estimatedValue = updates.getEstimatedValue();
-        if (updates.getProbability() != null) this.probability = updates.getProbability();
-        if (updates.getExpectedCloseDate() != null) this.expectedCloseDate = updates.getExpectedCloseDate();
-        if (updates.getAssignedTo() != null) this.assignedTo = updates.getAssignedTo();
-        if (updates.getNotes() != null) this.notes = updates.getNotes();
+
+        if (updates.getName() != null)
+            this.name = updates.getName();
+        if (updates.getDescription() != null)
+            this.description = updates.getDescription();
+        if (updates.getEstimatedValue() != null)
+            this.estimatedValue = updates.getEstimatedValue();
+        if (updates.getProbability() != null)
+            this.probability = updates.getProbability();
+        if (updates.getExpectedCloseDate() != null)
+            this.expectedCloseDate = updates.getExpectedCloseDate();
+        if (updates.getAssignedTo() != null)
+            this.assignedTo = updates.getAssignedTo();
+        if (updates.getNotes() != null)
+            this.notes = updates.getNotes();
     }
 
-    /**
-     * Close opportunity as won
-     */
     public void closeAsWon() {
         if (this.isClosed()) {
             throw new IllegalStateException("Opportunity already closed");
@@ -144,9 +143,6 @@ public class OpportunityEntity extends BaseEntity {
         this.actualCloseDate = LocalDate.now();
     }
 
-    /**
-     * Close opportunity as lost
-     */
     public void closeAsLost(String reason) {
         if (this.isClosed()) {
             throw new IllegalStateException("Opportunity already closed");
@@ -157,9 +153,6 @@ public class OpportunityEntity extends BaseEntity {
         this.lossReason = reason;
     }
 
-    /**
-     * Set default values for new opportunity
-     */
     public void setDefaults() {
         if (this.stage == null) {
             this.stage = OpportunityStage.PROSPECTING;

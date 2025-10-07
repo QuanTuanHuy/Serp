@@ -15,9 +15,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Activity Service Interface - Defines business operations for activity management
- */
 public interface IActivityService {
 
     ActivityEntity createActivity(ActivityEntity activity, Long tenantId);
@@ -30,7 +27,8 @@ public interface IActivityService {
 
     Pair<List<ActivityEntity>, Long> getActivitiesByType(ActivityType type, Long tenantId, PageRequest pageRequest);
 
-    Pair<List<ActivityEntity>, Long> getActivitiesByStatus(ActivityStatus status, Long tenantId, PageRequest pageRequest);
+    Pair<List<ActivityEntity>, Long> getActivitiesByStatus(ActivityStatus status, Long tenantId,
+            PageRequest pageRequest);
 
     Pair<List<ActivityEntity>, Long> getActivitiesByAssignee(Long userId, Long tenantId, PageRequest pageRequest);
 
@@ -38,7 +36,8 @@ public interface IActivityService {
 
     Pair<List<ActivityEntity>, Long> getActivitiesByCustomer(Long customerId, Long tenantId, PageRequest pageRequest);
 
-    Pair<List<ActivityEntity>, Long> getActivitiesByOpportunity(Long opportunityId, Long tenantId, PageRequest pageRequest);
+    Pair<List<ActivityEntity>, Long> getActivitiesByOpportunity(Long opportunityId, Long tenantId,
+            PageRequest pageRequest);
 
     Pair<List<ActivityEntity>, Long> getActivitiesByContact(Long contactId, Long tenantId, PageRequest pageRequest);
 

@@ -12,9 +12,6 @@ import serp.project.crm.core.domain.entity.TeamEntity;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Team Service Interface - Defines business operations for team management
- */
 public interface ITeamService {
 
     TeamEntity createTeam(TeamEntity team, Long tenantId);

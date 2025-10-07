@@ -14,9 +14,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Opportunity Service Interface - Defines business operations for opportunity management
- */
 public interface IOpportunityService {
 
     OpportunityEntity createOpportunity(OpportunityEntity opportunity, Long tenantId);
@@ -27,11 +24,13 @@ public interface IOpportunityService {
 
     Pair<List<OpportunityEntity>, Long> getAllOpportunities(Long tenantId, PageRequest pageRequest);
 
-    Pair<List<OpportunityEntity>, Long> getOpportunitiesByCustomer(Long customerId, Long tenantId, PageRequest pageRequest);
+    Pair<List<OpportunityEntity>, Long> getOpportunitiesByCustomer(Long customerId, Long tenantId,
+            PageRequest pageRequest);
 
     Pair<List<OpportunityEntity>, Long> getOpportunitiesByLead(Long leadId, Long tenantId, PageRequest pageRequest);
 
-    Pair<List<OpportunityEntity>, Long> getOpportunitiesByStage(OpportunityStage stage, Long tenantId, PageRequest pageRequest);
+    Pair<List<OpportunityEntity>, Long> getOpportunitiesByStage(OpportunityStage stage, Long tenantId,
+            PageRequest pageRequest);
 
     Pair<List<OpportunityEntity>, Long> getOpportunitiesAssignedTo(Long userId, Long tenantId, PageRequest pageRequest);
 

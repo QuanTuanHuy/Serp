@@ -14,9 +14,6 @@ import serp.project.crm.core.domain.enums.ContactType;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Contact Service Interface - Defines business operations for contact management
- */
 public interface IContactService {
 
     ContactEntity createContact(ContactEntity contact, Long tenantId);

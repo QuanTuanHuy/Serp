@@ -26,13 +26,15 @@ public class TeamMemberEntity extends BaseEntity {
     private String role;
     private TeamMemberStatus status;
 
-    // ========== Business Methods ==========
-
     public void updateFrom(TeamMemberEntity updates) {
-        if (updates.getName() != null) this.name = updates.getName();
-        if (updates.getEmail() != null) this.email = updates.getEmail();
-        if (updates.getPhone() != null) this.phone = updates.getPhone();
-        if (updates.getRole() != null) this.role = updates.getRole();
+        if (updates.getName() != null)
+            this.name = updates.getName();
+        if (updates.getEmail() != null)
+            this.email = updates.getEmail();
+        if (updates.getPhone() != null)
+            this.phone = updates.getPhone();
+        if (updates.getRole() != null)
+            this.role = updates.getRole();
     }
 
     public void setDefaults() {

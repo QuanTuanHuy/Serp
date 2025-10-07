@@ -14,9 +14,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Customer Service Interface - Defines business operations for customer management
- */
 public interface ICustomerService {
 
     CustomerEntity createCustomer(CustomerEntity customer, Long tenantId);

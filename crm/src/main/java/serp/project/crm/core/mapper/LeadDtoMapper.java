@@ -61,9 +61,9 @@ public class LeadDtoMapper {
         }
 
         AddressEntity address = null;
-        if (request.getStreet() != null || request.getCity() != null || 
-            request.getState() != null || request.getPostalCode() != null || 
-            request.getCountry() != null) {
+        if (request.getStreet() != null || request.getCity() != null ||
+                request.getState() != null || request.getPostalCode() != null ||
+                request.getCountry() != null) {
             address = AddressEntity.builder()
                     .street(request.getStreet())
                     .city(request.getCity())
@@ -177,20 +177,19 @@ public class LeadDtoMapper {
         }
 
         return OpportunityEntity.builder()
-                .name(request.getOpportunityName() != null ? 
-                      request.getOpportunityName() : 
-                      lead.getCompany() + " - " + lead.getName())
+                .name(request.getOpportunityName() != null ? request.getOpportunityName()
+                        : lead.getCompany() + " - " + lead.getName())
                 .customerId(customerId)
-                .estimatedValue(request.getOpportunityAmount() != null ? 
-                        request.getOpportunityAmount() : 
-                        lead.getEstimatedValue())
+                .estimatedValue(request.getOpportunityAmount() != null ? request.getOpportunityAmount()
+                        : lead.getEstimatedValue())
                 .description(request.getOpportunityDescription())
                 .stage(OpportunityStage.PROSPECTING)
                 .expectedCloseDate(lead.getExpectedCloseDate())
                 .build();
     }
 
-    public LeadConversionResponse toConversionResponse(Long leadId, Long customerId, Long opportunityId, Long contactId) {
+    public LeadConversionResponse toConversionResponse(Long leadId, Long customerId, Long opportunityId,
+            Long contactId) {
         return LeadConversionResponse.builder()
                 .leadId(leadId)
                 .customerId(customerId)

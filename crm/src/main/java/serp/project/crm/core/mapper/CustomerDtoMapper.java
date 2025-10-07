@@ -50,9 +50,9 @@ public class CustomerDtoMapper {
         }
 
         AddressEntity address = null;
-        if (request.getStreet() != null || request.getCity() != null || 
-            request.getState() != null || request.getZipCode() != null || 
-            request.getCountry() != null) {
+        if (request.getStreet() != null || request.getCity() != null ||
+                request.getState() != null || request.getZipCode() != null ||
+                request.getCountry() != null) {
             address = AddressEntity.builder()
                     .street(request.getStreet())
                     .city(request.getCity())

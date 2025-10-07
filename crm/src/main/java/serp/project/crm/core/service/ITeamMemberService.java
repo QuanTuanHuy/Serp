@@ -13,9 +13,6 @@ import serp.project.crm.core.domain.enums.TeamMemberStatus;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Team Member Service Interface - Defines business operations for team member management
- */
 public interface ITeamMemberService {
 
     TeamMemberEntity addTeamMember(TeamMemberEntity teamMember, Long tenantId);
@@ -30,7 +27,8 @@ public interface ITeamMemberService {
 
     Pair<List<TeamMemberEntity>, Long> getTeamMembersByRole(String role, Long tenantId, PageRequest pageRequest);
 
-    Pair<List<TeamMemberEntity>, Long> getTeamMembersByStatus(TeamMemberStatus status, Long tenantId, PageRequest pageRequest);
+    Pair<List<TeamMemberEntity>, Long> getTeamMembersByStatus(TeamMemberStatus status, Long tenantId,
+            PageRequest pageRequest);
 
     Optional<TeamMemberEntity> getTeamMemberByTeamAndUser(Long teamId, Long userId, Long tenantId);
 

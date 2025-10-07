@@ -16,9 +16,6 @@ import serp.project.crm.core.domain.dto.request.UpdateContactRequest;
 import serp.project.crm.core.usecase.ContactUseCase;
 import serp.project.crm.kernel.utils.AuthUtils;
 
-/**
- * Contact Controller - REST API endpoints for contact management
- */
 @RestController
 @RequestMapping("/api/v1/contacts")
 @RequiredArgsConstructor

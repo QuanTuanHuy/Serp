@@ -24,6 +24,22 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
     private final ResponseUtils responseUtils;
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<?> handleIllegalArgumentException(IllegalArgumentException ex) {
+        log.warn("Illegal argument: {}", ex.getMessage());
+
+        var response = responseUtils.badRequest(ex.getMessage());
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<?> handleIllegalStateException(IllegalStateException ex) {
+        log.warn("Illegal state: {}", ex.getMessage());
+
+        var response = responseUtils.badRequest(ex.getMessage());
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
     @ExceptionHandler(AppException.class)
     public ResponseEntity<?> handleAppException(AppException ex) {
         log.warn("Application error: Code={}, Message={}", ex.getCode(), ex.getMessage());

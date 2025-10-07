@@ -15,9 +15,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Lead Service Interface - Defines business operations for lead management
- */
 public interface ILeadService {
 
     LeadEntity createLead(LeadEntity lead, Long tenantId);
