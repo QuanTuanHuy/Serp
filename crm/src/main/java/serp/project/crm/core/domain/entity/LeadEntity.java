@@ -104,4 +104,48 @@ public class LeadEntity extends BaseEntity {
                 expectedCloseDate.isBefore(LocalDate.now()) &&
                 !isQualified();
     }
+
+    public void updateFrom(LeadEntity updates) {
+        if (updates.getName() != null)
+            this.name = updates.getName();
+        if (updates.getEmail() != null)
+            this.email = updates.getEmail();
+        if (updates.getPhone() != null)
+            this.phone = updates.getPhone();
+        if (updates.getCompany() != null)
+            this.company = updates.getCompany();
+        if (updates.getJobTitle() != null)
+            this.jobTitle = updates.getJobTitle();
+        if (updates.getLeadSource() != null)
+            this.leadSource = updates.getLeadSource();
+        if (updates.getIndustry() != null)
+            this.industry = updates.getIndustry();
+        if (updates.getCompanySize() != null)
+            this.companySize = updates.getCompanySize();
+        if (updates.getEstimatedValue() != null)
+            this.estimatedValue = updates.getEstimatedValue();
+        if (updates.getLeadStatus() != null)
+            this.leadStatus = updates.getLeadStatus();
+        if (updates.getAssignedTo() != null)
+            this.assignedTo = updates.getAssignedTo();
+        if (updates.getWebsite() != null)
+            this.website = updates.getWebsite();
+        if (updates.getAddress() != null)
+            this.address = updates.getAddress();
+        if (updates.getNotes() != null)
+            this.notes = updates.getNotes();
+        if (updates.getExpectedCloseDate() != null)
+            this.expectedCloseDate = updates.getExpectedCloseDate();
+        if (updates.getProbability() != null)
+            this.probability = updates.getProbability();
+    }
+
+    public void setDefaults() {
+        if (this.leadStatus == null) {
+            this.leadStatus = LeadStatus.NEW;
+        }
+        if (this.probability == null) {
+            this.probability = 0;
+        }
+    }
 }

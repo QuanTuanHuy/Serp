@@ -54,6 +54,7 @@ src/
 │   ├── domain/entity/     # Business entities (TaskEntity, CommentEntity)
 │   ├── domain/dto/        # Request/response DTOs
 │   ├── domain/enum/       # Status, Priority, ActiveStatus enums
+│   ├── mapper             # Entity <-> DTO mappers
 │   ├── port/store/        # Repository interfaces (*_port.go)
 │   ├── port/client/       # Client interfaces (*_port.go)
 │   ├── service/           # Domain services (business rules)

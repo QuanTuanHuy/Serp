@@ -25,4 +25,48 @@ public class TeamMemberEntity extends BaseEntity {
     private Long userId;
     private String role;
     private TeamMemberStatus status;
+
+    public void updateFrom(TeamMemberEntity updates) {
+        if (updates.getName() != null)
+            this.name = updates.getName();
+        if (updates.getEmail() != null)
+            this.email = updates.getEmail();
+        if (updates.getPhone() != null)
+            this.phone = updates.getPhone();
+        if (updates.getRole() != null)
+            this.role = updates.getRole();
+    }
+
+    public void setDefaults() {
+        if (this.status == null) {
+            this.status = TeamMemberStatus.INVITED;
+        }
+    }
+
+    public void confirmMember(Long tenantId) {
+        if (TeamMemberStatus.CONFIRMED.equals(this.status)) {
+            throw new IllegalStateException("Team member is already confirmed");
+        }
+        this.status = TeamMemberStatus.CONFIRMED;
+        this.setTenantId(tenantId);
+    }
+
+    public void archiveMember(Long tenantId) {
+        if (TeamMemberStatus.ARCHIVED.equals(this.status)) {
+            throw new IllegalStateException("Team member is already archived");
+        }
+        this.status = TeamMemberStatus.ARCHIVED;
+        this.setTenantId(tenantId);
+    }
+
+    public void changeRole(String newRole, Long tenantId) {
+        if (newRole == null || newRole.isBlank()) {
+            throw new IllegalArgumentException("Role cannot be empty");
+        }
+        if (newRole.equals(this.role)) {
+            throw new IllegalStateException("Member already has role: " + newRole);
+        }
+        this.role = newRole;
+        this.setTenantId(tenantId);
+    }
 }
