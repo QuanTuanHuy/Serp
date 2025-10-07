@@ -17,13 +17,16 @@ func AccountModule() fx.Option {
 		// Provide adapter
 		fx.Provide(adapter.NewAuthClientAdapter),
 		fx.Provide(adapter.NewUserClientAdapter),
+		fx.Provide(adapter.NewKeycloakClientAdapter),
 
 		// Provide service
 		fx.Provide(service.NewAuthService),
 		fx.Provide(service.NewUserService),
+		fx.Provide(service.NewKeycloakService),
 
 		// Provide controller
 		fx.Provide(controller.NewAuthController),
 		fx.Provide(controller.NewUserController),
+		fx.Provide(controller.NewKeycloakController),
 	)
 }

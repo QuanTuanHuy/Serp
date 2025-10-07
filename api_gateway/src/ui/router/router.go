@@ -21,8 +21,9 @@ type RegisterRoutersIn struct {
 	Engine   *gin.Engine
 	Actuator *actuator.Endpoint
 
-	AuthController *account.AuthController
-	UserController *account.UserController
+	AuthController     *account.AuthController
+	UserController     *account.UserController
+	KeycloakController *account.KeycloakController
 
 	ProjectController   *ptm.ProjectController
 	GroupTaskController *ptm.GroupTaskController
@@ -47,6 +48,7 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		group,
 		p.AuthController,
 		p.UserController,
+		p.KeycloakController,
 	)
 
 	RegisterPtmRoutes(

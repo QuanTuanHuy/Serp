@@ -57,9 +57,11 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
-            cd ${{ secrets.DEPLOY_PATH }}/account
+            cd ${{ secrets.DEPLOY_PATH }}/serp_account
+            export IMAGE_TAG=${{ github.sha }}
             docker compose pull
             docker compose up -d --remove-orphans
+            docker image prune -f
 
   deploy-api-gateway:
     needs: check-changes
@@ -75,8 +77,10 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
             cd ${{ secrets.DEPLOY_PATH }}/api_gateway
+            export IMAGE_TAG=${{ github.sha }}
             docker compose pull
             docker compose up -d --remove-orphans
+            docker image prune -f
 
   deploy-ptm-task:
     needs: check-changes
@@ -92,8 +96,10 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
             cd ${{ secrets.DEPLOY_PATH }}/ptm_task
+            export IMAGE_TAG=${{ github.sha }}
             docker compose pull
             docker compose up -d --remove-orphans
+            docker image prune -f
 
   deploy-ptm-schedule:
     needs: check-changes
@@ -109,8 +115,10 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
             cd ${{ secrets.DEPLOY_PATH }}/ptm_schedule
+            export IMAGE_TAG=${{ github.sha }}
             docker compose pull
             docker compose up -d --remove-orphans
+            docker image prune -f
 
   deploy-ptm-optimization:
     needs: check-changes
@@ -126,8 +134,10 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
             cd ${{ secrets.DEPLOY_PATH }}/ptm_optimization
+            export IMAGE_TAG=${{ github.sha }}
             docker compose pull
             docker compose up -d --remove-orphans
+            docker image prune -f
 
   deploy-crm:
     needs: check-changes
@@ -143,8 +153,10 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
             cd ${{ secrets.DEPLOY_PATH }}/crm
+            export IMAGE_TAG=${{ github.sha }}
             docker compose pull
             docker compose up -d --remove-orphans
+            docker image prune -f
 
   notify-deployment:
     needs: [check-changes, deploy-account, deploy-api-gateway, deploy-ptm-task, deploy-ptm-schedule, deploy-ptm-optimization, deploy-crm]
