@@ -46,11 +46,13 @@ func CoreInfrastructure() fx.Option {
 		// Provide app properties
 		golib.ProvideProps(properties.NewExternalServicePropeties),
 		golib.ProvideProps(properties.NewKeycloakProperties),
+		golib.ProvideProps(properties.NewCorsProperties),
 
 		// Provide utilities
 		fx.Provide(utils.NewJWTUtils),
 		fx.Provide(utils.NewKeycloakJwksUtils),
 		fx.Provide(middleware.NewJWTMiddleware),
+		fx.Provide(middleware.NewCorsMiddleware),
 	)
 }
 

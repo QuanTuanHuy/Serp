@@ -20,8 +20,12 @@ type CorsMiddleware struct {
 }
 
 func NewCorsMiddleware(corsProps *properties.CorsProperties) *CorsMiddleware {
+	config := properties.NewDefaultCorsProperties()
+	if corsProps != nil {
+		config.AllowAllOrigins = corsProps.AllowAllOrigins
+	}
 	return &CorsMiddleware{
-		corsProps: corsProps,
+		corsProps: config,
 	}
 }
 

@@ -14,6 +14,22 @@ app:
     expected-issuer: ${KEYCLOAK_URL}/realms/serp
     expected-audience: 
 
+  cors:
+    allowedOrigins:
+      - https://serp-soict.vercel.app
+    allowedMethods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - OPTIONS
+    allowedHeaders:
+      - Authorization
+      - Content-Type
+    allowCredentials: true
+    maxAge: 3600
+    allowFiles: true 
+
 external:
   services:
     accountService:

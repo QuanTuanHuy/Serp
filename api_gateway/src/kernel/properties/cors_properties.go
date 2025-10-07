@@ -1,5 +1,7 @@
 package properties
 
+import "github.com/golibs-starter/golib/config"
+
 type CorsProperties struct {
 	AllowedOrigins   []string
 	AllowedMethods   []string
@@ -15,10 +17,21 @@ type CorsProperties struct {
 	AllowFiles       bool
 }
 
+func (c CorsProperties) Prefix() string {
+	return "app.cors"
+}
+
+func NewCorsProperties(loader config.Loader) (*CorsProperties, error) {
+	props := CorsProperties{}
+	err := loader.Bind(&props)
+	return &props, err
+}
+
 func NewDefaultCorsProperties() *CorsProperties {
 	return &CorsProperties{
 		AllowedOrigins: []string{
 			"http://localhost:3000",
+			"https://serp-soict.vercel.app",
 		},
 		AllowedMethods: []string{
 			"GET",
