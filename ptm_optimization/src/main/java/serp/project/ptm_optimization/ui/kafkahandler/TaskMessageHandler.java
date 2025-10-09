@@ -16,13 +16,17 @@ import org.springframework.stereotype.Component;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import serp.project.ptm_optimization.core.domain.constant.TopicConstants;
+import serp.project.ptm_optimization.core.domain.dto.message.CreateTaskMessage;
 import serp.project.ptm_optimization.core.domain.dto.message.KafkaBaseDto;
+import serp.project.ptm_optimization.core.usecase.TaskUseCase;
 import serp.project.ptm_optimization.kernel.utils.JsonUtils;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class TaskMessageHandler {
+    private final TaskUseCase taskUseCase;
+
     private final JsonUtils jsonUtils;
 
     @KafkaListener(topics = TopicConstants.PTMTask.TOPIC)
@@ -39,7 +43,10 @@ public class TaskMessageHandler {
             var kafkaBaseDto = jsonUtils.fromJson(record.value(), KafkaBaseDto.class);
             switch (kafkaBaseDto.getCmd()) {
                 case TopicConstants.PTMTask.CREATE_TASK -> {
-                    log.info("Handling create task: {}", kafkaBaseDto);
+                    var createTaskMessage = jsonUtils.fromJson(
+                            jsonUtils.toJson(kafkaBaseDto.getData()),
+                            CreateTaskMessage.class);
+                    handleCreateTask(createTaskMessage, acknowledgement);
                 }
                 case TopicConstants.PTMTask.UPDATE_TASK -> {
                     log.info("Handling update task: {}", kafkaBaseDto);
@@ -51,6 +58,15 @@ public class TaskMessageHandler {
             }
         } catch (Exception e) {
             log.error("Error processing message: {}", e.getMessage());
+        }
+    }
+
+    private void handleCreateTask(CreateTaskMessage message, Acknowledgment acknowledgment) {
+        try {
+            taskUseCase.createTaskFromMessage(message);
+            acknowledgment.acknowledge();
+        } catch (Exception e) {
+            log.error("Error creating task: {}", e.getMessage());
         }
     }
 }
