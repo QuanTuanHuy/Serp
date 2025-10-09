@@ -1,3 +1,8 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
 package serp.project.ptm_optimization.core.domain.dto.message;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;

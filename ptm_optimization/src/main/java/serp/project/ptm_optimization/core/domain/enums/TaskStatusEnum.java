@@ -1,3 +1,8 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
 package serp.project.ptm_optimization.core.domain.enums;
 
 import lombok.Getter;
@@ -9,7 +14,7 @@ public enum TaskStatusEnum {
     DONE("DONE"),
     PENDING("PENDING"),
     ARCHIVED("ARCHIVED");
-    
+
     private final String value;
 
     TaskStatusEnum(String value) {

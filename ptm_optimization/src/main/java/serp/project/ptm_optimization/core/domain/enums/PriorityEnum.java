@@ -1,3 +1,8 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
 package serp.project.ptm_optimization.core.domain.enums;
 
 import lombok.Getter;
