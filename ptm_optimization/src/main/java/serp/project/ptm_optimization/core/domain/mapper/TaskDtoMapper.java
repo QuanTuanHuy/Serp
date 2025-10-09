@@ -11,20 +11,20 @@ import lombok.RequiredArgsConstructor;
 import serp.project.ptm_optimization.core.domain.dto.message.CreateTaskMessage;
 import serp.project.ptm_optimization.core.domain.entity.ParentTaskEntity;
 import serp.project.ptm_optimization.core.domain.entity.TaskEntity;
-import serp.project.ptm_optimization.kernel.utils.ConvertUtils;
+import serp.project.ptm_optimization.core.domain.enums.PriorityEnum;
 
 @Component
 @RequiredArgsConstructor
 public class TaskDtoMapper {
-    private final ConvertUtils convertUtils;
 
     public TaskEntity toEntity(CreateTaskMessage message, ParentTaskEntity parentTask) {
         return TaskEntity.builder()
                 .title(message.getTitle())
-                .status(convertUtils.convertEnumToString(message.getStatus()))
+                .priority(PriorityEnum.calculateWeightOfPriorities(message.getPriority()))
+                .status(message.getStatus())
                 .startDate(message.getStartDate())
                 .endDate(message.getDeadline())
-                .activeStatus(convertUtils.convertEnumToString(message.getActiveStatus()))
+                .activeStatus(message.getActiveStatus())
                 .originalId(message.getTaskId())
                 .duration(message.getDuration())
                 .parentTaskId(parentTask.getId())

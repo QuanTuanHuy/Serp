@@ -9,6 +9,8 @@ import java.util.List;
 
 import org.springframework.stereotype.Component;
 import serp.project.ptm_optimization.core.domain.entity.TaskEntity;
+import serp.project.ptm_optimization.core.domain.enums.ActiveStatusEnum;
+import serp.project.ptm_optimization.core.domain.enums.TaskStatusEnum;
 import serp.project.ptm_optimization.infrastructure.store.model.TaskModel;
 
 @Component
@@ -25,10 +27,10 @@ public class TaskMapper extends BaseMapper {
                 .updatedAt(localDateTimeToLong(model.getUpdatedAt()))
                 .title(model.getTitle())
                 .priority(model.getPriority())
-                .status(model.getStatus())
+                .status(convertStringToEnum(model.getStatus(), TaskStatusEnum.class))
                 .startDate(model.getStartDate())
                 .endDate(model.getEndDate())
-                .activeStatus(model.getActiveStatus())
+                .activeStatus(convertStringToEnum(model.getActiveStatus(), ActiveStatusEnum.class))
                 .originalId(model.getOriginalId())
                 .scheduleTaskId(model.getScheduleTaskId())
                 .taskOrder(model.getTaskOrder())
@@ -53,10 +55,10 @@ public class TaskMapper extends BaseMapper {
                 .updatedAt(longToLocalDateTime(entity.getUpdatedAt()))
                 .title(entity.getTitle())
                 .priority(entity.getPriority())
-                .status(entity.getStatus())
+                .status(convertEnumToDisplayString(entity.getStatus(), "getValue"))
                 .startDate(entity.getStartDate())
                 .endDate(entity.getEndDate())
-                .activeStatus(entity.getActiveStatus())
+                .activeStatus(convertEnumToDisplayString(entity.getActiveStatus(), "getValue"))
                 .originalId(entity.getOriginalId())
                 .scheduleTaskId(entity.getScheduleTaskId())
                 .taskOrder(entity.getTaskOrder())

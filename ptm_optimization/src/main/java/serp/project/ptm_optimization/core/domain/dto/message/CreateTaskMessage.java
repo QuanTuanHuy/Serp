@@ -5,6 +5,8 @@
 
 package serp.project.ptm_optimization.core.domain.dto.message;
 
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import lombok.AllArgsConstructor;
@@ -27,7 +29,7 @@ public class CreateTaskMessage {
     private Long userId;
     private String title;
     private String description;
-    private PriorityEnum[] priority;
+    private List<PriorityEnum> priority;
     private TaskStatusEnum status;
     private Long startDate;
     private Long deadline;

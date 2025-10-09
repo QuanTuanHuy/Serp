@@ -10,6 +10,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import serp.project.ptm_optimization.core.domain.enums.ActiveStatusEnum;
+import serp.project.ptm_optimization.core.domain.enums.TaskStatusEnum;
 
 @Getter
 @Setter
@@ -19,10 +21,10 @@ import lombok.experimental.SuperBuilder;
 public class TaskEntity extends BaseEntity {
     private String title;
     private Integer priority;
-    private String status;
+    private TaskStatusEnum status;
     private Long startDate;
     private Long endDate;
-    private String activeStatus;
+    private ActiveStatusEnum activeStatus;
     private Long originalId;
     private Long scheduleTaskId;
     private Integer taskOrder;

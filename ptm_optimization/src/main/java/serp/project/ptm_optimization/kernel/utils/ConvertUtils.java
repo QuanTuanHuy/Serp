@@ -1,5 +1,6 @@
 package serp.project.ptm_optimization.kernel.utils;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,6 +11,21 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @Slf4j
 public class ConvertUtils {
+
+    public String convertEnumToDisplayString(Enum<?> enumValue, String methodName) {
+        if (enumValue == null || methodName == null) {
+            return null;
+        }
+        try {
+            Method method = enumValue.getClass().getMethod(methodName);
+            Object result = method.invoke(enumValue);
+            return result != null ? result.toString() : null;
+        } catch (Exception e) {
+            log.error("Failed to convert enum to display string using method {}: {}", methodName, e.getMessage());
+            return null;
+        }
+    }
+
     public String convertEnumToString(Enum<?> enumValue) {
         return enumValue != null ? enumValue.name() : null;
     }
