@@ -17,12 +17,7 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        jdbc:
-          batch_size: 50
-          batch_versioned_data: true
-        order_inserts: true
-        order_updates: true
-        generate_statistics: false
+        
   data:
     redis:
       host: ${REDIS_HOST}
@@ -32,6 +27,13 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: ptm-optimization
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-commit-interval: 1000 # Fallback value, currently ignored
 
   security:
     oauth2:
