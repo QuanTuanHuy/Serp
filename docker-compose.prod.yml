@@ -1,0 +1,215 @@
+# Author: QuanTuanHuy
+# Description: Production Docker Compose for Serp Project with HTTPS
+
+version: '3.8'
+
+services:
+  serp-nginx:
+    image: nginx:1.25-alpine
+    container_name: serp-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/letsencrypt:ro
+      - ./nginx/www:/var/www/certbot:ro
+      - ./nginx/logs:/var/log/nginx
+    networks:
+      - serp_net
+    depends_on:
+      - serp-web
+      - serp-api-gateway
+      - serp-keycloak
+
+  serp-redis:
+    image: redis:7.2.4-alpine
+    container_name: serp-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - /home/openerp/serp/data/redis:/data
+    networks:
+      - serp_net
+
+  serp-postgres:
+    image: postgres:latest
+    container_name: serp-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=serpuser
+      - POSTGRES_PASSWORD=serppassword
+    ports:
+      - "5433:5432"
+    volumes:
+      - /home/openerp/serp/data/postgres:/var/lib/postgresql/data
+    networks:
+      - serp_net
+
+  serp-keycloak:
+    image: quay.io/keycloak/keycloak:26.3.3
+    container_name: serp-keycloak
+    command: ["start"]
+    restart: unless-stopped
+    environment:
+      # Database
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://serp-postgres:5432/keycloak
+      KC_DB_USERNAME: serpuser
+      KC_DB_PASSWORD: serppassword
+      
+      # Hostname & Proxy
+      KC_HOSTNAME: auth.serp.texkis.com
+      KC_HOSTNAME_STRICT: false
+      KC_PROXY_HEADERS: xforwarded
+      KC_HTTP_ENABLED: true
+      
+      # Admin
+      KEYCLOAK_ADMIN: serp-admin
+      KEYCLOAK_ADMIN_PASSWORD: serp-admin
+      
+      # Logging
+      KC_LOG_LEVEL: INFO
+      
+    # Don't expose port externally - Nginx will handle it
+    expose:
+      - "8080"
+    volumes:
+      - /home/openerp/serp/data/keycloak/import:/opt/keycloak/data/import
+    networks:
+      - serp_net
+    depends_on:
+      - serp-postgres
+
+  serp-kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: serp-kafka
+    restart: unless-stopped
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@serp-kafka:29093'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+
+      KAFKA_LISTENERS: 'PLAINTEXT://serp-kafka:29092,CONTROLLER://serp-kafka:29093,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://serp-kafka:29092,PLAINTEXT_HOST://localhost:9092'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+    volumes:
+      - /home/openerp/serp/data/kafka:/tmp/kraft-combined-logs
+    networks:
+      - serp_net
+
+  serp-api-gateway:
+    build:
+      context: ./api_gateway
+      dockerfile: Dockerfile
+    container_name: serp-api-gateway
+    restart: unless-stopped
+    environment:
+      - ENV=production
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8080
+      - DB_URL=postgresql://serpuser:serppassword@serp-postgres:5432/serp?sslmode=disable
+      - REDIS_HOST=serp-redis:6379
+      - KAFKA_BOOTSTRAP_SERVERS=serp-kafka:29092
+      - KEYCLOAK_SERVER_URL=https://auth.serp.texkis.com
+      - KEYCLOAK_REALM=serp
+    expose:
+      - "8080"
+    networks:
+      - serp_net
+    depends_on:
+      - serp-postgres
+      - serp-redis
+      - serp-kafka
+      - serp-keycloak
+
+  serp-account:
+    build:
+      context: ./account
+      dockerfile: Dockerfile
+    container_name: serp-account
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=production
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://serp-postgres:5432/serp
+      - SPRING_DATASOURCE_USERNAME=serpuser
+      - SPRING_DATASOURCE_PASSWORD=serppassword
+      - SPRING_DATA_REDIS_HOST=serp-redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=serp-kafka:29092
+      - APP_KEYCLOAK_SERVER_URL=https://auth.serp.texkis.com
+      - APP_KEYCLOAK_REALM=serp
+    expose:
+      - "8081"
+    networks:
+      - serp_net
+    depends_on:
+      - serp-postgres
+      - serp-redis
+      - serp-kafka
+      - serp-keycloak
+
+  serp-crm:
+    build:
+      context: ./crm
+      dockerfile: Dockerfile
+    container_name: serp-crm
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=production
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://serp-postgres:5432/serp
+      - SPRING_DATASOURCE_USERNAME=serpuser
+      - SPRING_DATASOURCE_PASSWORD=serppassword
+      - SPRING_DATA_REDIS_HOST=serp-redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=serp-kafka:29092
+      - APP_KEYCLOAK_SERVER_URL=https://auth.serp.texkis.com
+      - APP_KEYCLOAK_REALM=serp
+    expose:
+      - "8086"
+    networks:
+      - serp_net
+    depends_on:
+      - serp-postgres
+      - serp-redis
+      - serp-kafka
+      - serp-keycloak
+
+  serp-web:
+    build:
+      context: ./serp_web
+      dockerfile: Dockerfile
+    container_name: serp-web
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=https://api.serp.texkis.com
+      - NEXT_PUBLIC_KEYCLOAK_URL=https://auth.serp.texkis.com
+      - NEXT_PUBLIC_KEYCLOAK_REALM=serp
+      - NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=serp-web
+    expose:
+      - "3000"
+    networks:
+      - serp_net
+    depends_on:
+      - serp-api-gateway
+
+networks:
+  serp_net:
+    name: serp_net
+    driver: bridge
