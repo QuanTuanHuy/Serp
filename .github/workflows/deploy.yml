@@ -159,7 +159,7 @@ jobs:
             docker image prune -f
 
   notify-deployment:
-    needs: [check-changes, deploy-account, deploy-api-gateway, deploy-ptm-task, deploy-ptm-schedule, deploy-ptm-optimization, deploy-crm]
+    needs: check-changes
     if: always()
     runs-on: ubuntu-latest
     steps:
