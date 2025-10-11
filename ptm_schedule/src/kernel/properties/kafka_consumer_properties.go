@@ -5,7 +5,7 @@ import (
 )
 
 type KafkaConsumerProperties struct {
-	BootstrapServers []string `default:"localhost:9094"`
+	BootstrapServers []string `default:"localhost:9092"`
 	GroupID          string   `default:"task-manager-group"`
 	AutoOffsetReset  string   `default:"earliest"`
 	EnableAutoCommit bool     `default:"false"`
