@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.AssignRolesToGroupDto;
 import serp.project.account.core.domain.dto.request.CreateGroupDto;
+import serp.project.account.core.domain.dto.request.UserGroupDto;
 import serp.project.account.core.usecase.GroupUseCase;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -55,15 +56,20 @@ public class GroupController {
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
-    @PostMapping("/{groupId}/users/{userId}")
-    public ResponseEntity<?> addUserToGroup(@PathVariable Long groupId, @PathVariable Long userId) {
-        GeneralResponse<?> response = groupUseCase.addUserToGroup(userId, groupId);
+    @PostMapping("/{groupId}/users")
+    public ResponseEntity<?> addUserToGroup(
+            @PathVariable Long groupId,
+            @Valid @RequestBody UserGroupDto request) {
+        request.setGroupId(groupId);
+        GeneralResponse<?> response = groupUseCase.addUserToGroup(request.getUserId(), groupId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
-    @DeleteMapping("/{groupId}/users/{userId}")
-    public ResponseEntity<?> removeUserFromGroup(@PathVariable Long groupId, @PathVariable Long userId) {
-        GeneralResponse<?> response = groupUseCase.removeUserFromGroup(userId, groupId);
+    @DeleteMapping("/{groupId}/users")
+    public ResponseEntity<?> removeUserFromGroup(
+            @PathVariable Long groupId,
+            @Valid @RequestBody UserGroupDto request) {
+        GeneralResponse<?> response = groupUseCase.removeUserFromGroup(request.getUserId(), groupId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 }

@@ -22,6 +22,16 @@ public class CreateRoleDto {
     private Boolean isRealmRole = false;
     private String keycloakClientId;
     private Integer priority;
+    @NotBlank
+    private String scope;
+    private Long scopeId;
+    private Long moduleId;
+    private Long organizationId;
+    private Long departmentId;
+    private Long parentRoleId;
+    @NotBlank
+    private String roleType;
+    private Boolean isDefault;
 
     private List<Long> permissionIds;
 }

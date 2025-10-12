@@ -3,7 +3,6 @@
  * Description: Part of Serp Project
  */
 
-
 package serp.project.account.ui.controller;
 
 import jakarta.validation.Valid;
@@ -18,8 +17,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.GetMapping;
-
-
 
 @RestController
 @RequiredArgsConstructor
@@ -38,6 +35,5 @@ public class PermissionController {
         var response = permissionUseCase.getAllPermissions();
         return ResponseEntity.status(response.getCode()).body(response);
     }
-    
-    
+
 }

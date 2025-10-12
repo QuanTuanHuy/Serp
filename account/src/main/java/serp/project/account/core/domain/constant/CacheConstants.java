@@ -9,4 +9,5 @@ public class CacheConstants {
     public static final Long LONG_EXPIRATION = 86400L; // 24 hours
 
     public static final String ALL_ROLES = "account:roles:all";
+    public static final String ALL_MODULES = "account:modules:all";
 }

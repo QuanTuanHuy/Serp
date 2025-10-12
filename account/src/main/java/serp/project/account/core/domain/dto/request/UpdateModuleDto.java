@@ -16,4 +16,13 @@ public class UpdateModuleDto {
     private String description;
     @NotBlank
     private String keycloakClientId;
+    private String category;
+    private String icon;
+    private Integer displayOrder;
+    private String moduleType;
+    private Boolean isGlobal;
+    private Long organizationId;
+    private Boolean isFree;
+    private String pricingModel;
+    private String status;
 }

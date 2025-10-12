@@ -9,6 +9,8 @@ import java.util.List;
 
 import serp.project.account.core.domain.dto.request.CreateRoleDto;
 import serp.project.account.core.domain.entity.RoleEntity;
+import serp.project.account.core.domain.enums.RoleScope;
+import serp.project.account.core.domain.enums.RoleType;
 
 public interface IRoleService {
     RoleEntity createRole(CreateRoleDto request);
@@ -20,6 +22,10 @@ public interface IRoleService {
     List<RoleEntity> getAllRoles();
 
     List<RoleEntity> getRolesByGroupId(Long groupId);
+
+    List<RoleEntity> getRolesByScope(RoleScope scope);
+
+    List<RoleEntity> getRolesByScopeAndTypeList(RoleScope scope, List<RoleType> types);
 
     void addPermissionsToRole(Long roleId, List<Long> permissionIds);
 }

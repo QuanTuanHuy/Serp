@@ -7,7 +7,9 @@ import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.CreateModuleDto;
 import serp.project.account.core.domain.dto.request.UpdateModuleDto;
+import serp.project.account.core.domain.entity.UserModuleAccessEntity;
 import serp.project.account.core.service.IModuleService;
+import serp.project.account.core.service.IUserModuleAccessService;
 import serp.project.account.kernel.utils.ResponseUtils;
 
 @Service
@@ -15,6 +17,7 @@ import serp.project.account.kernel.utils.ResponseUtils;
 @Slf4j
 public class ModuleUseCase {
     private final IModuleService moduleService;
+    private final IUserModuleAccessService userModuleAccessService;
 
     private final ResponseUtils responseUtils;
 
@@ -57,6 +60,29 @@ public class ModuleUseCase {
             return responseUtils.success(modules);
         } catch (Exception e) {
             log.error("Error retrieving modules: {}", e.getMessage());
+            throw e;
+        }
+    }
+
+    public GeneralResponse<?> userRegisterModule(Long userId, Long moduleId, Long organizationId) {
+        try {
+            // User tự đăng ký, grantedBy chính là userId
+            UserModuleAccessEntity access = userModuleAccessService
+                    .registerUserToModule(userId, moduleId, organizationId, userId);
+
+            return responseUtils.success(access);
+        } catch (Exception e) {
+            log.error("Error registering user to module: {}", e.getMessage());
+            throw e;
+        }
+    }
+
+    public GeneralResponse<?> getUserModules(Long userId, Long organizationId) {
+        try {
+            var accesses = userModuleAccessService.getUserModuleAccesses(userId, organizationId);
+            return responseUtils.success(accesses);
+        } catch (Exception e) {
+            log.error("Error getting user modules: {}", e.getMessage());
             throw e;
         }
     }

@@ -14,5 +14,10 @@ import serp.project.account.infrastructure.store.model.ModuleModel;
 @Repository
 public interface IModuleRepository extends IBaseRepository<ModuleModel> {
     Optional<ModuleModel> findByModuleName(String moduleName);
+
+    Optional<ModuleModel> findByCode(String code);
+
     boolean existsByModuleName(String moduleName);
+
+    boolean existsByCode(String code);
 }

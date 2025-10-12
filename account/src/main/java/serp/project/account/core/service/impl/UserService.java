@@ -159,4 +159,15 @@ public class UserService implements IUserService {
             userRolePort.saveAll(newUserRoles);
         }
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public UserEntity updateUser(Long userId, UserEntity update) {
+        UserEntity user = userPort.getUserById(userId);
+        if (user == null) {
+            throw new AppException(Constants.ErrorMessage.USER_NOT_FOUND);
+        }
+        user = userMapper.updateUserMapper(user, update);
+        return userPort.save(user);
+    }
 }
