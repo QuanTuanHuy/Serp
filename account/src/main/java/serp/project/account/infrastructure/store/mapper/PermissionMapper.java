@@ -10,24 +10,30 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
+import lombok.RequiredArgsConstructor;
 import serp.project.account.core.domain.dto.request.CreatePermissionDto;
 import serp.project.account.core.domain.entity.PermissionEntity;
+import serp.project.account.core.domain.enums.PermissionAction;
 import serp.project.account.infrastructure.store.model.PermissionModel;
+import serp.project.account.kernel.utils.ConvertUtils;
 
 @Component
+@RequiredArgsConstructor
 public class PermissionMapper extends BaseMapper {
-    
+
+    private final ConvertUtils convertUtils;
+
     public PermissionEntity toEntity(PermissionModel model) {
         if (model == null) {
             return null;
         }
-        
+
         return PermissionEntity.builder()
                 .id(model.getId())
                 .name(model.getName())
                 .description(model.getDescription())
                 .resource(model.getResource())
-                .action(model.getAction())
+                .action(convertUtils.convertStringToEnum(model.getAction(), PermissionAction.class))
                 .createdAt(localDateTimeToLong(model.getCreatedAt()))
                 .updatedAt(localDateTimeToLong(model.getUpdatedAt()))
                 .build();
@@ -37,13 +43,13 @@ public class PermissionMapper extends BaseMapper {
         if (entity == null) {
             return null;
         }
-        
+
         return PermissionModel.builder()
                 .id(entity.getId())
                 .name(entity.getName())
                 .description(entity.getDescription())
                 .resource(entity.getResource())
-                .action(entity.getAction())
+                .action(convertUtils.convertEnumToString(entity.getAction()))
                 .createdAt(longToLocalDateTime(entity.getCreatedAt()))
                 .updatedAt(longToLocalDateTime(entity.getUpdatedAt()))
                 .build();
@@ -53,7 +59,7 @@ public class PermissionMapper extends BaseMapper {
         if (models == null) {
             return null;
         }
-        
+
         return models.stream()
                 .map(this::toEntity)
                 .collect(Collectors.toList());
@@ -63,7 +69,7 @@ public class PermissionMapper extends BaseMapper {
         if (entities == null) {
             return null;
         }
-        
+
         return entities.stream()
                 .map(this::toModel)
                 .collect(Collectors.toList());
@@ -74,7 +80,7 @@ public class PermissionMapper extends BaseMapper {
                 .name(request.getName())
                 .description(request.getDescription())
                 .resource(request.getResource())
-                .action(request.getAction())
+                .action(convertUtils.convertStringToEnum(request.getAction(), PermissionAction.class))
                 .build();
     }
 }

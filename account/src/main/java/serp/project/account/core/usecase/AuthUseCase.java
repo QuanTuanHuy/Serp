@@ -55,10 +55,12 @@ public class AuthUseCase {
             var user = userService.createUser(request);
 
             var organization = organizationService.createOrganization(request.getOrganization());
-            var ownerRole = roleService.getOrCreateOrganizationRole(RoleEnum.ORGANIZATION_OWNER.getRole());
-            var memberRole = roleService.getOrCreateOrganizationRole(RoleEnum.ORGANIZATION_MEMBER.getRole());
+            var ownerRole = roleService.getOrCreateOrganizationRole(RoleEnum.ORG_OWNER.getRoleName());
+            var adminRole = roleService.getOrCreateOrganizationRole(RoleEnum.ORG_ADMIN.getRoleName());
+            var memberRole = roleService.getOrCreateOrganizationRole(RoleEnum.ORG_USER.getRoleName());
             organizationService.assignOrganizationToUser(organization.getId(), user.getId(), ownerRole.getId());
             organizationService.assignOrganizationToUser(organization.getId(), user.getId(), memberRole.getId());
+            organizationService.assignOrganizationToUser(organization.getId(), user.getId(), adminRole.getId());
 
             var createUserKeycloak = userMapper.createUserMapper(user, organization.getId(), request);
             String userKeycloakId = keycloakUserService.createUser(createUserKeycloak);

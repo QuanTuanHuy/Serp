@@ -5,6 +5,8 @@
 
 package serp.project.ptm_optimization.ui.kafkahandler;
 
+import java.time.Duration;
+
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
@@ -66,6 +68,7 @@ public class TaskMessageHandler {
             acknowledgment.acknowledge();
         } catch (Exception e) {
             log.error("Error creating task: {}", e.getMessage());
+            acknowledgment.nack(Duration.ofSeconds(10));
         }
     }
 }
