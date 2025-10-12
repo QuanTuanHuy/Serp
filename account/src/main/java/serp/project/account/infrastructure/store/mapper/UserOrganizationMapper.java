@@ -70,7 +70,8 @@ public class UserOrganizationMapper extends BaseMapper {
                 .collect(Collectors.toList());
     }
 
-    public UserOrganizationEntity assignUserOrganizationMapper(Long userId, Long organizationId, Long roleId) {
+    public UserOrganizationEntity assignUserOrganizationMapper(Long userId, Long organizationId, Long roleId,
+            Boolean isDefault) {
         if (userId == null || organizationId == null || roleId == null) {
             return null;
         }
@@ -79,7 +80,7 @@ public class UserOrganizationMapper extends BaseMapper {
                 .userId(userId)
                 .organizationId(organizationId)
                 .roleId(roleId)
-                .isDefault(false)
+                .isDefault(isDefault)
                 .build();
     }
 }

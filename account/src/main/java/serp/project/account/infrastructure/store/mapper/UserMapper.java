@@ -32,6 +32,15 @@ public class UserMapper extends BaseMapper {
                 .lastName(model.getLastName())
                 .phoneNumber(model.getPhoneNumber())
                 .keycloakId(model.getKeycloakId())
+                .isSuperAdmin(model.getIsSuperAdmin())
+                .primaryOrganizationId(model.getPrimaryOrganizationId())
+                .primaryDepartmentId(model.getPrimaryDepartmentId())
+                .userType(model.getUserType())
+                .status(model.getStatus())
+                .lastLoginAt(model.getLastLoginAt())
+                .avatarUrl(model.getAvatarUrl())
+                .timezone(model.getTimezone())
+                .preferredLanguage(model.getPreferredLanguage())
                 .createdAt(localDateTimeToLong(model.getCreatedAt()))
                 .updatedAt(localDateTimeToLong(model.getUpdatedAt()))
                 .build();
@@ -49,6 +58,15 @@ public class UserMapper extends BaseMapper {
                 .lastName(entity.getLastName())
                 .phoneNumber(entity.getPhoneNumber())
                 .keycloakId(entity.getKeycloakId())
+                .isSuperAdmin(entity.getIsSuperAdmin())
+                .primaryOrganizationId(entity.getPrimaryOrganizationId())
+                .primaryDepartmentId(entity.getPrimaryDepartmentId())
+                .userType(entity.getUserType())
+                .status(entity.getStatus())
+                .lastLoginAt(entity.getLastLoginAt())
+                .avatarUrl(entity.getAvatarUrl())
+                .timezone(entity.getTimezone())
+                .preferredLanguage(entity.getPreferredLanguage())
                 .createdAt(longToLocalDateTime(entity.getCreatedAt()))
                 .updatedAt(longToLocalDateTime(entity.getUpdatedAt()))
                 .build();
@@ -114,6 +132,10 @@ public class UserMapper extends BaseMapper {
     public UserEntity updateUserMapper(UserEntity existing, UserEntity update) {
         if (existing == null || update == null) {
             return existing;
+        }
+
+        if (update.getEmail() != null && !update.getEmail().trim().isEmpty()) {
+            existing.setEmail(update.getEmail());
         }
 
         if (update.getFirstName() != null && !update.getFirstName().trim().isEmpty()) {

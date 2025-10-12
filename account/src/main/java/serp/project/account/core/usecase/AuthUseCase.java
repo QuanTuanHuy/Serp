@@ -19,14 +19,11 @@ import serp.project.account.core.domain.dto.request.RevokeTokenRequest;
 import serp.project.account.core.domain.entity.OrganizationEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.UserEntity;
-import serp.project.account.core.domain.enums.GroupEnum;
-import serp.project.account.core.domain.enums.RoleEnum;
 import serp.project.account.core.domain.enums.RoleScope;
 import serp.project.account.core.domain.enums.UserStatus;
 import serp.project.account.core.domain.enums.UserType;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.*;
-import serp.project.account.core.service.impl.GroupService;
 import serp.project.account.infrastructure.store.mapper.UserMapper;
 import serp.project.account.kernel.utils.CollectionUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
@@ -45,8 +42,6 @@ public class AuthUseCase {
     private final IKeycloakUserService keycloakUserService;
     private final IRoleService roleService;
     private final ITokenService tokenService;
-    private final GroupService groupService;
-    private final IKeycloakGroupService keycloakGroupService;
 
     private final ResponseUtils responseUtils;
 
@@ -54,41 +49,54 @@ public class AuthUseCase {
 
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> registerUser(CreateUserDto request) {
+        String userKeycloakId = null;
         try {
-            var group = groupService.getGroupByName(GroupEnum.DEFAULT_SERP_GROUP.getName());
-            if (group == null) {
+            var orgRoles = roleService.getRolesByScope(RoleScope.ORGANIZATION);
+            if (CollectionUtils.isEmpty(orgRoles)) {
+                log.error("No organization roles found. Check why?");
                 return responseUtils.internalServerError(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
             }
 
             request.setRoleIds(Collections.emptyList());
-            var user = userService.createUser(request);
+            UserEntity user = userService.createUser(request);
 
-            var organization = organizationService.createOrganization(request.getOrganization());
-            var ownerRole = roleService.getOrCreateOrganizationRole(RoleEnum.ORG_OWNER.getRoleName());
-            var adminRole = roleService.getOrCreateOrganizationRole(RoleEnum.ORG_ADMIN.getRoleName());
-            var memberRole = roleService.getOrCreateOrganizationRole(RoleEnum.ORG_USER.getRoleName());
-            organizationService.assignOrganizationToUser(organization.getId(), user.getId(), ownerRole.getId());
-            organizationService.assignOrganizationToUser(organization.getId(), user.getId(), memberRole.getId());
-            organizationService.assignOrganizationToUser(organization.getId(), user.getId(), adminRole.getId());
+            OrganizationEntity organization = organizationService.createOrganization(user.getId(),
+                    request.getOrganization());
+            log.info("Organization id: {}", organization.getId());
 
-            var createUserKeycloak = userMapper.createUserMapper(user, organization.getId(), request);
-            String userKeycloakId = keycloakUserService.createUser(createUserKeycloak);
-            userService.updateKeycloakUser(user.getId(), userKeycloakId);
+            var keycloakUser = userMapper.createUserMapper(user, organization.getId(), request);
+            userKeycloakId = keycloakUserService.createUser(keycloakUser);
 
-            keycloakGroupService.addUserToGroup(userKeycloakId, group.getKeycloakGroupId());
-            groupService.addUserToGroup(user.getId(), group.getId());
+            user.setKeycloakId(userKeycloakId);
+            user.setPrimaryOrganizationId(organization.getId());
+            user.setStatus(UserStatus.ACTIVE);
+            user.setUserType(UserType.OWNER);
 
-            var roles = roleService.getRolesByGroupId(group.getId());
-            if (!CollectionUtils.isEmpty(roles)) {
-                userService.addRolesToUser(user.getId(), roles.stream().map(RoleEntity::getId).toList());
-            }
+            user = userService.updateUser(user.getId(), user);
+            final Long userId = user.getId();
+
+            keycloakUserService.assignRealmRoles(userKeycloakId, orgRoles.stream()
+                    .filter(r -> r.getKeycloakClientId() == null)
+                    .map(RoleEntity::getName)
+                    .toList());
+            userService.addRolesToUser(user.getId(), orgRoles.stream().map(RoleEntity::getId).toList());
+
+            orgRoles.forEach(role -> {
+                organizationService.assignOrganizationToUser(organization.getId(), userId, role.getId(), true);
+            });
 
             return responseUtils.success(user);
         } catch (AppException e) {
             log.error("Register user failed: {}", e.getMessage());
+            if (userKeycloakId != null) {
+                keycloakUserService.deleteUser(userKeycloakId);
+            }
             throw e;
         } catch (Exception e) {
             log.error("Unexpected register user error: {}", e.getMessage());
+            if (userKeycloakId != null) {
+                keycloakUserService.deleteUser(userKeycloakId);
+            }
             throw e;
         }
     }
@@ -187,6 +195,7 @@ public class AuthUseCase {
             user.setUserType(UserType.OWNER);
 
             user = userService.updateUser(user.getId(), user);
+            final Long userId = user.getId();
 
             List<RoleEntity> combinedRoles = Stream.concat(
                     systemRoles.stream(),
@@ -197,13 +206,22 @@ public class AuthUseCase {
                     .toList());
             userService.addRolesToUser(user.getId(), combinedRoles.stream().map(RoleEntity::getId).toList());
 
+            orgRoles.forEach(role -> {
+                organizationService.assignOrganizationToUser(organization.getId(), userId, role.getId(), true);
+            });
+
             return responseUtils.success("Super Admin created successfully");
         } catch (AppException e) {
             log.error("Error creating super admin: {}", e.getMessage());
+            if (userKeycloakId != null) {
+                keycloakUserService.deleteUser(userKeycloakId);
+            }
             throw e;
         } catch (Exception e) {
             log.error("Unexpected error when creating super admin: {}", e.getMessage());
-            keycloakUserService.deleteUser(userKeycloakId);
+            if (userKeycloakId != null) {
+                keycloakUserService.deleteUser(userKeycloakId);
+            }
             throw e;
         }
     }

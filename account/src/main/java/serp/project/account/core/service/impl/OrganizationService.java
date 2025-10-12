@@ -44,14 +44,15 @@ public class OrganizationService implements IOrganizationService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void assignOrganizationToUser(Long organizationId, Long userId, Long roleId) {
+    public void assignOrganizationToUser(Long organizationId, Long userId, Long roleId, Boolean isDefault) {
         var existed = userOrganizationPort.getByUserIdAndOrganizationIdAndRoleId(userId, organizationId, roleId);
         if (existed != null) {
             log.warn("User with id {} already assigned to organization with id {} and role id {}", userId,
                     organizationId, roleId);
             return;
         }
-        var userOrganization = userOrganizationMapper.assignUserOrganizationMapper(userId, organizationId, roleId);
+        var userOrganization = userOrganizationMapper.assignUserOrganizationMapper(userId, organizationId, roleId,
+                isDefault);
         userOrganizationPort.save(userOrganization);
     }
 

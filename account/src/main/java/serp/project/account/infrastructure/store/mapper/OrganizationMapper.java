@@ -13,7 +13,10 @@ import org.springframework.stereotype.Component;
 import lombok.RequiredArgsConstructor;
 import serp.project.account.core.domain.dto.request.CreateOrganizationDto;
 import serp.project.account.core.domain.entity.OrganizationEntity;
+import serp.project.account.core.domain.entity.UserEntity;
+import serp.project.account.core.domain.enums.OrganizationStatus;
 import serp.project.account.core.domain.enums.OrganizationType;
+import serp.project.account.core.domain.enums.SubscriptionPlan;
 import serp.project.account.infrastructure.store.model.OrganizationModel;
 import serp.project.account.kernel.utils.ConvertUtils;
 
@@ -115,6 +118,8 @@ public class OrganizationMapper extends BaseMapper {
                 .code(getOrganizationCode(request.getName()))
                 .organizationType(
                         convertUtils.convertStringToEnum(request.getOrganizationType(), OrganizationType.class))
+                .subscriptionPlan(SubscriptionPlan.FREE)
+                .status(OrganizationStatus.TRIAL)
                 .build();
     }
 

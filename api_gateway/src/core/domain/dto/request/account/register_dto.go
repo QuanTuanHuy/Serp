@@ -14,5 +14,6 @@ type RegisterDTO struct {
 }
 
 type CreateOrganizationDTO struct {
-	Name string `json:"name"`
+	Name             string `json:"name"`
+	OrganizationType string `json:"organizationType"`
 }

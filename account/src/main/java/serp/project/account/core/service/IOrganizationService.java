@@ -13,5 +13,5 @@ public interface IOrganizationService {
 
     OrganizationEntity createOrganization(Long ownerId, CreateOrganizationDto request);
 
-    void assignOrganizationToUser(Long organizationId, Long userId, Long roleId);
+    void assignOrganizationToUser(Long organizationId, Long userId, Long roleId, Boolean isDefault);
 }
