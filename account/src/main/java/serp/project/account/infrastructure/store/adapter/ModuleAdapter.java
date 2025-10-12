@@ -36,12 +36,29 @@ public class ModuleAdapter implements IModulePort {
     }
 
     @Override
+    public ModuleEntity getModuleByCode(String code) {
+        return moduleRepository.findByCode(code)
+                .map(moduleMapper::toEntity)
+                .orElse(null);
+    }
+
+    @Override
     public List<ModuleEntity> getAllModules() {
         return moduleMapper.toEntityList(moduleRepository.findAll());
     }
 
     @Override
+    public List<ModuleEntity> getModulesByIds(List<Long> moduleIds) {
+        return moduleMapper.toEntityList(moduleRepository.findAllById(moduleIds));
+    }
+
+    @Override
     public boolean existsByName(String name) {
         return moduleRepository.existsByModuleName(name);
+    }
+
+    @Override
+    public boolean existsByCode(String code) {
+        return moduleRepository.existsByCode(code);
     }
 }

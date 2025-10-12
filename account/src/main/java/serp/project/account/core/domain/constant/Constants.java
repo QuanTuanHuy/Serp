@@ -43,6 +43,8 @@ public class Constants {
         public static final String MODULE_ALREADY_EXISTS = "Module already exists";
         public static final String MODULE_NOT_FOUND = "Module not found";
 
+        public static final String USER_MODULE_ACCESS_NOT_FOUND = "User module access not found";
+
         public static final String CLIENT_NOT_FOUND = "Client not found";
 
         public static final String ORGANIZATION_ALREADY_EXISTS = "Organization already exists";

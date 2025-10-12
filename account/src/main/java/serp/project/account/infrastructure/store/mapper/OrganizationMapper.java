@@ -13,7 +13,6 @@ import org.springframework.stereotype.Component;
 import lombok.RequiredArgsConstructor;
 import serp.project.account.core.domain.dto.request.CreateOrganizationDto;
 import serp.project.account.core.domain.entity.OrganizationEntity;
-import serp.project.account.core.domain.entity.UserEntity;
 import serp.project.account.core.domain.enums.OrganizationStatus;
 import serp.project.account.core.domain.enums.OrganizationType;
 import serp.project.account.core.domain.enums.SubscriptionPlan;

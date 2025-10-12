@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.*;
 import serp.project.account.core.domain.dto.request.CreateModuleDto;
 import serp.project.account.core.domain.dto.request.UpdateModuleDto;
 import serp.project.account.core.usecase.ModuleUseCase;
-import serp.project.account.core.usecase.UserUseCase;
 import serp.project.account.kernel.utils.AuthUtils;
 
 @RequiredArgsConstructor
@@ -15,7 +14,6 @@ import serp.project.account.kernel.utils.AuthUtils;
 @RequestMapping("/api/v1/modules")
 public class ModuleController {
     private final ModuleUseCase moduleUseCase;
-    private final UserUseCase userUseCase;
 
     private final AuthUtils authUtils;
 
@@ -37,17 +35,39 @@ public class ModuleController {
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
-    @PostMapping("/{moduleId}/registration")
-    public ResponseEntity<?> userRegisterModule(@PathVariable Long moduleId) {
-        Long userId = authUtils.getCurrentUserId().isPresent() ? authUtils.getCurrentUserId().get() : null;
-        Long tenantId = authUtils.getCurrentTenantId().isPresent() ? authUtils.getCurrentTenantId().get() : null;
-
-        return null;
-    }
-
     @GetMapping
     public ResponseEntity<?> getAllModules() {
         var response = moduleUseCase.getAllModules();
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PostMapping("/{moduleId}/registration")
+    public ResponseEntity<?> userRegisterModule(@PathVariable Long moduleId) {
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+
+        if (userId == null || tenantId == null) {
+            return ResponseEntity.status(401).body("Unauthorized: Missing user or tenant information");
+        }
+
+        var response = moduleUseCase.userRegisterModule(userId, moduleId, tenantId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @GetMapping("/my-modules")
+    public ResponseEntity<?> getMyModules() {
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+
+        if (userId == null) {
+            return ResponseEntity.status(401).body("Unauthorized: Missing user information");
+        }
+
+        if (tenantId == null) {
+            return ResponseEntity.status(401).body("Unauthorized: Missing tenant information");
+        }
+
+        var response = moduleUseCase.getUserModules(userId, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 }

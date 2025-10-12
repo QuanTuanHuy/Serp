@@ -5,6 +5,7 @@
 
 package serp.project.account.core.domain.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -91,4 +92,52 @@ public class ModuleEntity extends BaseEntity {
     private ModuleStatus status;
 
     private String version;
+
+    @JsonIgnore
+    public boolean isAvailable() {
+        return this.status == ModuleStatus.ACTIVE;
+    }
+
+    @JsonIgnore
+    public boolean isFreeModule() {
+        return Boolean.TRUE.equals(this.isFree);
+    }
+
+    @JsonIgnore
+    public boolean isGlobalModule() {
+        return Boolean.TRUE.equals(this.isGlobal);
+    }
+
+    @JsonIgnore
+    public boolean requiresPayment() {
+        return !isFreeModule();
+    }
+
+    @JsonIgnore
+    public boolean isBeta() {
+        return this.status == ModuleStatus.BETA;
+    }
+
+    @JsonIgnore
+    public boolean isDeprecated() {
+        return this.status == ModuleStatus.DEPRECATED;
+    }
+
+    @JsonIgnore
+    public boolean hasDependencies() {
+        return this.dependsOnModuleIds != null && !this.dependsOnModuleIds.isEmpty();
+    }
+
+    @JsonIgnore
+    public boolean canAccessInOrganization(Long orgId) {
+        if (isGlobalModule()) {
+            return true;
+        }
+        return this.organizationId != null && this.organizationId.equals(orgId);
+    }
+
+    @JsonIgnore
+    public String getDisplayNameWithVersion() {
+        return this.moduleName + " v" + this.version;
+    }
 }

@@ -18,5 +18,11 @@ public interface IModuleService {
 
     ModuleEntity getModuleById(Long moduleId);
 
+    ModuleEntity getModuleByCode(String code);
+
     List<ModuleEntity> getAllModules();
+
+    List<ModuleEntity> getModulesByIds(List<Long> moduleIds);
+
+    void seedPredefinedModules();
 }

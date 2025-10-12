@@ -35,5 +35,10 @@ public enum PricingModel {
     /**
      * Tính theo usage (API calls, storage, etc.)
      */
-    USAGE_BASED
+    USAGE_BASED,
+
+    /**
+     * Miễn phí hoàn toàn
+     */
+    FREE
 }
