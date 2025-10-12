@@ -42,7 +42,6 @@ public class KeycloakUserService implements IKeycloakUserService {
     @Override
     public void assignRealmRoles(String userId, List<String> roleNames) {
         try {
-            log.info("Rolenames: {}", roleNames);
             keycloakPort.assignRealmRoles(userId, roleNames);
         } catch (AppException e) {
             log.error("Error assigning realm roles to user {}: {}", userId, e.getMessage());

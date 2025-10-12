@@ -148,6 +148,7 @@ public class AuthUseCase {
 
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> createSuperAdmin(String email, String password) {
+        String userKeycloakId = null;
         try {
             List<RoleEntity> systemRoles = roleService.getRolesByScope(RoleScope.SYSTEM);
             if (CollectionUtils.isEmpty(systemRoles)) {
@@ -177,7 +178,7 @@ public class AuthUseCase {
             log.info("Organization id: {}", organization.getId());
 
             var keycloakUser = userMapper.createUserMapper(user, organization.getId(), createUserDto);
-            String userKeycloakId = keycloakUserService.createUser(keycloakUser);
+            userKeycloakId = keycloakUserService.createUser(keycloakUser);
 
             user.setKeycloakId(userKeycloakId);
             user.setIsSuperAdmin(true);
@@ -195,7 +196,6 @@ public class AuthUseCase {
                     .map(RoleEntity::getName)
                     .toList());
             userService.addRolesToUser(user.getId(), combinedRoles.stream().map(RoleEntity::getId).toList());
-            log.info("Here 3");
 
             return responseUtils.success("Super Admin created successfully");
         } catch (AppException e) {
@@ -203,6 +203,7 @@ public class AuthUseCase {
             throw e;
         } catch (Exception e) {
             log.error("Unexpected error when creating super admin: {}", e.getMessage());
+            keycloakUserService.deleteUser(userKeycloakId);
             throw e;
         }
     }
