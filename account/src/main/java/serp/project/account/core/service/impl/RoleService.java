@@ -6,6 +6,7 @@
 package serp.project.account.core.service.impl;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -23,6 +24,8 @@ import serp.project.account.core.domain.dto.request.CreateRoleDto;
 import serp.project.account.core.domain.entity.GroupRoleEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.RolePermissionEntity;
+import serp.project.account.core.domain.enums.RoleScope;
+import serp.project.account.core.domain.enums.RoleType;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.port.client.ICachePort;
 import serp.project.account.core.port.store.IGroupRolePort;
@@ -51,7 +54,8 @@ public class RoleService implements IRoleService {
     @Override
     public RoleEntity createRole(CreateRoleDto request) {
         var existedRole = rolePort.getRoleByName(request.getName());
-        if (existedRole != null) {
+        if (existedRole != null &&
+                existedRole.getKeycloakClientId().equals(request.getKeycloakClientId())) {
             throw new AppException(Constants.ErrorMessage.ROLE_ALREADY_EXISTS);
         }
 
@@ -169,6 +173,28 @@ public class RoleService implements IRoleService {
 
     public void clearCacheAllRoles() {
         asyncTaskExecutor.execute(() -> cachePort.deleteFromCache(CacheConstants.ALL_ROLES));
+    }
+
+    @Override
+    public List<RoleEntity> getRolesByScope(RoleScope scope) {
+        List<RoleEntity> roles = getAllRoles();
+        if (CollectionUtils.isEmpty(roles)) {
+            return Collections.emptyList();
+        }
+        return roles.stream()
+                .filter(role -> role.getScope().equals(scope))
+                .toList();
+    }
+
+    @Override
+    public List<RoleEntity> getRolesByScopeAndTypeList(RoleScope scope, List<RoleType> types) {
+        List<RoleEntity> roles = getAllRoles();
+        if (CollectionUtils.isEmpty(roles)) {
+            return Collections.emptyList();
+        }
+        return roles.stream()
+                .filter(role -> role.getScope().equals(scope) && types.contains(role.getRoleType()))
+                .toList();
     }
 
 }

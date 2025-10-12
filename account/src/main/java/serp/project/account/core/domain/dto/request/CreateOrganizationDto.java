@@ -22,4 +22,7 @@ import lombok.NoArgsConstructor;
 public class CreateOrganizationDto {
     @NotBlank
     private String name;
+
+    @NotBlank
+    private String organizationType;
 }

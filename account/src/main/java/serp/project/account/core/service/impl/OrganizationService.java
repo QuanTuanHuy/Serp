@@ -55,4 +55,24 @@ public class OrganizationService implements IOrganizationService {
         userOrganizationPort.save(userOrganization);
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public OrganizationEntity createOrganization(Long ownerId, CreateOrganizationDto request) {
+        try {
+            var existed = organizationPort.getOrganizationByName(request.getName());
+            if (existed != null) {
+                log.error("Organization with name {} already exists", request.getName());
+                throw new AppException(Constants.ErrorMessage.ORGANIZATION_ALREADY_EXISTS);
+            }
+            var organization = organizationMapper.createOrganizationMapper(request);
+            organization.setOwnerId(ownerId);
+            return organizationPort.save(organization);
+        } catch (AppException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error creating organization: {}", e.getMessage());
+            throw new AppException(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 }

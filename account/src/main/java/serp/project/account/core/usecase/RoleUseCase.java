@@ -9,6 +9,8 @@ import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.CreateRoleDto;
 import serp.project.account.core.domain.entity.PermissionEntity;
+import serp.project.account.core.domain.enums.RoleScope;
+import serp.project.account.core.domain.enums.RoleType;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.IKeycloakRoleService;
 import serp.project.account.core.service.IRoleService;
@@ -95,5 +97,20 @@ public class RoleUseCase {
         if (request.getIsRealmRole() == false && DataUtils.isNullOrEmpty(request.getKeycloakClientId())) {
             throw new AppException(Constants.ErrorMessage.CLIENT_NOT_FOUND);
         }
+
+        try {
+            RoleScope.valueOf(request.getScope());
+        } catch (IllegalArgumentException e) {
+            throw new AppException(Constants.ErrorMessage.INVALID_ROLE_SCOPE);
+        }
+
+        try {
+            RoleType.valueOf(request.getRoleType());
+        } catch (IllegalArgumentException e) {
+            throw new AppException(Constants.ErrorMessage.INVALID_ROLE_TYPE);
+        }
+
+        // need check organizationId, departmentId, moduleId exist in db if defined
+        // name in keycloak must be unique
     }
 }

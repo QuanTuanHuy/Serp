@@ -11,13 +11,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
+import serp.project.account.core.domain.dto.request.CreateOrganizationDto;
 import serp.project.account.core.domain.dto.request.CreateUserDto;
 import serp.project.account.core.domain.dto.request.LoginRequest;
 import serp.project.account.core.domain.dto.request.RefreshTokenRequest;
 import serp.project.account.core.domain.dto.request.RevokeTokenRequest;
+import serp.project.account.core.domain.entity.OrganizationEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
+import serp.project.account.core.domain.entity.UserEntity;
 import serp.project.account.core.domain.enums.GroupEnum;
 import serp.project.account.core.domain.enums.RoleEnum;
+import serp.project.account.core.domain.enums.RoleScope;
+import serp.project.account.core.domain.enums.UserStatus;
+import serp.project.account.core.domain.enums.UserType;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.*;
 import serp.project.account.core.service.impl.GroupService;
@@ -26,6 +32,9 @@ import serp.project.account.kernel.utils.CollectionUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -134,6 +143,67 @@ public class AuthUseCase {
         } catch (Exception e) {
             log.error("Unexpected error when revoking token: {}", e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> createSuperAdmin(String email, String password) {
+        try {
+            List<RoleEntity> systemRoles = roleService.getRolesByScope(RoleScope.SYSTEM);
+            if (CollectionUtils.isEmpty(systemRoles)) {
+                log.error("No system roles found, check why?");
+                return null;
+            }
+            List<RoleEntity> orgRoles = roleService.getRolesByScope(RoleScope.ORGANIZATION);
+            if (CollectionUtils.isEmpty(orgRoles)) {
+                log.error("No organization roles found, check why?");
+                return null;
+            }
+
+            var createUserDto = CreateUserDto.builder()
+                    .firstName("Super Admin")
+                    .lastName("Serp")
+                    .email(email)
+                    .password(password)
+                    .organization(CreateOrganizationDto.builder()
+                            .name("Serp Organization")
+                            .build())
+                    .build();
+
+            UserEntity user = userService.createUser(createUserDto);
+
+            OrganizationEntity organization = organizationService.createOrganization(user.getId(),
+                    createUserDto.getOrganization());
+            log.info("Organization id: {}", organization.getId());
+
+            var keycloakUser = userMapper.createUserMapper(user, organization.getId(), createUserDto);
+            String userKeycloakId = keycloakUserService.createUser(keycloakUser);
+
+            user.setKeycloakId(userKeycloakId);
+            user.setIsSuperAdmin(true);
+            user.setPrimaryOrganizationId(organization.getId());
+            user.setStatus(UserStatus.ACTIVE);
+            user.setUserType(UserType.OWNER);
+
+            user = userService.updateUser(user.getId(), user);
+
+            List<RoleEntity> combinedRoles = Stream.concat(
+                    systemRoles.stream(),
+                    orgRoles.stream()).collect(Collectors.toList());
+            keycloakUserService.assignRealmRoles(userKeycloakId, combinedRoles.stream()
+                    .filter(r -> r.getKeycloakClientId() == null)
+                    .map(RoleEntity::getName)
+                    .toList());
+            userService.addRolesToUser(user.getId(), combinedRoles.stream().map(RoleEntity::getId).toList());
+            log.info("Here 3");
+
+            return responseUtils.success("Super Admin created successfully");
+        } catch (AppException e) {
+            log.error("Error creating super admin: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error when creating super admin: {}", e.getMessage());
+            throw e;
         }
     }
 }

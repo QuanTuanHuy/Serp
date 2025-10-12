@@ -19,12 +19,12 @@ import serp.project.account.infrastructure.store.model.UserModel;
 
 @Component
 public class UserMapper extends BaseMapper {
-    
+
     public UserEntity toEntity(UserModel model) {
         if (model == null) {
             return null;
         }
-        
+
         return UserEntity.builder()
                 .id(model.getId())
                 .email(model.getEmail())
@@ -41,7 +41,7 @@ public class UserMapper extends BaseMapper {
         if (entity == null) {
             return null;
         }
-        
+
         return UserModel.builder()
                 .id(entity.getId())
                 .email(entity.getEmail())
@@ -58,7 +58,7 @@ public class UserMapper extends BaseMapper {
         if (models == null) {
             return null;
         }
-        
+
         return models.stream()
                 .map(this::toEntity)
                 .collect(Collectors.toList());
@@ -68,7 +68,7 @@ public class UserMapper extends BaseMapper {
         if (entities == null) {
             return null;
         }
-        
+
         return entities.stream()
                 .map(this::toModel)
                 .collect(Collectors.toList());
@@ -109,5 +109,65 @@ public class UserMapper extends BaseMapper {
                 .updatedAt(user.getUpdatedAt())
                 .roles(user.getRoles().stream().map(RoleEntity::getName).toList())
                 .build();
+    }
+
+    public UserEntity updateUserMapper(UserEntity existing, UserEntity update) {
+        if (existing == null || update == null) {
+            return existing;
+        }
+
+        if (update.getFirstName() != null && !update.getFirstName().trim().isEmpty()) {
+            existing.setFirstName(update.getFirstName());
+        }
+
+        if (update.getLastName() != null && !update.getLastName().trim().isEmpty()) {
+            existing.setLastName(update.getLastName());
+        }
+
+        if (update.getPhoneNumber() != null && !update.getPhoneNumber().trim().isEmpty()) {
+            existing.setPhoneNumber(update.getPhoneNumber());
+        }
+
+        if (update.getIsSuperAdmin() != null) {
+            existing.setIsSuperAdmin(update.getIsSuperAdmin());
+        }
+
+        if (update.getPrimaryOrganizationId() != null) {
+            existing.setPrimaryOrganizationId(update.getPrimaryOrganizationId());
+        }
+
+        if (update.getPrimaryDepartmentId() != null) {
+            existing.setPrimaryDepartmentId(update.getPrimaryDepartmentId());
+        }
+
+        if (update.getUserType() != null) {
+            existing.setUserType(update.getUserType());
+        }
+
+        if (update.getStatus() != null) {
+            existing.setStatus(update.getStatus());
+        }
+
+        if (update.getLastLoginAt() != null) {
+            existing.setLastLoginAt(update.getLastLoginAt());
+        }
+
+        if (update.getAvatarUrl() != null && !update.getAvatarUrl().trim().isEmpty()) {
+            existing.setAvatarUrl(update.getAvatarUrl());
+        }
+
+        if (update.getTimezone() != null && !update.getTimezone().trim().isEmpty()) {
+            existing.setTimezone(update.getTimezone());
+        }
+
+        if (update.getPreferredLanguage() != null && !update.getPreferredLanguage().trim().isEmpty()) {
+            existing.setPreferredLanguage(update.getPreferredLanguage());
+        }
+
+        if (update.getUpdatedAt() != null) {
+            existing.setUpdatedAt(update.getUpdatedAt());
+        }
+
+        return existing;
     }
 }

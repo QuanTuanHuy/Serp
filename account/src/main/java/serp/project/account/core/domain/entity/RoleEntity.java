@@ -96,4 +96,74 @@ public class RoleEntity extends BaseEntity {
      * Danh sách menu displays (UI menus) mà role này có quyền xem
      */
     private List<MenuDisplayEntity> menuDisplays;
+
+    public boolean isSystemRole() {
+        return RoleScope.SYSTEM.equals(this.scope);
+    }
+
+    public boolean isOrganizationRole() {
+        return RoleScope.ORGANIZATION.equals(this.scope);
+    }
+
+    public boolean isModuleRole() {
+        return RoleScope.MODULE.equals(this.scope);
+    }
+
+    public boolean isDepartmentRole() {
+        return RoleScope.DEPARTMENT.equals(this.scope);
+    }
+
+    public boolean hasHigherPriorityThan(RoleEntity other) {
+        if (other == null || this.priority == null || other.priority == null) {
+            return false;
+        }
+        return this.priority < other.priority;
+    }
+
+    public boolean isKeycloakRealmRole() {
+        return Boolean.TRUE.equals(this.isRealmRole);
+    }
+
+    public boolean isKeycloakClientRole() {
+        return Boolean.FALSE.equals(this.isRealmRole);
+    }
+
+    public boolean isAutoAssigned() {
+        return Boolean.TRUE.equals(this.isDefault);
+    }
+
+    public boolean hasPermissions() {
+        return this.permissions != null && !this.permissions.isEmpty();
+    }
+
+    public boolean hasMenuDisplays() {
+        return this.menuDisplays != null && !this.menuDisplays.isEmpty();
+    }
+
+    public int getPermissionCount() {
+        return this.permissions != null ? this.permissions.size() : 0;
+    }
+
+    public int getMenuDisplayCount() {
+        return this.menuDisplays != null ? this.menuDisplays.size() : 0;
+    }
+
+    public boolean hasParentRole() {
+        return this.parentRoleId != null;
+    }
+
+    public boolean isValid() {
+        return this.name != null && !this.name.trim().isEmpty() 
+            && this.scope != null 
+            && this.roleType != null
+            && this.isRealmRole != null
+            && this.priority != null && this.priority > 0;
+    }
+
+    public String getDisplayName() {
+        if (this.description != null && !this.description.trim().isEmpty()) {
+            return this.description;
+        }
+        return this.name;
+    }
 }

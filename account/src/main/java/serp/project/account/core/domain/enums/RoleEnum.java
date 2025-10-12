@@ -61,7 +61,7 @@ public enum RoleEnum {
      * Type: USER
      * Basic access, need module-specific roles for features
      */
-    ORG_USER("ORG_USER", RoleScope.ORGANIZATION, RoleType.USER, 7, true, "Organization User"),
+    ORG_USER("ORG_USER", RoleScope.ORGANIZATION, RoleType.USER, 7, true, "Organization User", true),
 
     /**
      * Organization Viewer - View-only user
@@ -128,12 +128,12 @@ public enum RoleEnum {
     /**
      * CRM Sales Person - Nhân viên bán hàng
      */
-    CRM_SALES_PERSON("CRM_SALES_PERSON", RoleScope.MODULE, RoleType.USER, 7, false, "CRM Sales Person"),
+    CRM_SALES_PERSON("CRM_SALES_PERSON", RoleScope.MODULE, RoleType.USER, 7, false, "CRM Sales Person", true),
 
     /**
      * CRM Viewer - View-only trong CRM
      */
-    CRM_VIEWER("CRM_VIEWER", RoleScope.MODULE, RoleType.VIEWER, 8, false, "CRM Viewer"),
+    CRM_VIEWER("CRM_VIEWER", RoleScope.MODULE, RoleType.VIEWER, 8, false, "CRM Viewer", true),
 
     // PTM (Personal Task Management) Module
     /**
@@ -144,7 +144,7 @@ public enum RoleEnum {
     /**
      * PTM USER
      */
-    PTM_USER("PTM_USER", RoleScope.MODULE, RoleType.USER, 7, false, "PTM User"),
+    PTM_USER("PTM_USER", RoleScope.MODULE, RoleType.USER, 7, false, "PTM User", true),
 
     // Accounting Module (future)
     /**
@@ -189,6 +189,8 @@ public enum RoleEnum {
      */
     private final Boolean isRealmRole;
 
+    private final Boolean isDefault;
+
     /**
      * Role description
      */
@@ -201,6 +203,18 @@ public enum RoleEnum {
         this.type = type;
         this.priority = priority;
         this.isRealmRole = isRealmRole;
+        this.isDefault = false;
+        this.description = description;
+    }
+
+    RoleEnum(String roleName, RoleScope scope, RoleType type, Integer priority,
+            Boolean isRealmRole, String description, Boolean isDefault) {
+        this.roleName = roleName;
+        this.scope = scope;
+        this.type = type;
+        this.priority = priority;
+        this.isRealmRole = isRealmRole;
+        this.isDefault = isDefault;
         this.description = description;
     }
 

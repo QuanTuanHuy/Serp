@@ -15,10 +15,18 @@ import java.util.List;
 
 public interface IUserService {
     UserEntity createUser(CreateUserDto request);
+
+    UserEntity updateUser(Long userId, UserEntity update);
+
     UserEntity getUserByEmail(String email);
+
     UserEntity getUserById(Long userId);
+
     UserProfileResponse getUserProfile(Long userId);
+
     void addRolesToUser(Long userId, List<Long> roleId);
+
     void updateKeycloakUser(Long userId, String keycloakId);
+
     Pair<Long, List<UserEntity>> getUsers(GetUserParams params);
 }
