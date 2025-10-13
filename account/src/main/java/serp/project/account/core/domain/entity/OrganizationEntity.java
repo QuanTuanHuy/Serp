@@ -12,9 +12,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import serp.project.account.core.domain.enums.BillingCycle;
 import serp.project.account.core.domain.enums.OrganizationStatus;
 import serp.project.account.core.domain.enums.OrganizationType;
-import serp.project.account.core.domain.enums.SubscriptionPlan;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -38,9 +38,13 @@ public class OrganizationEntity extends BaseEntity {
 
     private Integer employeeCount;
 
-    private SubscriptionPlan subscriptionPlan;
+    private Long subscriptionPlanId;
 
     private Long subscriptionExpiresAt;
+
+    private BillingCycle currentBillingCycle;
+
+    private Long nextBillingDate;
 
     private OrganizationStatus status;
 

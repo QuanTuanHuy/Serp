@@ -10,9 +10,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import serp.project.account.core.domain.enums.BillingCycle;
 import serp.project.account.core.domain.enums.OrganizationStatus;
 import serp.project.account.core.domain.enums.OrganizationType;
-import serp.project.account.core.domain.enums.SubscriptionPlan;
 
 @Entity
 @Table(name = "organizations")
@@ -47,12 +47,18 @@ public class OrganizationModel extends BaseModel {
     @Column(name = "employee_count")
     private Integer employeeCount;
 
-    @Column(name = "subscription_plan")
-    @Enumerated(EnumType.STRING)
-    private SubscriptionPlan subscriptionPlan;
+    @Column(name = "subscription_plan_id", nullable = false)
+    private Long subscriptionPlanId;
 
     @Column(name = "subscription_expires_at")
     private Long subscriptionExpiresAt;
+
+    @Column(name = "current_billing_cycle", length = 20)
+    @Enumerated(EnumType.STRING)
+    private BillingCycle currentBillingCycle;
+
+    @Column(name = "next_billing_date")
+    private Long nextBillingDate;
 
     @Column(name = "status")
     @Enumerated(EnumType.STRING)
