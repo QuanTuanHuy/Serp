@@ -8,6 +8,8 @@ package serp.project.account.infrastructure.client;
 import io.micrometer.common.util.StringUtils;
 import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.ClientResource;
 import org.keycloak.admin.client.resource.RealmResource;
@@ -31,6 +33,7 @@ import java.util.Objects;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class KeycloakAdapter implements IKeycloakPort {
 
     private final Keycloak keycloakAdmin;
@@ -51,9 +54,12 @@ public class KeycloakAdapter implements IKeycloakPort {
         user.setEmailVerified(request.isEmailVerified());
 
         Map<String, List<String>> attributes = new HashMap<>();
+        log.info("UID: {}, TenantID: {}", request.getUid(), request.getOrgId());
         attributes.put("uid", List.of(request.getUid().toString()));
-        attributes.put("tenant_id", List.of(request.getOrgId().toString()));
+        attributes.put("tid", List.of(request.getOrgId().toString()));
         user.setAttributes(attributes);
+        
+        log.info("Setting user attributes: {}", attributes);
 
         if (!StringUtils.isEmpty(request.getPassword())) {
             CredentialRepresentation credential = new CredentialRepresentation();
@@ -150,5 +156,31 @@ public class KeycloakAdapter implements IKeycloakPort {
         RealmResource realmResource = keycloakAdmin.realm(keycloakProperties.getRealm());
         ClientResource clientResource = realmResource.clients().get(clientUuid);
         return clientResource.getSecret().getValue();
+    }
+
+    @Override
+    public void updateUserAttributes(String userId, Map<String, List<String>> attributes) {
+        RealmResource realmResource = keycloakAdmin.realm(keycloakProperties.getRealm());
+        UserResource userResource = realmResource.users().get(userId);
+        UserRepresentation user = userResource.toRepresentation();
+        
+        if (user.getAttributes() == null) {
+            user.setAttributes(new HashMap<>());
+        }
+        user.getAttributes().putAll(attributes);
+        
+        userResource.update(user);
+        log.info("Updated user {} attributes: {}", userId, attributes);
+    }
+
+    @Override
+    public Map<String, List<String>> getUserAttributes(String userId) {
+        RealmResource realmResource = keycloakAdmin.realm(keycloakProperties.getRealm());
+        UserResource userResource = realmResource.users().get(userId);
+        UserRepresentation user = userResource.toRepresentation();
+        
+        Map<String, List<String>> attributes = user.getAttributes();
+        log.info("User {} attributes: {}", userId, attributes);
+        return attributes;
     }
 }

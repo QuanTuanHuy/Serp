@@ -15,6 +15,7 @@ import serp.project.account.core.port.client.IKeycloakPort;
 import serp.project.account.core.service.IKeycloakUserService;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -72,6 +73,27 @@ public class KeycloakUserService implements IKeycloakUserService {
             keycloakPort.deleteUser(userId);
         } catch (Exception e) {
             log.error("Error deleting user {}: {}", userId, e.getMessage());
+            throw new AppException(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @Override
+    public void updateUserAttributes(String userId, Map<String, List<String>> attributes) {
+        try {
+            keycloakPort.updateUserAttributes(userId, attributes);
+            log.info("Updated attributes for user {}: {}", userId, attributes);
+        } catch (Exception e) {
+            log.error("Error updating attributes for user {}: {}", userId, e.getMessage());
+            throw new AppException(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @Override
+    public Map<String, List<String>> getUserAttributes(String userId) {
+        try {
+            return keycloakPort.getUserAttributes(userId);
+        } catch (Exception e) {
+            log.error("Error getting attributes for user {}: {}", userId, e.getMessage());
             throw new AppException(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
         }
     }
