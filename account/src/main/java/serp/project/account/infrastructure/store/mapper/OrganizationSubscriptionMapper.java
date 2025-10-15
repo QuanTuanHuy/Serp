@@ -72,6 +72,37 @@ public class OrganizationSubscriptionMapper extends BaseMapper {
                 .build();
     }
 
+    public OrganizationSubscriptionEntity createTrialSubscription(Long organizationId, Long planId, serp.project.account.core.domain.enums.BillingCycle billingCycle, Long startDate, Long endDate, Long trialEndsAt, boolean isAutoRenew, java.math.BigDecimal totalAmount, String notes, Long createdBy) {
+        return OrganizationSubscriptionEntity.builder()
+                .organizationId(organizationId)
+                .subscriptionPlanId(planId)
+                .status(serp.project.account.core.domain.enums.SubscriptionStatus.TRIAL)
+                .billingCycle(billingCycle)
+                .startDate(startDate)
+                .endDate(endDate)
+                .trialEndsAt(trialEndsAt)
+                .isAutoRenew(isAutoRenew)
+                .totalAmount(totalAmount)
+                .notes(notes)
+                .createdBy(createdBy)
+                .build();
+    }
+
+    public OrganizationSubscriptionEntity createActiveSubscription(Long organizationId, Long planId, serp.project.account.core.domain.enums.BillingCycle billingCycle, Long startDate, Long endDate, boolean isAutoRenew, java.math.BigDecimal totalAmount, String notes, Long createdBy) {
+        return OrganizationSubscriptionEntity.builder()
+                .organizationId(organizationId)
+                .subscriptionPlanId(planId)
+                .status(serp.project.account.core.domain.enums.SubscriptionStatus.ACTIVE)
+                .billingCycle(billingCycle)
+                .startDate(startDate)
+                .endDate(endDate)
+                .isAutoRenew(isAutoRenew)
+                .totalAmount(totalAmount)
+                .notes(notes)
+                .createdBy(createdBy)
+                .build();
+    }
+
     public List<OrganizationSubscriptionEntity> toEntityList(List<OrganizationSubscriptionModel> models) {
         if (models == null) {
             return null;
