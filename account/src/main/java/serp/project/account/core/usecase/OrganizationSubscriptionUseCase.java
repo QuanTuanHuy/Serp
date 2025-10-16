@@ -24,9 +24,6 @@ public class OrganizationSubscriptionUseCase {
     private final IOrganizationSubscriptionService organizationSubscriptionService;
     private final ResponseUtils responseUtils;
 
-    /**
-     * Organization subscribes to a plan
-     */
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> subscribe(Long organizationId, SubscribeRequest request, Long requestedBy) {
         try {
@@ -34,20 +31,17 @@ public class OrganizationSubscriptionUseCase {
 
             var subscription = organizationSubscriptionService.subscribe(organizationId, request, requestedBy);
 
-            // TODO: Send Kafka event - subscription created
-            // kafkaProducer.sendSubscriptionCreatedEvent(subscription);
+            // TODO Send notification to organization admin
 
-            // TODO: Send notification to organization admin
-            // notificationService.sendSubscriptionConfirmation(organizationId, subscription);
-
-            log.info("[UseCase] Organization {} successfully subscribed to plan {}", organizationId, request.getPlanId());
+            log.info("[UseCase] Organization {} successfully subscribed to plan {}", organizationId,
+                    request.getPlanId());
             return responseUtils.success(subscription);
         } catch (AppException e) {
             log.error("Error subscribing organization {}: {}", organizationId, e.getMessage());
-            return responseUtils.error(e.getCode(), e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Unexpected error when subscribing organization {}: {}", organizationId, e.getMessage());
-            return responseUtils.internalServerError(e.getMessage());
+            throw e;
         }
     }
 
@@ -65,7 +59,8 @@ public class OrganizationSubscriptionUseCase {
             // kafkaProducer.sendTrialStartedEvent(subscription);
 
             // TODO: Send notification
-            // notificationService.sendTrialStartedNotification(organizationId, subscription);
+            // notificationService.sendTrialStartedNotification(organizationId,
+            // subscription);
 
             log.info("[UseCase] Organization {} successfully started trial", organizationId);
             return responseUtils.success(subscription);
@@ -82,14 +77,18 @@ public class OrganizationSubscriptionUseCase {
      * Upgrade subscription to higher plan
      */
     @Transactional(rollbackFor = Exception.class)
-    public GeneralResponse<?> upgradeSubscription(Long organizationId, UpgradeSubscriptionRequest request, Long requestedBy) {
+    public GeneralResponse<?> upgradeSubscription(Long organizationId, UpgradeSubscriptionRequest request,
+            Long requestedBy) {
         try {
-            log.info("[UseCase] Organization {} upgrading subscription to plan {}", organizationId, request.getNewPlanId());
+            log.info("[UseCase] Organization {} upgrading subscription to plan {}", organizationId,
+                    request.getNewPlanId());
 
-            var newSubscription = organizationSubscriptionService.upgradeSubscription(organizationId, request, requestedBy);
+            var newSubscription = organizationSubscriptionService.upgradeSubscription(organizationId, request,
+                    requestedBy);
 
             // TODO: Process payment with proration
-            // paymentService.processUpgradePayment(organizationId, newSubscription, prorationAmount);
+            // paymentService.processUpgradePayment(organizationId, newSubscription,
+            // prorationAmount);
 
             // TODO: Send Kafka event - subscription upgraded
             // kafkaProducer.sendSubscriptionUpgradedEvent(newSubscription);
@@ -97,13 +96,15 @@ public class OrganizationSubscriptionUseCase {
             // TODO: Send notification
             // notificationService.sendUpgradeConfirmation(organizationId, newSubscription);
 
-            log.info("[UseCase] Organization {} successfully upgraded to plan {}", organizationId, request.getNewPlanId());
+            log.info("[UseCase] Organization {} successfully upgraded to plan {}", organizationId,
+                    request.getNewPlanId());
             return responseUtils.success(newSubscription);
         } catch (AppException e) {
             log.error("Error upgrading subscription for organization {}: {}", organizationId, e.getMessage());
             return responseUtils.error(e.getCode(), e.getMessage());
         } catch (Exception e) {
-            log.error("Unexpected error when upgrading subscription for organization {}: {}", organizationId, e.getMessage());
+            log.error("Unexpected error when upgrading subscription for organization {}: {}", organizationId,
+                    e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
     }
@@ -112,25 +113,31 @@ public class OrganizationSubscriptionUseCase {
      * Downgrade subscription to lower plan
      */
     @Transactional(rollbackFor = Exception.class)
-    public GeneralResponse<?> downgradeSubscription(Long organizationId, DowngradeSubscriptionRequest request, Long requestedBy) {
+    public GeneralResponse<?> downgradeSubscription(Long organizationId, DowngradeSubscriptionRequest request,
+            Long requestedBy) {
         try {
-            log.info("[UseCase] Organization {} downgrading subscription to plan {}", organizationId, request.getNewPlanId());
+            log.info("[UseCase] Organization {} downgrading subscription to plan {}", organizationId,
+                    request.getNewPlanId());
 
-            var newSubscription = organizationSubscriptionService.downgradeSubscription(organizationId, request, requestedBy);
+            var newSubscription = organizationSubscriptionService.downgradeSubscription(organizationId, request,
+                    requestedBy);
 
             // TODO: Send Kafka event - subscription downgraded (scheduled)
             // kafkaProducer.sendSubscriptionDowngradedEvent(newSubscription);
 
             // TODO: Send notification
-            // notificationService.sendDowngradeScheduledNotification(organizationId, newSubscription);
+            // notificationService.sendDowngradeScheduledNotification(organizationId,
+            // newSubscription);
 
-            log.info("[UseCase] Organization {} scheduled downgrade to plan {}", organizationId, request.getNewPlanId());
+            log.info("[UseCase] Organization {} scheduled downgrade to plan {}", organizationId,
+                    request.getNewPlanId());
             return responseUtils.success(newSubscription);
         } catch (AppException e) {
             log.error("Error downgrading subscription for organization {}: {}", organizationId, e.getMessage());
             return responseUtils.error(e.getCode(), e.getMessage());
         } catch (Exception e) {
-            log.error("Unexpected error when downgrading subscription for organization {}: {}", organizationId, e.getMessage());
+            log.error("Unexpected error when downgrading subscription for organization {}: {}", organizationId,
+                    e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
     }
@@ -139,14 +146,16 @@ public class OrganizationSubscriptionUseCase {
      * Cancel subscription
      */
     @Transactional(rollbackFor = Exception.class)
-    public GeneralResponse<?> cancelSubscription(Long organizationId, CancelSubscriptionRequest request, Long cancelledBy) {
+    public GeneralResponse<?> cancelSubscription(Long organizationId, CancelSubscriptionRequest request,
+            Long cancelledBy) {
         try {
             log.info("[UseCase] Organization {} cancelling subscription", organizationId);
 
             organizationSubscriptionService.cancelSubscription(organizationId, request, cancelledBy);
 
             // TODO: Send Kafka event - subscription cancelled
-            // kafkaProducer.sendSubscriptionCancelledEvent(organizationId, request.getReason());
+            // kafkaProducer.sendSubscriptionCancelledEvent(organizationId,
+            // request.getReason());
 
             // TODO: Send notification
             // notificationService.sendCancellationConfirmation(organizationId);
@@ -160,7 +169,8 @@ public class OrganizationSubscriptionUseCase {
             log.error("Error cancelling subscription for organization {}: {}", organizationId, e.getMessage());
             return responseUtils.error(e.getCode(), e.getMessage());
         } catch (Exception e) {
-            log.error("Unexpected error when cancelling subscription for organization {}: {}", organizationId, e.getMessage());
+            log.error("Unexpected error when cancelling subscription for organization {}: {}", organizationId,
+                    e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
     }
@@ -190,7 +200,8 @@ public class OrganizationSubscriptionUseCase {
             log.error("Error renewing subscription for organization {}: {}", organizationId, e.getMessage());
             return responseUtils.error(e.getCode(), e.getMessage());
         } catch (Exception e) {
-            log.error("Unexpected error when renewing subscription for organization {}: {}", organizationId, e.getMessage());
+            log.error("Unexpected error when renewing subscription for organization {}: {}", organizationId,
+                    e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
     }
@@ -212,7 +223,8 @@ public class OrganizationSubscriptionUseCase {
             // kafkaProducer.sendSubscriptionActivatedEvent(subscription);
 
             // TODO: Send notification
-            // notificationService.sendActivationNotification(subscription.getOrganizationId(), subscription);
+            // notificationService.sendActivationNotification(subscription.getOrganizationId(),
+            // subscription);
 
             log.info("[UseCase] Successfully activated subscription {}", subscriptionId);
             return responseUtils.success(subscription);
@@ -229,17 +241,20 @@ public class OrganizationSubscriptionUseCase {
      * Reject pending subscription (admin rejection)
      */
     @Transactional(rollbackFor = Exception.class)
-    public GeneralResponse<?> rejectSubscription(Long subscriptionId, RejectSubscriptionRequest request, Long rejectedBy) {
+    public GeneralResponse<?> rejectSubscription(Long subscriptionId, RejectSubscriptionRequest request,
+            Long rejectedBy) {
         try {
             log.info("[UseCase] Rejecting subscription {}", subscriptionId);
 
             organizationSubscriptionService.rejectSubscription(subscriptionId, request.getReason(), rejectedBy);
 
             // TODO: Send Kafka event - subscription rejected
-            // kafkaProducer.sendSubscriptionRejectedEvent(subscriptionId, request.getReason());
+            // kafkaProducer.sendSubscriptionRejectedEvent(subscriptionId,
+            // request.getReason());
 
             // TODO: Send notification
-            // notificationService.sendRejectionNotification(subscriptionId, request.getReason());
+            // notificationService.sendRejectionNotification(subscriptionId,
+            // request.getReason());
 
             log.info("[UseCase] Successfully rejected subscription {}", subscriptionId);
             return responseUtils.success("Subscription rejected successfully");
@@ -258,15 +273,18 @@ public class OrganizationSubscriptionUseCase {
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> extendTrial(Long subscriptionId, ExtendTrialRequest request, Long extendedBy) {
         try {
-            log.info("[UseCase] Extending trial for subscription {} by {} days", subscriptionId, request.getAdditionalDays());
+            log.info("[UseCase] Extending trial for subscription {} by {} days", subscriptionId,
+                    request.getAdditionalDays());
 
-            var subscription = organizationSubscriptionService.extendTrial(subscriptionId, request.getAdditionalDays(), extendedBy);
+            var subscription = organizationSubscriptionService.extendTrial(subscriptionId, request.getAdditionalDays(),
+                    extendedBy);
 
             // TODO: Send Kafka event - trial extended
             // kafkaProducer.sendTrialExtendedEvent(subscription);
 
             // TODO: Send notification
-            // notificationService.sendTrialExtensionNotification(subscription.getOrganizationId(), subscription);
+            // notificationService.sendTrialExtensionNotification(subscription.getOrganizationId(),
+            // subscription);
 
             log.info("[UseCase] Successfully extended trial for subscription {}", subscriptionId);
             return responseUtils.success(subscription);
@@ -320,7 +338,8 @@ public class OrganizationSubscriptionUseCase {
             log.error("Error getting active subscription for organization {}: {}", organizationId, e.getMessage());
             return responseUtils.error(e.getCode(), e.getMessage());
         } catch (Exception e) {
-            log.error("Unexpected error when getting active subscription for organization {}: {}", organizationId, e.getMessage());
+            log.error("Unexpected error when getting active subscription for organization {}: {}", organizationId,
+                    e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
     }
@@ -349,7 +368,8 @@ public class OrganizationSubscriptionUseCase {
             var subscriptions = organizationSubscriptionService.getSubscriptionHistory(organizationId);
             return responseUtils.success(subscriptions);
         } catch (Exception e) {
-            log.error("Unexpected error when getting subscription history for organization {}: {}", organizationId, e.getMessage());
+            log.error("Unexpected error when getting subscription history for organization {}: {}", organizationId,
+                    e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
     }
@@ -401,7 +421,8 @@ public class OrganizationSubscriptionUseCase {
             var hasActive = organizationSubscriptionService.hasActiveSubscription(organizationId);
             return responseUtils.success(hasActive);
         } catch (Exception e) {
-            log.error("Unexpected error when checking active subscription for organization {}: {}", organizationId, e.getMessage());
+            log.error("Unexpected error when checking active subscription for organization {}: {}", organizationId,
+                    e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
     }
@@ -417,7 +438,8 @@ public class OrganizationSubscriptionUseCase {
             log.error("Error getting remaining days for subscription {}: {}", subscriptionId, e.getMessage());
             return responseUtils.error(e.getCode(), e.getMessage());
         } catch (Exception e) {
-            log.error("Unexpected error when getting remaining days for subscription {}: {}", subscriptionId, e.getMessage());
+            log.error("Unexpected error when getting remaining days for subscription {}: {}", subscriptionId,
+                    e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
     }

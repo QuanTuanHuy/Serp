@@ -19,6 +19,7 @@ import serp.project.account.core.domain.enums.SubscriptionStatus;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.port.store.IOrganizationSubscriptionPort;
+import serp.project.account.core.port.store.ISubscriptionPlanPort;
 import serp.project.account.core.service.IOrganizationSubscriptionService;
 import serp.project.account.core.service.ISubscriptionPlanService;
 import serp.project.account.infrastructure.store.mapper.OrganizationSubscriptionMapper;
@@ -34,6 +35,7 @@ import java.util.List;
 public class OrganizationSubscriptionService implements IOrganizationSubscriptionService {
 
     private final IOrganizationSubscriptionPort organizationSubscriptionPort;
+    private final ISubscriptionPlanPort subscriptionPlanPort;
     private final ISubscriptionPlanService subscriptionPlanService;
     private final OrganizationSubscriptionMapper organizationSubscriptionMapper;
 
@@ -42,17 +44,17 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OrganizationSubscriptionEntity subscribe(Long organizationId, SubscribeRequest request, Long requestedBy) {
-        log.info("Organization {} subscribing to plan {}", organizationId, request.getPlanId());
-
-        // Check if organization already has active subscription
         if (hasActiveSubscription(organizationId)) {
             log.error("Organization {} already has active subscription", organizationId);
             throw new AppException(Constants.ErrorMessage.ORGANIZATION_ALREADY_HAS_ACTIVE_SUBSCRIPTION);
         }
 
-        var plan = subscriptionPlanService.getPlanById(request.getPlanId());
+        var plan = subscriptionPlanPort.getById(request.getPlanId())
+                .orElseThrow(() -> {
+                    log.error("Subscription plan not found with ID: {}", request.getPlanId());
+                    return new AppException(Constants.ErrorMessage.SUBSCRIPTION_PLAN_NOT_FOUND);
+                });
 
-        // Determine subscription status based on plan
         SubscriptionStatus status = FREE_PLAN_CODE.equalsIgnoreCase(plan.getPlanCode())
                 ? SubscriptionStatus.ACTIVE
                 : SubscriptionStatus.PENDING;
@@ -62,14 +64,12 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
                 ? request.getBillingCycle()
                 : BillingCycle.MONTHLY;
 
-        // Calculate dates
         Long startDate = now;
         Long endDate = calculateEndDate(startDate, billingCycle);
         Long trialEndsAt = plan.getTrialDays() > 0
                 ? startDate + (plan.getTrialDays() * 24 * 60 * 60 * 1000L)
                 : null;
 
-        // Calculate total amount
         BigDecimal totalAmount = plan.getPriceByBillingCycle(billingCycle.name());
 
         var subscription = OrganizationSubscriptionEntity.builder()
@@ -87,7 +87,6 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
                 .createdAt(now)
                 .build();
 
-        // Auto-activate FREE plan
         if (SubscriptionStatus.ACTIVE.equals(status)) {
             subscription.setActivatedBy(requestedBy);
             subscription.setActivatedAt(now);
@@ -97,8 +96,6 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
 
         log.info("Organization {} subscribed to plan {} with status {}",
                 organizationId, request.getPlanId(), status);
-
-        // TODO: Send Kafka event - subscription created
 
         return savedSubscription;
     }
@@ -112,7 +109,11 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
             throw new AppException(Constants.ErrorMessage.ORGANIZATION_ALREADY_HAS_ACTIVE_SUBSCRIPTION);
         }
 
-        var plan = subscriptionPlanService.getPlanById(planId);
+        var plan = subscriptionPlanPort.getById(planId)
+                .orElseThrow(() -> {
+                    log.error("Subscription plan not found with ID: {}", planId);
+                    return new AppException(Constants.ErrorMessage.SUBSCRIPTION_PLAN_NOT_FOUND);
+                });
 
         if (plan.getTrialDays() == null || plan.getTrialDays() <= 0) {
             throw new AppException(Constants.ErrorMessage.PLAN_DOES_NOT_SUPPORT_TRIAL);
@@ -121,7 +122,6 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
         var now = Instant.now().toEpochMilli();
         Long trialEndsAt = now + (plan.getTrialDays() * 24 * 60 * 60 * 1000L);
 
-        // Use mapper to create trial subscription entity
         var subscription = organizationSubscriptionMapper.createTrialSubscription(
                 organizationId,
                 planId,
@@ -139,10 +139,6 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
         subscription.setCreatedAt(now);
 
         var savedSubscription = organizationSubscriptionPort.save(subscription);
-
-        log.info("Organization {} started trial until {}", organizationId, trialEndsAt);
-
-        // TODO: Send Kafka event - trial started
 
         return savedSubscription;
     }
@@ -353,18 +349,11 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
             throw new AppException(Constants.ErrorMessage.SUBSCRIPTION_NOT_PENDING_APPROVAL);
         }
 
-        var now = Instant.now().toEpochMilli();
-        subscription.setStatus(SubscriptionStatus.CANCELLED);
-        subscription.setCancelledBy(rejectedBy);
-        subscription.setCancelledAt(now);
-        subscription.setCancellationReason(reason);
-        subscription.setUpdatedAt(now);
+        subscription.rejectSubsciption(rejectedBy, reason);
 
         organizationSubscriptionPort.update(subscription);
 
         log.info("Subscription {} rejected. Reason: {}", subscriptionId, reason);
-
-        // TODO: Send Kafka event - subscription rejected
     }
 
     @Override
@@ -381,12 +370,11 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
         var now = Instant.now().toEpochMilli();
         subscription.extendTrial(additionalDays);
         subscription.setUpdatedAt(now);
+        subscription.setUpdatedBy(extendedBy);
 
         var extendedSubscription = organizationSubscriptionPort.update(subscription);
 
         log.info("Trial extended for subscription {} until {}", subscriptionId, extendedSubscription.getTrialEndsAt());
-
-        // TODO: Send Kafka event - trial extended
 
         return extendedSubscription;
     }
@@ -406,7 +394,6 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
 
         log.info("Subscription {} expired", subscriptionId);
 
-        // TODO: Send Kafka event - subscription expired
     }
 
     @Override
@@ -494,9 +481,8 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
         }
     }
 
-    /**
-     * Helper method to calculate end date based on billing cycle
-     */
+    // === Helper Methods ===
+
     private Long calculateEndDate(Long startDate, BillingCycle billingCycle) {
         Instant startInstant = Instant.ofEpochMilli(startDate);
 
