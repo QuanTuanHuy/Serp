@@ -5,10 +5,12 @@
 
 package serp.project.account.infrastructure.store.mapper;
 
+import java.time.Instant;
 import java.util.List;
 
 import org.springframework.stereotype.Component;
 import serp.project.account.core.domain.entity.SubscriptionPlanModuleEntity;
+import serp.project.account.core.domain.enums.LicenseType;
 import serp.project.account.infrastructure.store.model.SubscriptionPlanModuleModel;
 
 @Component
@@ -64,5 +66,22 @@ public class SubscriptionPlanModuleMapper extends BaseMapper {
             return null;
         }
         return entities.stream().map(this::toModel).toList();
+    }
+
+    public SubscriptionPlanModuleEntity buildNewPlanModule(Long planId, Long moduleId,
+            String licenseType, Boolean isIncluded,
+            Integer maxUsersPerModule, Long createdBy) {
+        var now = Instant.now().toEpochMilli();
+        return SubscriptionPlanModuleEntity.builder()
+                .subscriptionPlanId(planId)
+                .moduleId(moduleId)
+                .licenseType(LicenseType.valueOf(licenseType))
+                .isIncluded(isIncluded)
+                .maxUsersPerModule(maxUsersPerModule)
+                .createdBy(createdBy)
+                .createdAt(now)
+                .updatedBy(createdBy)
+                .updatedAt(now)
+                .build();
     }
 }

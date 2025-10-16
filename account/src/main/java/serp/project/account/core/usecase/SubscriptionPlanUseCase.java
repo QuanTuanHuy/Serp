@@ -25,81 +25,53 @@ public class SubscriptionPlanUseCase {
     private final ISubscriptionPlanService subscriptionPlanService;
     private final ResponseUtils responseUtils;
 
-    /**
-     * Create a new subscription plan
-     */
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> createPlan(CreateSubscriptionPlanRequest request, Long createdBy) {
         try {
-            log.info("[UseCase] Creating subscription plan: {}", request.getPlanCode());
-
             var plan = subscriptionPlanService.createPlan(request, createdBy);
-
-            // TODO: Send Kafka event - plan created
-            // kafkaProducer.sendPlanCreatedEvent(plan);
-
             log.info("[UseCase] Successfully created subscription plan with ID: {}", plan.getId());
             return responseUtils.success(plan);
         } catch (AppException e) {
             log.error("Error creating subscription plan: {}", e.getMessage());
-            return responseUtils.error(e.getCode(), e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Unexpected error when creating subscription plan: {}", e.getMessage());
-            return responseUtils.internalServerError(e.getMessage());
+            throw e;
         }
     }
 
-    /**
-     * Update an existing subscription plan
-     */
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> updatePlan(Long planId, UpdateSubscriptionPlanRequest request, Long updatedBy) {
         try {
-            log.info("[UseCase] Updating subscription plan: {}", planId);
-
             var plan = subscriptionPlanService.updatePlan(planId, request, updatedBy);
-
-            // TODO: Send Kafka event - plan updated
-            // kafkaProducer.sendPlanUpdatedEvent(plan);
 
             log.info("[UseCase] Successfully updated subscription plan: {}", planId);
             return responseUtils.success(plan);
         } catch (AppException e) {
             log.error("Error updating subscription plan {}: {}", planId, e.getMessage());
-            return responseUtils.error(e.getCode(), e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Unexpected error when updating subscription plan {}: {}", planId, e.getMessage());
-            return responseUtils.internalServerError(e.getMessage());
+            throw e;
         }
     }
 
-    /**
-     * Delete (deactivate) a subscription plan
-     */
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> deletePlan(Long planId) {
         try {
-            log.info("[UseCase] Deleting subscription plan: {}", planId);
-
             subscriptionPlanService.deletePlan(planId);
-
-            // TODO: Send Kafka event - plan deleted
-            // kafkaProducer.sendPlanDeletedEvent(planId);
 
             log.info("[UseCase] Successfully deleted subscription plan: {}", planId);
             return responseUtils.success("Subscription plan deleted successfully");
         } catch (AppException e) {
             log.error("Error deleting subscription plan {}: {}", planId, e.getMessage());
-            return responseUtils.error(e.getCode(), e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Unexpected error when deleting subscription plan {}: {}", planId, e.getMessage());
-            return responseUtils.internalServerError(e.getMessage());
+            throw e;
         }
     }
 
-    /**
-     * Get plan by ID
-     */
     public GeneralResponse<?> getPlanById(Long planId) {
         try {
             var plan = subscriptionPlanService.getPlanById(planId);
@@ -113,9 +85,6 @@ public class SubscriptionPlanUseCase {
         }
     }
 
-    /**
-     * Get plan by code
-     */
     public GeneralResponse<?> getPlanByCode(String planCode) {
         try {
             var plan = subscriptionPlanService.getPlanByCode(planCode);
@@ -129,9 +98,6 @@ public class SubscriptionPlanUseCase {
         }
     }
 
-    /**
-     * Get all plans
-     */
     public GeneralResponse<?> getAllPlans() {
         try {
             var plans = subscriptionPlanService.getAllPlans();
@@ -142,9 +108,6 @@ public class SubscriptionPlanUseCase {
         }
     }
 
-    /**
-     * Get all active plans
-     */
     public GeneralResponse<?> getAllActivePlans() {
         try {
             var plans = subscriptionPlanService.getAllActivePlans();
@@ -155,22 +118,17 @@ public class SubscriptionPlanUseCase {
         }
     }
 
-    /**
-     * Get custom plan for organization
-     */
     public GeneralResponse<?> getCustomPlanByOrganizationId(Long organizationId) {
         try {
             var plan = subscriptionPlanService.getCustomPlanByOrganizationId(organizationId);
             return responseUtils.success(plan);
         } catch (Exception e) {
-            log.error("Unexpected error when getting custom plan for organization {}: {}", organizationId, e.getMessage());
+            log.error("Unexpected error when getting custom plan for organization {}: {}", organizationId,
+                    e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
     }
 
-    /**
-     * Get standard plans (non-custom)
-     */
     public GeneralResponse<?> getStandardPlans() {
         try {
             var plans = subscriptionPlanService.getStandardPlans();
@@ -181,13 +139,10 @@ public class SubscriptionPlanUseCase {
         }
     }
 
-    /**
-     * Calculate plan price based on billing cycle
-     */
     public GeneralResponse<?> calculatePlanPrice(Long planId, String billingCycle) {
         try {
             var plan = subscriptionPlanService.getPlanById(planId);
-            var price = subscriptionPlanService.calculatePlanPrice(plan, billingCycle);
+            var price = plan.getPriceByBillingCycle(billingCycle);
             return responseUtils.success(price);
         } catch (AppException e) {
             log.error("Error calculating plan price for {}: {}", planId, e.getMessage());
@@ -198,13 +153,10 @@ public class SubscriptionPlanUseCase {
         }
     }
 
-    /**
-     * Calculate yearly savings for a plan
-     */
     public GeneralResponse<?> calculateYearlySavings(Long planId) {
         try {
             var plan = subscriptionPlanService.getPlanById(planId);
-            var savings = subscriptionPlanService.calculateYearlySavings(plan);
+            var savings = plan.getYearlySavings();
             return responseUtils.success(savings);
         } catch (AppException e) {
             log.error("Error calculating yearly savings for plan {}: {}", planId, e.getMessage());
@@ -215,9 +167,6 @@ public class SubscriptionPlanUseCase {
         }
     }
 
-    /**
-     * Add module to plan
-     */
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> addModuleToPlan(Long planId, AddModuleToPlanRequest request, Long createdBy) {
         try {
@@ -229,26 +178,19 @@ public class SubscriptionPlanUseCase {
                     request.getLicenseType().name(),
                     request.getIsIncluded(),
                     request.getMaxUsersPerModule(),
-                    createdBy
-            );
-
-            // TODO: Send Kafka event - module added to plan
-            // kafkaProducer.sendModuleAddedToPlanEvent(planModule);
+                    createdBy);
 
             log.info("[UseCase] Successfully added module {} to plan {}", request.getModuleId(), planId);
             return responseUtils.success(planModule);
         } catch (AppException e) {
             log.error("Error adding module to plan {}: {}", planId, e.getMessage());
-            return responseUtils.error(e.getCode(), e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Unexpected error when adding module to plan {}: {}", planId, e.getMessage());
-            return responseUtils.internalServerError(e.getMessage());
+            throw e;
         }
     }
 
-    /**
-     * Remove module from plan
-     */
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> removeModuleFromPlan(Long planId, Long moduleId) {
         try {
@@ -256,23 +198,17 @@ public class SubscriptionPlanUseCase {
 
             subscriptionPlanService.removeModuleFromPlan(planId, moduleId);
 
-            // TODO: Send Kafka event - module removed from plan
-            // kafkaProducer.sendModuleRemovedFromPlanEvent(planId, moduleId);
-
             log.info("[UseCase] Successfully removed module {} from plan {}", moduleId, planId);
             return responseUtils.success("Module removed from plan successfully");
         } catch (AppException e) {
             log.error("Error removing module from plan {}: {}", planId, e.getMessage());
-            return responseUtils.error(e.getCode(), e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Unexpected error when removing module from plan {}: {}", planId, e.getMessage());
-            return responseUtils.internalServerError(e.getMessage());
+            throw e;
         }
     }
 
-    /**
-     * Get modules for a plan
-     */
     public GeneralResponse<?> getPlanModules(Long planId) {
         try {
             var modules = subscriptionPlanService.getPlanModules(planId);
@@ -283,9 +219,6 @@ public class SubscriptionPlanUseCase {
         }
     }
 
-    /**
-     * Check if module is in plan
-     */
     public GeneralResponse<?> isModuleInPlan(Long planId, Long moduleId) {
         try {
             var exists = subscriptionPlanService.isModuleInPlan(planId, moduleId);

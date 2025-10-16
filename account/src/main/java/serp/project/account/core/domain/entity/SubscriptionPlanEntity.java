@@ -11,6 +11,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import serp.project.account.core.domain.enums.BillingCycle;
 
 import java.math.BigDecimal;
 
@@ -85,5 +86,12 @@ public class SubscriptionPlanEntity extends BaseEntity {
         }
         BigDecimal monthlyTotal = monthlyPrice.multiply(BigDecimal.valueOf(12));
         return monthlyTotal.subtract(yearlyPrice);
+    }
+
+    public BigDecimal getPriceByBillingCycle(String billingCycle) {
+        if (billingCycle == null) {
+            return this.monthlyPrice;
+        }
+        return BillingCycle.MONTHLY.name().equalsIgnoreCase(billingCycle) ? this.monthlyPrice : this.yearlyPrice;
     }
 }

@@ -51,26 +51,26 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
         }
 
         var plan = subscriptionPlanService.getPlanById(request.getPlanId());
-        
+
         // Determine subscription status based on plan
-        SubscriptionStatus status = FREE_PLAN_CODE.equalsIgnoreCase(plan.getPlanCode()) 
-                ? SubscriptionStatus.ACTIVE 
+        SubscriptionStatus status = FREE_PLAN_CODE.equalsIgnoreCase(plan.getPlanCode())
+                ? SubscriptionStatus.ACTIVE
                 : SubscriptionStatus.PENDING;
 
         var now = Instant.now().toEpochMilli();
-        BillingCycle billingCycle = request.getBillingCycle() != null 
-                ? request.getBillingCycle() 
+        BillingCycle billingCycle = request.getBillingCycle() != null
+                ? request.getBillingCycle()
                 : BillingCycle.MONTHLY;
 
         // Calculate dates
         Long startDate = now;
         Long endDate = calculateEndDate(startDate, billingCycle);
-        Long trialEndsAt = plan.getTrialDays() > 0 
-                ? startDate + (plan.getTrialDays() * 24 * 60 * 60 * 1000L) 
+        Long trialEndsAt = plan.getTrialDays() > 0
+                ? startDate + (plan.getTrialDays() * 24 * 60 * 60 * 1000L)
                 : null;
 
         // Calculate total amount
-        BigDecimal totalAmount = subscriptionPlanService.calculatePlanPrice(plan, billingCycle.name());
+        BigDecimal totalAmount = plan.getPriceByBillingCycle(billingCycle.name());
 
         var subscription = OrganizationSubscriptionEntity.builder()
                 .organizationId(organizationId)
@@ -94,12 +94,12 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
         }
 
         var savedSubscription = organizationSubscriptionPort.save(subscription);
-        
-        log.info("Organization {} subscribed to plan {} with status {}", 
+
+        log.info("Organization {} subscribed to plan {} with status {}",
                 organizationId, request.getPlanId(), status);
 
         // TODO: Send Kafka event - subscription created
-        
+
         return savedSubscription;
     }
 
@@ -132,27 +132,26 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
                 true,
                 BigDecimal.ZERO,
                 null,
-                requestedBy
-        );
-        
+                requestedBy);
+
         subscription.setActivatedBy(requestedBy);
         subscription.setActivatedAt(now);
         subscription.setCreatedAt(now);
 
         var savedSubscription = organizationSubscriptionPort.save(subscription);
-        
+
         log.info("Organization {} started trial until {}", organizationId, trialEndsAt);
 
         // TODO: Send Kafka event - trial started
-        
+
         return savedSubscription;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public OrganizationSubscriptionEntity upgradeSubscription(Long organizationId, 
-                                                               UpgradeSubscriptionRequest request, 
-                                                               Long requestedBy) {
+    public OrganizationSubscriptionEntity upgradeSubscription(Long organizationId,
+            UpgradeSubscriptionRequest request,
+            Long requestedBy) {
         log.info("Organization {} upgrading subscription to plan {}", organizationId, request.getNewPlanId());
 
         validateSubscriptionChange(organizationId, request.getNewPlanId());
@@ -167,13 +166,13 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
         }
 
         var now = Instant.now().toEpochMilli();
-        BillingCycle newBillingCycle = request.getBillingCycle() != null 
-                ? request.getBillingCycle() 
+        BillingCycle newBillingCycle = request.getBillingCycle() != null
+                ? request.getBillingCycle()
                 : currentSubscription.getBillingCycle();
 
         // Calculate proration
         BigDecimal prorationAmount = currentSubscription.calculateProration(currentPlan, newPlan);
-        BigDecimal newTotalAmount = subscriptionPlanService.calculatePlanPrice(newPlan, newBillingCycle.name());
+        BigDecimal newTotalAmount = newPlan.getPriceByBillingCycle(newBillingCycle.name());
 
         // Expire current subscription
         currentSubscription.expire();
@@ -182,8 +181,9 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
 
         // Create new subscription (immediate activation) using mapper
         Long newEndDate = calculateEndDate(now, newBillingCycle);
-        boolean isAutoRenew = request.getIsAutoRenew() != null ? request.getIsAutoRenew() : currentSubscription.getIsAutoRenew();
-        
+        boolean isAutoRenew = request.getIsAutoRenew() != null ? request.getIsAutoRenew()
+                : currentSubscription.getIsAutoRenew();
+
         var newSubscription = organizationSubscriptionMapper.createActiveSubscription(
                 organizationId,
                 newPlan.getId(),
@@ -193,28 +193,27 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
                 isAutoRenew,
                 newTotalAmount.subtract(prorationAmount),
                 request.getNotes(),
-                requestedBy
-        );
-        
+                requestedBy);
+
         newSubscription.setActivatedBy(requestedBy);
         newSubscription.setActivatedAt(now);
         newSubscription.setCreatedAt(now);
 
         var savedSubscription = organizationSubscriptionPort.save(newSubscription);
-        
-        log.info("Organization {} upgraded to plan {} with proration: {}", 
+
+        log.info("Organization {} upgraded to plan {} with proration: {}",
                 organizationId, newPlan.getId(), prorationAmount);
 
         // TODO: Send Kafka event - subscription upgraded
-        
+
         return savedSubscription;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public OrganizationSubscriptionEntity downgradeSubscription(Long organizationId, 
-                                                                 DowngradeSubscriptionRequest request, 
-                                                                 Long requestedBy) {
+    public OrganizationSubscriptionEntity downgradeSubscription(Long organizationId,
+            DowngradeSubscriptionRequest request,
+            Long requestedBy) {
         log.info("Organization {} downgrading subscription to plan {}", organizationId, request.getNewPlanId());
 
         validateSubscriptionChange(organizationId, request.getNewPlanId());
@@ -233,8 +232,7 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
         // Downgrade takes effect at end of current billing period
         Long newStartDate = currentSubscription.getEndDate();
         Long newEndDate = calculateEndDate(newStartDate, currentSubscription.getBillingCycle());
-        BigDecimal newTotalAmount = subscriptionPlanService.calculatePlanPrice(
-                newPlan, currentSubscription.getBillingCycle().name());
+        BigDecimal newTotalAmount = newPlan.getPriceByBillingCycle(currentSubscription.getBillingCycle().name());
 
         var newSubscription = OrganizationSubscriptionEntity.builder()
                 .organizationId(organizationId)
@@ -252,12 +250,12 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
                 .build();
 
         var savedSubscription = organizationSubscriptionPort.save(newSubscription);
-        
-        log.info("Organization {} scheduled downgrade to plan {} effective at {}", 
+
+        log.info("Organization {} scheduled downgrade to plan {} effective at {}",
                 organizationId, newPlan.getId(), newStartDate);
 
         // TODO: Send Kafka event - subscription downgraded (scheduled)
-        
+
         return savedSubscription;
     }
 
@@ -275,7 +273,7 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
         subscription.setUpdatedAt(now);
 
         organizationSubscriptionPort.update(subscription);
-        
+
         log.info("Organization {} cancelled subscription. Reason: {}", organizationId, request.getReason());
 
         // TODO: Send Kafka event - subscription cancelled
@@ -287,7 +285,7 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
         log.info("Organization {} renewing subscription", organizationId);
 
         var expiredSubscription = getActiveSubscription(organizationId);
-        
+
         if (!expiredSubscription.isExpired()) {
             throw new AppException(Constants.ErrorMessage.SUBSCRIPTION_NOT_EXPIRED);
         }
@@ -305,17 +303,18 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
                 .endDate(newEndDate)
                 .trialEndsAt(null)
                 .isAutoRenew(expiredSubscription.getIsAutoRenew())
-                .totalAmount(subscriptionPlanService.calculatePlanPrice(plan, expiredSubscription.getBillingCycle().name()))
+                .totalAmount(
+                        plan.getPriceByBillingCycle(expiredSubscription.getBillingCycle().name()))
                 .createdBy(renewedBy)
                 .createdAt(now)
                 .build();
 
         var savedSubscription = organizationSubscriptionPort.save(newSubscription);
-        
+
         log.info("Organization {} renewed subscription", organizationId);
 
         // TODO: Send Kafka event - subscription renewed
-        
+
         return savedSubscription;
     }
 
@@ -335,11 +334,11 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
         subscription.setUpdatedAt(now);
 
         var activatedSubscription = organizationSubscriptionPort.update(subscription);
-        
+
         log.info("Subscription {} activated", subscriptionId);
 
         // TODO: Send Kafka event - subscription activated
-        
+
         return activatedSubscription;
     }
 
@@ -362,7 +361,7 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
         subscription.setUpdatedAt(now);
 
         organizationSubscriptionPort.update(subscription);
-        
+
         log.info("Subscription {} rejected. Reason: {}", subscriptionId, reason);
 
         // TODO: Send Kafka event - subscription rejected
@@ -384,11 +383,11 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
         subscription.setUpdatedAt(now);
 
         var extendedSubscription = organizationSubscriptionPort.update(subscription);
-        
+
         log.info("Trial extended for subscription {} until {}", subscriptionId, extendedSubscription.getTrialEndsAt());
 
         // TODO: Send Kafka event - trial extended
-        
+
         return extendedSubscription;
     }
 
@@ -404,7 +403,7 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
         subscription.setUpdatedAt(now);
 
         organizationSubscriptionPort.update(subscription);
-        
+
         log.info("Subscription {} expired", subscriptionId);
 
         // TODO: Send Kafka event - subscription expired
@@ -461,8 +460,8 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
     }
 
     @Override
-    public BigDecimal calculateProration(OrganizationSubscriptionEntity currentSubscription, 
-                                          Long newPlanId, String newBillingCycle) {
+    public BigDecimal calculateProration(OrganizationSubscriptionEntity currentSubscription,
+            Long newPlanId, String newBillingCycle) {
         var currentPlan = subscriptionPlanService.getPlanById(currentSubscription.getSubscriptionPlanId());
         var newPlan = subscriptionPlanService.getPlanById(newPlanId);
 
@@ -482,7 +481,7 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
         }
 
         var newPlan = subscriptionPlanService.getPlanById(newPlanId);
-        
+
         if (!newPlan.getIsActive()) {
             throw new AppException(Constants.ErrorMessage.PLAN_NOT_ACTIVE);
         }
@@ -500,7 +499,7 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
      */
     private Long calculateEndDate(Long startDate, BillingCycle billingCycle) {
         Instant startInstant = Instant.ofEpochMilli(startDate);
-        
+
         Instant endInstant = BillingCycle.YEARLY.equals(billingCycle)
                 ? startInstant.plus(365, ChronoUnit.DAYS)
                 : startInstant.plus(30, ChronoUnit.DAYS);
