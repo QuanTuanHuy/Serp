@@ -31,7 +31,9 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ onSubmit, onCancel }) 
 
   const validateCardNumber = (value: string) => {
     const cleaned = value.replace(/\s/g, '');
-    return /^\d{16}$/.test(cleaned);
+    // Accept 15-16 digits (AMEX has 15, most others have 16)
+    // In production, use a proper card validation library
+    return /^\d{15,16}$/.test(cleaned);
   };
 
   const validateExpiryDate = (value: string) => {
@@ -44,8 +46,16 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ onSubmit, onCancel }) 
 
   const formatCardNumber = (value: string) => {
     const cleaned = value.replace(/\s/g, '');
-    const chunks = cleaned.match(/.{1,4}/g) || [];
-    return chunks.join(' ');
+    // Basic formatting - in production, detect card type and format accordingly
+    // AMEX: 4-6-5, Others: 4-4-4-4
+    if (cleaned.length <= 4) return cleaned;
+    if (cleaned.length <= 10) {
+      return `${cleaned.slice(0, 4)} ${cleaned.slice(4)}`;
+    }
+    if (cleaned.length <= 14) {
+      return `${cleaned.slice(0, 4)} ${cleaned.slice(4, 10)} ${cleaned.slice(10)}`;
+    }
+    return `${cleaned.slice(0, 4)} ${cleaned.slice(4, 8)} ${cleaned.slice(8, 12)} ${cleaned.slice(12, 16)}`;
   };
 
   const formatExpiryDate = (value: string) => {
@@ -80,7 +90,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ onSubmit, onCancel }) 
     const newErrors: Partial<Record<keyof PaymentInfo, string>> = {};
 
     if (!validateCardNumber(formData.cardNumber)) {
-      newErrors.cardNumber = 'Please enter a valid 16-digit card number';
+      newErrors.cardNumber = 'Please enter a valid card number (15-16 digits)';
     }
     if (!validateExpiryDate(formData.expiryDate)) {
       newErrors.expiryDate = 'Please enter a valid expiry date (MM/YY)';

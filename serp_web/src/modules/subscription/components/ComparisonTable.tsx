@@ -91,12 +91,14 @@ export const ComparisonTable: React.FC<ComparisonTableProps> = ({ plans }) => {
                             <div className='flex items-center gap-2'>
                               <span>{feature.name}</span>
                               {feature.tooltip && (
-                                <span
-                                  className='text-muted-foreground cursor-help'
+                                <button
+                                  type='button'
+                                  className='text-muted-foreground cursor-help inline-flex items-center justify-center w-4 h-4 rounded-full border border-current text-xs'
                                   title={feature.tooltip}
+                                  aria-label={`More information about ${feature.name}`}
                                 >
-                                  ⓘ
-                                </span>
+                                  <span aria-hidden='true'>i</span>
+                                </button>
                               )}
                             </div>
                           </td>

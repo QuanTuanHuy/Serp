@@ -178,7 +178,8 @@ export default function SubscriptionPage() {
   };
 
   const handlePaymentSubmit = (paymentInfo: PaymentInfo) => {
-    console.log('Payment info:', paymentInfo);
+    // Payment info would be sent to payment gateway here
+    // Do NOT log sensitive payment information
     setShowConfirmDialog(true);
   };
 
