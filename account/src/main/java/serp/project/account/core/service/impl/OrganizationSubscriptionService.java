@@ -15,11 +15,13 @@ import serp.project.account.core.domain.dto.request.SubscribeRequest;
 import serp.project.account.core.domain.dto.request.UpgradeSubscriptionRequest;
 import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
 import serp.project.account.core.domain.entity.SubscriptionPlanEntity;
+import serp.project.account.core.domain.entity.SubscriptionPlanModuleEntity;
 import serp.project.account.core.domain.enums.BillingCycle;
 import serp.project.account.core.domain.enums.SubscriptionStatus;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.port.store.IOrganizationSubscriptionPort;
+import serp.project.account.core.port.store.ISubscriptionPlanModulePort;
 import serp.project.account.core.port.store.ISubscriptionPlanPort;
 import serp.project.account.core.service.IOrganizationSubscriptionService;
 import serp.project.account.core.service.ISubscriptionPlanService;
@@ -37,6 +39,8 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
 
     private final IOrganizationSubscriptionPort organizationSubscriptionPort;
     private final ISubscriptionPlanPort subscriptionPlanPort;
+    private final ISubscriptionPlanModulePort subscriptionPlanModulePort;
+    // private final IModuleLicensePort moduleLicensePort;
 
     private final ISubscriptionPlanService subscriptionPlanService;
     private final OrganizationSubscriptionMapper organizationSubscriptionMapper;
@@ -266,6 +270,9 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
         if (!subscription.isPending()) {
             throw new AppException(Constants.ErrorMessage.SUBSCRIPTION_NOT_PENDING_APPROVAL);
         }
+
+        List<SubscriptionPlanModuleEntity> modulesInPlan = subscriptionPlanModulePort
+                .getBySubscriptionPlanId(subscription.getSubscriptionPlanId());
 
         subscription.activate(activatedBy);
         return organizationSubscriptionPort.update(subscription);
