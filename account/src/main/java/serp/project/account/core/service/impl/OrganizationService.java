@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.CreateOrganizationDto;
 import serp.project.account.core.domain.entity.OrganizationEntity;
+import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.port.store.IOrganizationPort;
 import serp.project.account.core.port.store.IUserOrganizationPort;
@@ -74,6 +75,24 @@ public class OrganizationService implements IOrganizationService {
             log.error("Error creating organization: {}", e.getMessage());
             throw new AppException(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    @Override
+    public OrganizationEntity getOrganizationById(Long organizationId) {
+        var organization = organizationPort.getById(organizationId);
+        if (organization == null) {
+            throw new AppException(Constants.ErrorMessage.ORGANIZATION_NOT_FOUND);
+        }
+        return organization;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public OrganizationEntity updateSubscription(Long organizationId,
+            OrganizationSubscriptionEntity subscription) {
+        var organization = getOrganizationById(organizationId);
+        organization.setSubscriptionId(subscription.getId());
+        return organizationPort.save(organization);
     }
 
 }

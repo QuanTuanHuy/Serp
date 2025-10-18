@@ -39,7 +39,7 @@ public class OrganizationMapper extends BaseMapper {
                 .organizationType(model.getOrganizationType())
                 .industry(model.getIndustry())
                 .employeeCount(model.getEmployeeCount())
-                .subscriptionPlanId(model.getSubscriptionPlanId())
+                .subscriptionId(model.getSubscriptionId())
                 .subscriptionExpiresAt(model.getSubscriptionExpiresAt())
                 .currentBillingCycle(model.getCurrentBillingCycle())
                 .nextBillingDate(model.getNextBillingDate())
@@ -72,7 +72,7 @@ public class OrganizationMapper extends BaseMapper {
                 .organizationType(entity.getOrganizationType())
                 .industry(entity.getIndustry())
                 .employeeCount(entity.getEmployeeCount())
-                .subscriptionPlanId(entity.getSubscriptionPlanId())
+                .subscriptionId(entity.getSubscriptionId())
                 .subscriptionExpiresAt(entity.getSubscriptionExpiresAt())
                 .currentBillingCycle(entity.getCurrentBillingCycle())
                 .nextBillingDate(entity.getNextBillingDate())
@@ -120,7 +120,6 @@ public class OrganizationMapper extends BaseMapper {
                 .code(getOrganizationCode(request.getName()))
                 .organizationType(
                         convertUtils.convertStringToEnum(request.getOrganizationType(), OrganizationType.class))
-                .subscriptionPlanId(1L) // TODO: Get FREE plan ID from database
                 .status(OrganizationStatus.TRIAL)
                 .build();
     }
@@ -166,8 +165,8 @@ public class OrganizationMapper extends BaseMapper {
             existing.setEmployeeCount(update.getEmployeeCount());
         }
 
-        if (update.getSubscriptionPlanId() != null) {
-            existing.setSubscriptionPlanId(update.getSubscriptionPlanId());
+        if (update.getSubscriptionId() != null) {
+            existing.setSubscriptionId(update.getSubscriptionId());
         }
 
         if (update.getSubscriptionExpiresAt() != null) {

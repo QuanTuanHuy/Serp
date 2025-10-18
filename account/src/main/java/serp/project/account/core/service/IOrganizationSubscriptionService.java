@@ -10,6 +10,7 @@ import serp.project.account.core.domain.dto.request.UpgradeSubscriptionRequest;
 import serp.project.account.core.domain.dto.request.DowngradeSubscriptionRequest;
 import serp.project.account.core.domain.dto.request.CancelSubscriptionRequest;
 import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
+import serp.project.account.core.domain.entity.SubscriptionPlanEntity;
 import serp.project.account.core.domain.enums.SubscriptionStatus;
 
 import java.math.BigDecimal;
@@ -18,28 +19,36 @@ import java.util.List;
 public interface IOrganizationSubscriptionService {
 
     /**
-     * Subscribe organization to a plan (creates PENDING_APPROVAL subscription for paid plans, ACTIVE for FREE)
+     * Subscribe organization to a plan (creates PENDING_APPROVAL subscription for
+     * paid plans, ACTIVE for FREE)
      */
-    OrganizationSubscriptionEntity subscribe(Long organizationId, SubscribeRequest request, Long requestedBy);
+    OrganizationSubscriptionEntity subscribe(Long organizationId, SubscribeRequest request, Long requestedBy,
+            SubscriptionPlanEntity plan);
 
     /**
      * Start trial period for organization
      */
-    OrganizationSubscriptionEntity startTrial(Long organizationId, Long planId, Long requestedBy);
+    OrganizationSubscriptionEntity startTrial(Long organizationId, SubscriptionPlanEntity plan, Long requestedBy);
 
     /**
      * Upgrade organization subscription to higher plan
      */
-    OrganizationSubscriptionEntity upgradeSubscription(Long organizationId, 
-                                                        UpgradeSubscriptionRequest request, 
-                                                        Long requestedBy);
+    OrganizationSubscriptionEntity upgradeSubscription(
+            Long organizationId,
+            UpgradeSubscriptionRequest request,
+            Long requestedBy,
+            SubscriptionPlanEntity currentPlan,
+            SubscriptionPlanEntity newPlan);
 
     /**
      * Downgrade organization subscription to lower plan
      */
-    OrganizationSubscriptionEntity downgradeSubscription(Long organizationId, 
-                                                          DowngradeSubscriptionRequest request, 
-                                                          Long requestedBy);
+    OrganizationSubscriptionEntity downgradeSubscription(
+            Long organizationId,
+            DowngradeSubscriptionRequest request,
+            Long requestedBy,
+            SubscriptionPlanEntity currentPlan,
+            SubscriptionPlanEntity newPlan);
 
     /**
      * Cancel organization subscription
@@ -49,7 +58,7 @@ public interface IOrganizationSubscriptionService {
     /**
      * Renew organization subscription
      */
-    OrganizationSubscriptionEntity renewSubscription(Long organizationId, Long renewedBy);
+    OrganizationSubscriptionEntity renewSubscription(Long organizationId, Long currentSubscriptionId, Long renewedBy);
 
     /**
      * Activate subscription (admin approval)
@@ -114,8 +123,8 @@ public interface IOrganizationSubscriptionService {
     /**
      * Calculate proration amount for upgrade/downgrade
      */
-    BigDecimal calculateProration(OrganizationSubscriptionEntity currentSubscription, 
-                                   Long newPlanId, String newBillingCycle);
+    BigDecimal calculateProration(OrganizationSubscriptionEntity currentSubscription,
+            Long newPlanId, String newBillingCycle);
 
     /**
      * Get remaining days of subscription
@@ -126,6 +135,16 @@ public interface IOrganizationSubscriptionService {
      * Validate subscription change (upgrade/downgrade)
      */
     void validateSubscriptionChange(Long organizationId, Long newPlanId);
+
+    /**
+     * Validate subscription change
+     */
+    void validateSubscriptionChange(SubscriptionPlanEntity currentPlan, SubscriptionPlanEntity newPlan);
+
+    /**
+     * Validate subscription upgrade
+     */
+    void validateUpgrade(SubscriptionPlanEntity currentPlan, SubscriptionPlanEntity newPlan);
 
     /**
      * Validate subscription cancellation

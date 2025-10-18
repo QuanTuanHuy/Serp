@@ -38,7 +38,7 @@ public class OrganizationEntity extends BaseEntity {
 
     private Integer employeeCount;
 
-    private Long subscriptionPlanId;
+    private Long subscriptionId;
 
     private Long subscriptionExpiresAt;
 

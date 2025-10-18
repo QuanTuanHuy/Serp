@@ -79,6 +79,9 @@ public class Constants {
         public static final String ASSIGN_MENU_DISPLAY_FAILED = "Assign menu display failed";
         public static final String UNASSIGN_MENU_DISPLAY_FAILED = "Unassign menu display failed";
 
+        // Organization errors
+        public static final String ORGANIZATION_NOT_FOUND = "Organization not found";
+
         // Subscription Plan errors
         public static final String SUBSCRIPTION_PLAN_NOT_FOUND = "Subscription plan not found";
         public static final String SUBSCRIPTION_PLAN_CODE_ALREADY_EXISTS = "Subscription plan code already exists";
@@ -93,6 +96,7 @@ public class Constants {
         public static final String SUBSCRIPTION_NOT_EXPIRED = "Subscription not expired";
         public static final String SUBSCRIPTION_NOT_PENDING_APPROVAL = "Subscription not pending approval";
         public static final String SUBSCRIPTION_NOT_IN_TRIAL = "Subscription not in trial";
+        public static final String SUBSCRIPTION_CANNOT_BE_UPGRADED = "Subscription cannot be upgraded";
         public static final String ACTIVE_SUBSCRIPTION_NOT_FOUND = "Active subscription not found";
         public static final String SUBSCRIPTION_NOT_FOUND = "Subscription not found";
         public static final String NO_ACTIVE_SUBSCRIPTION = "No active subscription";

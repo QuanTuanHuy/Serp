@@ -47,8 +47,8 @@ public class OrganizationModel extends BaseModel {
     @Column(name = "employee_count")
     private Integer employeeCount;
 
-    @Column(name = "subscription_plan_id", nullable = false)
-    private Long subscriptionPlanId;
+    @Column(name = "subscription_id", nullable = false)
+    private Long subscriptionId;
 
     @Column(name = "subscription_expires_at")
     private Long subscriptionExpiresAt;

@@ -76,7 +76,7 @@ public class OrganizationSubscriptionEntity extends BaseEntity {
         if (this.trialEndsAt == null) {
             return false;
         }
-        long now = System.currentTimeMillis();
+        long now = Instant.now().toEpochMilli();
         return now < this.trialEndsAt;
     }
 
@@ -85,7 +85,7 @@ public class OrganizationSubscriptionEntity extends BaseEntity {
         if (this.endDate == null) {
             return false; // Perpetual (FREE plan)
         }
-        long now = System.currentTimeMillis();
+        long now = Instant.now().toEpochMilli();
         return now > this.endDate;
     }
 
@@ -130,7 +130,7 @@ public class OrganizationSubscriptionEntity extends BaseEntity {
         if (this.endDate == null) {
             return -1;
         }
-        long now = System.currentTimeMillis();
+        long now = Instant.now().toEpochMilli();
         if (now > this.endDate) {
             return 0;
         }
@@ -148,7 +148,7 @@ public class OrganizationSubscriptionEntity extends BaseEntity {
         if (!isTrial() || this.trialEndsAt == null) {
             return 0;
         }
-        long now = System.currentTimeMillis();
+        long now = Instant.now().toEpochMilli();
         if (now > this.trialEndsAt) {
             return 0;
         }
@@ -175,12 +175,10 @@ public class OrganizationSubscriptionEntity extends BaseEntity {
             return BigDecimal.ZERO;
         }
 
-        // Get current plan price based on billing cycle
         BigDecimal currentPlanPrice = this.billingCycle == BillingCycle.MONTHLY
                 ? currentPlan.getMonthlyPrice()
                 : currentPlan.getYearlyPrice();
 
-        // Get new plan price based on billing cycle
         BigDecimal newPlanPrice = this.billingCycle == BillingCycle.MONTHLY
                 ? newPlan.getMonthlyPrice()
                 : newPlan.getYearlyPrice();
@@ -189,17 +187,12 @@ public class OrganizationSubscriptionEntity extends BaseEntity {
             return BigDecimal.ZERO;
         }
 
-        // Calculate total days in current period
         int totalDays = this.billingCycle == BillingCycle.MONTHLY ? 30 : 365;
 
-        // Calculate unused amount from current plan
         BigDecimal unusedAmount = currentPlanPrice
                 .multiply(BigDecimal.valueOf(remainingDays))
                 .divide(BigDecimal.valueOf(totalDays), 2, RoundingMode.HALF_UP);
 
-        // Proration = unusedAmount - newPlanPrice
-        // If positive: customer gets credit
-        // If negative: customer pays more
         return unusedAmount.subtract(newPlanPrice);
     }
 
@@ -220,7 +213,7 @@ public class OrganizationSubscriptionEntity extends BaseEntity {
         }
         this.status = SubscriptionStatus.ACTIVE;
         this.activatedBy = adminId;
-        this.activatedAt = System.currentTimeMillis();
+        this.activatedAt = Instant.now().toEpochMilli();
     }
 
     @JsonIgnore
@@ -229,6 +222,7 @@ public class OrganizationSubscriptionEntity extends BaseEntity {
             throw new IllegalStateException("Can only expire ACTIVE or TRIAL subscriptions");
         }
         this.status = SubscriptionStatus.EXPIRED;
+        this.setUpdatedAt(Instant.now().toEpochMilli());
     }
 
     @JsonIgnore
@@ -238,8 +232,9 @@ public class OrganizationSubscriptionEntity extends BaseEntity {
         }
         this.status = SubscriptionStatus.CANCELLED;
         this.cancelledBy = userId;
-        this.cancelledAt = System.currentTimeMillis();
+        this.cancelledAt = Instant.now().toEpochMilli();
         this.cancellationReason = reason;
+        this.setUpdatedAt(Instant.now().toEpochMilli());
     }
 
     @JsonIgnore
@@ -253,5 +248,19 @@ public class OrganizationSubscriptionEntity extends BaseEntity {
         Instant currentTrialEnd = Instant.ofEpochMilli(this.trialEndsAt);
         Instant newTrialEnd = currentTrialEnd.plus(additionalDays, ChronoUnit.DAYS);
         this.trialEndsAt = newTrialEnd.toEpochMilli();
+    }
+
+    @JsonIgnore
+    public void rejectSubscription(Long rejectedBy, String reason) {
+        if (this.status != SubscriptionStatus.PENDING) {
+            throw new IllegalStateException("Can only reject PENDING subscriptions");
+        }
+        long now = Instant.now().toEpochMilli();
+        this.status = SubscriptionStatus.CANCELLED;
+        this.cancelledBy = rejectedBy;
+        this.cancelledAt = now;
+        this.cancellationReason = reason;
+        this.updatedBy = rejectedBy;
+        this.setUpdatedAt(now);
     }
 }
