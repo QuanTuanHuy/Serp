@@ -35,14 +35,14 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://serp-keycloak:8180/realms/serp/protocol/openid-connect/certs
-          issuer-uri: http://serp-keycloak:8180/realms/serp
+          jwk-set-uri: ${JWK_SET_URI:https://serp-keycloak:8180/realms/serp/protocol/openid-connect/certs}
+          issuer-uri: ${ISSUER_URI:https://serp-keycloak:8180/realms/serp}
 
 app:
   keycloak:
-    url: http://localhost:8180
-    jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
-    expected-issuer: http://localhost:8180/realms/serp
+    url: ${KEYCLOAK_URL:https://serp-keycloak:8180}
+    jwk-set-uri: ${JWK_SET_URI:https://serp-keycloak:8180/realms/serp/protocol/openid-connect/certs}
+    expected-issuer: https://auth.serp.texkis.com/realms/serp
     expected-audience: serp-account
     realm: serp
     client-id: serp-account
