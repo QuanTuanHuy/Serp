@@ -15,6 +15,7 @@ import serp.project.account.core.domain.enums.BillingCycle;
 import serp.project.account.core.domain.enums.SubscriptionStatus;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 
 @Entity
@@ -46,13 +47,13 @@ public class OrganizationSubscriptionModel extends BaseModel {
     private BillingCycle billingCycle;
 
     @Column(name = "start_date", nullable = false)
-    private Long startDate;
+    private LocalDateTime startDate;
 
     @Column(name = "end_date")
-    private Long endDate;
+    private LocalDateTime endDate;
 
     @Column(name = "trial_ends_at")
-    private Long trialEndsAt;
+    private LocalDateTime trialEndsAt;
 
     @Column(name = "is_auto_renew", nullable = false)
     private Boolean isAutoRenew;
@@ -67,13 +68,13 @@ public class OrganizationSubscriptionModel extends BaseModel {
     private Long activatedBy;
 
     @Column(name = "activated_at")
-    private Long activatedAt;
+    private LocalDateTime activatedAt;
 
     @Column(name = "cancelled_by")
     private Long cancelledBy;
 
     @Column(name = "cancelled_at")
-    private Long cancelledAt;
+    private LocalDateTime cancelledAt;
 
     @Column(name = "cancellation_reason", columnDefinition = "TEXT")
     private String cancellationReason;
