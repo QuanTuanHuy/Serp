@@ -23,6 +23,6 @@ public class CreateOrganizationDto {
     @NotBlank
     private String name;
 
-    @NotBlank
-    private String organizationType;
+    @Builder.Default
+    private String organizationType = "PERSONAL";
 }
