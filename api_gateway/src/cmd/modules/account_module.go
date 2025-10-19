@@ -18,15 +18,36 @@ func AccountModule() fx.Option {
 		fx.Provide(adapter.NewAuthClientAdapter),
 		fx.Provide(adapter.NewUserClientAdapter),
 		fx.Provide(adapter.NewKeycloakClientAdapter),
+		fx.Provide(adapter.NewRoleClientAdapter),
+		fx.Provide(adapter.NewPermissionClientAdapter),
+		fx.Provide(adapter.NewModuleClientAdapter),
+		fx.Provide(adapter.NewSubscriptionClientAdapter),
+		fx.Provide(adapter.NewSubscriptionPlanClientAdapter),
+		fx.Provide(adapter.NewModuleAccessClientAdapter),
+		fx.Provide(adapter.NewMenuDisplayClientAdapter),
 
 		// Provide service
 		fx.Provide(service.NewAuthService),
 		fx.Provide(service.NewUserService),
 		fx.Provide(service.NewKeycloakService),
+		fx.Provide(service.NewRoleService),
+		fx.Provide(service.NewPermissionService),
+		fx.Provide(service.NewModuleService),
+		fx.Provide(service.NewSubscriptionService),
+		fx.Provide(service.NewSubscriptionPlanService),
+		fx.Provide(service.NewModuleAccessService),
+		fx.Provide(service.NewMenuDisplayService),
 
 		// Provide controller
 		fx.Provide(controller.NewAuthController),
 		fx.Provide(controller.NewUserController),
 		fx.Provide(controller.NewKeycloakController),
+		fx.Provide(controller.NewRoleController),
+		fx.Provide(controller.NewPermissionController),
+		fx.Provide(controller.NewModuleController),
+		fx.Provide(controller.NewSubscriptionController),
+		fx.Provide(controller.NewSubscriptionPlanController),
+		fx.Provide(controller.NewModuleAccessController),
+		fx.Provide(controller.NewMenuDisplayController),
 	)
 }
