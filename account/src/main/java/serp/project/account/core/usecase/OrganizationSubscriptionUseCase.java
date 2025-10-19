@@ -17,6 +17,7 @@ import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.IOrganizationService;
 import serp.project.account.core.service.IOrganizationSubscriptionService;
 import serp.project.account.core.service.ISubscriptionPlanService;
+import serp.project.account.core.service.IUserModuleAccessService;
 import serp.project.account.kernel.utils.ResponseUtils;
 
 @Service
@@ -27,6 +28,7 @@ public class OrganizationSubscriptionUseCase {
     private final IOrganizationSubscriptionService organizationSubscriptionService;
     private final ISubscriptionPlanService subscriptionPlanService;
     private final IOrganizationService organizationService;
+    private final IUserModuleAccessService userModuleAccessService;
 
     private final ResponseUtils responseUtils;
 
@@ -79,14 +81,33 @@ public class OrganizationSubscriptionUseCase {
             var subscription = organizationSubscriptionService.startTrial(organizationId, plan, requestedBy);
             organizationService.updateSubscription(organizationId, subscription);
 
+            // Auto-grant module access to organization owner
+            try {
+                var planModules = subscriptionPlanService.getPlanModules(plan.getId());
+                
+                for (var planModule : planModules) {
+                    if (planModule.getIsIncluded()) {
+                        userModuleAccessService.registerUserToModuleWithExpiration(
+                                requestedBy,
+                                planModule.getModuleId(),
+                                organizationId,
+                                requestedBy,
+                                subscription.getEndDate());
+                    }
+                }
+                log.info("Auto-granted {} modules to organization owner", planModules.size());
+            } catch (Exception e) {
+                log.error("Error auto-granting modules to owner: {}", e.getMessage());
+            }
+
             log.info("[UseCase] Organization {} successfully started trial", organizationId);
             return responseUtils.success(subscription);
         } catch (AppException e) {
             log.error("Error starting trial for organization {}: {}", organizationId, e.getMessage());
-            return responseUtils.error(e.getCode(), e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Unexpected error when starting trial for organization {}: {}", organizationId, e.getMessage());
-            return responseUtils.internalServerError(e.getMessage());
+            throw e;
         }
     }
 
@@ -213,7 +234,25 @@ public class OrganizationSubscriptionUseCase {
 
             var subscription = organizationSubscriptionService.activateSubscription(subscriptionId, activatedBy);
 
-            // Implement later: Grant module access based on subscription plan
+            // Auto-grant module access to organization owner
+            try {
+                var organization = organizationService.getOrganizationById(subscription.getOrganizationId());
+                var planModules = subscriptionPlanService.getPlanModules(subscription.getSubscriptionPlanId());
+                
+                for (var planModule : planModules) {
+                    if (planModule.getIsIncluded()) {
+                        userModuleAccessService.registerUserToModuleWithExpiration(
+                                organization.getOwnerId(),
+                                planModule.getModuleId(),
+                                subscription.getOrganizationId(),
+                                activatedBy,
+                                subscription.getEndDate());
+                    }
+                }
+                log.info("Auto-granted {} modules to organization owner", planModules.size());
+            } catch (Exception e) {
+                log.error("Error auto-granting modules to owner: {}", e.getMessage());
+            }
 
             log.info("[UseCase] Successfully activated subscription {}", subscriptionId);
             return responseUtils.success(subscription);
@@ -270,9 +309,32 @@ public class OrganizationSubscriptionUseCase {
         try {
             log.info("[UseCase] Expiring subscription {}", subscriptionId);
 
+            var subscription = organizationSubscriptionService.getSubscriptionById(subscriptionId);
             organizationSubscriptionService.expireSubscription(subscriptionId);
 
-            // Implement later: Revoke module access
+            // Revoke module access for all users in organization
+            try {
+                var planModules = subscriptionPlanService.getPlanModules(subscription.getSubscriptionPlanId());
+                
+                int usersRevoked = 0;
+                for (var planModule : planModules) {
+                    if (planModule.getIsIncluded()) {
+                        var users = userModuleAccessService.getUsersWithModuleAccess(
+                                planModule.getModuleId(), subscription.getOrganizationId());
+                        
+                        for (var userAccess : users) {
+                            userModuleAccessService.revokeUserModuleAccess(
+                                    userAccess.getUserId(),
+                                    planModule.getModuleId(),
+                                    subscription.getOrganizationId());
+                            usersRevoked++;
+                        }
+                    }
+                }
+                log.info("Revoked module access for {} users", usersRevoked);
+            } catch (Exception e) {
+                log.error("Error revoking module access: {}", e.getMessage());
+            }
 
             log.info("[UseCase] Successfully expired subscription {}", subscriptionId);
             return responseUtils.success("Subscription expired successfully");

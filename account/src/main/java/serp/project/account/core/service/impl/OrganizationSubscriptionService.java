@@ -271,9 +271,6 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
             throw new AppException(Constants.ErrorMessage.SUBSCRIPTION_NOT_PENDING_APPROVAL);
         }
 
-        List<SubscriptionPlanModuleEntity> modulesInPlan = subscriptionPlanModulePort
-                .getBySubscriptionPlanId(subscription.getSubscriptionPlanId());
-
         subscription.activate(activatedBy);
         return organizationSubscriptionPort.update(subscription);
     }

@@ -101,6 +101,13 @@ public class Constants {
         public static final String SUBSCRIPTION_NOT_FOUND = "Subscription not found";
         public static final String NO_ACTIVE_SUBSCRIPTION = "No active subscription";
         public static final String PLAN_NOT_ACTIVE = "Plan not active";
+        
+        // Module Access errors
+        public static final String ORGANIZATION_CANNOT_ACCESS_MODULE = "Organization does not have access to this module";
+        public static final String MODULE_NOT_AVAILABLE = "Module is not available";
+        public static final String USER_ALREADY_HAS_MODULE_ACCESS = "User already has access to this module";
+        public static final String MODULE_NOT_IN_SUBSCRIPTION_PLAN = "Module not found in subscription plan";
+        public static final String MAX_USERS_LIMIT_REACHED = "Maximum users limit reached for this module";
     }
 
     @UtilityClass

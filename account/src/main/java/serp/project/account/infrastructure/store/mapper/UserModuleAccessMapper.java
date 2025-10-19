@@ -90,4 +90,18 @@ public class UserModuleAccessMapper extends BaseMapper {
                 .description(moduleDescription)
                 .build();
     }
+
+    public UserModuleAccessEntity buildNewAccessWithExpiration(Long userId, Long moduleId, Long organizationId,
+            Long grantedBy, Long expiresAt, String moduleDescription) {
+        return UserModuleAccessEntity.builder()
+                .userId(userId)
+                .moduleId(moduleId)
+                .organizationId(organizationId)
+                .isActive(true)
+                .grantedBy(grantedBy)
+                .grantedAt(System.currentTimeMillis())
+                .expiresAt(expiresAt)
+                .description(moduleDescription)
+                .build();
+    }
 }

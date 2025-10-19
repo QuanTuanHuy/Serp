@@ -47,10 +47,21 @@ public class UserModuleAccessAdapter implements IUserModuleAccessPort {
     }
 
     @Override
+    public List<UserModuleAccessEntity> getActiveUsersByModuleAndOrg(Long moduleId, Long organizationId) {
+        return userModuleAccessMapper.toEntityList(
+                userModuleAccessRepository.findByModuleIdAndOrganizationIdAndIsActive(moduleId, organizationId, true));
+    }
+
+    @Override
     public boolean hasAccess(Long userId, Long moduleId, Long organizationId) {
         return userModuleAccessRepository
                 .existsByUserIdAndModuleIdAndOrganizationIdAndIsActive(
                         userId, moduleId, organizationId, true);
+    }
+
+    @Override
+    public int countActiveUsers(Long moduleId, Long organizationId) {
+        return userModuleAccessRepository.countActiveUsersByModuleAndOrganization(moduleId, organizationId);
     }
 
     @Override

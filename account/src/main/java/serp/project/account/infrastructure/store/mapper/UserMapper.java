@@ -5,6 +5,7 @@
 
 package serp.project.account.infrastructure.store.mapper;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -115,6 +116,9 @@ public class UserMapper extends BaseMapper {
     public UserProfileResponse toProfileResponse(UserEntity user) {
         if (user == null) {
             return null;
+        }
+        if (user.getRoles() == null) {
+            user.setRoles(Collections.emptyList());
         }
 
         return UserProfileResponse.builder()

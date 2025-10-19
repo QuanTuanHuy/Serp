@@ -5,8 +5,6 @@
 
 package serp.project.account.core.domain.entity;
 
-import java.util.List;
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -63,6 +61,4 @@ public class OrganizationEntity extends BaseEntity {
     private String phoneNumber;
 
     private String email;
-
-    private List<ModuleLicenseEntity> moduleLicenses;
 }

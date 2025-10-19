@@ -5,6 +5,8 @@
 
 package serp.project.account.infrastructure.store.repository;
 
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import serp.project.account.infrastructure.store.model.UserModuleAccessModel;
 
@@ -20,6 +22,17 @@ public interface IUserModuleAccessRepository extends IBaseRepository<UserModuleA
     
     List<UserModuleAccessModel> findByUserIdAndOrganizationId(Long userId, Long organizationId);
     
+    List<UserModuleAccessModel> findByModuleIdAndOrganizationIdAndIsActive(
+            Long moduleId, Long organizationId, Boolean isActive);
+    
     boolean existsByUserIdAndModuleIdAndOrganizationIdAndIsActive(
             Long userId, Long moduleId, Long organizationId, Boolean isActive);
+
+    @Query("SELECT COUNT(u) FROM UserModuleAccessModel u " +
+           "WHERE u.moduleId = :moduleId " +
+           "AND u.organizationId = :organizationId " +
+           "AND u.isActive = true")
+    int countActiveUsersByModuleAndOrganization(
+            @Param("moduleId") Long moduleId, 
+            @Param("organizationId") Long organizationId);
 }

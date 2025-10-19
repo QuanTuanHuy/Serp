@@ -170,4 +170,12 @@ public class UserService implements IUserService {
         user = userMapper.updateUserMapper(user, update);
         return userPort.save(user);
     }
+
+    @Override
+    public List<UserProfileResponse> getUserProfilesByIds(List<Long> userIds) {
+        List<UserEntity> users = userPort.getUsersByIds(userIds);
+        return users.stream()
+                .map(userMapper::toProfileResponse)
+                .toList();
+    }
 }
