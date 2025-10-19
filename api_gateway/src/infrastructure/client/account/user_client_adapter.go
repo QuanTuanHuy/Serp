@@ -49,7 +49,7 @@ func (u *UserClientAdapter) GetMyProfile(ctx context.Context) (*response.BaseRes
 
 func (u *UserClientAdapter) GetUsers(ctx context.Context, page *int, pageSize *int, sortBy *string, sortDir *string, search *string) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
-	
+
 	queryParams := make(map[string]string)
 	if page != nil {
 		queryParams["page"] = fmt.Sprintf("%d", *page)
