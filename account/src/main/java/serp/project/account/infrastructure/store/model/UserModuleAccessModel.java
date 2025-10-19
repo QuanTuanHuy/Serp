@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "user_module_access", indexes = {
-        @Index(name = "idx_user_module_org", columnList = "user_id,module_id,organization_id", unique = true),
+        @Index(name = "idx_user_org_module", columnList = "user_id,organization_id,module_id", unique = true),
         @Index(name = "idx_user_id", columnList = "user_id"),
         @Index(name = "idx_module_id", columnList = "module_id"),
         @Index(name = "idx_organization_id", columnList = "organization_id")

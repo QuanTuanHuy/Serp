@@ -24,6 +24,8 @@ public interface IUserService {
 
     UserProfileResponse getUserProfile(Long userId);
 
+    List<UserProfileResponse> getUserProfilesByIds(List<Long> userIds);
+
     void addRolesToUser(Long userId, List<Long> roleId);
 
     void updateKeycloakUser(Long userId, String keycloakId);

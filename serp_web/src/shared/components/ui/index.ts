@@ -35,3 +35,29 @@ export { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
 
 // Theme Components
 export { ThemeToggle } from './theme-toggle';
+
+// Form Components
+export { Switch } from './switch';
+export { Checkbox } from './checkbox';
+
+// Dialog Components
+export {
+  Dialog,
+  DialogPortal,
+  DialogOverlay,
+  DialogClose,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from './dialog';
+
+// Accordion Components
+export {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from './accordion';

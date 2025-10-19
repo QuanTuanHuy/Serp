@@ -5,7 +5,6 @@
 
 package serp.project.account.infrastructure.store.adapter;
 
-
 import java.util.List;
 
 import org.springframework.data.util.Pair;
@@ -27,7 +26,7 @@ public class UserAdapter implements IUserPort {
     private final IUserRepository userRepository;
     private final UserMapper userMapper;
     private final PaginationUtils paginationUtils;
-    
+
     @Override
     public UserEntity save(UserEntity user) {
         UserModel userModel = userMapper.toModel(user);
@@ -56,5 +55,10 @@ public class UserAdapter implements IUserPort {
 
         var users = userMapper.toEntityList(page.getContent());
         return Pair.of(page.getTotalElements(), users);
+    }
+
+    @Override
+    public List<UserEntity> getUsersByIds(List<Long> userIds) {
+        return userMapper.toEntityList(userRepository.findByIdIn(userIds));
     }
 }

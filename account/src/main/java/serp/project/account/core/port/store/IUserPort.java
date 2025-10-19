@@ -13,7 +13,12 @@ import serp.project.account.core.domain.entity.UserEntity;
 
 public interface IUserPort {
     UserEntity save(UserEntity user);
+
     UserEntity getUserByEmail(String email);
+
     UserEntity getUserById(Long id);
+
     Pair<Long, List<UserEntity>> getUsers(GetUserParams params);
+
+    List<UserEntity> getUsersByIds(List<Long> userIds);
 }
