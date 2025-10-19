@@ -78,6 +78,36 @@ public class Constants {
         public static final String GET_MENU_DISPLAY_FAILED = "Get menu display failed";
         public static final String ASSIGN_MENU_DISPLAY_FAILED = "Assign menu display failed";
         public static final String UNASSIGN_MENU_DISPLAY_FAILED = "Unassign menu display failed";
+
+        // Organization errors
+        public static final String ORGANIZATION_NOT_FOUND = "Organization not found";
+
+        // Subscription Plan errors
+        public static final String SUBSCRIPTION_PLAN_NOT_FOUND = "Subscription plan not found";
+        public static final String SUBSCRIPTION_PLAN_CODE_ALREADY_EXISTS = "Subscription plan code already exists";
+        public static final String MODULE_ALREADY_IN_PLAN = "Module already in plan";
+        public static final String MODULE_NOT_IN_PLAN = "Module not in plan";
+
+        // Organization Subscription errors
+        public static final String ORGANIZATION_ALREADY_HAS_ACTIVE_SUBSCRIPTION = "Organization already has active subscription";
+        public static final String PLAN_DOES_NOT_SUPPORT_TRIAL = "Plan does not support trial";
+        public static final String NEW_PLAN_MUST_BE_HIGHER_THAN_CURRENT = "New plan must be higher than current";
+        public static final String NEW_PLAN_MUST_BE_LOWER_THAN_CURRENT = "New plan must be lower than current";
+        public static final String SUBSCRIPTION_NOT_EXPIRED = "Subscription not expired";
+        public static final String SUBSCRIPTION_NOT_PENDING_APPROVAL = "Subscription not pending approval";
+        public static final String SUBSCRIPTION_NOT_IN_TRIAL = "Subscription not in trial";
+        public static final String SUBSCRIPTION_CANNOT_BE_UPGRADED = "Subscription cannot be upgraded";
+        public static final String ACTIVE_SUBSCRIPTION_NOT_FOUND = "Active subscription not found";
+        public static final String SUBSCRIPTION_NOT_FOUND = "Subscription not found";
+        public static final String NO_ACTIVE_SUBSCRIPTION = "No active subscription";
+        public static final String PLAN_NOT_ACTIVE = "Plan not active";
+        
+        // Module Access errors
+        public static final String ORGANIZATION_CANNOT_ACCESS_MODULE = "Organization does not have access to this module";
+        public static final String MODULE_NOT_AVAILABLE = "Module is not available";
+        public static final String USER_ALREADY_HAS_MODULE_ACCESS = "User already has access to this module";
+        public static final String MODULE_NOT_IN_SUBSCRIPTION_PLAN = "Module not found in subscription plan";
+        public static final String MAX_USERS_LIMIT_REACHED = "Maximum users limit reached for this module";
     }
 
     @UtilityClass

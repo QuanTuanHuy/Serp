@@ -15,7 +15,6 @@ import serp.project.account.core.domain.dto.request.CreateOrganizationDto;
 import serp.project.account.core.domain.entity.OrganizationEntity;
 import serp.project.account.core.domain.enums.OrganizationStatus;
 import serp.project.account.core.domain.enums.OrganizationType;
-import serp.project.account.core.domain.enums.SubscriptionPlan;
 import serp.project.account.infrastructure.store.model.OrganizationModel;
 import serp.project.account.kernel.utils.ConvertUtils;
 
@@ -40,8 +39,10 @@ public class OrganizationMapper extends BaseMapper {
                 .organizationType(model.getOrganizationType())
                 .industry(model.getIndustry())
                 .employeeCount(model.getEmployeeCount())
-                .subscriptionPlan(model.getSubscriptionPlan())
-                .subscriptionExpiresAt(model.getSubscriptionExpiresAt())
+                .subscriptionId(model.getSubscriptionId())
+                .subscriptionExpiresAt(localDateTimeToLong(model.getSubscriptionExpiresAt()))
+                .currentBillingCycle(model.getCurrentBillingCycle())
+                .nextBillingDate(localDateTimeToLong(model.getNextBillingDate()))
                 .status(model.getStatus())
                 .timezone(model.getTimezone())
                 .currency(model.getCurrency())
@@ -71,8 +72,10 @@ public class OrganizationMapper extends BaseMapper {
                 .organizationType(entity.getOrganizationType())
                 .industry(entity.getIndustry())
                 .employeeCount(entity.getEmployeeCount())
-                .subscriptionPlan(entity.getSubscriptionPlan())
-                .subscriptionExpiresAt(entity.getSubscriptionExpiresAt())
+                .subscriptionId(entity.getSubscriptionId())
+                .subscriptionExpiresAt(longToLocalDateTime(entity.getSubscriptionExpiresAt()))
+                .currentBillingCycle(entity.getCurrentBillingCycle())
+                .nextBillingDate(longToLocalDateTime(entity.getNextBillingDate()))
                 .status(entity.getStatus())
                 .timezone(entity.getTimezone())
                 .currency(entity.getCurrency())
@@ -117,7 +120,6 @@ public class OrganizationMapper extends BaseMapper {
                 .code(getOrganizationCode(request.getName()))
                 .organizationType(
                         convertUtils.convertStringToEnum(request.getOrganizationType(), OrganizationType.class))
-                .subscriptionPlan(SubscriptionPlan.FREE)
                 .status(OrganizationStatus.TRIAL)
                 .build();
     }
@@ -163,12 +165,20 @@ public class OrganizationMapper extends BaseMapper {
             existing.setEmployeeCount(update.getEmployeeCount());
         }
 
-        if (update.getSubscriptionPlan() != null) {
-            existing.setSubscriptionPlan(update.getSubscriptionPlan());
+        if (update.getSubscriptionId() != null) {
+            existing.setSubscriptionId(update.getSubscriptionId());
         }
 
         if (update.getSubscriptionExpiresAt() != null) {
             existing.setSubscriptionExpiresAt(update.getSubscriptionExpiresAt());
+        }
+
+        if (update.getCurrentBillingCycle() != null) {
+            existing.setCurrentBillingCycle(update.getCurrentBillingCycle());
+        }
+
+        if (update.getNextBillingDate() != null) {
+            existing.setNextBillingDate(update.getNextBillingDate());
         }
 
         if (update.getStatus() != null) {

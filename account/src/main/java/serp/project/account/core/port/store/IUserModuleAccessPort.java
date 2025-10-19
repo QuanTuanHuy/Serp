@@ -18,7 +18,11 @@ public interface IUserModuleAccessPort {
 
     List<UserModuleAccessEntity> getUserModuleAccessesByUserIdAndOrgId(Long userId, Long organizationId);
 
+    List<UserModuleAccessEntity> getActiveUsersByModuleAndOrg(Long moduleId, Long organizationId);
+
     boolean hasAccess(Long userId, Long moduleId, Long organizationId);
+
+    int countActiveUsers(Long moduleId, Long organizationId);
 
     void deleteUserModuleAccess(Long id);
 }

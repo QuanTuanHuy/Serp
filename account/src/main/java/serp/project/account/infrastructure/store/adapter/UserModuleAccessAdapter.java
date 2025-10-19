@@ -43,7 +43,13 @@ public class UserModuleAccessAdapter implements IUserModuleAccessPort {
     @Override
     public List<UserModuleAccessEntity> getUserModuleAccessesByUserIdAndOrgId(Long userId, Long organizationId) {
         return userModuleAccessMapper.toEntityList(
-                userModuleAccessRepository.findByUserIdAndOrganizationId(userId, organizationId));
+                userModuleAccessRepository.findByUserIdAndOrganizationIdAndIsActive(userId, organizationId, true));
+    }
+
+    @Override
+    public List<UserModuleAccessEntity> getActiveUsersByModuleAndOrg(Long moduleId, Long organizationId) {
+        return userModuleAccessMapper.toEntityList(
+                userModuleAccessRepository.findByModuleIdAndOrganizationIdAndIsActive(moduleId, organizationId, true));
     }
 
     @Override
@@ -51,6 +57,11 @@ public class UserModuleAccessAdapter implements IUserModuleAccessPort {
         return userModuleAccessRepository
                 .existsByUserIdAndModuleIdAndOrganizationIdAndIsActive(
                         userId, moduleId, organizationId, true);
+    }
+
+    @Override
+    public int countActiveUsers(Long moduleId, Long organizationId) {
+        return userModuleAccessRepository.countActiveUsersByModuleAndOrganization(moduleId, organizationId);
     }
 
     @Override
