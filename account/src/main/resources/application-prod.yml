@@ -40,9 +40,9 @@ spring:
 
 app:
   keycloak:
-    url: http://serp-keycloak:8180
-    jwk-set-uri: http://serp-keycloak:8180/realms/serp/protocol/openid-connect/certs
-    expected-issuer: http://serp-keycloak:8180/realms/serp
+    url: http://localhost:8180
+    jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
+    expected-issuer: http://localhost:8180/realms/serp
     expected-audience: serp-account
     realm: serp
     client-id: serp-account
@@ -55,8 +55,8 @@ app:
 
   security:
     admin:
-      email: ${ADMIN_EMAIL:serp.org@gmail.com}
-      password: ${ADMIN_PASSWORD:SuperAdmin@123}
+      email: serp.org@gmail.com
+      password: SuperAdmin@123
 
     filter:
       publicUrls:
@@ -82,26 +82,89 @@ app:
           second: GET
         - first: /api/v1/keycloak/**
           second: GET
+        - first: /api/v1/subscription-plans/**
+          second: GET
       protectedUrls:
+        # ==================== USER MANAGEMENT ====================
         - url-pattern: /api/v1/users/**
           roles:
-            - ADMIN
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
           permissions:
+
+        # ==================== ROLE MANAGEMENT ====================
         - url-pattern: /api/v1/roles/**
           roles:
-            - ADMIN
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+          permissions:
+
+        # ==================== PERMISSION MANAGEMENT ====================
         - url-pattern: /api/v1/permissions/**
           roles:
-            - ADMIN
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+          permissions:
+
+        # ==================== GROUP MANAGEMENT ====================
         - url-pattern: /api/v1/groups/**
           roles:
-            - ADMIN
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+          permissions:
+
+        # ==================== MODULE MANAGEMENT ====================
         - url-pattern: /api/v1/modules/**
           roles:
-            - ADMIN
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+          permissions:
+
+        # ==================== MENU DISPLAY MANAGEMENT ====================
         - url-pattern: /api/v1/menu-displays/**
           roles:
-            - ADMIN
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+          permissions:
+
+        # ==================== ORGANIZATION MANAGEMENT ====================
+        - url-pattern: /api/v1/organizations/**
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+
+        # ==================== SUBSCRIPTION PLAN MANAGEMENT ====================
+        - url-pattern: /api/v1/subscription-plans/**
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+
+        # ==================== ORGANIZATION SUBSCRIPTION MANAGEMENT ====================
+        - url-pattern: /api/v1/subscriptions/*
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+        
+        - url-pattern: /api/v1/subscriptions/**
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+            - ORG_USER
+
+        # ==================== MODULE ACCESS MANAGEMENT ====================
+        - url-pattern: /api/v1/module-access/**
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+            - ORG_USER
 
 
 server:

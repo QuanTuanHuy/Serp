@@ -104,6 +104,12 @@ public class OrganizationSubscriptionController {
             var response = responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
             return ResponseEntity.status(response.getCode()).body(response);
         }
+        
+        if (!authUtils.hasAnyRole("ORG_OWNER", "ORG_ADMIN", "SUPER_ADMIN", "SYSTEM_MODERATOR")) {
+            var response = responseUtils.forbidden("You don't have permission to upgrade subscription");
+            return ResponseEntity.status(response.getCode()).body(response);
+        }
+        
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
         if (tenantId == null) {
             var response = responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
@@ -124,6 +130,12 @@ public class OrganizationSubscriptionController {
             var response = responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
             return ResponseEntity.status(response.getCode()).body(response);
         }
+        
+        if (!authUtils.hasAnyRole("ORG_OWNER", "ORG_ADMIN", "SUPER_ADMIN", "SYSTEM_MODERATOR")) {
+            var response = responseUtils.forbidden("You don't have permission to downgrade subscription");
+            return ResponseEntity.status(response.getCode()).body(response);
+        }
+        
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
         if (tenantId == null) {
             var response = responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
@@ -144,6 +156,12 @@ public class OrganizationSubscriptionController {
             var response = responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
             return ResponseEntity.status(response.getCode()).body(response);
         }
+        
+        if (!authUtils.hasAnyRole("ORG_OWNER", "ORG_ADMIN", "SUPER_ADMIN", "SYSTEM_MODERATOR")) {
+            var response = responseUtils.forbidden("You don't have permission to cancel subscription");
+            return ResponseEntity.status(response.getCode()).body(response);
+        }
+        
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
         if (tenantId == null) {
             var response = responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
@@ -162,6 +180,12 @@ public class OrganizationSubscriptionController {
             var response = responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
             return ResponseEntity.status(response.getCode()).body(response);
         }
+        
+        if (!authUtils.hasAnyRole("ORG_OWNER", "ORG_ADMIN", "SUPER_ADMIN", "SYSTEM_MODERATOR")) {
+            var response = responseUtils.forbidden("You don't have permission to renew subscription");
+            return ResponseEntity.status(response.getCode()).body(response);
+        }
+        
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
         if (tenantId == null) {
             var response = responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
