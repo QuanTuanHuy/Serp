@@ -49,7 +49,7 @@ public class OrganizationModel extends BaseModel {
     @Column(name = "employee_count")
     private Integer employeeCount;
 
-    @Column(name = "subscription_id", nullable = false)
+    @Column(name = "subscription_id")
     private Long subscriptionId;
 
     @Column(name = "subscription_expires_at")

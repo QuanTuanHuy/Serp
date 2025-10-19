@@ -125,7 +125,7 @@ public class ModuleAccessController {
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
-    @GetMapping("/organizations/{organizationId}/modules")
+    @GetMapping("/users/me/organizations/{organizationId}/modules")
     public ResponseEntity<?> getModulesAccessibleByUser(
             @PathVariable Long organizationId) {
         if (!authUtils.canAccessOrganization(organizationId)) {
@@ -138,7 +138,7 @@ public class ModuleAccessController {
             return ResponseEntity.status(response.getCode()).body(response);
         }
 
-        log.info("GET /api/v1/module-access/organizations/{}/modules - Fetching user's accessible modules",
+        log.info("GET /api/v1/module-access/users/me/organizations/{}/modules - Fetching user's accessible modules",
                 organizationId);
         var response = moduleAccessUseCase.getModulesAccessibleByUser(userId, organizationId);
         return ResponseEntity.status(response.getCode()).body(response);
