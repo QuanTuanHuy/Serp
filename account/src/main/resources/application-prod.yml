@@ -85,86 +85,163 @@ app:
         - first: /api/v1/subscription-plans/**
           second: GET
       protectedUrls:
-        # ==================== USER MANAGEMENT ====================
+        # ==================== USER CONTROLLER ====================
+        - url-pattern: /api/v1/users/profile/me
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_USER
+          permissions:
         - url-pattern: /api/v1/users/**
           roles:
             - SUPER_ADMIN
             - SYSTEM_MODERATOR
-            - ORG_OWNER
-            - ORG_ADMIN
           permissions:
 
-        # ==================== ROLE MANAGEMENT ====================
+        # ==================== KEYCLOAK CONTROLLER ====================
+        - url-pattern: /api/v1/keycloak/**
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+          permissions:
+
+        # ==================== ROLE CONTROLLER ====================
         - url-pattern: /api/v1/roles/**
           roles:
             - SUPER_ADMIN
             - SYSTEM_MODERATOR
           permissions:
 
-        # ==================== PERMISSION MANAGEMENT ====================
+        # ==================== PERMISSION CONTROLLER ====================
         - url-pattern: /api/v1/permissions/**
           roles:
             - SUPER_ADMIN
             - SYSTEM_MODERATOR
           permissions:
 
-        # ==================== GROUP MANAGEMENT ====================
+        # ==================== GROUP CONTROLLER ====================
         - url-pattern: /api/v1/groups/**
           roles:
             - SUPER_ADMIN
             - SYSTEM_MODERATOR
           permissions:
 
-        # ==================== MODULE MANAGEMENT ====================
+        # ==================== MODULE CONTROLLER ====================
+        - url-pattern: /api/v1/modules/my-modules
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_USER
+          permissions:
         - url-pattern: /api/v1/modules/**
           roles:
             - SUPER_ADMIN
             - SYSTEM_MODERATOR
           permissions:
 
-        # ==================== MENU DISPLAY MANAGEMENT ====================
+        # ==================== MENU DISPLAY CONTROLLER ====================
         - url-pattern: /api/v1/menu-displays/**
           roles:
             - SUPER_ADMIN
             - SYSTEM_MODERATOR
           permissions:
-
-        # ==================== ORGANIZATION MANAGEMENT ====================
-        - url-pattern: /api/v1/organizations/**
-          roles:
-            - SUPER_ADMIN
-            - SYSTEM_MODERATOR
-            - ORG_OWNER
-            - ORG_ADMIN
-
-        # ==================== SUBSCRIPTION PLAN MANAGEMENT ====================
+        
+        # ==================== SUBSCRIPTION PLAN CONTROLLER ====================
         - url-pattern: /api/v1/subscription-plans/**
           roles:
             - SUPER_ADMIN
             - SYSTEM_MODERATOR
+          permissions:
 
-        # ==================== ORGANIZATION SUBSCRIPTION MANAGEMENT ====================
-        - url-pattern: /api/v1/subscriptions/*
+        # ==================== ORGANIZATION SUBSCRIPTION CONTROLLER ====================
+        - url-pattern: /api/v1/subscriptions/subscribe
           roles:
             - SUPER_ADMIN
             - SYSTEM_MODERATOR
-        
+            - ORG_OWNER
+          permissions:
+        - url-pattern: /api/v1/subscriptions/trial
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+          permissions:
+        - url-pattern: /api/v1/subscriptions/upgrade
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+          permissions:
+        - url-pattern: /api/v1/subscriptions/downgrade
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+          permissions:
+        - url-pattern: /api/v1/subscriptions/cancel
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+          permissions:
+        - url-pattern: /api/v1/subscriptions/renew
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+          permissions:
+        - url-pattern: /api/v1/subscriptions/*/extend-trial
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+          permissions:
+        - url-pattern: /api/v1/subscriptions/me/**
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_USER
+          permissions:
         - url-pattern: /api/v1/subscriptions/**
           roles:
             - SUPER_ADMIN
             - SYSTEM_MODERATOR
-            - ORG_OWNER
-            - ORG_ADMIN
-            - ORG_USER
+          permissions:
 
-        # ==================== MODULE ACCESS MANAGEMENT ====================
-        - url-pattern: /api/v1/module-access/**
+       # ==================== MODULE ACCESS CONTROLLER ====================
+        - url-pattern: /api/v1/organizations/*/modules/*/access
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_USER
+          permissions:
+        - url-pattern: /api/v1/organizations/*/modules
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_USER
+          permissions:
+        - url-pattern: /api/v1/organizations/*/modules/*/users
           roles:
             - SUPER_ADMIN
             - SYSTEM_MODERATOR
             - ORG_OWNER
             - ORG_ADMIN
+          permissions:
+        - url-pattern: /api/v1/organizations/*/modules/*/users/bulk
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+          permissions:
+        - url-pattern: /api/v1/organizations/*/users/me/modules
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
             - ORG_USER
+          permissions:
+
 
 
 server:

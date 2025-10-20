@@ -59,14 +59,6 @@ public class ModuleController {
         Long userId = authUtils.getCurrentUserId().orElse(null);
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
 
-        if (userId == null) {
-            return ResponseEntity.status(401).body("Unauthorized: Missing user information");
-        }
-
-        if (tenantId == null) {
-            return ResponseEntity.status(401).body("Unauthorized: Missing tenant information");
-        }
-
         var response = moduleUseCase.getUserModules(userId, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }

@@ -79,6 +79,10 @@ public class ModuleUseCase {
 
     public GeneralResponse<?> getUserModules(Long userId, Long organizationId) {
         try {
+            if (userId == null || organizationId == null) {
+                return responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
+            }
+
             var accesses = userModuleAccessService.getUserModuleAccesses(userId, organizationId);
             return responseUtils.success(accesses);
         } catch (Exception e) {

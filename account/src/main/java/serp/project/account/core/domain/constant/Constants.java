@@ -108,6 +108,7 @@ public class Constants {
         public static final String USER_ALREADY_HAS_MODULE_ACCESS = "User already has access to this module";
         public static final String MODULE_NOT_IN_SUBSCRIPTION_PLAN = "Module not found in subscription plan";
         public static final String MAX_USERS_LIMIT_REACHED = "Maximum users limit reached for this module";
+        public static final String NO_PERMISSION_TO_ACCESS_ORGANIZATION = "You don't have permission to access this organization";
     }
 
     @UtilityClass
