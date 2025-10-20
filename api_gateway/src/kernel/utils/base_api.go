@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/golibs-starter/golib/log"
@@ -68,10 +69,51 @@ func (api *BaseAPIClient) GET(ctx context.Context, path string, headers http.Hea
 	return api.makeRequest(ctx, config)
 }
 
+func (api *BaseAPIClient) GETWithQuery(ctx context.Context, path string, queryParams map[string]string, headers http.Header) (*HTTPResponse, error) {
+	fullURL := api.buildURL(path)
+
+	if len(queryParams) > 0 {
+		q := url.Values{}
+		for key, value := range queryParams {
+			q.Add(key, value)
+		}
+		fullURL = fullURL + "?" + q.Encode()
+	}
+
+	config := &HTTPRequestConfig{
+		Method:  http.MethodGet,
+		URL:     fullURL,
+		Headers: headers,
+		Timeout: api.timeout,
+	}
+	return api.makeRequest(ctx, config)
+}
+
 func (api *BaseAPIClient) POST(ctx context.Context, path string, body any, headers http.Header) (*HTTPResponse, error) {
 	config := &HTTPRequestConfig{
 		Method:  http.MethodPost,
 		URL:     api.buildURL(path),
+		Body:    body,
+		Headers: headers,
+		Timeout: api.timeout,
+	}
+	return api.makeRequest(ctx, config)
+}
+
+func (api *BaseAPIClient) POSTWithQuery(ctx context.Context, path string, queryParams map[string]string, body any, headers http.Header) (*HTTPResponse, error) {
+	fullURL := api.buildURL(path)
+
+	if len(queryParams) > 0 {
+		q := url.Values{}
+		for key, value := range queryParams {
+			q.Add(key, value)
+		}
+		fullURL = fullURL + "?" + q.Encode()
+	}
+
+	config := &HTTPRequestConfig{
+		Method:  http.MethodPost,
+		URL:     fullURL,
 		Body:    body,
 		Headers: headers,
 		Timeout: api.timeout,
