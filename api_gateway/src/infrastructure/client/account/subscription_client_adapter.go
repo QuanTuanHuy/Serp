@@ -25,11 +25,10 @@ type SubscriptionClientAdapter struct {
 func (s *SubscriptionClientAdapter) Subscribe(ctx context.Context, organizationId int64, req *request.SubscribeRequest) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
-	path := fmt.Sprintf("/api/v1/subscriptions/organizations/%d/subscribe", organizationId)
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		httpResponse, err = s.apiClient.POST(ctx, path, req, headers)
+		httpResponse, err = s.apiClient.POST(ctx, "/api/v1/subscriptions/subscribe", req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call subscribe API: %w", err)
 		}
@@ -55,13 +54,12 @@ func (s *SubscriptionClientAdapter) Subscribe(ctx context.Context, organizationI
 func (s *SubscriptionClientAdapter) StartTrial(ctx context.Context, organizationId int64, planId int64) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
-	path := fmt.Sprintf("/api/v1/subscriptions/organizations/%d/trial", organizationId)
 	queryParams := map[string]string{"planId": fmt.Sprintf("%d", planId)}
 
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		httpResponse, err = s.apiClient.POSTWithQuery(ctx, path, queryParams, nil, headers)
+		httpResponse, err = s.apiClient.POSTWithQuery(ctx, "/api/v1/subscriptions/trial", queryParams, nil, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call start trial API: %w", err)
 		}
@@ -323,11 +321,10 @@ func (s *SubscriptionClientAdapter) ExpireSubscription(ctx context.Context, subs
 func (s *SubscriptionClientAdapter) GetActiveSubscription(ctx context.Context, organizationId int64) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
-	path := fmt.Sprintf("/api/v1/subscriptions/organizations/%d/active", organizationId)
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		httpResponse, err = s.apiClient.GET(ctx, path, headers)
+		httpResponse, err = s.apiClient.GET(ctx, "/api/v1/subscriptions/me/active", headers)
 		if err != nil {
 			return fmt.Errorf("failed to call get active subscription API: %w", err)
 		}
@@ -383,11 +380,10 @@ func (s *SubscriptionClientAdapter) GetSubscriptionById(ctx context.Context, sub
 func (s *SubscriptionClientAdapter) GetSubscriptionHistory(ctx context.Context, organizationId int64) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
-	path := fmt.Sprintf("/api/v1/subscriptions/organizations/%d/history", organizationId)
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		httpResponse, err = s.apiClient.GET(ctx, path, headers)
+		httpResponse, err = s.apiClient.GET(ctx, "/api/v1/subscriptions/me/history", headers)
 		if err != nil {
 			return fmt.Errorf("failed to call get subscription history API: %w", err)
 		}

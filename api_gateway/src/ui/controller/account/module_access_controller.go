@@ -66,11 +66,21 @@ func (m *ModuleAccessController) AssignUserToModule(c *gin.Context) {
 		return
 	}
 
+	moduleIdStr := c.Param("moduleId")
+	moduleId, err := strconv.ParseInt(moduleIdStr, 10, 64)
+	if err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+		return
+	}
+
 	var req request.AssignUserToModuleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
 		return
 	}
+
+	// Set moduleId from path parameter
+	req.ModuleId = moduleId
 
 	res, err := m.moduleAccessService.AssignUserToModule(c.Request.Context(), organizationId, &req)
 	if err != nil {
@@ -81,11 +91,29 @@ func (m *ModuleAccessController) AssignUserToModule(c *gin.Context) {
 }
 
 func (m *ModuleAccessController) BulkAssignUsersToModule(c *gin.Context) {
+	organizationIdStr := c.Param("organizationId")
+	organizationId, err := strconv.ParseInt(organizationIdStr, 10, 64)
+	if err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+		return
+	}
+
+	moduleIdStr := c.Param("moduleId")
+	moduleId, err := strconv.ParseInt(moduleIdStr, 10, 64)
+	if err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+		return
+	}
+
 	var req request.BulkAssignUsersRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
 		return
 	}
+
+	// Set organizationId and moduleId from path parameters
+	req.OrganizationId = organizationId
+	req.ModuleId = moduleId
 
 	res, err := m.moduleAccessService.BulkAssignUsersToModule(c.Request.Context(), &req)
 	if err != nil {

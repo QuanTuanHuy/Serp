@@ -25,7 +25,7 @@ type ModuleAccessClientAdapter struct {
 func (m *ModuleAccessClientAdapter) CanOrganizationAccessModule(ctx context.Context, organizationId int64, moduleId int64) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
-	path := fmt.Sprintf("/api/v1/module-access/organizations/%d/modules/%d/check", organizationId, moduleId)
+	path := fmt.Sprintf("/api/v1/organizations/%d/modules/%d/access", organizationId, moduleId)
 	var httpResponse *utils.HTTPResponse
 	err := m.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
@@ -55,7 +55,7 @@ func (m *ModuleAccessClientAdapter) CanOrganizationAccessModule(ctx context.Cont
 func (m *ModuleAccessClientAdapter) GetAccessibleModulesForOrganization(ctx context.Context, organizationId int64) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
-	path := fmt.Sprintf("/api/v1/module-access/organizations/%d/modules", organizationId)
+	path := fmt.Sprintf("/api/v1/organizations/%d/modules", organizationId)
 	var httpResponse *utils.HTTPResponse
 	err := m.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
@@ -85,7 +85,7 @@ func (m *ModuleAccessClientAdapter) GetAccessibleModulesForOrganization(ctx cont
 func (m *ModuleAccessClientAdapter) AssignUserToModule(ctx context.Context, organizationId int64, req *request.AssignUserToModuleRequest) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
-	path := fmt.Sprintf("/api/v1/module-access/organizations/%d/assign", organizationId)
+	path := fmt.Sprintf("/api/v1/organizations/%d/modules/%d/users", organizationId, req.ModuleId)
 	var httpResponse *utils.HTTPResponse
 	err := m.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
@@ -115,10 +115,11 @@ func (m *ModuleAccessClientAdapter) AssignUserToModule(ctx context.Context, orga
 func (m *ModuleAccessClientAdapter) BulkAssignUsersToModule(ctx context.Context, req *request.BulkAssignUsersRequest) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
+	path := fmt.Sprintf("/api/v1/organizations/%d/modules/%d/users/bulk", req.OrganizationId, req.ModuleId)
 	var httpResponse *utils.HTTPResponse
 	err := m.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		httpResponse, err = m.apiClient.POST(ctx, "/api/v1/module-access/bulk-assign", req, headers)
+		httpResponse, err = m.apiClient.POST(ctx, path, req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call bulk assign users to module API: %w", err)
 		}
@@ -144,7 +145,7 @@ func (m *ModuleAccessClientAdapter) BulkAssignUsersToModule(ctx context.Context,
 func (m *ModuleAccessClientAdapter) RevokeUserAccessToModule(ctx context.Context, organizationId int64, moduleId int64, userId int64) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
-	path := fmt.Sprintf("/api/v1/module-access/organizations/%d/modules/%d/users/%d", organizationId, moduleId, userId)
+	path := fmt.Sprintf("/api/v1/organizations/%d/modules/%d/users/%d", organizationId, moduleId, userId)
 	var httpResponse *utils.HTTPResponse
 	err := m.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
@@ -174,7 +175,7 @@ func (m *ModuleAccessClientAdapter) RevokeUserAccessToModule(ctx context.Context
 func (m *ModuleAccessClientAdapter) GetUsersWithAccessToModule(ctx context.Context, organizationId int64, moduleId int64) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
-	path := fmt.Sprintf("/api/v1/module-access/organizations/%d/modules/%d/users", organizationId, moduleId)
+	path := fmt.Sprintf("/api/v1/organizations/%d/modules/%d/users", organizationId, moduleId)
 	var httpResponse *utils.HTTPResponse
 	err := m.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
@@ -204,7 +205,7 @@ func (m *ModuleAccessClientAdapter) GetUsersWithAccessToModule(ctx context.Conte
 func (m *ModuleAccessClientAdapter) GetModulesAccessibleByUser(ctx context.Context, organizationId int64) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
-	path := fmt.Sprintf("/api/v1/module-access/users/me/organizations/%d/modules", organizationId)
+	path := fmt.Sprintf("/api/v1/organizations/%d/users/me/modules", organizationId)
 	var httpResponse *utils.HTTPResponse
 	err := m.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
