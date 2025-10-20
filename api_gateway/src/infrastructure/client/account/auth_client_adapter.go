@@ -106,6 +106,35 @@ func (a *AuthClientAdapter) RefreshToken(ctx context.Context, req *request.Refre
 	return &result, nil
 }
 
+func (a *AuthClientAdapter) GetToken(ctx context.Context, req *request.LoginDTO) (*response.BaseResponse, error) {
+	headers := utils.BuildDefaultHeaders()
+
+	var httpResponse *utils.HTTPResponse
+	err := a.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
+		var err error
+		httpResponse, err = a.apiClient.POST(ctx, "/api/v1/auth/get-token", req, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call get token API: %w", err)
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to call get token API: %w", err)
+	}
+
+	if !a.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("GetToken API returned error status: %d", httpResponse.StatusCode))
+	}
+
+	var result response.BaseResponse
+	if err := a.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal get token response: %w", err)
+	}
+
+	return &result, nil
+}
+
 func (a *AuthClientAdapter) RevokeToken(ctx context.Context, req *request.RefreshTokenDTO) (*response.BaseResponse, error) {
 	headers := utils.BuildDefaultHeaders()
 
