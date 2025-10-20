@@ -35,6 +35,9 @@ public class OrganizationSubscriptionUseCase {
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> subscribe(Long organizationId, SubscribeRequest request, Long requestedBy) {
         try {
+            if (organizationId == null || requestedBy == null) {
+                return responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
+            }
             log.info("[UseCase] Organization {} subscribing to plan {}", organizationId, request.getPlanId());
 
             if (organizationSubscriptionService.hasActiveSubscription(organizationId)) {
@@ -65,6 +68,9 @@ public class OrganizationSubscriptionUseCase {
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> startTrial(Long organizationId, Long planId, Long requestedBy) {
         try {
+            if (organizationId == null || requestedBy == null) {
+                return responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
+            }
             log.info("[UseCase] Organization {} starting trial for plan {}", organizationId, planId);
 
             if (!organizationSubscriptionService.hasActiveSubscription(organizationId)) {
@@ -84,7 +90,7 @@ public class OrganizationSubscriptionUseCase {
             // Auto-grant module access to organization owner
             try {
                 var planModules = subscriptionPlanService.getPlanModules(plan.getId());
-                
+
                 for (var planModule : planModules) {
                     if (planModule.getIsIncluded()) {
                         userModuleAccessService.registerUserToModuleWithExpiration(
@@ -117,6 +123,9 @@ public class OrganizationSubscriptionUseCase {
         try {
             log.info("[UseCase] Organization {} upgrading subscription to plan {}", organizationId,
                     request.getNewPlanId());
+            if (organizationId == null || requestedBy == null) {
+                return responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
+            }
 
             var currentSubscription = organizationSubscriptionService.getActiveSubscription(organizationId);
             var currentPlan = subscriptionPlanService.getPlanById(currentSubscription.getSubscriptionPlanId());
@@ -150,6 +159,9 @@ public class OrganizationSubscriptionUseCase {
         try {
             log.info("[UseCase] Organization {} downgrading subscription to plan {}", organizationId,
                     request.getNewPlanId());
+            if (organizationId == null || requestedBy == null) {
+                return responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
+            }
 
             var currentSubscription = organizationSubscriptionService.getActiveSubscription(organizationId);
             var currentPlan = subscriptionPlanService.getPlanById(currentSubscription.getSubscriptionPlanId());
@@ -182,6 +194,9 @@ public class OrganizationSubscriptionUseCase {
             Long cancelledBy) {
         try {
             log.info("[UseCase] Organization {} cancelling subscription", organizationId);
+            if (organizationId == null || cancelledBy == null) {
+                return responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
+            }
 
             organizationSubscriptionService.cancelSubscription(organizationId, request, cancelledBy);
 
@@ -203,13 +218,16 @@ public class OrganizationSubscriptionUseCase {
     public GeneralResponse<?> renewSubscription(Long organizationId, Long renewedBy) {
         try {
             log.info("[UseCase] Organization {} renewing subscription", organizationId);
+            if (organizationId == null || renewedBy == null) {
+                return responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
+            }
 
             var organization = organizationService.getOrganizationById(organizationId);
             var newSubscription = organizationSubscriptionService.renewSubscription(
                     organizationId,
                     organization.getSubscriptionId(),
                     renewedBy);
-                    
+
             organizationService.updateSubscription(organizationId, newSubscription);
 
             // Implement later: Process payment
@@ -238,7 +256,7 @@ public class OrganizationSubscriptionUseCase {
             try {
                 var organization = organizationService.getOrganizationById(subscription.getOrganizationId());
                 var planModules = subscriptionPlanService.getPlanModules(subscription.getSubscriptionPlanId());
-                
+
                 for (var planModule : planModules) {
                     if (planModule.getIsIncluded()) {
                         userModuleAccessService.registerUserToModuleWithExpiration(
@@ -289,6 +307,9 @@ public class OrganizationSubscriptionUseCase {
         try {
             log.info("[UseCase] Extending trial for subscription {} by {} days", subscriptionId,
                     request.getAdditionalDays());
+            if (extendedBy == null) {
+                return responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
+            }
 
             var subscription = organizationSubscriptionService.extendTrial(subscriptionId, request.getAdditionalDays(),
                     extendedBy);
@@ -315,13 +336,13 @@ public class OrganizationSubscriptionUseCase {
             // Revoke module access for all users in organization
             try {
                 var planModules = subscriptionPlanService.getPlanModules(subscription.getSubscriptionPlanId());
-                
+
                 int usersRevoked = 0;
                 for (var planModule : planModules) {
                     if (planModule.getIsIncluded()) {
                         var users = userModuleAccessService.getUsersWithModuleAccess(
                                 planModule.getModuleId(), subscription.getOrganizationId());
-                        
+
                         for (var userAccess : users) {
                             userModuleAccessService.revokeUserModuleAccess(
                                     userAccess.getUserId(),
@@ -349,6 +370,9 @@ public class OrganizationSubscriptionUseCase {
 
     public GeneralResponse<?> getActiveSubscription(Long organizationId) {
         try {
+            if (organizationId == null) {
+                return responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
+            }
             var subscription = organizationSubscriptionService.getActiveSubscription(organizationId);
             return responseUtils.success(subscription);
         } catch (AppException e) {

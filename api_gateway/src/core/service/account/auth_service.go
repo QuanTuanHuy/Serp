@@ -17,6 +17,7 @@ import (
 type IAuthService interface {
 	Register(ctx context.Context, req *request.RegisterDTO) (*response.BaseResponse, error)
 	Login(ctx context.Context, req *request.LoginDTO) (*response.BaseResponse, error)
+	GetToken(ctx context.Context, req *request.LoginDTO) (*response.BaseResponse, error)
 	RefreshToken(ctx context.Context, req *request.RefreshTokenDTO) (*response.BaseResponse, error)
 	RevokeToken(ctx context.Context, req *request.RefreshTokenDTO) (*response.BaseResponse, error)
 }
@@ -47,6 +48,15 @@ func (a *AuthService) RefreshToken(ctx context.Context, req *request.RefreshToke
 	res, err := a.authClient.RefreshToken(ctx, req)
 	if err != nil {
 		log.Error(ctx, "AuthService: RefreshToken error: ", err.Error())
+		return nil, err
+	}
+	return res, nil
+}
+
+func (a *AuthService) GetToken(ctx context.Context, req *request.LoginDTO) (*response.BaseResponse, error) {
+	res, err := a.authClient.GetToken(ctx, req)
+	if err != nil {
+		log.Error(ctx, "AuthService: GetToken error: ", err.Error())
 		return nil, err
 	}
 	return res, nil
