@@ -24,7 +24,7 @@ func (s *SubscriptionController) Subscribe(c *gin.Context) {
 		return
 	}
 
-	res, err := s.subscriptionService.Subscribe(c.Request.Context(), 0, &req)
+	res, err := s.subscriptionService.Subscribe(c.Request.Context(), &req)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return
@@ -38,7 +38,7 @@ func (s *SubscriptionController) StartTrial(c *gin.Context) {
 		return
 	}
 
-	res, err := s.subscriptionService.StartTrial(c.Request.Context(), 0, planId)
+	res, err := s.subscriptionService.StartTrial(c.Request.Context(), planId)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return
@@ -169,8 +169,7 @@ func (s *SubscriptionController) ExpireSubscription(c *gin.Context) {
 }
 
 func (s *SubscriptionController) GetActiveSubscription(c *gin.Context) {
-	// organizationId will be extracted from JWT by the Account Service
-	res, err := s.subscriptionService.GetActiveSubscription(c.Request.Context(), 0)
+	res, err := s.subscriptionService.GetActiveSubscription(c.Request.Context())
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return
@@ -193,8 +192,7 @@ func (s *SubscriptionController) GetSubscriptionById(c *gin.Context) {
 }
 
 func (s *SubscriptionController) GetSubscriptionHistory(c *gin.Context) {
-	// organizationId will be extracted from JWT by the Account Service
-	res, err := s.subscriptionService.GetSubscriptionHistory(c.Request.Context(), 0)
+	res, err := s.subscriptionService.GetSubscriptionHistory(c.Request.Context())
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return

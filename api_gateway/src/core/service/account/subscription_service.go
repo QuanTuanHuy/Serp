@@ -15,8 +15,8 @@ import (
 )
 
 type ISubscriptionService interface {
-	Subscribe(ctx context.Context, organizationId int64, req *request.SubscribeRequest) (*response.BaseResponse, error)
-	StartTrial(ctx context.Context, organizationId int64, planId int64) (*response.BaseResponse, error)
+	Subscribe(ctx context.Context, req *request.SubscribeRequest) (*response.BaseResponse, error)
+	StartTrial(ctx context.Context, planId int64) (*response.BaseResponse, error)
 	ActivateSubscription(ctx context.Context, subscriptionId int64) (*response.BaseResponse, error)
 	RejectSubscription(ctx context.Context, subscriptionId int64, req *request.RejectSubscriptionRequest) (*response.BaseResponse, error)
 	UpgradeSubscription(ctx context.Context, req *request.UpgradeSubscriptionRequest) (*response.BaseResponse, error)
@@ -25,17 +25,17 @@ type ISubscriptionService interface {
 	RenewSubscription(ctx context.Context) (*response.BaseResponse, error)
 	ExtendTrial(ctx context.Context, subscriptionId int64, req *request.ExtendTrialRequest) (*response.BaseResponse, error)
 	ExpireSubscription(ctx context.Context, subscriptionId int64) (*response.BaseResponse, error)
-	GetActiveSubscription(ctx context.Context, organizationId int64) (*response.BaseResponse, error)
+	GetActiveSubscription(ctx context.Context) (*response.BaseResponse, error)
 	GetSubscriptionById(ctx context.Context, subscriptionId int64) (*response.BaseResponse, error)
-	GetSubscriptionHistory(ctx context.Context, organizationId int64) (*response.BaseResponse, error)
+	GetSubscriptionHistory(ctx context.Context) (*response.BaseResponse, error)
 }
 
 type SubscriptionService struct {
 	subscriptionClient port.ISubscriptionClientPort
 }
 
-func (s *SubscriptionService) Subscribe(ctx context.Context, organizationId int64, req *request.SubscribeRequest) (*response.BaseResponse, error) {
-	res, err := s.subscriptionClient.Subscribe(ctx, organizationId, req)
+func (s *SubscriptionService) Subscribe(ctx context.Context, req *request.SubscribeRequest) (*response.BaseResponse, error) {
+	res, err := s.subscriptionClient.Subscribe(ctx, req)
 	if err != nil {
 		log.Error(ctx, "SubscriptionService: Subscribe error: ", err.Error())
 		return nil, err
@@ -43,8 +43,8 @@ func (s *SubscriptionService) Subscribe(ctx context.Context, organizationId int6
 	return res, nil
 }
 
-func (s *SubscriptionService) StartTrial(ctx context.Context, organizationId int64, planId int64) (*response.BaseResponse, error) {
-	res, err := s.subscriptionClient.StartTrial(ctx, organizationId, planId)
+func (s *SubscriptionService) StartTrial(ctx context.Context, planId int64) (*response.BaseResponse, error) {
+	res, err := s.subscriptionClient.StartTrial(ctx, planId)
 	if err != nil {
 		log.Error(ctx, "SubscriptionService: StartTrial error: ", err.Error())
 		return nil, err
@@ -124,8 +124,8 @@ func (s *SubscriptionService) ExpireSubscription(ctx context.Context, subscripti
 	return res, nil
 }
 
-func (s *SubscriptionService) GetActiveSubscription(ctx context.Context, organizationId int64) (*response.BaseResponse, error) {
-	res, err := s.subscriptionClient.GetActiveSubscription(ctx, organizationId)
+func (s *SubscriptionService) GetActiveSubscription(ctx context.Context) (*response.BaseResponse, error) {
+	res, err := s.subscriptionClient.GetActiveSubscription(ctx)
 	if err != nil {
 		log.Error(ctx, "SubscriptionService: GetActiveSubscription error: ", err.Error())
 		return nil, err
@@ -142,8 +142,8 @@ func (s *SubscriptionService) GetSubscriptionById(ctx context.Context, subscript
 	return res, nil
 }
 
-func (s *SubscriptionService) GetSubscriptionHistory(ctx context.Context, organizationId int64) (*response.BaseResponse, error) {
-	res, err := s.subscriptionClient.GetSubscriptionHistory(ctx, organizationId)
+func (s *SubscriptionService) GetSubscriptionHistory(ctx context.Context) (*response.BaseResponse, error) {
+	res, err := s.subscriptionClient.GetSubscriptionHistory(ctx)
 	if err != nil {
 		log.Error(ctx, "SubscriptionService: GetSubscriptionHistory error: ", err.Error())
 		return nil, err

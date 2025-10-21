@@ -22,7 +22,7 @@ type SubscriptionClientAdapter struct {
 	circuitBreaker *utils.CircuitBreaker
 }
 
-func (s *SubscriptionClientAdapter) Subscribe(ctx context.Context, organizationId int64, req *request.SubscribeRequest) (*response.BaseResponse, error) {
+func (s *SubscriptionClientAdapter) Subscribe(ctx context.Context, req *request.SubscribeRequest) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
 	var httpResponse *utils.HTTPResponse
@@ -51,7 +51,7 @@ func (s *SubscriptionClientAdapter) Subscribe(ctx context.Context, organizationI
 	return &result, nil
 }
 
-func (s *SubscriptionClientAdapter) StartTrial(ctx context.Context, organizationId int64, planId int64) (*response.BaseResponse, error) {
+func (s *SubscriptionClientAdapter) StartTrial(ctx context.Context, planId int64) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
 	queryParams := map[string]string{"planId": fmt.Sprintf("%d", planId)}
@@ -318,7 +318,7 @@ func (s *SubscriptionClientAdapter) ExpireSubscription(ctx context.Context, subs
 	return &result, nil
 }
 
-func (s *SubscriptionClientAdapter) GetActiveSubscription(ctx context.Context, organizationId int64) (*response.BaseResponse, error) {
+func (s *SubscriptionClientAdapter) GetActiveSubscription(ctx context.Context) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
 	var httpResponse *utils.HTTPResponse
@@ -377,7 +377,7 @@ func (s *SubscriptionClientAdapter) GetSubscriptionById(ctx context.Context, sub
 	return &result, nil
 }
 
-func (s *SubscriptionClientAdapter) GetSubscriptionHistory(ctx context.Context, organizationId int64) (*response.BaseResponse, error) {
+func (s *SubscriptionClientAdapter) GetSubscriptionHistory(ctx context.Context) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
 	var httpResponse *utils.HTTPResponse

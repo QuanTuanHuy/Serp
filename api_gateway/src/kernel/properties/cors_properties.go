@@ -32,6 +32,7 @@ func NewDefaultCorsProperties() *CorsProperties {
 		AllowedOrigins: []string{
 			"http://localhost:3000",
 			"https://serp-soict.vercel.app",
+			"https://serp.texkis.com",
 		},
 		AllowedMethods: []string{
 			"GET",
