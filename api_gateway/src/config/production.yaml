@@ -17,6 +17,7 @@ app:
   cors:
     allowedOrigins:
       - https://serp-soict.vercel.app
+      - https://serp.texkis.com
     allowedMethods:
       - GET
       - POST

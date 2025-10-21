@@ -6,9 +6,6 @@ Description: Part of Serp Project
 package controller
 
 import (
-	"strconv"
-	"strings"
-
 	"github.com/gin-gonic/gin"
 	"github.com/serp/api-gateway/src/core/domain/constant"
 	request "github.com/serp/api-gateway/src/core/domain/dto/request/account"
@@ -36,10 +33,8 @@ func (m *MenuDisplayController) CreateMenuDisplay(c *gin.Context) {
 }
 
 func (m *MenuDisplayController) UpdateMenuDisplay(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	id, ok := utils.ValidateAndParseID(c, "id")
+	if !ok {
 		return
 	}
 
@@ -58,10 +53,8 @@ func (m *MenuDisplayController) UpdateMenuDisplay(c *gin.Context) {
 }
 
 func (m *MenuDisplayController) DeleteMenuDisplay(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	id, ok := utils.ValidateAndParseID(c, "id")
+	if !ok {
 		return
 	}
 
@@ -74,10 +67,8 @@ func (m *MenuDisplayController) DeleteMenuDisplay(c *gin.Context) {
 }
 
 func (m *MenuDisplayController) GetMenuDisplaysByModuleId(c *gin.Context) {
-	moduleIdStr := c.Param("moduleId")
-	moduleId, err := strconv.ParseInt(moduleIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	moduleId, ok := utils.ValidateAndParseID(c, "moduleId")
+	if !ok {
 		return
 	}
 
@@ -126,15 +117,9 @@ func (m *MenuDisplayController) GetMenuDisplaysByRoleIds(c *gin.Context) {
 		return
 	}
 
-	roleIdsStrSlice := strings.Split(roleIdsStr, ",")
-	roleIds := make([]int64, 0, len(roleIdsStrSlice))
-	for _, idStr := range roleIdsStrSlice {
-		id, err := strconv.ParseInt(strings.TrimSpace(idStr), 10, 64)
-		if err != nil {
-			utils.AbortErrorHandle(c, constant.GeneralBadRequest)
-			return
-		}
-		roleIds = append(roleIds, id)
+	roleIds, ok := utils.ValidateAndParseIDsQuery(c, "roleIds")
+	if !ok {
+		return
 	}
 
 	res, err := m.menuDisplayService.GetMenuDisplaysByRoleIds(c.Request.Context(), roleIds)
