@@ -23,6 +23,7 @@ jobs:
       ptm-schedule: ${{ steps.changes.outputs.ptm-schedule }}
       ptm-optimization: ${{ steps.changes.outputs.ptm-optimization }}
       crm: ${{ steps.changes.outputs.crm }}
+      serp-web: ${{ steps.changes.outputs.serp-web }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -43,6 +44,9 @@ jobs:
               - 'ptm_optimization/**'
             crm:
               - 'crm/**'
+            serp-web:
+              - 'serp_web/**'
+
 
   deploy-account:
     needs: check-changes
@@ -158,6 +162,26 @@ jobs:
             docker compose up -d --remove-orphans
             docker image prune -f
 
+  deploy-serp-web:
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.serp-web == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Serp Web (Next.js)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}/serp_web
+            export IMAGE_TAG=${{ github.sha }}
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker image prune -f
+
+
   notify-deployment:
     needs: check-changes
     if: always()
@@ -173,3 +197,5 @@ jobs:
           echo "- PTM Schedule: ${{ needs.check-changes.outputs.ptm-schedule }}" >> $GITHUB_STEP_SUMMARY
           echo "- PTM Optimization: ${{ needs.check-changes.outputs.ptm-optimization }}" >> $GITHUB_STEP_SUMMARY
           echo "- CRM: ${{ needs.check-changes.outputs.crm }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Serp Web: ${{ needs.check-changes.outputs.serp-web }}" >> $GITHUB_STEP_SUMMARY
+
