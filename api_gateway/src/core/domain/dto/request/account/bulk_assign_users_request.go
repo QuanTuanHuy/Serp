@@ -9,5 +9,4 @@ type BulkAssignUsersRequest struct {
 	OrganizationId int64   `json:"organizationId"`
 	UserIds        []int64 `json:"userIds"`
 	ModuleId       int64   `json:"moduleId"`
-	RoleId         *int64  `json:"roleId"`
 }

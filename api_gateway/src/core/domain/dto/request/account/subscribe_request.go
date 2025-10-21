@@ -6,8 +6,8 @@ Description: Part of Serp Project
 package request
 
 type SubscribeRequest struct {
-	PlanId          int64   `json:"planId"`
-	DurationMonths  *int    `json:"durationMonths"`
-	PaymentMethodId *string `json:"paymentMethodId"`
-	AutoRenew       *bool   `json:"autoRenew"`
+	PlanId       int64   `json:"planId"`
+	BillingCycle string  `json:"billingCycle"`
+	IsAutoRenew  *bool   `json:"isAutoRenew"`
+	Notes        *string `json:"notes"`
 }

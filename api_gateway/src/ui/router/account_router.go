@@ -68,8 +68,8 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 
 	subscriptionV1 := group.Group("/api/v1/subscriptions")
 	{
-		subscriptionV1.Use(middleware.AuthMiddleware()).POST("/organizations/:organizationId/subscribe", subscriptionController.Subscribe)
-		subscriptionV1.Use(middleware.AuthMiddleware()).POST("/organizations/:organizationId/trial", subscriptionController.StartTrial)
+		subscriptionV1.Use(middleware.AuthMiddleware()).POST("/subscribe", subscriptionController.Subscribe)
+		subscriptionV1.Use(middleware.AuthMiddleware()).POST("/trial", subscriptionController.StartTrial)
 		subscriptionV1.Use(middleware.AuthMiddleware()).PUT("/:subscriptionId/activate", subscriptionController.ActivateSubscription)
 		subscriptionV1.Use(middleware.AuthMiddleware()).PUT("/:subscriptionId/reject", subscriptionController.RejectSubscription)
 		subscriptionV1.Use(middleware.AuthMiddleware()).PUT("/upgrade", subscriptionController.UpgradeSubscription)
@@ -78,9 +78,9 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 		subscriptionV1.Use(middleware.AuthMiddleware()).PUT("/renew", subscriptionController.RenewSubscription)
 		subscriptionV1.Use(middleware.AuthMiddleware()).PUT("/:subscriptionId/extend-trial", subscriptionController.ExtendTrial)
 		subscriptionV1.Use(middleware.AuthMiddleware()).PUT("/:subscriptionId/expire", subscriptionController.ExpireSubscription)
-		subscriptionV1.Use(middleware.AuthMiddleware()).GET("/organizations/:organizationId/active", subscriptionController.GetActiveSubscription)
+		subscriptionV1.Use(middleware.AuthMiddleware()).GET("/me/active", subscriptionController.GetActiveSubscription)
 		subscriptionV1.Use(middleware.AuthMiddleware()).GET("/:subscriptionId", subscriptionController.GetSubscriptionById)
-		subscriptionV1.Use(middleware.AuthMiddleware()).GET("/organizations/:organizationId/history", subscriptionController.GetSubscriptionHistory)
+		subscriptionV1.Use(middleware.AuthMiddleware()).GET("/me/history", subscriptionController.GetSubscriptionHistory)
 	}
 
 	subscriptionPlanV1 := group.Group("/api/v1/subscription-plans")
@@ -96,15 +96,15 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 		subscriptionPlanV1.Use(middleware.AuthMiddleware()).GET("/:planId/modules", subscriptionPlanController.GetPlanModules)
 	}
 
-	moduleAccessV1 := group.Group("/api/v1/module-access")
+	organizationsV1 := group.Group("/api/v1/organizations")
 	{
-		moduleAccessV1.Use(middleware.AuthMiddleware()).GET("/organizations/:organizationId/modules/:moduleId/check", moduleAccessController.CanOrganizationAccessModule)
-		moduleAccessV1.Use(middleware.AuthMiddleware()).GET("/organizations/:organizationId/modules", moduleAccessController.GetAccessibleModulesForOrganization)
-		moduleAccessV1.Use(middleware.AuthMiddleware()).POST("/organizations/:organizationId/assign", moduleAccessController.AssignUserToModule)
-		moduleAccessV1.Use(middleware.AuthMiddleware()).POST("/bulk-assign", moduleAccessController.BulkAssignUsersToModule)
-		moduleAccessV1.Use(middleware.AuthMiddleware()).DELETE("/organizations/:organizationId/modules/:moduleId/users/:userId", moduleAccessController.RevokeUserAccessToModule)
-		moduleAccessV1.Use(middleware.AuthMiddleware()).GET("/organizations/:organizationId/modules/:moduleId/users", moduleAccessController.GetUsersWithAccessToModule)
-		moduleAccessV1.Use(middleware.AuthMiddleware()).GET("/users/me/organizations/:organizationId/modules", moduleAccessController.GetModulesAccessibleByUser)
+		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/modules/:moduleId/access", moduleAccessController.CanOrganizationAccessModule)
+		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/modules", moduleAccessController.GetAccessibleModulesForOrganization)
+		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/modules/:moduleId/users", moduleAccessController.AssignUserToModule)
+		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/modules/:moduleId/users/bulk", moduleAccessController.BulkAssignUsersToModule)
+		organizationsV1.Use(middleware.AuthMiddleware()).DELETE("/:organizationId/modules/:moduleId/users/:userId", moduleAccessController.RevokeUserAccessToModule)
+		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/modules/:moduleId/users", moduleAccessController.GetUsersWithAccessToModule)
+		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/users/me/modules", moduleAccessController.GetModulesAccessibleByUser)
 	}
 
 	menuDisplayV1 := group.Group("/api/v1/menu-displays")

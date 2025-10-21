@@ -5,9 +5,9 @@ Description: Part of Serp Project
 
 package request
 
-type AddModuleToPlanRequest struct {
+type PlanModuleDto struct {
 	ModuleId          int64  `json:"moduleId"`
-	LicenseType       string `json:"licenseType"`
 	IsIncluded        *bool  `json:"isIncluded"`
+	LicenseType       string `json:"licenseType"`
 	MaxUsersPerModule *int   `json:"maxUsersPerModule"`
 }

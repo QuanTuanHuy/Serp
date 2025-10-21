@@ -6,8 +6,6 @@ Description: Part of Serp Project
 package controller
 
 import (
-	"strconv"
-
 	"github.com/gin-gonic/gin"
 	"github.com/serp/api-gateway/src/core/domain/constant"
 	request "github.com/serp/api-gateway/src/core/domain/dto/request/account"
@@ -35,10 +33,8 @@ func (m *ModuleController) CreateModule(c *gin.Context) {
 }
 
 func (m *ModuleController) GetModuleById(c *gin.Context) {
-	moduleIdStr := c.Param("moduleId")
-	moduleId, err := strconv.ParseInt(moduleIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	moduleId, ok := utils.ValidateAndParseID(c, "moduleId")
+	if !ok {
 		return
 	}
 
@@ -51,10 +47,8 @@ func (m *ModuleController) GetModuleById(c *gin.Context) {
 }
 
 func (m *ModuleController) UpdateModule(c *gin.Context) {
-	moduleIdStr := c.Param("moduleId")
-	moduleId, err := strconv.ParseInt(moduleIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	moduleId, ok := utils.ValidateAndParseID(c, "moduleId")
+	if !ok {
 		return
 	}
 
@@ -82,10 +76,8 @@ func (m *ModuleController) GetAllModules(c *gin.Context) {
 }
 
 func (m *ModuleController) UserRegisterModule(c *gin.Context) {
-	moduleIdStr := c.Param("moduleId")
-	moduleId, err := strconv.ParseInt(moduleIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	moduleId, ok := utils.ValidateAndParseID(c, "moduleId")
+	if !ok {
 		return
 	}
 
