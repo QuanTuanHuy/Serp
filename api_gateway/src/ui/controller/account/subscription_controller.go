@@ -6,8 +6,6 @@ Description: Part of Serp Project
 package controller
 
 import (
-	"strconv"
-
 	"github.com/gin-gonic/gin"
 	"github.com/serp/api-gateway/src/core/domain/constant"
 	request "github.com/serp/api-gateway/src/core/domain/dto/request/account"
@@ -35,10 +33,8 @@ func (s *SubscriptionController) Subscribe(c *gin.Context) {
 }
 
 func (s *SubscriptionController) StartTrial(c *gin.Context) {
-	planIdStr := c.Query("planId")
-	planId, err := strconv.ParseInt(planIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	planId, ok := utils.ValidateAndParseQueryID(c, "planId")
+	if !ok {
 		return
 	}
 
@@ -51,10 +47,8 @@ func (s *SubscriptionController) StartTrial(c *gin.Context) {
 }
 
 func (s *SubscriptionController) ActivateSubscription(c *gin.Context) {
-	subscriptionIdStr := c.Param("subscriptionId")
-	subscriptionId, err := strconv.ParseInt(subscriptionIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	subscriptionId, ok := utils.ValidateAndParseID(c, "subscriptionId")
+	if !ok {
 		return
 	}
 
@@ -67,10 +61,8 @@ func (s *SubscriptionController) ActivateSubscription(c *gin.Context) {
 }
 
 func (s *SubscriptionController) RejectSubscription(c *gin.Context) {
-	subscriptionIdStr := c.Param("subscriptionId")
-	subscriptionId, err := strconv.ParseInt(subscriptionIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	subscriptionId, ok := utils.ValidateAndParseID(c, "subscriptionId")
+	if !ok {
 		return
 	}
 
@@ -143,10 +135,8 @@ func (s *SubscriptionController) RenewSubscription(c *gin.Context) {
 }
 
 func (s *SubscriptionController) ExtendTrial(c *gin.Context) {
-	subscriptionIdStr := c.Param("subscriptionId")
-	subscriptionId, err := strconv.ParseInt(subscriptionIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	subscriptionId, ok := utils.ValidateAndParseID(c, "subscriptionId")
+	if !ok {
 		return
 	}
 
@@ -165,10 +155,8 @@ func (s *SubscriptionController) ExtendTrial(c *gin.Context) {
 }
 
 func (s *SubscriptionController) ExpireSubscription(c *gin.Context) {
-	subscriptionIdStr := c.Param("subscriptionId")
-	subscriptionId, err := strconv.ParseInt(subscriptionIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	subscriptionId, ok := utils.ValidateAndParseID(c, "subscriptionId")
+	if !ok {
 		return
 	}
 
@@ -191,10 +179,8 @@ func (s *SubscriptionController) GetActiveSubscription(c *gin.Context) {
 }
 
 func (s *SubscriptionController) GetSubscriptionById(c *gin.Context) {
-	subscriptionIdStr := c.Param("subscriptionId")
-	subscriptionId, err := strconv.ParseInt(subscriptionIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	subscriptionId, ok := utils.ValidateAndParseID(c, "subscriptionId")
+	if !ok {
 		return
 	}
 

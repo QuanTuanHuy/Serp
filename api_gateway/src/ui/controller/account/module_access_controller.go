@@ -6,8 +6,6 @@ Description: Part of Serp Project
 package controller
 
 import (
-	"strconv"
-
 	"github.com/gin-gonic/gin"
 	"github.com/serp/api-gateway/src/core/domain/constant"
 	request "github.com/serp/api-gateway/src/core/domain/dto/request/account"
@@ -20,17 +18,13 @@ type ModuleAccessController struct {
 }
 
 func (m *ModuleAccessController) CanOrganizationAccessModule(c *gin.Context) {
-	organizationIdStr := c.Param("organizationId")
-	organizationId, err := strconv.ParseInt(organizationIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	organizationId, ok := utils.ValidateAndParseID(c, "organizationId")
+	if !ok {
 		return
 	}
 
-	moduleIdStr := c.Param("moduleId")
-	moduleId, err := strconv.ParseInt(moduleIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	moduleId, ok := utils.ValidateAndParseID(c, "moduleId")
+	if !ok {
 		return
 	}
 
@@ -43,10 +37,8 @@ func (m *ModuleAccessController) CanOrganizationAccessModule(c *gin.Context) {
 }
 
 func (m *ModuleAccessController) GetAccessibleModulesForOrganization(c *gin.Context) {
-	organizationIdStr := c.Param("organizationId")
-	organizationId, err := strconv.ParseInt(organizationIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	organizationId, ok := utils.ValidateAndParseID(c, "organizationId")
+	if !ok {
 		return
 	}
 
@@ -59,17 +51,13 @@ func (m *ModuleAccessController) GetAccessibleModulesForOrganization(c *gin.Cont
 }
 
 func (m *ModuleAccessController) AssignUserToModule(c *gin.Context) {
-	organizationIdStr := c.Param("organizationId")
-	organizationId, err := strconv.ParseInt(organizationIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	organizationId, ok := utils.ValidateAndParseID(c, "organizationId")
+	if !ok {
 		return
 	}
 
-	moduleIdStr := c.Param("moduleId")
-	moduleId, err := strconv.ParseInt(moduleIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	moduleId, ok := utils.ValidateAndParseID(c, "moduleId")
+	if !ok {
 		return
 	}
 
@@ -91,17 +79,13 @@ func (m *ModuleAccessController) AssignUserToModule(c *gin.Context) {
 }
 
 func (m *ModuleAccessController) BulkAssignUsersToModule(c *gin.Context) {
-	organizationIdStr := c.Param("organizationId")
-	organizationId, err := strconv.ParseInt(organizationIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	organizationId, ok := utils.ValidateAndParseID(c, "organizationId")
+	if !ok {
 		return
 	}
 
-	moduleIdStr := c.Param("moduleId")
-	moduleId, err := strconv.ParseInt(moduleIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	moduleId, ok := utils.ValidateAndParseID(c, "moduleId")
+	if !ok {
 		return
 	}
 
@@ -124,24 +108,18 @@ func (m *ModuleAccessController) BulkAssignUsersToModule(c *gin.Context) {
 }
 
 func (m *ModuleAccessController) RevokeUserAccessToModule(c *gin.Context) {
-	organizationIdStr := c.Param("organizationId")
-	organizationId, err := strconv.ParseInt(organizationIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	organizationId, ok := utils.ValidateAndParseID(c, "organizationId")
+	if !ok {
 		return
 	}
 
-	moduleIdStr := c.Param("moduleId")
-	moduleId, err := strconv.ParseInt(moduleIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	moduleId, ok := utils.ValidateAndParseID(c, "moduleId")
+	if !ok {
 		return
 	}
 
-	userIdStr := c.Param("userId")
-	userId, err := strconv.ParseInt(userIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	userId, ok := utils.ValidateAndParseID(c, "userId")
+	if !ok {
 		return
 	}
 
@@ -154,17 +132,13 @@ func (m *ModuleAccessController) RevokeUserAccessToModule(c *gin.Context) {
 }
 
 func (m *ModuleAccessController) GetUsersWithAccessToModule(c *gin.Context) {
-	organizationIdStr := c.Param("organizationId")
-	organizationId, err := strconv.ParseInt(organizationIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	organizationId, ok := utils.ValidateAndParseID(c, "organizationId")
+	if !ok {
 		return
 	}
 
-	moduleIdStr := c.Param("moduleId")
-	moduleId, err := strconv.ParseInt(moduleIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	moduleId, ok := utils.ValidateAndParseID(c, "moduleId")
+	if !ok {
 		return
 	}
 
@@ -177,10 +151,8 @@ func (m *ModuleAccessController) GetUsersWithAccessToModule(c *gin.Context) {
 }
 
 func (m *ModuleAccessController) GetModulesAccessibleByUser(c *gin.Context) {
-	organizationIdStr := c.Param("organizationId")
-	organizationId, err := strconv.ParseInt(organizationIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	organizationId, ok := utils.ValidateAndParseID(c, "organizationId")
+	if !ok {
 		return
 	}
 

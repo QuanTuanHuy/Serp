@@ -6,8 +6,6 @@ Description: Part of Serp Project
 package controller
 
 import (
-	"strconv"
-
 	"github.com/gin-gonic/gin"
 	"github.com/serp/api-gateway/src/core/domain/constant"
 	request "github.com/serp/api-gateway/src/core/domain/dto/request/account"
@@ -44,10 +42,8 @@ func (r *RoleController) GetAllRoles(c *gin.Context) {
 }
 
 func (r *RoleController) AddPermissionsToRole(c *gin.Context) {
-	roleIdStr := c.Param("roleId")
-	roleId, err := strconv.ParseInt(roleIdStr, 10, 64)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	roleId, ok := utils.ValidateAndParseID(c, "roleId")
+	if !ok {
 		return
 	}
 
