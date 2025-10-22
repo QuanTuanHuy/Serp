@@ -4,7 +4,15 @@ Description: Part of Serp Project
 */
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, Input, Button, Badge } from '@/shared/components/ui';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Button,
+  Badge,
+} from '@/shared/components/ui';
 import { OrderSummary as OrderSummaryType, BillingCycle } from '../types';
 import { Loader2 } from 'lucide-react';
 
@@ -70,7 +78,10 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
           <div className='pb-4 border-b space-y-2'>
             <p className='text-sm font-medium'>Add-ons</p>
             {summary.addOns.map((addOn) => (
-              <div key={addOn.id} className='flex justify-between items-start text-sm'>
+              <div
+                key={addOn.id}
+                className='flex justify-between items-start text-sm'
+              >
                 <div className='flex-1'>
                   <p className='text-muted-foreground'>{addOn.name}</p>
                   {addOn.quantity && addOn.quantity > 1 && (
@@ -121,7 +132,10 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
                 {summary.promoCode.code} applied
               </Badge>
               <span className='text-sm text-primary'>
-                -{summary.promoCode.type === 'percentage' ? `${summary.promoCode.discount}%` : `$${summary.promoCode.discount}`}
+                -
+                {summary.promoCode.type === 'percentage'
+                  ? `${summary.promoCode.discount}%`
+                  : `$${summary.promoCode.discount}`}
               </span>
             </div>
           )}
@@ -138,10 +152,9 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
               <span>Discount</span>
               <span>
                 -$
-                {(
-                  summary.promoCode.type === 'percentage'
-                    ? (summary.subtotal * summary.promoCode.discount) / 100
-                    : summary.promoCode.discount
+                {(summary.promoCode.type === 'percentage'
+                  ? (summary.subtotal * summary.promoCode.discount) / 100
+                  : summary.promoCode.discount
                 ).toFixed(2)}
               </span>
             </div>

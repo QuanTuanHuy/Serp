@@ -15,7 +15,6 @@ import serp.project.account.core.domain.dto.request.SubscribeRequest;
 import serp.project.account.core.domain.dto.request.UpgradeSubscriptionRequest;
 import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
 import serp.project.account.core.domain.entity.SubscriptionPlanEntity;
-import serp.project.account.core.domain.entity.SubscriptionPlanModuleEntity;
 import serp.project.account.core.domain.enums.BillingCycle;
 import serp.project.account.core.domain.enums.SubscriptionStatus;
 import serp.project.account.core.domain.constant.Constants;
@@ -40,7 +39,6 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
     private final IOrganizationSubscriptionPort organizationSubscriptionPort;
     private final ISubscriptionPlanPort subscriptionPlanPort;
     private final ISubscriptionPlanModulePort subscriptionPlanModulePort;
-    // private final IModuleLicensePort moduleLicensePort;
 
     private final ISubscriptionPlanService subscriptionPlanService;
     private final OrganizationSubscriptionMapper organizationSubscriptionMapper;

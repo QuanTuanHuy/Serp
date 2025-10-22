@@ -4,7 +4,13 @@ Description: Part of Serp Project
 */
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, Button } from '@/shared/components/ui';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Button,
+} from '@/shared/components/ui';
 import { SubscriptionPlan } from '../types';
 import { Check, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/shared/utils';
@@ -103,14 +109,12 @@ export const ComparisonTable: React.FC<ComparisonTableProps> = ({ plans }) => {
                             </div>
                           </td>
                           {plans.map((plan) => {
-                            const planFeature = plan.featuresDetailed[
-                              catIndex
-                            ]?.features[featureIndex];
+                            const planFeature =
+                              plan.featuresDetailed[catIndex]?.features[
+                                featureIndex
+                              ];
                             return (
-                              <td
-                                key={plan.id}
-                                className='p-4 text-center'
-                              >
+                              <td key={plan.id} className='p-4 text-center'>
                                 {planFeature?.included ? (
                                   <Check className='h-5 w-5 text-primary mx-auto' />
                                 ) : (

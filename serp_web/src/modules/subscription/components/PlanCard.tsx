@@ -4,7 +4,13 @@ Description: Part of Serp Project
 */
 
 import React from 'react';
-import { Card, CardContent, CardHeader, Badge, Button } from '@/shared/components/ui';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  Badge,
+  Button,
+} from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { SubscriptionPlan, BillingCycle } from '../types';
 import { Check } from 'lucide-react';
@@ -22,7 +28,8 @@ export const PlanCard: React.FC<PlanCardProps> = ({
   onSelect,
   isSelected = false,
 }) => {
-  const price = billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
+  const price =
+    billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
   const displayPrice = billingCycle === 'yearly' ? price / 12 : price;
 
   return (
@@ -86,7 +93,9 @@ export const PlanCard: React.FC<PlanCardProps> = ({
           <div className='flex items-center justify-between text-sm mb-2'>
             <span className='text-muted-foreground'>Users</span>
             <span className='font-medium'>
-              {plan.maxUsers === 'unlimited' ? 'Unlimited' : `Up to ${plan.maxUsers}`}
+              {plan.maxUsers === 'unlimited'
+                ? 'Unlimited'
+                : `Up to ${plan.maxUsers}`}
             </span>
           </div>
           <div className='flex items-center justify-between text-sm'>

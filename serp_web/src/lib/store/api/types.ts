@@ -16,22 +16,19 @@ export interface PaginatedResponse<T = any> {
   status: string;
   message: string;
   data: {
-    content: T[];
-    totalElements: number;
+    items: T[];
+    totalItems: number;
     totalPages: number;
-    size: number;
-    number: number;
-    first: boolean;
-    last: boolean;
+    currentPage: number;
   };
 }
 
 // Common request types
 export interface PaginationParams {
   page?: number;
-  size?: number;
-  sort?: string;
-  direction?: 'ASC' | 'DESC';
+  pageSize?: number;
+  sortBy?: string;
+  sortDir?: 'ASC' | 'DESC';
 }
 
 export interface SearchParams extends PaginationParams {

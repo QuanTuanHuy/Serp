@@ -100,6 +100,12 @@ export const api = createApi({
     'Opportunity',
     'Activity',
     'Analytics',
+    // Admin tags
+    'admin/Organization',
+    'admin/Subscription',
+    'admin/Plan',
+    'admin/Module',
+    'admin/User',
   ],
 
   // Define endpoints in separate files for each module

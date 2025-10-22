@@ -74,8 +74,6 @@ app:
           second: GET
         - first: /api/v1/roles/**
           second: GET
-        - first: /api/v1/users/**
-          second: GET
         - first: /api/v1/modules/**
           second: GET
         - first: /api/v1/menu-displays/**
@@ -85,6 +83,21 @@ app:
         - first: /api/v1/subscription-plans/**
           second: GET
       protectedUrls:
+        # ==================== SERP_ADMIN ====================
+        - url-pattern: /api/v1/admin/**
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+          permissions:
+
+        # =================== ORGANIZATION CONTROLLER ====================
+        - url-pattern: /api/v1/organizations/me
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_USER
+          permissions:
+
         # ==================== USER CONTROLLER ====================
         - url-pattern: /api/v1/users/profile/me
           roles:
@@ -92,7 +105,12 @@ app:
             - SYSTEM_MODERATOR
             - ORG_USER
           permissions:
-        - url-pattern: /api/v1/users/**
+        - url-pattern: /api/v1/users
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_USER
+        - url-pattern: /api/v1/users/assign-roles
           roles:
             - SUPER_ADMIN
             - SYSTEM_MODERATOR

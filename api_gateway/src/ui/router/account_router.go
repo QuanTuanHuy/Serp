@@ -21,7 +21,8 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 	subscriptionController *account.SubscriptionController,
 	subscriptionPlanController *account.SubscriptionPlanController,
 	moduleAccessController *account.ModuleAccessController,
-	menuDisplayController *account.MenuDisplayController) {
+	menuDisplayController *account.MenuDisplayController,
+	organizationController *account.OrganizationController) {
 	authV1 := group.Group("/api/v1/auth")
 	{
 		authV1.POST("/register", authController.Register)
@@ -96,8 +97,15 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 		subscriptionPlanV1.Use(middleware.AuthMiddleware()).GET("/:planId/modules", subscriptionPlanController.GetPlanModules)
 	}
 
+	adminOrganizationsV1 := group.Group("/api/v1/admin/organizations")
+	{
+		adminOrganizationsV1.Use(middleware.AuthMiddleware()).GET("", organizationController.GetOrganizations)
+		adminOrganizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId", organizationController.GetOrganizationById)
+	}
+
 	organizationsV1 := group.Group("/api/v1/organizations")
 	{
+		organizationsV1.Use(middleware.AuthMiddleware()).GET("/me", organizationController.GetMyOrganization)
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/modules/:moduleId/access", moduleAccessController.CanOrganizationAccessModule)
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/modules", moduleAccessController.GetAccessibleModulesForOrganization)
 		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/modules/:moduleId/users", moduleAccessController.AssignUserToModule)

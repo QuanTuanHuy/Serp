@@ -37,19 +37,19 @@ public class PaginationUtils {
         return PageRequest.of(page, size, sort);
     }
 
-    public Map<String, Object> getResponse(long totalItems, int totalPages, int currentPage, Object data) {
+    public Map<String, Object> getResponse(long totalItems, Object items) {
+        return Map.of(
+                "totalItems", totalItems,
+                "items", items);
+    }
+
+    public Map<String, Object> getResponse(long totalItems, int page, int pageSize, Object items) {
+        int totalPages = (int) Math.ceil((double) totalItems / pageSize);
+
         return Map.of(
                 "totalItems", totalItems,
                 "totalPages", totalPages,
-                "currentPage", currentPage,
-                "data", data
-        );
-    }
-
-    public Map<String, Object> getResponse(long totalItems, Object data) {
-        return Map.of(
-                "totalItems", totalItems,
-                "data", data
-        );
+                "currentPage", page,
+                "items", items);
     }
 }

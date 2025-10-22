@@ -13,16 +13,21 @@ import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.AssignRoleToUserDto;
 import serp.project.account.core.domain.dto.request.GetUserParams;
+import serp.project.account.core.domain.dto.response.UserProfileResponse;
+import serp.project.account.core.domain.entity.OrganizationEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.UserEntity;
 import serp.project.account.core.service.IKeycloakUserService;
+import serp.project.account.core.service.IOrganizationService;
 import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.IUserService;
+import serp.project.account.infrastructure.store.mapper.UserMapper;
 import serp.project.account.kernel.utils.CollectionUtils;
 import serp.project.account.kernel.utils.PaginationUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
 
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,6 +37,9 @@ public class UserUseCase {
     private final IUserService userService;
     private final IKeycloakUserService keycloakUserService;
     private final IRoleService roleService;
+    private final IOrganizationService organizationService;
+
+    private final UserMapper userMapper;
 
     private final ResponseUtils responseUtils;
     private final PaginationUtils paginationUtils;
@@ -88,8 +96,26 @@ public class UserUseCase {
 
     public GeneralResponse<?> getUsers(GetUserParams params) {
         try {
-            var response = userService.getUsers(params);
-            return responseUtils.success(paginationUtils.getResponse(response.getFirst(), response.getSecond()));
+            var pairUsers = userService.getUsers(params);
+            var users = pairUsers.getSecond();
+            var userProfiles = users.stream().map(userMapper::toProfileResponse).toList();
+            if (!CollectionUtils.isEmpty(userProfiles)) {
+                var organizationIds = userProfiles.stream()
+                        .map(UserProfileResponse::getOrganizationId)
+                        .distinct()
+                        .toList();
+                var organizationMap = organizationService.getOrganizationsByIds(organizationIds).stream()
+                        .collect(Collectors.toMap(OrganizationEntity::getId, Function.identity()));
+                userProfiles.forEach(profile -> {
+                    var organization = organizationMap.get(profile.getOrganizationId());
+                    if (organization != null) {
+                        profile.setOrganizationName(organization.getName());
+                    }
+                });
+            }
+
+            return responseUtils.success(paginationUtils.getResponse(pairUsers.getFirst(), params.getPage(),
+                    params.getPageSize(), userProfiles));
         } catch (Exception e) {
             log.error("Get users failed: {}", e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
