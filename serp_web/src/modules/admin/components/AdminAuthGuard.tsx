@@ -11,6 +11,7 @@ import {
   RoleGuard,
   RoleGuardProps,
 } from '@/modules/account/components/RoleGuard';
+import { SYSTEM_ADMIN_ROLES } from '@/shared';
 
 interface AdminAuthGuardProps {
   children: React.ReactNode;
@@ -88,7 +89,7 @@ export const AdminAuthGuard: React.FC<AdminAuthGuardProps> = ({
 
   return (
     <RoleGuard
-      roles={['SUPER_ADMIN', 'SYSTEM_MODERATOR']}
+      roles={SYSTEM_ADMIN_ROLES}
       requireAllRoles={false}
       fallback={adminFallback}
       loading={loading}

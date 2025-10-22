@@ -25,6 +25,7 @@ import {
   Shield,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
+import { useAuth } from '@/modules/account';
 
 interface AdminHeaderProps {
   className?: string;
@@ -34,6 +35,8 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ className }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [notifications, setNotifications] = useState(0);
+
+  const { logout } = useAuth();
 
   const router = useRouter();
   const pathname = usePathname();
@@ -59,7 +62,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ className }) => {
   };
 
   const handleLogout = () => {
-    // TODO: Implement logout
+    logout();
     router.push('/auth');
   };
 
