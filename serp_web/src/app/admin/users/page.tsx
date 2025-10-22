@@ -32,6 +32,7 @@ import {
   Mail,
   Building2,
 } from 'lucide-react';
+import { AdminUser } from '@/modules/admin/types';
 
 export default function UsersPage() {
   const [filters, setFilters] = useState<UserFilters>({
@@ -179,7 +180,7 @@ export default function UsersPage() {
                     </tr>
                   </thead>
                   <tbody className='divide-y'>
-                    {users.map((user) => (
+                    {users.map((user: AdminUser) => (
                       <tr
                         key={user.id}
                         className='hover:bg-muted/50 transition-colors'

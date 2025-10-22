@@ -40,7 +40,7 @@ export type {
   BillingCycle,
   ModuleStatus,
   UserStatus,
-} from './types/admin.types';
+} from './types';
 
 // API Services
 export {

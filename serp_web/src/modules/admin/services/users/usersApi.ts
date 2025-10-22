@@ -8,7 +8,7 @@ import type {
   AdminUser,
   UserFilters,
   UsersResponse,
-} from '../../types/admin.types';
+} from '../../types';
 import { createPaginatedTransform } from '@/lib/store/api/utils';
 
 export const usersApi = api.injectEndpoints({
