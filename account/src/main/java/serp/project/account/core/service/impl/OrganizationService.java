@@ -8,6 +8,7 @@ package serp.project.account.core.service.impl;
 import java.util.Collections;
 import java.util.List;
 
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -16,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.CreateOrganizationDto;
+import serp.project.account.core.domain.dto.request.GetOrganizationParams;
 import serp.project.account.core.domain.entity.OrganizationEntity;
 import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
 import serp.project.account.core.exception.AppException;
@@ -105,6 +107,11 @@ public class OrganizationService implements IOrganizationService {
             return Collections.emptyList();
         }
         return organizationPort.getByIds(organizationIds);
+    }
+
+    @Override
+    public Pair<List<OrganizationEntity>, Long> getOrganizations(GetOrganizationParams params) {
+        return organizationPort.getOrganizations(params);
     }
 
 }

@@ -114,7 +114,8 @@ public class UserUseCase {
                 });
             }
 
-            return responseUtils.success(paginationUtils.getResponse(pairUsers.getFirst(), userProfiles));
+            return responseUtils.success(paginationUtils.getResponse(pairUsers.getFirst(), params.getPage(),
+                    params.getPageSize(), userProfiles));
         } catch (Exception e) {
             log.error("Get users failed: {}", e.getMessage());
             return responseUtils.internalServerError(e.getMessage());

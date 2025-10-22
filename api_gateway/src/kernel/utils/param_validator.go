@@ -74,6 +74,18 @@ func ParseInt64Query(c *gin.Context, paramName string) *int64 {
 	return &param
 }
 
+func ParseInt64Param(c *gin.Context, paramName string) (int64, error) {
+	paramStr := c.Param(paramName)
+	if paramStr == "" {
+		return 0, fmt.Errorf("%s parameter is required", paramName)
+	}
+	param, err := strconv.ParseInt(paramStr, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid %s format", paramName)
+	}
+	return param, nil
+}
+
 func ParseStringQuery(c *gin.Context, paramName string) *string {
 	paramStr := c.Query(paramName)
 	if paramStr == "" {
