@@ -3,7 +3,7 @@
  * Description: Part of Serp Project - Utility functions for API responses
  */
 
-import type { ApiResponse, ApiError } from './types';
+import type { ApiResponse, ApiError, PaginatedResponse } from './types';
 import { epochToISOString } from '../../../shared/utils/dateTransformer';
 
 /**
@@ -62,6 +62,36 @@ export const createRtkTransformResponse = () => {
       return {
         ...response,
         data: transformTimestampFields(response.data),
+      };
+    }
+    return response;
+  };
+};
+
+export const createDataTransform = <T>() => {
+  return (response: any): T => {
+    if (response?.code === 200 && response?.status === 'success') {
+      return transformTimestampFields(response.data);
+    }
+    return response;
+  };
+};
+
+export const createPaginatedTransform = <T>() => {
+  return (response: any): PaginatedResponse<T> => {
+    if (response?.code === 200 && response?.status === 'success') {
+      const pageData = response.data;
+
+      return {
+        code: response.code,
+        status: response.status,
+        message: response.message,
+        data: {
+          items: transformTimestampFields(pageData.items || []),
+          totalItems: pageData.totalItems || 0,
+          totalPages: pageData.totalPages || 0,
+          currentPage: pageData.currentPage || 0,
+        },
       };
     }
     return response;

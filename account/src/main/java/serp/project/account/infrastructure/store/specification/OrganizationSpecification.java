@@ -15,7 +15,7 @@ public class OrganizationSpecification extends BaseSpecification<OrganizationMod
     }
 
     public static Specification<OrganizationModel> hasType(String type) {
-        return equal("type", type);
+        return equal("organizationType", type);
     }
 
     public static Specification<OrganizationModel> containsName(String name) {

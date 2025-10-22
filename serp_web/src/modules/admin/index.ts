@@ -41,3 +41,40 @@ export type {
   ModuleStatus,
   UserStatus,
 } from './types/admin.types';
+
+// API Services
+export {
+  // Organizations
+  organizationsApi,
+  useGetOrganizationsQuery,
+  useGetOrganizationByIdQuery,
+  useLazyGetOrganizationsQuery,
+  useLazyGetOrganizationByIdQuery,
+
+  // Users
+  usersApi,
+  useGetUsersQuery,
+  useLazyGetUsersQuery,
+
+  // Subscriptions
+  subscriptionsApi,
+  useGetSubscriptionsQuery,
+  useGetSubscriptionByIdQuery,
+  useLazyGetSubscriptionsQuery,
+  useLazyGetSubscriptionByIdQuery,
+
+  // Subscription Plans
+  plansApi,
+  useGetSubscriptionPlansQuery,
+  useGetSubscriptionPlanByIdQuery,
+  useCreateSubscriptionPlanMutation,
+  useUpdateSubscriptionPlanMutation,
+  useDeleteSubscriptionPlanMutation,
+
+  // Modules
+  modulesApi,
+  useGetModulesQuery,
+  useGetModuleByIdQuery,
+  useCreateModuleMutation,
+  useUpdateModuleMutation,
+} from './services/adminApi';
