@@ -69,7 +69,9 @@ export function Header() {
               </NavigationMenuLink>
             </NavigationMenuItem>
             <NavigationMenuItem>
-              <NavigationMenuLink href='/subscription'>Pricing</NavigationMenuLink>
+              <NavigationMenuLink href='/subscription'>
+                Pricing
+              </NavigationMenuLink>
             </NavigationMenuItem>
             <NavigationMenuItem>
               <NavigationMenuLink href='/help'>Help</NavigationMenuLink>

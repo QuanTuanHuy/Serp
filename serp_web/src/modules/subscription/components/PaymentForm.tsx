@@ -4,7 +4,15 @@ Description: Part of Serp Project
 */
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, Input, Label, Button } from '@/shared/components/ui';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Button,
+} from '@/shared/components/ui';
 import { PaymentInfo } from '../types';
 import { CreditCard, Lock } from 'lucide-react';
 
@@ -13,7 +21,10 @@ interface PaymentFormProps {
   onCancel?: () => void;
 }
 
-export const PaymentForm: React.FC<PaymentFormProps> = ({ onSubmit, onCancel }) => {
+export const PaymentForm: React.FC<PaymentFormProps> = ({
+  onSubmit,
+  onCancel,
+}) => {
   const [formData, setFormData] = useState<PaymentInfo>({
     cardNumber: '',
     expiryDate: '',
@@ -27,7 +38,9 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ onSubmit, onCancel }) 
     },
   });
 
-  const [errors, setErrors] = useState<Partial<Record<keyof PaymentInfo, string>>>({});
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof PaymentInfo, string>>
+  >({});
 
   const validateCardNumber = (value: string) => {
     const cleaned = value.replace(/\s/g, '');
@@ -74,7 +87,10 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ onSubmit, onCancel }) 
     setErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
-  const handleAddressChange = (field: keyof PaymentInfo['billingAddress'], value: string) => {
+  const handleAddressChange = (
+    field: keyof PaymentInfo['billingAddress'],
+    value: string
+  ) => {
     setFormData((prev) => ({
       ...prev,
       billingAddress: {
@@ -86,7 +102,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ onSubmit, onCancel }) 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const newErrors: Partial<Record<keyof PaymentInfo, string>> = {};
 
     if (!validateCardNumber(formData.cardNumber)) {
@@ -121,9 +137,15 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ onSubmit, onCancel }) 
           <div className='flex items-center gap-3 pb-4 border-b'>
             <span className='text-sm text-muted-foreground'>We accept:</span>
             <div className='flex gap-2'>
-              <div className='px-3 py-1 border rounded text-xs font-medium'>VISA</div>
-              <div className='px-3 py-1 border rounded text-xs font-medium'>Mastercard</div>
-              <div className='px-3 py-1 border rounded text-xs font-medium'>AMEX</div>
+              <div className='px-3 py-1 border rounded text-xs font-medium'>
+                VISA
+              </div>
+              <div className='px-3 py-1 border rounded text-xs font-medium'>
+                Mastercard
+              </div>
+              <div className='px-3 py-1 border rounded text-xs font-medium'>
+                AMEX
+              </div>
             </div>
           </div>
 
@@ -244,7 +266,9 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ onSubmit, onCancel }) 
                   type='text'
                   placeholder='10001'
                   value={formData.billingAddress.zipCode}
-                  onChange={(e) => handleAddressChange('zipCode', e.target.value)}
+                  onChange={(e) =>
+                    handleAddressChange('zipCode', e.target.value)
+                  }
                   required
                 />
               </div>
@@ -256,7 +280,9 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ onSubmit, onCancel }) 
                   type='text'
                   placeholder='United States'
                   value={formData.billingAddress.country}
-                  onChange={(e) => handleAddressChange('country', e.target.value)}
+                  onChange={(e) =>
+                    handleAddressChange('country', e.target.value)
+                  }
                   required
                 />
               </div>
@@ -274,7 +300,12 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ onSubmit, onCancel }) 
           {/* Submit Buttons */}
           <div className='flex gap-3 pt-4'>
             {onCancel && (
-              <Button type='button' variant='outline' onClick={onCancel} className='flex-1'>
+              <Button
+                type='button'
+                variant='outline'
+                onClick={onCancel}
+                className='flex-1'
+              >
                 Cancel
               </Button>
             )}

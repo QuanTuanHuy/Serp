@@ -51,7 +51,9 @@ export default function SubscriptionPage() {
   );
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [promoCode, setPromoCode] = useState<{ code: string; discount: number; type: 'percentage' | 'fixed' } | undefined>(undefined);
+  const [promoCode, setPromoCode] = useState<
+    { code: string; discount: number; type: 'percentage' | 'fixed' } | undefined
+  >(undefined);
 
   const selectedPlan = useMemo(
     () => SUBSCRIPTION_PLANS.find((plan) => plan.id === selectedPlanId),
@@ -163,9 +165,12 @@ export default function SubscriptionPage() {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     // Mock promo codes
-    const validPromoCodes: Record<string, { discount: number; type: 'percentage' | 'fixed' }> = {
-      'SAVE20': { discount: 20, type: 'percentage' },
-      'WELCOME10': { discount: 10, type: 'fixed' },
+    const validPromoCodes: Record<
+      string,
+      { discount: number; type: 'percentage' | 'fixed' }
+    > = {
+      SAVE20: { discount: 20, type: 'percentage' },
+      WELCOME10: { discount: 10, type: 'fixed' },
     };
 
     if (validPromoCodes[code]) {
@@ -188,7 +193,7 @@ export default function SubscriptionPage() {
     toast.success('Subscription Activated!', {
       description: `Welcome to SERP ${selectedPlan?.name}! Your subscription is now active.`,
     });
-    
+
     setTimeout(() => {
       router.push('/');
     }, 2000);
@@ -224,16 +229,13 @@ export default function SubscriptionPage() {
             Choose Your Perfect Plan
           </h1>
           <p className='text-xl text-muted-foreground max-w-2xl mx-auto'>
-            Start with a free trial. Upgrade or downgrade anytime. Cancel with no
-            penalties.
+            Start with a free trial. Upgrade or downgrade anytime. Cancel with
+            no penalties.
           </p>
         </div>
 
         {/* Billing Toggle */}
-        <BillingToggle
-          billingCycle={billingCycle}
-          onToggle={setBillingCycle}
-        />
+        <BillingToggle billingCycle={billingCycle} onToggle={setBillingCycle} />
 
         {/* Plan Cards */}
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12'>

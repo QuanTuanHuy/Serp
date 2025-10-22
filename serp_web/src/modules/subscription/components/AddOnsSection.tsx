@@ -4,7 +4,14 @@ Description: Part of Serp Project
 */
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, Checkbox, Input } from '@/shared/components/ui';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Checkbox,
+  Input,
+} from '@/shared/components/ui';
 import { AddOn } from '../types';
 import { cn } from '@/shared/utils';
 
