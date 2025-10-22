@@ -30,7 +30,7 @@ export type {
   OrganizationSubscription,
   SubscriptionPlan,
   Module,
-  AdminUser,
+  UserProfile,
   OrganizationFilters,
   SubscriptionFilters,
   ModuleFilters,

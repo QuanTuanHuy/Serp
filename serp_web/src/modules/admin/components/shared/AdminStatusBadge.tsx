@@ -11,9 +11,9 @@ import { cn } from '@/shared/utils';
 import {
   OrganizationStatus,
   SubscriptionStatus,
-  ModuleStatus,
   UserStatus,
-} from '../../types/admin.types';
+} from '../../types';
+import { ModuleStatus } from 'vm';
 
 type StatusType =
   | OrganizationStatus
