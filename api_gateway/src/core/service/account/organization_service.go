@@ -9,12 +9,13 @@ import (
 	"context"
 
 	"github.com/golibs-starter/golib/log"
+	request "github.com/serp/api-gateway/src/core/domain/dto/request/account"
 	"github.com/serp/api-gateway/src/core/domain/dto/response"
 	port "github.com/serp/api-gateway/src/core/port/client/account"
 )
 
 type IOrganizationService interface {
-	GetOrganizations(ctx context.Context, search *string, status *string, organizationType *string, page *int, pageSize *int) (*response.BaseResponse, error)
+	GetOrganizations(ctx context.Context, params *request.GetOrganizationParams) (*response.BaseResponse, error)
 	GetOrganizationById(ctx context.Context, organizationID int64) (*response.BaseResponse, error)
 	GetMyOrganization(ctx context.Context) (*response.BaseResponse, error)
 }
@@ -23,8 +24,8 @@ type OrganizationService struct {
 	organizationClient port.IOrganizationClientPort
 }
 
-func (o *OrganizationService) GetOrganizations(ctx context.Context, search *string, status *string, organizationType *string, page *int, pageSize *int) (*response.BaseResponse, error) {
-	res, err := o.organizationClient.GetOrganizations(ctx, search, status, organizationType, page, pageSize)
+func (o *OrganizationService) GetOrganizations(ctx context.Context, params *request.GetOrganizationParams) (*response.BaseResponse, error) {
+	res, err := o.organizationClient.GetOrganizations(ctx, params)
 	if err != nil {
 		log.Error(ctx, "OrganizationService: GetOrganizations error: ", err.Error())
 		return nil, err

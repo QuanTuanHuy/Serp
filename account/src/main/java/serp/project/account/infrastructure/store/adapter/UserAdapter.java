@@ -51,7 +51,8 @@ public class UserAdapter implements IUserPort {
     public Pair<Long, List<UserEntity>> getUsers(GetUserParams params) {
         var pageable = paginationUtils.getPageable(params);
         var specification = UserSpecification.searchUsersWithEmailOrName(params.getSearch())
-                .and(UserSpecification.hasOrganizationId(params.getOrganizationId()));
+                .and(UserSpecification.hasOrganizationId(params.getOrganizationId())
+                        .and(UserSpecification.hasStatus(params.getStatus())));
         var page = userRepository.findAll(specification, pageable);
 
         var users = userMapper.toEntityList(page.getContent());

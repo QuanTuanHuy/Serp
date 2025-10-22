@@ -14,3 +14,6 @@ export * from './providers';
 
 // Utils
 export * from './utils';
+
+// Types
+export * from './types';

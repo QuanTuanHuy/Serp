@@ -14,6 +14,6 @@ import (
 
 type IUserClientPort interface {
 	GetMyProfile(ctx context.Context) (*response.BaseResponse, error)
-	GetUsers(ctx context.Context, page *int, pageSize *int, sortBy *string, sortDir *string, search *string, organizationID *int64) (*response.BaseResponse, error)
+	GetUsers(ctx context.Context, params *request.GetUserParams) (*response.BaseResponse, error)
 	AssignRolesToUser(ctx context.Context, req *request.AssignRoleToUserDto) (*response.BaseResponse, error)
 }

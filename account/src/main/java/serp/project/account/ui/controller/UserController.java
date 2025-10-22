@@ -38,13 +38,16 @@ public class UserController {
             @RequestParam(required = false) String sortBy,
             @RequestParam(required = false) String sortDir,
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
             @RequestParam(required = false) Long organizationId) {
         if (!authUtils.canAccessOrganization(organizationId)) {
             organizationId = authUtils.getCurrentTenantId().orElse(null);
         }
 
         GetUserParams params = GetUserParams.builder()
-                .page(page).pageSize(pageSize).sortBy(sortBy).sortDirection(sortDir).search(search)
+                .page(page).pageSize(pageSize).sortBy(sortBy).sortDirection(sortDir)
+                .search(search)
+                .status(status)
                 .organizationId(organizationId)
                 .build();
         var response = userUseCase.getUsers(params);

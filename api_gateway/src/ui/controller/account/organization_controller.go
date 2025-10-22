@@ -8,6 +8,7 @@ package controller
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/serp/api-gateway/src/core/domain/constant"
+	request "github.com/serp/api-gateway/src/core/domain/dto/request/account"
 	service "github.com/serp/api-gateway/src/core/service/account"
 	"github.com/serp/api-gateway/src/kernel/utils"
 )
@@ -26,7 +27,15 @@ func (o *OrganizationController) GetOrganizations(c *gin.Context) {
 	status := utils.ParseStringQuery(c, "status")
 	organizationType := utils.ParseStringQuery(c, "type")
 
-	res, err := o.organizationService.GetOrganizations(c.Request.Context(), search, status, organizationType, &page, &pageSize)
+	params := &request.GetOrganizationParams{
+		Search:           search,
+		Status:           status,
+		OrganizationType: organizationType,
+		Page:             &page,
+		PageSize:         &pageSize,
+	}
+
+	res, err := o.organizationService.GetOrganizations(c.Request.Context(), params)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return

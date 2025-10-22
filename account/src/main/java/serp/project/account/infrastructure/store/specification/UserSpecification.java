@@ -23,6 +23,10 @@ public class UserSpecification extends BaseSpecification<UserModel> {
     public static Specification<UserModel> hasExactEmail(String email) {
         return equal("email", email);
     }
+
+    public static Specification<UserModel> hasStatus(String status) {
+        return equal("status", status);
+    }
     
     public static Specification<UserModel> hasExactFullName(String fullName) {
         return equal("fullName", fullName);
