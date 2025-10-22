@@ -35,9 +35,20 @@ func (u *UserController) GetUsers(c *gin.Context) {
 	sortBy := utils.ParseStringQuery(c, "sortBy")
 	sortDir := utils.ParseStringQuery(c, "sortDir")
 	search := utils.ParseStringQuery(c, "search")
+	status := utils.ParseStringQuery(c, "status")
 	organizationID := utils.ParseInt64Query(c, "organizationId")
 
-	res, err := u.userService.GetUsers(c.Request.Context(), &page, &pageSize, sortBy, sortDir, search, organizationID)
+	params := &request.GetUserParams{
+		Page:           &page,
+		PageSize:       &pageSize,
+		SortBy:         sortBy,
+		SortDir:        sortDir,
+		Search:         search,
+		OrganizationID: organizationID,
+		Status:         status,
+	}
+
+	res, err := u.userService.GetUsers(c.Request.Context(), params)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return

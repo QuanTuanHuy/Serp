@@ -47,27 +47,30 @@ func (u *UserClientAdapter) GetMyProfile(ctx context.Context) (*response.BaseRes
 	return &result, nil
 }
 
-func (u *UserClientAdapter) GetUsers(ctx context.Context, page *int, pageSize *int, sortBy *string, sortDir *string, search *string, organizationID *int64) (*response.BaseResponse, error) {
+func (u *UserClientAdapter) GetUsers(ctx context.Context, params *request.GetUserParams) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
 	queryParams := make(map[string]string)
-	if page != nil {
-		queryParams["page"] = fmt.Sprintf("%d", *page)
+	if params.Page != nil {
+		queryParams["page"] = fmt.Sprintf("%d", *params.Page)
 	}
-	if pageSize != nil {
-		queryParams["pageSize"] = fmt.Sprintf("%d", *pageSize)
+	if params.PageSize != nil {
+		queryParams["pageSize"] = fmt.Sprintf("%d", *params.PageSize)
 	}
-	if sortBy != nil {
-		queryParams["sortBy"] = *sortBy
+	if params.SortBy != nil {
+		queryParams["sortBy"] = *params.SortBy
 	}
-	if sortDir != nil {
-		queryParams["sortDir"] = *sortDir
+	if params.SortDir != nil {
+		queryParams["sortDir"] = *params.SortDir
 	}
-	if search != nil {
-		queryParams["search"] = *search
+	if params.Search != nil {
+		queryParams["search"] = *params.Search
 	}
-	if organizationID != nil {
-		queryParams["organizationId"] = fmt.Sprintf("%d", *organizationID)
+	if params.Status != nil {
+		queryParams["status"] = *params.Status
+	}
+	if params.OrganizationID != nil {
+		queryParams["organizationId"] = fmt.Sprintf("%d", *params.OrganizationID)
 	}
 
 	var httpResponse *utils.HTTPResponse

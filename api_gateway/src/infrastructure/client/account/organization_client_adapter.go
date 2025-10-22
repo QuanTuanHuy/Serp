@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/golibs-starter/golib/log"
+	request "github.com/serp/api-gateway/src/core/domain/dto/request/account"
 	"github.com/serp/api-gateway/src/core/domain/dto/response"
 	port "github.com/serp/api-gateway/src/core/port/client/account"
 	"github.com/serp/api-gateway/src/kernel/properties"
@@ -21,24 +22,24 @@ type OrganizationClientAdapter struct {
 	circuitBreaker *utils.CircuitBreaker
 }
 
-func (o *OrganizationClientAdapter) GetOrganizations(ctx context.Context, search *string, status *string, organizationType *string, page *int, pageSize *int) (*response.BaseResponse, error) {
+func (o *OrganizationClientAdapter) GetOrganizations(ctx context.Context, params *request.GetOrganizationParams) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
 	queryParams := make(map[string]string)
-	if search != nil {
-		queryParams["search"] = *search
+	if params.Search != nil {
+		queryParams["search"] = *params.Search
 	}
-	if status != nil {
-		queryParams["status"] = *status
+	if params.Status != nil {
+		queryParams["status"] = *params.Status
 	}
-	if organizationType != nil {
-		queryParams["type"] = *organizationType
+	if params.OrganizationType != nil {
+		queryParams["type"] = *params.OrganizationType
 	}
-	if page != nil {
-		queryParams["page"] = fmt.Sprintf("%d", *page)
+	if params.Page != nil {
+		queryParams["page"] = fmt.Sprintf("%d", *params.Page)
 	}
-	if pageSize != nil {
-		queryParams["pageSize"] = fmt.Sprintf("%d", *pageSize)
+	if params.PageSize != nil {
+		queryParams["pageSize"] = fmt.Sprintf("%d", *params.PageSize)
 	}
 
 	var httpResponse *utils.HTTPResponse

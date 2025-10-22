@@ -19,4 +19,5 @@ import lombok.experimental.SuperBuilder;
 public class GetUserParams extends BaseGetParams{
     private Long organizationId;
     private String search;
+    private String status;
 }
