@@ -7,6 +7,7 @@ package serp.project.account.ui.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Optional;
 
@@ -23,6 +24,7 @@ import serp.project.account.kernel.utils.ResponseUtils;
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/users")
+@Slf4j
 public class UserController {
     private final UserUseCase userUseCase;
 
@@ -35,10 +37,15 @@ public class UserController {
             @RequestParam(required = false) Integer pageSize,
             @RequestParam(required = false) String sortBy,
             @RequestParam(required = false) String sortDir,
-            @RequestParam(required = false) String search
-    ) {
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Long organizationId) {
+        if (!authUtils.canAccessOrganization(organizationId)) {
+            organizationId = authUtils.getCurrentTenantId().orElse(null);
+        }
+
         GetUserParams params = GetUserParams.builder()
                 .page(page).pageSize(pageSize).sortBy(sortBy).sortDirection(sortDir).search(search)
+                .organizationId(organizationId)
                 .build();
         var response = userUseCase.getUsers(params);
         return ResponseEntity.status(response.getCode()).body(response);

@@ -7,6 +7,8 @@ package serp.project.account.core.domain.entity;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -15,6 +17,7 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import serp.project.account.core.domain.enums.UserStatus;
 import serp.project.account.core.domain.enums.UserType;
+import serp.project.account.kernel.utils.CollectionUtils;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -80,5 +83,15 @@ public class UserEntity extends BaseEntity {
      * Danh sách departments mà user thuộc về
      */
     private List<UserDepartmentEntity> departments;
+
+    @JsonIgnore
+    public List<String> getRoleNames() {
+        if (CollectionUtils.isEmpty(this.getRoles())) {
+            return List.of();
+        }
+        return this.getRoles().stream()
+                .map(RoleEntity::getName)
+                .toList();
+    }
 
 }

@@ -5,8 +5,12 @@
 
 package serp.project.account.core.service.impl;
 
+import java.util.Collections;
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -93,6 +97,14 @@ public class OrganizationService implements IOrganizationService {
         var organization = getOrganizationById(organizationId);
         organization.setSubscriptionId(subscription.getId());
         return organizationPort.save(organization);
+    }
+
+    @Override
+    public List<OrganizationEntity> getOrganizationsByIds(List<Long> organizationIds) {
+        if (CollectionUtils.isEmpty(organizationIds)) {
+            return Collections.emptyList();
+        }
+        return organizationPort.getByIds(organizationIds);
     }
 
 }

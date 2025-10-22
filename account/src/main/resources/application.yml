@@ -74,8 +74,6 @@ app:
           second: GET
         - first: /api/v1/roles/**
           second: GET
-        - first: /api/v1/users/**
-          second: GET
         - first: /api/v1/modules/**
           second: GET
         - first: /api/v1/menu-displays/**
@@ -92,7 +90,13 @@ app:
             - SYSTEM_MODERATOR
             - ORG_USER
           permissions:
-        - url-pattern: /api/v1/users/**
+        - url-pattern: /api/v1/users
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_USER
+          permissions:
+        - url-pattern: /api/v1/users/assign-roles
           roles:
             - SUPER_ADMIN
             - SYSTEM_MODERATOR

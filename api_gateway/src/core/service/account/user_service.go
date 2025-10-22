@@ -16,7 +16,7 @@ import (
 
 type IUserService interface {
 	GetMyProfile(ctx context.Context) (*response.BaseResponse, error)
-	GetUsers(ctx context.Context, page *int, pageSize *int, sortBy *string, sortDir *string, search *string) (*response.BaseResponse, error)
+	GetUsers(ctx context.Context, page *int, pageSize *int, sortBy *string, sortDir *string, search *string, organizationID *int64) (*response.BaseResponse, error)
 	AssignRolesToUser(ctx context.Context, req *request.AssignRoleToUserDto) (*response.BaseResponse, error)
 }
 
@@ -33,8 +33,8 @@ func (u *UserService) GetMyProfile(ctx context.Context) (*response.BaseResponse,
 	return res, nil
 }
 
-func (u *UserService) GetUsers(ctx context.Context, page *int, pageSize *int, sortBy *string, sortDir *string, search *string) (*response.BaseResponse, error) {
-	res, err := u.userClient.GetUsers(ctx, page, pageSize, sortBy, sortDir, search)
+func (u *UserService) GetUsers(ctx context.Context, page *int, pageSize *int, sortBy *string, sortDir *string, search *string, organizationId *int64) (*response.BaseResponse, error) {
+	res, err := u.userClient.GetUsers(ctx, page, pageSize, sortBy, sortDir, search, organizationId)
 	if err != nil {
 		log.Error(ctx, "UserService: GetUsers error: ", err.Error())
 		return nil, err

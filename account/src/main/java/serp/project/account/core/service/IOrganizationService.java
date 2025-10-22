@@ -5,6 +5,8 @@
 
 package serp.project.account.core.service;
 
+import java.util.List;
+
 import serp.project.account.core.domain.dto.request.CreateOrganizationDto;
 import serp.project.account.core.domain.entity.OrganizationEntity;
 import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
@@ -19,4 +21,6 @@ public interface IOrganizationService {
     OrganizationEntity getOrganizationById(Long organizationId);
 
     void assignOrganizationToUser(Long organizationId, Long userId, Long roleId, Boolean isDefault);
+
+    List<OrganizationEntity> getOrganizationsByIds(List<Long> organizationIds);
 }

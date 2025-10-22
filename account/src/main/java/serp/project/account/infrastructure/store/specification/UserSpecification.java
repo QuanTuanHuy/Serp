@@ -31,6 +31,10 @@ public class UserSpecification extends BaseSpecification<UserModel> {
     public static Specification<UserModel> hasId(Long id) {
         return equal("id", id);
     }
+
+    public static Specification<UserModel> hasOrganizationId(Long organizationId) {
+        return equal("primaryOrganizationId", organizationId);
+    }
     
     public static Specification<UserModel> hasIds(List<Long> ids) {
         return in("id", ids);

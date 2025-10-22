@@ -127,9 +127,17 @@ public class UserMapper extends BaseMapper {
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .phoneNumber(user.getPhoneNumber())
+                .organizationId(user.getPrimaryOrganizationId())
+                .organizationName("") // To be filled later
+                .userType(user.getUserType())
+                .status(user.getStatus())
+                .lastLoginAt(user.getLastLoginAt())
+                .avatarUrl(user.getAvatarUrl())
+                .timezone(user.getTimezone())
+                .preferredLanguage(user.getPreferredLanguage())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
-                .roles(user.getRoles().stream().map(RoleEntity::getName).toList())
+                .roles(user.getRoleNames())
                 .build();
     }
 

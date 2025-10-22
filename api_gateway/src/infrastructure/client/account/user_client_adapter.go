@@ -47,7 +47,7 @@ func (u *UserClientAdapter) GetMyProfile(ctx context.Context) (*response.BaseRes
 	return &result, nil
 }
 
-func (u *UserClientAdapter) GetUsers(ctx context.Context, page *int, pageSize *int, sortBy *string, sortDir *string, search *string) (*response.BaseResponse, error) {
+func (u *UserClientAdapter) GetUsers(ctx context.Context, page *int, pageSize *int, sortBy *string, sortDir *string, search *string, organizationID *int64) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
 	queryParams := make(map[string]string)
@@ -65,6 +65,9 @@ func (u *UserClientAdapter) GetUsers(ctx context.Context, page *int, pageSize *i
 	}
 	if search != nil {
 		queryParams["search"] = *search
+	}
+	if organizationID != nil {
+		queryParams["organizationId"] = fmt.Sprintf("%d", *organizationID)
 	}
 
 	var httpResponse *utils.HTTPResponse

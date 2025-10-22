@@ -7,6 +7,8 @@ package serp.project.account.core.domain.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
+import serp.project.account.core.domain.enums.UserStatus;
+import serp.project.account.core.domain.enums.UserType;
 
 import java.util.List;
 
@@ -24,6 +26,12 @@ public class UserProfileResponse {
     private String phoneNumber;
     private Long organizationId;
     private String organizationName;
+    private UserType userType;
+    private UserStatus status;
+    private Long lastLoginAt;
+    private String avatarUrl;
+    private String timezone;
+    private String preferredLanguage;
     private Long createdAt;
     private Long updatedAt;
 
