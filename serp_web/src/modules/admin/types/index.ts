@@ -23,6 +23,7 @@ export type {
   SubscriptionResponse,
   PlansResponse,
   PlanResponse,
+  SubscriptionFilters,
 } from './subscription.types';
 
 // Module types
@@ -40,7 +41,7 @@ export type {
 export type {
   UserStatus,
   UserType,
-  AdminUser,
+  UserProfile,
   UserFilters,
   UsersResponse,
   UserResponse,

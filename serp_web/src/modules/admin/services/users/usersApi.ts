@@ -4,11 +4,7 @@
  */
 
 import { api } from '@/lib/store/api';
-import type {
-  AdminUser,
-  UserFilters,
-  UsersResponse,
-} from '../../types';
+import type { UserFilters, UserProfile, UsersResponse } from '../../types';
 import { createPaginatedTransform } from '@/lib/store/api/utils';
 
 export const usersApi = api.injectEndpoints({
@@ -33,7 +29,7 @@ export const usersApi = api.injectEndpoints({
           method: 'GET',
         };
       },
-      transformResponse: createPaginatedTransform<AdminUser>(),
+      transformResponse: createPaginatedTransform<UserProfile>(),
       providesTags: (result) =>
         result?.data.items
           ? [

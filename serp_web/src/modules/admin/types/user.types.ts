@@ -14,17 +14,15 @@ export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'DELETED';
 export type UserType = 'INTERNAL' | 'EXTERNAL' | 'SYSTEM';
 
 // User
-export interface AdminUser {
+
+export interface UserProfile {
   id: number;
   email: string;
   firstName?: string;
   lastName?: string;
   phoneNumber?: string;
-  keycloakId: string;
-  isSuperAdmin: boolean;
-  primaryOrganizationId?: number;
-  primaryDepartmentId?: number;
-  organizationName?: string;
+  organizationId: number;
+  organizationName: string;
   userType: UserType;
   status: UserStatus;
   lastLoginAt?: string;
@@ -39,8 +37,9 @@ export interface AdminUser {
 export interface UserFilters extends SearchParams {
   status?: UserStatus;
   organizationId?: number;
+  search?: string;
 }
 
 // Response types
-export type UsersResponse = BasePaginatedResponse<AdminUser>;
-export type UserResponse = ApiResponse<AdminUser>;
+export type UsersResponse = BasePaginatedResponse<UserProfile>;
+export type UserResponse = ApiResponse<UserProfile>;
