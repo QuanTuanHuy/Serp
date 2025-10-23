@@ -197,4 +197,13 @@ public class RoleService implements IRoleService {
                 .toList();
     }
 
+    @Override
+    public RoleEntity getHighestRole(List<RoleEntity> roles) {
+        if (CollectionUtils.isEmpty(roles)) {
+            return null;
+        }
+        roles.sort((r1, r2) -> Integer.compare(r2.getPriority(), r1.getPriority()));
+        return roles.getFirst();
+    }
+
 }

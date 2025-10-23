@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.CreateUserDto;
+import serp.project.account.core.domain.dto.request.CreateUserForOrgRequest;
 import serp.project.account.core.domain.dto.request.GetUserParams;
 import serp.project.account.core.domain.dto.response.UserProfileResponse;
 import serp.project.account.core.domain.entity.RoleEntity;
@@ -177,5 +178,16 @@ public class UserService implements IUserService {
         return users.stream()
                 .map(userMapper::toProfileResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public UserEntity createUser(Long organizationId, CreateUserForOrgRequest request) {
+        var existedUser = userPort.getUserByEmail(request.getEmail());
+        if (existedUser != null) {
+            throw new AppException(Constants.ErrorMessage.USER_ALREADY_EXISTS);
+        }
+        var user = userMapper.createUserForOrgMapper(request, organizationId);
+        return userPort.save(user);
     }
 }

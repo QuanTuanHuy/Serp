@@ -13,8 +13,8 @@ import org.springframework.stereotype.Component;
 
 import serp.project.account.core.domain.dto.request.CreateKeycloakUserDto;
 import serp.project.account.core.domain.dto.request.CreateUserDto;
+import serp.project.account.core.domain.dto.request.CreateUserForOrgRequest;
 import serp.project.account.core.domain.dto.response.UserProfileResponse;
-import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.UserEntity;
 import serp.project.account.infrastructure.store.model.UserModel;
 
@@ -101,13 +101,23 @@ public class UserMapper extends BaseMapper {
                 .build();
     }
 
-    public CreateKeycloakUserDto createUserMapper(UserEntity entity, Long organizationId, CreateUserDto request) {
+    public UserEntity createUserForOrgMapper(CreateUserForOrgRequest request, Long organizationId) {
+        return UserEntity.builder()
+                .email(request.getEmail())
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .primaryOrganizationId(organizationId)
+                .userType(request.getUserType())
+                .build();
+    }
+
+    public CreateKeycloakUserDto createUserMapper(UserEntity entity, Long organizationId, String password) {
         return CreateKeycloakUserDto.builder()
                 .username(entity.getEmail())
                 .email(entity.getEmail())
                 .firstName(entity.getFirstName())
                 .lastName(entity.getLastName())
-                .password(request.getPassword())
+                .password(password)
                 .uid(entity.getId())
                 .orgId(organizationId)
                 .build();

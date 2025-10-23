@@ -7,6 +7,7 @@ package serp.project.account.core.service;
 
 import org.springframework.data.util.Pair;
 import serp.project.account.core.domain.dto.request.CreateUserDto;
+import serp.project.account.core.domain.dto.request.CreateUserForOrgRequest;
 import serp.project.account.core.domain.dto.request.GetUserParams;
 import serp.project.account.core.domain.dto.response.UserProfileResponse;
 import serp.project.account.core.domain.entity.UserEntity;
@@ -15,6 +16,8 @@ import java.util.List;
 
 public interface IUserService {
     UserEntity createUser(CreateUserDto request);
+
+    UserEntity createUser(Long organizationId, CreateUserForOrgRequest request);
 
     UserEntity updateUser(Long userId, UserEntity update);
 

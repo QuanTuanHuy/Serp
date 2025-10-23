@@ -28,4 +28,6 @@ public interface IRoleService {
     List<RoleEntity> getRolesByScopeAndTypeList(RoleScope scope, List<RoleType> types);
 
     void addPermissionsToRole(Long roleId, List<Long> permissionIds);
+
+    RoleEntity getHighestRole(List<RoleEntity> roles);
 }
