@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import serp.project.account.core.domain.dto.request.AddPermissionToRoleDto;
 import serp.project.account.core.domain.dto.request.CreateRoleDto;
+import serp.project.account.core.domain.dto.request.UpdateRoleDto;
 import serp.project.account.core.usecase.RoleUseCase;
 
 @RequiredArgsConstructor
@@ -37,6 +38,14 @@ public class RoleController {
     @GetMapping
     public ResponseEntity<?> getAllRoles() {
         var response = roleUseCase.getAllRoles();
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PatchMapping("/{roleId}")
+    public ResponseEntity<?> updateRole(
+            @PathVariable Long roleId,
+            @Valid @RequestBody UpdateRoleDto request) {
+        var response = roleUseCase.updateRole(roleId, request);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 

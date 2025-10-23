@@ -7,6 +7,8 @@ package serp.project.account.core.domain.entity;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -97,22 +99,27 @@ public class RoleEntity extends BaseEntity {
      */
     private List<MenuDisplayEntity> menuDisplays;
 
+    @JsonIgnore
     public boolean isSystemRole() {
         return RoleScope.SYSTEM.equals(this.scope);
     }
 
+    @JsonIgnore
     public boolean isOrganizationRole() {
         return RoleScope.ORGANIZATION.equals(this.scope);
     }
 
+    @JsonIgnore
     public boolean isModuleRole() {
         return RoleScope.MODULE.equals(this.scope);
     }
 
+    @JsonIgnore
     public boolean isDepartmentRole() {
         return RoleScope.DEPARTMENT.equals(this.scope);
     }
 
+    @JsonIgnore
     public boolean hasHigherPriorityThan(RoleEntity other) {
         if (other == null || this.priority == null || other.priority == null) {
             return false;
@@ -120,46 +127,56 @@ public class RoleEntity extends BaseEntity {
         return this.priority < other.priority;
     }
 
+    @JsonIgnore
     public boolean isKeycloakRealmRole() {
         return Boolean.TRUE.equals(this.isRealmRole);
     }
 
+    @JsonIgnore
     public boolean isKeycloakClientRole() {
         return Boolean.FALSE.equals(this.isRealmRole);
     }
 
+    @JsonIgnore
     public boolean isAutoAssigned() {
         return Boolean.TRUE.equals(this.isDefault);
     }
 
+    @JsonIgnore
     public boolean hasPermissions() {
         return this.permissions != null && !this.permissions.isEmpty();
     }
 
+    @JsonIgnore
     public boolean hasMenuDisplays() {
         return this.menuDisplays != null && !this.menuDisplays.isEmpty();
     }
 
+    @JsonIgnore
     public int getPermissionCount() {
         return this.permissions != null ? this.permissions.size() : 0;
     }
 
+    @JsonIgnore
     public int getMenuDisplayCount() {
         return this.menuDisplays != null ? this.menuDisplays.size() : 0;
     }
 
+    @JsonIgnore
     public boolean hasParentRole() {
         return this.parentRoleId != null;
     }
 
+    @JsonIgnore
     public boolean isValid() {
-        return this.name != null && !this.name.trim().isEmpty() 
-            && this.scope != null 
-            && this.roleType != null
-            && this.isRealmRole != null
-            && this.priority != null && this.priority > 0;
+        return this.name != null && !this.name.trim().isEmpty()
+                && this.scope != null
+                && this.roleType != null
+                && this.isRealmRole != null
+                && this.priority != null && this.priority > 0;
     }
 
+    @JsonIgnore
     public String getDisplayName() {
         if (this.description != null && !this.description.trim().isEmpty()) {
             return this.description;

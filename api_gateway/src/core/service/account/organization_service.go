@@ -18,6 +18,7 @@ type IOrganizationService interface {
 	GetOrganizations(ctx context.Context, params *request.GetOrganizationParams) (*response.BaseResponse, error)
 	GetOrganizationById(ctx context.Context, organizationID int64) (*response.BaseResponse, error)
 	GetMyOrganization(ctx context.Context) (*response.BaseResponse, error)
+	CreateUserForOrganization(ctx context.Context, organizationID int64, req *request.CreateUserForOrgRequest) (*response.BaseResponse, error)
 }
 
 type OrganizationService struct {
@@ -46,6 +47,15 @@ func (o *OrganizationService) GetMyOrganization(ctx context.Context) (*response.
 	res, err := o.organizationClient.GetMyOrganization(ctx)
 	if err != nil {
 		log.Error(ctx, "OrganizationService: GetMyOrganization error: ", err.Error())
+		return nil, err
+	}
+	return res, nil
+}
+
+func (o *OrganizationService) CreateUserForOrganization(ctx context.Context, organizationID int64, req *request.CreateUserForOrgRequest) (*response.BaseResponse, error) {
+	res, err := o.organizationClient.CreateUserForOrganization(ctx, organizationID, req)
+	if err != nil {
+		log.Error(ctx, "OrganizationService: CreateUserForOrganization error: ", err.Error())
 		return nil, err
 	}
 	return res, nil

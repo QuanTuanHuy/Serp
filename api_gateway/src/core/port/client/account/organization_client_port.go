@@ -16,4 +16,5 @@ type IOrganizationClientPort interface {
 	GetOrganizations(ctx context.Context, params *request.GetOrganizationParams) (*response.BaseResponse, error)
 	GetOrganizationById(ctx context.Context, organizationID int64) (*response.BaseResponse, error)
 	GetMyOrganization(ctx context.Context) (*response.BaseResponse, error)
+	CreateUserForOrganization(ctx context.Context, organizationID int64, req *request.CreateUserForOrgRequest) (*response.BaseResponse, error)
 }

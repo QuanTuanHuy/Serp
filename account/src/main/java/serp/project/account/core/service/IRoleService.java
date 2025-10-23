@@ -8,6 +8,7 @@ package serp.project.account.core.service;
 import java.util.List;
 
 import serp.project.account.core.domain.dto.request.CreateRoleDto;
+import serp.project.account.core.domain.dto.request.UpdateRoleDto;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.enums.RoleScope;
 import serp.project.account.core.domain.enums.RoleType;
@@ -28,4 +29,8 @@ public interface IRoleService {
     List<RoleEntity> getRolesByScopeAndTypeList(RoleScope scope, List<RoleType> types);
 
     void addPermissionsToRole(Long roleId, List<Long> permissionIds);
+
+    RoleEntity getHighestRole(List<RoleEntity> roles);
+
+    RoleEntity updateRole(Long roleId, UpdateRoleDto updateDto);
 }

@@ -97,6 +97,13 @@ app:
             - SYSTEM_MODERATOR
             - ORG_USER
           permissions:
+        - url-pattern: /api/v1/organizations/*/users
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+          permissions:
 
         # ==================== USER CONTROLLER ====================
         - url-pattern: /api/v1/users/profile/me

@@ -67,6 +67,27 @@ func (o *OrganizationController) GetMyOrganization(c *gin.Context) {
 	c.JSON(res.Code, res)
 }
 
+func (o *OrganizationController) CreateUserForOrganization(c *gin.Context) {
+	var req request.CreateUserForOrgRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+		return
+	}
+
+	organizationID, valid := utils.ValidateAndParseID(c, "organizationId")
+	if !valid {
+		return
+	}
+
+	res, err := o.organizationService.CreateUserForOrganization(c.Request.Context(), organizationID, &req)
+	if err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
+		return
+	}
+
+	c.JSON(res.Code, res)
+}
+
 func NewOrganizationController(organizationService service.IOrganizationService) *OrganizationController {
 	return &OrganizationController{
 		organizationService: organizationService,

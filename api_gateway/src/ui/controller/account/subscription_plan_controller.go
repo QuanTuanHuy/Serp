@@ -19,8 +19,7 @@ type SubscriptionPlanController struct {
 
 func (s *SubscriptionPlanController) CreatePlan(c *gin.Context) {
 	var req request.CreateSubscriptionPlanRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	if ok := utils.ValidateAndBindJSON(c, &req); !ok {
 		return
 	}
 
@@ -39,8 +38,7 @@ func (s *SubscriptionPlanController) UpdatePlan(c *gin.Context) {
 	}
 
 	var req request.UpdateSubscriptionPlanRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+	if ok := utils.ValidateAndBindJSON(c, &req); !ok {
 		return
 	}
 

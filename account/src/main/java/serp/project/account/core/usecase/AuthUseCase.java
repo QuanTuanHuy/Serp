@@ -64,7 +64,7 @@ public class AuthUseCase {
                     request.getOrganization());
             log.info("Organization id: {}", organization.getId());
 
-            var keycloakUser = userMapper.createUserMapper(user, organization.getId(), request);
+            var keycloakUser = userMapper.createUserMapper(user, organization.getId(), request.getPassword());
             userKeycloakId = keycloakUserService.createUser(keycloakUser);
 
             user.setKeycloakId(userKeycloakId);
@@ -185,7 +185,7 @@ public class AuthUseCase {
                     createUserDto.getOrganization());
             log.info("Organization id: {}", organization.getId());
 
-            var keycloakUser = userMapper.createUserMapper(user, organization.getId(), createUserDto);
+            var keycloakUser = userMapper.createUserMapper(user, organization.getId(), createUserDto.getPassword());
             userKeycloakId = keycloakUserService.createUser(keycloakUser);
 
             user.setKeycloakId(userKeycloakId);

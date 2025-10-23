@@ -8,6 +8,7 @@ import org.springframework.util.CollectionUtils;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.CreateRoleDto;
+import serp.project.account.core.domain.dto.request.UpdateRoleDto;
 import serp.project.account.core.domain.entity.PermissionEntity;
 import serp.project.account.core.domain.enums.RoleScope;
 import serp.project.account.core.domain.enums.RoleType;
@@ -112,5 +113,35 @@ public class RoleUseCase {
 
         // need check organizationId, departmentId, moduleId exist in db if defined
         // name in keycloak must be unique
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> updateRole(Long roleId, UpdateRoleDto request) {
+        try {
+            if (request.getScope() != null) {
+                try {
+                    RoleScope.valueOf(request.getScope());
+                } catch (IllegalArgumentException e) {
+                    throw new AppException(Constants.ErrorMessage.INVALID_ROLE_SCOPE);
+                }
+            }
+
+            if (request.getRoleType() != null) {
+                try {
+                    RoleType.valueOf(request.getRoleType());
+                } catch (IllegalArgumentException e) {
+                    throw new AppException(Constants.ErrorMessage.INVALID_ROLE_TYPE);
+                }
+            }
+
+            var updatedRole = roleService.updateRole(roleId, request);
+            return responseUtils.success(updatedRole);
+        } catch (AppException e) {
+            log.error("Error updating role: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error when updating role: {}", e.getMessage());
+            throw e;
+        }
     }
 }

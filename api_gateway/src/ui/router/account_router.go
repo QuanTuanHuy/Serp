@@ -49,6 +49,7 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 		roleV1.Use(middleware.AuthMiddleware()).POST("", roleController.CreateRole)
 		roleV1.Use(middleware.AuthMiddleware()).GET("", roleController.GetAllRoles)
 		roleV1.Use(middleware.AuthMiddleware()).POST("/:roleId/permissions", roleController.AddPermissionsToRole)
+		roleV1.Use(middleware.AuthMiddleware()).PATCH("/:roleId", roleController.UpdateRole)
 	}
 
 	permissionV1 := group.Group("/api/v1/permissions")
@@ -106,6 +107,7 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 	organizationsV1 := group.Group("/api/v1/organizations")
 	{
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/me", organizationController.GetMyOrganization)
+		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/users", organizationController.CreateUserForOrganization)
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/modules/:moduleId/access", moduleAccessController.CanOrganizationAccessModule)
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/modules", moduleAccessController.GetAccessibleModulesForOrganization)
 		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/modules/:moduleId/users", moduleAccessController.AssignUserToModule)

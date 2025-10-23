@@ -61,6 +61,26 @@ func (r *RoleController) AddPermissionsToRole(c *gin.Context) {
 	c.JSON(res.Code, res)
 }
 
+func (r *RoleController) UpdateRole(c *gin.Context) {
+	roleId, ok := utils.ValidateAndParseID(c, "roleId")
+	if !ok {
+		return
+	}
+
+	var req request.UpdateRoleDto
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+		return
+	}
+
+	res, err := r.roleService.UpdateRole(c.Request.Context(), roleId, &req)
+	if err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
+		return
+	}
+	c.JSON(res.Code, res)
+}
+
 func NewRoleController(roleService service.IRoleService) *RoleController {
 	return &RoleController{
 		roleService: roleService,

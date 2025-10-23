@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import serp.project.account.core.domain.dto.request.CreateClientRoleDto;
 import serp.project.account.core.domain.dto.request.CreateRealmRoleDto;
 import serp.project.account.core.domain.dto.request.CreateRoleDto;
+import serp.project.account.core.domain.dto.request.UpdateRoleDto;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.enums.RoleEnum;
 import serp.project.account.core.domain.enums.RoleScope;
@@ -245,10 +246,11 @@ public class RoleMapper extends BaseMapper {
                 .build();
     }
 
+
     /**
-     * Update RoleEntity with data from CreateRoleDto
+     * Update RoleEntity with data from UpdateRoleDto
      */
-    public RoleEntity updateRoleFromDto(RoleEntity existingRole, CreateRoleDto updateDto) {
+    public RoleEntity updateRoleFromUpdateDto(RoleEntity existingRole, UpdateRoleDto updateDto) {
         if (existingRole == null || updateDto == null) {
             return existingRole;
         }

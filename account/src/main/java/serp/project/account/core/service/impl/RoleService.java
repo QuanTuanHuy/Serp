@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import serp.project.account.core.domain.constant.CacheConstants;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.CreateRoleDto;
+import serp.project.account.core.domain.dto.request.UpdateRoleDto;
 import serp.project.account.core.domain.entity.GroupRoleEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.RolePermissionEntity;
@@ -195,6 +196,31 @@ public class RoleService implements IRoleService {
         return roles.stream()
                 .filter(role -> role.getScope().equals(scope) && types.contains(role.getRoleType()))
                 .toList();
+    }
+
+    @Override
+    public RoleEntity getHighestRole(List<RoleEntity> roles) {
+        if (CollectionUtils.isEmpty(roles)) {
+            return null;
+        }
+        roles.sort((r1, r2) -> Integer.compare(r2.getPriority(), r1.getPriority()));
+        return roles.getFirst();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public RoleEntity updateRole(Long roleId, UpdateRoleDto updateDto) {
+        RoleEntity existingRole = rolePort.getRoleById(roleId);
+        if (existingRole == null) {
+            throw new AppException(Constants.ErrorMessage.ROLE_NOT_FOUND);
+        }
+
+        existingRole = roleMapper.updateRoleFromUpdateDto(existingRole, updateDto);
+        existingRole = rolePort.save(existingRole);
+
+        clearCacheAllRoles();
+
+        return existingRole;
     }
 
 }

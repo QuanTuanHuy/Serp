@@ -16,4 +16,5 @@ type IRoleClientPort interface {
 	CreateRole(ctx context.Context, req *request.CreateRoleDto) (*response.BaseResponse, error)
 	GetAllRoles(ctx context.Context) (*response.BaseResponse, error)
 	AddPermissionsToRole(ctx context.Context, roleId int64, req *request.AddPermissionToRoleDto) (*response.BaseResponse, error)
+	UpdateRole(ctx context.Context, roleId int64, req *request.UpdateRoleDto) (*response.BaseResponse, error)
 }

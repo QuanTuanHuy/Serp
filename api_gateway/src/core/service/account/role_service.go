@@ -18,6 +18,7 @@ type IRoleService interface {
 	CreateRole(ctx context.Context, req *request.CreateRoleDto) (*response.BaseResponse, error)
 	GetAllRoles(ctx context.Context) (*response.BaseResponse, error)
 	AddPermissionsToRole(ctx context.Context, roleId int64, req *request.AddPermissionToRoleDto) (*response.BaseResponse, error)
+	UpdateRole(ctx context.Context, roleId int64, req *request.UpdateRoleDto) (*response.BaseResponse, error)
 }
 
 type RoleService struct {
@@ -46,6 +47,15 @@ func (r *RoleService) AddPermissionsToRole(ctx context.Context, roleId int64, re
 	res, err := r.roleClient.AddPermissionsToRole(ctx, roleId, req)
 	if err != nil {
 		log.Error(ctx, "RoleService: AddPermissionsToRole error: ", err.Error())
+		return nil, err
+	}
+	return res, nil
+}
+
+func (r *RoleService) UpdateRole(ctx context.Context, roleId int64, req *request.UpdateRoleDto) (*response.BaseResponse, error) {
+	res, err := r.roleClient.UpdateRole(ctx, roleId, req)
+	if err != nil {
+		log.Error(ctx, "RoleService: UpdateRole error: ", err.Error())
 		return nil, err
 	}
 	return res, nil

@@ -5,13 +5,19 @@
 
 package serp.project.account.ui.controller;
 
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import serp.project.account.core.domain.constant.Constants;
+import serp.project.account.core.domain.dto.request.CreateUserForOrgRequest;
 import serp.project.account.core.domain.dto.request.GetOrganizationParams;
 import serp.project.account.core.usecase.OrganizationUseCase;
 import serp.project.account.kernel.utils.AuthUtils;
@@ -52,6 +58,19 @@ public class OrganizationController {
     public ResponseEntity<?> getMyOrganization() {
         Long organizationId = authUtils.getCurrentTenantId().orElse(null);
         var response = organizationUseCase.getOrganizationById(organizationId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PostMapping("/organizations/{organizationId}/users")
+    public ResponseEntity<?> createUserForOrganization(
+        @PathVariable Long organizationId,
+        @Valid @RequestBody CreateUserForOrgRequest request
+
+    ) {
+        if (!authUtils.canAccessOrganization(organizationId)) {
+            return ResponseEntity.status(403).body(Constants.ErrorMessage.FORBIDDEN);
+        }
+        var response = organizationUseCase.createUserForOrganization(organizationId, request);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
