@@ -72,6 +72,7 @@ public class OrganizationUseCase {
 
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> createUserForOrganization(Long tenantId, CreateUserForOrgRequest request) {
+        String keycloakUserId = null;
         try {
             var organization = organizationService.getOrganizationById(tenantId);
             if (organization == null) {
@@ -82,7 +83,7 @@ public class OrganizationUseCase {
             final Long userId = user.getId();
 
             var keycloakUser = userMapper.createUserMapper(user, tenantId, request.getPassword());
-            var keycloakUserId = keycloakUserService.createUser(keycloakUser);
+            keycloakUserId = keycloakUserService.createUser(keycloakUser);
 
             user.setKeycloakId(keycloakUserId);
             user.setStatus(UserStatus.ACTIVE);
@@ -91,7 +92,7 @@ public class OrganizationUseCase {
             List<RoleEntity> roles;
             if (CollectionUtils.isEmpty(request.getRoleIds())) {
                 roles = roleService.getRolesByScope(RoleScope.ORGANIZATION).stream()
-                        .filter(role -> role.getIsDefault() == true)
+                        .filter(RoleEntity::isAutoAssigned)
                         .toList();
             } else {
                 roles = roleService.getRolesByScope(RoleScope.ORGANIZATION).stream()
@@ -117,9 +118,15 @@ public class OrganizationUseCase {
 
         } catch (AppException e) {
             log.error("Error creating user for organization: {}", e.getMessage());
+            if (keycloakUserId != null) {
+                keycloakUserService.deleteUser(keycloakUserId);
+            }
             throw e;
         } catch (Exception e) {
             log.error("Unexpected error creating user for organization: {}", e.getMessage());
+            if (keycloakUserId != null) {
+                keycloakUserService.deleteUser(keycloakUserId);
+            }
             throw e;
         }
     }

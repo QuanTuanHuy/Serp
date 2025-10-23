@@ -49,6 +49,7 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 		roleV1.Use(middleware.AuthMiddleware()).POST("", roleController.CreateRole)
 		roleV1.Use(middleware.AuthMiddleware()).GET("", roleController.GetAllRoles)
 		roleV1.Use(middleware.AuthMiddleware()).POST("/:roleId/permissions", roleController.AddPermissionsToRole)
+		roleV1.Use(middleware.AuthMiddleware()).PATCH("/:roleId", roleController.UpdateRole)
 	}
 
 	permissionV1 := group.Group("/api/v1/permissions")

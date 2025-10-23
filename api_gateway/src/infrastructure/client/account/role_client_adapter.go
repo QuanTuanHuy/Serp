@@ -110,6 +110,36 @@ func (r *RoleClientAdapter) AddPermissionsToRole(ctx context.Context, roleId int
 	return &result, nil
 }
 
+func (r *RoleClientAdapter) UpdateRole(ctx context.Context, roleId int64, req *request.UpdateRoleDto) (*response.BaseResponse, error) {
+	headers := utils.BuildHeadersFromContext(ctx)
+
+	path := fmt.Sprintf("/api/v1/roles/%d", roleId)
+	var httpResponse *utils.HTTPResponse
+	err := r.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
+		var err error
+		httpResponse, err = r.apiClient.PATCH(ctx, path, req, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call update role API: %w", err)
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to call update role API: %w", err)
+	}
+
+	if !r.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("UpdateRole API returned error status: %d", httpResponse.StatusCode))
+	}
+
+	var result response.BaseResponse
+	if err := r.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal update role response: %w", err)
+	}
+
+	return &result, nil
+}
+
 func NewRoleClientAdapter(authProps *properties.ExternalServiceProperties) port.IRoleClientPort {
 	baseUrl := "http://" + authProps.AccountService.Host + ":" + authProps.AccountService.Port + "/account-service"
 	apiClient := utils.NewBaseAPIClient(baseUrl, authProps.AccountService.Timeout)
