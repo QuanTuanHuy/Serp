@@ -16,8 +16,12 @@ import {
   Puzzle,
   Users,
   ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
+import { useAdminSidebar } from '../../contexts/AdminSidebarContext';
+import { Button } from '@/shared/components/ui/button';
 
 interface NavigationItem {
   name: string;
@@ -67,6 +71,7 @@ const navigationItems: NavigationItem[] = [
 
 export const AdminSidebar: React.FC = () => {
   const pathname = usePathname();
+  const { isCollapsed, toggleSidebar } = useAdminSidebar();
 
   const isActive = (href: string) => {
     if (href === '/admin') {
@@ -76,22 +81,55 @@ export const AdminSidebar: React.FC = () => {
   };
 
   return (
-    <aside className='fixed left-0 top-0 z-30 h-screen w-64 border-r bg-background'>
+    <aside
+      className={cn(
+        'fixed left-0 top-0 z-30 h-screen border-r bg-background transition-all duration-300',
+        isCollapsed ? 'w-16' : 'w-64'
+      )}
+    >
       {/* Logo/Brand */}
-      <div className='flex h-16 items-center border-b px-6'>
+      <div className='flex h-16 items-center border-b px-3 justify-between'>
         <Link href='/admin' className='flex items-center space-x-2'>
-          <div className='flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground'>
+          <div className='flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground flex-shrink-0'>
             <span className='text-lg font-bold'>S</span>
           </div>
-          <div className='flex flex-col'>
-            <span className='text-sm font-semibold'>SERP</span>
-            <span className='text-xs text-muted-foreground'>System Admin</span>
-          </div>
+          {!isCollapsed && (
+            <div className='flex flex-col'>
+              <span className='text-sm font-semibold'>SERP</span>
+              <span className='text-xs text-muted-foreground'>
+                System Admin
+              </span>
+            </div>
+          )}
         </Link>
+
+        {/* Toggle Button - Only show when not collapsed */}
+        {!isCollapsed && (
+          <Button
+            variant='ghost'
+            size='icon'
+            className='h-8 w-8'
+            onClick={toggleSidebar}
+          >
+            <PanelLeftClose className='h-4 w-4' />
+          </Button>
+        )}
       </div>
 
       {/* Navigation */}
-      <nav className='flex-1 space-y-1 p-4'>
+      <nav className='flex-1 space-y-1 p-2'>
+        {/* Expand button when collapsed */}
+        {isCollapsed && (
+          <Button
+            variant='ghost'
+            size='icon'
+            className='w-full mt-4'
+            onClick={toggleSidebar}
+            title='Expand sidebar'
+          >
+            <PanelLeftOpen className='h-4 w-4' />
+          </Button>
+        )}
         {navigationItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
@@ -104,37 +142,43 @@ export const AdminSidebar: React.FC = () => {
                 'group flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-accent hover:text-accent-foreground',
                 active
                   ? 'bg-accent text-accent-foreground shadow-sm'
-                  : 'text-muted-foreground'
+                  : 'text-muted-foreground',
+                isCollapsed && 'justify-center'
               )}
+              title={isCollapsed ? item.name : undefined}
             >
               <div className='flex items-center space-x-3'>
                 <Icon
                   className={cn(
-                    'h-5 w-5 transition-colors',
+                    'h-5 w-5 transition-colors flex-shrink-0',
                     active
                       ? 'text-primary'
                       : 'text-muted-foreground group-hover:text-accent-foreground'
                   )}
                 />
-                <span>{item.name}</span>
+                {!isCollapsed && <span>{item.name}</span>}
               </div>
 
-              {active && <ChevronRight className='h-4 w-4 text-primary' />}
+              {active && !isCollapsed && (
+                <ChevronRight className='h-4 w-4 text-primary' />
+              )}
             </Link>
           );
         })}
       </nav>
 
       {/* Footer Info */}
-      <div className='border-t p-4'>
-        <div className='rounded-lg bg-muted p-3 text-xs text-muted-foreground'>
-          <p className='font-medium'>System Admin Panel</p>
-          <p className='mt-1'>
-            Logged in as{' '}
-            <span className='font-semibold'>System Administrator</span>
-          </p>
+      {!isCollapsed && (
+        <div className='border-t p-4'>
+          <div className='rounded-lg bg-muted p-3 text-xs text-muted-foreground'>
+            <p className='font-medium'>System Admin Panel</p>
+            <p className='mt-1'>
+              Logged in as{' '}
+              <span className='font-semibold'>System Administrator</span>
+            </p>
+          </div>
         </div>
-      </div>
+      )}
     </aside>
   );
 };

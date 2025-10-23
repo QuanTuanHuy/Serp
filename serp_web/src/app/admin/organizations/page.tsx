@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   useGetOrganizationsQuery,
   AdminStatusBadge,
@@ -20,16 +20,9 @@ import {
 } from '@/shared/components/ui/card';
 import { Input } from '@/shared/components/ui/input';
 import { Button } from '@/shared/components/ui/button';
-import {
-  Building2,
-  Search,
-  Eye,
-  Edit,
-  Ban,
-  CheckCircle,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
+import { DataTable } from '@/shared/components';
+import type { ColumnDef } from '@/shared/types';
+import { Building2, Search, Eye, Edit, Ban, CheckCircle } from 'lucide-react';
 import { Organization } from '@/modules/admin/types';
 
 export default function OrganizationsPage() {
@@ -71,6 +64,130 @@ export default function OrganizationsPage() {
       day: 'numeric',
     });
   };
+
+  // Define columns for DataTable
+  const columns = useMemo<ColumnDef<Organization>[]>(
+    () => [
+      {
+        id: 'organization',
+        header: 'Organization',
+        accessor: 'name',
+        defaultVisible: true,
+        cell: ({ row }) => (
+          <div className='flex items-center gap-3'>
+            <div className='h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center'>
+              <Building2 className='h-5 w-5 text-primary' />
+            </div>
+            <div>
+              <p className='font-medium'>{row.name}</p>
+              <p className='text-xs text-muted-foreground'>{row.code}</p>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: 'type',
+        header: 'Type',
+        accessor: 'organizationType',
+        defaultVisible: true,
+        cell: ({ value }) => <span className='text-sm'>{value}</span>,
+      },
+      {
+        id: 'status',
+        header: 'Status',
+        accessor: 'status',
+        defaultVisible: true,
+        cell: ({ value }) => <AdminStatusBadge status={value} />,
+      },
+      {
+        id: 'employees',
+        header: 'Employees',
+        accessor: 'employeeCount',
+        defaultVisible: true,
+        cell: ({ value }) => <span className='text-sm'>{value || 'N/A'}</span>,
+      },
+      {
+        id: 'email',
+        header: 'Email',
+        accessor: 'email',
+        defaultVisible: false,
+        cell: ({ value }) => (
+          <span className='text-sm text-muted-foreground'>
+            {value || 'N/A'}
+          </span>
+        ),
+      },
+      {
+        id: 'phone',
+        header: 'Phone',
+        accessor: 'phoneNumber',
+        defaultVisible: false,
+        cell: ({ value }) => (
+          <span className='text-sm text-muted-foreground'>
+            {value || 'N/A'}
+          </span>
+        ),
+      },
+      {
+        id: 'created',
+        header: 'Created',
+        accessor: 'createdAt',
+        defaultVisible: true,
+        cell: ({ value }) => (
+          <span className='text-sm text-muted-foreground'>
+            {formatDate(value)}
+          </span>
+        ),
+      },
+      {
+        id: 'subscription',
+        header: 'Subscription',
+        accessor: 'subscriptionExpiresAt',
+        defaultVisible: true,
+        cell: ({ value }) => (
+          <span className='text-sm text-muted-foreground'>
+            {value ? `Expires ${formatDate(value)}` : 'No subscription'}
+          </span>
+        ),
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        accessor: 'id',
+        align: 'right',
+        defaultVisible: true,
+        cell: ({ row }) => (
+          <AdminActionMenu
+            items={[
+              {
+                label: 'View Details',
+                onClick: () => console.log('View', row.id),
+                icon: <Eye className='h-4 w-4' />,
+              },
+              {
+                label: 'Edit',
+                onClick: () => console.log('Edit', row.id),
+                icon: <Edit className='h-4 w-4' />,
+              },
+              {
+                label: row.status === 'ACTIVE' ? 'Suspend' : 'Activate',
+                onClick: () => console.log('Toggle status', row.id),
+                icon:
+                  row.status === 'ACTIVE' ? (
+                    <Ban className='h-4 w-4' />
+                  ) : (
+                    <CheckCircle className='h-4 w-4' />
+                  ),
+                separator: true,
+                variant: row.status === 'ACTIVE' ? 'destructive' : 'default',
+              },
+            ]}
+          />
+        ),
+      },
+    ],
+    []
+  );
 
   return (
     <div className='space-y-6'>
@@ -148,178 +265,33 @@ export default function OrganizationsPage() {
       </Card>
 
       {/* Table Card */}
-      <Card>
-        <CardContent className='p-0'>
-          {/* Loading State */}
-          {isLoading && (
-            <div className='flex items-center justify-center h-64'>
-              <div className='text-muted-foreground'>
-                Loading organizations...
-              </div>
+      <DataTable
+        columns={columns}
+        data={organizations}
+        keyExtractor={(org) => String(org.id)}
+        isLoading={isLoading}
+        error={error}
+        storageKey='admin-organizations-columns'
+        pagination={{
+          currentPage,
+          totalPages,
+          totalItems: response?.data.totalItems || 0,
+          onPageChange: handlePageChange,
+          isFetching,
+        }}
+        loadingState={
+          <div className='flex items-center justify-center h-64'>
+            <div className='text-muted-foreground'>
+              Loading organizations...
             </div>
-          )}
-
-          {/* Error State */}
-          {error && (
-            <div className='flex items-center justify-center h-64'>
-              <div className='text-destructive'>
-                Failed to load organizations
-              </div>
-            </div>
-          )}
-
-          {/* Table */}
-          {!isLoading && !error && response && (
-            <>
-              <div className='overflow-x-auto'>
-                <table className='w-full'>
-                  <thead className='border-b bg-muted/50'>
-                    <tr>
-                      <th className='px-4 py-3 text-left text-sm font-medium'>
-                        Organization
-                      </th>
-                      <th className='px-4 py-3 text-left text-sm font-medium'>
-                        Type
-                      </th>
-                      <th className='px-4 py-3 text-left text-sm font-medium'>
-                        Status
-                      </th>
-                      <th className='px-4 py-3 text-left text-sm font-medium'>
-                        Employees
-                      </th>
-                      <th className='px-4 py-3 text-left text-sm font-medium'>
-                        Created
-                      </th>
-                      <th className='px-4 py-3 text-left text-sm font-medium'>
-                        Subscription
-                      </th>
-                      <th className='px-4 py-3 text-right text-sm font-medium'>
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className='divide-y'>
-                    {organizations.map((org: Organization) => (
-                      <tr
-                        key={org.id}
-                        className='hover:bg-muted/50 transition-colors'
-                      >
-                        <td className='px-4 py-3'>
-                          <div className='flex items-center gap-3'>
-                            <div className='h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center'>
-                              <Building2 className='h-5 w-5 text-primary' />
-                            </div>
-                            <div>
-                              <p className='font-medium'>{org.name}</p>
-                              <p className='text-xs text-muted-foreground'>
-                                {org.code}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className='px-4 py-3'>
-                          <span className='text-sm'>
-                            {org.organizationType}
-                          </span>
-                        </td>
-                        <td className='px-4 py-3'>
-                          <AdminStatusBadge status={org.status} />
-                        </td>
-                        <td className='px-4 py-3'>
-                          <span className='text-sm'>
-                            {org.employeeCount || 'N/A'}
-                          </span>
-                        </td>
-                        <td className='px-4 py-3'>
-                          <span className='text-sm text-muted-foreground'>
-                            {formatDate(org.createdAt)}
-                          </span>
-                        </td>
-                        <td className='px-4 py-3'>
-                          <span className='text-sm text-muted-foreground'>
-                            {org.subscriptionExpiresAt
-                              ? `Expires ${formatDate(org.subscriptionExpiresAt)}`
-                              : 'No subscription'}
-                          </span>
-                        </td>
-                        <td className='px-4 py-3 text-right'>
-                          <AdminActionMenu
-                            items={[
-                              {
-                                label: 'View Details',
-                                onClick: () => console.log('View', org.id),
-                                icon: <Eye className='h-4 w-4' />,
-                              },
-                              {
-                                label: 'Edit',
-                                onClick: () => console.log('Edit', org.id),
-                                icon: <Edit className='h-4 w-4' />,
-                              },
-                              {
-                                label:
-                                  org.status === 'ACTIVE'
-                                    ? 'Suspend'
-                                    : 'Activate',
-                                onClick: () =>
-                                  console.log('Toggle status', org.id),
-                                icon:
-                                  org.status === 'ACTIVE' ? (
-                                    <Ban className='h-4 w-4' />
-                                  ) : (
-                                    <CheckCircle className='h-4 w-4' />
-                                  ),
-                                separator: true,
-                                variant:
-                                  org.status === 'ACTIVE'
-                                    ? 'destructive'
-                                    : 'default',
-                              },
-                            ]}
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Pagination */}
-              <div className='flex items-center justify-between border-t px-4 py-4'>
-                <div className='text-sm text-muted-foreground'>
-                  Showing {organizations.length} of {response.data.totalItems}{' '}
-                  organizations
-                </div>
-
-                <div className='flex items-center gap-2'>
-                  <Button
-                    variant='outline'
-                    size='sm'
-                    onClick={() => handlePageChange(filters.page! - 1)}
-                    disabled={filters.page === 0 || isFetching}
-                  >
-                    <ChevronLeft className='h-4 w-4' />
-                    Previous
-                  </Button>
-
-                  <div className='text-sm'>
-                    Page {currentPage + 1} of {totalPages}
-                  </div>
-
-                  <Button
-                    variant='outline'
-                    size='sm'
-                    onClick={() => handlePageChange(filters.page! + 1)}
-                    disabled={currentPage >= totalPages - 1 || isFetching}
-                  >
-                    Next
-                    <ChevronRight className='h-4 w-4' />
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        }
+        errorState={
+          <div className='flex items-center justify-center h-64'>
+            <div className='text-destructive'>Failed to load organizations</div>
+          </div>
+        }
+      />
     </div>
   );
 }

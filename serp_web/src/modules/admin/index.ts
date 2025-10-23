@@ -11,6 +11,12 @@ export { AdminHeader } from './components/layout/AdminHeader';
 // Auth Guard
 export { AdminAuthGuard, withAdminAuth } from './components/AdminAuthGuard';
 
+// Contexts
+export {
+  AdminSidebarProvider,
+  useAdminSidebar,
+} from './contexts/AdminSidebarContext';
+
 // Shared Components
 export { AdminStatsCard } from './components/shared/AdminStatsCard';
 export type { AdminStatsCardProps } from './components/shared/AdminStatsCard';

@@ -9,6 +9,11 @@ import React from 'react';
 import { AdminSidebar } from './AdminSidebar';
 import { AdminHeader } from './AdminHeader';
 import { AdminAuthGuard } from '../AdminAuthGuard';
+import {
+  AdminSidebarProvider,
+  useAdminSidebar,
+} from '../../contexts/AdminSidebarContext';
+import { cn } from '@/shared/utils';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -16,37 +21,47 @@ interface AdminLayoutProps {
 
 /**
  * AdminLayout - Main layout wrapper for admin pages
- * Includes:
- * - AdminAuthGuard (requires SUPER_ADMIN/SYSTEM_MODERATOR)
- * - Fixed sidebar navigation (w-64)
- * - Header with breadcrumbs and user menu
- * - Main content area with container
  *
- * Usage in app/admin/layout.tsx:
+ * Usage
  * ```tsx
  * export default function Layout({ children }) {
  *   return <AdminLayout>{children}</AdminLayout>;
  * }
  * ```
  */
+const AdminLayoutContent: React.FC<AdminLayoutProps> = ({ children }) => {
+  const { isCollapsed } = useAdminSidebar();
+
+  return (
+    <div className='flex min-h-screen bg-background'>
+      {/* Fixed Sidebar - 64px or 256px width */}
+      <AdminSidebar />
+
+      {/* Main Content Area */}
+      <div
+        className={cn(
+          'flex flex-1 flex-col transition-all duration-300',
+          isCollapsed ? 'pl-16' : 'pl-64'
+        )}
+      >
+        {/* Header */}
+        <AdminHeader />
+
+        {/* Page Content */}
+        <main className='flex-1 overflow-y-auto'>
+          <div className='container mx-auto p-6'>{children}</div>
+        </main>
+      </div>
+    </div>
+  );
+};
+
 export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   return (
     <AdminAuthGuard>
-      <div className='flex min-h-screen bg-background'>
-        {/* Fixed Sidebar - 64px width */}
-        <AdminSidebar />
-
-        {/* Main Content Area */}
-        <div className='flex flex-1 flex-col pl-64'>
-          {/* Header */}
-          <AdminHeader />
-
-          {/* Page Content */}
-          <main className='flex-1 overflow-y-auto'>
-            <div className='container mx-auto p-6'>{children}</div>
-          </main>
-        </div>
-      </div>
+      <AdminSidebarProvider>
+        <AdminLayoutContent>{children}</AdminLayoutContent>
+      </AdminSidebarProvider>
     </AdminAuthGuard>
   );
 };

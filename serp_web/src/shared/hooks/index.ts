@@ -6,6 +6,7 @@
 export { useTheme } from './use-theme';
 export { useLocalStorage } from './use-local-storage';
 export { useNotification } from './use-notification';
+export { useColumnVisibility } from './use-column-visibility';
 export {
   useAppDispatch,
   useAppSelector,
