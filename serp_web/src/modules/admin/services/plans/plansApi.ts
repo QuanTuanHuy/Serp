@@ -35,7 +35,10 @@ export const plansApi = api.injectEndpoints({
 
     createSubscriptionPlan: builder.mutation<
       SubscriptionPlan,
-      Omit<SubscriptionPlan, 'id' | 'createdAt' | 'updatedAt'>
+      Omit<
+        SubscriptionPlan,
+        'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'
+      >
     >({
       query: (planData) => ({
         url: '/subscription-plans',
@@ -51,7 +54,7 @@ export const plansApi = api.injectEndpoints({
       { id: string; data: Partial<SubscriptionPlan> }
     >({
       query: ({ id, data }) => ({
-        url: `/account/api/v1/subscription-plans/${id}`,
+        url: `/subscription-plans/${id}`,
         method: 'PUT',
         body: data,
       }),

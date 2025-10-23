@@ -177,16 +177,13 @@ src/
     └── store.ts             # Redux store with RTK Query middleware
 ```
 
-**Rules:** Modules are isolated (no cross-imports), Barrel exports, communicate via Redux. Use Shadcn UI components. API calls via RTK Query.
+**Rules:** Modules are isolated (no cross-imports), Barrel exports, communicate via Redux. Use Shadcn UI components. API calls via RTK Query. Always read `api_gateway` for endpoint details.
 
 ## Common Gotchas & Solutions
 
 1. **Forgot to register FX module (Go)**: Build succeeds but runtime panic. → Check `cmd/bootstrap/all.go`
-2. **Port already in use**: Kill process or change port in `application.yml`/`default.yaml`
-3. **Keycloak token validation fails**: Check `jwk-set-uri` matches Keycloak realm URL
-4. **Kafka connection refused**: Ensure `KAFKA_BOOTSTRAP_SERVERS` is `localhost:9092` (external port)
-5. **Transaction not rolling back**: Use `txService.ExecuteInTransaction`, not manual `tx.Begin()`
-6. **Entity/Model field mismatch**: Mapper must handle all conversions (e.g., Unix ms ↔ `time.Time`)
+2. **Transaction not rolling back**: Use `txService.ExecuteInTransaction`, not manual `tx.Begin()`
+3. **Entity/Model field mismatch**: Mapper must handle all conversions (e.g., Unix ms ↔ `time.Time`)
 
 ## Testing & Debugging
 

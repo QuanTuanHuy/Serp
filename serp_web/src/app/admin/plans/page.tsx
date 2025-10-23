@@ -9,11 +9,14 @@ import React, { useState, useMemo } from 'react';
 import {
   useGetSubscriptionPlansQuery,
   useUpdateSubscriptionPlanMutation,
+  useCreateSubscriptionPlanMutation,
+  useDeleteSubscriptionPlanMutation,
   AdminStatusBadge,
   AdminActionMenu,
   AdminStatsCard,
 } from '@/modules/admin';
 import type { SubscriptionPlan } from '@/modules/admin';
+import { PlanFormDialog } from '@/modules/admin/components/plans';
 import {
   Card,
   CardContent,
@@ -39,7 +42,14 @@ import {
 export default function PlansPage() {
   const { data: plans, isLoading, error } = useGetSubscriptionPlansQuery();
   const [updatePlan] = useUpdateSubscriptionPlanMutation();
+  const [createPlan, { isLoading: isCreating }] =
+    useCreateSubscriptionPlanMutation();
+  const [deletePlan] = useDeleteSubscriptionPlanMutation();
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<
+    SubscriptionPlan | undefined
+  >();
 
   const handleToggleActive = async (planId: string, isActive: boolean) => {
     try {
@@ -49,6 +59,46 @@ export default function PlansPage() {
       }).unwrap();
     } catch (error) {
       console.error('Failed to update plan:', error);
+    }
+  };
+
+  const handleCreatePlan = () => {
+    setSelectedPlan(undefined);
+    setIsDialogOpen(true);
+  };
+
+  const handleEditPlan = (plan: SubscriptionPlan) => {
+    setSelectedPlan(plan);
+    setIsDialogOpen(true);
+  };
+
+  const handleSubmitPlan = async (data: any) => {
+    try {
+      if (selectedPlan) {
+        await updatePlan({
+          id: String(selectedPlan.id),
+          data,
+        }).unwrap();
+      } else {
+        await createPlan(data).unwrap();
+      }
+      setIsDialogOpen(false);
+      setSelectedPlan(undefined);
+    } catch (error) {
+      console.error('Failed to save plan:', error);
+      throw error;
+    }
+  };
+
+  const handleDeletePlan = async (planId: string) => {
+    if (!confirm('Are you sure you want to delete this plan?')) {
+      return;
+    }
+
+    try {
+      await deletePlan(planId).unwrap();
+    } catch (error) {
+      console.error('Failed to delete plan:', error);
     }
   };
 
@@ -163,13 +213,8 @@ export default function PlansPage() {
           <AdminActionMenu
             items={[
               {
-                label: 'View Details',
-                onClick: () => console.log('View', row.id),
-                icon: <Eye className='h-4 w-4' />,
-              },
-              {
                 label: 'Edit',
-                onClick: () => console.log('Edit', row.id),
+                onClick: () => handleEditPlan(row),
                 icon: <Edit className='h-4 w-4' />,
               },
               {
@@ -184,7 +229,7 @@ export default function PlansPage() {
               },
               {
                 label: 'Delete',
-                onClick: () => console.log('Delete', row.id),
+                onClick: () => handleDeletePlan(String(row.id)),
                 icon: <Trash2 className='h-4 w-4' />,
                 variant: 'destructive',
               },
@@ -193,7 +238,7 @@ export default function PlansPage() {
         ),
       },
     ],
-    [handleToggleActive]
+    [handleToggleActive, handleEditPlan, handleDeletePlan]
   );
 
   return (
@@ -230,7 +275,7 @@ export default function PlansPage() {
             </Button>
           </div>
 
-          <Button size='sm'>
+          <Button size='sm' onClick={handleCreatePlan}>
             <Plus className='h-4 w-4 mr-2' />
             Create Plan
           </Button>
@@ -356,12 +401,12 @@ export default function PlansPage() {
 
                   {/* Actions */}
                   <div className='flex gap-2 pt-2 border-t'>
-                    <Button variant='outline' size='sm' className='flex-1'>
-                      <Eye className='h-4 w-4 mr-2' />
-                      View
-                    </Button>
-
-                    <Button variant='outline' size='sm' className='flex-1'>
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      className='flex-1'
+                      onClick={() => handleEditPlan(plan)}
+                    >
                       <Edit className='h-4 w-4 mr-2' />
                       Edit
                     </Button>
@@ -380,7 +425,7 @@ export default function PlansPage() {
                         },
                         {
                           label: 'Delete',
-                          onClick: () => console.log('Delete', plan.id),
+                          onClick: () => handleDeletePlan(String(plan.id)),
                           icon: <Trash2 className='h-4 w-4' />,
                           variant: 'destructive',
                           separator: true,
@@ -420,7 +465,7 @@ export default function PlansPage() {
               <p className='text-sm text-muted-foreground mt-1'>
                 Create your first subscription plan to get started
               </p>
-              <Button size='sm' className='mt-4'>
+              <Button size='sm' className='mt-4' onClick={handleCreatePlan}>
                 <Plus className='h-4 w-4 mr-2' />
                 Create Plan
               </Button>
@@ -438,13 +483,22 @@ export default function PlansPage() {
             <p className='text-sm text-muted-foreground mt-1'>
               Create your first subscription plan to get started
             </p>
-            <Button size='sm' className='mt-4'>
+            <Button size='sm' className='mt-4' onClick={handleCreatePlan}>
               <Plus className='h-4 w-4 mr-2' />
               Create Plan
             </Button>
           </CardContent>
         </Card>
       )}
+
+      {/* Plan Form Dialog */}
+      <PlanFormDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        plan={selectedPlan}
+        onSubmit={handleSubmitPlan}
+        isLoading={isCreating}
+      />
     </div>
   );
 }
