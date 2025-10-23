@@ -6,6 +6,8 @@
 export * from './ui';
 export { Header } from './Header';
 export { AppsShowcase } from './AppsShowcase';
+export { DataTable } from './data-table';
+export { ColumnVisibilityMenu } from './column-visibility-menu';
 export {
   ErrorBoundary,
   withErrorBoundary,

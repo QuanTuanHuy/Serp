@@ -66,18 +66,22 @@ export const AdminStatsCard: React.FC<AdminStatsCardProps> = ({
   return (
     <Card className={className}>
       <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-        <CardTitle className='text-sm font-medium'>{title}</CardTitle>
-        {icon && <div className='text-muted-foreground'>{icon}</div>}
+        <CardTitle className='text-xs sm:text-sm font-medium truncate pr-2'>
+          {title}
+        </CardTitle>
+        {icon && (
+          <div className='text-muted-foreground flex-shrink-0'>{icon}</div>
+        )}
       </CardHeader>
-      <CardContent>
-        <div className='text-2xl font-bold'>{value}</div>
+      <CardContent className='pt-0'>
+        <div className='text-xl sm:text-2xl font-bold'>{value}</div>
 
         {(description || trend) && (
-          <div className='flex items-center gap-2 mt-1'>
+          <div className='flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1'>
             {trend && (
               <div
                 className={cn(
-                  'flex items-center gap-1 text-xs font-medium',
+                  'flex items-center gap-1 text-xs font-medium flex-shrink-0',
                   getTrendColor()
                 )}
               >
@@ -86,7 +90,7 @@ export const AdminStatsCard: React.FC<AdminStatsCardProps> = ({
               </div>
             )}
             {description && (
-              <p className='text-xs text-muted-foreground'>
+              <p className='text-xs text-muted-foreground truncate'>
                 {trend && trend.label ? trend.label : description}
               </p>
             )}
