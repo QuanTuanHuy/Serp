@@ -7,14 +7,14 @@
 
 import React, { useMemo } from 'react';
 import {
-  useGetModulesQuery,
-  useUpdateModuleMutation,
   AdminStatusBadge,
   AdminActionMenu,
   AdminStatsCard,
 } from '@/modules/admin';
 import type { Module } from '@/modules/admin';
-import { Card, Button } from '@/shared/components';
+import { useModules } from '@/modules/admin/hooks/useModules';
+import { ModuleFormDialog } from '@/modules/admin/components/modules/ModuleFormDialog';
+import { Card, Button, Input } from '@/shared/components';
 import { DataTable } from '@/shared/components';
 import type { ColumnDef } from '@/shared/types';
 import {
@@ -29,30 +29,33 @@ import {
 } from 'lucide-react';
 
 export default function ModulesPage() {
-  const { data: modules, isLoading, error } = useGetModulesQuery();
-  const [updateModule] = useUpdateModuleMutation();
+  const {
+    modules,
+    stats,
+    isLoading,
+    error,
+    openCreateDialog,
+    openEditDialog,
+    toggleStatus,
+    isDialogOpen,
+    selectedModule,
+    isCreating,
+    submitModule,
+    closeDialog,
+    filters,
+    handleSearch,
+    handleFilterChange,
+  } = useModules();
 
   const handleToggleStatus = async (
     moduleId: string,
     currentStatus: string
   ) => {
-    try {
-      const newStatus = currentStatus === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
-      await updateModule({
-        id: moduleId,
-        data: { status: newStatus },
-      }).unwrap();
-    } catch (error) {
-      console.error('Failed to update module:', error);
-    }
+    await toggleStatus(moduleId, currentStatus);
   };
 
   // Calculate stats
-  const stats = {
-    total: modules?.length || 0,
-    enabled: modules?.filter((m) => m.status === 'ACTIVE').length || 0,
-    disabled: modules?.filter((m) => m.status === 'DISABLED').length || 0,
-  };
+  // moved into useModules
 
   // Define columns for DataTable
   const columns = useMemo<ColumnDef<Module>[]>(
@@ -68,7 +71,7 @@ export default function ModulesPage() {
               <Puzzle className='h-4 w-4 sm:h-5 sm:w-5 text-primary' />
             </div>
             <div className='min-w-0 flex-1'>
-              <p className='font-medium truncate'>{row.moduleName}</p>
+              <p className='font-medium truncate'>{row.name}</p>
               {row.description && (
                 <p className='text-xs text-muted-foreground max-w-xs sm:max-w-md truncate'>
                   {row.description}
@@ -95,6 +98,37 @@ export default function ModulesPage() {
         cell: ({ value }) => <AdminStatusBadge status={value} />,
       },
       {
+        id: 'type',
+        header: 'Type',
+        accessor: 'moduleType',
+        defaultVisible: true,
+        cell: ({ value }) => (
+          <span className='text-sm font-medium'>{value}</span>
+        ),
+      },
+      {
+        id: 'pricing',
+        header: 'Pricing',
+        accessor: 'pricingModel',
+        defaultVisible: true,
+        cell: ({ row }) => (
+          <span className='text-sm'>
+            {row.isFree ? 'FREE' : row.pricingModel}
+          </span>
+        ),
+      },
+      {
+        id: 'visibility',
+        header: 'Visibility',
+        accessor: 'isGlobal',
+        defaultVisible: true,
+        cell: ({ row }) => (
+          <span className='text-sm'>
+            {row.isGlobal ? 'Global' : `Org #${row.organizationId ?? '-'}`}
+          </span>
+        ),
+      },
+      {
         id: 'icon',
         header: 'Icon',
         accessor: 'icon',
@@ -107,6 +141,27 @@ export default function ModulesPage() {
         accessor: 'displayOrder',
         defaultVisible: true,
         cell: ({ value }) => <span className='text-sm'>{value}</span>,
+      },
+      {
+        id: 'category',
+        header: 'Category',
+        accessor: 'category',
+        defaultVisible: false,
+        cell: ({ value }) => <span className='text-sm'>{value || 'N/A'}</span>,
+      },
+      {
+        id: 'version',
+        header: 'Version',
+        accessor: 'version',
+        defaultVisible: false,
+        cell: ({ value }) => <span className='text-sm'>{value || '—'}</span>,
+      },
+      {
+        id: 'keycloak',
+        header: 'Keycloak Client',
+        accessor: 'keycloakClientId',
+        defaultVisible: false,
+        cell: ({ value }) => <span className='text-xs'>{value || '—'}</span>,
       },
       {
         id: 'actions',
@@ -124,7 +179,7 @@ export default function ModulesPage() {
               },
               {
                 label: 'Edit',
-                onClick: () => console.log('Edit', row.id),
+                onClick: () => openEditDialog(row as unknown as Module),
                 icon: <Edit className='h-4 w-4' />,
               },
               {
@@ -144,13 +199,13 @@ export default function ModulesPage() {
         ),
       },
     ],
-    [handleToggleStatus]
+    [handleToggleStatus, openEditDialog]
   );
 
   return (
     <div className='space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-8'>
       {/* Page Header */}
-      <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
+      <div className='flex items-center justify-between'>
         <div>
           <h1 className='text-2xl sm:text-3xl font-bold tracking-tight'>
             Modules
@@ -159,8 +214,7 @@ export default function ModulesPage() {
             Manage system modules and features
           </p>
         </div>
-
-        <Button size='sm' className='self-start sm:self-auto'>
+        <Button size='sm' onClick={openCreateDialog}>
           <Plus className='h-4 w-4 mr-2' />
           Create Module
         </Button>
@@ -187,6 +241,58 @@ export default function ModulesPage() {
         />
       </div>
 
+      {/* Filters Card */}
+      <Card>
+        <div className='p-4'>
+          <div className='grid gap-4 md:grid-cols-4'>
+            {/* Search */}
+            <div className='md:col-span-2'>
+              <div className='relative'>
+                <Input
+                  placeholder='Search by name, code, description...'
+                  value={filters.search || ''}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className='pl-3'
+                />
+              </div>
+            </div>
+
+            {/* Status Filter */}
+            <div>
+              <select
+                value={filters.status || ''}
+                onChange={(e) =>
+                  handleFilterChange('status', e.target.value || undefined)
+                }
+                className='w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm'
+              >
+                <option value=''>All Statuses</option>
+                <option value='ACTIVE'>Active</option>
+                <option value='BETA'>Beta</option>
+                <option value='DEPRECATED'>Deprecated</option>
+                <option value='MAINTENANCE'>Maintenance</option>
+                <option value='DISABLED'>Disabled</option>
+              </select>
+            </div>
+
+            {/* Type Filter */}
+            <div>
+              <select
+                value={filters.type || ''}
+                onChange={(e) =>
+                  handleFilterChange('type', e.target.value || undefined)
+                }
+                className='w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm'
+              >
+                <option value=''>All Types</option>
+                <option value='SYSTEM'>System</option>
+                <option value='CUSTOM'>Custom</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </Card>
+
       {/* Modules Table */}
       <DataTable
         columns={columns}
@@ -212,12 +318,23 @@ export default function ModulesPage() {
             <p className='text-sm text-muted-foreground mt-1 max-w-sm'>
               Create your first module to get started
             </p>
-            <Button size='sm' className='mt-4'>
+            <Button size='sm' className='mt-4' onClick={openCreateDialog}>
               <Plus className='h-4 w-4 mr-2' />
               Create Module
             </Button>
           </div>
         }
+      />
+
+      {/* Create/Edit Module Dialog */}
+      <ModuleFormDialog
+        open={isDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) closeDialog();
+        }}
+        module={selectedModule}
+        onSubmit={submitModule}
+        isLoading={isCreating}
       />
     </div>
   );

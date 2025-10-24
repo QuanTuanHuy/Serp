@@ -6,10 +6,12 @@
 import { combineReducers } from '@reduxjs/toolkit';
 import { plansReducer } from './plans/plansSlice';
 import { organizationsReducer } from './organizations/organizationsSlice';
+import { modulesReducer } from './modules/modulesSlice';
 
 export const adminReducer = combineReducers({
   plans: plansReducer,
   organizations: organizationsReducer,
+  modules: modulesReducer,
 });
 
 export {
@@ -33,3 +35,17 @@ export {
   setSort as setOrganizationsSort,
   selectOrganizationsFilters,
 } from './organizations/organizationsSlice';
+
+export {
+  setModulesDialogOpen,
+  setSelectedModuleId,
+  clearSelectedModule,
+  selectModulesUi,
+  selectModulesDialogOpen,
+  selectSelectedModuleId,
+  setModulesFilters,
+  setModulesSearch,
+  setModulesStatus,
+  setModulesType,
+  selectModulesFilters,
+} from './modules/modulesSlice';
