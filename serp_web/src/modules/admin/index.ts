@@ -30,6 +30,12 @@ export type {
   AdminActionMenuItem,
 } from './components/shared/AdminActionMenu';
 
+// Hooks
+export { usePlans } from './hooks/usePlans';
+export type { UsePlansReturn } from './hooks/usePlans';
+export { useOrganizations } from './hooks/useOrganizations';
+export type { UseOrganizationsReturn } from './hooks/useOrganizations';
+
 // Types
 export type {
   Organization,

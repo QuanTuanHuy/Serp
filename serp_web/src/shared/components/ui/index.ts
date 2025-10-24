@@ -40,6 +40,18 @@ export { ThemeToggle } from './theme-toggle';
 export { Switch } from './switch';
 export { Checkbox } from './checkbox';
 
+// Select Components
+export {
+  Select,
+  SelectGroup,
+  SelectValue,
+  SelectTrigger,
+  SelectContent,
+  SelectLabel,
+  SelectItem,
+  SelectSeparator,
+} from './select';
+
 // Dialog Components
 export {
   Dialog,

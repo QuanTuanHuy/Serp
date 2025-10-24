@@ -5,12 +5,9 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import {
-  useGetSubscriptionPlansQuery,
-  useUpdateSubscriptionPlanMutation,
-  useCreateSubscriptionPlanMutation,
-  useDeleteSubscriptionPlanMutation,
+  usePlans,
   AdminStatusBadge,
   AdminActionMenu,
   AdminStatsCard,
@@ -40,79 +37,30 @@ import {
 } from 'lucide-react';
 
 export default function PlansPage() {
-  const { data: plans, isLoading, error } = useGetSubscriptionPlansQuery();
-  const [updatePlan] = useUpdateSubscriptionPlanMutation();
-  const [createPlan, { isLoading: isCreating }] =
-    useCreateSubscriptionPlanMutation();
-  const [deletePlan] = useDeleteSubscriptionPlanMutation();
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<
-    SubscriptionPlan | undefined
-  >();
-
-  const handleToggleActive = async (planId: string, isActive: boolean) => {
-    try {
-      await updatePlan({
-        id: planId,
-        data: { isActive: !isActive },
-      }).unwrap();
-    } catch (error) {
-      console.error('Failed to update plan:', error);
-    }
-  };
-
-  const handleCreatePlan = () => {
-    setSelectedPlan(undefined);
-    setIsDialogOpen(true);
-  };
-
-  const handleEditPlan = (plan: SubscriptionPlan) => {
-    setSelectedPlan(plan);
-    setIsDialogOpen(true);
-  };
-
-  const handleSubmitPlan = async (data: any) => {
-    try {
-      if (selectedPlan) {
-        await updatePlan({
-          id: String(selectedPlan.id),
-          data,
-        }).unwrap();
-      } else {
-        await createPlan(data).unwrap();
-      }
-      setIsDialogOpen(false);
-      setSelectedPlan(undefined);
-    } catch (error) {
-      console.error('Failed to save plan:', error);
-      throw error;
-    }
-  };
-
-  const handleDeletePlan = async (planId: string) => {
-    if (!confirm('Are you sure you want to delete this plan?')) {
-      return;
-    }
-
-    try {
-      await deletePlan(planId).unwrap();
-    } catch (error) {
-      console.error('Failed to delete plan:', error);
-    }
-  };
+  const {
+    plans,
+    stats,
+    viewMode,
+    setPlansViewMode,
+    isDialogOpen,
+    selectedPlan,
+    isLoading,
+    error,
+    isCreating,
+    openCreateDialog,
+    openEditDialog,
+    closeDialog,
+    submitPlan,
+    deletePlan,
+    toggleActive,
+  } = usePlans();
 
   const formatPrice = (price?: number) => {
     if (!price) return '$0';
     return `$${price.toFixed(2)}`;
   };
 
-  // Calculate stats
-  const stats = {
-    total: plans?.length || 0,
-    active: plans?.filter((p) => p.isActive).length || 0,
-    custom: plans?.filter((p) => p.isCustom).length || 0,
-  };
+  // stats provided by hook
 
   // Define columns for DataTable
   const columns = useMemo<ColumnDef<SubscriptionPlan>[]>(
@@ -214,12 +162,12 @@ export default function PlansPage() {
             items={[
               {
                 label: 'Edit',
-                onClick: () => handleEditPlan(row),
+                onClick: () => openEditDialog(row),
                 icon: <Edit className='h-4 w-4' />,
               },
               {
                 label: row.isActive ? 'Deactivate' : 'Activate',
-                onClick: () => handleToggleActive(String(row.id), row.isActive),
+                onClick: () => toggleActive(String(row.id), row.isActive),
                 icon: row.isActive ? (
                   <XCircle className='h-4 w-4' />
                 ) : (
@@ -229,7 +177,11 @@ export default function PlansPage() {
               },
               {
                 label: 'Delete',
-                onClick: () => handleDeletePlan(String(row.id)),
+                onClick: () => {
+                  if (confirm('Are you sure you want to delete this plan?')) {
+                    deletePlan(String(row.id));
+                  }
+                },
                 icon: <Trash2 className='h-4 w-4' />,
                 variant: 'destructive',
               },
@@ -238,7 +190,7 @@ export default function PlansPage() {
         ),
       },
     ],
-    [handleToggleActive, handleEditPlan, handleDeletePlan]
+    [toggleActive, openEditDialog, deletePlan]
   );
 
   return (
@@ -260,7 +212,7 @@ export default function PlansPage() {
             <Button
               variant={viewMode === 'grid' ? 'default' : 'ghost'}
               size='sm'
-              onClick={() => setViewMode('grid')}
+              onClick={() => setPlansViewMode('grid')}
               className='rounded-r-none'
             >
               <LayoutGrid className='h-4 w-4' />
@@ -268,14 +220,14 @@ export default function PlansPage() {
             <Button
               variant={viewMode === 'table' ? 'default' : 'ghost'}
               size='sm'
-              onClick={() => setViewMode('table')}
+              onClick={() => setPlansViewMode('table')}
               className='rounded-l-none'
             >
               <List className='h-4 w-4' />
             </Button>
           </div>
 
-          <Button size='sm' onClick={handleCreatePlan}>
+          <Button size='sm' onClick={openCreateDialog}>
             <Plus className='h-4 w-4 mr-2' />
             Create Plan
           </Button>
@@ -405,7 +357,7 @@ export default function PlansPage() {
                       variant='outline'
                       size='sm'
                       className='flex-1'
-                      onClick={() => handleEditPlan(plan)}
+                      onClick={() => openEditDialog(plan)}
                     >
                       <Edit className='h-4 w-4 mr-2' />
                       Edit
@@ -416,7 +368,7 @@ export default function PlansPage() {
                         {
                           label: plan.isActive ? 'Deactivate' : 'Activate',
                           onClick: () =>
-                            handleToggleActive(String(plan.id), plan.isActive),
+                            toggleActive(String(plan.id), plan.isActive),
                           icon: plan.isActive ? (
                             <XCircle className='h-4 w-4' />
                           ) : (
@@ -425,7 +377,15 @@ export default function PlansPage() {
                         },
                         {
                           label: 'Delete',
-                          onClick: () => handleDeletePlan(String(plan.id)),
+                          onClick: () => {
+                            if (
+                              confirm(
+                                'Are you sure you want to delete this plan?'
+                              )
+                            ) {
+                              deletePlan(String(plan.id));
+                            }
+                          },
                           icon: <Trash2 className='h-4 w-4' />,
                           variant: 'destructive',
                           separator: true,
@@ -465,7 +425,7 @@ export default function PlansPage() {
               <p className='text-sm text-muted-foreground mt-1'>
                 Create your first subscription plan to get started
               </p>
-              <Button size='sm' className='mt-4' onClick={handleCreatePlan}>
+              <Button size='sm' className='mt-4' onClick={openCreateDialog}>
                 <Plus className='h-4 w-4 mr-2' />
                 Create Plan
               </Button>
@@ -483,7 +443,7 @@ export default function PlansPage() {
             <p className='text-sm text-muted-foreground mt-1'>
               Create your first subscription plan to get started
             </p>
-            <Button size='sm' className='mt-4' onClick={handleCreatePlan}>
+            <Button size='sm' className='mt-4' onClick={openCreateDialog}>
               <Plus className='h-4 w-4 mr-2' />
               Create Plan
             </Button>
@@ -494,9 +454,9 @@ export default function PlansPage() {
       {/* Plan Form Dialog */}
       <PlanFormDialog
         open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
+        onOpenChange={(open) => (open ? openCreateDialog() : closeDialog())}
         plan={selectedPlan}
-        onSubmit={handleSubmitPlan}
+        onSubmit={submitPlan}
         isLoading={isCreating}
       />
     </div>
