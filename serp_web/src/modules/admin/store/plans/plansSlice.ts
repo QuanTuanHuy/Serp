@@ -42,13 +42,20 @@ const plansUiSlice = createSlice({
 export const plansReducer = plansUiSlice.reducer;
 
 // Actions
-export const { setViewMode, setDialogOpen, setSelectedPlanId, clearSelectedPlan } =
-  plansUiSlice.actions;
+export const {
+  setViewMode,
+  setDialogOpen,
+  setSelectedPlanId,
+  clearSelectedPlan,
+} = plansUiSlice.actions;
 
 // Selectors
 export const selectPlansUiState = (state: RootState) => state.admin.plans;
-export const selectPlansViewMode = (state: RootState) => state.admin.plans.viewMode;
-export const selectPlansDialogOpen = (state: RootState) => state.admin.plans.isDialogOpen;
-export const selectSelectedPlanId = (state: RootState) => state.admin.plans.selectedPlanId;
+export const selectPlansViewMode = (state: RootState) =>
+  state.admin.plans.viewMode;
+export const selectPlansDialogOpen = (state: RootState) =>
+  state.admin.plans.isDialogOpen;
+export const selectSelectedPlanId = (state: RootState) =>
+  state.admin.plans.selectedPlanId;
 
 export type { ViewMode };

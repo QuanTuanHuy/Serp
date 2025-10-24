@@ -6,7 +6,12 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { usePlans, AdminStatusBadge, AdminActionMenu, AdminStatsCard } from '@/modules/admin';
+import {
+  usePlans,
+  AdminStatusBadge,
+  AdminActionMenu,
+  AdminStatsCard,
+} from '@/modules/admin';
 import type { SubscriptionPlan } from '@/modules/admin';
 import { PlanFormDialog } from '@/modules/admin/components/plans';
 import {
@@ -373,7 +378,11 @@ export default function PlansPage() {
                         {
                           label: 'Delete',
                           onClick: () => {
-                            if (confirm('Are you sure you want to delete this plan?')) {
+                            if (
+                              confirm(
+                                'Are you sure you want to delete this plan?'
+                              )
+                            ) {
                               deletePlan(String(plan.id));
                             }
                           },

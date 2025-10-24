@@ -33,6 +33,8 @@ export type {
 // Hooks
 export { usePlans } from './hooks/usePlans';
 export type { UsePlansReturn } from './hooks/usePlans';
+export { useOrganizations } from './hooks/useOrganizations';
+export type { UseOrganizationsReturn } from './hooks/useOrganizations';
 
 // Types
 export type {

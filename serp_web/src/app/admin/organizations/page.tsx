@@ -5,13 +5,12 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import {
-  useGetOrganizationsQuery,
+  useOrganizations,
   AdminStatusBadge,
   AdminActionMenu,
 } from '@/modules/admin';
-import type { OrganizationFilters } from '@/modules/admin';
 import {
   Card,
   CardContent,
@@ -23,38 +22,20 @@ import { Button } from '@/shared/components/ui/button';
 import { DataTable } from '@/shared/components';
 import type { ColumnDef } from '@/shared/types';
 import { Building2, Search, Eye, Edit, Ban, CheckCircle } from 'lucide-react';
-import { Organization } from '@/modules/admin/types';
+import { Organization as OrganizationType } from '@/modules/admin/types';
 
 export default function OrganizationsPage() {
-  const [filters, setFilters] = useState<OrganizationFilters>({
-    page: 0,
-    pageSize: 10,
-    sortBy: 'id',
-    sortDir: 'DESC',
-  });
-
   const {
-    data: response,
+    filters,
+    organizations,
+    pagination,
     isLoading,
     isFetching,
     error,
-  } = useGetOrganizationsQuery(filters);
-
-  const organizations = response?.data.items || [];
-  const totalPages = response?.data.totalPages || 0;
-  const currentPage = response?.data.currentPage || 0;
-
-  const handleSearch = (search: string) => {
-    setFilters({ ...filters, search, page: 0 });
-  };
-
-  const handleFilterChange = (key: keyof OrganizationFilters, value: any) => {
-    setFilters({ ...filters, [key]: value, page: 0 });
-  };
-
-  const handlePageChange = (newPage: number) => {
-    setFilters({ ...filters, page: newPage });
-  };
+    handleSearch,
+    handleFilterChange,
+    handlePageChange,
+  } = useOrganizations();
 
   const formatDate = (isoDate?: string) => {
     if (!isoDate) return 'N/A';
@@ -66,7 +47,7 @@ export default function OrganizationsPage() {
   };
 
   // Define columns for DataTable
-  const columns = useMemo<ColumnDef<Organization>[]>(
+  const columns = useMemo<ColumnDef<OrganizationType>[]>(
     () => [
       {
         id: 'organization',
@@ -273,9 +254,9 @@ export default function OrganizationsPage() {
         error={error}
         storageKey='admin-organizations-columns'
         pagination={{
-          currentPage,
-          totalPages,
-          totalItems: response?.data.totalItems || 0,
+          currentPage: pagination.currentPage,
+          totalPages: pagination.totalPages,
+          totalItems: pagination.totalItems,
           onPageChange: handlePageChange,
           isFetching,
         }}
