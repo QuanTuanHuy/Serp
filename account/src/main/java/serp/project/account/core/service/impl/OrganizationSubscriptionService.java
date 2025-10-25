@@ -7,10 +7,14 @@ package serp.project.account.core.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import serp.project.account.core.domain.dto.request.CancelSubscriptionRequest;
 import serp.project.account.core.domain.dto.request.DowngradeSubscriptionRequest;
+import serp.project.account.core.domain.dto.request.GetSubscriptionParams;
 import serp.project.account.core.domain.dto.request.SubscribeRequest;
 import serp.project.account.core.domain.dto.request.UpgradeSubscriptionRequest;
 import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
@@ -49,8 +53,8 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
             SubscriptionPlanEntity plan) {
 
         // SubscriptionStatus status = plan.isFreePlan()
-        //         ? SubscriptionStatus.ACTIVE
-        //         : SubscriptionStatus.PENDING;
+        // ? SubscriptionStatus.ACTIVE
+        // : SubscriptionStatus.PENDING;
         SubscriptionStatus status = SubscriptionStatus.PENDING;
 
         var now = Instant.now().toEpochMilli();
@@ -436,5 +440,10 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
                 : startInstant.plus(30, ChronoUnit.DAYS);
 
         return endInstant.toEpochMilli();
+    }
+
+    @Override
+    public Pair<List<OrganizationSubscriptionEntity>, Long> getAllSubscriptions(GetSubscriptionParams params) {
+        return organizationSubscriptionPort.getAllSubscriptions(params);
     }
 }

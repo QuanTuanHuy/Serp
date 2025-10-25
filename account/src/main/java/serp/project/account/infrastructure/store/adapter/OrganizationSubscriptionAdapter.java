@@ -6,12 +6,20 @@
 package serp.project.account.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
+
+import serp.project.account.core.domain.dto.request.GetSubscriptionParams;
 import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
 import serp.project.account.core.domain.enums.SubscriptionStatus;
 import serp.project.account.core.port.store.IOrganizationSubscriptionPort;
 import serp.project.account.infrastructure.store.mapper.OrganizationSubscriptionMapper;
+import serp.project.account.infrastructure.store.model.OrganizationSubscriptionModel;
 import serp.project.account.infrastructure.store.repository.IOrganizationSubscriptionRepository;
+import serp.project.account.infrastructure.store.specification.SubscriptionSpecification;
+import serp.project.account.kernel.utils.PaginationUtils;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +29,8 @@ import java.util.Optional;
 public class OrganizationSubscriptionAdapter implements IOrganizationSubscriptionPort {
     private final IOrganizationSubscriptionRepository organizationSubscriptionRepository;
     private final OrganizationSubscriptionMapper organizationSubscriptionMapper;
+
+    private final PaginationUtils paginationUtils;
 
     @Override
     public OrganizationSubscriptionEntity save(OrganizationSubscriptionEntity subscription) {
@@ -76,5 +86,15 @@ public class OrganizationSubscriptionAdapter implements IOrganizationSubscriptio
     public boolean existsActiveSubscriptionForOrganization(Long organizationId) {
         return organizationSubscriptionRepository
                 .existsActiveSubscriptionForOrganization(organizationId);
+    }
+
+    @Override
+    public Pair<List<OrganizationSubscriptionEntity>, Long> getAllSubscriptions(GetSubscriptionParams params) {
+        var pageable = paginationUtils.getPageable(params);
+        var specification = SubscriptionSpecification.getAllSubscriptions(params);
+
+        var result = organizationSubscriptionRepository.findAll(specification, pageable);
+        var subscriptions = organizationSubscriptionMapper.toEntityList(result.getContent());
+        return Pair.of(subscriptions, result.getTotalElements());
     }
 }

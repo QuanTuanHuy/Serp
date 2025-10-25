@@ -6,6 +6,8 @@
 package serp.project.account.infrastructure.store.mapper;
 
 import org.springframework.stereotype.Component;
+
+import serp.project.account.core.domain.dto.response.SubscriptionResponse;
 import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
 import serp.project.account.core.domain.enums.BillingCycle;
 import serp.project.account.core.domain.enums.SubscriptionStatus;
@@ -144,8 +146,40 @@ public class OrganizationSubscriptionMapper extends BaseMapper {
         if (status == SubscriptionStatus.ACTIVE) {
             result.setActivatedAt(startDate);
             result.setActivatedBy(createdBy);
-        }   
+        }
 
         return result;
+    }
+
+    public SubscriptionResponse toSubscriptionResponse(OrganizationSubscriptionEntity entity,
+            String organizationName, String planName) {
+        if (entity == null) {
+            return null;
+        }
+
+        return SubscriptionResponse.builder()
+                .id(entity.getId())
+                .organizationId(entity.getOrganizationId())
+                .subscriptionPlanId(entity.getSubscriptionPlanId())
+                .status(entity.getStatus())
+                .billingCycle(entity.getBillingCycle())
+                .startDate(entity.getStartDate())
+                .endDate(entity.getEndDate())
+                .trialEndsAt(entity.getTrialEndsAt())
+                .isAutoRenew(entity.getIsAutoRenew())
+                .totalAmount(entity.getTotalAmount())
+                .notes(entity.getNotes())
+                .activatedBy(entity.getActivatedBy())
+                .activatedAt(entity.getActivatedAt())
+                .cancelledBy(entity.getCancelledBy())
+                .cancelledAt(entity.getCancelledAt())
+                .cancellationReason(entity.getCancellationReason())
+                .createdBy(entity.getCreatedBy())
+                .updatedBy(entity.getUpdatedBy())
+                .createdAt(entity.getCreatedAt())
+                .updatedAt(entity.getUpdatedAt())
+                .organizationName(organizationName)
+                .planName(planName)
+                .build();
     }
 }

@@ -17,6 +17,34 @@ type SubscriptionController struct {
 	subscriptionService service.ISubscriptionService
 }
 
+func (s *SubscriptionController) GetAllSubscriptions(c *gin.Context) {
+	page, ok := utils.ParseIntQuery(c, "page")
+	if !ok {
+		return
+	}
+	pageSize, ok := utils.ParseIntQuery(c, "pageSize")
+	if !ok {
+		return
+	}
+
+	params := request.GetSubscriptionParams{
+		Page:           page,
+		PageSize:       pageSize,
+		SortBy:         utils.ParseStringQuery(c, "sortBy"),
+		SortDir:        utils.ParseStringQuery(c, "sortDir"),
+		OrganizationID: utils.ParseInt64Query(c, "organizationId"),
+		Status:         utils.ParseStringQuery(c, "status"),
+		BillingCycle:   utils.ParseStringQuery(c, "billingCycle"),
+	}
+
+	res, err := s.subscriptionService.GetAllSubscriptions(c.Request.Context(), &params)
+	if err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
+		return
+	}
+	c.JSON(res.Code, res)
+}
+
 func (s *SubscriptionController) Subscribe(c *gin.Context) {
 	var req request.SubscribeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

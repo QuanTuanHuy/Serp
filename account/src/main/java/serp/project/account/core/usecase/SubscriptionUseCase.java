@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.*;
+import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.IKeycloakUserService;
@@ -26,13 +27,15 @@ import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.ISubscriptionPlanService;
 import serp.project.account.core.service.IUserModuleAccessService;
 import serp.project.account.core.service.IUserService;
+import serp.project.account.infrastructure.store.mapper.OrganizationSubscriptionMapper;
 import serp.project.account.kernel.utils.CollectionUtils;
+import serp.project.account.kernel.utils.PaginationUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class OrganizationSubscriptionUseCase {
+public class SubscriptionUseCase {
 
     private final IOrganizationSubscriptionService organizationSubscriptionService;
     private final ISubscriptionPlanService subscriptionPlanService;
@@ -44,6 +47,9 @@ public class OrganizationSubscriptionUseCase {
     private final IModuleService moduleService;
 
     private final ResponseUtils responseUtils;
+    private final PaginationUtils paginationUtils;
+
+    private final OrganizationSubscriptionMapper subscriptionMapper;
 
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> subscribe(Long organizationId, SubscribeRequest request, Long requestedBy) {
@@ -469,6 +475,43 @@ public class OrganizationSubscriptionUseCase {
         } catch (Exception e) {
             log.error("Unexpected error when getting subscription history for organization {}: {}", organizationId,
                     e.getMessage());
+            return responseUtils.internalServerError(e.getMessage());
+        }
+    }
+
+    public GeneralResponse<?> getAllSubscriptions(GetSubscriptionParams params) {
+        try {
+            var pairSubscriptions = organizationSubscriptionService.getAllSubscriptions(params);
+            var subscriptionEntities = pairSubscriptions.getFirst();
+
+            var allPlans = subscriptionPlanService.getAllPlans();
+            List<Long> orgIds = subscriptionEntities.stream()
+                    .map(OrganizationSubscriptionEntity::getOrganizationId)
+                    .distinct()
+                    .toList();
+            var allOrgs = organizationService.getOrganizationsByIds(orgIds);
+
+            var subscriptionDtos = subscriptionEntities.stream()
+                    .map(sub -> {
+                        var org = allOrgs.stream()
+                                .filter(o -> o.getId().equals(sub.getOrganizationId()))
+                                .findFirst()
+                                .orElse(null);
+                        var plan = allPlans.stream()
+                                .filter(p -> p.getId().equals(sub.getSubscriptionPlanId()))
+                                .findFirst()
+                                .orElse(null);
+                        var dto = subscriptionMapper.toSubscriptionResponse(sub,
+                                org != null ? org.getName() : "Unknown Organization",
+                                plan != null ? plan.getPlanName() : "Unknown Plan");
+                        return dto;
+                    }).toList();
+
+            var result = paginationUtils.getResponse(pairSubscriptions.getSecond(), params.getPage(),
+                    params.getPageSize(), subscriptionDtos);
+            return responseUtils.success(result);
+        } catch (Exception e) {
+            log.error("Unexpected error when getting all subscriptions: {}", e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
     }

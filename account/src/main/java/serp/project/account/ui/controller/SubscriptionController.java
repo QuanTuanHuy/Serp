@@ -11,16 +11,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import serp.project.account.core.domain.dto.request.*;
-import serp.project.account.core.usecase.OrganizationSubscriptionUseCase;
+import serp.project.account.core.usecase.SubscriptionUseCase;
 import serp.project.account.kernel.utils.AuthUtils;
 
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/subscriptions")
 @Slf4j
-public class OrganizationSubscriptionController {
+public class SubscriptionController {
 
-    private final OrganizationSubscriptionUseCase organizationSubscriptionUseCase;
+    private final SubscriptionUseCase organizationSubscriptionUseCase;
     private final AuthUtils authUtils;
 
     @PostMapping("/subscribe")
@@ -44,26 +44,6 @@ public class OrganizationSubscriptionController {
         log.info("POST /api/v1/subscriptions/trial - Starting trial for plan {}",
                 organizationId, planId);
         var response = organizationSubscriptionUseCase.startTrial(organizationId, planId, requestedBy);
-        return ResponseEntity.status(response.getCode()).body(response);
-    }
-
-    @PutMapping("/{subscriptionId}/activate")
-    public ResponseEntity<?> activateSubscription(@PathVariable Long subscriptionId) {
-        Long activatedBy = authUtils.getCurrentUserId().orElse(null);
-
-        log.info("PUT /api/v1/subscriptions/{}/activate - Activating subscription", subscriptionId);
-        var response = organizationSubscriptionUseCase.activateSubscription(subscriptionId, activatedBy);
-        return ResponseEntity.status(response.getCode()).body(response);
-    }
-
-    @PutMapping("/{subscriptionId}/reject")
-    public ResponseEntity<?> rejectSubscription(
-            @PathVariable Long subscriptionId,
-            @Valid @RequestBody RejectSubscriptionRequest request) {
-        Long rejectedBy = authUtils.getCurrentUserId().orElse(null);
-
-        log.info("PUT /api/v1/subscriptions/{}/reject - Rejecting subscription", subscriptionId);
-        var response = organizationSubscriptionUseCase.rejectSubscription(subscriptionId, request, rejectedBy);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
@@ -120,13 +100,6 @@ public class OrganizationSubscriptionController {
 
         log.info("PUT /api/v1/subscriptions/{}/extend-trial - Extending trial", subscriptionId);
         var response = organizationSubscriptionUseCase.extendTrial(subscriptionId, request, requestedBy);
-        return ResponseEntity.status(response.getCode()).body(response);
-    }
-
-    @PutMapping("/{subscriptionId}/expire")
-    public ResponseEntity<?> expireSubscription(@PathVariable Long subscriptionId) {
-        log.info("PUT /api/v1/subscriptions/{}/expire - Expiring subscription", subscriptionId);
-        var response = organizationSubscriptionUseCase.expireSubscription(subscriptionId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 

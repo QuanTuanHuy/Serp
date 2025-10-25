@@ -68,18 +68,23 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 		moduleV1.Use(middleware.AuthMiddleware()).GET("/my-modules", moduleController.GetMyModules)
 	}
 
+	adminSubscriptionV1 := group.Group("/api/v1/admin/subscriptions")
+	{
+		adminSubscriptionV1.Use(middleware.AuthMiddleware()).GET("", subscriptionController.GetAllSubscriptions)
+		adminSubscriptionV1.Use(middleware.AuthMiddleware()).PUT("/:subscriptionId/activate", subscriptionController.ActivateSubscription)
+		adminSubscriptionV1.Use(middleware.AuthMiddleware()).PUT("/:subscriptionId/reject", subscriptionController.RejectSubscription)
+		adminSubscriptionV1.Use(middleware.AuthMiddleware()).PUT("/:subscriptionId/expire", subscriptionController.ExpireSubscription)
+	}
+
 	subscriptionV1 := group.Group("/api/v1/subscriptions")
 	{
 		subscriptionV1.Use(middleware.AuthMiddleware()).POST("/subscribe", subscriptionController.Subscribe)
 		subscriptionV1.Use(middleware.AuthMiddleware()).POST("/trial", subscriptionController.StartTrial)
-		subscriptionV1.Use(middleware.AuthMiddleware()).PUT("/:subscriptionId/activate", subscriptionController.ActivateSubscription)
-		subscriptionV1.Use(middleware.AuthMiddleware()).PUT("/:subscriptionId/reject", subscriptionController.RejectSubscription)
 		subscriptionV1.Use(middleware.AuthMiddleware()).PUT("/upgrade", subscriptionController.UpgradeSubscription)
 		subscriptionV1.Use(middleware.AuthMiddleware()).PUT("/downgrade", subscriptionController.DowngradeSubscription)
 		subscriptionV1.Use(middleware.AuthMiddleware()).PUT("/cancel", subscriptionController.CancelSubscription)
 		subscriptionV1.Use(middleware.AuthMiddleware()).PUT("/renew", subscriptionController.RenewSubscription)
 		subscriptionV1.Use(middleware.AuthMiddleware()).PUT("/:subscriptionId/extend-trial", subscriptionController.ExtendTrial)
-		subscriptionV1.Use(middleware.AuthMiddleware()).PUT("/:subscriptionId/expire", subscriptionController.ExpireSubscription)
 		subscriptionV1.Use(middleware.AuthMiddleware()).GET("/me/active", subscriptionController.GetActiveSubscription)
 		subscriptionV1.Use(middleware.AuthMiddleware()).GET("/:subscriptionId", subscriptionController.GetSubscriptionById)
 		subscriptionV1.Use(middleware.AuthMiddleware()).GET("/me/history", subscriptionController.GetSubscriptionHistory)

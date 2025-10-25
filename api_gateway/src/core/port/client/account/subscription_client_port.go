@@ -13,6 +13,7 @@ import (
 )
 
 type ISubscriptionClientPort interface {
+	GetAllSubscriptions(ctx context.Context, params *request.GetSubscriptionParams) (*response.BaseResponse, error)
 	Subscribe(ctx context.Context, req *request.SubscribeRequest) (*response.BaseResponse, error)
 	StartTrial(ctx context.Context, planId int64) (*response.BaseResponse, error)
 	ActivateSubscription(ctx context.Context, subscriptionId int64) (*response.BaseResponse, error)
