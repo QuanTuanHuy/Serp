@@ -64,6 +64,7 @@ public class Constants {
         public static final String USER_ALREADY_EXISTS = "User already exists";
         public static final String USER_NOT_FOUND = "User not found";
         public static final String CREATE_USER_FAILED = "Create user failed";
+        public static final String USER_INACTIVE = "User is inactive";
 
         public static final String WRONG_EMAIL_OR_PASSWORD = "Wrong email or password";
         public static final String INVALID_REFRESH_TOKEN = "Invalid refresh token";

@@ -212,6 +212,10 @@ public class UserMapper extends BaseMapper {
             existing.setUpdatedAt(update.getUpdatedAt());
         }
 
+        if (update.getKeycloakId() != null && !update.getKeycloakId().trim().isEmpty()) {
+            existing.setKeycloakId(update.getKeycloakId());
+        }
+
         return existing;
     }
 }

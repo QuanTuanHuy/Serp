@@ -15,6 +15,7 @@ import (
 )
 
 type ISubscriptionService interface {
+	GetAllSubscriptions(ctx context.Context, params *request.GetSubscriptionParams) (*response.BaseResponse, error)
 	Subscribe(ctx context.Context, req *request.SubscribeRequest) (*response.BaseResponse, error)
 	StartTrial(ctx context.Context, planId int64) (*response.BaseResponse, error)
 	ActivateSubscription(ctx context.Context, subscriptionId int64) (*response.BaseResponse, error)
@@ -32,6 +33,15 @@ type ISubscriptionService interface {
 
 type SubscriptionService struct {
 	subscriptionClient port.ISubscriptionClientPort
+}
+
+func (s *SubscriptionService) GetAllSubscriptions(ctx context.Context, params *request.GetSubscriptionParams) (*response.BaseResponse, error) {
+	res, err := s.subscriptionClient.GetAllSubscriptions(ctx, params)
+	if err != nil {
+		log.Error(ctx, "SubscriptionService: GetAllSubscriptions error: ", err.Error())
+		return nil, err
+	}
+	return res, nil
 }
 
 func (s *SubscriptionService) Subscribe(ctx context.Context, req *request.SubscribeRequest) (*response.BaseResponse, error) {

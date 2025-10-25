@@ -30,11 +30,16 @@ export type {
   AdminActionMenuItem,
 } from './components/shared/AdminActionMenu';
 
+// Role Components
+export { RoleForm, RoleFormDialog } from './components/roles';
+
 // Hooks
 export { usePlans } from './hooks/usePlans';
 export type { UsePlansReturn } from './hooks/usePlans';
 export { useOrganizations } from './hooks/useOrganizations';
 export type { UseOrganizationsReturn } from './hooks/useOrganizations';
+export { useRoles } from './hooks/useRoles';
+export type { UseRolesReturn } from './hooks/useRoles';
 
 // Types
 export type {
@@ -43,15 +48,22 @@ export type {
   SubscriptionPlan,
   Module,
   UserProfile,
+  Role,
+  Permission,
+  CreateRoleRequest,
+  UpdateRoleRequest,
   OrganizationFilters,
   SubscriptionFilters,
   ModuleFilters,
   UserFilters,
+  RoleFilters,
   OrganizationStatus,
   SubscriptionStatus,
   BillingCycle,
   ModuleStatus,
   UserStatus,
+  RoleScope,
+  RoleType,
 } from './types';
 
 // API Services
@@ -89,4 +101,13 @@ export {
   useGetModuleByIdQuery,
   useCreateModuleMutation,
   useUpdateModuleMutation,
+
+  // Roles
+  rolesApi,
+  useGetAllRolesQuery,
+  useGetRoleByIdQuery,
+  useCreateRoleMutation,
+  useUpdateRoleMutation,
+  useAddPermissionsToRoleMutation,
+  useDeleteRoleMutation,
 } from './services/adminApi';

@@ -7,30 +7,49 @@ package serp.project.account.core.usecase;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.*;
+import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
+import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.exception.AppException;
+import serp.project.account.core.service.IKeycloakUserService;
+import serp.project.account.core.service.IModuleService;
 import serp.project.account.core.service.IOrganizationService;
 import serp.project.account.core.service.IOrganizationSubscriptionService;
+import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.ISubscriptionPlanService;
 import serp.project.account.core.service.IUserModuleAccessService;
+import serp.project.account.core.service.IUserService;
+import serp.project.account.infrastructure.store.mapper.OrganizationSubscriptionMapper;
+import serp.project.account.kernel.utils.CollectionUtils;
+import serp.project.account.kernel.utils.PaginationUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class OrganizationSubscriptionUseCase {
+public class SubscriptionUseCase {
 
     private final IOrganizationSubscriptionService organizationSubscriptionService;
     private final ISubscriptionPlanService subscriptionPlanService;
     private final IOrganizationService organizationService;
     private final IUserModuleAccessService userModuleAccessService;
+    private final IRoleService roleService;
+    private final IUserService userService;
+    private final IKeycloakUserService keycloakUserService;
+    private final IModuleService moduleService;
 
     private final ResponseUtils responseUtils;
+    private final PaginationUtils paginationUtils;
+
+    private final OrganizationSubscriptionMapper subscriptionMapper;
 
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> subscribe(Long organizationId, SubscribeRequest request, Long requestedBy) {
@@ -84,6 +103,11 @@ public class OrganizationSubscriptionUseCase {
                 throw new AppException(Constants.ErrorMessage.PLAN_DOES_NOT_SUPPORT_TRIAL);
             }
 
+            var user = userService.getUserById(requestedBy);
+            if (user == null || !user.getPrimaryOrganizationId().equals(organizationId)) {
+                return responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
+            }
+
             var subscription = organizationSubscriptionService.startTrial(organizationId, plan, requestedBy);
             organizationService.updateSubscription(organizationId, subscription);
 
@@ -92,6 +116,11 @@ public class OrganizationSubscriptionUseCase {
                 var planModules = subscriptionPlanService.getPlanModules(plan.getId());
 
                 for (var planModule : planModules) {
+                    var module = moduleService.getModuleByIdFromCache(planModule.getModuleId());
+                    if (module == null) {
+                        log.error("Module ID {} not found. Skipping auto-grant.", planModule.getModuleId());
+                        continue;
+                    }
                     if (planModule.getIsIncluded()) {
                         userModuleAccessService.registerUserToModuleWithExpiration(
                                 requestedBy,
@@ -99,6 +128,21 @@ public class OrganizationSubscriptionUseCase {
                                 organizationId,
                                 requestedBy,
                                 subscription.getEndDate());
+
+                        List<RoleEntity> roles = roleService.getRolesByModuleId(planModule.getModuleId());
+                        if (CollectionUtils.isEmpty(roles)) {
+                            log.error("No roles found for module ID {}. Check why?", planModule.getModuleId());
+                            continue;
+                        }
+                        List<Long> roleIds = roles.stream()
+                                .map(RoleEntity::getId)
+                                .toList();
+                        userService.addRolesToUser(requestedBy, roleIds);
+                        List<String> roleNames = roles.stream()
+                                .map(RoleEntity::getName)
+                                .toList();
+                        keycloakUserService.assignClientRoles(user.getKeycloakId(), module.getKeycloakClientId(),
+                                roleNames);
                     }
                 }
                 log.info("Auto-granted {} modules to organization owner", planModules.size());
@@ -251,13 +295,22 @@ public class OrganizationSubscriptionUseCase {
             log.info("[UseCase] Activating subscription {}", subscriptionId);
 
             var subscription = organizationSubscriptionService.activateSubscription(subscriptionId, activatedBy);
+            var organization = organizationService.getOrganizationById(subscription.getOrganizationId());
+            organizationService.updateSubscription(organization.getId(), subscription);
+
+            var orgOwner = userService.getUserById(organization.getOwnerId());
 
             // Auto-grant module access to organization owner
             try {
-                var organization = organizationService.getOrganizationById(subscription.getOrganizationId());
                 var planModules = subscriptionPlanService.getPlanModules(subscription.getSubscriptionPlanId());
 
                 for (var planModule : planModules) {
+                    var module = moduleService.getModuleByIdFromCache(planModule.getModuleId());
+                    if (module == null) {
+                        log.error("Module ID {} not found. Skipping auto-grant.", planModule.getModuleId());
+                        continue;
+                    }
+
                     if (planModule.getIsIncluded()) {
                         userModuleAccessService.registerUserToModuleWithExpiration(
                                 organization.getOwnerId(),
@@ -266,6 +319,23 @@ public class OrganizationSubscriptionUseCase {
                                 activatedBy,
                                 subscription.getEndDate());
                     }
+
+                    List<RoleEntity> roles = roleService.getRolesByModuleId(planModule.getModuleId());
+                    if (CollectionUtils.isEmpty(roles)) {
+                        log.error("No roles found for module ID {}. Check why?", planModule.getModuleId());
+                        continue;
+                    }
+                    List<Long> roleIds = roles.stream()
+                            .map(RoleEntity::getId)
+                            .toList();
+                    userService.addRolesToUser(organization.getOwnerId(), roleIds);
+                    List<String> roleNames = roles.stream()
+                            .map(RoleEntity::getName)
+                            .toList();
+                    keycloakUserService.assignClientRoles(
+                            orgOwner.getKeycloakId(),
+                            module.getKeycloakClientId(),
+                            roleNames);
                 }
                 log.info("Auto-granted {} modules to organization owner", planModules.size());
             } catch (Exception e) {
@@ -405,6 +475,43 @@ public class OrganizationSubscriptionUseCase {
         } catch (Exception e) {
             log.error("Unexpected error when getting subscription history for organization {}: {}", organizationId,
                     e.getMessage());
+            return responseUtils.internalServerError(e.getMessage());
+        }
+    }
+
+    public GeneralResponse<?> getAllSubscriptions(GetSubscriptionParams params) {
+        try {
+            var pairSubscriptions = organizationSubscriptionService.getAllSubscriptions(params);
+            var subscriptionEntities = pairSubscriptions.getFirst();
+
+            var allPlans = subscriptionPlanService.getAllPlans();
+            List<Long> orgIds = subscriptionEntities.stream()
+                    .map(OrganizationSubscriptionEntity::getOrganizationId)
+                    .distinct()
+                    .toList();
+            var allOrgs = organizationService.getOrganizationsByIds(orgIds);
+
+            var subscriptionDtos = subscriptionEntities.stream()
+                    .map(sub -> {
+                        var org = allOrgs.stream()
+                                .filter(o -> o.getId().equals(sub.getOrganizationId()))
+                                .findFirst()
+                                .orElse(null);
+                        var plan = allPlans.stream()
+                                .filter(p -> p.getId().equals(sub.getSubscriptionPlanId()))
+                                .findFirst()
+                                .orElse(null);
+                        var dto = subscriptionMapper.toSubscriptionResponse(sub,
+                                org != null ? org.getName() : "Unknown Organization",
+                                plan != null ? plan.getPlanName() : "Unknown Plan");
+                        return dto;
+                    }).toList();
+
+            var result = paginationUtils.getResponse(pairSubscriptions.getSecond(), params.getPage(),
+                    params.getPageSize(), subscriptionDtos);
+            return responseUtils.success(result);
+        } catch (Exception e) {
+            log.error("Unexpected error when getting all subscriptions: {}", e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
     }

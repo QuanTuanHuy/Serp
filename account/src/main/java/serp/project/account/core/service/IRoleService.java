@@ -24,6 +24,8 @@ public interface IRoleService {
 
     List<RoleEntity> getRolesByGroupId(Long groupId);
 
+    List<RoleEntity> getRolesByModuleId(Long moduleId);
+
     List<RoleEntity> getRolesByScope(RoleScope scope);
 
     List<RoleEntity> getRolesByScopeAndTypeList(RoleScope scope, List<RoleType> types);

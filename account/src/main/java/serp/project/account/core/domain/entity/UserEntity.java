@@ -94,4 +94,9 @@ public class UserEntity extends BaseEntity {
                 .toList();
     }
 
+    @JsonIgnore
+    public boolean isActive() {
+        return this.status != null && this.status == UserStatus.ACTIVE;
+    }
+
 }

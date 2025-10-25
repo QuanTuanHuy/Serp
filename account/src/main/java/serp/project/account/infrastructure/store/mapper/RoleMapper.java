@@ -159,7 +159,7 @@ public class RoleMapper extends BaseMapper {
                         .priority(roleEnum.getPriority())
                         .scope(roleEnum.getScope().toString())
                         .roleType(roleEnum.getType().toString())
-                        .isDefault(false)
+                        .isDefault(roleEnum.getIsDefault())
                         .build())
                 .toList();
     }

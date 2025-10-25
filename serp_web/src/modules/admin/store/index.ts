@@ -7,11 +7,13 @@ import { combineReducers } from '@reduxjs/toolkit';
 import { plansReducer } from './plans/plansSlice';
 import { organizationsReducer } from './organizations/organizationsSlice';
 import { modulesReducer } from './modules/modulesSlice';
+import { rolesReducer } from './roles/rolesSlice';
 
 export const adminReducer = combineReducers({
   plans: plansReducer,
   organizations: organizationsReducer,
   modules: modulesReducer,
+  roles: rolesReducer,
 });
 
 export {
@@ -49,3 +51,25 @@ export {
   setModulesType,
   selectModulesFilters,
 } from './modules/modulesSlice';
+
+export {
+  setFilters as setRolesFilters,
+  setSearch as setRolesSearch,
+  setScope as setRolesScope,
+  setRoleType as setRolesRoleType,
+  setOrganizationId as setRolesOrganizationId,
+  setModuleId as setRolesModuleId,
+  setIsDefault as setRolesIsDefault,
+  setPage as setRolesPage,
+  setPageSize as setRolesPageSize,
+  setSort as setRolesSort,
+  setSelectedRoleId,
+  clearSelectedRole,
+  setDialogOpen as setRolesDialogOpen,
+  setViewMode as setRolesViewMode,
+  selectRolesFilters,
+  selectRolesUiState,
+  selectSelectedRoleId,
+  selectRolesDialogOpen,
+  selectRolesViewMode,
+} from './roles/rolesSlice';

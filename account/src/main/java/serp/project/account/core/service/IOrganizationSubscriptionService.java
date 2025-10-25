@@ -8,6 +8,7 @@ package serp.project.account.core.service;
 import serp.project.account.core.domain.dto.request.SubscribeRequest;
 import serp.project.account.core.domain.dto.request.UpgradeSubscriptionRequest;
 import serp.project.account.core.domain.dto.request.DowngradeSubscriptionRequest;
+import serp.project.account.core.domain.dto.request.GetSubscriptionParams;
 import serp.project.account.core.domain.dto.request.CancelSubscriptionRequest;
 import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
 import serp.project.account.core.domain.entity.SubscriptionPlanEntity;
@@ -16,138 +17,143 @@ import serp.project.account.core.domain.enums.SubscriptionStatus;
 import java.math.BigDecimal;
 import java.util.List;
 
+import org.springframework.data.util.Pair;
+
 public interface IOrganizationSubscriptionService {
 
-    /**
-     * Subscribe organization to a plan (creates PENDING_APPROVAL subscription for
-     * paid plans, ACTIVE for FREE)
-     */
-    OrganizationSubscriptionEntity subscribe(Long organizationId, SubscribeRequest request, Long requestedBy,
-            SubscriptionPlanEntity plan);
+        Pair<List<OrganizationSubscriptionEntity>, Long> getAllSubscriptions(GetSubscriptionParams params);
 
-    /**
-     * Start trial period for organization
-     */
-    OrganizationSubscriptionEntity startTrial(Long organizationId, SubscriptionPlanEntity plan, Long requestedBy);
+        /**
+         * Subscribe organization to a plan (creates PENDING_APPROVAL subscription for
+         * paid plans, ACTIVE for FREE)
+         */
+        OrganizationSubscriptionEntity subscribe(Long organizationId, SubscribeRequest request, Long requestedBy,
+                        SubscriptionPlanEntity plan);
 
-    /**
-     * Upgrade organization subscription to higher plan
-     */
-    OrganizationSubscriptionEntity upgradeSubscription(
-            Long organizationId,
-            UpgradeSubscriptionRequest request,
-            Long requestedBy,
-            SubscriptionPlanEntity currentPlan,
-            SubscriptionPlanEntity newPlan);
+        /**
+         * Start trial period for organization
+         */
+        OrganizationSubscriptionEntity startTrial(Long organizationId, SubscriptionPlanEntity plan, Long requestedBy);
 
-    /**
-     * Downgrade organization subscription to lower plan
-     */
-    OrganizationSubscriptionEntity downgradeSubscription(
-            Long organizationId,
-            DowngradeSubscriptionRequest request,
-            Long requestedBy,
-            SubscriptionPlanEntity currentPlan,
-            SubscriptionPlanEntity newPlan);
+        /**
+         * Upgrade organization subscription to higher plan
+         */
+        OrganizationSubscriptionEntity upgradeSubscription(
+                        Long organizationId,
+                        UpgradeSubscriptionRequest request,
+                        Long requestedBy,
+                        SubscriptionPlanEntity currentPlan,
+                        SubscriptionPlanEntity newPlan);
 
-    /**
-     * Cancel organization subscription
-     */
-    void cancelSubscription(Long organizationId, CancelSubscriptionRequest request, Long cancelledBy);
+        /**
+         * Downgrade organization subscription to lower plan
+         */
+        OrganizationSubscriptionEntity downgradeSubscription(
+                        Long organizationId,
+                        DowngradeSubscriptionRequest request,
+                        Long requestedBy,
+                        SubscriptionPlanEntity currentPlan,
+                        SubscriptionPlanEntity newPlan);
 
-    /**
-     * Renew organization subscription
-     */
-    OrganizationSubscriptionEntity renewSubscription(Long organizationId, Long currentSubscriptionId, Long renewedBy);
+        /**
+         * Cancel organization subscription
+         */
+        void cancelSubscription(Long organizationId, CancelSubscriptionRequest request, Long cancelledBy);
 
-    /**
-     * Activate subscription (admin approval)
-     */
-    OrganizationSubscriptionEntity activateSubscription(Long subscriptionId, Long activatedBy);
+        /**
+         * Renew organization subscription
+         */
+        OrganizationSubscriptionEntity renewSubscription(Long organizationId, Long currentSubscriptionId,
+                        Long renewedBy);
 
-    /**
-     * Reject subscription (admin rejection)
-     */
-    void rejectSubscription(Long subscriptionId, String reason, Long rejectedBy);
+        /**
+         * Activate subscription (admin approval)
+         */
+        OrganizationSubscriptionEntity activateSubscription(Long subscriptionId, Long activatedBy);
 
-    /**
-     * Extend trial period
-     */
-    OrganizationSubscriptionEntity extendTrial(Long subscriptionId, int additionalDays, Long extendedBy);
+        /**
+         * Reject subscription (admin rejection)
+         */
+        void rejectSubscription(Long subscriptionId, String reason, Long rejectedBy);
 
-    /**
-     * Expire subscription (background job)
-     */
-    void expireSubscription(Long subscriptionId);
+        /**
+         * Extend trial period
+         */
+        OrganizationSubscriptionEntity extendTrial(Long subscriptionId, int additionalDays, Long extendedBy);
 
-    /**
-     * Get active subscription for organization
-     */
-    OrganizationSubscriptionEntity getActiveSubscription(Long organizationId);
+        /**
+         * Expire subscription (background job)
+         */
+        void expireSubscription(Long subscriptionId);
 
-    /**
-     * Get subscription by ID
-     */
-    OrganizationSubscriptionEntity getSubscriptionById(Long subscriptionId);
+        /**
+         * Get active subscription for organization
+         */
+        OrganizationSubscriptionEntity getActiveSubscription(Long organizationId);
 
-    /**
-     * Get subscription history for organization
-     */
-    List<OrganizationSubscriptionEntity> getSubscriptionHistory(Long organizationId);
+        /**
+         * Get subscription by ID
+         */
+        OrganizationSubscriptionEntity getSubscriptionById(Long subscriptionId);
 
-    /**
-     * Get subscriptions by status
-     */
-    List<OrganizationSubscriptionEntity> getSubscriptionsByStatus(SubscriptionStatus status);
+        /**
+         * Get subscription history for organization
+         */
+        List<OrganizationSubscriptionEntity> getSubscriptionHistory(Long organizationId);
 
-    /**
-     * Get subscriptions expiring before timestamp
-     */
-    List<OrganizationSubscriptionEntity> getExpiringSubscriptions(Long beforeTimestamp);
+        /**
+         * Get subscriptions by status
+         */
+        List<OrganizationSubscriptionEntity> getSubscriptionsByStatus(SubscriptionStatus status);
 
-    /**
-     * Get trial subscriptions ending before timestamp
-     */
-    List<OrganizationSubscriptionEntity> getTrialEndingSubscriptions(Long beforeTimestamp);
+        /**
+         * Get subscriptions expiring before timestamp
+         */
+        List<OrganizationSubscriptionEntity> getExpiringSubscriptions(Long beforeTimestamp);
 
-    /**
-     * Check if organization has active subscription
-     */
-    boolean hasActiveSubscription(Long organizationId);
+        /**
+         * Get trial subscriptions ending before timestamp
+         */
+        List<OrganizationSubscriptionEntity> getTrialEndingSubscriptions(Long beforeTimestamp);
 
-    /**
-     * Check if organization can access module based on subscription
-     */
-    boolean canAccessModule(Long organizationId, Long moduleId);
+        /**
+         * Check if organization has active subscription
+         */
+        boolean hasActiveSubscription(Long organizationId);
 
-    /**
-     * Calculate proration amount for upgrade/downgrade
-     */
-    BigDecimal calculateProration(OrganizationSubscriptionEntity currentSubscription,
-            Long newPlanId, String newBillingCycle);
+        /**
+         * Check if organization can access module based on subscription
+         */
+        boolean canAccessModule(Long organizationId, Long moduleId);
 
-    /**
-     * Get remaining days of subscription
-     */
-    int getRemainingDays(Long subscriptionId);
+        /**
+         * Calculate proration amount for upgrade/downgrade
+         */
+        BigDecimal calculateProration(OrganizationSubscriptionEntity currentSubscription,
+                        Long newPlanId, String newBillingCycle);
 
-    /**
-     * Validate subscription change (upgrade/downgrade)
-     */
-    void validateSubscriptionChange(Long organizationId, Long newPlanId);
+        /**
+         * Get remaining days of subscription
+         */
+        int getRemainingDays(Long subscriptionId);
 
-    /**
-     * Validate subscription change
-     */
-    void validateSubscriptionChange(SubscriptionPlanEntity currentPlan, SubscriptionPlanEntity newPlan);
+        /**
+         * Validate subscription change (upgrade/downgrade)
+         */
+        void validateSubscriptionChange(Long organizationId, Long newPlanId);
 
-    /**
-     * Validate subscription upgrade
-     */
-    void validateUpgrade(SubscriptionPlanEntity currentPlan, SubscriptionPlanEntity newPlan);
+        /**
+         * Validate subscription change
+         */
+        void validateSubscriptionChange(SubscriptionPlanEntity currentPlan, SubscriptionPlanEntity newPlan);
 
-    /**
-     * Validate subscription cancellation
-     */
-    void validateCancellation(Long organizationId);
+        /**
+         * Validate subscription upgrade
+         */
+        void validateUpgrade(SubscriptionPlanEntity currentPlan, SubscriptionPlanEntity newPlan);
+
+        /**
+         * Validate subscription cancellation
+         */
+        void validateCancellation(Long organizationId);
 }

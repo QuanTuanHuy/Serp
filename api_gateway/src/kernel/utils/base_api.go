@@ -211,10 +211,14 @@ func (api *BaseAPIClient) buildURL(path string) string {
 func (api *BaseAPIClient) UnmarshalResponse(ctx context.Context, response *HTTPResponse, target any) error {
 	if response == nil || response.Body == nil || len(response.Body) == 0 {
 		// special case for java spring
-		if response.StatusCode != http.StatusUnauthorized {
+		if response.StatusCode != http.StatusUnauthorized && response.StatusCode != http.StatusForbidden {
 			return fmt.Errorf("response or response body is nil")
 		}
-		response.Body = []byte("{\"code\":401,\"status\":\"error\",\"message\":\"Unauthorized\",\"data\":null}")
+		if response.StatusCode == http.StatusUnauthorized {
+			response.Body = []byte("{\"code\":401,\"status\":\"error\",\"message\":\"Unauthorized\",\"data\":null}")
+		} else {
+			response.Body = []byte("{\"code\":403,\"status\":\"error\",\"message\":\"Forbidden\",\"data\":null}")
+		}
 	}
 
 	if err := json.Unmarshal(response.Body, target); err != nil {

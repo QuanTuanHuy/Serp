@@ -88,6 +88,14 @@ public class ModuleService implements IModuleService {
     }
 
     @Override
+    public ModuleEntity getModuleByIdFromCache(Long moduleId) {
+        return getAllModules().stream()
+                .filter(m -> m.getId().equals(moduleId))
+                .findFirst()
+                .orElse(null);
+    }
+
+    @Override
     public ModuleEntity getModuleByCode(String code) {
         return getAllModules().stream()
                 .filter(m -> m.getCode().equals(code))

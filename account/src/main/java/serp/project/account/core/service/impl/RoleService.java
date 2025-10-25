@@ -116,6 +116,17 @@ public class RoleService implements IRoleService {
     }
 
     @Override
+    public List<RoleEntity> getRolesByModuleId(Long moduleId) {
+        List<RoleEntity> roles = getAllRoles();
+        if (CollectionUtils.isEmpty(roles)) {
+            return Collections.emptyList();
+        }
+        return roles.stream()
+                .filter(role -> role.getModuleId() != null && role.getModuleId().equals(moduleId))
+                .toList();
+    }
+
+    @Override
     public void addPermissionsToRole(Long roleId, List<Long> permissionIds) {
         RoleEntity role = rolePort.getRoleById(roleId);
         if (role == null) {
