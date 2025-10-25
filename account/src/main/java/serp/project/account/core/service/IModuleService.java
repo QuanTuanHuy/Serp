@@ -18,6 +18,8 @@ public interface IModuleService {
 
     ModuleEntity getModuleById(Long moduleId);
 
+    ModuleEntity getModuleByIdFromCache(Long moduleId);
+
     ModuleEntity getModuleByCode(String code);
 
     List<ModuleEntity> getAllModules();

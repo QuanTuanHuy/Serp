@@ -48,9 +48,10 @@ public class OrganizationSubscriptionService implements IOrganizationSubscriptio
     public OrganizationSubscriptionEntity subscribe(Long organizationId, SubscribeRequest request, Long requestedBy,
             SubscriptionPlanEntity plan) {
 
-        SubscriptionStatus status = plan.isFreePlan()
-                ? SubscriptionStatus.ACTIVE
-                : SubscriptionStatus.PENDING;
+        // SubscriptionStatus status = plan.isFreePlan()
+        //         ? SubscriptionStatus.ACTIVE
+        //         : SubscriptionStatus.PENDING;
+        SubscriptionStatus status = SubscriptionStatus.PENDING;
 
         var now = Instant.now().toEpochMilli();
         BillingCycle billingCycle = request.getBillingCycle() != null

@@ -7,17 +7,26 @@ package serp.project.account.core.usecase;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.*;
+import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.exception.AppException;
+import serp.project.account.core.service.IKeycloakUserService;
+import serp.project.account.core.service.IModuleService;
 import serp.project.account.core.service.IOrganizationService;
 import serp.project.account.core.service.IOrganizationSubscriptionService;
+import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.ISubscriptionPlanService;
 import serp.project.account.core.service.IUserModuleAccessService;
+import serp.project.account.core.service.IUserService;
+import serp.project.account.kernel.utils.CollectionUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
 
 @Service
@@ -29,6 +38,10 @@ public class OrganizationSubscriptionUseCase {
     private final ISubscriptionPlanService subscriptionPlanService;
     private final IOrganizationService organizationService;
     private final IUserModuleAccessService userModuleAccessService;
+    private final IRoleService roleService;
+    private final IUserService userService;
+    private final IKeycloakUserService keycloakUserService;
+    private final IModuleService moduleService;
 
     private final ResponseUtils responseUtils;
 
@@ -84,6 +97,11 @@ public class OrganizationSubscriptionUseCase {
                 throw new AppException(Constants.ErrorMessage.PLAN_DOES_NOT_SUPPORT_TRIAL);
             }
 
+            var user = userService.getUserById(requestedBy);
+            if (user == null || !user.getPrimaryOrganizationId().equals(organizationId)) {
+                return responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
+            }
+
             var subscription = organizationSubscriptionService.startTrial(organizationId, plan, requestedBy);
             organizationService.updateSubscription(organizationId, subscription);
 
@@ -92,6 +110,11 @@ public class OrganizationSubscriptionUseCase {
                 var planModules = subscriptionPlanService.getPlanModules(plan.getId());
 
                 for (var planModule : planModules) {
+                    var module = moduleService.getModuleByIdFromCache(planModule.getModuleId());
+                    if (module == null) {
+                        log.error("Module ID {} not found. Skipping auto-grant.", planModule.getModuleId());
+                        continue;
+                    }
                     if (planModule.getIsIncluded()) {
                         userModuleAccessService.registerUserToModuleWithExpiration(
                                 requestedBy,
@@ -99,6 +122,21 @@ public class OrganizationSubscriptionUseCase {
                                 organizationId,
                                 requestedBy,
                                 subscription.getEndDate());
+
+                        List<RoleEntity> roles = roleService.getRolesByModuleId(planModule.getModuleId());
+                        if (CollectionUtils.isEmpty(roles)) {
+                            log.error("No roles found for module ID {}. Check why?", planModule.getModuleId());
+                            continue;
+                        }
+                        List<Long> roleIds = roles.stream()
+                                .map(RoleEntity::getId)
+                                .toList();
+                        userService.addRolesToUser(requestedBy, roleIds);
+                        List<String> roleNames = roles.stream()
+                                .map(RoleEntity::getName)
+                                .toList();
+                        keycloakUserService.assignClientRoles(user.getKeycloakId(), module.getKeycloakClientId(),
+                                roleNames);
                     }
                 }
                 log.info("Auto-granted {} modules to organization owner", planModules.size());
@@ -251,13 +289,22 @@ public class OrganizationSubscriptionUseCase {
             log.info("[UseCase] Activating subscription {}", subscriptionId);
 
             var subscription = organizationSubscriptionService.activateSubscription(subscriptionId, activatedBy);
+            var organization = organizationService.getOrganizationById(subscription.getOrganizationId());
+            organizationService.updateSubscription(organization.getId(), subscription);
+
+            var orgOwner = userService.getUserById(organization.getOwnerId());
 
             // Auto-grant module access to organization owner
             try {
-                var organization = organizationService.getOrganizationById(subscription.getOrganizationId());
                 var planModules = subscriptionPlanService.getPlanModules(subscription.getSubscriptionPlanId());
 
                 for (var planModule : planModules) {
+                    var module = moduleService.getModuleByIdFromCache(planModule.getModuleId());
+                    if (module == null) {
+                        log.error("Module ID {} not found. Skipping auto-grant.", planModule.getModuleId());
+                        continue;
+                    }
+
                     if (planModule.getIsIncluded()) {
                         userModuleAccessService.registerUserToModuleWithExpiration(
                                 organization.getOwnerId(),
@@ -266,6 +313,23 @@ public class OrganizationSubscriptionUseCase {
                                 activatedBy,
                                 subscription.getEndDate());
                     }
+
+                    List<RoleEntity> roles = roleService.getRolesByModuleId(planModule.getModuleId());
+                    if (CollectionUtils.isEmpty(roles)) {
+                        log.error("No roles found for module ID {}. Check why?", planModule.getModuleId());
+                        continue;
+                    }
+                    List<Long> roleIds = roles.stream()
+                            .map(RoleEntity::getId)
+                            .toList();
+                    userService.addRolesToUser(organization.getOwnerId(), roleIds);
+                    List<String> roleNames = roles.stream()
+                            .map(RoleEntity::getName)
+                            .toList();
+                    keycloakUserService.assignClientRoles(
+                            orgOwner.getKeycloakId(),
+                            module.getKeycloakClientId(),
+                            roleNames);
                 }
                 log.info("Auto-granted {} modules to organization owner", planModules.size());
             } catch (Exception e) {

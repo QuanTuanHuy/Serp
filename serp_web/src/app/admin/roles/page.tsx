@@ -50,7 +50,6 @@ export default function RolesPage() {
   } = useRoles();
 
   const { modules } = useModules();
-  console.log('Modules in RolesPage:', modules);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Role | undefined>(undefined);

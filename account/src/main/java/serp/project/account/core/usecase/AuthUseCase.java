@@ -28,6 +28,7 @@ import serp.project.account.infrastructure.store.mapper.UserMapper;
 import serp.project.account.kernel.utils.CollectionUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -66,6 +67,7 @@ public class AuthUseCase {
 
             var keycloakUser = userMapper.createUserMapper(user, organization.getId(), request.getPassword());
             userKeycloakId = keycloakUserService.createUser(keycloakUser);
+            log.info("Keycloak user id: {}", userKeycloakId);
 
             user.setKeycloakId(userKeycloakId);
             user.setPrimaryOrganizationId(organization.getId());
@@ -107,7 +109,12 @@ public class AuthUseCase {
             if (user == null) {
                 return responseUtils.badRequest(Constants.ErrorMessage.WRONG_EMAIL_OR_PASSWORD);
             }
+            if (!user.isActive()) {
+                return responseUtils.badRequest(Constants.ErrorMessage.USER_INACTIVE);
+            }
             var loginResponse = tokenService.getUserToken(user.getEmail(), request.getPassword());
+            user.setLastLoginAt(Instant.now().toEpochMilli());
+            userService.updateUser(user.getId(), user);
             return responseUtils.success(loginResponse);
         } catch (Exception e) {
             log.error("Login failed: {}", e.getMessage());
