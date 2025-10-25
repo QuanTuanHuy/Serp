@@ -15,6 +15,7 @@ import {
   Package,
   Puzzle,
   Users,
+  Shield,
   ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
@@ -66,6 +67,12 @@ const navigationItems: NavigationItem[] = [
     href: '/admin/users',
     icon: Users,
     description: 'System-wide user management',
+  },
+  {
+    name: 'Roles',
+    href: '/admin/roles',
+    icon: Shield,
+    description: 'Role and permission management',
   },
 ];
 

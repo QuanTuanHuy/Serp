@@ -47,5 +47,20 @@ export type {
   UserResponse,
 } from './user.types';
 
+// Role types
+export type {
+  RoleScope,
+  RoleType,
+  Permission,
+  MenuDisplay,
+  Role,
+  CreateRoleRequest,
+  UpdateRoleRequest,
+  AddPermissionToRoleRequest,
+  RoleFilters,
+  RolesResponse,
+  RoleResponse,
+} from './role.types';
+
 // Stats types
 export type { AdminStats } from './stats.types';

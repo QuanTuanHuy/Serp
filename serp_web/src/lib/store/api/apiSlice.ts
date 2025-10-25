@@ -106,6 +106,7 @@ export const api = createApi({
     'admin/Plan',
     'admin/Module',
     'admin/User',
+    'admin/Role',
   ],
 
   // Define endpoints in separate files for each module

@@ -54,9 +54,6 @@ export default function ModulesPage() {
     await toggleStatus(moduleId, currentStatus);
   };
 
-  // Calculate stats
-  // moved into useModules
-
   // Define columns for DataTable
   const columns = useMemo<ColumnDef<Module>[]>(
     () => [

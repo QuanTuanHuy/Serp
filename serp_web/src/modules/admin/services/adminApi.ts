@@ -46,3 +46,16 @@ export {
   useCreateModuleMutation,
   useUpdateModuleMutation,
 } from './modules/modulesApi';
+
+// Roles API
+export {
+  rolesApi,
+  useGetAllRolesQuery,
+  useLazyGetAllRolesQuery,
+  useGetRoleByIdQuery,
+  useLazyGetRoleByIdQuery,
+  useCreateRoleMutation,
+  useUpdateRoleMutation,
+  useAddPermissionsToRoleMutation,
+  useDeleteRoleMutation,
+} from './roles/rolesApi';
