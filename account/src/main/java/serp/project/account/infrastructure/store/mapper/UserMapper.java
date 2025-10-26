@@ -133,6 +133,7 @@ public class UserMapper extends BaseMapper {
 
         return UserProfileResponse.builder()
                 .id(user.getId())
+                .keycloakId(user.getKeycloakId())
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())

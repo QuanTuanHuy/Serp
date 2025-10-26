@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.AssignRoleToUserDto;
+import serp.project.account.core.domain.dto.request.UpdateUserInfoRequest;
 import serp.project.account.core.domain.dto.request.GetUserParams;
 import serp.project.account.core.usecase.UserUseCase;
 import serp.project.account.kernel.utils.AuthUtils;
@@ -62,6 +63,28 @@ public class UserController {
             return ResponseEntity.status(response.getCode()).body(response);
         }
         var response = userUseCase.getUserProfile(userIdOpt.get());
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PatchMapping("/{userId}/info")
+    public ResponseEntity<?> updateUserInfo(
+            @PathVariable Long userId,
+            @Valid @RequestBody UpdateUserInfoRequest request
+    ) {
+        var currentUserIdOpt = authUtils.getCurrentUserId();
+        var organizationIdOpt = authUtils.getCurrentTenantId();
+        if (currentUserIdOpt.isEmpty() || organizationIdOpt.isEmpty()) {
+            var response = responseUtil.forbidden(Constants.ErrorMessage.FORBIDDEN);
+            return ResponseEntity.status(response.getCode()).body(response);
+        }
+        if (!currentUserIdOpt.get().equals(userId)) {
+            if (!authUtils.canAccessOrganization(organizationIdOpt.get())) {
+                var response = responseUtil.forbidden(Constants.ErrorMessage.NO_PERMISSION_TO_ACCESS_ORGANIZATION);
+                return ResponseEntity.status(response.getCode()).body(response);
+            }
+        }
+
+        var response = userUseCase.updateUserInfo(userId, request);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 

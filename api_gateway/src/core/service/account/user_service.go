@@ -18,6 +18,7 @@ type IUserService interface {
 	GetMyProfile(ctx context.Context) (*response.BaseResponse, error)
 	GetUsers(ctx context.Context, params *request.GetUserParams) (*response.BaseResponse, error)
 	AssignRolesToUser(ctx context.Context, req *request.AssignRoleToUserDto) (*response.BaseResponse, error)
+	UpdateUserInfo(ctx context.Context, userId int64, req *request.UpdateUserInfoRequest) (*response.BaseResponse, error)
 }
 
 type UserService struct {
@@ -46,6 +47,15 @@ func (u *UserService) AssignRolesToUser(ctx context.Context, req *request.Assign
 	res, err := u.userClient.AssignRolesToUser(ctx, req)
 	if err != nil {
 		log.Error(ctx, "UserService: AssignRolesToUser error: ", err.Error())
+		return nil, err
+	}
+	return res, nil
+}
+
+func (u *UserService) UpdateUserInfo(ctx context.Context, userId int64, req *request.UpdateUserInfoRequest) (*response.BaseResponse, error) {
+	res, err := u.userClient.UpdateUserInfo(ctx, userId, req)
+	if err != nil {
+		log.Error(ctx, "UserService: UpdateUserInfo error: ", err.Error())
 		return nil, err
 	}
 	return res, nil

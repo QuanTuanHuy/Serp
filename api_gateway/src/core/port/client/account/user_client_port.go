@@ -16,4 +16,5 @@ type IUserClientPort interface {
 	GetMyProfile(ctx context.Context) (*response.BaseResponse, error)
 	GetUsers(ctx context.Context, params *request.GetUserParams) (*response.BaseResponse, error)
 	AssignRolesToUser(ctx context.Context, req *request.AssignRoleToUserDto) (*response.BaseResponse, error)
+	UpdateUserInfo(ctx context.Context, userId int64, req *request.UpdateUserInfoRequest) (*response.BaseResponse, error)
 }

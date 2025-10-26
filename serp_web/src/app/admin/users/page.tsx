@@ -5,13 +5,17 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
-  useGetUsersQuery,
+  useUsers,
+  UserDialog,
   AdminStatusBadge,
   AdminActionMenu,
 } from '@/modules/admin';
-import type { UserFilters, UserProfile } from '@/modules/admin';
+import type { UserProfile } from '@/modules/admin';
+import { Combobox } from '@/shared/components/ui/combobox';
+import { useGetOrganizationsQuery } from '@/modules/admin/services/organizations/organizationsApi';
+import type { Organization } from '@/modules/admin/types';
 import {
   Card,
   CardContent,
@@ -34,35 +38,33 @@ import {
 } from 'lucide-react';
 
 export default function UsersPage() {
-  const [filters, setFilters] = useState<UserFilters>({
-    page: 0,
-    pageSize: 10,
-    sortBy: 'id',
-    sortDir: 'DESC',
-  });
-
   const {
-    data: response,
+    filters,
+    users,
+    pagination,
     isLoading,
     isFetching,
     error,
-  } = useGetUsersQuery(filters);
+    handleSearch,
+    handleFilterChange,
+    handlePageChange,
+    openCreate,
+    openEdit,
+  } = useUsers();
 
-  const users = response?.data.items || [];
-  const totalPages = response?.data.totalPages || 0;
-  const currentPage = response?.data.currentPage || 0;
-
-  const handleSearch = (search: string) => {
-    setFilters({ ...filters, search, page: 0 });
-  };
-
-  const handleFilterChange = (key: keyof UserFilters, value: any) => {
-    setFilters({ ...filters, [key]: value, page: 0 });
-  };
-
-  const handlePageChange = (newPage: number) => {
-    setFilters({ ...filters, page: newPage });
-  };
+  const [orgSearch, setOrgSearch] = useState<string>('');
+  const { data: orgsResponse, isFetching: isFetchingOrgs } =
+    useGetOrganizationsQuery({
+      page: 0,
+      pageSize: 50,
+      sortBy: 'name',
+      sortDir: 'ASC',
+      search: orgSearch || undefined,
+    } as any);
+  const organizations: Organization[] = useMemo(
+    () => orgsResponse?.data.items || [],
+    [orgsResponse]
+  );
 
   const formatDate = (isoDate?: string) => {
     if (!isoDate) return 'Never';
@@ -162,7 +164,7 @@ export default function UsersPage() {
               },
               {
                 label: 'Edit',
-                onClick: () => console.log('Edit', row.id),
+                onClick: () => openEdit(row.id),
                 icon: <Edit className='h-4 w-4' />,
               },
               {
@@ -197,6 +199,14 @@ export default function UsersPage() {
         </div>
 
         <div className='flex items-center gap-2'>
+          <Button
+            variant='default'
+            size='sm'
+            disabled={!filters.organizationId}
+            onClick={() => openCreate(filters.organizationId)}
+          >
+            Create User
+          </Button>
           <Button variant='outline' size='sm'>
             Export
           </Button>
@@ -209,7 +219,7 @@ export default function UsersPage() {
           <CardTitle className='text-base font-medium'>Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className='grid gap-4 md:grid-cols-3'>
+          <div className='grid gap-4 md:grid-cols-4'>
             {/* Search */}
             <div className='md:col-span-2'>
               <div className='relative'>
@@ -239,6 +249,26 @@ export default function UsersPage() {
                 <option value='SUSPENDED'>Suspended</option>
               </select>
             </div>
+
+            {/* Organization Filter */}
+            <div>
+              <Combobox
+                value={filters.organizationId}
+                onChange={(val) =>
+                  handleFilterChange(
+                    'organizationId',
+                    val !== undefined ? Number(val) : undefined
+                  )
+                }
+                items={organizations.map((o) => ({
+                  value: o.id,
+                  label: o.name,
+                }))}
+                placeholder='All Organizations'
+                loading={isFetchingOrgs}
+                onSearch={(q) => setOrgSearch(q)}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -252,9 +282,9 @@ export default function UsersPage() {
         error={error}
         storageKey='admin-users-columns'
         pagination={{
-          currentPage,
-          totalPages,
-          totalItems: response?.data.totalItems || 0,
+          currentPage: pagination.currentPage,
+          totalPages: pagination.totalPages,
+          totalItems: pagination.totalItems,
           onPageChange: handlePageChange,
           isFetching,
         }}
@@ -269,6 +299,8 @@ export default function UsersPage() {
           </div>
         }
       />
+      {/* Dialogs */}
+      <UserDialog />
     </div>
   );
 }

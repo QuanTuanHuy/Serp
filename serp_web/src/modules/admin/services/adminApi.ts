@@ -17,6 +17,8 @@ export {
   usersApi,
   useGetUsersQuery,
   useLazyGetUsersQuery,
+  useUpdateUserInfoMutation,
+  useCreateUserForOrganizationMutation,
 } from './users/usersApi';
 
 // Subscriptions API
@@ -26,6 +28,9 @@ export {
   useGetSubscriptionByIdQuery,
   useLazyGetSubscriptionsQuery,
   useLazyGetSubscriptionByIdQuery,
+  useActivateSubscriptionMutation,
+  useRejectSubscriptionMutation,
+  useExpireSubscriptionMutation,
 } from './subscriptions/subscriptionsApi';
 
 // Subscription Plans API

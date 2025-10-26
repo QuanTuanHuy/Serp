@@ -40,6 +40,9 @@ export { useOrganizations } from './hooks/useOrganizations';
 export type { UseOrganizationsReturn } from './hooks/useOrganizations';
 export { useRoles } from './hooks/useRoles';
 export type { UseRolesReturn } from './hooks/useRoles';
+export { useSubscriptions } from './hooks/useSubscriptions';
+export type { UseSubscriptionsReturn } from './hooks/useSubscriptions';
+export { useUsers } from './hooks/useUsers';
 
 // Types
 export type {
@@ -86,6 +89,9 @@ export {
   useGetSubscriptionByIdQuery,
   useLazyGetSubscriptionsQuery,
   useLazyGetSubscriptionByIdQuery,
+  useActivateSubscriptionMutation,
+  useRejectSubscriptionMutation,
+  useExpireSubscriptionMutation,
 
   // Subscription Plans
   plansApi,
@@ -111,3 +117,6 @@ export {
   useAddPermissionsToRoleMutation,
   useDeleteRoleMutation,
 } from './services/adminApi';
+
+// Users UI Components
+export { UserDialog } from './components/users/UserDialog';

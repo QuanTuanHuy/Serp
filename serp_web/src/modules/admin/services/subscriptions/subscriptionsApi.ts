@@ -24,13 +24,18 @@ export const subscriptionsApi = api.injectEndpoints({
           if (filters.organizationId)
             params.append('organizationId', String(filters.organizationId));
           if (filters.status) params.append('status', filters.status);
-          if (filters.planId) params.append('planId', String(filters.planId));
+          if (filters.planId) params.append('planId', String(filters.planId)); // BE may ignore
           if (filters.page !== undefined)
             params.append('page', String(filters.page));
           if (filters.pageSize !== undefined)
             params.append('pageSize', String(filters.pageSize));
           if (filters.sortBy) params.append('sortBy', filters.sortBy);
           if (filters.sortDir) params.append('sortDir', filters.sortDir);
+          if (filters.billingCycle) {
+            const allowed = ['MONTHLY', 'YEARLY', 'TRIAL'];
+            const bc = String(filters.billingCycle).toUpperCase();
+            if (allowed.includes(bc)) params.append('billingCycle', bc);
+          }
 
           return {
             url: `/admin/subscriptions?${params.toString()}`,
@@ -53,12 +58,55 @@ export const subscriptionsApi = api.injectEndpoints({
 
     getSubscriptionById: builder.query<OrganizationSubscription, string>({
       query: (subscriptionId) => ({
-        url: `/account/api/v1/subscriptions/${subscriptionId}`,
+        url: `/subscriptions/${subscriptionId}`,
         method: 'GET',
       }),
       transformResponse: createDataTransform<OrganizationSubscription>(),
       providesTags: (_result, _error, id) => [
         { type: 'admin/Subscription', id },
+      ],
+    }),
+
+    activateSubscription: builder.mutation<
+      { success: boolean },
+      { subscriptionId: number }
+    >({
+      query: ({ subscriptionId }) => ({
+        url: `/admin/subscriptions/${subscriptionId}/activate`,
+        method: 'PUT',
+      }),
+      invalidatesTags: (_result, _error, { subscriptionId }) => [
+        { type: 'admin/Subscription', id: subscriptionId },
+        { type: 'admin/Subscription', id: 'LIST' },
+      ],
+    }),
+
+    rejectSubscription: builder.mutation<
+      { success: boolean },
+      { subscriptionId: number; reason: string }
+    >({
+      query: ({ subscriptionId, reason }) => ({
+        url: `/admin/subscriptions/${subscriptionId}/reject`,
+        method: 'PUT',
+        body: { reason },
+      }),
+      invalidatesTags: (_result, _error, { subscriptionId }) => [
+        { type: 'admin/Subscription', id: subscriptionId },
+        { type: 'admin/Subscription', id: 'LIST' },
+      ],
+    }),
+
+    expireSubscription: builder.mutation<
+      { success: boolean },
+      { subscriptionId: number }
+    >({
+      query: ({ subscriptionId }) => ({
+        url: `/admin/subscriptions/${subscriptionId}/expire`,
+        method: 'PUT',
+      }),
+      invalidatesTags: (_result, _error, { subscriptionId }) => [
+        { type: 'admin/Subscription', id: subscriptionId },
+        { type: 'admin/Subscription', id: 'LIST' },
       ],
     }),
   }),
@@ -70,4 +118,7 @@ export const {
   useGetSubscriptionByIdQuery,
   useLazyGetSubscriptionsQuery,
   useLazyGetSubscriptionByIdQuery,
+  useActivateSubscriptionMutation,
+  useRejectSubscriptionMutation,
+  useExpireSubscriptionMutation,
 } = subscriptionsApi;

@@ -121,6 +121,33 @@ func (u *UserClientAdapter) AssignRolesToUser(ctx context.Context, req *request.
 	return &result, nil
 }
 
+func (u *UserClientAdapter) UpdateUserInfo(ctx context.Context, userId int64, req *request.UpdateUserInfoRequest) (*response.BaseResponse, error) {
+	headers := utils.BuildHeadersFromContext(ctx)
+	path := fmt.Sprintf("/api/v1/users/%d/info", userId)
+
+	var httpResponse *utils.HTTPResponse
+	err := u.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
+		var err error
+		httpResponse, err = u.apiClient.PATCH(ctx, path, req, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call update user info API: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !u.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("UpdateUserInfo API returned error status: %d", httpResponse.StatusCode))
+	}
+
+	var result response.BaseResponse
+	if err := u.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal update user info response: %w", err)
+	}
+	return &result, nil
+}
+
 func NewUserClientAdapter(authProps *properties.ExternalServiceProperties) port.IUserClientPort {
 	baseUrl := "http://" + authProps.AccountService.Host + ":" + authProps.AccountService.Port + "/account-service"
 	apiClient := utils.NewBaseAPIClient(baseUrl, authProps.AccountService.Timeout)

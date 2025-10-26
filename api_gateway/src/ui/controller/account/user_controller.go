@@ -71,6 +71,26 @@ func (u *UserController) AssignRolesToUser(c *gin.Context) {
 	c.JSON(res.Code, res)
 }
 
+func (u *UserController) UpdateUserInfo(c *gin.Context) {
+	userId, ok := utils.ValidateAndParseID(c, "userId")
+	if !ok {
+		return
+	}
+
+	var req request.UpdateUserInfoRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+		return
+	}
+
+	res, err := u.userService.UpdateUserInfo(c.Request.Context(), userId, &req)
+	if err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
+		return
+	}
+	c.JSON(res.Code, res)
+}
+
 func NewUserController(userService service.IUserService) *UserController {
 	return &UserController{
 		userService: userService,

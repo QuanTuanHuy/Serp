@@ -17,14 +17,18 @@ export type {
 // Subscription types
 export type {
   SubscriptionStatus,
-  SubscriptionPlan,
   OrganizationSubscription,
   SubscriptionsResponse,
   SubscriptionResponse,
+  SubscriptionFilters,
+} from './subscriptions.types';
+
+// Plan types
+export type {
+  SubscriptionPlan,
   PlansResponse,
   PlanResponse,
-  SubscriptionFilters,
-} from './subscription.types';
+} from './plans.types';
 
 // Module types
 export type {
@@ -45,6 +49,8 @@ export type {
   UserFilters,
   UsersResponse,
   UserResponse,
+  UpdateUserInfoRequest,
+  CreateUserForOrganizationRequest,
 } from './user.types';
 
 // Role types
