@@ -122,6 +122,14 @@ app:
             - SUPER_ADMIN
             - SYSTEM_MODERATOR
           permissions:
+        - url-pattern: /api/v1/users/*/info
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_USER
+            - ORG_ADMIN
+            - ORG_OWNER
+          permissions:
 
         # ==================== KEYCLOAK CONTROLLER ====================
         - url-pattern: /api/v1/keycloak/**

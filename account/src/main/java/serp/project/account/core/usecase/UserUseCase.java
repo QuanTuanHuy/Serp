@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.AssignRoleToUserDto;
+import serp.project.account.core.domain.dto.request.UpdateUserInfoRequest;
 import serp.project.account.core.domain.dto.request.GetUserParams;
 import serp.project.account.core.domain.dto.response.UserProfileResponse;
 import serp.project.account.core.domain.entity.OrganizationEntity;
@@ -119,6 +120,33 @@ public class UserUseCase {
         } catch (Exception e) {
             log.error("Get users failed: {}", e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> updateUserInfo(Long userId, UpdateUserInfoRequest request) {
+        try {
+            UserEntity user = userService.getUserById(userId);
+            if (user == null) {
+                return responseUtils.badRequest(Constants.ErrorMessage.USER_NOT_FOUND);
+            }
+
+            UserEntity patch = request.toEntity();
+
+            UserEntity updated = userService.updateUser(userId, patch);
+            UserProfileResponse profile = userMapper.toProfileResponse(updated);
+
+            if (profile.getOrganizationId() != null) {
+                var orgs = organizationService.getOrganizationsByIds(List.of(profile.getOrganizationId()));
+                if (!orgs.isEmpty()) {
+                    profile.setOrganizationName(orgs.get(0).getName());
+                }
+            }
+
+            return responseUtils.success(profile);
+        } catch (Exception e) {
+            log.error("Update user info failed: {}", e.getMessage());
+            throw e;
         }
     }
 }

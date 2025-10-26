@@ -20,6 +20,7 @@ import java.util.List;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class UserProfileResponse {
     private Long id;
+    private String keycloakId;
     private String email;
     private String firstName;
     private String lastName;
