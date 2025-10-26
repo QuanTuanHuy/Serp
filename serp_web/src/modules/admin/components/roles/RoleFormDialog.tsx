@@ -36,7 +36,7 @@ export const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
+      <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl'>
         <DialogHeader>
           <DialogTitle>{role ? 'Edit Role' : 'Create New Role'}</DialogTitle>
         </DialogHeader>

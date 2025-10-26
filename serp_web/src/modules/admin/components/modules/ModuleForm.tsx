@@ -197,7 +197,7 @@ export const ModuleForm: React.FC<ModuleFormProps> = ({
                 onValueChange={(v) => setValue('moduleType', v as ModuleType)}
                 defaultValue={module?.moduleType || 'SYSTEM'}
               >
-                <SelectTrigger>
+                <SelectTrigger className='w-full'>
                   <SelectValue placeholder='Select type' />
                 </SelectTrigger>
                 <SelectContent>
@@ -212,7 +212,7 @@ export const ModuleForm: React.FC<ModuleFormProps> = ({
                 onValueChange={(v) => setValue('status', v as ModuleStatus)}
                 defaultValue={module?.status || 'ACTIVE'}
               >
-                <SelectTrigger>
+                <SelectTrigger className='w-full'>
                   <SelectValue placeholder='Select status' />
                 </SelectTrigger>
                 <SelectContent>
@@ -232,7 +232,7 @@ export const ModuleForm: React.FC<ModuleFormProps> = ({
                 }
                 defaultValue={module?.pricingModel || 'FREE'}
               >
-                <SelectTrigger>
+                <SelectTrigger className='w-full'>
                   <SelectValue placeholder='Select pricing' />
                 </SelectTrigger>
                 <SelectContent>
