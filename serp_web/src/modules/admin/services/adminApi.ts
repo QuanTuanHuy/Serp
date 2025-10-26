@@ -26,6 +26,9 @@ export {
   useGetSubscriptionByIdQuery,
   useLazyGetSubscriptionsQuery,
   useLazyGetSubscriptionByIdQuery,
+  useActivateSubscriptionMutation,
+  useRejectSubscriptionMutation,
+  useExpireSubscriptionMutation,
 } from './subscriptions/subscriptionsApi';
 
 // Subscription Plans API

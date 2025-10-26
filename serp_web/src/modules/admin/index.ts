@@ -40,6 +40,8 @@ export { useOrganizations } from './hooks/useOrganizations';
 export type { UseOrganizationsReturn } from './hooks/useOrganizations';
 export { useRoles } from './hooks/useRoles';
 export type { UseRolesReturn } from './hooks/useRoles';
+export { useSubscriptions } from './hooks/useSubscriptions';
+export type { UseSubscriptionsReturn } from './hooks/useSubscriptions';
 
 // Types
 export type {
@@ -86,6 +88,9 @@ export {
   useGetSubscriptionByIdQuery,
   useLazyGetSubscriptionsQuery,
   useLazyGetSubscriptionByIdQuery,
+  useActivateSubscriptionMutation,
+  useRejectSubscriptionMutation,
+  useExpireSubscriptionMutation,
 
   // Subscription Plans
   plansApi,

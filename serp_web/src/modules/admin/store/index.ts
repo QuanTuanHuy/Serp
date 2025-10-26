@@ -8,12 +8,14 @@ import { plansReducer } from './plans/plansSlice';
 import { organizationsReducer } from './organizations/organizationsSlice';
 import { modulesReducer } from './modules/modulesSlice';
 import { rolesReducer } from './roles/rolesSlice';
+import { subscriptionsReducer } from './subscriptions/subscriptionsSlice';
 
 export const adminReducer = combineReducers({
   plans: plansReducer,
   organizations: organizationsReducer,
   modules: modulesReducer,
   roles: rolesReducer,
+  subscriptions: subscriptionsReducer,
 });
 
 export {
@@ -73,3 +75,18 @@ export {
   selectRolesDialogOpen,
   selectRolesViewMode,
 } from './roles/rolesSlice';
+
+export {
+  setSubscriptionsFilters,
+  setSubscriptionsStatus,
+  setSubscriptionsOrganizationId,
+  setSubscriptionsPlanId,
+  setSubscriptionsBillingCycle,
+  setSubscriptionsPage,
+  setSubscriptionsPageSize,
+  setSubscriptionsSort,
+  setSelectedSubscriptionId,
+  clearSelectedSubscription,
+  selectSubscriptionsFilters,
+  selectSelectedSubscriptionId,
+} from './subscriptions/subscriptionsSlice';
