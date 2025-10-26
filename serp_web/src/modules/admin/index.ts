@@ -42,6 +42,7 @@ export { useRoles } from './hooks/useRoles';
 export type { UseRolesReturn } from './hooks/useRoles';
 export { useSubscriptions } from './hooks/useSubscriptions';
 export type { UseSubscriptionsReturn } from './hooks/useSubscriptions';
+export { useUsers } from './hooks/useUsers';
 
 // Types
 export type {
@@ -116,3 +117,6 @@ export {
   useAddPermissionsToRoleMutation,
   useDeleteRoleMutation,
 } from './services/adminApi';
+
+// Users UI Components
+export { UserDialog } from './components/users/UserDialog';

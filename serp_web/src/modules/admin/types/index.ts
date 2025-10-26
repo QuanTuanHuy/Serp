@@ -49,6 +49,8 @@ export type {
   UserFilters,
   UsersResponse,
   UserResponse,
+  UpdateUserInfoRequest,
+  CreateUserForOrganizationRequest,
 } from './user.types';
 
 // Role types

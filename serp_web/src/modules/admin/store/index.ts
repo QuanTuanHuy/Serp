@@ -9,6 +9,8 @@ import { organizationsReducer } from './organizations/organizationsSlice';
 import { modulesReducer } from './modules/modulesSlice';
 import { rolesReducer } from './roles/rolesSlice';
 import { subscriptionsReducer } from './subscriptions/subscriptionsSlice';
+import { usersReducer } from './users/usersSlice';
+import { usersFiltersReducer } from './users/usersFiltersSlice';
 
 export const adminReducer = combineReducers({
   plans: plansReducer,
@@ -16,6 +18,8 @@ export const adminReducer = combineReducers({
   modules: modulesReducer,
   roles: rolesReducer,
   subscriptions: subscriptionsReducer,
+  users: usersReducer,
+  usersFilters: usersFiltersReducer,
 });
 
 export {
@@ -90,3 +94,26 @@ export {
   selectSubscriptionsFilters,
   selectSelectedSubscriptionId,
 } from './subscriptions/subscriptionsSlice';
+
+export {
+  openCreateUserDialog,
+  openEditUserDialog,
+  closeUserDialog,
+  selectUsersUiState,
+  selectUsersDialogOpen,
+  selectUsersViewMode,
+  selectSelectedUserId,
+  selectSelectedOrganizationId,
+} from './users/usersSlice';
+
+export {
+  setUsersFilters,
+  setUsersSearch,
+  setUsersStatus,
+  setUsersOrganizationId,
+  setUsersPage,
+  setUsersPageSize,
+  setUsersSort,
+  resetUsersFilters,
+  selectUsersFilters,
+} from './users/usersFiltersSlice';
