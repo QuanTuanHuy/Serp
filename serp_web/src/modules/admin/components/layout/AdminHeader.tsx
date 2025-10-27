@@ -161,7 +161,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ className }) => {
                     <p className='text-xs text-muted-foreground'>SUPER_ADMIN</p>
                   </div>
 
-                  <div className='py-2'>
+                  {/* <div className='py-2'>
                     <Button
                       variant='ghost'
                       className='w-full justify-start'
@@ -195,7 +195,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ className }) => {
                       <Home className='mr-2 h-4 w-4' />
                       Back to SERP
                     </Button>
-                  </div>
+                  </div> */}
 
                   <div className='border-t pt-2'>
                     <Button

@@ -10,14 +10,16 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import serp.project.account.core.domain.enums.LicenseType;
 
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ModuleAccessResponse {
+public class UserModuleAccessResponse {
+    private Long userId;
+
+    private Long organizationId;
 
     private Long moduleId;
 
@@ -25,17 +27,9 @@ public class ModuleAccessResponse {
 
     private String moduleCode;
 
-    private String description;
+    private String moduleDescription;
 
-    private LicenseType licenseType;
+    private Boolean isActive;
 
-    private Boolean hasAccess;
-
-    private Integer maxUsers;
-
-    private Integer currentUsers;
-
-    private Boolean canAddMoreUsers;
-
-    private Long assignedAt;
+    private Long grantedAt;
 }

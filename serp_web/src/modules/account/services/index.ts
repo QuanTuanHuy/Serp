@@ -17,3 +17,5 @@ export {
   useGetUserPermissionsQuery,
   useGetUserMenusQuery,
 } from './userApi';
+
+export { moduleApi, useGetMyModulesQuery } from './moduleApi';

@@ -22,6 +22,7 @@ import {
   Home,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
+import { useUser } from '@/modules/account';
 
 interface CRMHeaderProps {
   className?: string;
@@ -31,6 +32,8 @@ export const CRMHeader: React.FC<CRMHeaderProps> = ({ className }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [notifications, setNotifications] = useState(3);
+
+  const { getInitials, getDisplayName, user } = useUser();
 
   const router = useRouter();
   const pathname = usePathname();
@@ -88,18 +91,8 @@ export const CRMHeader: React.FC<CRMHeaderProps> = ({ className }) => {
       )}
     >
       <div className='flex h-16 items-center justify-between px-6'>
-        {/* Left Section - Branding & Breadcrumbs */}
+        {/* Left Section - Breadcrumbs */}
         <div className='flex items-center space-x-4'>
-          {/* CRM Logo */}
-          <Link href='/crm' className='flex items-center space-x-2'>
-            <div className='h-8 w-8 bg-primary rounded-md flex items-center justify-center'>
-              <span className='text-primary-foreground font-bold text-sm'>
-                C
-              </span>
-            </div>
-            <span className='font-bold text-lg hidden sm:block'>CRM</span>
-          </Link>
-
           {/* Breadcrumbs */}
           <nav className='hidden md:flex items-center space-x-2 text-sm'>
             {getBreadcrumbs().map((breadcrumb, index) => (
@@ -170,8 +163,8 @@ export const CRMHeader: React.FC<CRMHeaderProps> = ({ className }) => {
                 <AvatarFallback>SM</AvatarFallback>
               </Avatar>
               <div className='hidden sm:block text-left'>
-                <p className='text-sm font-medium'>Sales Manager</p>
-                <p className='text-xs text-muted-foreground'>admin@crm.com</p>
+                <p className='text-sm font-medium'>{getDisplayName()}</p>
+                <p className='text-xs text-muted-foreground'>{user?.email}</p>
               </div>
               <ChevronDown className='h-4 w-4 text-muted-foreground' />
             </button>
@@ -181,13 +174,13 @@ export const CRMHeader: React.FC<CRMHeaderProps> = ({ className }) => {
               <div className='absolute right-0 top-full mt-2 w-56 bg-background border rounded-md shadow-lg z-50'>
                 <div className='p-2'>
                   <div className='px-2 py-2 border-b'>
-                    <p className='font-medium'>Sales Manager</p>
+                    <p className='font-medium'>{getDisplayName()}</p>
                     <p className='text-xs text-muted-foreground'>
-                      admin@crm.com
+                      {user?.email}
                     </p>
                   </div>
 
-                  <div className='py-2'>
+                  {/* <div className='py-2'>
                     <Button
                       variant='ghost'
                       className='w-full justify-start'
@@ -212,7 +205,7 @@ export const CRMHeader: React.FC<CRMHeaderProps> = ({ className }) => {
                       <Home className='mr-2 h-4 w-4' />
                       Back to SERP
                     </Button>
-                  </div>
+                  </div> */}
 
                   <div className='border-t pt-2'>
                     <Button

@@ -20,3 +20,5 @@ export {
   type AccessDeniedProps,
   type AccessDeniedReason,
 } from './AccessDenied';
+export { ModuleCard } from './ModuleCard';
+export { ModuleShowcase } from './ModuleShowcase';

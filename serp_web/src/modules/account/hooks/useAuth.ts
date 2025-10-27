@@ -4,6 +4,7 @@
  */
 
 import { useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/shared/hooks';
 import { useNotification } from '@/shared/hooks';
 import { isSuccessResponse, getErrorMessage } from '@/lib/store';
@@ -31,6 +32,7 @@ import type { LoginRequest, RegisterRequest, User } from '../types';
 export const useAuth = () => {
   const dispatch = useAppDispatch();
   const notification = useNotification();
+  const router = useRouter();
 
   // Auth state selectors
   const auth = useAppSelector(selectAuth);
@@ -46,7 +48,6 @@ export const useAuth = () => {
   const [refreshTokenMutation] = useRefreshTokenMutation();
   const [revokeTokenMutation] = useRevokeTokenMutation();
 
-  // Current user query
   const {
     data: currentUserData,
     isLoading: userLoading,
@@ -55,7 +56,6 @@ export const useAuth = () => {
     skip: !isAuthenticated || !token,
   });
 
-  // Sync user data to user slice when query succeeds
   useEffect(() => {
     if (
       isSuccessResponse(currentUserData) &&
@@ -108,6 +108,9 @@ export const useAuth = () => {
           notification.success('Login successful!', {
             description: `Welcome back!`,
           });
+
+          router.push('/home');
+
           return { success: true, data: result.data };
         } else {
           throw new Error(result.message);
@@ -123,7 +126,7 @@ export const useAuth = () => {
         dispatch(setLoading(false));
       }
     },
-    [loginMutation, dispatch, notification, refetchUser]
+    [loginMutation, dispatch, notification, refetchUser, router]
   );
 
   const register = useCallback(
@@ -166,6 +169,7 @@ export const useAuth = () => {
           notification.success('Registration successful!', {
             description: `Welcome to SERP, ${userData.firstName} ${userData.lastName}!`,
           });
+
           return { success: true, data: result.data };
         } else {
           throw new Error(result.message);
@@ -181,7 +185,7 @@ export const useAuth = () => {
         dispatch(setLoading(false));
       }
     },
-    [registerMutation, dispatch, notification, refetchUser]
+    [registerMutation, dispatch, notification, refetchUser, router]
   );
 
   const logout = useCallback(
@@ -202,9 +206,11 @@ export const useAuth = () => {
         if (showNotification) {
           notification.success('Logged out successfully');
         }
+
+        router.push('/auth');
       }
     },
-    [auth.refreshToken, revokeTokenMutation, dispatch, notification]
+    [auth.refreshToken, revokeTokenMutation, dispatch, notification, router]
   );
 
   const refreshToken = useCallback(async () => {
@@ -236,7 +242,7 @@ export const useAuth = () => {
       dispatch(clearProfile());
       return false;
     }
-  }, [auth.refreshToken, refreshTokenMutation, dispatch]);
+  }, [auth.refreshToken, refreshTokenMutation, dispatch, router]);
 
   return {
     // State
