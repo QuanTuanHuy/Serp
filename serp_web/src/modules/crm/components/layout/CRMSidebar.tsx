@@ -1,4 +1,7 @@
-// CRM Sidebar Component (authors: QuanTuanHuy, Description: Part of Serp Project)
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project - CRM sidebar navigation
+ */
 
 'use client';
 
@@ -14,107 +17,185 @@ import {
   BarChart3,
   Settings,
   ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ArrowLeft,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
+import { useCRMSidebar } from '../../contexts/CRMSidebarContext';
+import { Button } from '@/shared/components/ui/button';
+import { MODULE_ICONS } from '@/shared/constants/moduleIcons';
 
-interface CRMSidebarProps {
-  className?: string;
+interface NavigationItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  description?: string;
 }
 
-const navigationItems = [
+const navigationItems: NavigationItem[] = [
   {
-    title: 'Dashboard',
+    name: 'Dashboard',
     href: '/crm/dashboard',
     icon: LayoutDashboard,
     description: 'Overview & Analytics',
   },
   {
-    title: 'Customers',
+    name: 'Customers',
     href: '/crm/customers',
     icon: Users,
     description: 'Customer Management',
   },
   {
-    title: 'Leads',
+    name: 'Leads',
     href: '/crm/leads',
     icon: Target,
     description: 'Sales Prospects',
   },
   {
-    title: 'Opportunities',
+    name: 'Opportunities',
     href: '/crm/opportunities',
     icon: Building2,
     description: 'Sales Pipeline',
   },
   {
-    title: 'Activities',
+    name: 'Activities',
     href: '/crm/activities',
     icon: Activity,
     description: 'Interactions & Tasks',
   },
   {
-    title: 'Reports',
+    name: 'Reports',
     href: '/crm/reports',
     icon: BarChart3,
     description: 'Analytics & Insights',
   },
   {
-    title: 'Settings',
+    name: 'Settings',
     href: '/crm/settings',
     icon: Settings,
     description: 'CRM Configuration',
   },
 ];
 
-export const CRMSidebar: React.FC<CRMSidebarProps> = ({ className }) => {
+export const CRMSidebar: React.FC = () => {
   const pathname = usePathname();
+  const { isCollapsed, toggleSidebar } = useCRMSidebar();
+  const [isModuleHovered, setIsModuleHovered] = React.useState(false);
+
+  // Get CRM module icon from shared configuration
+  const CRMIcon = MODULE_ICONS.CRM.icon;
+
+  const isActive = (href: string) => {
+    return pathname === href || pathname.startsWith(href);
+  };
 
   return (
-    <div
+    <aside
       className={cn(
-        'flex h-full w-64 flex-col border-r border-border bg-background',
-        className
+        'fixed left-0 top-0 z-30 h-screen border-r bg-background transition-all duration-300',
+        isCollapsed ? 'w-16' : 'w-64'
       )}
     >
-      {/* Header */}
-      <div className='flex h-16 items-center border-b border-border px-6'>
-        <h2 className='text-lg font-semibold'>CRM System</h2>
+      {/* Logo/Brand */}
+      <div className='flex h-16 items-center border-b px-3 justify-between'>
+        <Link
+          href='/home'
+          className='flex items-center space-x-3 group transition-colors'
+          onMouseEnter={() => setIsModuleHovered(true)}
+          onMouseLeave={() => setIsModuleHovered(false)}
+        >
+          {/* Icon that swaps on hover */}
+          <div className='flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground flex-shrink-0 transition-all group-hover:bg-primary/90'>
+            {isModuleHovered ? (
+              <ArrowLeft className='h-5 w-5' />
+            ) : (
+              <CRMIcon className='h-5 w-5' />
+            )}
+          </div>
+
+          {/* Module name */}
+          {!isCollapsed && (
+            <span className='text-sm font-semibold group-hover:text-primary transition-colors'>
+              CRM
+            </span>
+          )}
+        </Link>
+
+        {/* Toggle Button - Only show when not collapsed */}
+        {!isCollapsed && (
+          <Button
+            variant='ghost'
+            size='icon'
+            className='h-8 w-8'
+            onClick={toggleSidebar}
+          >
+            <PanelLeftClose className='h-4 w-4' />
+          </Button>
+        )}
       </div>
 
       {/* Navigation */}
-      <nav className='flex-1 space-y-1 p-4'>
+      <nav className='flex-1 space-y-1 p-2'>
+        {/* Expand button when collapsed */}
+        {isCollapsed && (
+          <Button
+            variant='ghost'
+            size='icon'
+            className='w-full mt-4'
+            onClick={toggleSidebar}
+            title='Expand sidebar'
+          >
+            <PanelLeftOpen className='h-4 w-4' />
+          </Button>
+        )}
         {navigationItems.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href;
+          const active = isActive(item.href);
 
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                'group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                'hover:bg-accent hover:text-accent-foreground',
-                isActive
-                  ? 'bg-accent text-accent-foreground'
-                  : 'text-muted-foreground'
+                'group flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-accent hover:text-accent-foreground',
+                active
+                  ? 'bg-accent text-accent-foreground shadow-sm'
+                  : 'text-muted-foreground',
+                isCollapsed && 'justify-center'
               )}
+              title={isCollapsed ? item.name : undefined}
             >
-              <Icon className='h-5 w-5' />
-              <span className='flex-1'>{item.title}</span>
-              {isActive && <ChevronRight className='h-4 w-4' />}
+              <div className='flex items-center space-x-3'>
+                <Icon
+                  className={cn(
+                    'h-5 w-5 transition-colors flex-shrink-0',
+                    active
+                      ? 'text-primary'
+                      : 'text-muted-foreground group-hover:text-accent-foreground'
+                  )}
+                />
+                {!isCollapsed && <span>{item.name}</span>}
+              </div>
+
+              {active && !isCollapsed && (
+                <ChevronRight className='h-4 w-4 text-primary' />
+              )}
             </Link>
           );
         })}
       </nav>
 
-      {/* Footer */}
-      <div className='border-t border-border p-4'>
-        <div className='text-xs text-muted-foreground'>
-          Customer Relationship Management
+      {/* Footer Info */}
+      {!isCollapsed && (
+        <div className='border-t p-4'>
+          <div className='rounded-lg bg-muted p-3 text-xs text-muted-foreground'>
+            <p className='font-medium'>Customer Relationship Management</p>
+            <p className='mt-1'>Version 1.0.0</p>
+          </div>
         </div>
-        <div className='text-xs text-muted-foreground'>Version 1.0.0</div>
-      </div>
-    </div>
+      )}
+    </aside>
   );
 };
 

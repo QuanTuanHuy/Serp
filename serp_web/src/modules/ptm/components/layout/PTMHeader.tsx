@@ -87,18 +87,8 @@ export function PTMHeader() {
   return (
     <header className='sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'>
       <div className='flex h-16 items-center justify-between px-6'>
-        {/* Left Section - Branding & Breadcrumbs */}
+        {/* Left Section - Breadcrumbs */}
         <div className='flex items-center space-x-4'>
-          {/* PTM Logo */}
-          <Link href='/ptm' className='flex items-center space-x-2'>
-            <div className='h-8 w-8 bg-primary rounded-md flex items-center justify-center'>
-              <span className='text-primary-foreground font-bold text-sm'>
-                P
-              </span>
-            </div>
-            <span className='font-bold text-lg hidden sm:block'>PTM</span>
-          </Link>
-
           {/* Breadcrumbs */}
           <nav className='hidden md:flex items-center space-x-2 text-sm'>
             {getBreadcrumbs().map((breadcrumb, index) => (
@@ -186,7 +176,7 @@ export function PTMHeader() {
                     </p>
                   </div>
 
-                  <div className='py-2'>
+                  {/* <div className='py-2'>
                     <Button
                       variant='ghost'
                       className='w-full justify-start'
@@ -211,7 +201,7 @@ export function PTMHeader() {
                       <Home className='mr-2 h-4 w-4' />
                       Back to SERP
                     </Button>
-                  </div>
+                  </div> */}
 
                   <div className='border-t pt-2'>
                     <Button

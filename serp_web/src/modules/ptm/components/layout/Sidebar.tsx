@@ -1,6 +1,6 @@
 /**
  * Author: QuanTuanHuy
- * Description: Part of Serp Project - Admin sidebar navigation
+ * Description: Part of Serp Project - PTM sidebar navigation
  */
 
 'use client';
@@ -10,19 +10,19 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
-  Building2,
-  CreditCard,
-  Package,
-  Puzzle,
-  Users,
-  ShieldCheck,
+  FolderKanban,
+  Brain,
+  Calendar,
+  FileText,
+  Bot,
+  Bell,
   ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
   ArrowLeft,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
-import { useAdminSidebar } from '../../contexts/AdminSidebarContext';
+import { usePTMSidebar } from '../../contexts/PTMSidebarContext';
 import { Button } from '@/shared/components/ui/button';
 import { MODULE_ICONS } from '@/shared/constants/moduleIcons';
 
@@ -36,60 +36,57 @@ interface NavigationItem {
 const navigationItems: NavigationItem[] = [
   {
     name: 'Dashboard',
-    href: '/admin',
+    href: '/ptm/dashboard',
     icon: LayoutDashboard,
-    description: 'System overview and statistics',
+    description: 'Overview of your tasks and projects',
   },
   {
-    name: 'Organizations',
-    href: '/admin/organizations',
-    icon: Building2,
-    description: 'Manage organizations and tenants',
+    name: 'Project Management',
+    href: '/ptm/projects',
+    icon: FolderKanban,
+    description: 'Manage your projects and teams',
   },
   {
-    name: 'Subscriptions',
-    href: '/admin/subscriptions',
-    icon: CreditCard,
-    description: 'View and manage organization subscriptions',
+    name: 'Optimize Your Tasks',
+    href: '/ptm/schedule',
+    icon: Brain,
+    description: 'AI-powered task optimization',
   },
   {
-    name: 'Subscription Plans',
-    href: '/admin/plans',
-    icon: Package,
-    description: 'Configure subscription plans and pricing',
+    name: 'Daily Calendar',
+    href: '/ptm/calendar',
+    icon: Calendar,
+    description: 'Your daily schedule and events',
   },
   {
-    name: 'Modules',
-    href: '/admin/modules',
-    icon: Puzzle,
-    description: 'Manage system modules and features',
+    name: 'Notifications',
+    href: '/ptm/notifications',
+    icon: Bell,
+    description: 'Alerts and notifications',
   },
   {
-    name: 'Users',
-    href: '/admin/users',
-    icon: Users,
-    description: 'System-wide user management',
+    name: 'Note',
+    href: '/ptm/note-dashboard',
+    icon: FileText,
+    description: 'Personal notes and documentation',
   },
   {
-    name: 'Roles',
-    href: '/admin/roles',
-    icon: ShieldCheck,
-    description: 'Role and permission management',
+    name: 'Chat Bot',
+    href: '/ptm/chat',
+    icon: Bot,
+    description: 'AI assistant for productivity',
   },
 ];
 
-export const AdminSidebar: React.FC = () => {
+export const Sidebar: React.FC = () => {
   const pathname = usePathname();
-  const { isCollapsed, toggleSidebar } = useAdminSidebar();
+  const { isCollapsed, toggleSidebar } = usePTMSidebar();
   const [isModuleHovered, setIsModuleHovered] = React.useState(false);
 
-  const AdminIcon = MODULE_ICONS.ADMIN.icon;
+  const PTMIcon = MODULE_ICONS.PTM.icon;
 
   const isActive = (href: string) => {
-    if (href === '/admin') {
-      return pathname === href;
-    }
-    return pathname.startsWith(href);
+    return pathname === href || pathname.startsWith(href);
   };
 
   return (
@@ -112,14 +109,14 @@ export const AdminSidebar: React.FC = () => {
             {isModuleHovered ? (
               <ArrowLeft className='h-5 w-5' />
             ) : (
-              <AdminIcon className='h-5 w-5' />
+              <PTMIcon className='h-5 w-5' />
             )}
           </div>
 
           {/* Module name */}
           {!isCollapsed && (
             <span className='text-sm font-semibold group-hover:text-primary transition-colors'>
-              Admin
+              PTM
             </span>
           )}
         </Link>
@@ -192,14 +189,13 @@ export const AdminSidebar: React.FC = () => {
       {!isCollapsed && (
         <div className='border-t p-4'>
           <div className='rounded-lg bg-muted p-3 text-xs text-muted-foreground'>
-            <p className='font-medium'>System Admin Panel</p>
-            <p className='mt-1'>
-              Logged in as{' '}
-              <span className='font-semibold'>System Administrator</span>
-            </p>
+            <p className='font-medium'>Personal Task Management</p>
+            <p className='mt-1'>Version 1.0.0</p>
           </div>
         </div>
       )}
     </aside>
   );
 };
+
+export default Sidebar;
