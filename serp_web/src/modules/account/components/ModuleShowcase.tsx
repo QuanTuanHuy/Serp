@@ -37,7 +37,7 @@ export const ModuleShowcase: React.FC<ModuleShowcaseProps> = ({
     return (
       <div className='text-center py-20'>
         <p className='text-muted-foreground text-lg'>
-          No modules available. Please contact your administrator.
+          No modules available. Please subscribe to a plan.
         </p>
       </div>
     );
@@ -79,7 +79,7 @@ export const ModuleShowcase: React.FC<ModuleShowcaseProps> = ({
 
       {/* Module Display */}
       {viewMode === 'grid' ? (
-        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
+        <div className='grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6'>
           {modules.map((module) => (
             <ModuleCard key={module.code} module={module} variant='grid' />
           ))}

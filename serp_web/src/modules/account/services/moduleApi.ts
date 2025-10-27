@@ -4,16 +4,15 @@
  */
 
 import { api } from '@/lib';
-import { createRtkTransformResponse } from '@/lib';
 import type { UserModuleAccess } from '../types';
-import type { ApiResponse } from '@/lib';
+import { createDataTransform } from '@/lib/store/api/utils';
 
 export const moduleApi = api.injectEndpoints({
   endpoints: (builder) => ({
-    getMyModules: builder.query<ApiResponse<UserModuleAccess[]>, void>({
+    getMyModules: builder.query<UserModuleAccess[], void>({
       query: () => '/modules/my-modules',
       providesTags: ['account/modules'],
-      transformResponse: createRtkTransformResponse(),
+      transformResponse: createDataTransform<UserModuleAccess[]>(),
     }),
   }),
   overrideExisting: false,

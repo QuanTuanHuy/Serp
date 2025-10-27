@@ -10,11 +10,7 @@ import { selectUserProfile } from '../store';
 import { SYSTEM_ADMIN_ROLES } from '@/shared/types';
 import { getModuleRoute } from '@/shared';
 import type { ModuleDisplayItem, UserModuleAccess } from '../types';
-import { isSuccessResponse } from '@/lib/store';
 
-/**
- * Hook to get user's accessible modules with admin module injection
- */
 export const useModules = () => {
   const user = useAppSelector(selectUserProfile);
   const { data: modulesData, isLoading, error } = useGetMyModulesQuery();
@@ -24,12 +20,10 @@ export const useModules = () => {
 
     const moduleList: ModuleDisplayItem[] = [];
 
-    // Check if user is system admin
     const isSystemAdmin = user.roles?.some((role) =>
       SYSTEM_ADMIN_ROLES.includes(role)
     );
 
-    // Add Admin module first if user is system admin
     if (isSystemAdmin) {
       moduleList.push({
         code: 'ADMIN',
@@ -39,11 +33,27 @@ export const useModules = () => {
         isActive: true,
         isAdmin: true,
       });
+      moduleList.push({
+        code: 'PTM',
+        name: 'PTM',
+        description: 'Project and Task Management',
+        href: '/ptm',
+        isActive: true,
+        isAdmin: true,
+      });
+      moduleList.push({
+        code: 'CRM',
+        name: 'CRM',
+        description: 'Customer Relationship Management',
+        href: '/crm',
+        isActive: true,
+        isAdmin: true,
+      });
+      return moduleList;
     }
 
-    // Add user's accessible modules
-    if (modulesData && isSuccessResponse(modulesData) && modulesData.data) {
-      const userModules = modulesData.data.map(
+    if (modulesData && modulesData.length > 0) {
+      const userModules = modulesData.map(
         (module: UserModuleAccess): ModuleDisplayItem => ({
           code: module.moduleCode,
           name: module.moduleName,
