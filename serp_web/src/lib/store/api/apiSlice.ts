@@ -95,6 +95,7 @@ export const api = createApi({
     'account/auth',
     'account/permissions',
     'account/menus',
+    'account/modules',
     'Customer',
     'Lead',
     'Opportunity',

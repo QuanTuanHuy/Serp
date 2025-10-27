@@ -55,6 +55,11 @@ export function Header() {
         {/* Navigation */}
         <NavigationMenu className='hidden md:flex'>
           <NavigationMenuList>
+            {isAuthenticated && (
+              <NavigationMenuItem>
+                <NavigationMenuLink href='/home'>Home</NavigationMenuLink>
+              </NavigationMenuItem>
+            )}
             <NavigationMenuItem>
               <NavigationMenuLink href='/apps'>Apps</NavigationMenuLink>
             </NavigationMenuItem>

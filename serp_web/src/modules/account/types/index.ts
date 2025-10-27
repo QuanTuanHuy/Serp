@@ -7,3 +7,4 @@ export * from './auth';
 export * from './permissions';
 export * from './api';
 export * from './forms';
+export * from './module';
