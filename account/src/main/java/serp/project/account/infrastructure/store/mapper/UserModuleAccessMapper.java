@@ -7,6 +7,9 @@ package serp.project.account.infrastructure.store.mapper;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+
+import serp.project.account.core.domain.dto.response.UserModuleAccessResponse;
+import serp.project.account.core.domain.entity.ModuleEntity;
 import serp.project.account.core.domain.entity.UserModuleAccessEntity;
 import serp.project.account.infrastructure.store.model.UserModuleAccessModel;
 
@@ -102,6 +105,23 @@ public class UserModuleAccessMapper extends BaseMapper {
                 .grantedAt(System.currentTimeMillis())
                 .expiresAt(expiresAt)
                 .description(moduleDescription)
+                .build();
+    }
+
+    public UserModuleAccessResponse toModuleAccessResponse(UserModuleAccessEntity userAccess, ModuleEntity module) {
+        if (userAccess == null || module == null) {
+            return null;
+        }
+
+        return UserModuleAccessResponse.builder()
+                .userId(userAccess.getUserId())
+                .organizationId(userAccess.getOrganizationId())
+                .isActive(userAccess.getIsActive())
+                .moduleId(userAccess.getModuleId())
+                .moduleName(module.getModuleName())
+                .moduleCode(module.getCode())
+                .moduleDescription(module.getDescription())
+                .grantedAt(userAccess.getGrantedAt())
                 .build();
     }
 }
