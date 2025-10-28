@@ -17,6 +17,8 @@ public interface IKeycloakPort {
 
     void assignClientRoles(String userId, String clientId, List<String> roleNames);
 
+    void revokeClientRoles(String userId, String clientId, List<String> roleNames);
+
     void deleteUser(String userId);
 
     boolean isUserExists(String username);

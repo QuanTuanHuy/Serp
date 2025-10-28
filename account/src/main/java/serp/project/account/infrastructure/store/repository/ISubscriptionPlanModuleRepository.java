@@ -26,9 +26,7 @@ public interface ISubscriptionPlanModuleRepository extends IBaseRepository<Subsc
 
     List<SubscriptionPlanModuleModel> findByModuleId(Long moduleId);
 
-    @Query("DELETE FROM SubscriptionPlanModuleModel spm " +
-           "WHERE spm.subscriptionPlanId = :planId AND spm.moduleId = :moduleId")
-    void deleteByPlanIdAndModuleId(@Param("planId") Long planId, @Param("moduleId") Long moduleId);
+    void deleteBySubscriptionPlanIdAndModuleId(Long subscriptionPlanId, Long moduleId);
 
     @Query("SELECT COUNT(spm) > 0 FROM SubscriptionPlanModuleModel spm " +
            "WHERE spm.subscriptionPlanId = :planId AND spm.moduleId = :moduleId")

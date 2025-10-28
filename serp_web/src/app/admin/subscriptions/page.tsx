@@ -11,6 +11,7 @@ import {
   AdminActionMenu,
   AdminStatusBadge,
 } from '@/modules/admin';
+import { SubscriptionDetailsDialog } from '@/modules/admin/components/subscriptions';
 import { Combobox } from '@/shared/components/ui/combobox';
 import {
   Card,
@@ -29,28 +30,40 @@ import {
 import { Button } from '@/shared/components/ui/button';
 import { DataTable } from '@/shared/components';
 import type { ColumnDef } from '@/shared/types';
-import { CheckCircle, Ban, RefreshCw, Building2, TimerOff } from 'lucide-react';
-import type {
-  OrganizationSubscription,
-  Organization,
-} from '@/modules/admin/types';
-import { useGetSubscriptionPlansQuery } from '@/modules/admin/services/plans/plansApi';
+import {
+  CheckCircle,
+  Ban,
+  Building2,
+  TimerOff,
+  Eye,
+  DollarSign,
+  Users,
+} from 'lucide-react';
+import type { Organization } from '@/modules/admin/types';
 import { useGetOrganizationsQuery } from '@/modules/admin/services/organizations/organizationsApi';
 
 export default function SubscriptionsPage() {
   const {
     filters,
     subscriptions,
+    plans,
     pagination,
     isLoading,
     isFetching,
     error,
+    isRejecting,
     handleFilterChange,
     handlePageChange,
     handleActivate,
     handleReject,
     handleExpire,
-    isRejecting,
+    detailsOpen,
+    selectedSubscription,
+    selectedPlan,
+    openDetailsDialog,
+    setDetailsOpen,
+    formatDate,
+    formatPrice,
   } = useSubscriptions();
 
   // Reject dialog state
@@ -58,13 +71,12 @@ export default function SubscriptionsPage() {
   const [rejectReason, setRejectReason] = useState('');
   const [rejectId, setRejectId] = useState<number | null>(null);
 
-  // Fetch lists for filters
-  const { data: plans = [] } = useGetSubscriptionPlansQuery();
+  // Fetch organizations for filters
   const [orgSearch, setOrgSearch] = useState<string>('');
   const { data: orgsResponse, isFetching: isFetchingOrgs } =
     useGetOrganizationsQuery({
       page: 0,
-      pageSize: 50,
+      pageSize: 5,
       sortBy: 'name',
       sortDir: 'ASC',
       search: orgSearch || undefined,
@@ -82,16 +94,7 @@ export default function SubscriptionsPage() {
     );
   }, [subscriptions, filters.planId]);
 
-  const formatDate = (ms?: number) => {
-    if (!ms) return 'N/A';
-    return new Date(ms).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-
-  const columns = useMemo<ColumnDef<OrganizationSubscription>[]>(
+  const columns = useMemo<ColumnDef<any>[]>(
     () => [
       {
         id: 'organization',
@@ -106,11 +109,41 @@ export default function SubscriptionsPage() {
             <div>
               <p className='font-medium'>{row.organizationName || 'N/A'}</p>
               <p className='text-xs text-muted-foreground'>
-                Plan: {row.planName || row.subscriptionPlanId}
+                ID: {row.organizationId}
               </p>
             </div>
           </div>
         ),
+      },
+      {
+        id: 'plan',
+        header: 'Plan',
+        accessor: 'planName',
+        defaultVisible: true,
+        cell: ({ row }) => {
+          const plan = plans.find((p) => p.id === row.subscriptionPlanId);
+          return (
+            <div>
+              <p className='font-medium'>{row.planName || 'N/A'}</p>
+              {plan && (
+                <div className='flex items-center gap-2 mt-1'>
+                  <span className='text-xs text-muted-foreground flex items-center gap-1'>
+                    <DollarSign className='h-3 w-3' />
+                    {row.billingCycle === 'MONTHLY'
+                      ? formatPrice(plan.monthlyPrice)
+                      : formatPrice(plan.yearlyPrice)}
+                  </span>
+                  {plan.maxUsers && (
+                    <span className='text-xs text-muted-foreground flex items-center gap-1'>
+                      <Users className='h-3 w-3' />
+                      {plan.maxUsers} users
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        },
       },
       {
         id: 'status',
@@ -155,12 +188,20 @@ export default function SubscriptionsPage() {
         align: 'right',
         defaultVisible: true,
         cell: ({ row }) => {
-          const items = [] as any[];
+          const items = [
+            {
+              label: 'View Details',
+              onClick: () => openDetailsDialog(row),
+              icon: <Eye className='h-4 w-4' />,
+            },
+          ] as any[];
+
           if (row.status !== 'ACTIVE') {
             items.push({
               label: 'Activate',
               onClick: () => handleActivate(row.id),
               icon: <CheckCircle className='h-4 w-4' />,
+              separator: true,
             });
           }
           if (row.status === 'PENDING') {
@@ -173,7 +214,6 @@ export default function SubscriptionsPage() {
               },
               icon: <Ban className='h-4 w-4' />,
               variant: 'destructive',
-              separator: true,
             });
           }
           if (row.status === 'ACTIVE' || row.status === 'TRIAL') {
@@ -182,21 +222,13 @@ export default function SubscriptionsPage() {
               onClick: () => handleExpire(row.id),
               icon: <TimerOff className='h-4 w-4' />,
               variant: 'destructive',
-              separator: true,
-            });
-          } else {
-            items.push({
-              label: 'Refresh',
-              onClick: () => window.location.reload(),
-              icon: <RefreshCw className='h-4 w-4' />,
-              separator: true,
             });
           }
           return <AdminActionMenu items={items} />;
         },
       },
     ],
-    [handleActivate, handleReject]
+    [handleActivate, handleReject, plans, openDetailsDialog]
   );
 
   return (
@@ -306,14 +338,14 @@ export default function SubscriptionsPage() {
         data={subscriptionsToShow}
         keyExtractor={(s) => String(s.id)}
         isLoading={isLoading}
-        error={error}
+        error={error as any}
         storageKey='admin-subscriptions-columns'
         pagination={{
           currentPage: pagination.currentPage,
           totalPages: pagination.totalPages,
           totalItems: pagination.totalItems,
           onPageChange: handlePageChange,
-          isFetching,
+          isFetching: isFetching,
         }}
         loadingState={
           <div className='flex items-center justify-center h-64'>
@@ -375,6 +407,14 @@ export default function SubscriptionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Subscription Details Dialog */}
+      <SubscriptionDetailsDialog
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        subscription={selectedSubscription}
+        plan={selectedPlan}
+      />
     </div>
   );
 }

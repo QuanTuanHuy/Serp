@@ -71,4 +71,9 @@ public class UserRoleAdapter implements IUserRolePort {
         Long end = System.currentTimeMillis();
         log.info("Time taken to insert 10000 records: {} ms", (end - start));
     }
+
+    @Override
+    public void deleteUserRolesByUserIdAndRoleIds(Long userId, List<Long> roleIds) {
+        userRoleRepository.deleteByUserIdAndRoleIdIn(userId, roleIds);
+    }
 }

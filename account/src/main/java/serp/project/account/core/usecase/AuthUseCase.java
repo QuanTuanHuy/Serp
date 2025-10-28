@@ -43,6 +43,7 @@ public class AuthUseCase {
     private final IKeycloakUserService keycloakUserService;
     private final IRoleService roleService;
     private final ITokenService tokenService;
+    private final ICombineRoleService combineRoleService;
 
     private final ResponseUtils responseUtils;
 
@@ -77,11 +78,7 @@ public class AuthUseCase {
             user = userService.updateUser(user.getId(), user);
             final Long userId = user.getId();
 
-            keycloakUserService.assignRealmRoles(userKeycloakId, orgRoles.stream()
-                    .filter(r -> r.getKeycloakClientId() == null)
-                    .map(RoleEntity::getName)
-                    .toList());
-            userService.addRolesToUser(user.getId(), orgRoles.stream().map(RoleEntity::getId).toList());
+            combineRoleService.assignRolesToUser(user, orgRoles);
 
             orgRoles.forEach(role -> {
                 organizationService.assignOrganizationToUser(organization.getId(), userId, role.getId(), true);
@@ -204,14 +201,8 @@ public class AuthUseCase {
             user = userService.updateUser(user.getId(), user);
             final Long userId = user.getId();
 
-            List<RoleEntity> combinedRoles = Stream.concat(
-                    systemRoles.stream(),
-                    orgRoles.stream()).collect(Collectors.toList());
-            keycloakUserService.assignRealmRoles(userKeycloakId, combinedRoles.stream()
-                    .filter(r -> r.getKeycloakClientId() == null)
-                    .map(RoleEntity::getName)
-                    .toList());
-            userService.addRolesToUser(user.getId(), combinedRoles.stream().map(RoleEntity::getId).toList());
+            combineRoleService.assignRolesToUser(user, systemRoles);
+            combineRoleService.assignRolesToUser(user, orgRoles);
 
             orgRoles.forEach(role -> {
                 organizationService.assignOrganizationToUser(organization.getId(), userId, role.getId(), true);

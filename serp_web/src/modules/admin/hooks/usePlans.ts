@@ -5,14 +5,20 @@
 
 'use client';
 
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import {
   useGetSubscriptionPlansQuery,
   useCreateSubscriptionPlanMutation,
   useUpdateSubscriptionPlanMutation,
   useDeleteSubscriptionPlanMutation,
+  useGetPlanModulesQuery,
+  useAddModuleToPlanMutation,
+  useRemoveModuleFromPlanMutation,
 } from '@/modules/admin/services/plans/plansApi';
-import type { SubscriptionPlan } from '@/modules/admin/types';
+import type {
+  SubscriptionPlan,
+  AddModuleToPlanRequest,
+} from '@/modules/admin/types';
 import { useNotification } from '@/shared/hooks/use-notification';
 import { useAppDispatch, useAppSelector } from '@/shared/hooks';
 import {
@@ -26,11 +32,6 @@ import {
 } from '@/modules/admin/store';
 import { getErrorMessage } from '@/lib/store/api';
 
-type CreateUpdatePayload = Omit<
-  SubscriptionPlan,
-  'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'
->;
-
 export function usePlans() {
   const dispatch = useAppDispatch();
   const notification = useNotification();
@@ -38,6 +39,12 @@ export function usePlans() {
   const viewMode = useAppSelector(selectPlansViewMode);
   const isDialogOpen = useAppSelector(selectPlansDialogOpen);
   const selectedPlanId = useAppSelector(selectSelectedPlanId);
+
+  // State for modules dialog
+  const [modulesDialogOpen, setModulesDialogOpen] = useState(false);
+  const [modulesDialogPlanId, setModulesDialogPlanId] = useState<string | null>(
+    null
+  );
 
   const {
     data: plans = [],
@@ -50,6 +57,17 @@ export function usePlans() {
     useCreateSubscriptionPlanMutation();
   const [updatePlanMutation] = useUpdateSubscriptionPlanMutation();
   const [deletePlanMutation] = useDeleteSubscriptionPlanMutation();
+
+  // Plan modules queries
+  const { data: planModules = [], isLoading: isLoadingModules } =
+    useGetPlanModulesQuery(modulesDialogPlanId || '', {
+      skip: !modulesDialogPlanId,
+    });
+
+  const [addModuleToPlanMutation, { isLoading: isAddingModule }] =
+    useAddModuleToPlanMutation();
+  const [removeModuleFromPlanMutation, { isLoading: isRemovingModule }] =
+    useRemoveModuleFromPlanMutation();
 
   const selectedPlan = useMemo(
     () => plans.find((p) => p.id === selectedPlanId),
@@ -91,7 +109,7 @@ export function usePlans() {
   );
 
   const createPlan = useCallback(
-    async (data: CreateUpdatePayload) => {
+    async (data: Partial<SubscriptionPlan>) => {
       try {
         await createPlanMutation(data).unwrap();
         notification.success('Plan created successfully');
@@ -157,16 +175,59 @@ export function usePlans() {
     [selectedPlan, updatePlan, createPlan]
   );
 
+  // Module management functions
+  const openModulesDialog = useCallback((planId: string | number) => {
+    setModulesDialogPlanId(String(planId));
+    setModulesDialogOpen(true);
+  }, []);
+
+  const closeModulesDialog = useCallback(() => {
+    setModulesDialogOpen(false);
+    setModulesDialogPlanId(null);
+  }, []);
+
+  const addModuleToPlan = useCallback(
+    async (planId: string, data: AddModuleToPlanRequest) => {
+      try {
+        await addModuleToPlanMutation({ planId, data }).unwrap();
+        notification.success('Module added to plan successfully');
+      } catch (err: any) {
+        notification.error(getErrorMessage(err));
+        throw err;
+      }
+    },
+    [addModuleToPlanMutation, notification]
+  );
+
+  const removeModuleFromPlan = useCallback(
+    async (planId: string, moduleId: number) => {
+      try {
+        await removeModuleFromPlanMutation({ planId, moduleId }).unwrap();
+        notification.success('Module removed from plan successfully');
+      } catch (err: any) {
+        notification.error(getErrorMessage(err));
+        throw err;
+      }
+    },
+    [removeModuleFromPlanMutation, notification]
+  );
+
   return {
     // data
     plans,
     stats,
     selectedPlan,
+    planModules,
     // state
     viewMode,
     isDialogOpen,
+    modulesDialogOpen,
+    modulesDialogPlanId,
     isCreating,
     isLoading,
+    isLoadingModules,
+    isAddingModule,
+    isRemovingModule,
     error,
     // actions
     refetch,
@@ -179,6 +240,11 @@ export function usePlans() {
     updatePlan,
     deletePlan,
     toggleActive,
+    // module actions
+    openModulesDialog,
+    closeModulesDialog,
+    addModuleToPlan,
+    removeModuleFromPlan,
   };
 }
 

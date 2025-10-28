@@ -190,4 +190,9 @@ public class UserService implements IUserService {
         var user = userMapper.createUserForOrgMapper(request, organizationId);
         return userPort.save(user);
     }
+
+    @Override
+    public void removeRolesFromUser(Long userId, List<Long> roleIds) {
+        userRolePort.deleteUserRolesByUserIdAndRoleIds(userId, roleIds);
+    }
 }

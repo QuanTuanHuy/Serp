@@ -36,6 +36,8 @@ export { RoleForm, RoleFormDialog } from './components/roles';
 // Hooks
 export { usePlans } from './hooks/usePlans';
 export type { UsePlansReturn } from './hooks/usePlans';
+export { useModules } from './hooks/useModules';
+export type { UseModulesReturn } from './hooks/useModules';
 export { useOrganizations } from './hooks/useOrganizations';
 export type { UseOrganizationsReturn } from './hooks/useOrganizations';
 export { useRoles } from './hooks/useRoles';

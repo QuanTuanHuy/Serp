@@ -61,7 +61,7 @@ public class SubscriptionPlanModuleAdapter implements ISubscriptionPlanModulePor
 
     @Override
     public void deleteByPlanIdAndModuleId(Long planId, Long moduleId) {
-        subscriptionPlanModuleRepository.deleteByPlanIdAndModuleId(planId, moduleId);
+        subscriptionPlanModuleRepository.deleteBySubscriptionPlanIdAndModuleId(planId, moduleId);
     }
 
     @Override

@@ -17,6 +17,8 @@ public interface IKeycloakUserService {
 
     void assignClientRoles(String userId, String clientId, List<String> roleNames);
 
+    void revokeClientRoles(String userId, String clientId, List<String> roleNames);
+
     void deleteUser(String userId);
 
     void updateUserAttributes(String userId, Map<String, List<String>> attributes);

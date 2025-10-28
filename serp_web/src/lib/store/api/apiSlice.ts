@@ -105,6 +105,7 @@ export const api = createApi({
     'admin/Organization',
     'admin/Subscription',
     'admin/Plan',
+    'admin/PlanModule',
     'admin/Module',
     'admin/User',
     'admin/Role',
