@@ -147,6 +147,5 @@ export const getModuleRoute = (moduleCode: string): string => {
   if (moduleCode === 'ADMIN') return '/admin';
   if (moduleCode === 'PTM') return '/ptm';
   if (moduleCode === 'CRM') return '/crm';
-  // Add more routes as needed
   return `/${moduleCode.toLowerCase()}`;
 };

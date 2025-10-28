@@ -6,28 +6,12 @@
  */
 
 import React from 'react';
-import { CRMSidebar, CRMHeader } from '@/modules/crm/components/layout';
+import { CRMLayout } from '@/modules/crm/components/layout';
 
-interface CRMLayoutProps {
+interface CRMLayoutPageProps {
   children: React.ReactNode;
 }
 
-export default function CRMLayout({ children }: CRMLayoutProps) {
-  return (
-    <div className='flex h-screen bg-background'>
-      {/* Sidebar */}
-      <CRMSidebar className='fixed left-0 top-0 z-40 h-full' />
-
-      {/* Main Content */}
-      <div className='flex-1 ml-64 flex flex-col'>
-        {/* CRM Header */}
-        <CRMHeader />
-
-        {/* Page Content */}
-        <main className='flex-1 overflow-y-auto'>
-          <div className='container mx-auto p-6'>{children}</div>
-        </main>
-      </div>
-    </div>
-  );
+export default function CRMLayoutPage({ children }: CRMLayoutPageProps) {
+  return <CRMLayout>{children}</CRMLayout>;
 }

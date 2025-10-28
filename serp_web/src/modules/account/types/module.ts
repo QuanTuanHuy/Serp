@@ -5,7 +5,6 @@
 
 /**
  * User Module Access Response
- * Maps to UserModuleAccessResponse.java in backend
  */
 export interface UserModuleAccess {
   userId: number;

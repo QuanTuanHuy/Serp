@@ -48,7 +48,6 @@ export const useAuth = () => {
   const [refreshTokenMutation] = useRefreshTokenMutation();
   const [revokeTokenMutation] = useRevokeTokenMutation();
 
-  // Current user query
   const {
     data: currentUserData,
     isLoading: userLoading,
@@ -57,7 +56,6 @@ export const useAuth = () => {
     skip: !isAuthenticated || !token,
   });
 
-  // Sync user data to user slice when query succeeds
   useEffect(() => {
     if (
       isSuccessResponse(currentUserData) &&
@@ -111,7 +109,6 @@ export const useAuth = () => {
             description: `Welcome back!`,
           });
 
-          // Redirect to home page after successful login
           router.push('/home');
 
           return { success: true, data: result.data };
@@ -173,9 +170,6 @@ export const useAuth = () => {
             description: `Welcome to SERP, ${userData.firstName} ${userData.lastName}!`,
           });
 
-          // Redirect to home page after successful registration
-          router.push('/home');
-
           return { success: true, data: result.data };
         } else {
           throw new Error(result.message);
@@ -213,8 +207,7 @@ export const useAuth = () => {
           notification.success('Logged out successfully');
         }
 
-        // Redirect to landing page after logout
-        router.push('/');
+        router.push('/auth');
       }
     },
     [auth.refreshToken, revokeTokenMutation, dispatch, notification, router]

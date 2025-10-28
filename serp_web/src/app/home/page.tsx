@@ -17,15 +17,13 @@ export default function HomePage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { modules, isLoading: modulesLoading } = useModules();
 
-  // Redirect to login if not authenticated
   React.useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      router.push('/auth/login');
+      router.push('/auth');
     }
   }, [isAuthenticated, authLoading, router]);
 
-  // Show loading state
-  if (authLoading || !isAuthenticated) {
+  if (authLoading && !isAuthenticated) {
     return (
       <div className='min-h-screen flex items-center justify-center bg-background'>
         <Loader2 className='w-8 h-8 animate-spin text-primary' />
