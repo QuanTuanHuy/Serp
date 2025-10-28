@@ -183,4 +183,28 @@ public class KeycloakAdapter implements IKeycloakPort {
         log.info("User {} attributes: {}", userId, attributes);
         return attributes;
     }
+
+    @Override
+    public void revokeClientRoles(String userId, String clientId, List<String> roleNames) {
+        RealmResource realmResource = keycloakAdmin.realm(keycloakProperties.getRealm());
+        UserResource user = realmResource.users().get(userId);
+
+        String clientUuid = getClientUuid(clientId);
+        ClientResource clientResource = realmResource.clients().get(clientUuid);
+
+        List<RoleRepresentation> rolesToRevoke = roleNames.stream()
+                .map(roleName -> {
+                    try {
+                        return clientResource.roles().get(roleName).toRepresentation();
+                    } catch (Exception e) {
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .toList();
+
+        if (!CollectionUtils.isEmpty(rolesToRevoke)) {
+            user.roles().clientLevel(clientUuid).remove(rolesToRevoke);
+        }
+    }
 }
