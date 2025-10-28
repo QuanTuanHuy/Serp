@@ -5,7 +5,11 @@
 
 import { api } from '@/lib/store/api';
 import { createDataTransform } from '@/lib/store/api/utils';
-import { SubscriptionPlan } from '../../types';
+import {
+  SubscriptionPlan,
+  PlanModule,
+  AddModuleToPlanRequest,
+} from '../../types';
 
 export const plansApi = api.injectEndpoints({
   endpoints: (builder) => ({
@@ -35,10 +39,7 @@ export const plansApi = api.injectEndpoints({
 
     createSubscriptionPlan: builder.mutation<
       SubscriptionPlan,
-      Omit<
-        SubscriptionPlan,
-        'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'
-      >
+      Partial<SubscriptionPlan>
     >({
       query: (planData) => ({
         url: '/subscription-plans',
@@ -75,6 +76,47 @@ export const plansApi = api.injectEndpoints({
         { type: 'admin/Plan', id: 'LIST' },
       ],
     }),
+
+    // Plan Modules endpoints
+    getPlanModules: builder.query<PlanModule[], string>({
+      query: (planId) => ({
+        url: `/subscription-plans/${planId}/modules`,
+        method: 'GET',
+      }),
+      transformResponse: createDataTransform<PlanModule[]>(),
+      providesTags: (_result, _error, planId) => [
+        { type: 'admin/PlanModule', id: planId },
+      ],
+    }),
+
+    addModuleToPlan: builder.mutation<
+      void,
+      { planId: string; data: AddModuleToPlanRequest }
+    >({
+      query: ({ planId, data }) => ({
+        url: `/subscription-plans/${planId}/modules`,
+        method: 'POST',
+        body: data,
+      }),
+      invalidatesTags: (_result, _error, { planId }) => [
+        { type: 'admin/PlanModule', id: planId },
+        { type: 'admin/Plan', id: planId },
+      ],
+    }),
+
+    removeModuleFromPlan: builder.mutation<
+      void,
+      { planId: string; moduleId: number }
+    >({
+      query: ({ planId, moduleId }) => ({
+        url: `/subscription-plans/${planId}/modules/${moduleId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (_result, _error, { planId }) => [
+        { type: 'admin/PlanModule', id: planId },
+        { type: 'admin/Plan', id: planId },
+      ],
+    }),
   }),
   overrideExisting: false,
 });
@@ -85,4 +127,7 @@ export const {
   useCreateSubscriptionPlanMutation,
   useUpdateSubscriptionPlanMutation,
   useDeleteSubscriptionPlanMutation,
+  useGetPlanModulesQuery,
+  useAddModuleToPlanMutation,
+  useRemoveModuleFromPlanMutation,
 } = plansApi;

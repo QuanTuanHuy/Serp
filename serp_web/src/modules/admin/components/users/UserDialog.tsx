@@ -58,7 +58,7 @@ export function UserDialog() {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent>
+      <DialogContent className='!max-w-4xl w-full max-h-[90vh]'>
         <DialogHeader>
           <DialogTitle>{isCreate ? 'Create User' : 'Edit User'}</DialogTitle>
         </DialogHeader>

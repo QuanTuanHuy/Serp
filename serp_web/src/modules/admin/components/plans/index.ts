@@ -5,3 +5,4 @@
 
 export { PlanForm } from './PlanForm';
 export { PlanFormDialog } from './PlanFormDialog';
+export { PlanModulesDialog } from './PlanModulesDialog';

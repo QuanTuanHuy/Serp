@@ -25,9 +25,13 @@ export type {
 
 // Plan types
 export type {
+  LicenseType,
+  PlanModule,
   SubscriptionPlan,
+  AddModuleToPlanRequest,
   PlansResponse,
   PlanResponse,
+  PlanModulesResponse,
 } from './plans.types';
 
 // Module types

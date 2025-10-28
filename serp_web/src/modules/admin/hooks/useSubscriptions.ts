@@ -5,16 +5,18 @@
 
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   useGetSubscriptionsQuery,
   useActivateSubscriptionMutation,
   useRejectSubscriptionMutation,
   useExpireSubscriptionMutation,
 } from '@/modules/admin';
+import { useGetSubscriptionPlansQuery } from '@/modules/admin/services/plans/plansApi';
 import type {
   OrganizationSubscription,
   SubscriptionFilters,
+  SubscriptionPlan,
 } from '@/modules/admin/types';
 import { useAppDispatch, useAppSelector } from '@/shared/hooks';
 import { useNotification } from '@/shared/hooks/use-notification';
@@ -52,10 +54,23 @@ export function useSubscriptions() {
   const [expireSubscription, { isLoading: isExpiring }] =
     useExpireSubscriptionMutation();
 
+  // Get plans for details dialog
+  const { data: plans = [] } = useGetSubscriptionPlansQuery();
+
   const subscriptions: OrganizationSubscription[] = useMemo(
     () => response?.data.items || [],
     [response]
   );
+
+  // Details dialog state
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [selectedSubscription, setSelectedSubscription] =
+    useState<OrganizationSubscription | null>(null);
+
+  const selectedPlan = useMemo(() => {
+    if (!selectedSubscription) return undefined;
+    return plans.find((p) => p.id === selectedSubscription.subscriptionPlanId);
+  }, [selectedSubscription, plans]);
 
   const pagination = useMemo(
     () => ({
@@ -155,9 +170,37 @@ export function useSubscriptions() {
     [expireSubscription, refetch]
   );
 
+  const openDetailsDialog = useCallback(
+    (subscription: OrganizationSubscription) => {
+      setSelectedSubscription(subscription);
+      setDetailsOpen(true);
+    },
+    []
+  );
+
+  const closeDetailsDialog = useCallback(() => {
+    setDetailsOpen(false);
+    setSelectedSubscription(null);
+  }, []);
+
+  const formatDate = useCallback((ms?: number) => {
+    if (!ms) return 'N/A';
+    return new Date(ms).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  }, []);
+
+  const formatPrice = useCallback((price?: number) => {
+    if (!price) return 'N/A';
+    return `$${price.toFixed(2)}`;
+  }, []);
+
   return {
     filters,
     subscriptions,
+    plans,
     pagination,
     isLoading,
     isFetching,
@@ -171,6 +214,16 @@ export function useSubscriptions() {
     handleActivate,
     handleReject,
     handleExpire,
+    // Details dialog
+    detailsOpen,
+    selectedSubscription,
+    selectedPlan,
+    openDetailsDialog,
+    closeDetailsDialog,
+    setDetailsOpen,
+    // Utility functions
+    formatDate,
+    formatPrice,
   };
 }
 

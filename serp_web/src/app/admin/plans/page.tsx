@@ -8,12 +8,16 @@
 import React, { useMemo } from 'react';
 import {
   usePlans,
+  useModules,
   AdminStatusBadge,
   AdminActionMenu,
   AdminStatsCard,
 } from '@/modules/admin';
 import type { SubscriptionPlan } from '@/modules/admin';
-import { PlanFormDialog } from '@/modules/admin/components/plans';
+import {
+  PlanFormDialog,
+  PlanModulesDialog,
+} from '@/modules/admin/components/plans';
 import {
   Card,
   CardContent,
@@ -26,7 +30,6 @@ import type { ColumnDef } from '@/shared/types';
 import {
   Package,
   Plus,
-  Eye,
   Edit,
   Trash2,
   Users,
@@ -53,14 +56,25 @@ export default function PlansPage() {
     submitPlan,
     deletePlan,
     toggleActive,
+    // Module management
+    modulesDialogOpen,
+    modulesDialogPlanId,
+    planModules,
+    isLoadingModules,
+    isAddingModule,
+    isRemovingModule,
+    openModulesDialog,
+    closeModulesDialog,
+    addModuleToPlan,
+    removeModuleFromPlan,
   } = usePlans();
+
+  const { rawModules: allModules } = useModules();
 
   const formatPrice = (price?: number) => {
     if (!price) return '$0';
     return `$${price.toFixed(2)}`;
   };
-
-  // stats provided by hook
 
   // Define columns for DataTable
   const columns = useMemo<ColumnDef<SubscriptionPlan>[]>(
@@ -161,6 +175,11 @@ export default function PlansPage() {
           <AdminActionMenu
             items={[
               {
+                label: 'Manage Modules',
+                onClick: () => openModulesDialog(row.id),
+                icon: <Package className='h-4 w-4' />,
+              },
+              {
                 label: 'Edit',
                 onClick: () => openEditDialog(row),
                 icon: <Edit className='h-4 w-4' />,
@@ -190,7 +209,7 @@ export default function PlansPage() {
         ),
       },
     ],
-    [toggleActive, openEditDialog, deletePlan]
+    [toggleActive, openEditDialog, deletePlan, openModulesDialog]
   );
 
   return (
@@ -357,6 +376,16 @@ export default function PlansPage() {
                       variant='outline'
                       size='sm'
                       className='flex-1'
+                      onClick={() => openModulesDialog(plan.id)}
+                    >
+                      <Package className='h-4 w-4 mr-2' />
+                      Modules
+                    </Button>
+
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      className='flex-1'
                       onClick={() => openEditDialog(plan)}
                     >
                       <Edit className='h-4 w-4 mr-2' />
@@ -459,6 +488,25 @@ export default function PlansPage() {
         onSubmit={submitPlan}
         isLoading={isCreating}
       />
+
+      {/* Plan Modules Dialog */}
+      {modulesDialogPlanId && (
+        <PlanModulesDialog
+          open={modulesDialogOpen}
+          onOpenChange={closeModulesDialog}
+          plan={
+            plans.find((p) => p.id === Number(modulesDialogPlanId)) ||
+            ({} as SubscriptionPlan)
+          }
+          planModules={planModules}
+          allModules={allModules}
+          isLoadingModules={isLoadingModules}
+          onAddModule={addModuleToPlan}
+          onRemoveModule={removeModuleFromPlan}
+          isAdding={isAddingModule}
+          isRemoving={isRemovingModule}
+        />
+      )}
     </div>
   );
 }

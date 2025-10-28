@@ -5,6 +5,24 @@
 
 import type { ApiResponse } from '@/lib/store/api/types';
 
+export type LicenseType =
+  | 'FREE'
+  | 'BASIC'
+  | 'PROFESSIONAL'
+  | 'ENTERPRISE'
+  | 'TRIAL'
+  | 'CUSTOM';
+
+export interface PlanModule {
+  id: number;
+  moduleId: number;
+  moduleName?: string;
+  moduleCode?: string;
+  isIncluded: boolean;
+  licenseType: LicenseType;
+  maxUsersPerModule?: number;
+}
+
 export interface SubscriptionPlan {
   id: number;
   planName: string;
@@ -18,11 +36,20 @@ export interface SubscriptionPlan {
   isCustom: boolean;
   organizationId?: number;
   displayOrder?: number;
+  modules?: PlanModule[];
   createdBy?: number;
   updatedBy?: number;
   createdAt: string;
   updatedAt: string;
 }
 
+export interface AddModuleToPlanRequest {
+  moduleId: number;
+  licenseType: LicenseType;
+  isIncluded?: boolean;
+  maxUsersPerModule?: number;
+}
+
 export type PlansResponse = ApiResponse<SubscriptionPlan[]>;
 export type PlanResponse = ApiResponse<SubscriptionPlan>;
+export type PlanModulesResponse = ApiResponse<PlanModule[]>;
