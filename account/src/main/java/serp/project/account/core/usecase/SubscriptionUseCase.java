@@ -19,10 +19,10 @@ import serp.project.account.core.domain.dto.request.*;
 import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.exception.AppException;
-import serp.project.account.core.service.IKeycloakUserService;
+import serp.project.account.core.service.ICombineRoleService;
 import serp.project.account.core.service.IModuleService;
 import serp.project.account.core.service.IOrganizationService;
-import serp.project.account.core.service.IOrganizationSubscriptionService;
+import serp.project.account.core.service.ISubscriptionService;
 import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.ISubscriptionPlanService;
 import serp.project.account.core.service.IUserModuleAccessService;
@@ -37,13 +37,13 @@ import serp.project.account.kernel.utils.ResponseUtils;
 @Slf4j
 public class SubscriptionUseCase {
 
-    private final IOrganizationSubscriptionService organizationSubscriptionService;
+    private final ISubscriptionService subscriptionService;
     private final ISubscriptionPlanService subscriptionPlanService;
     private final IOrganizationService organizationService;
     private final IUserModuleAccessService userModuleAccessService;
     private final IRoleService roleService;
     private final IUserService userService;
-    private final IKeycloakUserService keycloakUserService;
+    private final ICombineRoleService combineRoleService;
     private final IModuleService moduleService;
 
     private final ResponseUtils responseUtils;
@@ -59,7 +59,7 @@ public class SubscriptionUseCase {
             }
             log.info("[UseCase] Organization {} subscribing to plan {}", organizationId, request.getPlanId());
 
-            if (organizationSubscriptionService.hasActiveSubscription(organizationId)) {
+            if (subscriptionService.hasActiveSubscription(organizationId)) {
                 throw new AppException(Constants.ErrorMessage.ORGANIZATION_ALREADY_HAS_ACTIVE_SUBSCRIPTION);
             }
             var plan = subscriptionPlanService.getPlanById(request.getPlanId());
@@ -67,7 +67,7 @@ public class SubscriptionUseCase {
                 throw new AppException(Constants.ErrorMessage.PLAN_NOT_ACTIVE);
             }
 
-            var subscription = organizationSubscriptionService.subscribe(organizationId, request, requestedBy, plan);
+            var subscription = subscriptionService.subscribe(organizationId, request, requestedBy, plan);
             organizationService.updateSubscription(organizationId, subscription);
 
             // Implement later: Send notification
@@ -92,7 +92,7 @@ public class SubscriptionUseCase {
             }
             log.info("[UseCase] Organization {} starting trial for plan {}", organizationId, planId);
 
-            if (!organizationSubscriptionService.hasActiveSubscription(organizationId)) {
+            if (!subscriptionService.hasActiveSubscription(organizationId)) {
                 throw new AppException(Constants.ErrorMessage.ORGANIZATION_ALREADY_HAS_ACTIVE_SUBSCRIPTION);
             }
             var plan = subscriptionPlanService.getPlanById(planId);
@@ -108,7 +108,7 @@ public class SubscriptionUseCase {
                 return responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
             }
 
-            var subscription = organizationSubscriptionService.startTrial(organizationId, plan, requestedBy);
+            var subscription = subscriptionService.startTrial(organizationId, plan, requestedBy);
             organizationService.updateSubscription(organizationId, subscription);
 
             // Auto-grant module access to organization owner
@@ -130,19 +130,7 @@ public class SubscriptionUseCase {
                                 subscription.getEndDate());
 
                         List<RoleEntity> roles = roleService.getRolesByModuleId(planModule.getModuleId());
-                        if (CollectionUtils.isEmpty(roles)) {
-                            log.error("No roles found for module ID {}. Check why?", planModule.getModuleId());
-                            continue;
-                        }
-                        List<Long> roleIds = roles.stream()
-                                .map(RoleEntity::getId)
-                                .toList();
-                        userService.addRolesToUser(requestedBy, roleIds);
-                        List<String> roleNames = roles.stream()
-                                .map(RoleEntity::getName)
-                                .toList();
-                        keycloakUserService.assignClientRoles(user.getKeycloakId(), module.getKeycloakClientId(),
-                                roleNames);
+                        combineRoleService.assignRolesToUser(user, roles);
                     }
                 }
                 log.info("Auto-granted {} modules to organization owner", planModules.size());
@@ -171,14 +159,14 @@ public class SubscriptionUseCase {
                 return responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
             }
 
-            var currentSubscription = organizationSubscriptionService.getActiveSubscription(organizationId);
+            var currentSubscription = subscriptionService.getActiveSubscription(organizationId);
             var currentPlan = subscriptionPlanService.getPlanById(currentSubscription.getSubscriptionPlanId());
             var newPlan = subscriptionPlanService.getPlanById(request.getNewPlanId());
             if (!newPlan.isAvailable()) {
                 throw new AppException(Constants.ErrorMessage.PLAN_NOT_ACTIVE);
             }
 
-            var newSubscription = organizationSubscriptionService.upgradeSubscription(organizationId, request,
+            var newSubscription = subscriptionService.upgradeSubscription(organizationId, request,
                     requestedBy, currentPlan, newPlan);
             organizationService.updateSubscription(organizationId, newSubscription);
 
@@ -207,14 +195,14 @@ public class SubscriptionUseCase {
                 return responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
             }
 
-            var currentSubscription = organizationSubscriptionService.getActiveSubscription(organizationId);
+            var currentSubscription = subscriptionService.getActiveSubscription(organizationId);
             var currentPlan = subscriptionPlanService.getPlanById(currentSubscription.getSubscriptionPlanId());
             var newPlan = subscriptionPlanService.getPlanById(request.getNewPlanId());
             if (!newPlan.isAvailable()) {
                 throw new AppException(Constants.ErrorMessage.PLAN_NOT_ACTIVE);
             }
 
-            var newSubscription = organizationSubscriptionService.downgradeSubscription(organizationId, request,
+            var newSubscription = subscriptionService.downgradeSubscription(organizationId, request,
                     requestedBy, currentPlan, newPlan);
             organizationService.updateSubscription(organizationId, newSubscription);
 
@@ -242,7 +230,7 @@ public class SubscriptionUseCase {
                 return responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
             }
 
-            organizationSubscriptionService.cancelSubscription(organizationId, request, cancelledBy);
+            subscriptionService.cancelSubscription(organizationId, request, cancelledBy);
 
             // Implement later: Send notification
 
@@ -267,7 +255,7 @@ public class SubscriptionUseCase {
             }
 
             var organization = organizationService.getOrganizationById(organizationId);
-            var newSubscription = organizationSubscriptionService.renewSubscription(
+            var newSubscription = subscriptionService.renewSubscription(
                     organizationId,
                     organization.getSubscriptionId(),
                     renewedBy);
@@ -294,7 +282,7 @@ public class SubscriptionUseCase {
         try {
             log.info("[UseCase] Activating subscription {}", subscriptionId);
 
-            var subscription = organizationSubscriptionService.activateSubscription(subscriptionId, activatedBy);
+            var subscription = subscriptionService.activateSubscription(subscriptionId, activatedBy);
             var organization = organizationService.getOrganizationById(subscription.getOrganizationId());
             organizationService.updateSubscription(organization.getId(), subscription);
 
@@ -325,17 +313,7 @@ public class SubscriptionUseCase {
                         log.error("No roles found for module ID {}. Check why?", planModule.getModuleId());
                         continue;
                     }
-                    List<Long> roleIds = roles.stream()
-                            .map(RoleEntity::getId)
-                            .toList();
-                    userService.addRolesToUser(organization.getOwnerId(), roleIds);
-                    List<String> roleNames = roles.stream()
-                            .map(RoleEntity::getName)
-                            .toList();
-                    keycloakUserService.assignClientRoles(
-                            orgOwner.getKeycloakId(),
-                            module.getKeycloakClientId(),
-                            roleNames);
+                    combineRoleService.assignRolesToUser(orgOwner, roles);
                 }
                 log.info("Auto-granted {} modules to organization owner", planModules.size());
             } catch (Exception e) {
@@ -359,7 +337,7 @@ public class SubscriptionUseCase {
         try {
             log.info("[UseCase] Rejecting subscription {}", subscriptionId);
 
-            organizationSubscriptionService.rejectSubscription(subscriptionId, request.getReason(), rejectedBy);
+            subscriptionService.rejectSubscription(subscriptionId, request.getReason(), rejectedBy);
 
             log.info("[UseCase] Successfully rejected subscription {}", subscriptionId);
             return responseUtils.success("Subscription rejected successfully");
@@ -381,7 +359,7 @@ public class SubscriptionUseCase {
                 return responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
             }
 
-            var subscription = organizationSubscriptionService.extendTrial(subscriptionId, request.getAdditionalDays(),
+            var subscription = subscriptionService.extendTrial(subscriptionId, request.getAdditionalDays(),
                     extendedBy);
 
             log.info("[UseCase] Successfully extended trial for subscription {}", subscriptionId);
@@ -400,9 +378,9 @@ public class SubscriptionUseCase {
         try {
             log.info("[UseCase] Expiring subscription {}", subscriptionId);
 
-            var subscription = organizationSubscriptionService.getSubscriptionById(subscriptionId);
-            organizationSubscriptionService.expireSubscription(subscriptionId);
-            
+            var subscription = subscriptionService.getSubscriptionById(subscriptionId);
+            subscriptionService.expireSubscription(subscriptionId);
+
             var planModules = subscriptionPlanService.getPlanModules(subscription.getSubscriptionPlanId());
 
             // Revoke module access for all users in organization
@@ -412,64 +390,26 @@ public class SubscriptionUseCase {
                     if (planModule.getIsIncluded()) {
                         var users = userModuleAccessService.getUsersWithModuleAccess(
                                 planModule.getModuleId(), subscription.getOrganizationId());
+                        List<RoleEntity> roles = roleService.getRolesByModuleId(planModule.getModuleId());
 
                         for (var userAccess : users) {
                             userModuleAccessService.revokeUserModuleAccess(
                                     userAccess.getUserId(),
                                     planModule.getModuleId(),
                                     subscription.getOrganizationId());
+                            var user = userService.getUserById(userAccess.getUserId());
+                            if (user != null) {
+                                combineRoleService.removeRolesFromUser(user, roles);
+                            }
                             usersRevoked++;
                         }
+
                     }
                 }
                 log.info("Revoked module access for {} users", usersRevoked);
             } catch (Exception e) {
                 log.error("Error revoking module access: {}", e.getMessage());
             }
-
-            // Revoke roles from all users in organization
-            try {
-                int rolesRevoked = 0;
-                for (var planModule : planModules) {
-                    if (planModule.getIsIncluded()) {
-                        var module = moduleService.getModuleByIdFromCache(planModule.getModuleId());
-                        if (module == null) {
-                            log.error("Module ID {} not found. Skipping role revocation.", planModule.getModuleId());
-                            continue;
-                        }
-
-                        var users = userModuleAccessService.getUsersWithModuleAccess(
-                                planModule.getModuleId(), subscription.getOrganizationId());
-                        List<RoleEntity> roles = roleService.getRolesByModuleId(planModule.getModuleId());
-                        if (CollectionUtils.isEmpty(roles)) {
-                            log.error("No roles found for module ID {}. Check why?", planModule.getModuleId());
-                            continue;
-                        }
-                        List<String> roleNames = roles.stream()
-                                .map(RoleEntity::getName)
-                                .toList();
-
-                        for (var userAccess : users) {
-                            var user = userService.getUserById(userAccess.getUserId());
-                            if (user == null) {
-                                log.error("User ID {} not found. Skipping role revocation.", userAccess.getUserId());
-                                continue;
-                            }
-                            userService.removeRolesFromUser(userAccess.getUserId(),
-                                    roles.stream().map(RoleEntity::getId).toList());
-                            keycloakUserService.revokeClientRoles(
-                                    user.getKeycloakId(),
-                                    module.getKeycloakClientId(),
-                                    roleNames);
-                            rolesRevoked++;
-                        }
-                    }
-                }
-                log.info("Revoked roles from {} users", rolesRevoked);
-            } catch (Exception e) {
-                log.error("Error revoking roles from users: {}", e.getMessage());
-            }
-
 
             log.info("[UseCase] Successfully expired subscription {}", subscriptionId);
             return responseUtils.success("Subscription expired successfully");
@@ -487,7 +427,7 @@ public class SubscriptionUseCase {
             if (organizationId == null) {
                 return responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
             }
-            var subscription = organizationSubscriptionService.getActiveSubscription(organizationId);
+            var subscription = subscriptionService.getActiveSubscription(organizationId);
             return responseUtils.success(subscription);
         } catch (AppException e) {
             log.error("Error getting active subscription for organization {}: {}", organizationId, e.getMessage());
@@ -501,7 +441,7 @@ public class SubscriptionUseCase {
 
     public GeneralResponse<?> getSubscriptionById(Long subscriptionId) {
         try {
-            var subscription = organizationSubscriptionService.getSubscriptionById(subscriptionId);
+            var subscription = subscriptionService.getSubscriptionById(subscriptionId);
             return responseUtils.success(subscription);
         } catch (AppException e) {
             log.error("Error getting subscription {}: {}", subscriptionId, e.getMessage());
@@ -514,7 +454,7 @@ public class SubscriptionUseCase {
 
     public GeneralResponse<?> getSubscriptionHistory(Long organizationId) {
         try {
-            var subscriptions = organizationSubscriptionService.getSubscriptionHistory(organizationId);
+            var subscriptions = subscriptionService.getSubscriptionHistory(organizationId);
             return responseUtils.success(subscriptions);
         } catch (Exception e) {
             log.error("Unexpected error when getting subscription history for organization {}: {}", organizationId,
@@ -525,7 +465,7 @@ public class SubscriptionUseCase {
 
     public GeneralResponse<?> getAllSubscriptions(GetSubscriptionParams params) {
         try {
-            var pairSubscriptions = organizationSubscriptionService.getAllSubscriptions(params);
+            var pairSubscriptions = subscriptionService.getAllSubscriptions(params);
             var subscriptionEntities = pairSubscriptions.getFirst();
 
             var allPlans = subscriptionPlanService.getAllPlans();

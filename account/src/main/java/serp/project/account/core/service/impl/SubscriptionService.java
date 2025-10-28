@@ -24,10 +24,9 @@ import serp.project.account.core.domain.enums.SubscriptionStatus;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.port.store.IOrganizationSubscriptionPort;
-import serp.project.account.core.port.store.ISubscriptionPlanModulePort;
 import serp.project.account.core.port.store.ISubscriptionPlanPort;
-import serp.project.account.core.service.IOrganizationSubscriptionService;
 import serp.project.account.core.service.ISubscriptionPlanService;
+import serp.project.account.core.service.ISubscriptionService;
 import serp.project.account.infrastructure.store.mapper.OrganizationSubscriptionMapper;
 
 import java.math.BigDecimal;
@@ -38,11 +37,10 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class OrganizationSubscriptionService implements IOrganizationSubscriptionService {
+public class SubscriptionService implements ISubscriptionService {
 
     private final IOrganizationSubscriptionPort organizationSubscriptionPort;
     private final ISubscriptionPlanPort subscriptionPlanPort;
-    private final ISubscriptionPlanModulePort subscriptionPlanModulePort;
 
     private final ISubscriptionPlanService subscriptionPlanService;
     private final OrganizationSubscriptionMapper organizationSubscriptionMapper;

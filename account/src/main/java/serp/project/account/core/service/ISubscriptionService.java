@@ -19,7 +19,7 @@ import java.util.List;
 
 import org.springframework.data.util.Pair;
 
-public interface IOrganizationSubscriptionService {
+public interface ISubscriptionService {
 
         Pair<List<OrganizationSubscriptionEntity>, Long> getAllSubscriptions(GetSubscriptionParams params);
 
