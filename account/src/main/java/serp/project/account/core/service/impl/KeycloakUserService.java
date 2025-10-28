@@ -97,4 +97,14 @@ public class KeycloakUserService implements IKeycloakUserService {
             throw new AppException(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @Override
+    public void revokeClientRoles(String userId, String clientId, List<String> roleNames) {
+        try {
+            keycloakPort.revokeClientRoles(userId, clientId, roleNames);
+        } catch (Exception e) {
+            log.error("Error revoking roles from user {} for client {}: {}", userId, clientId, e.getMessage());
+            throw new AppException(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
+        }
+    }
 }

@@ -17,10 +17,13 @@ import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.AssignUserToModuleRequest;
 import serp.project.account.core.domain.dto.request.BulkAssignUsersRequest;
+import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.UserModuleAccessEntity;
 import serp.project.account.core.exception.AppException;
+import serp.project.account.core.service.IKeycloakUserService;
 import serp.project.account.core.service.IModuleService;
 import serp.project.account.core.service.IOrganizationSubscriptionService;
+import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.ISubscriptionPlanService;
 import serp.project.account.core.service.IUserModuleAccessService;
 import serp.project.account.core.service.IUserService;
@@ -36,6 +39,8 @@ public class ModuleAccessUseCase {
     private final IUserModuleAccessService userModuleAccessService;
     private final IUserService userService;
     private final IModuleService moduleService;
+    private final IRoleService roleService;
+    private final IKeycloakUserService keycloakUserService;
 
     private final ResponseUtils responseUtils;
 
@@ -104,7 +109,14 @@ public class ModuleAccessUseCase {
         try {
             log.info("[UseCase] Assigning user {} to module {} in organization {}",
                     request.getUserId(), request.getModuleId(), organizationId);
-
+            var user = userService.getUserById(request.getUserId());
+            if (user == null) {
+                throw new AppException(Constants.ErrorMessage.USER_NOT_FOUND);
+            }
+            var module = moduleService.getModuleByIdFromCache(request.getModuleId());
+            if (module == null) {
+                throw new AppException(Constants.ErrorMessage.MODULE_NOT_FOUND);
+            }
             var subscription = organizationSubscriptionService.getActiveSubscription(organizationId);
             var planModules = subscriptionPlanService.getPlanModules(subscription.getSubscriptionPlanId());
 
@@ -126,6 +138,29 @@ public class ModuleAccessUseCase {
                     organizationId,
                     assignedBy,
                     subscription.getEndDate());
+            List<RoleEntity> moduleRoles = roleService.getRolesByModuleId(request.getModuleId());
+            List<RoleEntity> assignedRoles = Collections.emptyList();
+            if (request.getRoleId() != null) {
+                assignedRoles = moduleRoles.stream()
+                        .filter(role -> role.getId().equals(request.getRoleId()))
+                        .toList();
+            }
+            if (assignedRoles.isEmpty()) {
+                assignedRoles = moduleRoles.stream()
+                        .filter(RoleEntity::isAutoAssigned)
+                        .toList();
+            }
+            if (assignedRoles.isEmpty()) {
+                log.error("No roles found to assign to user {} for module {}", request.getUserId(),
+                        request.getModuleId());
+                throw new AppException(Constants.ErrorMessage.NO_ROLES_FOUND_FOR_MODULE);
+            }
+            userService.addRolesToUser(request.getUserId(), assignedRoles.stream()
+                    .map(RoleEntity::getId).toList());
+            List<String> roleNames = assignedRoles.stream()
+                    .map(RoleEntity::getName)
+                    .toList();
+            keycloakUserService.assignClientRoles(user.getKeycloakId(), module.getKeycloakClientId(), roleNames);
 
             // Implement later: Send notification
 

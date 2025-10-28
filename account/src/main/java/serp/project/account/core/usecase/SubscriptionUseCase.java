@@ -402,11 +402,11 @@ public class SubscriptionUseCase {
 
             var subscription = organizationSubscriptionService.getSubscriptionById(subscriptionId);
             organizationSubscriptionService.expireSubscription(subscriptionId);
+            
+            var planModules = subscriptionPlanService.getPlanModules(subscription.getSubscriptionPlanId());
 
             // Revoke module access for all users in organization
             try {
-                var planModules = subscriptionPlanService.getPlanModules(subscription.getSubscriptionPlanId());
-
                 int usersRevoked = 0;
                 for (var planModule : planModules) {
                     if (planModule.getIsIncluded()) {
@@ -426,6 +426,50 @@ public class SubscriptionUseCase {
             } catch (Exception e) {
                 log.error("Error revoking module access: {}", e.getMessage());
             }
+
+            // Revoke roles from all users in organization
+            try {
+                int rolesRevoked = 0;
+                for (var planModule : planModules) {
+                    if (planModule.getIsIncluded()) {
+                        var module = moduleService.getModuleByIdFromCache(planModule.getModuleId());
+                        if (module == null) {
+                            log.error("Module ID {} not found. Skipping role revocation.", planModule.getModuleId());
+                            continue;
+                        }
+
+                        var users = userModuleAccessService.getUsersWithModuleAccess(
+                                planModule.getModuleId(), subscription.getOrganizationId());
+                        List<RoleEntity> roles = roleService.getRolesByModuleId(planModule.getModuleId());
+                        if (CollectionUtils.isEmpty(roles)) {
+                            log.error("No roles found for module ID {}. Check why?", planModule.getModuleId());
+                            continue;
+                        }
+                        List<String> roleNames = roles.stream()
+                                .map(RoleEntity::getName)
+                                .toList();
+
+                        for (var userAccess : users) {
+                            var user = userService.getUserById(userAccess.getUserId());
+                            if (user == null) {
+                                log.error("User ID {} not found. Skipping role revocation.", userAccess.getUserId());
+                                continue;
+                            }
+                            userService.removeRolesFromUser(userAccess.getUserId(),
+                                    roles.stream().map(RoleEntity::getId).toList());
+                            keycloakUserService.revokeClientRoles(
+                                    user.getKeycloakId(),
+                                    module.getKeycloakClientId(),
+                                    roleNames);
+                            rolesRevoked++;
+                        }
+                    }
+                }
+                log.info("Revoked roles from {} users", rolesRevoked);
+            } catch (Exception e) {
+                log.error("Error revoking roles from users: {}", e.getMessage());
+            }
+
 
             log.info("[UseCase] Successfully expired subscription {}", subscriptionId);
             return responseUtils.success("Subscription expired successfully");
