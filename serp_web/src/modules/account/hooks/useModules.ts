@@ -7,7 +7,7 @@ import { useMemo } from 'react';
 import { useGetMyModulesQuery } from '../services';
 import { useAppSelector } from '@/shared/hooks';
 import { selectUserProfile } from '../store';
-import { SYSTEM_ADMIN_ROLES } from '@/shared/types';
+import { SYSTEM_ADMIN_ROLES, ORGANIZATION_ADMIN_ROLES } from '@/shared';
 import { getModuleRoute } from '@/shared';
 import type { ModuleDisplayItem, UserModuleAccess } from '../types';
 
@@ -22,6 +22,10 @@ export const useModules = () => {
 
     const isSystemAdmin = user.roles?.some((role) =>
       SYSTEM_ADMIN_ROLES.includes(role)
+    );
+
+    const isOrgAdmin = user.roles?.some((role) =>
+      ORGANIZATION_ADMIN_ROLES.includes(role)
     );
 
     if (isSystemAdmin) {
@@ -49,7 +53,26 @@ export const useModules = () => {
         isActive: true,
         isAdmin: true,
       });
+      moduleList.push({
+        code: 'SETTINGS',
+        name: 'Settings',
+        description: 'Organization Settings',
+        href: '/settings',
+        isActive: true,
+        isAdmin: true,
+      });
       return moduleList;
+    }
+
+    if (isOrgAdmin) {
+      moduleList.push({
+        code: 'SETTINGS',
+        name: 'Settings',
+        description: 'Organization Settings',
+        href: '/settings',
+        isActive: true,
+        isAdmin: true,
+      });
     }
 
     if (modulesData && modulesData.length > 0) {
