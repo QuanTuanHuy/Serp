@@ -10,7 +10,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Settings,
-  Building2,
   Users,
   Puzzle,
   Layers,

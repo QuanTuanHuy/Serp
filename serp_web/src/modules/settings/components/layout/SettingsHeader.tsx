@@ -15,17 +15,9 @@ import {
   ThemeToggle,
   Input,
 } from '@/shared/components';
-import {
-  Search,
-  Bell,
-  Settings,
-  User,
-  ChevronDown,
-  Home,
-  Building2,
-} from 'lucide-react';
+import { Search, Bell, User, ChevronDown, Home, Building2 } from 'lucide-react';
 import { cn } from '@/shared/utils';
-import { useAuth } from '@/modules/account';
+import { useAuth, useUser } from '@/modules/account';
 
 interface SettingsHeaderProps {
   className?: string;
@@ -36,7 +28,8 @@ export const SettingsHeader: React.FC<SettingsHeaderProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [notifications, setNotifications] = useState(0);
+  const [notifications] = useState(0);
+  const { getDisplayName } = useUser();
 
   const { logout } = useAuth();
 
@@ -148,7 +141,7 @@ export const SettingsHeader: React.FC<SettingsHeaderProps> = ({
                 </AvatarFallback>
               </Avatar>
               <div className='hidden sm:block text-left'>
-                <p className='text-sm font-medium'>Org Admin</p>
+                <p className='text-sm font-medium'>{getDisplayName()}</p>
                 <p className='text-xs text-muted-foreground'>ORG_OWNER</p>
               </div>
               <ChevronDown className='h-4 w-4 text-muted-foreground' />
@@ -158,11 +151,6 @@ export const SettingsHeader: React.FC<SettingsHeaderProps> = ({
             {showUserMenu && (
               <div className='absolute right-0 top-full mt-2 w-56 bg-background border rounded-md shadow-lg z-50'>
                 <div className='p-2'>
-                  <div className='px-2 py-2 border-b'>
-                    <p className='font-medium'>Organization Admin</p>
-                    <p className='text-xs text-muted-foreground'>ORG_OWNER</p>
-                  </div>
-
                   <div className='py-2'>
                     <Button
                       variant='ghost'
@@ -180,7 +168,7 @@ export const SettingsHeader: React.FC<SettingsHeaderProps> = ({
                       className='w-full justify-start'
                       onClick={() => {
                         setShowUserMenu(false);
-                        router.push('/home');
+                        router.push('/');
                       }}
                     >
                       <Home className='mr-2 h-4 w-4' />

@@ -27,20 +27,6 @@ export interface SettingsStatsCardProps {
   className?: string;
 }
 
-/**
- * SettingsStatsCard - Display key metrics with optional trend indicator
- *
- * Usage:
- * ```tsx
- * <SettingsStatsCard
- *   title="Total Users"
- *   value={45}
- *   description="Active users"
- *   icon={<Users className="h-4 w-4" />}
- *   trend={{ value: 12.5, label: "vs last month" }}
- * />
- * ```
- */
 export const SettingsStatsCard: React.FC<SettingsStatsCardProps> = ({
   title,
   value,

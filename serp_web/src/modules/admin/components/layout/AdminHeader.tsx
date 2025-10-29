@@ -156,12 +156,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ className }) => {
             {showUserMenu && (
               <div className='absolute right-0 top-full mt-2 w-56 bg-background border rounded-md shadow-lg z-50'>
                 <div className='p-2'>
-                  <div className='px-2 py-2 border-b'>
-                    <p className='font-medium'>System Administrator</p>
-                    <p className='text-xs text-muted-foreground'>SUPER_ADMIN</p>
-                  </div>
-
-                  {/* <div className='py-2'>
+                  <div className='py-2'>
                     <Button
                       variant='ghost'
                       className='w-full justify-start'
@@ -178,7 +173,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ className }) => {
                       className='w-full justify-start'
                       onClick={() => {
                         setShowUserMenu(false);
-                        router.push('/admin/settings');
+                        router.push('/settings');
                       }}
                     >
                       <Settings className='mr-2 h-4 w-4' />
@@ -195,7 +190,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ className }) => {
                       <Home className='mr-2 h-4 w-4' />
                       Back to SERP
                     </Button>
-                  </div> */}
+                  </div>
 
                   <div className='border-t pt-2'>
                     <Button

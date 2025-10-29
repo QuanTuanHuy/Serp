@@ -34,19 +34,6 @@ export interface SettingsActionMenuProps {
   className?: string;
 }
 
-/**
- * SettingsActionMenu - Dropdown menu for row actions in tables
- *
- * Usage:
- * ```tsx
- * <SettingsActionMenu
- *   items={[
- *     { label: 'Edit', onClick: handleEdit, icon: <Edit className="h-4 w-4" /> },
- *     { label: 'Delete', onClick: handleDelete, variant: 'destructive', separator: true },
- *   ]}
- * />
- * ```
- */
 export const SettingsActionMenu: React.FC<SettingsActionMenuProps> = ({
   items,
   triggerLabel,

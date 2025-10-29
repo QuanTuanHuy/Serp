@@ -36,23 +36,8 @@ import {
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Badge } from '@/shared/components/ui/badge';
-import { Switch } from '@/shared/components/ui/switch';
-import { Label } from '@/shared/components/ui/label';
 import { SettingsStatsCard, SettingsActionMenu } from '@/modules/settings';
-import { Separator } from '@/shared/components/ui/separator';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/shared/components/ui/tabs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/shared/components/ui/tabs';
 
 interface Integration {
   id: string;

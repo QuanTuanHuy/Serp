@@ -35,13 +35,6 @@ import { Label } from '@/shared/components/ui/label';
 import { SettingsStatsCard } from '@/modules/settings';
 import { Separator } from '@/shared/components/ui/separator';
 import { Progress } from '@/shared/components/ui/progress';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/components/ui/select';
 import { MODULE_ICONS } from '@/shared/constants/moduleIcons';
 
 export default function SettingsModulesPage() {

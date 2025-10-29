@@ -19,16 +19,6 @@ interface SettingsLayoutProps {
   children: React.ReactNode;
 }
 
-/**
- * SettingsLayout - Main layout wrapper for settings pages
- *
- * Usage:
- * ```tsx
- * export default function Layout({ children }) {
- *   return <SettingsLayout>{children}</SettingsLayout>;
- * }
- * ```
- */
 const SettingsLayoutContent: React.FC<SettingsLayoutProps> = ({ children }) => {
   const { isCollapsed } = useSettingsSidebar();
 

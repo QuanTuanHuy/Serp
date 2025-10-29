@@ -20,17 +20,6 @@ interface SettingsAuthGuardProps {
   redirectTo?: string;
 }
 
-/**
- * SettingsAuthGuard - Protects routes/components for Organization Admin only
- * Requires ORG_OWNER or ORG_ADMIN role
- *
- * Usage:
- * ```tsx
- * <SettingsAuthGuard>
- *   <SettingsContent />
- * </SettingsAuthGuard>
- * ```
- */
 export const SettingsAuthGuard: React.FC<SettingsAuthGuardProps> = ({
   children,
   fallback,
@@ -77,7 +66,7 @@ export const SettingsAuthGuard: React.FC<SettingsAuthGuardProps> = ({
             Go Back
           </button>
           <button
-            onClick={() => router.push('/')}
+            onClick={() => router.push('/home')}
             className='px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors'
           >
             Go to Home
@@ -100,14 +89,6 @@ export const SettingsAuthGuard: React.FC<SettingsAuthGuardProps> = ({
   );
 };
 
-/**
- * HOC version for easier usage with page components
- *
- * Usage:
- * ```tsx
- * export default withSettingsAuth(SettingsPage);
- * ```
- */
 export const withSettingsAuth = <P extends object>(
   Component: React.ComponentType<P>
 ) => {
