@@ -7,7 +7,12 @@ import { useMemo } from 'react';
 import { useGetMyModulesQuery } from '../services';
 import { useAppSelector } from '@/shared/hooks';
 import { selectUserProfile } from '../store';
-import { SYSTEM_ADMIN_ROLES } from '@/shared/types';
+import {
+  SYSTEM_ADMIN_ROLES,
+  ORGANIZATION_ADMIN_ROLES,
+  DEFAULT_ADMIN_MODULES,
+  DEFAULT_ORG_ADMIN_MODULES,
+} from '@/shared';
 import { getModuleRoute } from '@/shared';
 import type { ModuleDisplayItem, UserModuleAccess } from '../types';
 
@@ -24,32 +29,17 @@ export const useModules = () => {
       SYSTEM_ADMIN_ROLES.includes(role)
     );
 
+    const isOrgAdmin = user.roles?.some((role) =>
+      ORGANIZATION_ADMIN_ROLES.includes(role)
+    );
+
     if (isSystemAdmin) {
-      moduleList.push({
-        code: 'ADMIN',
-        name: 'Admin',
-        description: 'System Administration',
-        href: '/admin',
-        isActive: true,
-        isAdmin: true,
-      });
-      moduleList.push({
-        code: 'PTM',
-        name: 'PTM',
-        description: 'Project and Task Management',
-        href: '/ptm',
-        isActive: true,
-        isAdmin: true,
-      });
-      moduleList.push({
-        code: 'CRM',
-        name: 'CRM',
-        description: 'Customer Relationship Management',
-        href: '/crm',
-        isActive: true,
-        isAdmin: true,
-      });
+      moduleList.push(...DEFAULT_ADMIN_MODULES);
       return moduleList;
+    }
+
+    if (isOrgAdmin) {
+      moduleList.push(...DEFAULT_ORG_ADMIN_MODULES);
     }
 
     if (modulesData && modulesData.length > 0) {

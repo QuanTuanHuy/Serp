@@ -169,14 +169,7 @@ export function PTMHeader() {
             {showUserMenu && (
               <div className='absolute right-0 top-full mt-2 w-56 bg-background border rounded-md shadow-lg z-50'>
                 <div className='p-2'>
-                  <div className='px-2 py-2 border-b'>
-                    <p className='font-medium'>{getDisplayName()}</p>
-                    <p className='text-xs text-muted-foreground'>
-                      {user?.email}
-                    </p>
-                  </div>
-
-                  {/* <div className='py-2'>
+                  <div className='py-2'>
                     <Button
                       variant='ghost'
                       className='w-full justify-start'
@@ -201,7 +194,7 @@ export function PTMHeader() {
                       <Home className='mr-2 h-4 w-4' />
                       Back to SERP
                     </Button>
-                  </div> */}
+                  </div>
 
                   <div className='border-t pt-2'>
                     <Button

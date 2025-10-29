@@ -19,4 +19,4 @@ export * from './utils';
 export * from './types';
 
 // Constants
-export * from './constants/moduleIcons';
+export * from './constants';

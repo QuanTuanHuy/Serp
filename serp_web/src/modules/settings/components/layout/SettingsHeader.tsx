@@ -1,6 +1,6 @@
 /**
  * Author: QuanTuanHuy
- * Description: Part of Serp Project - Admin header with breadcrumbs, search, notifications
+ * Description: Part of Serp Project - Settings header with breadcrumbs and user menu
  */
 
 'use client';
@@ -15,26 +15,21 @@ import {
   ThemeToggle,
   Input,
 } from '@/shared/components';
-import {
-  Search,
-  Bell,
-  Settings,
-  User,
-  ChevronDown,
-  Home,
-  Shield,
-} from 'lucide-react';
+import { Search, Bell, User, ChevronDown, Home, Building2 } from 'lucide-react';
 import { cn } from '@/shared/utils';
-import { useAuth } from '@/modules/account';
+import { useAuth, useUser } from '@/modules/account';
 
-interface AdminHeaderProps {
+interface SettingsHeaderProps {
   className?: string;
 }
 
-export const AdminHeader: React.FC<AdminHeaderProps> = ({ className }) => {
+export const SettingsHeader: React.FC<SettingsHeaderProps> = ({
+  className,
+}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [notifications, setNotifications] = useState(0);
+  const [notifications] = useState(0);
+  const { getDisplayName } = useUser();
 
   const { logout } = useAuth();
 
@@ -45,8 +40,8 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ className }) => {
     const segments = pathname.split('/').filter(Boolean);
     return segments.map((segment, index) => ({
       name:
-        segment === 'admin'
-          ? 'Admin'
+        segment === 'settings'
+          ? 'Settings'
           : segment.charAt(0).toUpperCase() + segment.slice(1),
       href: '/' + segments.slice(0, index + 1).join('/'),
       isLast: index === segments.length - 1,
@@ -56,7 +51,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ className }) => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      // TODO: Implement global admin search
+      // TODO: Implement settings search
       console.log('Searching:', searchQuery);
     }
   };
@@ -101,7 +96,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ className }) => {
           <form onSubmit={handleSearch} className='relative'>
             <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
             <Input
-              placeholder='Search organizations, users, subscriptions...'
+              placeholder='Search settings, users, departments...'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className='pl-10 pr-4'
@@ -141,13 +136,13 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ className }) => {
               className='flex items-center gap-2 rounded-lg p-2 hover:bg-muted transition-colors'
             >
               <Avatar className='h-8 w-8'>
-                <AvatarFallback className='bg-primary text-primary-foreground'>
-                  <Shield className='h-4 w-4' />
+                <AvatarFallback className='bg-purple-600 text-white'>
+                  <Building2 className='h-4 w-4' />
                 </AvatarFallback>
               </Avatar>
               <div className='hidden sm:block text-left'>
-                <p className='text-sm font-medium'>System Admin</p>
-                <p className='text-xs text-muted-foreground'>SUPER_ADMIN</p>
+                <p className='text-sm font-medium'>{getDisplayName()}</p>
+                <p className='text-xs text-muted-foreground'>ORG_OWNER</p>
               </div>
               <ChevronDown className='h-4 w-4 text-muted-foreground' />
             </button>
@@ -162,22 +157,11 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ className }) => {
                       className='w-full justify-start'
                       onClick={() => {
                         setShowUserMenu(false);
-                        router.push('/admin/profile');
+                        router.push('/profile');
                       }}
                     >
                       <User className='mr-2 h-4 w-4' />
                       Profile
-                    </Button>
-                    <Button
-                      variant='ghost'
-                      className='w-full justify-start'
-                      onClick={() => {
-                        setShowUserMenu(false);
-                        router.push('/settings');
-                      }}
-                    >
-                      <Settings className='mr-2 h-4 w-4' />
-                      Settings
                     </Button>
                     <Button
                       variant='ghost'
