@@ -35,7 +35,8 @@ export type ModuleCode =
   | 'MANUFACTURING'
   | 'HELPDESK'
   | 'FIELD_SERVICE'
-  | 'ADMIN';
+  | 'ADMIN'
+  | 'SETTINGS';
 
 export interface ModuleIconConfig {
   icon: LucideIcon;
@@ -53,6 +54,13 @@ export const MODULE_ICONS: Record<ModuleCode, ModuleIconConfig> = {
     icon: Shield,
     color: 'text-red-600',
     bgColor: 'bg-red-50 dark:bg-red-950',
+  },
+
+  // Settings (Special)
+  SETTINGS: {
+    icon: Settings,
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-50 dark:bg-purple-950',
   },
 
   // Sales & Marketing
@@ -145,6 +153,7 @@ export const getModuleIcon = (moduleCode: string): ModuleIconConfig | null => {
  */
 export const getModuleRoute = (moduleCode: string): string => {
   if (moduleCode === 'ADMIN') return '/admin';
+  if (moduleCode === 'SETTINGS') return '/settings';
   if (moduleCode === 'PTM') return '/ptm';
   if (moduleCode === 'CRM') return '/crm';
   return `/${moduleCode.toLowerCase()}`;
