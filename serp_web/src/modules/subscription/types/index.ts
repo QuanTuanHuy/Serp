@@ -7,6 +7,13 @@ export type BillingCycle = 'monthly' | 'yearly';
 
 export type PlanTier = 'free' | 'starter' | 'professional' | 'enterprise';
 
+export interface SubscribeRequest {
+  planId: number;
+  billingCycle: BillingCycle;
+  isAutoRenew?: boolean;
+  notes?: string;
+}
+
 export interface PlanFeature {
   name: string;
   included: boolean;

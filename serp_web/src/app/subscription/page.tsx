@@ -11,23 +11,16 @@ import {
   PlanCard,
   BillingToggle,
   ComparisonTable,
-  PaymentForm,
-  OrderSummaryComponent,
-  AddOnsSection,
   FAQSection,
   TrustIndicators,
 } from '@/modules/subscription';
 import {
   BillingCycle,
-  PaymentInfo,
-  AddOn as AddOnType,
   OrderSummary as OrderSummaryType,
 } from '@/modules/subscription/types';
 import {
   SUBSCRIPTION_PLANS,
-  ADD_ONS,
   FAQS,
-  TAX_RATE,
 } from '@/modules/subscription/types/constants';
 import {
   Dialog,
@@ -41,171 +34,124 @@ import {
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useGetSubscriptionPlansQuery } from '@/modules/admin/services/plans/plansApi';
+import { useSubscribeMutation } from '@/modules/subscription/services/subscriptionApi';
+import type { SubscriptionPlan as BEPlan } from '@/modules/admin/types/plans.types';
+import { getErrorMessage } from '@/lib';
 
 export default function SubscriptionPage() {
   const router = useRouter();
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
-  const [addOns, setAddOns] = useState<AddOnType[]>(
-    ADD_ONS.map((addon) => ({ ...addon, selected: false, quantity: 1 }))
-  );
-  const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [promoCode, setPromoCode] = useState<
-    { code: string; discount: number; type: 'percentage' | 'fixed' } | undefined
-  >(undefined);
+
+  const { data: bePlans, isLoading, isError } = useGetSubscriptionPlansQuery();
+  const [subscribe, { isLoading: isSubscribing }] = useSubscribeMutation();
+
+  const mappedPlans = useMemo(() => {
+    if (!bePlans) return SUBSCRIPTION_PLANS;
+
+    const templateIndexByKey = new Map<
+      string,
+      (typeof SUBSCRIPTION_PLANS)[number]
+    >();
+    for (const tpl of SUBSCRIPTION_PLANS) {
+      templateIndexByKey.set(tpl.id.toLowerCase(), tpl);
+      templateIndexByKey.set(tpl.name.toLowerCase(), tpl);
+    }
+
+    const normalize = (s?: string) => (s ? s.trim().toLowerCase() : '');
+
+    const toUiPlan = (p: BEPlan) => {
+      const key1 = normalize(p.planCode);
+      const key2 = normalize(p.planName);
+      const tpl = templateIndexByKey.get(key1) || templateIndexByKey.get(key2);
+
+      const base = tpl || SUBSCRIPTION_PLANS[0];
+
+      return {
+        ...base,
+        id: String(p.id),
+        name: p.planName || base.name,
+        description: p.description || base.description,
+        monthlyPrice: Number(p.monthlyPrice ?? base.monthlyPrice ?? 0),
+        yearlyPrice: Number(p.yearlyPrice ?? base.yearlyPrice ?? 0),
+        maxUsers: p.maxUsers ?? base.maxUsers,
+      };
+    };
+
+    const sorted = [...bePlans]
+      .filter((p) => p.isActive)
+      .sort((a, b) => {
+        const ao = a.displayOrder ?? 0;
+        const bo = b.displayOrder ?? 0;
+        return ao - bo;
+      });
+
+    return sorted.map(toUiPlan);
+  }, [bePlans]);
 
   const selectedPlan = useMemo(
-    () => SUBSCRIPTION_PLANS.find((plan) => plan.id === selectedPlanId),
-    [selectedPlanId]
+    () => mappedPlans.find((plan) => plan.id === selectedPlanId),
+    [selectedPlanId, mappedPlans]
   );
 
   const orderSummary: OrderSummaryType | null = useMemo(() => {
     if (!selectedPlan) return null;
-
     const basePrice =
       billingCycle === 'monthly'
         ? selectedPlan.monthlyPrice
         : selectedPlan.yearlyPrice;
-
-    const addOnsTotal = addOns
-      .filter((addon) => addon.selected)
-      .reduce((sum, addon) => sum + addon.price * (addon.quantity || 1), 0);
-
-    const subtotal = basePrice + addOnsTotal;
-
-    let discountAmount = 0;
-    if (promoCode) {
-      discountAmount =
-        promoCode.type === 'percentage'
-          ? (subtotal * promoCode.discount) / 100
-          : promoCode.discount;
-    }
-
-    const afterDiscount = subtotal - discountAmount;
-    const tax = afterDiscount * TAX_RATE;
-    const total = afterDiscount + tax;
-
     const nextBillingDate = new Date();
     nextBillingDate.setMonth(
       nextBillingDate.getMonth() + (billingCycle === 'monthly' ? 1 : 12)
     );
-
     return {
       planId: selectedPlan.id,
       planName: selectedPlan.name,
       billingCycle,
       basePrice,
-      addOns: addOns.filter((addon) => addon.selected),
-      promoCode,
-      subtotal,
-      tax,
-      total,
+      addOns: [],
+      subtotal: basePrice,
+      tax: 0,
+      total: basePrice,
       nextBillingDate: nextBillingDate.toISOString(),
     };
-  }, [selectedPlan, billingCycle, addOns, promoCode]);
+  }, [selectedPlan, billingCycle]);
 
   const handlePlanSelect = (planId: string) => {
-    const plan = SUBSCRIPTION_PLANS.find((p) => p.id === planId);
+    const plan = mappedPlans.find((p) => p.id === planId);
     if (!plan) return;
-
     setSelectedPlanId(planId);
-
-    // Free plan doesn't need payment
-    if (plan.tier === 'free') {
-      handleFreeSignup();
-      return;
-    }
-
-    // Enterprise needs to contact sales
-    if (plan.tier === 'enterprise') {
-      toast.info('Contact Sales', {
-        description: 'Please contact our sales team for enterprise pricing.',
-      });
-      return;
-    }
-
-    // Show payment form for paid plans
-    setShowPaymentForm(true);
-    setTimeout(() => {
-      document.getElementById('payment-section')?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
-    }, 100);
-  };
-
-  const handleFreeSignup = () => {
-    toast.success('Welcome!', {
-      description: 'You can now start using SERP with the Free plan.',
-    });
-    setTimeout(() => {
-      router.push('/');
-    }, 2000);
-  };
-
-  const handleAddOnToggle = (addOnId: string) => {
-    setAddOns((prev) =>
-      prev.map((addon) =>
-        addon.id === addOnId ? { ...addon, selected: !addon.selected } : addon
-      )
-    );
-  };
-
-  const handleAddOnQuantityChange = (addOnId: string, quantity: number) => {
-    setAddOns((prev) =>
-      prev.map((addon) =>
-        addon.id === addOnId ? { ...addon, quantity } : addon
-      )
-    );
-  };
-
-  const handleApplyPromoCode = async (code: string): Promise<boolean> => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // Mock promo codes
-    const validPromoCodes: Record<
-      string,
-      { discount: number; type: 'percentage' | 'fixed' }
-    > = {
-      SAVE20: { discount: 20, type: 'percentage' },
-      WELCOME10: { discount: 10, type: 'fixed' },
-    };
-
-    if (validPromoCodes[code]) {
-      setPromoCode({ code, ...validPromoCodes[code] });
-      toast.success('Promo code applied!');
-      return true;
-    }
-
-    return false;
-  };
-
-  const handlePaymentSubmit = (paymentInfo: PaymentInfo) => {
-    // Payment info would be sent to payment gateway here
-    // Do NOT log sensitive payment information
     setShowConfirmDialog(true);
   };
 
-  const handleConfirmSubscription = () => {
-    setShowConfirmDialog(false);
-    toast.success('Subscription Activated!', {
-      description: `Welcome to SERP ${selectedPlan?.name}! Your subscription is now active.`,
-    });
-
-    setTimeout(() => {
-      router.push('/');
-    }, 2000);
+  const handleConfirmSubscription = async () => {
+    if (!selectedPlanId) return;
+    try {
+      const planIdNum = Number(selectedPlanId);
+      await subscribe({
+        planId: planIdNum,
+        billingCycle: billingCycle,
+        isAutoRenew: false,
+      }).unwrap();
+      setShowConfirmDialog(false);
+      toast.success('Subscription is processing!', {
+        description: `Wait Admin to confirm ${selectedPlan?.name}!`,
+      });
+      setTimeout(() => {
+        router.push('/');
+      }, 1200);
+    } catch (e: any) {
+      const message =
+        getErrorMessage(e) || 'Failed to subscribe. Please try again.';
+      toast.error('Subscription Failed', { description: message });
+    }
   };
 
-  const handleCancelPayment = () => {
-    setShowPaymentForm(false);
+  const handleCancel = () => {
     setSelectedPlanId(null);
-    setAddOns((prev) =>
-      prev.map((addon) => ({ ...addon, selected: false, quantity: 1 }))
-    );
-    setPromoCode(undefined);
+    setShowConfirmDialog(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -214,7 +160,6 @@ export default function SubscriptionPage() {
       <Header />
 
       <main className='container mx-auto px-4 py-12'>
-        {/* Back Button */}
         <button
           onClick={() => router.push('/')}
           className='flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors'
@@ -223,7 +168,6 @@ export default function SubscriptionPage() {
           Back to Home
         </button>
 
-        {/* Hero Section */}
         <div className='text-center mb-12'>
           <h1 className='text-4xl md:text-5xl font-bold mb-4'>
             Choose Your Perfect Plan
@@ -234,12 +178,16 @@ export default function SubscriptionPage() {
           </p>
         </div>
 
-        {/* Billing Toggle */}
+        {isError && (
+          <div className='mb-6 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive'>
+            Could not load plans from server. Showing default plans.
+          </div>
+        )}
+
         <BillingToggle billingCycle={billingCycle} onToggle={setBillingCycle} />
 
-        {/* Plan Cards */}
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12'>
-          {SUBSCRIPTION_PLANS.map((plan) => (
+          {(isLoading ? SUBSCRIPTION_PLANS : mappedPlans).map((plan) => (
             <PlanCard
               key={plan.id}
               plan={plan}
@@ -250,61 +198,20 @@ export default function SubscriptionPage() {
           ))}
         </div>
 
-        {/* Comparison Table */}
         <div className='mb-12'>
-          <ComparisonTable plans={SUBSCRIPTION_PLANS} />
+          <ComparisonTable
+            plans={isLoading ? SUBSCRIPTION_PLANS : mappedPlans}
+          />
         </div>
 
-        {/* Trust Indicators */}
         <div className='mb-12'>
           <TrustIndicators />
         </div>
-
-        {/* Payment Section (shown when a paid plan is selected) */}
-        {showPaymentForm && selectedPlan && orderSummary && (
-          <div
-            id='payment-section'
-            className='scroll-mt-20 mb-12 border-t pt-12'
-          >
-            <h2 className='text-3xl font-bold mb-8 text-center'>
-              Complete Your Subscription
-            </h2>
-
-            <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
-              {/* Left Column - Payment & Add-ons */}
-              <div className='lg:col-span-2 space-y-8'>
-                {/* Add-ons */}
-                <AddOnsSection
-                  addOns={addOns}
-                  onToggle={handleAddOnToggle}
-                  onQuantityChange={handleAddOnQuantityChange}
-                />
-
-                {/* Payment Form */}
-                <PaymentForm
-                  onSubmit={handlePaymentSubmit}
-                  onCancel={handleCancelPayment}
-                />
-              </div>
-
-              {/* Right Column - Order Summary (Sticky) */}
-              <div className='lg:col-span-1'>
-                <OrderSummaryComponent
-                  summary={orderSummary}
-                  onApplyPromoCode={handleApplyPromoCode}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* FAQ Section */}
         <div className='mb-12'>
           <FAQSection faqs={FAQS} />
         </div>
       </main>
 
-      {/* Confirmation Dialog */}
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <DialogContent>
           <DialogHeader>
@@ -332,14 +239,14 @@ export default function SubscriptionPage() {
           </div>
 
           <DialogFooter>
-            <Button
-              variant='outline'
-              onClick={() => setShowConfirmDialog(false)}
-            >
+            <Button variant='outline' onClick={handleCancel}>
               Cancel
             </Button>
-            <Button onClick={handleConfirmSubscription}>
-              Confirm Subscription
+            <Button
+              onClick={handleConfirmSubscription}
+              disabled={isSubscribing}
+            >
+              {isSubscribing ? 'Subscribing...' : 'Confirm Subscription'}
             </Button>
           </DialogFooter>
         </DialogContent>
