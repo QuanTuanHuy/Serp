@@ -39,7 +39,7 @@ import java.util.List;
 @Slf4j
 public class SubscriptionService implements ISubscriptionService {
 
-    private final IOrganizationSubscriptionPort organizationSubscriptionPort;
+    private final IOrganizationSubscriptionPort subscriptionPort;
     private final ISubscriptionPlanPort subscriptionPlanPort;
 
     private final ISubscriptionPlanService subscriptionPlanService;
@@ -81,7 +81,7 @@ public class SubscriptionService implements ISubscriptionService {
                 request.getNotes(),
                 requestedBy);
 
-        var savedSubscription = organizationSubscriptionPort.save(subscription);
+        var savedSubscription = subscriptionPort.save(subscription);
 
         log.info("Organization {} subscribed to plan {} with status {}",
                 organizationId, request.getPlanId(), status);
@@ -113,7 +113,7 @@ public class SubscriptionService implements ISubscriptionService {
         subscription.setActivatedAt(now);
         subscription.setCreatedAt(now);
 
-        var savedSubscription = organizationSubscriptionPort.save(subscription);
+        var savedSubscription = subscriptionPort.save(subscription);
 
         return savedSubscription;
     }
@@ -143,7 +143,7 @@ public class SubscriptionService implements ISubscriptionService {
 
         // Expire current subscription
         currentSubscription.expire();
-        organizationSubscriptionPort.update(currentSubscription);
+        subscriptionPort.update(currentSubscription);
 
         // Create new subscription (immediate activation)
         Long newEndDate = calculateEndDate(now, newBillingCycle);
@@ -165,7 +165,7 @@ public class SubscriptionService implements ISubscriptionService {
         newSubscription.setActivatedAt(now);
         newSubscription.setCreatedAt(now);
 
-        var savedSubscription = organizationSubscriptionPort.save(newSubscription);
+        var savedSubscription = subscriptionPort.save(newSubscription);
 
         log.info("Organization {} upgraded to plan {} with proration: {}",
                 organizationId, newPlan.getId(), prorationAmount);
@@ -185,7 +185,7 @@ public class SubscriptionService implements ISubscriptionService {
 
         var currentSubscription = getActiveSubscription(organizationId);
         currentSubscription.expire();
-        organizationSubscriptionPort.update(currentSubscription);
+        subscriptionPort.update(currentSubscription);
 
         var now = Instant.now().toEpochMilli();
         Long newStartDate = currentSubscription.getEndDate();
@@ -207,7 +207,7 @@ public class SubscriptionService implements ISubscriptionService {
                 .createdAt(now)
                 .build();
 
-        var savedSubscription = organizationSubscriptionPort.save(newSubscription);
+        var savedSubscription = subscriptionPort.save(newSubscription);
 
         log.info("Organization {} scheduled downgrade to plan {} effective at {}",
                 organizationId, newPlan.getId(), newStartDate);
@@ -221,7 +221,7 @@ public class SubscriptionService implements ISubscriptionService {
         var subscription = getActiveSubscription(organizationId);
         subscription.cancel(cancelledBy, request.getReason());
 
-        organizationSubscriptionPort.update(subscription);
+        subscriptionPort.update(subscription);
 
         log.info("Organization {} cancelled subscription. Reason: {}", organizationId, request.getReason());
     }
@@ -237,7 +237,7 @@ public class SubscriptionService implements ISubscriptionService {
             throw new AppException(Constants.ErrorMessage.SUBSCRIPTION_NOT_EXPIRED);
         }
         currentSubscription.expire();
-        organizationSubscriptionPort.update(currentSubscription);
+        subscriptionPort.update(currentSubscription);
 
         var plan = subscriptionPlanService.getPlanById(currentSubscription.getSubscriptionPlanId());
         var now = Instant.now().toEpochMilli();
@@ -258,7 +258,7 @@ public class SubscriptionService implements ISubscriptionService {
                 .createdAt(now)
                 .build();
 
-        var savedSubscription = organizationSubscriptionPort.save(newSubscription);
+        var savedSubscription = subscriptionPort.save(newSubscription);
 
         return savedSubscription;
     }
@@ -273,7 +273,7 @@ public class SubscriptionService implements ISubscriptionService {
         }
 
         subscription.activate(activatedBy);
-        return organizationSubscriptionPort.update(subscription);
+        return subscriptionPort.update(subscription);
     }
 
     @Override
@@ -286,7 +286,7 @@ public class SubscriptionService implements ISubscriptionService {
         }
 
         subscription.rejectSubscription(rejectedBy, reason);
-        organizationSubscriptionPort.update(subscription);
+        subscriptionPort.update(subscription);
     }
 
     @Override
@@ -299,7 +299,7 @@ public class SubscriptionService implements ISubscriptionService {
         }
         subscription.extendTrial(additionalDays);
 
-        return organizationSubscriptionPort.update(subscription);
+        return subscriptionPort.update(subscription);
     }
 
     @Override
@@ -311,12 +311,12 @@ public class SubscriptionService implements ISubscriptionService {
         subscription.expire();
         subscription.setUpdatedAt(now);
 
-        organizationSubscriptionPort.update(subscription);
+        subscriptionPort.update(subscription);
     }
 
     @Override
     public OrganizationSubscriptionEntity getActiveSubscription(Long organizationId) {
-        return organizationSubscriptionPort.getActiveByOrganizationId(organizationId)
+        return subscriptionPort.getActiveByOrganizationId(organizationId)
                 .orElseThrow(() -> {
                     log.error("No active subscription found for organization {}", organizationId);
                     return new AppException(Constants.ErrorMessage.ACTIVE_SUBSCRIPTION_NOT_FOUND);
@@ -325,7 +325,7 @@ public class SubscriptionService implements ISubscriptionService {
 
     @Override
     public OrganizationSubscriptionEntity getSubscriptionById(Long subscriptionId) {
-        return organizationSubscriptionPort.getById(subscriptionId)
+        return subscriptionPort.getById(subscriptionId)
                 .orElseThrow(() -> {
                     log.error("Subscription not found with ID: {}", subscriptionId);
                     return new AppException(Constants.ErrorMessage.SUBSCRIPTION_NOT_FOUND);
@@ -334,27 +334,27 @@ public class SubscriptionService implements ISubscriptionService {
 
     @Override
     public List<OrganizationSubscriptionEntity> getSubscriptionHistory(Long organizationId) {
-        return organizationSubscriptionPort.getByOrganizationId(organizationId);
+        return subscriptionPort.getByOrganizationId(organizationId);
     }
 
     @Override
     public List<OrganizationSubscriptionEntity> getSubscriptionsByStatus(SubscriptionStatus status) {
-        return organizationSubscriptionPort.getByStatus(status);
+        return subscriptionPort.getByStatus(status);
     }
 
     @Override
     public List<OrganizationSubscriptionEntity> getExpiringSubscriptions(Long beforeTimestamp) {
-        return organizationSubscriptionPort.getExpiringBefore(beforeTimestamp);
+        return subscriptionPort.getExpiringBefore(beforeTimestamp);
     }
 
     @Override
     public List<OrganizationSubscriptionEntity> getTrialEndingSubscriptions(Long beforeTimestamp) {
-        return organizationSubscriptionPort.getTrialEndingBefore(beforeTimestamp);
+        return subscriptionPort.getTrialEndingBefore(beforeTimestamp);
     }
 
     @Override
     public boolean hasActiveSubscription(Long organizationId) {
-        return organizationSubscriptionPort.existsActiveSubscriptionForOrganization(organizationId);
+        return subscriptionPort.existsActiveSubscriptionForOrganization(organizationId);
     }
 
     @Override
@@ -442,6 +442,11 @@ public class SubscriptionService implements ISubscriptionService {
 
     @Override
     public Pair<List<OrganizationSubscriptionEntity>, Long> getAllSubscriptions(GetSubscriptionParams params) {
-        return organizationSubscriptionPort.getAllSubscriptions(params);
+        return subscriptionPort.getAllSubscriptions(params);
+    }
+
+    @Override
+    public List<OrganizationSubscriptionEntity> getSubscriptionsByPlanId(Long planId) {
+        return subscriptionPort.getByPlanId(planId);
     }
 }

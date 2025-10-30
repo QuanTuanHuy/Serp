@@ -21,4 +21,6 @@ public interface IUserPort {
     Pair<Long, List<UserEntity>> getUsers(GetUserParams params);
 
     List<UserEntity> getUsersByIds(List<Long> userIds);
+
+    List<UserEntity> getUsersByOrganizationId(Long organizationId);
 }

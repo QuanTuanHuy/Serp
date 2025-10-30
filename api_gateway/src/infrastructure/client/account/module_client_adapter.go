@@ -81,6 +81,36 @@ func (m *ModuleClientAdapter) GetModuleById(ctx context.Context, moduleId int64)
 	return &result, nil
 }
 
+func (m *ModuleClientAdapter) GetRolesInModule(ctx context.Context, moduleId int64) (*response.BaseResponse, error) {
+	headers := utils.BuildDefaultHeaders()
+
+	path := fmt.Sprintf("/api/v1/modules/%d/roles", moduleId)
+	var httpResponse *utils.HTTPResponse
+	err := m.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
+		var err error
+		httpResponse, err = m.apiClient.GET(ctx, path, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call get roles in module API: %w", err)
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !m.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("GetRolesInModule API returned error status: %d", httpResponse.StatusCode))
+	}
+
+	var result response.BaseResponse
+	if err := m.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal get roles in module response: %w", err)
+	}
+
+	return &result, nil
+}
+
 func (m *ModuleClientAdapter) UpdateModule(ctx context.Context, moduleId int64, req *request.UpdateModuleDto) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 

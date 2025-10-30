@@ -63,6 +63,7 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 	{
 		moduleV1.Use(middleware.AuthMiddleware()).POST("", moduleController.CreateModule)
 		moduleV1.Use(middleware.AuthMiddleware()).GET("/:moduleId", moduleController.GetModuleById)
+		moduleV1.Use(middleware.AuthMiddleware()).GET("/:moduleId/roles", moduleController.GetRolesInModule)
 		moduleV1.Use(middleware.AuthMiddleware()).PUT("/:moduleId", moduleController.UpdateModule)
 		moduleV1.Use(middleware.AuthMiddleware()).GET("", moduleController.GetAllModules)
 		moduleV1.Use(middleware.AuthMiddleware()).POST("/:moduleId/registration", moduleController.UserRegisterModule)

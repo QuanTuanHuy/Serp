@@ -195,4 +195,9 @@ public class UserService implements IUserService {
     public void removeRolesFromUser(Long userId, List<Long> roleIds) {
         userRolePort.deleteUserRolesByUserIdAndRoleIds(userId, roleIds);
     }
+
+    @Override
+    public List<UserEntity> getUsersByOrganizationId(Long organizationId) {
+        return userPort.getUsersByOrganizationId(organizationId);
+    }
 }

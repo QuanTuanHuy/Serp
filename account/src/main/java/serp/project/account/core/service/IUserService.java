@@ -27,6 +27,8 @@ public interface IUserService {
 
     UserProfileResponse getUserProfile(Long userId);
 
+    List<UserEntity> getUsersByOrganizationId(Long organizationId);
+
     List<UserProfileResponse> getUserProfilesByIds(List<Long> userIds);
 
     void addRolesToUser(Long userId, List<Long> roleIds);

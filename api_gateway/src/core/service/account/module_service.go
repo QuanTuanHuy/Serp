@@ -17,6 +17,7 @@ import (
 type IModuleService interface {
 	CreateModule(ctx context.Context, req *request.CreateModuleDto) (*response.BaseResponse, error)
 	GetModuleById(ctx context.Context, moduleId int64) (*response.BaseResponse, error)
+	GetRolesInModule(ctx context.Context, moduleId int64) (*response.BaseResponse, error)
 	UpdateModule(ctx context.Context, moduleId int64, req *request.UpdateModuleDto) (*response.BaseResponse, error)
 	GetAllModules(ctx context.Context) (*response.BaseResponse, error)
 	UserRegisterModule(ctx context.Context, moduleId int64) (*response.BaseResponse, error)
@@ -40,6 +41,15 @@ func (m *ModuleService) GetModuleById(ctx context.Context, moduleId int64) (*res
 	res, err := m.moduleClient.GetModuleById(ctx, moduleId)
 	if err != nil {
 		log.Error(ctx, "ModuleService: GetModuleById error: ", err.Error())
+		return nil, err
+	}
+	return res, nil
+}
+
+func (m *ModuleService) GetRolesInModule(ctx context.Context, moduleId int64) (*response.BaseResponse, error) {
+	res, err := m.moduleClient.GetRolesInModule(ctx, moduleId)
+	if err != nil {
+		log.Error(ctx, "ModuleService: GetRolesInModule error: ", err.Error())
 		return nil, err
 	}
 	return res, nil

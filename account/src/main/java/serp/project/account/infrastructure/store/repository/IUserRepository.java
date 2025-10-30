@@ -16,4 +16,6 @@ public interface IUserRepository extends IBaseRepository<UserModel> {
     Optional<UserModel> findByEmail(String email);
 
     List<UserModel> findByIdIn(List<Long> ids);
+
+    List<UserModel> findByPrimaryOrganizationId(Long organizationId);
 }
