@@ -5,11 +5,13 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useDebounce } from '@/shared/hooks';
+import { useSettingsModules } from '@/modules/settings/hooks/useModules';
+import { ModuleUsersDialog } from '@/modules/settings/components';
 import {
   Puzzle,
   Users,
-  Settings,
   CheckCircle2,
   XCircle,
   Shield,
@@ -19,6 +21,7 @@ import {
   Activity,
   ChevronRight,
   Search,
+  Settings,
 } from 'lucide-react';
 import {
   Card,
@@ -37,106 +40,27 @@ import { Separator } from '@/shared/components/ui/separator';
 import { Progress } from '@/shared/components/ui/progress';
 import { MODULE_ICONS } from '@/shared/constants/moduleIcons';
 
+import type { AccessibleModule } from '@/modules/settings/types/module-access.types';
+
 export default function SettingsModulesPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedModule, setSelectedModule] = useState<
+    AccessibleModule | undefined
+  >(undefined);
+  const debouncedSearch = useDebounce(searchQuery, 300);
 
-  // Mock data - organization's available modules
-  const mockModules = [
-    {
-      moduleCode: 'CRM',
-      moduleName: 'CRM',
-      moduleDescription: 'Customer Relationship Management',
-      isActive: true,
-      enabledAt: '2024-01-15T10:00:00Z',
-      activeUsersCount: 12,
-      totalUsersCount: 45,
-      autoGrantToNewUsers: true,
-      requiredRoles: ['CRM_SALES_PERSON'],
-    },
-    {
-      moduleCode: 'PTM',
-      moduleName: 'PTM',
-      moduleDescription: 'Project and Task Management',
-      isActive: true,
-      enabledAt: '2024-01-15T10:00:00Z',
-      activeUsersCount: 25,
-      totalUsersCount: 45,
-      autoGrantToNewUsers: false,
-      requiredRoles: ['PTM_USER', 'PTM_ADMIN'],
-    },
-    {
-      moduleCode: 'SALES',
-      moduleName: 'Sales',
-      moduleDescription: 'Sales pipeline and order management',
-      isActive: true,
-      enabledAt: '2024-02-01T10:00:00Z',
-      activeUsersCount: 8,
-      totalUsersCount: 45,
-      autoGrantToNewUsers: false,
-      requiredRoles: [],
-    },
-    {
-      moduleCode: 'MARKETING',
-      moduleName: 'Marketing',
-      moduleDescription: 'Marketing campaigns and automation',
-      isActive: false,
-      enabledAt: null,
-      activeUsersCount: 0,
-      totalUsersCount: 45,
-      autoGrantToNewUsers: false,
-      requiredRoles: [],
-    },
-    {
-      moduleCode: 'ACCOUNTING',
-      moduleName: 'Accounting',
-      moduleDescription: 'Financial accounting and reporting',
-      isActive: true,
-      enabledAt: '2024-03-01T10:00:00Z',
-      activeUsersCount: 5,
-      totalUsersCount: 45,
-      autoGrantToNewUsers: false,
-      requiredRoles: [],
-    },
-    {
-      moduleCode: 'HR',
-      moduleName: 'Human Resources',
-      moduleDescription: 'HR management and employee records',
-      isActive: false,
-      enabledAt: null,
-      activeUsersCount: 0,
-      totalUsersCount: 45,
-      autoGrantToNewUsers: false,
-      requiredRoles: [],
-    },
-    {
-      moduleCode: 'INVENTORY',
-      moduleName: 'Inventory',
-      moduleDescription: 'Warehouse and inventory management',
-      isActive: true,
-      enabledAt: '2024-02-15T10:00:00Z',
-      activeUsersCount: 6,
-      totalUsersCount: 45,
-      autoGrantToNewUsers: false,
-      requiredRoles: [],
-    },
-    {
-      moduleCode: 'HELPDESK',
-      moduleName: 'Helpdesk',
-      moduleDescription: 'Customer support and ticketing',
-      isActive: false,
-      enabledAt: null,
-      activeUsersCount: 0,
-      totalUsersCount: 45,
-      autoGrantToNewUsers: false,
-      requiredRoles: [],
-    },
-  ];
+  const {
+    modules,
+    activeModules,
+    totalActiveUsers,
+    totalUsersBaseline,
+    setSearch,
+  } = useSettingsModules();
 
-  const activeModules = mockModules.filter((m) => m.isActive);
-  const totalActiveUsers = activeModules.reduce(
-    (sum, m) => sum + m.activeUsersCount,
-    0
-  );
+  useEffect(() => {
+    setSearch(debouncedSearch);
+  }, [debouncedSearch, setSearch]);
 
   const getModuleIcon = (moduleCode: string) => {
     const iconConfig = MODULE_ICONS[moduleCode as keyof typeof MODULE_ICONS];
@@ -177,7 +101,7 @@ export default function SettingsModulesPage() {
         <SettingsStatsCard
           title='Active Modules'
           value={activeModules.length}
-          description={`of ${mockModules.length} available`}
+          description={`of ${modules.length} available`}
           icon={<Puzzle className='h-4 w-4' />}
         />
 
@@ -197,9 +121,11 @@ export default function SettingsModulesPage() {
 
         <SettingsStatsCard
           title='Avg Adoption'
-          value={`${Math.round(
-            (totalActiveUsers / (mockModules.length * 45)) * 100
-          )}%`}
+          value={`${useMemo(() => {
+            const denom = modules.length * (totalUsersBaseline || 0);
+            if (!denom) return 0;
+            return Math.round((totalActiveUsers / denom) * 100);
+          }, [modules.length, totalUsersBaseline, totalActiveUsers])}%`}
           description='Across all modules'
           icon={<Activity className='h-4 w-4' />}
         />
@@ -227,10 +153,10 @@ export default function SettingsModulesPage() {
 
           {/* Module Cards Grid */}
           <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-2'>
-            {mockModules.map((module) => {
+            {modules.map((module) => {
               const usagePercent = calculateUsagePercentage(
-                module.activeUsersCount,
-                module.totalUsersCount
+                module.activeUserCount || 0,
+                module.totalUsersCount || 0
               );
 
               return (
@@ -299,7 +225,8 @@ export default function SettingsModulesPage() {
                             <span>User Access</span>
                           </div>
                           <span className='font-medium'>
-                            {module.activeUsersCount} / {module.totalUsersCount}
+                            {module.activeUserCount || 0} /{' '}
+                            {module.totalUsersCount || 0}
                           </span>
                         </div>
                         <Progress value={usagePercent} className='h-2' />
@@ -323,7 +250,7 @@ export default function SettingsModulesPage() {
                             </p>
                           </div>
                           <Switch
-                            checked={module.autoGrantToNewUsers}
+                            checked={Boolean(module.isAutoGrantToNewUsers)}
                             onCheckedChange={() =>
                               console.log(
                                 'Toggle auto-grant',
@@ -334,28 +261,29 @@ export default function SettingsModulesPage() {
                           />
                         </div>
 
-                        {module.requiredRoles.length > 0 && (
-                          <>
-                            <Separator />
-                            <div className='space-y-2'>
-                              <Label className='text-sm font-medium flex items-center gap-2'>
-                                <Shield className='h-4 w-4 text-muted-foreground' />
-                                Required Roles
-                              </Label>
-                              <div className='flex flex-wrap gap-1'>
-                                {module.requiredRoles.map((role, index) => (
-                                  <Badge
-                                    key={index}
-                                    variant='outline'
-                                    className='text-xs'
-                                  >
-                                    {role.replace('_', ' ')}
-                                  </Badge>
-                                ))}
+                        {module.requiredRoles &&
+                          module.requiredRoles.length > 0 && (
+                            <>
+                              <Separator />
+                              <div className='space-y-2'>
+                                <Label className='text-sm font-medium flex items-center gap-2'>
+                                  <Shield className='h-4 w-4 text-muted-foreground' />
+                                  Required Roles
+                                </Label>
+                                <div className='flex flex-wrap gap-1'>
+                                  {module.requiredRoles.map((role, index) => (
+                                    <Badge
+                                      key={index}
+                                      variant='outline'
+                                      className='text-xs'
+                                    >
+                                      {role.replace('_', ' ')}
+                                    </Badge>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          </>
-                        )}
+                            </>
+                          )}
                       </div>
 
                       <Separator />
@@ -366,9 +294,10 @@ export default function SettingsModulesPage() {
                           variant='outline'
                           size='sm'
                           className='flex-1'
-                          onClick={() =>
-                            console.log('Manage users', module.moduleCode)
-                          }
+                          onClick={() => {
+                            setSelectedModule(module);
+                            setDialogOpen(true);
+                          }}
                         >
                           <Users className='h-4 w-4 mr-2' />
                           Manage Users
@@ -414,6 +343,13 @@ export default function SettingsModulesPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Manage Users Dialog */}
+      <ModuleUsersDialog
+        open={dialogOpen}
+        module={selectedModule}
+        onOpenChange={(v) => setDialogOpen(v)}
+      />
 
       {/* Quick Actions */}
       <Card className='border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/20'>

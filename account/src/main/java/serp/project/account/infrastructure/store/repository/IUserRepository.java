@@ -18,4 +18,6 @@ public interface IUserRepository extends IBaseRepository<UserModel> {
     List<UserModel> findByIdIn(List<Long> ids);
 
     List<UserModel> findByPrimaryOrganizationId(Long organizationId);
+
+    Integer countByPrimaryOrganizationId(Long organizationId);
 }

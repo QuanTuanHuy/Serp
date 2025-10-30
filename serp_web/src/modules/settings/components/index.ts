@@ -11,3 +11,6 @@ export { SettingsAuthGuard } from './SettingsAuthGuard';
 // Users
 export { SettingsUserDialog } from './users/UserDialog';
 export { SettingsUserForm } from './users/UserForm';
+
+// Modules
+export { ModuleUsersDialog } from './modules/ModuleUsersDialog';

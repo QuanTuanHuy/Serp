@@ -83,6 +83,17 @@ export {
   useGetMyOrganizationQuery,
   useLazyGetMyOrganizationQuery,
 } from './organizations/organizationsApi';
+// Modules API (Organization-level module access)
+export {
+  settingsModulesApi,
+  useGetAccessibleModulesForOrganizationQuery,
+  useLazyGetAccessibleModulesForOrganizationQuery,
+  useGetModuleRolesQuery,
+  useAssignUserToModuleMutation,
+  useRevokeUserAccessToModuleMutation,
+  useGetModuleUsersQuery,
+  useLazyGetModuleUsersQuery,
+} from './modules/modulesApi';
 // export {
 //   settingsRolesApi,
 //   useGetOrganizationRolesQuery,

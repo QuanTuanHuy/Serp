@@ -38,4 +38,6 @@ public interface IUserService {
     void updateKeycloakUser(Long userId, String keycloakId);
 
     Pair<Long, List<UserEntity>> getUsers(GetUserParams params);
+
+    Integer countUsersByOrganizationId(Long organizationId);
 }

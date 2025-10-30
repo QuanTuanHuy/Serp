@@ -35,7 +35,7 @@ export const transformTimestampFields = <T>(data: T): T => {
 
   const transformed = { ...data } as any;
 
-  const timestampFields = ['createdAt', 'updatedAt'];
+  const timestampFields = ['createdAt', 'updatedAt', 'grantedAt'];
 
   timestampFields.forEach((field) => {
     if (transformed[field] && typeof transformed[field] === 'number') {

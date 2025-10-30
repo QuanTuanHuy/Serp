@@ -200,4 +200,9 @@ public class UserService implements IUserService {
     public List<UserEntity> getUsersByOrganizationId(Long organizationId) {
         return userPort.getUsersByOrganizationId(organizationId);
     }
+
+    @Override
+    public Integer countUsersByOrganizationId(Long organizationId) {
+        return userPort.countUsersByOrganizationId(organizationId);
+    }
 }

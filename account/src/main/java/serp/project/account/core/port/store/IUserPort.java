@@ -23,4 +23,6 @@ public interface IUserPort {
     List<UserEntity> getUsersByIds(List<Long> userIds);
 
     List<UserEntity> getUsersByOrganizationId(Long organizationId);
+
+    Integer countUsersByOrganizationId(Long organizationId);
 }
