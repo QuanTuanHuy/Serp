@@ -7,3 +7,7 @@ export { SettingsLayout } from './layout/SettingsLayout';
 export { SettingsSidebar } from './layout/SettingsSidebar';
 export { SettingsHeader } from './layout/SettingsHeader';
 export { SettingsAuthGuard } from './SettingsAuthGuard';
+
+// Users
+export { SettingsUserDialog } from './users/UserDialog';
+export { SettingsUserForm } from './users/UserForm';

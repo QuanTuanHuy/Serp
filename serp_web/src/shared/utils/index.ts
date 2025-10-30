@@ -86,3 +86,71 @@ export function truncateText(text: string, length: number): string {
   if (text.length <= length) return text;
   return `${text.substring(0, length)}...`;
 }
+
+/**
+ * Compute initials from a person's name or identifier.
+ * Priority:
+ * 1) firstName + lastName
+ * 2) words in a full name string
+ * 3) local-part of email before '@'
+ * Fallback: empty string
+ * @param input - Either a full string (name/email) or object with firstName/lastName/email
+ * @param maxLetters - Max initials letters to return (default 2)
+ */
+export function getInitials(
+  input:
+    | string
+    | {
+        firstName?: string | null;
+        lastName?: string | null;
+        email?: string | null;
+        fullName?: string | null;
+      },
+  maxLetters: number = 2
+): string {
+  const clamp = (s: string) => s.replace(/\s+/g, ' ').trim();
+
+  const fromWords = (words: string[]) =>
+    words
+      .filter(Boolean)
+      .slice(0, maxLetters)
+      .map((w) => w.charAt(0))
+      .join('')
+      .toUpperCase();
+
+  let firstName: string | undefined;
+  let lastName: string | undefined;
+  let email: string | undefined;
+  let fullName: string | undefined;
+
+  if (typeof input === 'string') {
+    const s = clamp(input);
+    if (s.includes('@')) {
+      const local = s.split('@')[0];
+      if (local) return fromWords([local]);
+    }
+    if (s) return fromWords(s.split(' '));
+    return '';
+  } else if (input && typeof input === 'object') {
+    firstName = input.firstName ?? undefined;
+    lastName = input.lastName ?? undefined;
+    email = input.email ?? undefined;
+    fullName = input.fullName ?? undefined;
+  }
+
+  if (firstName || lastName) {
+    return fromWords([firstName ?? '', lastName ?? '']);
+  }
+
+  if (fullName) {
+    const s = clamp(fullName);
+    if (s) return fromWords(s.split(' '));
+  }
+
+  if (email) {
+    const local = clamp(email).split('@')[0];
+    if (local) return fromWords([local]);
+  }
+
+  return '';
+}

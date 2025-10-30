@@ -14,20 +14,14 @@
 //   useUpdateOrganizationPreferencesMutation,
 // } from './general/generalApi';
 
-// // Users API
-// export {
-//   settingsUsersApi,
-//   useGetOrganizationUsersQuery,
-//   useGetOrganizationUserByIdQuery,
-//   useInviteUserMutation,
-//   useUpdateOrganizationUserMutation,
-//   useRemoveUserFromOrganizationMutation,
-//   useGrantModuleAccessMutation,
-//   useRevokeModuleAccessMutation,
-//   useGetUserInvitationsQuery,
-//   useCancelInvitationMutation,
-//   useResendInvitationMutation,
-// } from './users/usersApi';
+// Users API
+export {
+  settingsUsersApi,
+  useGetOrganizationUsersQuery,
+  useLazyGetOrganizationUsersQuery,
+  useSettingsCreateUserForOrganizationMutation,
+  useUpdateOrganizationUserMutation,
+} from './users/usersApi';
 
 // // Departments API
 // export {
@@ -82,6 +76,13 @@
 // } from './integrations/integrationsApi';
 
 // // Roles API (Organization-level)
+
+// Organizations API (me)
+export {
+  settingsOrganizationsApi,
+  useGetMyOrganizationQuery,
+  useLazyGetMyOrganizationQuery,
+} from './organizations/organizationsApi';
 // export {
 //   settingsRolesApi,
 //   useGetOrganizationRolesQuery,

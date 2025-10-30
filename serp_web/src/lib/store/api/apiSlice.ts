@@ -109,6 +109,9 @@ export const api = createApi({
     'admin/Module',
     'admin/User',
     'admin/Role',
+    // Settings tags
+    'settings/Organization',
+    'settings/User',
   ],
 
   // Define endpoints in separate files for each module
