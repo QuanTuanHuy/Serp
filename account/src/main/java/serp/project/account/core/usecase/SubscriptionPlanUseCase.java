@@ -7,14 +7,29 @@ package serp.project.account.core.usecase;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.List;
+
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.AddModuleToPlanRequest;
 import serp.project.account.core.domain.dto.request.CreateSubscriptionPlanRequest;
 import serp.project.account.core.domain.dto.request.UpdateSubscriptionPlanRequest;
+import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.exception.AppException;
+import serp.project.account.core.service.ICombineRoleService;
+import serp.project.account.core.service.IModuleService;
+import serp.project.account.core.service.IOrganizationService;
+import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.ISubscriptionPlanService;
+import serp.project.account.core.service.ISubscriptionService;
+import serp.project.account.core.service.IUserModuleAccessService;
+import serp.project.account.core.service.IUserService;
+import serp.project.account.kernel.utils.CollectionUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
 
 @Service
@@ -23,7 +38,17 @@ import serp.project.account.kernel.utils.ResponseUtils;
 public class SubscriptionPlanUseCase {
 
     private final ISubscriptionPlanService subscriptionPlanService;
+    private final ISubscriptionService subscriptionService;
+    private final ICombineRoleService combineRoleService;
+    private final IRoleService roleService;
+    private final IUserService userService;
+    private final IUserModuleAccessService userModuleAccessService;
+    private final IOrganizationService organizationService;
+    private final IModuleService moduleService;
+
     private final ResponseUtils responseUtils;
+
+    private final AsyncTaskExecutor asyncTaskExecutor;
 
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> createPlan(CreateSubscriptionPlanRequest request, Long createdBy) {
@@ -172,6 +197,11 @@ public class SubscriptionPlanUseCase {
         try {
             log.info("[UseCase] Adding module {} to plan {}", request.getModuleId(), planId);
 
+            var module = moduleService.getModuleByIdFromCache(request.getModuleId());
+            if (module == null || !module.isAvailable()) {
+                return responseUtils.badRequest(Constants.ErrorMessage.MODULE_NOT_FOUND);
+            }
+
             var planModule = subscriptionPlanService.addModuleToPlan(
                     planId,
                     request.getModuleId(),
@@ -179,6 +209,8 @@ public class SubscriptionPlanUseCase {
                     request.getIsIncluded(),
                     request.getMaxUsersPerModule(),
                     createdBy);
+
+            addModuleAccessForExistedSubscriptions(planId, request.getModuleId());
 
             log.info("[UseCase] Successfully added module {} to plan {}", request.getModuleId(), planId);
             return responseUtils.success(planModule);
@@ -197,6 +229,8 @@ public class SubscriptionPlanUseCase {
             log.info("[UseCase] Removing module {} from plan {}", moduleId, planId);
 
             subscriptionPlanService.removeModuleFromPlan(planId, moduleId);
+
+            removeModuleAccessFromExistedSubscriptions(planId, moduleId);
 
             log.info("[UseCase] Successfully removed module {} from plan {}", moduleId, planId);
             return responseUtils.success("Module removed from plan successfully");
@@ -227,5 +261,91 @@ public class SubscriptionPlanUseCase {
             log.error("Unexpected error when checking module in plan: {}", e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void addModuleAccessForExistedSubscriptions(Long planId, Long moduleId) {
+        asyncTaskExecutor.execute(() -> {
+            var subscriptions = subscriptionService.getSubscriptionsByPlanId(planId).stream()
+                    .filter(sub -> sub.isActive())
+                    .toList();
+            if (CollectionUtils.isEmpty(subscriptions)) {
+                return;
+            }
+            List<RoleEntity> rolesInModule = roleService.getRolesByModuleId(moduleId);
+            if (CollectionUtils.isEmpty(rolesInModule)) {
+                log.error("No roles found in module {} when adding module access for existing subscriptions", moduleId);
+                return;
+            }
+
+            subscriptions.forEach(subscription -> {
+                try {
+                    var organization = organizationService.getOrganizationById(subscription.getOrganizationId());
+                    if (organization == null) {
+                        log.error("Organization with id {} not found. Skipping adding module access",
+                                subscription.getOrganizationId());
+                        return;
+                    }
+
+                    var usersInOrganization = userService.getUsersByOrganizationId(subscription.getOrganizationId());
+                    usersInOrganization.forEach(user -> {
+                        if (!user.isActive()) {
+                            return;
+                        }
+                        userModuleAccessService.registerUserToModuleWithExpiration(
+                                user.getId(),
+                                moduleId,
+                                organization.getId(),
+                                organization.getOwnerId(),
+                                subscription.getEndDate());
+                        combineRoleService.assignRolesToUser(user, rolesInModule);
+                    });
+                } catch (Exception e) {
+                    log.error("Error adding module access for subscription {}: {}", subscription.getId(),
+                            e.getMessage());
+                }
+            });
+
+            log.info("Completed adding module access for existing subscriptions of plan {}", planId);
+        });
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void removeModuleAccessFromExistedSubscriptions(Long planId, Long moduleId) {
+        asyncTaskExecutor.execute(() -> {
+            var subscriptions = subscriptionService.getSubscriptionsByPlanId(planId).stream()
+                    .filter(sub -> sub.isActive())
+                    .toList();
+            if (CollectionUtils.isEmpty(subscriptions)) {
+                return;
+            }
+            List<RoleEntity> rolesInModule = roleService.getRolesByModuleId(moduleId);
+            if (CollectionUtils.isEmpty(rolesInModule)) {
+                log.error("No roles found in module {} when removing module access for existing subscriptions",
+                        moduleId);
+                return;
+            }
+
+            subscriptions.forEach(subscription -> {
+                try {
+                    var organization = organizationService.getOrganizationById(subscription.getOrganizationId());
+                    if (organization == null) {
+                        log.error("Organization with id {} not found. Skipping removing module access",
+                                subscription.getOrganizationId());
+                        return;
+                    }
+                    var usersInOrganization = userService.getUsersByOrganizationId(subscription.getOrganizationId());
+                    usersInOrganization.forEach(user -> {
+                        userModuleAccessService.revokeUserModuleAccess(user.getId(), moduleId, organization.getId());
+                        combineRoleService.removeRolesFromUser(user, rolesInModule);
+                    });
+                } catch (Exception e) {
+                    log.error("Error removing module access for subscription {}: {}", subscription.getId(),
+                            e.getMessage());
+                }
+            });
+
+            log.info("Completed removing module access for existing subscriptions of plan {}", planId);
+        });
     }
 }

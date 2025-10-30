@@ -54,7 +54,7 @@ public class SubscriptionPlanService implements ISubscriptionPlanService {
         var plan = getPlanById(planId);
         plan = subscriptionPlanMapper.buildUpdatedPlan(plan, request, updatedBy);
 
-        // TODO: Update modules if provided in request
+        // Implement later: Update modules if provided in request
 
         var updatedPlan = subscriptionPlanPort.update(plan);
         log.info("Successfully updated subscription plan: {}", planId);
@@ -114,7 +114,7 @@ public class SubscriptionPlanService implements ISubscriptionPlanService {
 
     @Override
     public SubscriptionPlanEntity validatePlanDeletion(Long planId) {
-        // TODO: Check if any active subscriptions are using this plan
+        // Implement later: Check if any active subscriptions are using this plan
         return getPlanById(planId);
     }
 

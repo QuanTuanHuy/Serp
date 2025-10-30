@@ -28,6 +28,8 @@ public interface IOrganizationSubscriptionPort {
 
     List<OrganizationSubscriptionEntity> getByStatus(SubscriptionStatus status);
 
+    List<OrganizationSubscriptionEntity> getByPlanId(Long planId);
+
     /**
      * Find subscriptions expiring before the given timestamp
      */

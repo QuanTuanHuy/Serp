@@ -50,4 +50,6 @@ public interface IOrganizationSubscriptionRepository extends IBaseRepository<Org
            "WHERE os.organizationId = :organizationId " +
            "ORDER BY os.startDate DESC")
     List<OrganizationSubscriptionModel> findByOrganizationIdOrderByStartDateDesc(@Param("organizationId") Long organizationId);
+
+    List<OrganizationSubscriptionModel> findBySubscriptionPlanId(Long planId);
 }

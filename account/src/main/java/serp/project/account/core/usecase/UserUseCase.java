@@ -149,4 +149,42 @@ public class UserUseCase {
             throw e;
         }
     }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> updateUserStatus(Long organizationId, Long updatedBy, Long userId, String status,
+            Boolean isSerpAdmin) {
+        try {
+            UserEntity user = userService.getUserById(userId);
+            if (user == null) {
+                return responseUtils.badRequest(Constants.ErrorMessage.USER_NOT_FOUND);
+            }
+            if (!isSerpAdmin) {
+                var organization = organizationService.getOrganizationById(user.getPrimaryOrganizationId());
+                if (organization == null || !organization.getOwnerId().equals(organizationId)) {
+                    return responseUtils.forbidden(Constants.ErrorMessage.FORBIDDEN);
+                }
+            }
+            switch (status.toUpperCase()) {
+                case "ACTIVE":
+                    user.activate();
+                    break;
+                case "INACTIVE":
+                    user.deactivate();
+                    break;
+                case "SUSPENDED":
+                    user.suspend();
+                    break;
+                default:
+                    throw new IllegalArgumentException("Invalid status: " + status);
+            }
+            userService.updateUser(userId, user);
+            return responseUtils.success("User status updated successfully");
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.error("Update user status failed: {}", e.getMessage());
+            return responseUtils.badRequest(e.getMessage());
+        } catch (Exception e) {
+            log.error("Update user status failed: {}", e.getMessage());
+            return responseUtils.internalServerError(e.getMessage());
+        }
+    }
 }

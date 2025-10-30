@@ -40,6 +40,12 @@ public class ModuleController {
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
+    @GetMapping("/{moduleId}/roles")
+    public ResponseEntity<?> getRolesInModule(@PathVariable Long moduleId) {
+        var response = moduleUseCase.getRolesInModule(moduleId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
     @GetMapping
     public ResponseEntity<?> getAllModules() {
         var response = moduleUseCase.getAllModules();

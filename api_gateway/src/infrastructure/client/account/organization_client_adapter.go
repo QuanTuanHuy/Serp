@@ -147,6 +147,34 @@ func (o *OrganizationClientAdapter) CreateUserForOrganization(ctx context.Contex
 	return &result, nil
 }
 
+func (o *OrganizationClientAdapter) UpdateUserStatusInOrganization(ctx context.Context, organizationID int64, userID int64, req *request.UpdateUserStatusRequest) (*response.BaseResponse, error) {
+	headers := utils.BuildHeadersFromContext(ctx)
+
+	path := fmt.Sprintf("/api/v1/organizations/%d/users/%d/status", organizationID, userID)
+
+	var httpResponse *utils.HTTPResponse
+	err := o.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
+		var err error
+		httpResponse, err = o.apiClient.PATCH(ctx, path, req, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call update user status in organization API: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !o.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("UpdateUserStatusInOrganization API returned error status: %d", httpResponse.StatusCode))
+	}
+
+	var result response.BaseResponse
+	if err := o.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal update user status in organization response: %w", err)
+	}
+	return &result, nil
+}
+
 func NewOrganizationClientAdapter(authProps *properties.ExternalServiceProperties) port.IOrganizationClientPort {
 	baseUrl := "http://" + authProps.AccountService.Host + ":" + authProps.AccountService.Port + "/account-service"
 	apiClient := utils.NewBaseAPIClient(baseUrl, authProps.AccountService.Timeout)

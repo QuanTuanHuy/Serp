@@ -46,6 +46,20 @@ func (m *ModuleController) GetModuleById(c *gin.Context) {
 	c.JSON(res.Code, res)
 }
 
+func (m *ModuleController) GetRolesInModule(c *gin.Context) {
+	moduleId, ok := utils.ValidateAndParseID(c, "moduleId")
+	if !ok {
+		return
+	}
+
+	res, err := m.moduleService.GetRolesInModule(c.Request.Context(), moduleId)
+	if err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
+		return
+	}
+	c.JSON(res.Code, res)
+}
+
 func (m *ModuleController) UpdateModule(c *gin.Context) {
 	moduleId, ok := utils.ValidateAndParseID(c, "moduleId")
 	if !ok {

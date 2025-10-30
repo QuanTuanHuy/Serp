@@ -8,6 +8,7 @@ package serp.project.account.core.usecase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -17,11 +18,13 @@ import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.AssignUserToModuleRequest;
 import serp.project.account.core.domain.dto.request.BulkAssignUsersRequest;
+import serp.project.account.core.domain.dto.response.OrgModuleAccessResponse;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.UserModuleAccessEntity;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.ICombineRoleService;
 import serp.project.account.core.service.IModuleService;
+import serp.project.account.core.service.IOrganizationService;
 import serp.project.account.core.service.ISubscriptionService;
 import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.ISubscriptionPlanService;
@@ -42,6 +45,7 @@ public class ModuleAccessUseCase {
     private final IModuleService moduleService;
     private final IRoleService roleService;
     private final ICombineRoleService combineRoleService;
+    private final IOrganizationService organizationService;
 
     private final ResponseUtils responseUtils;
 
@@ -83,17 +87,53 @@ public class ModuleAccessUseCase {
                 return responseUtils.success(Collections.emptyList());
             }
 
+            var organization = organizationService.getOrganizationById(organizationId);
             var subscription = subscriptionService.getActiveSubscription(organizationId);
             var plan = subscriptionPlanService.getPlanById(subscription.getSubscriptionPlanId());
-
             var planModules = subscriptionPlanService.getPlanModules(plan.getId());
             var moduleIds = planModules.stream()
                     .filter(pm -> pm.getIsIncluded())
                     .map(pm -> pm.getModuleId())
                     .toList();
+            var allRoles = roleService.getAllRoles();
+            var allModules = moduleService.getAllModules();
+
+            int totalUsers = organization.getEmployeeCount() != null ? organization.getEmployeeCount()
+                    : userService.countUsersByOrganizationId(organizationId);
+
+            List<OrgModuleAccessResponse> result = new ArrayList<>();
+            result.addAll(allModules.stream()
+                    .filter(m -> moduleIds.contains(m.getId()))
+                    .map(m -> OrgModuleAccessResponse.builder()
+                            .organizationId(organizationId)
+                            .moduleId(m.getId())
+                            .moduleName(m.getModuleName())
+                            .moduleCode(m.getCode())
+                            .moduleDescription(m.getDescription())
+                            .isActive(true)
+                            .grantedAt(subscription.getActivatedAt())
+                            .activeUserCount(userModuleAccessService.countActiveUsers(m.getId(), organizationId))
+                            .totalUsersCount(totalUsers)
+                            .requiredRoles(allRoles.stream()
+                                    .filter(r -> r.getModuleId() != null && r.getModuleId().equals(m.getId()))
+                                    .map(RoleEntity::getName)
+                                    .toList())
+                            .build())
+                    .toList());
+            result.addAll(allModules.stream()
+                    .filter(m -> !moduleIds.contains(m.getId()))
+                    .map(m -> OrgModuleAccessResponse.builder()
+                            .organizationId(organizationId)
+                            .moduleId(m.getId())
+                            .moduleName(m.getModuleName())
+                            .moduleCode(m.getCode())
+                            .moduleDescription(m.getDescription())
+                            .isActive(false)
+                            .build())
+                    .toList());
 
             log.info("Organization {} has access to {} modules", organizationId, moduleIds.size());
-            return responseUtils.success(moduleIds);
+            return responseUtils.success(result);
         } catch (AppException e) {
             log.error("Error getting accessible modules for organization {}: {}", organizationId, e.getMessage());
             return responseUtils.error(e.getCode(), e.getMessage());

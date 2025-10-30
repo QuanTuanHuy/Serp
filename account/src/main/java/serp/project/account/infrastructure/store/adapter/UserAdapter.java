@@ -63,4 +63,14 @@ public class UserAdapter implements IUserPort {
     public List<UserEntity> getUsersByIds(List<Long> userIds) {
         return userMapper.toEntityList(userRepository.findByIdIn(userIds));
     }
+
+    @Override
+    public List<UserEntity> getUsersByOrganizationId(Long organizationId) {
+        return userMapper.toEntityList(userRepository.findByPrimaryOrganizationId(organizationId));
+    }
+
+    @Override
+    public Integer countUsersByOrganizationId(Long organizationId) {
+        return userRepository.countByPrimaryOrganizationId(organizationId);
+    }
 }

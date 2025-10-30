@@ -97,4 +97,10 @@ public class OrganizationSubscriptionAdapter implements IOrganizationSubscriptio
         var subscriptions = organizationSubscriptionMapper.toEntityList(result.getContent());
         return Pair.of(subscriptions, result.getTotalElements());
     }
+
+    @Override
+    public List<OrganizationSubscriptionEntity> getByPlanId(Long planId) {
+        return organizationSubscriptionMapper.toEntityList(
+                organizationSubscriptionRepository.findBySubscriptionPlanId(planId));
+    }
 }

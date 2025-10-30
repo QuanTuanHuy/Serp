@@ -17,4 +17,5 @@ type IOrganizationClientPort interface {
 	GetOrganizationById(ctx context.Context, organizationID int64) (*response.BaseResponse, error)
 	GetMyOrganization(ctx context.Context) (*response.BaseResponse, error)
 	CreateUserForOrganization(ctx context.Context, organizationID int64, req *request.CreateUserForOrgRequest) (*response.BaseResponse, error)
+	UpdateUserStatusInOrganization(ctx context.Context, organizationID int64, userID int64, req *request.UpdateUserStatusRequest) (*response.BaseResponse, error)
 }

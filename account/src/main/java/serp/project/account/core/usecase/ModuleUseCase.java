@@ -14,6 +14,7 @@ import serp.project.account.core.domain.dto.request.CreateModuleDto;
 import serp.project.account.core.domain.dto.request.UpdateModuleDto;
 import serp.project.account.core.domain.entity.UserModuleAccessEntity;
 import serp.project.account.core.service.IModuleService;
+import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.IUserModuleAccessService;
 import serp.project.account.infrastructure.store.mapper.UserModuleAccessMapper;
 import serp.project.account.kernel.utils.ResponseUtils;
@@ -24,6 +25,7 @@ import serp.project.account.kernel.utils.ResponseUtils;
 public class ModuleUseCase {
     private final IModuleService moduleService;
     private final IUserModuleAccessService userModuleAccessService;
+    private final IRoleService roleService;
 
     private final ResponseUtils responseUtils;
 
@@ -102,6 +104,16 @@ public class ModuleUseCase {
         } catch (Exception e) {
             log.error("Error getting user modules: {}", e.getMessage());
             throw e;
+        }
+    }
+
+    public GeneralResponse<?> getRolesInModule(Long moduleId) {
+        try {
+            var roles = roleService.getRolesByModuleId(moduleId);
+            return responseUtils.success(roles);
+        } catch (Exception e) {
+            log.error("Error getting roles in module: {}", e.getMessage());
+            return responseUtils.internalServerError(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
         }
     }
 }

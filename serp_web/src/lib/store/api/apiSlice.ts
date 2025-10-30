@@ -90,6 +90,7 @@ export const api = createApi({
 
   // Tag types for cache invalidation
   tagTypes: [
+    // Account tags
     'account/user',
     'account/profile',
     'account/auth',
@@ -109,6 +110,11 @@ export const api = createApi({
     'admin/Module',
     'admin/User',
     'admin/Role',
+    // Settings tags
+    'settings/Organization',
+    'settings/User',
+    'settings/Module',
+    'settings/ModuleUsers',
   ],
 
   // Define endpoints in separate files for each module

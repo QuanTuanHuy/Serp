@@ -23,6 +23,8 @@ public interface ISubscriptionService {
 
         Pair<List<OrganizationSubscriptionEntity>, Long> getAllSubscriptions(GetSubscriptionParams params);
 
+        List<OrganizationSubscriptionEntity> getSubscriptionsByPlanId(Long planId);
+
         /**
          * Subscribe organization to a plan (creates PENDING_APPROVAL subscription for
          * paid plans, ACTIVE for FREE)

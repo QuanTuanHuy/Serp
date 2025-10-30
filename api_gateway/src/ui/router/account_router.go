@@ -63,6 +63,7 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 	{
 		moduleV1.Use(middleware.AuthMiddleware()).POST("", moduleController.CreateModule)
 		moduleV1.Use(middleware.AuthMiddleware()).GET("/:moduleId", moduleController.GetModuleById)
+		moduleV1.Use(middleware.AuthMiddleware()).GET("/:moduleId/roles", moduleController.GetRolesInModule)
 		moduleV1.Use(middleware.AuthMiddleware()).PUT("/:moduleId", moduleController.UpdateModule)
 		moduleV1.Use(middleware.AuthMiddleware()).GET("", moduleController.GetAllModules)
 		moduleV1.Use(middleware.AuthMiddleware()).POST("/:moduleId/registration", moduleController.UserRegisterModule)
@@ -114,6 +115,7 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 	{
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/me", organizationController.GetMyOrganization)
 		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/users", organizationController.CreateUserForOrganization)
+		organizationsV1.Use(middleware.AuthMiddleware()).PATCH("/:organizationId/users/:userId/status", organizationController.UpdateUserStatusInOrganization)
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/modules/:moduleId/access", moduleAccessController.CanOrganizationAccessModule)
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/modules", moduleAccessController.GetAccessibleModulesForOrganization)
 		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/modules/:moduleId/users", moduleAccessController.AssignUserToModule)

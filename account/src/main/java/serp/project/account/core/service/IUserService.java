@@ -27,6 +27,8 @@ public interface IUserService {
 
     UserProfileResponse getUserProfile(Long userId);
 
+    List<UserEntity> getUsersByOrganizationId(Long organizationId);
+
     List<UserProfileResponse> getUserProfilesByIds(List<Long> userIds);
 
     void addRolesToUser(Long userId, List<Long> roleIds);
@@ -36,4 +38,6 @@ public interface IUserService {
     void updateKeycloakUser(Long userId, String keycloakId);
 
     Pair<Long, List<UserEntity>> getUsers(GetUserParams params);
+
+    Integer countUsersByOrganizationId(Long organizationId);
 }
