@@ -106,6 +106,7 @@ public class ModuleAccessUseCase {
                     .filter(m -> moduleIds.contains(m.getId()))
                     .map(m -> OrgModuleAccessResponse.builder()
                             .organizationId(organizationId)
+                            .moduleId(m.getId())
                             .moduleName(m.getModuleName())
                             .moduleCode(m.getCode())
                             .moduleDescription(m.getDescription())
@@ -119,11 +120,11 @@ public class ModuleAccessUseCase {
                                     .toList())
                             .build())
                     .toList());
-            log.info("Debug: moduleIds = {}", moduleIds);
             result.addAll(allModules.stream()
                     .filter(m -> !moduleIds.contains(m.getId()))
                     .map(m -> OrgModuleAccessResponse.builder()
                             .organizationId(organizationId)
+                            .moduleId(m.getId())
                             .moduleName(m.getModuleName())
                             .moduleCode(m.getCode())
                             .moduleDescription(m.getDescription())

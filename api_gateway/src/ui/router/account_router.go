@@ -115,6 +115,7 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 	{
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/me", organizationController.GetMyOrganization)
 		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/users", organizationController.CreateUserForOrganization)
+		organizationsV1.Use(middleware.AuthMiddleware()).PATCH("/:organizationId/users/:userId/status", organizationController.UpdateUserStatusInOrganization)
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/modules/:moduleId/access", moduleAccessController.CanOrganizationAccessModule)
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/modules", moduleAccessController.GetAccessibleModulesForOrganization)
 		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/modules/:moduleId/users", moduleAccessController.AssignUserToModule)

@@ -69,8 +69,7 @@ public class UserController {
     @PatchMapping("/{userId}/info")
     public ResponseEntity<?> updateUserInfo(
             @PathVariable Long userId,
-            @Valid @RequestBody UpdateUserInfoRequest request
-    ) {
+            @Valid @RequestBody UpdateUserInfoRequest request) {
         var currentUserIdOpt = authUtils.getCurrentUserId();
         var organizationIdOpt = authUtils.getCurrentTenantId();
         if (currentUserIdOpt.isEmpty() || organizationIdOpt.isEmpty()) {

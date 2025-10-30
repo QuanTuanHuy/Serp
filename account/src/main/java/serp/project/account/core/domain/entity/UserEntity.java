@@ -5,6 +5,7 @@
 
 package serp.project.account.core.domain.entity;
 
+import java.time.Instant;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -97,6 +98,33 @@ public class UserEntity extends BaseEntity {
     @JsonIgnore
     public boolean isActive() {
         return this.status != null && this.status == UserStatus.ACTIVE;
+    }
+
+    public void activate() {
+        if (this.status != UserStatus.INACTIVE && this.status != UserStatus.SUSPENDED) {
+            throw new IllegalStateException("User is not in a state that can be activated");
+        }
+        this.status = UserStatus.ACTIVE;
+        this.setUpdatedAt(Instant.now().toEpochMilli());
+    }
+
+    public void suspend() {
+        if (this.status != UserStatus.ACTIVE) {
+            throw new IllegalStateException("Only active users can be suspended");
+        }
+        if (this.status == UserStatus.SUSPENDED) {
+            throw new IllegalStateException("User is already suspended");
+        }
+        this.status = UserStatus.SUSPENDED;
+        this.setUpdatedAt(Instant.now().toEpochMilli());
+    }
+
+    public void deactivate() {
+        if (this.status == UserStatus.INACTIVE || this.status == UserStatus.SUSPENDED) {
+            throw new IllegalStateException("User is already inactive");
+        }
+        this.status = UserStatus.INACTIVE;
+        this.setUpdatedAt(Instant.now().toEpochMilli());
     }
 
 }

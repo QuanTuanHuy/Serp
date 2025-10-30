@@ -5,7 +5,7 @@
 
 package serp.project.account.core.domain.dto.request;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,7 +19,7 @@ import serp.project.account.core.domain.entity.UserEntity;
 @Getter
 @Setter
 @Builder
-@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class UpdateUserInfoRequest {
     @Size(max = 100)
     private String firstName;

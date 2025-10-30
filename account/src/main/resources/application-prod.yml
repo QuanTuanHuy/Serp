@@ -97,7 +97,15 @@ app:
             - SYSTEM_MODERATOR
             - ORG_USER
           permissions:
+          
         - url-pattern: /api/v1/organizations/*/users
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+          permissions:
+        - url-pattern: /api/v1/organizations/*/users/*/status
           roles:
             - SUPER_ADMIN
             - SYSTEM_MODERATOR
