@@ -1,0 +1,4 @@
+app:
+  name: Sales Service
+  path: /sales
+  port: 8088
