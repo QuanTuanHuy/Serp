@@ -13,21 +13,20 @@ import (
 	"github.com/serp/ptm-task/src/kernel/utils"
 )
 
-type UserTagController struct {
-	userTagUseCase usecase.IUserTagUsecase
+type TagController struct {
+	tagUseCase usecase.ITagUsecase
 }
 
-func (u *UserTagController) CreateTag(c *gin.Context) {
+func (c2 *TagController) CreateTag(c *gin.Context) {
 	userID, exists := utils.GetUserIDFromContext(c)
 	if !exists {
 		return
 	}
-	var request request.CreateTagDTO
-	if !utils.ValidateAndBindJSON(c, &request) {
+	var req request.CreateTagDTO
+	if !utils.ValidateAndBindJSON(c, &req) {
 		return
 	}
-
-	tag, err := u.userTagUseCase.CreateUserTag(c, userID, &request)
+	tag, err := c2.tagUseCase.CreateTag(c, userID, &req)
 	if err != nil {
 		if err.Error() == constant.TagAlreadyInUse {
 			utils.AbortErrorHandleCustomMessage(c, constant.GeneralBadRequest, constant.TagAlreadyInUse)
@@ -39,7 +38,7 @@ func (u *UserTagController) CreateTag(c *gin.Context) {
 	utils.SuccessfulHandle(c, tag)
 }
 
-func (u *UserTagController) UpdateTag(c *gin.Context) {
+func (c2 *TagController) UpdateTag(c *gin.Context) {
 	userID, exists := utils.GetUserIDFromContext(c)
 	if !exists {
 		return
@@ -48,11 +47,11 @@ func (u *UserTagController) UpdateTag(c *gin.Context) {
 	if !valid {
 		return
 	}
-	var request request.UpdateTagDTO
-	if !utils.ValidateAndBindJSON(c, &request) {
+	var req request.UpdateTagDTO
+	if !utils.ValidateAndBindJSON(c, &req) {
 		return
 	}
-	tag, err := u.userTagUseCase.UpdateUserTag(c, userID, tagID, &request)
+	tag, err := c2.tagUseCase.UpdateTag(c, userID, tagID, &req)
 	if err != nil {
 		if err.Error() == constant.TagNotFound {
 			utils.AbortErrorHandleCustomMessage(c, constant.GeneralBadRequest, constant.TagNotFound)
@@ -66,7 +65,7 @@ func (u *UserTagController) UpdateTag(c *gin.Context) {
 	utils.SuccessfulHandle(c, tag)
 }
 
-func (u *UserTagController) DeleteTag(c *gin.Context) {
+func (c2 *TagController) DeleteTag(c *gin.Context) {
 	userID, exists := utils.GetUserIDFromContext(c)
 	if !exists {
 		return
@@ -75,7 +74,7 @@ func (u *UserTagController) DeleteTag(c *gin.Context) {
 	if !valid {
 		return
 	}
-	err := u.userTagUseCase.DeleteUserTag(c, userID, tagID)
+	err := c2.tagUseCase.DeleteTag(c, userID, tagID)
 	if err != nil {
 		if err.Error() == constant.TagNotFound {
 			utils.AbortErrorHandleCustomMessage(c, constant.GeneralNotFound, constant.TagNotFound)
@@ -89,12 +88,12 @@ func (u *UserTagController) DeleteTag(c *gin.Context) {
 	utils.SuccessfulHandle(c, "Tag deleted successfully")
 }
 
-func (u *UserTagController) GetTags(c *gin.Context) {
+func (c2 *TagController) GetTags(c *gin.Context) {
 	userID, exists := utils.GetUserIDFromContext(c)
 	if !exists {
 		return
 	}
-	tags, err := u.userTagUseCase.GetTagsByUserID(c, userID)
+	tags, err := c2.tagUseCase.GetTagsByUserID(c, userID)
 	if err != nil {
 		utils.AbortErrorHandleCustomMessage(c, constant.GeneralInternalServerError, err.Error())
 		return
@@ -102,7 +101,7 @@ func (u *UserTagController) GetTags(c *gin.Context) {
 	utils.SuccessfulHandle(c, tags)
 }
 
-func (u *UserTagController) GetTagByID(c *gin.Context) {
+func (c2 *TagController) GetTagByID(c *gin.Context) {
 	userID, exists := utils.GetUserIDFromContext(c)
 	if !exists {
 		return
@@ -111,7 +110,7 @@ func (u *UserTagController) GetTagByID(c *gin.Context) {
 	if !valid {
 		return
 	}
-	tag, err := u.userTagUseCase.GetTagByID(c, userID, tagID)
+	tag, err := c2.tagUseCase.GetTagByID(c, userID, tagID)
 	if err != nil {
 		if err.Error() == constant.TagNotFound {
 			utils.AbortErrorHandleCustomMessage(c, constant.GeneralNotFound, constant.TagNotFound)
@@ -123,8 +122,6 @@ func (u *UserTagController) GetTagByID(c *gin.Context) {
 	utils.SuccessfulHandle(c, tag)
 }
 
-func NewUserTagController(userTagUseCase usecase.IUserTagUsecase) *UserTagController {
-	return &UserTagController{
-		userTagUseCase: userTagUseCase,
-	}
+func NewTagController(tagUseCase usecase.ITagUsecase) *TagController {
+	return &TagController{tagUseCase: tagUseCase}
 }

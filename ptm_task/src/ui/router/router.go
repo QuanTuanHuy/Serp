@@ -25,7 +25,7 @@ type RegisterRoutersIn struct {
 	TaskController      *controller.TaskController
 	CommentController   *controller.CommentController
 	NoteController      *controller.NoteController
-	UserTagController   *controller.UserTagController
+	TagController       *controller.TagController
 
 	JWTMiddleware         *middleware.JWTMiddleware
 	InternalJWTMiddleware *middleware.InternalJWTMiddleware
@@ -87,11 +87,11 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 
 		tagV1 := requiredAuthV1.Group("/tags")
 		{
-			tagV1.POST("", p.UserTagController.CreateTag)
-			tagV1.GET("", p.UserTagController.GetTags)
-			tagV1.GET("/:id", p.UserTagController.GetTagByID)
-			tagV1.PUT("/:id", p.UserTagController.UpdateTag)
-			tagV1.DELETE("/:id", p.UserTagController.DeleteTag)
+			tagV1.POST("", p.TagController.CreateTag)
+			tagV1.GET("", p.TagController.GetTags)
+			tagV1.GET("/:id", p.TagController.GetTagByID)
+			tagV1.PUT("/:id", p.TagController.UpdateTag)
+			tagV1.DELETE("/:id", p.TagController.DeleteTag)
 		}
 	}
 }

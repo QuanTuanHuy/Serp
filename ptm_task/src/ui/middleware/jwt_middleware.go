@@ -63,6 +63,7 @@ func (m *JWTMiddleware) AuthenticateJWT() gin.HandlerFunc {
 
 		// Set user information in context
 		c.Set("userID", claims.UserID)
+		c.Set("tenantID", claims.TenantID)
 		c.Set("userEmail", claims.Email)
 		c.Set("userFullName", claims.FullName)
 		c.Set("preferredUsername", claims.PreferredUsername)
@@ -76,7 +77,6 @@ func (m *JWTMiddleware) AuthenticateJWT() gin.HandlerFunc {
 		}
 		c.Set("roles", roles)
 
-		// log.Info(c, "JWT authentication successful for user: ", claims.UserID, " (", claims.Email, ")")
 		c.Next()
 	}
 }
