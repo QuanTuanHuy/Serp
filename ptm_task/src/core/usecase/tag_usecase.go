@@ -94,7 +94,6 @@ func (u *TagUseCase) UpdateTag(ctx context.Context, userID int64, tagID int64, r
 		log.Error(ctx, "User ", userID, " does not have permission to update tag ", tagID)
 		return nil, errors.New(constant.UpdateTagForbidden)
 	}
-	// Reuse existing mapper for update semantics via alias
 	updated := mapper.UpdateTagMapper(tag, req)
 	result, err := u.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
 		ut, err := u.tagService.UpdateTag(ctx, tx, updated)

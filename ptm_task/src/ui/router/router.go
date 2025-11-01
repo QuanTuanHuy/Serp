@@ -92,6 +92,14 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 			tagV1.GET("/:id", p.TagController.GetTagByID)
 			tagV1.PUT("/:id", p.TagController.UpdateTag)
 			tagV1.DELETE("/:id", p.TagController.DeleteTag)
+			tagV1.POST("/:id/attach", p.TagController.AttachTag)
+			tagV1.POST("/:id/attach/batch", p.TagController.AttachTagBatch)
+			tagV1.POST("/:id/detach", p.TagController.DetachTag)
+		}
+
+		resourcesV1 := requiredAuthV1.Group("/resources")
+		{
+			resourcesV1.GET("/:resourceType/:resourceId/tags", p.TagController.GetTagsForResource)
 		}
 	}
 }
