@@ -7,6 +7,11 @@ package entity
 
 import "github.com/serp/ptm-task/src/core/domain/enum"
 
+type PriorityDimension struct {
+	Key   string `json:"key"`
+	Value int32  `json:"value"`
+}
+
 type TaskEntity struct {
 	BaseEntity
 	Title        string            `json:"title"`
@@ -21,4 +26,6 @@ type TaskEntity struct {
 	UserID       int64             `json:"userId"`
 	ParentTaskID *int64            `json:"parentTaskId"`
 	Children     []*TaskEntity     `json:"children"`
+	PriorityScore *float64            `json:"priorityScore"`
+	PriorityDims  []PriorityDimension `json:"priorityDimensions"`
 }

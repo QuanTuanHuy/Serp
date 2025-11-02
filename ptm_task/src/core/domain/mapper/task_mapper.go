@@ -15,6 +15,13 @@ import (
 
 func ToTaskEntity(createTask *request.CreateTaskDTO) *entity.TaskEntity {
 	priorities := utils.StringSliceFromPointers(createTask.Priority)
+	// map priority dimensions
+	dims := make([]entity.PriorityDimension, 0)
+	if createTask.PriorityDimensions != nil {
+		for _, d := range createTask.PriorityDimensions {
+			dims = append(dims, entity.PriorityDimension{Key: d.Key, Value: d.Value})
+		}
+	}
 	return &entity.TaskEntity{
 		Title:        createTask.Title,
 		Description:  utils.StringValue(createTask.Description),
@@ -26,6 +33,7 @@ func ToTaskEntity(createTask *request.CreateTaskDTO) *entity.TaskEntity {
 		ActiveStatus: enum.Active,
 		GroupTaskID:  createTask.GroupTaskID,
 		ParentTaskID: createTask.ParentTaskID,
+		PriorityDims: dims,
 	}
 }
 

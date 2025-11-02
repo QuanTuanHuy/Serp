@@ -8,6 +8,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/golibs-starter/golib/log"
@@ -17,6 +18,7 @@ import (
 	"github.com/serp/ptm-task/src/core/domain/entity"
 	"github.com/serp/ptm-task/src/core/domain/enum"
 	"github.com/serp/ptm-task/src/core/domain/mapper"
+	prio "github.com/serp/ptm-task/src/core/domain/priority"
 	port2 "github.com/serp/ptm-task/src/core/port/client"
 	port "github.com/serp/ptm-task/src/core/port/store"
 	"gorm.io/gorm"
@@ -109,6 +111,31 @@ func (t *TaskService) CreateTask(ctx context.Context, tx *gorm.DB, userID int64,
 			}
 			cur = next
 		}
+	}
+
+	// Compute priority score from dimensions using system + optional user overrides
+	if len(task.PriorityDims) > 0 {
+		sys := prio.DefaultWeights()
+		userWeights := map[string]float64{}
+		if t.redisPort != nil {
+			key := fmt.Sprintf("priority:weights:user:%d", userID)
+			m, err := t.redisPort.GetHSetFromRedis(ctx, key)
+			if err == nil && len(m) > 0 {
+				for k, v := range m {
+					if f, perr := strconv.ParseFloat(v, 64); perr == nil {
+						userWeights[k] = f
+					}
+				}
+			}
+		}
+		merged := prio.MergeWeights(sys, userWeights)
+		pol := &prio.Policy{UserID: userID, Weights: merged}
+		dims := make([]prio.Dimension, 0, len(task.PriorityDims))
+		for _, d := range task.PriorityDims {
+			dims = append(dims, prio.Dimension{Key: d.Key, Value: d.Value})
+		}
+		score := prio.ScoreNormalized(dims, pol)
+		task.PriorityScore = &score
 	}
 
 	task, err := t.taskPort.CreateTask(ctx, tx, task)

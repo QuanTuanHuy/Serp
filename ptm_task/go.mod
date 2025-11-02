@@ -13,6 +13,7 @@ require (
 	github.com/golibs-starter/golib-gin v1.0.0
 	github.com/redis/go-redis/v9 v9.0.4
 	go.uber.org/fx v1.20.0
+	gorm.io/datatypes v1.2.0
 	gorm.io/gorm v1.25.0
 )
 
