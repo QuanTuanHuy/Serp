@@ -19,4 +19,6 @@ type TaskEntity struct {
 	ActiveStatus enum.ActiveStatus `json:"activeStatus"`
 	GroupTaskID  int64             `json:"groupTaskId"`
 	UserID       int64             `json:"userId"`
+	ParentTaskID *int64            `json:"parentTaskId"`
+	Children     []*TaskEntity     `json:"children"`
 }

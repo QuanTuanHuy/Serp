@@ -23,6 +23,7 @@ type ITaskUseCase interface {
 	CreateTask(ctx context.Context, userID int64, request *request.CreateTaskDTO) (*entity.TaskEntity, error)
 	UpdateTask(ctx context.Context, userID, taskID int64, request *request.UpdateTaskDTO) (*entity.TaskEntity, error)
 	DeleteTask(ctx context.Context, userID, taskID int64) error
+	SetParentTask(ctx context.Context, userID, taskID int64, req *request.SetParentTaskDTO) (*entity.TaskEntity, error)
 }
 
 type TaskUseCase struct {
@@ -124,6 +125,20 @@ func (t *TaskUseCase) DeleteTask(ctx context.Context, userID int64, taskID int64
 		}
 		return nil
 	})
+}
+
+func (t *TaskUseCase) SetParentTask(ctx context.Context, userID, taskID int64, req *request.SetParentTaskDTO) (*entity.TaskEntity, error) {
+	result, err := t.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
+		updated, err := t.taskService.SetParentTask(ctx, tx, userID, taskID, req.ParentTaskID)
+		if err != nil {
+			return nil, err
+		}
+		return updated, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*entity.TaskEntity), nil
 }
 
 func NewTaskUseCase(taskService service.ITaskService,

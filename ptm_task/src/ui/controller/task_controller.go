@@ -33,6 +33,8 @@ func (tc *TaskController) CreateTask(c *gin.Context) {
 	if err != nil {
 		if err.Error() == constant.GroupTaskNotFound {
 			utils.AbortErrorHandleCustomMessage(c, constant.GeneralBadRequest, constant.GroupTaskNotFound)
+		} else if err.Error() == constant.ParentTaskNotFound {
+			utils.AbortErrorHandleCustomMessage(c, constant.GeneralBadRequest, constant.ParentTaskNotFound)
 		} else {
 			utils.AbortErrorHandleCustomMessage(c, constant.GeneralInternalServerError, err.Error())
 		}
@@ -139,6 +141,41 @@ func (tc *TaskController) GetCommentsByTaskID(c *gin.Context) {
 		return
 	}
 	utils.SuccessfulHandle(c, comments)
+}
+
+func (tc *TaskController) SetParentTask(c *gin.Context) {
+	userID, exists := utils.GetUserIDFromContext(c)
+	if !exists {
+		return
+	}
+	taskID, valid := utils.ValidateAndParseID(c, "id")
+	if !valid {
+		return
+	}
+
+	var req request.SetParentTaskDTO
+	if !utils.ValidateAndBindJSON(c, &req) {
+		return
+	}
+
+	updated, err := tc.taskUseCase.SetParentTask(c, userID, taskID, &req)
+	if err != nil {
+		switch err.Error() {
+		case constant.TaskNotFound:
+			utils.AbortErrorHandleCustomMessage(c, constant.GeneralNotFound, constant.TaskNotFound)
+			return
+		case constant.ParentTaskNotFound:
+			utils.AbortErrorHandleCustomMessage(c, constant.GeneralBadRequest, constant.ParentTaskNotFound)
+			return
+		case constant.UpdateTaskForbidden:
+			utils.AbortErrorHandleCustomMessage(c, constant.GeneralForbidden, constant.UpdateTaskForbidden)
+			return
+		default:
+			utils.AbortErrorHandleCustomMessage(c, constant.GeneralBadRequest, err.Error())
+			return
+		}
+	}
+	utils.SuccessfulHandle(c, updated)
 }
 
 func NewTaskController(taskUseCase usecase.ITaskUseCase, commentUseCase usecase.ICommentUseCase) *TaskController {

@@ -21,6 +21,7 @@ const (
 	GetGroupTaskForbidden = "you do not have permission to access this group task"
 
 	TaskNotFound        = "task not found"
+	ParentTaskNotFound  = "parent task not found"
 	GetTaskForbidden    = "you do not have permission to access this task"
 	UpdateTaskForbidden = "you do not have permission to update this task"
 	DeleteTaskForbidden = "you do not have permission to delete this task"

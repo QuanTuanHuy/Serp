@@ -47,6 +47,7 @@ func ToTaskModel(task *entity.TaskEntity) *model.TaskModel {
 		ActiveStatus: string(task.ActiveStatus),
 		GroupTaskID:  task.GroupTaskID,
 		UserID:       task.UserID,
+		ParentTaskID: task.ParentTaskID,
 	}
 }
 
@@ -86,6 +87,7 @@ func ToTaskEntity(taskModel *model.TaskModel) *entity.TaskEntity {
 		ActiveStatus: enum.ActiveStatus(taskModel.ActiveStatus),
 		GroupTaskID:  taskModel.GroupTaskID,
 		UserID:       taskModel.UserID,
+		ParentTaskID: taskModel.ParentTaskID,
 	}
 }
 

@@ -19,6 +19,7 @@ type TaskModel struct {
 	ActiveStatus string     `gorm:"default:ACTIVE" json:"activeStatus"`
 	GroupTaskID  int64      `gorm:"not null;index" json:"groupTaskId"`
 	UserID       int64      `gorm:"not null;index" json:"userId"`
+	ParentTaskID *int64     `gorm:"index" json:"parentTaskId"`
 }
 
 func (TaskModel) TableName() string {

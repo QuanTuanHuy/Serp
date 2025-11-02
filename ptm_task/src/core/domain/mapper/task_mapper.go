@@ -25,6 +25,7 @@ func ToTaskEntity(createTask *request.CreateTaskDTO) *entity.TaskEntity {
 		Duration:     utils.Float64ValueWithDefault(createTask.Duration, 1),
 		ActiveStatus: enum.Active,
 		GroupTaskID:  createTask.GroupTaskID,
+		ParentTaskID: createTask.ParentTaskID,
 	}
 }
 
