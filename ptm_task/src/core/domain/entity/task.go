@@ -14,18 +14,18 @@ type PriorityDimension struct {
 
 type TaskEntity struct {
 	BaseEntity
-	Title        string            `json:"title"`
-	Description  string            `json:"description"`
-	Priority     []enum.Priority   `json:"priority"`
-	Status       enum.Status       `json:"status"`
-	StartDate    *int64            `json:"startDate"`
-	Deadline     *int64            `json:"deadline"`
-	Duration     float64           `json:"duration"`
-	ActiveStatus enum.ActiveStatus `json:"activeStatus"`
-	GroupTaskID  int64             `json:"groupTaskId"`
-	UserID       int64             `json:"userId"`
-	ParentTaskID *int64            `json:"parentTaskId"`
-	Children     []*TaskEntity     `json:"children"`
+	Title         string              `json:"title"`
+	Description   string              `json:"description"`
+	Priority      []enum.Priority     `json:"priority"`
+	Status        enum.Status         `json:"status"`
+	StartDate     *int64              `json:"startDate"`
+	Deadline      *int64              `json:"deadline"`
+	Duration      float64             `json:"duration"`
+	ActiveStatus  enum.ActiveStatus   `json:"activeStatus"`
+	GroupTaskID   int64               `json:"groupTaskId"`
+	UserID        int64               `json:"userId"`
+	ParentTaskID  *int64              `json:"parentTaskId"`
+	Children      []*TaskEntity       `json:"children"`
 	PriorityScore *float64            `json:"priorityScore"`
 	PriorityDims  []PriorityDimension `json:"priorityDimensions"`
 }

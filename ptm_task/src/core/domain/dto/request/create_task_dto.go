@@ -6,7 +6,7 @@ Description: Part of Serp Project
 package request
 
 type PriorityDimensionDTO struct {
-	Key   string `json:"key" validate:"required"`
+	Key   string `json:"key" validate:"required,oneof=urgency importance effort"`
 	Value int32  `json:"value" validate:"required"`
 }
 

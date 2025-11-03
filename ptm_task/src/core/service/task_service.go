@@ -81,7 +81,6 @@ func (t *TaskService) CreateTask(ctx context.Context, tx *gorm.DB, userID int64,
 
 	log.Info(ctx, "Parent task id: ", task.ParentTaskID)
 
-	// Validate parent
 	if task.ParentTaskID != nil {
 		parent, err := t.taskPort.GetTaskByID(ctx, *task.ParentTaskID)
 		if err != nil {
@@ -113,30 +112,7 @@ func (t *TaskService) CreateTask(ctx context.Context, tx *gorm.DB, userID int64,
 		}
 	}
 
-	// Compute priority score from dimensions using system + optional user overrides
-	if len(task.PriorityDims) > 0 {
-		sys := prio.DefaultWeights()
-		userWeights := map[string]float64{}
-		if t.redisPort != nil {
-			key := fmt.Sprintf("priority:weights:user:%d", userID)
-			m, err := t.redisPort.GetHSetFromRedis(ctx, key)
-			if err == nil && len(m) > 0 {
-				for k, v := range m {
-					if f, perr := strconv.ParseFloat(v, 64); perr == nil {
-						userWeights[k] = f
-					}
-				}
-			}
-		}
-		merged := prio.MergeWeights(sys, userWeights)
-		pol := &prio.Policy{UserID: userID, Weights: merged}
-		dims := make([]prio.Dimension, 0, len(task.PriorityDims))
-		for _, d := range task.PriorityDims {
-			dims = append(dims, prio.Dimension{Key: d.Key, Value: d.Value})
-		}
-		score := prio.ScoreNormalized(dims, pol)
-		task.PriorityScore = &score
-	}
+	t.MapPriorityScore(ctx, userID, task)
 
 	task, err := t.taskPort.CreateTask(ctx, tx, task)
 	if err != nil {
@@ -154,11 +130,33 @@ func (t *TaskService) UpdateTask(ctx context.Context, tx *gorm.DB, userID, taskI
 	}
 
 	task = mapper.UpdateTaskMapper(task, request)
+	t.MapPriorityScore(ctx, userID, task)
 	task, err = t.taskPort.UpdateTask(ctx, tx, taskID, task)
 	if err != nil {
 		return nil, err
 	}
 
+	return task, nil
+}
+
+func (t *TaskService) MapPriorityScore(ctx context.Context, userID int64, task *entity.TaskEntity) (*entity.TaskEntity, error) {
+	if len(task.PriorityDims) > 0 {
+		sys := prio.DefaultWeights()
+		userWeights := map[string]float64{}
+		key := fmt.Sprintf(constant.UserPriorityWeights, userID)
+		m, err := t.redisPort.GetHSetFromRedis(ctx, key)
+		if err == nil && len(m) > 0 {
+			for k, v := range m {
+				if f, perr := strconv.ParseFloat(v, 64); perr == nil {
+					userWeights[k] = f
+				}
+			}
+		}
+		merged := prio.MergeWeights(sys, userWeights)
+		pol := &prio.Policy{UserID: userID, Weights: merged}
+		score := prio.ScoreNormalized(task.PriorityDims, pol)
+		task.PriorityScore = &score
+	}
 	return task, nil
 }
 
