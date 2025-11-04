@@ -214,8 +214,8 @@ public class MilpScheduler {
                 Integer i = idxById.get(dep);
                 if (i == null)
                     continue; // dep outside scope
-                // gating
-                MPConstraint gate = solver.makeConstraint(0, 0, "gate_" + i + "_to_" + j);
+                // gating: sum_t s_jt - sum_t s_it <= 0  (child can be 1 only if parent is 1)
+                MPConstraint gate = solver.makeConstraint(-MPSolver.infinity(), 0, "gate_" + i + "_to_" + j);
                 for (int t = 0; t < T; t++) {
                     gate.setCoefficient(sVar[j][t], 1);
                     gate.setCoefficient(sVar[i][t], -1);

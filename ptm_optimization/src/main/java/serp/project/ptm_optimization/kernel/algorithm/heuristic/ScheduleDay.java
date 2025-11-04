@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import org.springframework.data.util.Pair;
@@ -308,8 +309,15 @@ public class ScheduleDay {
         List<Assignment> best = new ArrayList<>(assign);
         double bestScore = totalUtility(best);
         Instant deadline = Instant.now().plus(budget);
-
-        Map<Long, Window> winByDate = wins.stream().collect(Collectors.toMap(Window::getDateMs, x -> x, (a, b) -> a));
+        Map<Long, List<Window>> winsByDate = new HashMap<>();
+        for (Window win : wins) {
+            winsByDate.computeIfAbsent(win.getDateMs(), k -> new ArrayList<>()).add(win);
+        }
+        for (List<Window> wl : winsByDate.values()) {
+            wl.sort((wa, wb) -> Integer.compare(
+                    Optional.ofNullable(wa.getStartMin()).orElse(0),
+                    Optional.ofNullable(wb.getStartMin()).orElse(0)));
+        }
         Map<Long, Integer> idxByTask = new HashMap<>();
         for (int i = 0; i < best.size(); i++)
             idxByTask.put(best.get(i).getTaskId(), i);
@@ -321,14 +329,28 @@ public class ScheduleDay {
             }
         }
 
+        BiFunction<Long, int[], Boolean> withinAnyWindow = (date, se) -> {
+            List<Window> dayWins = winsByDate.get(date);
+            if (dayWins == null || dayWins.isEmpty())
+                return false;
+            int s = se[0], e2 = se[1];
+            for (Window win : dayWins) {
+                int wS = Optional.ofNullable(win.getStartMin()).orElse(0);
+                int wE = Optional.ofNullable(win.getEndMin()).orElse(Integer.MAX_VALUE);
+                if (s >= wS && e2 <= wE)
+                    return true;
+            }
+            return false;
+        };
+
         boolean improved = true;
         while (improved && Instant.now().isBefore(deadline)) {
             improved = false;
             // Shift moves
             for (int i = 0; i < best.size() && Instant.now().isBefore(deadline); i++) {
                 Assignment a = best.get(i);
-                Window win = winByDate.get(a.getDateMs());
-                if (win == null)
+                List<Window> dayWins = winsByDate.get(a.getDateMs());
+                if (dayWins == null || dayWins.isEmpty())
                     continue;
                 int dur = Optional.ofNullable(a.getEndMin()).orElse(0) - Optional.ofNullable(a.getStartMin()).orElse(0);
 
@@ -339,9 +361,7 @@ public class ScheduleDay {
                     int ns = Optional.ofNullable(a.getStartMin()).orElse(0) + dir * step;
                     while (Instant.now().isBefore(deadline)) {
                         int ne = ns + dur;
-                        int wS = Optional.ofNullable(win.getStartMin()).orElse(0);
-                        int wE = Optional.ofNullable(win.getEndMin()).orElse(Integer.MAX_VALUE);
-                        if (ns < wS || ne > wE)
+                        if (!withinAnyWindow.apply(a.getDateMs(), new int[] { ns, ne }))
                             break;
                         boolean violate = false;
                         for (Long d : deps.getOrDefault(a.getTaskId(), List.of())) {
@@ -400,7 +420,6 @@ public class ScheduleDay {
                     }
                     // If improved, re-fetch references for next iteration
                     if (improved) {
-                        win = winByDate.get(a.getDateMs());
                         dur = Optional.ofNullable(a.getEndMin()).orElse(0)
                                 - Optional.ofNullable(a.getStartMin()).orElse(0);
                     }
@@ -422,12 +441,14 @@ public class ScheduleDay {
                     Assignment b2 = Assignment.builder()
                             .taskId(b.getTaskId()).dateMs(b.getDateMs()).startMin(a.getStartMin()).endMin(a.getEndMin())
                             .build();
-                    Window win = winByDate.get(a2.getDateMs());
-                    int wS = Optional.ofNullable(win.getStartMin()).orElse(0);
-                    int wE = Optional.ofNullable(win.getEndMin()).orElse(Integer.MAX_VALUE);
-                    if (a2.getStartMin() < wS || a2.getEndMin() > wE)
+                    // both swapped placements must fit within some window on that date
+                    if (!withinAnyWindow.apply(a2.getDateMs(),
+                            new int[] { Optional.ofNullable(a2.getStartMin()).orElse(0),
+                                    Optional.ofNullable(a2.getEndMin()).orElse(0) }))
                         continue;
-                    if (b2.getStartMin() < wS || b2.getEndMin() > wE)
+                    if (!withinAnyWindow.apply(b2.getDateMs(),
+                            new int[] { Optional.ofNullable(b2.getStartMin()).orElse(0),
+                                    Optional.ofNullable(b2.getEndMin()).orElse(0) }))
                         continue;
 
                     TaskInput ta = tasks.get(a2.getTaskId());
