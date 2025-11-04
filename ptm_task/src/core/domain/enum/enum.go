@@ -30,3 +30,11 @@ const (
 	High   Priority = "HIGH"
 	Star   Priority = "STAR"
 )
+
+type ResourceType string
+
+const (
+	ResourceProject ResourceType = "PROJECT"
+	ResourceTask    ResourceType = "TASK"
+	ResourceNote    ResourceType = "NOTE"
+)

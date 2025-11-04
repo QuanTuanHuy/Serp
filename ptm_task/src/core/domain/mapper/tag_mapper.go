@@ -11,18 +11,19 @@ import (
 	"github.com/serp/ptm-task/src/kernel/utils"
 )
 
-func CreateUserTagMapper(req *request.CreateTagDTO, userID int64) *entity.UserTagEntity {
-	return &entity.UserTagEntity{
+func CreateTagMapper(req *request.CreateTagDTO, userID int64) *entity.TagEntity {
+	w := utils.Float64ValueWithDefault(req.Weight, 1)
+	return &entity.TagEntity{
 		UserID: userID,
 		Name:   req.Name,
 		Color:  utils.StringValueWithDefault(req.Color, "indigo"),
-		Weight: utils.Float64ValueWithDefault(req.Weight, 1),
+		Weight: utils.Float64Ptr(w),
 	}
 }
 
-func UpdateUserTagMapper(tag *entity.UserTagEntity, req *request.UpdateTagDTO) *entity.UserTagEntity {
+func UpdateTagMapper(tag *entity.TagEntity, req *request.UpdateTagDTO) *entity.TagEntity {
 	tag.Name = req.Name
 	tag.Color = req.Color
-	tag.Weight = req.Weight
+	tag.Weight = utils.Float64Ptr(req.Weight)
 	return tag
 }

@@ -5,7 +5,7 @@ Description: Part of Serp Project
 
 package model
 
-type UserTagModel struct {
+type TagModel struct {
 	BaseModel
 	Name         string  `gorm:"not null;size:255" json:"name"`
 	Color        string  `gorm:"not null;size:50" json:"color"`
@@ -14,6 +14,6 @@ type UserTagModel struct {
 	UserID       int64   `gorm:"not null;index" json:"userId"`
 }
 
-func (UserTagModel) TableName() string {
-	return "user_tags"
+func (TagModel) TableName() string {
+	return "tags"
 }

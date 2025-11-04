@@ -13,6 +13,7 @@ import (
 	"github.com/serp/ptm-task/src/core/domain/enum"
 	"github.com/serp/ptm-task/src/infrastructure/store/model"
 	"github.com/serp/ptm-task/src/kernel/utils"
+	"gorm.io/datatypes"
 )
 
 func ToTaskModel(task *entity.TaskEntity) *model.TaskModel {
@@ -33,20 +34,28 @@ func ToTaskModel(task *entity.TaskEntity) *model.TaskModel {
 		deadline = &deadlineTime
 	}
 
+	var dimsBytes []byte
+	if task.PriorityDims != nil {
+		dimsBytes, _ = json.Marshal(task.PriorityDims)
+	}
+
 	return &model.TaskModel{
 		BaseModel: model.BaseModel{
 			ID: task.ID,
 		},
-		Title:        task.Title,
-		Description:  task.Description,
-		Priority:     priorityStr,
-		Status:       string(task.Status),
-		StartDate:    startDate,
-		Deadline:     deadline,
-		Duration:     task.Duration,
-		ActiveStatus: string(task.ActiveStatus),
-		GroupTaskID:  task.GroupTaskID,
-		UserID:       task.UserID,
+		Title:         task.Title,
+		Description:   task.Description,
+		Priority:      priorityStr,
+		Status:        string(task.Status),
+		StartDate:     startDate,
+		PriorityScore: task.PriorityScore,
+		PriorityDims:  datatypes.JSON(dimsBytes),
+		Deadline:      deadline,
+		Duration:      task.Duration,
+		ActiveStatus:  string(task.ActiveStatus),
+		GroupTaskID:   task.GroupTaskID,
+		UserID:        task.UserID,
+		ParentTaskID:  task.ParentTaskID,
 	}
 }
 
@@ -70,22 +79,30 @@ func ToTaskEntity(taskModel *model.TaskModel) *entity.TaskEntity {
 		deadline = &deadlineUnix
 	}
 
+	var dims []entity.PriorityDimension
+	if len(taskModel.PriorityDims) > 0 {
+		_ = json.Unmarshal([]byte(taskModel.PriorityDims), &dims)
+	}
+
 	return &entity.TaskEntity{
 		BaseEntity: entity.BaseEntity{
 			ID:        taskModel.ID,
 			CreatedAt: taskModel.CreatedAt.UnixMilli(),
 			UpdatedAt: taskModel.UpdatedAt.UnixMilli(),
 		},
-		Title:        taskModel.Title,
-		Description:  taskModel.Description,
-		Priority:     utils.ToPriorityEnum(priority),
-		Status:       enum.Status(taskModel.Status),
-		StartDate:    startDate,
-		Deadline:     deadline,
-		Duration:     taskModel.Duration,
-		ActiveStatus: enum.ActiveStatus(taskModel.ActiveStatus),
-		GroupTaskID:  taskModel.GroupTaskID,
-		UserID:       taskModel.UserID,
+		Title:         taskModel.Title,
+		Description:   taskModel.Description,
+		Priority:      utils.ToPriorityEnum(priority),
+		Status:        enum.Status(taskModel.Status),
+		StartDate:     startDate,
+		PriorityScore: taskModel.PriorityScore,
+		PriorityDims:  dims,
+		Deadline:      deadline,
+		Duration:      taskModel.Duration,
+		ActiveStatus:  enum.ActiveStatus(taskModel.ActiveStatus),
+		GroupTaskID:   taskModel.GroupTaskID,
+		UserID:        taskModel.UserID,
+		ParentTaskID:  taskModel.ParentTaskID,
 	}
 }
 
