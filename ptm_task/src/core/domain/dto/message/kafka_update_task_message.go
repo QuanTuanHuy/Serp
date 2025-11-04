@@ -15,6 +15,7 @@ type KafkaUpdateTaskMessage struct {
 	Duration       float64  `json:"duration"`
 	Status         string   `json:"status"`
 	Priority       []string `json:"priority"`
+	PriorityScore  *float64 `json:"priorityScore"`
 	TaskOrder      int32    `json:"taskOrder"`
 	StopTime       float64  `json:"stopTime"`
 	ScheduleTaskID int64    `json:"scheduleTaskId"`

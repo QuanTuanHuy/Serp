@@ -30,6 +30,7 @@ func NewJWTUtils(keycloakProps *properties.KeycloakProperties, keycloakJwksUtils
 
 type Claims struct {
 	UserID            int64                  `json:"uid"`
+	TenantID          int64                  `json:"tid"`
 	Email             string                 `json:"email"`
 	FullName          string                 `json:"name"`
 	PreferredUsername string                 `json:"preferred_username"`
@@ -98,6 +99,14 @@ func (j *JWTUtils) ExtractUserID(tokenString string) (int64, error) {
 		return 0, err
 	}
 	return claims.UserID, nil
+}
+
+func (j *JWTUtils) ExtractTenantID(tokenString string) (int64, error) {
+	claims, err := j.ValidateToken(tokenString)
+	if err != nil {
+		return 0, err
+	}
+	return claims.TenantID, nil
 }
 
 func (j *JWTUtils) ExtractEmail(tokenString string) (string, error) {

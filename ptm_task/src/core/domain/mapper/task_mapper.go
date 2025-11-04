@@ -15,6 +15,12 @@ import (
 
 func ToTaskEntity(createTask *request.CreateTaskDTO) *entity.TaskEntity {
 	priorities := utils.StringSliceFromPointers(createTask.Priority)
+	dims := make([]entity.PriorityDimension, 0)
+	if createTask.PriorityDimensions != nil {
+		for _, d := range createTask.PriorityDimensions {
+			dims = append(dims, entity.PriorityDimension{Key: d.Key, Value: d.Value})
+		}
+	}
 	return &entity.TaskEntity{
 		Title:        createTask.Title,
 		Description:  utils.StringValue(createTask.Description),
@@ -25,10 +31,18 @@ func ToTaskEntity(createTask *request.CreateTaskDTO) *entity.TaskEntity {
 		Duration:     utils.Float64ValueWithDefault(createTask.Duration, 1),
 		ActiveStatus: enum.Active,
 		GroupTaskID:  createTask.GroupTaskID,
+		ParentTaskID: createTask.ParentTaskID,
+		PriorityDims: dims,
 	}
 }
 
 func UpdateTaskMapper(task *entity.TaskEntity, updateTask *request.UpdateTaskDTO) *entity.TaskEntity {
+	dims := make([]entity.PriorityDimension, 0)
+	if updateTask.PriorityDimensions != nil {
+		for _, d := range updateTask.PriorityDimensions {
+			dims = append(dims, entity.PriorityDimension{Key: d.Key, Value: d.Value})
+		}
+	}
 	task.Title = updateTask.Title
 	task.Description = updateTask.Description
 	task.StartDate = &updateTask.StartDate
@@ -39,22 +53,26 @@ func UpdateTaskMapper(task *entity.TaskEntity, updateTask *request.UpdateTaskDTO
 	if updateTask.ActiveStatus != nil {
 		task.ActiveStatus = enum.ActiveStatus(*updateTask.ActiveStatus)
 	}
+	if updateTask.PriorityDimensions != nil {
+		task.PriorityDims = dims
+	}
 	return task
 }
 
 func ToKafkaCreateTaskMessage(task *entity.TaskEntity) *message.KafkaCreateTaskMessage {
 	return &message.KafkaCreateTaskMessage{
-		GroupTaskID:  task.GroupTaskID,
-		TaskID:       task.ID,
-		UserID:       task.UserID,
-		Title:        task.Title,
-		Description:  task.Description,
-		Priority:     task.Priority,
-		Status:       task.Status,
-		StartDate:    task.StartDate,
-		Deadline:     task.Deadline,
-		Duration:     task.Duration,
-		ActiveStatus: task.ActiveStatus,
+		GroupTaskID:   task.GroupTaskID,
+		TaskID:        task.ID,
+		UserID:        task.UserID,
+		Title:         task.Title,
+		Description:   task.Description,
+		Priority:      task.Priority,
+		PriorityScore: task.PriorityScore,
+		Status:        task.Status,
+		StartDate:     task.StartDate,
+		Deadline:      task.Deadline,
+		Duration:      task.Duration,
+		ActiveStatus:  task.ActiveStatus,
 	}
 }
 
@@ -65,6 +83,7 @@ func ToKafkaUpdateTaskMessage(task *entity.TaskEntity, updateTask *request.Updat
 		Title:          task.Title,
 		Description:    task.Description,
 		Priority:       utils.ToPriorityString(task.Priority),
+		PriorityScore:  task.PriorityScore,
 		Status:         string(task.Status),
 		StartDate:      *task.StartDate,
 		Deadline:       *task.Deadline,

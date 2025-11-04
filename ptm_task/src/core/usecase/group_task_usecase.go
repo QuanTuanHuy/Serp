@@ -42,7 +42,7 @@ func (g *GroupTaskUseCase) GetGroupTaskByID(ctx context.Context, userID, groupTa
 	if project.OwnerID != userID {
 		return nil, errors.New(constant.GetGroupTaskForbidden)
 	}
-	tasks, err := g.taskService.GetTasksByGroupTaskID(ctx, groupTaskID)
+	tasks, err := g.taskService.GetTaskHierarchyByGroupTaskID(ctx, groupTaskID)
 	if err != nil {
 		log.Error(ctx, "Failed to get tasks for group task ID ", groupTaskID, " error: ", err)
 		return nil, err

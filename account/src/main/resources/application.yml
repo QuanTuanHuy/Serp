@@ -160,13 +160,6 @@ app:
             - SYSTEM_MODERATOR
           permissions:
 
-        # ==================== GROUP CONTROLLER ====================
-        - url-pattern: /api/v1/groups/**
-          roles:
-            - SUPER_ADMIN
-            - SYSTEM_MODERATOR
-          permissions:
-
         # ==================== MODULE CONTROLLER ====================
         - url-pattern: /api/v1/modules/my-modules
           roles:

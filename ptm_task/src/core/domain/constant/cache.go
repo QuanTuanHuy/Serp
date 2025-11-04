@@ -11,6 +11,8 @@ const (
 )
 
 const (
+	UserPriorityWeights = "ptm:users:%d:priority:weights"
+
 	ProjectsByUserID      = "ptm:users:%d:projects"
 	GroupTasksByProjectID = "ptm:projects:%d:group-tasks"
 )
