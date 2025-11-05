@@ -1,0 +1,22 @@
+app:
+  logging:
+    level: warn
+  datasource:
+    driver: postgres
+    host: ${DB_HOST}
+    port: ${DB_PORT:-5432}
+    database: ${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    logLevel: warn
+  redis:
+    host: ${REDIS_HOST}
+    port: ${REDIS_PORT:-6379}
+  keycloak:
+    url: ${KEYCLOAK_URL}
+    realm: serp
+    client-id: serp-ptm
+    client-secret: ${CLIENT_SECRET}
+    jwk-set-uri: ${KEYCLOAK_JWK_SET_URI}
+    expected-issuer: ${KEYCLOAK_EXPECTED_ISSUER}
+    expected-audience: ${KEYCLOAK_EXPECTED_AUDIENCE}
