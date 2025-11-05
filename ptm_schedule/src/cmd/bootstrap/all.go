@@ -82,6 +82,10 @@ func All() fx.Option {
 		fx.Provide(controller.NewSchedulePlanController),
 		fx.Provide(controller.NewScheduleGroupController),
 		fx.Provide(controller.NewScheduleTaskController),
+		fx.Provide(controller.NewAvailabilityCalendarController),
+		fx.Provide(controller.NewCalendarExceptionController),
+		fx.Provide(controller.NewScheduleWindowController),
+		fx.Provide(controller.NewScheduleEventController),
 
 		// Provide JWT components
 		fx.Provide(utils.NewKeycloakJwksUtils),

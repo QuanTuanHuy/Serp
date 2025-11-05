@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/serp/ptm-schedule/src/core/domain/constant"
 	dom "github.com/serp/ptm-schedule/src/core/domain/entity"
 	port "github.com/serp/ptm-schedule/src/core/port/store"
 	"gorm.io/gorm"
@@ -35,17 +36,17 @@ func (s *AvailabilityCalendarService) GetByUser(ctx context.Context, userID int6
 func (s *AvailabilityCalendarService) ValidateItems(userID int64, items []*dom.AvailabilityCalendarEntity) error {
 	for _, it := range items {
 		if !it.BelongsToUser(userID) {
-			return errors.New("userId mismatch in availability item")
+			return errors.New(constant.AvailabilityUserIDMismatch)
 		}
 		if !it.IsValid() {
-			return errors.New("invalid availability item: dayOfWeek must be 0-6, time range must be valid")
+			return errors.New(constant.AvailabilityInvalidItem)
 		}
 	}
 
 	for i := 0; i < len(items); i++ {
 		for j := i + 1; j < len(items); j++ {
-			if items[i].ID != items[j].ID && items[i].OverlapsWith(items[j]) {
-				return errors.New("availability items overlap: same day of week with overlapping time ranges")
+			if items[i].OverlapsWith(items[j]) {
+				return errors.New(constant.AvailabilityItemsOverlap)
 			}
 		}
 	}
@@ -65,7 +66,7 @@ func (s *AvailabilityCalendarService) ValidateNoOverlapWithExisting(ctx context.
 				continue
 			}
 			if newItem.OverlapsWith(existingItem) {
-				return errors.New("availability overlaps with existing schedule")
+				return errors.New(constant.AvailabilityOverlapWithExisting)
 			}
 		}
 	}

@@ -19,6 +19,12 @@ type ScheduleWindowAdapter struct {
 	db *gorm.DB
 }
 
+func (a *ScheduleWindowAdapter) DeleteByDateRange(ctx context.Context, tx *gorm.DB, userID int64, fromDateMs int64, toDateMs int64) error {
+	return a.db.WithContext(ctx).
+		Where("user_id = ? AND date >= ? AND date <= ?", userID, mp.DayStartUTC(fromDateMs), mp.DayStartUTC(toDateMs)).
+		Delete(&m.ScheduleWindowModel{}).Error
+}
+
 func NewScheduleWindowAdapter(db *gorm.DB) p.IScheduleWindowStorePort {
 	return &ScheduleWindowAdapter{db: db}
 }

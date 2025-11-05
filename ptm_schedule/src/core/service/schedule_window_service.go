@@ -19,6 +19,7 @@ type IScheduleWindowService interface {
 	ListAvailabilityWindows(ctx context.Context, userID int64, fromDateMs, toDateMs int64) ([]*dom.ScheduleWindowEntity, error)
 	CreateBatch(ctx context.Context, tx *gorm.DB, items []*dom.ScheduleWindowEntity) error
 	UpdateBatch(ctx context.Context, tx *gorm.DB, items []*dom.ScheduleWindowEntity) error
+	DeleteByDateRange(ctx context.Context, tx *gorm.DB, userID int64, fromDateMs, toDateMs int64) error
 	// Business logic methods
 	ExpandAvailabilityToWindows(availCalendar []*dom.AvailabilityCalendarEntity, fromDateMs, toDateMs int64) []*dom.ScheduleWindowEntity
 	SubtractExceptions(windows []*dom.ScheduleWindowEntity, exceptions []*dom.CalendarExceptionEntity) []*dom.ScheduleWindowEntity
@@ -26,6 +27,10 @@ type IScheduleWindowService interface {
 
 type ScheduleWindowService struct {
 	store port.IScheduleWindowStorePort
+}
+
+func (s *ScheduleWindowService) DeleteByDateRange(ctx context.Context, tx *gorm.DB, userID int64, fromDateMs int64, toDateMs int64) error {
+	return s.store.DeleteByDateRange(ctx, tx, userID, fromDateMs, toDateMs)
 }
 
 func (s *ScheduleWindowService) ListAvailabilityWindows(ctx context.Context, userID int64, fromDateMs, toDateMs int64) ([]*dom.ScheduleWindowEntity, error) {

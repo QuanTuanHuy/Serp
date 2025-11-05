@@ -7,6 +7,7 @@ package utils
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/serp/ptm-schedule/src/core/domain/constant"
 )
@@ -57,4 +58,17 @@ func GetErrorResponse(code int) ErrorResponse {
 		ServiceCode: code,
 		Message:     http.StatusText(http.StatusInternalServerError),
 	}
+}
+
+func GetErrorByErrorMessage(message string) ErrorResponse {
+	if strings.Contains(message, "invalid") {
+		return GetErrorResponse(constant.GeneralBadRequest)
+	}
+	if strings.Contains(message, "forbidden") || strings.Contains(message, "permission") {
+		return GetErrorResponse(constant.GeneralForbidden)
+	}
+	if strings.Contains(message, "not found") {
+		return GetErrorResponse(constant.GeneralNotFound)
+	}
+	return GetErrorResponse(constant.GeneralInternalServerError)
 }

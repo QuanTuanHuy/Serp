@@ -8,8 +8,8 @@ package usecase
 import (
 	"context"
 	"errors"
-	"fmt"
 
+	"github.com/serp/ptm-schedule/src/core/domain/constant"
 	dom "github.com/serp/ptm-schedule/src/core/domain/entity"
 	"github.com/serp/ptm-schedule/src/core/domain/enum"
 	"github.com/serp/ptm-schedule/src/core/service"
@@ -29,17 +29,17 @@ type ScheduleEventUseCase struct {
 
 func (u *ScheduleEventUseCase) ListEvents(ctx context.Context, planID int64, fromDateMs, toDateMs int64) ([]*dom.ScheduleEventEntity, error) {
 	if planID <= 0 {
-		return nil, errors.New("invalid planID")
+		return nil, errors.New(constant.InvalidPlanID)
 	}
 	if fromDateMs > toDateMs {
-		return nil, errors.New("invalid date range")
+		return nil, errors.New(constant.InvalidDateRange)
 	}
 	return u.eventSvc.ListEventsByPlanAndDateRange(ctx, planID, fromDateMs, toDateMs)
 }
 
 func (u *ScheduleEventUseCase) SaveEvents(ctx context.Context, planID int64, events []*dom.ScheduleEventEntity) error {
 	if planID <= 0 {
-		return errors.New("invalid planID")
+		return errors.New(constant.InvalidPlanID)
 	}
 
 	if err := u.eventSvc.ValidateEvents(planID, events); err != nil {
@@ -82,7 +82,7 @@ func (u *ScheduleEventUseCase) UpdateEventStatus(
 	actualStartMin, actualEndMin *int,
 ) error {
 	if eventID <= 0 {
-		return errors.New("invalid eventID")
+		return errors.New(constant.InvalidEventID)
 	}
 
 	if err := u.eventSvc.ValidateStatusUpdate(status, actualStartMin, actualEndMin); err != nil {
@@ -95,7 +95,7 @@ func (u *ScheduleEventUseCase) UpdateEventStatus(
 			return err
 		}
 		if event == nil {
-			return fmt.Errorf("event not found: %d", eventID)
+			return errors.New(constant.EventNotFound)
 		}
 
 		event.Status = status

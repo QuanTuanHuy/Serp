@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/serp/ptm-schedule/src/core/domain/constant"
 	dom "github.com/serp/ptm-schedule/src/core/domain/entity"
 	"github.com/serp/ptm-schedule/src/core/domain/enum"
 	port "github.com/serp/ptm-schedule/src/core/port/store"
@@ -41,10 +42,10 @@ func (s *ScheduleEventService) ListEventsByPlanAndDateRange(ctx context.Context,
 func (s *ScheduleEventService) ValidateEvents(planID int64, events []*dom.ScheduleEventEntity) error {
 	for _, ev := range events {
 		if !ev.BelongsToPlan(planID) {
-			return errors.New("planID mismatch in event")
+			return errors.New(constant.EventPlanIDMismatch)
 		}
 		if !ev.IsValid() {
-			return errors.New("invalid event: scheduleTaskID, dateMs, and time range must be valid")
+			return errors.New(constant.EventInvalidItem)
 		}
 		if ev.Status == "" {
 			ev.Status = enum.PLANNED
@@ -53,8 +54,8 @@ func (s *ScheduleEventService) ValidateEvents(planID int64, events []*dom.Schedu
 
 	for i := 0; i < len(events); i++ {
 		for j := i + 1; j < len(events); j++ {
-			if events[i].ID != events[j].ID && events[i].OverlapsWith(events[j]) {
-				return errors.New("events overlap: same plan and date with overlapping time ranges")
+			if events[i].OverlapsWith(events[j]) {
+				return errors.New(constant.EventItemsOverlap)
 			}
 		}
 	}
@@ -88,7 +89,7 @@ func (s *ScheduleEventService) ValidateNoOverlapWithExisting(ctx context.Context
 				continue
 			}
 			if newEvent.OverlapsWith(existingEvent) {
-				return errors.New("event overlaps with existing event in schedule")
+				return errors.New(constant.EventOverlapWithExisting)
 			}
 		}
 	}
@@ -103,15 +104,15 @@ func (s *ScheduleEventService) ValidateStatusUpdate(status enum.ScheduleEventSta
 		enum.SKIPPED: true,
 	}
 	if !validStatuses[status] {
-		return errors.New("invalid status")
+		return errors.New(constant.EventInvalidStatus)
 	}
 
 	if status == enum.DONE {
 		if actualStartMin == nil || actualEndMin == nil {
-			return errors.New("actualStartMin and actualEndMin required for DONE status")
+			return errors.New(constant.EventInvalidActualTime)
 		}
 		if *actualStartMin < 0 || *actualEndMin > 24*60 || *actualStartMin >= *actualEndMin {
-			return errors.New("invalid actual time range")
+			return errors.New(constant.EventInvalidActualTimeRange)
 		}
 	}
 
@@ -125,10 +126,10 @@ func (s *ScheduleEventService) UpdateEventStatus(ctx context.Context, tx *gorm.D
 	}
 
 	if !event.CanTransitionTo(newStatus) {
-		return errors.New("invalid status transition")
+		return errors.New(constant.EventInvalidStatusTransition)
 	}
 	if !event.SetStatus(newStatus, actualStartMin, actualEndMin) {
-		return errors.New("failed to set status: validation failed")
+		return errors.New(constant.EventStatusUpdateFailed)
 	}
 
 	return s.store.UpdateBatch(ctx, tx, []*dom.ScheduleEventEntity{event})

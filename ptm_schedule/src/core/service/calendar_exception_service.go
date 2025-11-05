@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/serp/ptm-schedule/src/core/domain/constant"
 	dom "github.com/serp/ptm-schedule/src/core/domain/entity"
 	port "github.com/serp/ptm-schedule/src/core/port/store"
 	"gorm.io/gorm"
@@ -35,17 +36,17 @@ func (s *CalendarExceptionService) ListExceptions(ctx context.Context, userID in
 func (s *CalendarExceptionService) ValidateItems(userID int64, items []*dom.CalendarExceptionEntity) error {
 	for _, it := range items {
 		if !it.BelongsToUser(userID) {
-			return errors.New("userId mismatch in exception item")
+			return errors.New(constant.ExceptionUserIDMismatch)
 		}
 		if !it.IsValid() {
-			return errors.New("invalid exception item: dateMs and time range must be valid")
+			return errors.New(constant.ExceptionInvalidItem)
 		}
 	}
 
 	for i := 0; i < len(items); i++ {
 		for j := i + 1; j < len(items); j++ {
-			if items[i].ID != items[j].ID && items[i].OverlapsWith(items[j]) {
-				return errors.New("exception items overlap: same date with overlapping time ranges")
+			if items[i].OverlapsWith(items[j]) {
+				return errors.New(constant.ExceptionItemsOverlap)
 			}
 		}
 	}
@@ -80,7 +81,7 @@ func (s *CalendarExceptionService) ValidateNoOverlapWithExisting(ctx context.Con
 				continue
 			}
 			if newItem.OverlapsWith(existingItem) {
-				return errors.New("exception overlaps with existing exception")
+				return errors.New(constant.ExceptionOverlapWithExisting)
 			}
 		}
 	}

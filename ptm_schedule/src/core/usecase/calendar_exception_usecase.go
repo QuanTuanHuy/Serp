@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/serp/ptm-schedule/src/core/domain/constant"
 	dom "github.com/serp/ptm-schedule/src/core/domain/entity"
 	"github.com/serp/ptm-schedule/src/core/service"
 	"gorm.io/gorm"
@@ -28,7 +29,7 @@ type CalendarExceptionUseCase struct {
 
 func (u *CalendarExceptionUseCase) ListExceptions(ctx context.Context, userID int64, fromDateMs, toDateMs int64) ([]*dom.CalendarExceptionEntity, error) {
 	if fromDateMs > toDateMs {
-		return nil, errors.New("invalid date range")
+		return nil, errors.New(constant.InvalidDateRange)
 	}
 	return u.svc.ListExceptions(ctx, userID, fromDateMs, toDateMs)
 }
@@ -66,7 +67,7 @@ func (u *CalendarExceptionUseCase) SaveExceptions(ctx context.Context, userID in
 
 func (u *CalendarExceptionUseCase) ReplaceExceptions(ctx context.Context, userID int64, fromDateMs, toDateMs int64, items []*dom.CalendarExceptionEntity) error {
 	if fromDateMs > toDateMs {
-		return errors.New("invalid date range")
+		return errors.New(constant.InvalidDateRange)
 	}
 
 	if err := u.svc.ValidateItems(userID, items); err != nil {
@@ -89,7 +90,7 @@ func (u *CalendarExceptionUseCase) ReplaceExceptions(ctx context.Context, userID
 
 func (u *CalendarExceptionUseCase) DeleteExceptions(ctx context.Context, userID int64, fromDateMs, toDateMs int64) error {
 	if fromDateMs > toDateMs {
-		return errors.New("invalid date range")
+		return errors.New(constant.InvalidDateRange)
 	}
 	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
 		return u.svc.DeleteByDateRange(ctx, tx, userID, fromDateMs, toDateMs)

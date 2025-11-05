@@ -11,4 +11,5 @@ type IScheduleWindowStorePort interface {
 	ListAvailabilityWindows(ctx context.Context, userID int64, fromDateMs, toDateMs int64) ([]*dom.ScheduleWindowEntity, error)
 	CreateBatch(ctx context.Context, tx *gorm.DB, items []*dom.ScheduleWindowEntity) error
 	UpdateBatch(ctx context.Context, tx *gorm.DB, items []*dom.ScheduleWindowEntity) error
+	DeleteByDateRange(ctx context.Context, tx *gorm.DB, userID int64, fromDateMs, toDateMs int64) error
 }

@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/serp/ptm-schedule/src/core/domain/constant"
 	dom "github.com/serp/ptm-schedule/src/core/domain/entity"
 	"github.com/serp/ptm-schedule/src/core/service"
 	"gorm.io/gorm"
@@ -28,14 +29,14 @@ type ScheduleWindowUseCase struct {
 
 func (u *ScheduleWindowUseCase) ListWindows(ctx context.Context, userID int64, fromDateMs, toDateMs int64) ([]*dom.ScheduleWindowEntity, error) {
 	if fromDateMs > toDateMs {
-		return nil, errors.New("invalid date range")
+		return nil, errors.New(constant.InvalidDateRange)
 	}
 	return u.windowSvc.ListAvailabilityWindows(ctx, userID, fromDateMs, toDateMs)
 }
 
 func (u *ScheduleWindowUseCase) MaterializeWindows(ctx context.Context, userID int64, fromDateMs, toDateMs int64) error {
 	if fromDateMs > toDateMs {
-		return errors.New("invalid date range")
+		return errors.New(constant.InvalidDateRange)
 	}
 
 	availCalendar, err := u.availSvc.GetByUser(ctx, userID)
@@ -43,7 +44,7 @@ func (u *ScheduleWindowUseCase) MaterializeWindows(ctx context.Context, userID i
 		return err
 	}
 	if len(availCalendar) == 0 {
-		return errors.New("no availability calendar found for user")
+		return errors.New(constant.AvailabilityCalendarNotFound)
 	}
 
 	exceptions, err := u.exceptionSvc.ListExceptions(ctx, userID, fromDateMs, toDateMs)
@@ -59,6 +60,9 @@ func (u *ScheduleWindowUseCase) MaterializeWindows(ctx context.Context, userID i
 	}
 
 	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
+		if err := u.windowSvc.DeleteByDateRange(ctx, tx, userID, fromDateMs, toDateMs); err != nil {
+			return err
+		}
 		return u.windowSvc.CreateBatch(ctx, tx, windows)
 	})
 }
