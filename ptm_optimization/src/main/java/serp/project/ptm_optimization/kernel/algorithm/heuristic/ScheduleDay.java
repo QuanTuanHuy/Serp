@@ -259,24 +259,8 @@ public class ScheduleDay {
 
     // ------------ Local Search ------------
 
-    private boolean overlaps(Assignment a, Assignment b) {
-        if (!Objects.equals(a.getDateMs(), b.getDateMs()))
-            return false;
-        int aS = Optional.ofNullable(a.getStartMin()).orElse(0);
-        int aE = Optional.ofNullable(a.getEndMin()).orElse(0);
-        int bS = Optional.ofNullable(b.getStartMin()).orElse(0);
-        int bE = Optional.ofNullable(b.getEndMin()).orElse(0);
-        return !(aE <= bS || bE <= aS);
-    }
-
     private boolean anyOverlap(List<Assignment> as) {
-        for (int i = 0; i < as.size(); i++) {
-            for (int j = i + 1; j < as.size(); j++) {
-                if (overlaps(as.get(i), as.get(j)))
-                    return true;
-            }
-        }
-        return false;
+        return IntervalTree.hasAnyOverlap(as);
     }
 
     private double totalUtility(List<Assignment> as) {
