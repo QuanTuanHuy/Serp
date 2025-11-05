@@ -96,3 +96,23 @@ func ToDayOfWeekString(weekDay int) string {
 	}
 	return "Unknown"
 }
+
+func DayStartUTC(ms int64) int64 {
+	const dayMs = 24 * 60 * 60 * 1000
+	return (ms / dayMs) * dayMs
+}
+
+// GetDayOfWeek returns day of week from Unix timestamp (ms)
+// 0=Sunday, 1=Monday, ..., 6=Saturday
+func GetDayOfWeek(dateMs int64) int {
+	days := dateMs / (24 * 60 * 60 * 1000)
+	// 1970-01-01 was Thursday (day 4), so adjust
+	return int((days + 4) % 7)
+}
+
+func MinInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
