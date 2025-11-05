@@ -52,3 +52,11 @@ const (
 	Relax  Tag = "RELAX"
 	Other  Tag = "OTHER"
 )
+
+type ScheduleEventStatus string
+
+const (
+	PLANNED ScheduleEventStatus = "PLANNED"
+	DONE    ScheduleEventStatus = "DONE"
+	SKIPPED ScheduleEventStatus = "SKIPPED"
+)
