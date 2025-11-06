@@ -65,7 +65,7 @@ class Settings(BaseSettings):
         description="Gemini OpenAI-compatible API base URL"
     )
     
-    # LLM Defaults (Gemini models)
+    # LLM Defaults
     default_model: str = Field(
         default="gemini-2.0-flash",
         description="Default LLM model (gemini-2.0-flash, gemini-2.5-pro, gemini-2.5-flash)"

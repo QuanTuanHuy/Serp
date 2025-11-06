@@ -1,5 +1,7 @@
-# Author: QuanTuanHuy
-# Description: Part of Serp Project - Logging Middleware
+"""
+Author: QuanTuanHuy
+Description: Part of Serp Project - Logging Middleware
+"""
 
 import time
 import uuid

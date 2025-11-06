@@ -9,12 +9,12 @@ from loguru import logger
 
 from src.config import settings
 from src.infrastructure.db import init_db, close_db
-from src.api.routes import health_router
-from src.api.middleware import LoggingMiddleware
+from src.ui.api.v1.router import api_router, api_v1_router
+from src.ui.middleware import LoggingMiddleware
 
 
 # Configure loguru logger
-logger.remove()  # Remove default handler
+logger.remove()
 if settings.log_format == "json":
     logger.add(
         sys.stdout,
@@ -35,13 +35,11 @@ async def lifespan(app: FastAPI):
     """
     Application lifespan - startup and shutdown events
     """
-    # Startup
     logger.info("Starting SERP LLM Service...")
     logger.info(f"Environment: {settings.environment}")
     logger.info(f"Debug mode: {settings.debug}")
     
     try:
-        # Initialize database
         await init_db()
         logger.info("Database initialized successfully")
     except Exception as e:
@@ -52,13 +50,11 @@ async def lifespan(app: FastAPI):
     
     yield
     
-    # Shutdown
     logger.info("Shutting down SERP LLM Service...")
     await close_db()
     logger.info("SERP LLM Service stopped")
 
 
-# Create FastAPI application
 app = FastAPI(
     title="SERP LLM Service",
     description="AI Assistant Service for SERP ERP System",
@@ -68,24 +64,19 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.is_development else [],  # Configure properly for production
+    allow_origins=["*"] if settings.is_development else [],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Custom Middleware
 app.add_middleware(LoggingMiddleware)
 
 # Register routers
-app.include_router(health_router)
-
-# Future routers will be added here:
-# app.include_router(chat_router, prefix="/api/v1")
-# app.include_router(suggestions_router, prefix="/api/v1")
+app.include_router(api_router)
+app.include_router(api_v1_router)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,7 @@
-# Author: QuanTuanHuy
-# Description: Part of Serp Project - Health Check Route
+"""
+Author: QuanTuanHuy
+Description: Part of Serp Project - Health Check Controller
+"""
 
 from fastapi import APIRouter
 from datetime import datetime
