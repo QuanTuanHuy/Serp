@@ -1,0 +1,100 @@
+# Author: QuanTuanHuy
+# Description: Part of Serp Project - Main FastAPI Application
+
+import sys
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from loguru import logger
+
+from src.config import settings
+from src.infrastructure.db import init_db, close_db
+from src.api.routes import health_router
+from src.api.middleware import LoggingMiddleware
+
+
+# Configure loguru logger
+logger.remove()  # Remove default handler
+if settings.log_format == "json":
+    logger.add(
+        sys.stdout,
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
+        level=settings.log_level,
+        serialize=True,  # JSON output
+    )
+else:
+    logger.add(
+        sys.stdout,
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
+        level=settings.log_level,
+    )
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Application lifespan - startup and shutdown events
+    """
+    # Startup
+    logger.info("Starting SERP LLM Service...")
+    logger.info(f"Environment: {settings.environment}")
+    logger.info(f"Debug mode: {settings.debug}")
+    
+    try:
+        # Initialize database
+        await init_db()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {e}")
+        raise
+    
+    logger.info(f"SERP LLM Service started on {settings.host}:{settings.port}")
+    
+    yield
+    
+    # Shutdown
+    logger.info("Shutting down SERP LLM Service...")
+    await close_db()
+    logger.info("SERP LLM Service stopped")
+
+
+# Create FastAPI application
+app = FastAPI(
+    title="SERP LLM Service",
+    description="AI Assistant Service for SERP ERP System",
+    version="0.1.0",
+    docs_url="/docs" if settings.debug else None,  # Disable docs in production
+    redoc_url="/redoc" if settings.debug else None,
+    lifespan=lifespan,
+)
+
+# CORS Middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"] if settings.is_development else [],  # Configure properly for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Custom Middleware
+app.add_middleware(LoggingMiddleware)
+
+# Register routers
+app.include_router(health_router)
+
+# Future routers will be added here:
+# app.include_router(chat_router, prefix="/api/v1")
+# app.include_router(suggestions_router, prefix="/api/v1")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    
+    uvicorn.run(
+        "src.main:app",
+        host=settings.host,
+        port=settings.port,
+        reload=settings.is_development,
+        log_level=settings.log_level.lower(),
+    )
