@@ -53,6 +53,10 @@ func All() fx.Option {
 		fx.Provide(adapter.NewScheduleTaskStoreAdapter),
 		fx.Provide(adapter.NewTimeBubblesStoreAdapter),
 		fx.Provide(adapter.NewScheduleDayStoreAdapter),
+		fx.Provide(adapter.NewAvailabilityCalendarAdapter),
+		fx.Provide(adapter.NewCalendarExceptionAdapter),
+		fx.Provide(adapter.NewScheduleWindowAdapter),
+		fx.Provide(adapter.NewScheduleEventAdapter),
 
 		// Provide service
 		fx.Provide(service.NewTransactionService),
@@ -60,16 +64,28 @@ func All() fx.Option {
 		fx.Provide(service.NewScheduleGroupService),
 		fx.Provide(service.NewScheduleTaskService),
 		fx.Provide(service.NewTimeBubblesService),
+		fx.Provide(service.NewAvailabilityCalendarService),
+		fx.Provide(service.NewCalendarExceptionService),
+		fx.Provide(service.NewScheduleWindowService),
+		fx.Provide(service.NewScheduleEventService),
 
 		// Provide usecase
 		fx.Provide(usecase.NewSchedulePlanUseCase),
 		fx.Provide(usecase.NewScheduleGroupUseCase),
 		fx.Provide(usecase.NewScheduleTaskUseCase),
+		fx.Provide(usecase.NewAvailabilityCalendarUseCase),
+		fx.Provide(usecase.NewCalendarExceptionUseCase),
+		fx.Provide(usecase.NewScheduleWindowUseCase),
+		fx.Provide(usecase.NewScheduleEventUseCase),
 
 		// Provide controller
 		fx.Provide(controller.NewSchedulePlanController),
 		fx.Provide(controller.NewScheduleGroupController),
 		fx.Provide(controller.NewScheduleTaskController),
+		fx.Provide(controller.NewAvailabilityCalendarController),
+		fx.Provide(controller.NewCalendarExceptionController),
+		fx.Provide(controller.NewScheduleWindowController),
+		fx.Provide(controller.NewScheduleEventController),
 
 		// Provide JWT components
 		fx.Provide(utils.NewKeycloakJwksUtils),

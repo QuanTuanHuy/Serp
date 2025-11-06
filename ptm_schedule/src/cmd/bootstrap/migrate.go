@@ -19,6 +19,10 @@ func InitializeDB(db *gorm.DB) {
 		&model.ScheduleTaskModel{},
 		&model.TimeBubblesModel{},
 		&model.ScheduleDayModel{},
+		&model.AvailabilityCalendarModel{},
+		&model.CalendarExceptionModel{},
+		&model.ScheduleWindowModel{},
+		&model.ScheduleEventModel{},
 	)
 	if err != nil {
 		log.Fatal("Failed to run migrations: ", err)
