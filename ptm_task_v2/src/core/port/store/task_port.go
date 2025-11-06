@@ -35,6 +35,7 @@ type ITaskPort interface {
 	GetTasksByCategory(ctx context.Context, userID int64, category string) ([]*entity.TaskEntity, error)
 	GetDeepWorkTasks(ctx context.Context, userID int64) ([]*entity.TaskEntity, error)
 	GetTasksByParentID(ctx context.Context, parentTaskID int64) ([]*entity.TaskEntity, error)
+	GetTasksByProjectID(ctx context.Context, projectID int64) ([]*entity.TaskEntity, error)
 }
 
 type TaskFilter struct {

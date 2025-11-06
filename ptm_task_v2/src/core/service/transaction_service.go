@@ -7,44 +7,60 @@ package service
 
 import (
 	"context"
-	"errors"
 
-	"github.com/serp/ptm-task/src/core/domain/constant"
+	"github.com/serp/ptm-task/src/core/port/store"
 	"gorm.io/gorm"
 )
 
 type ITransactionService interface {
-	ExecuteInTransaction(ctx context.Context, db *gorm.DB, fn func(tx *gorm.DB) error) error
-	ExecuteInTransactionWithResult(ctx context.Context, db *gorm.DB, fn func(tx *gorm.DB) (interface{}, error)) (interface{}, error)
+	ExecuteInTransaction(ctx context.Context, fn func(tx *gorm.DB) error) error
+	ExecuteInTransactionWithResult(ctx context.Context, fn func(tx *gorm.DB) (any, error)) (any, error)
 }
 
-type transactionService struct{}
-
-func NewTransactionService() ITransactionService {
-	return &transactionService{}
+type transactionService struct {
+	dbTxPort store.IDBTransactionPort
 }
 
-func (s *transactionService) ExecuteInTransaction(ctx context.Context, db *gorm.DB, fn func(tx *gorm.DB) error) error {
-	if db == nil {
-		return errors.New(constant.DatabaseConnectionNil)
+func NewTransactionService(dbTxPort store.IDBTransactionPort) ITransactionService {
+	return &transactionService{
+		dbTxPort: dbTxPort,
 	}
-	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return fn(tx)
-	})
 }
 
-func (s *transactionService) ExecuteInTransactionWithResult(ctx context.Context, db *gorm.DB, fn func(tx *gorm.DB) (interface{}, error)) (interface{}, error) {
-	if db == nil {
-		return nil, errors.New(constant.DatabaseConnectionNil)
-	}
-	var result interface{}
-	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		res, err := fn(tx)
-		if err != nil {
-			return err
+func (s *transactionService) ExecuteInTransaction(ctx context.Context, fn func(tx *gorm.DB) error) error {
+	tx := s.dbTxPort.StartTransaction()
+	defer func() {
+		if r := recover(); r != nil {
+			s.dbTxPort.Rollback(tx)
+			panic(r)
 		}
-		result = res
-		return nil
-	})
-	return result, err
+	}()
+
+	if err := fn(tx); err != nil {
+		s.dbTxPort.Rollback(tx)
+		return err
+	}
+	return s.dbTxPort.Commit(tx)
+}
+
+func (s *transactionService) ExecuteInTransactionWithResult(ctx context.Context, fn func(tx *gorm.DB) (any, error)) (any, error) {
+	var result any
+	tx := s.dbTxPort.StartTransaction()
+	defer func() {
+		if r := recover(); r != nil {
+			s.dbTxPort.Rollback(tx)
+			panic(r)
+		}
+	}()
+
+	var err error
+	result, err = fn(tx)
+	if err != nil {
+		s.dbTxPort.Rollback(tx)
+		return result, err
+	}
+	if err := s.dbTxPort.Commit(tx); err != nil {
+		return result, err
+	}
+	return result, nil
 }

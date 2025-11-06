@@ -26,7 +26,7 @@ type ITaskTemplateService interface {
 	CreateTemplate(ctx context.Context, tx *gorm.DB, userID int64, template *entity.TaskTemplateEntity) (*entity.TaskTemplateEntity, error)
 	UpdateTemplate(ctx context.Context, tx *gorm.DB, userID int64, template *entity.TaskTemplateEntity) error
 	DeleteTemplate(ctx context.Context, tx *gorm.DB, userID int64, templateID int64) error
-	ToggleFavorite(ctx context.Context, tx *gorm.DB, userID int64, templateID int64, isFavorite bool) error
+	SetFavorite(ctx context.Context, tx *gorm.DB, userID int64, templateID int64, isFavorite bool) error
 	IncrementUsageCount(ctx context.Context, tx *gorm.DB, templateID int64) error
 
 	// Query operations
@@ -114,7 +114,7 @@ func (s *taskTemplateService) DeleteTemplate(ctx context.Context, tx *gorm.DB, u
 	return s.templatePort.SoftDeleteTaskTemplate(ctx, tx, templateID)
 }
 
-func (s *taskTemplateService) ToggleFavorite(ctx context.Context, tx *gorm.DB, userID int64, templateID int64, isFavorite bool) error {
+func (s *taskTemplateService) SetFavorite(ctx context.Context, tx *gorm.DB, userID int64, templateID int64, isFavorite bool) error {
 	template, err := s.templatePort.GetTaskTemplateByID(ctx, templateID)
 	if err != nil {
 		return err
@@ -122,11 +122,24 @@ func (s *taskTemplateService) ToggleFavorite(ctx context.Context, tx *gorm.DB, u
 	if err := s.ValidateTemplateOwnership(userID, template); err != nil {
 		return err
 	}
+
+	template.IsFavorite = isFavorite
+	template.UpdatedAt = time.Now().UnixMilli()
+
 	return s.templatePort.ToggleFavorite(ctx, tx, templateID, isFavorite)
 }
 
 func (s *taskTemplateService) IncrementUsageCount(ctx context.Context, tx *gorm.DB, templateID int64) error {
+	template, err := s.templatePort.GetTaskTemplateByID(ctx, templateID)
+	if err != nil {
+		return err
+	}
+	if template == nil {
+		return errors.New(constant.TemplateNotFound)
+	}
+
 	now := time.Now().UnixMilli()
+	template.IncrementUsage(now)
 	return s.templatePort.UpdateTemplateUsage(ctx, tx, templateID, now)
 }
 

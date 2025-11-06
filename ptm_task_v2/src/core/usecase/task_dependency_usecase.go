@@ -28,18 +28,15 @@ type ITaskDependencyUseCase interface {
 }
 
 type taskDependencyUseCase struct {
-	db                *gorm.DB
 	dependencyService service.ITaskDependencyService
 	txService         service.ITransactionService
 }
 
 func NewTaskDependencyUseCase(
-	db *gorm.DB,
 	dependencyService service.ITaskDependencyService,
 	txService service.ITransactionService,
 ) ITaskDependencyUseCase {
 	return &taskDependencyUseCase{
-		db:                db,
 		dependencyService: dependencyService,
 		txService:         txService,
 	}
@@ -47,7 +44,7 @@ func NewTaskDependencyUseCase(
 
 func (u *taskDependencyUseCase) AddDependency(ctx context.Context, userID int64, taskID int64, dependsOnTaskID int64) (*entity.TaskDependencyGraphEntity, error) {
 	var createdDependency *entity.TaskDependencyGraphEntity
-	err := u.txService.ExecuteInTransaction(ctx, u.db, func(tx *gorm.DB) error {
+	err := u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
 		dependency := entity.NewTaskDependencyGraphEntity(userID, taskID, dependsOnTaskID)
 		created, err := u.dependencyService.CreateDependency(ctx, tx, userID, dependency)
 		if err != nil {
@@ -63,7 +60,7 @@ func (u *taskDependencyUseCase) AddDependency(ctx context.Context, userID int64,
 }
 
 func (u *taskDependencyUseCase) RemoveDependency(ctx context.Context, userID int64, taskID int64, dependsOnTaskID int64) error {
-	return u.txService.ExecuteInTransaction(ctx, u.db, func(tx *gorm.DB) error {
+	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
 		return u.dependencyService.RemoveDependency(ctx, tx, userID, taskID, dependsOnTaskID)
 	})
 }

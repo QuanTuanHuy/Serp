@@ -20,7 +20,7 @@ type ITaskTemplateUseCase interface {
 
 	// Update operations
 	UpdateTemplate(ctx context.Context, userID int64, template *entity.TaskTemplateEntity) error
-	ToggleFavorite(ctx context.Context, userID int64, templateID int64, isFavorite bool) error
+	SetFavorite(ctx context.Context, userID int64, templateID int64, isFavorite bool) error
 
 	// Delete operations
 	DeleteTemplate(ctx context.Context, userID int64, templateID int64) error
@@ -32,18 +32,15 @@ type ITaskTemplateUseCase interface {
 }
 
 type taskTemplateUseCase struct {
-	db              *gorm.DB
 	templateService service.ITaskTemplateService
 	txService       service.ITransactionService
 }
 
 func NewTaskTemplateUseCase(
-	db *gorm.DB,
 	templateService service.ITaskTemplateService,
 	txService service.ITransactionService,
 ) ITaskTemplateUseCase {
 	return &taskTemplateUseCase{
-		db:              db,
 		templateService: templateService,
 		txService:       txService,
 	}
@@ -51,7 +48,7 @@ func NewTaskTemplateUseCase(
 
 func (u *taskTemplateUseCase) CreateTemplate(ctx context.Context, userID int64, template *entity.TaskTemplateEntity) (*entity.TaskTemplateEntity, error) {
 	var createdTemplate *entity.TaskTemplateEntity
-	err := u.txService.ExecuteInTransaction(ctx, u.db, func(tx *gorm.DB) error {
+	err := u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
 		created, err := u.templateService.CreateTemplate(ctx, tx, userID, template)
 		if err != nil {
 			return err
@@ -66,19 +63,19 @@ func (u *taskTemplateUseCase) CreateTemplate(ctx context.Context, userID int64, 
 }
 
 func (u *taskTemplateUseCase) UpdateTemplate(ctx context.Context, userID int64, template *entity.TaskTemplateEntity) error {
-	return u.txService.ExecuteInTransaction(ctx, u.db, func(tx *gorm.DB) error {
+	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
 		return u.templateService.UpdateTemplate(ctx, tx, userID, template)
 	})
 }
 
-func (u *taskTemplateUseCase) ToggleFavorite(ctx context.Context, userID int64, templateID int64, isFavorite bool) error {
-	return u.txService.ExecuteInTransaction(ctx, u.db, func(tx *gorm.DB) error {
-		return u.templateService.ToggleFavorite(ctx, tx, userID, templateID, isFavorite)
+func (u *taskTemplateUseCase) SetFavorite(ctx context.Context, userID int64, templateID int64, isFavorite bool) error {
+	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
+		return u.templateService.SetFavorite(ctx, tx, userID, templateID, isFavorite)
 	})
 }
 
 func (u *taskTemplateUseCase) DeleteTemplate(ctx context.Context, userID int64, templateID int64) error {
-	return u.txService.ExecuteInTransaction(ctx, u.db, func(tx *gorm.DB) error {
+	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
 		return u.templateService.DeleteTemplate(ctx, tx, userID, templateID)
 	})
 }
