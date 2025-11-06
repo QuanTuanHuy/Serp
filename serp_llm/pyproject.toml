@@ -1,0 +1,87 @@
+# Author: QuanTuanHuy
+# Description: Part of Serp Project
+
+[tool.poetry]
+name = "serp-llm"
+version = "0.1.0"
+description = "AI Assistant Service for SERP ERP System"
+authors = ["QuanTuanHuy"]
+readme = "README.md"
+packages = [{include = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+# Web Framework
+fastapi = "^0.109.0"
+uvicorn = {extras = ["standard"], version = "^0.27.0"}
+pydantic = "^2.6.0"
+pydantic-settings = "^2.1.0"
+
+# LLM SDKs - OpenAI supports both OpenAI and Gemini compatible endpoints
+openai = "^1.10.0"
+
+# Database
+sqlalchemy = {extras = ["asyncio"], version = "^2.0.25"}
+asyncpg = "^0.29.0"
+alembic = "^1.13.1"
+pgvector = "^0.2.4"
+
+# Redis
+redis = {extras = ["hiredis"], version = "^5.0.1"}
+
+# Kafka
+aiokafka = "^0.10.0"
+
+# HTTP Client
+httpx = "^0.27.0"
+
+# Auth
+pyjwt = {extras = ["crypto"], version = "^2.8.0"}
+cryptography = "^42.0.0"
+
+# Utilities
+python-dotenv = "^1.0.0"
+tenacity = "^8.2.3"
+loguru = "^0.7.2"
+
+# Monitoring
+prometheus-client = "^0.19.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+pytest-asyncio = "^0.23.0"
+pytest-cov = "^4.1.0"
+black = "^24.0.0"
+ruff = "^0.1.0"
+mypy = "^1.8.0"
+pytest-httpx = "^0.30.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+include = '\.pyi?$'
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
