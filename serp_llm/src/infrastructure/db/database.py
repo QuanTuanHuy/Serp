@@ -14,21 +14,19 @@ from src.config import settings
 from src.infrastructure.db.base import Base
 
 
-# Create async engine
 engine: AsyncEngine = create_async_engine(
     settings.database_url,
-    echo=settings.debug,  # Log SQL queries in debug mode
-    pool_size=20,  # Connection pool size
-    max_overflow=10,  # Extra connections when pool is full
-    pool_pre_ping=True,  # Verify connections before using
-    pool_recycle=3600,  # Recycle connections after 1 hour
+    echo=settings.debug,
+    pool_size=5,
+    max_overflow=5,
+    pool_pre_ping=True,
+    pool_recycle=3600,
 )
 
-# Create async session factory
 AsyncSessionLocal = async_sessionmaker(
     engine,
     class_=AsyncSession,
-    expire_on_commit=False,  # Don't expire objects after commit
+    expire_on_commit=False,
     autocommit=False,
     autoflush=False,
 )
@@ -55,13 +53,21 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db() -> None:
-    """Initialize database - create all tables"""
+    """
+    Initialize database - create all tables
+    
+    NOTE: This is for DEVELOPMENT ONLY.
+    In production, use Alembic migrations: alembic upgrade head
+    """
     try:
         async with engine.begin() as conn:
-            # Import all models here to ensure they're registered
             from src.infrastructure.db.models import (
-                conversation_model,
-                message_model,
+                AIModuleModel,
+                AICapabilityModel,
+                ConversationModel,
+                MessageModel,
+                DocumentChunkModel,
+                EmbeddingsJobModel,
             )
             
             # Create all tables
