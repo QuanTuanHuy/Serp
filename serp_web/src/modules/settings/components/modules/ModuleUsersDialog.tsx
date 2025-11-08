@@ -27,7 +27,6 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/shared/components/ui/tabs';
-import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import { Users, Building2, Info, UserPlus, ListChecks } from 'lucide-react';
 import { useSettingsModules } from '../../hooks/useModules';
 import { useSettingsUsers } from '../../hooks/useUsers';
@@ -101,8 +100,8 @@ export function ModuleUsersDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='!max-w-4xl max-h-[90vh] flex flex-col overflow-hidden'>
-        <DialogHeader>
+      <DialogContent className='!max-w-4xl h-[90vh] flex flex-col p-0'>
+        <DialogHeader className='px-6 pt-6 pb-4 shrink-0'>
           <DialogTitle className='flex items-center gap-2'>
             <Building2 className='h-5 w-5 text-purple-600' />
             Module Access Management
@@ -124,7 +123,7 @@ export function ModuleUsersDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className='flex-1 px-6'>
+        <div className='flex-1 overflow-y-auto px-6'>
           <div className='flex flex-col gap-4 pb-4'>
             {/* Module Info Banner */}
             <Card className='border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/20'>
@@ -207,10 +206,10 @@ export function ModuleUsersDialog({
               </TabsContent>
             </Tabs>
           </div>
-        </ScrollArea>
+        </div>
 
-        <Separator />
-        <div className='flex justify-end gap-2 px-6 pb-2'>
+        <Separator className='shrink-0' />
+        <div className='flex justify-end gap-2 px-6 py-4 shrink-0 bg-background'>
           <Button variant='outline' onClick={() => onOpenChange(false)}>
             Close
           </Button>
