@@ -90,7 +90,16 @@ func (s *SubscriptionPlanController) GetPlanByCode(c *gin.Context) {
 }
 
 func (s *SubscriptionPlanController) GetAllPlans(c *gin.Context) {
-	res, err := s.subscriptionPlanService.GetAllPlans(c.Request.Context())
+	params := request.GetSubscriptionPlanParams{
+		Page:           utils.ParseIntQuery(c, "page"),
+		PageSize:       utils.ParseIntQuery(c, "pageSize"),
+		SortBy:         utils.ParseStringQuery(c, "sortBy"),
+		SortDir:        utils.ParseStringQuery(c, "sortDir"),
+		IsCustom:       utils.ParseBoolQuery(c, "isCustom"),
+		OrganizationID: utils.ParseInt64Query(c, "organizationId"),
+	}
+
+	res, err := s.subscriptionPlanService.GetAllPlans(c.Request.Context(), &params)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return

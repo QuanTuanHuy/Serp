@@ -7,10 +7,13 @@ package serp.project.account.core.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.CreateSubscriptionPlanRequest;
+import serp.project.account.core.domain.dto.request.GetSubscriptionPlanParams;
 import serp.project.account.core.domain.dto.request.UpdateSubscriptionPlanRequest;
 import serp.project.account.core.domain.entity.ModuleEntity;
 import serp.project.account.core.domain.entity.OrganizationEntity;
@@ -259,5 +262,10 @@ public class SubscriptionPlanService implements ISubscriptionPlanService {
     @Override
     public void updatePlanModule(SubscriptionPlanModuleEntity planModule) {
         subscriptionPlanModulePort.update(planModule);
+    }
+
+    @Override
+    public Pair<List<SubscriptionPlanEntity>, Long> getAllPlans(GetSubscriptionPlanParams params) {
+        return subscriptionPlanPort.getAll(params);
     }
 }

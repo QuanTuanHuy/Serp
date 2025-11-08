@@ -81,6 +81,8 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 	subscriptionV1 := group.Group("/api/v1/subscriptions")
 	{
 		subscriptionV1.Use(middleware.AuthMiddleware()).POST("/subscribe", subscriptionController.Subscribe)
+		subscriptionV1.Use(middleware.AuthMiddleware()).POST("/subscribe-custom-plan", subscriptionController.SubscribeCustomPlan)
+		subscriptionV1.Use(middleware.AuthMiddleware()).POST("/request-more-modules", subscriptionController.RequestMoreModules)
 		subscriptionV1.Use(middleware.AuthMiddleware()).POST("/trial", subscriptionController.StartTrial)
 		subscriptionV1.Use(middleware.AuthMiddleware()).PUT("/upgrade", subscriptionController.UpgradeSubscription)
 		subscriptionV1.Use(middleware.AuthMiddleware()).PUT("/downgrade", subscriptionController.DowngradeSubscription)

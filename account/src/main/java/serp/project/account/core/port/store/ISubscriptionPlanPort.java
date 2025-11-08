@@ -5,10 +5,13 @@
 
 package serp.project.account.core.port.store;
 
+import serp.project.account.core.domain.dto.request.GetSubscriptionPlanParams;
 import serp.project.account.core.domain.entity.SubscriptionPlanEntity;
 
 import java.util.List;
 import java.util.Optional;
+
+import org.springframework.data.util.Pair;
 
 public interface ISubscriptionPlanPort {
 
@@ -21,6 +24,8 @@ public interface ISubscriptionPlanPort {
     Optional<SubscriptionPlanEntity> getByPlanCode(String planCode);
 
     List<SubscriptionPlanEntity> getAll();
+
+    Pair<List<SubscriptionPlanEntity>, Long> getAll(GetSubscriptionPlanParams params);
 
     List<SubscriptionPlanEntity> getAllActive();
 

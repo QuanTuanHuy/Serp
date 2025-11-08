@@ -17,6 +17,8 @@ import (
 type ISubscriptionService interface {
 	GetAllSubscriptions(ctx context.Context, params *request.GetSubscriptionParams) (*response.BaseResponse, error)
 	Subscribe(ctx context.Context, req *request.SubscribeRequest) (*response.BaseResponse, error)
+	SubscribeCustomPlan(ctx context.Context, req *request.SubscribeCustomPlanRequest) (*response.BaseResponse, error)
+	RequestMoreModules(ctx context.Context, req *request.RequestMoreModulesRequest) (*response.BaseResponse, error)
 	StartTrial(ctx context.Context, planId int64) (*response.BaseResponse, error)
 	ActivateSubscription(ctx context.Context, subscriptionId int64) (*response.BaseResponse, error)
 	RejectSubscription(ctx context.Context, subscriptionId int64, req *request.RejectSubscriptionRequest) (*response.BaseResponse, error)
@@ -48,6 +50,24 @@ func (s *SubscriptionService) Subscribe(ctx context.Context, req *request.Subscr
 	res, err := s.subscriptionClient.Subscribe(ctx, req)
 	if err != nil {
 		log.Error(ctx, "SubscriptionService: Subscribe error: ", err.Error())
+		return nil, err
+	}
+	return res, nil
+}
+
+func (s *SubscriptionService) SubscribeCustomPlan(ctx context.Context, req *request.SubscribeCustomPlanRequest) (*response.BaseResponse, error) {
+	res, err := s.subscriptionClient.SubscribeCustomPlan(ctx, req)
+	if err != nil {
+		log.Error(ctx, "SubscriptionService: SubscribeCustomPlan error: ", err.Error())
+		return nil, err
+	}
+	return res, nil
+}
+
+func (s *SubscriptionService) RequestMoreModules(ctx context.Context, req *request.RequestMoreModulesRequest) (*response.BaseResponse, error) {
+	res, err := s.subscriptionClient.RequestMoreModules(ctx, req)
+	if err != nil {
+		log.Error(ctx, "SubscriptionService: RequestMoreModules error: ", err.Error())
 		return nil, err
 	}
 	return res, nil

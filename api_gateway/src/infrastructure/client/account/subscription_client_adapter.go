@@ -108,6 +108,64 @@ func (s *SubscriptionClientAdapter) Subscribe(ctx context.Context, req *request.
 	return &result, nil
 }
 
+func (s *SubscriptionClientAdapter) SubscribeCustomPlan(ctx context.Context, req *request.SubscribeCustomPlanRequest) (*response.BaseResponse, error) {
+	headers := utils.BuildHeadersFromContext(ctx)
+
+	var httpResponse *utils.HTTPResponse
+	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
+		var err error
+		httpResponse, err = s.apiClient.POST(ctx, "/api/v1/subscriptions/subscribe-custom-plan", req, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call subscribe custom plan API: %w", err)
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !s.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("SubscribeCustomPlan API returned error status: %d", httpResponse.StatusCode))
+	}
+
+	var result response.BaseResponse
+	if err := s.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal subscribe custom plan response: %w", err)
+	}
+
+	return &result, nil
+}
+
+func (s *SubscriptionClientAdapter) RequestMoreModules(ctx context.Context, req *request.RequestMoreModulesRequest) (*response.BaseResponse, error) {
+	headers := utils.BuildHeadersFromContext(ctx)
+
+	var httpResponse *utils.HTTPResponse
+	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
+		var err error
+		httpResponse, err = s.apiClient.POST(ctx, "/api/v1/subscriptions/request-more-modules", req, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call request more modules API: %w", err)
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !s.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("RequestMoreModules API returned error status: %d", httpResponse.StatusCode))
+	}
+
+	var result response.BaseResponse
+	if err := s.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal request more modules response: %w", err)
+	}
+
+	return &result, nil
+}
+
 func (s *SubscriptionClientAdapter) StartTrial(ctx context.Context, planId int64) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 

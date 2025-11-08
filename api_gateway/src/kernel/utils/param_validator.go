@@ -49,7 +49,7 @@ func ValidatePaginationParams(c *gin.Context) (page int, pageSize int, valid boo
 	return page, pageSize, true
 }
 
-func ParseIntQuery(c *gin.Context, paramName string) (*int, bool) {
+func ValidateAndParseIntQuery(c *gin.Context, paramName string) (*int, bool) {
 	paramStr := c.Query(paramName)
 	if paramStr == "" {
 		return nil, true
@@ -60,6 +60,18 @@ func ParseIntQuery(c *gin.Context, paramName string) (*int, bool) {
 		return nil, false
 	}
 	return &param, true
+}
+
+func ParseIntQuery(c *gin.Context, paramName string) *int {
+	paramStr := c.Query(paramName)
+	if paramStr == "" {
+		return nil
+	}
+	param, err := strconv.Atoi(paramStr)
+	if err != nil {
+		return nil
+	}
+	return &param
 }
 
 func ParseInt64Query(c *gin.Context, paramName string) *int64 {
@@ -140,4 +152,14 @@ func ValidateAndParseIDsQuery(c *gin.Context, paramName string) ([]int64, bool) 
 		ids = append(ids, id)
 	}
 	return ids, true
+}
+
+func ParseBoolQuery(c *gin.Context, paramName string) *bool {
+	paramStr := c.Query(paramName)
+	if paramStr == "" {
+		return nil
+	}
+	param := paramStr == "true"
+	return &param
+
 }

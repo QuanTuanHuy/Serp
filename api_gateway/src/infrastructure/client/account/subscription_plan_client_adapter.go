@@ -8,6 +8,7 @@ package adapter
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/golibs-starter/golib/log"
 	request "github.com/serp/api-gateway/src/core/domain/dto/request/account"
@@ -171,13 +172,35 @@ func (s *SubscriptionPlanClientAdapter) GetPlanByCode(ctx context.Context, planC
 	return &result, nil
 }
 
-func (s *SubscriptionPlanClientAdapter) GetAllPlans(ctx context.Context) (*response.BaseResponse, error) {
+func (s *SubscriptionPlanClientAdapter) GetAllPlans(ctx context.Context, params *request.GetSubscriptionPlanParams) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
+
+	queryParams := map[string]string{}
+	if params != nil {
+		if params.Page != nil {
+			queryParams["page"] = strconv.Itoa(*params.Page)
+		}
+		if params.PageSize != nil {
+			queryParams["pageSize"] = strconv.Itoa(*params.PageSize)
+		}
+		if params.SortBy != nil {
+			queryParams["sortBy"] = *params.SortBy
+		}
+		if params.SortDir != nil {
+			queryParams["sortDir"] = *params.SortDir
+		}
+		if params.IsCustom != nil {
+			queryParams["isCustom"] = strconv.FormatBool(*params.IsCustom)
+		}
+		if params.OrganizationID != nil {
+			queryParams["organizationId"] = strconv.FormatInt(*params.OrganizationID, 10)
+		}
+	}
 
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		httpResponse, err = s.apiClient.GET(ctx, "/api/v1/subscription-plans", headers)
+		httpResponse, err = s.apiClient.GETWithQuery(ctx, "/api/v1/subscription-plans", queryParams, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call get all plans API: %w", err)
 		}
