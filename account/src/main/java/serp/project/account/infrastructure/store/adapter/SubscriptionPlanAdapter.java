@@ -6,20 +6,30 @@
 package serp.project.account.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
+
+import serp.project.account.core.domain.dto.request.GetSubscriptionPlanParams;
 import serp.project.account.core.domain.entity.SubscriptionPlanEntity;
 import serp.project.account.core.port.store.ISubscriptionPlanPort;
 import serp.project.account.infrastructure.store.mapper.SubscriptionPlanMapper;
 import serp.project.account.infrastructure.store.repository.ISubscriptionPlanRepository;
+import serp.project.account.infrastructure.store.specification.SubscriptionPlanSpecification;
+import serp.project.account.kernel.utils.PaginationUtils;
 
 import java.util.List;
 import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class SubscriptionPlanAdapter implements ISubscriptionPlanPort {
     private final ISubscriptionPlanRepository subscriptionPlanRepository;
     private final SubscriptionPlanMapper subscriptionPlanMapper;
+
+    private final PaginationUtils paginationUtils;
 
     @Override
     public SubscriptionPlanEntity save(SubscriptionPlanEntity plan) {
@@ -75,5 +85,15 @@ public class SubscriptionPlanAdapter implements ISubscriptionPlanPort {
     @Override
     public boolean existsByPlanCode(String planCode) {
         return subscriptionPlanRepository.existsByPlanCode(planCode);
+    }
+
+    @Override
+    public Pair<List<SubscriptionPlanEntity>, Long> getAll(GetSubscriptionPlanParams params) {
+        var pageable = paginationUtils.getPageable(params);
+        var specification = SubscriptionPlanSpecification.getAllPlans(params);
+
+        var result = subscriptionPlanRepository.findAll(specification, pageable);
+        var entities = subscriptionPlanMapper.toEntityList(result.getContent());
+        return Pair.of(entities, result.getTotalElements());
     }
 }

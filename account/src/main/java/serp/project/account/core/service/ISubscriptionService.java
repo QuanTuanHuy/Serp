@@ -158,4 +158,6 @@ public interface ISubscriptionService {
          * Validate subscription cancellation
          */
         void validateCancellation(Long organizationId);
+
+        OrganizationSubscriptionEntity update(OrganizationSubscriptionEntity subscription);
 }

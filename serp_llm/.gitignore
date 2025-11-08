@@ -32,6 +32,7 @@ poetry.lock
 # Environment
 .env
 .env.local
+.env.docker
 .env.*.local
 
 # IDE

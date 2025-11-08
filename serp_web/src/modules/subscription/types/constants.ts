@@ -3,9 +3,9 @@ Author: QuanTuanHuy
 Description: Part of Serp Project
 */
 
-import { SubscriptionPlan, AddOn, FAQ } from './index';
+import { UISubscriptionPlan, AddOn, FAQ } from './index';
 
-export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
+export const SUBSCRIPTION_PLANS: UISubscriptionPlan[] = [
   {
     id: 'free',
     tier: 'free',

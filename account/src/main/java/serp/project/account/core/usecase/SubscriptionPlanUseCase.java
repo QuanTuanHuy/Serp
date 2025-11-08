@@ -18,6 +18,7 @@ import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.AddModuleToPlanRequest;
 import serp.project.account.core.domain.dto.request.CreateSubscriptionPlanRequest;
+import serp.project.account.core.domain.dto.request.GetSubscriptionPlanParams;
 import serp.project.account.core.domain.dto.request.UpdateSubscriptionPlanRequest;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.exception.AppException;
@@ -30,6 +31,7 @@ import serp.project.account.core.service.ISubscriptionService;
 import serp.project.account.core.service.IUserModuleAccessService;
 import serp.project.account.core.service.IUserService;
 import serp.project.account.kernel.utils.CollectionUtils;
+import serp.project.account.kernel.utils.PaginationUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
 
 @Service
@@ -47,6 +49,7 @@ public class SubscriptionPlanUseCase {
     private final IModuleService moduleService;
 
     private final ResponseUtils responseUtils;
+    private final PaginationUtils paginationUtils;
 
     private final AsyncTaskExecutor asyncTaskExecutor;
 
@@ -123,10 +126,13 @@ public class SubscriptionPlanUseCase {
         }
     }
 
-    public GeneralResponse<?> getAllPlans() {
+    public GeneralResponse<?> getAllPlans(GetSubscriptionPlanParams params) {
         try {
-            var plans = subscriptionPlanService.getAllPlans();
-            return responseUtils.success(plans);
+            var pairPlans = subscriptionPlanService.getAllPlans(params);
+            var result = paginationUtils.getResponse(pairPlans.getSecond(), params.getPage(), params.getPageSize(),
+                    pairPlans.getFirst());
+
+            return responseUtils.success(result);
         } catch (Exception e) {
             log.error("Unexpected error when getting all subscription plans: {}", e.getMessage());
             return responseUtils.internalServerError(e.getMessage());

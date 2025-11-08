@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import {
@@ -21,15 +21,18 @@ import { useAuth, useUser } from '@/modules/account';
 
 interface SettingsHeaderProps {
   className?: string;
+  scrollContainerRef?: React.RefObject<HTMLElement | null>;
 }
 
 export const SettingsHeader: React.FC<SettingsHeaderProps> = ({
   className,
+  scrollContainerRef,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [notifications] = useState(0);
   const { getDisplayName } = useUser();
+  const [hidden, setHidden] = useState(false);
 
   const { logout } = useAuth();
 
@@ -61,12 +64,52 @@ export const SettingsHeader: React.FC<SettingsHeaderProps> = ({
     router.push('/auth');
   };
 
+  useEffect(() => {
+    const container = scrollContainerRef?.current ?? null;
+    let last = container
+      ? container.scrollTop
+      : typeof window !== 'undefined'
+        ? window.scrollY
+        : 0;
+    let ticking = false;
+    const threshold = 8;
+
+    const onScroll = () => {
+      const current = container ? container.scrollTop : window.scrollY;
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          if (current <= 0) {
+            setHidden(false);
+          } else if (current > last + threshold) {
+            setHidden(true);
+          } else if (current < last - threshold) {
+            setHidden(false);
+          }
+          last = current;
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    const el: HTMLElement | Window = container ?? window;
+    el.addEventListener('scroll', onScroll, {
+      passive: true,
+    } as EventListenerOptions);
+
+    return () => {
+      el.removeEventListener('scroll', onScroll as EventListener);
+    };
+  }, [scrollContainerRef]);
+
   return (
     <header
       className={cn(
-        'sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60',
+        'sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-transform duration-200',
+        hidden ? '-translate-y-16' : 'translate-y-0',
         className
       )}
+      aria-hidden={hidden}
     >
       <div className='flex h-16 items-center justify-between px-6'>
         {/* Left Section - Breadcrumbs */}

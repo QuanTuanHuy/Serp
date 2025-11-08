@@ -35,6 +35,30 @@ public class SubscriptionController {
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
+    @PostMapping("/subscribe-custom-plan")
+    public ResponseEntity<?> subscribeCustomPlan(
+            @Valid @RequestBody SubscribeCustomPlanRequest request) {
+        Long requestedBy = authUtils.getCurrentUserId().orElse(null);
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+
+        log.info("POST /api/v1/subscriptions/subscribe-custom-plan - Subscribing to custom plan {}",
+                tenantId);
+        var response = organizationSubscriptionUseCase.subscribeCustomPlan(tenantId, request, requestedBy);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PostMapping("/request-more-modules")
+    public ResponseEntity<?> requestMoreModules(
+            @Valid @RequestBody RequestMoreModulesRequest request) {
+        Long requestedBy = authUtils.getCurrentUserId().orElse(null);
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+
+        log.info("POST /api/v1/subscriptions/request-more-modules - Requesting more modules for organization {}",
+                tenantId);
+        var response = organizationSubscriptionUseCase.requestMoreModulesForPlan(tenantId, request, requestedBy);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
     @PostMapping("/trial")
     public ResponseEntity<?> startTrial(
             @RequestParam Long planId) {

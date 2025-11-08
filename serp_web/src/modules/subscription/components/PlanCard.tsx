@@ -12,11 +12,11 @@ import {
   Button,
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
-import { SubscriptionPlan, BillingCycle } from '../types';
+import { UISubscriptionPlan, BillingCycle } from '../types';
 import { Check } from 'lucide-react';
 
 interface PlanCardProps {
-  plan: SubscriptionPlan;
+  plan: UISubscriptionPlan;
   billingCycle: BillingCycle;
   onSelect: (planId: string) => void;
   isSelected?: boolean;

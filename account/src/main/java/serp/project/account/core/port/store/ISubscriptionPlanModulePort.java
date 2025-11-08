@@ -14,6 +14,8 @@ public interface ISubscriptionPlanModulePort {
 
     SubscriptionPlanModuleEntity save(SubscriptionPlanModuleEntity planModule);
 
+    void saveAll(List<SubscriptionPlanModuleEntity> planModules);
+
     SubscriptionPlanModuleEntity update(SubscriptionPlanModuleEntity planModule);
 
     Optional<SubscriptionPlanModuleEntity> getById(Long id);

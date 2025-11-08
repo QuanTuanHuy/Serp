@@ -20,7 +20,7 @@ type ISubscriptionPlanService interface {
 	DeletePlan(ctx context.Context, planId int64) (*response.BaseResponse, error)
 	GetPlanById(ctx context.Context, planId int64) (*response.BaseResponse, error)
 	GetPlanByCode(ctx context.Context, planCode string) (*response.BaseResponse, error)
-	GetAllPlans(ctx context.Context) (*response.BaseResponse, error)
+	GetAllPlans(ctx context.Context, params *request.GetSubscriptionPlanParams) (*response.BaseResponse, error)
 	AddModuleToPlan(ctx context.Context, planId int64, req *request.AddModuleToPlanRequest) (*response.BaseResponse, error)
 	RemoveModuleFromPlan(ctx context.Context, planId int64, moduleId int64) (*response.BaseResponse, error)
 	GetPlanModules(ctx context.Context, planId int64) (*response.BaseResponse, error)
@@ -75,8 +75,8 @@ func (s *SubscriptionPlanService) GetPlanByCode(ctx context.Context, planCode st
 	return res, nil
 }
 
-func (s *SubscriptionPlanService) GetAllPlans(ctx context.Context) (*response.BaseResponse, error) {
-	res, err := s.subscriptionPlanClient.GetAllPlans(ctx)
+func (s *SubscriptionPlanService) GetAllPlans(ctx context.Context, params *request.GetSubscriptionPlanParams) (*response.BaseResponse, error) {
+	res, err := s.subscriptionPlanClient.GetAllPlans(ctx, params)
 	if err != nil {
 		log.Error(ctx, "SubscriptionPlanService: GetAllPlans error: ", err.Error())
 		return nil, err

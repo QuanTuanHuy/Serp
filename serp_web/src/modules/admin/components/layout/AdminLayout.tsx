@@ -5,7 +5,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { AdminSidebar } from './AdminSidebar';
 import { AdminHeader } from './AdminHeader';
 import { AdminAuthGuard } from '../AdminAuthGuard';
@@ -31,6 +31,7 @@ interface AdminLayoutProps {
  */
 const AdminLayoutContent: React.FC<AdminLayoutProps> = ({ children }) => {
   const { isCollapsed } = useAdminSidebar();
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   return (
     <div className='flex min-h-screen bg-background'>
@@ -39,16 +40,17 @@ const AdminLayoutContent: React.FC<AdminLayoutProps> = ({ children }) => {
 
       {/* Main Content Area */}
       <div
+        ref={containerRef}
         className={cn(
-          'flex flex-1 flex-col transition-all duration-300',
+          'flex flex-1 flex-col transition-all duration-300 h-screen overflow-y-auto',
           isCollapsed ? 'pl-16' : 'pl-64'
         )}
       >
         {/* Header */}
-        <AdminHeader />
+        <AdminHeader scrollContainerRef={containerRef} />
 
         {/* Page Content */}
-        <main className='flex-1 overflow-y-auto'>
+        <main className='flex-1'>
           <div className='container mx-auto p-6'>{children}</div>
         </main>
       </div>

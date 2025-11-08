@@ -115,6 +115,11 @@ export const api = createApi({
     'settings/User',
     'settings/Module',
     'settings/ModuleUsers',
+    // Subscription tags
+    'subscription/Plan',
+    'subscription/PlanModule',
+    'subscription/Module',
+    'subscription/Subscription',
   ],
 
   // Define endpoints in separate files for each module

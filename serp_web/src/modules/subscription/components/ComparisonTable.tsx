@@ -11,12 +11,12 @@ import {
   CardTitle,
   Button,
 } from '@/shared/components/ui';
-import { SubscriptionPlan } from '../types';
+import { UISubscriptionPlan } from '../types';
 import { Check, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/shared/utils';
 
 interface ComparisonTableProps {
-  plans: SubscriptionPlan[];
+  plans: UISubscriptionPlan[];
 }
 
 export const ComparisonTable: React.FC<ComparisonTableProps> = ({ plans }) => {

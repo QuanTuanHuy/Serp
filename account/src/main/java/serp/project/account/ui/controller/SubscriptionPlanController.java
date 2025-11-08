@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.*;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.AddModuleToPlanRequest;
 import serp.project.account.core.domain.dto.request.CreateSubscriptionPlanRequest;
+import serp.project.account.core.domain.dto.request.GetSubscriptionParams;
+import serp.project.account.core.domain.dto.request.GetSubscriptionPlanParams;
 import serp.project.account.core.domain.dto.request.UpdateSubscriptionPlanRequest;
 import serp.project.account.core.usecase.SubscriptionPlanUseCase;
 import serp.project.account.kernel.utils.AuthUtils;
@@ -78,9 +80,23 @@ public class SubscriptionPlanController {
     }
 
     @GetMapping
-    public ResponseEntity<?> getAllPlans() {
+    public ResponseEntity<?> getAllPlans(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer pageSize,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortDir,
+            @RequestParam(required = false) Boolean isCustom,
+            @RequestParam(required = false) Long organizationId) {
         log.info("GET /api/v1/subscription-plans - Fetching all plans");
-        var response = subscriptionPlanUseCase.getAllPlans();
+        if (!authUtils.isSystemAdmin()) {
+            organizationId = null;
+        }
+        var params = GetSubscriptionPlanParams.builder()
+                .page(page).pageSize(pageSize).sortBy(sortBy).sortDirection(sortDir)
+                .isCustom(isCustom).organizationId(organizationId)
+                .build();
+
+        var response = subscriptionPlanUseCase.getAllPlans(params);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 

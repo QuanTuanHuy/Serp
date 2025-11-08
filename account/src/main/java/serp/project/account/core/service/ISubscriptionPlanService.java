@@ -6,17 +6,29 @@
 package serp.project.account.core.service;
 
 import serp.project.account.core.domain.dto.request.CreateSubscriptionPlanRequest;
+import serp.project.account.core.domain.dto.request.GetSubscriptionPlanParams;
 import serp.project.account.core.domain.dto.request.UpdateSubscriptionPlanRequest;
+import serp.project.account.core.domain.entity.ModuleEntity;
+import serp.project.account.core.domain.entity.OrganizationEntity;
 import serp.project.account.core.domain.entity.SubscriptionPlanEntity;
 import serp.project.account.core.domain.entity.SubscriptionPlanModuleEntity;
 
 import java.util.List;
 
+import org.springframework.data.util.Pair;
+
 public interface ISubscriptionPlanService {
 
     SubscriptionPlanEntity createPlan(CreateSubscriptionPlanRequest request, Long createdBy);
 
+    SubscriptionPlanEntity createCustomPlanForOrg(OrganizationEntity organization, List<ModuleEntity> modules);
+
+    SubscriptionPlanEntity updateCustomPlanForOrg(OrganizationEntity organization, SubscriptionPlanEntity existedPlan,
+            List<ModuleEntity> addedModules);
+
     SubscriptionPlanEntity updatePlan(Long planId, UpdateSubscriptionPlanRequest request, Long updatedBy);
+
+    void updatePlanModule(SubscriptionPlanModuleEntity planModule);
 
     void deletePlan(Long planId);
 
@@ -25,6 +37,8 @@ public interface ISubscriptionPlanService {
     SubscriptionPlanEntity getPlanByCode(String planCode);
 
     List<SubscriptionPlanEntity> getAllPlans();
+
+    Pair<List<SubscriptionPlanEntity>, Long> getAllPlans(GetSubscriptionPlanParams params);
 
     List<SubscriptionPlanEntity> getAllActivePlans();
 

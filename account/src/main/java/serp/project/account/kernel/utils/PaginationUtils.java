@@ -28,7 +28,7 @@ public class PaginationUtils {
 
         String sortBy = (!DataUtils.isNullOrEmpty(params.getSortBy()) ? params.getSortBy() : "id");
 
-        Sort.Direction direction = (!DataUtils.isNullOrEmpty(params.getSortDirection()) ||
+        Sort.Direction direction = (!DataUtils.isNullOrEmpty(params.getSortDirection()) &&
                 params.getSortDirection().equalsIgnoreCase("desc"))
                         ? Sort.Direction.DESC
                         : Sort.Direction.ASC;

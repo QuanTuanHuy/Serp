@@ -11,3 +11,4 @@ export { OrderSummary } from './OrderSummary';
 export { AddOnsSection } from './AddOnsSection';
 export { FAQSection } from './FAQSection';
 export { TrustIndicators } from './TrustIndicators';
+export { ModuleSelector } from './ModuleSelector';

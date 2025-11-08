@@ -3,7 +3,7 @@ app:
     driver: postgres
     host: ${DB_HOST:-localhost}
     port: ${DB_PORT:-5432}
-    database: ${DB_NAME:-serp_ptm_task}
+    database: ${DB_NAME:-serp_ptm_task_v2}
     username: ${DB_USERNAME:-serp}
     password: ${DB_PASSWORD:-serp}
     logLevel: info

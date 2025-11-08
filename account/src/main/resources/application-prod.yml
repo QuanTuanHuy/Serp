@@ -194,6 +194,17 @@ app:
             - SYSTEM_MODERATOR
             - ORG_OWNER
           permissions:
+        - url-pattern: /api/v1/subscriptions/request-more-modules
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+          permissions:
+        - url-pattern: /api/v1/subscriptions/subscribe-custom-plan
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
         - url-pattern: /api/v1/subscriptions/trial
           roles:
             - SUPER_ADMIN

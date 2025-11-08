@@ -68,4 +68,10 @@ public class SubscriptionPlanModuleAdapter implements ISubscriptionPlanModulePor
     public boolean existsByPlanIdAndModuleId(Long planId, Long moduleId) {
         return subscriptionPlanModuleRepository.existsByPlanIdAndModuleId(planId, moduleId);
     }
+
+    @Override
+    public void saveAll(List<SubscriptionPlanModuleEntity> planModules) {
+        var models = subscriptionPlanModuleMapper.toModelList(planModules);
+        subscriptionPlanModuleRepository.saveAll(models);
+    }
 }

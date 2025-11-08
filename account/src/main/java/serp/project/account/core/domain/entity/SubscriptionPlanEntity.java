@@ -70,6 +70,11 @@ public class SubscriptionPlanEntity extends BaseEntity {
     }
 
     @JsonIgnore
+    public boolean isCustomPlan() {
+        return Boolean.TRUE.equals(this.isCustom) && this.organizationId != null;
+    }
+
+    @JsonIgnore
     public boolean hasTrial() {
         return this.trialDays != null && this.trialDays > 0;
     }
