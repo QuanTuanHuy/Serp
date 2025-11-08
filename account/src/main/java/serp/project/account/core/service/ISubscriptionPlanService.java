@@ -7,6 +7,8 @@ package serp.project.account.core.service;
 
 import serp.project.account.core.domain.dto.request.CreateSubscriptionPlanRequest;
 import serp.project.account.core.domain.dto.request.UpdateSubscriptionPlanRequest;
+import serp.project.account.core.domain.entity.ModuleEntity;
+import serp.project.account.core.domain.entity.OrganizationEntity;
 import serp.project.account.core.domain.entity.SubscriptionPlanEntity;
 import serp.project.account.core.domain.entity.SubscriptionPlanModuleEntity;
 
@@ -16,7 +18,14 @@ public interface ISubscriptionPlanService {
 
     SubscriptionPlanEntity createPlan(CreateSubscriptionPlanRequest request, Long createdBy);
 
+    SubscriptionPlanEntity createCustomPlanForOrg(OrganizationEntity organization, List<ModuleEntity> modules);
+
+    SubscriptionPlanEntity updateCustomPlanForOrg(OrganizationEntity organization, SubscriptionPlanEntity existedPlan,
+            List<ModuleEntity> addedModules);
+
     SubscriptionPlanEntity updatePlan(Long planId, UpdateSubscriptionPlanRequest request, Long updatedBy);
+
+    void updatePlanModule(SubscriptionPlanModuleEntity planModule);
 
     void deletePlan(Long planId);
 

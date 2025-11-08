@@ -7,7 +7,6 @@ package serp.project.account.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
@@ -16,7 +15,6 @@ import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
 import serp.project.account.core.domain.enums.SubscriptionStatus;
 import serp.project.account.core.port.store.IOrganizationSubscriptionPort;
 import serp.project.account.infrastructure.store.mapper.OrganizationSubscriptionMapper;
-import serp.project.account.infrastructure.store.model.OrganizationSubscriptionModel;
 import serp.project.account.infrastructure.store.repository.IOrganizationSubscriptionRepository;
 import serp.project.account.infrastructure.store.specification.SubscriptionSpecification;
 import serp.project.account.kernel.utils.PaginationUtils;

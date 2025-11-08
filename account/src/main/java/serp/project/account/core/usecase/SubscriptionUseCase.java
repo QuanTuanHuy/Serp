@@ -18,6 +18,8 @@ import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.*;
 import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
+import serp.project.account.core.domain.entity.SubscriptionPlanEntity;
+import serp.project.account.core.domain.enums.SubscriptionStatus;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.ICombineRoleService;
 import serp.project.account.core.service.IModuleService;
@@ -80,6 +82,78 @@ public class SubscriptionUseCase {
             throw e;
         } catch (Exception e) {
             log.error("Unexpected error when subscribing organization {}: {}", organizationId, e.getMessage());
+            throw e;
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> subscribeCustomPlan(Long organizationId, SubscribeCustomPlanRequest request,
+            Long requestedBy) {
+        try {
+            if (organizationId == null || requestedBy == null) {
+                return responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
+            }
+
+            if (subscriptionService.hasActiveSubscription(organizationId)) {
+                throw new AppException(Constants.ErrorMessage.ORGANIZATION_ALREADY_HAS_ACTIVE_SUBSCRIPTION);
+            }
+            var organization = organizationService.getOrganizationById(organizationId);
+            var modules = moduleService.getModulesByIds(request.getModuleIds()).stream()
+                    .filter(module -> module.isAvailable()).toList();
+            if (CollectionUtils.isEmpty(modules)) {
+                throw new AppException(Constants.ErrorMessage.MODULE_NOT_FOUND);
+            }
+
+            var customPlan = subscriptionPlanService.createCustomPlanForOrg(organization, modules);
+            final long planId = customPlan.getId();
+            SubscribeRequest subscribeRequest = request.toSubscribeRequest(planId);
+
+            var subscription = subscriptionService.subscribe(organizationId, subscribeRequest, requestedBy, customPlan);
+            organizationService.updateSubscription(organizationId, subscription);
+
+            log.info("[UseCase] Organization {} successfully subscribed to custom plan", organizationId);
+            return responseUtils.success(subscription);
+        } catch (AppException e) {
+            log.error("Error subscribing organization {} to custom plan: {}", organizationId, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error when subscribing organization {} to custom plan: {}", organizationId,
+                    e.getMessage());
+            throw e;
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> requestMoreModulesForPlan(Long organizationId, RequestMoreModulesRequest request,
+            Long requestedBy) {
+        try {
+            var organization = organizationService.getOrganizationById(organizationId);
+            var currentSubscription = subscriptionService.getSubscriptionById(organization.getSubscriptionId());
+            var currentPlan = subscriptionPlanService.getPlanById(currentSubscription.getSubscriptionPlanId());
+
+            var modulesToAdd = moduleService.getModulesByIds(request.getAdditionalModuleIds()).stream()
+                    .filter(module -> module.isAvailable())
+                    .toList();
+            if (CollectionUtils.isEmpty(modulesToAdd)) {
+                throw new AppException(Constants.ErrorMessage.MODULE_NOT_AVAILABLE);
+            }
+
+            currentPlan = subscriptionPlanService.updateCustomPlanForOrg(
+                    organizationService.getOrganizationById(organizationId),
+                    currentPlan,
+                    modulesToAdd);
+
+            currentSubscription.setSubscriptionPlanId(currentPlan.getId());
+            currentSubscription.setStatus(SubscriptionStatus.PENDING);
+            subscriptionService.update(currentSubscription);
+
+            return responseUtils.success("Module addition request submitted successfully. Please wait for approval.");
+        } catch (AppException e) {
+            log.error("Error adding modules to plan for organization {}: {}", organizationId, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error when adding modules to plan for organization {}: {}", organizationId,
+                    e.getMessage());
             throw e;
         }
     }
@@ -284,6 +358,7 @@ public class SubscriptionUseCase {
 
             var subscription = subscriptionService.activateSubscription(subscriptionId, activatedBy);
             var organization = organizationService.getOrganizationById(subscription.getOrganizationId());
+            var plan = subscriptionPlanService.getPlanById(subscription.getSubscriptionPlanId());
             organizationService.updateSubscription(organization.getId(), subscription);
 
             var orgOwner = userService.getUserById(organization.getOwnerId());
@@ -299,13 +374,19 @@ public class SubscriptionUseCase {
                         continue;
                     }
 
-                    if (planModule.getIsIncluded()) {
+                    if (planModule.getIsIncluded() ||
+                            (plan.isCustomPlan() && !planModule.getIsIncluded())) {
                         userModuleAccessService.registerUserToModuleWithExpiration(
                                 organization.getOwnerId(),
                                 planModule.getModuleId(),
                                 subscription.getOrganizationId(),
                                 activatedBy,
                                 subscription.getEndDate());
+
+                        if (!planModule.getIsIncluded()) {
+                            planModule.setIsIncluded(true);
+                            subscriptionPlanService.updatePlanModule(planModule);
+                        }
                     }
 
                     List<RoleEntity> roles = roleService.getRolesByModuleId(planModule.getModuleId());

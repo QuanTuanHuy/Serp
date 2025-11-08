@@ -99,10 +99,12 @@ public class Constants {
         public static final String SUBSCRIPTION_NOT_PENDING_APPROVAL = "Subscription not pending approval";
         public static final String SUBSCRIPTION_NOT_IN_TRIAL = "Subscription not in trial";
         public static final String SUBSCRIPTION_CANNOT_BE_UPGRADED = "Subscription cannot be upgraded";
+        public static final String SUBSCRIPTION_ALREADY_ACTIVE = "Subscription already active";
         public static final String ACTIVE_SUBSCRIPTION_NOT_FOUND = "Active subscription not found";
         public static final String SUBSCRIPTION_NOT_FOUND = "Subscription not found";
         public static final String NO_ACTIVE_SUBSCRIPTION = "No active subscription";
         public static final String PLAN_NOT_ACTIVE = "Plan not active";
+        public static final String NO_NEW_MODULES_TO_ADD = "No new modules to add to the subscription plan";
         
         // Module Access errors
         public static final String ORGANIZATION_CANNOT_ACCESS_MODULE = "Organization does not have access to this module";

@@ -268,9 +268,12 @@ public class SubscriptionService implements ISubscriptionService {
     public OrganizationSubscriptionEntity activateSubscription(Long subscriptionId, Long activatedBy) {
         var subscription = getSubscriptionById(subscriptionId);
 
-        if (!subscription.isPending()) {
-            throw new AppException(Constants.ErrorMessage.SUBSCRIPTION_NOT_PENDING_APPROVAL);
+        if (subscription.isActive()) {
+            throw new AppException(Constants.ErrorMessage.SUBSCRIPTION_ALREADY_ACTIVE);
         }
+        // if (!subscription.isPending() && !subscription.isExpired()) {
+        //     throw new AppException(Constants.ErrorMessage.SUBSCRIPTION_NOT_PENDING_APPROVAL);
+        // }
 
         subscription.activate(activatedBy);
         return subscriptionPort.update(subscription);
@@ -448,5 +451,11 @@ public class SubscriptionService implements ISubscriptionService {
     @Override
     public List<OrganizationSubscriptionEntity> getSubscriptionsByPlanId(Long planId) {
         return subscriptionPort.getByPlanId(planId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public OrganizationSubscriptionEntity update(OrganizationSubscriptionEntity subscription) {
+        return subscriptionPort.update(subscription);
     }
 }

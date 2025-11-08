@@ -12,8 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.CreateSubscriptionPlanRequest;
 import serp.project.account.core.domain.dto.request.UpdateSubscriptionPlanRequest;
+import serp.project.account.core.domain.entity.ModuleEntity;
+import serp.project.account.core.domain.entity.OrganizationEntity;
 import serp.project.account.core.domain.entity.SubscriptionPlanEntity;
 import serp.project.account.core.domain.entity.SubscriptionPlanModuleEntity;
+import serp.project.account.core.domain.enums.LicenseType;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.port.store.ISubscriptionPlanPort;
 import serp.project.account.core.port.store.ISubscriptionPlanModulePort;
@@ -21,7 +24,9 @@ import serp.project.account.core.service.ISubscriptionPlanService;
 import serp.project.account.infrastructure.store.mapper.SubscriptionPlanMapper;
 import serp.project.account.infrastructure.store.mapper.SubscriptionPlanModuleMapper;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -34,6 +39,9 @@ public class SubscriptionPlanService implements ISubscriptionPlanService {
 
     private final SubscriptionPlanMapper subscriptionPlanMapper;
     private final SubscriptionPlanModuleMapper subscriptionPlanModuleMapper;
+
+    private final static Integer DEFAULT_MAX_USERS_PER_MODULE = 10;
+    private final static Long SYSTEM_USER_ID = 1L;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -50,11 +58,88 @@ public class SubscriptionPlanService implements ISubscriptionPlanService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public SubscriptionPlanEntity createCustomPlanForOrg(OrganizationEntity organization, List<ModuleEntity> modules) {
+        return createCustomPlanForOrg(organization, null, modules);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public SubscriptionPlanEntity updateCustomPlanForOrg(OrganizationEntity organization,
+            SubscriptionPlanEntity existedPlan, List<ModuleEntity> modulesToAdd) {
+        if (existedPlan.isCustomPlan()) {
+            var existedModules = subscriptionPlanModulePort
+                    .getBySubscriptionPlanId(existedPlan.getId()).stream()
+                    .map(SubscriptionPlanModuleEntity::getModuleId)
+                    .toList();
+            var allModules = modulesToAdd.stream()
+                    .filter(m -> !existedModules.contains(m.getId()))
+                    .toList();
+            if (allModules.isEmpty()) {
+                throw new AppException(Constants.ErrorMessage.NO_NEW_MODULES_TO_ADD);
+            }
+            subscriptionPlanModulePort.saveAll(
+                    allModules.stream()
+                            .map(module -> subscriptionPlanModuleMapper.buildNewPlanModule(
+                                    existedPlan.getId(),
+                                    module.getId(),
+                                    LicenseType.BASIC.toString(),
+                                    false,
+                                    DEFAULT_MAX_USERS_PER_MODULE,
+                                    SYSTEM_USER_ID))
+                            .toList());
+            return existedPlan;
+        }
+        return createCustomPlanForOrg(organization, existedPlan, modulesToAdd);
+    }
+
+    public SubscriptionPlanEntity createCustomPlanForOrg(OrganizationEntity organization,
+            SubscriptionPlanEntity existedPlan, List<ModuleEntity> modules) {
+        var createPlanRequest = CreateSubscriptionPlanRequest.builder()
+                .planName("Plan for Organization " + organization.getName())
+                .planCode("CUSTOM_PLAN_ORG_" + organization.getId())
+                .description("Custom plan for organization " + organization.getName())
+                .monthlyPrice(existedPlan != null ? existedPlan.getMonthlyPrice() : BigDecimal.ZERO)
+                .yearlyPrice(existedPlan != null ? existedPlan.getYearlyPrice() : BigDecimal.ZERO)
+                .maxUsers(existedPlan != null ? existedPlan.getMaxUsers() : DEFAULT_MAX_USERS_PER_MODULE)
+                .trialDays(existedPlan != null ? existedPlan.getTrialDays() : 0)
+                .isCustom(true)
+                .isActive(true)
+                .organizationId(organization.getId())
+                .build();
+        var plan = createPlan(createPlanRequest, SYSTEM_USER_ID);
+        final long planId = plan.getId();
+
+        List<SubscriptionPlanModuleEntity> allPlanModules = new ArrayList<>();
+        var existedModules = subscriptionPlanModulePort
+                .getBySubscriptionPlanId(existedPlan != null ? existedPlan.getId() : -1L);
+        allPlanModules.addAll(existedModules.stream()
+                .map(em -> subscriptionPlanModuleMapper.buildNewPlanModule(
+                        planId,
+                        em.getModuleId(),
+                        em.getLicenseType().toString(),
+                        em.getIsIncluded(),
+                        em.getMaxUsersPerModule(),
+                        SYSTEM_USER_ID))
+                .toList());
+        allPlanModules.addAll(modules.stream()
+                .map(module -> subscriptionPlanModuleMapper.buildNewPlanModule(
+                        planId,
+                        module.getId(),
+                        LicenseType.BASIC.toString(),
+                        false,
+                        DEFAULT_MAX_USERS_PER_MODULE,
+                        SYSTEM_USER_ID))
+                .toList());
+        log.info("Plan {} has {} modules", planId, allPlanModules.size());
+        subscriptionPlanModulePort.saveAll(allPlanModules);
+        return plan;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public SubscriptionPlanEntity updatePlan(Long planId, UpdateSubscriptionPlanRequest request, Long updatedBy) {
         var plan = getPlanById(planId);
         plan = subscriptionPlanMapper.buildUpdatedPlan(plan, request, updatedBy);
-
-        // Implement later: Update modules if provided in request
 
         var updatedPlan = subscriptionPlanPort.update(plan);
         log.info("Successfully updated subscription plan: {}", planId);
@@ -169,5 +254,10 @@ public class SubscriptionPlanService implements ISubscriptionPlanService {
             log.error("Subscription plan with code {} already exists", planCode);
             throw new AppException(Constants.ErrorMessage.SUBSCRIPTION_PLAN_CODE_ALREADY_EXISTS);
         }
+    }
+
+    @Override
+    public void updatePlanModule(SubscriptionPlanModuleEntity planModule) {
+        subscriptionPlanModulePort.update(planModule);
     }
 }

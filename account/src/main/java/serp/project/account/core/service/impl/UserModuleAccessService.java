@@ -150,6 +150,8 @@ public class UserModuleAccessService implements IUserModuleAccessService {
                     .getUserModuleAccess(userId, moduleId, organizationId);
 
             if (access == null) {
+                log.error("User module access not found for user {} to module {} in org {}",
+                        userId, moduleId, organizationId);
                 throw new AppException(Constants.ErrorMessage.USER_MODULE_ACCESS_NOT_FOUND);
             }
 
