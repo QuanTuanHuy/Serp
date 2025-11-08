@@ -6,7 +6,7 @@
 import { api } from '@/lib/store/api';
 import { createDataTransform } from '@/lib/store/api/utils';
 import type { OrganizationSubscription } from '@/modules/admin/types/subscriptions.types';
-import { SubscribeRequest } from '../types';
+import { SubscribeRequest, SubscribeCustomPlanRequest } from '../types';
 
 export const subscriptionApi = api.injectEndpoints({
   endpoints: (builder) => ({
@@ -22,10 +22,35 @@ export const subscriptionApi = api.injectEndpoints({
         },
       }),
       transformResponse: createDataTransform<OrganizationSubscription>(),
-      invalidatesTags: [{ type: 'admin/Subscription', id: 'LIST' }],
+      invalidatesTags: [
+        { type: 'subscription/Subscription', id: 'LIST' },
+        { type: 'admin/Subscription', id: 'LIST' },
+      ],
+    }),
+
+    subscribeCustomPlan: builder.mutation<
+      OrganizationSubscription,
+      SubscribeCustomPlanRequest
+    >({
+      query: (req) => ({
+        url: '/subscriptions/subscribe-custom-plan',
+        method: 'POST',
+        body: {
+          billingCycle: req.billingCycle.toUpperCase(),
+          isAutoRenew: req.isAutoRenew ?? false,
+          notes: req.notes,
+          moduleIds: req.moduleIds,
+        },
+      }),
+      transformResponse: createDataTransform<OrganizationSubscription>(),
+      invalidatesTags: [
+        { type: 'subscription/Subscription', id: 'LIST' },
+        { type: 'admin/Subscription', id: 'LIST' },
+      ],
     }),
   }),
   overrideExisting: false,
 });
 
-export const { useSubscribeMutation } = subscriptionApi;
+export const { useSubscribeMutation, useSubscribeCustomPlanMutation } =
+  subscriptionApi;

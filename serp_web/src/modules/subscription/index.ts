@@ -12,5 +12,19 @@ export {
   AddOnsSection,
   FAQSection,
   TrustIndicators,
+  ModuleSelector,
 } from './components';
 export { OrderSummary as OrderSummaryComponent } from './components/OrderSummary';
+
+export {
+  useGetSubscriptionPlansQuery,
+  useGetSubscriptionPlanByIdQuery,
+  useGetPlanModulesQuery,
+} from './services/plansApi';
+
+export { useGetAvailableModulesQuery } from './services/modulesApi';
+
+export {
+  useSubscribeMutation,
+  useSubscribeCustomPlanMutation,
+} from './services/subscriptionApi';
