@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'SERP Web - Enterprise Resource Planning',
+  title: 'SERP - Enterprise Resource Planning',
   description: 'Modern ERP system built with Next.js and TypeScript',
   keywords: ['ERP', 'CRM', 'Accounting', 'Inventory', 'Business Management'],
   authors: [{ name: 'QuanTuanHuy' }],

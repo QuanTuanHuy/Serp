@@ -3,7 +3,7 @@
  * Description: Part of Serp Project - Subscription plan types
  */
 
-import type { ApiResponse } from '@/lib/store/api/types';
+import type { ApiResponse, PaginatedResponse } from '@/lib/store/api/types';
 
 export type LicenseType =
   | 'FREE'
@@ -50,6 +50,6 @@ export interface AddModuleToPlanRequest {
   maxUsersPerModule?: number;
 }
 
-export type PlansResponse = ApiResponse<SubscriptionPlan[]>;
+export type PlansResponse = PaginatedResponse<SubscriptionPlan>;
 export type PlanResponse = ApiResponse<SubscriptionPlan>;
 export type PlanModulesResponse = ApiResponse<PlanModule[]>;

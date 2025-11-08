@@ -7,13 +7,14 @@
 
 import { useMemo, useCallback, useState } from 'react';
 import {
-  useGetSubscriptionPlansQuery,
+  useGetSubscriptionPlansWithPaginationQuery,
   useCreateSubscriptionPlanMutation,
   useUpdateSubscriptionPlanMutation,
   useDeleteSubscriptionPlanMutation,
   useGetPlanModulesQuery,
   useAddModuleToPlanMutation,
   useRemoveModuleFromPlanMutation,
+  GetPlansParams,
 } from '@/modules/admin/services/plans/plansApi';
 import type {
   SubscriptionPlan,
@@ -32,6 +33,13 @@ import {
 } from '@/modules/admin/store';
 import { getErrorMessage } from '@/lib/store/api';
 
+export interface PlansFilters {
+  organizationId?: number;
+  isCustom?: boolean;
+  isActive?: boolean;
+  search?: string;
+}
+
 export function usePlans() {
   const dispatch = useAppDispatch();
   const notification = useNotification();
@@ -40,18 +48,46 @@ export function usePlans() {
   const isDialogOpen = useAppSelector(selectPlansDialogOpen);
   const selectedPlanId = useAppSelector(selectSelectedPlanId);
 
+  // Filters and pagination state
+  const [filters, setFilters] = useState<PlansFilters>({});
+  const [currentPage, setCurrentPage] = useState(0);
+  const pageSize = 10;
+
   // State for modules dialog
   const [modulesDialogOpen, setModulesDialogOpen] = useState(false);
   const [modulesDialogPlanId, setModulesDialogPlanId] = useState<string | null>(
     null
   );
 
+  const queryParams: GetPlansParams = useMemo(
+    () => ({
+      page: currentPage,
+      pageSize,
+      ...filters,
+    }),
+    [currentPage, filters]
+  );
+
   const {
-    data: plans = [],
+    data: plansResponse,
     isLoading,
+    isFetching,
     error,
     refetch,
-  } = useGetSubscriptionPlansQuery();
+  } = useGetSubscriptionPlansWithPaginationQuery(queryParams);
+
+  const plans = useMemo(
+    () => plansResponse?.data?.items || [],
+    [plansResponse]
+  );
+  const pagination = useMemo(
+    () => ({
+      currentPage: plansResponse?.data?.currentPage || 0,
+      totalPages: plansResponse?.data?.totalPages || 0,
+      totalItems: plansResponse?.data?.totalItems || 0,
+    }),
+    [plansResponse]
+  );
 
   const [createPlanMutation, { isLoading: isCreating }] =
     useCreateSubscriptionPlanMutation();
@@ -175,6 +211,18 @@ export function usePlans() {
     [selectedPlan, updatePlan, createPlan]
   );
 
+  const handleFilterChange = useCallback(
+    (key: keyof PlansFilters, value: any) => {
+      setFilters((prev) => ({ ...prev, [key]: value }));
+      setCurrentPage(0);
+    },
+    []
+  );
+
+  const handlePageChange = useCallback((page: number) => {
+    setCurrentPage(page);
+  }, []);
+
   // Module management functions
   const openModulesDialog = useCallback((planId: string | number) => {
     setModulesDialogPlanId(String(planId));
@@ -218,6 +266,8 @@ export function usePlans() {
     stats,
     selectedPlan,
     planModules,
+    pagination,
+    filters,
     // state
     viewMode,
     isDialogOpen,
@@ -225,6 +275,7 @@ export function usePlans() {
     modulesDialogPlanId,
     isCreating,
     isLoading,
+    isFetching,
     isLoadingModules,
     isAddingModule,
     isRemovingModule,
@@ -240,6 +291,8 @@ export function usePlans() {
     updatePlan,
     deletePlan,
     toggleActive,
+    handleFilterChange,
+    handlePageChange,
     // module actions
     openModulesDialog,
     closeModulesDialog,

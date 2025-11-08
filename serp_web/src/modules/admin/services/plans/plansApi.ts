@@ -4,25 +4,100 @@
  */
 
 import { api } from '@/lib/store/api';
-import { createDataTransform } from '@/lib/store/api/utils';
+import {
+  createDataTransform,
+  createPaginatedTransform,
+} from '@/lib/store/api/utils';
 import {
   SubscriptionPlan,
   PlanModule,
   AddModuleToPlanRequest,
+  PlansResponse,
 } from '../../types';
+
+export interface GetPlansParams {
+  page?: number;
+  pageSize?: number;
+  organizationId?: number;
+  isCustom?: boolean;
+  isActive?: boolean;
+  search?: string;
+}
 
 export const plansApi = api.injectEndpoints({
   endpoints: (builder) => ({
-    getSubscriptionPlans: builder.query<SubscriptionPlan[], void>({
-      query: () => ({
-        url: '/subscription-plans',
-        method: 'GET',
-      }),
-      transformResponse: createDataTransform<SubscriptionPlan[]>(),
+    getSubscriptionPlans: builder.query<
+      SubscriptionPlan[],
+      GetPlansParams | void
+    >({
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+
+        if (params) {
+          if (params.page !== undefined)
+            queryParams.append('page', String(params.page));
+          if (params.pageSize !== undefined)
+            queryParams.append('pageSize', String(params.pageSize));
+          if (params.organizationId !== undefined)
+            queryParams.append('organizationId', String(params.organizationId));
+          if (params.isCustom !== undefined)
+            queryParams.append('isCustom', String(params.isCustom));
+          if (params.isActive !== undefined)
+            queryParams.append('isActive', String(params.isActive));
+          if (params.search) queryParams.append('search', params.search);
+        }
+
+        return {
+          url: `/subscription-plans${queryParams.toString() ? `?${queryParams.toString()}` : ''}`,
+          method: 'GET',
+        };
+      },
+      transformResponse: (response: any) => {
+        const transformed =
+          createPaginatedTransform<SubscriptionPlan>()(response);
+        return transformed.data?.items || [];
+      },
       providesTags: (result) =>
         result
           ? [
               ...result.map(({ id }) => ({ type: 'admin/Plan' as const, id })),
+              { type: 'admin/Plan', id: 'LIST' },
+            ]
+          : [{ type: 'admin/Plan', id: 'LIST' }],
+    }),
+
+    getSubscriptionPlansWithPagination: builder.query<
+      PlansResponse,
+      GetPlansParams
+    >({
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+
+        if (params.page !== undefined)
+          queryParams.append('page', String(params.page));
+        if (params.pageSize !== undefined)
+          queryParams.append('pageSize', String(params.pageSize));
+        if (params.organizationId !== undefined)
+          queryParams.append('organizationId', String(params.organizationId));
+        if (params.isCustom !== undefined)
+          queryParams.append('isCustom', String(params.isCustom));
+        if (params.isActive !== undefined)
+          queryParams.append('isActive', String(params.isActive));
+        if (params.search) queryParams.append('search', params.search);
+
+        return {
+          url: `/subscription-plans?${queryParams.toString()}`,
+          method: 'GET',
+        };
+      },
+      transformResponse: createPaginatedTransform<SubscriptionPlan>(),
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.data.items.map(({ id }) => ({
+                type: 'admin/Plan' as const,
+                id,
+              })),
               { type: 'admin/Plan', id: 'LIST' },
             ]
           : [{ type: 'admin/Plan', id: 'LIST' }],
@@ -123,6 +198,7 @@ export const plansApi = api.injectEndpoints({
 
 export const {
   useGetSubscriptionPlansQuery,
+  useGetSubscriptionPlansWithPaginationQuery,
   useGetSubscriptionPlanByIdQuery,
   useCreateSubscriptionPlanMutation,
   useUpdateSubscriptionPlanMutation,

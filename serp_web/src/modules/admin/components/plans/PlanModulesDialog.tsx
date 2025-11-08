@@ -31,7 +31,6 @@ import {
   SelectValue,
 } from '@/shared/components/ui/select';
 import { Label } from '@/shared/components/ui/label';
-import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import {
   Package,
   Plus,
@@ -197,7 +196,7 @@ export const PlanModulesDialog: React.FC<PlanModulesDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='!max-w-4xl max-h-[90vh] flex flex-col'>
+      <DialogContent className='!max-w-5xl max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
           <DialogTitle className='flex items-center gap-2'>
             <Package className='h-5 w-5' />
@@ -208,7 +207,7 @@ export const PlanModulesDialog: React.FC<PlanModulesDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className='flex-1 overflow-hidden flex flex-col gap-4'>
+        <div className='flex flex-col gap-4'>
           {/* Search and Add Button */}
           <div className='flex items-center gap-2'>
             <div className='relative flex-1'>
@@ -340,7 +339,7 @@ export const PlanModulesDialog: React.FC<PlanModulesDialogProps> = ({
           )}
 
           {/* Modules List */}
-          <Card className='flex-1 flex flex-col overflow-hidden'>
+          <Card className='flex flex-col'>
             <CardHeader className='pb-3'>
               <CardTitle className='text-base flex items-center justify-between'>
                 <span>
@@ -349,110 +348,108 @@ export const PlanModulesDialog: React.FC<PlanModulesDialogProps> = ({
                 </span>
               </CardTitle>
             </CardHeader>
-            <CardContent className='flex-1 overflow-hidden p-0'>
-              <ScrollArea className='h-full'>
-                <div className='px-6 pb-6'>
-                  {isLoadingModules ? (
-                    <div className='flex items-center justify-center h-48'>
-                      <div className='flex flex-col items-center gap-2'>
-                        <Loader2 className='h-8 w-8 animate-spin text-muted-foreground' />
-                        <p className='text-sm text-muted-foreground'>
-                          Loading modules...
-                        </p>
-                      </div>
-                    </div>
-                  ) : filteredPlanModules.length === 0 ? (
-                    <div className='flex flex-col items-center justify-center h-48 text-center'>
-                      <Package className='h-12 w-12 text-muted-foreground mb-4' />
+            <CardContent className='p-0'>
+              <div className='px-6 pb-6'>
+                {isLoadingModules ? (
+                  <div className='flex items-center justify-center h-48'>
+                    <div className='flex flex-col items-center gap-2'>
+                      <Loader2 className='h-8 w-8 animate-spin text-muted-foreground' />
                       <p className='text-sm text-muted-foreground'>
-                        {search
-                          ? 'No modules found matching your search'
-                          : 'No modules added to this plan yet'}
+                        Loading modules...
                       </p>
-                      {!search && availableModules.length > 0 && (
-                        <Button
-                          size='sm'
-                          variant='outline'
-                          className='mt-4'
-                          onClick={() => setShowAddForm(true)}
-                        >
-                          <Plus className='h-4 w-4 mr-2' />
-                          Add First Module
-                        </Button>
-                      )}
                     </div>
-                  ) : (
-                    <div className='space-y-3'>
-                      {filteredPlanModules.map((planModule) => (
-                        <Card
-                          key={planModule.id}
-                          className={cn(
-                            'transition-colors',
-                            !planModule.isIncluded && 'opacity-60'
-                          )}
-                        >
-                          <CardContent className='p-4'>
-                            <div className='flex items-start justify-between gap-4'>
-                              <div className='flex-1 space-y-2'>
-                                <div className='flex items-center gap-2'>
-                                  <h4 className='font-semibold'>
-                                    {planModule.moduleName}
-                                  </h4>
-                                  <Badge
-                                    variant='outline'
-                                    className='text-xs font-mono'
-                                  >
-                                    {planModule.moduleCode}
-                                  </Badge>
-                                  {planModule.isIncluded ? (
-                                    <CheckCircle className='h-4 w-4 text-green-600' />
-                                  ) : (
-                                    <XCircle className='h-4 w-4 text-red-600' />
-                                  )}
-                                </div>
-
-                                <div className='flex items-center gap-3 text-sm'>
-                                  <div className='flex items-center gap-1'>
-                                    <Shield className='h-3 w-3 text-muted-foreground' />
-                                    <Badge
-                                      className={cn(
-                                        'text-xs',
-                                        getLicenseColor(planModule.licenseType)
-                                      )}
-                                    >
-                                      {planModule.licenseType}
-                                    </Badge>
-                                  </div>
-
-                                  {planModule.maxUsersPerModule && (
-                                    <span className='text-muted-foreground'>
-                                      Max Users: {planModule.maxUsersPerModule}
-                                    </span>
-                                  )}
-                                </div>
+                  </div>
+                ) : filteredPlanModules.length === 0 ? (
+                  <div className='flex flex-col items-center justify-center h-48 text-center'>
+                    <Package className='h-12 w-12 text-muted-foreground mb-4' />
+                    <p className='text-sm text-muted-foreground'>
+                      {search
+                        ? 'No modules found matching your search'
+                        : 'No modules added to this plan yet'}
+                    </p>
+                    {!search && availableModules.length > 0 && (
+                      <Button
+                        size='sm'
+                        variant='outline'
+                        className='mt-4'
+                        onClick={() => setShowAddForm(true)}
+                      >
+                        <Plus className='h-4 w-4 mr-2' />
+                        Add First Module
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <div className='space-y-3'>
+                    {filteredPlanModules.map((planModule) => (
+                      <Card
+                        key={planModule.id}
+                        className={cn(
+                          'transition-colors',
+                          !planModule.isIncluded && 'opacity-60'
+                        )}
+                      >
+                        <CardContent className='p-4'>
+                          <div className='flex items-start justify-between gap-4'>
+                            <div className='flex-1 space-y-2'>
+                              <div className='flex items-center gap-2'>
+                                <h4 className='font-semibold'>
+                                  {planModule.moduleName}
+                                </h4>
+                                <Badge
+                                  variant='outline'
+                                  className='text-xs font-mono'
+                                >
+                                  {planModule.moduleCode}
+                                </Badge>
+                                {planModule.isIncluded ? (
+                                  <CheckCircle className='h-4 w-4 text-green-600' />
+                                ) : (
+                                  <XCircle className='h-4 w-4 text-red-600' />
+                                )}
                               </div>
 
-                              <Button
-                                variant='ghost'
-                                size='sm'
-                                onClick={() =>
-                                  handleRemoveModule(
-                                    planModule.moduleId,
-                                    planModule.moduleName
-                                  )
-                                }
-                                disabled={isRemoving}
-                              >
-                                <Trash2 className='h-4 w-4 text-destructive' />
-                              </Button>
+                              <div className='flex items-center gap-3 text-sm'>
+                                <div className='flex items-center gap-1'>
+                                  <Shield className='h-3 w-3 text-muted-foreground' />
+                                  <Badge
+                                    className={cn(
+                                      'text-xs',
+                                      getLicenseColor(planModule.licenseType)
+                                    )}
+                                  >
+                                    {planModule.licenseType}
+                                  </Badge>
+                                </div>
+
+                                {planModule.maxUsersPerModule && (
+                                  <span className='text-muted-foreground'>
+                                    Max Users: {planModule.maxUsersPerModule}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
+
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              onClick={() =>
+                                handleRemoveModule(
+                                  planModule.moduleId,
+                                  planModule.moduleName
+                                )
+                              }
+                              disabled={isRemoving}
+                            >
+                              <Trash2 className='h-4 w-4 text-destructive' />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>

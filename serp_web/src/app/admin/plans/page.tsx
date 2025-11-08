@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   usePlans,
   useModules,
@@ -13,7 +13,7 @@ import {
   AdminActionMenu,
   AdminStatsCard,
 } from '@/modules/admin';
-import type { SubscriptionPlan } from '@/modules/admin';
+import type { SubscriptionPlan, Organization } from '@/modules/admin';
 import {
   PlanFormDialog,
   PlanModulesDialog,
@@ -25,6 +25,7 @@ import {
   CardTitle,
 } from '@/shared/components/ui/card';
 import { Button } from '@/shared/components/ui/button';
+import { Combobox } from '@/shared/components/ui/combobox';
 import { DataTable } from '@/shared/components';
 import type { ColumnDef } from '@/shared/types';
 import {
@@ -38,6 +39,7 @@ import {
   LayoutGrid,
   List,
 } from 'lucide-react';
+import { useGetOrganizationsQuery } from '@/modules/admin/services/organizations/organizationsApi';
 
 export default function PlansPage() {
   const {
@@ -48,14 +50,19 @@ export default function PlansPage() {
     isDialogOpen,
     selectedPlan,
     isLoading,
+    isFetching,
     error,
     isCreating,
+    filters,
+    pagination,
     openCreateDialog,
     openEditDialog,
     closeDialog,
     submitPlan,
     deletePlan,
     toggleActive,
+    handleFilterChange,
+    handlePageChange,
     // Module management
     modulesDialogOpen,
     modulesDialogPlanId,
@@ -70,6 +77,21 @@ export default function PlansPage() {
   } = usePlans();
 
   const { rawModules: allModules } = useModules();
+
+  // Fetch organizations for filters
+  const [orgSearch, setOrgSearch] = useState<string>('');
+  const { data: orgsResponse, isFetching: isFetchingOrgs } =
+    useGetOrganizationsQuery({
+      page: 0,
+      pageSize: 5,
+      sortBy: 'name',
+      sortDir: 'ASC',
+      search: orgSearch || undefined,
+    } as any);
+  const organizations: Organization[] = useMemo(
+    () => orgsResponse?.data.items || [],
+    [orgsResponse]
+  );
 
   const formatPrice = (price?: number) => {
     if (!price) return '$0';
@@ -86,8 +108,7 @@ export default function PlansPage() {
         defaultVisible: true,
         cell: ({ row }) => (
           <div>
-            <p className='font-medium'>{row.planName}</p>
-            <p className='text-xs text-muted-foreground'>{row.planCode}</p>
+            <p className='font-medium'>{row.planCode}</p>
             {row.description && (
               <p className='text-xs text-muted-foreground mt-1 max-w-md'>
                 {row.description}
@@ -276,6 +297,99 @@ export default function PlansPage() {
         />
       </div>
 
+      {/* Filters Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className='text-base font-medium'>Filters</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className='grid gap-4 md:grid-cols-4'>
+            {/* Organization Filter */}
+            <div>
+              <Combobox
+                value={filters.organizationId}
+                onChange={(val) =>
+                  handleFilterChange(
+                    'organizationId',
+                    val !== undefined ? Number(val) : undefined
+                  )
+                }
+                items={organizations.map((o) => ({
+                  value: o.id,
+                  label: o.name,
+                }))}
+                placeholder='All Organizations'
+                loading={isFetchingOrgs}
+                onSearch={(q) => setOrgSearch(q)}
+              />
+            </div>
+
+            {/* Plan Type Filter */}
+            <div>
+              <select
+                value={
+                  filters.isCustom === undefined
+                    ? ''
+                    : filters.isCustom
+                      ? 'custom'
+                      : 'standard'
+                }
+                onChange={(e) => {
+                  const value = e.target.value;
+                  handleFilterChange(
+                    'isCustom',
+                    value === '' ? undefined : value === 'custom'
+                  );
+                }}
+                className='w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm'
+              >
+                <option value=''>All Types</option>
+                <option value='standard'>Standard Plans</option>
+                <option value='custom'>Custom Plans</option>
+              </select>
+            </div>
+
+            {/* Status Filter */}
+            <div>
+              <select
+                value={
+                  filters.isActive === undefined
+                    ? ''
+                    : filters.isActive
+                      ? 'active'
+                      : 'inactive'
+                }
+                onChange={(e) => {
+                  const value = e.target.value;
+                  handleFilterChange(
+                    'isActive',
+                    value === '' ? undefined : value === 'active'
+                  );
+                }}
+                className='w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm'
+              >
+                <option value=''>All Status</option>
+                <option value='active'>Active</option>
+                <option value='inactive'>Inactive</option>
+              </select>
+            </div>
+
+            {/* Search */}
+            <div>
+              <input
+                type='text'
+                value={filters.search || ''}
+                onChange={(e) =>
+                  handleFilterChange('search', e.target.value || undefined)
+                }
+                placeholder='Search by name or code...'
+                className='w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm'
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Plans Grid View */}
       {viewMode === 'grid' && (
         <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
@@ -316,10 +430,7 @@ export default function PlansPage() {
                 <CardHeader>
                   <div className='flex items-start justify-between'>
                     <div>
-                      <CardTitle className='text-xl'>{plan.planName}</CardTitle>
-                      <p className='text-xs text-muted-foreground mt-1'>
-                        {plan.planCode}
-                      </p>
+                      <CardTitle className='text-xl'>{plan.planCode}</CardTitle>
                     </div>
                   </div>
 
@@ -437,6 +548,13 @@ export default function PlansPage() {
           isLoading={isLoading}
           error={error}
           storageKey='admin-plans-columns'
+          pagination={{
+            currentPage: pagination.currentPage,
+            totalPages: pagination.totalPages,
+            totalItems: pagination.totalItems,
+            onPageChange: handlePageChange,
+            isFetching: isFetching,
+          }}
           loadingState={
             <div className='flex items-center justify-center h-64'>
               <div className='text-muted-foreground'>Loading plans...</div>
