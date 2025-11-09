@@ -97,6 +97,11 @@ public class OrganizationSubscriptionEntity extends BaseEntity {
     }
 
     @JsonIgnore
+    public boolean isPendingUpgrade() {
+        return this.status == SubscriptionStatus.PENDING_UPGRADE;
+    }
+
+    @JsonIgnore
     public boolean canUpgrade() {
         return this.status == SubscriptionStatus.ACTIVE || this.status == SubscriptionStatus.TRIAL;
     }
@@ -206,7 +211,8 @@ public class OrganizationSubscriptionEntity extends BaseEntity {
     @JsonIgnore
     public void activate(Long adminId) {
         // if (!isPending() && !isTrial() && !isExpired()) {
-        //     throw new IllegalStateException("Can only activate PENDING or TRIAL subscriptions");
+        // throw new IllegalStateException("Can only activate PENDING or TRIAL
+        // subscriptions");
         // }
         this.status = SubscriptionStatus.ACTIVE;
         this.activatedBy = adminId;
@@ -219,6 +225,12 @@ public class OrganizationSubscriptionEntity extends BaseEntity {
             throw new IllegalStateException("Can only expire ACTIVE or TRIAL subscriptions");
         }
         this.status = SubscriptionStatus.EXPIRED;
+        this.setUpdatedAt(Instant.now().toEpochMilli());
+    }
+
+    @JsonIgnore
+    public void markPendingUpgrade() {
+        this.status = SubscriptionStatus.PENDING_UPGRADE;
         this.setUpdatedAt(Instant.now().toEpochMilli());
     }
 

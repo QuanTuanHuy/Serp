@@ -19,9 +19,14 @@ public interface IOrganizationSubscriptionRepository extends IBaseRepository<Org
 
     @Query("SELECT os FROM OrganizationSubscriptionModel os " +
            "WHERE os.organizationId = :organizationId " +
-           "AND os.status = 'ACTIVE' " +
-           "ORDER BY os.startDate DESC")
+           "AND os.status = 'ACTIVE' ")
     Optional<OrganizationSubscriptionModel> findActiveByOrganizationId(@Param("organizationId") Long organizationId);
+
+    @Query("SELECT os FROM OrganizationSubscriptionModel os " +
+           "WHERE os.organizationId = :organizationId " +
+           "AND os.status IN ('ACTIVE', 'PENDING_UPGRADE')")
+    Optional<OrganizationSubscriptionModel> findActiveOrPendingUpgradeByOrganizationId(
+       @Param("organizationId") Long organizationId);
 
     List<OrganizationSubscriptionModel> findByOrganizationId(Long organizationId);
 

@@ -101,4 +101,10 @@ public class OrganizationSubscriptionAdapter implements IOrganizationSubscriptio
         return organizationSubscriptionMapper.toEntityList(
                 organizationSubscriptionRepository.findBySubscriptionPlanId(planId));
     }
+
+    @Override
+    public Optional<OrganizationSubscriptionEntity> getActiveOrPendingUpgradeByOrganizationId(Long organizationId) {
+        return organizationSubscriptionRepository.findActiveOrPendingUpgradeByOrganizationId(organizationId)
+                .map(organizationSubscriptionMapper::toEntity);
+    }
 }

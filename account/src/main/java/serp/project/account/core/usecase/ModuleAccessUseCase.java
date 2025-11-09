@@ -53,12 +53,7 @@ public class ModuleAccessUseCase {
         try {
             log.info("[UseCase] Checking if organization {} can access module {}", organizationId, moduleId);
 
-            if (!subscriptionService.hasActiveSubscription(organizationId)) {
-                log.warn("Organization {} does not have active subscription", organizationId);
-                return responseUtils.success(false);
-            }
-
-            var subscription = subscriptionService.getActiveSubscription(organizationId);
+            var subscription = subscriptionService.getActiveOrPendingUpgrade(organizationId);
             var plan = subscriptionPlanService.getPlanById(subscription.getSubscriptionPlanId());
 
             var planModules = subscriptionPlanService.getPlanModules(plan.getId());
@@ -82,13 +77,8 @@ public class ModuleAccessUseCase {
         try {
             log.info("[UseCase] Getting accessible modules for organization {}", organizationId);
 
-            if (!subscriptionService.hasActiveSubscription(organizationId)) {
-                log.warn("Organization {} does not have active subscription", organizationId);
-                return responseUtils.success(Collections.emptyList());
-            }
-
             var organization = organizationService.getOrganizationById(organizationId);
-            var subscription = subscriptionService.getActiveSubscription(organizationId);
+            var subscription = subscriptionService.getActiveOrPendingUpgrade(organizationId);
             var plan = subscriptionPlanService.getPlanById(subscription.getSubscriptionPlanId());
             var planModules = subscriptionPlanService.getPlanModules(plan.getId());
             var moduleIds = planModules.stream()
@@ -158,7 +148,7 @@ public class ModuleAccessUseCase {
             if (module == null) {
                 throw new AppException(Constants.ErrorMessage.MODULE_NOT_FOUND);
             }
-            var subscription = subscriptionService.getActiveSubscription(organizationId);
+            var subscription = subscriptionService.getActiveOrPendingUpgrade(organizationId);
             var planModules = subscriptionPlanService.getPlanModules(subscription.getSubscriptionPlanId());
 
             var planModule = planModules.stream()
@@ -218,7 +208,7 @@ public class ModuleAccessUseCase {
             log.info("[UseCase] Bulk assigning {} users to module {} in organization {}",
                     request.getUserIds().size(), request.getModuleId(), request.getOrganizationId());
 
-            var subscription = subscriptionService.getActiveSubscription(request.getOrganizationId());
+            var subscription = subscriptionService.getActiveOrPendingUpgrade(request.getOrganizationId());
             var planModules = subscriptionPlanService.getPlanModules(subscription.getSubscriptionPlanId());
 
             var planModule = planModules.stream()
