@@ -16,6 +16,7 @@ import {
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Badge } from '@/shared/components/ui/badge';
+import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import {
   Card,
   CardContent,
@@ -104,6 +105,13 @@ export const PlanModulesDialog: React.FC<PlanModulesDialogProps> = ({
   const [licenseType, setLicenseType] = useState<LicenseType>('BASIC');
   const [maxUsersPerModule, setMaxUsersPerModule] = useState<string>('');
 
+  // Confirm dialog state
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [moduleToRemove, setModuleToRemove] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
+
   const enrichedPlanModules = useMemo(() => {
     if (!planModules || planModules.length === 0) {
       return [];
@@ -171,19 +179,21 @@ export const PlanModulesDialog: React.FC<PlanModulesDialogProps> = ({
   };
 
   const handleRemoveModule = async (moduleId: number, moduleName: string) => {
-    if (
-      !confirm(
-        `Are you sure you want to remove "${moduleName}" from this plan?`
-      )
-    ) {
-      return;
-    }
+    setModuleToRemove({ id: moduleId, name: moduleName });
+    setConfirmDialogOpen(true);
+  };
+
+  const confirmRemoveModule = async () => {
+    if (!moduleToRemove) return;
 
     try {
-      await onRemoveModule(String(plan.id), moduleId);
+      await onRemoveModule(String(plan.id), moduleToRemove.id);
       notification.success('Module removed from plan successfully');
+      setConfirmDialogOpen(false);
+      setModuleToRemove(null);
     } catch (error) {
       // Error handled in parent
+      setConfirmDialogOpen(false);
     }
   };
 
@@ -459,6 +469,23 @@ export const PlanModulesDialog: React.FC<PlanModulesDialogProps> = ({
             Close
           </Button>
         </div>
+
+        {/* Confirm Remove Module Dialog */}
+        <ConfirmDialog
+          open={confirmDialogOpen}
+          onOpenChange={setConfirmDialogOpen}
+          title='Remove Module from Plan'
+          description={
+            moduleToRemove
+              ? `Are you sure you want to remove "${moduleToRemove.name}" from this subscription plan? You can add it again later if needed.`
+              : ''
+          }
+          confirmText='Remove'
+          cancelText='Cancel'
+          onConfirm={confirmRemoveModule}
+          isLoading={isRemoving}
+          variant='destructive'
+        />
       </DialogContent>
     </Dialog>
   );
