@@ -92,6 +92,22 @@ export const settingsModulesApi = api.injectEndpoints({
         { type: 'settings/ModuleUsers', id: moduleId },
       ],
     }),
+
+    requestMoreModules: build.mutation<
+      { message: string },
+      { additionalModuleIds: number[] }
+    >({
+      query: (body) => ({
+        url: '/subscriptions/request-more-modules',
+        method: 'POST',
+        body,
+      }),
+      transformResponse: createDataTransform<{ message: string }>(),
+      invalidatesTags: [
+        { type: 'settings/Module', id: 'LIST' },
+        { type: 'subscription/Subscription', id: 'ACTIVE' },
+      ],
+    }),
   }),
 });
 
@@ -103,4 +119,5 @@ export const {
   useRevokeUserAccessToModuleMutation,
   useGetModuleUsersQuery,
   useLazyGetModuleUsersQuery,
+  useRequestMoreModulesMutation,
 } = settingsModulesApi;

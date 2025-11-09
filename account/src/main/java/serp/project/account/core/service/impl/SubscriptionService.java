@@ -272,7 +272,8 @@ public class SubscriptionService implements ISubscriptionService {
             throw new AppException(Constants.ErrorMessage.SUBSCRIPTION_ALREADY_ACTIVE);
         }
         // if (!subscription.isPending() && !subscription.isExpired()) {
-        //     throw new AppException(Constants.ErrorMessage.SUBSCRIPTION_NOT_PENDING_APPROVAL);
+        // throw new
+        // AppException(Constants.ErrorMessage.SUBSCRIPTION_NOT_PENDING_APPROVAL);
         // }
 
         subscription.activate(activatedBy);
@@ -457,5 +458,28 @@ public class SubscriptionService implements ISubscriptionService {
     @Transactional(rollbackFor = Exception.class)
     public OrganizationSubscriptionEntity update(OrganizationSubscriptionEntity subscription) {
         return subscriptionPort.update(subscription);
+    }
+
+    @Override
+    public OrganizationSubscriptionEntity getActiveOrPendingUpgrade(Long organizationId) {
+        return subscriptionPort.getActiveOrPendingUpgradeByOrganizationId(organizationId)
+                .orElseThrow(() -> {
+                    log.error("No active or pending upgrade subscription found for organization {}", organizationId);
+                    return new AppException(Constants.ErrorMessage.ACTIVE_SUBSCRIPTION_NOT_FOUND);
+                });
+    }
+
+    @Override
+    public boolean hasActiveOrPendingUpgradeSubscription(Long organizationId) {
+        try {
+            getActiveOrPendingUpgrade(organizationId);
+            return true;
+        } catch (AppException ex) {
+            return false;
+        } catch (Exception ex) {
+            log.error("Error checking active or pending upgrade subscription for organization {}: {}",
+                    organizationId, ex.getMessage());
+            return false;
+        }
     }
 }

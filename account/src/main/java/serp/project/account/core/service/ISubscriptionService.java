@@ -93,6 +93,8 @@ public interface ISubscriptionService {
          */
         OrganizationSubscriptionEntity getActiveSubscription(Long organizationId);
 
+        OrganizationSubscriptionEntity getActiveOrPendingUpgrade(Long organizationId);
+
         /**
          * Get subscription by ID
          */
@@ -122,6 +124,8 @@ public interface ISubscriptionService {
          * Check if organization has active subscription
          */
         boolean hasActiveSubscription(Long organizationId);
+
+        boolean hasActiveOrPendingUpgradeSubscription(Long organizationId);
 
         /**
          * Check if organization can access module based on subscription

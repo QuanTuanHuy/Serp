@@ -216,6 +216,18 @@ export default function SubscriptionsPage() {
               variant: 'destructive',
             });
           }
+          if (row.status === 'PENDING_UPGRADE') {
+            items.push({
+              label: 'Reject Upgrade',
+              onClick: () => {
+                setRejectId(row.id);
+                setRejectReason('');
+                setRejectOpen(true);
+              },
+              icon: <Ban className='h-4 w-4' />,
+              variant: 'destructive',
+            });
+          }
           if (row.status === 'ACTIVE' || row.status === 'TRIAL') {
             items.push({
               label: 'Expire',
@@ -266,6 +278,7 @@ export default function SubscriptionsPage() {
               >
                 <option value=''>All Statuses</option>
                 <option value='PENDING'>Pending</option>
+                <option value='PENDING_UPGRADE'>Pending Upgrade</option>
                 <option value='ACTIVE'>Active</option>
                 <option value='TRIAL'>Trial</option>
                 <option value='EXPIRED'>Expired</option>

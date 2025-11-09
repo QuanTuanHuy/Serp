@@ -24,6 +24,8 @@ public interface IOrganizationSubscriptionPort {
 
     Optional<OrganizationSubscriptionEntity> getActiveByOrganizationId(Long organizationId);
 
+    Optional<OrganizationSubscriptionEntity> getActiveOrPendingUpgradeByOrganizationId(Long organizationId);
+
     List<OrganizationSubscriptionEntity> getByOrganizationId(Long organizationId);
 
     List<OrganizationSubscriptionEntity> getByStatus(SubscriptionStatus status);

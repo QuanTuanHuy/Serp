@@ -18,8 +18,6 @@ import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.*;
 import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
-import serp.project.account.core.domain.entity.SubscriptionPlanEntity;
-import serp.project.account.core.domain.enums.SubscriptionStatus;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.ICombineRoleService;
 import serp.project.account.core.service.IModuleService;
@@ -61,9 +59,10 @@ public class SubscriptionUseCase {
             }
             log.info("[UseCase] Organization {} subscribing to plan {}", organizationId, request.getPlanId());
 
-            if (subscriptionService.hasActiveSubscription(organizationId)) {
+            if (subscriptionService.hasActiveOrPendingUpgradeSubscription(organizationId)) {
                 throw new AppException(Constants.ErrorMessage.ORGANIZATION_ALREADY_HAS_ACTIVE_SUBSCRIPTION);
             }
+
             var plan = subscriptionPlanService.getPlanById(request.getPlanId());
             if (!plan.isAvailable()) {
                 throw new AppException(Constants.ErrorMessage.PLAN_NOT_ACTIVE);
@@ -94,7 +93,7 @@ public class SubscriptionUseCase {
                 return responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
             }
 
-            if (subscriptionService.hasActiveSubscription(organizationId)) {
+            if (subscriptionService.hasActiveOrPendingUpgradeSubscription(organizationId)) {
                 throw new AppException(Constants.ErrorMessage.ORGANIZATION_ALREADY_HAS_ACTIVE_SUBSCRIPTION);
             }
             var organization = organizationService.getOrganizationById(organizationId);
@@ -127,8 +126,7 @@ public class SubscriptionUseCase {
     public GeneralResponse<?> requestMoreModulesForPlan(Long organizationId, RequestMoreModulesRequest request,
             Long requestedBy) {
         try {
-            var organization = organizationService.getOrganizationById(organizationId);
-            var currentSubscription = subscriptionService.getSubscriptionById(organization.getSubscriptionId());
+            var currentSubscription = subscriptionService.getActiveOrPendingUpgrade(organizationId);
             var currentPlan = subscriptionPlanService.getPlanById(currentSubscription.getSubscriptionPlanId());
 
             var modulesToAdd = moduleService.getModulesByIds(request.getAdditionalModuleIds()).stream()
@@ -144,7 +142,7 @@ public class SubscriptionUseCase {
                     modulesToAdd);
 
             currentSubscription.setSubscriptionPlanId(currentPlan.getId());
-            currentSubscription.setStatus(SubscriptionStatus.PENDING);
+            currentSubscription.markPendingUpgrade();
             subscriptionService.update(currentSubscription);
 
             return responseUtils.success("Module addition request submitted successfully. Please wait for approval.");
@@ -166,7 +164,7 @@ public class SubscriptionUseCase {
             }
             log.info("[UseCase] Organization {} starting trial for plan {}", organizationId, planId);
 
-            if (!subscriptionService.hasActiveSubscription(organizationId)) {
+            if (!subscriptionService.hasActiveOrPendingUpgradeSubscription(organizationId)) {
                 throw new AppException(Constants.ErrorMessage.ORGANIZATION_ALREADY_HAS_ACTIVE_SUBSCRIPTION);
             }
             var plan = subscriptionPlanService.getPlanById(planId);

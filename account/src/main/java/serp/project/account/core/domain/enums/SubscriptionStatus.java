@@ -42,5 +42,10 @@ public enum SubscriptionStatus {
     /**
      * Pending activation (chờ admin approve)
      */
-    PENDING
+    PENDING,
+
+    /**
+     * Pending upgrade (chờ nâng cấp)
+     */
+    PENDING_UPGRADE,
 }

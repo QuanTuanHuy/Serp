@@ -14,3 +14,4 @@ export { SettingsUserForm } from './users/UserForm';
 
 // Modules
 export { ModuleUsersDialog } from './modules/ModuleUsersDialog';
+export { RequestModuleDialog } from './modules/RequestModuleDialog';
