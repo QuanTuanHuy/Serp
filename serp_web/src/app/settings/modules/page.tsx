@@ -7,8 +7,11 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDebounce } from '@/shared/hooks';
+import { useNotification } from '@/shared/hooks/use-notification';
 import { useSettingsModules } from '@/modules/settings/hooks/useModules';
 import { ModuleUsersDialog } from '@/modules/settings/components';
+import { RequestModuleDialog } from '@/modules/settings/components/modules/RequestModuleDialog';
+import { useRequestMoreModulesMutation } from '@/modules/settings/services/modules/modulesApi';
 import {
   Puzzle,
   Users,
@@ -22,6 +25,7 @@ import {
   ChevronRight,
   Search,
   Settings,
+  Sparkles,
 } from 'lucide-react';
 import {
   Card,
@@ -43,8 +47,10 @@ import { MODULE_ICONS } from '@/shared/constants/moduleIcons';
 import type { AccessibleModule } from '@/modules/settings/types/module-access.types';
 
 export default function SettingsModulesPage() {
+  const notification = useNotification();
   const [searchQuery, setSearchQuery] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
   const [selectedModule, setSelectedModule] = useState<
     AccessibleModule | undefined
   >(undefined);
@@ -58,9 +64,41 @@ export default function SettingsModulesPage() {
     setSearch,
   } = useSettingsModules();
 
+  const [requestMoreModules, { isLoading: isRequesting }] =
+    useRequestMoreModulesMutation();
+
   useEffect(() => {
     setSearch(debouncedSearch);
   }, [debouncedSearch, setSearch]);
+
+  const handleRequestModule = async () => {
+    if (!selectedModule?.moduleId) {
+      notification.error('Module ID not found');
+      return;
+    }
+
+    try {
+      const result = await requestMoreModules({
+        additionalModuleIds: [selectedModule.moduleId],
+      }).unwrap();
+
+      notification.success(
+        result.message || 'Module request submitted successfully'
+      );
+      setRequestDialogOpen(false);
+      setSelectedModule(undefined);
+    } catch (error: any) {
+      notification.error(
+        error?.data?.message ||
+          'Failed to submit module request. Please try again.'
+      );
+    }
+  };
+
+  const handleEnableModule = (module: AccessibleModule) => {
+    setSelectedModule(module);
+    setRequestDialogOpen(true);
+  };
 
   const getModuleIcon = (moduleCode: string) => {
     const iconConfig = MODULE_ICONS[moduleCode as keyof typeof MODULE_ICONS];
@@ -319,20 +357,25 @@ export default function SettingsModulesPage() {
 
                   {!module.isActive && (
                     <CardContent>
-                      <div className='text-center py-4'>
-                        <Lock className='h-8 w-8 mx-auto text-muted-foreground mb-2' />
-                        <p className='text-sm text-muted-foreground mb-3'>
-                          This module is currently disabled
+                      <div className='text-center py-6'>
+                        <div className='mb-4 inline-flex items-center justify-center w-16 h-16 rounded-full bg-purple-50 dark:bg-purple-950/20'>
+                          <Lock className='h-8 w-8 text-purple-600 dark:text-purple-400' />
+                        </div>
+                        <h4 className='font-semibold text-base mb-2'>
+                          Module Not Available
+                        </h4>
+                        <p className='text-sm text-muted-foreground mb-4 max-w-xs mx-auto'>
+                          Request access to add this module to your
+                          organization's subscription
                         </p>
                         <Button
                           variant='outline'
                           size='sm'
                           className='border-purple-200 text-purple-600 hover:bg-purple-50 dark:border-purple-800 dark:text-purple-400'
-                          onClick={() =>
-                            console.log('Enable', module.moduleCode)
-                          }
+                          onClick={() => handleEnableModule(module)}
                         >
-                          Enable Module
+                          <Sparkles className='h-4 w-4 mr-2' />
+                          Request Module
                         </Button>
                       </div>
                     </CardContent>
@@ -349,6 +392,15 @@ export default function SettingsModulesPage() {
         open={dialogOpen}
         module={selectedModule}
         onOpenChange={(v) => setDialogOpen(v)}
+      />
+
+      {/* Request Module Dialog */}
+      <RequestModuleDialog
+        open={requestDialogOpen}
+        module={selectedModule}
+        onOpenChange={setRequestDialogOpen}
+        onConfirm={handleRequestModule}
+        isLoading={isRequesting}
       />
 
       {/* Quick Actions */}

@@ -17,7 +17,8 @@ export type SubscriptionStatus =
   | 'CANCELLED'
   | 'PAYMENT_FAILED'
   | 'GRACE_PERIOD'
-  | 'PENDING';
+  | 'PENDING'
+  | 'PENDING_UPGRADE';
 
 export type SubscriptionBillingCycle = BillingCycle | 'TRIAL';
 
