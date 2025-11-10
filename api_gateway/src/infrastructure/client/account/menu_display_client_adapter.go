@@ -236,6 +236,85 @@ func (m *MenuDisplayClientAdapter) GetMenuDisplaysByRoleIds(ctx context.Context,
 	return &result, nil
 }
 
+func (m *MenuDisplayClientAdapter) GetMenuDisplaysByModuleIdAndUserId(ctx context.Context, moduleId int64) (*response.BaseResponse, error) {
+	headers := utils.BuildHeadersFromContext(ctx)
+
+	queryParams := map[string]string{"moduleId": fmt.Sprintf("%d", moduleId)}
+
+	var httpResponse *utils.HTTPResponse
+	err := m.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
+		var err error
+		httpResponse, err = m.apiClient.GETWithQuery(ctx, "/api/v1/menu-displays/get-by-module-and-user", queryParams, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call get menu displays by module and user API: %w", err)
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !m.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("GetMenuDisplaysByModuleIdAndUserId API returned error status: %d", httpResponse.StatusCode))
+	}
+
+	var result response.BaseResponse
+	if err := m.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal get menu displays by module and user response: %w", err)
+	}
+
+	return &result, nil
+}
+
+func (m *MenuDisplayClientAdapter) GetAllMenuDisplays(ctx context.Context, params *request.GetMenuDisplayParams) (*response.BaseResponse, error) {
+	headers := utils.BuildHeadersFromContext(ctx)
+
+	queryParams := make(map[string]string)
+	if params != nil {
+		if params.Page != nil {
+			queryParams["page"] = fmt.Sprintf("%d", *params.Page)
+		}
+		if params.PageSize != nil {
+			queryParams["pageSize"] = fmt.Sprintf("%d", *params.PageSize)
+		}
+		if params.SortBy != nil {
+			queryParams["sortBy"] = *params.SortBy
+		}
+		if params.SortDirection != nil {
+			queryParams["sortDir"] = *params.SortDirection
+		}
+		if params.ModuleId != nil {
+			queryParams["moduleId"] = fmt.Sprintf("%d", *params.ModuleId)
+		}
+	}
+
+	var httpResponse *utils.HTTPResponse
+	err := m.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
+		var err error
+		httpResponse, err = m.apiClient.GETWithQuery(ctx, "/api/v1/menu-displays", queryParams, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call get all menu displays API: %w", err)
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !m.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("GetAllMenuDisplays API returned error status: %d", httpResponse.StatusCode))
+	}
+
+	var result response.BaseResponse
+	if err := m.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal get all menu displays response: %w", err)
+	}
+
+	return &result, nil
+}
+
 func NewMenuDisplayClientAdapter(authProps *properties.ExternalServiceProperties) port.IMenuDisplayClientPort {
 	baseUrl := "http://" + authProps.AccountService.Host + ":" + authProps.AccountService.Port + "/account-service"
 	apiClient := utils.NewBaseAPIClient(baseUrl, authProps.AccountService.Timeout)

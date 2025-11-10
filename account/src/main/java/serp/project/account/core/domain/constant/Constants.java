@@ -80,6 +80,7 @@ public class Constants {
         public static final String GET_MENU_DISPLAY_FAILED = "Get menu display failed";
         public static final String ASSIGN_MENU_DISPLAY_FAILED = "Assign menu display failed";
         public static final String UNASSIGN_MENU_DISPLAY_FAILED = "Unassign menu display failed";
+        public static final String ROLE_CANNOT_ASSIGN_MENU_DISPLAYS = "This role cannot be assigned menu displays";
 
         // Organization errors
         public static final String ORGANIZATION_NOT_FOUND = "Organization not found";

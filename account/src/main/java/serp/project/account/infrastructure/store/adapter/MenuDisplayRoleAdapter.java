@@ -50,4 +50,10 @@ public class MenuDisplayRoleAdapter implements IMenuDisplayRolePort {
     public void deleteByIds(List<Long> ids) {
         menuDisplayRoleRepository.deleteByIdIn(ids);
     }
+
+    @Override
+    public List<MenuDisplayRoleEntity> getByMenuDisplayIds(List<Long> menuDisplayIds) {
+        return menuDisplayRoleMapper.toEntityList(
+            menuDisplayRoleRepository.findByMenuDisplayIdIn(menuDisplayIds));
+    }
 }

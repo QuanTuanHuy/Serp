@@ -15,5 +15,7 @@ import serp.project.account.infrastructure.store.model.MenuDisplayRoleModel;
 public interface IMenuDisplayRoleRepository extends IBaseRepository<MenuDisplayRoleModel> {
     List<MenuDisplayRoleModel> findByRoleIdIn(List<Long> roleIds);
 
+    List<MenuDisplayRoleModel> findByMenuDisplayIdIn(List<Long> menuDisplayIds);
+
     void deleteByIdIn(List<Long> ids);
 }
