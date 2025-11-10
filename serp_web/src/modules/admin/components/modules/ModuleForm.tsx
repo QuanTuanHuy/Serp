@@ -71,7 +71,7 @@ export const ModuleForm: React.FC<ModuleFormProps> = ({
   } = useForm<ModuleFormData>({
     defaultValues: module
       ? {
-          name: module.name,
+          name: module.moduleName,
           code: module.code,
           description: module.description || '',
           keycloakClientId: module.keycloakClientId || '',

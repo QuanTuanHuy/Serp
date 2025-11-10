@@ -156,7 +156,7 @@ cd serp_web && npm run dev  # Frontend on :3000
 ### Frontend Structure (serp_web)
 ```
 src/
-├── app/(dashboard)/          # Next.js App Router pages
+├── app/
 │   ├── crm/[customerId]/    # Dynamic routes
 │   └── ptm/tasks/           # Module pages
 ├── modules/                  # Feature modules (self-contained)

@@ -325,7 +325,7 @@ export const RoleForm: React.FC<RoleFormProps> = ({
                   <option value=''>Select a module (optional)</option>
                   {modules.map((module) => (
                     <option key={module.id} value={module.id}>
-                      {module.name} ({module.code})
+                      {module.moduleName} ({module.code})
                     </option>
                   ))}
                 </select>

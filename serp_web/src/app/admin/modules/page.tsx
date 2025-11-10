@@ -68,7 +68,7 @@ export default function ModulesPage() {
               <Puzzle className='h-4 w-4 sm:h-5 sm:w-5 text-primary' />
             </div>
             <div className='min-w-0 flex-1'>
-              <p className='font-medium truncate'>{row.name}</p>
+              <p className='font-medium truncate'>{row.moduleName}</p>
               {row.description && (
                 <p className='text-xs text-muted-foreground max-w-xs sm:max-w-md truncate'>
                   {row.description}
