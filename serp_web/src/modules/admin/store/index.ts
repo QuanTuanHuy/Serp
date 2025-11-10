@@ -11,6 +11,7 @@ import { rolesReducer } from './roles/rolesSlice';
 import { subscriptionsReducer } from './subscriptions/subscriptionsSlice';
 import { usersReducer } from './users/usersSlice';
 import { usersFiltersReducer } from './users/usersFiltersSlice';
+import menuDisplaysReducer from './menu-displays/menuDisplaysSlice';
 
 export const adminReducer = combineReducers({
   plans: plansReducer,
@@ -20,6 +21,7 @@ export const adminReducer = combineReducers({
   subscriptions: subscriptionsReducer,
   users: usersReducer,
   usersFilters: usersFiltersReducer,
+  menuDisplays: menuDisplaysReducer,
 });
 
 export {
@@ -117,3 +119,23 @@ export {
   resetUsersFilters,
   selectUsersFilters,
 } from './users/usersFiltersSlice';
+
+export {
+  setFilters as setMenuDisplaysFilters,
+  setSearch as setMenuDisplaysSearch,
+  setModuleFilter as setMenuDisplaysModuleFilter,
+  setMenuTypeFilter as setMenuDisplaysMenuTypeFilter,
+  clearFilters as clearMenuDisplaysFilters,
+  openCreateDialog as openMenuDisplayCreateDialog,
+  openEditDialog as openMenuDisplayEditDialog,
+  closeDialog as closeMenuDisplayDialog,
+  setStats as setMenuDisplaysStats,
+  setMenuDisplaysPaginationMeta,
+  toggleNodeExpansion as toggleMenuDisplayNode,
+  expandAllNodes as expandAllMenuDisplayNodes,
+  collapseAllNodes as collapseAllMenuDisplayNodes,
+  resetMenuDisplaysState,
+  setMenuDisplaysPage,
+  setMenuDisplaysPageSize,
+  setMenuDisplaysSort,
+} from './menu-displays/menuDisplaysSlice';

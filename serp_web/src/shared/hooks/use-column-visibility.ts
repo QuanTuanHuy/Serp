@@ -3,6 +3,8 @@ Author: QuanTuanHuy
 Description: Part of Serp Project - Hook for managing column visibility with localStorage persistence
 */
 
+'use client';
+
 import { useState, useEffect, useCallback } from 'react';
 import { ColumnDef, ColumnVisibility } from '../types/datatable.types';
 

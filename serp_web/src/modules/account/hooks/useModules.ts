@@ -35,7 +35,6 @@ export const useModules = () => {
 
     if (isSystemAdmin) {
       moduleList.push(...DEFAULT_ADMIN_MODULES);
-      return moduleList;
     }
 
     if (isOrgAdmin) {

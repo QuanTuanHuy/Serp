@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.AddModuleToPlanRequest;
 import serp.project.account.core.domain.dto.request.CreateSubscriptionPlanRequest;
-import serp.project.account.core.domain.dto.request.GetSubscriptionParams;
 import serp.project.account.core.domain.dto.request.GetSubscriptionPlanParams;
 import serp.project.account.core.domain.dto.request.UpdateSubscriptionPlanRequest;
 import serp.project.account.core.usecase.SubscriptionPlanUseCase;

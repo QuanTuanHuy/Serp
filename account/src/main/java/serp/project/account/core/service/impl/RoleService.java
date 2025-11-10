@@ -8,6 +8,7 @@ package serp.project.account.core.service.impl;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -232,6 +233,20 @@ public class RoleService implements IRoleService {
         clearCacheAllRoles();
 
         return existingRole;
+    }
+
+    @Override
+    public RoleEntity getRoleById(Long roleId) {
+        return Optional.ofNullable(rolePort.getRoleById(roleId))
+                .orElseThrow(() -> new AppException(Constants.ErrorMessage.ROLE_NOT_FOUND));
+    }
+
+    @Override
+    public RoleEntity getRoleByIdFromCache(Long roleId) {
+        return getAllRoles().stream()
+                .filter(role -> role.getId().equals(roleId))
+                .findFirst()
+                .orElseThrow(() -> new AppException(Constants.ErrorMessage.ROLE_NOT_FOUND));
     }
 
 }

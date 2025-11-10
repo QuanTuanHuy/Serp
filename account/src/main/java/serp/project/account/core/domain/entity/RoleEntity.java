@@ -153,6 +153,11 @@ public class RoleEntity extends BaseEntity {
     }
 
     @JsonIgnore
+    public boolean canAssignToMenuDisplays() {
+        return this.isModuleRole() || this.isSystemRole();
+    }
+
+    @JsonIgnore
     public int getPermissionCount() {
         return this.permissions != null ? this.permissions.size() : 0;
     }

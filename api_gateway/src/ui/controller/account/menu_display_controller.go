@@ -80,6 +80,24 @@ func (m *MenuDisplayController) GetMenuDisplaysByModuleId(c *gin.Context) {
 	c.JSON(res.Code, res)
 }
 
+func (m *MenuDisplayController) GetAllMenuDisplays(c *gin.Context) {
+	params := request.GetMenuDisplayParams{
+		Page:          utils.ParseIntQuery(c, "page"),
+		PageSize:      utils.ParseIntQuery(c, "pageSize"),
+		SortBy:        utils.ParseStringQuery(c, "sortBy"),
+		SortDirection: utils.ParseStringQuery(c, "sortDir"),
+		ModuleId:      utils.ParseInt64Query(c, "moduleId"),
+		Search:        utils.ParseStringQuery(c, "search"),
+	}
+
+	res, err := m.menuDisplayService.GetAllMenuDisplays(c.Request.Context(), &params)
+	if err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
+		return
+	}
+	c.JSON(res.Code, res)
+}
+
 func (m *MenuDisplayController) AssignMenuDisplaysToRole(c *gin.Context) {
 	var req request.AssignMenuDisplayToRoleDto
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -88,6 +106,20 @@ func (m *MenuDisplayController) AssignMenuDisplaysToRole(c *gin.Context) {
 	}
 
 	res, err := m.menuDisplayService.AssignMenuDisplaysToRole(c.Request.Context(), &req)
+	if err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
+		return
+	}
+	c.JSON(res.Code, res)
+}
+
+func (m *MenuDisplayController) GetMenuDisplaysByModuleIdAndUserId(c *gin.Context) {
+	moduleId, ok := utils.ValidateAndParseQueryID(c, "moduleId")
+	if !ok {
+		return
+	}
+
+	res, err := m.menuDisplayService.GetMenuDisplaysByModuleIdAndUserId(c.Request.Context(), moduleId)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return

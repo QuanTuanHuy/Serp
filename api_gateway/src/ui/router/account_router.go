@@ -129,6 +129,8 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 
 	menuDisplayV1 := group.Group("/api/v1/menu-displays")
 	{
+		menuDisplayV1.Use(middleware.AuthMiddleware()).GET("/get-by-module-and-user", menuDisplayController.GetMenuDisplaysByModuleIdAndUserId)
+		menuDisplayV1.Use(middleware.AuthMiddleware()).GET("", menuDisplayController.GetAllMenuDisplays)
 		menuDisplayV1.Use(middleware.AuthMiddleware()).POST("", menuDisplayController.CreateMenuDisplay)
 		menuDisplayV1.Use(middleware.AuthMiddleware()).PUT("/:id", menuDisplayController.UpdateMenuDisplay)
 		menuDisplayV1.Use(middleware.AuthMiddleware()).DELETE("/:id", menuDisplayController.DeleteMenuDisplay)

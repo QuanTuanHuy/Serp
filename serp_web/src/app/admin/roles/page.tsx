@@ -129,7 +129,7 @@ export default function RolesPage() {
     (moduleId?: number) => {
       if (!moduleId) return null;
       const module = modules.find((m) => m.id === moduleId);
-      return module ? module.name : `ID: ${moduleId}`;
+      return module ? module.moduleName : `ID: ${moduleId}`;
     },
     [modules]
   );

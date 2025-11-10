@@ -123,7 +123,9 @@ export const PlanModulesDialog: React.FC<PlanModulesDialogProps> = ({
       return {
         ...pm,
         moduleName:
-          moduleDetails?.name || pm.moduleName || `Module #${pm.moduleId}`,
+          moduleDetails?.moduleName ||
+          pm.moduleName ||
+          `Module #${pm.moduleId}`,
         moduleCode:
           moduleDetails?.code || pm.moduleCode || `MOD-${pm.moduleId}`,
       };
@@ -270,7 +272,7 @@ export const PlanModulesDialog: React.FC<PlanModulesDialogProps> = ({
                             value={module.id.toString()}
                           >
                             <div className='flex items-center gap-2'>
-                              <span>{module.name}</span>
+                              <span>{module.moduleName}</span>
                               <span className='text-xs text-muted-foreground'>
                                 ({module.code})
                               </span>

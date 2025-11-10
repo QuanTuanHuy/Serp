@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,9 +19,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.CreateMenuDisplayDto;
+import serp.project.account.core.domain.dto.request.GetMenuDisplayParams;
 import serp.project.account.core.domain.dto.request.UpdateMenuDisplayDto;
 import serp.project.account.core.domain.entity.MenuDisplayEntity;
 import serp.project.account.core.domain.entity.MenuDisplayRoleEntity;
+import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.port.store.IMenuDisplayPort;
 import serp.project.account.core.port.store.IMenuDisplayRolePort;
@@ -153,7 +156,7 @@ public class MenuDisplayService implements IMenuDisplayService {
             var assignedMenuDisplayRoles = menuDisplayRolePort.getByRoleIds(List.of(roleId))
                     .stream()
                     .filter(menuDisplayRole -> menuDisplayIds.contains(menuDisplayRole.getMenuDisplayId()))
-                    .collect(Collectors.toList());
+                    .toList();
             if (!CollectionUtils.isEmpty(assignedMenuDisplayRoles)) {
                 var assignedMenuDisplayRoleIds = assignedMenuDisplayRoles.stream()
                         .map(MenuDisplayRoleEntity::getId)
@@ -187,6 +190,21 @@ public class MenuDisplayService implements IMenuDisplayService {
                                 Collectors.filtering(
                                         Objects::nonNull,
                                         Collectors.toList()))));
+    }
+
+    @Override
+    public List<MenuDisplayEntity> getByIds(List<Long> ids) {
+        return menuDisplayPort.getByIds(ids);
+    }
+
+    @Override
+    public Pair<List<MenuDisplayEntity>, Long> getAllMenuDisplays(GetMenuDisplayParams params) {
+        return menuDisplayPort.getAllMenuDisplays(params);
+    }
+
+    @Override
+    public List<MenuDisplayRoleEntity> getMenuDisplayRolesByMenuDisplayIds(List<Long> menuDisplayIds) {
+        return menuDisplayRolePort.getByMenuDisplayIds(menuDisplayIds);
     }
 
 }

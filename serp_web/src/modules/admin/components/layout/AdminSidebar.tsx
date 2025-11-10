@@ -20,6 +20,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   ArrowLeft,
+  Menu,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import { useAdminSidebar } from '../../contexts/AdminSidebarContext';
@@ -63,6 +64,12 @@ const navigationItems: NavigationItem[] = [
     href: '/admin/modules',
     icon: Puzzle,
     description: 'Manage system modules and features',
+  },
+  {
+    name: 'Menu Displays',
+    href: '/admin/menu-displays',
+    icon: Menu,
+    description: 'Manage navigation menus and hierarchies',
   },
   {
     name: 'Users',

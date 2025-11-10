@@ -35,4 +35,8 @@ public interface IRoleService {
     RoleEntity getHighestRole(List<RoleEntity> roles);
 
     RoleEntity updateRole(Long roleId, UpdateRoleDto updateDto);
+
+    RoleEntity getRoleById(Long roleId);
+
+    RoleEntity getRoleByIdFromCache(Long roleId);
 }

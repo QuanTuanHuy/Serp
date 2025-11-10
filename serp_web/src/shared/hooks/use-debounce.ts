@@ -3,6 +3,8 @@
  * Description: Part of Serp Project - Reusable debounce hook
  */
 
+'use client';
+
 import { useEffect, useState } from 'react';
 
 export function useDebounce<T>(value: T, delay = 300): T {

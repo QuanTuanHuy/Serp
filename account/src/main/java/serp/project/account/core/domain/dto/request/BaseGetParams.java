@@ -31,6 +31,10 @@ public class BaseGetParams {
     }
 
     public String getSortDirection() {
-        return sortDirection != null ? sortDirection : "desc";
+        if (sortDirection != null &&
+                (sortDirection.equalsIgnoreCase("asc") || sortDirection.equalsIgnoreCase("desc"))) {
+            return sortDirection;
+        }
+        return "desc";
     }
 }

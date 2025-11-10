@@ -17,6 +17,8 @@ type IMenuDisplayClientPort interface {
 	UpdateMenuDisplay(ctx context.Context, id int64, req *request.UpdateMenuDisplayDto) (*response.BaseResponse, error)
 	DeleteMenuDisplay(ctx context.Context, id int64) (*response.BaseResponse, error)
 	GetMenuDisplaysByModuleId(ctx context.Context, moduleId int64) (*response.BaseResponse, error)
+	GetMenuDisplaysByModuleIdAndUserId(ctx context.Context, moduleId int64) (*response.BaseResponse, error)
+	GetAllMenuDisplays(ctx context.Context, params *request.GetMenuDisplayParams) (*response.BaseResponse, error)
 	AssignMenuDisplaysToRole(ctx context.Context, req *request.AssignMenuDisplayToRoleDto) (*response.BaseResponse, error)
 	UnassignMenuDisplaysFromRole(ctx context.Context, req *request.AssignMenuDisplayToRoleDto) (*response.BaseResponse, error)
 	GetMenuDisplaysByRoleIds(ctx context.Context, roleIds []int64) (*response.BaseResponse, error)

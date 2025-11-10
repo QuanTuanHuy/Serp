@@ -66,7 +66,7 @@ export function useModules() {
     return modules.filter((m) => {
       const matchesSearch = !term
         ? true
-        : m.name?.toLowerCase().includes(term) ||
+        : m.moduleName?.toLowerCase().includes(term) ||
           m.code?.toLowerCase().includes(term) ||
           (m.description || '').toLowerCase().includes(term) ||
           (m.category || '').toLowerCase().includes(term) ||

@@ -18,7 +18,7 @@ Modern Enterprise Resource Planning (ERP) system built with Next.js 15, TypeScri
 ```
 src/
 ├── app/                    # Next.js App Router
-│   ├── (dashboard)/        # Dashboard route group
+│   ├── |── settings/      # Settings for organizaiton
 │   │   ├── crm/           # CRM module pages
 │   │   ├── accounting/    # Accounting module pages
 │   │   └── inventory/     # Inventory module pages
