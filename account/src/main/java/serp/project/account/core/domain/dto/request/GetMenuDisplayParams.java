@@ -18,4 +18,5 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 public class GetMenuDisplayParams extends BaseGetParams {
     private Long moduleId;
+    private String search;
 }

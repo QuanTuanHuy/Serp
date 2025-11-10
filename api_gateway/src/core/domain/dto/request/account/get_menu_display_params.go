@@ -11,4 +11,5 @@ type GetMenuDisplayParams struct {
 	SortBy        *string `json:"sortBy"`
 	SortDirection *string `json:"sortDirection"`
 	ModuleId      *int64  `json:"moduleId"`
+	Search        *string `json:"search"`
 }

@@ -72,6 +72,10 @@ public class MenuDisplayAdapter implements IMenuDisplayPort {
         if (params.getModuleId() != null) {
             whereClause.append(" AND module_id = ? ");
         }
+        params.setSearch(params.getSearch() != null ? params.getSearch().trim() : null);
+        if (params.getSearch() != null && !params.getSearch().isEmpty()) {
+            whereClause.append(" AND (name LIKE ? OR path LIKE ?) ");
+        }
         sql.append(whereClause);
         countSql.append(whereClause);
 
@@ -89,6 +93,11 @@ public class MenuDisplayAdapter implements IMenuDisplayPort {
         List<Object> whereArgs = new ArrayList<>();
         if (params.getModuleId() != null) {
             whereArgs.add(params.getModuleId());
+        }
+        if (params.getSearch() != null && !params.getSearch().isEmpty()) {
+            String searchPattern = "%" + params.getSearch() + "%";
+            whereArgs.add(searchPattern);
+            whereArgs.add(searchPattern);
         }
 
         Long total = jdbcTemplate.query(con -> {

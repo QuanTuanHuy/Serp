@@ -3,13 +3,17 @@
  * Description: Part of Serp Project - Menu Displays management hook
  */
 
-import { useMemo, useCallback } from 'react';
+'use client';
+
+import { useMemo, useCallback, useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/shared/hooks';
 import {
   useGetAllMenuDisplaysQuery,
   useCreateMenuDisplayMutation,
   useUpdateMenuDisplayMutation,
   useDeleteMenuDisplayMutation,
+  useAssignMenuDisplaysToRoleMutation,
+  useUnassignMenuDisplaysFromRoleMutation,
 } from '../services/adminApi';
 import {
   setMenuDisplaysFilters,
@@ -24,6 +28,10 @@ import {
   toggleMenuDisplayNode,
   expandAllMenuDisplayNodes,
   collapseAllMenuDisplayNodes,
+  setMenuDisplaysPage,
+  setMenuDisplaysPageSize,
+  setMenuDisplaysSort,
+  setMenuDisplaysPaginationMeta,
 } from '../store';
 import type {
   MenuDisplayDetail,
@@ -34,7 +42,15 @@ import type {
   UpdateMenuDisplayRequest,
 } from '../types';
 import { toast } from 'sonner';
-import type { RootState } from '@/lib/store/store';
+import {
+  selectExpandedMenuDisplayNodes,
+  selectIsCreatingMenuDisplay,
+  selectMenuDisplaysDialogOpen,
+  selectMenuDisplaysFilters,
+  selectMenuDisplaysStats,
+  selectSelectedMenuDisplay,
+  selectMenuDisplaysPagination,
+} from '../store/menu-displays/menuDisplaysSlice';
 
 /**
  * Build tree structure from flat menu display list
@@ -123,49 +139,7 @@ const calculateStats = (
   return stats;
 };
 
-/**
- * Filter menu displays based on current filters
- */
-const applyFilters = (
-  menuDisplays: MenuDisplayDetail[],
-  filters: MenuDisplayFilters
-): MenuDisplayDetail[] => {
-  return menuDisplays.filter((menu) => {
-    // Search filter
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      const matchesName = menu.name?.toLowerCase().includes(searchLower);
-      const matchesPath = menu.path?.toLowerCase().includes(searchLower);
-      const matchesDescription = menu.description
-        ?.toLowerCase()
-        .includes(searchLower);
-      const matchesModule = menu.moduleName
-        ?.toLowerCase()
-        .includes(searchLower);
-
-      if (
-        !matchesName &&
-        !matchesPath &&
-        !matchesDescription &&
-        !matchesModule
-      ) {
-        return false;
-      }
-    }
-
-    // Module filter
-    if (filters.moduleId !== undefined && menu.moduleId !== filters.moduleId) {
-      return false;
-    }
-
-    // Menu type filter
-    if (filters.menuType && menu.menuType !== filters.menuType) {
-      return false;
-    }
-
-    return true;
-  });
-};
+// Note: menuType remains client-side only for now; search/moduleId handled by backend
 
 /**
  * Get all node IDs for expand/collapse all functionality
@@ -189,25 +163,24 @@ const getAllNodeIds = (nodes: MenuDisplayTreeNode[]): number[] => {
 export const useMenuDisplays = () => {
   const dispatch = useAppDispatch();
 
+  // Local state for role assignment dialog
+  const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+  const [selectedMenuForRole, setSelectedMenuForRole] =
+    useState<MenuDisplayDetail | null>(null);
+
+  // Local state for details dialog
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedMenuForDetails, setSelectedMenuForDetails] =
+    useState<MenuDisplayDetail | null>(null);
+
   // Selectors
-  const filters = useAppSelector(
-    (state: RootState) => state.admin.menuDisplays.filters
-  );
-  const isDialogOpen = useAppSelector(
-    (state: RootState) => state.admin.menuDisplays.isDialogOpen
-  );
-  const isCreating = useAppSelector(
-    (state: RootState) => state.admin.menuDisplays.isCreating
-  );
-  const selectedMenuDisplay = useAppSelector(
-    (state: RootState) => state.admin.menuDisplays.selectedMenuDisplay
-  );
-  const stats = useAppSelector(
-    (state: RootState) => state.admin.menuDisplays.stats
-  );
-  const expandedNodes = useAppSelector(
-    (state: RootState) => state.admin.menuDisplays.expandedNodes
-  );
+  const filters = useAppSelector(selectMenuDisplaysFilters);
+  const isDialogOpen = useAppSelector(selectMenuDisplaysDialogOpen);
+  const isCreating = useAppSelector(selectIsCreatingMenuDisplay);
+  const selectedMenuDisplay = useAppSelector(selectSelectedMenuDisplay);
+  const stats = useAppSelector(selectMenuDisplaysStats);
+  const expandedNodes = useAppSelector(selectExpandedMenuDisplayNodes);
+  const pagination = useAppSelector(selectMenuDisplaysPagination);
 
   // Convert to Set for easier lookup in components
   const expandedNodesSet = useMemo(() => {
@@ -220,34 +193,78 @@ export const useMenuDisplays = () => {
     isLoading,
     error,
     refetch,
-  } = useGetAllMenuDisplaysQuery();
+  } = useGetAllMenuDisplaysQuery({
+    search: filters.search,
+    moduleId: filters.moduleId,
+    page: pagination.page,
+    pageSize: pagination.pageSize,
+    sortBy: pagination.sortBy,
+    sortDir: pagination.sortDir,
+  });
   const [createMenuDisplay, { isLoading: isCreatingMenuDisplay }] =
     useCreateMenuDisplayMutation();
   const [updateMenuDisplay, { isLoading: isUpdatingMenuDisplay }] =
     useUpdateMenuDisplayMutation();
   const [deleteMenuDisplay, { isLoading: isDeletingMenuDisplay }] =
     useDeleteMenuDisplayMutation();
+  const [assignMenuDisplaysToRole, { isLoading: isAssigningRole }] =
+    useAssignMenuDisplaysToRoleMutation();
+  const [unassignMenuDisplaysFromRole, { isLoading: isUnassigningRole }] =
+    useUnassignMenuDisplaysFromRoleMutation();
 
   // Extract items from paginated response
   const menuDisplaysData = menuDisplaysResponse?.data?.items || [];
 
   // Filtered and tree-structured menu displays
-  const filteredMenuDisplays = useMemo(() => {
-    if (!menuDisplaysData) return [];
-    return applyFilters(menuDisplaysData, filters);
-  }, [menuDisplaysData, filters]);
-
   const menuTree = useMemo(() => {
-    return buildMenuTree(filteredMenuDisplays);
-  }, [filteredMenuDisplays]);
+    // Backend already filters by search/moduleId; we keep optional client-side menuType filter
+    const clientFiltered = filters.menuType
+      ? menuDisplaysData.filter((m) => m.menuType === filters.menuType)
+      : menuDisplaysData;
+    return buildMenuTree(clientFiltered);
+  }, [menuDisplaysData, filters.menuType]);
 
-  // Calculate and update stats
-  useMemo(() => {
-    if (menuDisplaysData && menuDisplaysData.length > 0) {
-      const newStats = calculateStats(menuDisplaysData);
-      dispatch(setMenuDisplaysStats(newStats));
+  // Calculate stats memoized (no dispatch here to avoid loops)
+  const calculatedStats = useMemo(() => {
+    const items = menuDisplaysData || [];
+    return calculateStats(items);
+  }, [menuDisplaysData]);
+
+  // Sync stats to Redux only when stats object actually changes
+  useEffect(() => {
+    // Only dispatch if stats differ (deep comparison by JSON or manual check)
+    if (JSON.stringify(stats) !== JSON.stringify(calculatedStats)) {
+      dispatch(setMenuDisplaysStats(calculatedStats));
     }
-  }, [menuDisplaysData, dispatch]);
+  }, [calculatedStats, stats, dispatch]);
+
+  // Sync pagination meta from response only when data changes
+  useEffect(() => {
+    if (menuDisplaysResponse?.data) {
+      const { totalItems, totalPages, currentPage } = menuDisplaysResponse.data;
+
+      // Only dispatch if pagination meta actually changed
+      if (
+        pagination.totalItems !== totalItems ||
+        pagination.totalPages !== totalPages ||
+        pagination.page !== currentPage
+      ) {
+        dispatch(
+          setMenuDisplaysPaginationMeta({
+            totalItems,
+            totalPages,
+            currentPage,
+          })
+        );
+      }
+    }
+  }, [
+    menuDisplaysResponse?.data,
+    pagination.totalItems,
+    pagination.totalPages,
+    pagination.page,
+    dispatch,
+  ]);
 
   // Filter actions
   const handleSearch = useCallback(
@@ -274,6 +291,28 @@ export const useMenuDisplays = () => {
   const handleClearFilters = useCallback(() => {
     dispatch(clearMenuDisplaysFilters());
   }, [dispatch]);
+
+  // Pagination actions
+  const handlePageChange = useCallback(
+    (page: number) => {
+      dispatch(setMenuDisplaysPage(page));
+    },
+    [dispatch]
+  );
+
+  const handlePageSizeChange = useCallback(
+    (size: number) => {
+      dispatch(setMenuDisplaysPageSize(size));
+    },
+    [dispatch]
+  );
+
+  const handleSortChange = useCallback(
+    (sortBy: string, sortDir: 'ASC' | 'DESC') => {
+      dispatch(setMenuDisplaysSort({ sortBy, sortDir }));
+    },
+    [dispatch]
+  );
 
   // Dialog actions
   const openCreateDialog = useCallback(() => {
@@ -378,12 +417,72 @@ export const useMenuDisplays = () => {
     ]
   );
 
+  // Role assignment operations
+  const handleAssignRole = useCallback(
+    async (roleId: number, menuDisplayIds: number[]) => {
+      try {
+        await assignMenuDisplaysToRole({ roleId, menuDisplayIds }).unwrap();
+        toast.success('Role assigned successfully');
+        refetch();
+      } catch (error: any) {
+        const errorMessage = error?.data?.message || 'Failed to assign role';
+        toast.error(errorMessage);
+        throw error;
+      }
+    },
+    [assignMenuDisplaysToRole, refetch]
+  );
+
+  const handleUnassignRole = useCallback(
+    async (roleId: number, menuDisplayIds: number[]) => {
+      try {
+        await unassignMenuDisplaysFromRole({ roleId, menuDisplayIds }).unwrap();
+        toast.success('Role unassigned successfully');
+        refetch();
+      } catch (error: any) {
+        const errorMessage = error?.data?.message || 'Failed to unassign role';
+        toast.error(errorMessage);
+        throw error;
+      }
+    },
+    [unassignMenuDisplaysFromRole, refetch]
+  );
+
+  // Role dialog actions
+  const openRoleDialog = useCallback((menuDisplay: MenuDisplayDetail) => {
+    setSelectedMenuForRole(menuDisplay);
+    setRoleDialogOpen(true);
+  }, []);
+
+  const closeRoleDialog = useCallback(() => {
+    setRoleDialogOpen(false);
+    setSelectedMenuForRole(null);
+  }, []);
+
+  // Details dialog actions
+  const openDetailsDialog = useCallback((menuDisplay: MenuDisplayDetail) => {
+    setSelectedMenuForDetails(menuDisplay);
+    setDetailsDialogOpen(true);
+  }, []);
+
+  const closeDetailsDialog = useCallback(() => {
+    setDetailsDialogOpen(false);
+    setSelectedMenuForDetails(null);
+  }, []);
+
   return {
     // Data
     menuDisplays: menuDisplaysData || [],
-    filteredMenuDisplays,
     menuTree,
     stats,
+    pagination: {
+      currentPage: menuDisplaysResponse?.data?.currentPage || pagination.page,
+      totalPages: menuDisplaysResponse?.data?.totalPages || 0,
+      totalItems: menuDisplaysResponse?.data?.totalItems || 0,
+      pageSize: pagination.pageSize,
+      sortBy: pagination.sortBy,
+      sortDir: pagination.sortDir,
+    },
     expandedNodes: expandedNodesSet,
 
     // Loading states
@@ -392,6 +491,8 @@ export const useMenuDisplays = () => {
     isCreatingMenuDisplay,
     isUpdatingMenuDisplay,
     isDeletingMenuDisplay,
+    isAssigningRole,
+    isUnassigningRole,
 
     // Dialog state
     isDialogOpen,
@@ -404,6 +505,9 @@ export const useMenuDisplays = () => {
     handleModuleFilter,
     handleMenuTypeFilter,
     handleClearFilters,
+    handlePageChange,
+    handlePageSizeChange,
+    handleSortChange,
 
     // Dialog actions
     openCreateDialog,
@@ -420,6 +524,20 @@ export const useMenuDisplays = () => {
     handleUpdateMenuDisplay,
     handleDeleteMenuDisplay,
     submitMenuDisplay,
+    handleAssignRole,
+    handleUnassignRole,
     refetch,
+
+    // Role dialog state & actions
+    roleDialogOpen,
+    selectedMenuForRole,
+    openRoleDialog,
+    closeRoleDialog,
+
+    // Details dialog state & actions
+    detailsDialogOpen,
+    selectedMenuForDetails,
+    openDetailsDialog,
+    closeDetailsDialog,
   };
 };

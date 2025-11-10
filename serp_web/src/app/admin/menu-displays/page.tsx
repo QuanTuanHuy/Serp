@@ -5,10 +5,12 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useMenuDisplays } from '@/modules/admin/hooks/useMenuDisplays';
 import { MenuDisplayTree } from '@/modules/admin/components/menu-displays/MenuDisplayTree';
 import { MenuDisplayFormDialog } from '@/modules/admin/components/menu-displays/MenuDisplayFormDialog';
+import { RoleAssignmentDialog } from '@/modules/admin/components/menu-displays/RoleAssignmentDialog';
+import { MenuDisplayDetailsDialog } from '@/modules/admin/components/menu-displays/MenuDisplayDetailsDialog';
 import { Card, Button, Input } from '@/shared/components';
 import {
   Menu,
@@ -30,8 +32,12 @@ import {
 } from '@/shared/components/ui/select';
 import { Badge } from '@/shared/components/ui/badge';
 import { useGetModulesQuery } from '@/modules/admin/services/adminApi';
+import { useDebounce } from '@/shared/hooks/use-debounce';
 
 export default function MenuDisplaysPage() {
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedSearch = useDebounce(searchInput, 500);
+
   const {
     menuDisplays,
     menuTree,
@@ -56,9 +62,28 @@ export default function MenuDisplaysPage() {
     handleDeleteMenuDisplay,
     isCreatingMenuDisplay,
     isUpdatingMenuDisplay,
+    pagination,
+    handlePageChange,
+    handlePageSizeChange,
+    handleAssignRole,
+    handleUnassignRole,
+    isAssigningRole,
+    isUnassigningRole,
+    roleDialogOpen,
+    selectedMenuForRole,
+    openRoleDialog,
+    closeRoleDialog,
+    detailsDialogOpen,
+    selectedMenuForDetails,
+    openDetailsDialog,
+    closeDetailsDialog,
   } = useMenuDisplays();
 
   const { data: modules = [] } = useGetModulesQuery();
+
+  React.useEffect(() => {
+    handleSearch(debouncedSearch);
+  }, [debouncedSearch, handleSearch]);
 
   return (
     <div className='space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-8'>
@@ -159,8 +184,8 @@ export default function MenuDisplaysPage() {
                 <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
                 <Input
                   placeholder='Search by name, path, description, or module...'
-                  value={filters.search || ''}
-                  onChange={(e) => handleSearch(e.target.value)}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
                   className='pl-10'
                 />
               </div>
@@ -208,7 +233,10 @@ export default function MenuDisplaysPage() {
               <Button
                 variant='ghost'
                 size='sm'
-                onClick={handleClearFilters}
+                onClick={() => {
+                  setSearchInput('');
+                  handleClearFilters();
+                }}
                 className='ml-auto'
               >
                 Clear all
@@ -269,7 +297,7 @@ export default function MenuDisplaysPage() {
               <div className='mb-4 pb-3 border-b'>
                 <p className='text-sm text-muted-foreground'>
                   Showing {menuTree.length} top-level menu
-                  {menuTree.length !== 1 ? 's' : ''} ({menuDisplays.length}{' '}
+                  {menuTree.length !== 1 ? 's' : ''} ({pagination.totalItems}{' '}
                   total)
                 </p>
               </div>
@@ -279,7 +307,57 @@ export default function MenuDisplaysPage() {
                 onToggle={toggleNode}
                 onEdit={openEditDialog}
                 onDelete={handleDeleteMenuDisplay}
+                onAssignRoles={openRoleDialog}
+                onViewDetails={openDetailsDialog}
               />
+
+              {/* Pagination Controls */}
+              <div className='flex flex-col sm:flex-row items-center justify-between gap-3 mt-6'>
+                <p className='text-sm text-muted-foreground'>
+                  Page {pagination.currentPage + 1} of {pagination.totalPages}
+                </p>
+
+                <div className='flex items-center gap-2'>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    disabled={pagination.currentPage <= 0}
+                    onClick={() => handlePageChange(pagination.currentPage - 1)}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    disabled={
+                      pagination.totalPages === 0 ||
+                      pagination.currentPage >= pagination.totalPages - 1
+                    }
+                    onClick={() => handlePageChange(pagination.currentPage + 1)}
+                  >
+                    Next
+                  </Button>
+
+                  <div className='flex items-center gap-2 ml-2'>
+                    <span className='text-sm text-muted-foreground'>Rows:</span>
+                    <Select
+                      value={String(pagination.pageSize)}
+                      onValueChange={(v) => handlePageSizeChange(parseInt(v))}
+                    >
+                      <SelectTrigger className='w-[90px]'>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[10, 20, 50, 100].map((size) => (
+                          <SelectItem key={size} value={String(size)}>
+                            {size}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -295,6 +373,23 @@ export default function MenuDisplaysPage() {
         onSubmit={submitMenuDisplay}
         isLoading={isCreatingMenuDisplay || isUpdatingMenuDisplay}
         allMenuDisplays={menuDisplays}
+      />
+
+      {/* Role Assignment Dialog */}
+      <RoleAssignmentDialog
+        open={roleDialogOpen}
+        onOpenChange={closeRoleDialog}
+        menuDisplay={selectedMenuForRole}
+        onAssign={handleAssignRole}
+        onUnassign={handleUnassignRole}
+        isLoading={isAssigningRole || isUnassigningRole}
+      />
+
+      {/* Details Dialog */}
+      <MenuDisplayDetailsDialog
+        open={detailsDialogOpen}
+        onOpenChange={closeDetailsDialog}
+        menuDisplay={selectedMenuForDetails}
       />
     </div>
   );

@@ -49,6 +49,9 @@ public class MenuDisplayResponse {
 
     private List<RoleInfo> assignedRoles;
 
+    private Long createdAt;
+    private Long updatedAt;
+
     @NoArgsConstructor
     @AllArgsConstructor
     @Data
@@ -79,6 +82,8 @@ public class MenuDisplayResponse {
                                 .roleName(role.getName())
                                 .build())
                         .toList())
+                .createdAt(menuDisplay.getCreatedAt())
+                .updatedAt(menuDisplay.getUpdatedAt())
                 .build();
     }
 }

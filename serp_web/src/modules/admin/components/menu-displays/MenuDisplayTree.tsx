@@ -14,6 +14,7 @@ import {
   Eye,
   Edit,
   Trash2,
+  ShieldCheck,
 } from 'lucide-react';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
@@ -24,16 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/shared/components/ui/alert-dialog';
+import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { cn } from '@/shared/utils';
 import type { MenuDisplayTreeNode } from '../../types';
 
@@ -43,6 +35,8 @@ interface MenuDisplayTreeProps {
   onToggle: (nodeId: number) => void;
   onEdit: (node: MenuDisplayTreeNode) => void;
   onDelete: (id: number, name: string) => void;
+  onAssignRoles?: (node: MenuDisplayTreeNode) => void;
+  onViewDetails?: (node: MenuDisplayTreeNode) => void;
   level?: number;
 }
 
@@ -53,6 +47,8 @@ const MenuTreeNode: React.FC<{
   onToggle: (nodeId: number) => void;
   onEdit: (node: MenuDisplayTreeNode) => void;
   onDelete: (id: number, name: string) => void;
+  onAssignRoles?: (node: MenuDisplayTreeNode) => void;
+  onViewDetails?: (node: MenuDisplayTreeNode) => void;
   level: number;
 }> = ({
   node,
@@ -61,6 +57,8 @@ const MenuTreeNode: React.FC<{
   onToggle,
   onEdit,
   onDelete,
+  onAssignRoles,
+  onViewDetails,
   level,
 }) => {
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
@@ -175,16 +173,22 @@ const MenuTreeNode: React.FC<{
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align='end'>
-              <DropdownMenuItem
-                onClick={() => console.log('View details', node)}
-              >
-                <Eye className='mr-2 h-4 w-4' />
-                View Details
-              </DropdownMenuItem>
+              {onViewDetails && (
+                <DropdownMenuItem onClick={() => onViewDetails(node)}>
+                  <Eye className='mr-2 h-4 w-4' />
+                  View Details
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={() => onEdit(node)}>
                 <Edit className='mr-2 h-4 w-4' />
                 Edit
               </DropdownMenuItem>
+              {onAssignRoles && (
+                <DropdownMenuItem onClick={() => onAssignRoles(node)}>
+                  <ShieldCheck className='mr-2 h-4 w-4' />
+                  Assign Roles
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => setShowDeleteDialog(true)}
@@ -207,37 +211,36 @@ const MenuTreeNode: React.FC<{
             onToggle={onToggle}
             onEdit={onEdit}
             onDelete={onDelete}
+            onAssignRoles={onAssignRoles}
+            onViewDetails={onViewDetails}
             level={level + 1}
           />
         </div>
       )}
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Menu Display</AlertDialogTitle>
-            <AlertDialogDescription>
+      <ConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title='Delete Menu Display'
+        description={
+          <>
+            <span>
               Are you sure you want to delete &ldquo;{node.name}&rdquo;?
-              {hasChildren && (
-                <span className='text-destructive font-medium block mt-2'>
-                  Warning: This menu has {node.children!.length} child menu
-                  {node.children!.length !== 1 ? 's' : ''} that may be affected.
-                </span>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className='bg-destructive hover:bg-destructive/90'
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </span>
+            {hasChildren && (
+              <span className='text-destructive font-medium block mt-2'>
+                Warning: This menu has {node.children!.length} child menu
+                {node.children!.length !== 1 ? 's' : ''} that may be affected.
+              </span>
+            )}
+          </>
+        }
+        confirmText='Delete'
+        cancelText='Cancel'
+        onConfirm={handleDelete}
+        variant='destructive'
+      />
     </>
   );
 };
@@ -248,6 +251,8 @@ export const MenuDisplayTree: React.FC<MenuDisplayTreeProps> = ({
   onToggle,
   onEdit,
   onDelete,
+  onAssignRoles,
+  onViewDetails,
   level = 0,
 }) => {
   if (nodes.length === 0) {
@@ -265,6 +270,8 @@ export const MenuDisplayTree: React.FC<MenuDisplayTreeProps> = ({
           onToggle={onToggle}
           onEdit={onEdit}
           onDelete={onDelete}
+          onAssignRoles={onAssignRoles}
+          onViewDetails={onViewDetails}
           level={level}
         />
       ))}

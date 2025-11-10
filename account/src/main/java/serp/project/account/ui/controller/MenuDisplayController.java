@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
-import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
 import serp.project.account.core.domain.dto.request.AssignMenuDisplayToRoleDto;
 import serp.project.account.core.domain.dto.request.CreateMenuDisplayDto;
@@ -76,10 +75,12 @@ public class MenuDisplayController {
             @RequestParam(required = false) Integer pageSize,
             @RequestParam(required = false) String sortBy,
             @RequestParam(required = false) String sortDir,
-            @RequestParam(required = false) Long moduleId) {
+            @RequestParam(required = false) Long moduleId,
+            @RequestParam(required = false) String search) {
         var params = GetMenuDisplayParams.builder()
                 .page(page).pageSize(pageSize).sortBy(sortBy).sortDirection(sortDir)
                 .moduleId(moduleId)
+                .search(search != null ? search.trim() : null)
                 .build();
         var response = menuDisplayUseCase.getAllMenuDisplays(params);
         return ResponseEntity.status(response.getCode()).body(response);

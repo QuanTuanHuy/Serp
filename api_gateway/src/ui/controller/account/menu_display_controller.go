@@ -87,6 +87,7 @@ func (m *MenuDisplayController) GetAllMenuDisplays(c *gin.Context) {
 		SortBy:        utils.ParseStringQuery(c, "sortBy"),
 		SortDirection: utils.ParseStringQuery(c, "sortDir"),
 		ModuleId:      utils.ParseInt64Query(c, "moduleId"),
+		Search:        utils.ParseStringQuery(c, "search"),
 	}
 
 	res, err := m.menuDisplayService.GetAllMenuDisplays(c.Request.Context(), &params)

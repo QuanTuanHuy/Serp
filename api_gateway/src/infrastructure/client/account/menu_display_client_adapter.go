@@ -287,6 +287,9 @@ func (m *MenuDisplayClientAdapter) GetAllMenuDisplays(ctx context.Context, param
 		if params.ModuleId != nil {
 			queryParams["moduleId"] = fmt.Sprintf("%d", *params.ModuleId)
 		}
+		if params.Search != nil {
+			queryParams["search"] = *params.Search
+		}
 	}
 
 	var httpResponse *utils.HTTPResponse

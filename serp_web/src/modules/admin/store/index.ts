@@ -130,8 +130,12 @@ export {
   openEditDialog as openMenuDisplayEditDialog,
   closeDialog as closeMenuDisplayDialog,
   setStats as setMenuDisplaysStats,
+  setMenuDisplaysPaginationMeta,
   toggleNodeExpansion as toggleMenuDisplayNode,
   expandAllNodes as expandAllMenuDisplayNodes,
   collapseAllNodes as collapseAllMenuDisplayNodes,
   resetMenuDisplaysState,
+  setMenuDisplaysPage,
+  setMenuDisplaysPageSize,
+  setMenuDisplaysSort,
 } from './menu-displays/menuDisplaysSlice';

@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import {
   Dialog,
@@ -21,7 +21,6 @@ import { Label } from '@/shared/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { IconPicker } from './IconPicker';
 import { useGetModulesQuery } from '../../services/adminApi';
-import { useGetAllRolesQuery } from '../../services/adminApi';
 import {
   Select,
   SelectContent,
@@ -29,8 +28,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui/select';
-import { Badge } from '@/shared/components/ui/badge';
-import { X } from 'lucide-react';
 import type {
   MenuDisplayDetail,
   CreateMenuDisplayRequest,
@@ -67,7 +64,6 @@ export const MenuDisplayFormDialog: React.FC<MenuDisplayFormDialogProps> = ({
   allMenuDisplays = [],
 }) => {
   const isEditing = !!menuDisplay;
-  const [selectedRoles, setSelectedRoles] = useState<number[]>([]);
 
   const {
     register,
@@ -91,7 +87,6 @@ export const MenuDisplayFormDialog: React.FC<MenuDisplayFormDialogProps> = ({
 
   const { data: modules = [], isLoading: isLoadingModules } =
     useGetModulesQuery();
-  const { data: roles = [], isLoading: isLoadingRoles } = useGetAllRolesQuery();
 
   const selectedModuleId = watch('moduleId');
 
@@ -117,7 +112,6 @@ export const MenuDisplayFormDialog: React.FC<MenuDisplayFormDialogProps> = ({
           parentId: menuDisplay.parentId || undefined,
           moduleId: menuDisplay.moduleId,
         });
-        setSelectedRoles(menuDisplay.assignedRoles?.map((r) => r.roleId) || []);
       } else {
         reset({
           name: '',
@@ -128,7 +122,6 @@ export const MenuDisplayFormDialog: React.FC<MenuDisplayFormDialogProps> = ({
           moduleId: modules[0]?.id || 0,
           roleIds: [],
         });
-        setSelectedRoles([]);
       }
     }
   }, [open, menuDisplay, reset, modules]);
@@ -160,19 +153,6 @@ export const MenuDisplayFormDialog: React.FC<MenuDisplayFormDialogProps> = ({
       // Error handling is done in the parent component
       console.error('Form submission error:', error);
     }
-  };
-
-  const handleRoleToggle = (roleId: number) => {
-    setSelectedRoles((prev) => {
-      if (prev.includes(roleId)) {
-        return prev.filter((id) => id !== roleId);
-      }
-      return [...prev, roleId];
-    });
-  };
-
-  const handleRoleRemove = (roleId: number) => {
-    setSelectedRoles((prev) => prev.filter((id) => id !== roleId));
   };
 
   return (
@@ -349,77 +329,6 @@ export const MenuDisplayFormDialog: React.FC<MenuDisplayFormDialogProps> = ({
               />
               <p className='text-xs text-muted-foreground'>
                 Select a parent menu to create a submenu
-              </p>
-            </div>
-          )}
-
-          {/* Assigned Roles - Only shown when editing */}
-          {isEditing && (
-            <div className='space-y-2'>
-              <Label>Assigned Roles</Label>
-              <div className='border rounded-md p-3'>
-                {/* Selected Roles */}
-                {selectedRoles.length > 0 && (
-                  <div className='flex flex-wrap gap-2 mb-3'>
-                    {selectedRoles.map((roleId) => {
-                      const role = roles.find((r) => r.id === roleId);
-                      return (
-                        <Badge key={roleId} variant='secondary'>
-                          {role?.name || `Role #${roleId}`}
-                          <button
-                            type='button'
-                            onClick={() => handleRoleRemove(roleId)}
-                            className='ml-1 hover:text-destructive'
-                          >
-                            <X className='h-3 w-3' />
-                          </button>
-                        </Badge>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Available Roles */}
-                <div className='space-y-2 max-h-48 overflow-y-auto'>
-                  {isLoadingRoles ? (
-                    <div className='text-sm text-muted-foreground text-center py-4'>
-                      Loading roles...
-                    </div>
-                  ) : roles.length === 0 ? (
-                    <div className='text-sm text-muted-foreground text-center py-4'>
-                      No roles available
-                    </div>
-                  ) : (
-                    roles.map((role) => (
-                      <div
-                        key={role.id}
-                        className='flex items-center space-x-2'
-                      >
-                        <input
-                          type='checkbox'
-                          id={`role-${role.id}`}
-                          checked={selectedRoles.includes(role.id)}
-                          onChange={() => handleRoleToggle(role.id)}
-                          className='h-4 w-4 rounded border-gray-300'
-                        />
-                        <label
-                          htmlFor={`role-${role.id}`}
-                          className='text-sm flex-1 cursor-pointer'
-                        >
-                          {role.name}
-                          {role.description && (
-                            <span className='text-muted-foreground ml-2'>
-                              - {role.description}
-                            </span>
-                          )}
-                        </label>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-              <p className='text-xs text-muted-foreground'>
-                Select roles that should have access to this menu
               </p>
             </div>
           )}
