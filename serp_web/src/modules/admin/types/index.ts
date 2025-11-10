@@ -74,3 +74,19 @@ export type {
 
 // Stats types
 export type { AdminStats } from './stats.types';
+
+// Menu Display types
+export type {
+  MenuType,
+  RoleInfo as MenuRoleInfo,
+  MenuDisplayDetail,
+  MenuDisplayTreeNode,
+  CreateMenuDisplayRequest,
+  UpdateMenuDisplayRequest,
+  AssignMenuDisplayToRoleRequest,
+  GetMenuDisplayParams,
+  MenuDisplayResponse,
+  AssignRoleResponse,
+  MenuDisplayFilters,
+  MenuDisplayStats,
+} from './menu-display.types';

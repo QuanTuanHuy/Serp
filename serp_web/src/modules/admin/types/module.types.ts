@@ -19,7 +19,7 @@ export type PricingModel = 'FREE' | 'FIXED' | 'PER_USER' | 'TIERED';
 // Module
 export interface Module {
   id: number;
-  name: string;
+  moduleName: string;
   code: string;
   description?: string;
   keycloakClientId?: string;

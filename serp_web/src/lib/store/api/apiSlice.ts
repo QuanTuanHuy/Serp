@@ -110,6 +110,7 @@ export const api = createApi({
     'admin/Module',
     'admin/User',
     'admin/Role',
+    'admin/MenuDisplay',
     // Settings tags
     'settings/Organization',
     'settings/User',

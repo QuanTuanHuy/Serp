@@ -23,6 +23,8 @@ import serp.project.account.core.domain.enums.MenuType;
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class MenuDisplayResponse {
+    private Long id;
+    
     private String name;
 
     private String path;
@@ -59,6 +61,7 @@ public class MenuDisplayResponse {
     public static MenuDisplayResponse fromEnity(MenuDisplayEntity menuDisplay, ModuleEntity module,
             List<RoleEntity> roles) {
         return MenuDisplayResponse.builder()
+                .id(menuDisplay.getId())
                 .name(menuDisplay.getName())
                 .path(menuDisplay.getPath())
                 .icon(menuDisplay.getIcon())

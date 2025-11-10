@@ -33,6 +33,13 @@ export type {
 // Role Components
 export { RoleForm, RoleFormDialog } from './components/roles';
 
+// Menu Display Components
+export {
+  IconPicker,
+  MenuDisplayTree,
+  MenuDisplayFormDialog,
+} from './components/menu-displays';
+
 // Hooks
 export { usePlans } from './hooks/usePlans';
 export type { UsePlansReturn } from './hooks/usePlans';
@@ -45,6 +52,7 @@ export type { UseRolesReturn } from './hooks/useRoles';
 export { useSubscriptions } from './hooks/useSubscriptions';
 export type { UseSubscriptionsReturn } from './hooks/useSubscriptions';
 export { useUsers } from './hooks/useUsers';
+export { useMenuDisplays } from './hooks/useMenuDisplays';
 
 // Types
 export type {
@@ -69,6 +77,16 @@ export type {
   UserStatus,
   RoleScope,
   RoleType,
+  MenuType,
+  MenuRoleInfo,
+  MenuDisplayDetail,
+  MenuDisplayTreeNode,
+  CreateMenuDisplayRequest,
+  UpdateMenuDisplayRequest,
+  AssignMenuDisplayToRoleRequest,
+  GetMenuDisplayParams,
+  MenuDisplayFilters,
+  MenuDisplayStats,
 } from './types';
 
 // API Services
@@ -118,6 +136,17 @@ export {
   useUpdateRoleMutation,
   useAddPermissionsToRoleMutation,
   useDeleteRoleMutation,
+
+  // Menu Displays
+  menuDisplaysApi,
+  useGetAllMenuDisplaysQuery,
+  useGetMenuDisplaysByModuleQuery,
+  useGetMenuDisplaysByRoleIdsQuery,
+  useCreateMenuDisplayMutation,
+  useUpdateMenuDisplayMutation,
+  useDeleteMenuDisplayMutation,
+  useAssignMenuDisplaysToRoleMutation,
+  useUnassignMenuDisplaysFromRoleMutation,
 } from './services/adminApi';
 
 // Users UI Components

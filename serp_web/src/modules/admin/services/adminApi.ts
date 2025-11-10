@@ -64,3 +64,18 @@ export {
   useAddPermissionsToRoleMutation,
   useDeleteRoleMutation,
 } from './roles/rolesApi';
+
+// Menu Displays API
+export {
+  menuDisplaysApi,
+  useGetAllMenuDisplaysQuery,
+  useGetMenuDisplaysByModuleQuery,
+  useGetMenuDisplaysByRoleIdsQuery,
+  useLazyGetAllMenuDisplaysQuery,
+  useLazyGetMenuDisplaysByModuleQuery,
+  useCreateMenuDisplayMutation,
+  useUpdateMenuDisplayMutation,
+  useDeleteMenuDisplayMutation,
+  useAssignMenuDisplaysToRoleMutation,
+  useUnassignMenuDisplaysFromRoleMutation,
+} from './menu-displays/menuDisplaysApi';
