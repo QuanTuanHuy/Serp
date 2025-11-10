@@ -12,12 +12,25 @@ function ScrollArea({
   return (
     <ScrollAreaPrimitive.Root
       data-slot='scroll-area'
-      className={cn('relative', className)}
+      className={cn('relative overflow-hidden', className)}
       {...props}
     >
       <ScrollAreaPrimitive.Viewport
         data-slot='scroll-area-viewport'
-        className='focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1'
+        className={cn(
+          'h-full w-full overflow-auto overscroll-contain focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1'
+        )}
+        onWheel={(e: React.WheelEvent<HTMLDivElement>) => {
+          const el = e.currentTarget as HTMLDivElement;
+          const delta = e.deltaY;
+          const atTop = el.scrollTop === 0;
+          const atBottom =
+            Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop) <= 1;
+          if ((delta < 0 && atTop) || (delta > 0 && atBottom)) {
+            return;
+          }
+          e.stopPropagation();
+        }}
       >
         {children}
       </ScrollAreaPrimitive.Viewport>

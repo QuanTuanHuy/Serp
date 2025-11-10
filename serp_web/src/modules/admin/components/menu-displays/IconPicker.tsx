@@ -17,6 +17,7 @@ import { Button } from '@/shared/components/ui/button';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import { Search, X } from 'lucide-react';
 import { cn } from '@/shared/utils';
+import { useDebounce } from '@/shared/hooks/use-debounce';
 
 // Popular icons for quick access
 const POPULAR_ICONS = [
@@ -52,6 +53,8 @@ const POPULAR_ICONS = [
   'Music',
 ];
 
+const MAX_ICONS_DISPLAY = 180;
+
 interface IconPickerProps {
   value?: string;
   onChange: (iconName: string) => void;
@@ -66,27 +69,49 @@ export const IconPicker: React.FC<IconPickerProps> = ({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
 
-  // Get all lucide icon names
+  const debouncedSearch = useDebounce(search, 300);
+
   const allIconNames = useMemo(() => {
     return Object.keys(LucideIcons).filter(
       (key) =>
-        !key.includes('Icon') &&
-        typeof (LucideIcons as any)[key] === 'function' &&
-        key !== 'createLucideIcon'
+        key !== 'default' &&
+        key !== 'createLucideIcon' &&
+        !key.startsWith('Lucide') &&
+        typeof (LucideIcons as any)[key] === 'object' &&
+        (LucideIcons as any)[key]?.$$typeof
     );
   }, []);
 
-  // Filter icons based on search
+  // Filter icons based on search with limit
   const filteredIcons = useMemo(() => {
-    if (!search) return POPULAR_ICONS;
+    if (!debouncedSearch) return POPULAR_ICONS;
 
-    const searchLower = search.toLowerCase();
-    return allIconNames.filter((name) =>
+    const searchLower = debouncedSearch.toLowerCase();
+    let filtered = allIconNames.filter((name) =>
       name.toLowerCase().includes(searchLower)
     );
-  }, [search, allIconNames]);
 
-  // Get icon component
+    if (filtered.length === 0) {
+      filtered = POPULAR_ICONS.filter((name) =>
+        name.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return filtered.slice(0, MAX_ICONS_DISPLAY);
+  }, [debouncedSearch, allIconNames]);
+
+  // Check if results were truncated
+  const hasMoreResults = useMemo(() => {
+    if (!debouncedSearch) return false;
+
+    const searchLower = debouncedSearch.toLowerCase();
+    const totalMatches = allIconNames.filter((name) =>
+      name.toLowerCase().includes(searchLower)
+    ).length;
+
+    return totalMatches > MAX_ICONS_DISPLAY;
+  }, [debouncedSearch, allIconNames]);
+
   const getIconComponent = (iconName: string) => {
     const IconComponent = (LucideIcons as any)[iconName];
     return IconComponent || LucideIcons.HelpCircle;
@@ -134,7 +159,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent className='w-80 p-0' align='start'>
-        <div className='flex flex-col h-96'>
+        <div className='flex flex-col'>
           {/* Search */}
           <div className='p-3 border-b'>
             <div className='relative'>
@@ -149,19 +174,25 @@ export const IconPicker: React.FC<IconPickerProps> = ({
           </div>
 
           {/* Icon Grid */}
-          <ScrollArea className='flex-1'>
+          <ScrollArea className='h-[360px]'>
             {filteredIcons.length === 0 ? (
-              <div className='flex flex-col items-center justify-center p-8 text-center'>
+              <div className='flex flex-col items-center justify-center p-8 text-center min-h-[360px]'>
                 <LucideIcons.Search className='h-8 w-8 text-muted-foreground mb-2' />
                 <p className='text-sm text-muted-foreground'>
                   No icons found matching &ldquo;{search}&rdquo;
                 </p>
               </div>
             ) : (
-              <div className='p-2'>
-                {!search && (
+              <div className='p-2 pb-4'>
+                {!debouncedSearch && (
                   <div className='px-2 py-1.5 text-xs font-medium text-muted-foreground'>
                     Popular Icons
+                  </div>
+                )}
+                {debouncedSearch && hasMoreResults && (
+                  <div className='px-2 py-1.5 mb-2 text-xs text-amber-600 bg-amber-50 dark:bg-amber-950 dark:text-amber-400 rounded'>
+                    Showing first {MAX_ICONS_DISPLAY} results. Try a more
+                    specific search.
                   </div>
                 )}
                 <div className='grid grid-cols-6 gap-1'>
@@ -194,7 +225,8 @@ export const IconPicker: React.FC<IconPickerProps> = ({
           {/* Footer */}
           <div className='border-t p-2 text-xs text-muted-foreground text-center'>
             {filteredIcons.length} icon{filteredIcons.length !== 1 ? 's' : ''}{' '}
-            {search && 'found'}
+            {debouncedSearch && 'found'}
+            {hasMoreResults && ' (limited)'}
           </div>
         </div>
       </PopoverContent>
