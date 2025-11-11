@@ -51,6 +51,7 @@ import {
   selectSelectedMenuDisplay,
   selectMenuDisplaysPagination,
 } from '../store/menu-displays/menuDisplaysSlice';
+import { getErrorMessage } from '@/lib';
 
 /**
  * Build tree structure from flat menu display list
@@ -421,11 +422,14 @@ export const useMenuDisplays = () => {
   const handleAssignRole = useCallback(
     async (roleId: number, menuDisplayIds: number[]) => {
       try {
-        await assignMenuDisplaysToRole({ roleId, menuDisplayIds }).unwrap();
-        toast.success('Role assigned successfully');
+        const message = await assignMenuDisplaysToRole({
+          roleId,
+          menuDisplayIds,
+        }).unwrap();
+        toast.success(message);
         refetch();
       } catch (error: any) {
-        const errorMessage = error?.data?.message || 'Failed to assign role';
+        const errorMessage = getErrorMessage(error) || 'Failed to assign role';
         toast.error(errorMessage);
         throw error;
       }
@@ -436,11 +440,15 @@ export const useMenuDisplays = () => {
   const handleUnassignRole = useCallback(
     async (roleId: number, menuDisplayIds: number[]) => {
       try {
-        await unassignMenuDisplaysFromRole({ roleId, menuDisplayIds }).unwrap();
-        toast.success('Role unassigned successfully');
+        const message = await unassignMenuDisplaysFromRole({
+          roleId,
+          menuDisplayIds,
+        }).unwrap();
+        toast.success(message);
         refetch();
       } catch (error: any) {
-        const errorMessage = error?.data?.message || 'Failed to unassign role';
+        const errorMessage =
+          getErrorMessage(error) || 'Failed to unassign role';
         toast.error(errorMessage);
         throw error;
       }

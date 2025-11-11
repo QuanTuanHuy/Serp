@@ -14,6 +14,9 @@ export {
   useAppLoading,
   useAppErrors,
 } from './redux';
+export { useModuleSidebar } from './useModuleSidebar';
+export { useModuleRouteGuard } from './useModuleRouteGuard';
 
 // Export types
 export type { NotificationType, NotificationOptions } from './use-notification';
+export type { SidebarMenuItem } from './useModuleSidebar';

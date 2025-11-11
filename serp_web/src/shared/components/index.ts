@@ -13,3 +13,5 @@ export {
   withErrorBoundary,
   useErrorHandler,
 } from './error-boundary';
+export { DynamicSidebar } from './DynamicSidebar';
+export { RouteGuard } from './RouteGuard';

@@ -1,66 +1,78 @@
 /**
  * Authors: QuanTuanHuy
  * Description: Part of Serp Project - Permissions business logic orchestration hook
+ *
+ * NOTE: This hook is temporarily disabled because BE endpoints are not ready:
+ * - /api/v1/users/permissions/me (not implemented)
+ * - /api/v1/users/menus/me (not implemented)
+ *
+ * For now, we use module-specific menu APIs in useModuleRouteGuard hook.
+ * Once BE implements these endpoints, uncomment the API calls below.
  */
 
 import { useCallback, useMemo } from 'react';
 import { useAppSelector } from '@/shared/hooks';
 import { selectUserProfile } from '../store';
-import { useGetUserPermissionsQuery, useGetUserMenusQuery } from '../services';
-import { isSuccessResponse } from '@/lib/store';
+// import { useGetUserPermissionsQuery, useGetUserMenusQuery } from '../services';
+// import { isSuccessResponse } from '@/lib/store';
 import type { UserPermissions, MenuAccess, AccessConfig } from '../types';
 
 export const usePermissions = () => {
   const user = useAppSelector(selectUserProfile);
 
-  // API queries
-  const {
-    data: permissionsData,
-    isLoading: permissionsLoading,
-    refetch: refetchPermissions,
-  } = useGetUserPermissionsQuery(undefined, {
-    skip: !user?.id,
-    refetchOnMountOrArgChange: 300,
-  });
+  // TODO: Uncomment when BE implements these endpoints
+  // const {
+  //   data: permissionsData,
+  //   isLoading: permissionsLoading,
+  //   refetch: refetchPermissions,
+  // } = useGetUserPermissionsQuery(undefined, {
+  //   skip: !user?.id,
+  //   refetchOnMountOrArgChange: 300,
+  // });
 
-  const {
-    data: menusData,
-    isLoading: menusLoading,
-    refetch: refetchMenus,
-  } = useGetUserMenusQuery(undefined, {
-    skip: !user?.id,
-    refetchOnMountOrArgChange: 600,
-  });
+  // const {
+  //   data: menusData,
+  //   isLoading: menusLoading,
+  //   refetch: refetchMenus,
+  // } = useGetUserMenusQuery(undefined, {
+  //   skip: !user?.id,
+  //   refetchOnMountOrArgChange: 600,
+  // });
 
-  const isLoading = permissionsLoading || menusLoading;
+  // Temporary: No loading state since APIs are disabled
+  const isLoading = false;
+  const permissionsData = null;
+  const menusData = null;
 
   // Transform API data to normalized permissions object
   const userPermissions = useMemo<UserPermissions>(() => {
     const roles = user?.roles || [];
 
-    let permissions: string[] = [];
-    let menus: MenuAccess[] = [];
-    let modules: any[] = [];
-    let features: any[] = [];
-    let organizationPermissions: any[] = [];
+    // Temporary: Return empty arrays until BE APIs are ready
+    const permissions: string[] = [];
+    const menus: MenuAccess[] = [];
+    const modules: any[] = [];
+    const features: any[] = [];
+    const organizationPermissions: any[] = [];
 
+    // TODO: Uncomment when BE implements the endpoints
     // Extract permissions from API response
-    if (
-      permissionsData &&
-      isSuccessResponse(permissionsData) &&
-      permissionsData.data
-    ) {
-      permissions = permissionsData.data.permissions || [];
-      features = permissionsData.data.features || [];
-      organizationPermissions =
-        permissionsData.data.organizationPermissions || [];
-    }
+    // if (
+    //   permissionsData &&
+    //   isSuccessResponse(permissionsData) &&
+    //   permissionsData.data
+    // ) {
+    //   permissions = permissionsData.data.permissions || [];
+    //   features = permissionsData.data.features || [];
+    //   organizationPermissions =
+    //     permissionsData.data.organizationPermissions || [];
+    // }
 
     // Extract menus from API response
-    if (menusData && isSuccessResponse(menusData) && menusData.data) {
-      menus = menusData.data.menus || [];
-      modules = menusData.data.modules || [];
-    }
+    // if (menusData && isSuccessResponse(menusData) && menusData.data) {
+    //   menus = menusData.data.menus || [];
+    //   modules = menusData.data.modules || [];
+    // }
 
     return {
       roles,
@@ -248,8 +260,8 @@ export const usePermissions = () => {
     getAccessibleMenus,
     canAccess,
 
-    // Refetch functions
-    refetchPermissions,
-    refetchMenus,
+    // Refetch functions (disabled until BE ready)
+    refetchPermissions: () => Promise.resolve(),
+    refetchMenus: () => Promise.resolve(),
   };
 };

@@ -23,6 +23,8 @@ public interface IMenuDisplayService {
 
     MenuDisplayEntity getMenuDisplayByModuleIdAndName(Long moduleId, String name);
 
+    MenuDisplayEntity getMenuDisplayById(Long id);
+
     void deleteMenuDisplay(Long id);
 
     List<MenuDisplayEntity> getMenuDisplaysByModuleId(Long moduleId);

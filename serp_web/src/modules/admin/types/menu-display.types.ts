@@ -21,6 +21,7 @@ export interface MenuDisplayDetail extends BaseMenuDisplay {
   order: number;
   menuType: MenuType;
   isVisible: boolean;
+  moduleId: number;
   description?: string;
   moduleName?: string;
   moduleCode?: string;

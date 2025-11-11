@@ -27,4 +27,6 @@ public class UpdateMenuDisplayDto {
     private String icon;
     @Min(0)
     private Integer order;
+    private Boolean isVisible;
+    private String description;
 }

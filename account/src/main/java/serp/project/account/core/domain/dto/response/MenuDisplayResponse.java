@@ -12,6 +12,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import serp.project.account.core.domain.entity.MenuDisplayEntity;
 import serp.project.account.core.domain.entity.ModuleEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
@@ -22,6 +23,7 @@ import serp.project.account.core.domain.enums.MenuType;
 @Data
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@Slf4j
 public class MenuDisplayResponse {
     private Long id;
     

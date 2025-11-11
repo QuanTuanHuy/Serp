@@ -16,5 +16,9 @@ public interface IMenuDisplayRolePort {
 
     List<MenuDisplayRoleEntity> getByMenuDisplayIds(List<Long> menuDisplayIds);
 
+    List<MenuDisplayRoleEntity> getByRoleIdAndMenuDisplayIds(Long roleId, List<Long> menuDisplayIds);
+
+    void deleteByRoleIdAndMenuDisplayIds(Long roleId, List<Long> menuDisplayIds);
+
     void deleteByIds(List<Long> ids);
 }

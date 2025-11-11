@@ -71,6 +71,7 @@ public class Constants {
         public static final String INVALID_REFRESH_TOKEN = "Invalid refresh token";
         public static final String TOKEN_EXPIRED = "Token expired";
 
+        public static final String INVALID_MENU_TYPE = "Invalid menu type";
         public static final String MENU_DISPLAY_ALREADY_EXISTS = "Menu display already exists";
         public static final String MENU_DISPLAY_NOT_FOUND = "Menu display not found";
         public static final String PARENT_MENU_DISPLAY_NOT_FOUND = "Parent menu display not found";
@@ -81,6 +82,7 @@ public class Constants {
         public static final String ASSIGN_MENU_DISPLAY_FAILED = "Assign menu display failed";
         public static final String UNASSIGN_MENU_DISPLAY_FAILED = "Unassign menu display failed";
         public static final String ROLE_CANNOT_ASSIGN_MENU_DISPLAYS = "This role cannot be assigned menu displays";
+        public static final String NO_VALID_MENU_DISPLAYS_TO_ASSIGN = "No valid menu displays to assign to the role";
 
         // Organization errors
         public static final String ORGANIZATION_NOT_FOUND = "Organization not found";

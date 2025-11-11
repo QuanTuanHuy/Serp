@@ -17,5 +17,7 @@ public interface IMenuDisplayRoleRepository extends IBaseRepository<MenuDisplayR
 
     List<MenuDisplayRoleModel> findByMenuDisplayIdIn(List<Long> menuDisplayIds);
 
+    List<MenuDisplayRoleModel> findByRoleIdAndMenuDisplayIdIn(Long roleId, List<Long> menuDisplayIds);
+
     void deleteByIdIn(List<Long> ids);
 }

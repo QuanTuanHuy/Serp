@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import serp.project.account.core.domain.dto.request.CreateMenuDisplayDto;
 import serp.project.account.core.domain.dto.request.UpdateMenuDisplayDto;
 import serp.project.account.core.domain.entity.MenuDisplayEntity;
+import serp.project.account.core.domain.enums.MenuType;
 import serp.project.account.infrastructure.store.model.MenuDisplayModel;
 
 @Component
@@ -31,6 +32,9 @@ public class MenuDisplayMapper extends BaseMapper {
                 .order(model.getOrder())
                 .parentId(model.getParentId())
                 .moduleId(model.getModuleId())
+                .menuType(model.getMenuType())
+                .isVisible(model.getIsVisible())
+                .description(model.getDescription())
                 .createdAt(localDateTimeToLong(model.getCreatedAt()))
                 .updatedAt(localDateTimeToLong(model.getUpdatedAt()))
                 .build();
@@ -49,6 +53,9 @@ public class MenuDisplayMapper extends BaseMapper {
                 .order(entity.getOrder())
                 .parentId(entity.getParentId())
                 .moduleId(entity.getModuleId())
+                .menuType(entity.getMenuType())
+                .isVisible(entity.getIsVisible())
+                .description(entity.getDescription())
                 .createdAt(longToLocalDateTime(entity.getCreatedAt()))
                 .updatedAt(longToLocalDateTime(entity.getUpdatedAt()))
                 .build();
@@ -81,11 +88,14 @@ public class MenuDisplayMapper extends BaseMapper {
 
         return MenuDisplayEntity.builder()
                 .name(request.getName())
+                .menuType(MenuType.valueOf(request.getMenuType()))
                 .path(request.getPath())
                 .icon(request.getIcon())
                 .order(request.getOrder())
                 .parentId(request.getParentId())
                 .moduleId(request.getModuleId())
+                .isVisible(request.getIsVisible())
+                .description(request.getDescription())
                 .build();
     }
 
@@ -94,10 +104,24 @@ public class MenuDisplayMapper extends BaseMapper {
             return entity;
         }
 
-        entity.setName(request.getName());
-        entity.setPath(request.getPath());
-        entity.setIcon(request.getIcon());
-        entity.setOrder(request.getOrder());
+        if (request.getName() != null) {
+            entity.setName(request.getName());
+        }
+        if (request.getPath() != null) {
+            entity.setPath(request.getPath());
+        }
+        if (request.getIcon() != null) {
+            entity.setIcon(request.getIcon());
+        }
+        if (request.getOrder() != null) {
+            entity.setOrder(request.getOrder());
+        }
+        if (request.getIsVisible() != null) {
+            entity.setIsVisible(request.getIsVisible());
+        }
+        if (request.getDescription() != null) {
+            entity.setDescription(request.getDescription());
+        }
 
         return entity;
     }

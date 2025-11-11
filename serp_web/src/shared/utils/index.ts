@@ -154,3 +154,5 @@ export function getInitials(
 
   return '';
 }
+
+export { getIconComponent } from './getIconComponent';

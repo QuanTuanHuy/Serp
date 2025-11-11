@@ -124,7 +124,7 @@ export const menuDisplaysApi = api.injectEndpoints({
     }),
 
     assignMenuDisplaysToRole: builder.mutation<
-      void,
+      string,
       AssignMenuDisplayToRoleRequest
     >({
       query: (data) => ({
@@ -132,6 +132,7 @@ export const menuDisplaysApi = api.injectEndpoints({
         method: 'POST',
         body: data,
       }),
+      transformResponse: createDataTransform<string>(),
       invalidatesTags: [
         { type: 'admin/MenuDisplay', id: 'LIST' },
         { type: 'admin/MenuDisplay', id: 'ROLE_LIST' },
@@ -140,7 +141,7 @@ export const menuDisplaysApi = api.injectEndpoints({
     }),
 
     unassignMenuDisplaysFromRole: builder.mutation<
-      void,
+      string,
       AssignMenuDisplayToRoleRequest
     >({
       query: (data) => ({
@@ -148,6 +149,7 @@ export const menuDisplaysApi = api.injectEndpoints({
         method: 'POST',
         body: data,
       }),
+      transformResponse: createDataTransform<string>(),
       invalidatesTags: [
         { type: 'admin/MenuDisplay', id: 'LIST' },
         { type: 'admin/MenuDisplay', id: 'ROLE_LIST' },

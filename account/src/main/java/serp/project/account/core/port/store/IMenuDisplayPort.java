@@ -10,6 +10,8 @@ import org.springframework.data.util.Pair;
 public interface IMenuDisplayPort {
     MenuDisplayEntity save(MenuDisplayEntity menuDisplay);
 
+    MenuDisplayEntity getById(Long id);
+
     List<MenuDisplayEntity> getByIds(List<Long> ids);
 
     List<MenuDisplayEntity> getByModuleId(Long moduleId);

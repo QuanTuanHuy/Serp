@@ -15,7 +15,7 @@ spring:
       minimum-idle: 3
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     show-sql: false
     properties:
       hibernate:

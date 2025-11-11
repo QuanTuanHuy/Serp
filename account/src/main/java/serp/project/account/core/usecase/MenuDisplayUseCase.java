@@ -7,6 +7,7 @@ package serp.project.account.core.usecase;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -25,6 +26,7 @@ import serp.project.account.core.domain.entity.MenuDisplayEntity;
 import serp.project.account.core.domain.entity.MenuDisplayRoleEntity;
 import serp.project.account.core.domain.entity.ModuleEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
+import serp.project.account.core.domain.enums.MenuType;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.IMenuDisplayService;
 import serp.project.account.core.service.IModuleService;
@@ -48,6 +50,8 @@ public class MenuDisplayUseCase {
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> createMenuDisplay(CreateMenuDisplayDto request) {
         try {
+            validateCreateMenuDisplayRequest(request);
+
             var module = moduleService.getModuleById(request.getModuleId());
             if (module == null) {
                 throw new AppException(Constants.ErrorMessage.MODULE_NOT_FOUND);
@@ -66,6 +70,17 @@ public class MenuDisplayUseCase {
         } catch (Exception e) {
             log.error("Unexpected Error creating menu display: {}", e.getMessage());
             throw e;
+        }
+    }
+
+    private void validateCreateMenuDisplayRequest(CreateMenuDisplayDto request) {
+        try {
+            MenuType.valueOf(request.getMenuType());
+        } catch (IllegalArgumentException e) {
+            throw new AppException(Constants.ErrorMessage.INVALID_MENU_TYPE);
+        }
+        if (request.getParentId() != null) {
+            menuDisplayService.getMenuDisplayById(request.getParentId());
         }
     }
 
@@ -117,13 +132,16 @@ public class MenuDisplayUseCase {
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> assignMenuDisplaysToRole(Long roleId, List<Long> menuDisplayIds) {
         try {
-            var role = roleService.getRoleById(roleId);
+            var role = roleService.getRoleByIdFromCache(roleId);
             if (!role.canAssignToMenuDisplays()) {
                 throw new AppException(Constants.ErrorMessage.ROLE_CANNOT_ASSIGN_MENU_DISPLAYS);
             }
             List<MenuDisplayEntity> menuDisplays = menuDisplayService.getByIds(menuDisplayIds).stream()
                     .filter(md -> role.isSystemRole() || md.getModuleId().equals(role.getModuleId()))
                     .toList();
+            if (menuDisplays.isEmpty()) {
+                throw new AppException(Constants.ErrorMessage.NO_VALID_MENU_DISPLAYS_TO_ASSIGN);
+            }
             menuDisplayIds = menuDisplays.stream()
                     .map(MenuDisplayEntity::getId)
                     .distinct().toList();
@@ -200,7 +218,7 @@ public class MenuDisplayUseCase {
                             Collectors.mapping(
                                     menuDisplayRole -> roleService.getRoleByIdFromCache(menuDisplayRole.getRoleId()),
                                     Collectors.filtering(
-                                            r -> r != null,
+                                            Objects::nonNull,
                                             Collectors.toList()))));
 
             var responses = menuDisplayEntities.stream()
@@ -235,22 +253,24 @@ public class MenuDisplayUseCase {
                 throw new AppException(Constants.ErrorMessage.USER_NOT_FOUND);
             }
 
-            var userRoles = user.getRoles().stream()
-                    .filter(role -> role.isModuleRole() && role.getModuleId().equals(moduleId))
+            var userRoles = user.getRoles();
+            var menuDisplays = menuDisplayService.getMenuDisplaysByModuleId(moduleId).stream()
+                    .filter(MenuDisplayEntity::getIsVisible)
                     .toList();
-            if (userRoles.isEmpty()) {
-                return responseUtils.success(Collections.emptyList());
-            }
-
-            var roleIds = userRoles.stream()
-                    .map(RoleEntity::getId).toList();
-            var menuDisplaysByRoleIds = menuDisplayService.getMenuDisplaysByRoleIds(roleIds);
-            var menuDisplaySet = menuDisplaysByRoleIds.values().stream()
-                    .flatMap(List::stream)
-                    .filter(md -> md.getModuleId().equals(moduleId) && md.getIsVisible())
-                    .collect(Collectors.toSet());
-            var responses = menuDisplaySet.stream()
-                    .map(md -> MenuDisplayResponse.fromEnity(md, module, userRoles))
+            var responses = menuDisplays.stream()
+                    .map(md -> {
+                        List<Long> roleCanAccessIds = md.getAssignedRoles().stream()
+                                .map(MenuDisplayRoleEntity::getRoleId)
+                                .toList();
+                        List<RoleEntity> rolesCanAccess = userRoles.stream()
+                                .filter(r -> roleCanAccessIds.contains(r.getId()))
+                                .toList();
+                        if (rolesCanAccess.isEmpty()) {
+                            return null;
+                        }
+                        return MenuDisplayResponse.fromEnity(md, module, rolesCanAccess);
+                    })
+                    .filter(Objects::nonNull)
                     .toList();
 
             return responseUtils.success(responses);

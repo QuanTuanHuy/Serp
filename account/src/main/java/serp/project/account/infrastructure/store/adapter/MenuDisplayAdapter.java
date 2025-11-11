@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 import lombok.RequiredArgsConstructor;
 import serp.project.account.core.domain.dto.request.GetMenuDisplayParams;
 import serp.project.account.core.domain.entity.MenuDisplayEntity;
+import serp.project.account.core.domain.enums.MenuType;
 import serp.project.account.core.port.store.IMenuDisplayPort;
 import serp.project.account.infrastructure.store.mapper.MenuDisplayMapper;
 import serp.project.account.infrastructure.store.model.MenuDisplayModel;
@@ -43,7 +44,8 @@ public class MenuDisplayAdapter implements IMenuDisplayPort {
         return menuDisplayMapper.toEntityList(menuDisplayRepository.findByIdIn(ids));
     }
 
-    private MenuDisplayEntity getById(Long id) {
+    @Override
+    public MenuDisplayEntity getById(Long id) {
         return menuDisplayMapper.toEntity(menuDisplayRepository.findById(id).orElse(null));
     }
 
@@ -127,6 +129,11 @@ public class MenuDisplayAdapter implements IMenuDisplayPort {
                     .order(rs.getObject("order_index") != null ? rs.getInt("order_index") : null)
                     .parentId(rs.getObject("parent_id") != null ? rs.getLong("parent_id") : null)
                     .moduleId(rs.getLong("module_id"))
+                    .menuType(rs.getString("menu_type") != null
+                            ? MenuType.valueOf(rs.getString("menu_type"))
+                            : null)
+                    .isVisible(rs.getBoolean("is_visible"))
+                    .description(rs.getString("description"))
                     .createdAt(rs.getTimestamp("created_at").toLocalDateTime())
                     .updatedAt(rs.getTimestamp("updated_at").toLocalDateTime())
                     .build();
