@@ -7,12 +7,15 @@ package serp.project.account.infrastructure.store.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import serp.project.account.core.domain.enums.MenuType;
 
 @Entity
 @Table(name = "menu_displays")
@@ -39,4 +42,14 @@ public class MenuDisplayModel extends BaseModel {
 
     @Column(name = "module_id", nullable = false)
     private Long moduleId;
+
+    @Column(name = "menu_type", nullable = false, length = 50)
+    @Enumerated(EnumType.STRING)
+    private MenuType menuType;
+
+    @Column(name = "is_visible", nullable = false)
+    private Boolean isVisible;
+
+    @Column(name = "description", length = 500)
+    private String description;
 }

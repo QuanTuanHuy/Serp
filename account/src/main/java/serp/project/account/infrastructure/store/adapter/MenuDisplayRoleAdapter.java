@@ -6,6 +6,7 @@
 package serp.project.account.infrastructure.store.adapter;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -54,6 +55,30 @@ public class MenuDisplayRoleAdapter implements IMenuDisplayRolePort {
     @Override
     public List<MenuDisplayRoleEntity> getByMenuDisplayIds(List<Long> menuDisplayIds) {
         return menuDisplayRoleMapper.toEntityList(
-            menuDisplayRoleRepository.findByMenuDisplayIdIn(menuDisplayIds));
+                menuDisplayRoleRepository.findByMenuDisplayIdIn(menuDisplayIds));
+    }
+
+    @Override
+    public List<MenuDisplayRoleEntity> getByRoleIdAndMenuDisplayIds(Long roleId, List<Long> menuDisplayIds) {
+        return menuDisplayRoleMapper.toEntityList(
+                menuDisplayRoleRepository.findByRoleIdAndMenuDisplayIdIn(roleId, menuDisplayIds));
+    }
+
+    @Override
+    public void deleteByRoleIdAndMenuDisplayIds(Long roleId, List<Long> menuDisplayIds) {
+        if (menuDisplayIds == null || menuDisplayIds.isEmpty()) {
+            return;
+        }
+
+        String placeholders = menuDisplayIds.stream().map(id -> "?").collect(Collectors.joining(", "));
+        String sql = "DELETE FROM menu_display_roles WHERE role_id = ? AND menu_display_id IN (" + placeholders + ")";
+
+        Object[] params = new Object[1 + menuDisplayIds.size()];
+        params[0] = roleId;
+        for (int i = 0; i < menuDisplayIds.size(); i++) {
+            params[i + 1] = menuDisplayIds.get(i);
+        }
+
+        jdbcTemplate.update(sql, params);
     }
 }

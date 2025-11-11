@@ -31,4 +31,9 @@ public class CreateMenuDisplayDto {
     private Long parentId;
     @Min(1)
     private Long moduleId;
+    @Builder.Default
+    private String menuType = "SIDEBAR";
+    @Builder.Default
+    private Boolean isVisible = true;
+    private String description;
 }

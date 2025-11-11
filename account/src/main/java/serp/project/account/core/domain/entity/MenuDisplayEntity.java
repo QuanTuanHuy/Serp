@@ -5,6 +5,8 @@
 
 package serp.project.account.core.domain.entity;
 
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -41,4 +43,6 @@ public class MenuDisplayEntity extends BaseEntity {
     private Boolean isVisible = true;
 
     private String description;
+
+    private List<MenuDisplayRoleEntity> assignedRoles;
 }
