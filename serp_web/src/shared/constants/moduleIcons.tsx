@@ -154,7 +154,7 @@ export const getModuleIcon = (moduleCode: string): ModuleIconConfig | null => {
 export const getModuleRoute = (moduleCode: string): string => {
   if (moduleCode === 'ADMIN') return '/admin';
   if (moduleCode === 'SETTINGS') return '/settings';
-  if (moduleCode === 'PTM') return '/ptm';
-  if (moduleCode === 'CRM') return '/crm';
+  if (moduleCode === 'PTM') return '/ptm/dashboard';
+  if (moduleCode === 'CRM') return '/crm/dashboard';
   return `/${moduleCode.toLowerCase()}`;
 };

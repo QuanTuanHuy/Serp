@@ -6,7 +6,7 @@
  */
 
 // Components
-export { default as Sidebar } from './components/layout/Sidebar';
+export { default as Sidebar } from './components/layout/PTMSidebar.backup';
 
 // Re-export for convenience
-export { Sidebar as PTMSidebar } from './components/layout/Sidebar';
+export { Sidebar as PTMSidebar } from './components/layout/PTMSidebar.backup';
