@@ -4,13 +4,30 @@
 import sys
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
+from pydantic import ValidationError
 
 from src.config import settings
 from src.infrastructure.db import init_db, close_db
 from src.ui.api.v1.router import api_router, api_v1_router
-from src.ui.middleware import LoggingMiddleware
+from src.ui.middleware import (
+    LoggingMiddleware,
+    JWTAuthMiddleware,
+    app_exception_handler,
+    http_exception_handler,
+    validation_exception_handler,
+    pydantic_validation_exception_handler,
+    general_exception_handler,
+    value_error_handler,
+    permission_error_handler,
+    not_found_error_handler,
+)
+from src.core.domain.exceptions import (
+    BaseAppException,
+    NotFoundError,
+)
 
 
 # Configure loguru logger
@@ -72,7 +89,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(JWTAuthMiddleware)
+
 app.add_middleware(LoggingMiddleware)
+
+# Register exception handlers
+app.add_exception_handler(BaseAppException, app_exception_handler)
+app.add_exception_handler(NotFoundError, not_found_error_handler)
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(ValidationError, pydantic_validation_exception_handler)
+app.add_exception_handler(ValueError, value_error_handler)
+app.add_exception_handler(PermissionError, permission_error_handler)
+app.add_exception_handler(Exception, general_exception_handler)
 
 # Register routers
 app.include_router(api_router)

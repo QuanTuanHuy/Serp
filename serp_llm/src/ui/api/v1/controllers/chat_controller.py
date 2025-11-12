@@ -8,13 +8,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
 from src.infrastructure.db.database import get_db
-from src.core.domain.dto import ChatRequest, ChatResponse
+from src.core.domain.dto import ChatRequest, ChatResponse, GeneralResponse
 from src.core.usecase import ChatUseCase
 from src.ui.api.v1.dependencies import (
     get_chat_usecase,
     get_current_user_id,
     get_current_tenant_id,
 )
+from src.kernel.utils.response_utils import response_utils
 
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
@@ -22,7 +23,7 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 
 @router.post(
     "",
-    response_model=ChatResponse,
+    response_model=GeneralResponse[ChatResponse],
     status_code=status.HTTP_200_OK,
     summary="Send chat message",
     description="Send a message and get AI assistant response"
@@ -33,47 +34,26 @@ async def chat(
     chat_usecase: ChatUseCase = Depends(get_chat_usecase),
     user_id: int = Depends(get_current_user_id),
     tenant_id: int = Depends(get_current_tenant_id),
-) -> ChatResponse:
+) -> GeneralResponse[ChatResponse]:
     """
     Chat with AI assistant
     """
-    try:
-        response = await chat_usecase.execute(
-            db=db,
-            user_id=user_id,
-            tenant_id=tenant_id,
-            request=request,
-        )
-        
-        logger.info(
-            f"Chat completed: user={user_id}, conversation={response.conversation_id}, "
-            f"tokens={response.tokens_used}, time={response.processing_time_ms}ms"
-        )
-        
-        return response
-        
-    except ValueError as e:
-        logger.warning(f"Chat validation error: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
-    except PermissionError as e:
-        logger.warning(f"Chat permission denied: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(e)
-        )
-    except Exception as e:
-        logger.error(f"Chat error: {type(e).__name__}: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to process chat request: {type(e).__name__}"
-        )
+    response = await chat_usecase.execute(
+        db=db,
+        user_id=user_id,
+        tenant_id=tenant_id,
+        request=request,
+    )
+    
+    return response_utils.success(
+        data=response,
+        message="Chat completed successfully"
+    )
 
 
 @router.get(
     "/conversations",
+    response_model=GeneralResponse,
     summary="List user conversations",
     description="Get list of user's conversations"
 )
@@ -90,14 +70,13 @@ async def list_conversations(
     
     TODO: Implement conversation listing use case
     """
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Not implemented yet"
-    )
+    from src.core.domain.exceptions import NotFoundError
+    raise NotFoundError("Not implemented yet")
 
 
 @router.get(
     "/conversations/{conversation_id}/messages",
+    response_model=GeneralResponse,
     summary="Get conversation messages",
     description="Get messages in a specific conversation"
 )
@@ -113,7 +92,5 @@ async def get_conversation_messages(
     
     TODO: Implement message retrieval use case
     """
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Not implemented yet"
-    )
+    from src.core.domain.exceptions import NotFoundError
+    raise NotFoundError("Not implemented yet")
