@@ -93,6 +93,14 @@ export const MenuDisplayDetailsDialog: React.FC<
               </div>
               <div className='grid grid-cols-3 gap-2'>
                 <span className='text-sm text-muted-foreground'>
+                  Menu Type:
+                </span>
+                <span className='col-span-2'>
+                  <Badge variant='outline'>{menuDisplay.menuType}</Badge>
+                </span>
+              </div>
+              <div className='grid grid-cols-3 gap-2'>
+                <span className='text-sm text-muted-foreground'>
                   Visibility:
                 </span>
                 <span className='col-span-2'>
@@ -109,6 +117,16 @@ export const MenuDisplayDetailsDialog: React.FC<
                   </Badge>
                 </span>
               </div>
+              {menuDisplay.description && (
+                <div className='grid grid-cols-3 gap-2'>
+                  <span className='text-sm text-muted-foreground'>
+                    Description:
+                  </span>
+                  <span className='col-span-2 text-sm text-muted-foreground'>
+                    {menuDisplay.description}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 

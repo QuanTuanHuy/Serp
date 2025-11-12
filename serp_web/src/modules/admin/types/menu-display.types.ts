@@ -40,6 +40,9 @@ export interface CreateMenuDisplayRequest {
   order: number;
   parentId?: number;
   moduleId: number;
+  menuType?: MenuType;
+  isVisible?: boolean;
+  description?: string;
 }
 
 export interface UpdateMenuDisplayRequest {
@@ -47,6 +50,8 @@ export interface UpdateMenuDisplayRequest {
   path: string;
   icon?: string;
   order: number;
+  isVisible?: boolean;
+  description?: string;
 }
 
 export interface AssignMenuDisplayToRoleRequest {
