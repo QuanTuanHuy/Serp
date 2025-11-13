@@ -7,9 +7,10 @@ package serp.project.mailservice.infrastructure.client;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import serp.project.mailservice.core.port.client.ICachePort;
+import serp.project.mailservice.core.port.client.IRedisCachePort;
 import serp.project.mailservice.kernel.utils.JsonUtils;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.core.ParameterizedTypeReference;
@@ -19,7 +20,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class RedisCacheAdapter implements ICachePort {
+public class RedisCacheAdapter implements IRedisCachePort {
     private final JsonUtils jsonUtils;
     private final RedisTemplate<String, String> redisTemplate;
 
@@ -89,6 +90,56 @@ public class RedisCacheAdapter implements ICachePort {
             }
         } catch (Exception e) {
             log.error("Failed to delete values from cache by pattern, pattern: {}", pattern);
+        }
+    }
+
+    @Override
+    public boolean exists(String key) {
+        try {
+            return Boolean.TRUE.equals(redisTemplate.hasKey(key));
+        } catch (Exception e) {
+            log.error("Failed to check if key exists, key: {}", key);
+            return false;
+        }
+    }
+
+    @Override
+    public Long increment(String key) {
+        try {
+            return redisTemplate.opsForValue().increment(key);
+        } catch (Exception e) {
+            log.error("Failed to increment key, key: {}", key);
+            throw new RuntimeException("Failed to increment key: " + key, e);
+        }
+    }
+
+    @Override
+    public void expire(String key, Duration ttl) {
+        try {
+            redisTemplate.expire(key, ttl.getSeconds(), TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.error("Failed to set expiration on key, key: {}", key);
+        }
+    }
+
+    @Override
+    public boolean acquireLock(String key, Duration ttl) {
+        try {
+            Boolean acquired = redisTemplate.opsForValue()
+                    .setIfAbsent(key, "LOCKED", ttl.getSeconds(), TimeUnit.SECONDS);
+            return Boolean.TRUE.equals(acquired);
+        } catch (Exception e) {
+            log.error("Failed to acquire lock, key: {}", key);
+            return false;
+        }
+    }
+
+    @Override
+    public void releaseLock(String key) {
+        try {
+            redisTemplate.delete(key);
+        } catch (Exception e) {
+            log.error("Failed to release lock, key: {}", key);
         }
     }
 }

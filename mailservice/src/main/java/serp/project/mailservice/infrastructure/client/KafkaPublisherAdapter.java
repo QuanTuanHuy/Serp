@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import serp.project.mailservice.core.domain.callback.KafkaSendCallback;
-import serp.project.mailservice.core.port.client.IKafkaPublisher;
+import serp.project.mailservice.core.port.client.IKafkaProducerPort;
 import serp.project.mailservice.kernel.utils.JsonUtils;
 
 import java.util.concurrent.CompletableFuture;
@@ -19,7 +19,7 @@ import java.util.concurrent.CompletableFuture;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class KafkaPublisherAdapter implements IKafkaPublisher {
+public class KafkaPublisherAdapter implements IKafkaProducerPort {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final JsonUtils jsonUtils;
 
