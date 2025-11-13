@@ -28,6 +28,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui/select';
+import { Switch } from '@/shared/components/ui/switch';
+import { Textarea } from '@/shared/components/ui/textarea';
 import type {
   MenuDisplayDetail,
   CreateMenuDisplayRequest,
@@ -52,7 +54,9 @@ type FormData = {
   order: number;
   parentId?: number;
   moduleId: number;
-  roleIds?: number[];
+  menuType?: string;
+  isVisible?: boolean;
+  description?: string;
 };
 
 export const MenuDisplayFormDialog: React.FC<MenuDisplayFormDialogProps> = ({
@@ -81,7 +85,9 @@ export const MenuDisplayFormDialog: React.FC<MenuDisplayFormDialogProps> = ({
       order: 0,
       parentId: undefined,
       moduleId: 0,
-      roleIds: [],
+      menuType: 'SIDEBAR',
+      isVisible: true,
+      description: '',
     },
   });
 
@@ -111,6 +117,9 @@ export const MenuDisplayFormDialog: React.FC<MenuDisplayFormDialogProps> = ({
           order: menuDisplay.order,
           parentId: menuDisplay.parentId || undefined,
           moduleId: menuDisplay.moduleId,
+          menuType: menuDisplay.menuType || 'SIDEBAR',
+          isVisible: menuDisplay.isVisible ?? true,
+          description: menuDisplay.description || '',
         });
       } else {
         reset({
@@ -120,7 +129,9 @@ export const MenuDisplayFormDialog: React.FC<MenuDisplayFormDialogProps> = ({
           order: 0,
           parentId: undefined,
           moduleId: modules[0]?.id || 0,
-          roleIds: [],
+          menuType: 'SIDEBAR',
+          isVisible: true,
+          description: '',
         });
       }
     }
@@ -135,6 +146,8 @@ export const MenuDisplayFormDialog: React.FC<MenuDisplayFormDialogProps> = ({
           path: data.path,
           icon: data.icon,
           order: data.order,
+          isVisible: data.isVisible,
+          description: data.description,
         };
         await onSubmit(updateData);
       } else {
@@ -146,6 +159,9 @@ export const MenuDisplayFormDialog: React.FC<MenuDisplayFormDialogProps> = ({
           order: data.order,
           parentId: data.parentId,
           moduleId: data.moduleId,
+          menuType: data.menuType as any,
+          isVisible: data.isVisible,
+          description: data.description,
         };
         await onSubmit(createData);
       }
@@ -240,6 +256,71 @@ export const MenuDisplayFormDialog: React.FC<MenuDisplayFormDialogProps> = ({
                 </p>
               )}
             </div>
+          </div>
+
+          {/* Menu Type */}
+          <div className='space-y-2'>
+            <Label htmlFor='menuType'>
+              Menu Type <span className='text-destructive'>*</span>
+            </Label>
+            <Controller
+              name='menuType'
+              control={control}
+              rules={{ required: 'Menu type is required' }}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder='Select menu type' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='SIDEBAR'>Sidebar</SelectItem>
+                    <SelectItem value='TOPBAR'>Topbar</SelectItem>
+                    <SelectItem value='DROPDOWN'>Dropdown</SelectItem>
+                    <SelectItem value='ACTION'>Action</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.menuType && (
+              <p className='text-sm text-destructive'>
+                {errors.menuType.message}
+              </p>
+            )}
+          </div>
+
+          {/* Is Visible */}
+          <div className='flex items-center justify-between space-y-2'>
+            <div className='space-y-0.5'>
+              <Label htmlFor='isVisible'>Visible</Label>
+              <p className='text-xs text-muted-foreground'>
+                Make this menu item visible to users
+              </p>
+            </div>
+            <Controller
+              name='isVisible'
+              control={control}
+              render={({ field }) => (
+                <Switch
+                  id='isVisible'
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              )}
+            />
+          </div>
+
+          {/* Description */}
+          <div className='space-y-2'>
+            <Label htmlFor='description'>Description (Optional)</Label>
+            <Textarea
+              id='description'
+              {...register('description')}
+              placeholder='Enter a description for this menu item...'
+              rows={3}
+            />
+            <p className='text-xs text-muted-foreground'>
+              Provide additional context about this menu item
+            </p>
           </div>
 
           {/* Module - Only shown when creating */}

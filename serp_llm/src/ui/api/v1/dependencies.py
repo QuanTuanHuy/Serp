@@ -4,7 +4,7 @@ Description: Part of Serp Project - Dependency Injection
 """
 
 from functools import lru_cache
-from fastapi import Depends
+from fastapi import Depends, Request
 
 from src.infrastructure.db.repositories import (
     AIModuleAdapter,
@@ -22,6 +22,7 @@ from src.core.service import (
 )
 
 from src.core.usecase import ChatUseCase
+from src.kernel.utils.auth_utils import auth_utils
 
 
 # Repository Adapters
@@ -109,19 +110,95 @@ def get_chat_usecase(
 
 # Auth Dependencies
 
-async def get_current_user_id() -> int:
+async def get_current_user_id(request: Request) -> int:
     """
-    Get current user ID from header
+    Get current user ID from JWT token in request.
     
-    TODO: Replace with JWT token extraction in production
+    Raises:
+        HTTPException: If user is not authenticated
     """
-    return 1
+    return auth_utils.require_authentication(request)
 
 
-async def get_current_tenant_id() -> int:
+async def get_current_tenant_id(request: Request) -> int:
     """
-    Get current tenant ID from header
+    Get current tenant ID from JWT token in request.
     
-    TODO: Replace with JWT token extraction in production
+    Returns:
+        Tenant ID or raises exception if not found
     """
-    return 1
+    tenant_id = auth_utils.get_current_tenant_id(request)
+    if tenant_id is None:
+        from fastapi import HTTPException, status
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Tenant ID not found in token"
+        )
+    return tenant_id
+
+
+async def get_optional_user_id(request: Request) -> int | None:
+    """
+    Get current user ID from JWT token (optional).
+    
+    Returns:
+        User ID or None if not authenticated
+    """
+    return auth_utils.get_current_user_id(request)
+
+
+async def get_optional_tenant_id(request: Request) -> int | None:
+    """
+    Get current tenant ID from JWT token (optional).
+    
+    Returns:
+        Tenant ID or None if not found
+    """
+    return auth_utils.get_current_tenant_id(request)
+
+
+# Role-based access dependencies
+
+def require_role(*roles: str):
+    """
+    Dependency to require specific roles.
+    
+    Usage:
+        @router.get("/admin", dependencies=[Depends(require_role("ADMIN", "SUPER_ADMIN"))])
+    """
+    async def _check_role(request: Request):
+        auth_utils.require_role(request, *roles)
+    
+    return _check_role
+
+
+def require_system_admin():
+    """
+    Dependency to require system admin role.
+    
+    Usage:
+        @router.get("/admin", dependencies=[Depends(require_system_admin())])
+    """
+    async def _check_admin(request: Request):
+        from fastapi import HTTPException, status
+        if not auth_utils.is_system_admin(request):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="System admin access required"
+            )
+    
+    return _check_admin
+
+
+def require_organization_access(organization_id: int):
+    """
+    Dependency to require organization access.
+    
+    Usage:
+        @router.get("/org/{org_id}", dependencies=[Depends(require_organization_access(org_id))])
+    """
+    async def _check_org_access(request: Request):
+        auth_utils.require_organization_access(request, organization_id)
+    
+    return _check_org_access
+

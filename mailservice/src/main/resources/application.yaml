@@ -1,0 +1,138 @@
+server:
+  port: 8090
+  servlet:
+    context-path: /mail-service
+
+spring:
+  application:
+    name: mailservice
+  threads:
+    virtual:
+      enabled: true
+
+  datasource:
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    url: ${DB_URL}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 3
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+    placeholder-replacement: false
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          timeout: 5000
+          connectiontimeout: 5000
+          writetimeout: 5000
+        transport:
+          protocol: smtp
+    test-connection: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: mail-service-group
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
+          issuer-uri: http://localhost:8180/realms/serp
+
+app:
+  keycloak:
+    url: http://localhost:8180
+    jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
+    expected-issuer: http://localhost:8180/realms/serp
+    expected-audience: serp-mail
+    realm: serp
+    client-id: serp-mail
+    client-secret: ${CLIENT_SECRET}
+
+  email:
+    java-mail:
+      enabled: true
+      from: ${MAIL_FROM:noreply@serp.com}
+      from-name: ${MAIL_FROM_NAME:SERP System}
+      reply-to: ${MAIL_REPLY_TO:support@serp.com}
+      rate-limit-per-minute: 60
+      timeout-seconds: 10
+      max-retry-attempts: 3
+      retry-delay-minutes: 5
+    
+    brevo:
+      enabled: true
+      api-key: ${BREVO_API_KEY}
+      api-url: https://api.brevo.com/v3
+      from: ${BREVO_FROM:noreply@serp.com}
+      from-name: ${BREVO_FROM_NAME:SERP System}
+      rate-limit-per-minute: 300
+      timeout-seconds: 10
+      max-retry-attempts: 3
+      retry-delay-minutes: 5
+    
+    attachments:
+      storage-path: ${ATTACHMENT_STORAGE_PATH:./data/email-attachments}
+      max-size-mb: 25
+      allowed-extensions: pdf,doc,docx,xls,xlsx,txt,jpg,jpeg,png,gif,zip
+      retention-days: 7
+    
+    rate-limit:
+      enabled: true
+      default-per-tenant-per-minute: 100
+      default-per-provider-per-minute: 500
+      use-redis: true
+    
+    retry:
+      enabled: true
+      max-attempts: 3
+      initial-delay-minutes: 1
+      max-delay-minutes: 60
+      backoff-multiplier: 2.0
+    
+    scheduler:
+      retry-failed-emails-cron: "0 */5 * * * *"
+      aggregate-stats-cron: "0 0 * * * *"
+      cleanup-attachments-cron: "0 0 2 * * *"
+      provider-health-check-fixed-delay: 60000
+
+  security:
+    filter:
+      publicUrls:
+      protectedUrls:

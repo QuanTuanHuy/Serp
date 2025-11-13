@@ -42,16 +42,17 @@ serp_llm/
 │   ├── config/                    # Settings & configuration
 │   ├── core/                      # Business logic (Clean Architecture)
 │   │   ├── domain/                # Entities, DTOs, Enums
-│   │   ├── ports/                 # Interfaces (DIP)
-│   │   ├── services/              # Domain services
-│   │   └── usecases/              # Application use cases
+│   │   ├── port/                  # Interfaces (DIP)
+│   │   ├── service/               # Domain services
+│   │   └── usecase/               # Application use cases
 │   ├── infrastructure/            # External implementations
 │   │   ├── db/                    # Database (SQLAlchemy)
 │   │   ├── llm/                   # LLM clients
 │   │   └── cache/                 # Redis cache
-│   └── api/                       # API layer
-│       ├── routes/                # Endpoints
-│       └── middleware/            # Auth, logging, etc.
+│   └── ui/                        # User Interface layer
+│       └── api/                   # API layer
+│           ├── routes/            # Endpoints
+│           └── middleware/        # Auth, logging, etc.
 ├── alembic/                       # Database migrations
 ├── tests/                         # Unit & integration tests
 ├── pyproject.toml                 # Poetry dependencies

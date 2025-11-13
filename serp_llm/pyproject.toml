@@ -35,6 +35,7 @@ aiokafka = "^0.10.0"
 
 # HTTP Client
 httpx = "^0.27.0"
+requests = "^2.31.0"
 
 # Auth
 pyjwt = {extras = ["crypto"], version = "^2.8.0"}
