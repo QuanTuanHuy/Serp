@@ -57,9 +57,9 @@ spring:
 
 app:
   keycloak:
-    url: http://localhost:8180
-    jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
-    expected-issuer: http://localhost:8180/realms/serp
+    url: ${KEYCLOAK_URL:https://auth.serp.texkis.com/realms/serp}
+    jwk-set-uri: ${JWK_SET_URI:https://auth.serp.texkis.com/realms/serp/protocol/openid-connect/certs}
+    expected-issuer: https://auth.serp.texkis.com/realms/serp
     expected-audience: serp-mail
     realm: serp
     client-id: serp-mail
