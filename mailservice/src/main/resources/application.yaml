@@ -1,0 +1,65 @@
+server:
+  port: 8090
+  servlet:
+    context-path: /mail-service
+
+spring:
+  application:
+    name: mailservice
+  threads:
+    virtual:
+      enabled: true
+
+  datasource:
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    url: ${DB_URL}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 3
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
+          issuer-uri: http://localhost:8180/realms/serp
+
+app:
+  keycloak:
+    url: http://localhost:8180
+    jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
+    expected-issuer: http://localhost:8180/realms/serp
+    expected-audience: serp-account
+    realm: serp
+    client-id: serp-account
+    client-secret: ${CLIENT_SECRET}
+
+  security:
+    filter:
+      publicUrls:
+      protectedUrls:
