@@ -8,9 +8,12 @@ Event-driven microservices ERP system using **Clean Architecture**, **Kafka mess
 - `api_gateway` (Go:8080) - Routes requests, validates JWT, minimal business logic
 - `account` (Java:8081) - User/auth/org/RBAC management, Keycloak integration
 - `crm` (Java:8086) - Customer/lead/opportunity/activity tracking
+- `sales` (Go:8087) - Order management, quotation, pricing
 - `ptm_task` (Go:8083), `ptm_schedule` (Go:8084), `ptm_optimization` (Java:8085) - Personal productivity
 - `logging_tracker` (Java:8082) - Centralized audit trails & monitoring
+- `mailservice` (Java:8087) - Email management, template-based emails
 - `serp_web` (Next.js 15) - Redux + Shadcn UI frontend
+- `serp_llm` (Python:8087) - AI assistant with Google Gemini integration
 
 **Infrastructure:** PostgreSQL, Redis, Kafka, Keycloak (OAuth2/OIDC), Docker Compose
 
@@ -79,10 +82,19 @@ fx.Options(
 ### 4. Java Spring Boot Patterns
 - `@RestController` with `@RequestMapping("/api/v1/...")` for all endpoints
 - `@RequiredArgsConstructor` for constructor injection (final fields)
-- `@ConfigurationProperties(prefix = "app.keycloak")` for config binding
+- `@ConfigurationProperties(prefix = "app.keycloak")` for config binding from `application.yml`
 - Service path: `/crm/api/v1/customers`, `/account/api/v1/users`
+- Environment variables loaded from `.env` → `application.yml` (e.g., `${DB_URL}`, `${REDIS_HOST}`)
+- Run with `./run-dev.sh` (loads .env first) or `./mvnw spring-boot:run`
 
-### 5. Transaction Management
+### 5. Python FastAPI Patterns (serp_llm)
+- Clean Architecture with async SQLAlchemy 2.0 + pgvector
+- Google Gemini via OpenAI-compatible SDK (`openai` package)
+- Configuration via `.env`: `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `DATABASE_URL`
+- Alembic for database migrations: `poetry run alembic upgrade head`
+- Run with `./run-dev.sh` or `poetry run uvicorn src.main:app --reload --port 8087`
+
+### 6. Transaction Management
 Use `TransactionService.ExecuteInTransaction` in use cases for multi-step operations:
 ```go
 // Go pattern
@@ -94,13 +106,13 @@ result, err := t.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB)
 })
 ```
 
-### 6. Kafka Event Pattern
+### 7. Kafka Event Pattern
 - **Produce** events in use cases (after successful DB commit) via `IKafkaProducerPort`
 - **Consume** events in `ui/kafka/` handlers with `HandleMessage(ctx, topic, key, value)`
 - Event topics: `TASK_TOPIC`, `USER_EVENT_TOPIC` (defined in `domain/constant/`)
 - Use async producers (`SendMessageAsync`) for non-critical events
 
-### 7. JWT Authentication Flow
+### 8. JWT Authentication Flow
 1. User logs in → Account service → Keycloak → JWT access token
 2. Frontend sends `Authorization: Bearer <token>` → API Gateway
 3. Gateway validates JWT via Keycloak JWKS → Extracts user ID → Forwards JWT to backend
@@ -108,6 +120,12 @@ result, err := t.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB)
 5. Controllers extract `userID`, `tenantID` from context: `utils.GetUserIDFromContext(c)` (Go) or `AuthUtils.getCurrentUserId()` (Java)
 
 **Service-to-service:** Use Keycloak service account tokens (client credentials flow).
+
+### 9. Database & Configuration Management
+- **Java services**: Use Flyway for migrations (in `src/main/resources/db/migration/`)
+- **Python services**: Use Alembic for migrations (in `alembic/versions/`)
+- **Go services**: Manual migration scripts or GORM AutoMigrate for dev
+- **Configuration loading**: `.env` files → Environment variables → `application.yml` (Java) or properties structs (Go)
 
 ## Development Workflows
 
@@ -119,10 +137,17 @@ docker-compose -f docker-compose.dev.yml up -d
 # 2. Run services with environment variables from .env files
 cd account && ./run-dev.sh  # Java services use ./mvnw spring-boot:run
 cd ptm_task && ./run-dev.sh # Go services use go run src/main.go
+cd serp_llm && ./run-dev.sh # Python services use poetry run uvicorn
 cd serp_web && npm run dev  # Frontend on :3000
 ```
 
 **Environment Files:** Each service has `.env` with `DB_URL`, `REDIS_HOST`, `KAFKA_BOOTSTRAP_SERVERS`, `CLIENT_SECRET`
+
+**Infrastructure URLs:**
+- PostgreSQL: `localhost:5432` (user: serp, pass: serp)
+- Redis: `localhost:6379`
+- Kafka: `localhost:9092`
+- Keycloak: `http://localhost:8180` (admin: serp-admin/serp-admin)
 
 ### Adding New Features (Backend)
 
@@ -150,6 +175,17 @@ cd serp_web && npm run dev  # Frontend on :3000
 8. Service (`@Service @RequiredArgsConstructor`, business logic)
 9. UseCase (orchestration, transaction, Kafka producer)
 10. Controller (`@RestController @RequestMapping`, delegates to UseCase)
+
+**Python Services (serp_llm):**
+1. Entity in `src/core/domain/entities/` (Pydantic BaseModel)
+2. DTO in `src/core/domain/dto/` (request/response schemas)
+3. Model in `src/infrastructure/db/models/` (SQLAlchemy declarative)
+4. Port interface in `src/core/port/` (Protocol or ABC)
+5. Adapter in `src/infrastructure/` (implements port)
+6. Service in `src/core/service/` (async business logic)
+7. UseCase in `src/core/usecase/` (orchestration)
+8. Router in `src/ui/api/routes/` (FastAPI router)
+9. Run Alembic migration: `poetry run alembic revision --autogenerate -m "description"`
 
 **Key: Use cases orchestrate, controllers validate input, services enforce rules.**
 
@@ -184,6 +220,8 @@ src/
 1. **Forgot to register FX module (Go)**: Build succeeds but runtime panic. → Check `cmd/bootstrap/all.go`
 2. **Transaction not rolling back**: Use `txService.ExecuteInTransaction`, not manual `tx.Begin()`
 3. **Entity/Model field mismatch**: Mapper must handle all conversions (e.g., Unix ms ↔ `time.Time`)
+4. **Environment variables not loading**: Ensure `.env` exists and `run-dev.sh` is used (not direct `mvnw`/`go run`)
+5. **Keycloak JWT validation fails**: Check JWKS URL is accessible and realm name matches in `application.yml`
 
 ## Testing & Debugging
 
@@ -201,6 +239,14 @@ All Go/Java files must start with:
 Author: QuanTuanHuy
 Description: Part of Serp Project
 */
+```
+
+Python files use:
+```python
+"""
+Author: QuanTuanHuy
+Description: Part of Serp Project
+"""
 ```
 
 ## API Gateway Philosophy
