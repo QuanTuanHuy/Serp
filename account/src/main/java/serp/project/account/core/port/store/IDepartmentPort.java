@@ -21,6 +21,8 @@ public interface IDepartmentPort {
 
     List<DepartmentEntity> getByOrganizationId(Long organizationId);
 
+    List<DepartmentEntity> getByIds(List<Long> departmentIds);
+
     List<DepartmentEntity> getActiveByOrganizationId(Long organizationId);
 
     List<DepartmentEntity> getByParentDepartmentId(Long parentDepartmentId);

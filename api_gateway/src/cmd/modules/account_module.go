@@ -26,6 +26,7 @@ func AccountModule() fx.Option {
 		fx.Provide(adapter.NewModuleAccessClientAdapter),
 		fx.Provide(adapter.NewMenuDisplayClientAdapter),
 		fx.Provide(adapter.NewOrganizationClientAdapter),
+		fx.Provide(adapter.NewDepartmentClientAdapter),
 
 		// Provide service
 		fx.Provide(service.NewAuthService),
@@ -39,6 +40,7 @@ func AccountModule() fx.Option {
 		fx.Provide(service.NewModuleAccessService),
 		fx.Provide(service.NewMenuDisplayService),
 		fx.Provide(service.NewOrganizationService),
+		fx.Provide(service.NewDepartmentService),
 
 		// Provide controller
 		fx.Provide(controller.NewAuthController),
@@ -52,5 +54,6 @@ func AccountModule() fx.Option {
 		fx.Provide(controller.NewModuleAccessController),
 		fx.Provide(controller.NewMenuDisplayController),
 		fx.Provide(controller.NewOrganizationController),
+		fx.Provide(controller.NewDepartmentController),
 	)
 }

@@ -12,6 +12,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Collections;
 import java.util.List;
 
 @NoArgsConstructor
@@ -29,7 +30,9 @@ public class CreateDepartmentRequest {
 
     private Long managerId;
 
-    private List<Long> defaultModuleIds;
+    @Builder.Default
+    private List<Long> defaultModuleIds = Collections.emptyList();
 
-    private List<Long> defaultRoleIds;
+    @Builder.Default
+    private List<Long> defaultRoleIds = Collections.emptyList(); // not use for now
 }

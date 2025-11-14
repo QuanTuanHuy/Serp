@@ -23,6 +23,8 @@ public interface IDepartmentRepository extends IBaseRepository<DepartmentModel> 
 
     List<DepartmentModel> findByParentDepartmentIdAndIsActive(Long parentDepartmentId, Boolean isActive);
 
+    List<DepartmentModel> findByIdIn(List<Long> departmentIds);
+
     List<DepartmentModel> findByManagerId(Long managerId);
 
     Optional<DepartmentModel> findTopByOrganizationIdOrderByIdDesc(Long organizationId);

@@ -10,6 +10,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.account.core.domain.entity.DepartmentEntity;
 
 import java.util.List;
 
@@ -35,4 +36,24 @@ public class DepartmentResponse {
     private Integer memberCount;
     private Long createdAt;
     private Long updatedAt;
+
+    public DepartmentResponse(DepartmentEntity department, String parentDepartmentName, String managerName,
+            Integer childrenCount, Integer memberCount) {
+        this.id = department.getId();
+        this.organizationId = department.getOrganizationId();
+        this.name = department.getName();
+        this.code = department.getCode();
+        this.description = department.getDescription();
+        this.parentDepartmentId = department.getParentDepartmentId();
+        this.parentDepartmentName = parentDepartmentName;
+        this.managerId = department.getManagerId();
+        this.managerName = managerName;
+        this.defaultModuleIds = department.getDefaultModuleIds();
+        this.defaultRoleIds = department.getDefaultRoleIds();
+        this.isActive = department.getIsActive();
+        this.childrenCount = childrenCount;
+        this.memberCount = memberCount;
+        this.createdAt = department.getCreatedAt();
+        this.updatedAt = department.getUpdatedAt();
+    }
 }

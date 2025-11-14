@@ -66,6 +66,7 @@ public class Constants {
         public static final String USER_NOT_FOUND = "User not found";
         public static final String CREATE_USER_FAILED = "Create user failed";
         public static final String USER_INACTIVE = "User is inactive";
+        public static final String USER_NOT_IN_ORGANIZATION = "User does not belong to the organization";
 
         public static final String WRONG_EMAIL_OR_PASSWORD = "Wrong email or password";
         public static final String INVALID_REFRESH_TOKEN = "Invalid refresh token";
@@ -111,6 +112,7 @@ public class Constants {
 
         // Module Access errors
         public static final String ORGANIZATION_CANNOT_ACCESS_MODULE = "Organization does not have access to this module";
+        public static final String ORGANIZATION_CANNOT_ACCESS_MODULE_ID = "Organization does not have access to the module %d";
         public static final String MODULE_NOT_AVAILABLE = "Module is not available";
         public static final String USER_ALREADY_HAS_MODULE_ACCESS = "User already has access to this module";
         public static final String MODULE_NOT_IN_SUBSCRIPTION_PLAN = "Module not found in subscription plan";
@@ -119,6 +121,7 @@ public class Constants {
 
         // Department errors
         public static final String DEPARTMENT_NOT_FOUND = "Department not found";
+        public static final String DEPARTMENT_INACTIVE = "Department is inactive";
         public static final String DEPARTMENT_ALREADY_EXISTS = "Department already exists";
         public static final String CIRCULAR_PARENT_RELATIONSHIP = "Circular parent relationship detected";
         public static final String MANAGER_NOT_IN_ORGANIZATION = "Manager must belong to the same organization";

@@ -107,4 +107,9 @@ public class DepartmentAdapter implements IDepartmentPort {
             log.info("Soft deleted department with id: {}", id);
         });
     }
+
+    @Override
+    public List<DepartmentEntity> getByIds(List<Long> departmentIds) {
+        return departmentMapper.toEntityList(departmentRepository.findByIdIn(departmentIds));
+    }
 }

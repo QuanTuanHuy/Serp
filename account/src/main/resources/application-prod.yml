@@ -88,6 +88,8 @@ app:
           second: GET
         - first: /api/v1/subscription-plans/**
           second: GET
+        - first: /api/v1/organizations/*/departments
+          second: GET
       protectedUrls:
         # ==================== SERP_ADMIN ====================
         - url-pattern: /api/v1/admin/**
@@ -293,6 +295,14 @@ app:
             - ORG_USER
           permissions:
 
+        # ==================== DEPARTMENT CONTROLLER ====================
+        - url-pattern: /api/v1/organizations/*/departments/**
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+          permissions:
 
 
 server:

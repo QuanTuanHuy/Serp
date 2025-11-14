@@ -20,6 +20,8 @@ public interface IDepartmentService {
 
     DepartmentEntity getDepartmentById(Long departmentId);
 
+    List<DepartmentEntity> getDepartmentsByIds(List<Long> departmentIds);
+
     List<DepartmentEntity> getDepartmentsByOrganizationId(Long organizationId);
 
     List<DepartmentEntity> getActiveDepartmentsByOrganizationId(Long organizationId);

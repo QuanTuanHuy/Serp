@@ -22,6 +22,7 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 	subscriptionPlanController *account.SubscriptionPlanController,
 	moduleAccessController *account.ModuleAccessController,
 	menuDisplayController *account.MenuDisplayController,
+	departmentController *account.DepartmentController,
 	organizationController *account.OrganizationController) {
 	authV1 := group.Group("/api/v1/auth")
 	{
@@ -125,6 +126,18 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 		organizationsV1.Use(middleware.AuthMiddleware()).DELETE("/:organizationId/modules/:moduleId/users/:userId", moduleAccessController.RevokeUserAccessToModule)
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/modules/:moduleId/users", moduleAccessController.GetUsersWithAccessToModule)
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/users/me/modules", moduleAccessController.GetModulesAccessibleByUser)
+
+		// Department management routes
+		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/departments", departmentController.CreateDepartment)
+		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/departments", departmentController.GetDepartments)
+		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/departments/:departmentId", departmentController.GetDepartmentById)
+		organizationsV1.Use(middleware.AuthMiddleware()).PUT("/:organizationId/departments/:departmentId", departmentController.UpdateDepartment)
+		organizationsV1.Use(middleware.AuthMiddleware()).DELETE("/:organizationId/departments/:departmentId", departmentController.DeleteDepartment)
+		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/departments/:departmentId/tree", departmentController.GetDepartmentTree)
+		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/departments/:departmentId/users", departmentController.AssignUserToDepartment)
+		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/departments/:departmentId/users/bulk", departmentController.BulkAssignUsersToDepartment)
+		organizationsV1.Use(middleware.AuthMiddleware()).DELETE("/:organizationId/departments/:departmentId/users/:userId", departmentController.RemoveUserFromDepartment)
+		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/departments/:departmentId/members", departmentController.GetDepartmentMembers)
 	}
 
 	menuDisplayV1 := group.Group("/api/v1/menu-displays")

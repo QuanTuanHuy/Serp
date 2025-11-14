@@ -156,4 +156,12 @@ public class DepartmentService implements IDepartmentService {
             checkCircularParent(departmentId, parent.getParentDepartmentId(), visited);
         }
     }
+
+    @Override
+    public List<DepartmentEntity> getDepartmentsByIds(List<Long> departmentIds) {
+        if (departmentIds == null || departmentIds.isEmpty()) {
+            return List.of();
+        }
+        return departmentPort.getByIds(departmentIds);
+    }
 }
