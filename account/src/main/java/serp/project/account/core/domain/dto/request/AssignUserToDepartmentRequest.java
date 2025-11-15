@@ -26,6 +26,5 @@ public class AssignUserToDepartmentRequest {
     @Builder.Default
     private Boolean isPrimary = false;
 
-    @NotNull(message = "Department ID must not be null")
     private Long departmentId;
 }

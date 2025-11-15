@@ -19,6 +19,7 @@ import serp.project.account.core.domain.dto.request.CreateDepartmentRequest;
 import serp.project.account.core.domain.dto.request.GetDepartmentParams;
 import serp.project.account.core.domain.dto.request.UpdateDepartmentRequest;
 import serp.project.account.core.domain.dto.response.DepartmentResponse;
+import serp.project.account.core.domain.dto.response.UserDepartmentResponse;
 import serp.project.account.core.domain.entity.DepartmentEntity;
 import serp.project.account.core.domain.entity.OrganizationEntity;
 import serp.project.account.core.exception.AppException;
@@ -53,6 +54,16 @@ public class DepartmentUseCase {
                 validateModuleAccessForOrganization(organizationId, request.getDefaultModuleIds());
             }
             var department = departmentService.createDepartment(organizationId, request);
+
+            if (department.getManagerId() != null) {
+                var assignRequest = AssignUserToDepartmentRequest.builder()
+                        .userId(department.getManagerId())
+                        .departmentId(department.getId())
+                        .jobTitle("Manager")
+                        .build();
+                userDepartmentService.assignUserToDepartment(assignRequest);
+            }
+
             return responseUtils.success(department);
         } catch (AppException e) {
             log.error("Error creating department: {}", e.getMessage());
@@ -77,6 +88,47 @@ public class DepartmentUseCase {
             throw e;
         } catch (Exception e) {
             log.error("Unexpected error updating department: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> getDepartmentById(Long departmentId) {
+        try {
+            var department = departmentService.getDepartmentById(departmentId);
+            var manager = department.getManagerId() != null
+                    ? userService.getUserById(department.getManagerId())
+                    : null;
+            var parentDepartment = department.getParentDepartmentId() != null
+                    ? departmentService.getDepartmentById(department.getParentDepartmentId())
+                    : null;
+            var response = new DepartmentResponse(
+                    department,
+                    parentDepartment != null ? parentDepartment.getName() : "",
+                    manager != null ? manager.getFullName() : "",
+                    0,
+                    userDepartmentService.countMembersByDepartmentId(department.getId()).intValue());
+            return responseUtils.success(response);
+
+        } catch (AppException e) {
+            log.error("Error getting department by id: {}", e.getMessage());
+            return responseUtils.error(e.getCode(), e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error getting department by id: {}", e.getMessage(), e);
+            return responseUtils.internalServerError(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> deleteDepartment(Long departmentId) {
+        try {
+            departmentService.deleteDepartment(departmentId);
+            return responseUtils.success("Department deleted successfully");
+        } catch (AppException e) {
+            log.error("Error deleting department: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error deleting department: {}", e.getMessage(), e);
             throw e;
         }
     }
@@ -115,8 +167,8 @@ public class DepartmentUseCase {
                         var manager = d.getManagerId() != null ? idToUser.get(d.getManagerId()) : null;
                         return new DepartmentResponse(
                                 d,
-                                parentDepartment != null ? parentDepartment.getName() : "",
-                                manager != null ? manager.getFullName() : "",
+                                parentDepartment != null ? parentDepartment.getName() : null,
+                                manager != null ? manager.getFullName() : null,
                                 0, // implement later
                                 userDepartmentService.countMembersByDepartmentId(d.getId()).intValue());
                     })
@@ -177,6 +229,30 @@ public class DepartmentUseCase {
         } catch (Exception e) {
             log.error("Unexpected error assigning user to department: {}", e.getMessage(), e);
             throw e;
+        }
+    }
+
+    public GeneralResponse<?> getMembersByDepartmentId(Long departmentId) {
+        try {
+            var members = userDepartmentService.getDepartmentMembers(departmentId);
+            var userIds = members.stream().map(ud -> ud.getUserId()).distinct().toList();
+            if (userIds.isEmpty()) {
+                return responseUtils.success(new ArrayList<UserDepartmentResponse>());
+            }
+            var idToUser = userService.getUsersByIds(userIds).stream()
+                    .collect(Collectors.toMap(u -> u.getId(), Function.identity()));
+            var memberResponses = members.stream()
+                    .map(ud -> new UserDepartmentResponse(
+                            ud,
+                            idToUser.get(ud.getUserId())))
+                    .toList();
+            return responseUtils.success(memberResponses);
+        } catch (AppException e) {
+            log.error("Error getting members by department id: {}", e.getMessage());
+            return responseUtils.error(e.getCode(), e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error getting members by department id: {}", e.getMessage(), e);
+            return responseUtils.internalServerError(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
         }
     }
 

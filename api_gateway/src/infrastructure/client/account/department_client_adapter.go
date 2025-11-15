@@ -106,7 +106,7 @@ func (d *DepartmentClientAdapter) UpdateDepartment(ctx context.Context, organiza
 	var httpResponse *utils.HTTPResponse
 	err := d.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		httpResponse, err = d.apiClient.PUT(ctx, path, req, headers)
+		httpResponse, err = d.apiClient.PATCH(ctx, path, req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call update department API: %w", err)
 		}

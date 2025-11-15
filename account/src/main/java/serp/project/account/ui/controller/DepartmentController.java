@@ -43,7 +43,7 @@ public class DepartmentController {
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
-    @PutMapping("/{departmentId}")
+    @PatchMapping("/{departmentId}")
     public ResponseEntity<?> updateDepartment(
             @PathVariable Long organizationId,
             @PathVariable Long departmentId,
@@ -53,6 +53,32 @@ public class DepartmentController {
             return ResponseEntity.status(resp.getCode()).body(resp);
         }
         var response = departmentUseCase.updateDepartment(departmentId, request);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @DeleteMapping("/{departmentId}")
+    public ResponseEntity<?> deleteDepartment(
+            @PathVariable Long organizationId,
+            @PathVariable Long departmentId) {
+        if (!authUtils.canAccessOrganization(organizationId)) {
+            var resp = responseUtil.forbidden(Constants.ErrorMessage.NO_PERMISSION_TO_ACCESS_ORGANIZATION);
+            return ResponseEntity.status(resp.getCode()).body(resp);
+        }
+        var response = departmentUseCase.deleteDepartment(departmentId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @GetMapping("/{departmentId}")
+    public ResponseEntity<?> getDepartmentById(
+            @PathVariable Long organizationId,
+            @PathVariable Long departmentId) {
+
+        if (!authUtils.canAccessOrganization(organizationId)) {
+            var resp = responseUtil.forbidden(Constants.ErrorMessage.NO_PERMISSION_TO_ACCESS_ORGANIZATION);
+            return ResponseEntity.status(resp.getCode()).body(resp);
+        }
+
+        var response = departmentUseCase.getDepartmentById(departmentId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
@@ -103,6 +129,20 @@ public class DepartmentController {
         request.setDepartmentId(departmentId);
 
         var response = departmentUseCase.assignUserToDepartment(request);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @GetMapping("/{departmentId}/members")
+    public ResponseEntity<?> getDepartmentMembers(
+            @PathVariable Long organizationId,
+            @PathVariable Long departmentId) {
+
+        if (!authUtils.canAccessOrganization(organizationId)) {
+            var resp = responseUtil.forbidden(Constants.ErrorMessage.NO_PERMISSION_TO_ACCESS_ORGANIZATION);
+            return ResponseEntity.status(resp.getCode()).body(resp);
+        }
+
+        var response = departmentUseCase.getMembersByDepartmentId(departmentId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 

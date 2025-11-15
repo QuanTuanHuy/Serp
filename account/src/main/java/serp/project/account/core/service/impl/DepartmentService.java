@@ -54,10 +54,11 @@ public class DepartmentService implements IDepartmentService {
 
         var department = getDepartmentById(departmentId);
 
-        if (request.getManagerId() != null) {
+        if (request.getManagerId() != null && !request.getManagerId().equals(department.getManagerId())) {
             validateManager(request.getManagerId(), department.getOrganizationId());
         }
-        if (request.getParentDepartmentId() != null) {
+        if (request.getParentDepartmentId() != null
+                && !request.getParentDepartmentId().equals(department.getParentDepartmentId())) {
             validateParentDepartment(departmentId, request.getParentDepartmentId(), department.getOrganizationId());
         }
         department = departmentMapper.updateMapper(department, request);

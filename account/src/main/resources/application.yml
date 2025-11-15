@@ -90,6 +90,12 @@ app:
           second: GET
         - first: /api/v1/organizations/*/departments
           second: GET
+        - first: /api/v1/organizations/*/departments/*
+          second: GET
+        - first: /api/v1/organizations/*/departments/*/tree
+          second: GET
+        - first: /api/v1/organizations/*/departments/*/members
+          second: GET
       protectedUrls:
         # ==================== SERP ADMIN ====================
         - url-pattern: /api/v1/admin/**
