@@ -12,6 +12,7 @@ export interface User {
   lastName: string;
   roles: string[];
   organizationId?: number;
+  organizationName?: string;
   isActive?: boolean;
   createdAt: string;
   updatedAt: string;
