@@ -13,6 +13,8 @@ import lombok.experimental.SuperBuilder;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 /**
  * Quản lý phòng ban trong organization
  */
@@ -34,20 +36,14 @@ public class DepartmentEntity extends BaseEntity {
 
     private Long managerId;
 
-    /**
-     * Danh sách module IDs mà department này có quyền truy cập mặc định
-     * Khi user join vào department, tự động được access các modules này
-     */
     private List<Long> defaultModuleIds;
 
-    /**
-     * Danh sách role IDs mặc định cho members của department
-     * Ví dụ: Sales Department → default role "Sales Person"
-     */
     private List<Long> defaultRoleIds;
 
-    /**
-     * Trạng thái active
-     */
     private Boolean isActive;
+
+    @JsonIgnore
+    public boolean isActiveDepartment() {
+        return Boolean.TRUE.equals(this.isActive);
+    }
 }

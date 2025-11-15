@@ -86,6 +86,12 @@ public class UserEntity extends BaseEntity {
     private List<UserDepartmentEntity> departments;
 
     @JsonIgnore
+    public String getFullName() {
+        return String.format("%s %s", this.firstName != null ? this.firstName : "",
+                this.lastName != null ? this.lastName : "").trim();
+    }
+
+    @JsonIgnore
     public List<String> getRoleNames() {
         if (CollectionUtils.isEmpty(this.getRoles())) {
             return List.of();

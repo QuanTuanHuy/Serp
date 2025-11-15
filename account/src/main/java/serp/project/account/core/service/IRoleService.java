@@ -22,8 +22,6 @@ public interface IRoleService {
 
     List<RoleEntity> getAllRoles();
 
-    List<RoleEntity> getRolesByGroupId(Long groupId);
-
     List<RoleEntity> getRolesByModuleId(Long moduleId);
 
     List<RoleEntity> getRolesByScope(RoleScope scope);

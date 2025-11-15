@@ -3,7 +3,7 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.account.core.domain.entity;
+package serp.project.account.core.domain.dto.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -16,17 +16,10 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @Setter
 @SuperBuilder
-public class UserDepartmentEntity extends BaseEntity {
-
-    private Long userId;
-
-    private Long departmentId;
-
-    private Boolean isPrimary;
-
-    private String jobTitle;
-
-    private String description;
-
+public class GetDepartmentParams extends BaseGetParams {
+    private String search;
+    private Long organizationId;
+    private Long parentDepartmentId;
+    private Long managerId;
     private Boolean isActive;
 }

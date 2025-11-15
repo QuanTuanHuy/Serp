@@ -109,10 +109,11 @@ func (cb *CircuitBreaker) recordSuccess() {
 
 	cb.lastSuccessTime = time.Now()
 
-	if cb.state == HalfOpen {
+	switch cb.state {
+	case HalfOpen:
 		cb.setState(Closed)
 		cb.failures = 0
-	} else if cb.state == Closed {
+	case Closed:
 		cb.failures = 0
 	}
 }

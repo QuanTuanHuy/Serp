@@ -23,14 +23,12 @@ import serp.project.account.core.domain.constant.CacheConstants;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.CreateRoleDto;
 import serp.project.account.core.domain.dto.request.UpdateRoleDto;
-import serp.project.account.core.domain.entity.GroupRoleEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.RolePermissionEntity;
 import serp.project.account.core.domain.enums.RoleScope;
 import serp.project.account.core.domain.enums.RoleType;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.port.client.ICachePort;
-import serp.project.account.core.port.store.IGroupRolePort;
 import serp.project.account.core.port.store.IPermissionPort;
 import serp.project.account.core.port.store.IRolePermissionPort;
 import serp.project.account.core.port.store.IRolePort;
@@ -43,7 +41,6 @@ import serp.project.account.kernel.utils.CollectionUtils;
 @Slf4j
 public class RoleService implements IRoleService {
     private final IRolePort rolePort;
-    private final IGroupRolePort groupRolePort;
     private final IRolePermissionPort rolePermissionPort;
     private final IPermissionPort permissionPort;
 
@@ -166,17 +163,6 @@ public class RoleService implements IRoleService {
                 .isRealmRole(false)
                 .build();
         return rolePort.save(newRole);
-    }
-
-    @Override
-    public List<RoleEntity> getRolesByGroupId(Long groupId) {
-        List<Long> roleIds = groupRolePort.getByGroupId(groupId).stream()
-                .map(GroupRoleEntity::getRoleId)
-                .collect(Collectors.toList());
-        if (CollectionUtils.isEmpty(roleIds)) {
-            return List.of();
-        }
-        return rolePort.getRolesByIds(roleIds);
     }
 
     public void cacheAllRoles(List<RoleEntity> roles) {

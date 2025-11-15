@@ -32,6 +32,7 @@ type RegisterRoutersIn struct {
 	ModuleAccessController     *account.ModuleAccessController
 	MenuDisplayController      *account.MenuDisplayController
 	OrganizationController     *account.OrganizationController
+	DepartmentController       *account.DepartmentController
 
 	ProjectController   *ptm.ProjectController
 	GroupTaskController *ptm.GroupTaskController
@@ -64,6 +65,7 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		p.SubscriptionPlanController,
 		p.ModuleAccessController,
 		p.MenuDisplayController,
+		p.DepartmentController,
 		p.OrganizationController,
 	)
 
