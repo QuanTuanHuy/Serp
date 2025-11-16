@@ -229,6 +229,19 @@ func (d *DepartmentController) GetDepartmentMembers(c *gin.Context) {
 	c.JSON(res.Code, res)
 }
 
+func (d *DepartmentController) GetDepartmentStats(c *gin.Context) {
+	orgId, ok := utils.ValidateAndParseID(c, "organizationId")
+	if !ok {
+		return
+	}
+	res, err := d.deptService.GetDepartmentStats(c.Request.Context(), orgId)
+	if err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
+		return
+	}
+	c.JSON(res.Code, res)
+}
+
 func NewDepartmentController(deptService service.IDepartmentService) *DepartmentController {
 	return &DepartmentController{deptService: deptService}
 }

@@ -4,53 +4,89 @@
  */
 
 export interface Department {
-  id: string;
+  id: number;
+  organizationId: number;
   name: string;
+  code?: string;
   description?: string;
-  parentDepartmentId?: string;
+  parentDepartmentId?: number;
   parentDepartmentName?: string;
-  managerId?: string;
+  managerId?: number;
   managerName?: string;
-  memberCount: number;
-  status: DepartmentStatus;
-  createdAt: string;
-  updatedAt: string;
+  defaultModuleIds?: number[];
+  defaultRoleIds?: number[];
+  isActive: boolean;
+  childrenCount?: number;
+  memberCount?: number;
+  createdAt: number;
+  updatedAt: number;
 }
-
-export type DepartmentStatus = 'ACTIVE' | 'INACTIVE';
 
 export interface DepartmentMember {
-  userId: string;
+  userId: number;
+  userName: string;
   email: string;
-  firstName: string;
-  lastName: string;
-  fullName: string;
-  avatarUrl?: string;
-  position?: string;
-  joinedAt: string;
+  phoneNumber?: string;
+  departmentId: number;
+  isPrimary: boolean;
+  jobTitle?: string;
+  description?: string;
+  isActive: boolean;
+  createdAt: number;
+  updatedAt: number;
 }
 
+export interface DepartmentStatistics {
+  totalDepartments: number;
+  totalMembers: number;
+  averageTeamSize: number;
+  departmentsWithManagers: number;
+  activeDepartments: number;
+  inactiveDepartments: number;
+}
+
+// Request types
 export interface CreateDepartmentRequest {
   name: string;
   description?: string;
-  parentDepartmentId?: string;
-  managerId?: string;
+  parentDepartmentId?: number;
+  managerId?: number;
+  defaultModuleIds?: number[];
+  defaultRoleIds?: number[];
 }
 
 export interface UpdateDepartmentRequest {
   name?: string;
   description?: string;
-  parentDepartmentId?: string;
-  managerId?: string;
-  status?: DepartmentStatus;
+  parentDepartmentId?: number;
+  managerId?: number;
+  defaultModuleIds?: number[];
+  defaultRoleIds?: number[];
+  isActive?: boolean;
 }
 
-export interface AddDepartmentMemberRequest {
-  userId: string;
+export interface AssignUserToDepartmentRequest {
+  userId: number;
+  jobTitle?: string;
+  isPrimary?: boolean;
 }
 
-export interface DepartmentFilters {
+export interface BulkAssignUsersToDepartmentRequest {
+  userIds: number[];
+  jobTitle?: string;
+}
+
+// Query params
+export interface GetDepartmentParams {
+  organizationId: number;
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDir?: string;
   search?: string;
-  status?: DepartmentStatus;
-  parentDepartmentId?: string;
+  parentDepartmentId?: number;
+  isActive?: boolean;
+  managerId?: number;
 }
+
+export type DepartmentStatus = 'ACTIVE' | 'INACTIVE';

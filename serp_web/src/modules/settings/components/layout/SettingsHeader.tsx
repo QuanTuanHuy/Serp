@@ -12,6 +12,7 @@ import {
   Button,
   Avatar,
   AvatarFallback,
+  AvatarImage,
   ThemeToggle,
   Input,
 } from '@/shared/components';
@@ -31,7 +32,7 @@ export const SettingsHeader: React.FC<SettingsHeaderProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [notifications] = useState(0);
-  const { getDisplayName } = useUser();
+  const { getDisplayName, user } = useUser();
   const [hidden, setHidden] = useState(false);
 
   const { logout } = useAuth();
@@ -179,8 +180,11 @@ export const SettingsHeader: React.FC<SettingsHeaderProps> = ({
               className='flex items-center gap-2 rounded-lg p-2 hover:bg-muted transition-colors'
             >
               <Avatar className='h-8 w-8'>
+                {user?.avatarUrl && (
+                  <AvatarImage src={user.avatarUrl} alt={getDisplayName()} />
+                )}
                 <AvatarFallback className='bg-purple-600 text-white'>
-                  <Building2 className='h-4 w-4' />
+                  {user?.avatarUrl ? null : <Building2 className='h-4 w-4' />}
                 </AvatarFallback>
               </Avatar>
               <div className='hidden sm:block text-left'>

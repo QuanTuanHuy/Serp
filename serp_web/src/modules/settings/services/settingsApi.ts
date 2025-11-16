@@ -23,6 +23,25 @@ export {
   useUpdateOrganizationUserMutation,
 } from './users/usersApi';
 
+// Departments API
+export {
+  settingsDepartmentsApi,
+  useGetDepartmentsQuery,
+  useLazyGetDepartmentsQuery,
+  useGetDepartmentByIdQuery,
+  useLazyGetDepartmentByIdQuery,
+  useCreateDepartmentMutation,
+  useUpdateDepartmentMutation,
+  useDeleteDepartmentMutation,
+  useGetDepartmentMembersQuery,
+  useLazyGetDepartmentMembersQuery,
+  useAssignUserToDepartmentMutation,
+  useBulkAssignUsersToDepartmentMutation,
+  useRemoveUserFromDepartmentMutation,
+  useGetDepartmentStatisticsQuery,
+  useLazyGetDepartmentStatisticsQuery,
+} from './departments/departmentsApi';
+
 // // Departments API
 // export {
 //   departmentsApi,

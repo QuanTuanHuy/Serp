@@ -85,4 +85,14 @@ public class UserDepartmentAdapter implements IUserDepartmentPort {
             userDepartmentRepository.save(model);
         });
     }
+
+    @Override
+    public Long countByOrganizationId(Long organizationId) {
+        return userDepartmentRepository.countByOrganizationId(organizationId);
+    }
+
+    @Override
+    public Long countActiveByOrganizationId(Long organizationId) {
+        return userDepartmentRepository.countByOrganizationIdAndIsActive(organizationId, true);
+    }
 }

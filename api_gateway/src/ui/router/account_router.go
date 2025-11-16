@@ -133,6 +133,7 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/departments/:departmentId", departmentController.GetDepartmentById)
 		organizationsV1.Use(middleware.AuthMiddleware()).PATCH("/:organizationId/departments/:departmentId", departmentController.UpdateDepartment)
 		organizationsV1.Use(middleware.AuthMiddleware()).DELETE("/:organizationId/departments/:departmentId", departmentController.DeleteDepartment)
+		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/departments/stats", departmentController.GetDepartmentStats)
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/departments/:departmentId/tree", departmentController.GetDepartmentTree)
 		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/departments/:departmentId/users", departmentController.AssignUserToDepartment)
 		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/departments/:departmentId/users/bulk", departmentController.BulkAssignUsersToDepartment)

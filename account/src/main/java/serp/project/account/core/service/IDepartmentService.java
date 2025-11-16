@@ -9,6 +9,7 @@ import org.springframework.data.util.Pair;
 import serp.project.account.core.domain.dto.request.CreateDepartmentRequest;
 import serp.project.account.core.domain.dto.request.GetDepartmentParams;
 import serp.project.account.core.domain.dto.request.UpdateDepartmentRequest;
+import serp.project.account.core.domain.dto.response.DepartmentStats;
 import serp.project.account.core.domain.entity.DepartmentEntity;
 
 import java.util.List;
@@ -35,4 +36,6 @@ public interface IDepartmentService {
     void validateManager(Long managerId, Long organizationId);
 
     void validateParentDepartment(Long departmentId, Long parentDepartmentId, Long organizationId);
+
+    DepartmentStats getDepartmentStats(Long organizationId);
 }

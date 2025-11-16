@@ -24,6 +24,7 @@ type IDepartmentService interface {
 	BulkAssignUsersToDepartment(ctx context.Context, organizationId int64, departmentId int64, req any) (*response.BaseResponse, error)
 	RemoveUserFromDepartment(ctx context.Context, organizationId int64, departmentId int64, userId int64) (*response.BaseResponse, error)
 	GetDepartmentMembers(ctx context.Context, organizationId int64, departmentId int64) (*response.BaseResponse, error)
+	GetDepartmentStats(ctx context.Context, organizationId int64) (*response.BaseResponse, error)
 }
 
 type DepartmentService struct {
@@ -68,6 +69,10 @@ func (d *DepartmentService) RemoveUserFromDepartment(ctx context.Context, organi
 
 func (d *DepartmentService) GetDepartmentMembers(ctx context.Context, organizationId int64, departmentId int64) (*response.BaseResponse, error) {
 	return d.deptClient.GetDepartmentMembers(ctx, organizationId, departmentId)
+}
+
+func (d *DepartmentService) GetDepartmentStats(ctx context.Context, organizationId int64) (*response.BaseResponse, error) {
+	return d.deptClient.GetDepartmentStats(ctx, organizationId)
 }
 
 func NewDepartmentService(deptClient port.IDepartmentClientPort) IDepartmentService {

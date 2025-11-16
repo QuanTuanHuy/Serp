@@ -14,9 +14,11 @@ import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.CreateDepartmentRequest;
 import serp.project.account.core.domain.dto.request.GetDepartmentParams;
 import serp.project.account.core.domain.dto.request.UpdateDepartmentRequest;
+import serp.project.account.core.domain.dto.response.DepartmentStats;
 import serp.project.account.core.domain.entity.DepartmentEntity;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.port.store.IDepartmentPort;
+import serp.project.account.core.port.store.IUserDepartmentPort;
 import serp.project.account.core.port.store.IUserOrganizationPort;
 import serp.project.account.core.service.IDepartmentService;
 import serp.project.account.infrastructure.store.mapper.DepartmentMapper;
@@ -30,6 +32,7 @@ import java.util.Set;
 @Slf4j
 public class DepartmentService implements IDepartmentService {
     private final IDepartmentPort departmentPort;
+    private final IUserDepartmentPort userDepartmentPort;
     private final IUserOrganizationPort userOrganizationPort;
     private final DepartmentMapper departmentMapper;
 
@@ -164,5 +167,23 @@ public class DepartmentService implements IDepartmentService {
             return List.of();
         }
         return departmentPort.getByIds(departmentIds);
+    }
+
+    @Override
+    public DepartmentStats getDepartmentStats(Long organizationId) {
+        int totalDepartments = departmentPort.countByOrganizationId(organizationId).intValue();
+        int activeDepartments = departmentPort.countActiveByOrganizationId(organizationId).intValue();
+        int totalMembers = userDepartmentPort.countByOrganizationId(organizationId).intValue();
+        double averageTeamSize = totalDepartments == 0 ? 0 : (double) totalMembers / totalDepartments;
+        averageTeamSize = Math.round(averageTeamSize * 100.0) / 100.0;
+
+        return DepartmentStats.builder()
+                .totalDepartments(totalDepartments)
+                .totalMembers(totalMembers)
+                .averageTeamSize(averageTeamSize)
+                .activeDepartments(activeDepartments)
+                .inactiveDepartments(totalDepartments - activeDepartments)
+                .departmentsWithManagers(departmentPort.countHasManagerInOrganization(organizationId))
+                .build();
     }
 }

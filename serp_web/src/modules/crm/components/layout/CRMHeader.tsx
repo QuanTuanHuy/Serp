@@ -9,6 +9,7 @@ import {
   Button,
   Avatar,
   AvatarFallback,
+  AvatarImage,
   ThemeToggle,
   Input,
 } from '@/shared/components';
@@ -205,7 +206,10 @@ export const CRMHeader: React.FC<CRMHeaderProps> = ({
               className='flex items-center gap-2 rounded-lg p-2 hover:bg-muted transition-colors'
             >
               <Avatar className='h-8 w-8'>
-                <AvatarFallback>SM</AvatarFallback>
+                {user?.avatarUrl && (
+                  <AvatarImage src={user.avatarUrl} alt={getDisplayName()} />
+                )}
+                <AvatarFallback>{getInitials()}</AvatarFallback>
               </Avatar>
               <div className='hidden sm:block text-left'>
                 <p className='text-sm font-medium'>{getDisplayName()}</p>

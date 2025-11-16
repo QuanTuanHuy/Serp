@@ -33,5 +33,18 @@ export type {
   SettingsActionMenuItem,
 } from './components/shared/SettingsActionMenu';
 
+// Department Components
+export { CreateDepartmentDialog } from './components/departments/CreateDepartmentDialog';
+export { UpdateDepartmentDialog } from './components/departments/UpdateDepartmentDialog';
+export { DeleteDepartmentDialog } from './components/departments/DeleteDepartmentDialog';
+export { DepartmentDetailDialog } from './components/departments/DepartmentDetailDialog';
+
+// Hooks
+export { useSettingsDepartments } from './hooks/useDepartments';
+export type { UseSettingsDepartmentsReturn } from './hooks/useDepartments';
+
+// Services
+export * from './services/settingsApi';
+
 // Types
 export type * from './types';

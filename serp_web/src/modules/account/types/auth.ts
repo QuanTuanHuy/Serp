@@ -10,8 +10,10 @@ export interface User {
   fullName: string;
   firstName: string;
   lastName: string;
+  avatarUrl?: string;
   roles: string[];
   organizationId?: number;
+  organizationName?: string;
   isActive?: boolean;
   createdAt: string;
   updatedAt: string;

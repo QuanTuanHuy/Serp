@@ -23,4 +23,5 @@ type IDepartmentClientPort interface {
 	BulkAssignUsersToDepartment(ctx context.Context, organizationId int64, departmentId int64, req interface{}) (*response.BaseResponse, error)
 	RemoveUserFromDepartment(ctx context.Context, organizationId int64, departmentId int64, userId int64) (*response.BaseResponse, error)
 	GetDepartmentMembers(ctx context.Context, organizationId int64, departmentId int64) (*response.BaseResponse, error)
+	GetDepartmentStats(ctx context.Context, organizationId int64) (*response.BaseResponse, error)
 }

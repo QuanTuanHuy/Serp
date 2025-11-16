@@ -116,6 +116,7 @@ export const api = createApi({
     'settings/User',
     'settings/Module',
     'settings/ModuleUsers',
+    'settings/Department',
     // Subscription tags
     'subscription/Plan',
     'subscription/PlanModule',

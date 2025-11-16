@@ -281,6 +281,32 @@ func (d *DepartmentClientAdapter) GetDepartmentMembers(ctx context.Context, orga
 	return &result, nil
 }
 
+func (d *DepartmentClientAdapter) GetDepartmentStats(ctx context.Context, organizationId int64) (*response.BaseResponse, error) {
+	headers := utils.BuildHeadersFromContext(ctx)
+	path := fmt.Sprintf("/api/v1/organizations/%d/departments/stats", organizationId)
+
+	var httpResponse *utils.HTTPResponse
+	err := d.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
+		var err error
+		httpResponse, err = d.apiClient.GET(ctx, path, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call get department stats API: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !d.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("GetDepartmentStats API returned error status: %d", httpResponse.StatusCode))
+	}
+	var result response.BaseResponse
+	if err := d.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal get department stats response: %w", err)
+	}
+	return &result, nil
+}
+
 func NewDepartmentClientAdapter(authProps *properties.ExternalServiceProperties) port.IDepartmentClientPort {
 	baseUrl := "http://" + authProps.AccountService.Host + ":" + authProps.AccountService.Port + "/account-service"
 	apiClient := utils.NewBaseAPIClient(baseUrl, authProps.AccountService.Timeout)

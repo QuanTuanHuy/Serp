@@ -29,6 +29,10 @@ public interface IUserDepartmentPort {
 
     Long countActiveByDepartmentId(Long departmentId);
 
+    Long countByOrganizationId(Long organizationId);
+
+    Long countActiveByOrganizationId(Long organizationId);
+
     Boolean existsByUserIdAndDepartmentId(Long userId, Long departmentId);
 
     void delete(Long userId, Long departmentId);

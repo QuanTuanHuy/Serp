@@ -112,4 +112,11 @@ public class DepartmentAdapter implements IDepartmentPort {
     public List<DepartmentEntity> getByIds(List<Long> departmentIds) {
         return departmentMapper.toEntityList(departmentRepository.findByIdIn(departmentIds));
     }
+
+    @Override
+    public Integer countHasManagerInOrganization(Long organizationId) {
+        return departmentRepository
+                .countDistinctByOrganizationIdAndManagerIdIsNotNull(organizationId)
+                .intValue();
+    }
 }

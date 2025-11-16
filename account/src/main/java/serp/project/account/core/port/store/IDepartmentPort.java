@@ -39,5 +39,7 @@ public interface IDepartmentPort {
 
     Long countActiveByOrganizationId(Long organizationId);
 
+    Integer countHasManagerInOrganization(Long organizationId);
+
     void delete(Long id);
 }

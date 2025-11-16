@@ -146,4 +146,15 @@ public class DepartmentController {
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
+    @GetMapping("/stats")
+    public ResponseEntity<?> getDepartmentStats(
+            @PathVariable Long organizationId) {
+        if (!authUtils.canAccessOrganization(organizationId)) {
+            var resp = responseUtil.forbidden(Constants.ErrorMessage.NO_PERMISSION_TO_ACCESS_ORGANIZATION);
+            return ResponseEntity.status(resp.getCode()).body(resp);
+        }
+        var response = departmentUseCase.getDepartmentStats(organizationId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
 }
