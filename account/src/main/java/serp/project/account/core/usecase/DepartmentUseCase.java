@@ -256,6 +256,21 @@ public class DepartmentUseCase {
         }
     }
 
+    public GeneralResponse<?> getDepartmentStats(Long organizationId) {
+        try {
+            organizationService.getOrganizationById(organizationId);
+
+            var stats = departmentService.getDepartmentStats(organizationId);
+            return responseUtils.success(stats);
+        } catch (AppException e) {
+            log.error("Error getting department stats: {}", e.getMessage());
+            return responseUtils.error(e.getCode(), e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error getting department stats: {}", e.getMessage(), e);
+            return responseUtils.internalServerError(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     private void validateModuleAccessForOrganization(Long organizationId, List<Long> moduleIds) {
         var organization = organizationService.getOrganizationById(organizationId);
         long ownerId = organization.getOwnerId();

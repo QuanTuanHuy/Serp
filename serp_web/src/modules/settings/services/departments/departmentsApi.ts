@@ -203,7 +203,7 @@ export const settingsDepartmentsApi = api.injectEndpoints({
       { organizationId: number }
     >({
       query: ({ organizationId }) => ({
-        url: `/organizations/${organizationId}/departments/statistics`,
+        url: `/organizations/${organizationId}/departments/stats`,
         method: 'GET',
       }),
       transformResponse: createRtkTransformResponse(),

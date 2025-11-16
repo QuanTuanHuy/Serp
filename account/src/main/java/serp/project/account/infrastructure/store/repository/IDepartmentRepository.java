@@ -32,4 +32,6 @@ public interface IDepartmentRepository extends IBaseRepository<DepartmentModel> 
     Long countByOrganizationId(Long organizationId);
 
     Long countByOrganizationIdAndIsActive(Long organizationId, Boolean isActive);
+
+    Long countDistinctByOrganizationIdAndManagerIdIsNotNull(Long organizationId);
 }
