@@ -11,8 +11,9 @@ import {
   Badge,
   Button,
 } from '@/shared/components/ui';
+import { ModuleBadges } from '@/shared/components';
 import { cn } from '@/shared/utils';
-import { UISubscriptionPlan, BillingCycle } from '../types';
+import { UISubscriptionPlan, BillingCycle, PlanModule } from '../types';
 import { Check } from 'lucide-react';
 
 interface PlanCardProps {
@@ -20,6 +21,7 @@ interface PlanCardProps {
   billingCycle: BillingCycle;
   onSelect: (planId: string) => void;
   isSelected?: boolean;
+  modules?: PlanModule[];
 }
 
 export const PlanCard: React.FC<PlanCardProps> = ({
@@ -27,10 +29,18 @@ export const PlanCard: React.FC<PlanCardProps> = ({
   billingCycle,
   onSelect,
   isSelected = false,
+  modules,
 }) => {
   const price =
     billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
   const displayPrice = billingCycle === 'yearly' ? price / 12 : price;
+
+  const includedModules = modules?.filter((m) => m.isIncluded) || [];
+  const moduleBadges = includedModules.map((m) => ({
+    code: m.moduleCode || '',
+    name: m.moduleName || m.moduleCode || 'Module',
+    isIncluded: m.isIncluded,
+  }));
 
   return (
     <Card
@@ -88,6 +98,20 @@ export const PlanCard: React.FC<PlanCardProps> = ({
       </CardHeader>
 
       <CardContent className='flex-1'>
+        {/* Modules Section (if available) */}
+        {moduleBadges.length > 0 && (
+          <div className='mb-4 pb-4 border-b'>
+            <p className='text-sm font-semibold mb-3'>Included Modules:</p>
+            <ModuleBadges
+              modules={moduleBadges}
+              maxDisplay={6}
+              showIcons={true}
+              size='sm'
+              variant='outline'
+            />
+          </div>
+        )}
+
         {/* Plan Limits */}
         <div className='mb-4 pb-4 border-b'>
           <div className='flex items-center justify-between text-sm mb-2'>

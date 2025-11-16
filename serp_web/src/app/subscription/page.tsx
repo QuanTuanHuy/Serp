@@ -233,15 +233,21 @@ export default function SubscriptionPage() {
         </Card>
 
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12'>
-          {(isLoading ? SUBSCRIPTION_PLANS : mappedPlans).map((plan) => (
-            <PlanCard
-              key={plan.id}
-              plan={plan}
-              billingCycle={billingCycle}
-              onSelect={handlePlanSelect}
-              isSelected={selectedPlanId === plan.id}
-            />
-          ))}
+          {(isLoading ? SUBSCRIPTION_PLANS : mappedPlans).map((plan) => {
+            const backendPlan = bePlans?.data.items.find(
+              (p) => String(p.id) === plan.id
+            );
+            return (
+              <PlanCard
+                key={plan.id}
+                plan={plan}
+                billingCycle={billingCycle}
+                onSelect={handlePlanSelect}
+                isSelected={selectedPlanId === plan.id}
+                modules={backendPlan?.modules}
+              />
+            );
+          })}
         </div>
 
         <div className='mb-12'>

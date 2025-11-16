@@ -1,8 +1,11 @@
 'use client';
 
-import { Header, AppsShowcase } from '@/shared/components';
+import { Header, FeaturedAppsShowcase } from '@/shared/components';
+import { useRouter } from 'next/navigation';
 
 export default function LandingPage() {
+  const router = useRouter();
+
   return (
     <div className='min-h-screen bg-background w-full'>
       <Header />
@@ -20,7 +23,10 @@ export default function LandingPage() {
               integrated platform.
             </p>
             <div className='flex flex-col sm:flex-row gap-4 justify-center'>
-              <button className='bg-primary text-primary-foreground px-8 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors'>
+              <button
+                onClick={() => router.push('/subscription')}
+                className='bg-primary text-primary-foreground px-8 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors'
+              >
                 Get Started
               </button>
               <button className='border border-input bg-background px-8 py-3 rounded-lg font-medium hover:bg-accent transition-colors'>
@@ -31,7 +37,7 @@ export default function LandingPage() {
         </section>
 
         {/* Apps Showcase Section */}
-        <AppsShowcase />
+        <FeaturedAppsShowcase />
 
         {/* Features Section */}
         <section className='py-20 bg-muted/30 w-full'>
