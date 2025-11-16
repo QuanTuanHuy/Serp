@@ -14,6 +14,7 @@ import {
   Button,
   Avatar,
   AvatarFallback,
+  AvatarImage,
   ThemeToggle,
   Input,
 } from '@/shared/components';
@@ -207,6 +208,9 @@ export function PTMHeader({ scrollContainerRef }: PTMHeaderProps) {
               className='flex items-center gap-2 rounded-lg p-2 hover:bg-muted transition-colors'
             >
               <Avatar className='h-8 w-8'>
+                {user?.avatarUrl && (
+                  <AvatarImage src={user.avatarUrl} alt={getDisplayName()} />
+                )}
                 <AvatarFallback>{getInitials()}</AvatarFallback>
               </Avatar>
               <div className='hidden sm:block text-left'>

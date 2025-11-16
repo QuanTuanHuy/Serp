@@ -12,6 +12,7 @@ import {
   Button,
   Avatar,
   AvatarFallback,
+  AvatarImage,
   ThemeToggle,
   Input,
 } from '@/shared/components';
@@ -25,7 +26,7 @@ import {
   Shield,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
-import { useAuth } from '@/modules/account';
+import { useAuth, useUser } from '@/modules/account';
 
 interface AdminHeaderProps {
   className?: string;
@@ -42,6 +43,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   const [hidden, setHidden] = useState(false);
 
   const { logout } = useAuth();
+  const { getDisplayName, getInitials, user } = useUser();
 
   const router = useRouter();
   const pathname = usePathname();
@@ -187,12 +189,15 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
               className='flex items-center gap-2 rounded-lg p-2 hover:bg-muted transition-colors'
             >
               <Avatar className='h-8 w-8'>
+                {user?.avatarUrl && (
+                  <AvatarImage src={user.avatarUrl} alt={getDisplayName()} />
+                )}
                 <AvatarFallback className='bg-primary text-primary-foreground'>
-                  <Shield className='h-4 w-4' />
+                  {user?.avatarUrl ? null : <Shield className='h-4 w-4' />}
                 </AvatarFallback>
               </Avatar>
               <div className='hidden sm:block text-left'>
-                <p className='text-sm font-medium'>System Admin</p>
+                <p className='text-sm font-medium'>{getDisplayName()}</p>
                 <p className='text-xs text-muted-foreground'>SUPER_ADMIN</p>
               </div>
               <ChevronDown className='h-4 w-4 text-muted-foreground' />

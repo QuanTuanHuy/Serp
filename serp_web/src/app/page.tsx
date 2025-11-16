@@ -2,7 +2,7 @@
 
 import { Header, AppsShowcase } from '@/shared/components';
 
-export default function Home() {
+export default function LandingPage() {
   return (
     <div className='min-h-screen bg-background w-full'>
       <Header />

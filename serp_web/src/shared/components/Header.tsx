@@ -16,12 +16,13 @@ import {
   Avatar,
   AvatarFallback,
   ThemeToggle,
+  AvatarImage,
 } from '@/shared/components/ui';
 import { useAuth, useUser } from '@/modules/account';
 
 export function Header() {
-  const { isAuthenticated, user, logout } = useAuth();
-  const { getInitials, getDisplayName } = useUser();
+  const { isAuthenticated, logout } = useAuth();
+  const { user, getInitials, getDisplayName } = useUser();
 
   const router = useRouter();
 
@@ -90,15 +91,14 @@ export function Header() {
 
           {isAuthenticated ? (
             <div className='flex items-center space-x-3'>
-              <div className='hidden sm:block text-right'>
-                <p className='text-sm font-medium'>
-                  {getDisplayName() || 'User'}
-                </p>
-                <p className='text-xs text-muted-foreground'>{user?.email}</p>
-              </div>
               <div className='relative group'>
-                <Avatar className='cursor-pointer'>
-                  <AvatarFallback>{getInitials()}</AvatarFallback>
+                <Avatar className='h-8 w-8 cursor-pointer'>
+                  {user?.avatarUrl && (
+                    <AvatarImage src={user.avatarUrl} alt={getDisplayName()} />
+                  )}
+                  {user?.avatarUrl ? null : (
+                    <AvatarFallback>{getInitials()}</AvatarFallback>
+                  )}
                 </Avatar>
                 {/* Simple dropdown on hover */}
                 <div className='absolute right-0 top-full mt-2 w-48 bg-background border rounded-md shadow-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200'>
@@ -126,6 +126,12 @@ export function Header() {
                     </Button>
                   </div>
                 </div>
+              </div>
+              <div className='hidden sm:block text-left'>
+                <p className='text-sm font-medium'>
+                  {getDisplayName() || 'User'}
+                </p>
+                <p className='text-xs text-muted-foreground'>{user?.email}</p>
               </div>
             </div>
           ) : (
