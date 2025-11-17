@@ -108,6 +108,7 @@ public class ModuleMapper extends BaseMapper {
 
         return ModuleEntity.builder()
                 .moduleName(request.getName())
+                .code(request.getCode())
                 .description(request.getDescription())
                 .keycloakClientId(request.getKeycloakClientId())
                 .category(request.getCategory())
