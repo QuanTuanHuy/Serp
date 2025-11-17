@@ -25,6 +25,12 @@ import {
 import { Input } from '@/shared/components/ui/input';
 import { Button } from '@/shared/components/ui/button';
 import { DataTable } from '@/shared/components';
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from '@/shared/components/ui/avatar';
+import { getInitials } from '@/shared/utils';
 import type { ColumnDef } from '@/shared/types';
 import {
   Users,
@@ -86,7 +92,21 @@ export default function UsersPage() {
         cell: ({ row }) => (
           <div className='flex items-center gap-3'>
             <div className='h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center'>
-              <Users className='h-5 w-5 text-primary' />
+              <Avatar className='h-10 w-10'>
+                {row.avatarUrl ? (
+                  <AvatarImage
+                    src={row.avatarUrl}
+                    alt={`${row.firstName || ''} ${row.lastName || ''}`}
+                  />
+                ) : null}
+                <AvatarFallback className='bg-primary/10'>
+                  {getInitials({
+                    firstName: row.firstName,
+                    lastName: row.lastName,
+                    email: row.email,
+                  }) || <Users className='h-5 w-5 text-primary' />}
+                </AvatarFallback>
+              </Avatar>
             </div>
             <div>
               <p className='font-medium'>

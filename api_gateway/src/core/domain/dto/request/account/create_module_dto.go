@@ -7,6 +7,7 @@ package request
 
 type CreateModuleDto struct {
 	Name             string  `json:"name"`
+	Code             string  `json:"code"`
 	Description      *string `json:"description"`
 	KeycloakClientId string  `json:"keycloakClientId"`
 	Category         *string `json:"category"`
