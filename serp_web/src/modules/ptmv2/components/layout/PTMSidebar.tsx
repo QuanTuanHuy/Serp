@@ -8,6 +8,7 @@
 'use client';
 
 import { useSelector, useDispatch } from 'react-redux';
+import { useRouter, usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   CheckSquare,
@@ -30,16 +31,18 @@ import { LAYOUT_CONSTANTS } from '../../constants/colors';
 import type { PTMState } from '../../store';
 
 const navItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'tasks', label: 'Tasks', icon: CheckSquare },
-  { id: 'projects', label: 'Projects', icon: FolderKanban },
-  { id: 'schedule', label: 'Schedule', icon: Calendar },
-  { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/ptmv2' },
+  { id: 'tasks', label: 'Tasks', icon: CheckSquare, href: '/ptmv2/tasks' },
+  { id: 'projects', label: 'Projects', icon: FolderKanban, href: '/ptmv2/projects' },
+  { id: 'schedule', label: 'Schedule', icon: Calendar, href: '/ptmv2/schedule' },
+  { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '/ptmv2/analytics' },
 ] as const;
 
 export function PTMSidebar() {
+  const router = useRouter();
+  const pathname = usePathname();
   const dispatch = useDispatch();
-  const { sidebarCollapsed, activeView } = useSelector(
+  const { sidebarCollapsed } = useSelector(
     (state: { ptm: PTMState }) => state.ptm.ui
   );
 
@@ -47,8 +50,9 @@ export function PTMSidebar() {
     dispatch(collapseSidebar(!sidebarCollapsed));
   };
 
-  const handleNavClick = (viewId: (typeof navItems)[number]['id']) => {
-    dispatch(setActiveView(viewId));
+  const handleNavClick = (item: (typeof navItems)[number]) => {
+    dispatch(setActiveView(item.id));
+    router.push(item.href);
   };
 
   const handleQuickAdd = () => {
@@ -106,7 +110,7 @@ export function PTMSidebar() {
       <nav className='flex-1 px-3 py-2 space-y-1'>
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activeView === item.id;
+          const isActive = pathname === item.href;
 
           return (
             <Button
@@ -118,7 +122,7 @@ export function PTMSidebar() {
                 isActive && 'bg-primary/10 text-primary hover:bg-primary/20'
               )}
               size={sidebarCollapsed ? 'icon' : 'default'}
-              onClick={() => handleNavClick(item.id)}
+              onClick={() => handleNavClick(item)}
             >
               <Icon className='h-5 w-5' />
               {!sidebarCollapsed && <span>{item.label}</span>}

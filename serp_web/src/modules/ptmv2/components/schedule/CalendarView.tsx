@@ -11,10 +11,18 @@ import { useCallback, useMemo, useState } from 'react';
 import { Calendar, momentLocalizer, View, Views } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/shared/components/ui/card';
 import { Button } from '@/shared/components/ui/button';
 import { cn } from '@/shared/utils';
-import { useGetScheduleEventsQuery, useUpdateScheduleEventMutation } from '../../services/scheduleApi';
+import {
+  useGetScheduleEventsQuery,
+  useUpdateScheduleEventMutation,
+} from '../../services/scheduleApi';
 import type { ScheduleEvent } from '../../types';
 import { toast } from 'sonner';
 
@@ -63,7 +71,7 @@ export function CalendarView({ className }: CalendarViewProps) {
   // Event style customization
   const eventStyleGetter = useCallback((event: CalendarEvent) => {
     const scheduleEvent = event.resource;
-    
+
     let backgroundColor = '#3B82F6'; // default blue
     let borderColor = '#2563EB';
 
@@ -95,11 +103,19 @@ export function CalendarView({ className }: CalendarViewProps) {
 
   // Handle event resize/move
   const handleEventDrop = useCallback(
-    async ({ event, start, end }: { event: CalendarEvent; start: Date; end: Date }) => {
-      const startMinutes = (start.getHours() * 60) + start.getMinutes();
-      const endMinutes = (end.getHours() * 60) + end.getMinutes();
+    async ({
+      event,
+      start,
+      end,
+    }: {
+      event: CalendarEvent;
+      start: Date;
+      end: Date;
+    }) => {
+      const startMinutes = start.getHours() * 60 + start.getMinutes();
+      const endMinutes = end.getHours() * 60 + end.getMinutes();
       const dateMs = new Date(start).setHours(0, 0, 0, 0);
-      
+
       try {
         await updateEvent({
           id: event.id,
@@ -119,12 +135,12 @@ export function CalendarView({ className }: CalendarViewProps) {
   // Custom event component
   const EventComponent = ({ event }: { event: CalendarEvent }) => {
     const scheduleEvent = event.resource;
-    
+
     return (
-      <div className="flex items-center gap-1 text-xs">
+      <div className='flex items-center gap-1 text-xs'>
         {scheduleEvent.isDeepWork && <span>🔒</span>}
         {scheduleEvent.scheduleTaskId && <span>📋</span>}
-        <span className="truncate font-medium">{event.title}</span>
+        <span className='truncate font-medium'>{event.title}</span>
       </div>
     );
   };
@@ -136,8 +152,8 @@ export function CalendarView({ className }: CalendarViewProps) {
           <CardTitle>Calendar</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[600px] flex items-center justify-center">
-            <div className="text-muted-foreground">Loading calendar...</div>
+          <div className='h-[600px] flex items-center justify-center'>
+            <div className='text-muted-foreground'>Loading calendar...</div>
           </div>
         </CardContent>
       </Card>
@@ -147,26 +163,26 @@ export function CalendarView({ className }: CalendarViewProps) {
   return (
     <Card className={className}>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className='flex items-center justify-between'>
           <CardTitle>Calendar</CardTitle>
-          <div className="flex gap-2">
+          <div className='flex gap-2'>
             <Button
               variant={view === Views.WEEK ? 'default' : 'outline'}
-              size="sm"
+              size='sm'
               onClick={() => setView(Views.WEEK)}
             >
               Week
             </Button>
             <Button
               variant={view === Views.MONTH ? 'default' : 'outline'}
-              size="sm"
+              size='sm'
               onClick={() => setView(Views.MONTH)}
             >
               Month
             </Button>
             <Button
               variant={view === Views.DAY ? 'default' : 'outline'}
-              size="sm"
+              size='sm'
               onClick={() => setView(Views.DAY)}
             >
               Day
@@ -176,7 +192,7 @@ export function CalendarView({ className }: CalendarViewProps) {
       </CardHeader>
 
       <CardContent>
-        <div className="calendar-wrapper" style={{ height: 600 }}>
+        <div className='calendar-wrapper' style={{ height: 600 }}>
           <Calendar
             localizer={localizer}
             events={calendarEvents}
@@ -184,8 +200,8 @@ export function CalendarView({ className }: CalendarViewProps) {
             onView={setView}
             date={date}
             onNavigate={setDate}
-            startAccessor="start"
-            endAccessor="end"
+            startAccessor='start'
+            endAccessor='end'
             style={{ height: '100%' }}
             eventPropGetter={eventStyleGetter}
             components={{
@@ -201,18 +217,18 @@ export function CalendarView({ className }: CalendarViewProps) {
         </div>
 
         {/* Legend */}
-        <div className="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-purple-500" />
-            <span className="text-muted-foreground">Focus Time</span>
+        <div className='flex flex-wrap items-center gap-4 mt-4 pt-4 border-t text-sm'>
+          <div className='flex items-center gap-2'>
+            <div className='w-3 h-3 rounded bg-purple-500' />
+            <span className='text-muted-foreground'>Focus Time</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-amber-500" />
-            <span className="text-muted-foreground">Task</span>
+          <div className='flex items-center gap-2'>
+            <div className='w-3 h-3 rounded bg-amber-500' />
+            <span className='text-muted-foreground'>Task</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-blue-500" />
-            <span className="text-muted-foreground">Event</span>
+          <div className='flex items-center gap-2'>
+            <div className='w-3 h-3 rounded bg-blue-500' />
+            <span className='text-muted-foreground'>Event</span>
           </div>
         </div>
       </CardContent>
@@ -221,47 +237,47 @@ export function CalendarView({ className }: CalendarViewProps) {
         .calendar-wrapper .rbc-calendar {
           font-family: inherit;
         }
-        
+
         .calendar-wrapper .rbc-header {
           padding: 8px 4px;
           font-weight: 600;
           font-size: 13px;
           border-bottom: 2px solid hsl(var(--border));
         }
-        
+
         .calendar-wrapper .rbc-today {
           background-color: hsl(var(--accent));
         }
-        
+
         .calendar-wrapper .rbc-event {
           padding: 2px 6px;
           border-radius: 4px;
           cursor: pointer;
         }
-        
+
         .calendar-wrapper .rbc-event:hover {
           opacity: 0.85;
         }
-        
+
         .calendar-wrapper .rbc-selected {
           background-color: hsl(var(--primary)) !important;
         }
-        
+
         .calendar-wrapper .rbc-time-slot {
           min-height: 40px;
         }
-        
+
         .calendar-wrapper .rbc-current-time-indicator {
           background-color: hsl(var(--destructive));
           height: 2px;
         }
-        
+
         .calendar-wrapper .rbc-toolbar {
           padding: 12px;
           margin-bottom: 12px;
           border-bottom: 1px solid hsl(var(--border));
         }
-        
+
         .calendar-wrapper .rbc-toolbar button {
           padding: 6px 12px;
           border: 1px solid hsl(var(--border));
@@ -271,28 +287,28 @@ export function CalendarView({ className }: CalendarViewProps) {
           font-size: 13px;
           cursor: pointer;
         }
-        
+
         .calendar-wrapper .rbc-toolbar button:hover {
           background: hsl(var(--accent));
         }
-        
+
         .calendar-wrapper .rbc-toolbar button.rbc-active {
           background: hsl(var(--primary));
           color: hsl(var(--primary-foreground));
           border-color: hsl(var(--primary));
         }
-        
+
         .calendar-wrapper .rbc-month-view,
         .calendar-wrapper .rbc-time-view {
           border: 1px solid hsl(var(--border));
           border-radius: 8px;
           overflow: hidden;
         }
-        
+
         .calendar-wrapper .rbc-time-content {
           border-top: 1px solid hsl(var(--border));
         }
-        
+
         .calendar-wrapper .rbc-day-slot .rbc-time-slot {
           border-top: 1px solid hsl(var(--border) / 0.3);
         }

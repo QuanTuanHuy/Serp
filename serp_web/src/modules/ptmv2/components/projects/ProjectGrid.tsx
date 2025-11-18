@@ -29,7 +29,9 @@ interface ProjectGridProps {
 
 export function ProjectGrid({ className }: ProjectGridProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'ALL'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'ALL'>(
+    'ALL'
+  );
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   const { data: projects = [], isLoading } = useGetProjectsQuery({});
@@ -71,17 +73,17 @@ export function ProjectGrid({ className }: ProjectGridProps) {
   if (isLoading) {
     return (
       <div className={className}>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold">Projects</h2>
+        <div className='flex items-center justify-between mb-6'>
+          <h2 className='text-2xl font-bold'>Projects</h2>
           <Button>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className='mr-2 h-4 w-4' />
             New Project
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-64 w-full" />
+            <Skeleton key={i} className='h-64 w-full' />
           ))}
         </div>
       </div>
@@ -91,58 +93,61 @@ export function ProjectGrid({ className }: ProjectGridProps) {
   return (
     <div className={className}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className='flex items-center justify-between mb-6'>
         <div>
-          <h2 className="text-2xl font-bold">Projects</h2>
+          <h2 className='text-2xl font-bold'>Projects</h2>
           {filteredProjects.length > 0 && (
-            <p className="text-sm text-muted-foreground mt-1">
-              {filteredProjects.length} {filteredProjects.length === 1 ? 'project' : 'projects'}
+            <p className='text-sm text-muted-foreground mt-1'>
+              {filteredProjects.length}{' '}
+              {filteredProjects.length === 1 ? 'project' : 'projects'}
             </p>
           )}
         </div>
         <Button>
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className='mr-2 h-4 w-4' />
           New Project
         </Button>
       </div>
 
       {/* Filters */}
-      <div className="space-y-3 mb-6">
+      <div className='space-y-3 mb-6'>
         {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className='relative'>
+          <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search projects..."
-            className="pl-9"
+            placeholder='Search projects...'
+            className='pl-9'
           />
         </div>
 
         {/* Filters Row */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className='flex flex-wrap items-center gap-2'>
           <Select
             value={statusFilter}
-            onValueChange={(value) => setStatusFilter(value as ProjectStatus | 'ALL')}
+            onValueChange={(value) =>
+              setStatusFilter(value as ProjectStatus | 'ALL')
+            }
           >
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Status" />
+            <SelectTrigger className='w-[140px]'>
+              <SelectValue placeholder='Status' />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">All Status</SelectItem>
-              <SelectItem value="ACTIVE">Active</SelectItem>
-              <SelectItem value="COMPLETED">Completed</SelectItem>
-              <SelectItem value="ON_HOLD">On Hold</SelectItem>
-              <SelectItem value="ARCHIVED">Archived</SelectItem>
+              <SelectItem value='ALL'>All Status</SelectItem>
+              <SelectItem value='ACTIVE'>Active</SelectItem>
+              <SelectItem value='COMPLETED'>Completed</SelectItem>
+              <SelectItem value='ON_HOLD'>On Hold</SelectItem>
+              <SelectItem value='ARCHIVED'>Archived</SelectItem>
             </SelectContent>
           </Select>
 
           <Button
             variant={showFavoritesOnly ? 'default' : 'outline'}
-            size="sm"
+            size='sm'
             onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
           >
-            <Filter className="mr-2 h-4 w-4" />
+            <Filter className='mr-2 h-4 w-4' />
             Favorites Only
           </Button>
         </div>
@@ -150,16 +155,16 @@ export function ProjectGrid({ className }: ProjectGridProps) {
 
       {/* Project Grid */}
       {filteredProjects.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <p className="text-lg font-medium">No projects found</p>
-          <p className="text-sm mt-1">
+        <div className='text-center py-12 text-muted-foreground'>
+          <p className='text-lg font-medium'>No projects found</p>
+          <p className='text-sm mt-1'>
             {searchQuery || statusFilter !== 'ALL' || showFavoritesOnly
               ? 'Try adjusting your filters'
               : 'Create your first project to get started'}
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
           {filteredProjects.map((project) => (
             <ProjectCard key={project.id} project={project} />
           ))}

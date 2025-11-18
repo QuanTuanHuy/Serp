@@ -137,38 +137,38 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+      <SheetContent className='w-full sm:max-w-2xl overflow-y-auto'>
         {isLoading ? (
-          <div className="space-y-4">
-            <div className="h-8 w-3/4 bg-muted animate-pulse rounded" />
-            <div className="h-4 w-1/2 bg-muted animate-pulse rounded" />
+          <div className='space-y-4'>
+            <div className='h-8 w-3/4 bg-muted animate-pulse rounded' />
+            <div className='h-4 w-1/2 bg-muted animate-pulse rounded' />
           </div>
         ) : task ? (
           <>
             <SheetHeader>
-              <div className="space-y-3">
+              <div className='space-y-3'>
                 {isEditing ? (
                   <Input
                     value={editForm.title}
                     onChange={(e) =>
                       setEditForm({ ...editForm, title: e.target.value })
                     }
-                    className="text-2xl font-bold"
+                    className='text-2xl font-bold'
                   />
                 ) : (
-                  <SheetTitle className="text-2xl">{task.title}</SheetTitle>
+                  <SheetTitle className='text-2xl'>{task.title}</SheetTitle>
                 )}
 
-                <div className="flex items-center gap-2">
+                <div className='flex items-center gap-2'>
                   <StatusBadge status={task.status} />
                   <PriorityBadge priority={task.priority} />
                 </div>
               </div>
             </SheetHeader>
 
-            <div className="space-y-6 mt-6">
+            <div className='space-y-6 mt-6'>
               {/* Description */}
-              <div className="space-y-2">
+              <div className='space-y-2'>
                 <Label>Description</Label>
                 {isEditing ? (
                   <Textarea
@@ -179,17 +179,17 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
                     rows={4}
                   />
                 ) : (
-                  <p className="text-sm text-muted-foreground">
+                  <p className='text-sm text-muted-foreground'>
                     {task.description || 'No description provided'}
                   </p>
                 )}
               </div>
 
               {/* Progress */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
+              <div className='space-y-3'>
+                <div className='flex items-center justify-between'>
                   <Label>Progress</Label>
-                  <span className="text-sm font-medium">
+                  <span className='text-sm font-medium'>
                     {task.progressPercentage}%
                   </span>
                 </div>
@@ -198,23 +198,23 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
                   max={100}
                   step={10}
                   onValueChange={handleProgressChange}
-                  className="cursor-pointer"
+                  className='cursor-pointer'
                   disabled={isEditing}
                 />
-                <Progress value={task.progressPercentage} className="h-2" />
+                <Progress value={task.progressPercentage} className='h-2' />
               </div>
 
               <Separator />
 
               {/* Details Grid */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className='grid grid-cols-2 gap-4'>
                 {/* Duration */}
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground">Duration</Label>
+                <div className='space-y-1'>
+                  <Label className='text-muted-foreground'>Duration</Label>
                   {isEditing ? (
                     <Input
-                      type="number"
-                      step="0.5"
+                      type='number'
+                      step='0.5'
                       value={editForm.estimatedDurationHours || ''}
                       onChange={(e) =>
                         setEditForm({
@@ -224,8 +224,8 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
                       }
                     />
                   ) : (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Clock className="h-4 w-4" />
+                    <div className='flex items-center gap-2 text-sm'>
+                      <Clock className='h-4 w-4' />
                       <span>{task.estimatedDurationHours}h estimated</span>
                     </div>
                   )}
@@ -233,10 +233,10 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
 
                 {/* Deadline */}
                 {task.deadlineMs && (
-                  <div className="space-y-1">
-                    <Label className="text-muted-foreground">Deadline</Label>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="h-4 w-4" />
+                  <div className='space-y-1'>
+                    <Label className='text-muted-foreground'>Deadline</Label>
+                    <div className='flex items-center gap-2 text-sm'>
+                      <Calendar className='h-4 w-4' />
                       <span>
                         {new Date(task.deadlineMs).toLocaleDateString()}
                       </span>
@@ -245,17 +245,17 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
                 )}
 
                 {/* Created */}
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground">Created</Label>
-                  <p className="text-sm">
+                <div className='space-y-1'>
+                  <Label className='text-muted-foreground'>Created</Label>
+                  <p className='text-sm'>
                     {new Date(task.createdAt).toLocaleDateString()}
                   </p>
                 </div>
 
                 {/* Updated */}
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground">Updated</Label>
-                  <p className="text-sm">
+                <div className='space-y-1'>
+                  <Label className='text-muted-foreground'>Updated</Label>
+                  <p className='text-sm'>
                     {new Date(task.updatedAt).toLocaleDateString()}
                   </p>
                 </div>
@@ -263,16 +263,16 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
 
               {/* Tags */}
               {task.tags && task.tags.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Tag className="h-4 w-4" />
+                <div className='space-y-2'>
+                  <Label className='flex items-center gap-2'>
+                    <Tag className='h-4 w-4' />
                     Tags
                   </Label>
-                  <div className="flex flex-wrap gap-2">
+                  <div className='flex flex-wrap gap-2'>
                     {task.tags.map((tag: string, index: number) => (
                       <span
                         key={index}
-                        className="px-3 py-1 bg-muted rounded-full text-sm"
+                        className='px-3 py-1 bg-muted rounded-full text-sm'
                       >
                         {tag}
                       </span>
@@ -283,20 +283,19 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
 
               {/* Schedule Info (if available) */}
               {task.deadlineMs && (
-                <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
-                  <CardContent className="pt-4">
-                    <div className="flex items-start gap-3">
-                      <Calendar className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                <Card className='bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800'>
+                  <CardContent className='pt-4'>
+                    <div className='flex items-start gap-3'>
+                      <Calendar className='h-5 w-5 text-blue-600 flex-shrink-0' />
                       <div>
-                        <p className="font-medium text-blue-900 dark:text-blue-100">
+                        <p className='font-medium text-blue-900 dark:text-blue-100'>
                           Scheduled Task
                         </p>
-                        <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                          Deadline:{' '}
-                          {new Date(task.deadlineMs).toLocaleString()}
+                        <p className='text-sm text-blue-700 dark:text-blue-300 mt-1'>
+                          Deadline: {new Date(task.deadlineMs).toLocaleString()}
                         </p>
                         {task.isDeepWork && (
-                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                          <p className='text-xs text-blue-600 dark:text-blue-400 mt-1'>
                             🎯 Deep work task - requires focus time
                           </p>
                         )}
@@ -309,44 +308,44 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
               <Separator />
 
               {/* Actions */}
-              <div className="flex items-center justify-between pt-2">
+              <div className='flex items-center justify-between pt-2'>
                 {isEditing ? (
-                  <div className="flex gap-2 w-full">
+                  <div className='flex gap-2 w-full'>
                     <Button
-                      variant="outline"
+                      variant='outline'
                       onClick={handleCancel}
-                      className="flex-1"
+                      className='flex-1'
                     >
-                      <X className="mr-2 h-4 w-4" />
+                      <X className='mr-2 h-4 w-4' />
                       Cancel
                     </Button>
-                    <Button onClick={handleSave} className="flex-1">
-                      <Save className="mr-2 h-4 w-4" />
+                    <Button onClick={handleSave} className='flex-1'>
+                      <Save className='mr-2 h-4 w-4' />
                       Save Changes
                     </Button>
                   </div>
                 ) : (
                   <>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={handleEdit}>
-                        <Edit className="mr-2 h-4 w-4" />
+                    <div className='flex gap-2'>
+                      <Button variant='outline' size='sm' onClick={handleEdit}>
+                        <Edit className='mr-2 h-4 w-4' />
                         Edit
                       </Button>
                       <Button
-                        variant="outline"
-                        size="sm"
+                        variant='outline'
+                        size='sm'
                         onClick={handleCopyLink}
                       >
-                        <Copy className="mr-2 h-4 w-4" />
+                        <Copy className='mr-2 h-4 w-4' />
                         Copy Link
                       </Button>
                     </div>
                     <Button
-                      variant="destructive"
-                      size="sm"
+                      variant='destructive'
+                      size='sm'
                       onClick={handleDelete}
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <Trash2 className='mr-2 h-4 w-4' />
                       Delete
                     </Button>
                   </>

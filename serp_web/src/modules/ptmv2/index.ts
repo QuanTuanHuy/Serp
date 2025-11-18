@@ -12,6 +12,7 @@ export * from './components/dashboard';
 export * from './components/tasks';
 export * from './components/projects';
 export * from './components/schedule';
+export * from './components/schedule';
 
 // Hooks
 export * from './hooks';

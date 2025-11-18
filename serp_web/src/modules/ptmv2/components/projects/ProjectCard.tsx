@@ -19,7 +19,10 @@ import {
   DropdownMenuSeparator,
 } from '@/shared/components/ui/dropdown-menu';
 import { cn } from '@/shared/utils';
-import { useUpdateProjectMutation, useDeleteProjectMutation } from '../../services/projectApi';
+import {
+  useUpdateProjectMutation,
+  useDeleteProjectMutation,
+} from '../../services/projectApi';
 import type { Project } from '../../types';
 import { toast } from 'sonner';
 
@@ -33,11 +36,15 @@ export function ProjectCard({ project, onClick, className }: ProjectCardProps) {
   const [updateProject] = useUpdateProjectMutation();
   const [deleteProject] = useDeleteProjectMutation();
 
-  const completionRate = project.totalTasks > 0
-    ? Math.round((project.completedTasks / project.totalTasks) * 100)
-    : 0;
+  const completionRate =
+    project.totalTasks > 0
+      ? Math.round((project.completedTasks / project.totalTasks) * 100)
+      : 0;
 
-  const isOverdue = project.deadlineMs && project.deadlineMs < Date.now() && project.status !== 'COMPLETED';
+  const isOverdue =
+    project.deadlineMs &&
+    project.deadlineMs < Date.now() &&
+    project.status !== 'COMPLETED';
 
   const handleToggleFavorite = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -46,7 +53,9 @@ export function ProjectCard({ project, onClick, className }: ProjectCardProps) {
         id: project.id,
         isFavorite: !project.isFavorite,
       }).unwrap();
-      toast.success(project.isFavorite ? 'Removed from favorites' : 'Added to favorites');
+      toast.success(
+        project.isFavorite ? 'Removed from favorites' : 'Added to favorites'
+      );
     } catch (error) {
       toast.error('Failed to update project');
     }
@@ -72,20 +81,20 @@ export function ProjectCard({ project, onClick, className }: ProjectCardProps) {
       )}
       onClick={() => onClick?.(project.id)}
     >
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
+      <CardHeader className='pb-3'>
+        <div className='flex items-start justify-between gap-2'>
           {/* Color indicator & Title */}
-          <div className="flex items-start gap-3 flex-1 min-w-0">
+          <div className='flex items-start gap-3 flex-1 min-w-0'>
             <div
-              className="w-1 h-12 rounded-full flex-shrink-0"
+              className='w-1 h-12 rounded-full flex-shrink-0'
               style={{ backgroundColor: project.color }}
             />
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-base leading-tight mb-1 truncate">
+            <div className='flex-1 min-w-0'>
+              <h3 className='font-semibold text-base leading-tight mb-1 truncate'>
                 {project.title}
               </h3>
               {project.description && (
-                <p className="text-xs text-muted-foreground line-clamp-2">
+                <p className='text-xs text-muted-foreground line-clamp-2'>
                   {project.description}
                 </p>
               )}
@@ -93,11 +102,11 @@ export function ProjectCard({ project, onClick, className }: ProjectCardProps) {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className='flex items-center gap-1 flex-shrink-0'>
             <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
+              variant='ghost'
+              size='icon'
+              className='h-8 w-8'
               onClick={handleToggleFavorite}
             >
               <Star
@@ -110,15 +119,18 @@ export function ProjectCard({ project, onClick, className }: ProjectCardProps) {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreVertical className="h-4 w-4" />
+                <Button variant='ghost' size='icon' className='h-8 w-8'>
+                  <MoreVertical className='h-4 w-4' />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align='end'>
                 <DropdownMenuItem>Edit</DropdownMenuItem>
                 <DropdownMenuItem>View Tasks</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleDelete} className="text-red-600">
+                <DropdownMenuItem
+                  onClick={handleDelete}
+                  className='text-red-600'
+                >
                   Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -127,28 +139,28 @@ export function ProjectCard({ project, onClick, className }: ProjectCardProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className='space-y-4'>
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <CheckCircle className="h-4 w-4" />
+        <div className='grid grid-cols-2 gap-3 text-sm'>
+          <div className='flex items-center gap-2 text-muted-foreground'>
+            <CheckCircle className='h-4 w-4' />
             <span>
               {project.completedTasks}/{project.totalTasks} tasks
             </span>
           </div>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Clock className="h-4 w-4" />
+          <div className='flex items-center gap-2 text-muted-foreground'>
+            <Clock className='h-4 w-4' />
             <span>{project.estimatedHours}h estimated</span>
           </div>
         </div>
 
         {/* Progress Bar */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Progress</span>
-            <span className="font-medium">{completionRate}%</span>
+        <div className='space-y-2'>
+          <div className='flex items-center justify-between text-xs'>
+            <span className='text-muted-foreground'>Progress</span>
+            <span className='font-medium'>{completionRate}%</span>
           </div>
-          <Progress value={completionRate} className="h-2" />
+          <Progress value={completionRate} className='h-2' />
         </div>
 
         {/* Deadline */}
@@ -159,7 +171,7 @@ export function ProjectCard({ project, onClick, className }: ProjectCardProps) {
               isOverdue && 'text-red-600 dark:text-red-400 font-medium'
             )}
           >
-            <Calendar className="h-4 w-4" />
+            <Calendar className='h-4 w-4' />
             <span>
               {isOverdue && '⚠️ '}
               Due: {new Date(project.deadlineMs).toLocaleDateString()}
@@ -168,14 +180,18 @@ export function ProjectCard({ project, onClick, className }: ProjectCardProps) {
         )}
 
         {/* Status Badge */}
-        <div className="flex items-center gap-2">
+        <div className='flex items-center gap-2'>
           <span
             className={cn(
               'px-2.5 py-1 rounded-full text-xs font-medium',
-              project.status === 'ACTIVE' && 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400',
-              project.status === 'COMPLETED' && 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400',
-              project.status === 'ON_HOLD' && 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400',
-              project.status === 'ARCHIVED' && 'bg-gray-100 text-gray-700 dark:bg-gray-950 dark:text-gray-400'
+              project.status === 'ACTIVE' &&
+                'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400',
+              project.status === 'COMPLETED' &&
+                'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400',
+              project.status === 'ON_HOLD' &&
+                'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400',
+              project.status === 'ARCHIVED' &&
+                'bg-gray-100 text-gray-700 dark:bg-gray-950 dark:text-gray-400'
             )}
           >
             {project.status === 'ACTIVE' && 'Active'}
