@@ -1,10 +1,3 @@
-/**
- * PTM v2 - Task List Component
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - Virtualized task list with filters
- */
-
 'use client';
 
 import { useRef, useMemo, useState } from 'react';
@@ -17,7 +10,6 @@ import {
   CardTitle,
 } from '@/shared/components/ui/card';
 import { Input } from '@/shared/components/ui/input';
-import { Button } from '@/shared/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -132,8 +124,8 @@ export function TaskList({
   const virtualizer = useVirtualizer({
     count: filteredTasks.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 120, // Estimated height of each task card
-    overscan: 5, // Render 5 extra items above/below viewport
+    estimateSize: () => 120,
+    overscan: 5,
   });
 
   if (isLoading) {
@@ -263,12 +255,13 @@ export function TaskList({
                 return (
                   <div
                     key={task.id}
+                    data-index={virtualItem.index}
+                    ref={virtualizer.measureElement}
                     style={{
                       position: 'absolute',
                       top: 0,
                       left: 0,
                       width: '100%',
-                      height: `${virtualItem.size}px`,
                       transform: `translateY(${virtualItem.start}px)`,
                     }}
                   >

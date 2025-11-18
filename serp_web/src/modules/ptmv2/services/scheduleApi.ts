@@ -75,6 +75,26 @@ export const scheduleApi = ptmApi.injectEndpoints({
       providesTags: [{ type: 'ptm/Schedule', id: 'EVENTS' }],
     }),
 
+    // Create schedule event
+    createScheduleEvent: builder.mutation<
+      ScheduleEvent,
+      Partial<ScheduleEvent>
+    >({
+      queryFn: async (event) => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.schedule.createEvent(event);
+          return { data };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
+      invalidatesTags: [{ type: 'ptm/Schedule', id: 'EVENTS' }],
+    }),
+
     // Update schedule event (drag-drop)
     updateScheduleEvent: builder.mutation<
       ScheduleEvent,
@@ -126,6 +146,23 @@ export const scheduleApi = ptmApi.injectEndpoints({
         }
       },
 
+      invalidatesTags: [{ type: 'ptm/Schedule', id: 'EVENTS' }],
+    }),
+
+    // Delete schedule event
+    deleteScheduleEvent: builder.mutation<void, string>({
+      queryFn: async (id) => {
+        if (USE_MOCK_DATA) {
+          await mockApiHandlers.schedule.deleteEvent(id);
+          return { data: undefined };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
       invalidatesTags: [{ type: 'ptm/Schedule', id: 'EVENTS' }],
     }),
 
@@ -216,7 +253,9 @@ export const {
   useGetActiveSchedulePlanQuery,
   useCreateSchedulePlanMutation,
   useGetScheduleEventsQuery,
+  useCreateScheduleEventMutation,
   useUpdateScheduleEventMutation,
+  useDeleteScheduleEventMutation,
   useTriggerOptimizationMutation,
   useGetFocusTimeBlocksQuery,
   useCreateFocusTimeBlockMutation,

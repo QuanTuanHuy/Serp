@@ -6,3 +6,9 @@
  */
 
 export { CalendarView } from './CalendarView';
+export { ScheduleHeader } from './ScheduleHeader';
+export { ScheduleSidebar } from './ScheduleSidebar';
+export { SmartEventCard } from './SmartEventCard';
+export { OptimizationDialog } from './OptimizationDialog';
+export { EventDetailSheet } from './EventDetailSheet';
+export type { OptimizationConfig } from './OptimizationDialog';

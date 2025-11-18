@@ -8,7 +8,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Pin, Trash2, Edit, Clock, Paperclip } from 'lucide-react';
+import { Pin, Trash2, Clock, Paperclip } from 'lucide-react';
 import { Card, CardContent } from '@/shared/components/ui/card';
 import { Button } from '@/shared/components/ui/button';
 import { cn } from '@/shared/utils';
@@ -18,6 +18,8 @@ import {
 } from '../../services/noteApi';
 import type { Note } from '../../types';
 import { toast } from 'sonner';
+import { RichTextPreview } from './RichTextPreview';
+import { NoteDetailDialog } from './NoteDetailDialog';
 
 interface NoteCardProps {
   note: Note;
@@ -29,6 +31,7 @@ export function NoteCard({ note, onClick, className }: NoteCardProps) {
   const [updateNote] = useUpdateNoteMutation();
   const [deleteNote] = useDeleteNoteMutation();
   const [isHovered, setIsHovered] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
 
   const handleTogglePin = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -60,88 +63,107 @@ export function NoteCard({ note, onClick, className }: NoteCardProps) {
     return content.substring(0, maxLength) + '...';
   };
 
+  const handleCardClick = () => {
+    if (onClick) {
+      onClick(note.id);
+    } else {
+      setShowDetail(true);
+    }
+  };
+
   return (
-    <Card
-      className={cn(
-        'cursor-pointer transition-all hover:shadow-md',
-        note.isPinned && 'border-yellow-400 dark:border-yellow-600',
-        className
-      )}
-      onClick={() => onClick?.(note.id)}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <CardContent className='p-4 space-y-3'>
-        {/* Header */}
-        <div className='flex items-start justify-between gap-2'>
-          <div className='flex-1 min-w-0'>
-            {note.isPinned && (
-              <div className='flex items-center gap-1 text-yellow-600 dark:text-yellow-500 text-xs font-medium mb-1'>
-                <Pin className='h-3 w-3 fill-current' />
-                <span>Pinned</span>
+    <>
+      <Card
+        className={cn(
+          'cursor-pointer transition-all hover:shadow-md',
+          note.isPinned && 'border-yellow-400 dark:border-yellow-600',
+          className
+        )}
+        onClick={handleCardClick}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <CardContent className='p-4 space-y-3'>
+          {/* Header */}
+          <div className='flex items-start justify-between gap-2'>
+            <div className='flex-1 min-w-0'>
+              {note.isPinned && (
+                <div className='flex items-center gap-1 text-yellow-600 dark:text-yellow-500 text-xs font-medium mb-1'>
+                  <Pin className='h-3 w-3 fill-current' />
+                  <span>Pinned</span>
+                </div>
+              )}
+            </div>
+            {isHovered && (
+              <div
+                className='flex items-center gap-1'
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='h-7 w-7'
+                  onClick={handleTogglePin}
+                >
+                  <Pin
+                    className={cn(
+                      'h-3.5 w-3.5',
+                      note.isPinned && 'fill-yellow-600 text-yellow-600'
+                    )}
+                  />
+                </Button>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='h-7 w-7 text-red-600 hover:text-red-700'
+                  onClick={handleDelete}
+                >
+                  <Trash2 className='h-3.5 w-3.5' />
+                </Button>
               </div>
             )}
           </div>
-          {isHovered && (
-            <div
-              className='flex items-center gap-1'
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Button
-                variant='ghost'
-                size='icon'
-                className='h-7 w-7'
-                onClick={handleTogglePin}
-              >
-                <Pin
-                  className={cn(
-                    'h-3.5 w-3.5',
-                    note.isPinned && 'fill-yellow-600 text-yellow-600'
-                  )}
-                />
-              </Button>
-              <Button
-                variant='ghost'
-                size='icon'
-                className='h-7 w-7 text-red-600 hover:text-red-700'
-                onClick={handleDelete}
-              >
-                <Trash2 className='h-3.5 w-3.5' />
-              </Button>
+
+          {/* Content - Rich Text Preview */}
+          <div className='space-y-2 line-clamp-4 overflow-hidden'>
+            <RichTextPreview
+              content={note.content}
+              maxLength={150}
+              className='text-sm'
+            />
+          </div>
+
+          {/* Attachments */}
+          {note.attachments && note.attachments.length > 0 && (
+            <div className='flex items-center gap-1 text-xs text-muted-foreground'>
+              <Paperclip className='h-3 w-3' />
+              <span>
+                {note.attachments.length} attachment
+                {note.attachments.length > 1 ? 's' : ''}
+              </span>
             </div>
           )}
-        </div>
 
-        {/* Content */}
-        <div className='space-y-2'>
-          <p className='text-sm text-foreground line-clamp-4 whitespace-pre-wrap'>
-            {truncateContent(note.contentPlain)}
-          </p>
-        </div>
-
-        {/* Attachments */}
-        {note.attachments && note.attachments.length > 0 && (
-          <div className='flex items-center gap-1 text-xs text-muted-foreground'>
-            <Paperclip className='h-3 w-3' />
+          {/* Footer */}
+          <div className='flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t'>
+            <Clock className='h-3 w-3' />
             <span>
-              {note.attachments.length} attachment
-              {note.attachments.length > 1 ? 's' : ''}
+              {new Date(note.updatedAt).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })}
             </span>
           </div>
-        )}
+        </CardContent>
+      </Card>
 
-        {/* Footer */}
-        <div className='flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t'>
-          <Clock className='h-3 w-3' />
-          <span>
-            {new Date(note.updatedAt).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric',
-            })}
-          </span>
-        </div>
-      </CardContent>
-    </Card>
+      {/* Detail Dialog */}
+      <NoteDetailDialog
+        note={note}
+        open={showDetail}
+        onOpenChange={setShowDetail}
+      />
+    </>
   );
 }

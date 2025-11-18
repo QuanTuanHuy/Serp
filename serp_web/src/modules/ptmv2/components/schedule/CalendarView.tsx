@@ -31,6 +31,7 @@ import {
   useGetScheduleEventsQuery,
   useUpdateScheduleEventMutation,
 } from '../../services/scheduleApi';
+import { SmartEventCard } from './SmartEventCard';
 import type { ScheduleEvent } from '../../types';
 import { toast } from 'sonner';
 
@@ -39,6 +40,8 @@ const DnDCalendar = withDragAndDrop<CalendarEvent, object>(Calendar);
 
 interface CalendarViewProps {
   className?: string;
+  onEventSelect?: (event: ScheduleEvent) => void;
+  onExternalDrop?: (taskId: string, start: Date, end: Date) => void;
 }
 
 interface CalendarEvent {
@@ -49,7 +52,11 @@ interface CalendarEvent {
   resource: ScheduleEvent;
 }
 
-export function CalendarView({ className }: CalendarViewProps) {
+export function CalendarView({
+  className,
+  onEventSelect,
+  onExternalDrop,
+}: CalendarViewProps) {
   const [view, setView] = useState<View>(Views.WEEK);
   const [date, setDate] = useState(new Date());
 
@@ -146,17 +153,76 @@ export function CalendarView({ className }: CalendarViewProps) {
     [updateEvent, dateRange]
   );
 
-  // Custom event component
-  const EventComponent = ({ event }: { event: CalendarEvent }) => {
-    const scheduleEvent = event.resource;
+  // Handle external drag (from sidebar)
+  const handleDropFromOutside = useCallback(
+    ({ start, end }: { start: string | Date; end: string | Date }) => {
+      const startDate = typeof start === 'string' ? new Date(start) : start;
+      const endDate = typeof end === 'string' ? new Date(end) : end;
 
-    return (
-      <div className='flex items-center gap-1 text-xs'>
-        {scheduleEvent.isDeepWork && <span>🔒</span>}
-        {scheduleEvent.scheduleTaskId && <span>📋</span>}
-        <span className='truncate font-medium'>{event.title}</span>
-      </div>
-    );
+      // Get the dragged task ID from the drag event
+      const taskId = (window as any).__draggedTaskId;
+      if (!taskId) {
+        toast.error('Invalid task drop');
+        return;
+      }
+
+      if (onExternalDrop) {
+        onExternalDrop(taskId, startDate, endDate);
+      }
+
+      // Clear the dragged task ID
+      delete (window as any).__draggedTaskId;
+    },
+    [onExternalDrop]
+  );
+
+  // Handle drag over (needed for external drops)
+  const handleDragOver = useCallback((event: any) => {
+    event.preventDefault();
+    // Check if we have a dragged task
+    if ((window as any).__draggedTaskId) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+  }, []);
+
+  // Provide custom drag from outside item (required by react-big-calendar DnD)
+  const customDragFromOutsideItem = useCallback(() => {
+    const taskId = (window as any).__draggedTaskId;
+    if (!taskId) {
+      // Return a dummy event that will be ignored
+      return {
+        id: 'temp',
+        title: 'Temp',
+        start: new Date(),
+        end: new Date(),
+        resource: null as any,
+      };
+    }
+
+    // Return the dragged task as a calendar event placeholder
+    const now = new Date();
+    return {
+      id: taskId,
+      title: `Task ${taskId}`,
+      start: now,
+      end: new Date(now.getTime() + 60 * 60 * 1000), // 1 hour default
+      resource: { id: taskId } as any,
+    };
+  }, []);
+
+  // Handle event selection (click)
+  const handleSelectEvent = useCallback(
+    (event: CalendarEvent) => {
+      if (onEventSelect) {
+        onEventSelect(event.resource);
+      }
+    },
+    [onEventSelect]
+  );
+
+  // Custom event component
+  const EventComponent = ({ event }: EventProps<CalendarEvent>) => {
+    return <SmartEventCard event={event.resource} />;
   };
 
   if (isLoading) {
@@ -206,7 +272,11 @@ export function CalendarView({ className }: CalendarViewProps) {
       </CardHeader>
 
       <CardContent>
-        <div className='calendar-wrapper' style={{ height: 600 }}>
+        <div
+          className='calendar-wrapper'
+          style={{ height: 600 }}
+          onDragOver={handleDragOver}
+        >
           <DnDCalendar
             localizer={localizer}
             events={calendarEvents}
@@ -232,6 +302,10 @@ export function CalendarView({ className }: CalendarViewProps) {
             resizable
             onEventDrop={handleEventDrop}
             onEventResize={handleEventDrop}
+            onDropFromOutside={handleDropFromOutside}
+            onSelectEvent={handleSelectEvent}
+            onDragOver={handleDragOver}
+            dragFromOutsideItem={customDragFromOutsideItem}
           />
         </div>
 

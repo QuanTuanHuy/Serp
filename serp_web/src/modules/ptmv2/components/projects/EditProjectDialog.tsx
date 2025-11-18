@@ -111,7 +111,7 @@ export function EditProjectDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='sm:max-w-[500px]'>
+      <DialogContent className='!sm:max-w-[500px] !max-w-3xl'>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Edit Project</DialogTitle>

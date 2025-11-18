@@ -37,14 +37,19 @@ const extractPlainText = (content: string): string => {
         return node.text || '';
       }
       if (node.content && Array.isArray(node.content)) {
-        return node.content.map(getText).join('');
+        return node.content.map(getText).join(' ');
       }
       return '';
     };
-    return getText(json).trim();
+    const plainText = getText(json).trim();
+    // Return first 200 characters for preview
+    return plainText.length > 200
+      ? plainText.substring(0, 200) + '...'
+      : plainText;
   } catch {
     // If not JSON, return as-is (markdown or plain text)
-    return content.replace(/[#*`_\[\]()]/g, '');
+    const cleaned = content.replace(/[#*`_\[\]()]/g, '');
+    return cleaned.length > 200 ? cleaned.substring(0, 200) + '...' : cleaned;
   }
 };
 
@@ -106,13 +111,15 @@ export const mockApiHandlers = {
       const index = tasksStore.findIndex((t) => t.id === id);
       if (index === -1) throw new Error('Task not found');
 
-      tasksStore[index] = {
+      const updatedTask = {
         ...tasksStore[index],
         ...data,
         updatedAt: new Date().toISOString(),
       };
 
-      return tasksStore[index];
+      tasksStore = tasksStore.map((t, i) => (i === index ? updatedTask : t));
+
+      return updatedTask;
     },
 
     delete: async (id: string) => {
@@ -220,13 +227,17 @@ export const mockApiHandlers = {
       const index = projectsStore.findIndex((p) => p.id === id);
       if (index === -1) throw new Error('Project not found');
 
-      projectsStore[index] = {
+      const updatedProject = {
         ...projectsStore[index],
         ...data,
         updatedAt: new Date().toISOString(),
       };
 
-      return projectsStore[index];
+      projectsStore = projectsStore.map((p, i) =>
+        i === index ? updatedProject : p
+      );
+
+      return updatedProject;
     },
 
     delete: async (id: string) => {
@@ -263,18 +274,66 @@ export const mockApiHandlers = {
       );
     },
 
+    createEvent: async (data: Partial<ScheduleEvent>) => {
+      await delay();
+      const startMin = data.startMin || 480;
+      const endMin = data.endMin || 540;
+      const durationMin = endMin - startMin;
+
+      const newEvent: ScheduleEvent = {
+        id: `event-${Date.now()}`,
+        schedulePlanId: mockSchedulePlan.id,
+        scheduleTaskId: data.scheduleTaskId || `task-${Date.now()}`,
+        dateMs: data.dateMs || Date.now(),
+        startMin,
+        endMin,
+        durationMin,
+        status: 'scheduled',
+        taskPart: 1,
+        totalParts: 1,
+        utility: 75,
+        utilityBreakdown: {
+          priorityScore: 20,
+          deadlineScore: 25,
+          contextSwitchPenalty: -5,
+          focusTimeBonus: data.isDeepWork ? 10 : 0,
+          totalUtility: 75,
+          reason: 'Manually scheduled by user',
+        },
+        isManualOverride: true,
+        title: data.title || 'Untitled Event',
+        priority: data.priority,
+        isDeepWork: data.isDeepWork,
+        projectColor: data.projectColor,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      eventsStore.push(newEvent);
+      return newEvent;
+    },
+
     updateEvent: async (id: string, data: Partial<ScheduleEvent>) => {
       await delay();
       const index = eventsStore.findIndex((e) => e.id === id);
       if (index === -1) throw new Error('Event not found');
 
-      eventsStore[index] = {
+      const updatedEvent = {
         ...eventsStore[index],
         ...data,
         updatedAt: new Date().toISOString(),
       };
 
-      return eventsStore[index];
+      eventsStore = eventsStore.map((e, i) => (i === index ? updatedEvent : e));
+
+      return updatedEvent;
+    },
+
+    deleteEvent: async (id: string) => {
+      await delay();
+      const index = eventsStore.findIndex((e) => e.id === id);
+      if (index === -1) throw new Error('Event not found');
+      eventsStore.splice(index, 1);
     },
 
     triggerOptimization: async (data: any) => {
@@ -360,7 +419,7 @@ export const mockApiHandlers = {
       const index = notesStore.findIndex((n) => n.id === id);
       if (index === -1) throw new Error('Note not found');
 
-      notesStore[index] = {
+      const updatedNote = {
         ...notesStore[index],
         ...data,
         contentPlain: data.content
@@ -369,7 +428,9 @@ export const mockApiHandlers = {
         updatedAt: new Date().toISOString(),
       };
 
-      return notesStore[index];
+      notesStore = notesStore.map((n, i) => (i === index ? updatedNote : n));
+
+      return updatedNote;
     },
 
     delete: async (id: string) => {

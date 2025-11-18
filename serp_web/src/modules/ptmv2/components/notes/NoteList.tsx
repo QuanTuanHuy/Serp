@@ -14,7 +14,7 @@ import { Input } from '@/shared/components/ui/input';
 import { Card } from '@/shared/components/ui/card';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { NoteCard } from './NoteCard';
-import { NoteEditor } from './NoteEditor';
+import { NoteEditorNovel } from './NoteEditorNovel';
 import {
   useGetNotesByTaskQuery,
   useGetNotesByProjectQuery,
@@ -46,10 +46,11 @@ export function NoteList({ taskId, projectId, onNoteClick }: NoteListProps) {
 
   const handleCreateNote = async (content: string, isPinned: boolean) => {
     try {
+      // Content is already JSON string from Novel editor
       await createNote({
         taskId,
         projectId,
-        content,
+        content, // JSON content for full editing capability
         isPinned,
       }).unwrap();
 
@@ -106,7 +107,7 @@ export function NoteList({ taskId, projectId, onNoteClick }: NoteListProps) {
 
       {/* Note Editor */}
       {isCreating && (
-        <NoteEditor
+        <NoteEditorNovel
           onSave={handleCreateNote}
           onCancel={() => setIsCreating(false)}
         />
