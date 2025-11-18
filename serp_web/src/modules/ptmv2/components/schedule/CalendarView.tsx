@@ -8,9 +8,17 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { Calendar, momentLocalizer, View, Views } from 'react-big-calendar';
+import {
+  Calendar,
+  momentLocalizer,
+  View,
+  Views,
+  EventProps,
+} from 'react-big-calendar';
+import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
+import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import {
   Card,
   CardContent,
@@ -27,6 +35,7 @@ import type { ScheduleEvent } from '../../types';
 import { toast } from 'sonner';
 
 const localizer = momentLocalizer(moment);
+const DnDCalendar = withDragAndDrop<CalendarEvent, object>(Calendar);
 
 interface CalendarViewProps {
   className?: string;
@@ -109,12 +118,15 @@ export function CalendarView({ className }: CalendarViewProps) {
       end,
     }: {
       event: CalendarEvent;
-      start: Date;
-      end: Date;
+      start: string | Date;
+      end: string | Date;
     }) => {
-      const startMinutes = start.getHours() * 60 + start.getMinutes();
-      const endMinutes = end.getHours() * 60 + end.getMinutes();
-      const dateMs = new Date(start).setHours(0, 0, 0, 0);
+      const startDate = typeof start === 'string' ? new Date(start) : start;
+      const endDate = typeof end === 'string' ? new Date(end) : end;
+
+      const startMinutes = startDate.getHours() * 60 + startDate.getMinutes();
+      const endMinutes = endDate.getHours() * 60 + endDate.getMinutes();
+      const dateMs = new Date(startDate).setHours(0, 0, 0, 0);
 
       try {
         await updateEvent({
@@ -122,14 +134,16 @@ export function CalendarView({ className }: CalendarViewProps) {
           dateMs,
           startMin: startMinutes,
           endMin: endMinutes,
+          dateRange, // Pass dateRange for optimistic update
         }).unwrap();
 
         toast.success('Event updated!');
       } catch (error) {
+        console.error('Failed to update event:', error);
         toast.error('Failed to update event');
       }
     },
-    [updateEvent]
+    [updateEvent, dateRange]
   );
 
   // Custom event component
@@ -193,7 +207,7 @@ export function CalendarView({ className }: CalendarViewProps) {
 
       <CardContent>
         <div className='calendar-wrapper' style={{ height: 600 }}>
-          <Calendar
+          <DnDCalendar
             localizer={localizer}
             events={calendarEvents}
             view={view}
@@ -213,6 +227,11 @@ export function CalendarView({ className }: CalendarViewProps) {
             step={30}
             showMultiDayTimes
             defaultDate={new Date()}
+            // Enable drag & drop
+            draggableAccessor={() => true}
+            resizable
+            onEventDrop={handleEventDrop}
+            onEventResize={handleEventDrop}
           />
         </div>
 
@@ -239,14 +258,63 @@ export function CalendarView({ className }: CalendarViewProps) {
         }
 
         .calendar-wrapper .rbc-header {
-          padding: 8px 4px;
+          padding: 12px 8px;
           font-weight: 600;
           font-size: 13px;
           border-bottom: 2px solid hsl(var(--border));
+          background-color: hsl(var(--muted));
+          color: hsl(var(--foreground));
         }
 
         .calendar-wrapper .rbc-today {
-          background-color: hsl(var(--accent));
+          background-color: hsl(var(--accent) / 0.5);
+        }
+
+        .calendar-wrapper .rbc-event {
+          transition: all 0.2s ease;
+          cursor: move;
+        }
+
+        .calendar-wrapper .rbc-event:hover {
+          transform: scale(1.02);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          z-index: 10;
+        }
+
+        .calendar-wrapper .rbc-event.rbc-selected {
+          box-shadow: 0 0 0 3px hsl(var(--primary) / 0.3);
+        }
+
+        .calendar-wrapper .rbc-addons-dnd .rbc-addons-dnd-resizable {
+          position: relative;
+        }
+
+        .calendar-wrapper .rbc-addons-dnd-resize-anchor {
+          position: absolute;
+          width: 100%;
+          height: 10px;
+          bottom: 0;
+          cursor: ns-resize;
+          background: linear-gradient(
+            to bottom,
+            transparent,
+            rgba(0, 0, 0, 0.1)
+          );
+          opacity: 0;
+          transition: opacity 0.2s;
+        }
+
+        .calendar-wrapper .rbc-event:hover .rbc-addons-dnd-resize-anchor {
+          opacity: 1;
+        }
+
+        .calendar-wrapper .rbc-time-slot {
+          border-top: 1px solid hsl(var(--border) / 0.5);
+        }
+
+        .calendar-wrapper .rbc-current-time-indicator {
+          background-color: hsl(var(--destructive));
+          height: 2px;
         }
 
         .calendar-wrapper .rbc-event {

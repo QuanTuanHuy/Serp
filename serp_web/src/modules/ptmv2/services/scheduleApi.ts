@@ -78,22 +78,38 @@ export const scheduleApi = ptmApi.injectEndpoints({
     // Update schedule event (drag-drop)
     updateScheduleEvent: builder.mutation<
       ScheduleEvent,
-      UpdateScheduleEventRequest
+      UpdateScheduleEventRequest & {
+        dateRange?: { startDateMs: number; endDateMs: number };
+      }
     >({
-      query: ({ id, ...patch }) => ({
-        url: `/api/v2/schedule/events/${id}`,
-        method: 'PUT',
-        body: patch,
-      }),
-      transformResponse: createDataTransform<ScheduleEvent>(),
+      queryFn: async ({ id, dateRange, ...patch }) => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.schedule.updateEvent(id, patch);
+          return { data };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
 
       // Optimistic update
-      async onQueryStarted({ id, ...patch }, { dispatch, queryFulfilled }) {
+      async onQueryStarted(
+        { id, dateRange, ...patch },
+        { dispatch, queryFulfilled }
+      ) {
+        if (!dateRange) {
+          // Skip optimistic update if no dateRange provided
+          return;
+        }
+
         // Update in cache immediately
         const patchResult = dispatch(
           scheduleApi.util.updateQueryData(
             'getScheduleEvents',
-            undefined as any,
+            dateRange,
             (draft) => {
               const event = draft.find((e) => e.id === id);
               if (event) {
@@ -118,12 +134,19 @@ export const scheduleApi = ptmApi.injectEndpoints({
       { jobId: string },
       { planId: string; useQuickPlace?: boolean }
     >({
-      query: (body) => ({
-        url: '/api/v2/schedule/optimize',
-        method: 'POST',
-        body,
-      }),
-      transformResponse: createDataTransform<{ jobId: string }>(),
+      queryFn: async (params) => {
+        if (USE_MOCK_DATA) {
+          const data =
+            await mockApiHandlers.schedule.triggerOptimization(params);
+          return { data };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
       invalidatesTags: [{ type: 'ptm/Schedule', id: 'EVENTS' }],
     }),
 
