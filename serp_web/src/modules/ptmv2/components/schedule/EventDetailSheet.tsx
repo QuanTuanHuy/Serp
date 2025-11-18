@@ -312,7 +312,6 @@ export function EventDetailSheet({
                 className='w-full justify-start'
                 onClick={() => {
                   onViewTask?.(event.scheduleTaskId);
-                  toast.info('Opening task details...');
                 }}
               >
                 <ExternalLink className='h-4 w-4 mr-2' />
@@ -336,7 +335,6 @@ export function EventDetailSheet({
               className='w-full justify-start'
               onClick={() => {
                 onReschedule?.(event.id);
-                toast.info('AI will suggest best time slots...');
               }}
             >
               <Edit className='h-4 w-4 mr-2' />
@@ -351,23 +349,6 @@ export function EventDetailSheet({
               <Trash2 className='h-4 w-4 mr-2' />
               Remove from Schedule
             </Button>
-          </div>
-
-          {/* Metadata */}
-          <Separator />
-          <div className='space-y-2 text-xs text-muted-foreground'>
-            <div className='flex justify-between'>
-              <span>Created</span>
-              <span>{new Date(event.createdAt).toLocaleString()}</span>
-            </div>
-            <div className='flex justify-between'>
-              <span>Last Updated</span>
-              <span>{new Date(event.updatedAt).toLocaleString()}</span>
-            </div>
-            <div className='flex justify-between'>
-              <span>Event ID</span>
-              <span className='font-mono'>{event.id}</span>
-            </div>
           </div>
         </div>
       </SheetContent>

@@ -14,9 +14,6 @@ import {
   Target,
   Zap,
   Flame,
-  Plus,
-  Settings,
-  Filter,
   Sparkles,
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
@@ -34,9 +31,6 @@ interface ScheduleHeaderProps {
     focusBlocks: number;
   };
   onOptimize?: () => void;
-  onQuickAdd?: () => void;
-  onFocusBlocks?: () => void;
-  onFilters?: () => void;
   className?: string;
 }
 
@@ -44,9 +38,6 @@ export function ScheduleHeader({
   dateRange,
   stats,
   onOptimize,
-  onQuickAdd,
-  onFocusBlocks,
-  onFilters,
   className,
 }: ScheduleHeaderProps) {
   const formatDateRange = () => {
@@ -89,24 +80,12 @@ export function ScheduleHeader({
 
         {/* Quick Actions */}
         <div className='flex items-center gap-2'>
-          <Button variant='outline' size='sm' onClick={onFilters}>
-            <Filter className='h-4 w-4 mr-2' />
-            Filter
-          </Button>
-          <Button variant='outline' size='sm' onClick={onFocusBlocks}>
-            <Settings className='h-4 w-4 mr-2' />
-            Focus Blocks
-          </Button>
-          <Button variant='outline' size='sm' onClick={onQuickAdd}>
-            <Plus className='h-4 w-4 mr-2' />
-            Quick Add
-          </Button>
-          <Button
-            onClick={onOptimize}
-            className='bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700'
-          >
+          <Button onClick={onOptimize} className='flex items-center gap-2'>
             <Sparkles className='h-4 w-4 mr-2' />
             Re-optimize
+            <kbd className='ml-3 hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-white/20 px-1.5 font-mono text-[10px] font-medium opacity-100'>
+              ⌘O
+            </kbd>
           </Button>
         </div>
       </div>

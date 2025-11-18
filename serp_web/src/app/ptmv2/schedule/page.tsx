@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   CalendarView,
   ScheduleHeader,
@@ -33,11 +33,6 @@ export default function SchedulePage() {
   const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(
     null
   );
-  const [filters, setFilters] = useState({
-    showDeepWork: true,
-    showRegular: true,
-    showCompleted: true,
-  });
 
   // Fetch data
   const { data: allTasks = [] } = useGetTasksQuery({});
@@ -47,6 +42,29 @@ export default function SchedulePage() {
   const [createScheduleEvent] = useCreateScheduleEventMutation();
   const [updateScheduleEvent] = useUpdateScheduleEventMutation();
   const [deleteScheduleEvent] = useDeleteScheduleEventMutation();
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + O to optimize
+      if ((e.metaKey || e.ctrlKey) && e.key === 'o') {
+        e.preventDefault();
+        setOptimizationDialogOpen(true);
+      }
+
+      // Escape to close dialogs/sheets
+      if (e.key === 'Escape') {
+        if (optimizationDialogOpen) {
+          setOptimizationDialogOpen(false);
+        } else if (selectedEvent) {
+          setSelectedEvent(null);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [optimizationDialogOpen, selectedEvent]);
 
   // Calculate date range for current week
   const dateRange = useMemo(() => {
@@ -198,9 +216,6 @@ export default function SchedulePage() {
         dateRange={dateRange}
         stats={stats}
         onOptimize={() => setOptimizationDialogOpen(true)}
-        onQuickAdd={() => toast.info('Quick add feature coming soon!')}
-        onFocusBlocks={() => toast.info('Focus blocks manager coming soon!')}
-        onFilters={() => toast.info('Advanced filters coming soon!')}
       />
 
       {/* Main Content: Sidebar + Calendar */}
@@ -208,14 +223,11 @@ export default function SchedulePage() {
         <ScheduleSidebar
           unscheduledTasks={unscheduledTasks}
           focusBlocks={focusBlocks}
-          filters={filters}
-          onFilterChange={setFilters}
           onTaskDragStart={(task) => {
             console.log('Drag started:', task.title);
-            toast.info(`Dragging: ${task.title}`);
           }}
           onFocusBlockToggle={(blockId) => {
-            toast.info('Focus block toggled');
+            console.log('Focus block toggled:', blockId);
           }}
         />
 

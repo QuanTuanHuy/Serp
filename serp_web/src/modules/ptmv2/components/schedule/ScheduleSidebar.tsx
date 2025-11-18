@@ -14,7 +14,6 @@ import {
   Clock,
   Flame,
   CheckSquare,
-  Filter as FilterIcon,
   Calendar as CalendarIcon,
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
@@ -22,7 +21,6 @@ import { Card, CardContent, CardHeader } from '@/shared/components/ui/card';
 import { Badge } from '@/shared/components/ui/badge';
 import { Checkbox } from '@/shared/components/ui/checkbox';
 import { Label } from '@/shared/components/ui/label';
-import { Separator } from '@/shared/components/ui/separator';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import { cn } from '@/shared/utils';
 import type { Task, FocusTimeBlock } from '../../types';
@@ -30,16 +28,6 @@ import type { Task, FocusTimeBlock } from '../../types';
 interface ScheduleSidebarProps {
   unscheduledTasks: Task[];
   focusBlocks: FocusTimeBlock[];
-  filters: {
-    showDeepWork: boolean;
-    showRegular: boolean;
-    showCompleted: boolean;
-  };
-  onFilterChange: (filters: {
-    showDeepWork: boolean;
-    showRegular: boolean;
-    showCompleted: boolean;
-  }) => void;
   onTaskDragStart?: (task: Task) => void;
   onFocusBlockToggle?: (blockId: string) => void;
   className?: string;
@@ -48,8 +36,6 @@ interface ScheduleSidebarProps {
 export function ScheduleSidebar({
   unscheduledTasks,
   focusBlocks,
-  filters,
-  onFilterChange,
   onTaskDragStart,
   onFocusBlockToggle,
   className,
@@ -238,81 +224,6 @@ export function ScheduleSidebar({
                 </div>
               ))
             )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Separator />
-
-      {/* Quick Filters */}
-      <Card>
-        <CardHeader className='pb-3'>
-          <div className='flex items-center gap-2'>
-            <FilterIcon className='h-4 w-4 text-primary' />
-            <h3 className='font-semibold'>Quick Filters</h3>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className='space-y-3'>
-            <div className='flex items-center gap-2'>
-              <Checkbox
-                id='filter-deepwork'
-                checked={filters.showDeepWork}
-                onCheckedChange={(checked) =>
-                  onFilterChange({
-                    ...filters,
-                    showDeepWork: checked as boolean,
-                  })
-                }
-              />
-              <Label
-                htmlFor='filter-deepwork'
-                className='flex items-center gap-2 cursor-pointer'
-              >
-                <Flame className='h-3.5 w-3.5 text-red-600 dark:text-red-400' />
-                <span className='text-sm'>Deep Work</span>
-              </Label>
-            </div>
-
-            <div className='flex items-center gap-2'>
-              <Checkbox
-                id='filter-regular'
-                checked={filters.showRegular}
-                onCheckedChange={(checked) =>
-                  onFilterChange({
-                    ...filters,
-                    showRegular: checked as boolean,
-                  })
-                }
-              />
-              <Label
-                htmlFor='filter-regular'
-                className='flex items-center gap-2 cursor-pointer'
-              >
-                <CheckSquare className='h-3.5 w-3.5 text-blue-600 dark:text-blue-400' />
-                <span className='text-sm'>Regular Tasks</span>
-              </Label>
-            </div>
-
-            <div className='flex items-center gap-2'>
-              <Checkbox
-                id='filter-completed'
-                checked={filters.showCompleted}
-                onCheckedChange={(checked) =>
-                  onFilterChange({
-                    ...filters,
-                    showCompleted: checked as boolean,
-                  })
-                }
-              />
-              <Label
-                htmlFor='filter-completed'
-                className='flex items-center gap-2 cursor-pointer'
-              >
-                <CheckSquare className='h-3.5 w-3.5 text-green-600 dark:text-green-400' />
-                <span className='text-sm'>Completed</span>
-              </Label>
-            </div>
           </div>
         </CardContent>
       </Card>

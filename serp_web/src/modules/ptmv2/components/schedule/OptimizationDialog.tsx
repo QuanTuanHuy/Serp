@@ -8,7 +8,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Sparkles, TrendingUp, Calendar, Zap, Settings2 } from 'lucide-react';
+import { Sparkles, Calendar, Zap, Settings2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -19,7 +19,6 @@ import {
 } from '@/shared/components/ui/dialog';
 import { Button } from '@/shared/components/ui/button';
 import { Label } from '@/shared/components/ui/label';
-import { Slider } from '@/shared/components/ui/slider';
 import {
   Select,
   SelectContent,
@@ -65,12 +64,6 @@ export function OptimizationDialog({
 }: OptimizationDialogProps) {
   const [algorithmType, setAlgorithmType] =
     useState<AlgorithmType>('local_heuristic');
-  const [goals, setGoals] = useState({
-    priority: 90,
-    deadline: 70,
-    focusTime: 80,
-    contextSwitch: 60,
-  });
   const [constraints, setConstraints] = useState({
     respectFocusBlocks: true,
     noTasksBeforeHour: 8,
@@ -93,7 +86,12 @@ export function OptimizationDialog({
         startDateMs: startOfWeek.getTime(),
         endDateMs: endOfWeek.getTime(),
       },
-      goals,
+      goals: {
+        priority: 90,
+        deadline: 70,
+        focusTime: 80,
+        contextSwitch: 60,
+      },
       constraints,
     });
   };
@@ -171,115 +169,6 @@ export function OptimizationDialog({
             <p className='text-sm text-muted-foreground'>
               {getAlgorithmDescription(algorithmType)}
             </p>
-          </div>
-
-          <Separator />
-
-          {/* Optimization Goals */}
-          <div className='space-y-4'>
-            <div className='flex items-center gap-2'>
-              <TrendingUp className='h-4 w-4 text-primary' />
-              <Label className='text-base font-semibold'>
-                Optimization Goals
-              </Label>
-              <Badge variant='secondary' className='ml-auto'>
-                Adjust weights
-              </Badge>
-            </div>
-
-            {/* Priority Weight */}
-            <div className='space-y-2'>
-              <div className='flex items-center justify-between'>
-                <Label className='text-sm font-medium'>Priority Score</Label>
-                <span className='text-sm font-bold text-primary'>
-                  {goals.priority}%
-                </span>
-              </div>
-              <Slider
-                value={[goals.priority]}
-                onValueChange={(value) =>
-                  setGoals({ ...goals, priority: value[0] })
-                }
-                min={0}
-                max={100}
-                step={5}
-                className='w-full'
-              />
-              <p className='text-xs text-muted-foreground'>
-                Prioritize high-priority tasks first
-              </p>
-            </div>
-
-            {/* Deadline Weight */}
-            <div className='space-y-2'>
-              <div className='flex items-center justify-between'>
-                <Label className='text-sm font-medium'>Deadline Urgency</Label>
-                <span className='text-sm font-bold text-amber-600'>
-                  {goals.deadline}%
-                </span>
-              </div>
-              <Slider
-                value={[goals.deadline]}
-                onValueChange={(value) =>
-                  setGoals({ ...goals, deadline: value[0] })
-                }
-                min={0}
-                max={100}
-                step={5}
-                className='w-full'
-              />
-              <p className='text-xs text-muted-foreground'>
-                Schedule tasks closer to deadlines earlier
-              </p>
-            </div>
-
-            {/* Focus Time Weight */}
-            <div className='space-y-2'>
-              <div className='flex items-center justify-between'>
-                <Label className='text-sm font-medium'>Focus Time Bonus</Label>
-                <span className='text-sm font-bold text-purple-600'>
-                  {goals.focusTime}%
-                </span>
-              </div>
-              <Slider
-                value={[goals.focusTime]}
-                onValueChange={(value) =>
-                  setGoals({ ...goals, focusTime: value[0] })
-                }
-                min={0}
-                max={100}
-                step={5}
-                className='w-full'
-              />
-              <p className='text-xs text-muted-foreground'>
-                Align deep work tasks with focus blocks
-              </p>
-            </div>
-
-            {/* Context Switch Penalty */}
-            <div className='space-y-2'>
-              <div className='flex items-center justify-between'>
-                <Label className='text-sm font-medium'>
-                  Minimize Context Switching
-                </Label>
-                <span className='text-sm font-bold text-red-600'>
-                  {goals.contextSwitch}%
-                </span>
-              </div>
-              <Slider
-                value={[goals.contextSwitch]}
-                onValueChange={(value) =>
-                  setGoals({ ...goals, contextSwitch: value[0] })
-                }
-                min={0}
-                max={100}
-                step={5}
-                className='w-full'
-              />
-              <p className='text-xs text-muted-foreground'>
-                Group similar tasks together
-              </p>
-            </div>
           </div>
 
           <Separator />
