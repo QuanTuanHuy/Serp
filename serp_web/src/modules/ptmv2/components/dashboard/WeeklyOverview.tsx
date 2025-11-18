@@ -18,6 +18,7 @@ import {
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { cn } from '@/shared/utils';
 import { useGetTasksQuery } from '../../services/taskApi';
+import type { Task } from '../../types';
 
 interface DayData {
   day: string;
@@ -61,7 +62,7 @@ export function WeeklyOverview() {
       data.push({
         day: dayNames[date.getDay()],
         completed: dayTasks.length,
-        total: tasks.filter((t) => {
+        total: tasks.filter((t: Task) => {
           const createdDate = new Date(t.createdAt);
           return createdDate <= nextDay;
         }).length,
