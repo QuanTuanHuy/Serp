@@ -8,6 +8,10 @@
 // Components
 export * from './components/layout';
 export * from './components/shared';
+export * from './components/dashboard';
+
+// Hooks
+export * from './hooks';
 
 // Store
 export { ptmReducer } from './store';

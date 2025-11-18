@@ -15,7 +15,16 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
-  const statusConfig = {
+  const statusConfig: Record<
+    TaskStatus,
+    {
+      label: string;
+      bg: string;
+      text: string;
+      border: string;
+      dot: string;
+    }
+  > = {
     TODO: {
       label: 'To Do',
       ...PTM_COLORS.status.todo,
@@ -35,6 +44,10 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
   };
 
   const config = statusConfig[status];
+
+  if (!config) {
+    return null;
+  }
 
   return (
     <div

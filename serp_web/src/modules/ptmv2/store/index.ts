@@ -1,6 +1,6 @@
 /**
  * PTM v2 - Store Configuration
- * 
+ *
  * @author QuanTuanHuy
  * @description Part of Serp Project - Redux store setup
  */

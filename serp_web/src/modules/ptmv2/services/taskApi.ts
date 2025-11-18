@@ -7,6 +7,7 @@
 
 import { ptmApi } from './api';
 import { createDataTransform } from '@/lib/store/api/utils';
+import { USE_MOCK_DATA, mockApiHandlers } from '../mocks/mockHandlers';
 import type {
   Task,
   TaskTemplate,
@@ -18,12 +19,19 @@ export const taskApi = ptmApi.injectEndpoints({
   endpoints: (builder) => ({
     // Get all tasks
     getTasks: builder.query<Task[], { status?: string; projectId?: string }>({
-      query: (params) => ({
-        url: '/api/v2/tasks',
-        method: 'GET',
-        params,
-      }),
-      transformResponse: createDataTransform<Task[]>(),
+      queryFn: async (params) => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.tasks.getAll(params);
+          return { data };
+        }
+        // Real API call would go here
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
       providesTags: (result) =>
         result
           ? [
@@ -35,22 +43,35 @@ export const taskApi = ptmApi.injectEndpoints({
 
     // Get single task
     getTask: builder.query<Task, string>({
-      query: (id) => ({
-        url: `/api/v2/tasks/${id}`,
-        method: 'GET',
-      }),
-      transformResponse: createDataTransform<Task>(),
+      queryFn: async (id) => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.tasks.getById(id);
+          return { data };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
       providesTags: (_result, _error, id) => [{ type: 'ptm/Task', id }],
     }),
 
     // Create task
     createTask: builder.mutation<Task, CreateTaskRequest>({
-      query: (body) => ({
-        url: '/api/v2/tasks',
-        method: 'POST',
-        body,
-      }),
-      transformResponse: createDataTransform<Task>(),
+      queryFn: async (body) => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.tasks.create(body);
+          return { data };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
       invalidatesTags: [
         { type: 'ptm/Task', id: 'LIST' },
         { type: 'ptm/Schedule', id: 'LIST' },
@@ -59,12 +80,18 @@ export const taskApi = ptmApi.injectEndpoints({
 
     // Quick add task (one-click)
     quickAddTask: builder.mutation<Task, { title: string }>({
-      query: (body) => ({
-        url: '/api/v2/tasks/quick-add',
-        method: 'POST',
-        body,
-      }),
-      transformResponse: createDataTransform<Task>(),
+      queryFn: async (body) => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.tasks.quickAdd(body);
+          return { data };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
       invalidatesTags: [
         { type: 'ptm/Task', id: 'LIST' },
         { type: 'ptm/Schedule', id: 'LIST' },
@@ -73,12 +100,18 @@ export const taskApi = ptmApi.injectEndpoints({
 
     // Update task
     updateTask: builder.mutation<Task, UpdateTaskRequest>({
-      query: ({ id, ...patch }) => ({
-        url: `/api/v2/tasks/${id}`,
-        method: 'PUT',
-        body: patch,
-      }),
-      transformResponse: createDataTransform<Task>(),
+      queryFn: async ({ id, ...patch }) => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.tasks.update(id, patch);
+          return { data };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
 
       // Optimistic update
       async onQueryStarted({ id, ...patch }, { dispatch, queryFulfilled }) {
@@ -104,10 +137,18 @@ export const taskApi = ptmApi.injectEndpoints({
 
     // Delete task
     deleteTask: builder.mutation<void, string>({
-      query: (id) => ({
-        url: `/api/v2/tasks/${id}`,
-        method: 'DELETE',
-      }),
+      queryFn: async (id) => {
+        if (USE_MOCK_DATA) {
+          await mockApiHandlers.tasks.delete(id);
+          return { data: undefined };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
       invalidatesTags: (_result, _error, id) => [
         { type: 'ptm/Task', id },
         { type: 'ptm/Task', id: 'LIST' },
@@ -117,11 +158,18 @@ export const taskApi = ptmApi.injectEndpoints({
 
     // Get task templates
     getTaskTemplates: builder.query<TaskTemplate[], void>({
-      query: () => ({
-        url: '/api/v2/tasks/templates',
-        method: 'GET',
-      }),
-      transformResponse: createDataTransform<TaskTemplate[]>(),
+      queryFn: async () => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.tasks.getTemplates();
+          return { data };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
       providesTags: [{ type: 'ptm/Task', id: 'TEMPLATES' }],
     }),
 

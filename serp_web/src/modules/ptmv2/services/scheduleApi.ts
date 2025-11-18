@@ -7,6 +7,7 @@
 
 import { ptmApi } from './api';
 import { createDataTransform } from '@/lib/store/api/utils';
+import { USE_MOCK_DATA, mockApiHandlers } from '../mocks/mockHandlers';
 import type {
   SchedulePlan,
   ScheduleEvent,
@@ -59,12 +60,18 @@ export const scheduleApi = ptmApi.injectEndpoints({
       ScheduleEvent[],
       { startDateMs: number; endDateMs: number }
     >({
-      query: (params) => ({
-        url: '/api/v2/schedule/events',
-        method: 'GET',
-        params,
-      }),
-      transformResponse: createDataTransform<ScheduleEvent[]>(),
+      queryFn: async (params) => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.schedule.getEvents(params);
+          return { data };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
       providesTags: [{ type: 'ptm/Schedule', id: 'EVENTS' }],
     }),
 

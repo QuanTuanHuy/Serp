@@ -7,6 +7,7 @@
 
 import { ptmApi } from './api';
 import { createDataTransform } from '@/lib/store/api/utils';
+import { USE_MOCK_DATA, mockApiHandlers } from '../mocks/mockHandlers';
 import type {
   Project,
   CreateProjectRequest,
@@ -17,12 +18,18 @@ export const projectApi = ptmApi.injectEndpoints({
   endpoints: (builder) => ({
     // Get all projects
     getProjects: builder.query<Project[], { status?: string }>({
-      query: (params) => ({
-        url: '/api/v2/projects',
-        method: 'GET',
-        params,
-      }),
-      transformResponse: createDataTransform<Project[]>(),
+      queryFn: async (params) => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.projects.getAll(params);
+          return { data };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
       providesTags: (result) =>
         result
           ? [
