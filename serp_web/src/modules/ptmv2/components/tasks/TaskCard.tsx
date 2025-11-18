@@ -32,6 +32,7 @@ import { Progress } from '@/shared/components/ui/progress';
 import { cn } from '@/shared/utils';
 import { StatusBadge } from '../shared/StatusBadge';
 import { PriorityBadge } from '../shared/PriorityBadge';
+import { RecurringBadge } from './RecurringBadge';
 import {
   useGetTasksQuery,
   useUpdateTaskMutation,
@@ -185,6 +186,11 @@ export function TaskCard({ task, onClick, className }: TaskCardProps) {
 
             {/* Status */}
             <StatusBadge status={task.status} />
+
+            {/* Recurring Badge */}
+            {task.repeatConfig && (
+              <RecurringBadge repeatConfig={task.repeatConfig} />
+            )}
 
             {/* Deep Work Indicator */}
             {task.isDeepWork && (

@@ -9,15 +9,15 @@
 
 import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
-import { CheckSquare, Target, Clock, AlertCircle, Plus } from 'lucide-react';
-import { Button } from '@/shared/components/ui/button';
-import { setActiveView, toggleQuickAdd } from '@/modules/ptmv2/store/uiSlice';
+import { CheckSquare, Target, Clock, AlertCircle } from 'lucide-react';
+import { setActiveView } from '@/modules/ptmv2/store/uiSlice';
 import {
   StatsCard,
   TodaySchedule,
   RecentTasks,
   WeeklyOverview,
 } from '@/modules/ptmv2/components/dashboard';
+import { QuickAddTask } from '@/modules/ptmv2';
 import { useDashboardStats } from '@/modules/ptmv2/hooks';
 
 export default function PTMDashboardPage() {
@@ -28,9 +28,19 @@ export default function PTMDashboardPage() {
     dispatch(setActiveView('dashboard'));
   }, [dispatch]);
 
-  const handleQuickAdd = () => {
-    dispatch(toggleQuickAdd());
-  };
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + R to refresh dashboard
+      if ((e.metaKey || e.ctrlKey) && e.key === 'r') {
+        e.preventDefault();
+        window.location.reload();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div className='space-y-6'>
@@ -42,10 +52,7 @@ export default function PTMDashboardPage() {
             Welcome back! Here's your productivity overview.
           </p>
         </div>
-        <Button onClick={handleQuickAdd} className='gap-2'>
-          <Plus className='h-4 w-4' />
-          Quick Add Task
-        </Button>
+        <QuickAddTask showIcon={true} variant='default' />
       </div>
 
       {/* Stats Grid */}

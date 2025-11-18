@@ -92,6 +92,7 @@ export const mockApiHandlers = {
         category: data.category,
         tags: data.tags || [],
         dependentTaskIds: [],
+        repeatConfig: data.repeatConfig,
         source: 'manual',
         progressPercentage: 0,
         activeStatus: 'ACTIVE',
@@ -102,7 +103,7 @@ export const mockApiHandlers = {
         parentTaskId: data.parentTaskId,
       };
 
-      tasksStore.push(newTask);
+      tasksStore = [...tasksStore, newTask];
       return newTask;
     },
 
@@ -218,7 +219,7 @@ export const mockApiHandlers = {
         icon: data.icon,
       };
 
-      projectsStore.push(newProject);
+      projectsStore = [...projectsStore, newProject];
       return newProject;
     },
 
@@ -309,7 +310,7 @@ export const mockApiHandlers = {
         updatedAt: new Date().toISOString(),
       };
 
-      eventsStore.push(newEvent);
+      eventsStore = [...eventsStore, newEvent];
       return newEvent;
     },
 
@@ -410,7 +411,7 @@ export const mockApiHandlers = {
         projectId: data.projectId,
       };
 
-      notesStore.push(newNote);
+      notesStore = [...notesStore, newNote];
       return newNote;
     },
 

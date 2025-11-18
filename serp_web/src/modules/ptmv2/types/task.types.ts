@@ -85,6 +85,7 @@ export interface CreateTaskRequest {
   category?: string;
   tags?: string[];
   isDeepWork?: boolean;
+  repeatConfig?: RepeatConfig;
 }
 
 export interface UpdateTaskRequest {

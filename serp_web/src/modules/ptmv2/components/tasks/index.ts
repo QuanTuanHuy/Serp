@@ -9,3 +9,5 @@ export { QuickAddTask } from './QuickAddTask';
 export { TaskCard } from './TaskCard';
 export { TaskList } from './TaskList';
 export { TaskDetail } from './TaskDetail';
+export { RecurringTaskConfig } from './RecurringTaskConfig';
+export { RecurringBadge } from './RecurringBadge';

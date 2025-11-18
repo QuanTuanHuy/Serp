@@ -8,6 +8,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Clock, AlertCircle, Sparkles } from 'lucide-react';
 import {
   Card,
@@ -24,6 +25,7 @@ import { StatusBadge, PriorityBadge } from '../shared';
 import type { ScheduleEvent } from '../../types';
 
 export function TodaySchedule() {
+  const router = useRouter();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
@@ -76,7 +78,10 @@ export function TodaySchedule() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader
+        className='cursor-pointer hover:bg-accent/50 transition-colors rounded-t-lg'
+        onClick={() => router.push('/ptmv2/schedule')}
+      >
         <div className='flex items-center justify-between'>
           <CardTitle className='flex items-center gap-2'>
             <Clock className='h-5 w-5' />

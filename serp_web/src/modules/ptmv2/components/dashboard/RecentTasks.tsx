@@ -8,12 +8,12 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   CheckCircle2,
   Circle,
   Clock,
   MoreVertical,
-  Pencil,
   Trash2,
   PlayCircle,
 } from 'lucide-react';
@@ -43,6 +43,7 @@ import { StatusBadge, PriorityBadge } from '../shared';
 import type { Task, TaskStatus } from '../../types';
 
 export function RecentTasks() {
+  const router = useRouter();
   const { data: allTasks = [], isLoading } = useGetTasksQuery({});
   const [updateTask] = useUpdateTaskMutation();
   const [deleteTask] = useDeleteTaskMutation();
@@ -86,7 +87,11 @@ export function RecentTasks() {
             <Clock className='h-5 w-5' />
             Recent Tasks
           </CardTitle>
-          <Button variant='ghost' size='sm'>
+          <Button
+            variant='ghost'
+            size='sm'
+            onClick={() => router.push('/ptmv2/tasks')}
+          >
             View All
           </Button>
         </div>
@@ -218,10 +223,6 @@ function TaskItem({
                   Start Task
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem>
-                <Pencil className='h-4 w-4 mr-2' />
-                Edit
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onDelete} className='text-red-600'>
                 <Trash2 className='h-4 w-4 mr-2' />

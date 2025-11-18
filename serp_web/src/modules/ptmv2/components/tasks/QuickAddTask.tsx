@@ -27,7 +27,8 @@ import {
   useQuickAddTaskMutation,
 } from '../../services/taskApi';
 import { useGetProjectsQuery } from '../../services/projectApi';
-import type { TaskPriority, Project } from '../../types';
+import type { TaskPriority, Project, RepeatConfig } from '../../types';
+import { RecurringTaskConfig } from './RecurringTaskConfig';
 import { toast } from 'sonner';
 
 interface QuickAddTaskProps {
@@ -51,6 +52,7 @@ export function QuickAddTask({
   const [estimatedHours, setEstimatedHours] = useState('');
   const [projectId, setProjectId] = useState('');
   const [tags, setTags] = useState('');
+  const [repeatConfig, setRepeatConfig] = useState<RepeatConfig | null>(null);
 
   const [quickAddTask, { isLoading: isQuickAdding }] =
     useQuickAddTaskMutation();
@@ -92,6 +94,7 @@ export function QuickAddTask({
             : undefined,
           projectId: projectId || undefined,
           tags: tags.trim() ? tags.split(',').map((t) => t.trim()) : undefined,
+          repeatConfig: repeatConfig || undefined,
         }).unwrap();
       } else {
         // Quick add (only title)
@@ -114,6 +117,7 @@ export function QuickAddTask({
     setEstimatedHours('');
     setProjectId('');
     setTags('');
+    setRepeatConfig(null);
     setShowDetails(false);
   };
 
@@ -290,6 +294,12 @@ export function QuickAddTask({
                   disabled={isLoading}
                 />
               </div>
+
+              {/* Recurring Configuration */}
+              <RecurringTaskConfig
+                value={repeatConfig}
+                onChange={setRepeatConfig}
+              />
             </div>
           )}
 

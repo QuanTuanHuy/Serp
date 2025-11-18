@@ -73,11 +73,58 @@ export function WeeklyOverview() {
     return data;
   }, [tasks]);
 
+  // Calculate previous week data for trend comparison
+  const previousWeekData = useMemo(() => {
+    const today = new Date();
+    let prevWeekCompleted = 0;
+    let prevWeekFocusTime = 0;
+
+    for (let i = 13; i >= 7; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+
+      const nextDay = new Date(date);
+      nextDay.setDate(nextDay.getDate() + 1);
+
+      const dayTasks = tasks.filter((task) => {
+        if (!task.completedAt) return false;
+        const completedDate = new Date(task.completedAt);
+        return completedDate >= date && completedDate < nextDay;
+      });
+
+      prevWeekCompleted += dayTasks.length;
+      prevWeekFocusTime += dayTasks
+        .filter((t) => t.isDeepWork)
+        .reduce(
+          (acc, t) => acc + (t.actualDurationHours || t.estimatedDurationHours),
+          0
+        );
+    }
+
+    return { completed: prevWeekCompleted, focusTime: prevWeekFocusTime };
+  }, [tasks]);
+
   const maxCompleted = Math.max(...weekData.map((d) => d.completed), 1);
   const maxFocusTime = Math.max(...weekData.map((d) => d.focusTime), 1);
 
   const totalCompleted = weekData.reduce((acc, d) => acc + d.completed, 0);
   const totalFocusTime = weekData.reduce((acc, d) => acc + d.focusTime, 0);
+
+  // Calculate trends
+  const completedTrend =
+    previousWeekData.completed > 0
+      ? ((totalCompleted - previousWeekData.completed) /
+          previousWeekData.completed) *
+        100
+      : 0;
+
+  const focusTimeTrend =
+    previousWeekData.focusTime > 0
+      ? ((totalFocusTime - previousWeekData.focusTime) /
+          previousWeekData.focusTime) *
+        100
+      : 0;
 
   return (
     <Card>
@@ -156,10 +203,15 @@ export function WeeklyOverview() {
               <div className='space-y-1'>
                 <p className='text-xs text-muted-foreground'>Tasks Completed</p>
                 <p className='text-2xl font-bold'>{totalCompleted}</p>
-                <div className='flex items-center gap-1 text-xs text-green-600 dark:text-green-400'>
-                  <TrendingUp className='h-3 w-3' />
-                  <span>+12% from last week</span>
-                </div>
+                {previousWeekData.completed > 0 && (
+                  <div className='flex items-center gap-1 text-xs text-green-600 dark:text-green-400'>
+                    <TrendingUp className='h-3 w-3' />
+                    <span>
+                      {completedTrend > 0 ? '+' : ''}
+                      {completedTrend.toFixed(1)}% from last week
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className='space-y-1'>
@@ -169,10 +221,15 @@ export function WeeklyOverview() {
                 <p className='text-2xl font-bold'>
                   {totalFocusTime.toFixed(1)}h
                 </p>
-                <div className='flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400'>
-                  <TrendingUp className='h-3 w-3' />
-                  <span>+8% from last week</span>
-                </div>
+                {previousWeekData.focusTime > 0 && (
+                  <div className='flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400'>
+                    <TrendingUp className='h-3 w-3' />
+                    <span>
+                      {focusTimeTrend > 0 ? '+' : ''}
+                      {focusTimeTrend.toFixed(1)}% from last week
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
