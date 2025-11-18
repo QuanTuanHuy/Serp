@@ -19,6 +19,7 @@ import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
+import './calendar.css';
 import {
   Card,
   CardContent,
@@ -26,6 +27,7 @@ import {
   CardTitle,
 } from '@/shared/components/ui/card';
 import { Button } from '@/shared/components/ui/button';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import {
   useGetScheduleEventsQuery,
@@ -84,35 +86,49 @@ export function CalendarView({
     }));
   }, [events]);
 
-  // Event style customization
+  // Event style customization (Motion-inspired clean colors)
   const eventStyleGetter = useCallback((event: CalendarEvent) => {
     const scheduleEvent = event.resource;
 
-    let backgroundColor = '#3B82F6'; // default blue
-    let borderColor = '#2563EB';
-
-    // Focus time - purple
+    // Deep Work - Soft Purple
     if (scheduleEvent.isDeepWork) {
-      backgroundColor = '#8B5CF6';
-      borderColor = '#7C3AED';
+      return {
+        style: {
+          background: '#f3e8ff',
+          borderLeftColor: '#a855f7',
+          color: '#6b21a8',
+        },
+      };
     }
 
-    // Priority-based colors
-    if (scheduleEvent.scheduleTaskId) {
-      // This would normally come from task data, using placeholder
-      backgroundColor = '#F59E0B'; // amber for tasks
-      borderColor = '#D97706';
+    // High Priority Task - Soft Rose/Pink
+    if (scheduleEvent.priority === 'HIGH') {
+      return {
+        style: {
+          background: '#ffe4e6',
+          borderLeftColor: '#f43f5e',
+          color: '#9f1239',
+        },
+      };
     }
 
+    // Medium Priority - Soft Amber
+    if (scheduleEvent.priority === 'MEDIUM') {
+      return {
+        style: {
+          background: '#fef3c7',
+          borderLeftColor: '#f59e0b',
+          color: '#92400e',
+        },
+      };
+    }
+
+    // Low Priority or Regular Event - Soft Sky Blue (Motion default)
     return {
       style: {
-        backgroundColor,
-        borderColor,
-        borderLeft: `4px solid ${borderColor}`,
-        color: 'white',
-        borderRadius: '4px',
-        fontSize: '13px',
-        padding: '2px 6px',
+        background: '#e0f2fe',
+        borderLeftColor: '#0ea5e9',
+        color: '#075985',
       },
     };
   }, []);
@@ -241,11 +257,69 @@ export function CalendarView({
   }
 
   return (
-    <Card className={className}>
-      <CardHeader>
+    <Card className={cn('shadow-sm', className)}>
+      <CardHeader className='pb-4'>
         <div className='flex items-center justify-between'>
-          <CardTitle>Calendar</CardTitle>
+          <div className='flex items-center gap-4'>
+            <CardTitle>Calendar</CardTitle>
+            <div className='flex items-center gap-2'>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() =>
+                  setDate(
+                    moment(date)
+                      .subtract(
+                        1,
+                        view === Views.MONTH
+                          ? 'month'
+                          : view === Views.WEEK
+                            ? 'week'
+                            : 'day'
+                      )
+                      .toDate()
+                  )
+                }
+              >
+                <ChevronLeft className='h-4 w-4' />
+              </Button>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => setDate(new Date())}
+              >
+                Today
+              </Button>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() =>
+                  setDate(
+                    moment(date)
+                      .add(
+                        1,
+                        view === Views.MONTH
+                          ? 'month'
+                          : view === Views.WEEK
+                            ? 'week'
+                            : 'day'
+                      )
+                      .toDate()
+                  )
+                }
+              >
+                <ChevronRight className='h-4 w-4' />
+              </Button>
+            </div>
+          </div>
           <div className='flex gap-2'>
+            <Button
+              variant={view === Views.DAY ? 'default' : 'outline'}
+              size='sm'
+              onClick={() => setView(Views.DAY)}
+            >
+              Day
+            </Button>
             <Button
               variant={view === Views.WEEK ? 'default' : 'outline'}
               size='sm'
@@ -260,21 +334,13 @@ export function CalendarView({
             >
               Month
             </Button>
-            <Button
-              variant={view === Views.DAY ? 'default' : 'outline'}
-              size='sm'
-              onClick={() => setView(Views.DAY)}
-            >
-              Day
-            </Button>
           </div>
         </div>
       </CardHeader>
-
-      <CardContent>
+      <CardContent className='p-6 pt-0'>
         <div
           className='calendar-wrapper'
-          style={{ height: 600 }}
+          style={{ height: 700 }}
           onDragOver={handleDragOver}
         >
           <DnDCalendar
@@ -290,11 +356,13 @@ export function CalendarView({
             eventPropGetter={eventStyleGetter}
             components={{
               event: EventComponent,
+              toolbar: () => null,
             }}
             selectable
             popup
             views={[Views.MONTH, Views.WEEK, Views.DAY]}
-            step={30}
+            step={5}
+            timeslots={12}
             showMultiDayTimes
             defaultDate={new Date()}
             // Enable drag & drop
@@ -308,153 +376,7 @@ export function CalendarView({
             dragFromOutsideItem={customDragFromOutsideItem}
           />
         </div>
-
-        {/* Legend */}
-        <div className='flex flex-wrap items-center gap-4 mt-4 pt-4 border-t text-sm'>
-          <div className='flex items-center gap-2'>
-            <div className='w-3 h-3 rounded bg-purple-500' />
-            <span className='text-muted-foreground'>Focus Time</span>
-          </div>
-          <div className='flex items-center gap-2'>
-            <div className='w-3 h-3 rounded bg-amber-500' />
-            <span className='text-muted-foreground'>Task</span>
-          </div>
-          <div className='flex items-center gap-2'>
-            <div className='w-3 h-3 rounded bg-blue-500' />
-            <span className='text-muted-foreground'>Event</span>
-          </div>
-        </div>
       </CardContent>
-
-      <style jsx global>{`
-        .calendar-wrapper .rbc-calendar {
-          font-family: inherit;
-        }
-
-        .calendar-wrapper .rbc-header {
-          padding: 12px 8px;
-          font-weight: 600;
-          font-size: 13px;
-          border-bottom: 2px solid hsl(var(--border));
-          background-color: hsl(var(--muted));
-          color: hsl(var(--foreground));
-        }
-
-        .calendar-wrapper .rbc-today {
-          background-color: hsl(var(--accent) / 0.5);
-        }
-
-        .calendar-wrapper .rbc-event {
-          transition: all 0.2s ease;
-          cursor: move;
-        }
-
-        .calendar-wrapper .rbc-event:hover {
-          transform: scale(1.02);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-          z-index: 10;
-        }
-
-        .calendar-wrapper .rbc-event.rbc-selected {
-          box-shadow: 0 0 0 3px hsl(var(--primary) / 0.3);
-        }
-
-        .calendar-wrapper .rbc-addons-dnd .rbc-addons-dnd-resizable {
-          position: relative;
-        }
-
-        .calendar-wrapper .rbc-addons-dnd-resize-anchor {
-          position: absolute;
-          width: 100%;
-          height: 10px;
-          bottom: 0;
-          cursor: ns-resize;
-          background: linear-gradient(
-            to bottom,
-            transparent,
-            rgba(0, 0, 0, 0.1)
-          );
-          opacity: 0;
-          transition: opacity 0.2s;
-        }
-
-        .calendar-wrapper .rbc-event:hover .rbc-addons-dnd-resize-anchor {
-          opacity: 1;
-        }
-
-        .calendar-wrapper .rbc-time-slot {
-          border-top: 1px solid hsl(var(--border) / 0.5);
-        }
-
-        .calendar-wrapper .rbc-current-time-indicator {
-          background-color: hsl(var(--destructive));
-          height: 2px;
-        }
-
-        .calendar-wrapper .rbc-event {
-          padding: 2px 6px;
-          border-radius: 4px;
-          cursor: pointer;
-        }
-
-        .calendar-wrapper .rbc-event:hover {
-          opacity: 0.85;
-        }
-
-        .calendar-wrapper .rbc-selected {
-          background-color: hsl(var(--primary)) !important;
-        }
-
-        .calendar-wrapper .rbc-time-slot {
-          min-height: 40px;
-        }
-
-        .calendar-wrapper .rbc-current-time-indicator {
-          background-color: hsl(var(--destructive));
-          height: 2px;
-        }
-
-        .calendar-wrapper .rbc-toolbar {
-          padding: 12px;
-          margin-bottom: 12px;
-          border-bottom: 1px solid hsl(var(--border));
-        }
-
-        .calendar-wrapper .rbc-toolbar button {
-          padding: 6px 12px;
-          border: 1px solid hsl(var(--border));
-          border-radius: 6px;
-          background: hsl(var(--background));
-          color: hsl(var(--foreground));
-          font-size: 13px;
-          cursor: pointer;
-        }
-
-        .calendar-wrapper .rbc-toolbar button:hover {
-          background: hsl(var(--accent));
-        }
-
-        .calendar-wrapper .rbc-toolbar button.rbc-active {
-          background: hsl(var(--primary));
-          color: hsl(var(--primary-foreground));
-          border-color: hsl(var(--primary));
-        }
-
-        .calendar-wrapper .rbc-month-view,
-        .calendar-wrapper .rbc-time-view {
-          border: 1px solid hsl(var(--border));
-          border-radius: 8px;
-          overflow: hidden;
-        }
-
-        .calendar-wrapper .rbc-time-content {
-          border-top: 1px solid hsl(var(--border));
-        }
-
-        .calendar-wrapper .rbc-day-slot .rbc-time-slot {
-          border-top: 1px solid hsl(var(--border) / 0.3);
-        }
-      `}</style>
     </Card>
   );
 }

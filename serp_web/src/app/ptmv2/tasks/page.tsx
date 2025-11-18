@@ -29,7 +29,7 @@ export default function TasksPage() {
 
   return (
     <div className='space-y-6'>
-      {/* Clean Modern Header */}
+      {/* Header */}
       <div className='flex items-center justify-between'>
         <div>
           <div className='flex items-center gap-3 mb-2'>
