@@ -7,25 +7,23 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useMemo } from 'react';
 import { QuickAddTask, TaskList } from '@/modules/ptmv2';
 import { Card } from '@/shared/components/ui/card';
-import { Button } from '@/shared/components/ui/button';
-import { Badge } from '@/shared/components/ui/badge';
-import {
-  CheckSquare,
-  Circle,
-  Clock,
-  TrendingUp,
-  Filter,
-  LayoutGrid,
-  List,
-  Calendar,
-  Sparkles,
-} from 'lucide-react';
+import { useGetTasksQuery } from '@/modules/ptmv2/services/taskApi';
+import { CheckSquare, Circle, Clock } from 'lucide-react';
 
 export default function TasksPage() {
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const { data: tasks = [], isLoading } = useGetTasksQuery({});
+
+  // Calculate real-time stats
+  const stats = useMemo(() => {
+    const total = tasks.length;
+    const completed = tasks.filter((t) => t.status === 'DONE').length;
+    const inProgress = tasks.filter((t) => t.status === 'IN_PROGRESS').length;
+
+    return { total, completed, inProgress };
+  }, [tasks]);
 
   return (
     <div className='space-y-6'>
@@ -46,12 +44,14 @@ export default function TasksPage() {
       </div>
 
       {/* Stats Overview */}
-      <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
+      <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
         <Card className='p-4'>
           <div className='flex items-center justify-between'>
             <div>
               <p className='text-sm text-muted-foreground'>Total Tasks</p>
-              <p className='text-2xl font-bold'>24</p>
+              <p className='text-2xl font-bold'>
+                {isLoading ? '...' : stats.total}
+              </p>
             </div>
             <div className='p-3 rounded-full bg-primary/10'>
               <CheckSquare className='h-5 w-5 text-primary' />
@@ -62,20 +62,10 @@ export default function TasksPage() {
         <Card className='p-4'>
           <div className='flex items-center justify-between'>
             <div>
-              <p className='text-sm text-muted-foreground'>Completed</p>
-              <p className='text-2xl font-bold'>18</p>
-            </div>
-            <div className='p-3 rounded-full bg-green-500/10'>
-              <Circle className='h-5 w-5 text-green-600 dark:text-green-400 fill-current' />
-            </div>
-          </div>
-        </Card>
-
-        <Card className='p-4'>
-          <div className='flex items-center justify-between'>
-            <div>
               <p className='text-sm text-muted-foreground'>In Progress</p>
-              <p className='text-2xl font-bold'>6</p>
+              <p className='text-2xl font-bold'>
+                {isLoading ? '...' : stats.inProgress}
+              </p>
             </div>
             <div className='p-3 rounded-full bg-amber-500/10'>
               <Clock className='h-5 w-5 text-amber-600 dark:text-amber-400' />
@@ -86,103 +76,20 @@ export default function TasksPage() {
         <Card className='p-4'>
           <div className='flex items-center justify-between'>
             <div>
-              <p className='text-sm text-muted-foreground'>Completion</p>
-              <p className='text-2xl font-bold'>75%</p>
+              <p className='text-sm text-muted-foreground'>Completed</p>
+              <p className='text-2xl font-bold'>
+                {isLoading ? '...' : stats.completed}
+              </p>
             </div>
-            <div className='p-3 rounded-full bg-blue-500/10'>
-              <TrendingUp className='h-5 w-5 text-blue-600 dark:text-blue-400' />
+            <div className='p-3 rounded-full bg-green-500/10'>
+              <Circle className='h-5 w-5 text-green-600 dark:text-green-400 fill-current' />
             </div>
           </div>
         </Card>
       </div>
 
-      {/* Quick Filters */}
-      <div className='flex flex-wrap items-center gap-2'>
-        <Badge
-          variant='outline'
-          className='cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors'
-        >
-          All Tasks
-        </Badge>
-        <Badge
-          variant='outline'
-          className='cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors'
-        >
-          My Tasks
-        </Badge>
-        <Badge
-          variant='outline'
-          className='cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors'
-        >
-          🔴 High Priority
-        </Badge>
-        <Badge
-          variant='outline'
-          className='cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors'
-        >
-          ⏰ Due Today
-        </Badge>
-        <Badge
-          variant='outline'
-          className='cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors'
-        >
-          🟣 Deep Work
-        </Badge>
-      </div>
-
-      {/* Toolbar */}
-      <div className='flex items-center justify-between'>
-        <div className='flex items-center gap-2'>
-          <Button variant='outline' size='sm'>
-            <Filter className='h-4 w-4 mr-2' />
-            Filter
-          </Button>
-          <Button variant='outline' size='sm'>
-            <Calendar className='h-4 w-4 mr-2' />
-            Group by Project
-          </Button>
-          <Button variant='outline' size='sm'>
-            <Sparkles className='h-4 w-4 mr-2' />
-            AI Sort
-          </Button>
-        </div>
-
-        <div className='flex items-center gap-1 bg-muted p-1 rounded-lg'>
-          <Button
-            variant={viewMode === 'list' ? 'default' : 'ghost'}
-            size='sm'
-            onClick={() => setViewMode('list')}
-            className='h-8'
-          >
-            <List className='h-4 w-4' />
-          </Button>
-          <Button
-            variant={viewMode === 'grid' ? 'default' : 'ghost'}
-            size='sm'
-            onClick={() => setViewMode('grid')}
-            className='h-8'
-          >
-            <LayoutGrid className='h-4 w-4' />
-          </Button>
-        </div>
-      </div>
-
       {/* Task List */}
       <TaskList />
-
-      {/* AI Insights */}
-      <Card className='p-4 border-primary/20'>
-        <div className='flex items-start gap-3'>
-          <Sparkles className='h-5 w-5 text-primary mt-0.5 flex-shrink-0' />
-          <div className='space-y-1'>
-            <p className='font-semibold text-sm'>💡 AI Suggestion</p>
-            <p className='text-sm text-muted-foreground'>
-              You have 3 high-priority tasks due today. Consider scheduling a
-              2-hour focus block this afternoon to complete them.
-            </p>
-          </div>
-        </div>
-      </Card>
     </div>
   );
 }

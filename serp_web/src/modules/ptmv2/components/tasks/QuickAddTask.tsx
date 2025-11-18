@@ -7,8 +7,8 @@
 
 'use client';
 
-import { useState } from 'react';
-import { Plus, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import {
   Dialog,
@@ -58,6 +58,19 @@ export function QuickAddTask({
   const { data: projects } = useGetProjectsQuery({});
 
   const isLoading = isQuickAdding || isCreating;
+
+  // Keyboard shortcut: Cmd/Ctrl + K to open dialog
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleQuickSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,7 +123,7 @@ export function QuickAddTask({
         <Button size='lg' variant={variant} className={cn('gap-2', className)}>
           {showIcon && <Plus className='h-4 w-4' />}
           Quick Add
-          <kbd className='ml-2 hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100'>
+          <kbd className='ml-2 hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium opacity-100'>
             ⌘K
           </kbd>
         </Button>
@@ -276,26 +289,6 @@ export function QuickAddTask({
                   placeholder='backend, urgent, review'
                   disabled={isLoading}
                 />
-              </div>
-            </div>
-          )}
-
-          {/* AI Suggestion (placeholder for future implementation) */}
-          {title.length > 5 && !showDetails && (
-            <div className='p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800'>
-              <div className='flex items-start gap-2'>
-                <Sparkles className='h-4 w-4 text-purple-600 flex-shrink-0 mt-0.5' />
-                <div className='text-sm space-y-1'>
-                  <p className='font-medium text-purple-900 dark:text-purple-100'>
-                    💡 AI Suggestion
-                  </p>
-                  <p className='text-purple-700 dark:text-purple-300'>
-                    Similar tasks took ~2.5h on average
-                  </p>
-                  <p className='text-purple-700 dark:text-purple-300'>
-                    Best time: Tomorrow 9:00 AM (deep work)
-                  </p>
-                </div>
               </div>
             </div>
           )}

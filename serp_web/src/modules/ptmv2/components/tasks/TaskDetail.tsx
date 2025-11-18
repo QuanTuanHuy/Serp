@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Calendar,
   Clock,
@@ -84,6 +84,47 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
   const [createNote] = useCreateNoteMutation();
   const [updateNote] = useUpdateNoteMutation();
   const [deleteNote] = useDeleteNoteMutation();
+
+  // Keyboard shortcuts for task detail
+  useEffect(() => {
+    if (!open || !task) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape to close
+      if (e.key === 'Escape' && !isEditing) {
+        onOpenChange(false);
+      }
+
+      // Cmd/Ctrl + E to toggle edit mode
+      if ((e.metaKey || e.ctrlKey) && e.key === 'e') {
+        e.preventDefault();
+        if (isEditing) {
+          handleSave();
+        } else {
+          handleEdit();
+        }
+      }
+
+      // Cmd/Ctrl + D to delete (with confirmation)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'd') {
+        e.preventDefault();
+        handleDelete();
+      }
+
+      // Tab 1, 2 to switch tabs
+      if (e.key === '1' && !e.metaKey && !e.ctrlKey && !isEditing) {
+        e.preventDefault();
+        setActiveTab('details');
+      }
+      if (e.key === '2' && !e.metaKey && !e.ctrlKey && !isEditing) {
+        e.preventDefault();
+        setActiveTab('notes');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, task, isEditing, activeTab]);
 
   // Edit form state
   const [editForm, setEditForm] = useState<Partial<Task>>({});
@@ -233,7 +274,21 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
                     />
                   </>
                 ) : (
-                  <SheetTitle className='text-2xl'>{task.title}</SheetTitle>
+                  <>
+                    <div className='flex items-start justify-between'>
+                      <SheetTitle className='text-2xl'>{task.title}</SheetTitle>
+                      <div className='hidden md:flex items-center gap-2 text-xs text-muted-foreground'>
+                        <kbd className='px-1.5 py-0.5 bg-muted rounded border'>
+                          ⌘E
+                        </kbd>
+                        <span>Edit</span>
+                        <kbd className='px-1.5 py-0.5 bg-muted rounded border ml-2'>
+                          1/2
+                        </kbd>
+                        <span>Tabs</span>
+                      </div>
+                    </div>
+                  </>
                 )}
 
                 <div className='flex items-center gap-2'>
@@ -386,31 +441,6 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
                         ))}
                       </div>
                     </div>
-                  )}
-
-                  {/* Schedule Info (if available) */}
-                  {task.deadlineMs && (
-                    <Card className='bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800'>
-                      <CardContent className='pt-4'>
-                        <div className='flex items-start gap-3'>
-                          <Calendar className='h-5 w-5 text-blue-600 flex-shrink-0' />
-                          <div>
-                            <p className='font-medium text-blue-900 dark:text-blue-100'>
-                              Scheduled Task
-                            </p>
-                            <p className='text-sm text-blue-700 dark:text-blue-300 mt-1'>
-                              Deadline:{' '}
-                              {new Date(task.deadlineMs).toLocaleString()}
-                            </p>
-                            {task.isDeepWork && (
-                              <p className='text-xs text-blue-600 dark:text-blue-400 mt-1'>
-                                🎯 Deep work task - requires focus time
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
                   )}
                 </TabsContent>
 

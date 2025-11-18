@@ -15,10 +15,8 @@ import {
   Play,
   Pause,
   Check,
-  GripVertical,
   ListTodo,
   Brain,
-  StickyNote,
 } from 'lucide-react';
 import { Card } from '@/shared/components/ui/card';
 import { Checkbox } from '@/shared/components/ui/checkbox';
@@ -39,7 +37,6 @@ import {
   useUpdateTaskMutation,
   useDeleteTaskMutation,
 } from '../../services/taskApi';
-import { useGetNotesByTaskQuery } from '../../services/noteApi';
 import type { Task } from '../../types';
 import { toast } from 'sonner';
 
@@ -54,7 +51,6 @@ export function TaskCard({ task, onClick, className }: TaskCardProps) {
   const [deleteTask] = useDeleteTaskMutation();
 
   const { data: allTasks = [] } = useGetTasksQuery({});
-  const { data: notes = [] } = useGetNotesByTaskQuery(task.id);
 
   const subtasks = allTasks.filter((t) => t.parentTaskId === task.id);
   const completedSubtasks = subtasks.filter((t) => t.status === 'DONE').length;
@@ -129,12 +125,7 @@ export function TaskCard({ task, onClick, className }: TaskCardProps) {
       )}
       onClick={() => onClick?.(task.id)}
     >
-      {/* Drag Handle (appears on hover) */}
-      <div className='absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity'>
-        <GripVertical className='h-4 w-4 text-muted-foreground cursor-grab active:cursor-grabbing' />
-      </div>
-
-      <div className='flex items-start gap-3 pl-2'>
+      <div className='flex items-start gap-3'>
         {/* Checkbox */}
         <div onClick={(e) => e.stopPropagation()}>
           <Checkbox
@@ -210,14 +201,6 @@ export function TaskCard({ task, onClick, className }: TaskCardProps) {
                 <span>
                   {completedSubtasks}/{totalSubtasks}
                 </span>
-              </div>
-            )}
-
-            {/* Notes Indicator */}
-            {notes.length > 0 && (
-              <div className='flex items-center gap-1'>
-                <StickyNote className='h-3 w-3' />
-                <span>{notes.length}</span>
               </div>
             )}
           </div>

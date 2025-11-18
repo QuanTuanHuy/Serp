@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo, useState } from 'react';
+import { useRef, useMemo, useState, useEffect } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Filter, SortAsc, Search } from 'lucide-react';
 import {
@@ -128,6 +128,50 @@ export function TaskList({
     overscan: 5,
   });
 
+  // Keyboard shortcuts for task navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle shortcuts when no task detail is open
+      if (selectedTaskId) return;
+
+      // Cmd/Ctrl + F to focus search
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        e.preventDefault();
+        const searchInput = document.querySelector(
+          'input[placeholder="Search tasks..."]'
+        ) as HTMLInputElement;
+        searchInput?.focus();
+      }
+
+      // Escape to clear filters
+      if (e.key === 'Escape') {
+        setSearchQuery('');
+        setStatusFilter('ALL');
+        setPriorityFilter('ALL');
+      }
+
+      // Arrow down/up for task navigation when no input is focused
+      const activeElement = document.activeElement as HTMLElement;
+      const isInputFocused =
+        activeElement?.tagName === 'INPUT' ||
+        activeElement?.tagName === 'TEXTAREA';
+
+      if (!isInputFocused && filteredTasks.length > 0) {
+        if (
+          e.key === 'ArrowDown' ||
+          (e.key === 'j' && !e.metaKey && !e.ctrlKey)
+        ) {
+          e.preventDefault();
+          const firstTask = filteredTasks[0];
+          if (firstTask) setSelectedTaskId(firstTask.id);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedTaskId, filteredTasks]);
+
   if (isLoading) {
     return (
       <Card className={className}>
@@ -155,6 +199,12 @@ export function TaskList({
               </span>
             )}
           </span>
+          <div className='hidden md:flex items-center gap-2 text-xs text-muted-foreground'>
+            <kbd className='px-2 py-1 bg-muted rounded border'>⌘F</kbd>
+            <span>Search</span>
+            <kbd className='px-2 py-1 bg-muted rounded border ml-3'>ESC</kbd>
+            <span>Clear</span>
+          </div>
         </CardTitle>
 
         {/* Filters & Search */}
