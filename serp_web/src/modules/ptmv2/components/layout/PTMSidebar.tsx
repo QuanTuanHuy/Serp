@@ -76,6 +76,12 @@ const navItems = [
     icon: AlertTriangle,
     href: '/ptmv2/deadline-risks',
   },
+  {
+    id: 'settings',
+    label: 'Settings',
+    icon: Settings,
+    href: '/ptmv2/settings',
+  },
 ] as const;
 
 export function PTMSidebar() {

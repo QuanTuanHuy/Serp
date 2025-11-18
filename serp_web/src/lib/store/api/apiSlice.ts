@@ -127,6 +127,7 @@ export const api = createApi({
     'ptm/Project',
     'ptm/Schedule',
     'ptm/FocusTime',
+    'ptm/Availability',
     'ptm/Activity',
     'ptm/Note',
   ],

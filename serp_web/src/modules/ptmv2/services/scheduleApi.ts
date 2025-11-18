@@ -14,6 +14,9 @@ import type {
   FocusTimeBlock,
   CreateSchedulePlanRequest,
   UpdateScheduleEventRequest,
+  AvailabilityCalendar,
+  CreateAvailabilityRequest,
+  UpdateAvailabilityRequest,
 } from '../types';
 
 export const scheduleApi = ptmApi.injectEndpoints({
@@ -244,6 +247,50 @@ export const scheduleApi = ptmApi.injectEndpoints({
         { type: 'ptm/Schedule', id: 'EVENTS' },
       ],
     }),
+
+    // Get availability calendar
+    getAvailabilityCalendar: builder.query<AvailabilityCalendar[], void>({
+      query: () => ({
+        url: '/api/v2/schedule/availability',
+        method: 'GET',
+      }),
+      transformResponse: createDataTransform<AvailabilityCalendar[]>(),
+      providesTags: [{ type: 'ptm/Availability', id: 'LIST' }],
+    }),
+
+    // Set availability calendar (add/update specific days)
+    setAvailabilityCalendar: builder.mutation<
+      AvailabilityCalendar[],
+      CreateAvailabilityRequest
+    >({
+      query: (body) => ({
+        url: '/api/v2/schedule/availability/set',
+        method: 'POST',
+        body,
+      }),
+      transformResponse: createDataTransform<AvailabilityCalendar[]>(),
+      invalidatesTags: [
+        { type: 'ptm/Availability', id: 'LIST' },
+        { type: 'ptm/Schedule', id: 'EVENTS' },
+      ],
+    }),
+
+    // Replace availability calendar (replace all for specific days)
+    replaceAvailabilityCalendar: builder.mutation<
+      AvailabilityCalendar[],
+      UpdateAvailabilityRequest
+    >({
+      query: (body) => ({
+        url: '/api/v2/schedule/availability/replace',
+        method: 'PUT',
+        body,
+      }),
+      transformResponse: createDataTransform<AvailabilityCalendar[]>(),
+      invalidatesTags: [
+        { type: 'ptm/Availability', id: 'LIST' },
+        { type: 'ptm/Schedule', id: 'EVENTS' },
+      ],
+    }),
   }),
   overrideExisting: false,
 });
@@ -261,4 +308,7 @@ export const {
   useCreateFocusTimeBlockMutation,
   useUpdateFocusTimeBlockMutation,
   useDeleteFocusTimeBlockMutation,
+  useGetAvailabilityCalendarQuery,
+  useSetAvailabilityCalendarMutation,
+  useReplaceAvailabilityCalendarMutation,
 } = scheduleApi;

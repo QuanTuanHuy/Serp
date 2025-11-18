@@ -103,3 +103,36 @@ export interface UpdateScheduleEventRequest {
   endMin?: number;
   status?: ScheduleEventStatus;
 }
+
+// Availability Calendar Types
+export type AvailabilitySlotType = 'focus' | 'regular' | 'flexible';
+export type ActiveStatus = 'ACTIVE' | 'INACTIVE';
+
+export interface AvailabilityCalendar {
+  id?: number;
+  userId?: string;
+  dayOfWeek: number; // 0-6 (Sunday-Saturday)
+  startMin: number; // Minutes from midnight (0-1439)
+  endMin: number; // Minutes from midnight (0-1439)
+  slotType: AvailabilitySlotType; // 🆕 focus | regular | flexible
+  activeStatus: ActiveStatus;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AvailabilitySlot {
+  id?: number;
+  dayOfWeek: number;
+  startTime: string; // "09:00" format
+  endTime: string; // "17:00" format
+  slotType: AvailabilitySlotType;
+  isEnabled: boolean;
+}
+
+export interface CreateAvailabilityRequest {
+  items: AvailabilityCalendar[];
+}
+
+export interface UpdateAvailabilityRequest {
+  items: AvailabilityCalendar[];
+}

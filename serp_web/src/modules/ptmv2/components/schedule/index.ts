@@ -11,4 +11,5 @@ export { ScheduleSidebar } from './ScheduleSidebar';
 export { SmartEventCard } from './SmartEventCard';
 export { OptimizationDialog } from './OptimizationDialog';
 export { EventDetailSheet } from './EventDetailSheet';
+export { FocusTimeBadge, TimeBlockIndicator } from './FocusTimeBadge';
 export type { OptimizationConfig } from './OptimizationDialog';
