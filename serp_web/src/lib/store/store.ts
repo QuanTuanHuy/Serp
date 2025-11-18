@@ -21,6 +21,7 @@ import { api } from './api';
 import { authSlice, userSlice } from '@/modules/account/store';
 import { crmReducer } from '@/modules/crm/store';
 import { adminReducer } from '@/modules/admin/store';
+import { ptmReducer } from '@/modules/ptmv2';
 
 // Persist configuration
 const accountPersistConfig = {
@@ -41,6 +42,7 @@ const rootReducer = combineReducers({
   account: persistReducer(accountPersistConfig, accountReducer),
   crm: crmReducer,
   admin: adminReducer,
+  ptm: ptmReducer,
 });
 
 // Configure store
