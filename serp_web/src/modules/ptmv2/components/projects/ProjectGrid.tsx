@@ -8,7 +8,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Plus, Filter, Search } from 'lucide-react';
+import { Filter, Search } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import {
@@ -19,15 +19,17 @@ import {
   SelectValue,
 } from '@/shared/components/ui/select';
 import { ProjectCard } from './ProjectCard';
+import { CreateProjectDialog } from './CreateProjectDialog';
 import { useGetProjectsQuery } from '../../services/projectApi';
 import type { ProjectStatus } from '../../types';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 
 interface ProjectGridProps {
   className?: string;
+  onProjectClick?: (projectId: string) => void;
 }
 
-export function ProjectGrid({ className }: ProjectGridProps) {
+export function ProjectGrid({ className, onProjectClick }: ProjectGridProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'ALL'>(
     'ALL'
@@ -75,12 +77,8 @@ export function ProjectGrid({ className }: ProjectGridProps) {
       <div className={className}>
         <div className='flex items-center justify-between mb-6'>
           <h2 className='text-2xl font-bold'>Projects</h2>
-          <Button>
-            <Plus className='mr-2 h-4 w-4' />
-            New Project
-          </Button>
-        </div>
-
+          <CreateProjectDialog />
+        </div>{' '}
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className='h-64 w-full' />
@@ -103,10 +101,7 @@ export function ProjectGrid({ className }: ProjectGridProps) {
             </p>
           )}
         </div>
-        <Button>
-          <Plus className='mr-2 h-4 w-4' />
-          New Project
-        </Button>
+        <CreateProjectDialog />
       </div>
 
       {/* Filters */}
@@ -166,7 +161,11 @@ export function ProjectGrid({ className }: ProjectGridProps) {
       ) : (
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
           {filteredProjects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
+            <ProjectCard
+              key={project.id}
+              project={project}
+              onClick={onProjectClick}
+            />
           ))}
         </div>
       )}

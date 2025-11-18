@@ -40,9 +40,11 @@ export interface Project {
 export interface CreateProjectRequest {
   title: string;
   description?: string;
+  status?: ProjectStatus;
   priority?: ProjectPriority;
   startDateMs?: number;
   deadlineMs?: number;
+  estimatedHours?: number;
   color?: string;
   icon?: string;
 }
@@ -55,6 +57,7 @@ export interface UpdateProjectRequest {
   priority?: ProjectPriority;
   startDateMs?: number;
   deadlineMs?: number;
+  estimatedHours?: number;
   color?: string;
   icon?: string;
   isFavorite?: boolean;

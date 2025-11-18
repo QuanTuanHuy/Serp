@@ -8,7 +8,11 @@
 'use client';
 
 import { useState } from 'react';
-import { ProjectGrid } from '@/modules/ptmv2';
+import {
+  ProjectGrid,
+  ProjectDetailView,
+  CreateProjectDialog,
+} from '@/modules/ptmv2';
 import { Card } from '@/shared/components/ui/card';
 import { Button } from '@/shared/components/ui/button';
 import { Badge } from '@/shared/components/ui/badge';
@@ -28,6 +32,19 @@ import {
 
 export default function ProjectsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+    null
+  );
+
+  // If project is selected, show detail view
+  if (selectedProjectId) {
+    return (
+      <ProjectDetailView
+        projectId={selectedProjectId}
+        onClose={() => setSelectedProjectId(null)}
+      />
+    );
+  }
 
   return (
     <div className='space-y-6'>
@@ -44,10 +61,14 @@ export default function ProjectsPage() {
               Organize and track your projects from start to finish
             </p>
           </div>
-          <Button className='bg-white text-indigo-600 hover:bg-white/90 shadow-lg'>
-            <Plus className='h-4 w-4 mr-2' />
-            New Project
-          </Button>
+          <CreateProjectDialog
+            trigger={
+              <Button className='bg-white text-indigo-600 hover:bg-white/90 shadow-lg'>
+                <Plus className='h-4 w-4 mr-2' />
+                New Project
+              </Button>
+            }
+          />
         </div>
       </div>
 
@@ -186,7 +207,7 @@ export default function ProjectsPage() {
       </div>
 
       {/* Project Grid */}
-      <ProjectGrid />
+      <ProjectGrid onProjectClick={(id) => setSelectedProjectId(id)} />
 
       {/* AI Insights */}
       <Card className='p-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/10 dark:to-purple-950/10 border-indigo-200 dark:border-indigo-800'>

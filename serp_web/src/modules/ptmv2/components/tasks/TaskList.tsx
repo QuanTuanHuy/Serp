@@ -33,12 +33,17 @@ import { Skeleton } from '@/shared/components/ui/skeleton';
 
 interface TaskListProps {
   projectId?: string;
+  filterProjectId?: string;
   className?: string;
 }
 
 type SortOption = 'deadline' | 'priority' | 'created' | 'title';
 
-export function TaskList({ projectId, className }: TaskListProps) {
+export function TaskList({
+  projectId,
+  filterProjectId,
+  className,
+}: TaskListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'ALL'>('ALL');
   const [priorityFilter, setPriorityFilter] = useState<TaskPriority | 'ALL'>(
@@ -54,6 +59,11 @@ export function TaskList({ projectId, className }: TaskListProps) {
   // Filter and sort tasks
   const filteredTasks = useMemo(() => {
     let filtered = [...tasks];
+
+    // Filter by project if filterProjectId is provided
+    if (filterProjectId) {
+      filtered = filtered.filter((task) => task.projectId === filterProjectId);
+    }
 
     // Search filter
     if (searchQuery) {
@@ -107,7 +117,14 @@ export function TaskList({ projectId, className }: TaskListProps) {
     });
 
     return filtered;
-  }, [tasks, searchQuery, statusFilter, priorityFilter, sortBy]);
+  }, [
+    tasks,
+    searchQuery,
+    statusFilter,
+    priorityFilter,
+    sortBy,
+    filterProjectId,
+  ]);
 
   // Virtualization setup
   const parentRef = useRef<HTMLDivElement>(null);

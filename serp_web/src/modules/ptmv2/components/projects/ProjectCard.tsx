@@ -7,6 +7,7 @@
 
 'use client';
 
+import { useState } from 'react';
 import { Calendar, Clock, CheckCircle, MoreVertical, Star } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/shared/components/ui/card';
 import { Progress } from '@/shared/components/ui/progress';
@@ -23,6 +24,7 @@ import {
   useUpdateProjectMutation,
   useDeleteProjectMutation,
 } from '../../services/projectApi';
+import { EditProjectDialog } from './EditProjectDialog';
 import type { Project } from '../../types';
 import { toast } from 'sonner';
 
@@ -33,6 +35,7 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({ project, onClick, className }: ProjectCardProps) {
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [updateProject] = useUpdateProjectMutation();
   const [deleteProject] = useDeleteProjectMutation();
 
@@ -124,11 +127,28 @@ export function ProjectCard({ project, onClick, className }: ProjectCardProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align='end'>
-                <DropdownMenuItem>Edit</DropdownMenuItem>
-                <DropdownMenuItem>View Tasks</DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditDialogOpen(true);
+                  }}
+                >
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onClick?.(project.id);
+                  }}
+                >
+                  View Tasks
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={handleDelete}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete();
+                  }}
                   className='text-red-600'
                 >
                   Delete
@@ -201,6 +221,13 @@ export function ProjectCard({ project, onClick, className }: ProjectCardProps) {
           </span>
         </div>
       </CardContent>
+
+      {/* Edit Dialog */}
+      <EditProjectDialog
+        project={project}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
     </Card>
   );
 }

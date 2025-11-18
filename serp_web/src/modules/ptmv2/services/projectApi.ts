@@ -41,33 +41,52 @@ export const projectApi = ptmApi.injectEndpoints({
 
     // Get single project
     getProject: builder.query<Project, string>({
-      query: (id) => ({
-        url: `/api/v2/projects/${id}`,
-        method: 'GET',
-      }),
-      transformResponse: createDataTransform<Project>(),
+      queryFn: async (id) => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.projects.getById(id);
+          return { data };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
       providesTags: (_result, _error, id) => [{ type: 'ptm/Project', id }],
     }),
 
     // Create project
     createProject: builder.mutation<Project, CreateProjectRequest>({
-      query: (body) => ({
-        url: '/api/v2/projects',
-        method: 'POST',
-        body,
-      }),
-      transformResponse: createDataTransform<Project>(),
+      queryFn: async (body) => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.projects.create(body);
+          return { data };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
       invalidatesTags: [{ type: 'ptm/Project', id: 'LIST' }],
     }),
 
     // Update project
     updateProject: builder.mutation<Project, UpdateProjectRequest>({
-      query: ({ id, ...patch }) => ({
-        url: `/api/v2/projects/${id}`,
-        method: 'PUT',
-        body: patch,
-      }),
-      transformResponse: createDataTransform<Project>(),
+      queryFn: async ({ id, ...patch }) => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.projects.update(id, patch);
+          return { data };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'ptm/Project', id },
         { type: 'ptm/Project', id: 'LIST' },
@@ -76,10 +95,18 @@ export const projectApi = ptmApi.injectEndpoints({
 
     // Delete project
     deleteProject: builder.mutation<void, string>({
-      query: (id) => ({
-        url: `/api/v2/projects/${id}`,
-        method: 'DELETE',
-      }),
+      queryFn: async (id) => {
+        if (USE_MOCK_DATA) {
+          await mockApiHandlers.projects.delete(id);
+          return { data: undefined };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
       invalidatesTags: (_result, _error, id) => [
         { type: 'ptm/Project', id },
         { type: 'ptm/Project', id: 'LIST' },
