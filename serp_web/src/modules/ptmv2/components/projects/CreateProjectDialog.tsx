@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from '@/shared/components/ui/select';
 import { useCreateProjectMutation } from '../../services/projectApi';
-import type { ProjectStatus } from '../../types';
+import type { ProjectStatus, ProjectPriority } from '../../types';
 import { toast } from 'sonner';
 
 interface CreateProjectDialogProps {
@@ -53,8 +53,8 @@ export function CreateProjectDialog({ trigger }: CreateProjectDialogProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<ProjectStatus>('ACTIVE');
+  const [priority, setPriority] = useState<ProjectPriority>('MEDIUM');
   const [color, setColor] = useState(PROJECT_COLORS[0].value);
-  const [estimatedHours, setEstimatedHours] = useState('');
   const [deadline, setDeadline] = useState('');
 
   const [createProject, { isLoading }] = useCreateProjectMutation();
@@ -72,8 +72,8 @@ export function CreateProjectDialog({ trigger }: CreateProjectDialogProps) {
         title: title.trim(),
         description: description.trim() || undefined,
         status,
+        priority,
         color,
-        estimatedHours: estimatedHours ? parseInt(estimatedHours) : 0,
         deadlineMs: deadline ? new Date(deadline).getTime() : undefined,
       }).unwrap();
 
@@ -89,8 +89,8 @@ export function CreateProjectDialog({ trigger }: CreateProjectDialogProps) {
     setTitle('');
     setDescription('');
     setStatus('ACTIVE');
+    setPriority('MEDIUM');
     setColor(PROJECT_COLORS[0].value);
-    setEstimatedHours('');
     setDeadline('');
   };
 
@@ -111,7 +111,7 @@ export function CreateProjectDialog({ trigger }: CreateProjectDialogProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className='sm:max-w-[500px]'>
+      <DialogContent className='sm:max-w-[500px] !max-w-3xl'>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Create New Project</DialogTitle>
@@ -149,7 +149,7 @@ export function CreateProjectDialog({ trigger }: CreateProjectDialogProps) {
               />
             </div>
 
-            {/* Status & Color */}
+            {/* Status & Priority */}
             <div className='grid grid-cols-2 gap-4'>
               <div className='space-y-2'>
                 <Label htmlFor='status'>Status</Label>
@@ -170,6 +170,29 @@ export function CreateProjectDialog({ trigger }: CreateProjectDialogProps) {
                 </Select>
               </div>
 
+              <div className='space-y-2'>
+                <Label htmlFor='priority'>Priority</Label>
+                <Select
+                  value={priority}
+                  onValueChange={(value) =>
+                    setPriority(value as ProjectPriority)
+                  }
+                  disabled={isLoading}
+                >
+                  <SelectTrigger id='priority'>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='HIGH'>High</SelectItem>
+                    <SelectItem value='MEDIUM'>Medium</SelectItem>
+                    <SelectItem value='LOW'>Low</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Color & Deadline */}
+            <div className='grid grid-cols-2 gap-4'>
               <div className='space-y-2'>
                 <Label htmlFor='color'>Color</Label>
                 <Select
@@ -202,22 +225,6 @@ export function CreateProjectDialog({ trigger }: CreateProjectDialogProps) {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-            </div>
-
-            {/* Estimated Hours & Deadline */}
-            <div className='grid grid-cols-2 gap-4'>
-              <div className='space-y-2'>
-                <Label htmlFor='estimatedHours'>Estimated Hours</Label>
-                <Input
-                  id='estimatedHours'
-                  type='number'
-                  min='0'
-                  value={estimatedHours}
-                  onChange={(e) => setEstimatedHours(e.target.value)}
-                  placeholder='0'
-                  disabled={isLoading}
-                />
               </div>
 
               <div className='space-y-2'>

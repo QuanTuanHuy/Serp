@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from '@/shared/components/ui/select';
 import { useUpdateProjectMutation } from '../../services/projectApi';
-import type { Project, ProjectStatus } from '../../types';
+import type { Project, ProjectStatus, ProjectPriority } from '../../types';
 import { toast } from 'sonner';
 
 interface EditProjectDialogProps {
@@ -57,10 +57,8 @@ export function EditProjectDialog({
   const [title, setTitle] = useState(project.title);
   const [description, setDescription] = useState(project.description || '');
   const [status, setStatus] = useState<ProjectStatus>(project.status);
+  const [priority, setPriority] = useState<ProjectPriority>(project.priority);
   const [color, setColor] = useState(project.color);
-  const [estimatedHours, setEstimatedHours] = useState(
-    project.estimatedHours?.toString() || ''
-  );
   const [deadline, setDeadline] = useState(
     project.deadlineMs
       ? new Date(project.deadlineMs).toISOString().split('T')[0]
@@ -74,8 +72,8 @@ export function EditProjectDialog({
     setTitle(project.title);
     setDescription(project.description || '');
     setStatus(project.status);
+    setPriority(project.priority);
     setColor(project.color);
-    setEstimatedHours(project.estimatedHours?.toString() || '');
     setDeadline(
       project.deadlineMs
         ? new Date(project.deadlineMs).toISOString().split('T')[0]
@@ -97,8 +95,8 @@ export function EditProjectDialog({
         title: title.trim(),
         description: description.trim() || undefined,
         status,
+        priority,
         color,
-        estimatedHours: estimatedHours ? parseInt(estimatedHours) : 0,
         deadlineMs: deadline ? new Date(deadline).getTime() : undefined,
       }).unwrap();
 
@@ -149,7 +147,7 @@ export function EditProjectDialog({
               />
             </div>
 
-            {/* Status & Color */}
+            {/* Status & Priority */}
             <div className='grid grid-cols-2 gap-4'>
               <div className='space-y-2'>
                 <Label htmlFor='edit-status'>Status</Label>
@@ -170,6 +168,29 @@ export function EditProjectDialog({
                 </Select>
               </div>
 
+              <div className='space-y-2'>
+                <Label htmlFor='edit-priority'>Priority</Label>
+                <Select
+                  value={priority}
+                  onValueChange={(value) =>
+                    setPriority(value as ProjectPriority)
+                  }
+                  disabled={isLoading}
+                >
+                  <SelectTrigger id='edit-priority'>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='HIGH'>High</SelectItem>
+                    <SelectItem value='MEDIUM'>Medium</SelectItem>
+                    <SelectItem value='LOW'>Low</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Color & Deadline */}
+            <div className='grid grid-cols-2 gap-4'>
               <div className='space-y-2'>
                 <Label htmlFor='edit-color'>Color</Label>
                 <Select
@@ -202,22 +223,6 @@ export function EditProjectDialog({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-            </div>
-
-            {/* Estimated Hours & Deadline */}
-            <div className='grid grid-cols-2 gap-4'>
-              <div className='space-y-2'>
-                <Label htmlFor='edit-estimatedHours'>Estimated Hours</Label>
-                <Input
-                  id='edit-estimatedHours'
-                  type='number'
-                  min='0'
-                  value={estimatedHours}
-                  onChange={(e) => setEstimatedHours(e.target.value)}
-                  placeholder='0'
-                  disabled={isLoading}
-                />
               </div>
 
               <div className='space-y-2'>

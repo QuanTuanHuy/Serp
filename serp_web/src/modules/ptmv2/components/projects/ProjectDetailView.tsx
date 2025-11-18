@@ -63,9 +63,7 @@ export function ProjectDetailView({
   onClose,
 }: ProjectDetailViewProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'notes'>(
-    'overview'
-  );
+  const [activeTab, setActiveTab] = useState<'tasks' | 'notes'>('tasks');
   const [showNoteEditor, setShowNoteEditor] = useState(false);
 
   const {
@@ -356,13 +354,12 @@ export function ProjectDetailView({
         </CardContent>
       </Card>
 
-      {/* Tabs: Overview, Tasks, Notes */}
+      {/* Tabs: Tasks, Notes */}
       <Tabs
         value={activeTab}
-        onValueChange={(v) => setActiveTab(v as 'overview' | 'tasks' | 'notes')}
+        onValueChange={(v) => setActiveTab(v as 'tasks' | 'notes')}
       >
-        <TabsList className='grid w-full grid-cols-3'>
-          <TabsTrigger value='overview'>Overview</TabsTrigger>
+        <TabsList className='grid w-full grid-cols-2'>
           <TabsTrigger value='tasks'>
             Tasks {projectTasks.length > 0 && `(${projectTasks.length})`}
           </TabsTrigger>
@@ -371,67 +368,6 @@ export function ProjectDetailView({
             Notes {notes.length > 0 && `(${notes.length})`}
           </TabsTrigger>
         </TabsList>
-
-        {/* Overview Tab */}
-        <TabsContent value='overview' className='space-y-6 mt-6'>
-          <Card className='p-6'>
-            <h3 className='text-lg font-semibold mb-4'>Project Summary</h3>
-            <div className='space-y-4 text-sm'>
-              <div className='flex justify-between'>
-                <span className='text-muted-foreground'>Total Tasks:</span>
-                <span className='font-semibold'>{project.totalTasks}</span>
-              </div>
-              <div className='flex justify-between'>
-                <span className='text-muted-foreground'>Completed:</span>
-                <span className='font-semibold text-green-600'>
-                  {project.completedTasks}
-                </span>
-              </div>
-              <div className='flex justify-between'>
-                <span className='text-muted-foreground'>In Progress:</span>
-                <span className='font-semibold text-blue-600'>
-                  {
-                    projectTasks.filter((t) => t.status === 'IN_PROGRESS')
-                      .length
-                  }
-                </span>
-              </div>
-              <div className='flex justify-between'>
-                <span className='text-muted-foreground'>Estimated Hours:</span>
-                <span className='font-semibold'>{project.estimatedHours}h</span>
-              </div>
-              <Separator />
-              <div className='flex justify-between'>
-                <span className='text-muted-foreground'>Completion Rate:</span>
-                <span className='font-semibold'>{completionRate}%</span>
-              </div>
-            </div>
-          </Card>
-
-          {/* Recent activity or quick stats could go here */}
-          {notes.length > 0 && (
-            <Card className='p-6'>
-              <h3 className='text-lg font-semibold mb-4'>Recent Notes</h3>
-              <div className='space-y-3'>
-                {notes.slice(0, 3).map((note) => (
-                  <div key={note.id} className='p-3 bg-muted rounded-md'>
-                    <p className='text-sm line-clamp-2'>{note.contentPlain}</p>
-                    <p className='text-xs text-muted-foreground mt-1'>
-                      {new Date(note.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                ))}
-              </div>
-              <Button
-                variant='link'
-                className='mt-3 p-0 h-auto'
-                onClick={() => setActiveTab('notes')}
-              >
-                View all notes →
-              </Button>
-            </Card>
-          )}
-        </TabsContent>
 
         {/* Tasks Tab */}
         <TabsContent value='tasks' className='space-y-4 mt-6'>

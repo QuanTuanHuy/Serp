@@ -11,12 +11,9 @@ import { useState } from 'react';
 import {
   Calendar,
   Clock,
-  CheckCircle,
   MoreVertical,
   Star,
-  TrendingUp,
   AlertCircle,
-  StickyNote,
   ListTodo,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/shared/components/ui/card';
@@ -34,7 +31,6 @@ import {
   useUpdateProjectMutation,
   useDeleteProjectMutation,
 } from '../../services/projectApi';
-import { useGetNotesByProjectQuery } from '../../services/noteApi';
 import { EditProjectDialog } from './EditProjectDialog';
 import type { Project } from '../../types';
 import { toast } from 'sonner';
@@ -43,13 +39,18 @@ interface ProjectCardProps {
   project: Project;
   onClick?: (projectId: string) => void;
   className?: string;
+  viewMode?: 'grid' | 'list';
 }
 
-export function ProjectCard({ project, onClick, className }: ProjectCardProps) {
+export function ProjectCard({
+  project,
+  onClick,
+  className,
+  viewMode = 'grid',
+}: ProjectCardProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [updateProject] = useUpdateProjectMutation();
   const [deleteProject] = useDeleteProjectMutation();
-  const { data: notes = [] } = useGetNotesByProjectQuery(project.id);
 
   const completionRate =
     project.totalTasks > 0
@@ -60,6 +61,19 @@ export function ProjectCard({ project, onClick, className }: ProjectCardProps) {
     project.deadlineMs &&
     project.deadlineMs < Date.now() &&
     project.status !== 'COMPLETED';
+
+  const getPriorityColor = () => {
+    switch (project.priority) {
+      case 'HIGH':
+        return 'text-red-600 dark:text-red-400';
+      case 'MEDIUM':
+        return 'text-amber-600 dark:text-amber-400';
+      case 'LOW':
+        return 'text-green-600 dark:text-green-400';
+      default:
+        return 'text-muted-foreground';
+    }
+  };
 
   const handleToggleFavorite = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -87,6 +101,140 @@ export function ProjectCard({ project, onClick, className }: ProjectCardProps) {
     }
   };
 
+  // List view layout
+  if (viewMode === 'list') {
+    return (
+      <Card
+        className={cn(
+          'group relative overflow-hidden cursor-pointer transition-all',
+          'hover:shadow-md hover:border-primary/50',
+          'active:scale-[0.99]',
+          isOverdue && 'border-red-300 dark:border-red-800',
+          className
+        )}
+        onClick={() => onClick?.(project.id)}
+      >
+        <div className='flex items-center gap-4 p-4'>
+          {/* Color indicator */}
+          <div
+            className='w-1 h-16 rounded-full flex-shrink-0'
+            style={{ backgroundColor: project.color }}
+          />
+
+          {/* Content */}
+          <div className='flex-1 min-w-0 grid grid-cols-12 gap-4 items-center'>
+            {/* Title & Description */}
+            <div className='col-span-4 min-w-0'>
+              <div className='flex items-center gap-2 mb-1'>
+                <h3 className='font-semibold text-base truncate'>
+                  {project.title}
+                </h3>
+                {project.isFavorite && (
+                  <Star className='h-4 w-4 fill-yellow-400 text-yellow-400 flex-shrink-0' />
+                )}
+              </div>
+              {project.description && (
+                <p className='text-xs text-muted-foreground truncate'>
+                  {project.description}
+                </p>
+              )}
+            </div>
+
+            {/* Progress */}
+            <div className='col-span-2 text-center'>
+              <p className='text-2xl font-bold'>{completionRate}%</p>
+              <p className='text-xs text-muted-foreground'>Complete</p>
+            </div>
+
+            {/* Tasks */}
+            <div className='col-span-2 text-center'>
+              <p className='text-lg font-semibold'>
+                {project.completedTasks}/{project.totalTasks}
+              </p>
+              <p className='text-xs text-muted-foreground'>Tasks</p>
+            </div>
+
+            {/* Priority */}
+            <div className='col-span-1 text-center'>
+              <p className={cn('text-sm font-medium', getPriorityColor())}>
+                {project.priority}
+              </p>
+            </div>
+
+            {/* Deadline */}
+            <div className='col-span-2'>
+              {project.deadlineMs ? (
+                <div
+                  className={cn(
+                    'text-xs',
+                    isOverdue
+                      ? 'text-red-600 dark:text-red-400 font-medium'
+                      : 'text-muted-foreground'
+                  )}
+                >
+                  {isOverdue && '⚠️ '}
+                  {new Date(project.deadlineMs).toLocaleDateString()}
+                </div>
+              ) : (
+                <div className='text-xs text-muted-foreground'>No deadline</div>
+              )}
+            </div>
+
+            {/* Status & Actions */}
+            <div className='col-span-1 flex items-center justify-end gap-1'>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  asChild
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Button variant='ghost' size='icon' className='h-8 w-8'>
+                    <MoreVertical className='h-4 w-4' />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align='end'>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleFavorite(e);
+                    }}
+                  >
+                    {project.isFavorite
+                      ? 'Remove from Favorites'
+                      : 'Add to Favorites'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditDialogOpen(true);
+                    }}
+                  >
+                    Edit Project
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete();
+                    }}
+                    className='text-red-600'
+                  >
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </div>
+        <EditProjectDialog
+          project={project}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+        />
+      </Card>
+    );
+  }
+
+  // Grid view layout (optimized)
   return (
     <Card
       className={cn(
@@ -99,17 +247,12 @@ export function ProjectCard({ project, onClick, className }: ProjectCardProps) {
       )}
       onClick={() => onClick?.(project.id)}
     >
-      {/* Background gradient effect */}
-      <div
-        className='absolute top-0 right-0 w-32 h-32 opacity-10 rounded-full blur-3xl transition-all group-hover:opacity-20'
-        style={{ backgroundColor: project.color }}
-      />
-
       {/* Priority indicator line */}
       <div
         className='absolute top-0 left-0 w-full h-1 transition-all group-hover:h-1.5'
         style={{ backgroundColor: project.color }}
       />
+
       <CardHeader className='pb-3'>
         <div className='flex items-start justify-between gap-2'>
           {/* Color indicator & Title */}
@@ -137,11 +280,6 @@ export function ProjectCard({ project, onClick, className }: ProjectCardProps) {
               size='icon'
               className='h-8 w-8'
               onClick={handleToggleFavorite}
-              aria-label={
-                project.isFavorite
-                  ? 'Remove from favorites'
-                  : 'Add to favorites'
-              }
             >
               <Star
                 className={cn(
@@ -153,12 +291,7 @@ export function ProjectCard({ project, onClick, className }: ProjectCardProps) {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  className='h-8 w-8'
-                  aria-label='Project actions'
-                >
+                <Button variant='ghost' size='icon' className='h-8 w-8'>
                   <MoreVertical className='h-4 w-4' />
                 </Button>
               </DropdownMenuTrigger>
@@ -177,7 +310,7 @@ export function ProjectCard({ project, onClick, className }: ProjectCardProps) {
                     onClick?.(project.id);
                   }}
                 >
-                  View Tasks
+                  View Details
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -196,7 +329,7 @@ export function ProjectCard({ project, onClick, className }: ProjectCardProps) {
       </CardHeader>
 
       <CardContent className='space-y-4 pt-6'>
-        {/* Main Stats with Circular Progress */}
+        {/* Circular Progress & Stats */}
         <div className='flex items-center gap-4'>
           {/* Circular Progress */}
           <div className='relative flex-shrink-0'>
@@ -251,26 +384,13 @@ export function ProjectCard({ project, onClick, className }: ProjectCardProps) {
               </p>
             </div>
 
-            <div className='space-y-1'>
+            <div className='space-y-1 col-span-2'>
               <div className='flex items-center gap-1 text-muted-foreground'>
-                <TrendingUp className='h-3 w-3' />
-                <span>Progress</span>
+                <span className={cn('font-medium', getPriorityColor())}>
+                  {project.priority} Priority
+                </span>
               </div>
-              <p className='text-base font-semibold text-green-600 dark:text-green-400'>
-                {project.completedTasks > 0 ? '+' : ''}
-                {project.completedTasks}
-              </p>
             </div>
-
-            {notes.length > 0 && (
-              <div className='space-y-1'>
-                <div className='flex items-center gap-1 text-muted-foreground'>
-                  <StickyNote className='h-3 w-3' />
-                  <span>Notes</span>
-                </div>
-                <p className='text-base font-semibold'>{notes.length}</p>
-              </div>
-            )}
           </div>
         </div>
 
@@ -305,13 +425,13 @@ export function ProjectCard({ project, onClick, className }: ProjectCardProps) {
             className={cn(
               'px-2 py-0.5 rounded-full text-xs font-medium transition-colors',
               project.status === 'ACTIVE' &&
-                'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400 group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50',
+                'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400',
               project.status === 'COMPLETED' &&
-                'bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400 group-hover:bg-green-200 dark:group-hover:bg-green-900/50',
+                'bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400',
               project.status === 'ON_HOLD' &&
-                'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 group-hover:bg-amber-200 dark:group-hover:bg-amber-900/50',
+                'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400',
               project.status === 'ARCHIVED' &&
-                'bg-gray-100 text-gray-700 dark:bg-gray-950/50 dark:text-gray-400 group-hover:bg-gray-200 dark:group-hover:bg-gray-900/50'
+                'bg-gray-100 text-gray-700 dark:bg-gray-950/50 dark:text-gray-400'
             )}
           >
             {project.status === 'ACTIVE' && 'Active'}
