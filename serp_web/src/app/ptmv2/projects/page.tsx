@@ -11,7 +11,7 @@ import { ProjectGrid } from '@/modules/ptmv2';
 
 export default function ProjectsPage() {
   return (
-    <div className="container mx-auto p-6">
+    <div className='container mx-auto p-6'>
       <ProjectGrid />
     </div>
   );

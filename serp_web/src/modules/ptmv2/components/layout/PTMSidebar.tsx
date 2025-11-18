@@ -19,6 +19,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
+  Lock,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { cn } from '@/shared/utils';
@@ -31,11 +33,49 @@ import { LAYOUT_CONSTANTS } from '../../constants/colors';
 import type { PTMState } from '../../store';
 
 const navItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/ptmv2' },
+  {
+    id: 'dashboard',
+    label: 'Dashboard',
+    icon: LayoutDashboard,
+    href: '/ptmv2',
+  },
   { id: 'tasks', label: 'Tasks', icon: CheckSquare, href: '/ptmv2/tasks' },
-  { id: 'projects', label: 'Projects', icon: FolderKanban, href: '/ptmv2/projects' },
-  { id: 'schedule', label: 'Schedule', icon: Calendar, href: '/ptmv2/schedule' },
-  { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '/ptmv2/analytics' },
+  {
+    id: 'projects',
+    label: 'Projects',
+    icon: FolderKanban,
+    href: '/ptmv2/projects',
+  },
+  {
+    id: 'schedule',
+    label: 'Schedule',
+    icon: Calendar,
+    href: '/ptmv2/schedule',
+  },
+  {
+    id: 'focus_time',
+    label: 'Focus Time',
+    icon: Lock,
+    href: '/ptmv2/focus-time',
+  },
+  {
+    id: 'activity',
+    label: 'Activity',
+    icon: CheckSquare,
+    href: '/ptmv2/activity',
+  },
+  {
+    id: 'analytics',
+    label: 'Analytics',
+    icon: BarChart3,
+    href: '/ptmv2/analytics',
+  },
+  {
+    id: 'deadline_risks',
+    label: 'Deadline Risks',
+    icon: AlertTriangle,
+    href: '/ptmv2/deadline-risks',
+  },
 ] as const;
 
 export function PTMSidebar() {
@@ -51,7 +91,8 @@ export function PTMSidebar() {
   };
 
   const handleNavClick = (item: (typeof navItems)[number]) => {
-    dispatch(setActiveView(item.id));
+    // cast to any because `setActiveView` expects a narrower union of ids
+    dispatch(setActiveView(item.id as any));
     router.push(item.href);
   };
 
@@ -92,7 +133,7 @@ export function PTMSidebar() {
       </div>
 
       {/* Quick Add Button */}
-      <div className='p-3'>
+      {/* <div className='p-3'>
         <Button
           onClick={handleQuickAdd}
           className={cn(
@@ -104,7 +145,7 @@ export function PTMSidebar() {
           <Plus className='h-4 w-4' />
           {!sidebarCollapsed && <span>Quick Add</span>}
         </Button>
-      </div>
+      </div> */}
 
       {/* Navigation */}
       <nav className='flex-1 px-3 py-2 space-y-1'>
