@@ -15,6 +15,10 @@ import {
   Play,
   Pause,
   Check,
+  GripVertical,
+  ListTodo,
+  Brain,
+  StickyNote,
 } from 'lucide-react';
 import { Card } from '@/shared/components/ui/card';
 import { Checkbox } from '@/shared/components/ui/checkbox';
@@ -31,9 +35,11 @@ import { cn } from '@/shared/utils';
 import { StatusBadge } from '../shared/StatusBadge';
 import { PriorityBadge } from '../shared/PriorityBadge';
 import {
+  useGetTasksQuery,
   useUpdateTaskMutation,
   useDeleteTaskMutation,
 } from '../../services/taskApi';
+import { useGetNotesByTaskQuery } from '../../services/noteApi';
 import type { Task } from '../../types';
 import { toast } from 'sonner';
 
@@ -46,6 +52,13 @@ interface TaskCardProps {
 export function TaskCard({ task, onClick, className }: TaskCardProps) {
   const [updateTask] = useUpdateTaskMutation();
   const [deleteTask] = useDeleteTaskMutation();
+
+  const { data: allTasks = [] } = useGetTasksQuery({});
+  const { data: notes = [] } = useGetNotesByTaskQuery(task.id);
+
+  const subtasks = allTasks.filter((t) => t.parentTaskId === task.id);
+  const completedSubtasks = subtasks.filter((t) => t.status === 'DONE').length;
+  const totalSubtasks = subtasks.length;
 
   const isOverdue =
     task.status !== 'DONE' && task.deadlineMs && task.deadlineMs < Date.now();
@@ -105,14 +118,23 @@ export function TaskCard({ task, onClick, className }: TaskCardProps) {
   return (
     <Card
       className={cn(
-        'p-4 cursor-pointer transition-all hover:shadow-md',
+        'group relative p-4 cursor-pointer transition-all',
+        'hover:shadow-lg hover:scale-[1.01] hover:border-primary/50',
+        'active:scale-[0.99]',
         task.status === 'DONE' && 'opacity-60',
-        isOverdue && 'border-red-300 dark:border-red-800',
+        isOverdue &&
+          'border-red-300 dark:border-red-800 shadow-red-100 dark:shadow-red-900/20',
+        task.isDeepWork && 'border-l-4 border-l-purple-500',
         className
       )}
       onClick={() => onClick?.(task.id)}
     >
-      <div className='flex items-start gap-3'>
+      {/* Drag Handle (appears on hover) */}
+      <div className='absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity'>
+        <GripVertical className='h-4 w-4 text-muted-foreground cursor-grab active:cursor-grabbing' />
+      </div>
+
+      <div className='flex items-start gap-3 pl-2'>
         {/* Checkbox */}
         <div onClick={(e) => e.stopPropagation()}>
           <Checkbox
@@ -172,6 +194,32 @@ export function TaskCard({ task, onClick, className }: TaskCardProps) {
 
             {/* Status */}
             <StatusBadge status={task.status} />
+
+            {/* Deep Work Indicator */}
+            {task.isDeepWork && (
+              <div className='flex items-center gap-1 text-purple-600 dark:text-purple-400'>
+                <Brain className='h-3 w-3' />
+                <span className='font-medium'>Deep Work</span>
+              </div>
+            )}
+
+            {/* Subtasks Indicator */}
+            {totalSubtasks > 0 && (
+              <div className='flex items-center gap-1'>
+                <ListTodo className='h-3 w-3' />
+                <span>
+                  {completedSubtasks}/{totalSubtasks}
+                </span>
+              </div>
+            )}
+
+            {/* Notes Indicator */}
+            {notes.length > 0 && (
+              <div className='flex items-center gap-1'>
+                <StickyNote className='h-3 w-3' />
+                <span>{notes.length}</span>
+              </div>
+            )}
           </div>
 
           {/* Progress Bar */}

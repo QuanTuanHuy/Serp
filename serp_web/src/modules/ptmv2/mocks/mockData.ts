@@ -14,8 +14,8 @@ import type {
   TaskTemplate,
 } from '../types';
 
-// Mock Tasks
-export const mockTasks: Task[] = [
+// Mock Tasks - Using function to ensure mutable arrays
+const _mockTasksData: Task[] = [
   {
     id: '1',
     userId: 'user-1',
@@ -147,8 +147,10 @@ export const mockTasks: Task[] = [
   },
 ];
 
+export const mockTasks: Task[] = JSON.parse(JSON.stringify(_mockTasksData));
+
 // Mock Projects
-export const mockProjects: Project[] = [
+const _mockProjectsData: Project[] = [
   {
     id: 'proj-1',
     userId: 'user-1',
@@ -194,6 +196,10 @@ export const mockProjects: Project[] = [
     updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
   },
 ];
+
+export const mockProjects: Project[] = JSON.parse(
+  JSON.stringify(_mockProjectsData)
+);
 
 // Mock Schedule Events for Today
 const today = new Date();
@@ -414,3 +420,59 @@ export const mockTaskTemplates: TaskTemplate[] = [
 // Helper to simulate API delay
 export const delay = (ms: number = 300) =>
   new Promise((resolve) => setTimeout(resolve, ms));
+
+// Mock Notes
+export const mockNotes: import('../types').Note[] = [
+  {
+    id: 'note-1',
+    userId: 'user-1',
+    tenantId: 'tenant-1',
+    taskId: '1',
+    content:
+      '# Review Notes\n\nKey points to check:\n- Authentication logic\n- Error handling\n- Test coverage\n\n**Priority areas:**\n- Security validations\n- Input sanitization',
+    contentPlain:
+      'Review Notes Key points to check: Authentication logic Error handling Test coverage Priority areas: Security validations Input sanitization',
+    attachments: [],
+    isPinned: true,
+    activeStatus: 'ACTIVE',
+    createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'note-2',
+    userId: 'user-1',
+    tenantId: 'tenant-1',
+    projectId: 'proj-1',
+    content:
+      '## Project Setup\n\nInitial configurations done:\n- Database schema\n- API endpoints\n- Authentication flow\n\nNext steps:\n- Add unit tests\n- Setup CI/CD',
+    contentPlain:
+      'Project Setup Initial configurations done: Database schema API endpoints Authentication flow Next steps: Add unit tests Setup CI/CD',
+    attachments: [],
+    isPinned: false,
+    activeStatus: 'ACTIVE',
+    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'note-3',
+    userId: 'user-1',
+    tenantId: 'tenant-1',
+    taskId: '3',
+    content:
+      '### Design Tokens\n\nColors: `#3B82F6`, `#10B981`, `#F59E0B`\n\nTypography:\n- Heading: Inter Bold\n- Body: Inter Regular\n\nSpacing: 4px, 8px, 16px, 24px, 32px',
+    contentPlain:
+      'Design Tokens Colors: #3B82F6, #10B981, #F59E0B Typography: Heading: Inter Bold Body: Inter Regular Spacing: 4px, 8px, 16px, 24px, 32px',
+    attachments: [
+      {
+        name: 'design-specs.pdf',
+        url: 'https://example.com/files/design-specs.pdf',
+        size: 2048000,
+        type: 'application/pdf',
+      },
+    ],
+    isPinned: false,
+    activeStatus: 'ACTIVE',
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+  },
+];

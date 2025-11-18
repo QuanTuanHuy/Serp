@@ -128,6 +128,7 @@ export const api = createApi({
     'ptm/Schedule',
     'ptm/FocusTime',
     'ptm/Activity',
+    'ptm/Note',
   ],
 
   // Define endpoints in separate files for each module

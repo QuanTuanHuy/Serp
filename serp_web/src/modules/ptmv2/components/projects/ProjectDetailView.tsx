@@ -19,6 +19,8 @@ import {
   ArrowLeft,
   Target,
   TrendingUp,
+  StickyNote,
+  X,
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/shared/components/ui/card';
@@ -26,13 +28,27 @@ import { Progress } from '@/shared/components/ui/progress';
 import { Badge } from '@/shared/components/ui/badge';
 import { Separator } from '@/shared/components/ui/separator';
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/shared/components/ui/tabs';
+import {
   useGetProjectQuery,
   useUpdateProjectMutation,
   useDeleteProjectMutation,
 } from '../../services/projectApi';
 import { useGetTasksQuery } from '../../services/taskApi';
+import {
+  useGetNotesByProjectQuery,
+  useCreateNoteMutation,
+  useUpdateNoteMutation,
+  useDeleteNoteMutation,
+} from '../../services/noteApi';
 import { EditProjectDialog } from './EditProjectDialog';
 import { TaskList } from '../tasks/TaskList';
+import { NoteCard } from '../notes/NoteCard';
+import { NoteEditorNovel } from '../notes/NoteEditorNovel';
 import { cn } from '@/shared/utils';
 import { toast } from 'sonner';
 import { Skeleton } from '@/shared/components/ui/skeleton';
@@ -47,6 +63,10 @@ export function ProjectDetailView({
   onClose,
 }: ProjectDetailViewProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'notes'>(
+    'overview'
+  );
+  const [showNoteEditor, setShowNoteEditor] = useState(false);
 
   const {
     data: project,
@@ -63,8 +83,14 @@ export function ProjectDetailView({
       skip: !projectId,
     }
   );
+  const { data: notes = [] } = useGetNotesByProjectQuery(projectId, {
+    skip: !projectId,
+  });
   const [updateProject] = useUpdateProjectMutation();
   const [deleteProject] = useDeleteProjectMutation();
+  const [createNote] = useCreateNoteMutation();
+  const [updateNote] = useUpdateNoteMutation();
+  const [deleteNote] = useDeleteNoteMutation();
 
   const handleToggleFavorite = async () => {
     if (!project) return;
@@ -90,6 +116,52 @@ export function ProjectDetailView({
       onClose();
     } catch (error) {
       toast.error('Failed to delete project');
+    }
+  };
+
+  const handleCreateNote = async (content: string, isPinned: boolean) => {
+    if (!project) return;
+
+    try {
+      await createNote({
+        projectId: project.id,
+        content,
+        isPinned,
+      }).unwrap();
+
+      toast.success('Note created');
+      setShowNoteEditor(false);
+    } catch (error) {
+      toast.error('Failed to create note');
+    }
+  };
+
+  const handleUpdateNote = async (
+    noteId: string,
+    content: string,
+    isPinned: boolean
+  ) => {
+    try {
+      await updateNote({
+        id: noteId,
+        content,
+        isPinned,
+      }).unwrap();
+
+      toast.success('Note updated');
+    } catch (error) {
+      toast.error('Failed to update note');
+    }
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (!confirm('Are you sure you want to delete this note?')) return;
+
+    try {
+      await deleteNote(noteId).unwrap();
+      toast.success('Note deleted');
+    } catch (error) {
+      toast.error('Failed to delete note');
     }
   };
 
@@ -284,30 +356,169 @@ export function ProjectDetailView({
         </CardContent>
       </Card>
 
-      {/* Tasks Section */}
-      <div className='space-y-4'>
-        <div className='flex items-center justify-between'>
-          <h2 className='text-2xl font-bold'>Project Tasks</h2>
-          <Button>
-            <Plus className='h-4 w-4 mr-2' />
-            Add Task
-          </Button>
-        </div>
+      {/* Tabs: Overview, Tasks, Notes */}
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as 'overview' | 'tasks' | 'notes')}
+      >
+        <TabsList className='grid w-full grid-cols-3'>
+          <TabsTrigger value='overview'>Overview</TabsTrigger>
+          <TabsTrigger value='tasks'>
+            Tasks {projectTasks.length > 0 && `(${projectTasks.length})`}
+          </TabsTrigger>
+          <TabsTrigger value='notes' className='flex items-center gap-2'>
+            <StickyNote className='h-4 w-4' />
+            Notes {notes.length > 0 && `(${notes.length})`}
+          </TabsTrigger>
+        </TabsList>
 
-        {projectTasks.length === 0 ? (
-          <Card className='p-12 text-center'>
-            <div className='flex flex-col items-center gap-2 text-muted-foreground'>
-              <CheckCircle className='h-12 w-12' />
-              <p className='text-lg font-medium'>No tasks yet</p>
-              <p className='text-sm'>
-                Add your first task to this project to get started
-              </p>
+        {/* Overview Tab */}
+        <TabsContent value='overview' className='space-y-6 mt-6'>
+          <Card className='p-6'>
+            <h3 className='text-lg font-semibold mb-4'>Project Summary</h3>
+            <div className='space-y-4 text-sm'>
+              <div className='flex justify-between'>
+                <span className='text-muted-foreground'>Total Tasks:</span>
+                <span className='font-semibold'>{project.totalTasks}</span>
+              </div>
+              <div className='flex justify-between'>
+                <span className='text-muted-foreground'>Completed:</span>
+                <span className='font-semibold text-green-600'>
+                  {project.completedTasks}
+                </span>
+              </div>
+              <div className='flex justify-between'>
+                <span className='text-muted-foreground'>In Progress:</span>
+                <span className='font-semibold text-blue-600'>
+                  {
+                    projectTasks.filter((t) => t.status === 'IN_PROGRESS')
+                      .length
+                  }
+                </span>
+              </div>
+              <div className='flex justify-between'>
+                <span className='text-muted-foreground'>Estimated Hours:</span>
+                <span className='font-semibold'>{project.estimatedHours}h</span>
+              </div>
+              <Separator />
+              <div className='flex justify-between'>
+                <span className='text-muted-foreground'>Completion Rate:</span>
+                <span className='font-semibold'>{completionRate}%</span>
+              </div>
             </div>
           </Card>
-        ) : (
-          <TaskList filterProjectId={projectId} />
-        )}
-      </div>
+
+          {/* Recent activity or quick stats could go here */}
+          {notes.length > 0 && (
+            <Card className='p-6'>
+              <h3 className='text-lg font-semibold mb-4'>Recent Notes</h3>
+              <div className='space-y-3'>
+                {notes.slice(0, 3).map((note) => (
+                  <div key={note.id} className='p-3 bg-muted rounded-md'>
+                    <p className='text-sm line-clamp-2'>{note.contentPlain}</p>
+                    <p className='text-xs text-muted-foreground mt-1'>
+                      {new Date(note.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <Button
+                variant='link'
+                className='mt-3 p-0 h-auto'
+                onClick={() => setActiveTab('notes')}
+              >
+                View all notes →
+              </Button>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Tasks Tab */}
+        <TabsContent value='tasks' className='space-y-4 mt-6'>
+          <div className='flex items-center justify-between'>
+            <h3 className='text-lg font-semibold'>Project Tasks</h3>
+            <Button>
+              <Plus className='h-4 w-4 mr-2' />
+              Add Task
+            </Button>
+          </div>
+
+          {projectTasks.length === 0 ? (
+            <Card className='p-12 text-center border-dashed'>
+              <div className='flex flex-col items-center gap-2 text-muted-foreground'>
+                <CheckCircle className='h-12 w-12' />
+                <p className='text-lg font-medium'>No tasks yet</p>
+                <p className='text-sm'>
+                  Add your first task to this project to get started
+                </p>
+              </div>
+            </Card>
+          ) : (
+            <TaskList filterProjectId={projectId} />
+          )}
+        </TabsContent>
+
+        {/* Notes Tab */}
+        <TabsContent value='notes' className='space-y-4 mt-6'>
+          <div className='flex items-center justify-between'>
+            <h3 className='text-lg font-semibold'>Project Notes</h3>
+            <Button
+              size='sm'
+              onClick={() => setShowNoteEditor(!showNoteEditor)}
+              variant={showNoteEditor ? 'outline' : 'default'}
+            >
+              {showNoteEditor ? (
+                <>
+                  <X className='h-4 w-4 mr-2' />
+                  Cancel
+                </>
+              ) : (
+                <>
+                  <Plus className='h-4 w-4 mr-2' />
+                  Add Note
+                </>
+              )}
+            </Button>
+          </div>
+
+          {showNoteEditor && (
+            <NoteEditorNovel
+              onSave={handleCreateNote}
+              onCancel={() => setShowNoteEditor(false)}
+              placeholder='Add notes, decisions, or important information about this project...'
+            />
+          )}
+
+          {notes.length === 0 ? (
+            <Card className='p-8 text-center border-dashed'>
+              <div className='flex flex-col items-center gap-2 text-muted-foreground'>
+                <StickyNote className='h-12 w-12' />
+                <p className='text-lg font-medium'>No notes yet</p>
+                <p className='text-sm'>
+                  Add notes to document project decisions, ideas, and progress
+                </p>
+              </div>
+            </Card>
+          ) : (
+            <div className='space-y-3'>
+              {[...notes]
+                .sort((a, b) => {
+                  // Pinned notes first
+                  if (a.isPinned && !b.isPinned) return -1;
+                  if (!a.isPinned && b.isPinned) return 1;
+                  // Then by date (newest first)
+                  return (
+                    new Date(b.createdAt).getTime() -
+                    new Date(a.createdAt).getTime()
+                  );
+                })
+                .map((note) => (
+                  <NoteCard key={note.id} note={note} />
+                ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Edit Dialog */}
       <EditProjectDialog

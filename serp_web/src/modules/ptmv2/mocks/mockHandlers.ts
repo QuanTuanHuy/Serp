@@ -12,16 +12,41 @@ import {
   mockSchedulePlan,
   mockFocusTimeBlocks,
   mockTaskTemplates,
+  mockNotes,
   delay,
 } from './mockData';
-import type { Task, Project, ScheduleEvent } from '../types';
+import type { Task, Project, ScheduleEvent, Note } from '../types';
 
 // Enable/disable mock mode (set to false when API is ready)
 export const USE_MOCK_DATA = true;
 
-let tasksStore = [...mockTasks];
-let projectsStore = [...mockProjects];
-let eventsStore = [...mockScheduleEvents];
+// Helper to create mutable copies
+const deepClone = <T>(arr: T[]): T[] => JSON.parse(JSON.stringify(arr));
+
+let tasksStore = deepClone(mockTasks);
+let projectsStore = deepClone(mockProjects);
+let eventsStore = deepClone(mockScheduleEvents);
+let notesStore = deepClone(mockNotes);
+
+// Helper to extract plain text from Tiptap JSON
+const extractPlainText = (content: string): string => {
+  try {
+    const json = JSON.parse(content);
+    const getText = (node: any): string => {
+      if (node.type === 'text') {
+        return node.text || '';
+      }
+      if (node.content && Array.isArray(node.content)) {
+        return node.content.map(getText).join('');
+      }
+      return '';
+    };
+    return getText(json).trim();
+  } catch {
+    // If not JSON, return as-is (markdown or plain text)
+    return content.replace(/[#*`_\[\]()]/g, '');
+  }
+};
 
 export const mockApiHandlers = {
   // Task handlers
@@ -69,6 +94,7 @@ export const mockApiHandlers = {
         updatedAt: new Date().toISOString(),
         projectId: data.projectId,
         deadlineMs: data.deadlineMs,
+        parentTaskId: data.parentTaskId,
       };
 
       tasksStore.push(newTask);
@@ -288,11 +314,75 @@ export const mockApiHandlers = {
       await delay();
     },
   },
+
+  // Note handlers
+  notes: {
+    getByTask: async (taskId: string) => {
+      await delay();
+      return notesStore.filter((n) => n.taskId === taskId);
+    },
+
+    getByProject: async (projectId: string) => {
+      await delay();
+      return notesStore.filter((n) => n.projectId === projectId);
+    },
+
+    getById: async (id: string) => {
+      await delay();
+      const note = notesStore.find((n) => n.id === id);
+      if (!note) throw new Error('Note not found');
+      return note;
+    },
+
+    create: async (data: Partial<Note>) => {
+      await delay();
+      const newNote: Note = {
+        id: `note-${Date.now()}`,
+        userId: 'user-1',
+        tenantId: 'tenant-1',
+        content: data.content || '',
+        contentPlain: extractPlainText(data.content || ''),
+        attachments: data.attachments || [],
+        isPinned: data.isPinned || false,
+        activeStatus: 'ACTIVE',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        taskId: data.taskId,
+        projectId: data.projectId,
+      };
+
+      notesStore.push(newNote);
+      return newNote;
+    },
+
+    update: async (id: string, data: Partial<Note>) => {
+      await delay();
+      const index = notesStore.findIndex((n) => n.id === id);
+      if (index === -1) throw new Error('Note not found');
+
+      notesStore[index] = {
+        ...notesStore[index],
+        ...data,
+        contentPlain: data.content
+          ? extractPlainText(data.content)
+          : notesStore[index].contentPlain,
+        updatedAt: new Date().toISOString(),
+      };
+
+      return notesStore[index];
+    },
+
+    delete: async (id: string) => {
+      await delay();
+      notesStore = notesStore.filter((n) => n.id !== id);
+    },
+  },
 };
 
 // Reset mock data (useful for testing)
 export const resetMockData = () => {
-  tasksStore = [...mockTasks];
-  projectsStore = [...mockProjects];
-  eventsStore = [...mockScheduleEvents];
+  tasksStore = deepClone(mockTasks);
+  projectsStore = deepClone(mockProjects);
+  eventsStore = deepClone(mockScheduleEvents);
+  notesStore = deepClone(mockNotes);
 };

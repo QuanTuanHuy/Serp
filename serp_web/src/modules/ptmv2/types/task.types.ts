@@ -81,6 +81,7 @@ export interface CreateTaskRequest {
   estimatedDurationHours?: number;
   deadlineMs?: number;
   projectId?: string;
+  parentTaskId?: string;
   category?: string;
   tags?: string[];
   isDeepWork?: boolean;

@@ -8,3 +8,4 @@
 export * from './task.types';
 export * from './project.types';
 export * from './schedule.types';
+export * from './note.types';

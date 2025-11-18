@@ -29,46 +29,41 @@ export default function TasksPage() {
 
   return (
     <div className='space-y-6'>
-      {/* Header with Gradient Background */}
-      <div className='relative overflow-hidden rounded-lg bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 p-8'>
-        <div className='absolute inset-0 bg-grid-white/10' />
-        <div className='relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
-          <div className='text-white'>
-            <div className='flex items-center gap-2 mb-2'>
-              <CheckSquare className='h-8 w-8' />
-              <h1 className='text-3xl font-bold'>Tasks</h1>
+      {/* Clean Modern Header */}
+      <div className='flex items-center justify-between'>
+        <div>
+          <div className='flex items-center gap-3 mb-2'>
+            <div className='p-2 bg-primary/10 rounded-lg'>
+              <CheckSquare className='h-6 w-6 text-primary' />
             </div>
-            <p className='text-white/90 text-sm'>
-              Stay organized and focused on what matters most
-            </p>
+            <h1 className='text-3xl font-bold tracking-tight'>Tasks</h1>
           </div>
-          <QuickAddTask />
+          <p className='text-muted-foreground'>
+            Stay organized and focused on what matters most
+          </p>
         </div>
+        <QuickAddTask />
       </div>
 
       {/* Stats Overview */}
       <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
-        <Card className='p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border-blue-200 dark:border-blue-800'>
+        <Card className='p-4'>
           <div className='flex items-center justify-between'>
             <div>
               <p className='text-sm text-muted-foreground'>Total Tasks</p>
-              <p className='text-2xl font-bold text-blue-600 dark:text-blue-400'>
-                24
-              </p>
+              <p className='text-2xl font-bold'>24</p>
             </div>
-            <div className='p-3 rounded-full bg-blue-500/10'>
-              <CheckSquare className='h-5 w-5 text-blue-600 dark:text-blue-400' />
+            <div className='p-3 rounded-full bg-primary/10'>
+              <CheckSquare className='h-5 w-5 text-primary' />
             </div>
           </div>
         </Card>
 
-        <Card className='p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 border-green-200 dark:border-green-800'>
+        <Card className='p-4'>
           <div className='flex items-center justify-between'>
             <div>
               <p className='text-sm text-muted-foreground'>Completed</p>
-              <p className='text-2xl font-bold text-green-600 dark:text-green-400'>
-                18
-              </p>
+              <p className='text-2xl font-bold'>18</p>
             </div>
             <div className='p-3 rounded-full bg-green-500/10'>
               <Circle className='h-5 w-5 text-green-600 dark:text-green-400 fill-current' />
@@ -76,13 +71,11 @@ export default function TasksPage() {
           </div>
         </Card>
 
-        <Card className='p-4 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/20 dark:to-amber-900/20 border-amber-200 dark:border-amber-800'>
+        <Card className='p-4'>
           <div className='flex items-center justify-between'>
             <div>
               <p className='text-sm text-muted-foreground'>In Progress</p>
-              <p className='text-2xl font-bold text-amber-600 dark:text-amber-400'>
-                6
-              </p>
+              <p className='text-2xl font-bold'>6</p>
             </div>
             <div className='p-3 rounded-full bg-amber-500/10'>
               <Clock className='h-5 w-5 text-amber-600 dark:text-amber-400' />
@@ -90,16 +83,14 @@ export default function TasksPage() {
           </div>
         </Card>
 
-        <Card className='p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-purple-200 dark:border-purple-800'>
+        <Card className='p-4'>
           <div className='flex items-center justify-between'>
             <div>
               <p className='text-sm text-muted-foreground'>Completion</p>
-              <p className='text-2xl font-bold text-purple-600 dark:text-purple-400'>
-                75%
-              </p>
+              <p className='text-2xl font-bold'>75%</p>
             </div>
-            <div className='p-3 rounded-full bg-purple-500/10'>
-              <TrendingUp className='h-5 w-5 text-purple-600 dark:text-purple-400' />
+            <div className='p-3 rounded-full bg-blue-500/10'>
+              <TrendingUp className='h-5 w-5 text-blue-600 dark:text-blue-400' />
             </div>
           </div>
         </Card>
@@ -180,14 +171,12 @@ export default function TasksPage() {
       <TaskList />
 
       {/* AI Insights */}
-      <Card className='p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/10 dark:to-blue-950/10 border-purple-200 dark:border-purple-800'>
+      <Card className='p-4 border-primary/20'>
         <div className='flex items-start gap-3'>
-          <Sparkles className='h-5 w-5 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0' />
+          <Sparkles className='h-5 w-5 text-primary mt-0.5 flex-shrink-0' />
           <div className='space-y-1'>
-            <p className='font-semibold text-sm text-purple-900 dark:text-purple-100'>
-              💡 AI Suggestion
-            </p>
-            <p className='text-sm text-purple-700 dark:text-purple-300'>
+            <p className='font-semibold text-sm'>💡 AI Suggestion</p>
+            <p className='text-sm text-muted-foreground'>
               You have 3 high-priority tasks due today. Consider scheduling a
               2-hour focus block this afternoon to complete them.
             </p>

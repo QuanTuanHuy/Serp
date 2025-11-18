@@ -27,7 +27,7 @@ export {
 } from './store/uiSlice';
 
 // Services
-export { ptmApi, taskApi, projectApi, scheduleApi } from './services';
+export { ptmApi, taskApi, projectApi, scheduleApi, noteApi } from './services';
 
 // Types
 export type * from './types';

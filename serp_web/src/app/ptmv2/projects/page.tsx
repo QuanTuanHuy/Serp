@@ -48,53 +48,48 @@ export default function ProjectsPage() {
 
   return (
     <div className='space-y-6'>
-      {/* Header with Gradient Background */}
-      <div className='relative overflow-hidden rounded-lg bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 p-8'>
-        <div className='absolute inset-0 bg-grid-white/10' />
-        <div className='relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
-          <div className='text-white'>
-            <div className='flex items-center gap-2 mb-2'>
-              <FolderKanban className='h-8 w-8' />
-              <h1 className='text-3xl font-bold'>Projects</h1>
+      {/* Clean Modern Header */}
+      <div className='flex items-center justify-between'>
+        <div>
+          <div className='flex items-center gap-3 mb-2'>
+            <div className='p-2 bg-primary/10 rounded-lg'>
+              <FolderKanban className='h-6 w-6 text-primary' />
             </div>
-            <p className='text-white/90 text-sm'>
-              Organize and track your projects from start to finish
-            </p>
+            <h1 className='text-3xl font-bold tracking-tight'>Projects</h1>
           </div>
-          <CreateProjectDialog
-            trigger={
-              <Button className='bg-white text-indigo-600 hover:bg-white/90 shadow-lg'>
-                <Plus className='h-4 w-4 mr-2' />
-                New Project
-              </Button>
-            }
-          />
+          <p className='text-muted-foreground'>
+            Organize and track your projects from start to finish
+          </p>
         </div>
+        <CreateProjectDialog
+          trigger={
+            <Button size='lg'>
+              <Plus className='h-4 w-4 mr-2' />
+              New Project
+            </Button>
+          }
+        />
       </div>
 
       {/* Stats Overview */}
       <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
-        <Card className='p-4 bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-950/20 dark:to-indigo-900/20 border-indigo-200 dark:border-indigo-800'>
+        <Card className='p-4'>
           <div className='flex items-center justify-between'>
             <div>
               <p className='text-sm text-muted-foreground'>Active Projects</p>
-              <p className='text-2xl font-bold text-indigo-600 dark:text-indigo-400'>
-                8
-              </p>
+              <p className='text-2xl font-bold'>8</p>
             </div>
-            <div className='p-3 rounded-full bg-indigo-500/10'>
-              <FolderKanban className='h-5 w-5 text-indigo-600 dark:text-indigo-400' />
+            <div className='p-3 rounded-full bg-primary/10'>
+              <FolderKanban className='h-5 w-5 text-primary' />
             </div>
           </div>
         </Card>
 
-        <Card className='p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 border-green-200 dark:border-green-800'>
+        <Card className='p-4'>
           <div className='flex items-center justify-between'>
             <div>
               <p className='text-sm text-muted-foreground'>Completed</p>
-              <p className='text-2xl font-bold text-green-600 dark:text-green-400'>
-                12
-              </p>
+              <p className='text-2xl font-bold'>12</p>
             </div>
             <div className='p-3 rounded-full bg-green-500/10'>
               <CheckCircle2 className='h-5 w-5 text-green-600 dark:text-green-400' />
@@ -102,27 +97,23 @@ export default function ProjectsPage() {
           </div>
         </Card>
 
-        <Card className='p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-purple-200 dark:border-purple-800'>
+        <Card className='p-4'>
           <div className='flex items-center justify-between'>
             <div>
               <p className='text-sm text-muted-foreground'>Total Tasks</p>
-              <p className='text-2xl font-bold text-purple-600 dark:text-purple-400'>
-                142
-              </p>
+              <p className='text-2xl font-bold'>142</p>
             </div>
-            <div className='p-3 rounded-full bg-purple-500/10'>
-              <Target className='h-5 w-5 text-purple-600 dark:text-purple-400' />
+            <div className='p-3 rounded-full bg-blue-500/10'>
+              <Target className='h-5 w-5 text-blue-600 dark:text-blue-400' />
             </div>
           </div>
         </Card>
 
-        <Card className='p-4 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/20 dark:to-amber-900/20 border-amber-200 dark:border-amber-800'>
+        <Card className='p-4'>
           <div className='flex items-center justify-between'>
             <div>
               <p className='text-sm text-muted-foreground'>Success Rate</p>
-              <p className='text-2xl font-bold text-amber-600 dark:text-amber-400'>
-                92%
-              </p>
+              <p className='text-2xl font-bold'>92%</p>
             </div>
             <div className='p-3 rounded-full bg-amber-500/10'>
               <TrendingUp className='h-5 w-5 text-amber-600 dark:text-amber-400' />
@@ -210,14 +201,12 @@ export default function ProjectsPage() {
       <ProjectGrid onProjectClick={(id) => setSelectedProjectId(id)} />
 
       {/* AI Insights */}
-      <Card className='p-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/10 dark:to-purple-950/10 border-indigo-200 dark:border-indigo-800'>
+      <Card className='p-4 border-primary/20'>
         <div className='flex items-start gap-3'>
-          <Sparkles className='h-5 w-5 text-indigo-600 dark:text-indigo-400 mt-0.5 flex-shrink-0' />
+          <Sparkles className='h-5 w-5 text-primary mt-0.5 flex-shrink-0' />
           <div className='space-y-1'>
-            <p className='font-semibold text-sm text-indigo-900 dark:text-indigo-100'>
-              💡 Project Insights
-            </p>
-            <p className='text-sm text-indigo-700 dark:text-indigo-300'>
+            <p className='font-semibold text-sm'>💡 Project Insights</p>
+            <p className='text-sm text-muted-foreground'>
               "Website Redesign" is 85% complete with 3 tasks remaining.
               Consider scheduling a final review meeting for next week to ensure
               on-time delivery.
