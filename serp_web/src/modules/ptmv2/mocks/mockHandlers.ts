@@ -14,6 +14,7 @@ import {
   mockTaskTemplates,
   mockNotes,
   getMockActivityEvents,
+  getMockTaskDependencies,
   delay,
 } from './mockData';
 import type {
@@ -24,6 +25,9 @@ import type {
   ActivityEvent,
   ActivityFeedResponse,
   ActivityFeedFilters,
+  TaskDependency,
+  CreateDependencyRequest,
+  DependencyValidationResult,
 } from '../types';
 
 // Enable/disable mock mode (set to false when API is ready)
@@ -37,6 +41,7 @@ let projectsStore = deepClone(mockProjects);
 let eventsStore = deepClone(mockScheduleEvents);
 let notesStore = deepClone(mockNotes);
 let activitiesStore = getMockActivityEvents();
+let dependenciesStore = getMockTaskDependencies();
 
 // Helper to extract plain text from Tiptap JSON
 const extractPlainText = (content: string): string => {
@@ -186,7 +191,7 @@ export const mockApiHandlers = {
       });
     },
 
-    // Subtask and dependency handlers
+    // Phase 1: Subtask handlers
     getSubtasks: async (parentTaskId: number | string) => {
       await delay();
       return tasksStore.filter((t) => t.parentTaskId == parentTaskId);
@@ -194,173 +199,239 @@ export const mockApiHandlers = {
 
     getTaskTree: async (rootTaskId: number | string) => {
       await delay();
-      const buildTree = (taskId: number | string): any => {
-        const task = tasksStore.find((t) => t.id == taskId);
-        if (!task) return null;
-
-        const subtasks = tasksStore
-          .filter((t) => t.parentTaskId == taskId)
-          .map((subtask) => buildTree(subtask.id));
-
-        return {
-          ...task,
-          subtasks,
-          depth: task.parentTaskId ? 1 : 0, // Simple depth calculation
-          hasSubtasks: subtasks.length > 0,
-          completedSubtasksCount: subtasks.filter(
-            (st: any) => st.status === 'COMPLETED'
-          ).length,
-          totalSubtasksCount: subtasks.length,
-        };
-      };
-
-      return buildTree(rootTaskId);
-    },
-
-    getDependencies: async (taskId: number | string) => {
-      await delay();
-      const task = tasksStore.find((t) => t.id == taskId);
+      const task = tasksStore.find((t) => t.id == rootTaskId);
       if (!task) throw new Error('Task not found');
 
-      const dependencies = task.dependentTaskIds
-        .map((depId) => {
-          const depTask = tasksStore.find((t) => t.id == depId);
-          return depTask
-            ? {
-                id: `${taskId}-${depId}`,
-                dependentTaskId: taskId,
-                dependencyTaskId: depId,
-                dependencyType: 'FINISH_TO_START' as const,
-                createdAt: new Date().toISOString(),
-                dependencyTask: depTask,
-              }
-            : null;
-        })
-        .filter(Boolean);
+      // Get direct children
+      const children = tasksStore.filter((t) => t.parentTaskId == rootTaskId);
 
-      return dependencies;
+      // Get all descendants recursively
+      const descendants: Task[] = [];
+      const getDescendants = (parentId: number | string) => {
+        const kids = tasksStore.filter((t) => t.parentTaskId == parentId);
+        descendants.push(...kids);
+        kids.forEach((kid) => getDescendants(kid.id));
+      };
+      getDescendants(rootTaskId);
+
+      // Get ancestors
+      const ancestors: Task[] = [];
+      let currentParentId = task.parentTaskId;
+      while (currentParentId) {
+        const parent = tasksStore.find((t) => t.id === currentParentId);
+        if (parent) {
+          ancestors.unshift(parent);
+          currentParentId = parent.parentTaskId;
+        } else {
+          break;
+        }
+      }
+
+      return {
+        task,
+        children,
+        descendants,
+        ancestors,
+      };
     },
 
-    addDependency: async (data: {
-      dependentTaskId: number;
-      dependencyTaskId: number;
-      dependencyType?: string;
-    }) => {
+    // Phase 2: Dependency handlers
+    getDependencies: async (taskId: number | string) => {
+      await delay();
+      return dependenciesStore.filter((d) => d.taskId == taskId);
+    },
+
+    addDependency: async (request: CreateDependencyRequest) => {
       await delay();
       const {
-        dependentTaskId,
-        dependencyTaskId,
+        taskId,
+        dependsOnTaskId,
         dependencyType = 'FINISH_TO_START',
-      } = data;
+        lagDays,
+      } = request;
 
       // Validate tasks exist
-      const dependentTask = tasksStore.find((t) => t.id == dependentTaskId);
-      const dependencyTask = tasksStore.find((t) => t.id == dependencyTaskId);
-      if (!dependentTask || !dependencyTask) {
+      const task = tasksStore.find((t) => t.id == taskId);
+      const dependsOnTask = tasksStore.find((t) => t.id == dependsOnTaskId);
+      if (!task || !dependsOnTask) {
         throw new Error('One or both tasks not found');
       }
 
-      // Check for circular dependency (simple check)
-      if (dependentTask.dependentTaskIds.includes(dependencyTaskId)) {
-        throw new Error('Circular dependency detected');
+      // Validate no circular dependency
+      const validation =
+        await mockApiHandlers.tasks.validateDependency(request);
+      if (!validation.isValid) {
+        throw new Error(validation.errors[0] || 'Invalid dependency');
       }
 
-      // Update dependent task
+      // Create new dependency
+      const newDependency: TaskDependency = {
+        id: Date.now(),
+        taskId,
+        dependsOnTaskId,
+        dependencyType,
+        lagDays,
+        createdAt: Date.now(),
+      };
+
+      dependenciesStore = [...dependenciesStore, newDependency];
+
+      // Update task's dependentTaskIds array
       const updatedTask = {
-        ...dependentTask,
-        dependentTaskIds: [...dependentTask.dependentTaskIds, dependencyTaskId],
+        ...task,
+        dependentTaskIds: [...task.dependentTaskIds, dependsOnTaskId],
         updatedAt: new Date().toISOString(),
       };
+      tasksStore = tasksStore.map((t) => (t.id == taskId ? updatedTask : t));
 
-      tasksStore = tasksStore.map((t) =>
-        t.id == dependentTaskId ? updatedTask : t
-      );
-
-      return {
-        id: `${dependentTaskId}-${dependencyTaskId}`,
-        dependentTaskId,
-        dependencyTaskId,
-        dependencyType,
-        createdAt: new Date().toISOString(),
-        dependencyTask,
-      };
+      return newDependency;
     },
 
     removeDependency: async (
-      dependentTaskId: number,
-      dependencyTaskId: number
+      taskId: number | string,
+      dependencyId: number | string
     ) => {
       await delay();
-      const task = tasksStore.find((t) => t.id == dependentTaskId);
-      if (!task) throw new Error('Task not found');
-
-      const updatedTask = {
-        ...task,
-        dependentTaskIds: task.dependentTaskIds.filter(
-          (id) => id !== dependencyTaskId
-        ),
-        updatedAt: new Date().toISOString(),
-      };
-
-      tasksStore = tasksStore.map((t) =>
-        t.id == dependentTaskId ? updatedTask : t
+      const dependency = dependenciesStore.find(
+        (d) => d.id == dependencyId && d.taskId == taskId
       );
+      if (!dependency) throw new Error('Dependency not found');
+
+      // Remove from dependencies store
+      dependenciesStore = dependenciesStore.filter(
+        (d) => d.id !== dependencyId
+      );
+
+      // Update task's dependentTaskIds array
+      const task = tasksStore.find((t) => t.id == taskId);
+      if (task) {
+        const updatedTask = {
+          ...task,
+          dependentTaskIds: task.dependentTaskIds.filter(
+            (id) => id !== dependency.dependsOnTaskId
+          ),
+          updatedAt: new Date().toISOString(),
+        };
+        tasksStore = tasksStore.map((t) => (t.id == taskId ? updatedTask : t));
+      }
     },
 
     validateDependency: async (
-      dependentTaskId: number,
-      dependencyTaskId: number
-    ) => {
+      request: CreateDependencyRequest
+    ): Promise<DependencyValidationResult> => {
       await delay();
+      const { taskId, dependsOnTaskId } = request;
+      const errors: string[] = [];
+      const warnings: string[] = [];
 
       // Check if tasks exist
-      const dependentTask = tasksStore.find((t) => t.id == dependentTaskId);
-      const dependencyTask = tasksStore.find((t) => t.id == dependencyTaskId);
-      if (!dependentTask || !dependencyTask) {
-        return {
-          isValid: false,
-          reason: 'One or both tasks not found',
-        };
+      const task = tasksStore.find((t) => t.id == taskId);
+      const dependsOnTask = tasksStore.find((t) => t.id == dependsOnTaskId);
+      if (!task) {
+        errors.push('Task not found');
+        return { isValid: false, errors, warnings, wouldCreateCycle: false };
+      }
+      if (!dependsOnTask) {
+        errors.push('Dependency task not found');
+        return { isValid: false, errors, warnings, wouldCreateCycle: false };
       }
 
       // Check for self-dependency
-      if (dependentTaskId === dependencyTaskId) {
-        return {
-          isValid: false,
-          reason: 'Task cannot depend on itself',
-        };
+      if (taskId === dependsOnTaskId) {
+        errors.push('Task cannot depend on itself');
+        return { isValid: false, errors, warnings, wouldCreateCycle: true };
       }
 
-      // Check for circular dependency (simple check - would need graph traversal for full validation)
-      if (dependentTask.dependentTaskIds.includes(dependencyTaskId)) {
-        return {
-          isValid: false,
-          reason: 'Circular dependency detected',
-        };
+      // Check for existing dependency
+      const existingDep = dependenciesStore.find(
+        (d) => d.taskId == taskId && d.dependsOnTaskId == dependsOnTaskId
+      );
+      if (existingDep) {
+        errors.push('Dependency already exists');
+        return { isValid: false, errors, warnings, wouldCreateCycle: false };
       }
 
-      // Check if dependency task is a subtask of dependent task (would create hierarchy issues)
-      const isDependencySubtask = (
-        taskId: number,
-        potentialParentId: number
+      // Check for circular dependency using graph traversal
+      const wouldCreateCycle = (
+        startId: number | string,
+        targetId: number | string
       ): boolean => {
-        const task = tasksStore.find((t) => t.id == taskId);
-        if (!task || !task.parentTaskId) return false;
-        if (task.parentTaskId == potentialParentId) return true;
-        return isDependencySubtask(task.parentTaskId, potentialParentId);
+        const visited = new Set<number | string>();
+        const stack = [startId];
+
+        while (stack.length > 0) {
+          const currentId = stack.pop()!;
+          if (visited.has(currentId)) continue;
+          visited.add(currentId);
+
+          if (currentId == targetId) return true;
+
+          // Get all dependencies of current task
+          const currentDeps = dependenciesStore
+            .filter((d) => d.dependsOnTaskId == currentId)
+            .map((d) => d.taskId);
+          stack.push(...currentDeps);
+        }
+
+        return false;
       };
 
-      if (isDependencySubtask(dependencyTaskId, dependentTaskId)) {
-        return {
-          isValid: false,
-          reason: 'Cannot create dependency with subtask',
-        };
+      if (wouldCreateCycle(dependsOnTaskId, taskId)) {
+        errors.push('This would create a circular dependency');
+        return { isValid: false, errors, warnings, wouldCreateCycle: true };
+      }
+
+      // Check if dependency task is a subtask of dependent task
+      const isDescendant = (
+        potentialDescendant: number | string,
+        ancestorId: number | string
+      ): boolean => {
+        const desc = tasksStore.find((t) => t.id == potentialDescendant);
+        if (!desc || !desc.parentTaskId) return false;
+        if (desc.parentTaskId == ancestorId) return true;
+        return isDescendant(desc.parentTaskId, ancestorId);
+      };
+
+      if (isDescendant(dependsOnTaskId, taskId)) {
+        errors.push('Cannot create dependency with own subtask');
+        return { isValid: false, errors, warnings, wouldCreateCycle: false };
+      }
+
+      // Check if tasks are in different projects
+      if (
+        task.projectId &&
+        dependsOnTask.projectId &&
+        task.projectId !== dependsOnTask.projectId
+      ) {
+        warnings.push('Tasks are in different projects');
       }
 
       return {
         isValid: true,
-        reason: 'Valid dependency',
+        errors,
+        warnings,
+        wouldCreateCycle: false,
       };
+    },
+
+    getBlockedBy: async (taskId: number | string) => {
+      await delay();
+      const dependencies = dependenciesStore.filter((d) => d.taskId == taskId);
+      const blockedByTasks = dependencies
+        .map((d) => tasksStore.find((t) => t.id == d.dependsOnTaskId))
+        .filter(Boolean) as Task[];
+      return blockedByTasks;
+    },
+
+    getBlocking: async (taskId: number | string) => {
+      await delay();
+      const blockingDependencies = dependenciesStore.filter(
+        (d) => d.dependsOnTaskId == taskId
+      );
+      const blockingTasks = blockingDependencies
+        .map((d) => tasksStore.find((t) => t.id == d.taskId))
+        .filter(Boolean) as Task[];
+      return blockingTasks;
     },
   },
 

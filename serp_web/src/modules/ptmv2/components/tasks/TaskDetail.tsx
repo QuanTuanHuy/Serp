@@ -20,6 +20,8 @@ import {
   X,
   StickyNote,
   Plus,
+  Link as LinkIcon,
+  AlertCircle,
 } from 'lucide-react';
 import {
   Sheet,
@@ -45,6 +47,8 @@ import { cn } from '@/shared/utils';
 import { StatusBadge } from '../shared/StatusBadge';
 import { PriorityBadge } from '../shared/PriorityBadge';
 import { SubtaskList } from './SubtaskList';
+import { DependencyList } from './DependencyList';
+import { Badge } from '@/shared/components/ui/badge';
 import {
   useGetTaskQuery,
   useUpdateTaskMutation,
@@ -69,7 +73,9 @@ interface TaskDetailProps {
 
 export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'details' | 'notes'>('details');
+  const [activeTab, setActiveTab] = useState<
+    'details' | 'dependencies' | 'notes'
+  >('details');
   const [showNoteEditor, setShowNoteEditor] = useState(false);
 
   // Convert taskId to number for API calls
@@ -310,10 +316,22 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
               {/* Tabs for Details and Notes */}
               <Tabs
                 value={activeTab}
-                onValueChange={(v) => setActiveTab(v as 'details' | 'notes')}
+                onValueChange={(v) =>
+                  setActiveTab(v as 'details' | 'dependencies' | 'notes')
+                }
               >
-                <TabsList className='grid w-full grid-cols-2'>
+                <TabsList className='grid w-full grid-cols-3'>
                   <TabsTrigger value='details'>Details</TabsTrigger>
+                  <TabsTrigger
+                    value='dependencies'
+                    className='flex items-center gap-2'
+                  >
+                    <LinkIcon className='h-4 w-4' />
+                    Dependencies
+                    {task.isBlocked && (
+                      <AlertCircle className='h-3 w-3 text-red-600' />
+                    )}
+                  </TabsTrigger>
                   <TabsTrigger
                     value='notes'
                     className='flex items-center gap-2'
@@ -460,6 +478,11 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
                       </div>
                     </div>
                   )}
+                </TabsContent>
+
+                {/* Dependencies Tab */}
+                <TabsContent value='dependencies' className='mt-4'>
+                  <DependencyList taskId={task.id} />
                 </TabsContent>
 
                 {/* Notes Tab */}

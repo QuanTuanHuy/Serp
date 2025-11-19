@@ -13,6 +13,9 @@ import type {
   TaskTemplate,
   CreateTaskRequest,
   UpdateTaskRequest,
+  TaskDependency,
+  CreateDependencyRequest,
+  DependencyValidationResult,
 } from '../types';
 
 export const taskApi = ptmApi.injectEndpoints({
@@ -291,6 +294,134 @@ export const taskApi = ptmApi.injectEndpoints({
       },
       invalidatesTags: [{ type: 'ptm/Task', id: 'LIST' }],
     }),
+
+    // ========================================
+    // Dependency Operations
+    // ========================================
+
+    // Get dependencies for a task
+    getTaskDependencies: builder.query<TaskDependency[], number>({
+      queryFn: async (taskId) => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.tasks.getDependencies(taskId);
+          return { data };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
+      providesTags: (_result, _error, taskId) => [
+        { type: 'ptm/Dependency', id: taskId },
+        { type: 'ptm/Dependency', id: 'LIST' },
+      ],
+    }),
+
+    // Add dependency
+    addDependency: builder.mutation<TaskDependency, CreateDependencyRequest>({
+      queryFn: async (request) => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.tasks.addDependency(request);
+          return { data };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
+      invalidatesTags: (_result, _error, { taskId }) => [
+        { type: 'ptm/Dependency', id: taskId },
+        { type: 'ptm/Dependency', id: 'LIST' },
+        { type: 'ptm/Task', id: taskId },
+        { type: 'ptm/Task', id: 'LIST' },
+      ],
+    }),
+
+    // Remove dependency
+    removeDependency: builder.mutation<
+      void,
+      { taskId: number; dependencyId: number }
+    >({
+      queryFn: async ({ taskId, dependencyId }) => {
+        if (USE_MOCK_DATA) {
+          await mockApiHandlers.tasks.removeDependency(taskId, dependencyId);
+          return { data: undefined };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
+      invalidatesTags: (_result, _error, { taskId }) => [
+        { type: 'ptm/Dependency', id: taskId },
+        { type: 'ptm/Dependency', id: 'LIST' },
+        { type: 'ptm/Task', id: taskId },
+        { type: 'ptm/Task', id: 'LIST' },
+      ],
+    }),
+
+    // Validate dependency (check for cycles)
+    validateDependency: builder.mutation<
+      DependencyValidationResult,
+      CreateDependencyRequest
+    >({
+      queryFn: async (request) => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.tasks.validateDependency(request);
+          return { data };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
+    }),
+
+    // Get tasks that block this task (tasks this depends on)
+    getBlockedTasks: builder.query<Task[], number>({
+      queryFn: async (taskId) => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.tasks.getBlockedBy(taskId);
+          return { data };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
+      providesTags: (_result, _error, taskId) => [
+        { type: 'ptm/Task', id: `BLOCKED_${taskId}` },
+      ],
+    }),
+
+    // Get tasks that this task blocks
+    getBlockingTasks: builder.query<Task[], number>({
+      queryFn: async (taskId) => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.tasks.getBlocking(taskId);
+          return { data };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
+      providesTags: (_result, _error, taskId) => [
+        { type: 'ptm/Task', id: `BLOCKING_${taskId}` },
+      ],
+    }),
   }),
   overrideExisting: false,
 });
@@ -309,4 +440,11 @@ export const {
   useGetTaskTreeQuery,
   usePromoteSubtaskMutation,
   useReparentTasksMutation,
+  // Phase 2: Dependency hooks
+  useGetTaskDependenciesQuery,
+  useAddDependencyMutation,
+  useRemoveDependencyMutation,
+  useValidateDependencyMutation,
+  useGetBlockedTasksQuery,
+  useGetBlockingTasksQuery,
 } = taskApi;

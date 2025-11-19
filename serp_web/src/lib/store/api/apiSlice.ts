@@ -130,6 +130,7 @@ export const api = createApi({
     'ptm/Availability',
     'ptm/Activity',
     'ptm/Note',
+    'ptm/Dependency',
   ],
 
   // Define endpoints in separate files for each module

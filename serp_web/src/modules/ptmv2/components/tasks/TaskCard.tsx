@@ -18,9 +18,12 @@ import {
   ListTodo,
   Brain,
   ExternalLink,
+  Link as LinkIcon,
+  AlertCircle,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/shared/components/ui/card';
+import { Badge } from '@/shared/components/ui/badge';
 import { Checkbox } from '@/shared/components/ui/checkbox';
 import {
   DropdownMenu,
@@ -225,6 +228,27 @@ export function TaskCard({
                   {completedSubtasks}/{totalSubtasks}
                 </span>
               </div>
+            )}
+
+            {/* Dependency Indicators */}
+            {task.isBlocked && (
+              <Badge variant='destructive' className='text-xs'>
+                <AlertCircle className='h-3 w-3 mr-1' />
+                Blocked
+              </Badge>
+            )}
+
+            {task.dependentTaskIds && task.dependentTaskIds.length > 0 && (
+              <Badge variant='outline' className='text-xs'>
+                <LinkIcon className='h-3 w-3 mr-1' />
+                Depends on {task.dependentTaskIds.length}
+              </Badge>
+            )}
+
+            {task.blockingTasksCount && task.blockingTasksCount > 0 && (
+              <Badge variant='secondary' className='text-xs'>
+                Blocking {task.blockingTasksCount}
+              </Badge>
             )}
           </div>
 

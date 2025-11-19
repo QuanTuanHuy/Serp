@@ -14,6 +14,7 @@ import type {
   TaskTemplate,
   ActivityEvent,
   ActivityEventType,
+  TaskDependency,
 } from '../types';
 
 // Mock Tasks - Using function to ensure mutable arrays
@@ -774,3 +775,45 @@ const _mockActivityEventsData: ActivityEvent[] = [
 
 export const getMockActivityEvents = (): ActivityEvent[] =>
   JSON.parse(JSON.stringify(_mockActivityEventsData));
+
+// Mock Task Dependencies
+const _mockTaskDependenciesData: TaskDependency[] = [
+  {
+    id: 1,
+    taskId: 2, // Update Documentation
+    dependsOnTaskId: 1, // Review Pull Requests
+    dependencyType: 'FINISH_TO_START',
+    createdAt: Date.now() - 24 * 60 * 60 * 1000,
+  },
+  {
+    id: 2,
+    taskId: 8, // Test the changes (subtask)
+    dependsOnTaskId: 7, // Review code changes (subtask)
+    dependencyType: 'FINISH_TO_START',
+    createdAt: Date.now() - 8 * 60 * 60 * 1000,
+  },
+  {
+    id: 3,
+    taskId: 9, // Write review feedback (subtask)
+    dependsOnTaskId: 7, // Review code changes (subtask)
+    dependencyType: 'FINISH_TO_START',
+    createdAt: Date.now() - 8 * 60 * 60 * 1000,
+  },
+  {
+    id: 4,
+    taskId: 9, // Write review feedback (subtask)
+    dependsOnTaskId: 8, // Test the changes (subtask)
+    dependencyType: 'FINISH_TO_START',
+    createdAt: Date.now() - 8 * 60 * 60 * 1000,
+  },
+  {
+    id: 5,
+    taskId: 11, // Add component tests (subtask)
+    dependsOnTaskId: 10, // Create Button component (subtask)
+    dependencyType: 'FINISH_TO_START',
+    createdAt: Date.now() - 2 * 60 * 60 * 1000,
+  },
+];
+
+export const getMockTaskDependencies = (): TaskDependency[] =>
+  JSON.parse(JSON.stringify(_mockTaskDependenciesData));
