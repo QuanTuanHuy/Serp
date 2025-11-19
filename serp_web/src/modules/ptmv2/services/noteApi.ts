@@ -12,7 +12,7 @@ import type { Note, CreateNoteRequest, UpdateNoteRequest } from '../types';
 export const noteApi = ptmApi.injectEndpoints({
   endpoints: (builder) => ({
     // Get notes by task
-    getNotesByTask: builder.query<Note[], string>({
+    getNotesByTask: builder.query<Note[], number>({
       queryFn: async (taskId) => {
         if (USE_MOCK_DATA) {
           const data = await mockApiHandlers.notes.getByTask(taskId);
@@ -31,7 +31,7 @@ export const noteApi = ptmApi.injectEndpoints({
     }),
 
     // Get notes by project
-    getNotesByProject: builder.query<Note[], string>({
+    getNotesByProject: builder.query<Note[], number>({
       queryFn: async (projectId) => {
         if (USE_MOCK_DATA) {
           const data = await mockApiHandlers.notes.getByProject(projectId);
@@ -50,7 +50,7 @@ export const noteApi = ptmApi.injectEndpoints({
     }),
 
     // Get single note
-    getNote: builder.query<Note, string>({
+    getNote: builder.query<Note, number>({
       queryFn: async (id) => {
         if (USE_MOCK_DATA) {
           const data = await mockApiHandlers.notes.getById(id);
@@ -123,7 +123,7 @@ export const noteApi = ptmApi.injectEndpoints({
     }),
 
     // Delete note
-    deleteNote: builder.mutation<void, string>({
+    deleteNote: builder.mutation<void, number>({
       queryFn: async (id) => {
         if (USE_MOCK_DATA) {
           await mockApiHandlers.notes.delete(id);

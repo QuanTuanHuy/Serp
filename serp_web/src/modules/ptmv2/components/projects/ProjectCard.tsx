@@ -37,7 +37,7 @@ import { toast } from 'sonner';
 
 interface ProjectCardProps {
   project: Project;
-  onClick?: (projectId: string) => void;
+  onClick?: (projectId: number) => void;
   className?: string;
   viewMode?: 'grid' | 'list';
 }

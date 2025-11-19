@@ -45,7 +45,7 @@ import { toast } from 'sonner';
 
 interface TaskCardProps {
   task: Task;
-  onClick?: (taskId: string) => void;
+  onClick?: (taskId: number) => void;
   onNavigate?: boolean; // If true, navigate to detail page instead of opening sheet
   className?: string;
 }

@@ -19,10 +19,10 @@ import type {
 // Mock Tasks - Using function to ensure mutable arrays
 const _mockTasksData: Task[] = [
   {
-    id: '1',
-    userId: 'user-1',
-    tenantId: 'tenant-1',
-    projectId: 'proj-1',
+    id: 1,
+    userId: 1,
+    tenantId: 1,
+    projectId: 1,
     title: 'Review Pull Requests',
     description: 'Review and merge pending PRs for the authentication module',
     priority: 'HIGH',
@@ -41,10 +41,10 @@ const _mockTasksData: Task[] = [
     updatedAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
   },
   {
-    id: '2',
-    userId: 'user-1',
-    tenantId: 'tenant-1',
-    projectId: 'proj-1',
+    id: 2,
+    userId: 1,
+    tenantId: 1,
+    projectId: 1,
     title: 'Update Documentation',
     description: 'Update API documentation with new endpoints',
     priority: 'MEDIUM',
@@ -54,7 +54,7 @@ const _mockTasksData: Task[] = [
     isDeepWork: false,
     category: 'Documentation',
     tags: ['docs', 'api'],
-    dependentTaskIds: ['1'],
+    dependentTaskIds: [1],
     source: 'manual',
     progressPercentage: 0,
     activeStatus: 'ACTIVE',
@@ -62,10 +62,10 @@ const _mockTasksData: Task[] = [
     updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
-    id: '3',
-    userId: 'user-1',
-    tenantId: 'tenant-1',
-    projectId: 'proj-2',
+    id: 3,
+    userId: 1,
+    tenantId: 1,
+    projectId: 2,
     title: 'Design System Components',
     description: 'Create reusable UI components for the design system',
     priority: 'HIGH',
@@ -84,9 +84,9 @@ const _mockTasksData: Task[] = [
     updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
   },
   {
-    id: '4',
-    userId: 'user-1',
-    tenantId: 'tenant-1',
+    id: 4,
+    userId: 1,
+    tenantId: 1,
     title: 'Team Standup Meeting',
     description: 'Daily standup with the development team',
     priority: 'LOW',
@@ -105,10 +105,10 @@ const _mockTasksData: Task[] = [
     updatedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
   },
   {
-    id: '5',
-    userId: 'user-1',
-    tenantId: 'tenant-1',
-    projectId: 'proj-1',
+    id: 5,
+    userId: 1,
+    tenantId: 1,
+    projectId: 1,
     title: 'Fix Critical Bug in Payment Flow',
     description: 'Resolve the issue causing payment failures in production',
     priority: 'HIGH',
@@ -126,10 +126,10 @@ const _mockTasksData: Task[] = [
     updatedAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
   },
   {
-    id: '6',
-    userId: 'user-1',
-    tenantId: 'tenant-1',
-    projectId: 'proj-2',
+    id: 6,
+    userId: 1,
+    tenantId: 1,
+    projectId: 2,
     title: 'Client Presentation Prep',
     description: 'Prepare slides and demo for client meeting',
     priority: 'MEDIUM',
@@ -154,9 +154,9 @@ export const mockTasks: Task[] = JSON.parse(JSON.stringify(_mockTasksData));
 // Mock Projects
 const _mockProjectsData: Project[] = [
   {
-    id: 'proj-1',
-    userId: 'user-1',
-    tenantId: 'tenant-1',
+    id: 1,
+    userId: 1,
+    tenantId: 1,
     title: 'Backend Refactoring',
     description: 'Refactor backend services for better performance',
     status: 'ACTIVE',
@@ -176,9 +176,9 @@ const _mockProjectsData: Project[] = [
     updatedAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
   },
   {
-    id: 'proj-2',
-    userId: 'user-1',
-    tenantId: 'tenant-1',
+    id: 2,
+    userId: 1,
+    tenantId: 1,
     title: 'Design System v2',
     description: 'Build comprehensive design system for all products',
     status: 'ACTIVE',
@@ -209,9 +209,9 @@ today.setHours(0, 0, 0, 0);
 
 export const mockScheduleEvents: ScheduleEvent[] = [
   {
-    id: 'evt-1',
-    schedulePlanId: 'plan-1',
-    scheduleTaskId: '1',
+    id: 1,
+    schedulePlanId: 1,
+    scheduleTaskId: 1,
     dateMs: today.getTime(),
     startMin: 540, // 9:00 AM
     endMin: 600, // 10:00 AM
@@ -237,9 +237,9 @@ export const mockScheduleEvents: ScheduleEvent[] = [
     updatedAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
   },
   {
-    id: 'evt-2',
-    schedulePlanId: 'plan-1',
-    scheduleTaskId: '3',
+    id: 2,
+    schedulePlanId: 1,
+    scheduleTaskId: 3,
     dateMs: today.getTime(),
     startMin: 660, // 11:00 AM
     endMin: 780, // 1:00 PM
@@ -265,9 +265,9 @@ export const mockScheduleEvents: ScheduleEvent[] = [
     updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
-    id: 'evt-3',
-    schedulePlanId: 'plan-1',
-    scheduleTaskId: '6',
+    id: 3,
+    schedulePlanId: 1,
+    scheduleTaskId: 6,
     dateMs: today.getTime(),
     startMin: 840, // 2:00 PM
     endMin: 900, // 3:00 PM
@@ -293,9 +293,9 @@ export const mockScheduleEvents: ScheduleEvent[] = [
     updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
-    id: 'evt-4',
-    schedulePlanId: 'plan-1',
-    scheduleTaskId: '2',
+    id: 4,
+    schedulePlanId: 1,
+    scheduleTaskId: 2,
     dateMs: today.getTime(),
     startMin: 960, // 4:00 PM
     endMin: 1050, // 5:30 PM
@@ -324,9 +324,9 @@ export const mockScheduleEvents: ScheduleEvent[] = [
 
 // Mock Schedule Plan
 export const mockSchedulePlan: SchedulePlan = {
-  id: 'plan-1',
-  userId: 'user-1',
-  tenantId: 'tenant-1',
+  id: 1,
+  userId: 1,
+  tenantId: 1,
   startDateMs: today.getTime(),
   endDateMs: today.getTime() + 7 * 24 * 60 * 60 * 1000,
   status: 'active',
@@ -343,9 +343,9 @@ export const mockSchedulePlan: SchedulePlan = {
 // Mock Focus Time Blocks
 export const mockFocusTimeBlocks: FocusTimeBlock[] = [
   {
-    id: 'focus-1',
-    userId: 'user-1',
-    tenantId: 'tenant-1',
+    id: 1,
+    userId: 1,
+    tenantId: 1,
     blockName: 'Morning Deep Work',
     dayOfWeek: 1, // Monday
     startMin: 540, // 9:00 AM
@@ -359,9 +359,9 @@ export const mockFocusTimeBlocks: FocusTimeBlock[] = [
     updatedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
-    id: 'focus-2',
-    userId: 'user-1',
-    tenantId: 'tenant-1',
+    id: 2,
+    userId: 1,
+    tenantId: 1,
     blockName: 'Afternoon Focus',
     dayOfWeek: 3, // Wednesday
     startMin: 840, // 2:00 PM
@@ -379,9 +379,9 @@ export const mockFocusTimeBlocks: FocusTimeBlock[] = [
 // Mock Task Templates
 export const mockTaskTemplates: TaskTemplate[] = [
   {
-    id: 'tpl-1',
-    userId: 'user-1',
-    tenantId: 'tenant-1',
+    id: 1,
+    userId: 1,
+    tenantId: 1,
     templateName: 'Code Review',
     titleTemplate: 'Review PR: {{pr_number}}',
     descriptionTemplate:
@@ -399,9 +399,9 @@ export const mockTaskTemplates: TaskTemplate[] = [
     updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
-    id: 'tpl-2',
-    userId: 'user-1',
-    tenantId: 'tenant-1',
+    id: 2,
+    userId: 1,
+    tenantId: 1,
     templateName: 'Weekly Planning',
     titleTemplate: 'Plan Week of {{week_date}}',
     descriptionTemplate: 'Review goals and plan tasks for the upcoming week',
@@ -426,10 +426,10 @@ export const delay = (ms: number = 300) =>
 // Mock Notes
 export const mockNotes: import('../types').Note[] = [
   {
-    id: 'note-1',
-    userId: 'user-1',
-    tenantId: 'tenant-1',
-    taskId: '1',
+    id: 1,
+    userId: 1,
+    tenantId: 1,
+    taskId: 1,
     content:
       '# Review Notes\n\nKey points to check:\n- Authentication logic\n- Error handling\n- Test coverage\n\n**Priority areas:**\n- Security validations\n- Input sanitization',
     contentPlain:
@@ -441,10 +441,10 @@ export const mockNotes: import('../types').Note[] = [
     updatedAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
   },
   {
-    id: 'note-2',
-    userId: 'user-1',
-    tenantId: 'tenant-1',
-    projectId: 'proj-1',
+    id: 2,
+    userId: 1,
+    tenantId: 1,
+    projectId: 1,
     content:
       '## Project Setup\n\nInitial configurations done:\n- Database schema\n- API endpoints\n- Authentication flow\n\nNext steps:\n- Add unit tests\n- Setup CI/CD',
     contentPlain:
@@ -456,10 +456,10 @@ export const mockNotes: import('../types').Note[] = [
     updatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
   },
   {
-    id: 'note-3',
-    userId: 'user-1',
-    tenantId: 'tenant-1',
-    taskId: '3',
+    id: 3,
+    userId: 1,
+    tenantId: 1,
+    taskId: 3,
     content:
       '### Design Tokens\n\nColors: `#3B82F6`, `#10B981`, `#F59E0B`\n\nTypography:\n- Heading: Inter Bold\n- Body: Inter Regular\n\nSpacing: 4px, 8px, 16px, 24px, 32px',
     contentPlain:
@@ -482,9 +482,9 @@ export const mockNotes: import('../types').Note[] = [
 // Mock Activity Events
 const _mockActivityEventsData: ActivityEvent[] = [
   {
-    id: 'act-1',
-    userId: 'user-1',
-    tenantId: 'tenant-1',
+    id: 1,
+    userId: 1,
+    tenantId: 1,
     eventType: 'task_created',
     entityType: 'task',
     entityId: 1,
@@ -502,9 +502,9 @@ const _mockActivityEventsData: ActivityEvent[] = [
     createdAt: Date.now() - 2 * 60 * 60 * 1000, // 2 hours ago
   },
   {
-    id: 'act-2',
-    userId: 'user-1',
-    tenantId: 'tenant-1',
+    id: 2,
+    userId: 1,
+    tenantId: 1,
     eventType: 'schedule_optimized',
     entityType: 'schedule',
     title: 'Schedule optimized for today',
@@ -530,9 +530,9 @@ const _mockActivityEventsData: ActivityEvent[] = [
     createdAt: Date.now() - 3 * 60 * 60 * 1000, // 3 hours ago
   },
   {
-    id: 'act-3',
-    userId: 'user-1',
-    tenantId: 'tenant-1',
+    id: 3,
+    userId: 1,
+    tenantId: 1,
     eventType: 'task_completed',
     entityType: 'task',
     entityId: 4,
@@ -546,9 +546,9 @@ const _mockActivityEventsData: ActivityEvent[] = [
     createdAt: Date.now() - 6 * 60 * 60 * 1000, // 6 hours ago
   },
   {
-    id: 'act-4',
-    userId: 'user-1',
-    tenantId: 'tenant-1',
+    id: 4,
+    userId: 1,
+    tenantId: 1,
     eventType: 'algorithm_executed',
     entityType: 'algorithm',
     title: 'MILP optimization completed',
@@ -576,9 +576,9 @@ const _mockActivityEventsData: ActivityEvent[] = [
     createdAt: Date.now() - 12 * 60 * 60 * 1000, // 12 hours ago
   },
   {
-    id: 'act-5',
-    userId: 'user-1',
-    tenantId: 'tenant-1',
+    id: 5,
+    userId: 1,
+    tenantId: 1,
     eventType: 'project_created',
     entityType: 'project',
     entityId: 1,
@@ -588,16 +588,16 @@ const _mockActivityEventsData: ActivityEvent[] = [
       teamSize: 5,
       deadline: Date.now() + 30 * 24 * 60 * 60 * 1000,
     },
-    navigationUrl: '/ptmv2/projects/proj-1',
+    navigationUrl: '/ptmv2/projects/1',
     navigationParams: {
       tab: 'overview',
     },
     createdAt: Date.now() - 24 * 60 * 60 * 1000, // 1 day ago
   },
   {
-    id: 'act-6',
-    userId: 'user-1',
-    tenantId: 'tenant-1',
+    id: 6,
+    userId: 1,
+    tenantId: 1,
     eventType: 'deadline_risk_detected',
     entityType: 'task',
     entityId: 1,
@@ -616,9 +616,9 @@ const _mockActivityEventsData: ActivityEvent[] = [
     createdAt: Date.now() - 30 * 60 * 1000, // 30 minutes ago
   },
   {
-    id: 'act-7',
-    userId: 'user-1',
-    tenantId: 'tenant-1',
+    id: 7,
+    userId: 1,
+    tenantId: 1,
     eventType: 'task_updated',
     entityType: 'task',
     entityId: 3,
@@ -633,9 +633,9 @@ const _mockActivityEventsData: ActivityEvent[] = [
     createdAt: Date.now() - 2 * 24 * 60 * 60 * 1000, // 2 days ago
   },
   {
-    id: 'act-8',
-    userId: 'user-1',
-    tenantId: 'tenant-1',
+    id: 8,
+    userId: 1,
+    tenantId: 1,
     eventType: 'schedule_conflict_detected',
     entityType: 'schedule',
     title: 'Schedule conflict detected',

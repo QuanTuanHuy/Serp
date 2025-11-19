@@ -24,8 +24,8 @@ import type { Task, TaskStatus, TaskPriority } from '../../types';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 
 interface TaskListProps {
-  projectId?: string;
-  filterProjectId?: string;
+  projectId?: number | string;
+  filterProjectId?: number | string;
   className?: string;
 }
 
@@ -42,7 +42,7 @@ export function TaskList({
     'ALL'
   );
   const [sortBy, setSortBy] = useState<SortOption>('deadline');
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
   const { data: tasks = [], isLoading } = useGetTasksQuery({
     projectId,

@@ -43,11 +43,11 @@ const DnDCalendar = withDragAndDrop<CalendarEvent, object>(Calendar);
 interface CalendarViewProps {
   className?: string;
   onEventSelect?: (event: ScheduleEvent) => void;
-  onExternalDrop?: (taskId: string, start: Date, end: Date) => void;
+  onExternalDrop?: (taskId: number | string, start: Date, end: Date) => void;
 }
 
 interface CalendarEvent {
-  id: string;
+  id: number;
   title: string;
   start: Date;
   end: Date;
@@ -153,7 +153,7 @@ export function CalendarView({
 
       try {
         await updateEvent({
-          id: event.id,
+          id: event.resource.id,
           dateMs,
           startMin: startMinutes,
           endMin: endMinutes,

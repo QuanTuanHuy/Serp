@@ -31,7 +31,7 @@ export default function TaskDetailPage({
   const router = useRouter();
   const searchParams = useSearchParams();
   const unwrappedParams = use(params);
-  const taskId = unwrappedParams.taskId;
+  const taskId = parseInt(unwrappedParams.taskId, 10);
 
   const [activeTab, setActiveTab] = useState('details');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -43,7 +43,7 @@ export default function TaskDetailPage({
   const { data: activities = [] } = useGetEntityActivitiesQuery(
     {
       entityType: 'task',
-      entityId: parseInt(taskId),
+      entityId: taskId,
     },
     {
       skip: !taskId,
@@ -52,7 +52,7 @@ export default function TaskDetailPage({
 
   // Auto-open edit dialog from URL param
   useEffect(() => {
-    if (editParam === taskId) {
+    if (editParam === taskId.toString()) {
       setIsEditDialogOpen(true);
     }
   }, [editParam, taskId]);
@@ -232,7 +232,11 @@ export default function TaskDetailPage({
         <TabsContent value='activity'>
           <TaskActivityTimeline
             activities={activities}
-            highlightId={highlightActivityId ?? undefined}
+            highlightId={
+              highlightActivityId
+                ? parseInt(highlightActivityId, 10)
+                : undefined
+            }
           />
         </TabsContent>
       </Tabs>

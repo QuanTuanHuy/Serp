@@ -38,7 +38,7 @@ import type { Task } from '../../types';
 import { toast } from 'sonner';
 
 interface SubtaskListProps {
-  parentTaskId: string;
+  parentTaskId: number | string;
   className?: string;
 }
 
@@ -47,6 +47,11 @@ export function SubtaskList({ parentTaskId, className }: SubtaskListProps) {
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [isExpanded, setIsExpanded] = useState(true);
 
+  const numericParentTaskId =
+    typeof parentTaskId === 'string'
+      ? parseInt(parentTaskId, 10)
+      : parentTaskId;
+
   const { data: allTasks = [] } = useGetTasksQuery({});
   const [createTask] = useCreateTaskMutation();
   const [updateTask] = useUpdateTaskMutation();
@@ -54,7 +59,7 @@ export function SubtaskList({ parentTaskId, className }: SubtaskListProps) {
 
   // Filter subtasks
   const subtasks = allTasks.filter(
-    (task) => task.parentTaskId === parentTaskId
+    (task) => task.parentTaskId === numericParentTaskId
   );
   const completedSubtasks = subtasks.filter(
     (task) => task.status === 'DONE'
@@ -69,7 +74,7 @@ export function SubtaskList({ parentTaskId, className }: SubtaskListProps) {
     try {
       await createTask({
         title: newSubtaskTitle,
-        parentTaskId,
+        parentTaskId: numericParentTaskId,
       }).unwrap();
 
       toast.success('Subtask added');
@@ -92,7 +97,7 @@ export function SubtaskList({ parentTaskId, className }: SubtaskListProps) {
     }
   };
 
-  const handleDeleteSubtask = async (subtaskId: string) => {
+  const handleDeleteSubtask = async (subtaskId: number) => {
     if (!confirm('Are you sure you want to delete this subtask?')) return;
 
     try {

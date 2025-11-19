@@ -6,11 +6,11 @@
  */
 
 export interface Note {
-  id: string;
-  userId: string;
-  tenantId: string;
-  taskId?: string;
-  projectId?: string;
+  id: number;
+  userId: number;
+  tenantId: number;
+  taskId?: number;
+  projectId?: number;
 
   content: string; // Markdown formatted
   contentPlain: string; // Plain text for search
@@ -30,14 +30,14 @@ export interface NoteAttachment {
 }
 
 export interface CreateNoteRequest {
-  taskId?: string;
-  projectId?: string;
+  taskId?: number;
+  projectId?: number;
   content: string;
   isPinned?: boolean;
 }
 
 export interface UpdateNoteRequest {
-  id: string;
+  id: number;
   content?: string;
   isPinned?: boolean;
 }

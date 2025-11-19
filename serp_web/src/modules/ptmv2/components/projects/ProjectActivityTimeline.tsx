@@ -19,7 +19,7 @@ import type { ActivityEvent } from '../../types';
 
 interface Props {
   activities: ActivityEvent[];
-  highlightId?: string;
+  highlightId?: number;
 }
 
 const EVENT_COLORS: Record<string, string> = {

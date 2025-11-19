@@ -19,7 +19,7 @@ import { FolderKanban, Plus, CheckCircle2, Clock } from 'lucide-react';
 import { useGetProjectsQuery } from '@/modules/ptmv2/services/projectApi';
 
 export default function ProjectsPage() {
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(
     null
   );
 

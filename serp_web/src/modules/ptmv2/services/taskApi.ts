@@ -18,7 +18,10 @@ import type {
 export const taskApi = ptmApi.injectEndpoints({
   endpoints: (builder) => ({
     // Get all tasks
-    getTasks: builder.query<Task[], { status?: string; projectId?: string }>({
+    getTasks: builder.query<
+      Task[],
+      { status?: string; projectId?: number | string }
+    >({
       queryFn: async (params) => {
         if (USE_MOCK_DATA) {
           const data = await mockApiHandlers.tasks.getAll(params);
@@ -42,7 +45,7 @@ export const taskApi = ptmApi.injectEndpoints({
     }),
 
     // Get single task
-    getTask: builder.query<Task, string>({
+    getTask: builder.query<Task, number>({
       queryFn: async (id) => {
         if (USE_MOCK_DATA) {
           const data = await mockApiHandlers.tasks.getById(id);
@@ -136,7 +139,7 @@ export const taskApi = ptmApi.injectEndpoints({
     }),
 
     // Delete task
-    deleteTask: builder.mutation<void, string>({
+    deleteTask: builder.mutation<void, number>({
       queryFn: async (id) => {
         if (USE_MOCK_DATA) {
           await mockApiHandlers.tasks.delete(id);

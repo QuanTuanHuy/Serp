@@ -24,20 +24,32 @@ import type { Note } from '../../types';
 import { toast } from 'sonner';
 
 interface NoteListProps {
-  taskId?: string;
-  projectId?: string;
-  onNoteClick?: (noteId: string) => void;
+  taskId?: number | string;
+  projectId?: number | string;
+  onNoteClick?: (noteId: number) => void;
 }
 
 export function NoteList({ taskId, projectId, onNoteClick }: NoteListProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Convert to numbers for API calls
+  const numericTaskId = taskId
+    ? typeof taskId === 'string'
+      ? parseInt(taskId, 10)
+      : taskId
+    : undefined;
+  const numericProjectId = projectId
+    ? typeof projectId === 'string'
+      ? parseInt(projectId, 10)
+      : projectId
+    : undefined;
+
   // Use appropriate query based on taskId or projectId
   const { data: taskNotes = [], isLoading: isLoadingTask } =
-    useGetNotesByTaskQuery(taskId!, { skip: !taskId });
+    useGetNotesByTaskQuery(numericTaskId!, { skip: !numericTaskId });
   const { data: projectNotes = [], isLoading: isLoadingProject } =
-    useGetNotesByProjectQuery(projectId!, { skip: !projectId });
+    useGetNotesByProjectQuery(numericProjectId!, { skip: !numericProjectId });
 
   const notes = taskId ? taskNotes : projectNotes;
   const isLoading = taskId ? isLoadingTask : isLoadingProject;
@@ -48,8 +60,8 @@ export function NoteList({ taskId, projectId, onNoteClick }: NoteListProps) {
     try {
       // Content is already JSON string from Novel editor
       await createNote({
-        taskId,
-        projectId,
+        taskId: numericTaskId,
+        projectId: numericProjectId,
         content, // JSON content for full editing capability
         isPinned,
       }).unwrap();

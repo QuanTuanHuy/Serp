@@ -62,7 +62,7 @@ import type { Task, TaskPriority } from '../../types';
 import { toast } from 'sonner';
 
 interface TaskDetailProps {
-  taskId: string | null;
+  taskId: number | string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -72,11 +72,15 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
   const [activeTab, setActiveTab] = useState<'details' | 'notes'>('details');
   const [showNoteEditor, setShowNoteEditor] = useState(false);
 
-  const { data: task, isLoading } = useGetTaskQuery(taskId!, {
-    skip: !taskId,
+  // Convert taskId to number for API calls
+  const numericTaskId =
+    typeof taskId === 'string' ? parseInt(taskId, 10) : taskId;
+
+  const { data: task, isLoading } = useGetTaskQuery(numericTaskId!, {
+    skip: !numericTaskId,
   });
-  const { data: notes = [] } = useGetNotesByTaskQuery(taskId!, {
-    skip: !taskId,
+  const { data: notes = [] } = useGetNotesByTaskQuery(numericTaskId!, {
+    skip: !numericTaskId,
   });
 
   const [updateTask] = useUpdateTaskMutation();
@@ -202,7 +206,7 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
 
     try {
       await createNote({
-        taskId: task.id,
+        taskId: numericTaskId!,
         content,
         isPinned,
       }).unwrap();
@@ -215,13 +219,15 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
   };
 
   const handleUpdateNote = async (
-    noteId: string,
+    noteId: number | string,
     content: string,
     isPinned: boolean
   ) => {
     try {
+      const numericNoteId =
+        typeof noteId === 'string' ? parseInt(noteId, 10) : noteId;
       await updateNote({
-        id: noteId,
+        id: numericNoteId,
         content,
         isPinned,
       }).unwrap();
@@ -232,11 +238,13 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
     }
   };
 
-  const handleDeleteNote = async (noteId: string) => {
+  const handleDeleteNote = async (noteId: number | string) => {
     if (!confirm('Are you sure you want to delete this note?')) return;
 
     try {
-      await deleteNote(noteId).unwrap();
+      const numericNoteId =
+        typeof noteId === 'string' ? parseInt(noteId, 10) : noteId;
+      await deleteNote(numericNoteId).unwrap();
       toast.success('Note deleted');
     } catch (error) {
       toast.error('Failed to delete note');

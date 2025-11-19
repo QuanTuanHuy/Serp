@@ -29,7 +29,7 @@ interface ScheduleSidebarProps {
   unscheduledTasks: Task[];
   focusBlocks: FocusTimeBlock[];
   onTaskDragStart?: (task: Task) => void;
-  onFocusBlockToggle?: (blockId: string) => void;
+  onFocusBlockToggle?: (blockId: number) => void;
   className?: string;
 }
 
@@ -138,7 +138,7 @@ export function ScheduleSidebar({
                       // Store task ID in window for calendar drop handler
                       (window as any).__draggedTaskId = task.id;
                       e.dataTransfer.effectAllowed = 'move';
-                      e.dataTransfer.setData('text/plain', task.id);
+                      e.dataTransfer.setData('text/plain', String(task.id));
                       onTaskDragStart?.(task);
                     }}
                     onDragEnd={() => {

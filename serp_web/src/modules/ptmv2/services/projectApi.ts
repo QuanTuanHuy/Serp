@@ -40,7 +40,7 @@ export const projectApi = ptmApi.injectEndpoints({
     }),
 
     // Get single project
-    getProject: builder.query<Project, string>({
+    getProject: builder.query<Project, number>({
       queryFn: async (id) => {
         if (USE_MOCK_DATA) {
           const data = await mockApiHandlers.projects.getById(id);
@@ -94,7 +94,7 @@ export const projectApi = ptmApi.injectEndpoints({
     }),
 
     // Delete project
-    deleteProject: builder.mutation<void, string>({
+    deleteProject: builder.mutation<void, number>({
       queryFn: async (id) => {
         if (USE_MOCK_DATA) {
           await mockApiHandlers.projects.delete(id);

@@ -54,7 +54,7 @@ import { toast } from 'sonner';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 
 interface ProjectDetailViewProps {
-  projectId: string;
+  projectId: number | string;
   onClose: () => void;
 }
 
@@ -66,23 +66,26 @@ export function ProjectDetailView({
   const [activeTab, setActiveTab] = useState<'tasks' | 'notes'>('tasks');
   const [showNoteEditor, setShowNoteEditor] = useState(false);
 
+  const numericProjectId =
+    typeof projectId === 'string' ? parseInt(projectId, 10) : projectId;
+
   const {
     data: project,
     isLoading: isLoadingProject,
     error: projectError,
-  } = useGetProjectQuery(projectId, {
-    skip: !projectId,
+  } = useGetProjectQuery(numericProjectId, {
+    skip: !numericProjectId,
   });
   const { data: tasks = [], isLoading: isLoadingTasks } = useGetTasksQuery(
     {
-      projectId,
+      projectId: numericProjectId,
     },
     {
-      skip: !projectId,
+      skip: !numericProjectId,
     }
   );
-  const { data: notes = [] } = useGetNotesByProjectQuery(projectId, {
-    skip: !projectId,
+  const { data: notes = [] } = useGetNotesByProjectQuery(numericProjectId, {
+    skip: !numericProjectId,
   });
   const [updateProject] = useUpdateProjectMutation();
   const [deleteProject] = useDeleteProjectMutation();
@@ -109,7 +112,7 @@ export function ProjectDetailView({
     if (!confirm('Are you sure you want to delete this project?')) return;
 
     try {
-      await deleteProject(projectId).unwrap();
+      await deleteProject(numericProjectId).unwrap();
       toast.success('Project deleted');
       onClose();
     } catch (error) {
@@ -135,7 +138,7 @@ export function ProjectDetailView({
   };
 
   const handleUpdateNote = async (
-    noteId: string,
+    noteId: number,
     content: string,
     isPinned: boolean
   ) => {
@@ -152,7 +155,7 @@ export function ProjectDetailView({
     }
   };
 
-  const handleDeleteNote = async (noteId: string) => {
+  const handleDeleteNote = async (noteId: number) => {
     if (!confirm('Are you sure you want to delete this note?')) return;
 
     try {
@@ -206,7 +209,9 @@ export function ProjectDetailView({
     project.deadlineMs < Date.now() &&
     project.status !== 'COMPLETED';
 
-  const projectTasks = tasks.filter((task) => task.projectId === projectId);
+  const projectTasks = tasks.filter(
+    (task) => task.projectId === numericProjectId
+  );
 
   return (
     <div className='space-y-6'>
@@ -390,7 +395,7 @@ export function ProjectDetailView({
               </div>
             </Card>
           ) : (
-            <TaskList filterProjectId={projectId} />
+            <TaskList filterProjectId={numericProjectId} />
           )}
         </TabsContent>
 

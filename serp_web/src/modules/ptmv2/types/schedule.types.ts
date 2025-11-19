@@ -13,9 +13,9 @@ export type ScheduleEventStatus =
 export type AlgorithmType = 'local_heuristic' | 'milp_optimized' | 'hybrid';
 
 export interface SchedulePlan {
-  id: string;
-  userId: string;
-  tenantId: string;
+  id: number;
+  userId: number;
+  tenantId: number;
 
   startDateMs: number;
   endDateMs?: number;
@@ -33,9 +33,9 @@ export interface SchedulePlan {
 }
 
 export interface ScheduleEvent {
-  id: string;
-  schedulePlanId: string;
-  scheduleTaskId: string;
+  id: number;
+  schedulePlanId: number;
+  scheduleTaskId: number;
 
   dateMs: number;
   startMin: number; // Minutes from midnight (0-1439)
@@ -71,9 +71,9 @@ export interface UtilityBreakdown {
 }
 
 export interface FocusTimeBlock {
-  id: string;
-  userId: string;
-  tenantId: string;
+  id: number;
+  userId: number;
+  tenantId: number;
 
   blockName: string;
   dayOfWeek: number; // 0=Sunday, 6=Saturday
@@ -97,7 +97,7 @@ export interface CreateSchedulePlanRequest {
 }
 
 export interface UpdateScheduleEventRequest {
-  id: string;
+  id: number;
   dateMs?: number;
   startMin?: number;
   endMin?: number;

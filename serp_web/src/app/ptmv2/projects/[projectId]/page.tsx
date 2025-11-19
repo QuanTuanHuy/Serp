@@ -39,7 +39,7 @@ export default function ProjectDetailPage({
   const router = useRouter();
   const searchParams = useSearchParams();
   const unwrappedParams = use(params);
-  const projectId = unwrappedParams.projectId;
+  const projectId = parseInt(unwrappedParams.projectId, 10);
 
   const [activeTab, setActiveTab] = useState('details');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -53,7 +53,7 @@ export default function ProjectDetailPage({
   const { data: activities = [] } = useGetEntityActivitiesQuery(
     {
       entityType: 'project',
-      entityId: parseInt(projectId),
+      entityId: projectId,
     },
     {
       skip: !projectId,
@@ -62,7 +62,7 @@ export default function ProjectDetailPage({
 
   // Auto-open edit dialog from URL param
   useEffect(() => {
-    if (editParam === projectId) {
+    if (editParam === projectId.toString()) {
       setIsEditDialogOpen(true);
     }
   }, [editParam, projectId]);
@@ -290,7 +290,11 @@ export default function ProjectDetailPage({
         <TabsContent value='activity'>
           <ProjectActivityTimeline
             activities={activities}
-            highlightId={highlightActivityId ?? undefined}
+            highlightId={
+              highlightActivityId
+                ? parseInt(highlightActivityId, 10)
+                : undefined
+            }
           />
         </TabsContent>
       </Tabs>

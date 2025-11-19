@@ -66,7 +66,10 @@ const extractPlainText = (content: string): string => {
 export const mockApiHandlers = {
   // Task handlers
   tasks: {
-    getAll: async (params?: { status?: string; projectId?: string }) => {
+    getAll: async (params?: {
+      status?: string;
+      projectId?: number | string;
+    }) => {
       await delay();
       let filtered = tasksStore;
 
@@ -74,15 +77,15 @@ export const mockApiHandlers = {
         filtered = filtered.filter((t) => t.status === params.status);
       }
       if (params?.projectId) {
-        filtered = filtered.filter((t) => t.projectId === params.projectId);
+        filtered = filtered.filter((t) => t.projectId == params.projectId);
       }
 
       return filtered;
     },
 
-    getById: async (id: string) => {
+    getById: async (id: number | string) => {
       await delay();
-      const task = tasksStore.find((t) => t.id === id);
+      const task = tasksStore.find((t) => t.id == id);
       if (!task) throw new Error('Task not found');
       return task;
     },
@@ -90,9 +93,9 @@ export const mockApiHandlers = {
     create: async (data: Partial<Task>) => {
       await delay();
       const newTask: Task = {
-        id: `task-${Date.now()}`,
-        userId: 'user-1',
-        tenantId: 'tenant-1',
+        id: Date.now(),
+        userId: 1,
+        tenantId: 1,
         title: data.title || 'New Task',
         description: data.description,
         priority: data.priority || 'MEDIUM',
@@ -117,9 +120,9 @@ export const mockApiHandlers = {
       return newTask;
     },
 
-    update: async (id: string, data: Partial<Task>) => {
+    update: async (id: number | string, data: Partial<Task>) => {
       await delay();
-      const index = tasksStore.findIndex((t) => t.id === id);
+      const index = tasksStore.findIndex((t) => t.id == id);
       if (index === -1) throw new Error('Task not found');
 
       const updatedTask = {
@@ -133,7 +136,7 @@ export const mockApiHandlers = {
       return updatedTask;
     },
 
-    delete: async (id: string) => {
+    delete: async (id: number | string) => {
       await delay();
       tasksStore = tasksStore.filter((t) => t.id !== id);
     },
@@ -153,7 +156,7 @@ export const mockApiHandlers = {
     },
 
     createFromTemplate: async (
-      templateId: string,
+      templateId: number | string,
       variables?: Record<string, string>
     ) => {
       await delay();
@@ -197,9 +200,9 @@ export const mockApiHandlers = {
       return filtered;
     },
 
-    getById: async (id: string) => {
+    getById: async (id: number | string) => {
       await delay();
-      const project = projectsStore.find((p) => p.id === id);
+      const project = projectsStore.find((p) => p.id == id);
       if (!project) throw new Error('Project not found');
       return project;
     },
@@ -207,9 +210,9 @@ export const mockApiHandlers = {
     create: async (data: Partial<Project>) => {
       await delay();
       const newProject: Project = {
-        id: `proj-${Date.now()}`,
-        userId: 'user-1',
-        tenantId: 'tenant-1',
+        id: Date.now(),
+        userId: 1,
+        tenantId: 1,
         title: data.title || 'New Project',
         description: data.description,
         status: 'ACTIVE',
@@ -233,9 +236,9 @@ export const mockApiHandlers = {
       return newProject;
     },
 
-    update: async (id: string, data: Partial<Project>) => {
+    update: async (id: number | string, data: Partial<Project>) => {
       await delay();
-      const index = projectsStore.findIndex((p) => p.id === id);
+      const index = projectsStore.findIndex((p) => p.id == id);
       if (index === -1) throw new Error('Project not found');
 
       const updatedProject = {
@@ -251,7 +254,7 @@ export const mockApiHandlers = {
       return updatedProject;
     },
 
-    delete: async (id: string) => {
+    delete: async (id: number | string) => {
       await delay();
       projectsStore = projectsStore.filter((p) => p.id !== id);
     },
@@ -292,9 +295,9 @@ export const mockApiHandlers = {
       const durationMin = endMin - startMin;
 
       const newEvent: ScheduleEvent = {
-        id: `event-${Date.now()}`,
+        id: Date.now(),
         schedulePlanId: mockSchedulePlan.id,
-        scheduleTaskId: data.scheduleTaskId || `task-${Date.now()}`,
+        scheduleTaskId: data.scheduleTaskId || Date.now(),
         dateMs: data.dateMs || Date.now(),
         startMin,
         endMin,
@@ -324,9 +327,9 @@ export const mockApiHandlers = {
       return newEvent;
     },
 
-    updateEvent: async (id: string, data: Partial<ScheduleEvent>) => {
+    updateEvent: async (id: number, data: Partial<ScheduleEvent>) => {
       await delay();
-      const index = eventsStore.findIndex((e) => e.id === id);
+      const index = eventsStore.findIndex((e) => e.id == id);
       if (index === -1) throw new Error('Event not found');
 
       const updatedEvent = {
@@ -340,9 +343,9 @@ export const mockApiHandlers = {
       return updatedEvent;
     },
 
-    deleteEvent: async (id: string) => {
+    deleteEvent: async (id: number) => {
       await delay();
-      const index = eventsStore.findIndex((e) => e.id === id);
+      const index = eventsStore.findIndex((e) => e.id == id);
       if (index === -1) throw new Error('Event not found');
       eventsStore.splice(index, 1);
     },
@@ -361,8 +364,8 @@ export const mockApiHandlers = {
       await delay();
       return {
         id: `focus-${Date.now()}`,
-        userId: 'user-1',
-        tenantId: 'tenant-1',
+        userId: 1,
+        tenantId: 1,
         ...data,
         isEnabled: true,
         activeStatus: 'ACTIVE' as const,
@@ -387,19 +390,19 @@ export const mockApiHandlers = {
 
   // Note handlers
   notes: {
-    getByTask: async (taskId: string) => {
+    getByTask: async (taskId: number) => {
       await delay();
       return notesStore.filter((n) => n.taskId === taskId);
     },
 
-    getByProject: async (projectId: string) => {
+    getByProject: async (projectId: number) => {
       await delay();
       return notesStore.filter((n) => n.projectId === projectId);
     },
 
-    getById: async (id: string) => {
+    getById: async (id: number | string) => {
       await delay();
-      const note = notesStore.find((n) => n.id === id);
+      const note = notesStore.find((n) => n.id == id);
       if (!note) throw new Error('Note not found');
       return note;
     },
@@ -407,9 +410,9 @@ export const mockApiHandlers = {
     create: async (data: Partial<Note>) => {
       await delay();
       const newNote: Note = {
-        id: `note-${Date.now()}`,
-        userId: 'user-1',
-        tenantId: 'tenant-1',
+        id: Date.now(),
+        userId: 1,
+        tenantId: 1,
         content: data.content || '',
         contentPlain: extractPlainText(data.content || ''),
         attachments: data.attachments || [],
@@ -425,9 +428,9 @@ export const mockApiHandlers = {
       return newNote;
     },
 
-    update: async (id: string, data: Partial<Note>) => {
+    update: async (id: number | string, data: Partial<Note>) => {
       await delay();
-      const index = notesStore.findIndex((n) => n.id === id);
+      const index = notesStore.findIndex((n) => n.id == id);
       if (index === -1) throw new Error('Note not found');
 
       const updatedNote = {
@@ -444,7 +447,7 @@ export const mockApiHandlers = {
       return updatedNote;
     },
 
-    delete: async (id: string) => {
+    delete: async (id: number | string) => {
       await delay();
       notesStore = notesStore.filter((n) => n.id !== id);
     },

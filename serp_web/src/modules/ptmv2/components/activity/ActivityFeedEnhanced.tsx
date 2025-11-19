@@ -25,7 +25,7 @@ import { ActivityItem } from './ActivityItem';
 interface Props {
   maxItems?: number;
   className?: string;
-  highlightActivityId?: string;
+  highlightActivityId?: number;
 }
 
 export function ActivityFeedEnhanced({

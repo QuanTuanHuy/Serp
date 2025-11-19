@@ -27,7 +27,7 @@ import { AlgorithmUtilityBreakdown } from './AlgorithmUtilityBreakdown';
 interface ActivityItemProps {
   activity: ActivityEvent;
   isLatest?: boolean;
-  highlightId?: string;
+  highlightId?: number;
 }
 
 const ACTIVITY_ICON_MAP: Record<string, React.ReactNode> = {

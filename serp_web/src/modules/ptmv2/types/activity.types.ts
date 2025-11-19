@@ -42,9 +42,9 @@ export interface GoalWeights {
 }
 
 export interface ActivityEvent {
-  id: string;
-  userId: string;
-  tenantId: string;
+  id: number;
+  userId: number;
+  tenantId: number;
 
   // Event classification
   eventType: ActivityEventType;

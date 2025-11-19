@@ -50,7 +50,7 @@ export function QuickAddTask({
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('MEDIUM');
   const [estimatedHours, setEstimatedHours] = useState('');
-  const [projectId, setProjectId] = useState('');
+  const [projectId, setProjectId] = useState<number | string>('');
   const [tags, setTags] = useState('');
   const [repeatConfig, setRepeatConfig] = useState<RepeatConfig | null>(null);
 
@@ -92,7 +92,11 @@ export function QuickAddTask({
           estimatedDurationHours: estimatedHours
             ? parseFloat(estimatedHours)
             : undefined,
-          projectId: projectId || undefined,
+          projectId: projectId
+            ? typeof projectId === 'string'
+              ? parseInt(projectId, 10)
+              : projectId
+            : undefined,
           tags: tags.trim() ? tags.split(',').map((t) => t.trim()) : undefined,
           repeatConfig: repeatConfig || undefined,
         }).unwrap();

@@ -10,11 +10,11 @@ export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED';
 export type TaskSource = 'manual' | 'template' | 'imported' | 'ai_generated';
 
 export interface Task {
-  id: string;
-  userId: string;
-  tenantId: string;
-  projectId?: string;
-  parentTaskId?: string;
+  id: number;
+  userId: number;
+  tenantId: number;
+  projectId?: number;
+  parentTaskId?: number;
 
   title: string;
   description?: string;
@@ -32,7 +32,7 @@ export interface Task {
   category?: string;
   tags: string[];
 
-  dependentTaskIds: string[];
+  dependentTaskIds: number[];
   repeatConfig?: RepeatConfig;
   source: TaskSource;
   externalId?: string;
@@ -51,9 +51,9 @@ export interface RepeatConfig {
 }
 
 export interface TaskTemplate {
-  id: string;
-  userId: string;
-  tenantId: string;
+  id: number;
+  userId: number;
+  tenantId: number;
 
   templateName: string;
   titleTemplate: string;
@@ -80,8 +80,8 @@ export interface CreateTaskRequest {
   priority?: TaskPriority;
   estimatedDurationHours?: number;
   deadlineMs?: number;
-  projectId?: string;
-  parentTaskId?: string;
+  projectId?: number;
+  parentTaskId?: number;
   category?: string;
   tags?: string[];
   isDeepWork?: boolean;
@@ -89,7 +89,7 @@ export interface CreateTaskRequest {
 }
 
 export interface UpdateTaskRequest {
-  id: string;
+  id: number;
   title?: string;
   description?: string;
   priority?: TaskPriority;

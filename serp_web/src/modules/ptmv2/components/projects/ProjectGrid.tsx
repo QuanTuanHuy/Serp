@@ -26,7 +26,7 @@ import { cn } from '@/shared/utils';
 
 interface ProjectGridProps {
   className?: string;
-  onProjectClick?: (projectId: string) => void;
+  onProjectClick?: (projectId: number) => void;
 }
 
 export function ProjectGrid({ className, onProjectClick }: ProjectGridProps) {

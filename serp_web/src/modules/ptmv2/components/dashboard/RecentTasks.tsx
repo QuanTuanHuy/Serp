@@ -73,7 +73,7 @@ export function RecentTasks() {
     });
   };
 
-  const handleDelete = async (taskId: string) => {
+  const handleDelete = async (taskId: number) => {
     if (confirm('Are you sure you want to delete this task?')) {
       await deleteTask(taskId);
     }

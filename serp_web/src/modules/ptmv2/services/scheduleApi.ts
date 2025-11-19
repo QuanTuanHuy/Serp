@@ -153,7 +153,7 @@ export const scheduleApi = ptmApi.injectEndpoints({
     }),
 
     // Delete schedule event
-    deleteScheduleEvent: builder.mutation<void, string>({
+    deleteScheduleEvent: builder.mutation<void, number>({
       queryFn: async (id) => {
         if (USE_MOCK_DATA) {
           await mockApiHandlers.schedule.deleteEvent(id);

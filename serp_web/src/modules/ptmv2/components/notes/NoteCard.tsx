@@ -23,7 +23,7 @@ import { NoteDetailDialog } from './NoteDetailDialog';
 
 interface NoteCardProps {
   note: Note;
-  onClick?: (noteId: string) => void;
+  onClick?: (noteId: number) => void;
   className?: string;
 }
 

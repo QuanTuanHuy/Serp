@@ -131,9 +131,15 @@ export default function SchedulePage() {
     }
   };
 
-  const handleExternalDrop = async (taskId: string, start: Date, end: Date) => {
+  const handleExternalDrop = async (
+    taskId: number | string,
+    start: Date,
+    end: Date
+  ) => {
     try {
-      const task = allTasks.find((t) => t.id === taskId);
+      const numericTaskId =
+        typeof taskId === 'string' ? parseInt(taskId, 10) : taskId;
+      const task = allTasks.find((t) => t.id === numericTaskId);
       if (!task) {
         toast.error('Task not found');
         return;
@@ -144,7 +150,7 @@ export default function SchedulePage() {
       const dateMs = new Date(start).setHours(0, 0, 0, 0);
 
       await createScheduleEvent({
-        scheduleTaskId: taskId,
+        scheduleTaskId: numericTaskId,
         dateMs,
         startMin: startMinutes,
         endMin: endMinutes,

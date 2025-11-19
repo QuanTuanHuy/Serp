@@ -39,10 +39,10 @@ interface EventDetailSheetProps {
   event: ScheduleEvent | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onMarkComplete?: (eventId: string) => void;
-  onReschedule?: (eventId: string) => void;
-  onRemove?: (eventId: string) => void;
-  onViewTask?: (taskId: string) => void;
+  onMarkComplete?: (eventId: number) => void;
+  onReschedule?: (eventId: number) => void;
+  onRemove?: (eventId: number) => void;
+  onViewTask?: (taskId: number) => void;
 }
 
 export function EventDetailSheet({

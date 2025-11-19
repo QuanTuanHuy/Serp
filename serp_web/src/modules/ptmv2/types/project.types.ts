@@ -9,9 +9,9 @@ export type ProjectStatus = 'ACTIVE' | 'COMPLETED' | 'ARCHIVED' | 'ON_HOLD';
 export type ProjectPriority = 'LOW' | 'MEDIUM' | 'HIGH';
 
 export interface Project {
-  id: string;
-  userId: string;
-  tenantId: string;
+  id: number;
+  userId: number;
+  tenantId: number;
 
   title: string;
   description?: string;
@@ -50,7 +50,7 @@ export interface CreateProjectRequest {
 }
 
 export interface UpdateProjectRequest {
-  id: string;
+  id: number;
   title?: string;
   description?: string;
   status?: ProjectStatus;
