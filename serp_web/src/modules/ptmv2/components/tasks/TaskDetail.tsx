@@ -111,12 +111,12 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
         handleDelete();
       }
 
-      // Tab 1, 2 to switch tabs
-      if (e.key === '1' && !e.metaKey && !e.ctrlKey && !isEditing) {
+      // Ctrl + Tab 1, 2 to switch tabs
+      if (e.key === '1' && (e.metaKey || e.ctrlKey) && !isEditing) {
         e.preventDefault();
         setActiveTab('details');
       }
-      if (e.key === '2' && !e.metaKey && !e.ctrlKey && !isEditing) {
+      if (e.key === '2' && (e.metaKey || e.ctrlKey) && !isEditing) {
         e.preventDefault();
         setActiveTab('notes');
       }
@@ -279,11 +279,11 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
                       <SheetTitle className='text-2xl'>{task.title}</SheetTitle>
                       <div className='hidden md:flex items-center gap-2 text-xs text-muted-foreground'>
                         <kbd className='px-1.5 py-0.5 bg-muted rounded border'>
-                          ⌘E
+                          Ctrl+E
                         </kbd>
                         <span>Edit</span>
                         <kbd className='px-1.5 py-0.5 bg-muted rounded border ml-2'>
-                          1/2
+                          Ctrl+1/2
                         </kbd>
                         <span>Tabs</span>
                       </div>
