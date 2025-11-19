@@ -207,7 +207,9 @@ export const mockApiHandlers = {
           subtasks,
           depth: task.parentTaskId ? 1 : 0, // Simple depth calculation
           hasSubtasks: subtasks.length > 0,
-          completedSubtasksCount: subtasks.filter((st: any) => st.status === 'COMPLETED').length,
+          completedSubtasksCount: subtasks.filter(
+            (st: any) => st.status === 'COMPLETED'
+          ).length,
           totalSubtasksCount: subtasks.length,
         };
       };
@@ -220,24 +222,36 @@ export const mockApiHandlers = {
       const task = tasksStore.find((t) => t.id == taskId);
       if (!task) throw new Error('Task not found');
 
-      const dependencies = task.dependentTaskIds.map((depId) => {
-        const depTask = tasksStore.find((t) => t.id == depId);
-        return depTask ? {
-          id: `${taskId}-${depId}`,
-          dependentTaskId: taskId,
-          dependencyTaskId: depId,
-          dependencyType: 'FINISH_TO_START' as const,
-          createdAt: new Date().toISOString(),
-          dependencyTask: depTask,
-        } : null;
-      }).filter(Boolean);
+      const dependencies = task.dependentTaskIds
+        .map((depId) => {
+          const depTask = tasksStore.find((t) => t.id == depId);
+          return depTask
+            ? {
+                id: `${taskId}-${depId}`,
+                dependentTaskId: taskId,
+                dependencyTaskId: depId,
+                dependencyType: 'FINISH_TO_START' as const,
+                createdAt: new Date().toISOString(),
+                dependencyTask: depTask,
+              }
+            : null;
+        })
+        .filter(Boolean);
 
       return dependencies;
     },
 
-    addDependency: async (data: { dependentTaskId: number; dependencyTaskId: number; dependencyType?: string }) => {
+    addDependency: async (data: {
+      dependentTaskId: number;
+      dependencyTaskId: number;
+      dependencyType?: string;
+    }) => {
       await delay();
-      const { dependentTaskId, dependencyTaskId, dependencyType = 'FINISH_TO_START' } = data;
+      const {
+        dependentTaskId,
+        dependencyTaskId,
+        dependencyType = 'FINISH_TO_START',
+      } = data;
 
       // Validate tasks exist
       const dependentTask = tasksStore.find((t) => t.id == dependentTaskId);
@@ -258,7 +272,9 @@ export const mockApiHandlers = {
         updatedAt: new Date().toISOString(),
       };
 
-      tasksStore = tasksStore.map((t) => t.id == dependentTaskId ? updatedTask : t);
+      tasksStore = tasksStore.map((t) =>
+        t.id == dependentTaskId ? updatedTask : t
+      );
 
       return {
         id: `${dependentTaskId}-${dependencyTaskId}`,
@@ -270,21 +286,31 @@ export const mockApiHandlers = {
       };
     },
 
-    removeDependency: async (dependentTaskId: number, dependencyTaskId: number) => {
+    removeDependency: async (
+      dependentTaskId: number,
+      dependencyTaskId: number
+    ) => {
       await delay();
       const task = tasksStore.find((t) => t.id == dependentTaskId);
       if (!task) throw new Error('Task not found');
 
       const updatedTask = {
         ...task,
-        dependentTaskIds: task.dependentTaskIds.filter((id) => id !== dependencyTaskId),
+        dependentTaskIds: task.dependentTaskIds.filter(
+          (id) => id !== dependencyTaskId
+        ),
         updatedAt: new Date().toISOString(),
       };
 
-      tasksStore = tasksStore.map((t) => t.id == dependentTaskId ? updatedTask : t);
+      tasksStore = tasksStore.map((t) =>
+        t.id == dependentTaskId ? updatedTask : t
+      );
     },
 
-    validateDependency: async (dependentTaskId: number, dependencyTaskId: number) => {
+    validateDependency: async (
+      dependentTaskId: number,
+      dependencyTaskId: number
+    ) => {
       await delay();
 
       // Check if tasks exist
@@ -314,7 +340,10 @@ export const mockApiHandlers = {
       }
 
       // Check if dependency task is a subtask of dependent task (would create hierarchy issues)
-      const isDependencySubtask = (taskId: number, potentialParentId: number): boolean => {
+      const isDependencySubtask = (
+        taskId: number,
+        potentialParentId: number
+      ): boolean => {
         const task = tasksStore.find((t) => t.id == taskId);
         if (!task || !task.parentTaskId) return false;
         if (task.parentTaskId == potentialParentId) return true;

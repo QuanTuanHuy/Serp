@@ -43,10 +43,10 @@ export interface Task {
   updatedAt: string;
 
   // NEW: Computed fields for hierarchy and dependencies
-  depth?: number;                // 0=root, 1=subtask, 2=sub-subtask
-  hasSubtasks?: boolean;         // Quick check
-  isBlocked?: boolean;           // Has incomplete dependencies
-  blockingTasksCount?: number;   // Number of tasks waiting for this
+  depth?: number; // 0=root, 1=subtask, 2=sub-subtask
+  hasSubtasks?: boolean; // Quick check
+  isBlocked?: boolean; // Has incomplete dependencies
+  blockingTasksCount?: number; // Number of tasks waiting for this
   completedSubtasksCount?: number;
   totalSubtasksCount?: number;
 }
@@ -68,15 +68,15 @@ export interface TaskDependency {
   createdAt: number;
 }
 
-export type DependencyType = 
-  | 'FINISH_TO_START'   // Default: B starts after A finishes
-  | 'START_TO_START'    // B starts when A starts
+export type DependencyType =
+  | 'FINISH_TO_START' // Default: B starts after A finishes
+  | 'START_TO_START' // B starts when A starts
   | 'FINISH_TO_FINISH'; // B finishes when A finishes
 
 export interface DependencyGraph {
   nodes: Task[];
   edges: TaskDependency[];
-  criticalPath?: number[];  // IDs of tasks in critical path
+  criticalPath?: number[]; // IDs of tasks in critical path
 }
 
 // NEW: API Request/Response types
@@ -89,9 +89,9 @@ export interface CreateDependencyRequest {
 
 export interface GetTaskTreeResponse {
   task: Task;
-  children: Task[];      // Direct subtasks
-  descendants: Task[];   // All nested subtasks
-  ancestors: Task[];     // Parent chain to root
+  children: Task[]; // Direct subtasks
+  descendants: Task[]; // All nested subtasks
+  ancestors: Task[]; // Parent chain to root
   dependencies: TaskDependency[];
 }
 

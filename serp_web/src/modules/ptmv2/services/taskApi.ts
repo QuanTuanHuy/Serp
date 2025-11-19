@@ -192,6 +192,105 @@ export const taskApi = ptmApi.injectEndpoints({
         { type: 'ptm/Schedule', id: 'LIST' },
       ],
     }),
+
+    // ========================================
+    // PHASE 1: Subtask Operations
+    // ========================================
+
+    // Get subtasks for a parent task
+    getSubtasks: builder.query<Task[], number>({
+      queryFn: async (parentTaskId) => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.tasks.getSubtasks(parentTaskId);
+          return { data };
+        }
+        // Real API call
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
+      providesTags: (_result, _error, parentTaskId) => [
+        { type: 'ptm/Task', id: `SUBTASKS_${parentTaskId}` },
+        { type: 'ptm/Task', id: 'LIST' },
+      ],
+    }),
+
+    // Get full task tree (task + all descendants + ancestors)
+    getTaskTree: builder.query<
+      {
+        task: Task;
+        children: Task[];
+        descendants: Task[];
+        ancestors: Task[];
+      },
+      number
+    >({
+      queryFn: async (taskId) => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.tasks.getTaskTree(taskId);
+          return { data };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
+      providesTags: (_result, _error, taskId) => [
+        { type: 'ptm/Task', id: taskId },
+        { type: 'ptm/Task', id: `TREE_${taskId}` },
+      ],
+    }),
+
+    // Convert subtask to independent task (remove parent)
+    promoteSubtask: builder.mutation<Task, number>({
+      queryFn: async (taskId) => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.tasks.update(taskId, {
+            parentTaskId: undefined,
+          });
+          return { data };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
+      invalidatesTags: (_result, _error, taskId) => [
+        { type: 'ptm/Task', id: taskId },
+        { type: 'ptm/Task', id: 'LIST' },
+      ],
+    }),
+
+    // Bulk reparent tasks (move to different parent or make independent)
+    reparentTasks: builder.mutation<
+      void,
+      { taskIds: number[]; newParentId?: number }
+    >({
+      queryFn: async ({ taskIds, newParentId }) => {
+        if (USE_MOCK_DATA) {
+          for (const taskId of taskIds) {
+            await mockApiHandlers.tasks.update(taskId, {
+              parentTaskId: newParentId,
+            });
+          }
+          return { data: undefined };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
+      invalidatesTags: [{ type: 'ptm/Task', id: 'LIST' }],
+    }),
   }),
   overrideExisting: false,
 });
@@ -205,4 +304,9 @@ export const {
   useDeleteTaskMutation,
   useGetTaskTemplatesQuery,
   useCreateFromTemplateMutation,
+  // Phase 1: Subtask hooks
+  useGetSubtasksQuery,
+  useGetTaskTreeQuery,
+  usePromoteSubtaskMutation,
+  useReparentTasksMutation,
 } = taskApi;

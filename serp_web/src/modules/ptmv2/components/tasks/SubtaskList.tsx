@@ -1,8 +1,8 @@
 /**
- * PTM v2 - Subtask List Component
+ * PTM v2 - Subtask List Component (Phase 1: Full Task Entities)
  *
  * @author QuanTuanHuy
- * @description Part of Serp Project - Hierarchical subtask management
+ * @description Part of Serp Project - Hierarchical subtask management with full task features
  */
 
 'use client';
@@ -11,94 +11,96 @@ import { useState } from 'react';
 import {
   Plus,
   ChevronRight,
-  ChevronDown,
-  CheckCircle2,
-  Circle,
   MoreVertical,
-  Trash2,
+  ExternalLink,
+  GripVertical,
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
-import { Input } from '@/shared/components/ui/input';
+import { Card } from '@/shared/components/ui/card';
 import { Checkbox } from '@/shared/components/ui/checkbox';
+import { Badge } from '@/shared/components/ui/badge';
+import { Progress } from '@/shared/components/ui/progress';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu';
-import { Progress } from '@/shared/components/ui/progress';
 import { cn } from '@/shared/utils';
+import { toast } from 'sonner';
+
 import {
-  useGetTasksQuery,
+  useGetSubtasksQuery,
   useCreateTaskMutation,
   useUpdateTaskMutation,
   useDeleteTaskMutation,
+  usePromoteSubtaskMutation,
 } from '../../services/taskApi';
+import { PriorityBadge, StatusBadge } from '../shared';
 import type { Task } from '../../types';
-import { toast } from 'sonner';
 
 interface SubtaskListProps {
-  parentTaskId: number | string;
+  parentTaskId: number;
+  allowNesting?: boolean; // Allow creating sub-subtasks
+  showFullDetails?: boolean; // Show priority, dates, etc
+  onTaskClick?: (taskId: number) => void; // Open task detail
   className?: string;
 }
 
-export function SubtaskList({ parentTaskId, className }: SubtaskListProps) {
-  const [isAdding, setIsAdding] = useState(false);
-  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
-  const [isExpanded, setIsExpanded] = useState(true);
+export function SubtaskList({
+  parentTaskId,
+  allowNesting = true,
+  showFullDetails = true,
+  onTaskClick,
+  className,
+}: SubtaskListProps) {
+  const [isCreating, setIsCreating] = useState(false);
+  const [expandedSubtasks, setExpandedSubtasks] = useState<Set<number>>(
+    new Set()
+  );
 
-  const numericParentTaskId =
-    typeof parentTaskId === 'string'
-      ? parseInt(parentTaskId, 10)
-      : parentTaskId;
-
-  const { data: allTasks = [] } = useGetTasksQuery({});
+  const { data: subtasks = [], isLoading } = useGetSubtasksQuery(parentTaskId);
   const [createTask] = useCreateTaskMutation();
   const [updateTask] = useUpdateTaskMutation();
   const [deleteTask] = useDeleteTaskMutation();
+  const [promoteSubtask] = usePromoteSubtaskMutation();
 
-  // Filter subtasks
-  const subtasks = allTasks.filter(
-    (task) => task.parentTaskId === numericParentTaskId
-  );
-  const completedSubtasks = subtasks.filter(
-    (task) => task.status === 'DONE'
-  ).length;
-  const totalSubtasks = subtasks.length;
-  const completionRate =
-    totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
+  const completedCount = subtasks.filter((t) => t.status === 'DONE').length;
+  const totalCount = subtasks.length;
+  const progressPercentage =
+    totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
-  const handleAddSubtask = async () => {
-    if (!newSubtaskTitle.trim()) return;
+  const handleCreateSubtask = async (title: string) => {
+    if (!title.trim()) return;
 
     try {
       await createTask({
-        title: newSubtaskTitle,
-        parentTaskId: numericParentTaskId,
+        title: title.trim(),
+        parentTaskId,
+        priority: 'MEDIUM',
+        estimatedDurationHours: 1,
+        isDeepWork: false,
+        tags: [],
       }).unwrap();
-
-      toast.success('Subtask added');
-      setNewSubtaskTitle('');
-      setIsAdding(false);
+      setIsCreating(false);
+      toast.success('Subtask created');
     } catch (error) {
-      toast.error('Failed to add subtask');
+      toast.error('Failed to create subtask');
     }
   };
 
-  const handleToggleSubtask = async (subtask: Task) => {
-    try {
-      await updateTask({
-        id: subtask.id,
-        status: subtask.status === 'DONE' ? 'TODO' : 'DONE',
-        progressPercentage: subtask.status === 'DONE' ? 0 : 100,
-      }).unwrap();
-    } catch (error) {
-      toast.error('Failed to update subtask');
-    }
+  const handleToggleComplete = async (subtask: Task) => {
+    const newStatus = subtask.status === 'DONE' ? 'TODO' : 'DONE';
+    await updateTask({
+      id: subtask.id,
+      status: newStatus,
+      progressPercentage: newStatus === 'DONE' ? 100 : 0,
+    });
   };
 
   const handleDeleteSubtask = async (subtaskId: number) => {
-    if (!confirm('Are you sure you want to delete this subtask?')) return;
+    if (!confirm('Delete this subtask and all its children?')) return;
 
     try {
       await deleteTask(subtaskId).unwrap();
@@ -108,124 +110,272 @@ export function SubtaskList({ parentTaskId, className }: SubtaskListProps) {
     }
   };
 
+  const handlePromoteToTask = async (subtaskId: number) => {
+    try {
+      await promoteSubtask(subtaskId).unwrap();
+      toast.success('Converted to independent task');
+    } catch (error) {
+      toast.error('Failed to convert');
+    }
+  };
+
+  const toggleExpand = (subtaskId: number) => {
+    const newExpanded = new Set(expandedSubtasks);
+    if (newExpanded.has(subtaskId)) {
+      newExpanded.delete(subtaskId);
+    } else {
+      newExpanded.add(subtaskId);
+    }
+    setExpandedSubtasks(newExpanded);
+  };
+
+  if (isLoading) {
+    return (
+      <div className='text-sm text-muted-foreground'>Loading subtasks...</div>
+    );
+  }
+
   return (
     <div className={cn('space-y-3', className)}>
-      {/* Header */}
-      <div className='flex items-center justify-between'>
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className='flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors'
-        >
-          {isExpanded ? (
-            <ChevronDown className='h-4 w-4' />
-          ) : (
-            <ChevronRight className='h-4 w-4' />
-          )}
-          <span>
-            Subtasks ({completedSubtasks}/{totalSubtasks})
-          </span>
-        </button>
-        <Button variant='ghost' size='sm' onClick={() => setIsAdding(true)}>
-          <Plus className='h-4 w-4 mr-1' />
-          Add
-        </Button>
+      {/* Header with Progress */}
+      <div className='space-y-2'>
+        <div className='flex items-center justify-between'>
+          <h3 className='text-sm font-semibold text-muted-foreground'>
+            Subtasks ({completedCount}/{totalCount})
+          </h3>
+          <Button
+            variant='ghost'
+            size='sm'
+            onClick={() => setIsCreating(true)}
+            disabled={isCreating}
+          >
+            <Plus className='h-4 w-4 mr-1' />
+            Add Subtask
+          </Button>
+        </div>
+
+        {/* Progress Bar */}
+        {totalCount > 0 && (
+          <div className='space-y-1'>
+            <Progress value={progressPercentage} className='h-2' />
+            <p className='text-xs text-muted-foreground text-right'>
+              {Math.round(progressPercentage)}% complete
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Progress Bar */}
-      {totalSubtasks > 0 && (
-        <div className='space-y-1'>
-          <Progress value={completionRate} className='h-2' />
-          <p className='text-xs text-muted-foreground text-right'>
-            {Math.round(completionRate)}% complete
-          </p>
-        </div>
+      {/* Quick Add Input */}
+      {isCreating && (
+        <Card className='p-3'>
+          <input
+            autoFocus
+            type='text'
+            placeholder='Subtask title...'
+            className='w-full bg-transparent border-none outline-none text-sm'
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleCreateSubtask(e.currentTarget.value);
+              } else if (e.key === 'Escape') {
+                setIsCreating(false);
+              }
+            }}
+            onBlur={(e) => {
+              if (e.target.value.trim()) {
+                handleCreateSubtask(e.target.value);
+              } else {
+                setIsCreating(false);
+              }
+            }}
+          />
+        </Card>
       )}
 
-      {/* Subtasks List */}
-      {isExpanded && (
-        <div className='space-y-2'>
-          {/* Add New Subtask Input */}
-          {isAdding && (
-            <div className='flex items-center gap-2 p-2 border rounded-lg bg-muted/50'>
-              <Input
-                value={newSubtaskTitle}
-                onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                placeholder='Subtask title...'
-                className='h-8 text-sm'
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleAddSubtask();
-                  if (e.key === 'Escape') {
-                    setIsAdding(false);
-                    setNewSubtaskTitle('');
-                  }
-                }}
+      {/* Subtask List */}
+      {subtasks.length === 0 && !isCreating ? (
+        <Card className='p-6 text-center text-muted-foreground'>
+          <p className='text-sm'>No subtasks yet</p>
+          <p className='text-xs mt-1'>
+            Click &quot;Add Subtask&quot; to create one
+          </p>
+        </Card>
+      ) : (
+        <div className='space-y-1'>
+          {subtasks.map((subtask) => (
+            <SubtaskItem
+              key={subtask.id}
+              subtask={subtask}
+              showFullDetails={showFullDetails}
+              allowNesting={allowNesting}
+              isExpanded={expandedSubtasks.has(subtask.id)}
+              onToggleExpand={() => toggleExpand(subtask.id)}
+              onToggleComplete={() => handleToggleComplete(subtask)}
+              onDelete={() => handleDeleteSubtask(subtask.id)}
+              onPromote={() => handlePromoteToTask(subtask.id)}
+              onTaskClick={onTaskClick}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Recursive subtask item component
+interface SubtaskItemProps {
+  subtask: Task;
+  showFullDetails: boolean;
+  allowNesting: boolean;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+  onToggleComplete: () => void;
+  onDelete: () => void;
+  onPromote: () => void;
+  onTaskClick?: (taskId: number) => void;
+}
+
+function SubtaskItem({
+  subtask,
+  showFullDetails,
+  allowNesting,
+  isExpanded,
+  onToggleExpand,
+  onToggleComplete,
+  onDelete,
+  onPromote,
+  onTaskClick,
+}: SubtaskItemProps) {
+  const { data: nestedSubtasks = [] } = useGetSubtasksQuery(subtask.id, {
+    skip: !allowNesting,
+  });
+  const hasNested = nestedSubtasks.length > 0;
+
+  return (
+    <div className='space-y-1'>
+      <Card
+        className={cn(
+          'p-2 hover:bg-accent/50 transition-colors group',
+          subtask.status === 'DONE' && 'opacity-60'
+        )}
+      >
+        <div className='flex items-start gap-2'>
+          {/* Drag handle (future: drag & drop support) */}
+          <button
+            className='shrink-0 w-4 h-4 flex items-center justify-center opacity-0 group-hover:opacity-50 cursor-grab'
+            aria-label='Drag to reorder'
+          >
+            <GripVertical className='h-3 w-3' />
+          </button>
+
+          {/* Expand button for nested subtasks */}
+          {allowNesting && (
+            <button
+              onClick={onToggleExpand}
+              className={cn(
+                'shrink-0 w-4 h-4 flex items-center justify-center',
+                !hasNested && 'invisible'
+              )}
+            >
+              <ChevronRight
+                className={cn(
+                  'h-3 w-3 transition-transform',
+                  isExpanded && 'rotate-90'
+                )}
               />
-              <Button size='sm' onClick={handleAddSubtask}>
-                Add
-              </Button>
-              <Button
-                size='sm'
-                variant='ghost'
-                onClick={() => {
-                  setIsAdding(false);
-                  setNewSubtaskTitle('');
-                }}
-              >
-                Cancel
-              </Button>
-            </div>
+            </button>
           )}
 
-          {/* Subtask Items */}
-          {subtasks.length === 0 ? (
-            <div className='text-center py-8 text-sm text-muted-foreground'>
-              No subtasks yet. Click "Add" to create one.
-            </div>
-          ) : (
-            <div className='space-y-1'>
-              {subtasks.map((subtask) => (
-                <div
-                  key={subtask.id}
-                  className='flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors group'
-                >
-                  <Checkbox
-                    checked={subtask.status === 'DONE'}
-                    onCheckedChange={() => handleToggleSubtask(subtask)}
-                  />
-                  <span
-                    className={cn(
-                      'flex-1 text-sm',
-                      subtask.status === 'DONE' &&
-                        'line-through text-muted-foreground'
-                    )}
+          {/* Checkbox */}
+          <Checkbox
+            checked={subtask.status === 'DONE'}
+            onCheckedChange={onToggleComplete}
+            className='mt-0.5'
+          />
+
+          {/* Content */}
+          <div className='flex-1 min-w-0'>
+            <div className='flex items-start gap-2'>
+              <button
+                onClick={() => onTaskClick?.(subtask.id)}
+                className={cn(
+                  'text-sm flex-1 text-left hover:text-primary transition-colors',
+                  subtask.status === 'DONE' &&
+                    'line-through text-muted-foreground'
+                )}
+              >
+                {subtask.title}
+              </button>
+
+              {/* Actions */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    className='h-6 w-6 opacity-0 group-hover:opacity-100'
                   >
-                    {subtask.title}
-                  </span>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant='ghost'
-                        size='icon'
-                        className='h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity'
-                      >
-                        <MoreVertical className='h-3.5 w-3.5' />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align='end'>
-                      <DropdownMenuItem
-                        onClick={() => handleDeleteSubtask(subtask.id)}
-                        className='text-red-600'
-                      >
-                        <Trash2 className='mr-2 h-4 w-4' />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ))}
+                    <MoreVertical className='h-3 w-3' />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align='end'>
+                  <DropdownMenuItem onClick={() => onTaskClick?.(subtask.id)}>
+                    Edit Details
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onPromote}>
+                    <ExternalLink className='h-3 w-3 mr-2' />
+                    Convert to Task
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onDelete} className='text-red-600'>
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-          )}
+
+            {/* Metadata */}
+            {showFullDetails && (
+              <div className='flex items-center gap-2 mt-1 flex-wrap'>
+                <PriorityBadge
+                  priority={subtask.priority}
+                  showLabel={false}
+                  className='h-5'
+                />
+                <StatusBadge status={subtask.status} className='h-5 text-xs' />
+
+                {subtask.deadlineMs && (
+                  <span className='text-xs text-muted-foreground'>
+                    Due: {new Date(subtask.deadlineMs).toLocaleDateString()}
+                  </span>
+                )}
+
+                {subtask.estimatedDurationHours && (
+                  <Badge variant='outline' className='text-xs h-5'>
+                    {subtask.estimatedDurationHours}h
+                  </Badge>
+                )}
+
+                {hasNested && (
+                  <Badge variant='secondary' className='text-xs h-5'>
+                    {nestedSubtasks.length} subtask
+                    {nestedSubtasks.length !== 1 ? 's' : ''}
+                  </Badge>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      {/* Nested subtasks */}
+      {allowNesting && isExpanded && hasNested && (
+        <div className='ml-6 border-l-2 border-border pl-2'>
+          <SubtaskList
+            parentTaskId={subtask.id}
+            allowNesting={allowNesting}
+            showFullDetails={showFullDetails}
+            onTaskClick={onTaskClick}
+          />
         </div>
       )}
     </div>

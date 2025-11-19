@@ -367,7 +367,17 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
 
                   {/* Subtasks Section */}
                   <div className='p-4 bg-muted/30 rounded-lg'>
-                    <SubtaskList parentTaskId={task.id} />
+                    <SubtaskList
+                      parentTaskId={task.id}
+                      allowNesting={true}
+                      showFullDetails={true}
+                      onTaskClick={(subtaskId) => {
+                        // Open subtask in new detail sheet (future: nested sheets)
+                        toast.info(
+                          'Click to open subtask details (coming soon)'
+                        );
+                      }}
+                    />
                   </div>
 
                   <Separator />
