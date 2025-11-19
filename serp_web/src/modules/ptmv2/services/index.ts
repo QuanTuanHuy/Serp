@@ -10,3 +10,4 @@ export * from './taskApi';
 export * from './projectApi';
 export * from './scheduleApi';
 export * from './noteApi';
+export * from './activityApi';
