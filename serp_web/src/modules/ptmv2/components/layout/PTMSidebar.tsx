@@ -53,12 +53,6 @@ const navItems = [
     href: '/ptmv2/schedule',
   },
   {
-    id: 'focus_time',
-    label: 'Focus Time',
-    icon: Lock,
-    href: '/ptmv2/focus-time',
-  },
-  {
     id: 'activity',
     label: 'Activity',
     icon: CheckSquare,
@@ -137,21 +131,6 @@ export function PTMSidebar() {
           )}
         </Button>
       </div>
-
-      {/* Quick Add Button */}
-      {/* <div className='p-3'>
-        <Button
-          onClick={handleQuickAdd}
-          className={cn(
-            'w-full justify-start gap-2',
-            sidebarCollapsed && 'justify-center px-2'
-          )}
-          size={sidebarCollapsed ? 'icon' : 'default'}
-        >
-          <Plus className='h-4 w-4' />
-          {!sidebarCollapsed && <span>Quick Add</span>}
-        </Button>
-      </div> */}
 
       {/* Navigation */}
       <nav className='flex-1 px-3 py-2 space-y-1'>
