@@ -17,6 +17,14 @@ import {
 } from '@/modules/ptmv2';
 import type { OptimizationConfig, ScheduleEvent } from '@/modules/ptmv2';
 import { useGetTasksQuery } from '@/modules/ptmv2/services/taskApi';
+import { GanttView } from '@/modules/ptmv2/components/schedule/GanttView';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/shared/components/ui/tabs';
+import { Calendar, GanttChart } from 'lucide-react';
 import {
   useGetFocusTimeBlocksQuery,
   useTriggerOptimizationMutation,
@@ -29,6 +37,7 @@ import { toast } from 'sonner';
 
 export default function SchedulePage() {
   const router = useRouter();
+  const [viewMode, setViewMode] = useState<'calendar' | 'gantt'>('calendar');
   const [optimizationDialogOpen, setOptimizationDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(
     null
@@ -224,26 +233,60 @@ export default function SchedulePage() {
         onOptimize={() => setOptimizationDialogOpen(true)}
       />
 
-      {/* Main Content: Sidebar + Calendar */}
-      <div className='flex gap-6'>
-        <ScheduleSidebar
-          unscheduledTasks={unscheduledTasks}
-          focusBlocks={focusBlocks}
-          onTaskDragStart={(task) => {
-            console.log('Drag started:', task.title);
-          }}
-          onFocusBlockToggle={(blockId) => {
-            console.log('Focus block toggled:', blockId);
-          }}
-        />
+      {/* View Tabs: Calendar & Gantt */}
+      <Tabs
+        value={viewMode}
+        onValueChange={(v) => setViewMode(v as 'calendar' | 'gantt')}
+      >
+        <TabsList className='grid w-full max-w-md grid-cols-2'>
+          <TabsTrigger value='calendar' className='flex items-center gap-2'>
+            <Calendar className='h-4 w-4' />
+            Calendar View
+          </TabsTrigger>
+          <TabsTrigger value='gantt' className='flex items-center gap-2'>
+            <GanttChart className='h-4 w-4' />
+            Timeline View
+          </TabsTrigger>
+        </TabsList>
 
-        <div className='flex-1'>
-          <CalendarView
-            onEventSelect={handleEventSelect}
-            onExternalDrop={handleExternalDrop}
-          />
-        </div>
-      </div>
+        {/* Calendar View */}
+        <TabsContent value='calendar' className='mt-6'>
+          <div className='flex gap-6'>
+            <ScheduleSidebar
+              unscheduledTasks={unscheduledTasks}
+              focusBlocks={focusBlocks}
+              onTaskDragStart={(task) => {
+                console.log('Drag started:', task.title);
+              }}
+              onFocusBlockToggle={(blockId) => {
+                console.log('Focus block toggled:', blockId);
+              }}
+            />
+
+            <div className='flex-1'>
+              <CalendarView
+                onEventSelect={handleEventSelect}
+                onExternalDrop={handleExternalDrop}
+              />
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Gantt Timeline View */}
+        <TabsContent value='gantt' className='mt-6'>
+          <div className='border rounded-lg overflow-hidden bg-card'>
+            <div className='p-4 border-b'>
+              <h3 className='text-lg font-semibold'>Project Timeline</h3>
+              <p className='text-sm text-muted-foreground'>
+                Visualize task schedules and dependencies on a Gantt chart
+              </p>
+            </div>
+            <div className='h-[700px]'>
+              <GanttView />
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Event Detail Sheet */}
       {selectedEvent && (

@@ -7,13 +7,21 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { QuickAddTask, TaskList } from '@/modules/ptmv2';
 import { Card } from '@/shared/components/ui/card';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/shared/components/ui/tabs';
 import { useGetTasksQuery } from '@/modules/ptmv2/services/taskApi';
-import { CheckSquare, Circle, Clock } from 'lucide-react';
+import { DependencyGraph } from '@/modules/ptmv2/components/tasks/DependencyGraph';
+import { CheckSquare, Circle, Clock, Network } from 'lucide-react';
 
 export default function TasksPage() {
+  const [activeTab, setActiveTab] = useState('list');
   const { data: tasks = [], isLoading } = useGetTasksQuery({});
 
   // Calculate real-time stats
@@ -88,8 +96,42 @@ export default function TasksPage() {
         </Card>
       </div>
 
-      {/* Task List */}
-      <TaskList />
+      {/* Task Views - List & Dependency Graph */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className='grid w-full max-w-md grid-cols-2'>
+          <TabsTrigger value='list' className='flex items-center gap-2'>
+            <CheckSquare className='h-4 w-4' />
+            List View
+          </TabsTrigger>
+          <TabsTrigger value='dependencies' className='flex items-center gap-2'>
+            <Network className='h-4 w-4' />
+            Dependencies
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value='list' className='mt-6'>
+          <TaskList />
+        </TabsContent>
+
+        <TabsContent value='dependencies' className='mt-6'>
+          <Card className='p-6'>
+            <div className='space-y-4'>
+              <div>
+                <h3 className='text-lg font-semibold'>
+                  Task Dependencies Graph
+                </h3>
+                <p className='text-sm text-muted-foreground'>
+                  Visualize task dependencies and identify blocking
+                  relationships
+                </p>
+              </div>
+              <div className='h-[600px] border rounded-lg overflow-hidden'>
+                <DependencyGraph />
+              </div>
+            </div>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

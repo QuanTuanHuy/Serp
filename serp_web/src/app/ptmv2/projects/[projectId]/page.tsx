@@ -30,6 +30,9 @@ import { EditProjectDialog } from '@/modules/ptmv2/components/projects/EditProje
 import { ProjectActivityTimeline } from '@/modules/ptmv2/components/projects';
 import { TaskList } from '@/modules/ptmv2/components/tasks/TaskList';
 import { PriorityBadge } from '@/modules/ptmv2/components/shared/PriorityBadge';
+import { DependencyGraph } from '@/modules/ptmv2/components/tasks/DependencyGraph';
+import { GanttView } from '@/modules/ptmv2/components/schedule/GanttView';
+import { Network, GanttChart } from 'lucide-react';
 
 export default function ProjectDetailPage({
   params,
@@ -130,6 +133,14 @@ export default function ProjectDetailPage({
                 {projectTasks.length}
               </Badge>
             )}
+          </TabsTrigger>
+          <TabsTrigger value='dependencies' className='flex items-center gap-2'>
+            <Network className='h-4 w-4' />
+            Dependencies
+          </TabsTrigger>
+          <TabsTrigger value='timeline' className='flex items-center gap-2'>
+            <GanttChart className='h-4 w-4' />
+            Timeline
           </TabsTrigger>
           <TabsTrigger value='activity'>
             Activity
@@ -285,6 +296,60 @@ export default function ProjectDetailPage({
               </Button>
             </Card>
           )}
+        </TabsContent>
+
+        {/* Dependencies Tab */}
+        <TabsContent value='dependencies'>
+          <Card className='p-6'>
+            <div className='space-y-4'>
+              <div>
+                <h3 className='text-lg font-semibold'>
+                  Project Dependencies Graph
+                </h3>
+                <p className='text-sm text-muted-foreground'>
+                  Visualize dependencies between tasks in this project
+                </p>
+              </div>
+              {projectTasks.length > 0 ? (
+                <div className='h-[600px] border rounded-lg overflow-hidden'>
+                  <DependencyGraph projectId={projectId} />
+                </div>
+              ) : (
+                <Card className='p-12 text-center border-dashed'>
+                  <Network className='h-12 w-12 mx-auto mb-4 text-muted-foreground' />
+                  <p className='text-muted-foreground'>
+                    No tasks to visualize dependencies
+                  </p>
+                </Card>
+              )}
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* Timeline Tab */}
+        <TabsContent value='timeline'>
+          <Card className='p-6'>
+            <div className='space-y-4'>
+              <div>
+                <h3 className='text-lg font-semibold'>Project Timeline</h3>
+                <p className='text-sm text-muted-foreground'>
+                  View task schedules and dependencies on a Gantt chart
+                </p>
+              </div>
+              {projectTasks.length > 0 ? (
+                <div className='h-[600px] border rounded-lg overflow-hidden'>
+                  <GanttView projectId={projectId} />
+                </div>
+              ) : (
+                <Card className='p-12 text-center border-dashed'>
+                  <GanttChart className='h-12 w-12 mx-auto mb-4 text-muted-foreground' />
+                  <p className='text-muted-foreground'>
+                    No tasks to display on timeline
+                  </p>
+                </Card>
+              )}
+            </div>
+          </Card>
         </TabsContent>
 
         <TabsContent value='activity'>
