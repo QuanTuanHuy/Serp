@@ -588,7 +588,7 @@ const _mockActivityEventsData: ActivityEvent[] = [
       teamSize: 5,
       deadline: Date.now() + 30 * 24 * 60 * 60 * 1000,
     },
-    navigationUrl: '/ptmv2/projects/1',
+    navigationUrl: '/ptmv2/projects/proj-1',
     navigationParams: {
       tab: 'overview',
     },

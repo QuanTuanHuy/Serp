@@ -11,3 +11,4 @@ export { TaskList } from './TaskList';
 export { TaskDetail } from './TaskDetail';
 export { RecurringTaskConfig } from './RecurringTaskConfig';
 export { RecurringBadge } from './RecurringBadge';
+export { TaskActivityTimeline } from './TaskActivityTimeline';

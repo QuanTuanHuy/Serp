@@ -17,7 +17,9 @@ import {
   Check,
   ListTodo,
   Brain,
+  ExternalLink,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Card } from '@/shared/components/ui/card';
 import { Checkbox } from '@/shared/components/ui/checkbox';
 import {
@@ -44,10 +46,17 @@ import { toast } from 'sonner';
 interface TaskCardProps {
   task: Task;
   onClick?: (taskId: string) => void;
+  onNavigate?: boolean; // If true, navigate to detail page instead of opening sheet
   className?: string;
 }
 
-export function TaskCard({ task, onClick, className }: TaskCardProps) {
+export function TaskCard({
+  task,
+  onClick,
+  onNavigate = false,
+  className,
+}: TaskCardProps) {
+  const router = useRouter();
   const [updateTask] = useUpdateTaskMutation();
   const [deleteTask] = useDeleteTaskMutation();
 
@@ -112,6 +121,14 @@ export function TaskCard({ task, onClick, className }: TaskCardProps) {
     }
   };
 
+  const handleCardClick = () => {
+    if (onNavigate) {
+      router.push(`/ptmv2/tasks/${task.id}`);
+    } else {
+      onClick?.(task.id);
+    }
+  };
+
   return (
     <Card
       className={cn(
@@ -124,7 +141,7 @@ export function TaskCard({ task, onClick, className }: TaskCardProps) {
         task.isDeepWork && 'border-l-4 border-l-purple-500',
         className
       )}
-      onClick={() => onClick?.(task.id)}
+      onClick={handleCardClick}
     >
       <div className='flex items-start gap-3'>
         {/* Checkbox */}
@@ -255,6 +272,16 @@ export function TaskCard({ task, onClick, className }: TaskCardProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align='end'>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push(`/ptmv2/tasks/${task.id}`);
+              }}
+            >
+              <ExternalLink className='mr-2 h-4 w-4' />
+              Open Detail
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             {task.status === 'TODO' && (
               <DropdownMenuItem onClick={handleStart}>
                 <Play className='mr-2 h-4 w-4' />

@@ -10,3 +10,4 @@ export { ProjectGrid } from './ProjectGrid';
 export { CreateProjectDialog } from './CreateProjectDialog';
 export { EditProjectDialog } from './EditProjectDialog';
 export { ProjectDetailView } from './ProjectDetailView';
+export { ProjectActivityTimeline } from './ProjectActivityTimeline';
