@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useEffect } from 'react';
 import ReactFlow, {
   Node,
   Edge,
@@ -38,26 +38,26 @@ function TaskNode({ data }: { data: Task }) {
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'HIGH':
-        return 'border-red-500 bg-red-50';
+        return 'border-red-500 bg-red-50 dark:bg-red-950/30 dark:text-red-100';
       case 'MEDIUM':
-        return 'border-yellow-500 bg-yellow-50';
+        return 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30 dark:text-yellow-100';
       case 'LOW':
-        return 'border-blue-500 bg-blue-50';
+        return 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 dark:text-blue-100';
       default:
-        return 'border-gray-500 bg-gray-50';
+        return 'border-gray-500 bg-gray-50 dark:bg-gray-800 dark:text-gray-100';
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'DONE':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300';
       case 'IN_PROGRESS':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300';
       case 'TODO':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700/60 dark:text-gray-300';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700/60 dark:text-gray-300';
     }
   };
 
@@ -109,10 +109,12 @@ export function DependencyGraph({
     const taskIdSet = new Set(allTasks.map((t) => t.id));
     const allMockDependencies = getMockTaskDependencies();
 
-    return allMockDependencies.filter(
+    const filtered = allMockDependencies.filter(
       (dep: TaskDependency) =>
         taskIdSet.has(dep.taskId) && taskIdSet.has(dep.dependsOnTaskId)
     );
+
+    return filtered;
   }, [allTasks]);
 
   // Convert tasks to nodes
@@ -146,6 +148,8 @@ export function DependencyGraph({
       label:
         dep.dependencyType === 'FINISH_TO_START' ? 'FS' : dep.dependencyType,
       style: { stroke: '#64748b', strokeWidth: 2 },
+      labelStyle: { fill: '#64748b', fontWeight: 600 },
+      labelBgStyle: { fill: 'white', fillOpacity: 0.8 },
     }));
   }, [allDependencies]);
 
@@ -198,8 +202,13 @@ export function DependencyGraph({
     setNodes(layoutedNodes);
   }, [initialNodes, initialEdges, setNodes]);
 
-  // Auto-layout on mount
-  useMemo(() => {
+  // Sync edges when initialEdges changes
+  useEffect(() => {
+    setEdges(initialEdges);
+  }, [initialEdges, setEdges]);
+
+  // Sync nodes when initialNodes changes
+  useEffect(() => {
     if (initialNodes.length > 0) {
       autoLayout();
     }
