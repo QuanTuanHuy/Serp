@@ -8,7 +8,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import {
   Dialog,
@@ -28,6 +28,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui/select';
+import { Calendar } from '@/shared/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/shared/components/ui/popover';
+import { format } from 'date-fns';
 import { useUpdateProjectMutation } from '../../services/projectApi';
 import type { Project, ProjectStatus, ProjectPriority } from '../../types';
 import { toast } from 'sonner';
@@ -64,6 +71,7 @@ export function EditProjectDialog({
       ? new Date(project.deadlineMs).toISOString().split('T')[0]
       : ''
   );
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const [updateProject, { isLoading }] = useUpdateProjectMutation();
 
@@ -79,6 +87,7 @@ export function EditProjectDialog({
         ? new Date(project.deadlineMs).toISOString().split('T')[0]
         : ''
     );
+    setIsCalendarOpen(false);
   }, [project]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -227,13 +236,38 @@ export function EditProjectDialog({
 
               <div className='space-y-2'>
                 <Label htmlFor='edit-deadline'>Deadline</Label>
-                <Input
-                  id='edit-deadline'
-                  type='date'
-                  value={deadline}
-                  onChange={(e) => setDeadline(e.target.value)}
-                  disabled={isLoading}
-                />
+                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant='outline'
+                      className={`w-full justify-start text-left font-normal ${
+                        !deadline && 'text-muted-foreground'
+                      }`}
+                      disabled={isLoading}
+                    >
+                      <CalendarIcon className='mr-2 h-4 w-4' />
+                      {deadline
+                        ? format(new Date(deadline), 'PPP')
+                        : 'Pick a date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className='w-auto p-0' align='start'>
+                    <Calendar
+                      mode='single'
+                      selected={deadline ? new Date(deadline) : undefined}
+                      onSelect={(date) => {
+                        setDeadline(
+                          date ? date.toISOString().split('T')[0] : ''
+                        );
+                        setIsCalendarOpen(false);
+                      }}
+                      disabled={(date) =>
+                        date < new Date(new Date().setHours(0, 0, 0, 0))
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
           </div>

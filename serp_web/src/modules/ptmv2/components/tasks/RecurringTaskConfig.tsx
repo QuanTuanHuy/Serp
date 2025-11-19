@@ -8,7 +8,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, Repeat, X } from 'lucide-react';
+import { Calendar as CalendarIcon, Repeat, X } from 'lucide-react';
 import { Label } from '@/shared/components/ui/label';
 import {
   Select,
@@ -20,6 +20,13 @@ import {
 import { Input } from '@/shared/components/ui/input';
 import { Button } from '@/shared/components/ui/button';
 import { Badge } from '@/shared/components/ui/badge';
+import { Calendar } from '@/shared/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/shared/components/ui/popover';
+import { format } from 'date-fns';
 import { cn } from '@/shared/utils';
 
 export interface RepeatConfig {
@@ -59,6 +66,7 @@ export function RecurringTaskConfig({
   const [selectedDays, setSelectedDays] = useState<number[]>(
     value?.daysOfWeek || []
   );
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   // Update parent when config changes
   useEffect(() => {
@@ -242,24 +250,42 @@ export function RecurringTaskConfig({
 
       {/* End Date (Optional) */}
       <div className='space-y-2'>
-        <Label htmlFor='endDate'>End Date (Optional)</Label>
-        <div className='flex items-center gap-2'>
-          <Calendar className='h-4 w-4 text-muted-foreground' />
-          <Input
-            id='endDate'
-            type='date'
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className='flex-1'
-            min={new Date().toISOString().split('T')[0]}
-          />
+        <Label>End Date (Optional)</Label>
+        <div className='flex gap-2'>
+          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant='outline'
+                className={cn(
+                  'flex-1 justify-start text-left font-normal',
+                  !endDate && 'text-muted-foreground'
+                )}
+              >
+                <CalendarIcon className='mr-2 h-4 w-4' />
+                {endDate ? format(new Date(endDate), 'PPP') : 'Pick a date'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className='w-auto p-0' align='start'>
+              <Calendar
+                mode='single'
+                selected={endDate ? new Date(endDate) : undefined}
+                onSelect={(date) => {
+                  setEndDate(date ? date.toISOString().split('T')[0] : '');
+                  setIsCalendarOpen(false);
+                }}
+                disabled={(date) =>
+                  date < new Date(new Date().setHours(0, 0, 0, 0))
+                }
+              />
+            </PopoverContent>
+          </Popover>
           {endDate && (
             <Button
               type='button'
               variant='ghost'
               size='icon'
               onClick={() => setEndDate('')}
-              className='h-8 w-8'
+              className='h-10 w-10'
             >
               <X className='h-4 w-4' />
             </Button>

@@ -23,6 +23,7 @@ import { Input } from '@/shared/components/ui/input';
 import { Badge } from '@/shared/components/ui/badge';
 import { cn } from '@/shared/utils';
 import { toast } from 'sonner';
+import { TimePicker } from '@/shared/components/ui/time-picker';
 import type { AvailabilitySlot, AvailabilitySlotType } from '../../types';
 
 interface AvailabilityCalendarProps {
@@ -333,14 +334,13 @@ export function AvailabilityCalendar({
                             {/* Time Inputs */}
                             <div className='flex-1 space-y-3'>
                               <div className='flex items-center gap-2'>
-                                <Input
-                                  type='time'
+                                <TimePicker
                                   value={slot.startTime}
-                                  onChange={(e) =>
+                                  onChange={(value) =>
                                     updateSlot(
                                       slot.originalIndex!,
                                       'startTime',
-                                      e.target.value
+                                      value
                                     )
                                   }
                                   className='w-32'
@@ -348,14 +348,13 @@ export function AvailabilityCalendar({
                                 <span className='text-muted-foreground'>
                                   to
                                 </span>
-                                <Input
-                                  type='time'
+                                <TimePicker
                                   value={slot.endTime}
-                                  onChange={(e) =>
+                                  onChange={(value) =>
                                     updateSlot(
                                       slot.originalIndex!,
                                       'endTime',
-                                      e.target.value
+                                      value
                                     )
                                   }
                                   className='w-32'

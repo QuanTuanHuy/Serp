@@ -137,7 +137,7 @@ export function QuickAddTask({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className='max-w-2xl'>
+      <DialogContent className='!max-w-2xl'>
         <DialogHeader>
           <DialogTitle className='flex items-center gap-2'>
             ⚡ Quick Add Task

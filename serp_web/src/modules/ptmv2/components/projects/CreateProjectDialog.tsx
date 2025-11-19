@@ -8,7 +8,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import {
   Dialog,
@@ -29,6 +29,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui/select';
+import { Calendar } from '@/shared/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/shared/components/ui/popover';
+import { format } from 'date-fns';
 import { useCreateProjectMutation } from '../../services/projectApi';
 import type { ProjectStatus, ProjectPriority } from '../../types';
 import { toast } from 'sonner';
@@ -56,6 +63,7 @@ export function CreateProjectDialog({ trigger }: CreateProjectDialogProps) {
   const [priority, setPriority] = useState<ProjectPriority>('MEDIUM');
   const [color, setColor] = useState(PROJECT_COLORS[0].value);
   const [deadline, setDeadline] = useState('');
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const [createProject, { isLoading }] = useCreateProjectMutation();
 
@@ -229,13 +237,37 @@ export function CreateProjectDialog({ trigger }: CreateProjectDialogProps) {
 
               <div className='space-y-2'>
                 <Label htmlFor='deadline'>Deadline</Label>
-                <Input
-                  id='deadline'
-                  type='date'
-                  value={deadline}
-                  onChange={(e) => setDeadline(e.target.value)}
-                  disabled={isLoading}
-                />
+                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant='outline'
+                      className={`w-full justify-start text-left font-normal ${
+                        !deadline && 'text-muted-foreground'
+                      }`}
+                      disabled={isLoading}
+                    >
+                      <CalendarIcon className='mr-2 h-4 w-4' />
+                      {deadline
+                        ? format(new Date(deadline), 'PPP')
+                        : 'Pick a date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className='w-auto p-0' align='start'>
+                    <Calendar
+                      mode='single'
+                      selected={deadline ? new Date(deadline) : undefined}
+                      onSelect={(date) => {
+                        setDeadline(
+                          date ? date.toISOString().split('T')[0] : ''
+                        );
+                        setIsCalendarOpen(false);
+                      }}
+                      disabled={(date) =>
+                        date < new Date(new Date().setHours(0, 0, 0, 0))
+                      }
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
           </div>
