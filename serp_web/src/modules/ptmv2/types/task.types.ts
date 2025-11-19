@@ -41,6 +41,14 @@ export interface Task {
   activeStatus: 'ACTIVE' | 'INACTIVE';
   createdAt: string;
   updatedAt: string;
+
+  // NEW: Computed fields for hierarchy and dependencies
+  depth?: number;                // 0=root, 1=subtask, 2=sub-subtask
+  hasSubtasks?: boolean;         // Quick check
+  isBlocked?: boolean;           // Has incomplete dependencies
+  blockingTasksCount?: number;   // Number of tasks waiting for this
+  completedSubtasksCount?: number;
+  totalSubtasksCount?: number;
 }
 
 export interface RepeatConfig {
@@ -48,6 +56,50 @@ export interface RepeatConfig {
   interval: number;
   endDate?: string;
   daysOfWeek?: number[];
+}
+
+// NEW: Dependency types
+export interface TaskDependency {
+  id: number;
+  taskId: number;
+  dependsOnTaskId: number;
+  dependencyType: DependencyType;
+  lagDays?: number;
+  createdAt: number;
+}
+
+export type DependencyType = 
+  | 'FINISH_TO_START'   // Default: B starts after A finishes
+  | 'START_TO_START'    // B starts when A starts
+  | 'FINISH_TO_FINISH'; // B finishes when A finishes
+
+export interface DependencyGraph {
+  nodes: Task[];
+  edges: TaskDependency[];
+  criticalPath?: number[];  // IDs of tasks in critical path
+}
+
+// NEW: API Request/Response types
+export interface CreateDependencyRequest {
+  taskId: number;
+  dependsOnTaskId: number;
+  dependencyType?: DependencyType;
+  lagDays?: number;
+}
+
+export interface GetTaskTreeResponse {
+  task: Task;
+  children: Task[];      // Direct subtasks
+  descendants: Task[];   // All nested subtasks
+  ancestors: Task[];     // Parent chain to root
+  dependencies: TaskDependency[];
+}
+
+export interface DependencyValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  wouldCreateCycle?: boolean;
 }
 
 export interface TaskTemplate {
