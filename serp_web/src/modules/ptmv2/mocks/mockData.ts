@@ -12,6 +12,8 @@ import type {
   SchedulePlan,
   FocusTimeBlock,
   TaskTemplate,
+  ActivityEvent,
+  ActivityEventType,
 } from '../types';
 
 // Mock Tasks - Using function to ensure mutable arrays
@@ -476,3 +478,180 @@ export const mockNotes: import('../types').Note[] = [
     updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
   },
 ];
+
+// Mock Activity Events
+const _mockActivityEventsData: ActivityEvent[] = [
+  {
+    id: 'act-1',
+    userId: 'user-1',
+    tenantId: 'tenant-1',
+    eventType: 'task_created',
+    entityType: 'task',
+    entityId: 1,
+    title: 'Created task "Review Pull Requests"',
+    description: 'New high-priority task added to Sprint 23',
+    metadata: {
+      priority: 'HIGH',
+      duration: 120,
+      projectName: 'Backend API',
+    },
+    navigationUrl: '/ptmv2/tasks/1',
+    navigationParams: {
+      openDetail: 'true',
+    },
+    createdAt: Date.now() - 2 * 60 * 60 * 1000, // 2 hours ago
+  },
+  {
+    id: 'act-2',
+    userId: 'user-1',
+    tenantId: 'tenant-1',
+    eventType: 'schedule_optimized',
+    entityType: 'schedule',
+    title: 'Schedule optimized for today',
+    description: '15 tasks scheduled with optimal time allocation',
+    algorithmType: 'hybrid',
+    utilityBreakdown: {
+      priorityScore: 0.85,
+      deadlineScore: 0.72,
+      focusTimeBonus: 0.15,
+      contextSwitchPenalty: -0.12,
+      totalUtility: 1.6,
+      reason: 'Optimized for deadline urgency and focus time availability',
+    },
+    executionTimeMs: 245,
+    goalWeights: {
+      priority: 0.4,
+      deadline: 0.3,
+      focusTime: 0.2,
+      contextSwitch: 0.1,
+    },
+    tasksAffected: 15,
+    navigationUrl: '/ptmv2/schedule',
+    createdAt: Date.now() - 3 * 60 * 60 * 1000, // 3 hours ago
+  },
+  {
+    id: 'act-3',
+    userId: 'user-1',
+    tenantId: 'tenant-1',
+    eventType: 'task_completed',
+    entityType: 'task',
+    entityId: 4,
+    title: 'Completed "Team Standup Meeting"',
+    description: 'Task marked as done',
+    metadata: {
+      duration: 15,
+      onTime: true,
+    },
+    navigationUrl: '/ptmv2/tasks/4',
+    createdAt: Date.now() - 6 * 60 * 60 * 1000, // 6 hours ago
+  },
+  {
+    id: 'act-4',
+    userId: 'user-1',
+    tenantId: 'tenant-1',
+    eventType: 'algorithm_executed',
+    entityType: 'algorithm',
+    title: 'MILP optimization completed',
+    description:
+      'Deep optimization found better schedule arrangement (+18% utility)',
+    algorithmType: 'milp_optimized',
+    utilityBreakdown: {
+      priorityScore: 0.92,
+      deadlineScore: 0.88,
+      focusTimeBonus: 0.25,
+      contextSwitchPenalty: -0.08,
+      totalUtility: 1.97,
+      reason:
+        'MILP solver found globally optimal solution considering all constraints',
+    },
+    executionTimeMs: 1850,
+    goalWeights: {
+      priority: 0.35,
+      deadline: 0.35,
+      focusTime: 0.2,
+      contextSwitch: 0.1,
+    },
+    tasksAffected: 22,
+    navigationUrl: '/ptmv2/schedule',
+    createdAt: Date.now() - 12 * 60 * 60 * 1000, // 12 hours ago
+  },
+  {
+    id: 'act-5',
+    userId: 'user-1',
+    tenantId: 'tenant-1',
+    eventType: 'project_created',
+    entityType: 'project',
+    entityId: 1,
+    title: 'Created project "Backend API"',
+    description: 'New project for Q4 2025 roadmap',
+    metadata: {
+      teamSize: 5,
+      deadline: Date.now() + 30 * 24 * 60 * 60 * 1000,
+    },
+    navigationUrl: '/ptmv2/projects/1',
+    navigationParams: {
+      tab: 'overview',
+    },
+    createdAt: Date.now() - 24 * 60 * 60 * 1000, // 1 day ago
+  },
+  {
+    id: 'act-6',
+    userId: 'user-1',
+    tenantId: 'tenant-1',
+    eventType: 'deadline_risk_detected',
+    entityType: 'task',
+    entityId: 1,
+    title: 'Deadline risk for "Review Pull Requests"',
+    description: 'Task is at risk of missing deadline (3 hours remaining)',
+    metadata: {
+      priority: 'HIGH',
+      remainingTimeMs: 3 * 60 * 60 * 1000,
+      estimatedCompletionMs: 2 * 60 * 60 * 1000,
+    },
+    navigationUrl: '/ptmv2/tasks/1',
+    navigationParams: {
+      openDetail: 'true',
+      highlightDeadline: 'true',
+    },
+    createdAt: Date.now() - 30 * 60 * 1000, // 30 minutes ago
+  },
+  {
+    id: 'act-7',
+    userId: 'user-1',
+    tenantId: 'tenant-1',
+    eventType: 'task_updated',
+    entityType: 'task',
+    entityId: 3,
+    title: 'Updated "Design System Components"',
+    description: 'Priority changed from MEDIUM to HIGH',
+    metadata: {
+      changes: {
+        priority: { from: 'MEDIUM', to: 'HIGH' },
+      },
+    },
+    navigationUrl: '/ptmv2/tasks/3',
+    createdAt: Date.now() - 2 * 24 * 60 * 60 * 1000, // 2 days ago
+  },
+  {
+    id: 'act-8',
+    userId: 'user-1',
+    tenantId: 'tenant-1',
+    eventType: 'schedule_conflict_detected',
+    entityType: 'schedule',
+    title: 'Schedule conflict detected',
+    description: '2 overlapping tasks found in afternoon slot',
+    metadata: {
+      conflictingTasks: ['Review Pull Requests', 'Design System Components'],
+      timeSlot: '14:00-16:00',
+    },
+    navigationUrl: '/ptmv2/schedule',
+    navigationParams: {
+      date: new Date().toISOString().split('T')[0],
+      highlight: 'conflict',
+    },
+    createdAt: Date.now() - 45 * 60 * 1000, // 45 minutes ago
+  },
+];
+
+export const getMockActivityEvents = (): ActivityEvent[] =>
+  JSON.parse(JSON.stringify(_mockActivityEventsData));

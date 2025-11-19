@@ -4,6 +4,7 @@
  */
 
 import { ptmApi } from './api';
+import { USE_MOCK_DATA, mockApiHandlers } from '../mocks/mockHandlers';
 import type {
   ActivityEvent,
   ActivityFeedResponse,
@@ -14,17 +15,20 @@ export const activityApi = ptmApi.injectEndpoints({
   endpoints: (builder) => ({
     // Get paginated activity feed
     getActivityFeed: builder.query<ActivityFeedResponse, ActivityFeedFilters>({
-      query: (filters) => ({
-        url: '/ptm_task/activities',
-        params: {
-          types: filters.types?.join(','),
-          entity: filters.entity,
-          from: filters.fromDateMs,
-          to: filters.toDateMs,
-          page: filters.page ?? 0,
-          size: filters.size ?? 20,
-        },
-      }),
+      queryFn: async (filters) => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.activities.getFeed(filters);
+          return { data };
+        }
+
+        // Real API implementation (when backend ready)
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
       providesTags: (result) =>
         result
           ? [
@@ -60,8 +64,23 @@ export const activityApi = ptmApi.injectEndpoints({
       ActivityEvent[],
       { entityType: string; entityId: number }
     >({
-      query: ({ entityType, entityId }) =>
-        `/ptm_task/activities/entity/${entityType}/${entityId}`,
+      queryFn: async ({ entityType, entityId }) => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.activities.getByEntity(
+            entityType,
+            entityId
+          );
+          return { data };
+        }
+
+        // Real API implementation
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
       providesTags: (result, error, { entityType, entityId }) => [
         { type: 'ptm/Activity', id: `${entityType}:${entityId}` },
       ],
@@ -77,7 +96,20 @@ export const activityApi = ptmApi.injectEndpoints({
       },
       void
     >({
-      query: () => '/ptm_task/activities/stats',
+      queryFn: async () => {
+        if (USE_MOCK_DATA) {
+          const data = await mockApiHandlers.activities.getStats();
+          return { data };
+        }
+
+        // Real API implementation
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'API not implemented',
+          } as any,
+        };
+      },
       providesTags: [{ type: 'ptm/Activity', id: 'STATS' }],
     }),
   }),

@@ -13,9 +13,18 @@ import {
   mockFocusTimeBlocks,
   mockTaskTemplates,
   mockNotes,
+  getMockActivityEvents,
   delay,
 } from './mockData';
-import type { Task, Project, ScheduleEvent, Note } from '../types';
+import type {
+  Task,
+  Project,
+  ScheduleEvent,
+  Note,
+  ActivityEvent,
+  ActivityFeedResponse,
+  ActivityFeedFilters,
+} from '../types';
 
 // Enable/disable mock mode (set to false when API is ready)
 export const USE_MOCK_DATA = true;
@@ -27,6 +36,7 @@ let tasksStore = deepClone(mockTasks);
 let projectsStore = deepClone(mockProjects);
 let eventsStore = deepClone(mockScheduleEvents);
 let notesStore = deepClone(mockNotes);
+let activitiesStore = getMockActivityEvents();
 
 // Helper to extract plain text from Tiptap JSON
 const extractPlainText = (content: string): string => {
@@ -439,6 +449,80 @@ export const mockApiHandlers = {
       notesStore = notesStore.filter((n) => n.id !== id);
     },
   },
+
+  // Activity handlers
+  activities: {
+    getFeed: async (filters: ActivityFeedFilters) => {
+      await delay();
+      let filtered = activitiesStore;
+
+      // Filter by types
+      if (filters.types && filters.types.length > 0) {
+        filtered = filtered.filter((a) => filters.types!.includes(a.eventType));
+      }
+
+      // Filter by entity type
+      if (filters.entity) {
+        filtered = filtered.filter((a) => a.entityType === filters.entity);
+      }
+
+      // Filter by date range
+      if (filters.fromDateMs) {
+        filtered = filtered.filter((a) => a.createdAt >= filters.fromDateMs!);
+      }
+      if (filters.toDateMs) {
+        filtered = filtered.filter((a) => a.createdAt <= filters.toDateMs!);
+      }
+
+      // Sort by newest first
+      filtered.sort((a, b) => b.createdAt - a.createdAt);
+
+      // Pagination
+      const page = filters.page ?? 0;
+      const size = filters.size ?? 20;
+      const start = page * size;
+      const end = start + size;
+      const paginatedActivities = filtered.slice(start, end);
+
+      const response: ActivityFeedResponse = {
+        activities: paginatedActivities,
+        totalCount: filtered.length,
+        currentPage: page,
+        pageSize: size,
+        hasMore: end < filtered.length,
+      };
+
+      return response;
+    },
+
+    getByEntity: async (entityType: string, entityId: number) => {
+      await delay();
+      return activitiesStore.filter(
+        (a) => a.entityType === entityType && a.entityId === entityId
+      );
+    },
+
+    getStats: async () => {
+      await delay();
+      const now = Date.now();
+      const oneDayAgo = now - 24 * 60 * 60 * 1000;
+      const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000;
+
+      const todayCount = activitiesStore.filter(
+        (a) => a.createdAt >= oneDayAgo
+      ).length;
+      const weekCount = activitiesStore.filter(
+        (a) => a.createdAt >= oneWeekAgo
+      ).length;
+
+      return {
+        todayCount,
+        weekCount,
+        averagePerDay: Math.round(weekCount / 7),
+        mostActiveHour: '14:00',
+      };
+    },
+  },
 };
 
 // Reset mock data (useful for testing)
@@ -447,4 +531,5 @@ export const resetMockData = () => {
   projectsStore = deepClone(mockProjects);
   eventsStore = deepClone(mockScheduleEvents);
   notesStore = deepClone(mockNotes);
+  activitiesStore = getMockActivityEvents();
 };
