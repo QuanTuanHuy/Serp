@@ -94,53 +94,42 @@ export function SmartEventCard({
           <div
             onClick={onClick}
             className={cn(
-              'group relative cursor-pointer transition-all',
+              'group relative cursor-pointer transition-all h-full',
               className
             )}
           >
-            {/* Event Content */}
-            <div className='flex items-start gap-1.5 text-xs p-1'>
-              {/* Icons */}
-              <div className='flex items-center gap-0.5 flex-shrink-0'>
-                {event.isDeepWork && (
-                  <Flame className='h-3 w-3 text-white/90' />
-                )}
-                {event.priority && getPriorityIcon(event.priority)}
-                {getStatusIcon(event.status)}
+            {/* Simplified Event Content */}
+            <div className='flex flex-col gap-0.5 h-full p-1.5'>
+              {/* Time */}
+              <div className='flex items-center gap-1 text-[10px] opacity-80'>
+                <Clock className='h-2.5 w-2.5' />
+                <span>{formatTime(event.startMin)}</span>
               </div>
 
-              {/* Title */}
-              <div className='flex-1 min-w-0'>
-                <p className='font-medium truncate text-white/95'>
+              {/* Title with icons */}
+              <div className='flex items-start gap-1 flex-1'>
+                {event.isDeepWork && (
+                  <Flame className='h-3 w-3 flex-shrink-0 mt-0.5' />
+                )}
+                <p className='font-medium text-xs leading-tight line-clamp-2'>
                   {event.title || 'Untitled Event'}
                 </p>
-                <p className='text-[10px] text-white/70'>
-                  {formatTime(event.startMin)} - {formatTime(event.endMin)}
-                </p>
               </div>
 
-              {/* Utility Score (Small) */}
-              {event.utility > 0 && (
-                <Badge
-                  variant='secondary'
-                  className='text-[9px] px-1 py-0 h-4 bg-white/20 text-white border-0'
-                >
-                  {Math.round(event.utility)}
-                </Badge>
+              {/* Bottom indicators */}
+              {(event.priority === 'HIGH' || event.totalParts > 1) && (
+                <div className='flex items-center gap-1 text-[9px] opacity-70'>
+                  {event.priority === 'HIGH' && (
+                    <span className='font-medium'>High Priority</span>
+                  )}
+                  {event.totalParts > 1 && (
+                    <span>
+                      • {event.taskPart}/{event.totalParts}
+                    </span>
+                  )}
+                </div>
               )}
             </div>
-
-            {/* Task Part Indicator */}
-            {event.totalParts > 1 && (
-              <div className='absolute bottom-0 left-0 right-0 h-0.5 bg-white/30'>
-                <div
-                  className='h-full bg-white/70'
-                  style={{
-                    width: `${(event.taskPart / event.totalParts) * 100}%`,
-                  }}
-                />
-              </div>
-            )}
           </div>
         </TooltipTrigger>
 
