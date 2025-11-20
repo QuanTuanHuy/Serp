@@ -1,6 +1,7 @@
 package serp.project.purchase_service.controller;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -19,8 +20,9 @@ import serp.project.purchase_service.util.AuthUtils;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("api/v1/supplier")
+@RequestMapping("purchase-service/api/v1/supplier")
 @Validated
+@Slf4j
 public class SupplierController {
 
     private final SupplierService supplierService;
@@ -52,7 +54,7 @@ public class SupplierController {
     public ResponseEntity<GeneralResponse<Page<SupplierEntity>>> getSuppliers(
             @RequestParam(required = false, defaultValue = "1") int page,
             @RequestParam(required = false, defaultValue = "10") int size,
-            @RequestParam(required = false, defaultValue = "createdAt") String sortBy,
+            @RequestParam(required = false, defaultValue = "createdStamp") String sortBy,
             @RequestParam(required = false, defaultValue = "desc") String sortDirection,
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String statusId
@@ -79,7 +81,7 @@ public class SupplierController {
         if (supplier == null) {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
-        AddressEntity address = addressService.findByEntityId(supplierId, tenantId).stream().findFirst().orElse(null);
+        AddressEntity address = addressService.findByEntityId(supplierId, tenantId).stream().filter(AddressEntity::isDefault).findFirst().orElse(null);
         SupplierDetailResponse supplierDetail = SupplierDetailResponse.fromEntity(supplier, address);
         return ResponseEntity.ok(GeneralResponse.success("Successfully get supplier detail", supplierDetail));
     }

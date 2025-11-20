@@ -11,6 +11,7 @@ public class OrderSpecification {
 
     public static Specification<OrderEntity> satisfy(String _query,
                                                      String fromSupplierId,
+                                                     String saleChannelId,
                                                      LocalDate orderDateFrom,
                                                      LocalDate orderDateTo,
                                                      LocalDate deliveryBefore,
@@ -24,6 +25,9 @@ public class OrderSpecification {
 
             if (StringUtils.hasText(fromSupplierId)) {
                 predicates.add(criteriaBuilder.equal(root.get("fromSupplierId"), fromSupplierId));
+            }
+            if (StringUtils.hasText(saleChannelId)) {
+                predicates.add(criteriaBuilder.equal(root.get("saleChannelId"), saleChannelId));
             }
             if (orderDateFrom != null) {
                 predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("orderDate"), orderDateFrom));

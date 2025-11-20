@@ -132,6 +132,14 @@ public class ShipmentController {
         return ResponseEntity.ok(GeneralResponse.success("Successfully get shipment detail", response));
     }
 
-
+    @GetMapping("/search/by-order/{orderId}")
+    public ResponseEntity<GeneralResponse<List<ShipmentEntity>>> getShipmentsByOrderId(
+            @PathVariable String orderId
+    ) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
+        List<ShipmentEntity> shipments = shipmentService.findByOrderId(orderId, tenantId);
+        return ResponseEntity.ok(GeneralResponse.success("Successfully get shipments by order ID", shipments));
+    }
 
 }

@@ -50,7 +50,7 @@ public class FacilityEntity {
     private String postalCode;
 
     private float length;
-    private float weight;
+    private float width;
     private float height;
 
     @Column(name = "tenant_id")

@@ -10,6 +10,6 @@ public class FacilityUpdateForm {
     private String phone;
     private String postalCode;
     private float length;
-    private float weight;
+    private float width;
     private float height;
 }

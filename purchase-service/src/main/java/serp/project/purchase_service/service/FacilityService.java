@@ -5,11 +5,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import serp.project.purchase_service.constant.EntityType;
-import serp.project.purchase_service.constant.FacilityStatus;
 import serp.project.purchase_service.dto.request.AddressCreationForm;
 import serp.project.purchase_service.dto.request.FacilityCreationForm;
 import serp.project.purchase_service.dto.request.FacilityUpdateForm;
-import serp.project.purchase_service.entity.AddressEntity;
 import serp.project.purchase_service.entity.FacilityEntity;
 import serp.project.purchase_service.exception.AppErrorCode;
 import serp.project.purchase_service.exception.AppException;
@@ -35,7 +33,7 @@ public class FacilityService {
                 .phone(form.getPhone())
                 .postalCode(form.getPostalCode())
                 .length(form.getLength())
-                .weight(form.getWeight())
+                .width(form.getWidth())
                 .height(form.getHeight())
                 .tenantId(tenantId)
                 .build();
@@ -63,7 +61,7 @@ public class FacilityService {
         facility.setDefault(form.isDefault());
         facility.setPostalCode(form.getPostalCode());
         facility.setLength(form.getLength());
-        facility.setWeight(form.getWeight());
+        facility.setWidth(form.getWidth());
         facility.setHeight(form.getHeight());
         facilityRepository.save(facility);
     }

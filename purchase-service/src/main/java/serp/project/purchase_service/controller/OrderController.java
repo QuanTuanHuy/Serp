@@ -147,11 +147,12 @@ public class OrderController {
     public ResponseEntity<GeneralResponse<PageResponse<OrderEntity>>> getOrders(
             @RequestParam(required = false, defaultValue = "1") int page,
             @RequestParam(required = false, defaultValue = "10") int size,
-            @RequestParam(required = false, defaultValue = "createdAt") String sortBy,
+            @RequestParam(required = false, defaultValue = "createdStamp") String sortBy,
             @RequestParam(required = false, defaultValue = "desc") String sortDirection,
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String statusId,
             @RequestParam(required = false) String fromSupplierId,
+            @RequestParam(required = false) String saleChannelId,
             @RequestParam(required = false) LocalDate orderDateAfter,
             @RequestParam(required = false) LocalDate orderDateBefore,
             @RequestParam(required = false) LocalDate deliveryBefore,
@@ -162,6 +163,7 @@ public class OrderController {
         var orders = orderService.findOrders(
                 query,
                 fromSupplierId,
+                saleChannelId,
                 orderDateAfter,
                 orderDateBefore,
                 deliveryBefore,

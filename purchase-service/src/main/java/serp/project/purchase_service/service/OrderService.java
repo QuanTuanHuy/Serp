@@ -1,6 +1,7 @@
 package serp.project.purchase_service.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OrderService {
 
     private final OrderRepository orderRepository;
@@ -100,6 +102,7 @@ public class OrderService {
     }
 
     public OrderEntity getOrder(String orderId, Long tenantId) {
+        log.info("Getting order {} for tenant {}", orderId, tenantId);
         OrderEntity order = orderRepository.findById(orderId).orElse(null);
         if (order == null || !order.getTenantId().equals(tenantId)) {
             return null;
@@ -110,6 +113,7 @@ public class OrderService {
     public Page<OrderEntity> findOrders(
             String query,
             String fromSupplierId,
+            String saleChannelId,
             LocalDate orderDateAfter,
             LocalDate orderDateBefore,
             LocalDate deliveryBefore,
@@ -125,6 +129,7 @@ public class OrderService {
                 OrderSpecification.satisfy(
                         query,
                         fromSupplierId,
+                        saleChannelId,
                         orderDateAfter,
                         orderDateBefore,
                         deliveryBefore,

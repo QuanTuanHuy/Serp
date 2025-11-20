@@ -32,7 +32,7 @@ public class ShipmentService {
                 .fromSupplierId(form.getFromSupplierId())
                 .createdByUserId(userId)
                 .orderId(form.getOrderId())
-                .shipmentName(StringUtils.hasText(form.getShipmentName()) ? form.getShipmentName() : "Phiếu nhập tự động mã" + shipmentId)
+                .shipmentName(StringUtils.hasText(form.getShipmentName()) ? form.getShipmentName() : "Phiếu nhập tự động mã " + shipmentId)
                 .statusId(ShipmentStatus.CREATED.value())
                 .note(form.getNote())
                 .expectedDeliveryDate(form.getExpectedDeliveryDate())

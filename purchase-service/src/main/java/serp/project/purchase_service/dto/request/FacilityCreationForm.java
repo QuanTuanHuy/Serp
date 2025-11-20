@@ -10,7 +10,7 @@ public class FacilityCreationForm {
     private String statusId;
     private String postalCode;
     private float length;
-    private float weight;
+    private float width;
     private float height;
 
     private String addressType;

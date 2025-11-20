@@ -51,7 +51,7 @@ public class SecurityConfig {
     @Bean
     @Order(2)
     public SecurityFilterChain publicApiFilterChain(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity.securityMatcher("/api/**")
+        httpSecurity.securityMatcher("/purchase-service/api/**")
                 .authorizeHttpRequests(request -> {
                     urlProperties.getPublicUrls().forEach(url -> request.requestMatchers(
                                     HttpMethod.valueOf(url.getSecond()), url.getFirst())

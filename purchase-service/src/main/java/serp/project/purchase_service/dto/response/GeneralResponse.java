@@ -1,5 +1,6 @@
 package serp.project.purchase_service.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
@@ -9,6 +10,8 @@ public class GeneralResponse<T> {
     private final HttpStatus httpStatus;
     private final String code;
     private final String message;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private T data;
 
     public GeneralResponse(HttpStatus httpStatus, String code, String message, T data) {

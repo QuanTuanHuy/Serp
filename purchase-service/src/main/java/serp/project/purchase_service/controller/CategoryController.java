@@ -42,7 +42,7 @@ public class CategoryController {
     public ResponseEntity<GeneralResponse<PageResponse<CategoryEntity>>> getCategories(
             @Min(1) @RequestParam(required = false, defaultValue = "1") int page,
             @RequestParam(required = false, defaultValue = "10") int size,
-            @RequestParam(required = false, defaultValue = "createdAt") String sortBy,
+            @RequestParam(required = false, defaultValue = "createdStamp") String sortBy,
             @RequestParam(required = false, defaultValue = "desc") String sortDirection,
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String statusId

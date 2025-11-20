@@ -10,6 +10,7 @@ import serp.project.purchase_service.exception.AppErrorCode;
 import serp.project.purchase_service.exception.AppException;
 import serp.project.purchase_service.repository.CategoryRepository;
 import serp.project.purchase_service.repository.specification.CategorySpecification;
+import serp.project.purchase_service.util.IdUtils;
 import serp.project.purchase_service.util.PaginationUtils;
 
 @Service
@@ -19,7 +20,9 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
 
     public void createCategory(CategoryForm form, Long tenantId) {
+        String categoryId = IdUtils.generateCategoryId();
         var category = CategoryEntity.builder()
+                .id(categoryId)
                 .name(form.getName())
                 .tenantId(tenantId)
                 .build();

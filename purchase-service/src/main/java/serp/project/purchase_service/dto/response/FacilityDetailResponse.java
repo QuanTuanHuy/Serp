@@ -19,7 +19,7 @@ public class FacilityDetailResponse {
     private String phone;
     private String postalCode;
     private float length;
-    private float weight;
+    private float width;
     private float height;
     private AddressEntity address;
 
@@ -37,7 +37,7 @@ public class FacilityDetailResponse {
                 .phone(facility.getPhone())
                 .postalCode(facility.getPostalCode())
                 .length(facility.getLength())
-                .weight(facility.getWeight())
+                .width(facility.getWidth())
                 .height(facility.getHeight())
                 .address(address)
                 .build();

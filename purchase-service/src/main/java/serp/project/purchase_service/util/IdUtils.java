@@ -20,6 +20,10 @@ public class IdUtils {
         return generateIdWithPrefix("CUS");
     }
 
+    public static String generateCategoryId() {
+        return generateIdWithPrefix("CAT");
+    }
+
     public static String generateInvoiceId() {
         return generateIdWithPrefix("INV");
     }

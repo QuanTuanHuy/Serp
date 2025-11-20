@@ -39,4 +39,12 @@ public class SupplierEntity {
     @Column(name = "tenant_id")
     private Long tenantId;
 
+    @CreationTimestamp
+    @Column(name = "created_stamp")
+    private LocalDateTime createdStamp;
+
+    @UpdateTimestamp
+    @Column(name = "last_updated_stamp")
+    private LocalDateTime lastUpdatedStamp;
+
 }

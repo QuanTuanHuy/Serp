@@ -12,7 +12,7 @@ import serp.project.purchase_service.exception.AppException;
 import serp.project.purchase_service.service.AddressService;
 import serp.project.purchase_service.util.AuthUtils;
 
-@Service
+@RestController
 @RequiredArgsConstructor
 @RequestMapping("/purchase-service/api/v1/address")
 public class AddressController {
