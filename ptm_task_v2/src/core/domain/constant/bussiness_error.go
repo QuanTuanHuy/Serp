@@ -78,3 +78,12 @@ const (
 	ProjectHasTasks                = "cannot delete project with existing tasks"
 	ProjectCannotComplete          = "cannot complete project with incomplete tasks"
 )
+
+const (
+	ActivityEventTypeNotValid = "activity event type is not valid"
+	ActivityEventNotFound     = "activity event not found"
+)
+
+const (
+	UserIDInvalid = "user ID is invalid"
+)
