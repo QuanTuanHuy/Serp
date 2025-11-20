@@ -9,7 +9,7 @@
 
 import { useMemo } from 'react';
 import { Activity, Clock, TrendingUp, Zap } from 'lucide-react';
-import { ActivityFeedEnhanced } from '@/modules/ptmv2/components/activity';
+import { ActivityFeedEnhanced } from '@/modules/ptm/components/activity';
 import { Card } from '@/shared/components/ui/card';
 
 export default function ActivityPage() {

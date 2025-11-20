@@ -8,7 +8,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { QuickAddTask, TaskList } from '@/modules/ptmv2';
+import { QuickAddTask, TaskList } from '@/modules/ptm';
 import { Card } from '@/shared/components/ui/card';
 import {
   Tabs,
@@ -16,8 +16,8 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/shared/components/ui/tabs';
-import { useGetTasksQuery } from '@/modules/ptmv2/services/taskApi';
-import { DependencyGraph } from '@/modules/ptmv2/components/tasks/DependencyGraph';
+import { useGetTasksQuery } from '@/modules/ptm/services/taskApi';
+import { DependencyGraph } from '@/modules/ptm/components/tasks/DependencyGraph';
 import { CheckSquare, Circle, Clock, Network } from 'lucide-react';
 
 export default function TasksPage() {

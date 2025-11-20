@@ -23,15 +23,15 @@ import {
   CardTitle,
 } from '@/shared/components/ui/card';
 import { Progress } from '@/shared/components/ui/progress';
-import { useGetProjectQuery } from '@/modules/ptmv2/services/projectApi';
-import { useGetTasksQuery } from '@/modules/ptmv2/services/taskApi';
-import { useGetEntityActivitiesQuery } from '@/modules/ptmv2/services/activityApi';
-import { EditProjectDialog } from '@/modules/ptmv2/components/projects/EditProjectDialog';
-import { ProjectActivityTimeline } from '@/modules/ptmv2/components/projects';
-import { TaskList } from '@/modules/ptmv2/components/tasks/TaskList';
-import { PriorityBadge } from '@/modules/ptmv2/components/shared/PriorityBadge';
-import { DependencyGraph } from '@/modules/ptmv2/components/tasks/DependencyGraph';
-import { GanttView } from '@/modules/ptmv2/components/schedule/GanttView';
+import { useGetProjectQuery } from '@/modules/ptm/services/projectApi';
+import { useGetTasksQuery } from '@/modules/ptm/services/taskApi';
+import { useGetEntityActivitiesQuery } from '@/modules/ptm/services/activityApi';
+import { EditProjectDialog } from '@/modules/ptm/components/projects/EditProjectDialog';
+import { ProjectActivityTimeline } from '@/modules/ptm/components/projects';
+import { TaskList } from '@/modules/ptm/components/tasks/TaskList';
+import { PriorityBadge } from '@/modules/ptm/components/shared/PriorityBadge';
+import { DependencyGraph } from '@/modules/ptm/components/tasks/DependencyGraph';
+import { GanttView } from '@/modules/ptm/components/schedule/GanttView';
 import { Network, GanttChart } from 'lucide-react';
 
 export default function ProjectDetailPage({

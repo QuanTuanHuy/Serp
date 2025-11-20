@@ -21,7 +21,7 @@ import { api } from './api';
 import { authSlice, userSlice } from '@/modules/account/store';
 import { crmReducer } from '@/modules/crm/store';
 import { adminReducer } from '@/modules/admin/store';
-import { ptmReducer } from '@/modules/ptmv2';
+import { ptmReducer } from '@/modules/ptm';
 
 // Persist configuration
 const accountPersistConfig = {

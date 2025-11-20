@@ -6,6 +6,5 @@
  */
 
 export { PTMLayout } from './PTMLayout';
-export { PTMSidebar } from './PTMSidebar';
 export { PTMHeader } from './PTMHeader';
 export { PTMCommandPalette } from './PTMCommandPalette';

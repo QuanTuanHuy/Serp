@@ -1,12 +1,37 @@
 /**
- * PTM Module Exports
+ * PTM v2 - Module Index
  *
  * @author QuanTuanHuy
- * @description Part of Serp Project - PTM module barrel exports
+ * @description Part of Serp Project - Main module exports
  */
 
 // Components
-export { default as Sidebar } from './components/layout/PTMSidebar.backup';
+export * from './components/layout';
+export * from './components/shared';
+export * from './components/dashboard';
+export * from './components/tasks';
+export * from './components/projects';
+export * from './components/schedule';
+export * from './components/schedule';
+export { PTMAuthGuard, withPTMAuth } from './components/PTMAuthGuard';
 
-// Re-export for convenience
-export { Sidebar as PTMSidebar } from './components/layout/PTMSidebar.backup';
+// Hooks
+export * from './hooks';
+
+// Store
+export { ptmReducer } from './store';
+export {
+  uiSlice,
+  selectUI,
+  selectActiveView,
+  selectSidebarState,
+} from './store/uiSlice';
+
+// Services
+export { ptmApi, taskApi, projectApi, scheduleApi, noteApi } from './services';
+
+// Types
+export type * from './types';
+
+// Constants
+export { PTM_COLORS, LAYOUT_CONSTANTS } from './constants/colors';

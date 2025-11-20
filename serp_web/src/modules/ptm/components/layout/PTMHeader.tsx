@@ -1,8 +1,8 @@
 /**
- * PTM Header Component
+ * PTM v2 - Header Component
  *
  * @author QuanTuanHuy
- * @description Part of Serp Project - PTM specific header with navigation and controls
+ * @description Part of Serp Project - Top header with search and navigation
  */
 
 'use client';
@@ -10,6 +10,17 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
+import { useSelector, useDispatch } from 'react-redux';
+import {
+  Search,
+  Bell,
+  User,
+  Command,
+  Plus,
+  Settings,
+  Home,
+  ChevronDown,
+} from 'lucide-react';
 import {
   Button,
   Avatar,
@@ -18,78 +29,57 @@ import {
   ThemeToggle,
   Input,
 } from '@/shared/components';
-import {
-  Search,
-  Plus,
-  Bell,
-  Settings,
-  User,
-  ChevronDown,
-  Home,
-} from 'lucide-react';
 import { useUser } from '@/modules/account';
+import { openCommandPalette } from '../../store/uiSlice';
 import { cn } from '@/shared/utils';
+import type { PTMState } from '../../store';
 
 interface PTMHeaderProps {
   className?: string;
   scrollContainerRef?: React.RefObject<HTMLElement | null>;
 }
 
-export function PTMHeader({ scrollContainerRef }: PTMHeaderProps) {
+export function PTMHeader({ scrollContainerRef, className }: PTMHeaderProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [notifications, setNotifications] = useState(3); // Mock notification count
   const [hidden, setHidden] = useState(false);
 
-  const { getInitials, getDisplayName, user } = useUser();
-
+  const dispatch = useDispatch();
   const router = useRouter();
   const pathname = usePathname();
 
-  const getPageTitle = () => {
-    const path = pathname.split('/').pop();
-    switch (path) {
-      case 'dashboard':
-        return 'Dashboard';
-      case 'projects':
-        return 'Project Management';
-      case 'schedule':
-        return 'Optimize Your Tasks';
-      case 'calendar':
-        return 'Daily Calendar';
-      case 'notifications':
-        return 'Notifications';
-      case 'note-dashboard':
-        return 'Note Dashboard';
-      case 'chat':
-        return 'AI Assistant';
-      default:
-        return 'PTM';
-    }
-  };
+  const { getInitials, getDisplayName, user } = useUser();
+  const { activeView } = useSelector(
+    (state: { ptm: PTMState }) => state.ptm.ui
+  );
 
-  const getBreadcrumbs = () => {
-    const segments = pathname.split('/').filter(Boolean);
-    return segments.map((segment, index) => ({
-      name:
-        segment === 'ptm'
-          ? 'PTM'
-          : segment.charAt(0).toUpperCase() + segment.slice(1),
-      href: '/' + segments.slice(0, index + 1).join('/'),
-      isLast: index === segments.length - 1,
-    }));
+  const handleOpenCommandPalette = () => {
+    dispatch(openCommandPalette());
   };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/ptm/dashboard?search=${encodeURIComponent(searchQuery)}`);
+      router.push(`/ptmv2/tasks?search=${encodeURIComponent(searchQuery)}`);
     }
   };
 
   const handleLogout = () => {
     // Handle logout logic
     router.push('/auth');
+  };
+
+  const getBreadcrumbs = () => {
+    const segments = pathname.split('/').filter(Boolean);
+    return segments.map((segment, index) => ({
+      name:
+        segment === 'ptmv2'
+          ? 'PTM v2'
+          : segment.charAt(0).toUpperCase() + segment.slice(1),
+      href: '/' + segments.slice(0, index + 1).join('/'),
+      isLast: index === segments.length - 1,
+    }));
   };
 
   useEffect(() => {
@@ -134,7 +124,8 @@ export function PTMHeader({ scrollContainerRef }: PTMHeaderProps) {
     <header
       className={cn(
         'sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-transform duration-200',
-        hidden ? '-translate-y-16' : 'translate-y-0'
+        hidden ? '-translate-y-16' : 'translate-y-0',
+        className
       )}
       aria-hidden={hidden}
     >
@@ -169,8 +160,14 @@ export function PTMHeader({ scrollContainerRef }: PTMHeaderProps) {
               placeholder='Search tasks, projects, notes...'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className='pl-10 pr-4'
+              onClick={handleOpenCommandPalette}
+              className='pl-10 pr-20'
             />
+            <div className='absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1'>
+              <kbd className='px-2 py-1 text-xs bg-muted rounded'>
+                <Command className='h-3 w-3 inline' />K
+              </kbd>
+            </div>
           </form>
         </div>
 
@@ -186,7 +183,7 @@ export function PTMHeader({ scrollContainerRef }: PTMHeaderProps) {
             <Button
               variant='ghost'
               size='sm'
-              onClick={() => router.push('/ptm/notifications')}
+              onClick={() => router.push('/ptmv2/activity')}
               className='relative'
             >
               <Bell className='h-5 w-5' />
@@ -225,14 +222,6 @@ export function PTMHeader({ scrollContainerRef }: PTMHeaderProps) {
               <div className='absolute right-0 top-full mt-2 w-56 bg-background border rounded-md shadow-lg z-50'>
                 <div className='p-2'>
                   <div className='py-2'>
-                    <Button
-                      variant='ghost'
-                      className='w-full justify-start'
-                      onClick={() => router.push('/ptm/profile')}
-                    >
-                      <User className='mr-2 h-4 w-4' />
-                      Profile
-                    </Button>
                     <Button
                       variant='ghost'
                       className='w-full justify-start'
@@ -277,5 +266,3 @@ export function PTMHeader({ scrollContainerRef }: PTMHeaderProps) {
     </header>
   );
 }
-
-export default PTMHeader;

@@ -1,128 +1,313 @@
 /**
- * PTM Schedule Page - Modern Calendar with Drag & Drop
+ * PTM v2 - Schedule Page
  *
  * @author QuanTuanHuy
- * @description Part of Serp Project - Interactive calendar scheduling
+ * @description Part of Serp Project - Modern intelligent schedule management
  */
 
 'use client';
 
-import React, { useState } from 'react';
-import { CalendarView } from '@/modules/ptmv2/components/schedule';
-import { Button } from '@/shared/components/ui/button';
-import { Card } from '@/shared/components/ui/card';
+import { useState, useMemo, useEffect } from 'react';
 import {
-  Calendar,
-  Plus,
-  Sparkles,
-  Clock,
-  Lock,
-  List,
-  Settings,
-} from 'lucide-react';
+  CalendarView,
+  ScheduleHeader,
+  ScheduleSidebar,
+  OptimizationDialog,
+  EventDetailSheet,
+} from '@/modules/ptm';
+import type { OptimizationConfig, ScheduleEvent } from '@/modules/ptm';
+import { useGetTasksQuery } from '@/modules/ptm/services/taskApi';
+import { GanttView } from '@/modules/ptm/components/schedule/GanttView';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/shared/components/ui/tabs';
+import { Calendar, GanttChart } from 'lucide-react';
+import {
+  useGetFocusTimeBlocksQuery,
+  useTriggerOptimizationMutation,
+  useCreateScheduleEventMutation,
+  useUpdateScheduleEventMutation,
+  useDeleteScheduleEventMutation,
+} from '@/modules/ptm/services/scheduleApi';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
-const Schedule: React.FC = () => {
-  const [showQuickAdd, setShowQuickAdd] = useState(false);
+export default function SchedulePage() {
+  const router = useRouter();
+  const [viewMode, setViewMode] = useState<'calendar' | 'gantt'>('calendar');
+  const [optimizationDialogOpen, setOptimizationDialogOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(
+    null
+  );
+
+  // Fetch data
+  const { data: allTasks = [] } = useGetTasksQuery({});
+  const { data: focusBlocks = [] } = useGetFocusTimeBlocksQuery();
+  const [triggerOptimization, { isLoading: isOptimizing }] =
+    useTriggerOptimizationMutation();
+  const [createScheduleEvent] = useCreateScheduleEventMutation();
+  const [updateScheduleEvent] = useUpdateScheduleEventMutation();
+  const [deleteScheduleEvent] = useDeleteScheduleEventMutation();
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + O to optimize
+      if ((e.metaKey || e.ctrlKey) && e.key === 'o') {
+        e.preventDefault();
+        setOptimizationDialogOpen(true);
+      }
+
+      // Escape to close dialogs/sheets
+      if (e.key === 'Escape') {
+        if (optimizationDialogOpen) {
+          setOptimizationDialogOpen(false);
+        } else if (selectedEvent) {
+          setSelectedEvent(null);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [optimizationDialogOpen, selectedEvent]);
+
+  // Calculate date range for current week
+  const dateRange = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now);
+    start.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(start);
+    end.setDate(start.getDate() + 7); // End of week
+
+    return { start, end };
+  }, []);
+
+  // Calculate unscheduled tasks (tasks without schedule events)
+  const unscheduledTasks = useMemo(() => {
+    return allTasks.filter(
+      (task) =>
+        task.status !== 'DONE' &&
+        task.status !== 'CANCELLED' &&
+        task.activeStatus === 'ACTIVE'
+    );
+  }, [allTasks]);
+
+  // Calculate stats
+  const stats = useMemo(() => {
+    const totalTasks = allTasks.filter(
+      (t) => t.status !== 'CANCELLED' && t.activeStatus === 'ACTIVE'
+    ).length;
+    const scheduledTasks = totalTasks - unscheduledTasks.length;
+    const plannedHours = allTasks
+      .filter((t) => t.status !== 'DONE' && t.status !== 'CANCELLED')
+      .reduce((sum, task) => sum + task.estimatedDurationHours, 0);
+    const activeFocusBlocks = focusBlocks.filter((b) => b.isEnabled).length;
+
+    // Mock optimization percentage (would come from backend)
+    const optimizedPercentage =
+      scheduledTasks > 0 ? Math.round((scheduledTasks / totalTasks) * 100) : 0;
+
+    return {
+      optimizedPercentage,
+      tasksScheduled: scheduledTasks,
+      totalTasks,
+      plannedHours: Math.round(plannedHours),
+      focusBlocks: activeFocusBlocks,
+    };
+  }, [allTasks, unscheduledTasks, focusBlocks]);
+
+  const handleOptimize = async (config: OptimizationConfig) => {
+    try {
+      await triggerOptimization({
+        planId: 'current', // Would be actual plan ID
+        useQuickPlace: config.algorithmType === 'local_heuristic',
+      }).unwrap();
+
+      toast.success('Schedule optimized successfully! 🎉', {
+        description: `Scheduled ${stats.tasksScheduled} tasks using ${config.algorithmType}`,
+      });
+      setOptimizationDialogOpen(false);
+    } catch (error) {
+      toast.error('Failed to optimize schedule', {
+        description: 'Please try again or contact support',
+      });
+    }
+  };
+
+  const handleExternalDrop = async (
+    taskId: number | string,
+    start: Date,
+    end: Date
+  ) => {
+    try {
+      const numericTaskId =
+        typeof taskId === 'string' ? parseInt(taskId, 10) : taskId;
+      const task = allTasks.find((t) => t.id === numericTaskId);
+      if (!task) {
+        toast.error('Task not found');
+        return;
+      }
+
+      const startMinutes = start.getHours() * 60 + start.getMinutes();
+      const endMinutes = end.getHours() * 60 + end.getMinutes();
+      const dateMs = new Date(start).setHours(0, 0, 0, 0);
+
+      await createScheduleEvent({
+        scheduleTaskId: numericTaskId,
+        dateMs,
+        startMin: startMinutes,
+        endMin: endMinutes,
+        isDeepWork: false,
+        title: task.title,
+      }).unwrap();
+
+      toast.success(`Scheduled: ${task.title}`, {
+        description: `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+      });
+    } catch (error) {
+      console.error('Failed to create schedule event:', error);
+      toast.error('Failed to schedule task');
+    }
+  };
+
+  const handleEventSelect = (event: ScheduleEvent) => {
+    setSelectedEvent(event);
+  };
+
+  const handleMarkComplete = async () => {
+    if (!selectedEvent?.scheduleTaskId) return;
+
+    try {
+      // This would call task update API to mark complete
+      toast.success('Task marked as complete!');
+      setSelectedEvent(null);
+    } catch (error) {
+      toast.error('Failed to mark task complete');
+    }
+  };
+
+  const handleReschedule = async () => {
+    if (!selectedEvent) return;
+
+    try {
+      // Trigger AI reschedule
+      setSelectedEvent(null);
+      setOptimizationDialogOpen(true);
+      toast.info('AI will reschedule this task optimally');
+    } catch (error) {
+      toast.error('Failed to reschedule task');
+    }
+  };
+
+  const handleRemoveFromSchedule = async () => {
+    if (!selectedEvent) return;
+
+    try {
+      await deleteScheduleEvent(selectedEvent.id).unwrap();
+      toast.success('Event removed from schedule');
+      setSelectedEvent(null);
+    } catch (error) {
+      console.error('Failed to delete event:', error);
+      toast.error('Failed to remove event');
+    }
+  };
+
+  const handleViewTask = () => {
+    if (!selectedEvent?.scheduleTaskId) return;
+    setSelectedEvent(null);
+    router.push(`/ptmv2/tasks/${selectedEvent.scheduleTaskId}`);
+  };
 
   return (
-    <div className='space-y-6'>
-      {/* Header */}
-      <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
-        <div className='flex items-center gap-3'>
-          <div className='p-2 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500'>
-            <Calendar className='h-6 w-6 text-white' />
-          </div>
-          <div>
-            <h1 className='text-2xl font-bold'>Schedule</h1>
-            <p className='text-sm text-muted-foreground'>
-              Drag & drop to organize your time
-            </p>
-          </div>
-        </div>
+    <div className='container mx-auto p-6 space-y-6'>
+      {/* Intelligent Header */}
+      <ScheduleHeader
+        dateRange={dateRange}
+        stats={stats}
+        onOptimize={() => setOptimizationDialogOpen(true)}
+      />
 
-        <div className='flex items-center gap-2'>
-          <Button variant='outline' size='sm'>
-            <List className='h-4 w-4 mr-2' />
-            Agenda
-          </Button>
-          <Button variant='outline' size='sm'>
-            <Sparkles className='h-4 w-4 mr-2' />
-            AI Optimize
-          </Button>
-          <Button onClick={() => setShowQuickAdd(true)} size='sm'>
-            <Plus className='h-4 w-4 mr-2' />
-            Add Event
-          </Button>
-        </div>
-      </div>
+      {/* View Tabs: Calendar & Gantt */}
+      <Tabs
+        value={viewMode}
+        onValueChange={(v) => setViewMode(v as 'calendar' | 'gantt')}
+      >
+        <TabsList className='grid w-full max-w-md grid-cols-2'>
+          <TabsTrigger value='calendar' className='flex items-center gap-2'>
+            <Calendar className='h-4 w-4' />
+            Calendar View
+          </TabsTrigger>
+          <TabsTrigger value='gantt' className='flex items-center gap-2'>
+            <GanttChart className='h-4 w-4' />
+            Timeline View
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Stats Cards */}
-      <div className='grid grid-cols-1 gap-4 md:grid-cols-3'>
-        <Card className='p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-purple-200 dark:border-purple-800'>
-          <div className='flex items-center gap-3'>
-            <div className='p-2 rounded-lg bg-purple-500/10'>
-              <Lock className='h-5 w-5 text-purple-600 dark:text-purple-400' />
+        {/* Calendar View */}
+        <TabsContent value='calendar' className='mt-6'>
+          <div className='flex gap-6'>
+            <ScheduleSidebar
+              unscheduledTasks={unscheduledTasks}
+              focusBlocks={focusBlocks}
+              onTaskDragStart={(task) => {
+                console.log('Drag started:', task.title);
+              }}
+              onFocusBlockToggle={(blockId) => {
+                console.log('Focus block toggled:', blockId);
+              }}
+            />
+
+            <div className='flex-1'>
+              <CalendarView
+                onEventSelect={handleEventSelect}
+                onExternalDrop={handleExternalDrop}
+              />
             </div>
-            <div>
-              <p className='text-sm text-muted-foreground'>Focus Time Today</p>
-              <p className='text-2xl font-bold text-purple-600 dark:text-purple-400'>
-                4.5h
+          </div>
+        </TabsContent>
+
+        {/* Gantt Timeline View */}
+        <TabsContent value='gantt' className='mt-6'>
+          <div className='border rounded-lg overflow-hidden bg-card'>
+            <div className='p-4 border-b'>
+              <h3 className='text-lg font-semibold'>Project Timeline</h3>
+              <p className='text-sm text-muted-foreground'>
+                Visualize task schedules and dependencies on a Gantt chart
               </p>
             </div>
-          </div>
-        </Card>
-
-        <Card className='p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border-blue-200 dark:border-blue-800'>
-          <div className='flex items-center gap-3'>
-            <div className='p-2 rounded-lg bg-blue-500/10'>
-              <Clock className='h-5 w-5 text-blue-600 dark:text-blue-400' />
-            </div>
-            <div>
-              <p className='text-sm text-muted-foreground'>Events Today</p>
-              <p className='text-2xl font-bold text-blue-600 dark:text-blue-400'>
-                7
-              </p>
+            <div className='h-[700px]'>
+              <GanttView />
             </div>
           </div>
-        </Card>
+        </TabsContent>
+      </Tabs>
 
-        <Card className='p-4 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/20 dark:to-amber-900/20 border-amber-200 dark:border-amber-800'>
-          <div className='flex items-center gap-3'>
-            <div className='p-2 rounded-lg bg-amber-500/10'>
-              <Sparkles className='h-5 w-5 text-amber-600 dark:text-amber-400' />
-            </div>
-            <div>
-              <p className='text-sm text-muted-foreground'>Utilization</p>
-              <p className='text-2xl font-bold text-amber-600 dark:text-amber-400'>
-                87%
-              </p>
-            </div>
-          </div>
-        </Card>
-      </div>
+      {/* Event Detail Sheet */}
+      {selectedEvent && (
+        <EventDetailSheet
+          event={selectedEvent}
+          open={!!selectedEvent}
+          onOpenChange={(open) => !open && setSelectedEvent(null)}
+          onMarkComplete={handleMarkComplete}
+          onReschedule={handleReschedule}
+          onRemove={handleRemoveFromSchedule}
+          onViewTask={handleViewTask}
+        />
+      )}
 
-      {/* Calendar */}
-      <CalendarView />
-
-      {/* Quick Tips */}
-      <Card className='p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/10 dark:to-purple-950/10 border-blue-200 dark:border-blue-800'>
-        <div className='flex items-start gap-3'>
-          <Sparkles className='h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0' />
-          <div className='space-y-1'>
-            <p className='font-semibold text-sm text-blue-900 dark:text-blue-100'>
-              💡 Pro Tips
-            </p>
-            <ul className='text-sm text-blue-700 dark:text-blue-300 space-y-1'>
-              <li>• Drag events to reschedule instantly</li>
-              <li>• Resize events to adjust duration</li>
-              <li>• Click "AI Optimize" to auto-schedule unassigned tasks</li>
-              <li>• Purple blocks are protected focus time</li>
-            </ul>
-          </div>
-        </div>
-      </Card>
+      {/* Optimization Dialog */}
+      <OptimizationDialog
+        open={optimizationDialogOpen}
+        onOpenChange={setOptimizationDialogOpen}
+        onOptimize={handleOptimize}
+        isOptimizing={isOptimizing}
+      />
     </div>
   );
-};
-
-export default Schedule;
+}

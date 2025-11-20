@@ -1,17 +1,16 @@
 /**
- * PTM Layout - Personal Task Management Layout
+ * PTM v2 - Layout
  *
  * @author QuanTuanHuy
- * @description Part of Serp Project - PTM layout with sidebar navigation
+ * @description Part of Serp Project - PTM module layout wrapper
  */
 
-import React from 'react';
-import { PTMLayout } from '@/modules/ptm/components';
+import { PTMLayout } from '@/modules/ptm';
 
-interface PTMLayoutPageProps {
+export default function PTMv2Layout({
+  children,
+}: {
   children: React.ReactNode;
-}
-
-export default function PTMLayoutPage({ children }: PTMLayoutPageProps) {
+}) {
   return <PTMLayout>{children}</PTMLayout>;
 }

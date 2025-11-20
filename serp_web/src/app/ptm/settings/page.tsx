@@ -22,9 +22,9 @@ import {
   CardTitle,
   CardDescription,
 } from '@/shared/components/ui/card';
-import { AvailabilitySettings } from '@/modules/ptmv2/components/settings';
-import { AlgorithmPreferences } from '@/modules/ptmv2/components/settings/AlgorithmPreferences';
-import { BufferSettings } from '@/modules/ptmv2/components/settings/BufferSettings';
+import { AvailabilitySettings } from '@/modules/ptm/components/settings';
+import { AlgorithmPreferences } from '@/modules/ptm/components/settings/AlgorithmPreferences';
+import { BufferSettings } from '@/modules/ptm/components/settings/BufferSettings';
 
 export default function PTMSettingsPage() {
   const [activeTab, setActiveTab] = useState('availability');

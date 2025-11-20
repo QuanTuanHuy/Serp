@@ -5,7 +5,7 @@ Description: Part of Serp Project
 
 'use client';
 
-import { AnalyticsDashboard } from '@/modules/ptmv2/components/analytics';
+import { AnalyticsDashboard } from '@/modules/ptm/components/analytics';
 
 export default function AnalyticsPage() {
   return (

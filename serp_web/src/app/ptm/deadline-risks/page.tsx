@@ -5,7 +5,7 @@ Description: Part of Serp Project
 
 'use client';
 
-import { DeadlineRiskAlerts } from '@/modules/ptmv2/components/alerts';
+import { DeadlineRiskAlerts } from '@/modules/ptm/components/alerts';
 
 export default function DeadlineRisksPage() {
   return (
