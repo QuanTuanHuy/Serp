@@ -19,6 +19,7 @@ import { Button } from '@/shared/components/ui/button';
 import { useModuleSidebar } from '@/shared/hooks';
 import { getModuleIcon } from '@/shared/constants/moduleIcons';
 import { SidebarMenuItemComponent } from './SidebarMenuItem';
+import { useSidebarContext } from './SidebarContext';
 
 interface DynamicSidebarProps {
   moduleCode: string;
@@ -29,7 +30,7 @@ export const DynamicSidebar: React.FC<DynamicSidebarProps> = ({
   moduleCode,
   className,
 }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const { isCollapsed, toggleSidebar } = useSidebarContext();
   const [isModuleHovered, setIsModuleHovered] = useState(false);
 
   const { menuItems, currentModule, isLoading, error, hasMenus, refetch } =
@@ -37,10 +38,6 @@ export const DynamicSidebar: React.FC<DynamicSidebarProps> = ({
 
   const moduleIcon = getModuleIcon(moduleCode);
   const ModuleIcon = moduleIcon?.icon;
-
-  const toggleSidebar = () => {
-    setIsCollapsed(!isCollapsed);
-  };
 
   return (
     <aside

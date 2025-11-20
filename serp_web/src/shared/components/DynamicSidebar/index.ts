@@ -5,3 +5,4 @@
 
 export { DynamicSidebar } from './DynamicSidebar';
 export { SidebarMenuItemComponent } from './SidebarMenuItem';
+export { SidebarProvider, useSidebarContext } from './SidebarContext';
