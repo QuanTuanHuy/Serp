@@ -25,7 +25,7 @@ func (m *TaskDependencyGraphMapper) ToModel(entity *entity.TaskDependencyGraphEn
 		return nil
 	}
 
-	modelData := &model.TaskDependencyGraphModel{
+	return &model.TaskDependencyGraphModel{
 		BaseModel: model.BaseModel{
 			ID: entity.ID,
 		},
@@ -36,15 +36,6 @@ func (m *TaskDependencyGraphMapper) ToModel(entity *entity.TaskDependencyGraphEn
 		ValidationError: entity.ValidationError,
 		DependencyDepth: entity.DependencyDepth,
 	}
-
-	if entity.CreatedAt > 0 {
-		modelData.CreatedAt = m.UnixMilliToTime(entity.CreatedAt)
-	}
-	if entity.UpdatedAt > 0 {
-		modelData.UpdatedAt = m.UnixMilliToTime(entity.UpdatedAt)
-	}
-
-	return modelData
 }
 
 func (m *TaskDependencyGraphMapper) ToEntity(model *model.TaskDependencyGraphModel) *entity.TaskDependencyGraphEntity {

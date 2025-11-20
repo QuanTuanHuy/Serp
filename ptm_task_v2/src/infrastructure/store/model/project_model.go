@@ -14,8 +14,9 @@ type ProjectModel struct {
 	Title       string  `gorm:"type:varchar(255);not null"`
 	Description *string `gorm:"type:text"`
 
-	Status   string `gorm:"type:varchar(20);not null;default:'ACTIVE';index:idx_project_user_status,priority:2"`
-	Priority string `gorm:"type:varchar(20);not null;default:'MEDIUM';index:idx_project_user_status,priority:3"`
+	Status       string `gorm:"type:varchar(20);not null;default:'ACTIVE';index:idx_project_user_status,priority:2"`
+	ActiveStatus string `gorm:"type:varchar(20);not null;default:'ACTIVE'"`
+	Priority     string `gorm:"type:varchar(20);not null;default:'MEDIUM';index:idx_project_user_status,priority:3"`
 
 	StartDateMs *int64
 	DeadlineMs  *int64

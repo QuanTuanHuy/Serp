@@ -28,7 +28,6 @@ func NewTaskReminderAdapter(db *gorm.DB) store.ITaskReminderPort {
 	}
 }
 
-// CreateReminder creates a new task reminder
 func (a *TaskReminderAdapter) CreateReminder(ctx context.Context, tx *gorm.DB, reminder *entity.TaskReminderEntity) error {
 	db := a.getDB(tx)
 	reminderModel := a.mapper.ToModel(reminder)
@@ -37,14 +36,9 @@ func (a *TaskReminderAdapter) CreateReminder(ctx context.Context, tx *gorm.DB, r
 		return fmt.Errorf("failed to create reminder: %w", err)
 	}
 
-	reminder.ID = reminderModel.ID
-	reminder.CreatedAt = reminderModel.CreatedAt.UnixMilli()
-	reminder.UpdatedAt = reminderModel.UpdatedAt.UnixMilli()
-
 	return nil
 }
 
-// CreateReminders creates multiple reminders in batch
 func (a *TaskReminderAdapter) CreateReminders(ctx context.Context, tx *gorm.DB, reminders []*entity.TaskReminderEntity) error {
 	if len(reminders) == 0 {
 		return nil
@@ -56,17 +50,9 @@ func (a *TaskReminderAdapter) CreateReminders(ctx context.Context, tx *gorm.DB, 
 	if err := db.WithContext(ctx).CreateInBatches(reminderModels, 100).Error; err != nil {
 		return fmt.Errorf("failed to create reminders: %w", err)
 	}
-
-	for i, reminderModel := range reminderModels {
-		reminders[i].ID = reminderModel.ID
-		reminders[i].CreatedAt = reminderModel.CreatedAt.UnixMilli()
-		reminders[i].UpdatedAt = reminderModel.UpdatedAt.UnixMilli()
-	}
-
 	return nil
 }
 
-// GetReminderByID retrieves a reminder by ID
 func (a *TaskReminderAdapter) GetReminderByID(ctx context.Context, id int64) (*entity.TaskReminderEntity, error) {
 	var reminderModel model.TaskReminderModel
 
@@ -80,7 +66,6 @@ func (a *TaskReminderAdapter) GetReminderByID(ctx context.Context, id int64) (*e
 	return a.mapper.ToEntity(&reminderModel), nil
 }
 
-// GetRemindersByTaskID retrieves all reminders for a task
 func (a *TaskReminderAdapter) GetRemindersByTaskID(ctx context.Context, taskID int64) ([]*entity.TaskReminderEntity, error) {
 	var reminderModels []*model.TaskReminderModel
 
@@ -94,7 +79,6 @@ func (a *TaskReminderAdapter) GetRemindersByTaskID(ctx context.Context, taskID i
 	return a.mapper.ToEntities(reminderModels), nil
 }
 
-// GetRemindersByUserID retrieves reminders for a user with filters
 func (a *TaskReminderAdapter) GetRemindersByUserID(ctx context.Context, userID int64, filter *store.ReminderFilter) ([]*entity.TaskReminderEntity, error) {
 	var reminderModels []*model.TaskReminderModel
 
@@ -107,7 +91,6 @@ func (a *TaskReminderAdapter) GetRemindersByUserID(ctx context.Context, userID i
 	return a.mapper.ToEntities(reminderModels), nil
 }
 
-// GetPendingReminders retrieves pending reminders that haven't been sent
 func (a *TaskReminderAdapter) GetPendingReminders(ctx context.Context, currentTimeMs int64, limit int) ([]*entity.TaskReminderEntity, error) {
 	var reminderModels []*model.TaskReminderModel
 
@@ -127,7 +110,6 @@ func (a *TaskReminderAdapter) GetPendingReminders(ctx context.Context, currentTi
 	return a.mapper.ToEntities(reminderModels), nil
 }
 
-// GetDueReminders retrieves reminders that are due (scheduled time has passed)
 func (a *TaskReminderAdapter) GetDueReminders(ctx context.Context, currentTimeMs int64, limit int) ([]*entity.TaskReminderEntity, error) {
 	var reminderModels []*model.TaskReminderModel
 
@@ -148,7 +130,6 @@ func (a *TaskReminderAdapter) GetDueReminders(ctx context.Context, currentTimeMs
 	return a.mapper.ToEntities(reminderModels), nil
 }
 
-// UpdateReminder updates a reminder
 func (a *TaskReminderAdapter) UpdateReminder(ctx context.Context, tx *gorm.DB, reminder *entity.TaskReminderEntity) error {
 	db := a.getDB(tx)
 	reminderModel := a.mapper.ToModel(reminder)
@@ -162,7 +143,6 @@ func (a *TaskReminderAdapter) UpdateReminder(ctx context.Context, tx *gorm.DB, r
 	return nil
 }
 
-// MarkAsSent marks a reminder as sent
 func (a *TaskReminderAdapter) MarkAsSent(ctx context.Context, tx *gorm.DB, reminderID int64, sentAt int64) error {
 	db := a.getDB(tx)
 
@@ -180,7 +160,6 @@ func (a *TaskReminderAdapter) MarkAsSent(ctx context.Context, tx *gorm.DB, remin
 	return nil
 }
 
-// MarkAsRead marks a reminder as read
 func (a *TaskReminderAdapter) MarkAsRead(ctx context.Context, tx *gorm.DB, reminderID int64, readAt int64) error {
 	db := a.getDB(tx)
 
@@ -198,7 +177,6 @@ func (a *TaskReminderAdapter) MarkAsRead(ctx context.Context, tx *gorm.DB, remin
 	return nil
 }
 
-// SnoozeReminder snoozes a reminder until a specified time
 func (a *TaskReminderAdapter) SnoozeReminder(ctx context.Context, tx *gorm.DB, reminderID int64, snoozeUntil int64) error {
 	db := a.getDB(tx)
 
@@ -218,7 +196,6 @@ func (a *TaskReminderAdapter) SnoozeReminder(ctx context.Context, tx *gorm.DB, r
 	return nil
 }
 
-// DismissReminder dismisses a reminder
 func (a *TaskReminderAdapter) DismissReminder(ctx context.Context, tx *gorm.DB, reminderID int64) error {
 	db := a.getDB(tx)
 
@@ -236,7 +213,6 @@ func (a *TaskReminderAdapter) DismissReminder(ctx context.Context, tx *gorm.DB, 
 	return nil
 }
 
-// SoftDeleteReminder soft deletes a reminder
 func (a *TaskReminderAdapter) SoftDeleteReminder(ctx context.Context, tx *gorm.DB, id int64) error {
 	db := a.getDB(tx)
 
@@ -249,7 +225,6 @@ func (a *TaskReminderAdapter) SoftDeleteReminder(ctx context.Context, tx *gorm.D
 	return nil
 }
 
-// DeleteRemindersByTaskID deletes all reminders for a task
 func (a *TaskReminderAdapter) DeleteRemindersByTaskID(ctx context.Context, tx *gorm.DB, taskID int64) error {
 	db := a.getDB(tx)
 
@@ -262,7 +237,6 @@ func (a *TaskReminderAdapter) DeleteRemindersByTaskID(ctx context.Context, tx *g
 	return nil
 }
 
-// CountUnreadReminders counts unread reminders for a user
 func (a *TaskReminderAdapter) CountUnreadReminders(ctx context.Context, userID int64) (int64, error) {
 	var count int64
 
@@ -275,7 +249,6 @@ func (a *TaskReminderAdapter) CountUnreadReminders(ctx context.Context, userID i
 	return count, nil
 }
 
-// GetReminderDeliveryStats retrieves reminder delivery statistics
 func (a *TaskReminderAdapter) GetReminderDeliveryStats(ctx context.Context, userID int64, fromTimeMs int64) (*store.ReminderDeliveryStats, error) {
 	var stats store.ReminderDeliveryStats
 
@@ -330,8 +303,6 @@ func (a *TaskReminderAdapter) GetReminderDeliveryStats(ctx context.Context, user
 	return &stats, nil
 }
 
-// Helper functions
-
 func (a *TaskReminderAdapter) getDB(tx *gorm.DB) *gorm.DB {
 	if tx != nil {
 		return tx
@@ -346,20 +317,16 @@ func (a *TaskReminderAdapter) buildReminderQuery(userID int64, filter *store.Rem
 
 	query := a.db.Where("user_id = ?", userID)
 
-	// Active status
 	query = query.Where("active_status = ?", "ACTIVE")
 
-	// Reminder type filter
 	if len(filter.ReminderTypes) > 0 {
 		query = query.Where("reminder_type IN ?", filter.ReminderTypes)
 	}
 
-	// Reminder status filter
 	if len(filter.ReminderStatuses) > 0 {
 		query = query.Where("reminder_status IN ?", filter.ReminderStatuses)
 	}
 
-	// Scheduled time filter
 	if filter.ScheduledFrom != nil {
 		query = query.Where("scheduled_time_ms >= ?", *filter.ScheduledFrom)
 	}
@@ -367,7 +334,6 @@ func (a *TaskReminderAdapter) buildReminderQuery(userID int64, filter *store.Rem
 		query = query.Where("scheduled_time_ms <= ?", *filter.ScheduledTo)
 	}
 
-	// Boolean filters
 	if filter.IsRead != nil {
 		query = query.Where("is_read = ?", *filter.IsRead)
 	}
@@ -378,17 +344,14 @@ func (a *TaskReminderAdapter) buildReminderQuery(userID int64, filter *store.Rem
 		query = query.Where("is_dismissed = ?", *filter.IsDismissed)
 	}
 
-	// Channel filter
 	if len(filter.Channels) > 0 {
 		query = query.Where("channel IN ?", filter.Channels)
 	}
 
-	// Sorting
 	if filter.SortBy != "" && filter.SortOrder != "" {
 		query = query.Order(fmt.Sprintf("%s %s", filter.SortBy, filter.SortOrder))
 	}
 
-	// Pagination
 	if filter.Limit > 0 {
 		query = query.Limit(filter.Limit)
 	}

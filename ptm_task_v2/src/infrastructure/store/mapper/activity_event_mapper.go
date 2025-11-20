@@ -20,13 +20,15 @@ func NewActivityEventMapper() *ActivityEventMapper {
 	}
 }
 
-// ToModel converts ActivityEventEntity to ActivityEventModel
 func (m *ActivityEventMapper) ToModel(entity *entity.ActivityEventEntity) *model.ActivityEventModel {
 	if entity == nil {
 		return nil
 	}
 
-	modelData := &model.ActivityEventModel{
+	return &model.ActivityEventModel{
+		BaseModel: model.BaseModel{
+			ID: entity.ID,
+		},
 		UserID:           entity.UserID,
 		TenantID:         entity.TenantID,
 		EventType:        entity.EventType,
@@ -38,24 +40,19 @@ func (m *ActivityEventMapper) ToModel(entity *entity.ActivityEventEntity) *model
 		NavigationURL:    entity.NavigationURL,
 		NavigationParams: entity.NavigationParams,
 	}
-
-	if entity.CreatedAt > 0 {
-		modelData.CreatedAt = m.UnixMilliToTime(entity.CreatedAt)
-	}
-	if entity.UpdatedAt > 0 {
-		modelData.UpdatedAt = m.UnixMilliToTime(entity.UpdatedAt)
-	}
-
-	return modelData
 }
 
-// ToEntity converts ActivityEventModel to ActivityEventEntity
 func (m *ActivityEventMapper) ToEntity(model *model.ActivityEventModel) *entity.ActivityEventEntity {
 	if model == nil {
 		return nil
 	}
 
-	entity := &entity.ActivityEventEntity{
+	return &entity.ActivityEventEntity{
+		BaseEntity: entity.BaseEntity{
+			ID:        model.ID,
+			CreatedAt: model.CreatedAt.UnixMilli(),
+			UpdatedAt: model.UpdatedAt.UnixMilli(),
+		},
 		UserID:           model.UserID,
 		TenantID:         model.TenantID,
 		EventType:        model.EventType,
@@ -67,15 +64,8 @@ func (m *ActivityEventMapper) ToEntity(model *model.ActivityEventModel) *entity.
 		NavigationURL:    model.NavigationURL,
 		NavigationParams: model.NavigationParams,
 	}
-
-	entity.ID = model.ID
-	entity.CreatedAt = m.TimeToUnixMilli(model.CreatedAt)
-	entity.UpdatedAt = m.TimeToUnixMilli(model.UpdatedAt)
-
-	return entity
 }
 
-// ToEntities converts slice of ActivityEventModel to slice of ActivityEventEntity
 func (m *ActivityEventMapper) ToEntities(models []*model.ActivityEventModel) []*entity.ActivityEventEntity {
 	entities := make([]*entity.ActivityEventEntity, 0, len(models))
 	for _, model := range models {
@@ -84,7 +74,6 @@ func (m *ActivityEventMapper) ToEntities(models []*model.ActivityEventModel) []*
 	return entities
 }
 
-// ToModels converts slice of ActivityEventEntity to slice of ActivityEventModel
 func (m *ActivityEventMapper) ToModels(entities []*entity.ActivityEventEntity) []*model.ActivityEventModel {
 	models := make([]*model.ActivityEventModel, 0, len(entities))
 	for _, entity := range entities {

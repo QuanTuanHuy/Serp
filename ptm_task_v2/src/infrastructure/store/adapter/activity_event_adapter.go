@@ -28,7 +28,6 @@ func NewActivityEventAdapter(db *gorm.DB) store.IActivityEventStorePort {
 	}
 }
 
-// CreateActivityEvent creates a new activity event
 func (a *ActivityEventAdapter) CreateActivityEvent(ctx context.Context, tx *gorm.DB, activity *entity.ActivityEventEntity) error {
 	db := a.getDB(tx)
 	activityModel := a.mapper.ToModel(activity)
@@ -36,15 +35,9 @@ func (a *ActivityEventAdapter) CreateActivityEvent(ctx context.Context, tx *gorm
 	if err := db.WithContext(ctx).Create(activityModel).Error; err != nil {
 		return fmt.Errorf("failed to create activity event: %w", err)
 	}
-
-	activity.ID = activityModel.ID
-	activity.CreatedAt = activityModel.CreatedAt.UnixMilli()
-	activity.UpdatedAt = activityModel.UpdatedAt.UnixMilli()
-
 	return nil
 }
 
-// GetActivityEventByID retrieves an activity event by ID
 func (a *ActivityEventAdapter) GetActivityEventByID(ctx context.Context, id int64) (*entity.ActivityEventEntity, error) {
 	var activityModel model.ActivityEventModel
 
@@ -58,20 +51,16 @@ func (a *ActivityEventAdapter) GetActivityEventByID(ctx context.Context, id int6
 	return a.mapper.ToEntity(&activityModel), nil
 }
 
-// GetActivityEventsByUserID retrieves activity events for a user with filters
 func (a *ActivityEventAdapter) GetActivityEventsByUserID(ctx context.Context, userID int64, filter *store.ActivityEventFilter) ([]*entity.ActivityEventEntity, error) {
 	var activityModels []*model.ActivityEventModel
 
 	query := a.buildActivityQuery(userID, filter)
-
 	if err := query.WithContext(ctx).Find(&activityModels).Error; err != nil {
 		return nil, fmt.Errorf("failed to get activity events by user id: %w", err)
 	}
 
 	return a.mapper.ToEntities(activityModels), nil
 }
-
-// Helper functions
 
 func (a *ActivityEventAdapter) getDB(tx *gorm.DB) *gorm.DB {
 	if tx != nil {
@@ -85,9 +74,8 @@ func (a *ActivityEventAdapter) buildActivityQuery(userID int64, filter *store.Ac
 		filter = &store.ActivityEventFilter{}
 	}
 
-	query := a.db.Where("user_id = ? AND active_status = ?", userID, "ACTIVE")
+	query := a.db.Where("user_id = ?", userID)
 
-	// Created time filter
 	if filter.CreatedFrom != nil {
 		query = query.Where("created_at >= ?", *filter.CreatedFrom)
 	}
@@ -95,10 +83,8 @@ func (a *ActivityEventAdapter) buildActivityQuery(userID int64, filter *store.Ac
 		query = query.Where("created_at <= ?", *filter.CreatedTo)
 	}
 
-	// Default sorting by created_at DESC
 	query = query.Order("created_at DESC")
 
-	// Pagination
 	if filter.Limit != nil && *filter.Limit > 0 {
 		query = query.Limit(*filter.Limit)
 	}

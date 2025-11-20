@@ -8,32 +8,42 @@ package enum
 type ProjectStatus string
 
 const (
-	ProjectActive    ProjectStatus = "ACTIVE"
-	ProjectCompleted ProjectStatus = "COMPLETED"
-	ProjectArchived  ProjectStatus = "ARCHIVED"
-	ProjectOnHold    ProjectStatus = "ON_HOLD"
+	ProjectNew        ProjectStatus = "NEW"
+	ProjectInProgress ProjectStatus = "IN_PROGRESS"
+	ProjectCompleted  ProjectStatus = "COMPLETED"
+	ProjectArchived   ProjectStatus = "ARCHIVED"
+	ProjectOnHold     ProjectStatus = "ON_HOLD"
 )
 
 func (s ProjectStatus) IsValid() bool {
 	switch s {
-	case ProjectActive, ProjectCompleted, ProjectArchived, ProjectOnHold:
+	case ProjectNew, ProjectInProgress, ProjectCompleted, ProjectArchived, ProjectOnHold:
 		return true
 	}
 	return false
 }
 
 func (s ProjectStatus) CanTransitionTo(newStatus ProjectStatus) bool {
-	switch s {
-	case ProjectActive:
-		return true
-	case ProjectOnHold:
-		return newStatus == ProjectActive || newStatus == ProjectArchived || newStatus == ProjectCompleted
-	case ProjectCompleted:
-		return newStatus == ProjectArchived || newStatus == ProjectActive
-	case ProjectArchived:
-		return newStatus == ProjectActive
+	if !newStatus.IsValid() {
+		return false
 	}
-	return false
+	if s == newStatus {
+		return false
+	}
+	if s.IsTerminal() {
+		return false
+	}
+
+	switch s {
+	case ProjectNew:
+		return newStatus == ProjectInProgress || newStatus == ProjectOnHold || newStatus == ProjectArchived
+	case ProjectInProgress:
+		return newStatus == ProjectCompleted || newStatus == ProjectOnHold || newStatus == ProjectArchived
+	case ProjectOnHold:
+		return newStatus == ProjectInProgress || newStatus == ProjectArchived
+	default:
+		return false
+	}
 }
 
 func (s ProjectStatus) IsTerminal() bool {

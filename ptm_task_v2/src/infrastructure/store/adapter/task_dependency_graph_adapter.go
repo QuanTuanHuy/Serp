@@ -28,7 +28,6 @@ func NewTaskDependencyGraphAdapter(db *gorm.DB) store.ITaskDependencyGraphPort {
 	}
 }
 
-// CreateDependencyGraph creates a new dependency graph entry
 func (a *TaskDependencyGraphAdapter) CreateDependencyGraph(ctx context.Context, tx *gorm.DB, graph *entity.TaskDependencyGraphEntity) error {
 	db := a.getDB(tx)
 	graphModel := a.mapper.ToModel(graph)
@@ -36,15 +35,9 @@ func (a *TaskDependencyGraphAdapter) CreateDependencyGraph(ctx context.Context, 
 	if err := db.WithContext(ctx).Create(graphModel).Error; err != nil {
 		return fmt.Errorf("failed to create dependency graph: %w", err)
 	}
-
-	graph.ID = graphModel.ID
-	graph.CreatedAt = graphModel.CreatedAt.UnixMilli()
-	graph.UpdatedAt = graphModel.UpdatedAt.UnixMilli()
-
 	return nil
 }
 
-// CreateDependencyGraphs creates multiple dependency graphs in batch
 func (a *TaskDependencyGraphAdapter) CreateDependencyGraphs(ctx context.Context, tx *gorm.DB, graphs []*entity.TaskDependencyGraphEntity) error {
 	if len(graphs) == 0 {
 		return nil
@@ -56,17 +49,9 @@ func (a *TaskDependencyGraphAdapter) CreateDependencyGraphs(ctx context.Context,
 	if err := db.WithContext(ctx).CreateInBatches(graphModels, 100).Error; err != nil {
 		return fmt.Errorf("failed to create dependency graphs: %w", err)
 	}
-
-	for i, graphModel := range graphModels {
-		graphs[i].ID = graphModel.ID
-		graphs[i].CreatedAt = graphModel.CreatedAt.UnixMilli()
-		graphs[i].UpdatedAt = graphModel.UpdatedAt.UnixMilli()
-	}
-
 	return nil
 }
 
-// GetDependencyGraphByID retrieves a dependency graph by ID
 func (a *TaskDependencyGraphAdapter) GetDependencyGraphByID(ctx context.Context, id int64) (*entity.TaskDependencyGraphEntity, error) {
 	var graphModel model.TaskDependencyGraphModel
 
@@ -80,12 +65,11 @@ func (a *TaskDependencyGraphAdapter) GetDependencyGraphByID(ctx context.Context,
 	return a.mapper.ToEntity(&graphModel), nil
 }
 
-// GetDependencyGraphsByTaskID retrieves all dependencies for a task
 func (a *TaskDependencyGraphAdapter) GetDependencyGraphsByTaskID(ctx context.Context, taskID int64) ([]*entity.TaskDependencyGraphEntity, error) {
 	var graphModels []*model.TaskDependencyGraphModel
 
 	if err := a.db.WithContext(ctx).
-		Where("task_id = ? AND active_status = ?", taskID, "ACTIVE").
+		Where("task_id = ?", taskID).
 		Find(&graphModels).Error; err != nil {
 		return nil, fmt.Errorf("failed to get dependency graphs by task id: %w", err)
 	}
@@ -93,12 +77,11 @@ func (a *TaskDependencyGraphAdapter) GetDependencyGraphsByTaskID(ctx context.Con
 	return a.mapper.ToEntities(graphModels), nil
 }
 
-// GetBlockingTasks retrieves tasks that this task depends on
 func (a *TaskDependencyGraphAdapter) GetBlockingTasks(ctx context.Context, taskID int64) ([]*entity.TaskDependencyGraphEntity, error) {
 	var graphModels []*model.TaskDependencyGraphModel
 
 	if err := a.db.WithContext(ctx).
-		Where("task_id = ? AND active_status = ?", taskID, "ACTIVE").
+		Where("task_id = ?", taskID).
 		Find(&graphModels).Error; err != nil {
 		return nil, fmt.Errorf("failed to get blocking tasks: %w", err)
 	}
@@ -106,12 +89,11 @@ func (a *TaskDependencyGraphAdapter) GetBlockingTasks(ctx context.Context, taskI
 	return a.mapper.ToEntities(graphModels), nil
 }
 
-// GetBlockedTasks retrieves tasks that depend on this task
 func (a *TaskDependencyGraphAdapter) GetBlockedTasks(ctx context.Context, taskID int64) ([]*entity.TaskDependencyGraphEntity, error) {
 	var graphModels []*model.TaskDependencyGraphModel
 
 	if err := a.db.WithContext(ctx).
-		Where("depends_on_task_id = ? AND active_status = ?", taskID, "ACTIVE").
+		Where("depends_on_task_id = ?", taskID).
 		Find(&graphModels).Error; err != nil {
 		return nil, fmt.Errorf("failed to get blocked tasks: %w", err)
 	}
@@ -119,12 +101,11 @@ func (a *TaskDependencyGraphAdapter) GetBlockedTasks(ctx context.Context, taskID
 	return a.mapper.ToEntities(graphModels), nil
 }
 
-// GetInvalidDependencies retrieves all invalid dependencies for a user
 func (a *TaskDependencyGraphAdapter) GetInvalidDependencies(ctx context.Context, userID int64) ([]*entity.TaskDependencyGraphEntity, error) {
 	var graphModels []*model.TaskDependencyGraphModel
 
 	if err := a.db.WithContext(ctx).
-		Where("user_id = ? AND is_valid = ? AND active_status = ?", userID, false, "ACTIVE").
+		Where("user_id = ? AND is_valid = ?", userID, false).
 		Find(&graphModels).Error; err != nil {
 		return nil, fmt.Errorf("failed to get invalid dependencies: %w", err)
 	}
@@ -132,7 +113,6 @@ func (a *TaskDependencyGraphAdapter) GetInvalidDependencies(ctx context.Context,
 	return a.mapper.ToEntities(graphModels), nil
 }
 
-// UpdateDependencyGraph updates a dependency graph
 func (a *TaskDependencyGraphAdapter) UpdateDependencyGraph(ctx context.Context, tx *gorm.DB, graph *entity.TaskDependencyGraphEntity) error {
 	db := a.getDB(tx)
 	graphModel := a.mapper.ToModel(graph)
@@ -141,16 +121,13 @@ func (a *TaskDependencyGraphAdapter) UpdateDependencyGraph(ctx context.Context, 
 		return fmt.Errorf("failed to update dependency graph: %w", err)
 	}
 
-	graph.UpdatedAt = graphModel.UpdatedAt.UnixMilli()
-
 	return nil
 }
 
-// MarkAsInvalid marks a dependency as invalid
 func (a *TaskDependencyGraphAdapter) MarkAsInvalid(ctx context.Context, tx *gorm.DB, graphID int64, reason string, circularPath []int64) error {
 	db := a.getDB(tx)
 
-	updates := map[string]interface{}{
+	updates := map[string]any{
 		"is_valid":             false,
 		"invalidation_reason":  reason,
 		"circular_path":        circularPath,
@@ -166,11 +143,10 @@ func (a *TaskDependencyGraphAdapter) MarkAsInvalid(ctx context.Context, tx *gorm
 	return nil
 }
 
-// MarkAsValid marks a dependency as valid
 func (a *TaskDependencyGraphAdapter) MarkAsValid(ctx context.Context, tx *gorm.DB, graphID int64) error {
 	db := a.getDB(tx)
 
-	updates := map[string]interface{}{
+	updates := map[string]any{
 		"is_valid":             true,
 		"invalidation_reason":  nil,
 		"circular_path":        nil,
@@ -186,7 +162,6 @@ func (a *TaskDependencyGraphAdapter) MarkAsValid(ctx context.Context, tx *gorm.D
 	return nil
 }
 
-// SoftDeleteDependencyGraph soft deletes a dependency graph
 func (a *TaskDependencyGraphAdapter) SoftDeleteDependencyGraph(ctx context.Context, tx *gorm.DB, id int64) error {
 	db := a.getDB(tx)
 
@@ -199,7 +174,6 @@ func (a *TaskDependencyGraphAdapter) SoftDeleteDependencyGraph(ctx context.Conte
 	return nil
 }
 
-// DeleteDependenciesByTaskID deletes all dependencies for a task
 func (a *TaskDependencyGraphAdapter) DeleteDependenciesByTaskID(ctx context.Context, tx *gorm.DB, taskID int64) error {
 	db := a.getDB(tx)
 
@@ -212,7 +186,6 @@ func (a *TaskDependencyGraphAdapter) DeleteDependenciesByTaskID(ctx context.Cont
 	return nil
 }
 
-// DeleteDependencyBetweenTasks deletes a specific dependency between two tasks
 func (a *TaskDependencyGraphAdapter) DeleteDependencyBetweenTasks(ctx context.Context, tx *gorm.DB, taskID int64, dependsOnTaskID int64) error {
 	db := a.getDB(tx)
 
@@ -225,9 +198,7 @@ func (a *TaskDependencyGraphAdapter) DeleteDependencyBetweenTasks(ctx context.Co
 	return nil
 }
 
-// ValidateDependency validates if a dependency can be created
 func (a *TaskDependencyGraphAdapter) ValidateDependency(ctx context.Context, taskID int64, dependsOnTaskID int64) (*store.DependencyValidationResult, error) {
-	// Check for self-dependency
 	if taskID == dependsOnTaskID {
 		return &store.DependencyValidationResult{
 			IsValid: false,
@@ -235,7 +206,6 @@ func (a *TaskDependencyGraphAdapter) ValidateDependency(ctx context.Context, tas
 		}, nil
 	}
 
-	// Check for circular dependencies
 	circularPaths, err := a.DetectCircularDependencies(ctx, dependsOnTaskID)
 	if err != nil {
 		return nil, err
@@ -249,13 +219,12 @@ func (a *TaskDependencyGraphAdapter) ValidateDependency(ctx context.Context, tas
 		}, nil
 	}
 
-	// Check dependency depth
 	depth, err := a.GetDependencyDepth(ctx, dependsOnTaskID)
 	if err != nil {
 		return nil, err
 	}
 
-	const maxDepth = 10 // Maximum dependency depth allowed
+	const maxDepth = 10
 	if depth >= maxDepth {
 		return &store.DependencyValidationResult{
 			IsValid:          false,

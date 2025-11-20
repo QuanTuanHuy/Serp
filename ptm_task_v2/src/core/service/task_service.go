@@ -155,6 +155,9 @@ func (s *taskService) CreateTask(ctx context.Context, tx *gorm.DB, userID int64,
 	if task.ActiveStatus == "" {
 		task.ActiveStatus = string(enum.Active)
 	}
+	if task.Priority == "" {
+		task.Priority = string(enum.PriorityMedium)
+	}
 	if task.RecurrencePattern == nil {
 		none := string(enum.RecurrenceNone)
 		task.RecurrencePattern = &none

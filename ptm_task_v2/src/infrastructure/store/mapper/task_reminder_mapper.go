@@ -49,13 +49,6 @@ func (m *TaskReminderMapper) ToModel(entity *entity.TaskReminderEntity) *model.T
 		modelData.NotificationChannels = datatypes.JSON(channelsJSON)
 	}
 
-	if entity.CreatedAt > 0 {
-		modelData.CreatedAt = m.UnixMilliToTime(entity.CreatedAt)
-	}
-	if entity.UpdatedAt > 0 {
-		modelData.UpdatedAt = m.UnixMilliToTime(entity.UpdatedAt)
-	}
-
 	return modelData
 }
 

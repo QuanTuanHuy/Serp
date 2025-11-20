@@ -66,6 +66,16 @@ func (a *TaskAdapter) GetTasksByIDs(ctx context.Context, ids []int64) ([]*entity
 	if len(ids) == 0 {
 		return []*entity.TaskEntity{}, nil
 	}
+	if len(ids) == 1 {
+		task, err := a.GetTaskByID(ctx, ids[0])
+		if err != nil {
+			return nil, err
+		}
+		if task == nil {
+			return []*entity.TaskEntity{}, nil
+		}
+		return []*entity.TaskEntity{task}, nil
+	}
 	var taskModels []*model.TaskModel
 	if err := a.db.WithContext(ctx).Where("id IN ?", ids).Find(&taskModels).Error; err != nil {
 		return nil, fmt.Errorf("failed to get tasks by ids: %w", err)
@@ -81,6 +91,16 @@ func (a *TaskAdapter) GetTasksByUserID(ctx context.Context, userID int64, filter
 	}
 	return a.mapper.ToEntities(taskModels), nil
 }
+func (a *TaskAdapter) CountTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) (int64, error) {
+	var count int64
+	filter.Limit = 0
+	filter.Offset = 0
+	query := a.buildTaskQuery(userID, filter)
+	if err := query.WithContext(ctx).Model(&model.TaskModel{}).Count(&count).Error; err != nil {
+		return 0, fmt.Errorf("failed to count tasks: %w", err)
+	}
+	return count, nil
+}
 
 func (a *TaskAdapter) GetTaskByExternalID(ctx context.Context, externalID string) (*entity.TaskEntity, error) {
 	var taskModel model.TaskModel
@@ -91,15 +111,6 @@ func (a *TaskAdapter) GetTaskByExternalID(ctx context.Context, externalID string
 		return nil, fmt.Errorf("failed to get task by external id: %w", err)
 	}
 	return a.mapper.ToEntity(&taskModel), nil
-}
-
-func (a *TaskAdapter) CountTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) (int64, error) {
-	var count int64
-	query := a.buildTaskQuery(userID, filter)
-	if err := query.WithContext(ctx).Model(&model.TaskModel{}).Count(&count).Error; err != nil {
-		return 0, fmt.Errorf("failed to count tasks: %w", err)
-	}
-	return count, nil
 }
 
 func (a *TaskAdapter) UpdateTask(ctx context.Context, tx *gorm.DB, task *entity.TaskEntity) error {
@@ -114,7 +125,7 @@ func (a *TaskAdapter) UpdateTask(ctx context.Context, tx *gorm.DB, task *entity.
 func (a *TaskAdapter) UpdateTaskStatus(ctx context.Context, tx *gorm.DB, taskID int64, status string) error {
 	db := a.getDB(tx)
 
-	updates := map[string]interface{}{
+	updates := map[string]any{
 		"status": status,
 	}
 	if status == "DONE" {
@@ -135,7 +146,7 @@ func (a *TaskAdapter) UpdateTaskPriority(ctx context.Context, tx *gorm.DB, taskI
 
 	if err := db.WithContext(ctx).Model(&model.TaskModel{}).
 		Where("id = ?", taskID).
-		Updates(map[string]interface{}{
+		Updates(map[string]any{
 			"priority":       priority,
 			"priority_score": priorityScore,
 		}).Error; err != nil {
@@ -185,7 +196,6 @@ func (a *TaskAdapter) SoftDeleteTasks(ctx context.Context, tx *gorm.DB, taskIDs 
 	return nil
 }
 
-// GetOverdueTasks retrieves overdue tasks for a user
 func (a *TaskAdapter) GetOverdueTasks(ctx context.Context, userID int64, currentTimeMs int64) ([]*entity.TaskEntity, error) {
 	var taskModels []*model.TaskModel
 
@@ -200,7 +210,6 @@ func (a *TaskAdapter) GetOverdueTasks(ctx context.Context, userID int64, current
 	return a.mapper.ToEntities(taskModels), nil
 }
 
-// GetTasksByDeadline retrieves tasks within a deadline range
 func (a *TaskAdapter) GetTasksByDeadline(ctx context.Context, userID int64, fromMs, toMs int64) ([]*entity.TaskEntity, error) {
 	var taskModels []*model.TaskModel
 
@@ -215,7 +224,6 @@ func (a *TaskAdapter) GetTasksByDeadline(ctx context.Context, userID int64, from
 	return a.mapper.ToEntities(taskModels), nil
 }
 
-// GetTasksByCategory retrieves tasks by category
 func (a *TaskAdapter) GetTasksByCategory(ctx context.Context, userID int64, category string) ([]*entity.TaskEntity, error) {
 	var taskModels []*model.TaskModel
 
@@ -229,13 +237,12 @@ func (a *TaskAdapter) GetTasksByCategory(ctx context.Context, userID int64, cate
 	return a.mapper.ToEntities(taskModels), nil
 }
 
-// GetDeepWorkTasks retrieves deep work tasks
 func (a *TaskAdapter) GetDeepWorkTasks(ctx context.Context, userID int64) ([]*entity.TaskEntity, error) {
 	var taskModels []*model.TaskModel
 
 	if err := a.db.WithContext(ctx).
 		Where("user_id = ? AND is_deep_work = ? AND active_status = ?", userID, true, "ACTIVE").
-		Order("priority DESC, deadline_ms ASC").
+		Order("priority_score DESC, deadline_ms ASC").
 		Find(&taskModels).Error; err != nil {
 		return nil, fmt.Errorf("failed to get deep work tasks: %w", err)
 	}
@@ -243,7 +250,6 @@ func (a *TaskAdapter) GetDeepWorkTasks(ctx context.Context, userID int64) ([]*en
 	return a.mapper.ToEntities(taskModels), nil
 }
 
-// GetTasksByParentID retrieves subtasks of a parent task
 func (a *TaskAdapter) GetTasksByParentID(ctx context.Context, parentTaskID int64) ([]*entity.TaskEntity, error) {
 	var taskModels []*model.TaskModel
 
@@ -257,7 +263,6 @@ func (a *TaskAdapter) GetTasksByParentID(ctx context.Context, parentTaskID int64
 	return a.mapper.ToEntities(taskModels), nil
 }
 
-// GetTasksByProjectID retrieves tasks for a project
 func (a *TaskAdapter) GetTasksByProjectID(ctx context.Context, projectID int64) ([]*entity.TaskEntity, error) {
 	var taskModels []*model.TaskModel
 
@@ -270,8 +275,6 @@ func (a *TaskAdapter) GetTasksByProjectID(ctx context.Context, projectID int64) 
 
 	return a.mapper.ToEntities(taskModels), nil
 }
-
-// Helper functions
 
 func (a *TaskAdapter) getDB(tx *gorm.DB) *gorm.DB {
 	if tx != nil {
@@ -287,19 +290,16 @@ func (a *TaskAdapter) buildTaskQuery(userID int64, filter *store.TaskFilter) *go
 
 	query := a.db.Where("user_id = ?", userID)
 
-	// Status filter
 	if len(filter.Statuses) > 0 {
 		query = query.Where("status IN ?", filter.Statuses)
 	}
 
-	// Active status filter
 	if filter.ActiveStatus != nil {
 		query = query.Where("active_status = ?", *filter.ActiveStatus)
 	} else {
 		query = query.Where("active_status = ?", "ACTIVE")
 	}
 
-	// Priority filter
 	if len(filter.Priorities) > 0 {
 		query = query.Where("priority IN ?", filter.Priorities)
 	}
@@ -307,7 +307,6 @@ func (a *TaskAdapter) buildTaskQuery(userID int64, filter *store.TaskFilter) *go
 		query = query.Where("priority_score >= ?", *filter.MinPriorityScore)
 	}
 
-	// Deadline filter
 	if filter.DeadlineFrom != nil {
 		query = query.Where("deadline_ms >= ?", *filter.DeadlineFrom)
 	}
@@ -315,7 +314,6 @@ func (a *TaskAdapter) buildTaskQuery(userID int64, filter *store.TaskFilter) *go
 		query = query.Where("deadline_ms <= ?", *filter.DeadlineTo)
 	}
 
-	// Created date filter
 	if filter.CreatedFrom != nil {
 		query = query.Where("created_at >= ?", *filter.CreatedFrom)
 	}
@@ -323,24 +321,20 @@ func (a *TaskAdapter) buildTaskQuery(userID int64, filter *store.TaskFilter) *go
 		query = query.Where("created_at <= ?", *filter.CreatedTo)
 	}
 
-	// Category filter
 	if len(filter.Categories) > 0 {
 		query = query.Where("category IN ?", filter.Categories)
 	}
 
-	// Tags filter (JSONB containment)
 	if len(filter.Tags) > 0 {
 		for _, tag := range filter.Tags {
-			query = query.Where("tags @> ?", fmt.Sprintf(`{"%s": true}`, tag))
+			query = query.Where("tags @> ?", fmt.Sprintf(`["%s"]`, tag))
 		}
 	}
 
-	// Project filter
 	if filter.ProjectID != nil {
 		query = query.Where("project_id = ?", *filter.ProjectID)
 	}
 
-	// Task type filters
 	if filter.IsDeepWork != nil {
 		query = query.Where("is_deep_work = ?", *filter.IsDeepWork)
 	}
@@ -351,17 +345,14 @@ func (a *TaskAdapter) buildTaskQuery(userID int64, filter *store.TaskFilter) *go
 		query = query.Where("is_recurring = ?", *filter.IsRecurring)
 	}
 
-	// Parent task filter
 	if filter.ParentTaskID != nil {
 		query = query.Where("parent_task_id = ?", *filter.ParentTaskID)
 	}
 
-	// Sorting
 	if filter.SortBy != "" && filter.SortOrder != "" {
 		query = query.Order(fmt.Sprintf("%s %s", filter.SortBy, filter.SortOrder))
 	}
 
-	// Pagination
 	if filter.Limit > 0 {
 		query = query.Limit(filter.Limit)
 	}

@@ -10,7 +10,6 @@ import (
 
 	"github.com/serp/ptm-task/src/core/domain/entity"
 	"github.com/serp/ptm-task/src/infrastructure/store/model"
-	"gorm.io/datatypes"
 )
 
 type TaskMapper struct{}
@@ -71,9 +70,12 @@ func (m *TaskMapper) ToEntity(taskModel *model.TaskModel) *entity.TaskEntity {
 		CompletedAt: taskModel.CompletedAt,
 	}
 
-	task.Tags = m.jsonMapToStringSlice(taskModel.Tags)
-
-	task.DependentTaskIDs = m.jsonMapToInt64Slice(taskModel.DependentTaskIDs)
+	if len(taskModel.Tags) > 0 {
+		var tags []string
+		if err := json.Unmarshal(taskModel.Tags, &tags); err == nil {
+			task.Tags = tags
+		}
+	}
 
 	return task
 }
@@ -128,9 +130,11 @@ func (m *TaskMapper) ToModel(task *entity.TaskEntity) *model.TaskModel {
 		CompletedAt: task.CompletedAt,
 	}
 
-	taskModel.Tags = m.stringSliceToJSONMap(task.Tags)
-
-	taskModel.DependentTaskIDs = m.int64SliceToJSONMap(task.DependentTaskIDs)
+	if len(task.Tags) > 0 {
+		if tagsJSON, err := json.Marshal(task.Tags); err == nil {
+			taskModel.Tags = tagsJSON
+		}
+	}
 
 	return taskModel
 }
@@ -163,77 +167,4 @@ func (m *TaskMapper) ToModels(entities []*entity.TaskEntity) []*model.TaskModel 
 	}
 
 	return models
-}
-
-func (m *TaskMapper) stringSliceToJSONMap(slice []string) datatypes.JSONMap {
-	if slice == nil {
-		return datatypes.JSONMap{}
-	}
-
-	result := make(map[string]interface{})
-	for i, val := range slice {
-		result[string(rune('0'+i))] = val
-	}
-
-	return datatypes.JSONMap(result)
-}
-
-func (m *TaskMapper) jsonMapToStringSlice(jsonMap datatypes.JSONMap) []string {
-	if len(jsonMap) == 0 {
-		return []string{}
-	}
-
-	var arr []string
-	bytes, _ := json.Marshal(jsonMap)
-	if err := json.Unmarshal(bytes, &arr); err == nil {
-		return arr
-	}
-
-	result := make([]string, 0, len(jsonMap))
-	for _, val := range jsonMap {
-		if str, ok := val.(string); ok {
-			result = append(result, str)
-		}
-	}
-
-	return result
-}
-
-func (m *TaskMapper) int64SliceToJSONMap(slice []int64) datatypes.JSONMap {
-	if slice == nil {
-		return datatypes.JSONMap{}
-	}
-
-	result := make(map[string]interface{})
-	for i, val := range slice {
-		result[string(rune('0'+i))] = val
-	}
-
-	return datatypes.JSONMap(result)
-}
-
-func (m *TaskMapper) jsonMapToInt64Slice(jsonMap datatypes.JSONMap) []int64 {
-	if len(jsonMap) == 0 {
-		return []int64{}
-	}
-
-	var arr []int64
-	bytes, _ := json.Marshal(jsonMap)
-	if err := json.Unmarshal(bytes, &arr); err == nil {
-		return arr
-	}
-
-	result := make([]int64, 0, len(jsonMap))
-	for _, val := range jsonMap {
-		switch v := val.(type) {
-		case int64:
-			result = append(result, v)
-		case float64:
-			result = append(result, int64(v))
-		case int:
-			result = append(result, int64(v))
-		}
-	}
-
-	return result
 }

@@ -48,7 +48,6 @@ func (m *TaskTemplateMapper) ToModel(entity *entity.TaskTemplateEntity) *model.T
 		ActiveStatus:         entity.ActiveStatus,
 	}
 
-	// Convert tags to JSONB
 	if len(entity.Tags) > 0 {
 		tagsMap := make(datatypes.JSONMap)
 		for _, tag := range entity.Tags {
@@ -57,7 +56,6 @@ func (m *TaskTemplateMapper) ToModel(entity *entity.TaskTemplateEntity) *model.T
 		modelData.Tags = tagsMap
 	}
 
-	// Convert preferred days to JSONB
 	if len(entity.PreferredDays) > 0 {
 		daysMap := make(datatypes.JSONMap)
 		for i, day := range entity.PreferredDays {
@@ -66,17 +64,9 @@ func (m *TaskTemplateMapper) ToModel(entity *entity.TaskTemplateEntity) *model.T
 		modelData.PreferredDays = daysMap
 	}
 
-	if entity.CreatedAt > 0 {
-		modelData.CreatedAt = m.UnixMilliToTime(entity.CreatedAt)
-	}
-	if entity.UpdatedAt > 0 {
-		modelData.UpdatedAt = m.UnixMilliToTime(entity.UpdatedAt)
-	}
-
 	return modelData
 }
 
-// ToEntity converts TaskTemplateModel to TaskTemplateEntity
 func (m *TaskTemplateMapper) ToEntity(model *model.TaskTemplateModel) *entity.TaskTemplateEntity {
 	if model == nil {
 		return nil

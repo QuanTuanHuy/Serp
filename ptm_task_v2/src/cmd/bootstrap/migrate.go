@@ -18,6 +18,7 @@ func InitializeDB(db *gorm.DB) {
 		&model.TaskModel{},
 		&model.NoteModel{},
 		&model.TaskDependencyGraphModel{},
+		&model.ActivityEventModel{},
 	)
 	if err != nil {
 		log.Fatal("Failed to run migrations: ", err)

@@ -33,8 +33,9 @@ func (m *ProjectMapper) ToEntity(model *model.ProjectModel) *entity.ProjectEntit
 		Title:       model.Title,
 		Description: model.Description,
 
-		Status:   model.Status,
-		Priority: model.Priority,
+		Status:       model.Status,
+		ActiveStatus: model.ActiveStatus,
+		Priority:     model.Priority,
 
 		StartDateMs: model.StartDateMs,
 		DeadlineMs:  model.DeadlineMs,
@@ -57,7 +58,7 @@ func (m *ProjectMapper) ToModel(entity *entity.ProjectEntity) *model.ProjectMode
 		return nil
 	}
 
-	projectModel := &model.ProjectModel{
+	return &model.ProjectModel{
 		BaseModel: model.BaseModel{
 			ID: entity.ID,
 		},
@@ -67,8 +68,9 @@ func (m *ProjectMapper) ToModel(entity *entity.ProjectEntity) *model.ProjectMode
 		Title:       entity.Title,
 		Description: entity.Description,
 
-		Status:   entity.Status,
-		Priority: entity.Priority,
+		Status:       entity.Status,
+		ActiveStatus: entity.ActiveStatus,
+		Priority:     entity.Priority,
 
 		StartDateMs: entity.StartDateMs,
 		DeadlineMs:  entity.DeadlineMs,
@@ -84,8 +86,6 @@ func (m *ProjectMapper) ToModel(entity *entity.ProjectEntity) *model.ProjectMode
 		EstimatedHours: entity.EstimatedHours,
 		ActualHours:    entity.ActualHours,
 	}
-
-	return projectModel
 }
 
 func (m *ProjectMapper) ToEntities(models []*model.ProjectModel) []*entity.ProjectEntity {

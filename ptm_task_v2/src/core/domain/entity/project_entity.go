@@ -5,6 +5,8 @@ Description: Part of Serp Project
 
 package entity
 
+import "github.com/serp/ptm-task/src/core/domain/enum"
+
 type ProjectEntity struct {
 	BaseEntity
 
@@ -14,8 +16,9 @@ type ProjectEntity struct {
 	Title       string  `json:"title"`
 	Description *string `json:"description,omitempty"`
 
-	Status   string `json:"status"`
-	Priority string `json:"priority"`
+	Status       string `json:"status"`
+	ActiveStatus string `json:"activeStatus"`
+	Priority     string `json:"priority"`
 
 	StartDateMs *int64 `json:"startDateMs,omitempty"`
 	DeadlineMs  *int64 `json:"deadlineMs,omitempty"`
@@ -36,8 +39,9 @@ type ProjectEntity struct {
 
 func NewProjectEntity() *ProjectEntity {
 	return &ProjectEntity{
-		Status:             "ACTIVE",
-		Priority:           "MEDIUM",
+		Status:             string(enum.ProjectNew),
+		Priority:           string(enum.Medium),
+		ActiveStatus:       string(enum.Active),
 		IsFavorite:         false,
 		ProgressPercentage: 0,
 	}

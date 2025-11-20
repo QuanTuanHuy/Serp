@@ -27,11 +27,10 @@ type TaskModel struct {
 	DeadlineMs           *int64
 	EarliestStartMs      *int64
 
-	Category *string           `gorm:"type:varchar(100)"`
-	Tags     datatypes.JSONMap `gorm:"type:jsonb;index:idx_task_tags,type:gin"`
+	Category *string        `gorm:"type:varchar(100)"`
+	Tags     datatypes.JSON `gorm:"type:jsonb;index:idx_task_tags,type:gin"`
 
-	ParentTaskID     *int64            `gorm:"index:idx_task_parent"`
-	DependentTaskIDs datatypes.JSONMap `gorm:"type:jsonb"`
+	ParentTaskID *int64 `gorm:"index:idx_task_parent"`
 
 	ProjectID *int64 `gorm:"index:idx_task_project_status,priority:1"`
 

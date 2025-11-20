@@ -20,12 +20,10 @@ func NewDBTransactionAdapter(db *gorm.DB) store.IDBTransactionPort {
 	return &DBTransactionAdapter{db: db}
 }
 
-// StartTransaction starts a new database transaction
 func (a *DBTransactionAdapter) StartTransaction() *gorm.DB {
 	return a.db.Begin()
 }
 
-// Commit commits the transaction
 func (a *DBTransactionAdapter) Commit(tx *gorm.DB) error {
 	if tx == nil {
 		return fmt.Errorf("transaction is nil")
@@ -38,7 +36,6 @@ func (a *DBTransactionAdapter) Commit(tx *gorm.DB) error {
 	return nil
 }
 
-// Rollback rolls back the transaction
 func (a *DBTransactionAdapter) Rollback(tx *gorm.DB) error {
 	if tx == nil {
 		return fmt.Errorf("transaction is nil")
