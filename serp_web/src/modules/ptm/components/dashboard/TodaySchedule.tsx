@@ -80,7 +80,7 @@ export function TodaySchedule() {
     <Card>
       <CardHeader
         className='cursor-pointer hover:bg-accent/50 transition-colors rounded-t-lg'
-        onClick={() => router.push('/ptmv2/schedule')}
+        onClick={() => router.push('/ptm/schedule')}
       >
         <div className='flex items-center justify-between'>
           <CardTitle className='flex items-center gap-2'>

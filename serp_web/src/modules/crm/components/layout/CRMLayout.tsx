@@ -6,9 +6,15 @@
 'use client';
 
 import React from 'react';
-import { DynamicSidebar, RouteGuard } from '@/shared/components';
+import {
+  DynamicSidebar,
+  RouteGuard,
+  SidebarProvider,
+  useSidebarContext,
+} from '@/shared/components';
 import { CRMHeader } from './CRMHeader';
 import { CRMAuthGuard } from '../CRMAuthGuard';
+import { cn } from '@/shared/utils';
 
 interface CRMLayoutProps {
   children: React.ReactNode;
@@ -19,6 +25,7 @@ interface CRMLayoutProps {
  */
 const CRMLayoutContent: React.FC<CRMLayoutProps> = ({ children }) => {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const { isCollapsed } = useSidebarContext();
 
   return (
     <div className='flex min-h-screen bg-background'>
@@ -28,7 +35,10 @@ const CRMLayoutContent: React.FC<CRMLayoutProps> = ({ children }) => {
       {/* Main Content Area */}
       <div
         ref={containerRef}
-        className='flex flex-1 flex-col transition-all duration-300 h-screen overflow-y-auto pl-64'
+        className={cn(
+          'flex flex-1 flex-col transition-all duration-300 h-screen overflow-y-auto',
+          isCollapsed ? 'pl-16' : 'pl-64'
+        )}
       >
         {/* Header */}
         <CRMHeader scrollContainerRef={containerRef} />
@@ -47,7 +57,9 @@ const CRMLayoutContent: React.FC<CRMLayoutProps> = ({ children }) => {
 export const CRMLayout: React.FC<CRMLayoutProps> = ({ children }) => {
   return (
     <CRMAuthGuard>
-      <CRMLayoutContent>{children}</CRMLayoutContent>
+      <SidebarProvider>
+        <CRMLayoutContent>{children}</CRMLayoutContent>
+      </SidebarProvider>
     </CRMAuthGuard>
   );
 };

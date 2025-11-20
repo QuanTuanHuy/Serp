@@ -126,7 +126,7 @@ export function TaskCard({
 
   const handleCardClick = () => {
     if (onNavigate) {
-      router.push(`/ptmv2/tasks/${task.id}`);
+      router.push(`/ptm/tasks/${task.id}`);
     } else {
       onClick?.(task.id);
     }
@@ -299,7 +299,7 @@ export function TaskCard({
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
-                router.push(`/ptmv2/tasks/${task.id}`);
+                router.push(`/ptm/tasks/${task.id}`);
               }}
             >
               <ExternalLink className='mr-2 h-4 w-4' />

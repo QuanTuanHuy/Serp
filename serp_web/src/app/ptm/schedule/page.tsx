@@ -221,7 +221,7 @@ export default function SchedulePage() {
   const handleViewTask = () => {
     if (!selectedEvent?.scheduleTaskId) return;
     setSelectedEvent(null);
-    router.push(`/ptmv2/tasks/${selectedEvent.scheduleTaskId}`);
+    router.push(`/ptm/tasks/${selectedEvent.scheduleTaskId}`);
   };
 
   return (

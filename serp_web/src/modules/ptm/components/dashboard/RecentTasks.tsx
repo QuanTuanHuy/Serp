@@ -90,7 +90,7 @@ export function RecentTasks() {
           <Button
             variant='ghost'
             size='sm'
-            onClick={() => router.push('/ptmv2/tasks')}
+            onClick={() => router.push('/ptm/tasks')}
           >
             View All
           </Button>

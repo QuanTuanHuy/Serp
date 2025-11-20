@@ -61,7 +61,7 @@ export function PTMHeader({ scrollContainerRef, className }: PTMHeaderProps) {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/ptmv2/tasks?search=${encodeURIComponent(searchQuery)}`);
+      router.push(`/ptm/tasks?search=${encodeURIComponent(searchQuery)}`);
     }
   };
 
@@ -74,8 +74,8 @@ export function PTMHeader({ scrollContainerRef, className }: PTMHeaderProps) {
     const segments = pathname.split('/').filter(Boolean);
     return segments.map((segment, index) => ({
       name:
-        segment === 'ptmv2'
-          ? 'PTM v2'
+        segment === 'ptm'
+          ? 'PTM'
           : segment.charAt(0).toUpperCase() + segment.slice(1),
       href: '/' + segments.slice(0, index + 1).join('/'),
       isLast: index === segments.length - 1,
@@ -183,7 +183,7 @@ export function PTMHeader({ scrollContainerRef, className }: PTMHeaderProps) {
             <Button
               variant='ghost'
               size='sm'
-              onClick={() => router.push('/ptmv2/activity')}
+              onClick={() => router.push('/ptm/activity')}
               className='relative'
             >
               <Bell className='h-5 w-5' />

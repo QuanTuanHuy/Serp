@@ -615,7 +615,7 @@ const _mockActivityEventsData: ActivityEvent[] = [
       duration: 120,
       projectName: 'Backend API',
     },
-    navigationUrl: '/ptmv2/tasks/1',
+    navigationUrl: '/ptm/tasks/1',
     navigationParams: {
       openDetail: 'true',
     },
@@ -646,7 +646,7 @@ const _mockActivityEventsData: ActivityEvent[] = [
       contextSwitch: 0.1,
     },
     tasksAffected: 15,
-    navigationUrl: '/ptmv2/schedule',
+    navigationUrl: '/ptm/schedule',
     createdAt: Date.now() - 3 * 60 * 60 * 1000, // 3 hours ago
   },
   {
@@ -662,7 +662,7 @@ const _mockActivityEventsData: ActivityEvent[] = [
       duration: 15,
       onTime: true,
     },
-    navigationUrl: '/ptmv2/tasks/4',
+    navigationUrl: '/ptm/tasks/4',
     createdAt: Date.now() - 6 * 60 * 60 * 1000, // 6 hours ago
   },
   {
@@ -692,7 +692,7 @@ const _mockActivityEventsData: ActivityEvent[] = [
       contextSwitch: 0.1,
     },
     tasksAffected: 22,
-    navigationUrl: '/ptmv2/schedule',
+    navigationUrl: '/ptm/schedule',
     createdAt: Date.now() - 12 * 60 * 60 * 1000, // 12 hours ago
   },
   {
@@ -708,7 +708,7 @@ const _mockActivityEventsData: ActivityEvent[] = [
       teamSize: 5,
       deadline: Date.now() + 30 * 24 * 60 * 60 * 1000,
     },
-    navigationUrl: '/ptmv2/projects/1',
+    navigationUrl: '/ptm/projects/1',
     navigationParams: {
       tab: 'overview',
     },
@@ -728,7 +728,7 @@ const _mockActivityEventsData: ActivityEvent[] = [
       remainingTimeMs: 3 * 60 * 60 * 1000,
       estimatedCompletionMs: 2 * 60 * 60 * 1000,
     },
-    navigationUrl: '/ptmv2/tasks/1',
+    navigationUrl: '/ptm/tasks/1',
     navigationParams: {
       openDetail: 'true',
       highlightDeadline: 'true',
@@ -749,7 +749,7 @@ const _mockActivityEventsData: ActivityEvent[] = [
         priority: { from: 'MEDIUM', to: 'HIGH' },
       },
     },
-    navigationUrl: '/ptmv2/tasks/3',
+    navigationUrl: '/ptm/tasks/3',
     createdAt: Date.now() - 2 * 24 * 60 * 60 * 1000, // 2 days ago
   },
   {
@@ -764,7 +764,7 @@ const _mockActivityEventsData: ActivityEvent[] = [
       conflictingTasks: ['Review Pull Requests', 'Design System Components'],
       timeSlot: '14:00-16:00',
     },
-    navigationUrl: '/ptmv2/schedule',
+    navigationUrl: '/ptm/schedule',
     navigationParams: {
       date: new Date().toISOString().split('T')[0],
       highlight: 'conflict',

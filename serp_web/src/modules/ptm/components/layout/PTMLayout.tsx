@@ -8,10 +8,16 @@
 'use client';
 
 import React from 'react';
-import { DynamicSidebar, RouteGuard } from '@/shared/components';
+import {
+  DynamicSidebar,
+  RouteGuard,
+  SidebarProvider,
+  useSidebarContext,
+} from '@/shared/components';
 import { PTMHeader } from './PTMHeader';
 import { PTMCommandPalette } from './PTMCommandPalette';
 import { PTMAuthGuard } from '../PTMAuthGuard';
+import { cn } from '@/shared/utils';
 
 interface PTMLayoutProps {
   children: React.ReactNode;
@@ -19,6 +25,7 @@ interface PTMLayoutProps {
 
 const PTMLayoutContent: React.FC<PTMLayoutProps> = ({ children }) => {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const { isCollapsed } = useSidebarContext();
 
   return (
     <div className='flex min-h-screen bg-background'>
@@ -28,7 +35,10 @@ const PTMLayoutContent: React.FC<PTMLayoutProps> = ({ children }) => {
       {/* Main Content Area */}
       <div
         ref={containerRef}
-        className='flex flex-1 flex-col transition-all duration-300 h-screen overflow-y-auto pl-64'
+        className={cn(
+          'flex flex-1 flex-col transition-all duration-300 h-screen overflow-y-auto',
+          isCollapsed ? 'pl-16' : 'pl-64'
+        )}
       >
         {/* Header */}
         <PTMHeader scrollContainerRef={containerRef} />
@@ -50,7 +60,9 @@ const PTMLayoutContent: React.FC<PTMLayoutProps> = ({ children }) => {
 export const PTMLayout: React.FC<PTMLayoutProps> = ({ children }) => {
   return (
     <PTMAuthGuard>
-      <PTMLayoutContent>{children}</PTMLayoutContent>
+      <SidebarProvider>
+        <PTMLayoutContent>{children}</PTMLayoutContent>
+      </SidebarProvider>
     </PTMAuthGuard>
   );
 };

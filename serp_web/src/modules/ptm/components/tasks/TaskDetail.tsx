@@ -202,7 +202,7 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
   const handleCopyLink = () => {
     if (!task) return;
 
-    const url = `${window.location.origin}/ptmv2/tasks/${task.id}`;
+    const url = `${window.location.origin}/ptm/tasks/${task.id}`;
     navigator.clipboard.writeText(url);
     toast.success('Link copied to clipboard');
   };

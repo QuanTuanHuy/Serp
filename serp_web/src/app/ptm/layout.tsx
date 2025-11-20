@@ -5,12 +5,8 @@
  * @description Part of Serp Project - PTM module layout wrapper
  */
 
-import { PTMLayout } from '@/modules/ptm';
+import { PTMLayout as Layout } from '@/modules/ptm';
 
-export default function PTMv2Layout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return <PTMLayout>{children}</PTMLayout>;
+export default function PTMLayout({ children }: { children: React.ReactNode }) {
+  return <Layout>{children}</Layout>;
 }

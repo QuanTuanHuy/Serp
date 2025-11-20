@@ -115,7 +115,7 @@ export default function ProjectDetailPage({
         <Button
           variant='ghost'
           size='sm'
-          onClick={() => router.push('/ptmv2/projects')}
+          onClick={() => router.push('/ptm/projects')}
         >
           <ArrowLeft className='h-4 w-4 mr-2' />
           Back to Projects
@@ -290,7 +290,7 @@ export default function ProjectDetailPage({
                 variant='outline'
                 size='sm'
                 className='mt-4'
-                onClick={() => router.push(`/ptmv2/tasks?project=${projectId}`)}
+                onClick={() => router.push(`/ptm/tasks?project=${projectId}`)}
               >
                 Create Task
               </Button>
