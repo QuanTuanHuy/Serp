@@ -11,7 +11,7 @@ type CreateFacilityRequest struct {
 	StatusId         string  `json:"statusId"`
 	PostalCode       string  `json:"postalCode"`
 	Length           float32 `json:"length"`
-	Weight           float32 `json:"weight"`
+	Width            float32 `json:"width"`
 	Height           float32 `json:"height"`
 	AddressType      string  `json:"addressType"`
 	Latitude         float32 `json:"latitude"`
@@ -27,7 +27,7 @@ type UpdateFacilityRequest struct {
 	Phone      string  `json:"phone"`
 	PostalCode string  `json:"postalCode"`
 	Length     float32 `json:"length"`
-	Weight     float32 `json:"weight"`
+	Width      float32 `json:"width"`
 	Height     float32 `json:"height"`
 }
 

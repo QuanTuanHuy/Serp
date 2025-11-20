@@ -93,6 +93,7 @@ func (o *OrderController) GetOrders(ctx *gin.Context) {
 	sortDirection := utils.ParseStringQuery(ctx, "sortDirection")
 	query := utils.ParseStringQuery(ctx, "query")
 	statusId := utils.ParseStringQuery(ctx, "statusId")
+	saleChannelId := utils.ParseStringQuery(ctx, "saleChannelId")
 	fromSupplierId := utils.ParseStringQuery(ctx, "fromSupplierId")
 	orderDateAfter := utils.ParseStringQuery(ctx, "orderDateAfter")
 	orderDateBefore := utils.ParseStringQuery(ctx, "orderDateBefore")
@@ -106,6 +107,7 @@ func (o *OrderController) GetOrders(ctx *gin.Context) {
 		SortDirection:   sortDirection,
 		Query:           query,
 		StatusId:        statusId,
+		SaleChannelId:   saleChannelId,
 		FromSupplierId:  fromSupplierId,
 		OrderDateAfter:  orderDateAfter,
 		OrderDateBefore: orderDateBefore,

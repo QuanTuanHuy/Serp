@@ -19,6 +19,7 @@ type IShipmentService interface {
 	UpdateShipment(ctx context.Context, shipmentId string, req *request.UpdateShipmentRequest) (*response.BaseResponse, error)
 	DeleteShipment(ctx context.Context, shipmentId string) (*response.BaseResponse, error)
 	GetShipment(ctx context.Context, shipmentId string) (*response.BaseResponse, error)
+	GetShipmentsByOrderId(ctx context.Context, orderId string) (*response.BaseResponse, error)
 	ImportShipment(ctx context.Context, shipmentId string) (*response.BaseResponse, error)
 
 	AddItemToShipment(ctx context.Context, shipmentId string, req *request.AddItemToShipmentRequest) (*response.BaseResponse, error)
@@ -63,6 +64,15 @@ func (s *ShipmentService) GetShipment(ctx context.Context, shipmentId string) (*
 	res, err := s.shipmentClient.GetShipment(ctx, shipmentId)
 	if err != nil {
 		log.Error(ctx, "ShipmentService: GetShipment error: ", err.Error())
+		return nil, err
+	}
+	return res, nil
+}
+
+func (s *ShipmentService) GetShipmentsByOrderId(ctx context.Context, orderId string) (*response.BaseResponse, error) {
+	res, err := s.shipmentClient.GetShipmentsByOrderId(ctx, orderId)
+	if err != nil {
+		log.Error(ctx, "ShipmentService: GetShipmentsByOrderId error: ", err.Error())
 		return nil, err
 	}
 	return res, nil

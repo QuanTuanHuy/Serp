@@ -86,6 +86,7 @@ func RegisterPurchaseRoutes(group *gin.RouterGroup,
 		shipmentV1.Use(middleware.AuthMiddleware()).PATCH("/update/:shipmentId", shipmentController.UpdateShipment)
 		shipmentV1.Use(middleware.AuthMiddleware()).DELETE("/delete/:shipmentId", shipmentController.DeleteShipment)
 		shipmentV1.Use(middleware.AuthMiddleware()).GET("/search/:shipmentId", shipmentController.GetShipment)
+		shipmentV1.Use(middleware.AuthMiddleware()).GET("/search/by-order/:orderId", shipmentController.GetShipmentsByOrderId)
 
 		// Shipment state operation
 		shipmentV1.Use(middleware.AuthMiddleware()).PATCH("/manage/:shipmentId/import", shipmentController.ImportShipment)

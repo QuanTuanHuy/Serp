@@ -60,6 +60,7 @@ type GetOrderParams struct {
 	Query           *string `form:"query"`
 	StatusId        *string `form:"statusId"`
 	FromSupplierId  *string `form:"fromSupplierId"`
+	SaleChannelId   *string `form:"saleChannelId"`
 	OrderDateAfter  *string `form:"orderDateAfter"`
 	OrderDateBefore *string `form:"orderDateBefore"`
 	DeliveryBefore  *string `form:"deliveryBefore"`

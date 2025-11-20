@@ -83,6 +83,21 @@ func (s *ShipmentController) GetShipment(ctx *gin.Context) {
 	ctx.JSON(res.Code, res)
 }
 
+func (s *ShipmentController) GetShipmentsByOrderId(ctx *gin.Context) {
+	orderId := ctx.Param("orderId")
+	if orderId == "" {
+		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
+		return
+	}
+
+	res, err := s.shipmentService.GetShipmentsByOrderId(ctx.Request.Context(), orderId)
+	if err != nil {
+		utils.AbortErrorHandle(ctx, constant.GeneralInternalServerError)
+		return
+	}
+	ctx.JSON(res.Code, res)
+}
+
 func (s *ShipmentController) ImportShipment(ctx *gin.Context) {
 	shipmentId := ctx.Param("shipmentId")
 	if shipmentId == "" {

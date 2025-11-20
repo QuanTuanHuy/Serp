@@ -125,6 +125,32 @@ func (s *ShipmentClientAdapter) GetShipment(ctx context.Context, shipmentId stri
 	return &result, nil
 }
 
+func (s *ShipmentClientAdapter) GetShipmentsByOrderId(ctx context.Context, orderId string) (*response.BaseResponse, error) {
+	headers := utils.BuildHeadersFromContext(ctx)
+	var httpResponse *utils.HTTPResponse
+	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
+		var err error
+		url := fmt.Sprintf("/api/v1/shipment/search/by-order/%s", orderId)
+		httpResponse, err = s.apiClient.GET(ctx, url, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call get shipments by order API: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !s.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("GetShipmentsByOrderId API returned error status: %d", httpResponse.StatusCode))
+	}
+
+	var result response.BaseResponse
+	if err := s.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal get shipments by order response: %w", err)
+	}
+	return &result, nil
+}
+
 func (s *ShipmentClientAdapter) ImportShipment(ctx context.Context, shipmentId string) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	var httpResponse *utils.HTTPResponse

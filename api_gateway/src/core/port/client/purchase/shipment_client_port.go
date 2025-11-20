@@ -17,6 +17,7 @@ type IShipmentClientPort interface {
 	UpdateShipment(ctx context.Context, shipmentId string, req *request.UpdateShipmentRequest) (*response.BaseResponse, error)
 	DeleteShipment(ctx context.Context, shipmentId string) (*response.BaseResponse, error)
 	GetShipment(ctx context.Context, shipmentId string) (*response.BaseResponse, error)
+	GetShipmentsByOrderId(ctx context.Context, orderId string) (*response.BaseResponse, error)
 	ImportShipment(ctx context.Context, shipmentId string) (*response.BaseResponse, error)
 
 	// Item management
