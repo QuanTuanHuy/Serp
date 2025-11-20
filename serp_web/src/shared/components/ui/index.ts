@@ -92,3 +92,6 @@ export {
   AccordionTrigger,
   AccordionContent,
 } from './accordion';
+
+// Alert Components
+export { Alert, AlertTitle, AlertDescription } from './alert';

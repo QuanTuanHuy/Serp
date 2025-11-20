@@ -122,6 +122,15 @@ export const api = createApi({
     'subscription/PlanModule',
     'subscription/Module',
     'subscription/Subscription',
+    // PTM v2 tags
+    'ptm/Task',
+    'ptm/Project',
+    'ptm/Schedule',
+    'ptm/FocusTime',
+    'ptm/Availability',
+    'ptm/Activity',
+    'ptm/Note',
+    'ptm/Dependency',
   ],
 
   // Define endpoints in separate files for each module

@@ -1,6 +1,8 @@
 /**
- * Author: QuanTuanHuy
- * Description: Part of Serp Project - PTM main layout with sidebar and header
+ * PTM v2 - Main Layout Component
+ *
+ * @author QuanTuanHuy
+ * @description Part of Serp Project - Layout wrapper for PTM module
  */
 
 'use client';
@@ -8,6 +10,7 @@
 import React from 'react';
 import { DynamicSidebar, RouteGuard } from '@/shared/components';
 import { PTMHeader } from './PTMHeader';
+import { PTMCommandPalette } from './PTMCommandPalette';
 import { PTMAuthGuard } from '../PTMAuthGuard';
 
 interface PTMLayoutProps {
@@ -19,7 +22,7 @@ const PTMLayoutContent: React.FC<PTMLayoutProps> = ({ children }) => {
 
   return (
     <div className='flex min-h-screen bg-background'>
-      {/* Sidebar */}
+      {/* Dynamic Sidebar */}
       <DynamicSidebar moduleCode='PTM' />
 
       {/* Main Content Area */}
@@ -37,6 +40,9 @@ const PTMLayoutContent: React.FC<PTMLayoutProps> = ({ children }) => {
           </div>
         </main>
       </div>
+
+      {/* Command Palette */}
+      <PTMCommandPalette />
     </div>
   );
 };

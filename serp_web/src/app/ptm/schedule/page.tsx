@@ -1,169 +1,313 @@
 /**
- * PTM Schedule Page - Optimize Your Tasks
+ * PTM v2 - Schedule Page
  *
  * @author QuanTuanHuy
- * @description Part of Serp Project - task optimization
+ * @description Part of Serp Project - Modern intelligent schedule management
  */
 
 'use client';
 
-import React from 'react';
-import { Button, Card } from '@/shared/components';
-import { Brain, Zap, Target, Clock, TrendingUp, RefreshCw } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import {
+  CalendarView,
+  ScheduleHeader,
+  ScheduleSidebar,
+  OptimizationDialog,
+  EventDetailSheet,
+} from '@/modules/ptm';
+import type { OptimizationConfig, ScheduleEvent } from '@/modules/ptm';
+import { useGetTasksQuery } from '@/modules/ptm/services/taskApi';
+import { GanttView } from '@/modules/ptm/components/schedule/GanttView';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/shared/components/ui/tabs';
+import { Calendar, GanttChart } from 'lucide-react';
+import {
+  useGetFocusTimeBlocksQuery,
+  useTriggerOptimizationMutation,
+  useCreateScheduleEventMutation,
+  useUpdateScheduleEventMutation,
+  useDeleteScheduleEventMutation,
+} from '@/modules/ptm/services/scheduleApi';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
-const Schedule: React.FC = () => {
-  const optimizedTasks = [
-    {
-      id: 1,
-      title: 'Code review for authentication module',
-      priority: 'High',
-      estimatedTime: '2 hours',
-      suggestedTime: '9:00 AM - 11:00 AM',
-      reasoning: 'Best focus time, matches your peak productivity hours',
-    },
-    {
-      id: 2,
-      title: 'Team standup meeting',
-      priority: 'Medium',
-      estimatedTime: '30 minutes',
-      suggestedTime: '11:30 AM - 12:00 PM',
-      reasoning: 'Good transition time before lunch break',
-    },
-    {
-      id: 3,
-      title: 'Database optimization research',
-      priority: 'Medium',
-      estimatedTime: '1.5 hours',
-      suggestedTime: '2:00 PM - 3:30 PM',
-      reasoning: 'Post-lunch energy suitable for research tasks',
-    },
-  ];
+export default function SchedulePage() {
+  const router = useRouter();
+  const [viewMode, setViewMode] = useState<'calendar' | 'gantt'>('calendar');
+  const [optimizationDialogOpen, setOptimizationDialogOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(
+    null
+  );
+
+  // Fetch data
+  const { data: allTasks = [] } = useGetTasksQuery({});
+  const { data: focusBlocks = [] } = useGetFocusTimeBlocksQuery();
+  const [triggerOptimization, { isLoading: isOptimizing }] =
+    useTriggerOptimizationMutation();
+  const [createScheduleEvent] = useCreateScheduleEventMutation();
+  const [updateScheduleEvent] = useUpdateScheduleEventMutation();
+  const [deleteScheduleEvent] = useDeleteScheduleEventMutation();
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + O to optimize
+      if ((e.metaKey || e.ctrlKey) && e.key === 'o') {
+        e.preventDefault();
+        setOptimizationDialogOpen(true);
+      }
+
+      // Escape to close dialogs/sheets
+      if (e.key === 'Escape') {
+        if (optimizationDialogOpen) {
+          setOptimizationDialogOpen(false);
+        } else if (selectedEvent) {
+          setSelectedEvent(null);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [optimizationDialogOpen, selectedEvent]);
+
+  // Calculate date range for current week
+  const dateRange = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now);
+    start.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(start);
+    end.setDate(start.getDate() + 7); // End of week
+
+    return { start, end };
+  }, []);
+
+  // Calculate unscheduled tasks (tasks without schedule events)
+  const unscheduledTasks = useMemo(() => {
+    return allTasks.filter(
+      (task) =>
+        task.status !== 'DONE' &&
+        task.status !== 'CANCELLED' &&
+        task.activeStatus === 'ACTIVE'
+    );
+  }, [allTasks]);
+
+  // Calculate stats
+  const stats = useMemo(() => {
+    const totalTasks = allTasks.filter(
+      (t) => t.status !== 'CANCELLED' && t.activeStatus === 'ACTIVE'
+    ).length;
+    const scheduledTasks = totalTasks - unscheduledTasks.length;
+    const plannedHours = allTasks
+      .filter((t) => t.status !== 'DONE' && t.status !== 'CANCELLED')
+      .reduce((sum, task) => sum + task.estimatedDurationHours, 0);
+    const activeFocusBlocks = focusBlocks.filter((b) => b.isEnabled).length;
+
+    // Mock optimization percentage (would come from backend)
+    const optimizedPercentage =
+      scheduledTasks > 0 ? Math.round((scheduledTasks / totalTasks) * 100) : 0;
+
+    return {
+      optimizedPercentage,
+      tasksScheduled: scheduledTasks,
+      totalTasks,
+      plannedHours: Math.round(plannedHours),
+      focusBlocks: activeFocusBlocks,
+    };
+  }, [allTasks, unscheduledTasks, focusBlocks]);
+
+  const handleOptimize = async (config: OptimizationConfig) => {
+    try {
+      await triggerOptimization({
+        planId: 'current', // Would be actual plan ID
+        useQuickPlace: config.algorithmType === 'local_heuristic',
+      }).unwrap();
+
+      toast.success('Schedule optimized successfully! 🎉', {
+        description: `Scheduled ${stats.tasksScheduled} tasks using ${config.algorithmType}`,
+      });
+      setOptimizationDialogOpen(false);
+    } catch (error) {
+      toast.error('Failed to optimize schedule', {
+        description: 'Please try again or contact support',
+      });
+    }
+  };
+
+  const handleExternalDrop = async (
+    taskId: number | string,
+    start: Date,
+    end: Date
+  ) => {
+    try {
+      const numericTaskId =
+        typeof taskId === 'string' ? parseInt(taskId, 10) : taskId;
+      const task = allTasks.find((t) => t.id === numericTaskId);
+      if (!task) {
+        toast.error('Task not found');
+        return;
+      }
+
+      const startMinutes = start.getHours() * 60 + start.getMinutes();
+      const endMinutes = end.getHours() * 60 + end.getMinutes();
+      const dateMs = new Date(start).setHours(0, 0, 0, 0);
+
+      await createScheduleEvent({
+        scheduleTaskId: numericTaskId,
+        dateMs,
+        startMin: startMinutes,
+        endMin: endMinutes,
+        isDeepWork: false,
+        title: task.title,
+      }).unwrap();
+
+      toast.success(`Scheduled: ${task.title}`, {
+        description: `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+      });
+    } catch (error) {
+      console.error('Failed to create schedule event:', error);
+      toast.error('Failed to schedule task');
+    }
+  };
+
+  const handleEventSelect = (event: ScheduleEvent) => {
+    setSelectedEvent(event);
+  };
+
+  const handleMarkComplete = async () => {
+    if (!selectedEvent?.scheduleTaskId) return;
+
+    try {
+      // This would call task update API to mark complete
+      toast.success('Task marked as complete!');
+      setSelectedEvent(null);
+    } catch (error) {
+      toast.error('Failed to mark task complete');
+    }
+  };
+
+  const handleReschedule = async () => {
+    if (!selectedEvent) return;
+
+    try {
+      // Trigger AI reschedule
+      setSelectedEvent(null);
+      setOptimizationDialogOpen(true);
+      toast.info('AI will reschedule this task optimally');
+    } catch (error) {
+      toast.error('Failed to reschedule task');
+    }
+  };
+
+  const handleRemoveFromSchedule = async () => {
+    if (!selectedEvent) return;
+
+    try {
+      await deleteScheduleEvent(selectedEvent.id).unwrap();
+      toast.success('Event removed from schedule');
+      setSelectedEvent(null);
+    } catch (error) {
+      console.error('Failed to delete event:', error);
+      toast.error('Failed to remove event');
+    }
+  };
+
+  const handleViewTask = () => {
+    if (!selectedEvent?.scheduleTaskId) return;
+    setSelectedEvent(null);
+    router.push(`/ptmv2/tasks/${selectedEvent.scheduleTaskId}`);
+  };
 
   return (
-    <div className='space-y-6'>
-      {/* Header */}
-      <div className='flex items-center justify-between'>
-        <div className='flex items-center gap-2'>
-          <Brain className='h-6 w-6' />
-          <h1 className='text-2xl font-bold'>Optimize Your Tasks</h1>
-        </div>
-        <Button>
-          <RefreshCw className='mr-2 h-4 w-4' />
-          Re-optimize
-        </Button>
-      </div>
+    <div className='container mx-auto p-6 space-y-6'>
+      {/* Intelligent Header */}
+      <ScheduleHeader
+        dateRange={dateRange}
+        stats={stats}
+        onOptimize={() => setOptimizationDialogOpen(true)}
+      />
 
-      {/* AI Insights */}
-      <div className='grid grid-cols-1 gap-4 md:grid-cols-3'>
-        <Card className='p-6'>
-          <div className='flex items-center gap-2 mb-2'>
-            <Zap className='h-5 w-5 text-yellow-500' />
-            <h3 className='font-semibold'>Energy Level</h3>
-          </div>
-          <p className='text-2xl font-bold'>High</p>
-          <p className='text-sm text-muted-foreground'>
-            Peak productivity window: 9 AM - 11 AM
-          </p>
-        </Card>
+      {/* View Tabs: Calendar & Gantt */}
+      <Tabs
+        value={viewMode}
+        onValueChange={(v) => setViewMode(v as 'calendar' | 'gantt')}
+      >
+        <TabsList className='grid w-full max-w-md grid-cols-2'>
+          <TabsTrigger value='calendar' className='flex items-center gap-2'>
+            <Calendar className='h-4 w-4' />
+            Calendar View
+          </TabsTrigger>
+          <TabsTrigger value='gantt' className='flex items-center gap-2'>
+            <GanttChart className='h-4 w-4' />
+            Timeline View
+          </TabsTrigger>
+        </TabsList>
 
-        <Card className='p-6'>
-          <div className='flex items-center gap-2 mb-2'>
-            <Target className='h-5 w-5 text-green-500' />
-            <h3 className='font-semibold'>Focus Score</h3>
-          </div>
-          <p className='text-2xl font-bold'>8.5/10</p>
-          <p className='text-sm text-muted-foreground'>
-            Excellent focus conditions today
-          </p>
-        </Card>
+        {/* Calendar View */}
+        <TabsContent value='calendar' className='mt-6'>
+          <div className='flex gap-6'>
+            <ScheduleSidebar
+              unscheduledTasks={unscheduledTasks}
+              focusBlocks={focusBlocks}
+              onTaskDragStart={(task) => {
+                console.log('Drag started:', task.title);
+              }}
+              onFocusBlockToggle={(blockId) => {
+                console.log('Focus block toggled:', blockId);
+              }}
+            />
 
-        <Card className='p-6'>
-          <div className='flex items-center gap-2 mb-2'>
-            <TrendingUp className='h-5 w-5 text-blue-500' />
-            <h3 className='font-semibold'>Efficiency</h3>
-          </div>
-          <p className='text-2xl font-bold'>92%</p>
-          <p className='text-sm text-muted-foreground'>+15% from last week</p>
-        </Card>
-      </div>
-
-      {/* Optimized Schedule */}
-      <Card className='p-6'>
-        <h3 className='mb-4 text-lg font-semibold'>AI-Optimized Schedule</h3>
-        <div className='space-y-4'>
-          {optimizedTasks.map((task) => (
-            <div key={task.id} className='rounded-lg border p-4'>
-              <div className='flex items-start justify-between'>
-                <div className='flex-1'>
-                  <h4 className='font-medium'>{task.title}</h4>
-                  <div className='mt-2 flex items-center gap-4 text-sm text-muted-foreground'>
-                    <div className='flex items-center gap-1'>
-                      <Target className='h-4 w-4' />
-                      <span>{task.priority}</span>
-                    </div>
-                    <div className='flex items-center gap-1'>
-                      <Clock className='h-4 w-4' />
-                      <span>{task.estimatedTime}</span>
-                    </div>
-                  </div>
-                  <div className='mt-2'>
-                    <p className='text-sm font-medium text-primary'>
-                      Suggested: {task.suggestedTime}
-                    </p>
-                    <p className='text-xs text-muted-foreground'>
-                      {task.reasoning}
-                    </p>
-                  </div>
-                </div>
-                <div className='flex gap-2'>
-                  <Button size='sm' variant='outline'>
-                    Adjust
-                  </Button>
-                  <Button size='sm'>Accept</Button>
-                </div>
-              </div>
+            <div className='flex-1'>
+              <CalendarView
+                onEventSelect={handleEventSelect}
+                onExternalDrop={handleExternalDrop}
+              />
             </div>
-          ))}
-        </div>
-      </Card>
+          </div>
+        </TabsContent>
 
-      {/* Productivity Tips */}
-      <Card className='p-6'>
-        <h3 className='mb-4 text-lg font-semibold'>
-          Today's Productivity Tips
-        </h3>
-        <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
-          <div className='rounded-lg bg-muted p-4'>
-            <h4 className='font-medium'>🎯 Focus Block</h4>
-            <p className='text-sm text-muted-foreground'>
-              Schedule 2-hour focus blocks for deep work. Turn off notifications
-              during these periods.
-            </p>
+        {/* Gantt Timeline View */}
+        <TabsContent value='gantt' className='mt-6'>
+          <div className='border rounded-lg overflow-hidden bg-card'>
+            <div className='p-4 border-b'>
+              <h3 className='text-lg font-semibold'>Project Timeline</h3>
+              <p className='text-sm text-muted-foreground'>
+                Visualize task schedules and dependencies on a Gantt chart
+              </p>
+            </div>
+            <div className='h-[700px]'>
+              <GanttView />
+            </div>
           </div>
-          <div className='rounded-lg bg-muted p-4'>
-            <h4 className='font-medium'>⏰ Time Boxing</h4>
-            <p className='text-sm text-muted-foreground'>
-              Set strict time limits for each task to maintain momentum and
-              avoid perfectionism.
-            </p>
-          </div>
-          <div className='rounded-lg bg-muted p-4'>
-            <h4 className='font-medium'>🔄 Pomodoro Technique</h4>
-            <p className='text-sm text-muted-foreground'>
-              Work in 25-minute focused sprints followed by 5-minute breaks.
-            </p>
-          </div>
-          <div className='rounded-lg bg-muted p-4'>
-            <h4 className='font-medium'>📊 Track Progress</h4>
-            <p className='text-sm text-muted-foreground'>
-              Log your completed tasks to build momentum and track productivity
-              patterns.
-            </p>
-          </div>
-        </div>
-      </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Event Detail Sheet */}
+      {selectedEvent && (
+        <EventDetailSheet
+          event={selectedEvent}
+          open={!!selectedEvent}
+          onOpenChange={(open) => !open && setSelectedEvent(null)}
+          onMarkComplete={handleMarkComplete}
+          onReschedule={handleReschedule}
+          onRemove={handleRemoveFromSchedule}
+          onViewTask={handleViewTask}
+        />
+      )}
+
+      {/* Optimization Dialog */}
+      <OptimizationDialog
+        open={optimizationDialogOpen}
+        onOpenChange={setOptimizationDialogOpen}
+        onOptimize={handleOptimize}
+        isOptimizing={isOptimizing}
+      />
     </div>
   );
-};
-
-export default Schedule;
+}
