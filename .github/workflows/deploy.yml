@@ -24,6 +24,7 @@ jobs:
       ptm-optimization: ${{ steps.changes.outputs.ptm-optimization }}
       crm: ${{ steps.changes.outputs.crm }}
       serp-web: ${{ steps.changes.outputs.serp-web }}
+      purchase: ${{ steps.changes.outputs.purchase }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -46,6 +47,8 @@ jobs:
               - 'crm/**'
             serp-web:
               - 'serp_web/**'
+            purchase:
+              - 'purchase_service/**'
 
 
   deploy-account:
@@ -181,6 +184,24 @@ jobs:
             docker compose up -d --remove-orphans
             docker image prune -f
 
+  deploy-purchase:
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.purchase == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Purchase Service
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}/serp_purchase
+            export IMAGE_TAG=${{ github.sha }}
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker image prune -f
 
   notify-deployment:
     needs: check-changes
