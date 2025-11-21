@@ -41,3 +41,7 @@ external:
       host: ${PTM_TASK_SERVICE_HOST}
       port: ${PTM_TASK_SERVICE_PORT}
       timeout: 15s
+    purchaseService:
+      host: ${PURCHASE_SERVICE_HOST}
+      port: ${PURCHASE_SERVICE_PORT}
+      timeout: 15s
