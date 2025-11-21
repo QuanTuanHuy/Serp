@@ -24,4 +24,6 @@ public interface IKeycloakUserService {
     void updateUserAttributes(String userId, Map<String, List<String>> attributes);
 
     Map<String, List<String>> getUserAttributes(String userId);
+
+    void resetPassword(String userId, String newPassword);
 }

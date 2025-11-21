@@ -161,6 +161,32 @@ func (a *AuthClientAdapter) RevokeToken(ctx context.Context, req *request.Refres
 	return &result, nil
 }
 
+func (a *AuthClientAdapter) ChangePassword(ctx context.Context, req *request.ChangePasswordDTO) (*response.BaseResponse, error) {
+	headers := utils.BuildHeadersFromContext(ctx)
+
+	var httpResponse *utils.HTTPResponse
+	err := a.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
+		var err error
+		httpResponse, err = a.apiClient.POST(ctx, "/api/v1/auth/change-password", req, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call change password API: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !a.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("ChangePassword API returned error status: %d", httpResponse.StatusCode))
+	}
+
+	var result response.BaseResponse
+	if err := a.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal change password response: %w", err)
+	}
+	return &result, nil
+}
+
 func NewAuthClientAdapter(authProps *properties.ExternalServiceProperties) port.IAuthClientPort {
 	baseUrl := "http://" + authProps.AccountService.Host + ":" + authProps.AccountService.Port + "/account-service"
 	apiClient := utils.NewBaseAPIClient(baseUrl, authProps.AccountService.Timeout)

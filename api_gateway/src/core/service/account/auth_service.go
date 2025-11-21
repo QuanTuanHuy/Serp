@@ -20,6 +20,7 @@ type IAuthService interface {
 	GetToken(ctx context.Context, req *request.LoginDTO) (*response.BaseResponse, error)
 	RefreshToken(ctx context.Context, req *request.RefreshTokenDTO) (*response.BaseResponse, error)
 	RevokeToken(ctx context.Context, req *request.RefreshTokenDTO) (*response.BaseResponse, error)
+	ChangePassword(ctx context.Context, req *request.ChangePasswordDTO) (*response.BaseResponse, error)
 }
 
 type AuthService struct {
@@ -66,6 +67,15 @@ func (a *AuthService) RevokeToken(ctx context.Context, req *request.RefreshToken
 	res, err := a.authClient.RevokeToken(ctx, req)
 	if err != nil {
 		log.Error(ctx, "AuthService: RevokeToken error: ", err.Error())
+		return nil, err
+	}
+	return res, nil
+}
+
+func (a *AuthService) ChangePassword(ctx context.Context, req *request.ChangePasswordDTO) (*response.BaseResponse, error) {
+	res, err := a.authClient.ChangePassword(ctx, req)
+	if err != nil {
+		log.Error(ctx, "AuthService: ChangePassword error: ", err.Error())
 		return nil, err
 	}
 	return res, nil

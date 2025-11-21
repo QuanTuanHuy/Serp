@@ -58,7 +58,7 @@ public class KeycloakAdapter implements IKeycloakPort {
         attributes.put("uid", List.of(request.getUid().toString()));
         attributes.put("tid", List.of(request.getOrgId().toString()));
         user.setAttributes(attributes);
-        
+
         log.info("Setting user attributes: {}", attributes);
 
         if (!StringUtils.isEmpty(request.getPassword())) {
@@ -163,12 +163,12 @@ public class KeycloakAdapter implements IKeycloakPort {
         RealmResource realmResource = keycloakAdmin.realm(keycloakProperties.getRealm());
         UserResource userResource = realmResource.users().get(userId);
         UserRepresentation user = userResource.toRepresentation();
-        
+
         if (user.getAttributes() == null) {
             user.setAttributes(new HashMap<>());
         }
         user.getAttributes().putAll(attributes);
-        
+
         userResource.update(user);
         log.info("Updated user {} attributes: {}", userId, attributes);
     }
@@ -178,7 +178,7 @@ public class KeycloakAdapter implements IKeycloakPort {
         RealmResource realmResource = keycloakAdmin.realm(keycloakProperties.getRealm());
         UserResource userResource = realmResource.users().get(userId);
         UserRepresentation user = userResource.toRepresentation();
-        
+
         Map<String, List<String>> attributes = user.getAttributes();
         log.info("User {} attributes: {}", userId, attributes);
         return attributes;
@@ -206,5 +206,18 @@ public class KeycloakAdapter implements IKeycloakPort {
         if (!CollectionUtils.isEmpty(rolesToRevoke)) {
             user.roles().clientLevel(clientUuid).remove(rolesToRevoke);
         }
+    }
+
+    @Override
+    public void resetPassword(String userId, String newPassword) {
+        RealmResource realmResource = keycloakAdmin.realm(keycloakProperties.getRealm());
+        UserResource userResource = realmResource.users().get(userId);
+
+        CredentialRepresentation credential = new CredentialRepresentation();
+        credential.setType(CredentialRepresentation.PASSWORD);
+        credential.setValue(newPassword);
+        credential.setTemporary(false);
+
+        userResource.resetPassword(credential);
     }
 }

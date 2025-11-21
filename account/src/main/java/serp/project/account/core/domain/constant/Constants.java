@@ -69,6 +69,9 @@ public class Constants {
         public static final String USER_NOT_IN_ORGANIZATION = "User does not belong to the organization";
 
         public static final String WRONG_EMAIL_OR_PASSWORD = "Wrong email or password";
+        public static final String INVALID_PASSWORD = "Invalid password";
+        public static final String PASSWORD_MISMATCH = "Password mismatch";
+        public static final String PASSWORD_CANNOT_BE_OLD_PASSWORD = "New password cannot be the same as the old password";
         public static final String INVALID_REFRESH_TOKEN = "Invalid refresh token";
         public static final String TOKEN_EXPIRED = "Token expired";
 
