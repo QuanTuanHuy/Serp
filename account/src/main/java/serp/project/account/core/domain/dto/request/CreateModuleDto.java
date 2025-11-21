@@ -16,10 +16,12 @@ import lombok.NoArgsConstructor;
 @Data
 @Builder
 public class CreateModuleDto {
-    @NotBlank
+    @NotBlank(message = "Name cannot be blank")
     private String name;
+    @NotBlank(message = "Code cannot be blank")
+    private String code;
     private String description;
-    @NotBlank
+    @NotBlank(message = "Keycloak Client ID cannot be blank")
     private String keycloakClientId;
     private String category;
     private String icon;

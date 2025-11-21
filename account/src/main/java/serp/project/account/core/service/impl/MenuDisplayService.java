@@ -137,7 +137,7 @@ public class MenuDisplayService implements IMenuDisplayService {
     public void assignMenuDisplaysToRole(Long roleId, List<Long> menuDisplayIds) {
         try {
             var assignedMenuDisplayIds = menuDisplayRolePort.getByRoleIds(List.of(roleId))
-                    .stream().map(MenuDisplayRoleEntity::getId)
+                    .stream().map(MenuDisplayRoleEntity::getMenuDisplayId)
                     .toList();
             var newMenuDisplayIds = menuDisplayIds.stream()
                     .filter(id -> !assignedMenuDisplayIds.contains(id))
@@ -152,8 +152,11 @@ public class MenuDisplayService implements IMenuDisplayService {
                                 .build())
                         .collect(Collectors.toList());
                 menuDisplayRolePort.save(newMenuDisplayRoles);
+                log.info("Assigned menu displays successfully to role: {}, menu displays: {}", roleId,
+                        newMenuDisplayIds);
+            } else {
+                log.info("No new menu displays to assign to role: {}", roleId);
             }
-            log.info("Assigned menu displays successfully to role: {}, menu displays: {}", roleId, newMenuDisplayIds);
         } catch (Exception e) {
             log.error("Error assigning menu displays to role: {}", e.getMessage());
             throw new AppException(Constants.ErrorMessage.ASSIGN_MENU_DISPLAY_FAILED);

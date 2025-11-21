@@ -20,27 +20,22 @@ import (
 )
 
 type ITaskUseCase interface {
-	// Create operations
 	CreateTask(ctx context.Context, userID int64, task *entity.TaskEntity) (*entity.TaskEntity, error)
 	CreateTaskFromTemplate(ctx context.Context, userID int64, templateID int64, variables map[string]string) (*entity.TaskEntity, error)
 	CreateRecurringTask(ctx context.Context, userID int64, task *entity.TaskEntity) (*entity.TaskEntity, error)
 
-	// Update operations
 	UpdateTask(ctx context.Context, userID int64, task *entity.TaskEntity) error
 	UpdateTaskStatus(ctx context.Context, userID int64, taskID int64, status string) error
 	CompleteTask(ctx context.Context, userID int64, taskID int64, actualDurationMin int, quality int) error
 
-	// Delete operations
 	DeleteTask(ctx context.Context, userID int64, taskID int64) error
 	BulkDeleteTasks(ctx context.Context, userID int64, taskIDs []int64) error
 
-	// Query operations
 	GetTaskByID(ctx context.Context, userID int64, taskID int64) (*entity.TaskEntity, error)
 	GetTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) ([]*entity.TaskEntity, error)
 	GetOverdueTasks(ctx context.Context, userID int64) ([]*entity.TaskEntity, error)
 	GetDeepWorkTasks(ctx context.Context, userID int64) ([]*entity.TaskEntity, error)
 
-	// Integration operations
 	RefreshProjectProgressForTask(ctx context.Context, taskID int64) error
 }
 

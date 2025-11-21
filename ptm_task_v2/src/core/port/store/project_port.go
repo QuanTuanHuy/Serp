@@ -38,8 +38,7 @@ type IProjectPort interface {
 type ProjectFilter struct {
 	Statuses     []string
 	ActiveStatus *string
-
-	Priorities []string
+	Priorities   []string
 
 	DeadlineFrom *int64
 	DeadlineTo   *int64

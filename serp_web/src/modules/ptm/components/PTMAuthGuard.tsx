@@ -1,6 +1,6 @@
 /**
  * Author: QuanTuanHuy
- * Description: Part of Serp Project - PTM authentication guard
+ * Description: Part of Serp Project - PTM v2 authentication guard
  */
 
 'use client';
@@ -21,7 +21,7 @@ interface PTMAuthGuardProps {
 }
 
 /**
- * PTMAuthGuard - Protects routes/components for PTM module
+ * PTMAuthGuard - Protects routes/components for PTM v2 module
  */
 export const PTMAuthGuard: React.FC<PTMAuthGuardProps> = ({
   children,
@@ -54,7 +54,7 @@ export const PTMAuthGuard: React.FC<PTMAuthGuardProps> = ({
         <h1 className='text-2xl font-bold'>Access Denied</h1>
 
         <p className='text-muted-foreground'>
-          You need appropriate permissions to access the PTM module.
+          You need appropriate permissions to access the PTM v2 module.
         </p>
 
         <div className='flex gap-3 justify-center pt-4'>

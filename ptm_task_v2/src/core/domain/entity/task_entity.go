@@ -5,6 +5,8 @@ Description: Part of Serp Project
 
 package entity
 
+import "github.com/serp/ptm-task/src/core/domain/enum"
+
 type TaskEntity struct {
 	BaseEntity
 
@@ -54,10 +56,10 @@ type TaskEntity struct {
 
 func NewTaskEntity() *TaskEntity {
 	return &TaskEntity{
-		Priority:         "MEDIUM",
+		Priority:         string(enum.PriorityMedium),
 		IsFlexible:       true,
-		ActiveStatus:     "ACTIVE",
-		Status:           "TODO",
+		ActiveStatus:     string(enum.Active),
+		Status:           string(enum.StatusTodo),
 		Source:           "manual",
 		Tags:             []string{},
 		DependentTaskIDs: []int64{},
@@ -83,14 +85,6 @@ func (t *TaskEntity) GetPriorityScore() float64 {
 		return *t.PriorityScore
 	}
 
-	switch t.Priority {
-	case "HIGH":
-		return 1.0
-	case "MEDIUM":
-		return 0.66
-	case "LOW":
-		return 0.33
-	default:
-		return 0.5
-	}
+	priority := enum.TaskPriority(t.Priority)
+	return priority.GetScore()
 }

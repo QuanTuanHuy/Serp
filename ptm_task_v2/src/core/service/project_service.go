@@ -130,10 +130,13 @@ func (s *projectService) CreateProject(ctx context.Context, tx *gorm.DB, userID 
 	project.UpdatedAt = now
 
 	if project.Status == "" {
-		project.Status = string(enum.ProjectActive)
+		project.Status = string(enum.ProjectNew)
+	}
+	if project.ActiveStatus == "" {
+		project.ActiveStatus = string(enum.Active)
 	}
 	if project.Priority == "" {
-		project.Priority = "MEDIUM"
+		project.Priority = string(enum.Medium)
 	}
 	project.ProgressPercentage = 0
 
