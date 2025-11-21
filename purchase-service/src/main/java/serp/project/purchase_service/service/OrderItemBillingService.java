@@ -2,6 +2,7 @@ package serp.project.purchase_service.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import serp.project.purchase_service.entity.InventoryItemDetailEntity;
 import serp.project.purchase_service.entity.OrderItemBillingEntity;
 import serp.project.purchase_service.repository.OrderItemBillingRepository;
@@ -13,6 +14,7 @@ public class OrderItemBillingService {
 
     private final OrderItemBillingRepository orderItemBillingRepository;
 
+    @Transactional(rollbackFor = Exception.class)
     public void createItemBill(String invoiceItemId, InventoryItemDetailEntity item) {
         String itemBillId = IdUtils.generateOrderItemBillingId();
         OrderItemBillingEntity itemBill = OrderItemBillingEntity.builder()

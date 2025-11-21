@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import serp.project.purchase_service.dto.request.SupplierCreationForm;
 import serp.project.purchase_service.dto.request.SupplierUpdateForm;
 import serp.project.purchase_service.dto.response.GeneralResponse;
+import serp.project.purchase_service.dto.response.PageResponse;
 import serp.project.purchase_service.dto.response.SupplierDetailResponse;
 import serp.project.purchase_service.entity.AddressEntity;
 import serp.project.purchase_service.entity.SupplierEntity;
@@ -51,7 +52,7 @@ public class SupplierController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<GeneralResponse<Page<SupplierEntity>>> getSuppliers(
+    public ResponseEntity<GeneralResponse<PageResponse<SupplierEntity>>> getSuppliers(
             @RequestParam(required = false, defaultValue = "1") int page,
             @RequestParam(required = false, defaultValue = "10") int size,
             @RequestParam(required = false, defaultValue = "createdStamp") String sortBy,
@@ -70,7 +71,7 @@ public class SupplierController {
                 sortBy,
                 sortDirection
         );
-        return ResponseEntity.ok(GeneralResponse.success("Successfully get list of suppliers at page " + page, suppliers));
+        return ResponseEntity.ok(GeneralResponse.success("Successfully get list of suppliers at page " + page, PageResponse.of(suppliers)));
     }
 
     @GetMapping("/search/{supplierId}")

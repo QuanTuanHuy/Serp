@@ -2,6 +2,7 @@ package serp.project.purchase_service.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import serp.project.purchase_service.entity.*;
 import serp.project.purchase_service.repository.InventoryItemDetailRepository;
 import serp.project.purchase_service.repository.InvoiceItemRepository;
@@ -18,6 +19,7 @@ public class InvoiceItemService {
     private final InventoryItemDetailRepository inventoryItemDetailRepository;
     private final OrderItemBillingService orderItemBillingService;
 
+    @Transactional(rollbackFor = Exception.class)
     public void createInvoiceItem(String invoiceId, ShipmentEntity shipment) {
 
         String invoiceItemId = IdUtils.generateInvoiceItemId();

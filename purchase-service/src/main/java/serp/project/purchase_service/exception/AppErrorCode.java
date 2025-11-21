@@ -11,6 +11,7 @@ public enum AppErrorCode {
     INVALID_STATUS_TRANSITION("PURCHASE-BIZ-002", "Invalid status transition", HttpStatus.BAD_REQUEST),
     UNKNOWN_ENUM_VALUE("PURCHASE-VAL-001", "Unknown enum value provided", HttpStatus.BAD_REQUEST),
     ORDER_NOT_READY_FOR_DELIVERY("PURCHASE-BIZ-003", "Order is not ready for delivery", HttpStatus.BAD_REQUEST),
+    ORDER_NOT_APPROVED_YET("PURCHASE-BIZ-004", "Order has not been approved yet", HttpStatus.BAD_REQUEST),
     CANNOT_ACCESS("PURCHASE-SEC-002", "Cannot access the requested resource", HttpStatus.FORBIDDEN),
     UNAUTHORIZED("PURCHASE-SEC-001", "Unauthorized access", HttpStatus.UNAUTHORIZED);
 

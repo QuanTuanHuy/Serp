@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import serp.project.purchase_service.constant.OrderStatus;
 import serp.project.purchase_service.constant.ShipmentStatus;
@@ -35,6 +36,7 @@ public class OrderService {
     private final ShipmentService shipmentService;
     private final InventoryItemDetailService inventoryItemDetailService;
 
+    @Transactional(rollbackFor = Exception.class)
     public void createOrder(OrderCreationForm form, Long userId, Long tenantId) {
         String orderId = IdUtils.generateOrderId();
         OrderEntity order = OrderEntity.builder()
@@ -59,6 +61,7 @@ public class OrderService {
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void updateOrder(String orderId, OrderUpdateForm form, Long tenantId) {
         OrderEntity order = orderRepository.findById(orderId).orElse(null);
         if (order == null || !order.getTenantId().equals(tenantId)) {
@@ -74,6 +77,7 @@ public class OrderService {
         orderRepository.save(order);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void approveOrder(String orderId, Long userId, Long tenantId) {
         OrderEntity order = orderRepository.findById(orderId).orElse(null);
         if (order == null || !order.getTenantId().equals(tenantId)) {
@@ -87,6 +91,7 @@ public class OrderService {
         orderRepository.save(order);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void cancelOrder(String orderId, String cancellationNote, Long userId, Long tenantId) {
         OrderEntity order = orderRepository.findById(orderId).orElse(null);
         if (order == null || !order.getTenantId().equals(tenantId)) {
@@ -140,6 +145,7 @@ public class OrderService {
                 PaginationUtils.createPageable(page, size, sortBy, sortDirection));
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void readyForDeliveryOrder(String orderId, Long tenantId) {
         OrderEntity order = orderRepository.findById(orderId).orElse(null);
         if (order == null || !order.getTenantId().equals(tenantId)) {

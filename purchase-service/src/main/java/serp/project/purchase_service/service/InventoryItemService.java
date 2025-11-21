@@ -2,6 +2,7 @@ package serp.project.purchase_service.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import serp.project.purchase_service.entity.InventoryItemDetailEntity;
 import serp.project.purchase_service.entity.InventoryItemEntity;
 import serp.project.purchase_service.repository.InventoryItemRepository;
@@ -15,6 +16,7 @@ public class InventoryItemService {
 
     private final InventoryItemRepository inventoryItemRepository;
 
+    @Transactional(rollbackFor = Exception.class)
     public void createInventoryItem(InventoryItemDetailEntity item) {
         String inventoryItemId = IdUtils.generateInventoryItemId();
         InventoryItemEntity inventoryItem = InventoryItemEntity.builder()

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import serp.project.purchase_service.constant.EntityType;
 import serp.project.purchase_service.dto.request.AddressCreationForm;
 import serp.project.purchase_service.dto.request.SupplierCreationForm;
@@ -23,6 +24,7 @@ public class SupplierService {
     private final SupplierRepository supplierRepository;
     private final AddressService addressService;
 
+    @Transactional(rollbackFor = Exception.class)
     public void createSupplier(SupplierCreationForm form, Long tenantId) {
 
         String supplierId = IdUtils.generateSupplierId();
@@ -48,6 +50,7 @@ public class SupplierService {
 
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void updateSupplier(String id, SupplierUpdateForm form, Long tenantId) {
         SupplierEntity supplier = supplierRepository.findById(id).orElse(null);
         if (supplier == null || !supplier.getTenantId().equals(tenantId)) {

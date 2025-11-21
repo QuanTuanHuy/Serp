@@ -2,6 +2,7 @@ package serp.project.purchase_service.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import serp.project.purchase_service.dto.request.InventoryItemDetailUpdateForm;
 import serp.project.purchase_service.dto.request.ShipmentCreationForm;
 import serp.project.purchase_service.entity.InventoryItemDetailEntity;
@@ -20,6 +21,7 @@ public class InventoryItemDetailService {
     private final InventoryItemDetailRepository inventoryItemDetailRepository;
     private final ProductService productService;
 
+    @Transactional(rollbackFor = Exception.class)
     public void createInventoryItemDetails(
             String shipmentId,
             ShipmentCreationForm.InventoryItemDetail form,
@@ -50,6 +52,7 @@ public class InventoryItemDetailService {
 
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void updateInventoryItemDetail(String itemId, InventoryItemDetailUpdateForm form, String shipmentId, Long tenantId) {
         InventoryItemDetailEntity entity = inventoryItemDetailRepository.findById(itemId).orElse(null);
         if (entity == null || !entity.getTenantId().equals(tenantId) || !entity.getShipmentId().equals(shipmentId)) {
@@ -65,6 +68,7 @@ public class InventoryItemDetailService {
         inventoryItemDetailRepository.save(entity);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void updateFacility(String shipmentId, String facilityId, Long tenantId) {
         List<InventoryItemDetailEntity> items = inventoryItemDetailRepository.findByTenantIdAndShipmentId(tenantId, shipmentId);
         for (InventoryItemDetailEntity item : items) {
@@ -77,6 +81,7 @@ public class InventoryItemDetailService {
         return inventoryItemDetailRepository.findByTenantIdAndShipmentId(tenantId, shipmentId);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void deleteItem(String itemId, String shipmentId, Long tenantId) {
         InventoryItemDetailEntity entity = inventoryItemDetailRepository.findById(itemId).orElse(null);
         if (entity == null || !entity.getTenantId().equals(tenantId) || !entity.getShipmentId().equals(shipmentId)) {

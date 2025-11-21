@@ -27,7 +27,7 @@ func (f *FacilityClientAdapter) CreateFacility(ctx context.Context, req *request
 	var httpResponse *utils.HTTPResponse
 	err := f.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		httpResponse, err = f.apiClient.POST(ctx, "/api/v1/facility", req, headers)
+		httpResponse, err = f.apiClient.POST(ctx, "/api/v1/facility/create", req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call create facility API: %w", err)
 		}
@@ -52,7 +52,7 @@ func (f *FacilityClientAdapter) UpdateFacility(ctx context.Context, facilityId s
 	var httpResponse *utils.HTTPResponse
 	err := f.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/facility/%s", facilityId)
+		url := fmt.Sprintf("/api/v1/facility/update/%s", facilityId)
 		httpResponse, err = f.apiClient.PATCH(ctx, url, req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call update facility API: %w", err)
@@ -78,7 +78,7 @@ func (f *FacilityClientAdapter) DeleteFacility(ctx context.Context, facilityId s
 	var httpResponse *utils.HTTPResponse
 	err := f.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/facility/%s", facilityId)
+		url := fmt.Sprintf("/api/v1/facility/delete/%s", facilityId)
 		httpResponse, err = f.apiClient.DELETE(ctx, url, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call delete facility API: %w", err)
@@ -104,7 +104,7 @@ func (f *FacilityClientAdapter) GetFacility(ctx context.Context, facilityId stri
 	var httpResponse *utils.HTTPResponse
 	err := f.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/facility/%s", facilityId)
+		url := fmt.Sprintf("/api/v1/facility/search/%s", facilityId)
 		httpResponse, err = f.apiClient.GET(ctx, url, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call get facility API: %w", err)
@@ -151,7 +151,7 @@ func (f *FacilityClientAdapter) GetFacilities(ctx context.Context, params *reque
 	var httpResponse *utils.HTTPResponse
 	err := f.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		httpResponse, err = f.apiClient.GETWithQuery(ctx, "/api/v1/facility", queryParams, headers)
+		httpResponse, err = f.apiClient.GETWithQuery(ctx, "/api/v1/facility/search", queryParams, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call get facilities API: %w", err)
 		}

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import serp.project.purchase_service.dto.request.CategoryForm;
 import serp.project.purchase_service.entity.CategoryEntity;
 import serp.project.purchase_service.exception.AppErrorCode;
@@ -19,6 +20,7 @@ public class CategoryService {
 
     private final CategoryRepository categoryRepository;
 
+    @Transactional(rollbackFor = Exception.class)
     public void createCategory(CategoryForm form, Long tenantId) {
         String categoryId = IdUtils.generateCategoryId();
         var category = CategoryEntity.builder()
@@ -29,6 +31,7 @@ public class CategoryService {
         categoryRepository.save(category);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void updateCategory(String categoryId, CategoryForm form, Long tenantId) {
         var category = categoryRepository.findById(categoryId).orElse(null);
         if (category == null || !category.getTenantId().equals(tenantId)) {

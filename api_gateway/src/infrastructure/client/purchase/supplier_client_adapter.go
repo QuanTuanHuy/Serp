@@ -27,7 +27,7 @@ func (s *SupplierClientAdapter) CreateSupplier(ctx context.Context, req *request
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		httpResponse, err = s.apiClient.POST(ctx, "/api/v1/supplier", req, headers)
+		httpResponse, err = s.apiClient.POST(ctx, "/api/v1/supplier/create", req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call create supplier API: %w", err)
 		}
@@ -52,7 +52,7 @@ func (s *SupplierClientAdapter) UpdateSupplier(ctx context.Context, supplierId s
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/supplier/%s", supplierId)
+		url := fmt.Sprintf("/api/v1/supplier/update/%s", supplierId)
 		httpResponse, err = s.apiClient.PATCH(ctx, url, req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call update supplier API: %w", err)
@@ -78,7 +78,7 @@ func (s *SupplierClientAdapter) DeleteSupplier(ctx context.Context, supplierId s
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/supplier/%s", supplierId)
+		url := fmt.Sprintf("/api/v1/supplier/delete/%s", supplierId)
 		httpResponse, err = s.apiClient.DELETE(ctx, url, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call delete supplier API: %w", err)
@@ -104,7 +104,7 @@ func (s *SupplierClientAdapter) GetSupplier(ctx context.Context, supplierId stri
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/supplier/%s", supplierId)
+		url := fmt.Sprintf("/api/v1/supplier/search/%s", supplierId)
 		httpResponse, err = s.apiClient.GET(ctx, url, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call get supplier API: %w", err)
@@ -151,7 +151,7 @@ func (s *SupplierClientAdapter) GetSuppliers(ctx context.Context, params *reques
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		httpResponse, err = s.apiClient.GETWithQuery(ctx, "/api/v1/supplier", queryParams, headers)
+		httpResponse, err = s.apiClient.GETWithQuery(ctx, "/api/v1/supplier/search", queryParams, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call get suppliers API: %w", err)
 		}

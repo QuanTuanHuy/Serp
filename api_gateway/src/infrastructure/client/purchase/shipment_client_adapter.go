@@ -27,7 +27,7 @@ func (s *ShipmentClientAdapter) CreateShipment(ctx context.Context, req *request
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		httpResponse, err = s.apiClient.POST(ctx, "/api/v1/shipment", req, headers)
+		httpResponse, err = s.apiClient.POST(ctx, "/api/v1/shipment/create", req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call create shipment API: %w", err)
 		}
@@ -52,7 +52,7 @@ func (s *ShipmentClientAdapter) UpdateShipment(ctx context.Context, shipmentId s
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/shipment/%s", shipmentId)
+		url := fmt.Sprintf("/api/v1/shipment/update/%s", shipmentId)
 		httpResponse, err = s.apiClient.PATCH(ctx, url, req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call update shipment API: %w", err)
@@ -78,7 +78,7 @@ func (s *ShipmentClientAdapter) DeleteShipment(ctx context.Context, shipmentId s
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/shipment/%s", shipmentId)
+		url := fmt.Sprintf("/api/v1/shipment/delete/%s", shipmentId)
 		httpResponse, err = s.apiClient.DELETE(ctx, url, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call delete shipment API: %w", err)
@@ -104,7 +104,7 @@ func (s *ShipmentClientAdapter) GetShipment(ctx context.Context, shipmentId stri
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/shipment/%s", shipmentId)
+		url := fmt.Sprintf("/api/v1/shipment/search/%s", shipmentId)
 		httpResponse, err = s.apiClient.GET(ctx, url, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call get shipment API: %w", err)
@@ -156,7 +156,7 @@ func (s *ShipmentClientAdapter) ImportShipment(ctx context.Context, shipmentId s
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/shipment/%s/import", shipmentId)
+		url := fmt.Sprintf("/api/v1/shipment/manage/%s/import", shipmentId)
 		httpResponse, err = s.apiClient.PATCH(ctx, url, nil, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call import shipment API: %w", err)
@@ -182,7 +182,7 @@ func (s *ShipmentClientAdapter) AddItemToShipment(ctx context.Context, shipmentI
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/shipment/%s/add", shipmentId)
+		url := fmt.Sprintf("/api/v1/shipment/create/%s/add", shipmentId)
 		httpResponse, err = s.apiClient.PATCH(ctx, url, req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call add item to shipment API: %w", err)
@@ -208,7 +208,7 @@ func (s *ShipmentClientAdapter) UpdateItemInShipment(ctx context.Context, shipme
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/shipment/%s/update/%s", shipmentId, itemId)
+		url := fmt.Sprintf("/api/v1/shipment/update/%s/update/%s", shipmentId, itemId)
 		httpResponse, err = s.apiClient.PATCH(ctx, url, req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call update item in shipment API: %w", err)
@@ -234,7 +234,7 @@ func (s *ShipmentClientAdapter) DeleteItemFromShipment(ctx context.Context, ship
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/shipment/%s/delete/%s", shipmentId, itemId)
+		url := fmt.Sprintf("/api/v1/shipment/update/%s/delete/%s", shipmentId, itemId)
 		httpResponse, err = s.apiClient.PATCH(ctx, url, nil, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call delete item from shipment API: %w", err)
@@ -260,7 +260,7 @@ func (s *ShipmentClientAdapter) UpdateShipmentFacility(ctx context.Context, ship
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/shipment/%s/facility", shipmentId)
+		url := fmt.Sprintf("/api/v1/shipment/update/%s/facility", shipmentId)
 		httpResponse, err = s.apiClient.PATCH(ctx, url, req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call update shipment facility API: %w", err)

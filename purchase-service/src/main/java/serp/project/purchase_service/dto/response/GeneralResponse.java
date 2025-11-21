@@ -7,23 +7,23 @@ import org.springframework.http.HttpStatus;
 @Getter
 public class GeneralResponse<T> {
 
-    private final HttpStatus httpStatus;
-    private final String code;
+    private final int code;
+    private final String status;
     private final String message;
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private T data;
 
-    public GeneralResponse(HttpStatus httpStatus, String code, String message, T data) {
-        this.httpStatus = httpStatus;
-        this.code = code;
+    public GeneralResponse(HttpStatus httpStatus, String status, String message, T data) {
+        this.code = httpStatus.value();
+        this.status = status;
         this.message = message;
         this.data = data;
     }
 
-    public GeneralResponse(HttpStatus httpStatus, String code, String message) {
-        this.httpStatus = httpStatus;
-        this.code = code;
+    public GeneralResponse(HttpStatus httpStatus, String status, String message) {
+        this.code = httpStatus.value();
+        this.status = status;
         this.message = message;
     }
 
@@ -35,8 +35,8 @@ public class GeneralResponse<T> {
         return new GeneralResponse<>(HttpStatus.OK, "SUCCESS", message, data);
     }
 
-    public static <T> GeneralResponse<T> error(HttpStatus httpStatus, String code, String message) {
-        return new GeneralResponse<>(httpStatus, code, message);
+    public static <T> GeneralResponse<T> error(HttpStatus httpStatus, String status, String message) {
+        return new GeneralResponse<>(httpStatus, status, message);
     }
 
 }

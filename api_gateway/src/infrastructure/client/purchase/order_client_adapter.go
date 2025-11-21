@@ -27,7 +27,7 @@ func (o *OrderClientAdapter) CreateOrder(ctx context.Context, req *request.Creat
 	var httpResponse *utils.HTTPResponse
 	err := o.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		httpResponse, err = o.apiClient.POST(ctx, "/api/v1/order", req, headers)
+		httpResponse, err = o.apiClient.POST(ctx, "/api/v1/order/create", req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call create order API: %w", err)
 		}
@@ -52,7 +52,7 @@ func (o *OrderClientAdapter) UpdateOrder(ctx context.Context, orderId string, re
 	var httpResponse *utils.HTTPResponse
 	err := o.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/order/%s", orderId)
+		url := fmt.Sprintf("/api/v1/order/update/%s", orderId)
 		httpResponse, err = o.apiClient.PATCH(ctx, url, req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call update order API: %w", err)
@@ -78,7 +78,7 @@ func (o *OrderClientAdapter) DeleteOrder(ctx context.Context, orderId string) (*
 	var httpResponse *utils.HTTPResponse
 	err := o.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/order/%s", orderId)
+		url := fmt.Sprintf("/api/v1/order/delete/%s", orderId)
 		httpResponse, err = o.apiClient.DELETE(ctx, url, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call delete order API: %w", err)
@@ -104,7 +104,7 @@ func (o *OrderClientAdapter) GetOrder(ctx context.Context, orderId string) (*res
 	var httpResponse *utils.HTTPResponse
 	err := o.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/order/%s", orderId)
+		url := fmt.Sprintf("/api/v1/order/search/%s", orderId)
 		httpResponse, err = o.apiClient.GET(ctx, url, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call get order API: %w", err)
@@ -166,7 +166,7 @@ func (o *OrderClientAdapter) GetOrders(ctx context.Context, params *request.GetO
 	var httpResponse *utils.HTTPResponse
 	err := o.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		httpResponse, err = o.apiClient.GETWithQuery(ctx, "/api/v1/order", queryParams, headers)
+		httpResponse, err = o.apiClient.GETWithQuery(ctx, "/api/v1/order/search", queryParams, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call get orders API: %w", err)
 		}
@@ -191,7 +191,7 @@ func (o *OrderClientAdapter) AddProductToOrder(ctx context.Context, orderId stri
 	var httpResponse *utils.HTTPResponse
 	err := o.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/order/%s/add", orderId)
+		url := fmt.Sprintf("/api/v1/order/create/%s/add", orderId)
 		httpResponse, err = o.apiClient.POST(ctx, url, req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call add product to order API: %w", err)
@@ -217,7 +217,7 @@ func (o *OrderClientAdapter) DeleteProductFromOrder(ctx context.Context, orderId
 	var httpResponse *utils.HTTPResponse
 	err := o.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/order/%s/delete/%s", orderId, orderItemId)
+		url := fmt.Sprintf("/api/v1/order/update/%s/delete/%s", orderId, orderItemId)
 		httpResponse, err = o.apiClient.PATCH(ctx, url, nil, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call delete product from order API: %w", err)
@@ -243,7 +243,7 @@ func (o *OrderClientAdapter) UpdateProductInOrder(ctx context.Context, orderId s
 	var httpResponse *utils.HTTPResponse
 	err := o.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/order/%s/update/%s", orderId, orderItemId)
+		url := fmt.Sprintf("/api/v1/order/update/%s/update/%s", orderId, orderItemId)
 		httpResponse, err = o.apiClient.PATCH(ctx, url, req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call update product in order API: %w", err)
@@ -269,7 +269,7 @@ func (o *OrderClientAdapter) ApproveOrder(ctx context.Context, orderId string) (
 	var httpResponse *utils.HTTPResponse
 	err := o.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/order/%s/approve", orderId)
+		url := fmt.Sprintf("/api/v1/order/manage/%s/approve", orderId)
 		httpResponse, err = o.apiClient.PATCH(ctx, url, nil, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call approve order API: %w", err)
@@ -295,7 +295,7 @@ func (o *OrderClientAdapter) CancelOrder(ctx context.Context, orderId string, re
 	var httpResponse *utils.HTTPResponse
 	err := o.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/order/%s/cancel", orderId)
+		url := fmt.Sprintf("/api/v1/order/manage/%s/cancel", orderId)
 		httpResponse, err = o.apiClient.PATCH(ctx, url, req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call cancel order API: %w", err)
@@ -321,7 +321,7 @@ func (o *OrderClientAdapter) MarkOrderAsReady(ctx context.Context, orderId strin
 	var httpResponse *utils.HTTPResponse
 	err := o.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/order/%s/ready", orderId)
+		url := fmt.Sprintf("/api/v1/order/update/%s/ready", orderId)
 		httpResponse, err = o.apiClient.PATCH(ctx, url, nil, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call mark order as ready API: %w", err)

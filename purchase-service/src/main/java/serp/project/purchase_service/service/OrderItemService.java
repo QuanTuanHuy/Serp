@@ -2,6 +2,7 @@ package serp.project.purchase_service.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import serp.project.purchase_service.constant.OrderItemStatus;
 import serp.project.purchase_service.dto.request.OrderCreationForm;
 import serp.project.purchase_service.dto.request.OrderItemUpdateForm;
@@ -22,6 +23,7 @@ public class OrderItemService {
     private final OrderItemRepository orderItemRepository;
     private final ProductService productService;
 
+    @Transactional(rollbackFor = Exception.class)
     public void createOrderItems(OrderCreationForm.OrderItem itemForm, String orderId, Long tenantId) {
         ProductEntity product = productService.getProduct(itemForm.getProductId(), tenantId);
         if (product == null) {
@@ -46,6 +48,7 @@ public class OrderItemService {
         orderItemRepository.save(orderItem);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void updateOrderItem(String orderItemId, OrderItemUpdateForm form, String orderId, Long tenantId) {
         OrderItemEntity orderItem = orderItemRepository.findById(orderItemId).orElse(null);
         if (orderItem == null || !orderItem.getTenantId().equals(tenantId) || !orderItem.getOrderId().equals(orderId)) {
@@ -63,6 +66,7 @@ public class OrderItemService {
         return orderItemRepository.findByTenantIdAndOrderId(tenantId, orderId);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void deleteOrderItem(String orderItemId, String orderId, Long tenantId) {
         OrderItemEntity orderItem = orderItemRepository.findById(orderItemId).orElse(null);
         if (orderItem == null || !orderItem.getTenantId().equals(tenantId) || !orderItem.getOrderId().equals(orderId)) {

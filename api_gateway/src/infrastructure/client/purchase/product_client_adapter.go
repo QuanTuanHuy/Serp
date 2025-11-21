@@ -27,7 +27,7 @@ func (p *ProductClientAdapter) CreateProduct(ctx context.Context, req *request.C
 	var httpResponse *utils.HTTPResponse
 	err := p.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		httpResponse, err = p.apiClient.POST(ctx, "/api/v1/product", req, headers)
+		httpResponse, err = p.apiClient.POST(ctx, "/api/v1/product/create", req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call create product API: %w", err)
 		}
@@ -52,7 +52,7 @@ func (p *ProductClientAdapter) UpdateProduct(ctx context.Context, productId stri
 	var httpResponse *utils.HTTPResponse
 	err := p.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/product/%s", productId)
+		url := fmt.Sprintf("/api/v1/product/update/%s", productId)
 		httpResponse, err = p.apiClient.PATCH(ctx, url, req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call update product API: %w", err)
@@ -78,7 +78,7 @@ func (p *ProductClientAdapter) DeleteProduct(ctx context.Context, productId stri
 	var httpResponse *utils.HTTPResponse
 	err := p.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/product/%s", productId)
+		url := fmt.Sprintf("/api/v1/product/delete/%s", productId)
 		httpResponse, err = p.apiClient.DELETE(ctx, url, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call delete product API: %w", err)
@@ -104,7 +104,7 @@ func (p *ProductClientAdapter) GetProduct(ctx context.Context, productId string)
 	var httpResponse *utils.HTTPResponse
 	err := p.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/product/%s", productId)
+		url := fmt.Sprintf("/api/v1/product/search/%s", productId)
 		httpResponse, err = p.apiClient.GET(ctx, url, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call get product API: %w", err)
@@ -151,7 +151,7 @@ func (p *ProductClientAdapter) GetProducts(ctx context.Context, params *request.
 	var httpResponse *utils.HTTPResponse
 	err := p.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		httpResponse, err = p.apiClient.GETWithQuery(ctx, "/api/v1/product", queryParams, headers)
+		httpResponse, err = p.apiClient.GETWithQuery(ctx, "/api/v1/product/search", queryParams, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call get products API: %w", err)
 		}

@@ -27,7 +27,7 @@ func (c *CategoryClientAdapter) CreateCategory(ctx context.Context, req *request
 	var httpResponse *utils.HTTPResponse
 	err := c.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		httpResponse, err = c.apiClient.POST(ctx, "/api/v1/category", req, headers)
+		httpResponse, err = c.apiClient.POST(ctx, "/api/v1/category/create", req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call create category API: %w", err)
 		}
@@ -52,7 +52,7 @@ func (c *CategoryClientAdapter) UpdateCategory(ctx context.Context, categoryId s
 	var httpResponse *utils.HTTPResponse
 	err := c.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/category/%s", categoryId)
+		url := fmt.Sprintf("/api/v1/category/update/%s", categoryId)
 		httpResponse, err = c.apiClient.PATCH(ctx, url, req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call update category API: %w", err)
@@ -78,7 +78,7 @@ func (c *CategoryClientAdapter) DeleteCategory(ctx context.Context, categoryId s
 	var httpResponse *utils.HTTPResponse
 	err := c.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/category/%s", categoryId)
+		url := fmt.Sprintf("/api/v1/category/delete/%s", categoryId)
 		httpResponse, err = c.apiClient.DELETE(ctx, url, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call delete category API: %w", err)
@@ -104,7 +104,7 @@ func (c *CategoryClientAdapter) GetCategory(ctx context.Context, categoryId stri
 	var httpResponse *utils.HTTPResponse
 	err := c.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/category/%s", categoryId)
+		url := fmt.Sprintf("/api/v1/category/search/%s", categoryId)
 		httpResponse, err = c.apiClient.GET(ctx, url, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call get category API: %w", err)
@@ -151,7 +151,7 @@ func (c *CategoryClientAdapter) GetCategories(ctx context.Context, params *reque
 	var httpResponse *utils.HTTPResponse
 	err := c.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		httpResponse, err = c.apiClient.GETWithQuery(ctx, "/api/v1/category", queryParams, headers)
+		httpResponse, err = c.apiClient.GETWithQuery(ctx, "/api/v1/category/search", queryParams, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call get categories API: %w", err)
 		}

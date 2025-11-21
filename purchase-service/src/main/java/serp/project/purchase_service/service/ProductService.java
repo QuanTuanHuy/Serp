@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import serp.project.purchase_service.dto.request.ProductCreationForm;
 import serp.project.purchase_service.dto.request.ProductUpdateForm;
 import serp.project.purchase_service.entity.ProductEntity;
@@ -18,6 +19,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
 
+    @Transactional(rollbackFor = Exception.class)
     public void createProduct(ProductCreationForm form, Long tenantId) {
         String productId = IdUtils.generateProductId();
         ProductEntity product = ProductEntity.builder()
@@ -40,6 +42,7 @@ public class ProductService {
         productRepository.save(product);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void updateProduct(String productId, ProductUpdateForm form, Long tenantId) {
         ProductEntity product = productRepository.findById(productId).orElse(null);
         if (product == null || !product.getTenantId().equals(tenantId)) {

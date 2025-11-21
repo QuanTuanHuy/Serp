@@ -27,7 +27,7 @@ func (a *AddressClientAdapter) CreateAddress(ctx context.Context, req *request.C
 	var httpResponse *utils.HTTPResponse
 	err := a.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		httpResponse, err = a.apiClient.POST(ctx, "/api/v1/address", req, headers)
+		httpResponse, err = a.apiClient.POST(ctx, "/api/v1/address/create", req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call create address API: %w", err)
 		}
@@ -52,7 +52,7 @@ func (a *AddressClientAdapter) UpdateAddress(ctx context.Context, addressId stri
 	var httpResponse *utils.HTTPResponse
 	err := a.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/address/%s", addressId)
+		url := fmt.Sprintf("/api/v1/address/update/%s", addressId)
 		httpResponse, err = a.apiClient.PATCH(ctx, url, req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call update address API: %w", err)

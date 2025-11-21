@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import serp.project.purchase_service.constant.EntityType;
 import serp.project.purchase_service.dto.request.AddressCreationForm;
 import serp.project.purchase_service.dto.request.FacilityCreationForm;
@@ -23,6 +24,7 @@ public class FacilityService {
     private final FacilityRepository facilityRepository;
     private final AddressService addressService;
 
+    @Transactional(rollbackFor = Exception.class)
     public void createFacility(FacilityCreationForm form, Long tenantId) {
         String facilityId = IdUtils.generateFacilityId();
         FacilityEntity facility = FacilityEntity.builder()
@@ -50,6 +52,7 @@ public class FacilityService {
         addressService.createAddress(addressForm, tenantId);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void updateFacility(String facilityId, FacilityUpdateForm form, Long tenantId) {
         FacilityEntity facility = facilityRepository.findById(facilityId).orElse(null);
         if (facility == null || !facility.getTenantId().equals(tenantId)) {

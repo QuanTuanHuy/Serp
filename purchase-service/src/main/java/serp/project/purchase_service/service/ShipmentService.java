@@ -2,7 +2,9 @@ package serp.project.purchase_service.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import serp.project.purchase_service.constant.OrderStatus;
 import serp.project.purchase_service.constant.ShipmentStatus;
 import serp.project.purchase_service.dto.request.ShipmentCreationForm;
 import serp.project.purchase_service.dto.request.ShipmentUpdateForm;
@@ -10,6 +12,7 @@ import serp.project.purchase_service.entity.InventoryItemDetailEntity;
 import serp.project.purchase_service.entity.ShipmentEntity;
 import serp.project.purchase_service.exception.AppErrorCode;
 import serp.project.purchase_service.exception.AppException;
+import serp.project.purchase_service.repository.OrderRepository;
 import serp.project.purchase_service.repository.ShipmentRepository;
 import serp.project.purchase_service.util.IdUtils;
 
@@ -23,8 +26,15 @@ public class ShipmentService {
     private final InventoryItemDetailService inventoryItemDetailService;
     private final InvoiceService invoiceService;
     private final InventoryItemService inventoryItemService;
+    private final OrderRepository orderRepository;
 
+    @Transactional(rollbackFor = Exception.class)
     public void createShipment(ShipmentCreationForm form, Long userId, Long tenantId) {
+        String orderStatus = orderRepository.getOrderStatus(form.getOrderId(), tenantId);
+        if (!orderStatus.equals(OrderStatus.APPROVED.value())) {
+            throw new AppException(AppErrorCode.ORDER_NOT_APPROVED_YET);
+        }
+
         String shipmentId = IdUtils.generateShipmentId();
         ShipmentEntity shipment = ShipmentEntity.builder()
                 .id(shipmentId)
@@ -49,6 +59,7 @@ public class ShipmentService {
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void updateShipment(String shipmentId, ShipmentUpdateForm form, Long tenantId) {
         ShipmentEntity shipment = shipmentRepository.findById(shipmentId).orElse(null);
         if (shipment == null || !shipment.getTenantId().equals(tenantId)) {
@@ -62,14 +73,17 @@ public class ShipmentService {
         shipmentRepository.save(shipment);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void updateShipmentBatch(List<ShipmentEntity> shipments) {
         shipmentRepository.saveAll(shipments);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void updateFacility(String shipmentId, String facilityId, Long tenantId) {
         inventoryItemDetailService.updateFacility(shipmentId, facilityId, tenantId);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void importShipment(String shipmentId, Long userId, Long tenantId) {
         ShipmentEntity shipment = shipmentRepository.findById(shipmentId).orElse(null);
         if (shipment == null || !shipment.getTenantId().equals(tenantId)) {
@@ -91,6 +105,7 @@ public class ShipmentService {
         int shipmentNotDeliveredCount = shipmentRepository.countShipmentEntitiesByTenantIdAndOrderIdAndStatusId(tenantId, shipment.getOrderId(), ShipmentStatus.CREATED.value());
         if (shipmentNotDeliveredCount == 0) {
             invoiceService.createInvoice(shipment.getOrderId());
+            orderRepository.updateOrderStatus(shipment.getOrderId(), OrderStatus.FULLY_DELIVERED.value(), tenantId);
         }
     }
 
@@ -106,6 +121,7 @@ public class ShipmentService {
         return shipment;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void deleteShipment(String shipmentId, Long tenantId) {
         ShipmentEntity shipment = shipmentRepository.findById(shipmentId).orElse(null);
         if (shipment == null || !shipment.getTenantId().equals(tenantId)) {

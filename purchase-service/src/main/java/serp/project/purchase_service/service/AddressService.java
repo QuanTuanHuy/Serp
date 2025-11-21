@@ -2,6 +2,7 @@ package serp.project.purchase_service.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import serp.project.purchase_service.dto.request.AddressCreationForm;
 import serp.project.purchase_service.dto.request.AddressUpdateForm;
 import serp.project.purchase_service.entity.AddressEntity;
@@ -18,6 +19,7 @@ public class AddressService {
 
     private final AddressRepository addressRepository;
 
+    @Transactional(rollbackFor = Exception.class)
     public void createAddress(AddressCreationForm form, Long tenantId) {
         String addressId = IdUtils.generateAddressId();
         AddressEntity address = AddressEntity.builder()
@@ -34,6 +36,7 @@ public class AddressService {
         addressRepository.save(address);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void updateAddress(String addressId, AddressUpdateForm form, Long tenantId) {
         AddressEntity address = addressRepository.findById(addressId).orElse(null);
         if (address == null || !address.getTenantId().equals(tenantId)) {
@@ -51,6 +54,7 @@ public class AddressService {
         return addressRepository.findByEntityIdAndTenantId(entityId, tenantId);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void deleteAddress(String addressId, Long tenantId) {
         AddressEntity address = addressRepository.findById(addressId).orElse(null);
         if (address == null || !address.getTenantId().equals(tenantId)) {

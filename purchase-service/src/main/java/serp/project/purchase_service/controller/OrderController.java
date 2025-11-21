@@ -135,6 +135,9 @@ public class OrderController {
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
         var order = orderService.getOrder(orderId, tenantId);
+        if (order == null) {
+            throw new AppException(AppErrorCode.NOT_FOUND);
+        }
         var orderItems = orderItemService.findByOrderId(orderId, tenantId);
         OrderDetailResponse response = OrderDetailResponse.fromEntity(
                 order,

@@ -21,7 +21,7 @@ public class GlobalExceptionHandler {
                 .status(errorCode.getStatus())
                 .body(GeneralResponse.error(
                         errorCode.getStatus(),
-                        errorCode.getCode(),
+                        "FAILED",
                         errorCode.getMessage()
                 ));
     }
@@ -35,7 +35,7 @@ public class GlobalExceptionHandler {
                 .status(errorCode.getStatus())
                 .body(GeneralResponse.error(
                         errorCode.getStatus(),
-                        errorCode.getCode(),
+                        "FAILED",
                         errorCode.getMessage()
                 ));
     }
