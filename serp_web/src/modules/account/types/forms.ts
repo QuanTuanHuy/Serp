@@ -18,6 +18,21 @@ export interface RegisterFormData {
   organizationName: string;
 }
 
+// Profile update types
+export interface UpdateProfileRequest {
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+  avatarUrl?: string;
+  timezone?: string;
+  preferredLanguage?: string;
+}
+
+export interface ChangePasswordRequest {
+  oldPassword: string;
+  newPassword: string;
+}
+
 // Validation error types
 export interface FormFieldError {
   field: string;

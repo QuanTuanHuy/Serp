@@ -11,6 +11,9 @@ export interface User {
   firstName: string;
   lastName: string;
   avatarUrl?: string;
+  phoneNumber?: string;
+  timezone?: string;
+  preferredLanguage?: string;
   roles: string[];
   organizationId?: number;
   organizationName?: string;
