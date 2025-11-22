@@ -53,6 +53,21 @@ func (a *AddressController) UpdateAddress(c *gin.Context) {
 	c.JSON(res.Code, res)
 }
 
+func (a *AddressController) GetAddressesByEntityId(c *gin.Context) {
+	entityId := c.Param("entityId")
+	if entityId == "" {
+		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+		return
+	}
+
+	res, err := a.addressService.GetAddressesByEntityId(c.Request.Context(), entityId)
+	if err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
+		return
+	}
+	c.JSON(res.Code, res)
+}
+
 func NewAddressController(addressService service.IAddressService) *AddressController {
 	return &AddressController{addressService: addressService}
 }

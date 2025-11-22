@@ -4,10 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import serp.project.purchase_service.dto.request.InventoryItemDetailUpdateForm;
-import serp.project.purchase_service.dto.request.ShipmentCreationForm;
-import serp.project.purchase_service.dto.request.ShipmentFacilityUpdateForm;
-import serp.project.purchase_service.dto.request.ShipmentUpdateForm;
+import serp.project.purchase_service.dto.request.*;
 import serp.project.purchase_service.dto.response.GeneralResponse;
 import serp.project.purchase_service.dto.response.ShipmentDetailResponse;
 import serp.project.purchase_service.entity.InventoryItemDetailEntity;
@@ -78,11 +75,12 @@ public class ShipmentController {
     @PostMapping("/create/{shipmentId}/add")
     public ResponseEntity<GeneralResponse<?>> addItemToShipment(
         @PathVariable String shipmentId,
-        @RequestBody ShipmentCreationForm.InventoryItemDetail itemForm
+        @RequestBody ShipmentItemAddForm form
     ) {
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
-        inventoryItemDetailService.createInventoryItemDetails(shipmentId, itemForm, tenantId);
+        ShipmentCreationForm.InventoryItemDetail itemForm = form.toInventoryItemDetailForm();
+        inventoryItemDetailService.createInventoryItemDetails(shipmentId, itemForm, form.getFacilityId(), tenantId);
         return ResponseEntity.ok(GeneralResponse.success("Item added to shipment successfully"));
     }
 
