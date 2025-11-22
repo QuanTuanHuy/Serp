@@ -15,14 +15,13 @@ import (
 func InitializeDB(db *gorm.DB) {
 	err := db.AutoMigrate(
 		&model.ProjectModel{},
-		&model.GroupTaskModel{},
 		&model.TaskModel{},
-		&model.CommentModel{},
 		&model.NoteModel{},
-		&model.TagModel{},
-		&model.TaggedItemModel{},
+		&model.TaskDependencyGraphModel{},
+		&model.ActivityEventModel{},
 	)
 	if err != nil {
 		log.Fatal("Failed to run migrations: ", err)
 	}
+	log.Println("Database migration skipped - add your models when ready")
 }

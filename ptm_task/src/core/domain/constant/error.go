@@ -5,6 +5,7 @@ Description: Part of Serp Project
 
 package constant
 
+// HTTP Error Codes
 const (
 	GeneralInternalServerError = 500
 

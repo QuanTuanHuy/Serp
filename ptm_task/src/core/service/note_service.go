@@ -8,93 +8,218 @@ package service
 import (
 	"context"
 	"errors"
+	"regexp"
+	"strings"
 	"time"
 
-	"github.com/golibs-starter/golib/log"
 	"github.com/serp/ptm-task/src/core/domain/constant"
-	"github.com/serp/ptm-task/src/core/domain/dto/request"
 	"github.com/serp/ptm-task/src/core/domain/entity"
-	"github.com/serp/ptm-task/src/core/domain/mapper"
-	port2 "github.com/serp/ptm-task/src/core/port/client"
-	port "github.com/serp/ptm-task/src/core/port/store"
+	"github.com/serp/ptm-task/src/core/domain/enum"
+	"github.com/serp/ptm-task/src/core/port/store"
 	"gorm.io/gorm"
 )
 
+const (
+	MaxNoteContentLength   = 100000
+	MaxAttachmentSize      = 10 * 1024 * 1024
+	MaxAttachmentsPerNote  = 10
+	MaxTotalAttachmentSize = 50 * 1024 * 1024
+)
+
 type INoteService interface {
-	CreateNote(ctx context.Context, tx *gorm.DB, userID int64, request *request.CreateNoteDTO) (*entity.NoteEntity, error)
-	GetNotesByUserID(ctx context.Context, userID int64) ([]*entity.NoteEntity, error)
+	ValidateNoteData(note *entity.NoteEntity) error
+	ValidateNoteOwnership(userID int64, note *entity.NoteEntity) error
+	ValidateAttachments(attachments []entity.NoteAttachment) error
+
+	StripMarkdownToPlainText(markdown string) string
+	SanitizeMarkdown(markdown string) string
+
+	CreateNote(ctx context.Context, tx *gorm.DB, userID int64, note *entity.NoteEntity) (*entity.NoteEntity, error)
+	UpdateNote(ctx context.Context, tx *gorm.DB, userID int64, note *entity.NoteEntity) error
+	TogglePin(ctx context.Context, tx *gorm.DB, userID int64, noteID int64) error
+	DeleteNote(ctx context.Context, tx *gorm.DB, userID int64, noteID int64) error
+
 	GetNoteByID(ctx context.Context, noteID int64) (*entity.NoteEntity, error)
-	UpdateNote(ctx context.Context, tx *gorm.DB, note *entity.NoteEntity) (*entity.NoteEntity, error)
-	DeleteNote(ctx context.Context, tx *gorm.DB, noteID int64) error
+	GetNotesByTaskID(ctx context.Context, taskID int64, filter *store.NoteFilter) ([]*entity.NoteEntity, error)
+	GetNotesByProjectID(ctx context.Context, projectID int64, filter *store.NoteFilter) ([]*entity.NoteEntity, error)
+	GetNotesByUserID(ctx context.Context, userID int64, filter *store.NoteFilter) ([]*entity.NoteEntity, error)
+	SearchNotes(ctx context.Context, userID int64, searchQuery string, filter *store.NoteFilter) ([]*entity.NoteEntity, error)
 }
 
-type NoteService struct {
-	notePort  port.INotePort
-	redisPort port2.IRedisPort
+type noteService struct {
+	notePort store.INotePort
 }
 
-func (n *NoteService) UpdateNote(ctx context.Context, tx *gorm.DB, note *entity.NoteEntity) (*entity.NoteEntity, error) {
-	note, err := n.notePort.UpdateNote(ctx, tx, note)
-	if err != nil {
-		log.Error(ctx, "Failed to update note: ", err)
-		return nil, err
+func NewNoteService(notePort store.INotePort) INoteService {
+	return &noteService{
+		notePort: notePort,
 	}
-	return note, nil
 }
 
-func (n *NoteService) CreateNote(ctx context.Context, tx *gorm.DB, userID int64, request *request.CreateNoteDTO) (*entity.NoteEntity, error) {
-	note := mapper.ToNoteEntity(request)
-	note.OwnerID = userID
-	if note.Name == "" {
-		note.Name = n.createNoteName()
+func (s *noteService) ValidateNoteData(note *entity.NoteEntity) error {
+	if note.Content == "" {
+		return errors.New(constant.NoteContentRequired)
 	}
-
-	note, err := n.notePort.CreateNote(ctx, tx, note)
-	if err != nil {
-		log.Error(ctx, "Failed to create note: ", err)
-		return nil, err
+	if len(note.Content) > MaxNoteContentLength {
+		return errors.New(constant.NoteContentTooLong)
 	}
-	return note, nil
-}
-
-func (n *NoteService) createNoteName() string {
-	return time.Now().Format("2006-1-2 15:04:05")
-}
-
-func (n *NoteService) DeleteNote(ctx context.Context, tx *gorm.DB, noteID int64) error {
-	err := n.notePort.DeleteNote(ctx, tx, noteID)
-	if err != nil {
-		log.Error(ctx, "Failed to delete note: ", err)
-		return err
+	if note.TaskID == nil && note.ProjectID == nil {
+		return errors.New(constant.NoteMustAttachToTaskOrProject)
+	}
+	if note.TaskID != nil && note.ProjectID != nil {
+		return errors.New(constant.NoteCannotAttachToBoth)
+	}
+	if !enum.ActiveStatus(note.ActiveStatus).IsValid() {
+		return errors.New("invalid active status")
 	}
 	return nil
 }
 
-func (n *NoteService) GetNoteByID(ctx context.Context, noteID int64) (*entity.NoteEntity, error) {
-	note, err := n.notePort.GetNoteByID(ctx, noteID)
-	if err != nil {
-		log.Error(ctx, "Failed to get note by ID: ", err)
+func (s *noteService) ValidateNoteOwnership(userID int64, note *entity.NoteEntity) error {
+	if note.UserID != userID {
+		return errors.New(constant.UpdateNoteForbidden)
+	}
+	return nil
+}
+
+func (s *noteService) ValidateAttachments(attachments []entity.NoteAttachment) error {
+	if len(attachments) > MaxAttachmentsPerNote {
+		return errors.New(constant.NoteTooManyAttachments)
+	}
+
+	var totalSize int64
+	for _, attachment := range attachments {
+		if attachment.Size > MaxAttachmentSize {
+			return errors.New(constant.NoteAttachmentTooLarge)
+		}
+		totalSize += attachment.Size
+	}
+
+	if totalSize > MaxTotalAttachmentSize {
+		return errors.New(constant.NoteAttachmentTooLarge)
+	}
+
+	return nil
+}
+
+func (s *noteService) StripMarkdownToPlainText(markdown string) string {
+	text := markdown
+
+	text = regexp.MustCompile(`\!\[.*?\]\(.*?\)`).ReplaceAllString(text, "")
+	text = regexp.MustCompile(`\[([^\]]+)\]\([^)]+\)`).ReplaceAllString(text, "$1")
+	text = regexp.MustCompile(`#{1,6}\s`).ReplaceAllString(text, "")
+	text = regexp.MustCompile(`[\*_]{1,3}([^\*_]+)[\*_]{1,3}`).ReplaceAllString(text, "$1")
+	text = regexp.MustCompile("```[\\s\\S]*?```").ReplaceAllString(text, "")
+	text = regexp.MustCompile("`([^`]+)`").ReplaceAllString(text, "$1")
+	text = regexp.MustCompile(`^\s*[-*+]\s+`).ReplaceAllString(text, "")
+	text = regexp.MustCompile(`^\s*\d+\.\s+`).ReplaceAllString(text, "")
+	text = regexp.MustCompile(`>\s+`).ReplaceAllString(text, "")
+	text = regexp.MustCompile(`\s+`).ReplaceAllString(text, " ")
+
+	return strings.TrimSpace(text)
+}
+
+func (s *noteService) SanitizeMarkdown(markdown string) string {
+	sanitized := markdown
+	sanitized = regexp.MustCompile(`<script[^>]*>.*?</script>`).ReplaceAllString(sanitized, "")
+	sanitized = regexp.MustCompile(`<iframe[^>]*>.*?</iframe>`).ReplaceAllString(sanitized, "")
+	sanitized = regexp.MustCompile(`javascript:`).ReplaceAllString(sanitized, "")
+	sanitized = regexp.MustCompile(`on\w+\s*=`).ReplaceAllString(sanitized, "")
+
+	return sanitized
+}
+
+func (s *noteService) CreateNote(ctx context.Context, tx *gorm.DB, userID int64, note *entity.NoteEntity) (*entity.NoteEntity, error) {
+	note.UserID = userID
+	now := time.Now().UnixMilli()
+	note.CreatedAt = now
+	note.UpdatedAt = now
+
+	if note.ActiveStatus == "" {
+		note.ActiveStatus = string(enum.Active)
+	}
+
+	note.Content = s.SanitizeMarkdown(note.Content)
+	plainText := s.StripMarkdownToPlainText(note.Content)
+	note.ContentPlain = &plainText
+
+	if err := s.ValidateNoteData(note); err != nil {
 		return nil, err
 	}
-	if note == nil {
-		log.Error(ctx, "Note not found with ID: ", noteID)
-		return nil, errors.New(constant.NoteNotFound)
+	if err := s.ValidateAttachments(note.Attachments); err != nil {
+		return nil, err
 	}
+
+	if err := s.notePort.CreateNote(ctx, tx, note); err != nil {
+		return nil, err
+	}
+
 	return note, nil
 }
 
-func (n *NoteService) GetNotesByUserID(ctx context.Context, userID int64) ([]*entity.NoteEntity, error) {
-	notes, err := n.notePort.GetNotesByUserID(ctx, userID)
-	if err != nil {
-		log.Error(ctx, "Failed to get notes by user ID: ", err)
-		return nil, err
+func (s *noteService) UpdateNote(ctx context.Context, tx *gorm.DB, userID int64, note *entity.NoteEntity) error {
+	if err := s.ValidateNoteOwnership(userID, note); err != nil {
+		return err
 	}
-	return notes, nil
+
+	note.Content = s.SanitizeMarkdown(note.Content)
+	plainText := s.StripMarkdownToPlainText(note.Content)
+	note.ContentPlain = &plainText
+
+	if err := s.ValidateNoteData(note); err != nil {
+		return err
+	}
+	if err := s.ValidateAttachments(note.Attachments); err != nil {
+		return err
+	}
+
+	note.UpdatedAt = time.Now().UnixMilli()
+	return s.notePort.UpdateNote(ctx, tx, note)
 }
 
-func NewNoteService(notePort port.INotePort, redisPort port2.IRedisPort) INoteService {
-	return &NoteService{
-		notePort:  notePort,
-		redisPort: redisPort,
+func (s *noteService) TogglePin(ctx context.Context, tx *gorm.DB, userID int64, noteID int64) error {
+	note, err := s.notePort.GetNoteByID(ctx, noteID)
+	if err != nil {
+		return err
 	}
+	if err := s.ValidateNoteOwnership(userID, note); err != nil {
+		return err
+	}
+
+	return s.notePort.UpdateNotePin(ctx, tx, noteID, !note.IsPinned)
+}
+
+func (s *noteService) DeleteNote(ctx context.Context, tx *gorm.DB, userID int64, noteID int64) error {
+	note, err := s.notePort.GetNoteByID(ctx, noteID)
+	if err != nil {
+		return err
+	}
+	if err := s.ValidateNoteOwnership(userID, note); err != nil {
+		return err
+	}
+
+	return s.notePort.SoftDeleteNote(ctx, tx, noteID)
+}
+
+func (s *noteService) GetNoteByID(ctx context.Context, noteID int64) (*entity.NoteEntity, error) {
+	return s.notePort.GetNoteByID(ctx, noteID)
+}
+
+func (s *noteService) GetNotesByTaskID(ctx context.Context, taskID int64, filter *store.NoteFilter) ([]*entity.NoteEntity, error) {
+	return s.notePort.GetNotesByTaskID(ctx, taskID, filter)
+}
+
+func (s *noteService) GetNotesByProjectID(ctx context.Context, projectID int64, filter *store.NoteFilter) ([]*entity.NoteEntity, error) {
+	return s.notePort.GetNotesByProjectID(ctx, projectID, filter)
+}
+
+func (s *noteService) GetNotesByUserID(ctx context.Context, userID int64, filter *store.NoteFilter) ([]*entity.NoteEntity, error) {
+	return s.notePort.GetNotesByUserID(ctx, userID, filter)
+}
+
+func (s *noteService) SearchNotes(ctx context.Context, userID int64, searchQuery string, filter *store.NoteFilter) ([]*entity.NoteEntity, error) {
+	if searchQuery == "" {
+		return s.notePort.GetNotesByUserID(ctx, userID, filter)
+	}
+	return s.notePort.SearchNotes(ctx, userID, searchQuery, filter)
 }

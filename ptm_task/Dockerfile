@@ -1,8 +1,5 @@
 # Build stage
 FROM golang:1.25-alpine AS builder
-ARG BUILD_VERSION
-ARG BUILD_COMMIT_HASH
-ARG BUILD_TIME
 
 WORKDIR /app
 COPY go.mod go.sum ./
@@ -18,8 +15,6 @@ FROM alpine:latest
 WORKDIR /app
 
 COPY --from=builder /app/main .
-
-COPY --from=builder /app/src/config ./config
 
 EXPOSE 8083
 

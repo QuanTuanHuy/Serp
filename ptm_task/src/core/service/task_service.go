@@ -8,280 +8,268 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
-	"strconv"
+	"time"
 
-	"github.com/golibs-starter/golib/log"
 	"github.com/serp/ptm-task/src/core/domain/constant"
-	"github.com/serp/ptm-task/src/core/domain/dto/message"
-	"github.com/serp/ptm-task/src/core/domain/dto/request"
 	"github.com/serp/ptm-task/src/core/domain/entity"
 	"github.com/serp/ptm-task/src/core/domain/enum"
-	"github.com/serp/ptm-task/src/core/domain/mapper"
-	prio "github.com/serp/ptm-task/src/core/domain/priority"
-	port2 "github.com/serp/ptm-task/src/core/port/client"
-	port "github.com/serp/ptm-task/src/core/port/store"
+	"github.com/serp/ptm-task/src/core/port/store"
 	"gorm.io/gorm"
 )
 
 type ITaskService interface {
-	CreateTask(ctx context.Context, tx *gorm.DB, userID int64, request *request.CreateTaskDTO) (*entity.TaskEntity, error)
-	UpdateTask(ctx context.Context, tx *gorm.DB, userID, taskID int64, request *request.UpdateTaskDTO) (*entity.TaskEntity, error)
-	DeleteTask(ctx context.Context, tx *gorm.DB, userID, taskID int64) error
+	// Validation
+	ValidateTaskData(task *entity.TaskEntity) error
+	ValidateTaskOwnership(userID int64, task *entity.TaskEntity) error
+	ValidateTaskStatus(currentStatus, newStatus string) error
+	ValidateTaskDeadline(task *entity.TaskEntity, projectDeadline *int64) error
+
+	// Business rules
+	CalculatePriorityScore(task *entity.TaskEntity, currentTimeMs int64) float64
+	CheckIfOverdue(task *entity.TaskEntity, currentTimeMs int64) bool
+	CheckIfCanBeScheduled(task *entity.TaskEntity) bool
+	CheckIfHasIncompleteSubtasks(ctx context.Context, taskID int64) (bool, error)
+
+	// Task operations
+	CreateTask(ctx context.Context, tx *gorm.DB, userID int64, task *entity.TaskEntity) (*entity.TaskEntity, error)
+	UpdateTask(ctx context.Context, tx *gorm.DB, userID int64, task *entity.TaskEntity) error
+	UpdateTaskStatus(ctx context.Context, tx *gorm.DB, userID int64, taskID int64, status string) error
+	CompleteTask(ctx context.Context, tx *gorm.DB, userID int64, taskID int64, actualDurationMin int, quality int) error
+	DeleteTask(ctx context.Context, tx *gorm.DB, userID int64, taskID int64) error
+
+	// Query operations
 	GetTaskByID(ctx context.Context, taskID int64) (*entity.TaskEntity, error)
-	GetTasksByGroupTaskID(ctx context.Context, groupTaskID int64) ([]*entity.TaskEntity, error)
-	GetTaskHierarchyByGroupTaskID(ctx context.Context, groupTaskID int64) ([]*entity.TaskEntity, error)
-	PushCreateTaskToKafka(ctx context.Context, task *entity.TaskEntity) error
-	PushUpdateTaskToKafka(ctx context.Context, task *entity.TaskEntity, updateTask *request.UpdateTaskDTO) error
-	PushDeleteTaskToKafka(ctx context.Context, taskID int64) error
-	SetParentTask(ctx context.Context, tx *gorm.DB, userID, taskID int64, parentTaskID *int64) (*entity.TaskEntity, error)
+	GetTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) ([]*entity.TaskEntity, error)
+	GetTaskByProjectID(ctx context.Context, projectID int64) ([]*entity.TaskEntity, error)
+	GetOverdueTasks(ctx context.Context, userID int64, currentTimeMs int64) ([]*entity.TaskEntity, error)
+	GetDeepWorkTasks(ctx context.Context, userID int64) ([]*entity.TaskEntity, error)
+	GetDependentTasks(ctx context.Context, taskID int64) ([]*entity.TaskEntity, error)
 }
 
-type TaskService struct {
-	taskPort      port.ITaskPort
-	groupTaskPort port.IGroupTaskPort
-	redisPort     port2.IRedisPort
-	kafkaProducer port2.IKafkaProducerPort
+type taskService struct {
+	taskPort store.ITaskPort
 }
 
-func (t *TaskService) GetTaskHierarchyByGroupTaskID(ctx context.Context, groupTaskID int64) ([]*entity.TaskEntity, error) {
-	tasks, err := t.taskPort.GetTasksByGroupTaskID(ctx, groupTaskID)
-	if err != nil {
-		return nil, err
+func NewTaskService(taskPort store.ITaskPort) ITaskService {
+	return &taskService{
+		taskPort: taskPort,
 	}
-	taskMap := make(map[int64]*entity.TaskEntity)
-	var roots []*entity.TaskEntity
-	for _, task := range tasks {
-		taskMap[task.ID] = task
-		if task.ParentTaskID == nil {
-			roots = append(roots, task)
+}
+
+func (s *taskService) ValidateTaskData(task *entity.TaskEntity) error {
+	if task.Title == "" {
+		return errors.New(constant.TaskTitleRequired)
+	}
+	if len(task.Title) > 500 {
+		return errors.New(constant.TaskTitleTooLong)
+	}
+	if !enum.TaskPriority(task.Priority).IsValid() {
+		return errors.New(constant.InvalidTaskPriority)
+	}
+	if !enum.TaskStatus(task.Status).IsValid() {
+		return errors.New(constant.InvalidTaskStatus)
+	}
+	if task.DeadlineMs != nil && task.EarliestStartMs != nil {
+		if *task.DeadlineMs < *task.EarliestStartMs {
+			return errors.New(constant.InvalidDeadline)
 		}
 	}
-	for _, task := range tasks {
-		if task.ParentTaskID != nil {
-			parent, exists := taskMap[*task.ParentTaskID]
-			if exists {
-				if parent.Children == nil {
-					parent.Children = []*entity.TaskEntity{}
-				}
-				parent.Children = append(parent.Children, task)
-			}
-		}
+	if task.EstimatedDurationMin != nil && *task.EstimatedDurationMin <= 0 {
+		return errors.New(constant.InvalidDuration)
 	}
-	return roots, nil
+	if task.RecurrencePattern != nil && !enum.RecurrencePattern(*task.RecurrencePattern).IsValid() {
+		return errors.New(constant.InvalidRecurrencePattern)
+	}
+	return nil
 }
 
-func (t *TaskService) GetTasksByGroupTaskID(ctx context.Context, groupTaskID int64) ([]*entity.TaskEntity, error) {
-	return t.taskPort.GetTasksByGroupTaskID(ctx, groupTaskID)
-}
-
-func (t *TaskService) CreateTask(ctx context.Context, tx *gorm.DB, userID int64, request *request.CreateTaskDTO) (*entity.TaskEntity, error) {
-	task := mapper.ToTaskEntity(request)
-	task.UserID = userID
-
-	log.Info(ctx, "Parent task id: ", task.ParentTaskID)
-
-	if task.ParentTaskID != nil {
-		parent, err := t.taskPort.GetTaskByID(ctx, *task.ParentTaskID)
-		if err != nil {
-			log.Error(ctx, "Failed to get parent task: ", err)
-			return nil, err
-		}
-		if parent == nil || parent.UserID != userID {
-			return nil, errors.New(constant.TaskNotFound)
-		}
-		if parent.ID == task.ID {
-			return nil, errors.New("invalid parent: cannot set task as its own parent")
-		}
-		if parent.GroupTaskID != task.GroupTaskID {
-			return nil, errors.New("invalid parent: parent and child must belong to same groupTask")
-		}
-		// Cycle guard
-		seen := map[int64]bool{task.ID: true}
-		cur := parent
-		for cur != nil && cur.ParentTaskID != nil {
-			if seen[*cur.ParentTaskID] {
-				return nil, errors.New("invalid parent: cycle detected")
-			}
-			seen[*cur.ParentTaskID] = true
-			next, err := t.taskPort.GetTaskByID(ctx, *cur.ParentTaskID)
-			if err != nil {
-				return nil, err
-			}
-			cur = next
-		}
-	}
-
-	t.MapPriorityScore(ctx, userID, task)
-
-	task, err := t.taskPort.CreateTask(ctx, tx, task)
-	if err != nil {
-		log.Error(ctx, "Failed to create task: ", err)
-		return nil, err
-	}
-	return task, nil
-}
-
-func (t *TaskService) UpdateTask(ctx context.Context, tx *gorm.DB, userID, taskID int64, request *request.UpdateTaskDTO) (*entity.TaskEntity, error) {
-	task, err := t.GetTaskByUserIDAndTaskID(ctx, userID, taskID)
-	if err != nil {
-		log.Error(ctx, "Failed to get task by user ID and task ID: ", err)
-		return nil, err
-	}
-
-	task = mapper.UpdateTaskMapper(task, request)
-	t.MapPriorityScore(ctx, userID, task)
-	task, err = t.taskPort.UpdateTask(ctx, tx, taskID, task)
-	if err != nil {
-		return nil, err
-	}
-
-	return task, nil
-}
-
-func (t *TaskService) MapPriorityScore(ctx context.Context, userID int64, task *entity.TaskEntity) (*entity.TaskEntity, error) {
-	if len(task.PriorityDims) > 0 {
-		sys := prio.DefaultWeights()
-		userWeights := map[string]float64{}
-		key := fmt.Sprintf(constant.UserPriorityWeights, userID)
-		m, err := t.redisPort.GetHSetFromRedis(ctx, key)
-		if err == nil && len(m) > 0 {
-			for k, v := range m {
-				if f, perr := strconv.ParseFloat(v, 64); perr == nil {
-					userWeights[k] = f
-				}
-			}
-		}
-		merged := prio.MergeWeights(sys, userWeights)
-		pol := &prio.Policy{UserID: userID, Weights: merged}
-		score := prio.ScoreNormalized(task.PriorityDims, pol)
-		task.PriorityScore = &score
-	}
-	return task, nil
-}
-
-func (t *TaskService) PushUpdateTaskToKafka(ctx context.Context, task *entity.TaskEntity, updateTask *request.UpdateTaskDTO) error {
-	updateTaskMsg := mapper.ToKafkaUpdateTaskMessage(task, updateTask)
-	kafkaMessage := message.CreateKafkaMessage(message.UPDATE_TASK, message.ErrorCodeSuccess, message.ErrorMsgSuccess, updateTaskMsg)
-	return t.kafkaProducer.SendMessageAsync(ctx, string(enum.TASK_TOPIC), strconv.FormatInt(task.ID, 10), kafkaMessage)
-}
-
-func (t *TaskService) PushCreateTaskToKafka(ctx context.Context, task *entity.TaskEntity) error {
-	groupTask, err := t.groupTaskPort.GetGroupTaskByID(ctx, task.GroupTaskID)
-	if err != nil {
-		log.Error(ctx, "Failed to get group task by ID ", task.GroupTaskID, " error: ", err)
-		return err
-	}
-	createTaskMsg := mapper.ToKafkaCreateTaskMessage(task)
-	createTaskMsg.ProjectID = groupTask.ProjectID
-
-	kafkaMessage := message.CreateKafkaMessage(message.CREATE_TASK, message.ErrorCodeSuccess, message.ErrorMsgSuccess, createTaskMsg)
-	return t.kafkaProducer.SendMessageAsync(ctx, string(enum.TASK_TOPIC), strconv.FormatInt(task.ID, 10), kafkaMessage)
-}
-
-func (t *TaskService) GetTaskByID(ctx context.Context, taskID int64) (*entity.TaskEntity, error) {
-	task, err := t.taskPort.GetTaskByID(ctx, taskID)
-	if err != nil {
-		log.Error(ctx, "Failed to get task by ID ", taskID, " error: ", err)
-		return nil, err
-	}
-	if task == nil {
-		return nil, errors.New(constant.TaskNotFound)
-	}
-	return task, nil
-}
-
-func (t *TaskService) GetTaskByUserIDAndTaskID(ctx context.Context, userID int64, taskID int64) (*entity.TaskEntity, error) {
-	task, err := t.taskPort.GetTaskByID(ctx, taskID)
-	if err != nil {
-		return nil, err
-	}
-	if task == nil {
-		return nil, errors.New(constant.TaskNotFound)
-	}
+func (s *taskService) ValidateTaskOwnership(userID int64, task *entity.TaskEntity) error {
 	if task.UserID != userID {
-		return nil, errors.New(constant.GetTaskForbidden)
+		return errors.New(constant.UpdateTaskForbidden)
+	}
+	return nil
+}
+
+func (s *taskService) ValidateTaskStatus(currentStatus, newStatus string) error {
+	current := enum.TaskStatus(currentStatus)
+	if !current.IsValid() {
+		return errors.New(constant.InvalidTaskStatus)
+	}
+	new := enum.TaskStatus(newStatus)
+	if !new.IsValid() {
+		return errors.New(constant.InvalidTaskStatus)
+	}
+	if !current.CanTransitionTo(new) {
+		return errors.New(constant.InvalidStatusTransition)
+	}
+	return nil
+}
+
+func (s *taskService) CalculatePriorityScore(task *entity.TaskEntity, currentTimeMs int64) float64 {
+	return task.GetPriorityScore()
+}
+
+func (s *taskService) CheckIfOverdue(task *entity.TaskEntity, currentTimeMs int64) bool {
+	return task.IsOverdue(currentTimeMs)
+}
+
+func (s *taskService) CheckIfCanBeScheduled(task *entity.TaskEntity) bool {
+	return task.CanBeScheduled(time.Now().UnixMilli())
+}
+
+func (s *taskService) ValidateTaskDeadline(task *entity.TaskEntity, projectDeadline *int64) error {
+	if task.DeadlineMs != nil && projectDeadline != nil {
+		if *task.DeadlineMs > *projectDeadline {
+			return errors.New("task deadline cannot be after project deadline")
+		}
+	}
+	return nil
+}
+
+func (s *taskService) CheckIfHasIncompleteSubtasks(ctx context.Context, taskID int64) (bool, error) {
+	subtasks, err := s.taskPort.GetTasksByParentID(ctx, taskID)
+	if err != nil {
+		return false, err
+	}
+	for _, subtask := range subtasks {
+		if !enum.TaskStatus(subtask.Status).IsCompleted() {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (s *taskService) GetDependentTasks(ctx context.Context, taskID int64) ([]*entity.TaskEntity, error) {
+	// Implement later
+	return []*entity.TaskEntity{}, nil
+}
+
+func (s *taskService) CreateTask(ctx context.Context, tx *gorm.DB, userID int64, task *entity.TaskEntity) (*entity.TaskEntity, error) {
+	task.UserID = userID
+	now := time.Now().UnixMilli()
+	task.CreatedAt = now
+	task.UpdatedAt = now
+	if task.Status == "" {
+		task.Status = string(enum.StatusTodo)
+	}
+	if task.ActiveStatus == "" {
+		task.ActiveStatus = string(enum.Active)
+	}
+	if task.Priority == "" {
+		task.Priority = string(enum.PriorityMedium)
+	}
+	if task.RecurrencePattern == nil {
+		none := string(enum.RecurrenceNone)
+		task.RecurrencePattern = &none
+	}
+	score := s.CalculatePriorityScore(task, now)
+	task.PriorityScore = &score
+	if err := s.ValidateTaskData(task); err != nil {
+		return nil, err
+	}
+	if err := s.taskPort.CreateTask(ctx, tx, task); err != nil {
+		return nil, err
 	}
 	return task, nil
 }
 
-func (t *TaskService) DeleteTask(ctx context.Context, tx *gorm.DB, userID int64, taskID int64) error {
-	_, err := t.GetTaskByUserIDAndTaskID(ctx, userID, taskID)
+func (s *taskService) UpdateTask(ctx context.Context, tx *gorm.DB, userID int64, task *entity.TaskEntity) error {
+	if err := s.ValidateTaskOwnership(userID, task); err != nil {
+		return err
+	}
+	if err := s.ValidateTaskData(task); err != nil {
+		return err
+	}
+	now := time.Now().UnixMilli()
+	task.UpdatedAt = now
+	score := s.CalculatePriorityScore(task, now)
+	task.PriorityScore = &score
+	return s.taskPort.UpdateTask(ctx, tx, task)
+}
+
+func (s *taskService) UpdateTaskStatus(ctx context.Context, tx *gorm.DB, userID int64, taskID int64, status string) error {
+	task, err := s.taskPort.GetTaskByID(ctx, taskID)
 	if err != nil {
-		log.Error(ctx, "Failed to get task by user ID and task ID for deletion: ", err)
+		return err
+	}
+	if task == nil {
+		return errors.New(constant.TaskNotFound)
+	}
+	if err := s.ValidateTaskOwnership(userID, task); err != nil {
+		return err
+	}
+	if err := s.ValidateTaskStatus(task.Status, status); err != nil {
+		return err
+	}
+	return s.taskPort.UpdateTaskStatus(ctx, tx, taskID, status)
+}
+
+func (s *taskService) CompleteTask(ctx context.Context, tx *gorm.DB, userID int64, taskID int64, actualDurationMin int, quality int) error {
+	task, err := s.taskPort.GetTaskByID(ctx, taskID)
+	if err != nil {
+		return err
+	}
+	if err := s.ValidateTaskOwnership(userID, task); err != nil {
 		return err
 	}
 
-	err = t.taskPort.DeleteTask(ctx, tx, taskID)
+	hasIncompleteSubtasks, err := s.CheckIfHasIncompleteSubtasks(ctx, taskID)
 	if err != nil {
-		log.Error(ctx, "Failed to delete task ID ", taskID, " error: ", err)
+		return err
+	}
+	if hasIncompleteSubtasks {
+		return errors.New(constant.CannotCompleteTaskWithSubtasks)
+	}
+
+	if err := s.ValidateTaskStatus(task.Status, string(enum.StatusDone)); err != nil {
+		return err
+	}
+	if quality < 1 || quality > 5 {
+		return errors.New(constant.InvalidQuality)
+	}
+	if err := s.taskPort.UpdateTaskStatus(ctx, tx, taskID, string(enum.StatusDone)); err != nil {
+		return err
+	}
+	if err := s.taskPort.UpdateTaskDuration(ctx, tx, taskID, actualDurationMin); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (t *TaskService) SetParentTask(ctx context.Context, tx *gorm.DB, userID, taskID int64, parentTaskID *int64) (*entity.TaskEntity, error) {
-	task, err := t.GetTaskByUserIDAndTaskID(ctx, userID, taskID)
+func (s *taskService) DeleteTask(ctx context.Context, tx *gorm.DB, userID int64, taskID int64) error {
+	task, err := s.taskPort.GetTaskByID(ctx, taskID)
+	if err != nil {
+		return err
+	}
+	if err := s.ValidateTaskOwnership(userID, task); err != nil {
+		return err
+	}
+	return s.taskPort.SoftDeleteTask(ctx, tx, taskID)
+}
+
+func (s *taskService) GetTaskByID(ctx context.Context, taskID int64) (*entity.TaskEntity, error) {
+	task, err := s.taskPort.GetTaskByID(ctx, taskID)
 	if err != nil {
 		return nil, err
 	}
-
-	if parentTaskID != nil {
-		if *parentTaskID == taskID {
-			return nil, errors.New("invalid parent: cannot set task as its own parent")
-		}
-		parent, err := t.taskPort.GetTaskByID(ctx, *parentTaskID)
-		if err != nil {
-			return nil, err
-		}
-		if parent == nil || parent.UserID != userID {
-			return nil, errors.New(constant.ParentTaskNotFound)
-		}
-		if parent.GroupTaskID != task.GroupTaskID {
-			return nil, errors.New("invalid parent: parent and child must belong to same groupTask")
-		}
-
-		cur := parent
-		for cur != nil {
-			if cur.ID == taskID {
-				return nil, errors.New("invalid parent: cycle detected")
-			}
-			if cur.ParentTaskID == nil {
-				break
-			}
-			next, err := t.taskPort.GetTaskByID(ctx, *cur.ParentTaskID)
-			if err != nil {
-				return nil, err
-			}
-			cur = next
-		}
+	if task == nil {
+		return nil, errors.New(constant.TaskNotFound)
 	}
-
-	task.ParentTaskID = parentTaskID
-	updated, err := t.taskPort.UpdateTask(ctx, tx, taskID, task)
-	if err != nil {
-		return nil, err
-	}
-	return updated, nil
+	return task, nil
 }
 
-func (t *TaskService) PushDeleteTaskToKafka(ctx context.Context, taskID int64) error {
-	deleteTaskMsg := &message.KafkaDeleteTaskMessage{
-		TaskID: taskID,
-	}
-	kafkaMessage := message.CreateKafkaMessage(message.DELETE_TASK, message.ErrorCodeSuccess, message.ErrorMsgSuccess, deleteTaskMsg)
-	return t.kafkaProducer.SendMessageAsync(ctx, string(enum.TASK_TOPIC), strconv.FormatInt(taskID, 10), kafkaMessage)
+func (s *taskService) GetTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) ([]*entity.TaskEntity, error) {
+	return s.taskPort.GetTasksByUserID(ctx, userID, filter)
 }
 
-func NewTaskService(
-	taskPort port.ITaskPort,
-	redisPort port2.IRedisPort,
-	kafkaProducer port2.IKafkaProducerPort,
-	groupTaskPort port.IGroupTaskPort) ITaskService {
-	return &TaskService{
-		taskPort:      taskPort,
-		groupTaskPort: groupTaskPort,
-		redisPort:     redisPort,
-		kafkaProducer: kafkaProducer,
-	}
+func (s *taskService) GetTaskByProjectID(ctx context.Context, projectID int64) ([]*entity.TaskEntity, error) {
+	return s.taskPort.GetTasksByProjectID(ctx, projectID)
+}
+
+func (s *taskService) GetOverdueTasks(ctx context.Context, userID int64, currentTimeMs int64) ([]*entity.TaskEntity, error) {
+	return s.taskPort.GetOverdueTasks(ctx, userID, currentTimeMs)
+}
+
+func (s *taskService) GetDeepWorkTasks(ctx context.Context, userID int64) ([]*entity.TaskEntity, error) {
+	return s.taskPort.GetDeepWorkTasks(ctx, userID)
 }

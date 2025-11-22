@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golibs-starter/golib/log"
 	"github.com/serp/ptm-task/src/kernel/properties"
+	"go.uber.org/zap"
 )
 
 type JWKSResponse struct {
@@ -38,13 +38,15 @@ type KeycloakJwksUtils struct {
 	keyCache      map[string]*rsa.PublicKey
 	lastFetch     time.Time
 	cacheTTL      time.Duration
+	logger        *zap.Logger
 }
 
-func NewKeycloakJwksUtils(keycloakProps *properties.KeycloakProperties) *KeycloakJwksUtils {
+func NewKeycloakJwksUtils(appProps *properties.AppProperties, logger *zap.Logger) *KeycloakJwksUtils {
 	return &KeycloakJwksUtils{
-		keycloakProps: keycloakProps,
+		keycloakProps: &appProps.Keycloak,
 		keyCache:      make(map[string]*rsa.PublicKey),
 		cacheTTL:      5 * time.Minute,
+		logger:        logger,
 	}
 }
 
@@ -71,7 +73,7 @@ func (k *KeycloakJwksUtils) fetchKeys() error {
 			k.keycloakProps.Url, k.keycloakProps.Realm)
 	}
 
-	log.Info("Fetching JWKS from: ", jwksUrl)
+	k.logger.Info("Fetching JWKS from: " + jwksUrl)
 
 	resp, err := http.Get(jwksUrl)
 	if err != nil {
@@ -97,7 +99,7 @@ func (k *KeycloakJwksUtils) fetchKeys() error {
 		if jwk.Kty == "RSA" && jwk.Use == "sig" {
 			publicKey, err := k.parseRSAPublicKey(jwk)
 			if err != nil {
-				log.Warn("Failed to parse RSA public key for kid: ", jwk.Kid, ", error: ", err)
+				k.logger.Warn("Failed to parse RSA public key for kid: " + jwk.Kid + ", error: " + err.Error())
 				continue
 			}
 			k.keyCache[jwk.Kid] = publicKey
@@ -105,24 +107,28 @@ func (k *KeycloakJwksUtils) fetchKeys() error {
 	}
 
 	k.lastFetch = time.Now()
-	log.Info("Successfully cached ", len(k.keyCache), " public keys")
+	k.logger.Info("Successfully cached " + fmt.Sprint(len(k.keyCache)) + " public keys")
 	return nil
 }
 
 func (k *KeycloakJwksUtils) parseRSAPublicKey(jwk JWK) (*rsa.PublicKey, error) {
+	// Decode base64url encoded modulus
 	nBytes, err := base64URLDecode(jwk.N)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode modulus: %w", err)
 	}
 
+	// Decode base64url encoded exponent
 	eBytes, err := base64URLDecode(jwk.E)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode exponent: %w", err)
 	}
 
+	// Convert to big.Int
 	n := new(big.Int).SetBytes(nBytes)
 	e := new(big.Int).SetBytes(eBytes)
 
+	// Create RSA public key
 	publicKey := &rsa.PublicKey{
 		N: n,
 		E: int(e.Int64()),
@@ -132,9 +138,11 @@ func (k *KeycloakJwksUtils) parseRSAPublicKey(jwk JWK) (*rsa.PublicKey, error) {
 }
 
 func base64URLDecode(s string) ([]byte, error) {
+	// Replace URL-safe characters with standard base64 characters
 	s = strings.ReplaceAll(s, "-", "+")
 	s = strings.ReplaceAll(s, "_", "/")
 
+	// Add padding if necessary
 	switch len(s) % 4 {
 	case 2:
 		s += "=="

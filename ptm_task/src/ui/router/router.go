@@ -6,100 +6,44 @@ Description: Part of Serp Project
 package router
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
-	"github.com/golibs-starter/golib"
-	"github.com/golibs-starter/golib/web/actuator"
+	"github.com/serp/ptm-task/src/kernel/properties"
 	"github.com/serp/ptm-task/src/ui/controller"
 	"github.com/serp/ptm-task/src/ui/middleware"
-	"go.uber.org/fx"
+	"go.uber.org/zap"
 )
 
-type RegisterRoutersIn struct {
-	fx.In
-	App      *golib.App
-	Engine   *gin.Engine
-	Actuator *actuator.Endpoint
-
-	ProjectController   *controller.ProjectController
-	GroupTaskController *controller.GroupTaskController
-	TaskController      *controller.TaskController
-	CommentController   *controller.CommentController
-	NoteController      *controller.NoteController
-	TagController       *controller.TagController
-
-	JWTMiddleware         *middleware.JWTMiddleware
-	InternalJWTMiddleware *middleware.InternalJWTMiddleware
+type RouterConfig struct {
+	AppProps          *properties.AppProperties
+	Engine            *gin.Engine
+	ProjectController *controller.ProjectController
+	JWTMiddleware     *middleware.JWTMiddleware
+	RoleMiddleware    *middleware.RoleMiddleware
+	Logger            *zap.Logger
 }
 
-func RegisterGinRouters(p RegisterRoutersIn) {
-	group := p.Engine.Group(p.App.Path())
+func RegisterRoutes(config *RouterConfig) {
+	config.Engine.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"status":  "UP",
+			"service": config.AppProps.Name,
+		})
+	})
 
-	group.GET("/actuator/health", gin.WrapF(p.Actuator.Health))
-	group.GET("/actuator/info", gin.WrapF(p.Actuator.Info))
-
-	requiredAuthV1 := group.Group("/api/v1")
-	requiredAuthV1.Use(p.JWTMiddleware.AuthenticateJWT())
+	apiV1 := config.Engine.Group(fmt.Sprintf("%s/api/v1", config.AppProps.Path))
+	apiV1.Use(config.JWTMiddleware.AuthenticateJWT())
 	{
-		projectV1 := requiredAuthV1.Group("/projects")
+		projects := apiV1.Group("/projects")
 		{
-			projectV1.POST("", p.ProjectController.CreateProject)
-			projectV1.GET("/all", p.ProjectController.GetProjectsByUserID)
-			projectV1.GET("/:id", p.ProjectController.GetProjectByID)
-			projectV1.PUT("/:id", p.ProjectController.UpdateProject)
-			projectV1.PUT("/:id/archive", p.ProjectController.ArchiveProject)
-			projectV1.GET("/:id/group-tasks", p.ProjectController.GetGroupTasksByProjectID)
-			projectV1.GET("", p.ProjectController.GetProjects)
-			projectV1.GET("/search", p.ProjectController.GetProjectsByName)
-		}
-
-		groupTaskV1 := requiredAuthV1.Group("/group-tasks")
-		{
-			groupTaskV1.POST("", p.GroupTaskController.CreateGroupTask)
-			groupTaskV1.GET("/:id", p.GroupTaskController.GetGroupTaskByID)
-		}
-
-		taskV1 := requiredAuthV1.Group("/tasks")
-		{
-			taskV1.POST("", p.TaskController.CreateTask)
-			taskV1.GET("/:id", p.TaskController.GetTaskByID)
-			taskV1.PUT("/:id", p.TaskController.UpdateTask)
-			taskV1.DELETE("/:id", p.TaskController.DeleteTask)
-			taskV1.GET("/:id/comments", p.TaskController.GetCommentsByTaskID)
-		}
-
-		commentV1 := requiredAuthV1.Group("/comments")
-		{
-			commentV1.POST("", p.CommentController.CreateComment)
-			commentV1.GET("/:id", p.CommentController.GetCommentByID)
-			commentV1.PUT("/:id", p.CommentController.UpdateComment)
-			commentV1.DELETE("/:id", p.CommentController.DeleteComment)
-		}
-
-		noteV1 := requiredAuthV1.Group("/notes")
-		{
-			noteV1.POST("", p.NoteController.CreateNote)
-			noteV1.GET("", p.NoteController.GetAllNotes)
-			noteV1.GET("/:id", p.NoteController.GetNoteByID)
-			noteV1.DELETE("/:id", p.NoteController.DeleteNote)
-			noteV1.PUT("/:id/lock", p.NoteController.LockNote)
-			noteV1.PUT("/:id/unlock", p.NoteController.UnlockNote)
-		}
-
-		tagV1 := requiredAuthV1.Group("/tags")
-		{
-			tagV1.POST("", p.TagController.CreateTag)
-			tagV1.GET("", p.TagController.GetTags)
-			tagV1.GET("/:id", p.TagController.GetTagByID)
-			tagV1.PUT("/:id", p.TagController.UpdateTag)
-			tagV1.DELETE("/:id", p.TagController.DeleteTag)
-			tagV1.POST("/:id/attach", p.TagController.AttachTag)
-			tagV1.POST("/:id/attach/batch", p.TagController.AttachTagBatch)
-			tagV1.POST("/:id/detach", p.TagController.DetachTag)
-		}
-
-		resourcesV1 := requiredAuthV1.Group("/resources")
-		{
-			resourcesV1.GET("/:resourceType/:resourceId/tags", p.TagController.GetTagsForResource)
+			projects.POST("", config.ProjectController.CreateProject)
+			// projects.GET("", config.ProjectController.GetAllProjects)
+			// projects.GET("/:id", config.ProjectController.GetProjectByID)
+			// projects.PUT("/:id", config.ProjectController.UpdateProject)
+			// projects.DELETE("/:id", config.ProjectController.DeleteProject)
 		}
 	}
+
+	config.Logger.Info("Routes registered successfully")
 }
