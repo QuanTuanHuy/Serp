@@ -3,7 +3,7 @@ app:
     driver: postgres
     host: ${DB_HOST:-localhost}
     port: ${DB_PORT:-5432}
-    database: ${DB_NAME:-serp_ptm_task_v2}
+    database: ${DB_NAME:-serp_ptm_task}
     username: ${DB_USERNAME:-serp}
     password: ${DB_PASSWORD:-serp}
     logLevel: info
@@ -18,3 +18,13 @@ app:
     jwk-set-uri: ${KEYCLOAK_JWK_SET_URI}
     expected-issuer: ${KEYCLOAK_EXPECTED_ISSUER}
     expected-audience: ${KEYCLOAK_EXPECTED_AUDIENCE}
+  kafka:
+    producer:
+      bootstrapServers:
+        - ${KAFKA_BOOTSTRAP_SERVERS:-localhost:9092}
+      requireAcks: 1
+      maxMessageBytes: 1048576
+      retryMax: 3
+      retryBackoffMs: 100
+      flushFrequencyMs: 500
+      flushMessages: 100

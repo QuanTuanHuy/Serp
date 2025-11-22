@@ -21,5 +21,9 @@ func NewAppProperties(v *viper.Viper, logger *zap.Logger) (*properties.AppProper
 		zap.String("path", props.Path),
 		zap.Int("port", props.Port),
 	)
+	// kafka properties
+	logger.Info("Kafka Producer properties loaded",
+		zap.String("bootstrapServers", props.Kafka.Producer.BootstrapServers[0]),
+	)
 	return &props, nil
 }

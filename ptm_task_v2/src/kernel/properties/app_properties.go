@@ -32,4 +32,5 @@ type AppProperties struct {
 	Datasource DatabaseProperties `mapstructure:"datasource"`
 	Redis      RedisProperties    `mapstructure:"redis"`
 	Keycloak   KeycloakProperties `mapstructure:"keycloak"`
+	Kafka      KafkaProperties    `mapstructure:"kafka"`
 }

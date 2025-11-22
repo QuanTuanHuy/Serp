@@ -6,6 +6,7 @@ Description: Part of Serp Project
 package bootstrap
 
 import (
+	client "github.com/serp/ptm-task/src/infrastructure/client"
 	"github.com/serp/ptm-task/src/ui/middleware"
 	"go.uber.org/fx"
 )
@@ -24,6 +25,10 @@ func All() fx.Option {
 		fx.Provide(middleware.NewJWTMiddleware),
 
 		// Add your services, use cases, controllers here when ready
+
+		// Adapter
+		fx.Provide(client.NewRedisAdapter),
+		fx.Provide(client.NewKafkaProducerAdapter),
 
 		// Lifecycle
 		fx.Invoke(InitializeDB),

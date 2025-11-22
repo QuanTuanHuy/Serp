@@ -20,3 +20,13 @@ app:
     jwk-set-uri: ${KEYCLOAK_JWK_SET_URI}
     expected-issuer: ${KEYCLOAK_EXPECTED_ISSUER}
     expected-audience: ${KEYCLOAK_EXPECTED_AUDIENCE}
+  kafka:
+    producer:
+      bootstrapServers:
+        - ${KAFKA_BOOTSTRAP_SERVERS}
+      requireAcks: 1
+      maxMessageBytes: 1048576
+      retryMax: 3
+      retryBackoffMs: 100
+      flushFrequencyMs: 500
+      flushMessages: 100
