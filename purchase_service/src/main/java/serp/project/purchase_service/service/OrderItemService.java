@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.purchase_service.constant.OrderItemStatus;
+import serp.project.purchase_service.constant.OrderStatus;
 import serp.project.purchase_service.dto.request.OrderCreationForm;
 import serp.project.purchase_service.dto.request.OrderItemUpdateForm;
 import serp.project.purchase_service.entity.OrderItemEntity;
@@ -11,6 +12,7 @@ import serp.project.purchase_service.entity.ProductEntity;
 import serp.project.purchase_service.exception.AppErrorCode;
 import serp.project.purchase_service.exception.AppException;
 import serp.project.purchase_service.repository.OrderItemRepository;
+import serp.project.purchase_service.repository.OrderRepository;
 import serp.project.purchase_service.util.CalculatorUtils;
 import serp.project.purchase_service.util.IdUtils;
 
@@ -21,6 +23,7 @@ import java.util.List;
 public class OrderItemService {
 
     private final OrderItemRepository orderItemRepository;
+    private final OrderRepository orderRepository;
     private final ProductService productService;
 
     @Transactional(rollbackFor = Exception.class)
@@ -29,6 +32,11 @@ public class OrderItemService {
         if (product == null) {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
+        String orderStatus = orderRepository.getOrderStatus(orderId, tenantId);
+        if (OrderStatus.fromValue(orderStatus).ordinal() > OrderStatus.CANCELLED.ordinal()) {
+            throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
+        }
+        orderRepository.updateOrderStatus(orderId, OrderStatus.CREATED.value(), tenantId);
 
         String orderItemId = IdUtils.generateOrderItemId();
         OrderItemEntity orderItem = OrderItemEntity.builder()
@@ -54,6 +62,12 @@ public class OrderItemService {
         if (orderItem == null || !orderItem.getTenantId().equals(tenantId) || !orderItem.getOrderId().equals(orderId)) {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
+        String orderStatus = orderRepository.getOrderStatus(orderId, tenantId);
+        if (OrderStatus.fromValue(orderStatus).ordinal() > OrderStatus.CANCELLED.ordinal()) {
+            throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
+        }
+        orderRepository.updateOrderStatus(orderId, OrderStatus.CREATED.value(), tenantId);
+
         orderItem.setOrderItemSeqId(form.getOrderItemSeqId());
         orderItem.setQuantity(form.getQuantity());
         orderItem.setTax(form.getTax());
@@ -68,6 +82,11 @@ public class OrderItemService {
 
     @Transactional(rollbackFor = Exception.class)
     public void deleteOrderItem(String orderItemId, String orderId, Long tenantId) {
+        String orderStatus = orderRepository.getOrderStatus(orderId, tenantId);
+        if (OrderStatus.fromValue(orderStatus).ordinal() > OrderStatus.CANCELLED.ordinal()) {
+            throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
+        }
+        orderRepository.updateOrderStatus(orderId, OrderStatus.CREATED.value(), tenantId);
         OrderItemEntity orderItem = orderItemRepository.findById(orderItemId).orElse(null);
         if (orderItem == null || !orderItem.getTenantId().equals(tenantId) || !orderItem.getOrderId().equals(orderId)) {
             throw new AppException(AppErrorCode.NOT_FOUND);

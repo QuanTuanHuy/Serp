@@ -95,6 +95,21 @@ func (a *AuthController) RevokeToken(c *gin.Context) {
 	c.JSON(res.Code, res)
 }
 
+func (a *AuthController) ChangePassword(c *gin.Context) {
+	var req request.ChangePasswordDTO
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+		return
+	}
+
+	res, err := a.authService.ChangePassword(c.Request.Context(), &req)
+	if err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
+		return
+	}
+	c.JSON(res.Code, res)
+}
+
 func NewAuthController(authService service.IAuthService) *AuthController {
 	return &AuthController{
 		authService: authService,

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
+import serp.project.account.core.domain.dto.request.ChangePasswordRequest;
 import serp.project.account.core.domain.dto.request.CreateOrganizationDto;
 import serp.project.account.core.domain.dto.request.CreateUserDto;
 import serp.project.account.core.domain.dto.request.LoginRequest;
@@ -219,6 +220,34 @@ public class AuthUseCase {
                 keycloakUserService.deleteUser(userKeycloakId);
             }
             throw e;
+        }
+    }
+
+    public GeneralResponse<?> changePassword(Long userId,
+            ChangePasswordRequest request) {
+        try {
+            UserEntity user = userService.getUserById(userId);
+            if (user == null) {
+                return responseUtils.badRequest(Constants.ErrorMessage.USER_NOT_FOUND);
+            }
+            try {
+                tokenService.getUserToken(user.getEmail(), request.getOldPassword());
+            } catch (Exception e) {
+                return responseUtils.badRequest(Constants.ErrorMessage.INVALID_PASSWORD);
+            }
+            if (request.getOldPassword().equals(request.getNewPassword())) {
+                return responseUtils.badRequest(Constants.ErrorMessage.PASSWORD_CANNOT_BE_OLD_PASSWORD);
+            }
+
+            keycloakUserService.resetPassword(user.getKeycloakId(), request.getNewPassword());
+
+            return responseUtils.success("Password changed successfully");
+        } catch (AppException e) {
+            log.error("Change password failed: {}", e.getMessage());
+            return responseUtils.error(e.getCode(), e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error when changing password: {}", e.getMessage());
+            return responseUtils.internalServerError(e.getMessage());
         }
     }
 }

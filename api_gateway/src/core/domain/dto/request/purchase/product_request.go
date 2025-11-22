@@ -42,5 +42,6 @@ type GetProductParams struct {
 	SortBy        *string `form:"sortBy"`
 	SortDirection *string `form:"sortDirection"`
 	Query         *string `form:"query"`
+	CategoryId    *string `form:"categoryId"`
 	StatusId      *string `form:"statusId"`
 }

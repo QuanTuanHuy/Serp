@@ -3,6 +3,8 @@
  * Description: Part of Serp Project - Authentication business logic orchestration hook
  */
 
+'use client';
+
 import { useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/shared/hooks';

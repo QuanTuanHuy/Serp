@@ -2,6 +2,7 @@
  * Authors: QuanTuanHuy
  * Description: Part of Serp Project - User management business logic hook
  */
+'use client';
 
 import { useCallback, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/shared/hooks';

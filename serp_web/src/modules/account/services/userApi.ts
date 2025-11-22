@@ -9,6 +9,8 @@ import {
   MenusResponse,
   PermissionsResponse,
   UserProfileResponse,
+  UpdateProfileRequest,
+  ChangePasswordRequest,
 } from '../types';
 
 export const userApi = api.injectEndpoints({
@@ -39,6 +41,33 @@ export const userApi = api.injectEndpoints({
       ],
       transformResponse: createRtkTransformResponse(),
     }),
+
+    updateUserProfile: builder.mutation<
+      UserProfileResponse,
+      { userId: number; data: UpdateProfileRequest }
+    >({
+      query: ({ userId, data }) => ({
+        url: `/users/${userId}/info`,
+        method: 'PATCH',
+        body: data,
+      }),
+      invalidatesTags: [
+        { type: 'account/user', id: 'CURRENT_USER' },
+        'account/profile',
+      ],
+      transformResponse: createRtkTransformResponse(),
+    }),
+
+    changePassword: builder.mutation<
+      void,
+      { userId: number; data: ChangePasswordRequest }
+    >({
+      query: ({ data }) => ({
+        url: `/auth/change-password`,
+        method: 'POST',
+        body: data,
+      }),
+    }),
   }),
   overrideExisting: false,
 });
@@ -47,4 +76,6 @@ export const {
   useGetCurrentUserQuery,
   useGetUserPermissionsQuery,
   useGetUserMenusQuery,
+  useUpdateUserProfileMutation,
+  useChangePasswordMutation,
 } = userApi;

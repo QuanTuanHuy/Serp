@@ -9,17 +9,23 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import serp.project.account.core.domain.constant.Constants;
+import serp.project.account.core.domain.dto.request.ChangePasswordRequest;
 import serp.project.account.core.domain.dto.request.CreateUserDto;
 import serp.project.account.core.domain.dto.request.LoginRequest;
 import serp.project.account.core.domain.dto.request.RefreshTokenRequest;
 import serp.project.account.core.domain.dto.request.RevokeTokenRequest;
+import serp.project.account.core.exception.AppException;
 import serp.project.account.core.usecase.AuthUseCase;
+import serp.project.account.kernel.utils.AuthUtils;
 
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
     private final AuthUseCase authUseCase;
+    private final AuthUtils authUtils;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody CreateUserDto request) {
@@ -48,6 +54,15 @@ public class AuthController {
     @PostMapping("/revoke-token")
     public ResponseEntity<?> revokeToken(@Valid @RequestBody RevokeTokenRequest request) {
         var response = authUseCase.revokeToken(request);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request) {
+        var userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AppException(Constants.ErrorMessage.UNAUTHORIZED));
+        var response = authUseCase.changePassword(userId, request);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 }

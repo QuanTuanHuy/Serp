@@ -144,6 +144,9 @@ func (p *ProductClientAdapter) GetProducts(ctx context.Context, params *request.
 	if params.Query != nil {
 		queryParams["query"] = *params.Query
 	}
+	if params.CategoryId != nil {
+		queryParams["categoryId"] = *params.CategoryId
+	}
 	if params.StatusId != nil {
 		queryParams["statusId"] = *params.StatusId
 	}

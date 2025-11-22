@@ -18,4 +18,5 @@ type IAuthClientPort interface {
 	GetToken(ctx context.Context, req *request.LoginDTO) (*response.BaseResponse, error)
 	RefreshToken(ctx context.Context, req *request.RefreshTokenDTO) (*response.BaseResponse, error)
 	RevokeToken(ctx context.Context, req *request.RefreshTokenDTO) (*response.BaseResponse, error)
+	ChangePassword(ctx context.Context, req *request.ChangePasswordDTO) (*response.BaseResponse, error)
 }

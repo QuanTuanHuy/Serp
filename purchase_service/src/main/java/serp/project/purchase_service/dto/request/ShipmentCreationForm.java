@@ -20,6 +20,7 @@ public class ShipmentCreationForm {
 
     private List<InventoryItemDetail> items;
 
+    private String facilityId;
 
     @Data
     public static class InventoryItemDetail {
@@ -37,7 +38,6 @@ public class ShipmentCreationForm {
 
         private LocalDate manufacturingDate;
 
-        private String facilityId;
     }
 
 }

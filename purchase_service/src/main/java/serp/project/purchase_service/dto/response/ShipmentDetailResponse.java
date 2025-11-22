@@ -3,6 +3,7 @@ package serp.project.purchase_service.dto.response;
 import lombok.Builder;
 import lombok.Data;
 import serp.project.purchase_service.entity.InventoryItemDetailEntity;
+import serp.project.purchase_service.entity.ShipmentEntity;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -29,12 +30,17 @@ public class ShipmentDetailResponse
     private Long userCancelledId;
     private long totalWeight;
     private int totalQuantity;
+    private String facilityId;
     private List<InventoryItemDetailEntity> items;
 
     public static ShipmentDetailResponse fromEntity(
-            serp.project.purchase_service.entity.ShipmentEntity shipment,
+            ShipmentEntity shipment,
             List<InventoryItemDetailEntity> items
     ) {
+        String facilityId = null;
+        if (items != null && !items.isEmpty()) {
+            facilityId = items.getFirst().getFacilityId();
+        }
         return ShipmentDetailResponse.builder()
                 .id(shipment.getId())
                 .shipmentTypeId(shipment.getShipmentTypeId())
@@ -52,6 +58,7 @@ public class ShipmentDetailResponse
                 .userCancelledId(shipment.getUserCancelledId())
                 .totalWeight(shipment.getTotalWeight())
                 .totalQuantity(shipment.getTotalQuantity())
+                .facilityId(facilityId)
                 .items(items)
                 .build();
     }

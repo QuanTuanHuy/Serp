@@ -15,4 +15,13 @@ public enum OrderStatus {
     public String value() {
         return value;
     }
+
+    public static OrderStatus fromValue(String value) {
+        for (OrderStatus status : OrderStatus.values()) {
+            if (status.value.equals(value)) {
+                return status;
+            }
+        }
+        throw new IllegalArgumentException("Unknown OrderStatus value: " + value);
+    }
 }

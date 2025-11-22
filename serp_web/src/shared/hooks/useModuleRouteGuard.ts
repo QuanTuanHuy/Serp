@@ -3,6 +3,8 @@
  * Description: Part of Serp Project - Route guard hook using module-specific menu APIs
  */
 
+'use client';
+
 import { useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import {

@@ -107,4 +107,14 @@ public class KeycloakUserService implements IKeycloakUserService {
             throw new AppException(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @Override
+    public void resetPassword(String userId, String newPassword) {
+        try {
+            keycloakPort.resetPassword(userId, newPassword);
+        } catch (Exception e) {
+            log.error("Error resetting password for user {}: {}", userId, e.getMessage());
+            throw new AppException(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
+        }
+    }
 }

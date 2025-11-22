@@ -13,7 +13,6 @@ type InventoryItemDetail struct {
 	LotId             string `json:"lotId"`
 	ExpirationDate    string `json:"expirationDate"`    // LocalDate as string "2025-11-19"
 	ManufacturingDate string `json:"manufacturingDate"` // LocalDate as string "2025-11-19"
-	FacilityId        string `json:"facilityId"`
 }
 
 type CreateShipmentRequest struct {
@@ -23,6 +22,7 @@ type CreateShipmentRequest struct {
 	Note                 string                `json:"note"`
 	ExpectedDeliveryDate string                `json:"expectedDeliveryDate"` // LocalDate as string
 	Items                []InventoryItemDetail `json:"items"`
+	FacilityId           string                `json:"facilityId"`
 }
 
 type UpdateShipmentRequest struct {

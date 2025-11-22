@@ -95,3 +95,11 @@ export {
 
 // Alert Components
 export { Alert, AlertTitle, AlertDescription } from './alert';
+
+// Tooltip Components
+export {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from './tooltip';
