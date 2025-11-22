@@ -7,6 +7,6 @@ import java.util.List;
 
 public interface AddressRepository extends JpaRepository<AddressEntity,String> {
 
-    public List<AddressEntity> findByEntityIdAndTenantId(String entityId, Long tenantId);
+    public List<AddressEntity> findByTenantIdAndEntityId(Long tenantId, String entityId);
 
 }

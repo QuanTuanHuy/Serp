@@ -73,6 +73,32 @@ func (a *AddressClientAdapter) UpdateAddress(ctx context.Context, addressId stri
 	return &result, nil
 }
 
+func (a *AddressClientAdapter) GetAddressesByEntityId(ctx context.Context, entityId string) (*response.BaseResponse, error) {
+	headers := utils.BuildHeadersFromContext(ctx)
+	var httpResponse *utils.HTTPResponse
+	err := a.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
+		var err error
+		url := fmt.Sprintf("/api/v1/address/search/by-entity/%s", entityId)
+		httpResponse, err = a.apiClient.GET(ctx, url, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call get addresses by entity API: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !a.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("GetAddressesByEntityId API returned error status: %d", httpResponse.StatusCode))
+	}
+
+	var result response.BaseResponse
+	if err := a.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal get addresses by entity response: %w", err)
+	}
+	return &result, nil
+}
+
 func NewAddressClientAdapter(serviceProps *properties.ExternalServiceProperties) port.IAddressClientPort {
 	baseUrl := "http://" + serviceProps.PurchaseService.Host + ":" + serviceProps.PurchaseService.Port + "/purchase-service"
 	apiClient := utils.NewBaseAPIClient(baseUrl, serviceProps.PurchaseService.Timeout)

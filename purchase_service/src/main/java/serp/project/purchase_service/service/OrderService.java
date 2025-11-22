@@ -67,6 +67,9 @@ public class OrderService {
         if (order == null || !order.getTenantId().equals(tenantId)) {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
+        if (OrderStatus.fromValue(order.getStatusId()).ordinal() < OrderStatus.CANCELLED.ordinal()) {
+            throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
+        }
 
         order.setDeliveryBeforeDate(form.getDeliveryBeforeDate());
         order.setDeliveryAfterDate(form.getDeliveryAfterDate());
@@ -74,6 +77,7 @@ public class OrderService {
         order.setOrderName(form.getOrderName());
         order.setPriority(form.getPriority());
         order.setSaleChannelId(form.getSaleChannelId());
+        order.setStatusId(OrderStatus.CREATED.value());
         orderRepository.save(order);
     }
 
