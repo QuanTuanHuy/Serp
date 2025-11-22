@@ -131,6 +131,13 @@ export const api = createApi({
     'ptm/Activity',
     'ptm/Note',
     'ptm/Dependency',
+    // Purchase tags
+    'purchase/Supplier',
+    'purchase/Product',
+    'purchase/Category',
+    'purchase/Order',
+    'purchase/Facility',
+    'purchase/Shipment',
   ],
 
   // Define endpoints in separate files for each module
