@@ -17,84 +17,117 @@ export interface Order {
   orderDate: string;
   statusId: string;
   lastUpdatedStamp: string;
-  description?: string;
-  totalPrice?: number;
-  totalQuantity?: number;
-  tenantId: number;
+  deliveryBeforeDate: string;
+  deliveryAfterDate: string;
+  note?: string;
+  orderName: string;
+  priority: number;
+  salesChannelId: string;
+  userApprovedId?: number;
+  userCancelledId?: number;
+  cancellationNote?: string;
 }
 
 // Order item entity
 export interface OrderItem {
   id: string;
   orderId: string;
+  orderItemSeqId: number;
   productId: string;
   quantity: number;
-  unitPrice: number;
-  totalPrice: number;
+  amount: number;
   statusId: string;
-  product?: Product;
-  tenantId: number;
   createdStamp: string;
-  lastUpdatedStamp: string;
+  lastUpdatedStamp?: string;
+  price: number;
+  tax: number;
+  discount: number;
+  unit: string;
 }
 
 // Order detail with items
 export interface OrderDetail extends Order {
-  items: OrderItem[];
-  supplierName?: string;
-  customerName?: string;
+  orderItems: OrderItem[];
+  id: string;
+  orderTypeId: string;
+  fromSupplierId?: string;
+  toCustomerId?: string;
+  createdByUserId: number;
+  createdStamp: string;
+  orderDate: string;
+  statusId: string;
+  lastUpdatedStamp: string;
+  deliveryBeforeDate: string;
+  deliveryAfterDate: string;
+  note?: string;
+  orderName: string;
+  priority: number;
+  salesChannelId: string;
+  userApprovedId?: number;
+  userCancelledId?: number;
+  cancellationNote?: string;
 }
 
 // Create order request
 export interface CreateOrderRequest {
-  orderTypeId: string;
-  fromSupplierId?: string;
-  toCustomerId?: string;
-  orderDate: string;
-  description?: string;
-  items: Array<{
+  fromSupplierId: string;
+  deliveryBeforeDate: string;
+  deliveryAfterDate: string;
+  orderName: string;
+  note?: string;
+  priority: number;
+  salesChannelId?: string;
+  orderItems: Array<{
     productId: string;
+    orderItemSeqId: number;
     quantity: number;
-    unitPrice: number;
+    tax: number;
+    discount: number;
   }>;
 }
 
 // Update order request
 export interface UpdateOrderRequest {
-  orderTypeId?: string;
-  fromSupplierId?: string;
-  toCustomerId?: string;
-  orderDate?: string;
-  description?: string;
+  deliveryBeforeDate: string;
+  deliveryAfterDate: string;
+  orderName: string;
+  note?: string;
+  priority: number;
+  salesChannelId?: string;
 }
 
 // Update order item request
 export interface UpdateOrderItemRequest {
+  orderItemSeqId: number;
   quantity?: number;
-  unitPrice?: number;
+  tax?: number;
+  discount?: number;
 }
 
 // Add product to order request
 export interface AddOrderItemRequest {
   productId: string;
+  orderItemSeqId: number;
   quantity: number;
-  unitPrice: number;
+  tax: number;
+  discount: number;
 }
 
 // Order cancellation request
 export interface CancelOrderRequest {
-  reason?: string;
+  note: string;
 }
 
 // Order filters for search
 export interface OrderFilters extends SearchParams {
   query?: string;
   statusId?: string;
-  orderTypeId?: string;
   fromSupplierId?: string;
-  toCustomerId?: string;
-  fromDate?: string;
-  toDate?: string;
+  salesChannelId?: string;
+  orderDateAfter?: string;
+  orderDateBefore?: string;
+  deliveryAfter?: string;
+  deliveryBefore?: string;
   page?: number;
   size?: number;
   sortBy?: string;

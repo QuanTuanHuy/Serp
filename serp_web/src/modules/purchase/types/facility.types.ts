@@ -4,7 +4,7 @@ Description: Part of Serp Project - Facility types for purchase module
 */
 
 import type { ApiResponse, PaginatedResponse, SearchParams } from '@/lib/store/api/types';
-import type { Address } from './supplier.types';
+import type { Address } from './address.types';
 
 // Facility entity
 export interface Facility {

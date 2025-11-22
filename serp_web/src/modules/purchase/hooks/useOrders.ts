@@ -86,7 +86,7 @@ export function useOrders() {
   const pagination = useMemo(() => {
     if (!response?.data) return null;
     return {
-      currentPage: response.data.currentPage,
+      currentPage: response.data.currentPage - 1,
       totalPages: response.data.totalPages,
       totalItems: response.data.totalItems,
       pageSize: filters.size || 10,

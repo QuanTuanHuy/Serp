@@ -54,6 +54,13 @@ import type {
   ShipmentResponse,
   ShipmentsResponse,
   ShipmentDetailResponse,
+  // Address types
+  Address,
+  CreateAddressRequest,
+  UpdateAddressRequest,
+  AddressFilters,
+  AddressResponse,
+  AddressesResponse,
 } from '../types';
 
 // Base URL for Purchase Service
@@ -230,11 +237,12 @@ export const purchaseApi = api.injectEndpoints({
           sortDirection: filters.sortDirection || 'desc',
           query: filters.query,
           statusId: filters.statusId,
-          orderTypeId: filters.orderTypeId,
           fromSupplierId: filters.fromSupplierId,
-          toCustomerId: filters.toCustomerId,
-          fromDate: filters.fromDate,
-          toDate: filters.toDate,
+          salesChannelId: filters.salesChannelId,
+          orderDateAfter: filters.orderDateAfter,
+          orderDateBefore: filters.orderDateBefore,
+          deliveryAfter: filters.deliveryAfter,
+          deliveryBefore: filters.deliveryBefore,
         },
       }),
       providesTags: (result) =>
@@ -495,6 +503,65 @@ export const purchaseApi = api.injectEndpoints({
         { type: 'purchase/Shipment', id: 'LIST' },
       ],
     }),
+
+    // ============= Address Endpoints =============
+    getAddresses: builder.query<AddressesResponse, AddressFilters>({
+      query: (filters) => ({
+        url: `${PURCHASE_API_BASE_URL}/address/search`,
+        params: {
+          page: filters.page || 1,
+          size: filters.size || 10,
+          sortBy: filters.sortBy || 'createdStamp',
+          sortDirection: filters.sortDirection || 'desc',
+          entityId: filters.entityId,
+          entityType: filters.entityType,
+          addressType: filters.addressType,
+        },
+      }),
+      providesTags: (result) =>
+        result?.data?.items
+          ? [
+              ...result.data.items.map(({ id }) => ({
+                type: 'purchase/Address' as const,
+                id,
+              })),
+              { type: 'purchase/Address', id: 'LIST' },
+            ]
+          : [{ type: 'purchase/Address', id: 'LIST' }],
+    }),
+
+    getAddressById: builder.query<AddressResponse, string>({
+      query: (addressId) => ({
+        url: `${PURCHASE_API_BASE_URL}/address/search/${addressId}`,
+      }),
+      providesTags: (result, error, addressId) => [
+        { type: 'purchase/Address', id: addressId },
+      ],
+    }),
+
+    createAddress: builder.mutation<AddressResponse, CreateAddressRequest>({
+      query: (data) => ({
+        url: `${PURCHASE_API_BASE_URL}/address/create`,
+        method: 'POST',
+        body: data,
+      }),
+      invalidatesTags: [{ type: 'purchase/Address', id: 'LIST' }],
+    }),
+
+    updateAddress: builder.mutation<
+      AddressResponse,
+      { addressId: string; data: UpdateAddressRequest }
+    >({
+      query: ({ addressId, data }) => ({
+        url: `${PURCHASE_API_BASE_URL}/address/update/${addressId}`,
+        method: 'PATCH',
+        body: data,
+      }),
+      invalidatesTags: (result, error, { addressId }) => [
+        { type: 'purchase/Address', id: addressId },
+        { type: 'purchase/Address', id: 'LIST' },
+      ],
+    }),
   }),
 });
 
@@ -537,4 +604,9 @@ export const {
   useCreateShipmentMutation,
   useUpdateShipmentMutation,
   useDeleteShipmentMutation,
+  // Address hooks
+  useGetAddressesQuery,
+  useGetAddressByIdQuery,
+  useCreateAddressMutation,
+  useUpdateAddressMutation,
 } = purchaseApi;

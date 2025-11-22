@@ -10,6 +10,14 @@ export { PurchaseHeader } from './layout/PurchaseHeader';
 // Auth Guard
 export { PurchaseAuthGuard } from './PurchaseAuthGuard';
 
-// Product components
+// Product Components
 export { ProductForm } from './products/ProductForm';
 export { ProductFormDialog } from './products/ProductFormDialog';
+
+// Order components
+export { OrderForm } from './orders/OrderForm';
+export { OrderFormDialog } from './orders/OrderFormDialog';
+
+// Address Components
+export { AddressForm } from './addresses/AddressForm';
+export { AddressFormDialog } from './addresses/AddressFormDialog';

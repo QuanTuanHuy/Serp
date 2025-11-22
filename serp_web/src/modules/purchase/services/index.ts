@@ -44,4 +44,9 @@ export {
   useCreateShipmentMutation,
   useUpdateShipmentMutation,
   useDeleteShipmentMutation,
+  // Address hooks
+  useGetAddressesQuery,
+  useGetAddressByIdQuery,
+  useCreateAddressMutation,
+  useUpdateAddressMutation,
 } from './purchaseApi';

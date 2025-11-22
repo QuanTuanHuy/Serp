@@ -4,6 +4,7 @@ Description: Part of Serp Project - Supplier types for purchase module
 */
 
 import type { ApiResponse, PaginatedResponse, SearchParams } from '@/lib/store/api/types';
+import type { Address } from './address.types';
 
 // Supplier entity
 export interface Supplier {
@@ -18,23 +19,7 @@ export interface Supplier {
   lastUpdatedStamp: string;
 }
 
-// Address entity (for supplier detail)
-export interface Address {
-  id: string;
-  entityId: string;
-  entityType: string;
-  address: string;
-  city?: string;
-  province?: string;
-  country?: string;
-  postalCode?: string;
-  isDefault: boolean;
-  tenantId: number;
-  createdStamp: string;
-  lastUpdatedStamp: string;
-}
-
-// Supplier detail response (includes address)
+// Supplier detail response (includes address from address.types.ts)
 export interface SupplierDetail extends Supplier {
   address?: Address;
 }

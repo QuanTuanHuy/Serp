@@ -17,3 +17,6 @@ export type * from './facility.types';
 
 // Shipment types
 export type * from './shipment.types';
+
+// Address types
+export type * from './address.types';

@@ -45,14 +45,25 @@ export {
   useCreateShipmentMutation,
   useUpdateShipmentMutation,
   useDeleteShipmentMutation,
+  // Address hooks
+  useGetAddressesQuery,
+  useGetAddressByIdQuery,
+  useCreateAddressMutation,
+  useUpdateAddressMutation,
 } from './services';
 
 // ============= Custom Hooks =============
-export { useSuppliers, useProducts, useOrders } from './hooks';
+export {
+  useSuppliers,
+  useProducts,
+  useOrders,
+  useAddresses,
+} from './hooks';
 export type {
   UseSuppliersReturn,
   UseProductsReturn,
   UseOrdersReturn,
+  UseAddressesReturn,
 } from './hooks';
 
 // ============= Store (Actions & Selectors) =============
@@ -127,6 +138,27 @@ export {
   selectOrdersUiState,
 } from './store';
 
+// Addresses
+export {
+  setAddressesEntityId,
+  setAddressesEntityType,
+  setAddressesAddressType,
+  setAddressesPage,
+  setAddressesPageSize,
+  setAddressesSorting,
+  setAddressesDialogOpen,
+  openCreateAddressDialog,
+  openEditAddressDialog,
+  openViewAddressDialog,
+  setSelectedAddress,
+  resetAddressesFilters,
+  selectAddressesFilters,
+  selectAddressesDialogOpen,
+  selectAddressesDialogMode,
+  selectSelectedAddressId,
+  selectAddressesUiState,
+} from './store';
+
 // ============= Components =============
 export {
   // Layout Components
@@ -137,4 +169,10 @@ export {
   // Product Components
   ProductForm,
   ProductFormDialog,
+  // Order Components
+  OrderForm,
+  OrderFormDialog,
+  // Address Components
+  AddressForm,
+  AddressFormDialog,
 } from './components';

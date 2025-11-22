@@ -7,12 +7,14 @@ import { combineReducers } from '@reduxjs/toolkit';
 import suppliersReducer from './suppliers/suppliersSlice';
 import productsReducer from './products/productsSlice';
 import ordersReducer from './orders/ordersSlice';
+import addressesReducer from './addresses/addressesSlice';
 
 // Combine purchase reducers
 export const purchaseReducer = combineReducers({
   suppliers: suppliersReducer,
   products: productsReducer,
   orders: ordersReducer,
+  addresses: addressesReducer,
 });
 
 // Re-export actions and selectors from suppliers
@@ -85,3 +87,25 @@ export {
   selectOrdersViewMode,
   selectOrdersUiState,
 } from './orders/ordersSlice';
+
+// Re-export actions and selectors from addresses
+export {
+  setEntityId as setAddressesEntityId,
+  setEntityType as setAddressesEntityType,
+  setAddressType as setAddressesAddressType,
+  setPage as setAddressesPage,
+  setPageSize as setAddressesPageSize,
+  setSorting as setAddressesSorting,
+  setDialogOpen as setAddressesDialogOpen,
+  openCreateDialog as openCreateAddressDialog,
+  openEditDialog as openEditAddressDialog,
+  openViewDialog as openViewAddressDialog,
+  setSelectedAddress,
+  resetFilters as resetAddressesFilters,
+  selectAddressesFilters,
+  selectAddressesDialogOpen,
+  selectAddressesDialogMode,
+  selectSelectedAddressId,
+  selectAddressesUiState,
+} from './addresses/addressesSlice';
+

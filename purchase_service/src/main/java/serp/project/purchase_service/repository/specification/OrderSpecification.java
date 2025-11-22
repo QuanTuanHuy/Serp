@@ -22,6 +22,7 @@ public class OrderSpecification {
             var predicates = new java.util.ArrayList<Predicate>();
 
             predicates.add(criteriaBuilder.equal(root.get("tenantId"), tenantId));
+            predicates.add(criteriaBuilder.equal(root.get("orderTypeId"), "PURCHASE"));
 
             if (StringUtils.hasText(fromSupplierId)) {
                 predicates.add(criteriaBuilder.equal(root.get("fromSupplierId"), fromSupplierId));

@@ -138,6 +138,7 @@ export const api = createApi({
     'purchase/Order',
     'purchase/Facility',
     'purchase/Shipment',
+    'purchase/Address',
   ],
 
   // Define endpoints in separate files for each module

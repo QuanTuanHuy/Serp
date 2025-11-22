@@ -11,3 +11,6 @@ export type { UseProductsReturn } from './useProducts';
 
 export { useOrders } from './useOrders';
 export type { UseOrdersReturn } from './useOrders';
+
+export { useAddresses } from './useAddresses';
+export type { UseAddressesReturn } from './useAddresses';
