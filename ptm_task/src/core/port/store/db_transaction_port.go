@@ -3,7 +3,7 @@ Author: QuanTuanHuy
 Description: Part of Serp Project
 */
 
-package port
+package store
 
 import "gorm.io/gorm"
 

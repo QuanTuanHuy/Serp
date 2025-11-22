@@ -8,48 +8,50 @@ package adapter
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/IBM/sarama"
-	"github.com/golibs-starter/golib/log"
 	port "github.com/serp/ptm-task/src/core/port/client"
 	"github.com/serp/ptm-task/src/kernel/properties"
+	"go.uber.org/zap"
 )
 
 type KafkaProducerAdapter struct {
 	syncProducer       sarama.SyncProducer
 	asyncProducer      sarama.AsyncProducer
 	producerProperties *properties.KafkaProducerProperties
+	logger             *zap.Logger
 }
 
 func (k *KafkaProducerAdapter) SendMessage(ctx context.Context, topic string, key string, payload any) error {
 	message, err := k.ToSaramaMessage(topic, key, payload)
 	if err != nil {
-		log.Error(ctx, "Failed to create message for topic ", topic, " with key ", key, " error: ", err)
+		k.logger.Error(fmt.Sprintf("Failed to create message for topic %s with key %s", topic, key), zap.Error(err))
 		return err
 	}
 	partition, offset, err := k.syncProducer.SendMessage(message)
 	if err != nil {
-		log.Error(ctx, "Failed to send message to topic ", topic, " with key ", key, " error: ", err)
+		k.logger.Error(fmt.Sprintf("Failed to send message to topic %s with key %s", topic, key), zap.Error(err))
 		return err
 	}
-	log.Info(ctx, "Message sent successfully to topic ", topic, " with key ", key, " at partition ", partition, " and offset ", offset)
+	k.logger.Info(fmt.Sprintf("Message sent successfully to topic %s with key %s at partition %d and offset %d", topic, key, partition, offset))
 	return nil
 }
 
 func (k *KafkaProducerAdapter) SendMessageAsync(ctx context.Context, topic string, key string, payload any) error {
 	message, err := k.ToSaramaMessage(topic, key, payload)
 	if err != nil {
-		log.Error(ctx, "Failed to create message for topic ", topic, " with key ", key, " error: ", err)
+		k.logger.Error(fmt.Sprintf("Failed to create message for topic %s with key %s", topic, key), zap.Error(err))
 		return err
 	}
 
 	select {
 	case k.asyncProducer.Input() <- message:
-		log.Info(ctx, "Async message sent to topic ", topic, " with key ", key)
+		k.logger.Info(fmt.Sprintf("Async message sent to topic %s with key %s", topic, key))
 		return nil
 	default:
-		log.Error(ctx, "Failed to send async message to topic ", topic, " with key ", key, " due to full channel")
+		k.logger.Error(fmt.Sprintf("Failed to send async message to topic %s with key %s due to full channel", topic, key))
 		return sarama.ErrOutOfBrokers
 	}
 }
@@ -57,10 +59,10 @@ func (k *KafkaProducerAdapter) SendMessageAsync(ctx context.Context, topic strin
 func (k *KafkaProducerAdapter) ToSaramaMessage(topic string, key string, payload any) (*sarama.ProducerMessage, error) {
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		log.Error("Failed to marshal payload: ", err)
+		k.logger.Error(fmt.Sprintf("Failed to marshal payload for topic %s with key %s", topic, key), zap.Error(err))
 		return nil, err
 	}
-	log.Info("Creating message for topic ", topic, " with key ", key, " and payload ", string(payloadBytes))
+	k.logger.Info(fmt.Sprintf("Creating message for topic %s with key %s and payload %s", topic, key, string(payloadBytes)))
 
 	return &sarama.ProducerMessage{
 		Topic: topic,
@@ -70,14 +72,12 @@ func (k *KafkaProducerAdapter) ToSaramaMessage(topic string, key string, payload
 }
 
 func (k *KafkaProducerAdapter) HandleAsyncProducerMessages() {
-	ctx := context.Background()
-
 	for {
 		select {
 		case success := <-k.asyncProducer.Successes():
-			log.Info(ctx, "Message sent successfully to topic ", success.Topic, " with key ", success.Key)
+			k.logger.Info(fmt.Sprintf("Message sent successfully to topic %s with key %s", success.Topic, success.Key))
 		case err := <-k.asyncProducer.Errors():
-			log.Error(ctx, "Failed to send message to topic ", err.Msg.Topic, " with key ", err.Msg.Key, " error: ", err.Err)
+			k.logger.Error(fmt.Sprintf("Failed to send message to topic %s with key %s error: %v", err.Msg.Topic, err.Msg.Key, err.Err))
 		}
 	}
 }

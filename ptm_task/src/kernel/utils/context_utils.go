@@ -6,134 +6,63 @@ Description: Part of Serp Project
 package utils
 
 import (
+	"errors"
+
 	"github.com/gin-gonic/gin"
 )
 
-func GetUserIDFromContext(c *gin.Context) (int64, bool) {
-	if userID, exists := c.Get("userID"); exists {
-		if id, ok := userID.(int64); ok {
-			return id, true
-		}
-	}
-	return 0, false
-}
-
-func GetTenantIDFromContext(c *gin.Context) (int64, bool) {
-	if tenantID, exists := c.Get("tenantID"); exists {
-		if id, ok := tenantID.(int64); ok {
-			return id, true
-		}
-	}
-	return 0, false
-}
-
-func GetUserEmailFromContext(c *gin.Context) (string, bool) {
-	if email, exists := c.Get("userEmail"); exists {
-		if emailStr, ok := email.(string); ok {
-			return emailStr, true
-		}
-	}
-	return "", false
-}
-
-func GetUserFullNameFromContext(c *gin.Context) (string, bool) {
-	if fullName, exists := c.Get("userFullName"); exists {
-		if nameStr, ok := fullName.(string); ok {
-			return nameStr, true
-		}
-	}
-	return "", false
-}
-
-func GetTokenFromContext(c *gin.Context) (string, bool) {
-	if token, exists := c.Get("token"); exists {
-		if tokenStr, ok := token.(string); ok {
-			return tokenStr, true
-		}
-	}
-	return "", false
-}
-
-func GetRolesFromContext(c *gin.Context) ([]string, bool) {
-	if roles, exists := c.Get("roles"); exists {
-		if roleSlice, ok := roles.([]string); ok {
-			return roleSlice, true
-		}
-	}
-	return nil, false
-}
-
-func GetPermissionsFromContext(c *gin.Context) ([]string, bool) {
-	if permissions, exists := c.Get("permissions"); exists {
-		if permSlice, ok := permissions.([]string); ok {
-			return permSlice, true
-		}
-	}
-	return nil, false
-}
-
-func GetAuthoritiesFromContext(c *gin.Context) ([]string, bool) {
-	if authorities, exists := c.Get("authorities"); exists {
-		if authSlice, ok := authorities.([]string); ok {
-			return authSlice, true
-		}
-	}
-	return nil, false
-}
-
-func IsAuthenticated(c *gin.Context) bool {
-	if authenticated, exists := c.Get("authenticated"); exists {
-		if auth, ok := authenticated.(bool); ok {
-			return auth
-		}
-	}
-	// If authenticated flag is not set, check if userID exists
-	_, exists := GetUserIDFromContext(c)
-	return exists
-}
-
-func HasRole(c *gin.Context, roleName string) bool {
-	roles, exists := GetRolesFromContext(c)
+func GetUserIDFromContext(c *gin.Context) (int64, error) {
+	userID, exists := c.Get("userID")
 	if !exists {
-		return false
+		return 0, errors.New("userID not found in context")
 	}
 
-	for _, role := range roles {
-		if role == roleName {
-			return true
-		}
+	id, ok := userID.(int64)
+	if !ok {
+		return 0, errors.New("userID is not of type int64")
 	}
-	return false
+
+	return id, nil
 }
 
-func HasPermission(c *gin.Context, permissionName string) bool {
-	permissions, exists := GetPermissionsFromContext(c)
+func GetTenantIDFromContext(c *gin.Context) (int64, error) {
+	tenantID, exists := c.Get("tenantID")
 	if !exists {
-		return false
+		return 0, errors.New("tenantID not found in context")
 	}
 
-	for _, permission := range permissions {
-		if permission == permissionName {
-			return true
-		}
+	id, ok := tenantID.(int64)
+	if !ok {
+		return 0, errors.New("tenantID is not of type int64")
 	}
-	return false
+
+	return id, nil
 }
 
-func HasAnyRole(c *gin.Context, roleNames ...string) bool {
-	for _, roleName := range roleNames {
-		if HasRole(c, roleName) {
-			return true
-		}
+func GetUserEmailFromContext(c *gin.Context) (string, error) {
+	email, exists := c.Get("userEmail")
+	if !exists {
+		return "", errors.New("userEmail not found in context")
 	}
-	return false
+
+	str, ok := email.(string)
+	if !ok {
+		return "", errors.New("userEmail is not of type string")
+	}
+
+	return str, nil
 }
 
-func HasAnyPermission(c *gin.Context, permissionNames ...string) bool {
-	for _, permissionName := range permissionNames {
-		if HasPermission(c, permissionName) {
-			return true
-		}
+func GetTokenFromContext(c *gin.Context) (string, error) {
+	token, exists := c.Get("token")
+	if !exists {
+		return "", errors.New("token not found in context")
 	}
-	return false
+
+	str, ok := token.(string)
+	if !ok {
+		return "", errors.New("token is not of type string")
+	}
+
+	return str, nil
 }
