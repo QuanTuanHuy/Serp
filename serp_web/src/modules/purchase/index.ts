@@ -116,9 +116,8 @@ export {
 export {
   setOrdersQuery,
   setOrdersStatusId,
-  setOrdersOrderTypeId,
   setOrdersFromSupplierId,
-  setOrdersToCustomerId,
+  setOrdersSalesChannelId,
   setOrdersDateRange,
   setOrdersPage,
   setOrdersPageSize,

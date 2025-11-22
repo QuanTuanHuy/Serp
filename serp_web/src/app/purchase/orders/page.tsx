@@ -57,7 +57,6 @@ export default function OrdersPage() {
     filters,
     handleQueryChange,
     handleStatusChange,
-    handleOrderTypeChange,
     handlePageChange,
     handlePageSizeChange,
     handleResetFilters,

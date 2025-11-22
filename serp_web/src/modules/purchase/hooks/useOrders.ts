@@ -24,9 +24,8 @@ import {
   selectSelectedOrderId,
   setOrdersQuery,
   setOrdersStatusId,
-  setOrdersOrderTypeId,
   setOrdersFromSupplierId,
-  setOrdersToCustomerId,
+  setOrdersSalesChannelId,
   setOrdersDateRange,
   setOrdersPage,
   setOrdersPageSize,
@@ -112,13 +111,6 @@ export function useOrders() {
     [dispatch]
   );
 
-  const handleOrderTypeChange = useCallback(
-    (orderTypeId: string | undefined) => {
-      dispatch(setOrdersOrderTypeId(orderTypeId));
-    },
-    [dispatch]
-  );
-
   const handleSupplierChange = useCallback(
     (fromSupplierId: string | undefined) => {
       dispatch(setOrdersFromSupplierId(fromSupplierId));
@@ -126,16 +118,16 @@ export function useOrders() {
     [dispatch]
   );
 
-  const handleCustomerChange = useCallback(
-    (toCustomerId: string | undefined) => {
-      dispatch(setOrdersToCustomerId(toCustomerId));
+  const handleSalesChannelChange = useCallback(
+    (salesChannelId: string | undefined) => {
+      dispatch(setOrdersSalesChannelId(salesChannelId));
     },
     [dispatch]
   );
 
   const handleDateRangeChange = useCallback(
-    (fromDate?: string, toDate?: string) => {
-      dispatch(setOrdersDateRange({ fromDate, toDate }));
+    (deliveryAfter?: string, deliveryBefore?: string) => {
+      dispatch(setOrdersDateRange({ deliveryAfter, deliveryBefore }));
     },
     [dispatch]
   );
@@ -394,9 +386,8 @@ export function useOrders() {
     filters,
     handleQueryChange,
     handleStatusChange,
-    handleOrderTypeChange,
     handleSupplierChange,
-    handleCustomerChange,
+    handleSalesChannelChange,
     handleDateRangeChange,
     handlePageChange,
     handlePageSizeChange,

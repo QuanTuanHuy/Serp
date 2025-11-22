@@ -66,9 +66,8 @@ export {
 export {
   setQuery as setOrdersQuery,
   setStatusId as setOrdersStatusId,
-  setOrderTypeId as setOrdersOrderTypeId,
   setFromSupplierId as setOrdersFromSupplierId,
-  setToCustomerId as setOrdersToCustomerId,
+  setSalesChannelId as setOrdersSalesChannelId,
   setDateRange as setOrdersDateRange,
   setPage as setOrdersPage,
   setPageSize as setOrdersPageSize,

@@ -40,24 +40,20 @@ const ordersSlice = createSlice({
       state.filters.statusId = action.payload;
       state.filters.page = 1;
     },
-    setOrderTypeId(state, action: PayloadAction<string | undefined>) {
-      state.filters.orderTypeId = action.payload;
-      state.filters.page = 1;
-    },
     setFromSupplierId(state, action: PayloadAction<string | undefined>) {
       state.filters.fromSupplierId = action.payload;
       state.filters.page = 1;
     },
-    setToCustomerId(state, action: PayloadAction<string | undefined>) {
-      state.filters.toCustomerId = action.payload;
+    setSalesChannelId(state, action: PayloadAction<string | undefined>) {
+      state.filters.salesChannelId = action.payload;
       state.filters.page = 1;
     },
     setDateRange(
       state,
-      action: PayloadAction<{ fromDate?: string; toDate?: string }>
+      action: PayloadAction<{ deliveryAfter?: string; deliveryBefore?: string }>
     ) {
-      state.filters.fromDate = action.payload.fromDate;
-      state.filters.toDate = action.payload.toDate;
+      state.filters.deliveryAfter = action.payload.deliveryAfter;
+      state.filters.deliveryBefore = action.payload.deliveryBefore;
       state.filters.page = 1;
     },
     setPage(state, action: PayloadAction<number>) {
@@ -107,9 +103,8 @@ const ordersSlice = createSlice({
 export const {
   setQuery,
   setStatusId,
-  setOrderTypeId,
   setFromSupplierId,
-  setToCustomerId,
+  setSalesChannelId,
   setDateRange,
   setPage,
   setPageSize,
