@@ -66,3 +66,87 @@ func GetTokenFromContext(c *gin.Context) (string, error) {
 
 	return str, nil
 }
+
+func GetRealmRolesFromContext(c *gin.Context) ([]string, error) {
+	roles, exists := c.Get("realmRoles")
+	if !exists {
+		return []string{}, errors.New("realmRoles not found in context")
+	}
+
+	rolesList, ok := roles.([]string)
+	if !ok {
+		return []string{}, errors.New("realmRoles is not of type []string")
+	}
+
+	return rolesList, nil
+}
+
+func GetResourceRolesFromContext(c *gin.Context) ([]string, error) {
+	roles, exists := c.Get("resourceRoles")
+	if !exists {
+		return []string{}, errors.New("resourceRoles not found in context")
+	}
+
+	rolesList, ok := roles.([]string)
+	if !ok {
+		return []string{}, errors.New("resourceRoles is not of type []string")
+	}
+
+	return rolesList, nil
+}
+
+func GetAllRolesFromContext(c *gin.Context) ([]string, error) {
+	roles, exists := c.Get("allRoles")
+	if !exists {
+		return []string{}, errors.New("allRoles not found in context")
+	}
+
+	rolesList, ok := roles.([]string)
+	if !ok {
+		return []string{}, errors.New("allRoles is not of type []string")
+	}
+
+	return rolesList, nil
+}
+
+func HasRole(c *gin.Context, roleName string) bool {
+	allRoles, err := GetAllRolesFromContext(c)
+	if err != nil {
+		return false
+	}
+
+	for _, role := range allRoles {
+		if role == roleName {
+			return true
+		}
+	}
+	return false
+}
+
+func HasRealmRole(c *gin.Context, roleName string) bool {
+	realmRoles, err := GetRealmRolesFromContext(c)
+	if err != nil {
+		return false
+	}
+
+	for _, role := range realmRoles {
+		if role == roleName {
+			return true
+		}
+	}
+	return false
+}
+
+func HasResourceRole(c *gin.Context, roleName string) bool {
+	resourceRoles, err := GetResourceRolesFromContext(c)
+	if err != nil {
+		return false
+	}
+
+	for _, role := range resourceRoles {
+		if role == roleName {
+			return true
+		}
+	}
+	return false
+}

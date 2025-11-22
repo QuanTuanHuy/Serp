@@ -62,6 +62,7 @@ func AbortErrorHandleCustomMessage(c *gin.Context, errorCode int, customMessage 
 	errorResponse := GetErrorResponse(errorCode)
 	c.JSON(errorResponse.HTTPCode, gin.H{
 		"code":    errorResponse.ServiceCode,
+		"status":  "error",
 		"message": customMessage,
 	})
 	c.Abort()
@@ -71,15 +72,75 @@ func AbortErrorHandle(c *gin.Context, errorCode int) {
 	errorResponse := GetErrorResponse(errorCode)
 	c.JSON(errorResponse.HTTPCode, gin.H{
 		"code":    errorResponse.ServiceCode,
+		"status":  "error",
 		"message": errorResponse.Message,
 	})
 	c.Abort()
 }
 
-func SuccessfulHandle(c *gin.Context, data any) {
+func SuccessfulHandle(c *gin.Context, message string, data any) {
 	c.JSON(http.StatusOK, gin.H{
 		"code":    http.StatusOK,
-		"message": "Success",
+		"status":  "success",
+		"message": message,
 		"data":    data,
 	})
+}
+
+func HandleBusinessError(c *gin.Context, businessError string) {
+	if errorResp, ok := constant.BusinessErrorResponseMap[businessError]; ok {
+		c.JSON(errorResp.HTTPCode, gin.H{
+			"code":    errorResp.HTTPCode,
+			"status":  constant.HttpStatusError,
+			"message": errorResp.Message,
+		})
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    http.StatusBadRequest,
+			"status":  constant.HttpStatusError,
+			"message": businessError,
+		})
+	}
+	c.Abort()
+}
+
+func ErrorHandle(c *gin.Context, err error) {
+	if err == nil {
+		return
+	}
+
+	errorMsg := err.Error()
+
+	if errorResp, ok := constant.BusinessErrorResponseMap[errorMsg]; ok {
+		c.JSON(errorResp.HTTPCode, gin.H{
+			"code":    errorResp.HTTPCode,
+			"status":  constant.HttpStatusError,
+			"message": errorResp.Message,
+		})
+		c.Abort()
+		return
+	}
+
+	c.JSON(http.StatusInternalServerError, gin.H{
+		"code":    http.StatusInternalServerError,
+		"status":  constant.HttpStatusError,
+		"message": errorMsg,
+	})
+	c.Abort()
+}
+
+func ErrorHandleCustomMessage(c *gin.Context, businessError string, customMessage string) {
+	var httpCode int
+	if errorResp, ok := constant.BusinessErrorResponseMap[businessError]; ok {
+		httpCode = errorResp.HTTPCode
+	} else {
+		httpCode = http.StatusBadRequest
+	}
+
+	c.JSON(httpCode, gin.H{
+		"code":    httpCode,
+		"status":  constant.HttpStatusError,
+		"message": customMessage,
+	})
+	c.Abort()
 }

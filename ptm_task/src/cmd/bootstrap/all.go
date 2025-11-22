@@ -6,8 +6,14 @@ Description: Part of Serp Project
 package bootstrap
 
 import (
+	"github.com/serp/ptm-task/src/core/service"
+	"github.com/serp/ptm-task/src/core/usecase"
 	client "github.com/serp/ptm-task/src/infrastructure/client"
+	store "github.com/serp/ptm-task/src/infrastructure/store/adapter"
+	"github.com/serp/ptm-task/src/kernel/utils"
+	"github.com/serp/ptm-task/src/ui/controller"
 	"github.com/serp/ptm-task/src/ui/middleware"
+	"github.com/serp/ptm-task/src/ui/router"
 	"go.uber.org/fx"
 )
 
@@ -23,16 +29,38 @@ func All() fx.Option {
 
 		// Middleware
 		fx.Provide(middleware.NewJWTMiddleware),
+		fx.Provide(middleware.NewRoleMiddleware),
 
-		// Add your services, use cases, controllers here when ready
+		// Utils
+		fx.Provide(utils.NewKeycloakJwksUtils),
 
 		// Adapter
 		fx.Provide(client.NewRedisAdapter),
 		fx.Provide(client.NewKafkaProducerAdapter),
 
+		fx.Provide(store.NewDBTransactionAdapter),
+		fx.Provide(store.NewProjectAdapter),
+		fx.Provide(store.NewTaskAdapter),
+		fx.Provide(store.NewNoteAdapter),
+
+		// Services
+		fx.Provide(service.NewTransactionService),
+		fx.Provide(service.NewProjectService),
+		fx.Provide(service.NewTaskService),
+		fx.Provide(service.NewNoteService),
+
+		// Use cases
+		fx.Provide(usecase.NewProjectUseCase),
+
+		// Controllers
+		fx.Provide(controller.NewProjectController),
+
+		// Router
+		fx.Provide(NewRouterConfig),
+
 		// Lifecycle
 		fx.Invoke(InitializeDB),
-		fx.Invoke(RegisterRoutes),
+		fx.Invoke(router.RegisterRoutes),
 		fx.Invoke(StartServer),
 	)
 }

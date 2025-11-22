@@ -1,5 +1,7 @@
 package constant
 
+import "net/http"
+
 const (
 	TaskNotFound                   = "task not found"
 	TaskTitleRequired              = "task title is required"
@@ -87,3 +89,80 @@ const (
 const (
 	UserIDInvalid = "user ID is invalid"
 )
+
+type BusinessErrorResponse struct {
+	HTTPCode int
+	Message  string
+}
+
+var BusinessErrorResponseMap = map[string]BusinessErrorResponse{
+
+	TaskNotFound:                   {HTTPCode: http.StatusNotFound, Message: TaskNotFound},
+	TaskTitleRequired:              {HTTPCode: http.StatusBadRequest, Message: TaskTitleRequired},
+	TaskTitleTooLong:               {HTTPCode: http.StatusBadRequest, Message: TaskTitleTooLong},
+	InvalidTaskPriority:            {HTTPCode: http.StatusBadRequest, Message: InvalidTaskPriority},
+	InvalidTaskStatus:              {HTTPCode: http.StatusBadRequest, Message: InvalidTaskStatus},
+	InvalidStatusTransition:        {HTTPCode: http.StatusBadRequest, Message: InvalidStatusTransition},
+	InvalidDeadline:                {HTTPCode: http.StatusBadRequest, Message: InvalidDeadline},
+	InvalidDuration:                {HTTPCode: http.StatusBadRequest, Message: InvalidDuration},
+	InvalidRecurrencePattern:       {HTTPCode: http.StatusBadRequest, Message: InvalidRecurrencePattern},
+	InvalidQuality:                 {HTTPCode: http.StatusBadRequest, Message: InvalidQuality},
+	GetTaskForbidden:               {HTTPCode: http.StatusForbidden, Message: GetTaskForbidden},
+	UpdateTaskForbidden:            {HTTPCode: http.StatusForbidden, Message: UpdateTaskForbidden},
+	DeleteTaskForbidden:            {HTTPCode: http.StatusForbidden, Message: DeleteTaskForbidden},
+	CannotCompleteTaskWithSubtasks: {HTTPCode: http.StatusBadRequest, Message: CannotCompleteTaskWithSubtasks},
+
+	TemplateNotFound:            {HTTPCode: http.StatusNotFound, Message: TemplateNotFound},
+	TemplateNameRequired:        {HTTPCode: http.StatusBadRequest, Message: TemplateNameRequired},
+	TemplateNameTooLong:         {HTTPCode: http.StatusBadRequest, Message: TemplateNameTooLong},
+	TemplateTitleRequired:       {HTTPCode: http.StatusBadRequest, Message: TemplateTitleRequired},
+	InvalidTemplatePriority:     {HTTPCode: http.StatusBadRequest, Message: InvalidTemplatePriority},
+	GetTemplateForbidden:        {HTTPCode: http.StatusForbidden, Message: GetTemplateForbidden},
+	UpdateTemplateForbidden:     {HTTPCode: http.StatusForbidden, Message: UpdateTemplateForbidden},
+	DeleteTemplateForbidden:     {HTTPCode: http.StatusForbidden, Message: DeleteTemplateForbidden},
+	TemplateDoesNotBelongToUser: {HTTPCode: http.StatusForbidden, Message: TemplateDoesNotBelongToUser},
+
+	DependencyTaskNotFound:        {HTTPCode: http.StatusNotFound, Message: DependencyTaskNotFound},
+	DependencyCannotSelfDepend:    {HTTPCode: http.StatusBadRequest, Message: DependencyCannotSelfDepend},
+	DependencyDifferentUsers:      {HTTPCode: http.StatusBadRequest, Message: DependencyDifferentUsers},
+	DependencyOnCompletedTask:     {HTTPCode: http.StatusBadRequest, Message: DependencyOnCompletedTask},
+	DependencyCircularDetected:    {HTTPCode: http.StatusBadRequest, Message: DependencyCircularDetected},
+	DependencyTaskNotBelongToUser: {HTTPCode: http.StatusForbidden, Message: DependencyTaskNotBelongToUser},
+
+	CompletionTaskIDRequired:  {HTTPCode: http.StatusBadRequest, Message: CompletionTaskIDRequired},
+	CompletionUserIDRequired:  {HTTPCode: http.StatusBadRequest, Message: CompletionUserIDRequired},
+	CompletionInvalidDuration: {HTTPCode: http.StatusBadRequest, Message: CompletionInvalidDuration},
+	CompletionInvalidQuality:  {HTTPCode: http.StatusBadRequest, Message: CompletionInvalidQuality},
+
+	DatabaseConnectionNil: {HTTPCode: http.StatusInternalServerError, Message: DatabaseConnectionNil},
+
+	NoteNotFound:                  {HTTPCode: http.StatusNotFound, Message: NoteNotFound},
+	NoteContentRequired:           {HTTPCode: http.StatusBadRequest, Message: NoteContentRequired},
+	NoteContentTooLong:            {HTTPCode: http.StatusBadRequest, Message: NoteContentTooLong},
+	NoteMustAttachToTaskOrProject: {HTTPCode: http.StatusBadRequest, Message: NoteMustAttachToTaskOrProject},
+	NoteCannotAttachToBoth:        {HTTPCode: http.StatusBadRequest, Message: NoteCannotAttachToBoth},
+	NoteAttachmentTooLarge:        {HTTPCode: http.StatusBadRequest, Message: NoteAttachmentTooLarge},
+	NoteTooManyAttachments:        {HTTPCode: http.StatusBadRequest, Message: NoteTooManyAttachments},
+	GetNoteForbidden:              {HTTPCode: http.StatusForbidden, Message: GetNoteForbidden},
+	UpdateNoteForbidden:           {HTTPCode: http.StatusForbidden, Message: UpdateNoteForbidden},
+	DeleteNoteForbidden:           {HTTPCode: http.StatusForbidden, Message: DeleteNoteForbidden},
+
+	ProjectNotFound:                {HTTPCode: http.StatusNotFound, Message: ProjectNotFound},
+	ProjectTitleRequired:           {HTTPCode: http.StatusBadRequest, Message: ProjectTitleRequired},
+	ProjectTitleTooLong:            {HTTPCode: http.StatusBadRequest, Message: ProjectTitleTooLong},
+	InvalidProjectPriority:         {HTTPCode: http.StatusBadRequest, Message: InvalidProjectPriority},
+	InvalidProjectStatus:           {HTTPCode: http.StatusBadRequest, Message: InvalidProjectStatus},
+	InvalidProjectStatusTransition: {HTTPCode: http.StatusBadRequest, Message: InvalidProjectStatusTransition},
+	InvalidProjectDeadline:         {HTTPCode: http.StatusBadRequest, Message: InvalidProjectDeadline},
+	InvalidProjectProgress:         {HTTPCode: http.StatusBadRequest, Message: InvalidProjectProgress},
+	GetProjectForbidden:            {HTTPCode: http.StatusForbidden, Message: GetProjectForbidden},
+	UpdateProjectForbidden:         {HTTPCode: http.StatusForbidden, Message: UpdateProjectForbidden},
+	DeleteProjectForbidden:         {HTTPCode: http.StatusForbidden, Message: DeleteProjectForbidden},
+	ProjectHasTasks:                {HTTPCode: http.StatusBadRequest, Message: ProjectHasTasks},
+	ProjectCannotComplete:          {HTTPCode: http.StatusBadRequest, Message: ProjectCannotComplete},
+
+	ActivityEventTypeNotValid: {HTTPCode: http.StatusBadRequest, Message: ActivityEventTypeNotValid},
+	ActivityEventNotFound:     {HTTPCode: http.StatusNotFound, Message: ActivityEventNotFound},
+
+	UserIDInvalid: {HTTPCode: http.StatusBadRequest, Message: UserIDInvalid},
+}

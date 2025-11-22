@@ -11,10 +11,30 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/serp/ptm-task/src/kernel/properties"
+	"github.com/serp/ptm-task/src/ui/controller"
 	"github.com/serp/ptm-task/src/ui/middleware"
+	"github.com/serp/ptm-task/src/ui/router"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
+
+func NewRouterConfig(
+	appProps *properties.AppProperties,
+	engine *gin.Engine,
+	projectController *controller.ProjectController,
+	jwtMiddleware *middleware.JWTMiddleware,
+	roleMiddleware *middleware.RoleMiddleware,
+	logger *zap.Logger,
+) *router.RouterConfig {
+	return &router.RouterConfig{
+		AppProps:          appProps,
+		Engine:            engine,
+		ProjectController: projectController,
+		JWTMiddleware:     jwtMiddleware,
+		RoleMiddleware:    roleMiddleware,
+		Logger:            logger,
+	}
+}
 
 func StartServer(lc fx.Lifecycle, engine *gin.Engine, appProps *properties.AppProperties, zapLogger *zap.Logger) {
 	lc.Append(fx.Hook{
@@ -36,31 +56,4 @@ func StartServer(lc fx.Lifecycle, engine *gin.Engine, appProps *properties.AppPr
 			return nil
 		},
 	})
-}
-
-func RegisterRoutes(engine *gin.Engine, appProps *properties.AppProperties, jwtMiddleware *middleware.JWTMiddleware, logger *zap.Logger) {
-	engine.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"status":  "UP",
-			"service": appProps.Name,
-		})
-	})
-
-	// API v1 routes with JWT authentication
-	apiV1 := engine.Group(fmt.Sprintf("%s/api/v1", appProps.Path))
-	apiV1.Use(jwtMiddleware.AuthenticateJWT())
-	{
-		// Add your routes here when ready
-		// Example:
-		// tasks := apiV1.Group("/tasks")
-		// {
-		//     tasks.POST("", taskController.CreateTask)
-		//     tasks.GET("", taskController.GetAllTasks)
-		//     tasks.GET("/:id", taskController.GetTaskByID)
-		//     tasks.PUT("/:id", taskController.UpdateTask)
-		//     tasks.DELETE("/:id", taskController.DeleteTask)
-		// }
-	}
-
-	logger.Info("Routes registered successfully")
 }
