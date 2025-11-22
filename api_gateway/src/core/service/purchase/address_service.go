@@ -17,6 +17,7 @@ import (
 type IAddressService interface {
 	CreateAddress(ctx context.Context, req *request.CreateAddressRequest) (*response.BaseResponse, error)
 	UpdateAddress(ctx context.Context, addressId string, req *request.UpdateAddressRequest) (*response.BaseResponse, error)
+	GetAddressesByEntityId(ctx context.Context, entityId string) (*response.BaseResponse, error)
 }
 
 type AddressService struct {
@@ -36,6 +37,15 @@ func (a *AddressService) UpdateAddress(ctx context.Context, addressId string, re
 	res, err := a.addressClient.UpdateAddress(ctx, addressId, req)
 	if err != nil {
 		log.Error(ctx, "AddressService: UpdateAddress error: ", err.Error())
+		return nil, err
+	}
+	return res, nil
+}
+
+func (a *AddressService) GetAddressesByEntityId(ctx context.Context, entityId string) (*response.BaseResponse, error) {
+	res, err := a.addressClient.GetAddressesByEntityId(ctx, entityId)
+	if err != nil {
+		log.Error(ctx, "AddressService: GetAddressesByEntityId error: ", err.Error())
 		return nil, err
 	}
 	return res, nil

@@ -25,6 +25,7 @@ public class InventoryItemDetailService {
     public void createInventoryItemDetails(
             String shipmentId,
             ShipmentCreationForm.InventoryItemDetail form,
+            String facilityId,
             Long tenantId
     ) {
         ProductEntity product = productService.getProduct(form.getProductId(), tenantId);
@@ -43,7 +44,7 @@ public class InventoryItemDetailService {
                 .lotId(form.getLotId())
                 .expirationDate(form.getExpirationDate())
                 .manufacturingDate(form.getManufacturingDate())
-                .facilityId(form.getFacilityId())
+                .facilityId(facilityId)
                 .unit(product.getUnit())
                 .price(product.getCostPrice())
                 .tenantId(tenantId)

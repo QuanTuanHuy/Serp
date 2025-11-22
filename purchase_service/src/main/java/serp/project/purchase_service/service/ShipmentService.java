@@ -54,6 +54,7 @@ public class ShipmentService {
             inventoryItemDetailService.createInventoryItemDetails(
                     shipmentId,
                     itemDetail,
+                    form.getFacilityId(),
                     tenantId
             );
         }

@@ -33,6 +33,7 @@ func RegisterPurchaseRoutes(group *gin.RouterGroup,
 	{
 		addressV1.Use(middleware.AuthMiddleware()).POST("/create", addressController.CreateAddress)
 		addressV1.Use(middleware.AuthMiddleware()).PATCH("/update/:addressId", addressController.UpdateAddress)
+		addressV1.Use(middleware.AuthMiddleware()).GET("/search/by-entity/:entityId", addressController.GetAddressesByEntityId)
 	}
 
 	categoryV1 := group.Group("purchase-service/api/v1/category")

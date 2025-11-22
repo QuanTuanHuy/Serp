@@ -51,7 +51,7 @@ public class AddressService {
     }
 
     public List<AddressEntity> findByEntityId(String entityId, Long tenantId) {
-        return addressRepository.findByEntityIdAndTenantId(entityId, tenantId);
+        return addressRepository.findByTenantIdAndEntityId(tenantId, entityId);
     }
 
     @Transactional(rollbackFor = Exception.class)

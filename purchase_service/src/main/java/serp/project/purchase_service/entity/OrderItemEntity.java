@@ -9,6 +9,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -42,6 +43,10 @@ public class OrderItemEntity {
     @CreationTimestamp
     @Column(name = "created_stamp")
     private LocalDateTime createdStamp;
+
+    @UpdateTimestamp
+    @Column(name = "last_updated_stamp")
+    private LocalDateTime lastUpdatedStamp;
 
     private long price;
 
