@@ -38,10 +38,12 @@ type ProjectEntity struct {
 }
 
 func NewProjectEntity() *ProjectEntity {
+	color := "#6366f1"
 	return &ProjectEntity{
 		Status:             string(enum.ProjectNew),
 		Priority:           string(enum.Medium),
 		ActiveStatus:       string(enum.Active),
+		Color:              &color,
 		IsFavorite:         false,
 		ProgressPercentage: 0,
 	}

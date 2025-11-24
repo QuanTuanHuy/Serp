@@ -28,13 +28,13 @@ func NewProjectAdapter(db *gorm.DB) store.IProjectPort {
 	}
 }
 
-func (a *ProjectAdapter) CreateProject(ctx context.Context, tx *gorm.DB, project *entity.ProjectEntity) error {
+func (a *ProjectAdapter) CreateProject(ctx context.Context, tx *gorm.DB, project *entity.ProjectEntity) (*entity.ProjectEntity, error) {
 	db := a.getDB(tx)
 	projectModel := a.mapper.ToModel(project)
 	if err := db.WithContext(ctx).Create(projectModel).Error; err != nil {
-		return fmt.Errorf("failed to create project: %w", err)
+		return nil, fmt.Errorf("failed to create project: %w", err)
 	}
-	return nil
+	return a.mapper.ToEntity(projectModel), nil
 }
 
 func (a *ProjectAdapter) CreateProjects(ctx context.Context, tx *gorm.DB, projects []*entity.ProjectEntity) error {
@@ -112,7 +112,7 @@ func (a *ProjectAdapter) UpdateProject(ctx context.Context, tx *gorm.DB, project
 	db := a.getDB(tx)
 	projectModel := a.mapper.ToModel(project)
 
-	if err := db.WithContext(ctx).Save(projectModel).Error; err != nil {
+	if err := db.WithContext(ctx).Updates(projectModel).Error; err != nil {
 		return fmt.Errorf("failed to update project: %w", err)
 	}
 

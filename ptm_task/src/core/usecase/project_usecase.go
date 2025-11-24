@@ -10,8 +10,10 @@ import (
 	"errors"
 
 	"github.com/serp/ptm-task/src/core/domain/constant"
+	"github.com/serp/ptm-task/src/core/domain/dto/request"
 	"github.com/serp/ptm-task/src/core/domain/entity"
 	"github.com/serp/ptm-task/src/core/domain/enum"
+	"github.com/serp/ptm-task/src/core/domain/mapper"
 	"github.com/serp/ptm-task/src/core/port/store"
 	"github.com/serp/ptm-task/src/core/service"
 	"gorm.io/gorm"
@@ -20,7 +22,7 @@ import (
 type IProjectUseCase interface {
 	CreateProject(ctx context.Context, userID int64, project *entity.ProjectEntity) (*entity.ProjectEntity, error)
 
-	UpdateProject(ctx context.Context, userID int64, project *entity.ProjectEntity) error
+	UpdateProject(ctx context.Context, userID, projectID int64, req *request.UpdateProjectRequest) error
 	UpdateProjectStatus(ctx context.Context, userID int64, projectID int64, status string) error
 	ToggleFavorite(ctx context.Context, userID int64, projectID int64) error
 	CompleteProject(ctx context.Context, userID int64, projectID int64) error
@@ -48,6 +50,7 @@ type projectUseCase struct {
 	projectService service.IProjectService
 	taskService    service.ITaskService
 	txService      service.ITransactionService
+	mapper         *mapper.ProjectMapper
 }
 
 func NewProjectUseCase(
@@ -59,26 +62,30 @@ func NewProjectUseCase(
 		projectService: projectService,
 		taskService:    taskService,
 		txService:      txService,
+		mapper:         mapper.NewProjectMapper(),
 	}
 }
 
 func (u *projectUseCase) CreateProject(ctx context.Context, userID int64, project *entity.ProjectEntity) (*entity.ProjectEntity, error) {
-	var createdProject *entity.ProjectEntity
-	err := u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
-		created, err := u.projectService.CreateProject(ctx, tx, userID, project)
+	result, err := u.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
+		project, err := u.projectService.CreateProject(ctx, tx, userID, project)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		createdProject = created
-		return nil
+		return project, nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return createdProject, nil
+	return result.(*entity.ProjectEntity), nil
 }
 
-func (u *projectUseCase) UpdateProject(ctx context.Context, userID int64, project *entity.ProjectEntity) error {
+func (u *projectUseCase) UpdateProject(ctx context.Context, userID, projectID int64, req *request.UpdateProjectRequest) error {
+	project, err := u.projectService.GetProjectByID(ctx, projectID)
+	if err != nil {
+		return err
+	}
+	project = u.mapper.UpdateRequestToEntity(req, project)
 	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
 		return u.projectService.UpdateProject(ctx, tx, userID, project)
 	})
