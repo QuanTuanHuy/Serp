@@ -67,7 +67,7 @@ public class OrderService {
         if (order == null || !order.getTenantId().equals(tenantId)) {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
-        if (OrderStatus.fromValue(order.getStatusId()).ordinal() < OrderStatus.CANCELLED.ordinal()) {
+        if (OrderStatus.fromValue(order.getStatusId()).ordinal() > OrderStatus.CANCELLED.ordinal()) {
             throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
         }
 
@@ -163,6 +163,9 @@ public class OrderService {
         ));
         Map<String, Integer> deliveredQuantityMap = new HashMap<>();
         List<ShipmentEntity> shipments = shipmentService.findByOrderId(orderId, tenantId);
+        if (shipments.isEmpty()) {
+            throw new AppException(AppErrorCode.ORDER_NOT_READY_FOR_DELIVERY);
+        }
         for (ShipmentEntity shipment : shipments) {
             var items = inventoryItemDetailService.getItemsByShipmentId(shipment.getId(), tenantId);
             for (var item : items) {
