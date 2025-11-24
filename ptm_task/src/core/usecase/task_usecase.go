@@ -11,8 +11,10 @@ import (
 	"fmt"
 
 	"github.com/serp/ptm-task/src/core/domain/constant"
+	"github.com/serp/ptm-task/src/core/domain/dto/request"
 	"github.com/serp/ptm-task/src/core/domain/entity"
 	"github.com/serp/ptm-task/src/core/domain/enum"
+	"github.com/serp/ptm-task/src/core/domain/mapper"
 	"github.com/serp/ptm-task/src/core/port/store"
 	"github.com/serp/ptm-task/src/core/service"
 	"go.uber.org/zap"
@@ -20,11 +22,10 @@ import (
 )
 
 type ITaskUseCase interface {
-	CreateTask(ctx context.Context, userID int64, task *entity.TaskEntity) (*entity.TaskEntity, error)
+	CreateTask(ctx context.Context, userID, tenantID int64, req *request.CreateTaskRequest) (*entity.TaskEntity, error)
 	CreateTaskFromTemplate(ctx context.Context, userID int64, templateID int64, variables map[string]string) (*entity.TaskEntity, error)
-	CreateRecurringTask(ctx context.Context, userID int64, task *entity.TaskEntity) (*entity.TaskEntity, error)
 
-	UpdateTask(ctx context.Context, userID int64, task *entity.TaskEntity) error
+	UpdateTask(ctx context.Context, userID, taskID int64, req *request.UpdateTaskRequest) (*entity.TaskEntity, error)
 	UpdateTaskStatus(ctx context.Context, userID int64, taskID int64, status string) error
 	CompleteTask(ctx context.Context, userID int64, taskID int64, actualDurationMin int, quality int) error
 
@@ -33,6 +34,8 @@ type ITaskUseCase interface {
 
 	GetTaskByID(ctx context.Context, userID int64, taskID int64) (*entity.TaskEntity, error)
 	GetTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) ([]*entity.TaskEntity, error)
+	GetTasksByProjectID(ctx context.Context, userID int64, projectID int64) ([]*entity.TaskEntity, error)
+	CountTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) (int64, error)
 	GetOverdueTasks(ctx context.Context, userID int64) ([]*entity.TaskEntity, error)
 	GetDeepWorkTasks(ctx context.Context, userID int64) ([]*entity.TaskEntity, error)
 
@@ -41,6 +44,7 @@ type ITaskUseCase interface {
 
 type taskUseCase struct {
 	logger          *zap.Logger
+	mapper          *mapper.TaskMapper
 	taskService     service.ITaskService
 	templateService service.ITaskTemplateService
 	projectService  service.IProjectService
@@ -58,6 +62,7 @@ func NewTaskUseCase(
 ) ITaskUseCase {
 	return &taskUseCase{
 		logger:          logger,
+		mapper:          mapper.NewTaskMapper(),
 		taskService:     taskService,
 		templateService: templateService,
 		projectService:  projectService,
@@ -66,12 +71,20 @@ func NewTaskUseCase(
 	}
 }
 
-func (u *taskUseCase) CreateTask(ctx context.Context, userID int64, task *entity.TaskEntity) (*entity.TaskEntity, error) {
+func (u *taskUseCase) CreateTask(ctx context.Context, userID, tenantID int64, req *request.CreateTaskRequest) (*entity.TaskEntity, error) {
+	task := u.mapper.CreateRequestToEntity(req, userID, tenantID)
 	result, err := u.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
 		task, err := u.taskService.CreateTask(ctx, tx, userID, task)
 		if err != nil {
 			return nil, err
 		}
+
+		err = u.taskService.PushTaskCreatedEvent(ctx, task)
+		if err != nil {
+			u.logger.Error("failed to push task created event", zap.Error(err))
+			return nil, err
+		}
+
 		return task, nil
 	})
 	if err != nil {
@@ -109,6 +122,12 @@ func (u *taskUseCase) CreateTaskFromTemplate(ctx context.Context, userID int64, 
 			return nil, err
 		}
 
+		err = u.taskService.PushTaskCreatedEvent(ctx, task)
+		if err != nil {
+			u.logger.Error("failed to push task created event", zap.Error(err))
+			return nil, err
+		}
+
 		_ = u.templateService.IncrementUsageCount(ctx, tx, templateID)
 
 		return task, nil
@@ -119,18 +138,28 @@ func (u *taskUseCase) CreateTaskFromTemplate(ctx context.Context, userID int64, 
 	return result.(*entity.TaskEntity), nil
 }
 
-func (u *taskUseCase) CreateRecurringTask(ctx context.Context, userID int64, task *entity.TaskEntity) (*entity.TaskEntity, error) {
-	if task.RecurrencePattern == nil || *task.RecurrencePattern == "" {
-		return nil, errors.New(constant.InvalidRecurrencePattern)
+func (u *taskUseCase) UpdateTask(ctx context.Context, userID, taskID int64, req *request.UpdateTaskRequest) (*entity.TaskEntity, error) {
+	task, err := u.taskService.GetTaskByID(ctx, taskID)
+	if err != nil {
+		return nil, err
 	}
-	task.IsRecurring = true
-	return u.CreateTask(ctx, userID, task)
-}
-
-func (u *taskUseCase) UpdateTask(ctx context.Context, userID int64, task *entity.TaskEntity) error {
-	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
-		return u.taskService.UpdateTask(ctx, tx, userID, task)
+	task = u.mapper.UpdateRequestToEntity(req, task)
+	result, err := u.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
+		task, err := u.taskService.UpdateTask(ctx, tx, userID, task)
+		if err != nil {
+			return nil, err
+		}
+		err = u.taskService.PushTaskUpdatedEvent(ctx, task)
+		if err != nil {
+			u.logger.Error("failed to push task updated event", zap.Error(err))
+			return nil, err
+		}
+		return task, nil
 	})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*entity.TaskEntity), nil
 }
 
 func (u *taskUseCase) UpdateTaskStatus(ctx context.Context, userID int64, taskID int64, status string) error {
@@ -160,6 +189,11 @@ func (u *taskUseCase) DeleteTask(ctx context.Context, userID int64, taskID int64
 		if err := u.taskService.DeleteTask(ctx, tx, userID, taskID); err != nil {
 			return err
 		}
+		err := u.taskService.PushTaskDeletedEvent(ctx, taskID)
+		if err != nil {
+			u.logger.Error("failed to push task deleted event", zap.Error(err))
+			return err
+		}
 
 		go func() {
 			if err := u.RefreshProjectProgressForTask(ctx, taskID); err != nil {
@@ -175,6 +209,11 @@ func (u *taskUseCase) BulkDeleteTasks(ctx context.Context, userID int64, taskIDs
 	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
 		for _, taskID := range taskIDs {
 			if err := u.taskService.DeleteTask(ctx, tx, userID, taskID); err != nil {
+				return err
+			}
+			err := u.taskService.PushTaskDeletedEvent(ctx, taskID)
+			if err != nil {
+				u.logger.Error("failed to push task deleted event", zap.Error(err))
 				return err
 			}
 		}
@@ -204,6 +243,24 @@ func (u *taskUseCase) GetTaskByID(ctx context.Context, userID int64, taskID int6
 
 func (u *taskUseCase) GetTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) ([]*entity.TaskEntity, error) {
 	return u.taskService.GetTasksByUserID(ctx, userID, filter)
+}
+
+func (u *taskUseCase) GetTasksByProjectID(ctx context.Context, userID int64, projectID int64) ([]*entity.TaskEntity, error) {
+	project, err := u.projectService.GetProjectByID(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+	if project.UserID != userID {
+		return nil, errors.New(constant.GetTaskForbidden)
+	}
+
+	filter := store.NewTaskFilter()
+	filter.ProjectID = &projectID
+	return u.taskService.GetTasksByUserID(ctx, userID, filter)
+}
+
+func (u *taskUseCase) CountTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) (int64, error) {
+	return u.taskService.CountTasksByUserID(ctx, userID, filter)
 }
 
 func (u *taskUseCase) GetOverdueTasks(ctx context.Context, userID int64) ([]*entity.TaskEntity, error) {

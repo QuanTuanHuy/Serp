@@ -87,6 +87,16 @@ func SuccessfulHandle(c *gin.Context, message string, data any) {
 	})
 }
 
+func SuccessfulHandlePagination(c *gin.Context, message string, data any, total int64, page int, pageSize int) {
+	totalPage := int((total + int64(pageSize) - 1) / int64(pageSize))
+	c.JSON(http.StatusOK, gin.H{
+		"code":    http.StatusOK,
+		"status":  "success",
+		"message": message,
+		"data":    gin.H{"items": data, "totalItems": total, "totalPages": totalPage, "currentPage": page},
+	})
+}
+
 func HandleBusinessError(c *gin.Context, businessError string) {
 	if errorResp, ok := constant.BusinessErrorResponseMap[businessError]; ok {
 		c.JSON(errorResp.HTTPCode, gin.H{
