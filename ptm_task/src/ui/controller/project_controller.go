@@ -7,40 +7,80 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/serp/ptm-task/src/core/domain/constant"
 	"github.com/serp/ptm-task/src/core/domain/dto/request"
+	"github.com/serp/ptm-task/src/core/domain/mapper"
 	"github.com/serp/ptm-task/src/core/usecase"
 	"github.com/serp/ptm-task/src/kernel/utils"
 )
 
 type ProjectController struct {
-	projectUseCase   usecase.IProjectUseCase
-	groupTaskUseCase usecase.IGroupTaskUseCase
+	projectUseCase usecase.IProjectUseCase
+	mapper         *mapper.ProjectMapper
 }
 
-func (p *ProjectController) CreateProject(c *gin.Context) {
-	userID, exists := utils.GetUserIDFromContext(c)
-	if !exists {
-		return
-	}
-
-	var request request.CreateProjectDTO
-
-	if !utils.ValidateAndBindJSON(c, &request) {
-		return
-	}
-
-	project, err := p.projectUseCase.CreateProject(c, userID, &request)
+func (pc *ProjectController) CreateProject(c *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(c)
 	if err != nil {
-		utils.AbortErrorHandleCustomMessage(c, constant.GeneralInternalServerError, err.Error())
 		return
 	}
-	utils.SuccessfulHandle(c, project)
+	tenantID, err := utils.GetTenantIDFromContext(c)
+	if err != nil {
+		return
+	}
+	var req request.CreateProjectRequest
+	if !utils.ValidateAndBindJSON(c, &req) {
+		return
+	}
+	project, err := pc.projectUseCase.CreateProject(
+		c.Request.Context(), userID, pc.mapper.CreateRequestToEntity(&req, userID, tenantID))
+	if err != nil {
+		utils.ErrorHandle(c, err)
+		return
+	}
+
+	utils.SuccessfulHandle(c, "Project created successfully", pc.mapper.EntityToResponse(project, false))
 }
 
-func (p *ProjectController) UpdateProject(c *gin.Context) {
-	userID, exists := utils.GetUserIDFromContext(c)
-	if !exists {
+func (pc *ProjectController) GetAllProjects(c *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		return
+	}
+	var filter request.ProjectFilterRequest
+	if !utils.ValidateAndBindQuery(c, &filter) {
+		return
+	}
+
+	projects, err := pc.projectUseCase.GetProjectsByUserID(
+		c.Request.Context(), userID, pc.mapper.FilterMapper(&filter))
+	if err != nil {
+		utils.ErrorHandle(c, err)
+		return
+	}
+
+	utils.SuccessfulHandle(c, "Projects retrieved successfully", pc.mapper.EntitiesToResponses(projects, false))
+}
+
+func (pc *ProjectController) GetProjectByID(c *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		return
+	}
+	projectID, valid := utils.ValidateAndParseID(c, "id")
+	if !valid {
+		return
+	}
+	project, err := pc.projectUseCase.GetProjectByID(c.Request.Context(), userID, projectID)
+	if err != nil {
+		utils.ErrorHandle(c, err)
+		return
+	}
+	utils.SuccessfulHandle(c, "Project retrieved successfully", pc.mapper.EntityToResponse(project, false))
+}
+
+func (pc *ProjectController) UpdateProject(c *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
 		return
 	}
 	projectID, valid := utils.ValidateAndParseID(c, "id")
@@ -48,177 +88,38 @@ func (p *ProjectController) UpdateProject(c *gin.Context) {
 		return
 	}
 
-	var request request.UpdateProjectDTO
-	if !utils.ValidateAndBindJSON(c, &request) {
+	var req request.UpdateProjectRequest
+	if !utils.ValidateAndBindJSON(c, &req) {
 		return
 	}
-
-	project, err := p.projectUseCase.UpdateProject(c, userID, projectID, &request)
+	err = pc.projectUseCase.UpdateProject(c.Request.Context(), userID, projectID, &req)
 	if err != nil {
-		if err.Error() == constant.ProjectNotFound {
-			utils.AbortErrorHandleCustomMessage(c, constant.GeneralBadRequest, constant.ProjectNotFound)
-			return
-		}
-		if err.Error() == constant.UpdateProjectForbidden {
-			utils.AbortErrorHandleCustomMessage(c, constant.GeneralForbidden, constant.UpdateProjectForbidden)
-			return
-		}
-		utils.AbortErrorHandleCustomMessage(c, constant.GeneralInternalServerError, err.Error())
+		utils.ErrorHandle(c, err)
 		return
 	}
-
-	utils.SuccessfulHandle(c, project)
+	utils.SuccessfulHandle(c, "Project updated successfully", nil)
 }
 
-func (p *ProjectController) GetProjectByID(c *gin.Context) {
+func (pc *ProjectController) DeleteProject(c *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		return
+	}
 	projectID, valid := utils.ValidateAndParseID(c, "id")
 	if !valid {
 		return
 	}
-
-	project, err := p.projectUseCase.GetProjectByID(c, projectID)
+	err = pc.projectUseCase.DeleteProject(c.Request.Context(), userID, projectID)
 	if err != nil {
-		if err.Error() == constant.ProjectNotFound {
-			utils.AbortErrorHandleCustomMessage(c, constant.GeneralBadRequest, constant.ProjectNotFound)
-			return
-		}
-		utils.AbortErrorHandleCustomMessage(c, constant.GeneralInternalServerError, err.Error())
+		utils.ErrorHandle(c, err)
 		return
 	}
-
-	utils.SuccessfulHandle(c, project)
+	utils.SuccessfulHandle(c, "Project deleted successfully", nil)
 }
 
-func (p *ProjectController) GetProjectsByUserID(c *gin.Context) {
-	userID, exists := utils.GetUserIDFromContext(c)
-	if !exists {
-		return
-	}
-
-	projects, err := p.projectUseCase.GetProjectsByUserID(c, userID)
-	if err != nil {
-		utils.AbortErrorHandleCustomMessage(c, constant.GeneralInternalServerError, err.Error())
-		return
-	}
-
-	utils.SuccessfulHandle(c, projects)
-}
-
-func (p *ProjectController) GetProjects(c *gin.Context) {
-	userID, exists := utils.GetUserIDFromContext(c)
-	if !exists {
-		return
-	}
-
-	var params request.GetProjectParams
-	params.UserID = &userID
-
-	page, pageSize, valid := utils.ValidatePaginationParams(c)
-	if !valid {
-		return
-	}
-	offset := utils.CalculateOffsetFromPage(page, pageSize)
-	if err := c.ShouldBindQuery(&params); err != nil {
-		utils.AbortErrorHandleCustomMessage(c, constant.GeneralBadRequest, constant.InvalidQueryParameters)
-		return
-	}
-	params.Limit = &pageSize
-	params.Offset = &offset
-
-	projects, count, err := p.projectUseCase.GetProjects(c, &params)
-	if err != nil {
-		utils.AbortErrorHandleCustomMessage(c, constant.GeneralInternalServerError, err.Error())
-		return
-	}
-	dataResponse := utils.MakeDataResponseWithPagination(projects, count)
-
-	utils.SuccessfulHandle(c, dataResponse)
-}
-
-func (p *ProjectController) GetProjectsByName(c *gin.Context) {
-	userID, exists := utils.GetUserIDFromContext(c)
-	if !exists {
-		return
-	}
-
-	searchName := c.Query("name")
-	maxDistance := 2
-	limit := 10
-
-	if searchName == "" {
-		utils.AbortErrorHandleCustomMessage(c, constant.GeneralBadRequest, constant.InvalidQueryParameters)
-		return
-	}
-
-	projects, err := p.projectUseCase.GetProjectsByName(c, userID, searchName, maxDistance, limit)
-	if err != nil {
-		utils.AbortErrorHandleCustomMessage(c, constant.GeneralInternalServerError, err.Error())
-		return
-	}
-
-	utils.SuccessfulHandle(c, projects)
-}
-
-func (p *ProjectController) GetGroupTasksByProjectID(c *gin.Context) {
-	userID, exists := utils.GetUserIDFromContext(c)
-	if !exists {
-		return
-	}
-
-	projectID, valid := utils.ValidateAndParseID(c, "id")
-	if !valid {
-		return
-	}
-
-	groupTasks, err := p.groupTaskUseCase.GetGroupTasksByProjectID(c, userID, projectID)
-	if err != nil {
-		if err.Error() == constant.ProjectNotFound {
-			utils.AbortErrorHandleCustomMessage(c, constant.GeneralBadRequest, constant.ProjectNotFound)
-			return
-		}
-		if err.Error() == constant.GetGroupTaskForbidden {
-			utils.AbortErrorHandleCustomMessage(c, constant.GeneralForbidden, constant.GetGroupTaskForbidden)
-			return
-		}
-		utils.AbortErrorHandleCustomMessage(c, constant.GeneralInternalServerError, err.Error())
-		return
-	}
-	utils.SuccessfulHandle(c, groupTasks)
-}
-
-func (p *ProjectController) ArchiveProject(c *gin.Context) {
-	userID, exists := utils.GetUserIDFromContext(c)
-	if !exists {
-		return
-	}
-
-	projectID, valid := utils.ValidateAndParseID(c, "id")
-	if !valid {
-		return
-	}
-
-	err := p.projectUseCase.ArchiveProject(c, userID, projectID)
-	if err != nil {
-		if err.Error() == constant.ProjectNotFound {
-			utils.AbortErrorHandleCustomMessage(c, constant.GeneralBadRequest, err.Error())
-			return
-		}
-		if err.Error() == constant.ArchiveProjectForbidden {
-			utils.AbortErrorHandleCustomMessage(c, constant.GeneralForbidden, err.Error())
-			return
-		}
-		utils.AbortErrorHandleCustomMessage(c, constant.GeneralInternalServerError, err.Error())
-		return
-	}
-
-	utils.SuccessfulHandle(c, nil)
-}
-
-func NewProjectController(
-	projectUseCase usecase.IProjectUseCase,
-	groupTaskUseCase usecase.IGroupTaskUseCase) *ProjectController {
+func NewProjectController(projectUseCase usecase.IProjectUseCase) *ProjectController {
 	return &ProjectController{
-		projectUseCase:   projectUseCase,
-		groupTaskUseCase: groupTaskUseCase,
+		projectUseCase: projectUseCase,
+		mapper:         mapper.NewProjectMapper(),
 	}
 }

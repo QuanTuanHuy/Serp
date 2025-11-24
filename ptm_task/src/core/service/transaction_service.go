@@ -8,8 +8,7 @@ package service
 import (
 	"context"
 
-	"github.com/golibs-starter/golib/log"
-	port "github.com/serp/ptm-task/src/core/port/store"
+	"github.com/serp/ptm-task/src/core/port/store"
 	"gorm.io/gorm"
 )
 
@@ -18,39 +17,38 @@ type ITransactionService interface {
 	ExecuteInTransactionWithResult(ctx context.Context, fn func(tx *gorm.DB) (any, error)) (any, error)
 }
 
-type TransactionService struct {
-	dbTxPort port.IDBTransactionPort
+type transactionService struct {
+	dbTxPort store.IDBTransactionPort
 }
 
-func (t *TransactionService) ExecuteInTransaction(ctx context.Context, fn func(tx *gorm.DB) error) error {
-	tx := t.dbTxPort.StartTransaction()
+func NewTransactionService(dbTxPort store.IDBTransactionPort) ITransactionService {
+	return &transactionService{
+		dbTxPort: dbTxPort,
+	}
+}
+
+func (s *transactionService) ExecuteInTransaction(ctx context.Context, fn func(tx *gorm.DB) error) error {
+	tx := s.dbTxPort.StartTransaction()
 	defer func() {
 		if r := recover(); r != nil {
-			t.dbTxPort.Rollback(tx)
+			s.dbTxPort.Rollback(tx)
 			panic(r)
 		}
 	}()
 
 	if err := fn(tx); err != nil {
-		if rollbackErr := t.dbTxPort.Rollback(tx); rollbackErr != nil {
-			log.Error(ctx, "Failed to rollback transaction: ", "error ", rollbackErr)
-		}
-		log.Info(ctx, "Transaction rolled back due to error: ", err)
+		s.dbTxPort.Rollback(tx)
 		return err
 	}
-	if err := t.dbTxPort.Commit(tx); err != nil {
-		log.Error(ctx, "Failed to commit transaction: ", "error ", err)
-		return err
-	}
-	return nil
+	return s.dbTxPort.Commit(tx)
 }
 
-func (t *TransactionService) ExecuteInTransactionWithResult(ctx context.Context, fn func(tx *gorm.DB) (any, error)) (any, error) {
+func (s *transactionService) ExecuteInTransactionWithResult(ctx context.Context, fn func(tx *gorm.DB) (any, error)) (any, error) {
 	var result any
-	tx := t.dbTxPort.StartTransaction()
+	tx := s.dbTxPort.StartTransaction()
 	defer func() {
 		if r := recover(); r != nil {
-			t.dbTxPort.Rollback(tx)
+			s.dbTxPort.Rollback(tx)
 			panic(r)
 		}
 	}()
@@ -58,20 +56,11 @@ func (t *TransactionService) ExecuteInTransactionWithResult(ctx context.Context,
 	var err error
 	result, err = fn(tx)
 	if err != nil {
-		if rollbackErr := t.dbTxPort.Rollback(tx); rollbackErr != nil {
-			log.Error(ctx, "Failed to rollback transaction: ", "error ", rollbackErr)
-		}
-		log.Info(ctx, "Transaction rolled back due to error: ", err)
+		s.dbTxPort.Rollback(tx)
 		return result, err
 	}
-	if err := t.dbTxPort.Commit(tx); err != nil {
-		log.Error(ctx, "Failed to commit transaction: ", "error ", err)
+	if err := s.dbTxPort.Commit(tx); err != nil {
 		return result, err
 	}
 	return result, nil
-
-}
-
-func NewTransactionService(dbTxPort port.IDBTransactionPort) ITransactionService {
-	return &TransactionService{dbTxPort: dbTxPort}
 }

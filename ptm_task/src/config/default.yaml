@@ -1,4 +1,6 @@
 app:
-  name: Personal Task Manager - Task Manager
-  path: /ptm/task-manager
+  name: PTM Task Service
+  path: /ptm-task
   port: 8083
+  logging:
+    level: info

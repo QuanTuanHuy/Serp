@@ -1,26 +1,40 @@
 /*
 Author: QuanTuanHuy
-Description: Part of Serp Project - Base mapper utilities for Go services
+Description: Part of Serp Project
 */
 
 package mapper
 
-import "time"
+import (
+	"time"
+)
 
-func TimeToEpochMilli(t time.Time) int64 {
-	if t.IsZero() {
-		return 0
+type BaseMapper struct{}
+
+func NewBaseMapper() *BaseMapper {
+	return &BaseMapper{}
+}
+
+func (m *BaseMapper) UnixMilliToTime(unixMilli int64) time.Time {
+	return time.UnixMilli(unixMilli)
+}
+
+func (m *BaseMapper) UnixMilliToTimePtr(unixMilli *int64) *time.Time {
+	if unixMilli == nil {
+		return nil
 	}
+	t := time.UnixMilli(*unixMilli)
+	return &t
+}
+
+func (m *BaseMapper) TimeToUnixMilli(t time.Time) int64 {
 	return t.UnixMilli()
 }
 
-func EpochMilliToTime(epochMilli int64) time.Time {
-	if epochMilli == 0 {
-		return time.Time{}
+func (m *BaseMapper) TimePtrToUnixMilli(t *time.Time) *int64 {
+	if t == nil {
+		return nil
 	}
-	return time.UnixMilli(epochMilli)
-}
-
-func GetCurrentEpochMilli() int64 {
-	return time.Now().UnixMilli()
+	unixMilli := t.UnixMilli()
+	return &unixMilli
 }

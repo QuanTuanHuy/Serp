@@ -8,281 +8,257 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
-	"math"
-	"sort"
-	"strings"
+	"time"
 
-	"github.com/agnivade/levenshtein"
-	"github.com/golibs-starter/golib/log"
 	"github.com/serp/ptm-task/src/core/domain/constant"
-	"github.com/serp/ptm-task/src/core/domain/dto/request"
-	"github.com/serp/ptm-task/src/core/domain/dto/response"
 	"github.com/serp/ptm-task/src/core/domain/entity"
 	"github.com/serp/ptm-task/src/core/domain/enum"
-	"github.com/serp/ptm-task/src/core/domain/mapper"
-	port2 "github.com/serp/ptm-task/src/core/port/client"
-	port "github.com/serp/ptm-task/src/core/port/store"
+	"github.com/serp/ptm-task/src/core/port/store"
 	"gorm.io/gorm"
 )
 
 type IProjectService interface {
-	CreateProject(ctx context.Context, tx *gorm.DB, userID int64, request *request.CreateProjectDTO) (*entity.ProjectEntity, error)
-	UpdateProject(ctx context.Context, tx *gorm.DB, userID, projectID int64, request *request.UpdateProjectDTO) (*entity.ProjectEntity, error)
-	GetProjectByID(ctx context.Context, ID int64) (*entity.ProjectEntity, error)
-	GetProjects(ctx context.Context, params *request.GetProjectParams) ([]*entity.ProjectEntity, int64, error)
-	GetProjectsByName(ctx context.Context, userID int64, searchName string, maxDistance int, limit int) ([]*entity.ProjectEntity, error)
-	GetProjectByName(ctx context.Context, userID int64, searchName string) (*entity.ProjectEntity, error)
-	GetProjectsByUserID(ctx context.Context, userID int64) ([]*entity.ProjectEntity, error)
-	ArchiveProject(ctx context.Context, tx *gorm.DB, userID, projectID int64) error
+	// Validation
+	ValidateProjectData(project *entity.ProjectEntity) error
+	ValidateProjectOwnership(userID int64, project *entity.ProjectEntity) error
+	ValidateProjectStatus(currentStatus, newStatus string) error
+
+	// Business rules
+	CalculateProgressPercentage(totalTasks, completedTasks int) int
+	CheckIfOverdue(project *entity.ProjectEntity, currentTimeMs int64) bool
+	CheckIfCanBeCompleted(project *entity.ProjectEntity, taskStats *store.ProjectStats) bool
+
+	// Project operations
+	CreateProject(ctx context.Context, tx *gorm.DB, userID int64, project *entity.ProjectEntity) (*entity.ProjectEntity, error)
+	UpdateProject(ctx context.Context, tx *gorm.DB, userID int64, project *entity.ProjectEntity) error
+	UpdateProjectStatus(ctx context.Context, tx *gorm.DB, userID int64, projectID int64, status string) error
+	UpdateProjectProgress(ctx context.Context, tx *gorm.DB, projectID int64, totalTasks, completedTasks int) error
+	DeleteProject(ctx context.Context, tx *gorm.DB, userID int64, projectID int64) error
+
+	// Query operations
+	GetProjectByID(ctx context.Context, projectID int64) (*entity.ProjectEntity, error)
+	GetProjectWithStats(ctx context.Context, projectID int64) (*entity.ProjectEntity, error)
+	GetProjectsByUserID(ctx context.Context, userID int64, filter *store.ProjectFilter) ([]*entity.ProjectEntity, error)
+	GetProjectsWithStats(ctx context.Context, userID int64, filter *store.ProjectFilter) ([]*entity.ProjectEntity, error)
+	GetFavoriteProjects(ctx context.Context, userID int64) ([]*entity.ProjectEntity, error)
+	GetOverdueProjects(ctx context.Context, userID int64) ([]*entity.ProjectEntity, error)
 }
 
-type ProjectService struct {
-	projectPort   port.IProjectPort
-	groupTaskPort port.IGroupTaskPort
-	redisPort     port2.IRedisPort
-}
-
-func (p *ProjectService) GetProjectsByUserID(ctx context.Context, userID int64) ([]*entity.ProjectEntity, error) {
-	var projects []*entity.ProjectEntity
-	var err error
-	cacheKey := fmt.Sprintf(constant.ProjectsByUserID, userID)
-
-	if err = p.redisPort.GetFromRedis(ctx, cacheKey, &projects); err != nil {
-		log.Info(ctx, "Cache miss for projects by user ID ", userID, " error: ")
-	}
-	if projects != nil {
-		return projects, nil
-	}
-
-	projects, err = p.projectPort.GetProjectsByUserID(ctx, userID)
-	if err != nil {
-		log.Error(ctx, "Failed to get projects by user ID ", userID, " error: ", err)
-		return nil, err
-	}
-
-	go func() {
-		if len(projects) > 0 {
-			err = p.redisPort.SetToRedis(ctx, cacheKey, projects, constant.DefaultTTL)
-			if err != nil {
-				log.Error(ctx, "Failed to set projects to Redis cache for user ID ", userID, " error: ", err)
-			}
-		}
-	}()
-	return projects, nil
-}
-
-func (p *ProjectService) GetProjectsByName(ctx context.Context, userID int64, searchName string, maxDistance int, limit int) ([]*entity.ProjectEntity, error) {
-	projects, err := p.projectPort.GetProjectsByUserID(ctx, userID)
-	if err != nil {
-		log.Error(ctx, "Failed to get projects by user ID ", userID, " error: ", err)
-		return nil, err
-	}
-	if len(projects) == 0 {
-		return nil, nil
-	}
-
-	var matchProject []*response.ProjectMatchDTO
-	searchNameLower := strings.ToLower(searchName)
-
-	for _, project := range projects {
-		projectNameLower := strings.ToLower(project.Name)
-
-		if strings.Contains(projectNameLower, searchNameLower) {
-			matchProject = append(matchProject, &response.ProjectMatchDTO{
-				Project:  project,
-				Distance: 0,
-			})
-			continue
-		}
-
-		fullDistance := levenshtein.ComputeDistance(searchNameLower, projectNameLower)
-		if fullDistance <= maxDistance {
-			matchProject = append(matchProject, &response.ProjectMatchDTO{
-				Project:  project,
-				Distance: fullDistance,
-			})
-			continue
-		}
-
-		words := strings.Fields(projectNameLower)
-		for _, word := range words {
-			wordDistance := levenshtein.ComputeDistance(searchNameLower, word)
-			if wordDistance <= maxDistance {
-				matchProject = append(matchProject, &response.ProjectMatchDTO{
-					Project:  project,
-					Distance: wordDistance,
-				})
-				break
-			}
-		}
-	}
-	sort.Slice(matchProject, func(i, j int) bool {
-		return matchProject[i].Distance < matchProject[j].Distance
-	})
-
-	result := make([]*entity.ProjectEntity, 0, limit)
-	for i, match := range matchProject {
-		if i >= limit {
-			break
-		}
-		result = append(result, match.Project)
-	}
-	return result, nil
-}
-
-func (p *ProjectService) GetProjectByName(ctx context.Context, userID int64, searchName string) (*entity.ProjectEntity, error) {
-	projects, err := p.GetProjectsByName(ctx, userID, searchName, math.MaxInt, 1)
-	if err != nil {
-		return nil, err
-	}
-	if len(projects) == 0 {
-		return nil, nil
-	}
-	return projects[0], nil
-}
-
-func (p *ProjectService) GetProjects(ctx context.Context, params *request.GetProjectParams) ([]*entity.ProjectEntity, int64, error) {
-	projects, count, err := p.projectPort.GetProjects(ctx, params)
-	if err != nil {
-		log.Error(ctx, "Failed to get projects: ", err)
-		return nil, 0, err
-	}
-	return projects, count, nil
-}
-
-func (p *ProjectService) GetProjectByID(ctx context.Context, ID int64) (*entity.ProjectEntity, error) {
-	project, err := p.projectPort.GetProjectByID(ctx, ID)
-	if err != nil {
-		log.Error(ctx, "Failed to get project by ID ", ID)
-		return nil, err
-	}
-	if project == nil {
-		return nil, errors.New(constant.ProjectNotFound)
-	}
-	return project, nil
-}
-
-func (p *ProjectService) CreateProject(ctx context.Context, tx *gorm.DB, userID int64, request *request.CreateProjectDTO) (*entity.ProjectEntity, error) {
-	var err error
-	hasDefaultProject, err := p.CheckDefaultProject(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	if !hasDefaultProject {
-		request.IsDefault = true
-	}
-
-	project := mapper.CreateProjectMapper(request, userID)
-	project, err = p.projectPort.CreateProject(ctx, tx, project)
-	if err != nil {
-		log.Error(ctx, "Failed to create project ", "error ", err)
-		return nil, err
-	}
-
-	go func() {
-		err = p.redisPort.DeleteKeyFromRedis(ctx, fmt.Sprintf(constant.ProjectsByUserID, userID))
-		if err != nil {
-			log.Error(ctx, "Failed to delete projects cache when create new project for user ID ", userID, " error: ", err)
-		}
-	}()
-
-	return project, nil
-}
-
-func (p *ProjectService) UpdateProject(ctx context.Context, tx *gorm.DB, userID, projectID int64, request *request.UpdateProjectDTO) (*entity.ProjectEntity, error) {
-	var err error
-	project, err := p.projectPort.GetProjectByID(ctx, projectID)
-	if err != nil {
-		return nil, err
-	}
-	if project == nil {
-		return nil, errors.New(constant.ProjectNotFound)
-	}
-	if project.OwnerID != userID {
-		return nil, errors.New(constant.UpdateProjectForbidden)
-	}
-
-	project = request.ToProjectEntity(project)
-	project, err = p.updateProject(ctx, tx, projectID, project)
-	if err != nil {
-		log.Error(ctx, "Failed to update project ", projectID, " error: ", err)
-		return nil, err
-	}
-	go func() {
-		err = p.redisPort.DeleteKeyFromRedis(ctx, fmt.Sprintf(constant.ProjectsByUserID, userID))
-		if err != nil {
-			log.Error(ctx, "Failed to delete projects cache when update project for user ID ", userID, " error: ", err)
-		}
-	}()
-	return project, nil
-}
-
-func (p *ProjectService) CheckDefaultProject(ctx context.Context, userID int64) (bool, error) {
-	project, err := p.projectPort.GetDefaultProjectByUserID(ctx, userID)
-	if err != nil {
-		log.Error(ctx, "Failed to get default project by user ID", "userID", userID, "error", err)
-		return false, err
-	}
-	return project != nil, nil
-}
-
-func (p *ProjectService) ArchiveProject(ctx context.Context, tx *gorm.DB, userID int64, projectID int64) error {
-	var err error
-	project, err := p.projectPort.GetProjectByID(ctx, projectID)
-	if err != nil {
-		log.Error(ctx, "Failed to get project by ID ", projectID, " error: ", err)
-		return err
-	}
-	if project == nil {
-		return errors.New(constant.ProjectNotFound)
-	}
-	if project.OwnerID != userID {
-		return errors.New(constant.ArchiveProjectForbidden)
-	}
-	if project.ActiveStatus == enum.Inactive || project.Status == enum.Archived {
-		return nil
-	}
-
-	project.ActiveStatus = enum.Inactive
-	project.Status = enum.Archived
-
-	_, err = p.updateProject(ctx, tx, projectID, project)
-	if err != nil {
-		log.Error(ctx, "Failed to archive project ", projectID, " error: ", err)
-		return err
-	}
-
-	go func() {
-		err = p.redisPort.DeleteKeyFromRedis(ctx, fmt.Sprintf(constant.ProjectsByUserID, userID))
-		if err != nil {
-			log.Error(ctx, "Failed to delete projects cache when archive project for user ID ", userID, " error: ", err)
-		}
-		err = p.redisPort.DeleteKeyFromRedis(ctx, fmt.Sprintf(constant.GroupTasksByProjectID, projectID))
-		if err != nil {
-			log.Error(ctx, "Failed to delete project cache by ID ", projectID, " error: ", err)
-		}
-	}()
-
-	return nil
-}
-
-func (p *ProjectService) updateProject(ctx context.Context, tx *gorm.DB, projectID int64, project *entity.ProjectEntity) (*entity.ProjectEntity, error) {
-	project, err := p.projectPort.UpdateProject(ctx, tx, projectID, project)
-	if err != nil {
-		log.Error(ctx, "Failed to update project ", "error ", err)
-		return nil, err
-	}
-	return project, nil
+type projectService struct {
+	projectPort store.IProjectPort
+	taskPort    store.ITaskPort
 }
 
 func NewProjectService(
-	projectPort port.IProjectPort,
-	groupTaskPort port.IGroupTaskPort,
-	redisPort port2.IRedisPort) IProjectService {
-	return &ProjectService{
-		projectPort:   projectPort,
-		groupTaskPort: groupTaskPort,
-		redisPort:     redisPort,
+	projectPort store.IProjectPort,
+	taskPort store.ITaskPort,
+) IProjectService {
+	return &projectService{
+		projectPort: projectPort,
+		taskPort:    taskPort,
 	}
+}
+
+func (s *projectService) ValidateProjectData(project *entity.ProjectEntity) error {
+	if project.Title == "" {
+		return errors.New(constant.ProjectTitleRequired)
+	}
+	if len(project.Title) > 500 {
+		return errors.New(constant.ProjectTitleTooLong)
+	}
+	if !enum.TaskPriority(project.Priority).IsValid() {
+		return errors.New(constant.InvalidProjectPriority)
+	}
+	if !enum.ProjectStatus(project.Status).IsValid() {
+		return errors.New(constant.InvalidProjectStatus)
+	}
+	if project.DeadlineMs != nil && project.StartDateMs != nil {
+		if *project.DeadlineMs < *project.StartDateMs {
+			return errors.New(constant.InvalidProjectDeadline)
+		}
+	}
+	if project.ProgressPercentage < 0 || project.ProgressPercentage > 100 {
+		return errors.New(constant.InvalidProjectProgress)
+	}
+	return nil
+}
+
+func (s *projectService) ValidateProjectOwnership(userID int64, project *entity.ProjectEntity) error {
+	if project.UserID != userID {
+		return errors.New(constant.UpdateProjectForbidden)
+	}
+	return nil
+}
+
+func (s *projectService) ValidateProjectStatus(currentStatus, newStatus string) error {
+	current := enum.ProjectStatus(currentStatus)
+	if !current.IsValid() {
+		return errors.New(constant.InvalidProjectStatus)
+	}
+	new := enum.ProjectStatus(newStatus)
+	if !new.IsValid() {
+		return errors.New(constant.InvalidProjectStatus)
+	}
+	if !current.CanTransitionTo(new) {
+		return errors.New(constant.InvalidProjectStatusTransition)
+	}
+	return nil
+}
+
+func (s *projectService) CalculateProgressPercentage(totalTasks, completedTasks int) int {
+	if totalTasks == 0 {
+		return 0
+	}
+	return int(float64(completedTasks) / float64(totalTasks) * 100)
+}
+
+func (s *projectService) CheckIfOverdue(project *entity.ProjectEntity, currentTimeMs int64) bool {
+	return project.IsOverdue(currentTimeMs)
+}
+
+func (s *projectService) CheckIfCanBeCompleted(project *entity.ProjectEntity, taskStats *store.ProjectStats) bool {
+	if taskStats.TotalTasks == 0 {
+		return true
+	}
+	return taskStats.CompletedTasks == taskStats.TotalTasks
+}
+
+func (s *projectService) CreateProject(ctx context.Context, tx *gorm.DB, userID int64, project *entity.ProjectEntity) (*entity.ProjectEntity, error) {
+	project.UserID = userID
+	now := time.Now().UnixMilli()
+	project.CreatedAt = now
+	project.UpdatedAt = now
+
+	if project.Status == "" {
+		project.Status = string(enum.ProjectNew)
+	}
+	if project.ActiveStatus == "" {
+		project.ActiveStatus = string(enum.Active)
+	}
+	if project.Priority == "" {
+		project.Priority = string(enum.Medium)
+	}
+	project.ProgressPercentage = 0
+
+	if err := s.ValidateProjectData(project); err != nil {
+		return nil, err
+	}
+
+	project, err := s.projectPort.CreateProject(ctx, tx, project)
+	if err != nil {
+		return nil, err
+	}
+
+	return project, nil
+}
+
+func (s *projectService) UpdateProject(ctx context.Context, tx *gorm.DB, userID int64, project *entity.ProjectEntity) error {
+	if err := s.ValidateProjectOwnership(userID, project); err != nil {
+		return err
+	}
+	if err := s.ValidateProjectData(project); err != nil {
+		return err
+	}
+
+	project.UpdatedAt = time.Now().UnixMilli()
+	return s.projectPort.UpdateProject(ctx, tx, project)
+}
+
+func (s *projectService) UpdateProjectStatus(ctx context.Context, tx *gorm.DB, userID int64, projectID int64, status string) error {
+	project, err := s.GetProjectByID(ctx, projectID)
+	if err != nil {
+		return err
+	}
+	if err := s.ValidateProjectOwnership(userID, project); err != nil {
+		return err
+	}
+	if err := s.ValidateProjectStatus(project.Status, status); err != nil {
+		return err
+	}
+
+	if status == string(enum.ProjectCompleted) {
+		stats, err := s.projectPort.GetProjectStats(ctx, projectID)
+		if err != nil {
+			return err
+		}
+		if !s.CheckIfCanBeCompleted(project, stats) {
+			return errors.New(constant.ProjectCannotComplete)
+		}
+	}
+
+	return s.projectPort.UpdateProjectStatus(ctx, tx, projectID, status)
+}
+
+func (s *projectService) UpdateProjectProgress(ctx context.Context, tx *gorm.DB, projectID int64, totalTasks, completedTasks int) error {
+	progressPercentage := s.CalculateProgressPercentage(totalTasks, completedTasks)
+	return s.projectPort.UpdateProjectProgress(ctx, tx, projectID, progressPercentage)
+}
+
+func (s *projectService) DeleteProject(ctx context.Context, tx *gorm.DB, userID int64, projectID int64) error {
+	project, err := s.GetProjectByID(ctx, projectID)
+	if err != nil {
+		return err
+	}
+	if err := s.ValidateProjectOwnership(userID, project); err != nil {
+		return err
+	}
+
+	stats, err := s.projectPort.GetProjectStats(ctx, projectID)
+	if err != nil {
+		return err
+	}
+	if stats.TotalTasks > 0 {
+		return errors.New(constant.ProjectHasTasks)
+	}
+
+	return s.projectPort.SoftDeleteProject(ctx, tx, projectID)
+}
+
+func (s *projectService) GetProjectByID(ctx context.Context, projectID int64) (*entity.ProjectEntity, error) {
+	project, err := s.projectPort.GetProjectByID(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+	if project == nil {
+		return nil, errors.New(constant.ProjectNotFound)
+	}
+	return project, nil
+}
+
+func (s *projectService) GetProjectWithStats(ctx context.Context, projectID int64) (*entity.ProjectEntity, error) {
+	project, err := s.GetProjectByID(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+
+	stats, err := s.projectPort.GetProjectStats(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+
+	project.UpdateStats(
+		stats.TotalTasks,
+		stats.CompletedTasks,
+		stats.EstimatedDurationMin,
+		stats.ActualDurationMin,
+	)
+
+	return project, nil
+}
+
+func (s *projectService) GetProjectsByUserID(ctx context.Context, userID int64, filter *store.ProjectFilter) ([]*entity.ProjectEntity, error) {
+	return s.projectPort.GetProjectsByUserID(ctx, userID, filter)
+}
+
+func (s *projectService) GetProjectsWithStats(ctx context.Context, userID int64, filter *store.ProjectFilter) ([]*entity.ProjectEntity, error) {
+	return s.projectPort.GetProjectsWithStats(ctx, userID, filter)
+}
+
+func (s *projectService) GetFavoriteProjects(ctx context.Context, userID int64) ([]*entity.ProjectEntity, error) {
+	return s.projectPort.GetFavoriteProjects(ctx, userID)
+}
+
+func (s *projectService) GetOverdueProjects(ctx context.Context, userID int64) ([]*entity.ProjectEntity, error) {
+	currentTimeMs := time.Now().UnixMilli()
+	return s.projectPort.GetOverdueProjects(ctx, userID, currentTimeMs)
 }

@@ -10,143 +10,232 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/golibs-starter/golib/log"
 	"github.com/serp/ptm-task/src/core/domain/constant"
-	"github.com/serp/ptm-task/src/core/domain/dto/request"
 	"github.com/serp/ptm-task/src/core/domain/entity"
+	"github.com/serp/ptm-task/src/core/domain/enum"
+	"github.com/serp/ptm-task/src/core/port/store"
 	"github.com/serp/ptm-task/src/core/service"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 type ITaskUseCase interface {
-	GetTaskByID(ctx context.Context, userID, taskID int64) (*entity.TaskEntity, error)
-	CreateTask(ctx context.Context, userID int64, request *request.CreateTaskDTO) (*entity.TaskEntity, error)
-	UpdateTask(ctx context.Context, userID, taskID int64, request *request.UpdateTaskDTO) (*entity.TaskEntity, error)
-	DeleteTask(ctx context.Context, userID, taskID int64) error
-	SetParentTask(ctx context.Context, userID, taskID int64, req *request.SetParentTaskDTO) (*entity.TaskEntity, error)
+	CreateTask(ctx context.Context, userID int64, task *entity.TaskEntity) (*entity.TaskEntity, error)
+	CreateTaskFromTemplate(ctx context.Context, userID int64, templateID int64, variables map[string]string) (*entity.TaskEntity, error)
+	CreateRecurringTask(ctx context.Context, userID int64, task *entity.TaskEntity) (*entity.TaskEntity, error)
+
+	UpdateTask(ctx context.Context, userID int64, task *entity.TaskEntity) error
+	UpdateTaskStatus(ctx context.Context, userID int64, taskID int64, status string) error
+	CompleteTask(ctx context.Context, userID int64, taskID int64, actualDurationMin int, quality int) error
+
+	DeleteTask(ctx context.Context, userID int64, taskID int64) error
+	BulkDeleteTasks(ctx context.Context, userID int64, taskIDs []int64) error
+
+	GetTaskByID(ctx context.Context, userID int64, taskID int64) (*entity.TaskEntity, error)
+	GetTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) ([]*entity.TaskEntity, error)
+	GetOverdueTasks(ctx context.Context, userID int64) ([]*entity.TaskEntity, error)
+	GetDeepWorkTasks(ctx context.Context, userID int64) ([]*entity.TaskEntity, error)
+
+	RefreshProjectProgressForTask(ctx context.Context, taskID int64) error
 }
 
-type TaskUseCase struct {
-	taskService      service.ITaskService
-	groupTaskService service.IGroupTaskService
-	txService        service.ITransactionService
+type taskUseCase struct {
+	logger          *zap.Logger
+	taskService     service.ITaskService
+	templateService service.ITaskTemplateService
+	projectService  service.IProjectService
+	noteService     service.INoteService
+	txService       service.ITransactionService
 }
 
-func (t *TaskUseCase) CreateTask(ctx context.Context, userID int64, request *request.CreateTaskDTO) (*entity.TaskEntity, error) {
-	groupTask, err := t.groupTaskService.GetGroupTaskByID(ctx, request.GroupTaskID)
-	if err != nil {
-		return nil, err
+func NewTaskUseCase(
+	logger *zap.Logger,
+	taskService service.ITaskService,
+	templateService service.ITaskTemplateService,
+	projectService service.IProjectService,
+	noteService service.INoteService,
+	txService service.ITransactionService,
+) ITaskUseCase {
+	return &taskUseCase{
+		logger:          logger,
+		taskService:     taskService,
+		templateService: templateService,
+		projectService:  projectService,
+		noteService:     noteService,
+		txService:       txService,
 	}
-	result, err := t.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
-		task, err := t.taskService.CreateTask(ctx, tx, userID, request)
-		if err != nil {
-			return nil, err
-		}
+}
 
-		_, err = t.groupTaskService.CalculateTasksInGroupTask(ctx, tx, groupTask.ID)
+func (u *taskUseCase) CreateTask(ctx context.Context, userID int64, task *entity.TaskEntity) (*entity.TaskEntity, error) {
+	result, err := u.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
+		task, err := u.taskService.CreateTask(ctx, tx, userID, task)
 		if err != nil {
-			return nil, err
-		}
-
-		err = t.taskService.PushCreateTaskToKafka(ctx, task)
-		if err != nil {
-			log.Error(ctx, "Failed to push task creation to Kafka for task ID ", task.ID, " error ", err)
 			return nil, err
 		}
 		return task, nil
-
 	})
 	if err != nil {
 		return nil, err
 	}
-
 	return result.(*entity.TaskEntity), nil
 }
 
-func (t *TaskUseCase) GetTaskByID(ctx context.Context, userID int64, taskID int64) (*entity.TaskEntity, error) {
-	task, err := t.taskService.GetTaskByID(ctx, taskID)
+func (u *taskUseCase) CreateTaskFromTemplate(ctx context.Context, userID int64, templateID int64, variables map[string]string) (*entity.TaskEntity, error) {
+	template, err := u.templateService.GetTemplateByID(ctx, templateID)
+	if err != nil {
+		return nil, err
+	}
+	if template.UserID != userID {
+		return nil, errors.New(constant.TemplateDoesNotBelongToUser)
+	}
+
+	result, err := u.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
+		task := &entity.TaskEntity{
+			UserID:               userID,
+			TenantID:             template.TenantID,
+			Title:                template.SubstituteVariables(variables),
+			Description:          template.Description,
+			Priority:             template.Priority,
+			EstimatedDurationMin: &template.EstimatedDurationMin,
+			Category:             template.Category,
+			Tags:                 template.Tags,
+			IsDeepWork:           template.IsDeepWork,
+			RecurrencePattern:    template.RecurrencePattern,
+			RecurrenceConfig:     template.RecurrenceConfig,
+		}
+
+		task, err := u.taskService.CreateTask(ctx, tx, userID, task)
+		if err != nil {
+			return nil, err
+		}
+
+		_ = u.templateService.IncrementUsageCount(ctx, tx, templateID)
+
+		return task, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*entity.TaskEntity), nil
+}
+
+func (u *taskUseCase) CreateRecurringTask(ctx context.Context, userID int64, task *entity.TaskEntity) (*entity.TaskEntity, error) {
+	if task.RecurrencePattern == nil || *task.RecurrencePattern == "" {
+		return nil, errors.New(constant.InvalidRecurrencePattern)
+	}
+	task.IsRecurring = true
+	return u.CreateTask(ctx, userID, task)
+}
+
+func (u *taskUseCase) UpdateTask(ctx context.Context, userID int64, task *entity.TaskEntity) error {
+	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
+		return u.taskService.UpdateTask(ctx, tx, userID, task)
+	})
+}
+
+func (u *taskUseCase) UpdateTaskStatus(ctx context.Context, userID int64, taskID int64, status string) error {
+	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
+		return u.taskService.UpdateTaskStatus(ctx, tx, userID, taskID, status)
+	})
+}
+
+func (u *taskUseCase) CompleteTask(ctx context.Context, userID int64, taskID int64, actualDurationMin int, quality int) error {
+	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
+		if err := u.taskService.CompleteTask(ctx, tx, userID, taskID, actualDurationMin, quality); err != nil {
+			return err
+		}
+
+		go func() {
+			if err := u.RefreshProjectProgressForTask(ctx, taskID); err != nil {
+				u.logger.Error("failed to refresh project progress", zap.Error(err))
+			}
+		}()
+
+		return nil
+	})
+}
+
+func (u *taskUseCase) DeleteTask(ctx context.Context, userID int64, taskID int64) error {
+	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
+		if err := u.taskService.DeleteTask(ctx, tx, userID, taskID); err != nil {
+			return err
+		}
+
+		go func() {
+			if err := u.RefreshProjectProgressForTask(ctx, taskID); err != nil {
+				u.logger.Error("failed to refresh project progress", zap.Error(err))
+			}
+		}()
+
+		return nil
+	})
+}
+
+func (u *taskUseCase) BulkDeleteTasks(ctx context.Context, userID int64, taskIDs []int64) error {
+	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
+		for _, taskID := range taskIDs {
+			if err := u.taskService.DeleteTask(ctx, tx, userID, taskID); err != nil {
+				return err
+			}
+		}
+
+		go func() {
+			for _, taskID := range taskIDs {
+				if err := u.RefreshProjectProgressForTask(ctx, taskID); err != nil {
+					u.logger.Error(fmt.Sprintf("failed to refresh project progress for task %d", taskID))
+				}
+			}
+		}()
+
+		return nil
+	})
+}
+
+func (u *taskUseCase) GetTaskByID(ctx context.Context, userID int64, taskID int64) (*entity.TaskEntity, error) {
+	task, err := u.taskService.GetTaskByID(ctx, taskID)
 	if err != nil {
 		return nil, err
 	}
 	if task.UserID != userID {
-		log.Error(ctx, "User ", userID, " does not have permission to access task ", taskID)
 		return nil, errors.New(constant.GetTaskForbidden)
 	}
 	return task, nil
 }
 
-func (t *TaskUseCase) UpdateTask(ctx context.Context, userID, taskID int64, request *request.UpdateTaskDTO) (*entity.TaskEntity, error) {
-	result, err := t.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
-		task, err := t.taskService.UpdateTask(ctx, tx, userID, taskID, request)
-		if err != nil {
-			return nil, err
-		}
-
-		_, err = t.groupTaskService.CalculateTasksInGroupTask(ctx, tx, task.GroupTaskID)
-		if err != nil {
-			return nil, err
-		}
-
-		err = t.taskService.PushUpdateTaskToKafka(ctx, task, request)
-		if err != nil {
-			log.Error(ctx, fmt.Sprintf("Failed to push task update to Kafka for task ID %d: %v", task.ID, err))
-			return nil, err
-		}
-		return task, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return result.(*entity.TaskEntity), nil
+func (u *taskUseCase) GetTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) ([]*entity.TaskEntity, error) {
+	return u.taskService.GetTasksByUserID(ctx, userID, filter)
 }
 
-func (t *TaskUseCase) DeleteTask(ctx context.Context, userID int64, taskID int64) error {
-	task, err := t.taskService.GetTaskByID(ctx, taskID)
+func (u *taskUseCase) GetOverdueTasks(ctx context.Context, userID int64) ([]*entity.TaskEntity, error) {
+	return u.taskService.GetOverdueTasks(ctx, userID, 0)
+}
+
+func (u *taskUseCase) GetDeepWorkTasks(ctx context.Context, userID int64) ([]*entity.TaskEntity, error) {
+	return u.taskService.GetDeepWorkTasks(ctx, userID)
+}
+
+func (u *taskUseCase) RefreshProjectProgressForTask(ctx context.Context, taskID int64) error {
+	task, err := u.taskService.GetTaskByID(ctx, taskID)
 	if err != nil {
 		return err
 	}
-
-	return t.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
-		err = t.taskService.DeleteTask(ctx, tx, userID, taskID)
-		if err != nil {
-			return err
-		}
-
-		_, err = t.groupTaskService.CalculateTasksInGroupTask(ctx, tx, task.GroupTaskID)
-		if err != nil {
-			return err
-		}
-
-		err = t.taskService.PushDeleteTaskToKafka(ctx, taskID)
-		if err != nil {
-			log.Error(ctx, fmt.Sprintf("Failed to push task deletion to Kafka for task ID %d: %v", taskID, err))
-			return err
-		}
+	if task.ProjectID == nil {
 		return nil
-	})
-}
+	}
 
-func (t *TaskUseCase) SetParentTask(ctx context.Context, userID, taskID int64, req *request.SetParentTaskDTO) (*entity.TaskEntity, error) {
-	result, err := t.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
-		updated, err := t.taskService.SetParentTask(ctx, tx, userID, taskID, req.ParentTaskID)
-		if err != nil {
-			return nil, err
-		}
-		return updated, nil
-	})
+	tasks, err := u.taskService.GetTaskByProjectID(ctx, *task.ProjectID)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return result.(*entity.TaskEntity), nil
-}
+	totalTasks := len(tasks)
+	completedTasks := 0
+	for _, t := range tasks {
+		if enum.TaskStatus(t.Status).IsCompleted() {
+			completedTasks++
+		}
+	}
 
-func NewTaskUseCase(taskService service.ITaskService,
-	groupTaskService service.IGroupTaskService,
-	txService service.ITransactionService) ITaskUseCase {
-	return &TaskUseCase{
-		taskService:      taskService,
-		groupTaskService: groupTaskService,
-		txService:        txService,
-	}
+	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
+		return u.projectService.UpdateProjectProgress(ctx, tx, *task.ProjectID, totalTasks, completedTasks)
+	})
 }
