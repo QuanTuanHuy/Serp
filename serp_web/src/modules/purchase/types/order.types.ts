@@ -123,7 +123,7 @@ export interface OrderFilters extends SearchParams {
   query?: string;
   statusId?: string;
   fromSupplierId?: string;
-  salesChannelId?: string;
+  saleChannelId?: string;
   orderDateAfter?: string;
   orderDateBefore?: string;
   deliveryAfter?: string;

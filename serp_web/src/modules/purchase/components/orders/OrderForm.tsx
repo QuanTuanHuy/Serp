@@ -96,7 +96,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({
           orderName: order.orderName || '',
           note: order.note || '',
           priority: order.priority || 0,
-          salesChannelId: order.salesChannelId || '',
+          saleChannelId: order.saleChannelId || '',
           orderItems: order.orderItems.map((item, index) => ({
             productId: item.productId,
             orderItemSeqId: index + 1,
@@ -165,7 +165,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({
     setValue(`orderItems.${index}.productId`, value);
   };
 
-  const onFormSubmit = handleSubmit(async (data: OrderFormData) => {
+  const onFormSubmit = handleSubmit(async (data) => {
     await onSubmit(data);
   });
 

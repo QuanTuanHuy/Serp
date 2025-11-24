@@ -238,7 +238,7 @@ export const purchaseApi = api.injectEndpoints({
           query: filters.query,
           statusId: filters.statusId,
           fromSupplierId: filters.fromSupplierId,
-          salesChannelId: filters.salesChannelId,
+          saleChannelId: filters.saleChannelId,
           orderDateAfter: filters.orderDateAfter,
           orderDateBefore: filters.orderDateBefore,
           deliveryAfter: filters.deliveryAfter,
