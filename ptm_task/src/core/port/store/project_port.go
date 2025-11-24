@@ -13,7 +13,7 @@ import (
 )
 
 type IProjectPort interface {
-	CreateProject(ctx context.Context, tx *gorm.DB, project *entity.ProjectEntity) error
+	CreateProject(ctx context.Context, tx *gorm.DB, project *entity.ProjectEntity) (*entity.ProjectEntity, error)
 	CreateProjects(ctx context.Context, tx *gorm.DB, projects []*entity.ProjectEntity) error
 
 	GetProjectByID(ctx context.Context, id int64) (*entity.ProjectEntity, error)
@@ -65,7 +65,7 @@ func NewProjectFilter() *ProjectFilter {
 		Priorities: []string{},
 		SortBy:     "created_at",
 		SortOrder:  "DESC",
-		Limit:      50,
+		Limit:      10,
 		Offset:     0,
 	}
 }

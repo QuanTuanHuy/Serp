@@ -67,19 +67,17 @@ func NewTaskUseCase(
 }
 
 func (u *taskUseCase) CreateTask(ctx context.Context, userID int64, task *entity.TaskEntity) (*entity.TaskEntity, error) {
-	var createdTask *entity.TaskEntity
-	err := u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
-		created, err := u.taskService.CreateTask(ctx, tx, userID, task)
+	result, err := u.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
+		task, err := u.taskService.CreateTask(ctx, tx, userID, task)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		createdTask = created
-		return nil
+		return task, nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return createdTask, nil
+	return result.(*entity.TaskEntity), nil
 }
 
 func (u *taskUseCase) CreateTaskFromTemplate(ctx context.Context, userID int64, templateID int64, variables map[string]string) (*entity.TaskEntity, error) {
@@ -91,8 +89,7 @@ func (u *taskUseCase) CreateTaskFromTemplate(ctx context.Context, userID int64, 
 		return nil, errors.New(constant.TemplateDoesNotBelongToUser)
 	}
 
-	var createdTask *entity.TaskEntity
-	err = u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
+	result, err := u.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
 		task := &entity.TaskEntity{
 			UserID:               userID,
 			TenantID:             template.TenantID,
@@ -107,20 +104,19 @@ func (u *taskUseCase) CreateTaskFromTemplate(ctx context.Context, userID int64, 
 			RecurrenceConfig:     template.RecurrenceConfig,
 		}
 
-		created, err := u.taskService.CreateTask(ctx, tx, userID, task)
+		task, err := u.taskService.CreateTask(ctx, tx, userID, task)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		_ = u.templateService.IncrementUsageCount(ctx, tx, templateID)
 
-		createdTask = created
-		return nil
+		return task, nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return createdTask, nil
+	return result.(*entity.TaskEntity), nil
 }
 
 func (u *taskUseCase) CreateRecurringTask(ctx context.Context, userID int64, task *entity.TaskEntity) (*entity.TaskEntity, error) {

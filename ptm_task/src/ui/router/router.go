@@ -38,10 +38,10 @@ func RegisterRoutes(config *RouterConfig) {
 		projects := apiV1.Group("/projects")
 		{
 			projects.POST("", config.ProjectController.CreateProject)
-			// projects.GET("", config.ProjectController.GetAllProjects)
-			// projects.GET("/:id", config.ProjectController.GetProjectByID)
-			// projects.PUT("/:id", config.ProjectController.UpdateProject)
-			// projects.DELETE("/:id", config.ProjectController.DeleteProject)
+			projects.GET("", config.ProjectController.GetAllProjects)
+			projects.GET("/:id", config.ProjectController.GetProjectByID)
+			projects.PATCH("/:id", config.ProjectController.UpdateProject)
+			projects.DELETE("/:id", config.ProjectController.DeleteProject)
 		}
 	}
 

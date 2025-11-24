@@ -144,7 +144,8 @@ func (s *projectService) CreateProject(ctx context.Context, tx *gorm.DB, userID 
 		return nil, err
 	}
 
-	if err := s.projectPort.CreateProject(ctx, tx, project); err != nil {
+	project, err := s.projectPort.CreateProject(ctx, tx, project)
+	if err != nil {
 		return nil, err
 	}
 

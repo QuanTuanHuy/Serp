@@ -11,6 +11,7 @@ import (
 	"github.com/serp/ptm-task/src/core/domain/dto/request"
 	"github.com/serp/ptm-task/src/core/domain/dto/response"
 	"github.com/serp/ptm-task/src/core/domain/entity"
+	"github.com/serp/ptm-task/src/core/port/store"
 )
 
 type ProjectMapper struct{}
@@ -28,7 +29,9 @@ func (m *ProjectMapper) CreateRequestToEntity(req *request.CreateProjectRequest,
 	project.Priority = req.Priority
 	project.StartDateMs = req.StartDateMs
 	project.DeadlineMs = req.DeadlineMs
-	project.Color = req.Color
+	if req.Color != nil {
+		project.Color = req.Color
+	}
 	project.Icon = req.Icon
 
 	if req.IsFavorite != nil {
@@ -126,4 +129,19 @@ func (m *ProjectMapper) EntityToStatsResponse(stats *entity.ProjectEntity) *resp
 		OverdueTasks:         0, // TODO: Calculate from tasks
 		ProgressPercentage:   stats.ProgressPercentage,
 	}
+}
+
+func (m *ProjectMapper) FilterMapper(req *request.ProjectFilterRequest) *store.ProjectFilter {
+	filter := store.NewProjectFilter()
+	if req.Status != nil {
+		filter.Statuses = append(filter.Statuses, *req.Status)
+	}
+	if req.Priority != nil {
+		filter.Priorities = append(filter.Priorities, *req.Priority)
+	}
+	filter.Limit = req.PageSize
+	filter.Offset = req.Page * req.PageSize
+	filter.SortBy = req.SortBy
+	filter.SortOrder = req.SortOrder
+	return filter
 }
