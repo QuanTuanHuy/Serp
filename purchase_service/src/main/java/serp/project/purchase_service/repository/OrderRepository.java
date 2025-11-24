@@ -15,4 +15,12 @@ public interface OrderRepository extends JpaRepository<OrderEntity, String>, Jpa
     @Query("SELECT o.statusId FROM OrderEntity o WHERE o.tenantId = :tenantId AND o.id = :orderId")
     public String getOrderStatus(String orderId, Long tenantId);
 
+    @Modifying
+    @Query("UPDATE OrderEntity o SET o.statusId = 'CREATED', " +
+            "o.userApprovedId = null, " +
+            "o.userCancelledId = null, " +
+            "o.cancellationNote = '' " +
+            "WHERE o.tenantId = :tenantId AND o.id = :orderId")
+    public void resetOrderStatus(String orderId, Long tenantId);
+
 }

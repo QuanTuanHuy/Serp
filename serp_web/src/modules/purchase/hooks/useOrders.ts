@@ -25,7 +25,7 @@ import {
   setOrdersQuery,
   setOrdersStatusId,
   setOrdersFromSupplierId,
-  setOrdersSalesChannelId,
+  setOrdersSaleChannelId,
   setOrdersDateRange,
   setOrdersPage,
   setOrdersPageSize,
@@ -119,8 +119,8 @@ export function useOrders() {
   );
 
   const handleSalesChannelChange = useCallback(
-    (salesChannelId: string | undefined) => {
-      dispatch(setOrdersSalesChannelId(salesChannelId));
+    (saleChannelId: string | undefined) => {
+      dispatch(setOrdersSaleChannelId(saleChannelId));
     },
     [dispatch]
   );

@@ -68,6 +68,7 @@ public class OrderService {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
         if (OrderStatus.fromValue(order.getStatusId()).ordinal() > OrderStatus.CANCELLED.ordinal()) {
+            log.error("Cannot update order with status {}", order.getStatusId());
             throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
         }
 

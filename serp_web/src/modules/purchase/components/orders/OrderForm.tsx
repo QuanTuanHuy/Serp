@@ -51,7 +51,7 @@ const orderFormSchema = z.object({
   orderName: z.string().min(1, 'Order name is required'),
   note: z.string().optional(),
   priority: z.number().min(0, 'Priority must be positive'),
-  salesChannelId: z.string().optional(),
+  saleChannelId: z.string().optional(),
   orderItems: z.array(orderItemSchema).min(1, 'At least one item is required'),
 });
 
@@ -111,8 +111,8 @@ export const OrderForm: React.FC<OrderFormProps> = ({
           deliveryAfterDate: '',
           orderName: '',
           note: '',
-          priority: 0,
-          salesChannelId: '',
+          priority: 1,
+          saleChannelId: '',
           orderItems: [
             {
               productId: '',
@@ -281,10 +281,10 @@ export const OrderForm: React.FC<OrderFormProps> = ({
 
             {/* Sales Channel */}
             <div className='space-y-2'>
-              <Label htmlFor='salesChannelId'>Sales Channel</Label>
+              <Label htmlFor='saleChannelId'>Sales Channel</Label>
               <Select
-                value={watch('salesChannelId')}
-                onValueChange={(value) => setValue('salesChannelId', value)}
+                value={watch('saleChannelId')}
+                onValueChange={(value) => setValue('saleChannelId', value)}
                 disabled={isLoading}
               >
                 <SelectTrigger>

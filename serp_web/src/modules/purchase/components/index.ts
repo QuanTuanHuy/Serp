@@ -17,6 +17,12 @@ export { ProductFormDialog } from './products/ProductFormDialog';
 // Order components
 export { OrderForm } from './orders/OrderForm';
 export { OrderFormDialog } from './orders/OrderFormDialog';
+export { OrderDetailDialog } from './orders/OrderDetailDialog';
+export { OrderOverviewTab } from './orders/OrderOverviewTab';
+export { OrderItemsTab } from './orders/OrderItemsTab';
+export { OrderShipmentsTab } from './orders/OrderShipmentsTab';
+export { OrderEditDialog } from './orders/OrderEditDialog';
+export { CancelOrderDialog } from './orders/CancelOrderDialog';
 
 // Address Components
 export { AddressForm } from './addresses/AddressForm';

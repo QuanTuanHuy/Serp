@@ -117,7 +117,7 @@ export {
   setOrdersQuery,
   setOrdersStatusId,
   setOrdersFromSupplierId,
-  setOrdersSalesChannelId,
+  setOrdersSaleChannelId,
   setOrdersDateRange,
   setOrdersPage,
   setOrdersPageSize,
@@ -171,6 +171,12 @@ export {
   // Order Components
   OrderForm,
   OrderFormDialog,
+  OrderDetailDialog,
+  OrderOverviewTab,
+  OrderItemsTab,
+  OrderShipmentsTab,
+  OrderEditDialog,
+  CancelOrderDialog,
   // Address Components
   AddressForm,
   AddressFormDialog,

@@ -36,7 +36,7 @@ public class OrderItemService {
         if (OrderStatus.fromValue(orderStatus).ordinal() > OrderStatus.CANCELLED.ordinal()) {
             throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
         }
-        orderRepository.updateOrderStatus(orderId, OrderStatus.CREATED.value(), tenantId);
+        orderRepository.resetOrderStatus(orderId, tenantId);
 
         String orderItemId = IdUtils.generateOrderItemId();
         OrderItemEntity orderItem = OrderItemEntity.builder()
@@ -66,7 +66,7 @@ public class OrderItemService {
         if (OrderStatus.fromValue(orderStatus).ordinal() > OrderStatus.CANCELLED.ordinal()) {
             throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
         }
-        orderRepository.updateOrderStatus(orderId, OrderStatus.CREATED.value(), tenantId);
+        orderRepository.resetOrderStatus(orderId, tenantId);
 
         orderItem.setOrderItemSeqId(form.getOrderItemSeqId());
         orderItem.setQuantity(form.getQuantity());
@@ -86,7 +86,7 @@ public class OrderItemService {
         if (OrderStatus.fromValue(orderStatus).ordinal() > OrderStatus.CANCELLED.ordinal()) {
             throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
         }
-        orderRepository.updateOrderStatus(orderId, OrderStatus.CREATED.value(), tenantId);
+        orderRepository.resetOrderStatus(orderId, tenantId);
         OrderItemEntity orderItem = orderItemRepository.findById(orderItemId).orElse(null);
         if (orderItem == null || !orderItem.getTenantId().equals(tenantId) || !orderItem.getOrderId().equals(orderId)) {
             throw new AppException(AppErrorCode.NOT_FOUND);

@@ -9,10 +9,14 @@ import React, { useMemo, useState } from 'react';
 import {
   useOrders,
   OrderFormDialog,
+  OrderDetailDialog,
+  CancelOrderDialog,
   type OrderDetail,
   useGetSuppliersQuery,
+  useGetOrderByIdQuery,
 } from '@/modules/purchase';
 import { useProducts } from '@/modules/purchase';
+import { usePermissions } from '@/modules/account';
 import {
   Button,
   Card,
@@ -37,7 +41,6 @@ import {
   Search,
   Filter,
   MoreVertical,
-  Eye,
   CheckCircle,
   XCircle,
   RefreshCw,
@@ -73,6 +76,24 @@ export default function OrdersPage() {
   } = useOrders();
 
   const { products } = useProducts();
+  const { hasAnyRole } = usePermissions();
+
+  // Detail dialog state
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+
+  // Cancel dialog state
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [orderIdToCancel, setOrderIdToCancel] = useState<string | null>(null);
+
+  // Fetch selected order details
+  const { data: orderDetailData, refetch: refetchOrderDetail } =
+    useGetOrderByIdQuery(selectedOrderId || '', { skip: !selectedOrderId });
+
+  const orderDetail = orderDetailData?.data;
+
+  // Check if user has admin or manager role for purchase module
+  const canManageOrders = hasAnyRole(['PURCHASE_ADMIN', 'PURCHASE_MANAGER']);
 
   // Fetch all suppliers for mapping
   const { data: suppliersData } = useGetSuppliersQuery({
@@ -147,7 +168,17 @@ export default function OrdersPage() {
         id: 'orderName',
         header: 'Order Name',
         accessor: 'orderName',
-        cell: ({ row }: any) => <div className='text-sm'>{row.orderName}</div>,
+        cell: ({ row }: any) => (
+          <button
+            onClick={() => {
+              setSelectedOrderId(row.id);
+              setDetailDialogOpen(true);
+            }}
+            className='text-sm text-primary hover:underline cursor-pointer'
+          >
+            {row.orderName}
+          </button>
+        ),
       },
       {
         id: 'orderDate',
@@ -194,11 +225,7 @@ export default function OrdersPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align='end'>
-              <DropdownMenuItem onClick={() => handleOpenEditDialog(row.id)}>
-                <Eye className='mr-2 h-4 w-4' />
-                View Details
-              </DropdownMenuItem>
-              {row.statusId?.toUpperCase() === 'CREATED' && (
+              {canManageOrders && row.statusId?.toUpperCase() === 'CREATED' && (
                 <DropdownMenuItem
                   onClick={() => handleApproveOrder(row.id)}
                   disabled={isApproving}
@@ -207,17 +234,21 @@ export default function OrdersPage() {
                   Approve Order
                 </DropdownMenuItem>
               )}
-              {['CREATED', 'PENDING', 'APPROVED'].includes(
-                row.statusId?.toUpperCase()
-              ) && (
-                <DropdownMenuItem
-                  onClick={() => handleCancelOrder(row.id)}
-                  disabled={isCancelling}
-                  className='text-destructive'
-                >
-                  <XCircle className='mr-2 h-4 w-4' />
-                  Cancel Order
-                </DropdownMenuItem>
+              {canManageOrders &&
+                ['CREATED'].includes(row.statusId?.toUpperCase()) && (
+                  <DropdownMenuItem
+                    onClick={() => handleCancelOrderClick(row.id)}
+                    disabled={isCancelling}
+                    className='text-destructive'
+                  >
+                    <XCircle className='mr-2 h-4 w-4' />
+                    Cancel Order
+                  </DropdownMenuItem>
+                )}
+              {!canManageOrders && (
+                <div className='px-2 py-1.5 text-sm text-muted-foreground'>
+                  No actions available
+                </div>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -244,6 +275,21 @@ export default function OrdersPage() {
       await handleUpdateOrder(selectedOrder.id, data);
     } else {
       await handleCreateOrder(data);
+    }
+  };
+
+  const handleCancelOrderClick = (orderId: string) => {
+    setOrderIdToCancel(orderId);
+    setCancelDialogOpen(true);
+  };
+
+  const handleConfirmCancel = async (note: string) => {
+    if (!orderIdToCancel) return;
+
+    const success = await handleCancelOrder(orderIdToCancel, { note });
+    if (success) {
+      setCancelDialogOpen(false);
+      setOrderIdToCancel(null);
     }
   };
 
@@ -354,6 +400,27 @@ export default function OrdersPage() {
         products={products}
         onSubmit={handleFormSubmit}
         isLoading={isCreating || isUpdating}
+      />
+
+      {/* Order Detail Dialog */}
+      {orderDetail && (
+        <OrderDetailDialog
+          open={detailDialogOpen}
+          onOpenChange={setDetailDialogOpen}
+          order={orderDetail}
+          onRefresh={() => {
+            refetchOrderDetail();
+            refetch();
+          }}
+        />
+      )}
+
+      {/* Cancel Order Dialog */}
+      <CancelOrderDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        onConfirm={handleConfirmCancel}
+        isLoading={isCancelling}
       />
     </div>
   );

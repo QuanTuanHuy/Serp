@@ -44,8 +44,8 @@ const ordersSlice = createSlice({
       state.filters.fromSupplierId = action.payload;
       state.filters.page = 1;
     },
-    setSalesChannelId(state, action: PayloadAction<string | undefined>) {
-      state.filters.salesChannelId = action.payload;
+    setSaleChannelId(state, action: PayloadAction<string | undefined>) {
+      state.filters.saleChannelId = action.payload;
       state.filters.page = 1;
     },
     setDateRange(
@@ -104,7 +104,7 @@ export const {
   setQuery,
   setStatusId,
   setFromSupplierId,
-  setSalesChannelId,
+  setSaleChannelId,
   setDateRange,
   setPage,
   setPageSize,

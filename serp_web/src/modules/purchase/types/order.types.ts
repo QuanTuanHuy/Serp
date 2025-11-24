@@ -22,7 +22,7 @@ export interface Order {
   note?: string;
   orderName: string;
   priority: number;
-  salesChannelId: string;
+  saleChannelId: string;
   userApprovedId?: number;
   userCancelledId?: number;
   cancellationNote?: string;
@@ -62,7 +62,7 @@ export interface OrderDetail extends Order {
   note?: string;
   orderName: string;
   priority: number;
-  salesChannelId: string;
+  saleChannelId: string;
   userApprovedId?: number;
   userCancelledId?: number;
   cancellationNote?: string;
@@ -76,7 +76,7 @@ export interface CreateOrderRequest {
   orderName: string;
   note?: string;
   priority: number;
-  salesChannelId?: string;
+  saleChannelId?: string;
   orderItems: Array<{
     productId: string;
     orderItemSeqId: number;
@@ -93,7 +93,7 @@ export interface UpdateOrderRequest {
   orderName: string;
   note?: string;
   priority: number;
-  salesChannelId?: string;
+  saleChannelId?: string;
 }
 
 // Update order item request
