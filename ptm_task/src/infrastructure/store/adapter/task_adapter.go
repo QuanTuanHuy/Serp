@@ -29,13 +29,13 @@ func NewTaskAdapter(db *gorm.DB) store.ITaskPort {
 	}
 }
 
-func (a *TaskAdapter) CreateTask(ctx context.Context, tx *gorm.DB, task *entity.TaskEntity) error {
+func (a *TaskAdapter) CreateTask(ctx context.Context, tx *gorm.DB, task *entity.TaskEntity) (*entity.TaskEntity, error) {
 	db := a.getDB(tx)
 	taskModel := a.mapper.ToModel(task)
 	if err := db.WithContext(ctx).Create(taskModel).Error; err != nil {
-		return fmt.Errorf("failed to create task: %w", err)
+		return nil, fmt.Errorf("failed to create task: %w", err)
 	}
-	return nil
+	return a.mapper.ToEntity(taskModel), nil
 }
 
 func (a *TaskAdapter) CreateTasks(ctx context.Context, tx *gorm.DB, tasks []*entity.TaskEntity) error {
@@ -91,6 +91,7 @@ func (a *TaskAdapter) GetTasksByUserID(ctx context.Context, userID int64, filter
 	}
 	return a.mapper.ToEntities(taskModels), nil
 }
+
 func (a *TaskAdapter) CountTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) (int64, error) {
 	var count int64
 	filter.Limit = 0
@@ -113,13 +114,13 @@ func (a *TaskAdapter) GetTaskByExternalID(ctx context.Context, externalID string
 	return a.mapper.ToEntity(&taskModel), nil
 }
 
-func (a *TaskAdapter) UpdateTask(ctx context.Context, tx *gorm.DB, task *entity.TaskEntity) error {
+func (a *TaskAdapter) UpdateTask(ctx context.Context, tx *gorm.DB, task *entity.TaskEntity) (*entity.TaskEntity, error) {
 	db := a.getDB(tx)
 	taskModel := a.mapper.ToModel(task)
-	if err := db.WithContext(ctx).Save(taskModel).Error; err != nil {
-		return fmt.Errorf("failed to update task: %w", err)
+	if err := db.WithContext(ctx).Updates(taskModel).Error; err != nil {
+		return nil, fmt.Errorf("failed to update task: %w", err)
 	}
-	return nil
+	return a.mapper.ToEntity(taskModel), nil
 }
 
 func (a *TaskAdapter) UpdateTaskStatus(ctx context.Context, tx *gorm.DB, taskID int64, status string) error {

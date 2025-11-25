@@ -82,7 +82,9 @@ func (k *KafkaProducerAdapter) HandleAsyncProducerMessages() {
 	}
 }
 
-func NewKafkaProducerAdapter(producerProperties *properties.KafkaProducerProperties) port.IKafkaProducerPort {
+func NewKafkaProducerAdapter(appProperties *properties.AppProperties, logger *zap.Logger) port.IKafkaProducerPort {
+	producerProperties := &appProperties.Kafka.Producer
+
 	saramaConfig := sarama.NewConfig()
 
 	saramaConfig.Producer.Return.Successes = true
@@ -110,6 +112,7 @@ func NewKafkaProducerAdapter(producerProperties *properties.KafkaProducerPropert
 		syncProducer:       syncProducer,
 		asyncProducer:      asyncProducer,
 		producerProperties: producerProperties,
+		logger:             logger,
 	}
 	go kafkaProducerAdapter.HandleAsyncProducerMessages()
 

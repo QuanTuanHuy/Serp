@@ -8,51 +8,57 @@ package service
 import (
 	"context"
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/serp/ptm-task/src/core/domain/constant"
 	"github.com/serp/ptm-task/src/core/domain/entity"
 	"github.com/serp/ptm-task/src/core/domain/enum"
+	client "github.com/serp/ptm-task/src/core/port/client"
 	"github.com/serp/ptm-task/src/core/port/store"
+	"github.com/serp/ptm-task/src/kernel/utils"
 	"gorm.io/gorm"
 )
 
 type ITaskService interface {
-	// Validation
 	ValidateTaskData(task *entity.TaskEntity) error
 	ValidateTaskOwnership(userID int64, task *entity.TaskEntity) error
 	ValidateTaskStatus(currentStatus, newStatus string) error
 	ValidateTaskDeadline(task *entity.TaskEntity, projectDeadline *int64) error
 
-	// Business rules
 	CalculatePriorityScore(task *entity.TaskEntity, currentTimeMs int64) float64
 	CheckIfOverdue(task *entity.TaskEntity, currentTimeMs int64) bool
 	CheckIfCanBeScheduled(task *entity.TaskEntity) bool
 	CheckIfHasIncompleteSubtasks(ctx context.Context, taskID int64) (bool, error)
 
-	// Task operations
 	CreateTask(ctx context.Context, tx *gorm.DB, userID int64, task *entity.TaskEntity) (*entity.TaskEntity, error)
-	UpdateTask(ctx context.Context, tx *gorm.DB, userID int64, task *entity.TaskEntity) error
+	UpdateTask(ctx context.Context, tx *gorm.DB, userID int64, task *entity.TaskEntity) (*entity.TaskEntity, error)
 	UpdateTaskStatus(ctx context.Context, tx *gorm.DB, userID int64, taskID int64, status string) error
 	CompleteTask(ctx context.Context, tx *gorm.DB, userID int64, taskID int64, actualDurationMin int, quality int) error
 	DeleteTask(ctx context.Context, tx *gorm.DB, userID int64, taskID int64) error
 
-	// Query operations
 	GetTaskByID(ctx context.Context, taskID int64) (*entity.TaskEntity, error)
 	GetTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) ([]*entity.TaskEntity, error)
+	CountTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) (int64, error)
 	GetTaskByProjectID(ctx context.Context, projectID int64) ([]*entity.TaskEntity, error)
 	GetOverdueTasks(ctx context.Context, userID int64, currentTimeMs int64) ([]*entity.TaskEntity, error)
 	GetDeepWorkTasks(ctx context.Context, userID int64) ([]*entity.TaskEntity, error)
 	GetDependentTasks(ctx context.Context, taskID int64) ([]*entity.TaskEntity, error)
+
+	PushTaskCreatedEvent(ctx context.Context, task *entity.TaskEntity) error
+	PushTaskUpdatedEvent(ctx context.Context, task *entity.TaskEntity) error
+	PushTaskDeletedEvent(ctx context.Context, taskID int64) error
 }
 
 type taskService struct {
-	taskPort store.ITaskPort
+	taskPort      store.ITaskPort
+	kafkaProducer client.IKafkaProducerPort
 }
 
-func NewTaskService(taskPort store.ITaskPort) ITaskService {
+func NewTaskService(taskPort store.ITaskPort, kafkaProducer client.IKafkaProducerPort) ITaskService {
 	return &taskService{
-		taskPort: taskPort,
+		taskPort:      taskPort,
+		kafkaProducer: kafkaProducer,
 	}
 }
 
@@ -167,18 +173,19 @@ func (s *taskService) CreateTask(ctx context.Context, tx *gorm.DB, userID int64,
 	if err := s.ValidateTaskData(task); err != nil {
 		return nil, err
 	}
-	if err := s.taskPort.CreateTask(ctx, tx, task); err != nil {
+	task, err := s.taskPort.CreateTask(ctx, tx, task)
+	if err != nil {
 		return nil, err
 	}
 	return task, nil
 }
 
-func (s *taskService) UpdateTask(ctx context.Context, tx *gorm.DB, userID int64, task *entity.TaskEntity) error {
+func (s *taskService) UpdateTask(ctx context.Context, tx *gorm.DB, userID int64, task *entity.TaskEntity) (*entity.TaskEntity, error) {
 	if err := s.ValidateTaskOwnership(userID, task); err != nil {
-		return err
+		return nil, err
 	}
 	if err := s.ValidateTaskData(task); err != nil {
-		return err
+		return nil, err
 	}
 	now := time.Now().UnixMilli()
 	task.UpdatedAt = now
@@ -262,6 +269,10 @@ func (s *taskService) GetTasksByUserID(ctx context.Context, userID int64, filter
 	return s.taskPort.GetTasksByUserID(ctx, userID, filter)
 }
 
+func (s *taskService) CountTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) (int64, error) {
+	return s.taskPort.CountTasksByUserID(ctx, userID, filter)
+}
+
 func (s *taskService) GetTaskByProjectID(ctx context.Context, projectID int64) ([]*entity.TaskEntity, error) {
 	return s.taskPort.GetTasksByProjectID(ctx, projectID)
 }
@@ -272,4 +283,19 @@ func (s *taskService) GetOverdueTasks(ctx context.Context, userID int64, current
 
 func (s *taskService) GetDeepWorkTasks(ctx context.Context, userID int64) ([]*entity.TaskEntity, error) {
 	return s.taskPort.GetDeepWorkTasks(ctx, userID)
+}
+
+func (s *taskService) PushTaskCreatedEvent(ctx context.Context, task *entity.TaskEntity) error {
+	message := utils.BuildCreatedEvent(ctx, "task", task)
+	return s.kafkaProducer.SendMessage(ctx, string(constant.TASK_TOPIC), strconv.FormatInt(task.ID, 10), message)
+}
+
+func (s *taskService) PushTaskDeletedEvent(ctx context.Context, taskID int64) error {
+	message := utils.BuildDeletedEvent(ctx, "task", taskID)
+	return s.kafkaProducer.SendMessage(ctx, string(constant.TASK_TOPIC), strconv.FormatInt(taskID, 10), message)
+}
+
+func (s *taskService) PushTaskUpdatedEvent(ctx context.Context, task *entity.TaskEntity) error {
+	message := utils.BuildUpdatedEvent(ctx, "task", task)
+	return s.kafkaProducer.SendMessage(ctx, string(constant.TASK_TOPIC), strconv.FormatInt(task.ID, 10), message)
 }

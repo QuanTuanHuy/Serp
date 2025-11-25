@@ -18,27 +18,24 @@ import (
 )
 
 type IProjectService interface {
-	// Validation
 	ValidateProjectData(project *entity.ProjectEntity) error
 	ValidateProjectOwnership(userID int64, project *entity.ProjectEntity) error
 	ValidateProjectStatus(currentStatus, newStatus string) error
 
-	// Business rules
 	CalculateProgressPercentage(totalTasks, completedTasks int) int
 	CheckIfOverdue(project *entity.ProjectEntity, currentTimeMs int64) bool
 	CheckIfCanBeCompleted(project *entity.ProjectEntity, taskStats *store.ProjectStats) bool
 
-	// Project operations
 	CreateProject(ctx context.Context, tx *gorm.DB, userID int64, project *entity.ProjectEntity) (*entity.ProjectEntity, error)
 	UpdateProject(ctx context.Context, tx *gorm.DB, userID int64, project *entity.ProjectEntity) error
 	UpdateProjectStatus(ctx context.Context, tx *gorm.DB, userID int64, projectID int64, status string) error
 	UpdateProjectProgress(ctx context.Context, tx *gorm.DB, projectID int64, totalTasks, completedTasks int) error
 	DeleteProject(ctx context.Context, tx *gorm.DB, userID int64, projectID int64) error
 
-	// Query operations
 	GetProjectByID(ctx context.Context, projectID int64) (*entity.ProjectEntity, error)
 	GetProjectWithStats(ctx context.Context, projectID int64) (*entity.ProjectEntity, error)
 	GetProjectsByUserID(ctx context.Context, userID int64, filter *store.ProjectFilter) ([]*entity.ProjectEntity, error)
+	CountProjectsByUserID(ctx context.Context, userID int64, filter *store.ProjectFilter) (int64, error)
 	GetProjectsWithStats(ctx context.Context, userID int64, filter *store.ProjectFilter) ([]*entity.ProjectEntity, error)
 	GetFavoriteProjects(ctx context.Context, userID int64) ([]*entity.ProjectEntity, error)
 	GetOverdueProjects(ctx context.Context, userID int64) ([]*entity.ProjectEntity, error)
@@ -248,6 +245,10 @@ func (s *projectService) GetProjectWithStats(ctx context.Context, projectID int6
 
 func (s *projectService) GetProjectsByUserID(ctx context.Context, userID int64, filter *store.ProjectFilter) ([]*entity.ProjectEntity, error) {
 	return s.projectPort.GetProjectsByUserID(ctx, userID, filter)
+}
+
+func (s *projectService) CountProjectsByUserID(ctx context.Context, userID int64, filter *store.ProjectFilter) (int64, error) {
+	return s.projectPort.CountProjectsByUserID(ctx, userID, filter)
 }
 
 func (s *projectService) GetProjectsWithStats(ctx context.Context, userID int64, filter *store.ProjectFilter) ([]*entity.ProjectEntity, error) {

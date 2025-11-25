@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Load environment variables from .env file
 if [ -f .env ]; then
-  export $(cat .env | grep -v '^#' | xargs)
+  set -a
+  source <(sed -e 's/^\s*export\s\+//g' -e 's/\r$//g' .env)
+  set +a
 fi
 
-# Run the application
 go run src/main.go

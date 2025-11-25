@@ -41,19 +41,23 @@ func All() fx.Option {
 		fx.Provide(store.NewDBTransactionAdapter),
 		fx.Provide(store.NewProjectAdapter),
 		fx.Provide(store.NewTaskAdapter),
+		fx.Provide(store.NewTaskTemplateAdapter),
 		fx.Provide(store.NewNoteAdapter),
 
 		// Services
 		fx.Provide(service.NewTransactionService),
 		fx.Provide(service.NewProjectService),
 		fx.Provide(service.NewTaskService),
+		fx.Provide(service.NewTaskTemplateService),
 		fx.Provide(service.NewNoteService),
 
 		// Use cases
 		fx.Provide(usecase.NewProjectUseCase),
+		fx.Provide(usecase.NewTaskUseCase),
 
 		// Controllers
 		fx.Provide(controller.NewProjectController),
+		fx.Provide(controller.NewTaskController),
 
 		// Router
 		fx.Provide(NewRouterConfig),

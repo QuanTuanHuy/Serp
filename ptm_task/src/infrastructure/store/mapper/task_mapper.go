@@ -63,7 +63,6 @@ func (m *TaskMapper) ToEntity(taskModel *model.TaskModel) *entity.TaskEntity {
 		Status:       taskModel.Status,
 		ActiveStatus: taskModel.ActiveStatus,
 
-		Notes:      taskModel.Notes,
 		ExternalID: taskModel.ExternalID,
 		Source:     taskModel.Source,
 
@@ -123,7 +122,6 @@ func (m *TaskMapper) ToModel(task *entity.TaskEntity) *model.TaskModel {
 		Status:       task.Status,
 		ActiveStatus: task.ActiveStatus,
 
-		Notes:      task.Notes,
 		ExternalID: task.ExternalID,
 		Source:     task.Source,
 
