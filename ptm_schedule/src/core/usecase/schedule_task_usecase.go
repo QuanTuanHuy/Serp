@@ -20,13 +20,15 @@ import (
 )
 
 type IScheduleTaskUseCase interface {
-	GetListTaskByUserID(ctx context.Context, userID int64) ([]*entity.ScheduleTaskEntity, error)
+	// GetListTaskByUserID(ctx context.Context, userID int64) ([]*entity.ScheduleTaskEntity, error)
 	CreateScheduleTask(ctx context.Context, userID int64, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error)
 	UpdateScheduleTask(ctx context.Context, userID, taskID int64, updateTaskMsg *message.KafkaUpdateTaskMessage) (*entity.ScheduleTaskEntity, error)
 	DeleteScheduleTask(ctx context.Context, taskID int64) error
 	GetBatchTasks(ctx context.Context, userID int64) (map[int32][]*entity.ScheduleTaskEntity, error)
-	ChooseTaskBatch(ctx context.Context, userID int64, taskBatch int32) ([]*entity.ScheduleTaskEntity, error)
 	GetScheduleTaskDetail(ctx context.Context, userID, taskID, scheduleTaskID int64) (*entity.ScheduleTaskEntity, error)
+
+	SyncTaskFromSource(ctx context.Context, event any) error
+	UpdateTaskConstraints(ctx context.Context, scheduleTaskID int64, constraints map[string]any) error
 }
 
 type ScheduleTaskUseCase struct {
@@ -35,43 +37,51 @@ type ScheduleTaskUseCase struct {
 	txService           service.ITransactionService
 }
 
-func (s *ScheduleTaskUseCase) GetListTaskByUserID(ctx context.Context, userID int64) ([]*entity.ScheduleTaskEntity, error) {
-	schedulePlan, err := s.schedulePlanService.GetSchedulePlanByUserID(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	schedulePlanID, activeTaskBatch, isActiveTaskBatch := schedulePlan.ID, schedulePlan.ActiveTaskBatch, schedulePlan.IsActiveTaskBatch
-
-	if isActiveTaskBatch && activeTaskBatch > 0 {
-		tasks, err := s.scheduleTaskService.GetByTaskBatch(ctx, schedulePlanID, activeTaskBatch)
-		if err != nil {
-			return nil, err
-		}
-		if len(tasks) > 0 {
-			return tasks, nil
-		}
-		err = s.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
-			_, err := s.schedulePlanService.UpdateTaskBatch(ctx, tx, schedulePlan, 0, false)
-			return err
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		log.Info(ctx,
-			fmt.Sprintf("No tasks found for userID: %d in active task batch: %d, fetching top 10 newest tasks", userID, activeTaskBatch))
-		return s.scheduleTaskService.GetTopNewestTasks(ctx, schedulePlanID, 10)
-	}
-
-	if isActiveTaskBatch && activeTaskBatch == 0 {
-		return []*entity.ScheduleTaskEntity{}, nil
-	}
-
-	if activeTaskBatch == 0 {
-		return s.scheduleTaskService.GetTopNewestTasks(ctx, schedulePlanID, 10)
-	}
-	return []*entity.ScheduleTaskEntity{}, nil
+func (s *ScheduleTaskUseCase) SyncTaskFromSource(ctx context.Context, event any) error {
+	panic("unimplemented")
 }
+
+func (s *ScheduleTaskUseCase) UpdateTaskConstraints(ctx context.Context, scheduleTaskID int64, constraints map[string]any) error {
+	panic("unimplemented")
+}
+
+// func (s *ScheduleTaskUseCase) GetListTaskByUserID(ctx context.Context, userID int64) ([]*entity.ScheduleTaskEntity, error) {
+// 	schedulePlan, err := s.schedulePlanService.GetSchedulePlanByUserID(ctx, userID)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	schedulePlanID, activeTaskBatch, isActiveTaskBatch := schedulePlan.ID, schedulePlan.ActiveTaskBatch, schedulePlan.IsActiveTaskBatch
+
+// 	if isActiveTaskBatch && activeTaskBatch > 0 {
+// 		tasks, err := s.scheduleTaskService.GetByTaskBatch(ctx, schedulePlanID, activeTaskBatch)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		if len(tasks) > 0 {
+// 			return tasks, nil
+// 		}
+// 		err = s.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
+// 			_, err := s.schedulePlanService.UpdateTaskBatch(ctx, tx, schedulePlan, 0, false)
+// 			return err
+// 		})
+// 		if err != nil {
+// 			return nil, err
+// 		}
+
+// 		log.Info(ctx,
+// 			fmt.Sprintf("No tasks found for userID: %d in active task batch: %d, fetching top 10 newest tasks", userID, activeTaskBatch))
+// 		return s.scheduleTaskService.GetTopNewestTasks(ctx, schedulePlanID, 10)
+// 	}
+
+// 	if isActiveTaskBatch && activeTaskBatch == 0 {
+// 		return []*entity.ScheduleTaskEntity{}, nil
+// 	}
+
+// 	if activeTaskBatch == 0 {
+// 		return s.scheduleTaskService.GetTopNewestTasks(ctx, schedulePlanID, 10)
+// 	}
+// 	return []*entity.ScheduleTaskEntity{}, nil
+// }
 
 func (s *ScheduleTaskUseCase) CreateScheduleTask(ctx context.Context, userID int64, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error) {
 	result, err := s.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
@@ -142,21 +152,6 @@ func (s *ScheduleTaskUseCase) GetBatchTasks(ctx context.Context, userID int64) (
 		}
 	}
 	return taskMap, nil
-}
-
-func (s *ScheduleTaskUseCase) ChooseTaskBatch(ctx context.Context, userID int64, taskBatch int32) ([]*entity.ScheduleTaskEntity, error) {
-	schedulePlan, err := s.schedulePlanService.GetSchedulePlanByUserID(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	err = s.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
-		_, err := s.schedulePlanService.UpdateTaskBatch(ctx, tx, schedulePlan, taskBatch, true)
-		return err
-	})
-	if err != nil {
-		return nil, err
-	}
-	return s.scheduleTaskService.GetByTaskBatch(ctx, schedulePlan.ID, taskBatch)
 }
 
 func (s *ScheduleTaskUseCase) GetScheduleTaskDetail(ctx context.Context, userID int64, taskID int64, scheduleTaskID int64) (*entity.ScheduleTaskEntity, error) {

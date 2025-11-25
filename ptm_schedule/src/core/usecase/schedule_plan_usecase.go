@@ -15,11 +15,17 @@ import (
 
 type ISchedulePlanUseCase interface {
 	CreateSchedulePlan(ctx context.Context, userID int64) (*entity.SchedulePlanEntity, error)
+
+	CreatePlan(ctx context.Context, userID, startDate, endDate int64) (*entity.SchedulePlanEntity, error)
 }
 
 type SchedulePlanUseCase struct {
 	schedulePlanService service.ISchedulePlanService
 	txService           service.ITransactionService
+}
+
+func (s *SchedulePlanUseCase) CreatePlan(ctx context.Context, userID int64, startDate int64, endDate int64) (*entity.SchedulePlanEntity, error) {
+	panic("unimplemented")
 }
 
 func (s *SchedulePlanUseCase) CreateSchedulePlan(ctx context.Context, userID int64) (*entity.SchedulePlanEntity, error) {

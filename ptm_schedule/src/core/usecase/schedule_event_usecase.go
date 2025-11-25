@@ -20,11 +20,17 @@ type IScheduleEventUseCase interface {
 	ListEvents(ctx context.Context, planID int64, fromDateMs, toDateMs int64) ([]*dom.ScheduleEventEntity, error)
 	SaveEvents(ctx context.Context, planID int64, events []*dom.ScheduleEventEntity) error
 	UpdateEventStatus(ctx context.Context, eventID int64, status enum.ScheduleEventStatus, actualStartMin, actualEndMin *int) error
+
+	ManuallyMoveEvent(ctx context.Context, eventID int64, newStartMin, newEndMin int) error
 }
 
 type ScheduleEventUseCase struct {
 	eventSvc  service.IScheduleEventService
 	txService service.ITransactionService
+}
+
+func (u *ScheduleEventUseCase) ManuallyMoveEvent(ctx context.Context, eventID int64, newStartMin int, newEndMin int) error {
+	panic("unimplemented")
 }
 
 func (u *ScheduleEventUseCase) ListEvents(ctx context.Context, planID int64, fromDateMs, toDateMs int64) ([]*dom.ScheduleEventEntity, error) {

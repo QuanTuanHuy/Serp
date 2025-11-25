@@ -21,12 +21,42 @@ type ISchedulePlanService interface {
 	CreateSchedulePlan(ctx context.Context, tx *gorm.DB, userID int64) (*entity.SchedulePlanEntity, error)
 	GetSchedulePlanByUserID(ctx context.Context, userID int64) (*entity.SchedulePlanEntity, error)
 	UpdateSchedulePlan(ctx context.Context, tx *gorm.DB, schedulePlan *entity.SchedulePlanEntity) (*entity.SchedulePlanEntity, error)
-	UpdateTaskBatch(ctx context.Context, tx *gorm.DB, schedulePlan *entity.SchedulePlanEntity, activeBatch int32, isActiveBatch bool) (*entity.SchedulePlanEntity, error)
+
+	CreatePlan(ctx context.Context) (*entity.SchedulePlanEntity, error)
+	GetActivePlanByUserID(ctx context.Context, userID int64) (*entity.SchedulePlanEntity, error)
+	GetLatestProposedPlanByUserID(ctx context.Context, userID int64) (*entity.SchedulePlanEntity, error)
+	ApplyPlan(ctx context.Context, tx *gorm.DB, userID, planID int64) (*entity.SchedulePlanEntity, error)
+	DiscardPlan(ctx context.Context, tx *gorm.DB, userID, planID int64) (*entity.SchedulePlanEntity, error)
+	RevertToPlan(ctx context.Context, tx *gorm.DB, userID, planID int64) (*entity.SchedulePlanEntity, error)
 }
 
 type SchedulePlanService struct {
 	schedulePlanPort port.ISchedulePlanPort
 	dbTxPort         port.IDBTransactionPort
+}
+
+func (s *SchedulePlanService) ApplyPlan(ctx context.Context, tx *gorm.DB, userID int64, planID int64) (*entity.SchedulePlanEntity, error) {
+	panic("unimplemented")
+}
+
+func (s *SchedulePlanService) CreatePlan(ctx context.Context) (*entity.SchedulePlanEntity, error) {
+	panic("unimplemented")
+}
+
+func (s *SchedulePlanService) DiscardPlan(ctx context.Context, tx *gorm.DB, userID int64, planID int64) (*entity.SchedulePlanEntity, error) {
+	panic("unimplemented")
+}
+
+func (s *SchedulePlanService) GetActivePlanByUserID(ctx context.Context, userID int64) (*entity.SchedulePlanEntity, error) {
+	panic("unimplemented")
+}
+
+func (s *SchedulePlanService) GetLatestProposedPlanByUserID(ctx context.Context, userID int64) (*entity.SchedulePlanEntity, error) {
+	panic("unimplemented")
+}
+
+func (s *SchedulePlanService) RevertToPlan(ctx context.Context, tx *gorm.DB, userID int64, planID int64) (*entity.SchedulePlanEntity, error) {
+	panic("unimplemented")
 }
 
 func (s *SchedulePlanService) CreateSchedulePlan(ctx context.Context, tx *gorm.DB, userID int64) (*entity.SchedulePlanEntity, error) {
@@ -60,11 +90,6 @@ func (s *SchedulePlanService) GetSchedulePlanByUserID(ctx context.Context, userI
 		return nil, errors.New(constant.SchedulePlanNotFound)
 	}
 	return schedulePlan, nil
-}
-
-func (s *SchedulePlanService) UpdateTaskBatch(ctx context.Context, tx *gorm.DB, schedulePlan *entity.SchedulePlanEntity, activeBatch int32, isActiveBatch bool) (*entity.SchedulePlanEntity, error) {
-	schedulePlan.UpdateTaskBatch(activeBatch, isActiveBatch)
-	return s.UpdateSchedulePlan(ctx, tx, schedulePlan)
 }
 
 func (s *SchedulePlanService) UpdateSchedulePlan(ctx context.Context, tx *gorm.DB, schedulePlan *entity.SchedulePlanEntity) (*entity.SchedulePlanEntity, error) {

@@ -17,22 +17,22 @@ type ScheduleTaskController struct {
 	scheduleTaskUseCase usecase.IScheduleTaskUseCase
 }
 
-func (s *ScheduleTaskController) GetListTaskByUserID(c *gin.Context) {
-	userID, exists := utils.GetUserIDFromContext(c)
-	if !exists {
-		return
-	}
-	tasks, err := s.scheduleTaskUseCase.GetListTaskByUserID(c.Request.Context(), userID)
-	if err != nil {
-		if err.Error() == constant.SchedulePlanNotFound {
-			utils.AbortErrorHandleCustomMessage(c, constant.GeneralNotFound, constant.SchedulePlanNotFound)
-		} else {
-			utils.AbortErrorHandleCustomMessage(c, constant.GeneralInternalServerError, err.Error())
-		}
-		return
-	}
-	utils.SuccessfulHandle(c, tasks)
-}
+// func (s *ScheduleTaskController) GetListTaskByUserID(c *gin.Context) {
+// 	userID, exists := utils.GetUserIDFromContext(c)
+// 	if !exists {
+// 		return
+// 	}
+// 	tasks, err := s.scheduleTaskUseCase.GetListTaskByUserID(c.Request.Context(), userID)
+// 	if err != nil {
+// 		if err.Error() == constant.SchedulePlanNotFound {
+// 			utils.AbortErrorHandleCustomMessage(c, constant.GeneralNotFound, constant.SchedulePlanNotFound)
+// 		} else {
+// 			utils.AbortErrorHandleCustomMessage(c, constant.GeneralInternalServerError, err.Error())
+// 		}
+// 		return
+// 	}
+// 	utils.SuccessfulHandle(c, tasks)
+// }
 
 func (s *ScheduleTaskController) GetBatchTasks(c *gin.Context) {
 	userID, exists := utils.GetUserIDFromContext(c)
@@ -49,28 +49,6 @@ func (s *ScheduleTaskController) GetBatchTasks(c *gin.Context) {
 		return
 	}
 	utils.SuccessfulHandle(c, taskMap)
-}
-
-func (s *ScheduleTaskController) ChooseTaskBatch(c *gin.Context) {
-	userID, exists := utils.GetUserIDFromContext(c)
-	if !exists {
-		return
-	}
-	var request request.ChooseTaskBatchRequest
-	if !utils.ValidateAndBindJSON(c, &request) {
-		return
-	}
-
-	tasks, err := s.scheduleTaskUseCase.ChooseTaskBatch(c.Request.Context(), userID, request.BatchNumber)
-	if err != nil {
-		if err.Error() == constant.SchedulePlanNotFound {
-			utils.AbortErrorHandleCustomMessage(c, constant.GeneralNotFound, constant.SchedulePlanNotFound)
-		} else {
-			utils.AbortErrorHandleCustomMessage(c, constant.GeneralInternalServerError, err.Error())
-		}
-		return
-	}
-	utils.SuccessfulHandle(c, tasks)
 }
 
 func (s *ScheduleTaskController) GetScheduleTaskDetail(c *gin.Context) {

@@ -4,14 +4,26 @@ import "github.com/serp/ptm-schedule/src/core/domain/enum"
 
 type ScheduleEventEntity struct {
 	BaseEntity
-	SchedulePlanID int64                    `json:"schedulePlanId"`
-	ScheduleTaskID int64                    `json:"scheduleTaskId"`
-	DateMs         int64                    `json:"dateMs"`
-	StartMin       int                      `json:"startMin"`
-	EndMin         int                      `json:"endMin"`
-	Status         enum.ScheduleEventStatus `json:"status"`
-	ActualStartMin *int                     `json:"actualStartMin"`
-	ActualEndMin   *int                     `json:"actualEndMin"`
+	SchedulePlanID int64 `json:"schedulePlanId"`
+	ScheduleTaskID int64 `json:"scheduleTaskId"`
+
+	DateMs   int64 `json:"dateMs"`
+	StartMin int   `json:"startMin"`
+	EndMin   int   `json:"endMin"`
+
+	Title string `json:"title"`
+
+	PartIndex     int    `json:"partIndex"`
+	TotalParts    int    `json:"totalParts"`
+	LinkedEventID *int64 `json:"linkedEventId"`
+
+	Status   enum.ScheduleEventStatus `json:"status"`
+	IsPinned bool                     `json:"isPinned"`
+
+	UtilityScore *float64 `json:"utilityScore"`
+
+	ActualStartMin *int `json:"actualStartMin"`
+	ActualEndMin   *int `json:"actualEndMin"`
 }
 
 func (e *ScheduleEventEntity) IsNew() bool {

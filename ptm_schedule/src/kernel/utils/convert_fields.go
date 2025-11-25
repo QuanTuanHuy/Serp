@@ -23,8 +23,6 @@ func ConvertPriority(priorities []enum.Priority) int32 {
 		return 2
 	case enum.High:
 		return 3
-	case enum.Star:
-		return 5
 	default:
 		return 0
 	}
@@ -41,8 +39,6 @@ func ToPriorityEnum(priorities []string) []enum.Priority {
 			result = append(result, enum.Medium)
 		case "high":
 			result = append(result, enum.High)
-		case "star":
-			result = append(result, enum.Star)
 		}
 	}
 	return result
@@ -58,8 +54,6 @@ func ToPriorityString(priorities []enum.Priority) []string {
 			result = append(result, "MEDIUM")
 		case enum.High:
 			result = append(result, "HIGH")
-		case enum.Star:
-			result = append(result, "STAR")
 		default:
 			result = append(result, "UNKNOWN")
 		}
