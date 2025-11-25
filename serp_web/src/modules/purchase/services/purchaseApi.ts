@@ -4,6 +4,7 @@ Description: Part of Serp Project - Purchase API service with RTK Query
 */
 
 import { api } from '@/lib/store/api';
+import type { ApiResponse } from '@/lib/store/api/types';
 import type {
   // Supplier types
   Supplier,
@@ -50,6 +51,9 @@ import type {
   ShipmentDetail,
   CreateShipmentRequest,
   UpdateShipmentRequest,
+  ShipmentItemAddRequest,
+  InventoryItemDetailUpdateRequest,
+  ShipmentFacilityUpdateRequest,
   ShipmentFilters,
   ShipmentResponse,
   ShipmentsResponse,
@@ -504,6 +508,93 @@ export const purchaseApi = api.injectEndpoints({
       ],
     }),
 
+    // Import shipment (matches /manage/{shipmentId}/import endpoint)
+    importShipment: builder.mutation<ShipmentResponse, string>({
+      query: (shipmentId) => ({
+        url: `${PURCHASE_API_BASE_URL}/shipment/manage/${shipmentId}/import`,
+        method: 'PATCH',
+      }),
+      invalidatesTags: (result, error, shipmentId) => [
+        { type: 'purchase/Shipment', id: shipmentId },
+        { type: 'purchase/Shipment', id: 'LIST' },
+        { type: 'purchase/Order', id: 'LIST' },
+      ],
+    }),
+
+    // Add item to shipment (matches /create/{shipmentId}/add endpoint)
+    addItemToShipment: builder.mutation<
+      ShipmentResponse,
+      { shipmentId: string; data: ShipmentItemAddRequest }
+    >({
+      query: ({ shipmentId, data }) => ({
+        url: `${PURCHASE_API_BASE_URL}/shipment/create/${shipmentId}/add`,
+        method: 'POST',
+        body: data,
+      }),
+      invalidatesTags: (result, error, { shipmentId }) => [
+        { type: 'purchase/Shipment', id: shipmentId },
+        { type: 'purchase/Shipment', id: 'LIST' },
+      ],
+    }),
+
+    // Update item in shipment (matches /update/{shipmentId}/update/{itemId} endpoint)
+    updateItemInShipment: builder.mutation<
+      ShipmentResponse,
+      { shipmentId: string; itemId: string; data: InventoryItemDetailUpdateRequest }
+    >({
+      query: ({ shipmentId, itemId, data }) => ({
+        url: `${PURCHASE_API_BASE_URL}/shipment/update/${shipmentId}/update/${itemId}`,
+        method: 'PATCH',
+        body: data,
+      }),
+      invalidatesTags: (result, error, { shipmentId }) => [
+        { type: 'purchase/Shipment', id: shipmentId },
+        { type: 'purchase/Shipment', id: 'LIST' },
+      ],
+    }),
+
+    // Delete item from shipment (matches /update/{shipmentId}/delete/{itemId} endpoint)
+    deleteItemFromShipment: builder.mutation<
+      ShipmentResponse,
+      { shipmentId: string; itemId: string }
+    >({
+      query: ({ shipmentId, itemId }) => ({
+        url: `${PURCHASE_API_BASE_URL}/shipment/update/${shipmentId}/delete/${itemId}`,
+        method: 'PATCH',
+      }),
+      invalidatesTags: (result, error, { shipmentId }) => [
+        { type: 'purchase/Shipment', id: shipmentId },
+        { type: 'purchase/Shipment', id: 'LIST' },
+      ],
+    }),
+
+    // Update shipment facility (matches /update/{shipmentId}/facility endpoint)
+    updateShipmentFacility: builder.mutation<
+      ShipmentResponse,
+      { shipmentId: string; data: ShipmentFacilityUpdateRequest }
+    >({
+      query: ({ shipmentId, data }) => ({
+        url: `${PURCHASE_API_BASE_URL}/shipment/update/${shipmentId}/facility`,
+        method: 'PATCH',
+        body: data,
+      }),
+      invalidatesTags: (result, error, { shipmentId }) => [
+        { type: 'purchase/Shipment', id: shipmentId },
+        { type: 'purchase/Shipment', id: 'LIST' },
+      ],
+    }),
+
+    // Get shipments by order ID (matches /search/by-order/{orderId} endpoint)
+    getShipmentsByOrderId: builder.query<ApiResponse<Shipment[]>, string>({
+      query: (orderId) => ({
+        url: `${PURCHASE_API_BASE_URL}/shipment/search/by-order/${orderId}`,
+      }),
+      providesTags: (result, error, orderId) => [
+        { type: 'purchase/Shipment', id: `ORDER_${orderId}` },
+        { type: 'purchase/Shipment', id: 'LIST' },
+      ],
+    }),
+
     // ============= Address Endpoints =============
     getAddresses: builder.query<AddressesResponse, AddressFilters>({
       query: (filters) => ({
@@ -604,6 +695,12 @@ export const {
   useCreateShipmentMutation,
   useUpdateShipmentMutation,
   useDeleteShipmentMutation,
+  useImportShipmentMutation,
+  useAddItemToShipmentMutation,
+  useUpdateItemInShipmentMutation,
+  useDeleteItemFromShipmentMutation,
+  useUpdateShipmentFacilityMutation,
+  useGetShipmentsByOrderIdQuery,
   // Address hooks
   useGetAddressesQuery,
   useGetAddressByIdQuery,

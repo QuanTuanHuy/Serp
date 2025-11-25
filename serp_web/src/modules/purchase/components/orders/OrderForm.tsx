@@ -158,7 +158,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({
 
     if (isDuplicate) {
       // Show error or warning
-      alert('This product has already been added to the order!');
+      alert('Sản phẩm này đã được thêm vào đơn hàng!');
       return;
     }
 
@@ -173,19 +173,19 @@ export const OrderForm: React.FC<OrderFormProps> = ({
     <form onSubmit={onFormSubmit} className='space-y-4'>
       <Card>
         <CardHeader>
-          <CardTitle>Order Information</CardTitle>
+          <CardTitle>Thông tin đơn hàng</CardTitle>
         </CardHeader>
         <CardContent className='space-y-4'>
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
             {/* Order Name */}
             <div className='space-y-2'>
               <Label htmlFor='orderName'>
-                Order Name <span className='text-red-500'>*</span>
+                Tên đơn hàng <span className='text-red-500'>*</span>
               </Label>
               <Input
                 id='orderName'
                 {...register('orderName')}
-                placeholder='Enter order name'
+                placeholder='Nhập tên đơn hàng'
                 disabled={isLoading}
               />
               {errors.orderName && (
@@ -198,7 +198,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({
             {/* Supplier */}
             <div className='space-y-2'>
               <Label htmlFor='fromSupplierId'>
-                Supplier <span className='text-red-500'>*</span>
+                Nhà cung cấp <span className='text-red-500'>*</span>
               </Label>
               <Select
                 value={watch('fromSupplierId')}
@@ -206,7 +206,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({
                 disabled={isLoading}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder='Select supplier' />
+                  <SelectValue placeholder='Chọn nhà cung cấp' />
                 </SelectTrigger>
                 <SelectContent>
                   {suppliers.map((supplier) => (
@@ -226,7 +226,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({
             {/* Delivery After Date */}
             <div className='space-y-2'>
               <Label htmlFor='deliveryAfterDate'>
-                Delivery After Date <span className='text-red-500'>*</span>
+                Giao sau ngày <span className='text-red-500'>*</span>
               </Label>
               <Input
                 id='deliveryAfterDate'
@@ -244,7 +244,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({
             {/* Delivery Before Date */}
             <div className='space-y-2'>
               <Label htmlFor='deliveryBeforeDate'>
-                Delivery Before Date <span className='text-red-500'>*</span>
+                Giao trước ngày <span className='text-red-500'>*</span>
               </Label>
               <Input
                 id='deliveryBeforeDate'
@@ -262,7 +262,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({
             {/* Priority */}
             <div className='space-y-2'>
               <Label htmlFor='priority'>
-                Priority <span className='text-red-500'>*</span>
+                Độ ưu tiên <span className='text-red-500'>*</span>
               </Label>
               <Input
                 id='priority'
@@ -281,14 +281,14 @@ export const OrderForm: React.FC<OrderFormProps> = ({
 
             {/* Sales Channel */}
             <div className='space-y-2'>
-              <Label htmlFor='saleChannelId'>Sales Channel</Label>
+              <Label htmlFor='saleChannelId'>Kênh bán</Label>
               <Select
                 value={watch('saleChannelId')}
                 onValueChange={(value) => setValue('saleChannelId', value)}
                 disabled={isLoading}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder='Select sales channel' />
+                  <SelectValue placeholder='Chọn kênh bán' />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value='PARTNER'>Partner</SelectItem>
@@ -300,11 +300,11 @@ export const OrderForm: React.FC<OrderFormProps> = ({
 
           {/* Note */}
           <div className='space-y-2'>
-            <Label htmlFor='note'>Note</Label>
+            <Label htmlFor='note'>Ghi chú</Label>
             <Textarea
               id='note'
               {...register('note')}
-              placeholder='Enter order note'
+              placeholder='Nhập ghi chú đơn hàng'
               rows={3}
               disabled={isLoading}
             />
@@ -315,7 +315,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({
       {/* Order Items */}
       <Card>
         <CardHeader className='flex flex-row items-center justify-between'>
-          <CardTitle>Order Items</CardTitle>
+          <CardTitle>Sản phẩm</CardTitle>
           <Button
             type='button'
             variant='outline'
@@ -333,7 +333,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({
             disabled={isLoading}
           >
             <Plus className='h-4 w-4 mr-2' />
-            Add Item
+            Thêm sản phẩm
           </Button>
         </CardHeader>
         <CardContent>
@@ -342,10 +342,10 @@ export const OrderForm: React.FC<OrderFormProps> = ({
               <TableHeader>
                 <TableRow>
                   <TableHead className='w-[60px]'>#</TableHead>
-                  <TableHead className='min-w-[200px]'>Product</TableHead>
-                  <TableHead className='min-w-[100px]'>Quantity</TableHead>
-                  <TableHead className='min-w-[100px]'>Tax (%)</TableHead>
-                  <TableHead className='min-w-[100px]'>Discount</TableHead>
+                  <TableHead className='min-w-[200px]'>Sản phẩm</TableHead>
+                  <TableHead className='min-w-[100px]'>Số lượng</TableHead>
+                  <TableHead className='min-w-[100px]'>Thuế (%)</TableHead>
+                  <TableHead className='min-w-[100px]'>Giảm giá</TableHead>
                   <TableHead className='w-[50px]'></TableHead>
                 </TableRow>
               </TableHeader>
@@ -366,7 +366,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({
                         disabled={isLoading}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder='Select product' />
+                          <SelectValue placeholder='Chọn sản phẩm' />
                         </SelectTrigger>
                         <SelectContent>
                           {getAvailableProducts(index).map((product) => (
@@ -376,7 +376,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({
                           ))}
                           {getAvailableProducts(index).length === 0 && (
                             <div className='px-2 py-1.5 text-sm text-muted-foreground'>
-                              No available products
+                              Không có sản phẩm khả dụng
                             </div>
                           )}
                         </SelectContent>
@@ -457,7 +457,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({
                       colSpan={6}
                       className='text-center text-muted-foreground'
                     >
-                      No items added yet
+                      Chưa có sản phẩm nào
                     </TableCell>
                   </TableRow>
                 )}
@@ -483,12 +483,12 @@ export const OrderForm: React.FC<OrderFormProps> = ({
             onClick={onCancel}
             disabled={isLoading}
           >
-            Cancel
+            Hủy
           </Button>
         )}
         <Button type='submit' disabled={isLoading}>
           {isLoading && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
-          {order ? 'Update Order' : 'Create Order'}
+          {order ? 'Cập nhật đơn hàng' : 'Tạo đơn hàng'}
         </Button>
       </div>
     </form>

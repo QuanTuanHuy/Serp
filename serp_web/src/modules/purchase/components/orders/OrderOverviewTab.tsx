@@ -18,6 +18,7 @@ import { Pencil } from 'lucide-react';
 import { OrderEditDialog } from './OrderEditDialog';
 import { useGetSupplierByIdQuery } from '../../services';
 import { useGetUsersQuery } from '@/modules/admin';
+import { usePermissions } from '@/modules/account';
 import type { OrderDetail } from '../../types';
 
 interface OrderOverviewTabProps {
@@ -30,6 +31,8 @@ export const OrderOverviewTab: React.FC<OrderOverviewTabProps> = ({
   onRefresh,
 }) => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const { hasAnyRole } = usePermissions();
+  const canEditOrder = hasAnyRole(['PURCHASE_STAFF', 'PURCHASE_ADMIN']);
 
   // Fetch supplier name
   const { data: supplierData } = useGetSupplierByIdQuery(
@@ -117,14 +120,16 @@ export const OrderOverviewTab: React.FC<OrderOverviewTabProps> = ({
       <Card>
         <CardHeader className='flex flex-row items-center justify-between'>
           <CardTitle>Thông tin đơn hàng</CardTitle>
-          <Button
-            variant='outline'
-            size='sm'
-            onClick={() => setEditDialogOpen(true)}
-          >
-            <Pencil className='h-4 w-4 mr-2' />
-            Chỉnh sửa
-          </Button>
+          {canEditOrder && (
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={() => setEditDialogOpen(true)}
+            >
+              <Pencil className='h-4 w-4 mr-2' />
+              Chỉnh sửa
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>

@@ -96,12 +96,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         {/* Product Name */}
         <div className='space-y-2'>
           <Label htmlFor='name'>
-            Product Name <span className='text-red-500'>*</span>
+            Tên sản phẩm <span className='text-red-500'>*</span>
           </Label>
           <Input
             id='name'
             {...register('name')}
-            placeholder='Enter product name'
+            placeholder='Nhập tên sản phẩm'
             disabled={isLoading}
           />
           {errors.name && (
@@ -112,12 +112,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         {/* Unit */}
         <div className='space-y-2'>
           <Label htmlFor='unit'>
-            Unit <span className='text-red-500'>*</span>
+            Đơn vị <span className='text-red-500'>*</span>
           </Label>
           <Input
             id='unit'
             {...register('unit')}
-            placeholder='e.g., pcs, kg, box'
+            placeholder='Ví dụ: cái, kg, hộp'
             disabled={isLoading}
           />
           {errors.unit && (
@@ -128,7 +128,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         {/* Cost Price */}
         <div className='space-y-2'>
           <Label htmlFor='costPrice'>
-            Cost Price <span className='text-red-500'>*</span>
+            Giá vốn <span className='text-red-500'>*</span>
           </Label>
           <Input
             id='costPrice'
@@ -145,7 +145,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
         {/* Wholesale Price */}
         <div className='space-y-2'>
-          <Label htmlFor='wholeSalePrice'>Wholesale Price</Label>
+          <Label htmlFor='wholeSalePrice'>Giá bán sỉ</Label>
           <Input
             id='wholeSalePrice'
             type='number'
@@ -163,7 +163,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
         {/* Retail Price */}
         <div className='space-y-2'>
-          <Label htmlFor='retailPrice'>Retail Price</Label>
+          <Label htmlFor='retailPrice'>Giá bán lẻ</Label>
           <Input
             id='retailPrice'
             type='number'
@@ -179,7 +179,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
         {/* Category */}
         <div className='space-y-2'>
-          <Label htmlFor='categoryId'>Category</Label>
+          <Label htmlFor='categoryId'>Danh mục</Label>
           <Select
             value={watch('categoryId') || 'NONE'}
             onValueChange={(value) =>
@@ -188,10 +188,10 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             disabled={isLoading}
           >
             <SelectTrigger>
-              <SelectValue placeholder='Select category' />
+              <SelectValue placeholder='Chọn danh mục' />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value='NONE'>No category</SelectItem>
+              <SelectItem value='NONE'>Không có danh mục</SelectItem>
               {categories.map((category) => (
                 <SelectItem key={category.id} value={category.id}>
                   {category.name}
@@ -206,7 +206,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
         {/* Weight */}
         <div className='space-y-2'>
-          <Label htmlFor='weight'>Weight (kg)</Label>
+          <Label htmlFor='weight'>Khối lượng (kg)</Label>
           <Input
             id='weight'
             type='number'
@@ -222,7 +222,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
         {/* Height */}
         <div className='space-y-2'>
-          <Label htmlFor='height'>Height (cm)</Label>
+          <Label htmlFor='height'>Chiều cao (cm)</Label>
           <Input
             id='height'
             type='number'
@@ -239,7 +239,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         {/* Status */}
         <div className='space-y-2'>
           <Label htmlFor='statusId'>
-            Status <span className='text-red-500'>*</span>
+            Trạng thái <span className='text-red-500'>*</span>
           </Label>
           <Select
             value={watch('statusId')}
@@ -247,11 +247,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             disabled={isLoading}
           >
             <SelectTrigger>
-              <SelectValue placeholder='Select status' />
+              <SelectValue placeholder='Chọn trạng thái' />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value='ACTIVE'>Active</SelectItem>
-              <SelectItem value='INACTIVE'>Inactive</SelectItem>
+              <SelectItem value='ACTIVE'>Hoạt động</SelectItem>
+              <SelectItem value='INACTIVE'>Không hoạt động</SelectItem>
             </SelectContent>
           </Select>
           {errors.statusId && (
@@ -261,11 +261,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
         {/* Image ID (placeholder) */}
         <div className='space-y-2'>
-          <Label htmlFor='imageId'>Image ID</Label>
+          <Label htmlFor='imageId'>Mã hình ảnh</Label>
           <Input
             id='imageId'
             {...register('imageId')}
-            placeholder='Image identifier'
+            placeholder='Mã định danh hình ảnh'
             disabled={isLoading}
           />
           {errors.imageId && (
@@ -283,12 +283,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             onClick={onCancel}
             disabled={isLoading}
           >
-            Cancel
+            Hủy
           </Button>
         )}
         <Button type='submit' disabled={isLoading}>
           {isLoading && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
-          {product ? 'Update Product' : 'Create Product'}
+          {product ? 'Cập nhật sản phẩm' : 'Tạo sản phẩm'}
         </Button>
       </div>
     </form>

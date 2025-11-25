@@ -52,21 +52,21 @@ export const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
     const path = pathname.split('/').pop();
     switch (path) {
       case 'products':
-        return 'Products';
+        return 'Sản phẩm';
       case 'suppliers':
-        return 'Suppliers';
+        return 'Nhà cung cấp';
       case 'orders':
-        return 'Purchase Orders';
+        return 'Đơn hàng mua';
       case 'facilities':
-        return 'Facilities';
+        return 'Cơ sở';
       case 'shipments':
-        return 'Shipments';
+        return 'Phiếu nhập';
       case 'reports':
-        return 'Reports';
+        return 'Báo cáo';
       case 'settings':
-        return 'Settings';
+        return 'Cài đặt';
       default:
-        return 'Purchase';
+        return 'Mua hàng';
     }
   };
 
@@ -75,7 +75,7 @@ export const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
     return segments.map((segment, index) => ({
       name:
         segment === 'purchase'
-          ? 'Purchase'
+          ? 'Mua hàng'
           : segment.charAt(0).toUpperCase() + segment.slice(1),
       href: '/' + segments.slice(0, index + 1).join('/'),
       isLast: index === segments.length - 1,
@@ -95,8 +95,12 @@ export const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
   };
 
   const quickActions = [
-    { label: 'New Product', icon: Package, href: '/purchase/products?action=new' },
-    { label: 'New Order', icon: Plus, href: '/purchase/orders?action=new' },
+    {
+      label: 'Sản phẩm mới',
+      icon: Package,
+      href: '/purchase/products?action=new',
+    },
+    { label: 'Đơn hàng mới', icon: Plus, href: '/purchase/orders?action=new' },
   ];
 
   // Auto-hide header on scroll down
@@ -175,7 +179,7 @@ export const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
             <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground' />
             <Input
               type='search'
-              placeholder='Search products, orders, suppliers...'
+              placeholder='Tìm kiếm sản phẩm, đơn hàng, nhà cung cấp...'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className='pl-9 pr-4'
@@ -267,7 +271,7 @@ export const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
                       className='w-full px-4 py-2 text-left text-sm hover:bg-accent flex items-center space-x-2'
                     >
                       <Home className='h-4 w-4' />
-                      <span>Home</span>
+                      <span>Trang chủ</span>
                     </button>
                     <button
                       onClick={() => {
@@ -277,7 +281,7 @@ export const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
                       className='w-full px-4 py-2 text-left text-sm hover:bg-accent flex items-center space-x-2'
                     >
                       <User className='h-4 w-4' />
-                      <span>Profile</span>
+                      <span>Hồ sơ</span>
                     </button>
                     <button
                       onClick={() => {
@@ -287,7 +291,7 @@ export const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
                       className='w-full px-4 py-2 text-left text-sm hover:bg-accent flex items-center space-x-2'
                     >
                       <Settings className='h-4 w-4' />
-                      <span>Settings</span>
+                      <span>Cài đặt</span>
                     </button>
                   </div>
 
@@ -296,7 +300,7 @@ export const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
                       onClick={handleLogout}
                       className='w-full px-4 py-2 text-left text-sm text-destructive hover:bg-accent'
                     >
-                      Logout
+                      Đăng xuất
                     </button>
                   </div>
                 </div>

@@ -95,6 +95,9 @@ export default function OrdersPage() {
   // Check if user has admin or manager role for purchase module
   const canManageOrders = hasAnyRole(['PURCHASE_ADMIN', 'PURCHASE_MANAGER']);
 
+  // Check if user can create/edit orders
+  const canEditOrders = hasAnyRole(['PURCHASE_STAFF', 'PURCHASE_ADMIN']);
+
   // Fetch all suppliers for mapping
   const { data: suppliersData } = useGetSuppliersQuery({
     page: 1,
@@ -141,32 +144,15 @@ export default function OrdersPage() {
     () => [
       {
         id: 'id',
-        header: 'Order ID',
+        header: 'Mã đơn hàng',
         accessor: 'id',
         cell: ({ row }: any) => (
           <div className='font-mono text-sm'>{row.id.substring(0, 8)}</div>
         ),
       },
       {
-        id: 'orderTypeId',
-        header: 'Type',
-        accessor: 'orderTypeId',
-        cell: ({ row }: any) => {
-          const type = row.orderTypeId;
-          return (
-            <Badge variant='outline'>
-              {type === 'PURCHASE'
-                ? 'Purchase'
-                : type === 'SALES'
-                  ? 'Sales'
-                  : 'Transfer'}
-            </Badge>
-          );
-        },
-      },
-      {
         id: 'orderName',
-        header: 'Order Name',
+        header: 'Tên đơn hàng',
         accessor: 'orderName',
         cell: ({ row }: any) => (
           <button
@@ -182,7 +168,7 @@ export default function OrdersPage() {
       },
       {
         id: 'orderDate',
-        header: 'Order Date',
+        header: 'Ngày đặt hàng',
         accessor: 'orderDate',
         cell: ({ row }: any) => (
           <div className='text-sm'>{formatDate(row.orderDate)}</div>
@@ -190,7 +176,7 @@ export default function OrdersPage() {
       },
       {
         id: 'supplier',
-        header: 'Supplier',
+        header: 'Nhà cung cấp',
         accessor: 'fromSupplierId',
         cell: ({ row }: any) => {
           if (!row.fromSupplierId) {
@@ -205,11 +191,11 @@ export default function OrdersPage() {
       },
       {
         id: 'statusId',
-        header: 'Status',
+        header: 'Trạng thái',
         accessor: 'statusId',
         cell: ({ row }: any) => (
           <Badge variant={getStatusBadgeVariant(row.statusId)}>
-            {row.statusId || 'Unknown'}
+            {row.statusId || 'Không xác định'}
           </Badge>
         ),
       },
@@ -217,42 +203,39 @@ export default function OrdersPage() {
         id: 'actions',
         header: '',
         accessor: 'id',
-        cell: ({ row }: any) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant='ghost' size='sm'>
-                <MoreVertical className='h-4 w-4' />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align='end'>
-              {canManageOrders && row.statusId?.toUpperCase() === 'CREATED' && (
+        cell: ({ row }: any) => {
+          const hasActions =
+            canManageOrders && row.statusId?.toUpperCase() === 'CREATED';
+
+          if (!hasActions) return null;
+
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant='ghost' size='sm'>
+                  <MoreVertical className='h-4 w-4' />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end'>
                 <DropdownMenuItem
                   onClick={() => handleApproveOrder(row.id)}
                   disabled={isApproving}
                 >
                   <CheckCircle className='mr-2 h-4 w-4' />
-                  Approve Order
+                  Duyệt đơn hàng
                 </DropdownMenuItem>
-              )}
-              {canManageOrders &&
-                ['CREATED'].includes(row.statusId?.toUpperCase()) && (
-                  <DropdownMenuItem
-                    onClick={() => handleCancelOrderClick(row.id)}
-                    disabled={isCancelling}
-                    className='text-destructive'
-                  >
-                    <XCircle className='mr-2 h-4 w-4' />
-                    Cancel Order
-                  </DropdownMenuItem>
-                )}
-              {!canManageOrders && (
-                <div className='px-2 py-1.5 text-sm text-muted-foreground'>
-                  No actions available
-                </div>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ),
+                <DropdownMenuItem
+                  onClick={() => handleCancelOrderClick(row.id)}
+                  disabled={isCancelling}
+                  className='text-destructive'
+                >
+                  <XCircle className='mr-2 h-4 w-4' />
+                  Hủy đơn hàng
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        },
       },
     ],
     [
@@ -298,19 +281,19 @@ export default function OrdersPage() {
       {/* Header */}
       <div className='flex items-center justify-between'>
         <div>
-          <h1 className='text-3xl font-bold tracking-tight'>Orders</h1>
-          <p className='text-muted-foreground'>
-            Manage purchase orders, sales orders, and transfers
-          </p>
+          <h1 className='text-3xl font-bold tracking-tight'>Đơn hàng</h1>
+          <p className='text-muted-foreground'>Quản lý đơn hàng mua</p>
         </div>
         <div className='flex gap-2'>
           <Button variant='outline' size='icon' onClick={() => refetch()}>
             <RefreshCw className='h-4 w-4' />
           </Button>
-          <Button onClick={handleOpenCreateDialog}>
-            <Plus className='mr-2 h-4 w-4' />
-            Create Order
-          </Button>
+          {canEditOrders && (
+            <Button onClick={handleOpenCreateDialog}>
+              <Plus className='mr-2 h-4 w-4' />
+              Tạo đơn hàng
+            </Button>
+          )}
         </div>
       </div>
 
@@ -319,7 +302,7 @@ export default function OrdersPage() {
         <CardHeader>
           <CardTitle className='flex items-center gap-2'>
             <Filter className='h-5 w-5' />
-            Filters
+            Bộ lọc
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -329,7 +312,7 @@ export default function OrdersPage() {
               <div className='relative'>
                 <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground' />
                 <Input
-                  placeholder='Search orders...'
+                  placeholder='Tìm kiếm đơn hàng...'
                   value={searchInput}
                   onChange={(e) => handleSearchInputChange(e.target.value)}
                   className='pl-10'
@@ -345,16 +328,17 @@ export default function OrdersPage() {
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder='Status' />
+                <SelectValue placeholder='Trạng thái' />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value='all'>All Statuses</SelectItem>
-                <SelectItem value='CREATED'>Created</SelectItem>
-                <SelectItem value='PENDING'>Pending</SelectItem>
-                <SelectItem value='APPROVED'>Approved</SelectItem>
-                <SelectItem value='CONFIRMED'>Confirmed</SelectItem>
-                <SelectItem value='COMPLETED'>Completed</SelectItem>
-                <SelectItem value='CANCELLED'>Cancelled</SelectItem>
+                <SelectItem value='all'>Tất cả trạng thái</SelectItem>
+                <SelectItem value='CREATED'>Đã tạo</SelectItem>
+                <SelectItem value='APPROVED'>Đã duyệt</SelectItem>
+                <SelectItem value='CANCELLED'>Đã hủy</SelectItem>
+                <SelectItem value='READY_FOR_DELIVERY'>
+                  Sẵn sàng giao
+                </SelectItem>
+                <SelectItem value='FULLY_DELIVERED'>Đã giao</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -363,7 +347,7 @@ export default function OrdersPage() {
           {(filters.query || filters.statusId) && (
             <div className='mt-4'>
               <Button variant='outline' size='sm' onClick={handleResetFilters}>
-                Reset Filters
+                Đặt lại bộ lọc
               </Button>
             </div>
           )}

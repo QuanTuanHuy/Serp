@@ -36,6 +36,7 @@ import {
   useGetProductsQuery,
 } from '../../services';
 import { useNotification } from '@/shared/hooks/use-notification';
+import { usePermissions } from '@/modules/account';
 import type {
   OrderDetail,
   OrderItem,
@@ -53,6 +54,8 @@ export const OrderItemsTab: React.FC<OrderItemsTabProps> = ({
   onRefresh,
 }) => {
   const { success, error: showError } = useNotification();
+  const { hasAnyRole } = usePermissions();
+  const canEditOrder = hasAnyRole(['PURCHASE_STAFF', 'PURCHASE_ADMIN']);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
 
@@ -216,7 +219,7 @@ export const OrderItemsTab: React.FC<OrderItemsTabProps> = ({
         <CardHeader>
           <div className='flex items-center justify-between'>
             <CardTitle>Danh sách sản phẩm</CardTitle>
-            {!isAddingNew && (
+            {canEditOrder && !isAddingNew && (
               <Button
                 onClick={handleAddNew}
                 disabled={
@@ -300,53 +303,55 @@ export const OrderItemsTab: React.FC<OrderItemsTabProps> = ({
                       {item.amount?.toLocaleString('vi-VN')} ₫
                     </TableCell>
                     <TableCell>
-                      <div className='flex items-center justify-center gap-2'>
-                        {isEditing ? (
-                          <>
-                            <Button
-                              size='sm'
-                              variant='ghost'
-                              onClick={handleSubmitEdit((data) =>
-                                handleSaveEdit(data, item.id)
-                              )}
-                              disabled={isUpdating}
-                            >
-                              <Check className='h-4 w-4 text-green-600' />
-                            </Button>
-                            <Button
-                              size='sm'
-                              variant='ghost'
-                              onClick={handleCancelEdit}
-                              disabled={isUpdating}
-                            >
-                              <X className='h-4 w-4 text-red-600' />
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <Button
-                              size='sm'
-                              variant='ghost'
-                              onClick={() => handleEdit(item)}
-                              disabled={editingItemId !== null || isAddingNew}
-                            >
-                              <Pencil className='h-4 w-4' />
-                            </Button>
-                            <Button
-                              size='sm'
-                              variant='ghost'
-                              onClick={() => handleDelete(item.id)}
-                              disabled={
-                                isDeleting ||
-                                editingItemId !== null ||
-                                isAddingNew
-                              }
-                            >
-                              <Trash2 className='h-4 w-4 text-red-600' />
-                            </Button>
-                          </>
-                        )}
-                      </div>
+                      {canEditOrder && (
+                        <div className='flex items-center justify-center gap-2'>
+                          {isEditing ? (
+                            <>
+                              <Button
+                                size='sm'
+                                variant='ghost'
+                                onClick={handleSubmitEdit((data) =>
+                                  handleSaveEdit(data, item.id)
+                                )}
+                                disabled={isUpdating}
+                              >
+                                <Check className='h-4 w-4 text-green-600' />
+                              </Button>
+                              <Button
+                                size='sm'
+                                variant='ghost'
+                                onClick={handleCancelEdit}
+                                disabled={isUpdating}
+                              >
+                                <X className='h-4 w-4 text-red-600' />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button
+                                size='sm'
+                                variant='ghost'
+                                onClick={() => handleEdit(item)}
+                                disabled={editingItemId !== null || isAddingNew}
+                              >
+                                <Pencil className='h-4 w-4' />
+                              </Button>
+                              <Button
+                                size='sm'
+                                variant='ghost'
+                                onClick={() => handleDelete(item.id)}
+                                disabled={
+                                  isDeleting ||
+                                  editingItemId !== null ||
+                                  isAddingNew
+                                }
+                              >
+                                <Trash2 className='h-4 w-4 text-red-600' />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 );

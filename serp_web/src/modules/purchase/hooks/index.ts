@@ -14,3 +14,6 @@ export type { UseOrdersReturn } from './useOrders';
 
 export { useAddresses } from './useAddresses';
 export type { UseAddressesReturn } from './useAddresses';
+
+export { useShipments } from './useShipments';
+export type { UseShipmentsReturn } from './useShipments';

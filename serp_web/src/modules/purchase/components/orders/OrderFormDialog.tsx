@@ -45,7 +45,9 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='!max-w-7xl max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
-          <DialogTitle>{order ? 'Edit Order' : 'Create New Order'}</DialogTitle>
+          <DialogTitle>
+            {order ? 'Chỉnh sửa đơn hàng' : 'Tạo đơn hàng mới'}
+          </DialogTitle>
         </DialogHeader>
         <OrderForm
           order={order}

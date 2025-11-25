@@ -25,7 +25,9 @@ interface ProductFormDialogProps {
   onOpenChange: (open: boolean) => void;
   product?: Product;
   categories?: Category[];
-  onSubmit: (data: CreateProductRequest | UpdateProductRequest) => Promise<void>;
+  onSubmit: (
+    data: CreateProductRequest | UpdateProductRequest
+  ) => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -43,10 +45,10 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className='max-w-3xl max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
           <DialogTitle>
-            {product ? 'Edit Product' : 'Create New Product'}
+            {product ? 'Chỉnh sửa sản phẩm' : 'Tạo sản phẩm mới'}
           </DialogTitle>
         </DialogHeader>
         <ProductForm

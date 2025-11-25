@@ -40,15 +40,6 @@ export const OrderDetailDialog: React.FC<OrderDetailDialogProps> = ({
 
   if (!order) return null;
 
-  const isShipmentsDisabled = order.statusId === 'CREATED';
-
-  const handleTabChange = (value: string) => {
-    if (value === 'shipments' && isShipmentsDisabled) {
-      return; // Prevent switching to disabled tab
-    }
-    setActiveTab(value);
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='!max-w-7xl max-h-[90vh] overflow-y-auto'>
@@ -56,24 +47,11 @@ export const OrderDetailDialog: React.FC<OrderDetailDialogProps> = ({
           <DialogTitle>{order.orderName}</DialogTitle>
         </DialogHeader>
 
-        <Tabs
-          value={activeTab}
-          onValueChange={handleTabChange}
-          className='w-full'
-        >
+        <Tabs value={activeTab} onValueChange={setActiveTab} className='w-full'>
           <TabsList className='grid w-full grid-cols-3'>
             <TabsTrigger value='overview'>Tổng quan</TabsTrigger>
             <TabsTrigger value='items'>Sản phẩm</TabsTrigger>
-            <TabsTrigger
-              value='shipments'
-              className={
-                isShipmentsDisabled
-                  ? 'opacity-50 cursor-not-allowed pointer-events-none'
-                  : ''
-              }
-            >
-              Phiếu nhập
-            </TabsTrigger>
+            <TabsTrigger value='shipments'>Phiếu nhập</TabsTrigger>
           </TabsList>
 
           <TabsContent value='overview' className='space-y-4 mt-4'>

@@ -81,13 +81,13 @@ export default function ProductsPage() {
     () => [
       {
         id: 'name',
-        header: 'Product Name',
+        header: 'Tên sản phẩm',
         accessor: 'name',
         cell: ({ row }: any) => <div className='font-medium'>{row.name}</div>,
       },
       {
         id: 'unit',
-        header: 'Unit',
+        header: 'Đơn vị',
         accessor: 'unit',
         cell: ({ row }: any) => (
           <div className='text-sm text-muted-foreground'>{row.unit}</div>
@@ -95,7 +95,7 @@ export default function ProductsPage() {
       },
       {
         id: 'costPrice',
-        header: 'Cost Price',
+        header: 'Giá vốn',
         accessor: 'costPrice',
         cell: ({ row }: any) => (
           <div className='text-sm'>{row.costPrice.toLocaleString()}</div>
@@ -103,7 +103,7 @@ export default function ProductsPage() {
       },
       {
         id: 'wholeSalePrice',
-        header: 'Whole Sale Price',
+        header: 'Giá bán sỉ',
         accessor: 'wholeSalePrice',
         cell: ({ row }: any) => (
           <div className='text-sm'>
@@ -113,7 +113,7 @@ export default function ProductsPage() {
       },
       {
         id: 'categoryId',
-        header: 'Category',
+        header: 'Danh mục',
         accessor: 'categoryId',
         cell: ({ row }: any) => {
           const category = categories.find((c) => c.id === row.categoryId);
@@ -126,20 +126,20 @@ export default function ProductsPage() {
       },
       {
         id: 'statusId',
-        header: 'Status',
+        header: 'Trạng thái',
         accessor: 'statusId',
         cell: ({ row }: any) => {
           const status = row.statusId;
           return (
             <Badge variant={status === 'ACTIVE' ? 'default' : 'secondary'}>
-              {status}
+              {status === 'ACTIVE' ? 'Hoạt động' : 'Không hoạt động'}
             </Badge>
           );
         },
       },
       {
         id: 'actions',
-        header: 'Actions',
+        header: 'Hành động',
         accessor: () => '',
         cell: ({ row }: any) => (
           <DropdownMenu>
@@ -151,14 +151,12 @@ export default function ProductsPage() {
             <DropdownMenuContent align='end'>
               <DropdownMenuItem onClick={() => handleOpenEditDialog(row.id)}>
                 <Pencil className='mr-2 h-4 w-4' />
-                Edit
+                Chỉnh sửa
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
                   if (
-                    window.confirm(
-                      'Are you sure you want to delete this product?'
-                    )
+                    window.confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')
                   ) {
                     handleDeleteProduct(row.id);
                   }
@@ -167,7 +165,7 @@ export default function ProductsPage() {
                 disabled={isDeleting}
               >
                 <Trash2 className='mr-2 h-4 w-4' />
-                Delete
+                Xóa
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -195,19 +193,19 @@ export default function ProductsPage() {
       {/* Header */}
       <div className='flex items-center justify-between'>
         <div>
-          <h1 className='text-3xl font-bold tracking-tight'>Products</h1>
-          <p className='text-muted-foreground'>Manage your product catalog</p>
+          <h1 className='text-3xl font-bold tracking-tight'>Sản phẩm</h1>
+          <p className='text-muted-foreground'>Quản lý danh mục sản phẩm</p>
         </div>
         <Button onClick={handleOpenCreateDialog}>
           <Plus className='mr-2 h-4 w-4' />
-          Add Product
+          Thêm sản phẩm
         </Button>
       </div>
 
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle className='text-lg'>Filters</CardTitle>
+          <CardTitle className='text-lg'>Bộ lọc</CardTitle>
         </CardHeader>
         <CardContent>
           <div className='flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4'>
@@ -218,7 +216,7 @@ export default function ProductsPage() {
                 <div className='relative'>
                   <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground' />
                   <Input
-                    placeholder='Search products...'
+                    placeholder='Tìm kiếm sản phẩm...'
                     value={searchInput}
                     onChange={(e) => handleSearchInputChange(e.target.value)}
                     className='pl-10'
@@ -227,7 +225,7 @@ export default function ProductsPage() {
               </div>
 
               {/* Category Filter */}
-              <div className='w-full sm:w-34'>
+              <div className='w-full sm:w-44'>
                 <Select
                   value={filters.categoryId || 'ALL'}
                   onValueChange={(value) =>
@@ -235,10 +233,10 @@ export default function ProductsPage() {
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder='All Categories' />
+                    <SelectValue placeholder='Tất cả danh mục' />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value='ALL'>All Categories</SelectItem>
+                    <SelectItem value='ALL'>Tất cả danh mục</SelectItem>
                     {categories.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
                         {category.name}
@@ -249,7 +247,7 @@ export default function ProductsPage() {
               </div>
 
               {/* Status Filter */}
-              <div className='w-full sm:w-30'>
+              <div className='w-full sm:w-44'>
                 <Select
                   value={filters.statusId || 'ALL'}
                   onValueChange={(value) =>
@@ -257,12 +255,12 @@ export default function ProductsPage() {
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder='All Status' />
+                    <SelectValue placeholder='Tất cả trạng thái' />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value='ALL'>All Status</SelectItem>
-                    <SelectItem value='ACTIVE'>Active</SelectItem>
-                    <SelectItem value='INACTIVE'>Inactive</SelectItem>
+                    <SelectItem value='ALL'>Tất cả trạng thái</SelectItem>
+                    <SelectItem value='ACTIVE'>Hoạt động</SelectItem>
+                    <SelectItem value='INACTIVE'>Không hoạt động</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -273,7 +271,7 @@ export default function ProductsPage() {
                 onClick={handleResetFilters}
                 className='sm:w-auto'
               >
-                Reset
+                Đặt lại
               </Button>
             </div>
 
