@@ -1,6 +1,8 @@
 package serp.project.purchase_service.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,7 @@ import serp.project.purchase_service.util.PaginationUtils;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
@@ -29,6 +32,8 @@ public class CategoryService {
                 .tenantId(tenantId)
                 .build();
         categoryRepository.save(category);
+        log.info("[CategoryService] Created category {} with ID {} for tenantId: {}", category.getName(), categoryId,
+                tenantId);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -39,6 +44,8 @@ public class CategoryService {
         }
         category.setName(form.getName());
         categoryRepository.save(category);
+        log.info("[CategoryService] Updated category {} with ID {} for tenantId: {}", category.getName(), categoryId,
+                tenantId);
     }
 
     public CategoryEntity getCategory(String categoryId, Long tenantId) {
@@ -46,6 +53,8 @@ public class CategoryService {
         if (category == null || !category.getTenantId().equals(tenantId)) {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
+        log.info("[CategoryService] Retrieved category {} with ID {} for tenantId: {}", category.getName(), categoryId,
+                tenantId);
         return category;
     }
 
@@ -55,13 +64,11 @@ public class CategoryService {
             int page,
             int size,
             String sortBy,
-            String sortDirection
-    ) {
+            String sortDirection) {
         Pageable pageable = PaginationUtils.createPageable(page, size, sortBy, sortDirection);
         return categoryRepository.findAll(
                 CategorySpecification.satisfy(query, tenantId),
-                pageable
-        );
+                pageable);
     }
 
 }

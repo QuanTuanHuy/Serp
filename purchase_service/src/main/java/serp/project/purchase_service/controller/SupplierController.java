@@ -34,14 +34,18 @@ public class SupplierController {
     public ResponseEntity<GeneralResponse<?>> createSupplier(@RequestBody SupplierCreationForm form) {
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
+        log.info("[SupplierController] Creating supplier {} for tenantId {}", form.getName(), tenantId);
         supplierService.createSupplier(form, tenantId);
         return ResponseEntity.ok(GeneralResponse.success("Supplier created successfully"));
     }
 
     @PatchMapping("/update/{supplierId}")
-    public ResponseEntity<GeneralResponse<?>> updateSupplier(@RequestBody SupplierUpdateForm form, @PathVariable("supplierId") String supplierId) {
+    public ResponseEntity<GeneralResponse<?>> updateSupplier(@RequestBody SupplierUpdateForm form,
+            @PathVariable("supplierId") String supplierId) {
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
+        log.info("[SupplierController] Updating supplier {} with ID {} for tenantId {}", form.getName(), supplierId,
+                tenantId);
         supplierService.updateSupplier(supplierId, form, tenantId);
         return ResponseEntity.ok(GeneralResponse.success("Supplier updated successfully"));
     }
@@ -58,10 +62,10 @@ public class SupplierController {
             @RequestParam(required = false, defaultValue = "createdStamp") String sortBy,
             @RequestParam(required = false, defaultValue = "desc") String sortDirection,
             @RequestParam(required = false) String query,
-            @RequestParam(required = false) String statusId
-    ) {
+            @RequestParam(required = false) String statusId) {
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
+        log.info("[SupplierController] Getting suppliers of page {}/{} for tenantId {}", page, size, tenantId);
         Page<SupplierEntity> suppliers = supplierService.findSuppliers(
                 query,
                 statusId,
@@ -69,20 +73,23 @@ public class SupplierController {
                 page,
                 size,
                 sortBy,
-                sortDirection
-        );
-        return ResponseEntity.ok(GeneralResponse.success("Successfully get list of suppliers at page " + page, PageResponse.of(suppliers)));
+                sortDirection);
+        return ResponseEntity.ok(GeneralResponse.success("Successfully get list of suppliers at page " + page,
+                PageResponse.of(suppliers)));
     }
 
     @GetMapping("/search/{supplierId}")
-    public ResponseEntity<GeneralResponse<SupplierDetailResponse>> getDetailSupplier(@PathVariable("supplierId") String supplierId) {
+    public ResponseEntity<GeneralResponse<SupplierDetailResponse>> getDetailSupplier(
+            @PathVariable("supplierId") String supplierId) {
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
+        log.info("[SupplierController] Getting detail supplier with ID {} for tenantId {}", supplierId, tenantId);
         SupplierEntity supplier = supplierService.getSupplier(supplierId, tenantId);
         if (supplier == null) {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
-        AddressEntity address = addressService.findByEntityId(supplierId, tenantId).stream().filter(AddressEntity::isDefault).findFirst().orElse(null);
+        AddressEntity address = addressService.findByEntityId(supplierId, tenantId).stream()
+                .filter(AddressEntity::isDefault).findFirst().orElse(null);
         SupplierDetailResponse supplierDetail = SupplierDetailResponse.fromEntity(supplier, address);
         return ResponseEntity.ok(GeneralResponse.success("Successfully get supplier detail", supplierDetail));
     }

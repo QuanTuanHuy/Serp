@@ -49,15 +49,19 @@ public class OrderService {
                 .deliveryBeforeDate(form.getDeliveryBeforeDate())
                 .deliveryAfterDate(form.getDeliveryAfterDate())
                 .note(form.getNote())
-                .orderName(StringUtils.hasText(form.getOrderName()) ? form.getOrderName() : "Đơn hàng mua mã " + orderId)
+                .orderName(
+                        StringUtils.hasText(form.getOrderName()) ? form.getOrderName() : "Đơn hàng mua mã " + orderId)
                 .priority(form.getPriority() != 0 ? form.getPriority() : 20)
                 .saleChannelId(form.getSaleChannelId())
                 .tenantId(tenantId)
                 .build();
         orderRepository.save(order);
+        log.info("[OrderService] Created order {} with ID {} for tenant {}", order.getOrderName(), orderId, tenantId);
 
         for (OrderCreationForm.OrderItem itemForm : form.getOrderItems()) {
             orderItemService.createOrderItems(itemForm, orderId, tenantId);
+            log.info("[OrderService] Added order item for product ID {} to order ID {}",
+                    itemForm.getProductId(), orderId);
         }
     }
 
@@ -68,7 +72,7 @@ public class OrderService {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
         if (OrderStatus.fromValue(order.getStatusId()).ordinal() > OrderStatus.CANCELLED.ordinal()) {
-            log.error("Cannot update order with status {}", order.getStatusId());
+            log.error("[OrderService] Cannot update order with status {}", order.getStatusId());
             throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
         }
 
@@ -80,6 +84,7 @@ public class OrderService {
         order.setSaleChannelId(form.getSaleChannelId());
         order.setStatusId(OrderStatus.CREATED.value());
         orderRepository.save(order);
+        log.info("[OrderService] Updated order {} with ID {} for tenant {}", order.getOrderName(), orderId, tenantId);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -89,11 +94,13 @@ public class OrderService {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
         if (!order.getStatusId().equals(OrderStatus.CREATED.value())) {
+            log.error("[OrderService] Cannot approve order with status {}", order.getStatusId());
             throw new AppException(AppErrorCode.INVALID_STATUS_TRANSITION);
         }
         order.setStatusId(OrderStatus.APPROVED.value());
         order.setUserApprovedId(userId);
         orderRepository.save(order);
+        log.info("[OrderService] Approved order {} with ID {} for tenant {}", order.getOrderName(), orderId, tenantId);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -103,18 +110,21 @@ public class OrderService {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
         if (!order.getStatusId().equals(OrderStatus.CREATED.value())) {
+            log.error("[OrderService] Cannot cancel order with status {}", order.getStatusId());
             throw new AppException(AppErrorCode.INVALID_STATUS_TRANSITION);
         }
         order.setCancellationNote(cancellationNote);
         order.setStatusId(OrderStatus.CANCELLED.value());
         order.setUserCancelledId(userId);
         orderRepository.save(order);
+        log.info("[OrderService] Cancelled order {} with ID {} for tenant {}", order.getOrderName(), orderId, tenantId);
     }
 
     public OrderEntity getOrder(String orderId, Long tenantId) {
-        log.info("Getting order {} for tenant {}", orderId, tenantId);
+        log.info("[OrderService] Getting order {} for tenant {}", orderId, tenantId);
         OrderEntity order = orderRepository.findById(orderId).orElse(null);
         if (order == null || !order.getTenantId().equals(tenantId)) {
+            log.info("[OrderService] Order {} not found for tenant {} or does not belong to tenant", orderId, tenantId);
             return null;
         }
         return order;
@@ -133,9 +143,8 @@ public class OrderService {
             int page,
             int size,
             String sortBy,
-            String sortDirection
-            ) {
-        return  orderRepository.findAll(
+            String sortDirection) {
+        return orderRepository.findAll(
                 OrderSpecification.satisfy(
                         query,
                         fromSupplierId,
@@ -145,8 +154,7 @@ public class OrderService {
                         deliveryBefore,
                         deliveryAfter,
                         statusId,
-                        tenantId
-                ),
+                        tenantId),
                 PaginationUtils.createPageable(page, size, sortBy, sortDirection));
     }
 
@@ -154,17 +162,18 @@ public class OrderService {
     public void readyForDeliveryOrder(String orderId, Long tenantId) {
         OrderEntity order = orderRepository.findById(orderId).orElse(null);
         if (order == null || !order.getTenantId().equals(tenantId)) {
+            log.info("[OrderService] Order {} not found for tenant {} or does not belong to tenant", orderId, tenantId);
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
 
         List<OrderItemEntity> orderItems = orderItemService.findByOrderId(orderId, tenantId);
         Map<String, Integer> itemQuantityMap = orderItems.stream().collect(Collectors.toMap(
                 OrderItemEntity::getId,
-                OrderItemEntity::getQuantity
-        ));
+                OrderItemEntity::getQuantity));
         Map<String, Integer> deliveredQuantityMap = new HashMap<>();
         List<ShipmentEntity> shipments = shipmentService.findByOrderId(orderId, tenantId);
         if (shipments.isEmpty()) {
+            log.info("[OrderService] No shipments found for order {} and tenant {}", orderId, tenantId);
             throw new AppException(AppErrorCode.ORDER_NOT_READY_FOR_DELIVERY);
         }
         for (ShipmentEntity shipment : shipments) {
@@ -172,23 +181,29 @@ public class OrderService {
             for (var item : items) {
                 deliveredQuantityMap.put(
                         item.getOrderItemId(),
-                        deliveredQuantityMap.getOrDefault(item.getOrderItemId(), 0) + item.getQuantity()
-                );
+                        deliveredQuantityMap.getOrDefault(item.getOrderItemId(), 0) + item.getQuantity());
             }
         }
         for (var entry : itemQuantityMap.entrySet()) {
             String orderItemId = entry.getKey();
             int orderedQuantity = entry.getValue();
             int deliveredQuantity = deliveredQuantityMap.getOrDefault(orderItemId, 0);
-            if (deliveredQuantity < orderedQuantity) {
+            if (deliveredQuantity != orderedQuantity) {
+                log.info(
+                        "[OrderService] Order {} is not ready for delivery. Order item {} has delivered quantity {}/{}",
+                        orderId, orderItemId, deliveredQuantity, orderedQuantity);
                 throw new AppException(AppErrorCode.ORDER_NOT_READY_FOR_DELIVERY);
             }
         }
         order.setStatusId(OrderStatus.READY_FOR_DELIVERY.value());
         orderRepository.save(order);
+        log.info("[OrderService] Marked order {} as ready for delivery for tenant {}", orderId, tenantId);
 
-        shipments.forEach(shipment -> {shipment.setStatusId(ShipmentStatus.READY.value());});
+        shipments.forEach(shipment -> {
+            shipment.setStatusId(ShipmentStatus.READY.value());
+        });
         shipmentService.updateShipmentBatch(shipments);
+        log.info("[OrderService] Updated shipment statuses to READY for order {} and tenant {}", orderId, tenantId);
     }
 
 }

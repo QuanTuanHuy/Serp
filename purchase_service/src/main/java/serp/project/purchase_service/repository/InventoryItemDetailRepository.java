@@ -9,4 +9,8 @@ public interface InventoryItemDetailRepository extends JpaRepository<InventoryIt
 
     public List<InventoryItemDetailEntity> findByTenantIdAndShipmentId(Long tenantId, String shipmentId);
 
+    public void deleteByOrderItemId(String orderItemId);
+
+    public void deleteByShipmentId(String shipmentId);
+
 }

@@ -1,6 +1,8 @@
 package serp.project.purchase_service.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.purchase_service.dto.request.InventoryItemDetailUpdateForm;
@@ -16,6 +18,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class InventoryItemDetailService {
 
     private final InventoryItemDetailRepository inventoryItemDetailRepository;
@@ -26,10 +29,11 @@ public class InventoryItemDetailService {
             String shipmentId,
             ShipmentCreationForm.InventoryItemDetail form,
             String facilityId,
-            Long tenantId
-    ) {
+            Long tenantId) {
         ProductEntity product = productService.getProduct(form.getProductId(), tenantId);
         if (product == null || !product.getTenantId().equals(tenantId)) {
+            log.info("[InventoryItemDetailService] Product ID {} not found for tenant {}", form.getProductId(),
+                    tenantId);
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
 
@@ -54,9 +58,12 @@ public class InventoryItemDetailService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void updateInventoryItemDetail(String itemId, InventoryItemDetailUpdateForm form, String shipmentId, Long tenantId) {
+    public void updateInventoryItemDetail(String itemId, InventoryItemDetailUpdateForm form, String shipmentId,
+            Long tenantId) {
         InventoryItemDetailEntity entity = inventoryItemDetailRepository.findById(itemId).orElse(null);
         if (entity == null || !entity.getTenantId().equals(tenantId) || !entity.getShipmentId().equals(shipmentId)) {
+            log.info("[InventoryItemDetailService] Inventory Item Detail ID {} not found for tenant {}", itemId,
+                    tenantId);
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
 
@@ -67,15 +74,19 @@ public class InventoryItemDetailService {
         entity.setManufacturingDate(form.getManufacturingDate());
 
         inventoryItemDetailRepository.save(entity);
+        log.info("[InventoryItemDetailService] Inventory Item Detail ID {} updated for tenant {}", itemId,
+                tenantId);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void updateFacility(String shipmentId, String facilityId, Long tenantId) {
-        List<InventoryItemDetailEntity> items = inventoryItemDetailRepository.findByTenantIdAndShipmentId(tenantId, shipmentId);
+        List<InventoryItemDetailEntity> items = inventoryItemDetailRepository.findByTenantIdAndShipmentId(tenantId,
+                shipmentId);
         for (InventoryItemDetailEntity item : items) {
             item.setFacilityId(facilityId);
         }
         inventoryItemDetailRepository.saveAll(items);
+        log.info("[InventoryItemDetailService] Inventory Item Details updated facility for tenant {}", tenantId);
     }
 
     public List<InventoryItemDetailEntity> getItemsByShipmentId(String shipmentId, Long tenantId) {
@@ -86,9 +97,12 @@ public class InventoryItemDetailService {
     public void deleteItem(String itemId, String shipmentId, Long tenantId) {
         InventoryItemDetailEntity entity = inventoryItemDetailRepository.findById(itemId).orElse(null);
         if (entity == null || !entity.getTenantId().equals(tenantId) || !entity.getShipmentId().equals(shipmentId)) {
+            log.error("[InventoryItemDetailService] Inventory Item Detail ID {} not found for tenant {}", itemId,
+                    tenantId);
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
         inventoryItemDetailRepository.delete(entity);
+        log.info("[InventoryItemDetailService] Inventory Item Detail ID {} deleted", itemId);
     }
 
 }

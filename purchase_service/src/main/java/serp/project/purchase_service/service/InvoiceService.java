@@ -1,6 +1,8 @@
 package serp.project.purchase_service.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.purchase_service.constant.InvoiceStatus;
@@ -20,6 +22,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class InvoiceService {
 
     private final InvoiceRepository invoiceRepository;
@@ -32,6 +35,7 @@ public class InvoiceService {
     public void createInvoice(String orderId) {
         OrderEntity order = orderRepository.findById(orderId).orElse(null);
         if (order == null) {
+            log.error("[InvoiceService] Order {} not found", orderId);
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
 
@@ -52,6 +56,8 @@ public class InvoiceService {
                 .build();
 
         invoiceRepository.save(invoice);
+        log.info("[InvoiceService] Created invoice {} for order {} and tenant {}", invoiceId, orderId,
+                order.getTenantId());
 
         List<ShipmentEntity> shipments = shipmentRepository.findByTenantIdAndOrderId(order.getTenantId(), orderId);
         for (ShipmentEntity shipment : shipments) {

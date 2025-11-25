@@ -1,6 +1,8 @@
 package serp.project.purchase_service.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.purchase_service.dto.request.AddressCreationForm;
@@ -15,6 +17,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AddressService {
 
     private final AddressRepository addressRepository;
@@ -34,6 +37,8 @@ public class AddressService {
                 .tenantId(tenantId)
                 .build();
         addressRepository.save(address);
+        log.info("[AddressService] Created address {} with ID {} for tenantId: {}", address.getFullAddress(), addressId,
+                tenantId);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -48,6 +53,8 @@ public class AddressService {
         address.setDefault(form.isDefault());
         address.setFullAddress(form.getFullAddress());
         addressRepository.save(address);
+        log.info("[AddressService] Updated address {} with ID {} for tenantId: {}", address.getFullAddress(), addressId,
+                tenantId);
     }
 
     public List<AddressEntity> findByEntityId(String entityId, Long tenantId) {
@@ -61,6 +68,8 @@ public class AddressService {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
         addressRepository.delete(address);
+        log.info("[AddressService] Deleted address {} with ID {} for tenantId: {}", address.getFullAddress(), addressId,
+                tenantId);
     }
 
 }
