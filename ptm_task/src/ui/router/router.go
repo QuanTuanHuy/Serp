@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/serp/ptm-task/src/core/domain/enum"
 	"github.com/serp/ptm-task/src/kernel/properties"
 	"github.com/serp/ptm-task/src/ui/controller"
 	"github.com/serp/ptm-task/src/ui/middleware"
@@ -19,6 +20,7 @@ type RouterConfig struct {
 	AppProps          *properties.AppProperties
 	Engine            *gin.Engine
 	ProjectController *controller.ProjectController
+	TaskController    *controller.TaskController
 	JWTMiddleware     *middleware.JWTMiddleware
 	RoleMiddleware    *middleware.RoleMiddleware
 	Logger            *zap.Logger
@@ -33,15 +35,25 @@ func RegisterRoutes(config *RouterConfig) {
 	})
 
 	apiV1 := config.Engine.Group(fmt.Sprintf("%s/api/v1", config.AppProps.Path))
-	apiV1.Use(config.JWTMiddleware.AuthenticateJWT())
+	apiV1.Use(config.JWTMiddleware.AuthenticateJWT(), config.RoleMiddleware.RequireRole(string(enum.RoleUser), string(enum.RoleAdmin)))
 	{
 		projects := apiV1.Group("/projects")
 		{
 			projects.POST("", config.ProjectController.CreateProject)
 			projects.GET("", config.ProjectController.GetAllProjects)
 			projects.GET("/:id", config.ProjectController.GetProjectByID)
+			projects.GET("/:id/tasks", config.ProjectController.GetTasksByProjectID)
 			projects.PATCH("/:id", config.ProjectController.UpdateProject)
 			projects.DELETE("/:id", config.ProjectController.DeleteProject)
+		}
+
+		tasks := apiV1.Group("/tasks")
+		{
+			tasks.POST("", config.TaskController.CreateTask)
+			tasks.GET("", config.TaskController.GetTasksByUserID)
+			tasks.GET("/:id", config.TaskController.GetTaskByID)
+			tasks.PATCH("/:id", config.TaskController.UpdateTask)
+			tasks.DELETE("/:id", config.TaskController.DeleteTask)
 		}
 	}
 

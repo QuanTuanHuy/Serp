@@ -13,7 +13,7 @@ import (
 )
 
 type ITaskPort interface {
-	CreateTask(ctx context.Context, tx *gorm.DB, task *entity.TaskEntity) error
+	CreateTask(ctx context.Context, tx *gorm.DB, task *entity.TaskEntity) (*entity.TaskEntity, error)
 	CreateTasks(ctx context.Context, tx *gorm.DB, tasks []*entity.TaskEntity) error
 
 	GetTaskByID(ctx context.Context, id int64) (*entity.TaskEntity, error)
@@ -22,7 +22,7 @@ type ITaskPort interface {
 	GetTaskByExternalID(ctx context.Context, externalID string) (*entity.TaskEntity, error)
 	CountTasksByUserID(ctx context.Context, userID int64, filter *TaskFilter) (int64, error)
 
-	UpdateTask(ctx context.Context, tx *gorm.DB, task *entity.TaskEntity) error
+	UpdateTask(ctx context.Context, tx *gorm.DB, task *entity.TaskEntity) (*entity.TaskEntity, error)
 	UpdateTaskStatus(ctx context.Context, tx *gorm.DB, taskID int64, status string) error
 	UpdateTaskPriority(ctx context.Context, tx *gorm.DB, taskID int64, priority string, priorityScore float64) error
 	UpdateTaskDuration(ctx context.Context, tx *gorm.DB, taskID int64, actualDurationMin int) error
@@ -74,7 +74,7 @@ func NewTaskFilter() *TaskFilter {
 		Priorities: []string{},
 		Categories: []string{},
 		Tags:       []string{},
-		SortBy:     "created_at",
+		SortBy:     "id",
 		SortOrder:  "DESC",
 		Limit:      50,
 		Offset:     0,

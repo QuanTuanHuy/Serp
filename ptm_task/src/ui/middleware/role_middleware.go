@@ -56,9 +56,9 @@ func (m *RoleMiddleware) RequireRole(roles ...string) gin.HandlerFunc {
 			return
 		}
 
-		m.logger.Debug("Role check passed",
-			zap.Int64("userID", userID),
-			zap.Strings("requiredRoles", roles))
+		// m.logger.Debug("Role check passed",
+		// 	zap.Int64("userID", userID),
+		// 	zap.Strings("requiredRoles", roles))
 
 		c.Next()
 	}
