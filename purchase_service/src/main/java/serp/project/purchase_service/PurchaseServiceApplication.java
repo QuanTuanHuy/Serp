@@ -10,7 +10,7 @@ public class PurchaseServiceApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(PurchaseServiceApplication.class, args);
-		log.info("Purchase Service v0.1.1 is running...");
+		log.info("Purchase Service v0.1.2 is running...");
 	}
 
 }
