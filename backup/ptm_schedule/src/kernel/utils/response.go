@@ -1,0 +1,74 @@
+/*
+Author: QuanTuanHuy
+Description: Part of Serp Project
+*/
+
+package utils
+
+import (
+	"net/http"
+	"strings"
+
+	"github.com/serp/ptm-schedule/src/core/domain/constant"
+)
+
+type ErrorResponse struct {
+	HTTPCode    int
+	ServiceCode int
+	Message     string
+}
+
+var errorResponseMap = map[int]ErrorResponse{
+	constant.GeneralInternalServerError: {
+		HTTPCode:    http.StatusInternalServerError,
+		ServiceCode: constant.GeneralInternalServerError,
+		Message:     "Service unavailable",
+	},
+	constant.GeneralBadRequest: {
+		HTTPCode:    http.StatusBadRequest,
+		ServiceCode: constant.GeneralBadRequest,
+		Message:     "Bad request",
+	},
+	constant.GeneralUnauthorized: {
+		HTTPCode:    http.StatusUnauthorized,
+		ServiceCode: constant.GeneralUnauthorized,
+		Message:     "Unauthorized",
+	},
+	constant.GeneralForbidden: {
+		HTTPCode:    http.StatusForbidden,
+		ServiceCode: constant.GeneralForbidden,
+		Message:     "Forbidden",
+	},
+	constant.GeneralNotFound: {
+		HTTPCode:    http.StatusNotFound,
+		ServiceCode: constant.GeneralNotFound,
+		Message:     "Not found",
+	},
+}
+
+// GetErrorResponse get error response from code
+func GetErrorResponse(code int) ErrorResponse {
+	if val, ok := errorResponseMap[code]; ok {
+		return val
+	}
+
+	// default response
+	return ErrorResponse{
+		HTTPCode:    http.StatusInternalServerError,
+		ServiceCode: code,
+		Message:     http.StatusText(http.StatusInternalServerError),
+	}
+}
+
+func GetErrorByErrorMessage(message string) ErrorResponse {
+	if strings.Contains(message, "invalid") {
+		return GetErrorResponse(constant.GeneralBadRequest)
+	}
+	if strings.Contains(message, "forbidden") || strings.Contains(message, "permission") {
+		return GetErrorResponse(constant.GeneralForbidden)
+	}
+	if strings.Contains(message, "not found") {
+		return GetErrorResponse(constant.GeneralNotFound)
+	}
+	return GetErrorResponse(constant.GeneralInternalServerError)
+}

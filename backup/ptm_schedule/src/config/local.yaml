@@ -1,0 +1,50 @@
+app:
+  logging:
+    level: INFO
+  datasource:
+    driver: postgres
+    host: ${DB_HOST}
+    port: 5432
+    database: ${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    logLevel: INFO
+  redis:
+    host: ${REDIS_HOST}
+    port: ${REDIS_PORT}
+  keycloak:
+    url: ${KEYCLOAK_URL}
+    realm: serp
+    client-id: serp-ptm
+    client-secret: ${CLIENT_SECRET}
+    jwk-set-uri: ${KEYCLOAK_JWK_SET_URI}
+    expected-issuer: ${KEYCLOAK_EXPECTED_ISSUER}
+    expected-audience: 
+  kafka:
+    producer:
+      bootstrapServers:
+        - ${KAFKA_BOOTSTRAP_SERVERS}
+      requireAcks: 1
+      maxMessageBytes: 1048576
+      retryMax: 3
+      retryBackoffMs: 100
+      flushFrequencyMs: 500
+      flushMessages: 100
+    consumer:
+      bootstrapServers:
+        - ${KAFKA_BOOTSTRAP_SERVERS}
+      groupId: ptm-schedule-group
+      autoOffsetReset: earliest
+      enableAutoCommit: false
+      sessionTimeoutMs: 30000
+      heartbeatMs: 10000
+      maxPollRecords: 100
+      fetchMinBytes: 1
+      fetchMaxWaitMs: 500
+
+external:
+  services:
+    accountService:
+      host: ${ACCOUNT_SERVICE_HOST}
+      port: ${ACCOUNT_SERVICE_PORT}
+      timeout: 15s
