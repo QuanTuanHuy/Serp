@@ -3,13 +3,10 @@ Author: QuanTuanHuy
 Description: Part of Serp Project
 */
 
-package entity
+package response
 
-import "github.com/serp/ptm-task/src/core/domain/enum"
-
-type TaskEntity struct {
-	BaseEntity
-
+type TaskResponse struct {
+	ID       int64 `json:"id"`
 	UserID   int64 `json:"userId"`
 	TenantID int64 `json:"tenantId"`
 
@@ -17,7 +14,7 @@ type TaskEntity struct {
 	Description *string `json:"description,omitempty"`
 
 	Priority      string   `json:"priority"`
-	PriorityScore *float64 `json:"priorityScore"`
+	PriorityScore *float64 `json:"priorityScore,omitempty"`
 
 	EstimatedDurationMin *int `json:"estimatedDurationMin,omitempty"`
 	ActualDurationMin    *int `json:"actualDurationMin,omitempty"`
@@ -30,7 +27,8 @@ type TaskEntity struct {
 	Category *string  `json:"category,omitempty"`
 	Tags     []string `json:"tags,omitempty"`
 
-	ParentTaskID *int64 `json:"parentTaskId,omitempty"`
+	ParentTaskID     *int64  `json:"parentTaskId,omitempty"`
+	DependentTaskIDs []int64 `json:"dependentTaskIds,omitempty"`
 
 	ProjectID *int64 `json:"projectId,omitempty"`
 
@@ -46,42 +44,33 @@ type TaskEntity struct {
 	Status       string `json:"status"`
 	ActiveStatus string `json:"activeStatus"`
 
+	Notes      *string `json:"notes,omitempty"`
 	ExternalID *string `json:"externalId,omitempty"`
 	Source     string  `json:"source"`
 
 	CompletedAt *int64 `json:"completedAt,omitempty"`
+
+	CreatedAt int64 `json:"createdAt"`
+	UpdatedAt int64 `json:"updatedAt"`
+
+	// Computed fields
+	IsOverdue           *bool  `json:"isOverdue,omitempty"`
+	CanBeScheduled      *bool  `json:"canBeScheduled,omitempty"`
+	DeadlineRemainingMs *int64 `json:"deadlineRemainingMs,omitempty"`
 }
 
-func NewTaskEntity() *TaskEntity {
-	return &TaskEntity{
-		Priority:     string(enum.PriorityMedium),
-		IsFlexible:   true,
-		ActiveStatus: string(enum.Active),
-		Status:       string(enum.StatusTodo),
-		Source:       "manual",
-		Tags:         []string{},
-	}
-}
+type TaskStatsResponse struct {
+	TotalTasks      int `json:"totalTasks"`
+	TodoTasks       int `json:"todoTasks"`
+	InProgressTasks int `json:"inProgressTasks"`
+	CompletedTasks  int `json:"completedTasks"`
+	OverdueTasks    int `json:"overdueTasks"`
 
-func (t *TaskEntity) IsOverdue(currentTimeMs int64) bool {
-	if t.DeadlineMs == nil {
-		return false
-	}
-	return currentTimeMs > *t.DeadlineMs && t.Status != "DONE" && t.Status != "CANCELLED"
-}
+	TotalEstimatedMin int `json:"totalEstimatedMin"`
+	TotalActualMin    int `json:"totalActualMin"`
 
-func (t *TaskEntity) CanBeScheduled(currentTimeMs int64) bool {
-	if t.EarliestStartMs == nil {
-		return true
-	}
-	return currentTimeMs >= *t.EarliestStartMs
-}
-
-func (t *TaskEntity) GetPriorityScore() float64 {
-	if t.PriorityScore != nil {
-		return *t.PriorityScore
-	}
-
-	priority := enum.TaskPriority(t.Priority)
-	return priority.GetScore()
+	DeepWorkTasks     int `json:"deepWorkTasks"`
+	MeetingTasks      int `json:"meetingTasks"`
+	RecurringTasks    int `json:"recurringTasks"`
+	TasksWithDeadline int `json:"tasksWithDeadline"`
 }

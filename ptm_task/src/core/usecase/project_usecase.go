@@ -34,6 +34,7 @@ type IProjectUseCase interface {
 	GetProjectByID(ctx context.Context, userID int64, projectID int64) (*entity.ProjectEntity, error)
 	GetProjectWithStats(ctx context.Context, userID int64, projectID int64) (*entity.ProjectEntity, error)
 	GetProjectsByUserID(ctx context.Context, userID int64, filter *store.ProjectFilter) ([]*entity.ProjectEntity, error)
+	CountProjectsByUserID(ctx context.Context, userID int64, filter *store.ProjectFilter) (int64, error)
 	GetProjectsWithStats(ctx context.Context, userID int64, filter *store.ProjectFilter) ([]*entity.ProjectEntity, error)
 	GetFavoriteProjects(ctx context.Context, userID int64) ([]*entity.ProjectEntity, error)
 	GetOverdueProjects(ctx context.Context, userID int64) ([]*entity.ProjectEntity, error)
@@ -162,6 +163,10 @@ func (u *projectUseCase) GetProjectsByUserID(ctx context.Context, userID int64, 
 	return u.projectService.GetProjectsByUserID(ctx, userID, filter)
 }
 
+func (u *projectUseCase) CountProjectsByUserID(ctx context.Context, userID int64, filter *store.ProjectFilter) (int64, error) {
+	return u.projectService.CountProjectsByUserID(ctx, userID, filter)
+}
+
 func (u *projectUseCase) GetProjectsWithStats(ctx context.Context, userID int64, filter *store.ProjectFilter) ([]*entity.ProjectEntity, error) {
 	return u.projectService.GetProjectsWithStats(ctx, userID, filter)
 }
@@ -193,7 +198,7 @@ func (u *projectUseCase) AddTaskToProject(ctx context.Context, userID int64, pro
 		}
 
 		task.ProjectID = &projectID
-		if err := u.taskService.UpdateTask(ctx, tx, userID, task); err != nil {
+		if _, err := u.taskService.UpdateTask(ctx, tx, userID, task); err != nil {
 			return err
 		}
 
@@ -213,7 +218,7 @@ func (u *projectUseCase) RemoveTaskFromProject(ctx context.Context, userID int64
 
 		oldProjectID := task.ProjectID
 		task.ProjectID = nil
-		if err := u.taskService.UpdateTask(ctx, tx, userID, task); err != nil {
+		if _, err := u.taskService.UpdateTask(ctx, tx, userID, task); err != nil {
 			return err
 		}
 
@@ -244,7 +249,7 @@ func (u *projectUseCase) MoveTaskToProject(ctx context.Context, userID int64, ta
 
 		oldProjectID := task.ProjectID
 		task.ProjectID = &newProjectID
-		if err := u.taskService.UpdateTask(ctx, tx, userID, task); err != nil {
+		if _, err := u.taskService.UpdateTask(ctx, tx, userID, task); err != nil {
 			return err
 		}
 

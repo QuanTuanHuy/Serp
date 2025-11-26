@@ -15,7 +15,9 @@ import (
 
 type ProjectController struct {
 	projectUseCase usecase.IProjectUseCase
+	taskUseCase    usecase.ITaskUseCase
 	mapper         *mapper.ProjectMapper
+	taskMapper     *mapper.TaskMapper
 }
 
 func (pc *ProjectController) CreateProject(c *gin.Context) {
@@ -57,8 +59,18 @@ func (pc *ProjectController) GetAllProjects(c *gin.Context) {
 		utils.ErrorHandle(c, err)
 		return
 	}
+	if len(projects) == 0 {
+		utils.SuccessfulHandlePagination(c, "No projects found", projects, 0, filter.Page, filter.PageSize)
+		return
+	}
+	count, err := pc.projectUseCase.CountProjectsByUserID(
+		c.Request.Context(), userID, pc.mapper.FilterMapper(&filter))
+	if err != nil {
+		utils.ErrorHandle(c, err)
+		return
+	}
 
-	utils.SuccessfulHandle(c, "Projects retrieved successfully", pc.mapper.EntitiesToResponses(projects, false))
+	utils.SuccessfulHandlePagination(c, "Projects retrieved successfully", pc.mapper.EntitiesToResponses(projects, false), count, filter.Page, filter.PageSize)
 }
 
 func (pc *ProjectController) GetProjectByID(c *gin.Context) {
@@ -76,6 +88,23 @@ func (pc *ProjectController) GetProjectByID(c *gin.Context) {
 		return
 	}
 	utils.SuccessfulHandle(c, "Project retrieved successfully", pc.mapper.EntityToResponse(project, false))
+}
+
+func (pc *ProjectController) GetTasksByProjectID(c *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		return
+	}
+	projectID, valid := utils.ValidateAndParseID(c, "id")
+	if !valid {
+		return
+	}
+	tasks, err := pc.taskUseCase.GetTasksByProjectID(c.Request.Context(), userID, projectID)
+	if err != nil {
+		utils.ErrorHandle(c, err)
+		return
+	}
+	utils.SuccessfulHandle(c, "Tasks retrieved successfully", pc.taskMapper.EntitiesToResponses(tasks))
 }
 
 func (pc *ProjectController) UpdateProject(c *gin.Context) {
@@ -117,9 +146,11 @@ func (pc *ProjectController) DeleteProject(c *gin.Context) {
 	utils.SuccessfulHandle(c, "Project deleted successfully", nil)
 }
 
-func NewProjectController(projectUseCase usecase.IProjectUseCase) *ProjectController {
+func NewProjectController(projectUseCase usecase.IProjectUseCase, taskUseCase usecase.ITaskUseCase) *ProjectController {
 	return &ProjectController{
 		projectUseCase: projectUseCase,
+		taskUseCase:    taskUseCase,
 		mapper:         mapper.NewProjectMapper(),
+		taskMapper:     mapper.NewTaskMapper(),
 	}
 }

@@ -46,7 +46,6 @@ type TaskModel struct {
 	Status       string `gorm:"type:varchar(20);not null;default:'TODO';index:idx_task_user_status,priority:2;index:idx_task_project_status,priority:2"`
 	ActiveStatus string `gorm:"type:varchar(20);not null;default:'ACTIVE'"`
 
-	Notes      *string `gorm:"type:text"`
 	ExternalID *string `gorm:"type:varchar(100);index:idx_task_external_id,unique"`
 	Source     string  `gorm:"type:varchar(50);not null;default:'manual'"`
 
