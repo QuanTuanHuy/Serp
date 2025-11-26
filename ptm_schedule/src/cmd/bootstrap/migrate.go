@@ -15,7 +15,6 @@ import (
 func InitializeDB(db *gorm.DB) {
 	err := db.AutoMigrate(
 		&model.SchedulePlanModel{},
-		&model.ScheduleGroupModel{},
 		&model.ScheduleTaskModel{},
 		&model.TimeBubblesModel{},
 		&model.ScheduleDayModel{},

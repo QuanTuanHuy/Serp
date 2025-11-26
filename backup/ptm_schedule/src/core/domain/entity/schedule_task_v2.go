@@ -7,7 +7,7 @@ package entity
 
 import "github.com/serp/ptm-schedule/src/core/domain/enum"
 
-type ScheduleTaskEntity struct {
+type ScheduleTaskV2Entity struct {
 	BaseEntity
 	UserID   int64 `json:"userId"`
 	TenantID int64 `json:"tenantId"`
