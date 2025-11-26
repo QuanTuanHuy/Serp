@@ -54,14 +54,6 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 			scheduleGroupV1.DELETE("/:id", p.ScheduleGroupController.DeleteScheduleGroup)
 		}
 
-		scheduleTaskV1 := requiredAuthV1.Group("/schedule-tasks")
-		{
-			// scheduleTaskV1.GET("/tasks", p.ScheduleTaskController.GetListTaskByUserID)
-			scheduleTaskV1.GET("/batch-tasks", p.ScheduleTaskController.GetBatchTasks)
-			// scheduleTaskV1.POST("/choose-task-batch", p.ScheduleTaskController.ChooseTaskBatch)
-			scheduleTaskV1.GET("/detail", p.ScheduleTaskController.GetScheduleTaskDetail)
-		}
-
 		availabilityV1 := requiredAuthV1.Group("/availability-calendar")
 		{
 			availabilityV1.GET("", p.AvailabilityCalendarController.GetAvailability)

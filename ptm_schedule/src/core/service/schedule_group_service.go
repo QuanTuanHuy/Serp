@@ -55,16 +55,16 @@ func (s *ScheduleGroupService) GetScheduleGroupByID(ctx context.Context, ID int6
 }
 
 func (s *ScheduleGroupService) DeleteScheduleGroup(ctx context.Context, tx *gorm.DB, ID int64) error {
-	err := s.scheduleTaskPort.DeleteByScheduleGroupID(ctx, tx, ID)
-	if err != nil {
-		log.Error(ctx, "Error deleting tasks in DeleteScheduleGroup: ", err)
-		return err
-	}
-	err = s.scheduleGroupPort.DeleteScheduleGroup(ctx, tx, ID)
-	if err != nil {
-		log.Error(ctx, "Error in DeleteScheduleGroup: ", err)
-		return err
-	}
+	// err := s.scheduleTaskPort.DeleteByScheduleGroupID(ctx, tx, ID)
+	// if err != nil {
+	// 	log.Error(ctx, "Error deleting tasks in DeleteScheduleGroup: ", err)
+	// 	return err
+	// }
+	// err = s.scheduleGroupPort.DeleteScheduleGroup(ctx, tx, ID)
+	// if err != nil {
+	// 	log.Error(ctx, "Error in DeleteScheduleGroup: ", err)
+	// 	return err
+	// }
 	return nil
 }
 

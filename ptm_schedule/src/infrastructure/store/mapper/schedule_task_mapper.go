@@ -14,75 +14,149 @@ import (
 	"github.com/serp/ptm-schedule/src/infrastructure/store/model"
 )
 
-func ToScheduleTaskEntity(model *model.ScheduleTaskModel) *entity.ScheduleTaskEntity {
-	if model == nil {
+func ToScheduleTaskEntity(m *model.ScheduleTaskModel) *entity.ScheduleTaskEntity {
+	if m == nil {
 		return nil
 	}
-	var priorities []enum.Priority
-	err := json.Unmarshal([]byte(model.Priority), &priorities)
-	if err != nil {
-		priorities = []enum.Priority{}
+
+	var dependentTaskIDs []int64
+	if m.DependentTaskIDs != "" {
+		_ = json.Unmarshal([]byte(m.DependentTaskIDs), &dependentTaskIDs)
+	}
+
+	var earliestStartMs *int64
+	if m.EarliestStartMs != nil {
+		ms := m.EarliestStartMs.UnixMilli()
+		earliestStartMs = &ms
+	}
+
+	var deadlineMs *int64
+	if m.DeadlineMs != nil {
+		ms := m.DeadlineMs.UnixMilli()
+		deadlineMs = &ms
+	}
+
+	var preferredStartMs *int64
+	if m.PreferredStartMs != nil {
+		ms := m.PreferredStartMs.UnixMilli()
+		preferredStartMs = &ms
+	}
+
+	var pinnedStartMs *int64
+	if m.PinnedStartMs != nil {
+		ms := m.PinnedStartMs.UnixMilli()
+		pinnedStartMs = &ms
+	}
+
+	var pinnedEndMs *int64
+	if m.PinnedEndMs != nil {
+		ms := m.PinnedEndMs.UnixMilli()
+		pinnedEndMs = &ms
 	}
 
 	return &entity.ScheduleTaskEntity{
 		BaseEntity: entity.BaseEntity{
-			ID:        model.ID,
-			CreatedAt: model.CreatedAt.UnixMilli(),
-			UpdatedAt: model.UpdatedAt.UnixMilli(),
+			ID:        m.ID,
+			CreatedAt: m.CreatedAt.UnixMilli(),
+			UpdatedAt: m.UpdatedAt.UnixMilli(),
 		},
-		TaskID:               model.TaskID,
-		Title:                model.Title,
-		Priority:             priorities,
-		Status:               enum.Status(model.Status),
-		StartDate:            model.StartDate.UnixMilli(),
-		Deadline:             model.Deadline.UnixMilli(),
-		Duration:             model.Duration,
-		ActiveStatus:         enum.ActiveStatus(model.ActiveStatus),
-		PreferenceLevel:      model.PreferenceLevel,
-		IsSynchronizedWithWO: model.IsSynchronizedWithWO,
-		TaskOrder:            model.TaskOrder,
-		Weight:               model.Weight,
-		StopTime:             model.StopTime,
-		TaskBatch:            model.TaskBatch,
-		SchedulePlanID:       model.SchedulePlanID,
-		Repeat:               enum.RepeatLevel(model.Repeat),
-		ScheduleGroupID:      model.ScheduleGroupID,
+		UserID:              m.UserID,
+		TenantID:            m.TenantID,
+		SchedulePlanID:      m.SchedulePlanID,
+		TaskID:              m.TaskID,
+		TaskSnapshotHash:    m.TaskSnapshotHash,
+		Title:               m.Title,
+		DurationMin:         m.DurationMin,
+		Priority:            enum.Priority(m.Priority),
+		PriorityScore:       m.PriorityScore,
+		Category:            m.Category,
+		IsDeepWork:          m.IsDeepWork,
+		EarliestStartMs:     earliestStartMs,
+		DeadlineMs:          deadlineMs,
+		PreferredStartMs:    preferredStartMs,
+		AllowSplit:          m.AllowSplit,
+		MinSplitDurationMin: m.MinSplitDurationMin,
+		MaxSplitCount:       m.MaxSplitCount,
+		IsPinned:            m.IsPinned,
+		PinnedStartMs:       pinnedStartMs,
+		PinnedEndMs:         pinnedEndMs,
+		DependentTaskIDs:    dependentTaskIDs,
+		BufferBeforeMin:     m.BufferBeforeMin,
+		BufferAfterMin:      m.BufferAfterMin,
+		ScheduleStatus:      enum.ScheduleTaskStatus(m.ScheduleStatus),
+		UnscheduledReason:   m.UnscheduledReason,
 	}
 }
 
-func ToScheduleTaskModel(entity *entity.ScheduleTaskEntity) *model.ScheduleTaskModel {
-	if entity == nil {
+func ToScheduleTaskModel(e *entity.ScheduleTaskEntity) *model.ScheduleTaskModel {
+	if e == nil {
 		return nil
 	}
-	b, err := json.Marshal(entity.Priority)
-	var priorityStr string
+
+	dependentTaskIDsJSON, err := json.Marshal(e.DependentTaskIDs)
 	if err != nil {
-		priorityStr = "[]"
-	} else {
-		priorityStr = string(b)
+		dependentTaskIDsJSON = []byte("[]")
+	}
+
+	var earliestStartMs *time.Time
+	if e.EarliestStartMs != nil {
+		t := time.UnixMilli(*e.EarliestStartMs)
+		earliestStartMs = &t
+	}
+
+	var deadlineMs *time.Time
+	if e.DeadlineMs != nil {
+		t := time.UnixMilli(*e.DeadlineMs)
+		deadlineMs = &t
+	}
+
+	var preferredStartMs *time.Time
+	if e.PreferredStartMs != nil {
+		t := time.UnixMilli(*e.PreferredStartMs)
+		preferredStartMs = &t
+	}
+
+	var pinnedStartMs *time.Time
+	if e.PinnedStartMs != nil {
+		t := time.UnixMilli(*e.PinnedStartMs)
+		pinnedStartMs = &t
+	}
+
+	var pinnedEndMs *time.Time
+	if e.PinnedEndMs != nil {
+		t := time.UnixMilli(*e.PinnedEndMs)
+		pinnedEndMs = &t
 	}
 
 	return &model.ScheduleTaskModel{
 		BaseModel: model.BaseModel{
-			ID: entity.ID,
+			ID: e.ID,
 		},
-		TaskID:               entity.TaskID,
-		Title:                entity.Title,
-		Priority:             priorityStr,
-		Status:               string(entity.Status),
-		StartDate:            time.UnixMilli(entity.StartDate),
-		Deadline:             time.UnixMilli(entity.Deadline),
-		Duration:             entity.Duration,
-		ActiveStatus:         string(entity.ActiveStatus),
-		PreferenceLevel:      entity.PreferenceLevel,
-		IsSynchronizedWithWO: entity.IsSynchronizedWithWO,
-		TaskOrder:            entity.TaskOrder,
-		Weight:               entity.Weight,
-		StopTime:             entity.StopTime,
-		TaskBatch:            entity.TaskBatch,
-		SchedulePlanID:       entity.SchedulePlanID,
-		Repeat:               string(entity.Repeat),
-		ScheduleGroupID:      entity.ScheduleGroupID,
+		UserID:              e.UserID,
+		TenantID:            e.TenantID,
+		SchedulePlanID:      e.SchedulePlanID,
+		TaskID:              e.TaskID,
+		TaskSnapshotHash:    e.TaskSnapshotHash,
+		Title:               e.Title,
+		DurationMin:         e.DurationMin,
+		Priority:            string(e.Priority),
+		PriorityScore:       e.PriorityScore,
+		Category:            e.Category,
+		IsDeepWork:          e.IsDeepWork,
+		EarliestStartMs:     earliestStartMs,
+		DeadlineMs:          deadlineMs,
+		PreferredStartMs:    preferredStartMs,
+		AllowSplit:          e.AllowSplit,
+		MinSplitDurationMin: e.MinSplitDurationMin,
+		MaxSplitCount:       e.MaxSplitCount,
+		IsPinned:            e.IsPinned,
+		PinnedStartMs:       pinnedStartMs,
+		PinnedEndMs:         pinnedEndMs,
+		DependentTaskIDs:    string(dependentTaskIDsJSON),
+		BufferBeforeMin:     e.BufferBeforeMin,
+		BufferAfterMin:      e.BufferAfterMin,
+		ScheduleStatus:      string(e.ScheduleStatus),
+		UnscheduledReason:   e.UnscheduledReason,
 	}
 }
 

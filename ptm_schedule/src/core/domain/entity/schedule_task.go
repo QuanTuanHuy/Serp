@@ -1,34 +1,45 @@
+/*
+Author: QuanTuanHuy
+Description: Part of Serp Project
+*/
+
 package entity
 
 import "github.com/serp/ptm-schedule/src/core/domain/enum"
 
 type ScheduleTaskEntity struct {
 	BaseEntity
-	TaskID               int64             `json:"taskId"`
-	Title                string            `json:"title"`
-	Priority             []enum.Priority   `json:"priority"`
-	Status               enum.Status       `json:"status"`
-	StartDate            int64             `json:"startDate"`
-	Deadline             int64             `json:"deadline"`
-	Duration             float64           `json:"duration"`
-	ActiveStatus         enum.ActiveStatus `json:"activeStatus"`
-	PreferenceLevel      int32             `json:"preferenceLevel"`
-	IsSynchronizedWithWO bool              `json:"isSynchronizedWithWO"`
-	TaskOrder            int32             `json:"taskOrder"`
-	Weight               float64           `json:"weight"`
-	StopTime             float64           `json:"stopTime"`
-	TaskBatch            int32             `json:"taskBatch"`
-	SchedulePlanID       int64             `json:"schedulePlanId"`
-	Repeat               enum.RepeatLevel  `json:"repeat"`
-	ScheduleGroupID      int64             `json:"scheduleGroupId"`
-}
+	UserID   int64 `json:"userId"`
+	TenantID int64 `json:"tenantId"`
 
-func (st *ScheduleTaskEntity) MarkAsSynchronized() {
-	st.IsSynchronizedWithWO = true
-}
+	SchedulePlanID int64 `json:"schedulePlanId"`
 
-func (st *ScheduleTaskEntity) UpdateOptimizeTask(taskOrder int32, weight, stopTime float64) {
-	st.TaskOrder = taskOrder
-	st.Weight = weight
-	st.StopTime = stopTime
+	TaskID           int64  `json:"taskId"`
+	TaskSnapshotHash string `json:"taskSnapshotHash"`
+	Title            string `json:"title"`
+
+	DurationMin   int           `json:"durationMin"`
+	Priority      enum.Priority `json:"priority"`
+	PriorityScore float64       `json:"priorityScore"`
+	Category      *string       `json:"category"`
+	IsDeepWork    bool          `json:"isDeepWork"`
+
+	EarliestStartMs  *int64 `json:"earliestStartMs,omitempty"`
+	DeadlineMs       *int64 `json:"deadlineMs,omitempty"`
+	PreferredStartMs *int64 `json:"preferredStartMs,omitempty"`
+
+	AllowSplit          bool `json:"allowSplit"`
+	MinSplitDurationMin int  `json:"minSplitDurationMin"`
+	MaxSplitCount       int  `json:"maxSplitCount"`
+
+	IsPinned      bool   `json:"isPinned"`
+	PinnedStartMs *int64 `json:"pinnedStartMs,omitempty"`
+	PinnedEndMs   *int64 `json:"pinnedEndMs,omitempty"`
+
+	DependentTaskIDs []int64 `json:"dependentTaskIds"`
+	BufferBeforeMin  int     `json:"bufferBeforeMin"`
+	BufferAfterMin   int     `json:"bufferAfterMin"`
+
+	ScheduleStatus    enum.ScheduleTaskStatus `json:"scheduleStatus"`
+	UnscheduledReason *string                 `json:"unscheduledReason,omitempty"`
 }

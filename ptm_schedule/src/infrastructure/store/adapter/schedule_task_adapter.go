@@ -21,17 +21,14 @@ type ScheduleTaskStoreAdapter struct {
 	db *gorm.DB
 }
 
-func (s *ScheduleTaskStoreAdapter) GetScheduleTaskByTaskID(ctx context.Context, taskID int64) (*entity.ScheduleTaskEntity, error) {
-	var scheduleTaskModel model.ScheduleTaskModel
+func (s *ScheduleTaskStoreAdapter) GetScheduleTaskByTaskID(ctx context.Context, taskID int64) ([]*entity.ScheduleTaskEntity, error) {
+	var scheduleTasksModel []*model.ScheduleTaskModel
 	if err := s.db.WithContext(ctx).
 		Where("task_id = ?", taskID).
-		First(&scheduleTaskModel).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
+		Find(&scheduleTasksModel).Error; err != nil {
 		return nil, err
 	}
-	return mapper.ToScheduleTaskEntity(&scheduleTaskModel), nil
+	return mapper.ToScheduleTaskEntities(scheduleTasksModel), nil
 }
 
 func (s *ScheduleTaskStoreAdapter) CreateScheduleTask(ctx context.Context, tx *gorm.DB, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error) {
@@ -46,16 +43,6 @@ func (s *ScheduleTaskStoreAdapter) GetBySchedulePlanID(ctx context.Context, sche
 	var scheduleTasksModel []*model.ScheduleTaskModel
 	if err := s.db.WithContext(ctx).
 		Where("schedule_plan_id = ?", schedulePlanID).
-		Find(&scheduleTasksModel).Error; err != nil {
-		return nil, err
-	}
-	return mapper.ToScheduleTaskEntities(scheduleTasksModel), nil
-}
-
-func (s *ScheduleTaskStoreAdapter) GetByTaskBatch(ctx context.Context, schedulePlanID int64, taskBatch int32) ([]*entity.ScheduleTaskEntity, error) {
-	var scheduleTasksModel []*model.ScheduleTaskModel
-	if err := s.db.WithContext(ctx).
-		Where("schedule_plan_id = ? AND task_batch = ?", schedulePlanID, taskBatch).
 		Find(&scheduleTasksModel).Error; err != nil {
 		return nil, err
 	}
@@ -99,12 +86,6 @@ func (s *ScheduleTaskStoreAdapter) GetTopNewestTasks(ctx context.Context, schedu
 		return nil, err
 	}
 	return mapper.ToScheduleTaskEntities(scheduleTasks), nil
-}
-
-func (s *ScheduleTaskStoreAdapter) DeleteByScheduleGroupID(ctx context.Context, tx *gorm.DB, scheduleGroupID int64) error {
-	return tx.WithContext(ctx).
-		Where("schedule_group_id = ?", scheduleGroupID).
-		Delete(&model.ScheduleTaskModel{}).Error
 }
 
 func NewScheduleTaskStoreAdapter(db *gorm.DB) port.IScheduleTaskPort {
