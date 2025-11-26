@@ -56,6 +56,14 @@ export const OrderItemsTab: React.FC<OrderItemsTabProps> = ({
   const { success, error: showError } = useNotification();
   const { hasAnyRole } = usePermissions();
   const canEditOrder = hasAnyRole(['PURCHASE_STAFF', 'PURCHASE_ADMIN']);
+
+  // Only allow editing order items when order status is CREATED, APPROVED, or CANCELLED
+  const canEditOrderData =
+    canEditOrder &&
+    ['CREATED', 'APPROVED', 'CANCELLED'].includes(
+      order.statusId?.toUpperCase()
+    );
+
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
 

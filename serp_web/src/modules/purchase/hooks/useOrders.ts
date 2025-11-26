@@ -13,6 +13,7 @@ import {
   useUpdateOrderMutation,
   useApproveOrderMutation,
   useCancelOrderMutation,
+  useMarkOrderAsReadyMutation,
   useAddProductToOrderMutation,
   useUpdateOrderItemMutation,
   useDeleteOrderItemMutation,
@@ -70,6 +71,8 @@ export function useOrders() {
   const [updateOrder, { isLoading: isUpdating }] = useUpdateOrderMutation();
   const [approveOrder, { isLoading: isApproving }] = useApproveOrderMutation();
   const [cancelOrder, { isLoading: isCancelling }] = useCancelOrderMutation();
+  const [markOrderAsReady, { isLoading: isMarkingReady }] =
+    useMarkOrderAsReadyMutation();
   const [addProductToOrder, { isLoading: isAddingProduct }] =
     useAddProductToOrderMutation();
   const [updateOrderItem, { isLoading: isUpdatingItem }] =
@@ -279,6 +282,32 @@ export function useOrders() {
     [cancelOrder, success, showError, refetch]
   );
 
+  const handleMarkOrderAsReady = useCallback(
+    async (orderId: string) => {
+      try {
+        const result = await markOrderAsReady(orderId).unwrap();
+        if (result.code === 200 && result.status.toLowerCase() === 'success') {
+          success('Đơn hàng đã sẵn sàng giao', {
+            description: result.message,
+          });
+          refetch();
+          return true;
+        } else {
+          showError('Không thể đánh dấu đơn hàng sẵn sàng giao', {
+            description: result.message,
+          });
+          return false;
+        }
+      } catch (err: any) {
+        showError('Lỗi khi đánh dấu đơn hàng sẵn sàng giao', {
+          description: err?.data?.message || 'An unexpected error occurred',
+        });
+        return false;
+      }
+    },
+    [markOrderAsReady, success, showError, refetch]
+  );
+
   const handleAddProductToOrder = useCallback(
     async (orderId: string, data: AddOrderItemRequest) => {
       try {
@@ -377,6 +406,7 @@ export function useOrders() {
     isUpdating,
     isApproving,
     isCancelling,
+    isMarkingReady,
     isAddingProduct,
     isUpdatingItem,
     isDeletingItem,
@@ -404,6 +434,7 @@ export function useOrders() {
     handleUpdateOrder,
     handleApproveOrder,
     handleCancelOrder,
+    handleMarkOrderAsReady,
     handleAddProductToOrder,
     handleUpdateOrderItem,
     handleDeleteOrderItem,

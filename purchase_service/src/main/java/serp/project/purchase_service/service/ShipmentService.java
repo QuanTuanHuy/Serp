@@ -158,12 +158,12 @@ public class ShipmentService {
             log.error("[ShipmentService] Shipment {} not found for tenant {}", shipmentId, tenantId);
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
-        shipmentRepository.delete(shipment);
-        log.info("[ShipmentService] Deleted shipment {} for tenant {}", shipmentId, tenantId);
-
         inventoryItemDetailRepository.deleteByShipmentId(shipmentId);
         log.info("[ShipmentService] Deleted inventory item details for shipment {} and tenant {}", shipmentId,
                 tenantId);
+
+        shipmentRepository.delete(shipment);
+        log.info("[ShipmentService] Deleted shipment {} for tenant {}", shipmentId, tenantId);
     }
 
 }

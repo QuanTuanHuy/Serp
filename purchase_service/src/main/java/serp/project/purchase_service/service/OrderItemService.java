@@ -115,11 +115,11 @@ public class OrderItemService {
                     tenantId);
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
-        orderItemRepository.delete(orderItem);
-        log.info("[OrderItemService] Deleted order item {} for order {} and tenant {}", orderItemId, orderId,
-                tenantId);
         inventoryItemDetailRepository.deleteByOrderItemId(orderItemId);
         log.info("[OrderItemService] Deleted inventory item details for order item {} for tenant {}", orderItemId,
+                tenantId);
+        orderItemRepository.delete(orderItem);
+        log.info("[OrderItemService] Deleted order item {} for order {} and tenant {}", orderItemId, orderId,
                 tenantId);
     }
 

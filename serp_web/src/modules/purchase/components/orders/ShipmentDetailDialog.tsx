@@ -38,8 +38,10 @@ import { Loader2, Plus, Edit2, Trash2, Save, X, Building2 } from 'lucide-react';
 import {
   useGetShipmentByIdQuery,
   useGetFacilitiesQuery,
+  useGetProductsQuery,
 } from '../../services/purchaseApi';
 import { formatDate } from '@/shared/utils';
+import { useNotification } from '@/shared/hooks';
 import type {
   ShipmentItemAddRequest,
   InventoryItemDetailUpdateRequest,
@@ -62,6 +64,7 @@ interface ShipmentDetailDialogProps {
   shipmentId: string | null;
   order: OrderDetail;
   canEdit: boolean;
+  existingShipments: any[];
   onUpdateShipment: (
     shipmentId: string,
     data: UpdateShipmentRequest
@@ -89,6 +92,7 @@ export const ShipmentDetailDialog: React.FC<ShipmentDetailDialogProps> = ({
   shipmentId,
   order,
   canEdit,
+  existingShipments,
   onUpdateShipment,
   onUpdateFacility,
   onAddItem,
@@ -96,6 +100,7 @@ export const ShipmentDetailDialog: React.FC<ShipmentDetailDialogProps> = ({
   onDeleteItem,
   isLoading = false,
 }) => {
+  const notification = useNotification();
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [isEditingShipment, setIsEditingShipment] = useState(false);
@@ -121,7 +126,56 @@ export const ShipmentDetailDialog: React.FC<ShipmentDetailDialogProps> = ({
     [facilitiesResponse]
   );
 
-  // Get available products (not yet in shipment)
+  // Fetch products
+  const { data: productsResponse } = useGetProductsQuery({
+    page: 1,
+    size: 1000,
+  });
+
+  const products = useMemo(
+    () => productsResponse?.data?.items || [],
+    [productsResponse]
+  );
+
+  // Calculate remaining quantities for each product
+  const productQuantities = useMemo(() => {
+    if (!shipment) return new Map();
+
+    const quantityMap = new Map();
+
+    // Initialize with order quantities
+    order.orderItems?.forEach((item) => {
+      quantityMap.set(item.productId, {
+        orderedQuantity: item.quantity,
+        usedQuantity: 0,
+        currentShipmentQuantity: 0,
+        orderItemId: item.id,
+      });
+    });
+
+    // Sum quantities from all shipments except current one
+    existingShipments.forEach((s) => {
+      if (s.id === shipmentId) return; // Skip current shipment
+      s.items?.forEach((item: any) => {
+        const data = quantityMap.get(item.productId);
+        if (data) {
+          data.usedQuantity += item.quantity;
+        }
+      });
+    });
+
+    // Track current shipment quantities
+    shipment.items?.forEach((item) => {
+      const data = quantityMap.get(item.productId);
+      if (data) {
+        data.currentShipmentQuantity = item.quantity;
+      }
+    });
+
+    return quantityMap;
+  }, [shipment, order, existingShipments, shipmentId]);
+
+  // Get available products (not yet in current shipment)
   const availableProducts = useMemo(() => {
     if (!shipment) return [];
 
@@ -130,10 +184,13 @@ export const ShipmentDetailDialog: React.FC<ShipmentDetailDialogProps> = ({
     );
 
     return (
-      order.orderItems?.filter((item) => !usedProductIds.has(item.productId)) ||
-      []
+      order.orderItems?.filter((item) => {
+        if (usedProductIds.has(item.productId)) return false;
+        const data = productQuantities.get(item.productId);
+        return data && data.usedQuantity < data.orderedQuantity;
+      }) || []
     );
-  }, [shipment, order]);
+  }, [shipment, order, productQuantities]);
 
   // Update form for shipment
   const updateForm = useForm<UpdateShipmentFormData>({
@@ -191,6 +248,16 @@ export const ShipmentDetailDialog: React.FC<ShipmentDetailDialogProps> = ({
   const handleSaveItem = async (itemId: string) => {
     if (!shipmentId || !editingItem) return;
 
+    // Find the item being edited to get its productId
+    const currentItem = shipment?.items?.find((item) => item.id === itemId);
+    if (!currentItem) return;
+
+    const maxQuantity = getMaxQuantityForProduct(currentItem.productId);
+    if (editingItem.quantity > maxQuantity) {
+      notification.error(`Số lượng vượt quá giới hạn. Tối đa: ${maxQuantity}`);
+      return;
+    }
+
     const success = await onUpdateItem(shipmentId, itemId, {
       quantity: editingItem.quantity,
       lotId: editingItem.lotId,
@@ -221,7 +288,13 @@ export const ShipmentDetailDialog: React.FC<ShipmentDetailDialogProps> = ({
   };
 
   const handleAddNewItem = async () => {
-    if (!shipmentId) return;
+    if (!shipmentId || !newItem.productId) return;
+
+    const maxQuantity = getRemainingQuantityForNewItem(newItem.productId);
+    if (newItem.quantity > maxQuantity) {
+      notification.error(`Số lượng vượt quá giới hạn. Tối đa: ${maxQuantity}`);
+      return;
+    }
 
     const success = await onAddItem(shipmentId, {
       ...newItem,
@@ -273,10 +346,24 @@ export const ShipmentDetailDialog: React.FC<ShipmentDetailDialogProps> = ({
   };
 
   const getProductName = (productId: string) => {
-    const product = order.orderItems?.find(
-      (item) => item.productId === productId
+    const product = products.find((p) => p.id === productId);
+    return product?.name || productId;
+  };
+
+  const getMaxQuantityForProduct = (productId: string) => {
+    const data = productQuantities.get(productId);
+    if (!data) return 0;
+    // Max = ordered - used in other shipments + current quantity in this shipment
+    return (
+      data.orderedQuantity - data.usedQuantity + data.currentShipmentQuantity
     );
-    return product?.productId || productId;
+  };
+
+  const getRemainingQuantityForNewItem = (productId: string) => {
+    const data = productQuantities.get(productId);
+    if (!data) return 0;
+    // Remaining = ordered - used in other shipments
+    return data.orderedQuantity - data.usedQuantity;
   };
 
   const getProductUnit = (productId: string) => {
@@ -313,7 +400,7 @@ export const ShipmentDetailDialog: React.FC<ShipmentDetailDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='max-w-6xl max-h-[90vh] overflow-y-auto'>
+      <DialogContent className='max-w-[calc(100%-2rem)] sm:max-w-7xl max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
           <div className='flex items-center justify-between'>
             <DialogTitle>{shipment.shipmentName}</DialogTitle>
@@ -522,18 +609,24 @@ export const ShipmentDetailDialog: React.FC<ShipmentDetailDialogProps> = ({
                       <TableCell>{getProductName(item.productId)}</TableCell>
                       <TableCell>
                         {isEditing ? (
-                          <Input
-                            type='number'
-                            min={1}
-                            value={editingItem?.quantity || 1}
-                            onChange={(e) =>
-                              setEditingItem((prev) => ({
-                                ...prev!,
-                                quantity: Number(e.target.value),
-                              }))
-                            }
-                            className='w-20'
-                          />
+                          <div className='space-y-1'>
+                            <Input
+                              type='number'
+                              min={1}
+                              max={getMaxQuantityForProduct(item.productId)}
+                              value={editingItem?.quantity || 1}
+                              onChange={(e) =>
+                                setEditingItem((prev) => ({
+                                  ...prev!,
+                                  quantity: Number(e.target.value),
+                                }))
+                              }
+                              className='w-20'
+                            />
+                            <p className='text-xs text-muted-foreground'>
+                              Tối đa: {getMaxQuantityForProduct(item.productId)}
+                            </p>
+                          </div>
                         ) : (
                           item.quantity
                         )}
@@ -654,30 +747,54 @@ export const ShipmentDetailDialog: React.FC<ShipmentDetailDialogProps> = ({
                           <SelectValue placeholder='Chọn sản phẩm' />
                         </SelectTrigger>
                         <SelectContent>
-                          {availableProducts.map((product) => (
-                            <SelectItem
-                              key={product.id}
-                              value={product.productId}
-                            >
-                              {product.productId}
-                            </SelectItem>
-                          ))}
+                          {availableProducts.map((product) => {
+                            const productInfo = products.find(
+                              (p) => p.id === product.productId
+                            );
+                            const remaining = getRemainingQuantityForNewItem(
+                              product.productId
+                            );
+                            return (
+                              <SelectItem
+                                key={product.id}
+                                value={product.productId}
+                              >
+                                {productInfo?.name || product.productId} (Còn:{' '}
+                                {remaining})
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                     </TableCell>
                     <TableCell>
-                      <Input
-                        type='number'
-                        min={1}
-                        value={newItem.quantity}
-                        onChange={(e) =>
-                          setNewItem((prev) => ({
-                            ...prev,
-                            quantity: Number(e.target.value),
-                          }))
-                        }
-                        className='w-20'
-                      />
+                      <div className='space-y-1'>
+                        <Input
+                          type='number'
+                          min={1}
+                          max={
+                            newItem.productId
+                              ? getRemainingQuantityForNewItem(
+                                  newItem.productId
+                                )
+                              : undefined
+                          }
+                          value={newItem.quantity}
+                          onChange={(e) =>
+                            setNewItem((prev) => ({
+                              ...prev,
+                              quantity: Number(e.target.value),
+                            }))
+                          }
+                          className='w-20'
+                        />
+                        {newItem.productId && (
+                          <p className='text-xs text-muted-foreground'>
+                            Tối đa:{' '}
+                            {getRemainingQuantityForNewItem(newItem.productId)}
+                          </p>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       {newItem.productId

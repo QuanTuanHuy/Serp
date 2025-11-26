@@ -57,6 +57,11 @@ export const OrderEditDialog: React.FC<OrderEditDialogProps> = ({
   const { success, error: showError } = useNotification();
   const [updateOrder, { isLoading }] = useUpdateOrderMutation();
 
+  // Only allow editing order info when order status is CREATED, APPROVED, or CANCELLED
+  const canEditOrderInfo = ['CREATED', 'APPROVED', 'CANCELLED'].includes(
+    order.statusId?.toUpperCase()
+  );
+
   const {
     register,
     handleSubmit,
@@ -106,6 +111,16 @@ export const OrderEditDialog: React.FC<OrderEditDialogProps> = ({
           <DialogTitle>Chỉnh sửa đơn hàng</DialogTitle>
         </DialogHeader>
 
+        {!canEditOrderInfo && (
+          <div className='p-4 mb-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg'>
+            <p className='font-medium'>Không thể chỉnh sửa</p>
+            <p className='mt-1'>
+              Chỉ có thể chỉnh sửa đơn hàng khi trạng thái là Đã tạo, Đã duyệt
+              hoặc Đã hủy.
+            </p>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit(onSubmit)} className='space-y-4'>
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
             {/* Order Name */}
@@ -116,7 +131,7 @@ export const OrderEditDialog: React.FC<OrderEditDialogProps> = ({
               <Input
                 id='orderName'
                 {...register('orderName')}
-                disabled={isLoading}
+                disabled={isLoading || !canEditOrderInfo}
               />
               {errors.orderName && (
                 <p className='text-sm text-destructive'>
@@ -134,7 +149,7 @@ export const OrderEditDialog: React.FC<OrderEditDialogProps> = ({
                 id='deliveryAfterDate'
                 type='date'
                 {...register('deliveryAfterDate')}
-                disabled={isLoading}
+                disabled={isLoading || !canEditOrderInfo}
               />
               {errors.deliveryAfterDate && (
                 <p className='text-sm text-destructive'>
@@ -152,7 +167,7 @@ export const OrderEditDialog: React.FC<OrderEditDialogProps> = ({
                 id='deliveryBeforeDate'
                 type='date'
                 {...register('deliveryBeforeDate')}
-                disabled={isLoading}
+                disabled={isLoading || !canEditOrderInfo}
               />
               {errors.deliveryBeforeDate && (
                 <p className='text-sm text-destructive'>
@@ -171,7 +186,7 @@ export const OrderEditDialog: React.FC<OrderEditDialogProps> = ({
                 type='number'
                 {...register('priority', { valueAsNumber: true })}
                 min='0'
-                disabled={isLoading}
+                disabled={isLoading || !canEditOrderInfo}
               />
               {errors.priority && (
                 <p className='text-sm text-destructive'>
@@ -186,7 +201,7 @@ export const OrderEditDialog: React.FC<OrderEditDialogProps> = ({
               <Select
                 value={watch('saleChannelId')}
                 onValueChange={(value) => setValue('saleChannelId', value)}
-                disabled={isLoading}
+                disabled={isLoading || !canEditOrderInfo}
               >
                 <SelectTrigger>
                   <SelectValue placeholder='Chọn kênh bán' />
@@ -206,7 +221,7 @@ export const OrderEditDialog: React.FC<OrderEditDialogProps> = ({
                 {...register('note')}
                 placeholder='Nhập ghi chú'
                 rows={3}
-                disabled={isLoading}
+                disabled={isLoading || !canEditOrderInfo}
               />
             </div>
           </div>
@@ -220,7 +235,7 @@ export const OrderEditDialog: React.FC<OrderEditDialogProps> = ({
             >
               Hủy
             </Button>
-            <Button type='submit' disabled={isLoading}>
+            <Button type='submit' disabled={isLoading || !canEditOrderInfo}>
               {isLoading && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
               Lưu
             </Button>

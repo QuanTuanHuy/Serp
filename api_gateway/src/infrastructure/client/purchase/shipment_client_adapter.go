@@ -183,7 +183,7 @@ func (s *ShipmentClientAdapter) AddItemToShipment(ctx context.Context, shipmentI
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
 		url := fmt.Sprintf("/api/v1/shipment/create/%s/add", shipmentId)
-		httpResponse, err = s.apiClient.PATCH(ctx, url, req, headers)
+		httpResponse, err = s.apiClient.POST(ctx, url, req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call add item to shipment API: %w", err)
 		}

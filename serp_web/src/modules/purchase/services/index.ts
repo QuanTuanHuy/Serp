@@ -29,6 +29,7 @@ export {
   useUpdateOrderMutation,
   useApproveOrderMutation,
   useCancelOrderMutation,
+  useMarkOrderAsReadyMutation,
   useAddProductToOrderMutation,
   useUpdateOrderItemMutation,
   useDeleteOrderItemMutation,

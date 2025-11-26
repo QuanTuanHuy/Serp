@@ -320,6 +320,17 @@ export const purchaseApi = api.injectEndpoints({
       ],
     }),
 
+    markOrderAsReady: builder.mutation<OrderResponse, string>({
+      query: (orderId) => ({
+        url: `${PURCHASE_API_BASE_URL}/order/update/${orderId}/ready`,
+        method: 'PATCH',
+      }),
+      invalidatesTags: (result, error, orderId) => [
+        { type: 'purchase/Order', id: orderId },
+        { type: 'purchase/Order', id: 'LIST' },
+      ],
+    }),
+
     addProductToOrder: builder.mutation<
       OrderResponse,
       { orderId: string; data: AddOrderItemRequest }
@@ -680,6 +691,7 @@ export const {
   useUpdateOrderMutation,
   useApproveOrderMutation,
   useCancelOrderMutation,
+  useMarkOrderAsReadyMutation,
   useAddProductToOrderMutation,
   useUpdateOrderItemMutation,
   useDeleteOrderItemMutation,

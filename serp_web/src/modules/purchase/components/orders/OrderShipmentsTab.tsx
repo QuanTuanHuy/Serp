@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/shared/components/ui/table';
-import { Package, Plus, PackageCheck, Trash2, Eye } from 'lucide-react';
+import { Package, Plus, PackageCheck, Trash2 } from 'lucide-react';
 import { formatDate } from '@/shared/utils';
 import { useShipments } from '../../hooks/useShipments';
 import { ShipmentFormDialog } from './ShipmentFormDialog';
@@ -208,38 +208,29 @@ export const OrderShipmentsTab: React.FC<OrderShipmentsTabProps> = ({
                       </TableCell>
                       <TableCell className='text-right'>
                         <div className='flex items-center justify-end gap-2'>
-                          <Button
-                            size='sm'
-                            variant='ghost'
-                            onClick={() => handleViewDetail(shipment.id)}
-                          >
-                            <Eye className='h-4 w-4' />
-                          </Button>
-                          {showActions && (
-                            <>
-                              {order.statusId === 'READY_FOR_DELIVERY' &&
-                                shipment.statusId === 'READY' && (
-                                  <Button
-                                    size='sm'
-                                    variant='ghost'
-                                    onClick={() =>
-                                      handleImportClick(shipment.id)
-                                    }
-                                    disabled={isImporting}
-                                    title='Nhập hàng'
-                                  >
-                                    <PackageCheck className='h-4 w-4 text-green-600' />
-                                  </Button>
-                                )}
+                          {canEdit &&
+                            order.statusId === 'READY_FOR_DELIVERY' &&
+                            shipment.statusId === 'READY' && (
                               <Button
                                 size='sm'
                                 variant='ghost'
-                                onClick={() => handleDeleteClick(shipment.id)}
-                                disabled={isDeleting}
+                                onClick={() => handleImportClick(shipment.id)}
+                                disabled={isImporting}
+                                title='Nhập hàng'
                               >
-                                <Trash2 className='h-4 w-4 text-destructive' />
+                                <PackageCheck className='h-4 w-4 text-green-600' />
                               </Button>
-                            </>
+                            )}
+                          {showActions && (
+                            <Button
+                              size='sm'
+                              variant='ghost'
+                              onClick={() => handleDeleteClick(shipment.id)}
+                              disabled={isDeleting}
+                              title='Xóa phiếu nhập'
+                            >
+                              <Trash2 className='h-4 w-4 text-destructive' />
+                            </Button>
                           )}
                         </div>
                       </TableCell>
@@ -269,6 +260,7 @@ export const OrderShipmentsTab: React.FC<OrderShipmentsTabProps> = ({
         shipmentId={selectedShipmentId}
         order={order}
         canEdit={canEdit}
+        existingShipments={shipments}
         onUpdateShipment={handleUpdateShipment}
         onUpdateFacility={handleUpdateFacility}
         onAddItem={handleAddItem}

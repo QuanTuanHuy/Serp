@@ -25,7 +25,10 @@ import {
   SelectValue,
 } from '@/shared/components/ui';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
-import { useGetFacilitiesQuery } from '../../services/purchaseApi';
+import {
+  useGetFacilitiesQuery,
+  useGetProductsQuery,
+} from '../../services/purchaseApi';
 import type { OrderDetail, CreateShipmentRequest } from '../../types';
 
 const shipmentItemSchema = z.object({
@@ -76,6 +79,17 @@ export const ShipmentFormDialog: React.FC<ShipmentFormDialogProps> = ({
   const facilities = useMemo(
     () => facilitiesResponse?.data?.items || [],
     [facilitiesResponse]
+  );
+
+  // Fetch products
+  const { data: productsResponse } = useGetProductsQuery({
+    page: 1,
+    size: 1000,
+  });
+
+  const products = useMemo(
+    () => productsResponse?.data?.items || [],
+    [productsResponse]
   );
 
   // Calculate remaining quantities for each product
@@ -179,7 +193,7 @@ export const ShipmentFormDialog: React.FC<ShipmentFormDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
+      <DialogContent className='max-w-[calc(100%-2rem)] sm:max-w-6xl max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
           <DialogTitle>Tạo phiếu nhập mới</DialogTitle>
         </DialogHeader>
@@ -325,15 +339,20 @@ export const ShipmentFormDialog: React.FC<ShipmentFormDialogProps> = ({
                         <SelectValue placeholder='Chọn sản phẩm' />
                       </SelectTrigger>
                       <SelectContent>
-                        {availableProducts.map((product) => (
-                          <SelectItem
-                            key={product.productId}
-                            value={product.productId}
-                          >
-                            {product.productId} (Còn:{' '}
-                            {product.remainingQuantity})
-                          </SelectItem>
-                        ))}
+                        {availableProducts.map((product) => {
+                          const productInfo = products.find(
+                            (p) => p.id === product.productId
+                          );
+                          return (
+                            <SelectItem
+                              key={product.productId}
+                              value={product.productId}
+                            >
+                              {productInfo?.name || product.productId} (Còn:{' '}
+                              {product.remainingQuantity})
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     {errors.items?.[index]?.productId && (

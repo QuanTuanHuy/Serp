@@ -44,6 +44,7 @@ import {
   CheckCircle,
   XCircle,
   RefreshCw,
+  Truck,
 } from 'lucide-react';
 
 export default function OrdersPage() {
@@ -57,6 +58,7 @@ export default function OrdersPage() {
     isUpdating,
     isApproving,
     isCancelling,
+    isMarkingReady,
     filters,
     handleQueryChange,
     handleStatusChange,
@@ -72,6 +74,7 @@ export default function OrdersPage() {
     handleUpdateOrder,
     handleApproveOrder,
     handleCancelOrder,
+    handleMarkOrderAsReady,
     refetch,
   } = useOrders();
 
@@ -204,10 +207,13 @@ export default function OrdersPage() {
         header: '',
         accessor: 'id',
         cell: ({ row }: any) => {
-          const hasActions =
-            canManageOrders && row.statusId?.toUpperCase() === 'CREATED';
+          const statusId = row.statusId?.toUpperCase();
+          const hasActionsForCreated =
+            canManageOrders && statusId === 'CREATED';
+          const hasActionsForApproved =
+            canEditOrders && statusId === 'APPROVED';
 
-          if (!hasActions) return null;
+          if (!hasActionsForCreated && !hasActionsForApproved) return null;
 
           return (
             <DropdownMenu>
@@ -217,21 +223,34 @@ export default function OrdersPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align='end'>
-                <DropdownMenuItem
-                  onClick={() => handleApproveOrder(row.id)}
-                  disabled={isApproving}
-                >
-                  <CheckCircle className='mr-2 h-4 w-4' />
-                  Duyệt đơn hàng
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleCancelOrderClick(row.id)}
-                  disabled={isCancelling}
-                  className='text-destructive'
-                >
-                  <XCircle className='mr-2 h-4 w-4' />
-                  Hủy đơn hàng
-                </DropdownMenuItem>
+                {hasActionsForCreated && (
+                  <>
+                    <DropdownMenuItem
+                      onClick={() => handleApproveOrder(row.id)}
+                      disabled={isApproving}
+                    >
+                      <CheckCircle className='mr-2 h-4 w-4' />
+                      Duyệt đơn hàng
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleCancelOrderClick(row.id)}
+                      disabled={isCancelling}
+                      className='text-destructive'
+                    >
+                      <XCircle className='mr-2 h-4 w-4' />
+                      Hủy đơn hàng
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {hasActionsForApproved && (
+                  <DropdownMenuItem
+                    onClick={() => handleMarkOrderAsReady(row.id)}
+                    disabled={isMarkingReady}
+                  >
+                    <Truck className='mr-2 h-4 w-4' />
+                    Sẵn sàng giao
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           );
