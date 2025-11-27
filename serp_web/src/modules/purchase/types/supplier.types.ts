@@ -3,7 +3,11 @@ Author: QuanTuanHuy
 Description: Part of Serp Project - Supplier types for purchase module
 */
 
-import type { ApiResponse, PaginatedResponse, SearchParams } from '@/lib/store/api/types';
+import type {
+  ApiResponse,
+  PaginatedResponse,
+  SearchParams,
+} from '@/lib/store/api/types';
 import type { Address } from './address.types';
 
 // Supplier entity

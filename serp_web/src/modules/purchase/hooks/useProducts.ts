@@ -59,12 +59,9 @@ export function useProducts() {
   const { data: categoriesData, isLoading: isCategoriesLoading } =
     useGetCategoriesQuery();
 
-  const [createProduct, { isLoading: isCreating }] =
-    useCreateProductMutation();
-  const [updateProduct, { isLoading: isUpdating }] =
-    useUpdateProductMutation();
-  const [deleteProduct, { isLoading: isDeleting }] =
-    useDeleteProductMutation();
+  const [createProduct, { isLoading: isCreating }] = useCreateProductMutation();
+  const [updateProduct, { isLoading: isUpdating }] = useUpdateProductMutation();
+  const [deleteProduct, { isLoading: isDeleting }] = useDeleteProductMutation();
 
   // Extract data from response
   const products = useMemo(() => {
