@@ -27,6 +27,7 @@ export type ModuleCode =
   | 'SALES'
   | 'MARKETING'
   | 'PTM'
+  | 'SALES'
   | 'PROJECT'
   | 'ACCOUNTING'
   | 'INVOICING'
@@ -65,6 +66,11 @@ export const MODULE_ICONS: Record<ModuleCode, ModuleIconConfig> = {
   },
 
   // Sales & Marketing
+  SALES: {
+    icon: ShoppingCart,
+    color: 'text-green-600',
+    bgColor: 'bg-green-50 dark:bg-green-950',
+  },
   CRM: {
     icon: Users,
     color: 'text-blue-600',

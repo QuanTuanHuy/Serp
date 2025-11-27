@@ -149,7 +149,7 @@ func (u *taskUseCase) UpdateTask(ctx context.Context, userID, taskID int64, req 
 		if err != nil {
 			return nil, err
 		}
-		err = u.taskService.PushTaskUpdatedEvent(ctx, task)
+		err = u.taskService.PushTaskUpdatedEvent(ctx, task, req)
 		if err != nil {
 			u.logger.Error("failed to push task updated event", zap.Error(err))
 			return nil, err

@@ -117,4 +117,17 @@ public class KeycloakUserService implements IKeycloakUserService {
             throw new AppException(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @Override
+    public void logoutUser(String userId) {
+        try {
+            keycloakPort.logoutUser(userId);
+            log.info("Successfully logged out user {} from all sessions", userId);
+        } catch (AppException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error logging out user {}: {}", userId, e.getMessage());
+            throw new AppException(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
+        }
+    }
 }

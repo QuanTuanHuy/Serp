@@ -30,4 +30,6 @@ public interface IKeycloakPort {
     Map<String, List<String>> getUserAttributes(String userId);
 
     void resetPassword(String userId, String newPassword);
+
+    void logoutUser(String userId);
 }

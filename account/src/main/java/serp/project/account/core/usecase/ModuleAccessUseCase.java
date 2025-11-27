@@ -23,6 +23,7 @@ import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.UserModuleAccessEntity;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.ICombineRoleService;
+import serp.project.account.core.service.IKeycloakUserService;
 import serp.project.account.core.service.IModuleService;
 import serp.project.account.core.service.IOrganizationService;
 import serp.project.account.core.service.ISubscriptionService;
@@ -46,6 +47,7 @@ public class ModuleAccessUseCase {
     private final IRoleService roleService;
     private final ICombineRoleService combineRoleService;
     private final IOrganizationService organizationService;
+    private final IKeycloakUserService keycloakUserService;
 
     private final ResponseUtils responseUtils;
 
@@ -188,6 +190,11 @@ public class ModuleAccessUseCase {
             }
             combineRoleService.assignRolesToUser(user, assignedRoles);
 
+            if (user.getKeycloakId() != null) {
+                keycloakUserService.logoutUser(user.getKeycloakId());
+                log.info("Logged out user {} to refresh permissions", request.getUserId());
+            }
+
             // Implement later: Send notification
 
             log.info("[UseCase] Successfully assigned user {} to module {}",
@@ -268,6 +275,10 @@ public class ModuleAccessUseCase {
             var user = userService.getUserById(userId);
             if (user != null && !CollectionUtils.isEmpty(moduleRoles)) {
                 combineRoleService.removeRolesFromUser(user, moduleRoles);
+                if (user.getKeycloakId() != null) {
+                    keycloakUserService.logoutUser(user.getKeycloakId());
+                    log.info("Logged out user {} to refresh permissions", userId);
+                }
             }
 
             // Implement later: Send notification
