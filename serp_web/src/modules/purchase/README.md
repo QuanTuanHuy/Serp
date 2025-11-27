@@ -53,6 +53,7 @@ src/modules/purchase/
 All TypeScript types for the purchase module including:
 
 **Suppliers:**
+
 - `Supplier` - Main supplier entity
 - `SupplierDetail` - Supplier with address information
 - `CreateSupplierRequest` / `UpdateSupplierRequest` - DTOs
@@ -60,12 +61,14 @@ All TypeScript types for the purchase module including:
 - `Address` - Address entity
 
 **Products:**
+
 - `Product` - Main product entity
 - `Category` - Product category
 - `CreateProductRequest` / `UpdateProductRequest` - DTOs
 - `ProductFilters` - Search and filter params
 
 **Orders:**
+
 - `Order` - Main order entity
 - `OrderItem` - Order line items
 - `OrderDetail` - Order with items
@@ -76,6 +79,7 @@ All TypeScript types for the purchase module including:
 - `OrderStatus` - Status enum
 
 **Facilities:**
+
 - `Facility` - Warehouse/facility entity
 - `FacilityDetail` - Facility with address
 - `CreateFacilityRequest` / `UpdateFacilityRequest` - DTOs
@@ -83,6 +87,7 @@ All TypeScript types for the purchase module including:
 - `FacilityStatus` - Status enum
 
 **Shipments:**
+
 - `Shipment` - Shipment entity
 - `ShipmentItem` - Shipment line items
 - `ShipmentDetail` - Shipment with items
@@ -93,13 +98,16 @@ All TypeScript types for the purchase module including:
 ### 2. RTK Query API Service (`services/purchaseApi.ts`)
 
 **API Configuration:**
+
 ```typescript
-const PURCHASE_API_BASE_URL = 'https://api.serp.texkis.com/purchase-service/api/v1';
+const PURCHASE_API_BASE_URL =
+  'https://api.serp.texkis.com/purchase-service/api/v1';
 ```
 
 This module uses a dedicated production API endpoint instead of the default API Gateway base URL configured in `apiSlice.ts`. All endpoints use `${PURCHASE_API_BASE_URL}/...` for full URL construction, ensuring requests go directly to the purchase service.
 
 **Why separate base URL?**
+
 - Direct access to purchase service in production environment
 - Independent deployment and scaling
 - Does not affect other modules (CRM, PTM, Admin) which continue using API Gateway
@@ -107,6 +115,7 @@ This module uses a dedicated production API endpoint instead of the default API 
 Complete API endpoints for all purchase entities:
 
 **Supplier Endpoints:**
+
 - `getSuppliers` - Paginated list with filters
 - `getSupplierById` - Supplier detail with address
 - `createSupplier` - Create new supplier
@@ -114,6 +123,7 @@ Complete API endpoints for all purchase entities:
 - `deleteSupplier` - Delete supplier
 
 **Product Endpoints:**
+
 - `getProducts` - Paginated list with filters
 - `getProductById` - Product detail
 - `createProduct` - Create new product
@@ -121,10 +131,12 @@ Complete API endpoints for all purchase entities:
 - `deleteProduct` - Delete product
 
 **Category Endpoints:**
+
 - `getCategories` - List all categories
 - `createCategory` - Create new category
 
 **Order Endpoints:**
+
 - `getOrders` - Paginated list with filters
 - `getOrderById` - Order detail with items
 - `createOrder` - Create new order
@@ -136,6 +148,7 @@ Complete API endpoints for all purchase entities:
 - `deleteOrderItem` - Remove item from order
 
 **Facility Endpoints:**
+
 - `getFacilities` - Paginated list with filters
 - `getFacilityById` - Facility detail
 - `createFacility` - Create new facility
@@ -143,6 +156,7 @@ Complete API endpoints for all purchase entities:
 - `deleteFacility` - Delete facility
 
 **Shipment Endpoints:**
+
 - `getShipments` - Paginated list with filters
 - `getShipmentById` - Shipment detail with items
 - `createShipment` - Create new shipment
@@ -154,18 +168,21 @@ Complete API endpoints for all purchase entities:
 UI state management for each entity with filters, pagination, dialog states:
 
 **Suppliers Slice:**
+
 - Filters: query, statusId, pagination, sorting
 - Dialog: open/close, create/edit/view modes
 - Selected supplier ID
 - View mode (list/grid)
 
 **Products Slice:**
+
 - Filters: query, categoryId, statusId, pagination, sorting
 - Dialog: open/close, create/edit/view modes
 - Selected product ID
 - View mode (list/grid - default: grid)
 
 **Orders Slice:**
+
 - Filters: query, statusId, orderTypeId, supplierId, customerId, dateRange, pagination, sorting
 - Dialog: open/close, create/edit/view modes
 - Selected order ID
@@ -176,6 +193,7 @@ UI state management for each entity with filters, pagination, dialog states:
 Business logic hooks that combine RTK Query and Redux state:
 
 **useSuppliers:**
+
 - Data: suppliers list, selected supplier, pagination
 - Loading states: isLoading, isFetching, isCreating, isUpdating, isDeleting
 - Filter handlers: query, status, page, pageSize, sorting
@@ -184,6 +202,7 @@ Business logic hooks that combine RTK Query and Redux state:
 - Utilities: refetch, error handling
 
 **useProducts:**
+
 - Data: products list, selected product, categories, pagination
 - Loading states: isLoading, isFetching, isCreating, isUpdating, isDeleting, isCategoriesLoading
 - Filter handlers: query, category, status, page, pageSize, sorting
@@ -192,6 +211,7 @@ Business logic hooks that combine RTK Query and Redux state:
 - Utilities: refetch, error handling
 
 **useOrders:**
+
 - Data: orders list, selected order (with items), pagination
 - Loading states: isLoading, isFetching, isCreating, isUpdating, isApproving, isCancelling, isAddingProduct, isUpdatingItem, isDeletingItem
 - Filter handlers: query, status, orderType, supplier, customer, dateRange, page, pageSize, sorting
@@ -202,6 +222,7 @@ Business logic hooks that combine RTK Query and Redux state:
 ### 5. Layout Components (`components/layout/`)
 
 **PurchaseLayout:**
+
 - Main layout wrapper for all Purchase pages
 - Integrates `DynamicSidebar` with `PURCHASE` module code
 - Responsive design with sidebar collapse functionality
@@ -210,6 +231,7 @@ Business logic hooks that combine RTK Query and Redux state:
 - Provides consistent header and content structure
 
 **PurchaseHeader:**
+
 - Fixed header with auto-hide on scroll down
 - Breadcrumb navigation showing current location
 - Global search bar for products, orders, suppliers
@@ -220,6 +242,7 @@ Business logic hooks that combine RTK Query and Redux state:
 - Responsive design for mobile and desktop
 
 **PurchaseAuthGuard:**
+
 - Role-based access control using `RoleGuard`
 - Allowed roles: `PURCHASE_MANAGER`, `PURCHASE_OFFICER`, `SUPER_ADMIN`, `SYSTEM_MODERATOR`
 - Custom access denied UI with helpful messaging
@@ -229,6 +252,7 @@ Business logic hooks that combine RTK Query and Redux state:
 ### 6. Product Components (`components/products/`)
 
 **ProductForm:**
+
 - Comprehensive form with React Hook Form + Zod validation
 - Fields: name, SKU, description, category, unit, price, quantity, supplier, status
 - Real-time validation with error messages
@@ -237,6 +261,7 @@ Business logic hooks that combine RTK Query and Redux state:
 - Submit and cancel actions
 
 **ProductFormDialog:**
+
 - Dialog wrapper for ProductForm
 - Modes: create/edit/view
 - Handles form submission and API calls
@@ -267,6 +292,7 @@ The frontend is mapped to the following backend endpoints:
 **Base URL:** `/api/v1/purchase-service`
 
 **Suppliers:**
+
 - `GET /supplier/search` - List suppliers
 - `GET /supplier/search/{supplierId}` - Get supplier detail
 - `POST /supplier/create` - Create supplier
@@ -274,6 +300,7 @@ The frontend is mapped to the following backend endpoints:
 - `DELETE /supplier/delete/{supplierId}` - Delete supplier
 
 **Products:**
+
 - `GET /product/search` - List products
 - `GET /product/search/{productId}` - Get product detail
 - `POST /product/create` - Create product
@@ -281,6 +308,7 @@ The frontend is mapped to the following backend endpoints:
 - `DELETE /product/delete/{productId}` - Delete product
 
 **Orders:**
+
 - `GET /order/search` - List orders
 - `GET /order/search/{orderId}` - Get order detail
 - `POST /order/create` - Create order
@@ -458,6 +486,7 @@ export default function SuppliersPage() {
 ## Environment Variables
 
 Ensure `.env` file has:
+
 ```
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
 ```
@@ -465,6 +494,7 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
 ## Testing
 
 After creating components and pages:
+
 1. Start backend services: `docker-compose -f docker-compose.dev.yml up -d`
 2. Start purchase service: `cd purchase_service && ./run-dev.sh`
 3. Start frontend: `cd serp_web && npm run dev`
