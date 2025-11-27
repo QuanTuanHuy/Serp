@@ -53,8 +53,8 @@ export const PurchaseAuthGuard: React.FC<PurchaseAuthGuardProps> = ({
         </h1>
 
         <p className='text-muted-foreground'>
-          You don&apos;t have permission to access the Purchase Management module.
-          Please contact your administrator to request access.
+          You don&apos;t have permission to access the Purchase Management
+          module. Please contact your administrator to request access.
         </p>
 
         <div className='flex flex-col sm:flex-row gap-3 justify-center pt-4'>

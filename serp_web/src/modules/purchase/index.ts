@@ -53,12 +53,7 @@ export {
 } from './services';
 
 // ============= Custom Hooks =============
-export {
-  useSuppliers,
-  useProducts,
-  useOrders,
-  useAddresses,
-} from './hooks';
+export { useSuppliers, useProducts, useOrders, useAddresses } from './hooks';
 export type {
   UseSuppliersReturn,
   UseProductsReturn,

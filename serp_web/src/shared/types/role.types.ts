@@ -11,4 +11,8 @@ export const CRM_ROLES: string[] = ['CRM_SALES_PERSON'];
 
 export const PTM_ROLES: string[] = ['PTM_USER', 'PTM_ADMIN'];
 
-export const PURCHASE_ROLES: string[] = ['PURCHASE_ADMIN', 'PURCHASE_MANAGER', 'PURCHASE_STAFF'];
+export const PURCHASE_ROLES: string[] = [
+  'PURCHASE_ADMIN',
+  'PURCHASE_MANAGER',
+  'PURCHASE_STAFF',
+];

@@ -68,7 +68,8 @@ import type {
 } from '../types';
 
 // Base URL for Purchase Service
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
 const PURCHASE_API_BASE_URL = `${API_BASE_URL}/purchase-service/api/v1`;
 
 // Purchase API endpoints
@@ -221,7 +222,10 @@ export const purchaseApi = api.injectEndpoints({
       providesTags: [{ type: 'purchase/Category', id: 'LIST' }],
     }),
 
-    createCategory: builder.mutation<CategoryResponse, { name: string; parentCategoryId?: string }>({
+    createCategory: builder.mutation<
+      CategoryResponse,
+      { name: string; parentCategoryId?: string }
+    >({
       query: (data) => ({
         url: `${PURCHASE_API_BASE_URL}/category/create`,
         method: 'POST',
@@ -551,7 +555,11 @@ export const purchaseApi = api.injectEndpoints({
     // Update item in shipment (matches /update/{shipmentId}/update/{itemId} endpoint)
     updateItemInShipment: builder.mutation<
       ShipmentResponse,
-      { shipmentId: string; itemId: string; data: InventoryItemDetailUpdateRequest }
+      {
+        shipmentId: string;
+        itemId: string;
+        data: InventoryItemDetailUpdateRequest;
+      }
     >({
       query: ({ shipmentId, itemId, data }) => ({
         url: `${PURCHASE_API_BASE_URL}/shipment/update/${shipmentId}/update/${itemId}`,
