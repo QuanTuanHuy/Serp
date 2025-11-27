@@ -49,10 +49,7 @@ func All() fx.Option {
 
 		fx.Provide(adapter.NewDBTransactionAdapter),
 		fx.Provide(adapter.NewSchedulePlanStoreAdapter),
-		fx.Provide(adapter.NewScheduleGroupStoreAdapter),
 		fx.Provide(adapter.NewScheduleTaskStoreAdapter),
-		fx.Provide(adapter.NewTimeBubblesStoreAdapter),
-		fx.Provide(adapter.NewScheduleDayStoreAdapter),
 		fx.Provide(adapter.NewAvailabilityCalendarAdapter),
 		fx.Provide(adapter.NewCalendarExceptionAdapter),
 		fx.Provide(adapter.NewScheduleWindowAdapter),
@@ -61,9 +58,7 @@ func All() fx.Option {
 		// Provide service
 		fx.Provide(service.NewTransactionService),
 		fx.Provide(service.NewSchedulePlanService),
-		fx.Provide(service.NewScheduleGroupService),
 		fx.Provide(service.NewScheduleTaskService),
-		fx.Provide(service.NewTimeBubblesService),
 		fx.Provide(service.NewAvailabilityCalendarService),
 		fx.Provide(service.NewCalendarExceptionService),
 		fx.Provide(service.NewScheduleWindowService),
@@ -71,7 +66,6 @@ func All() fx.Option {
 
 		// Provide usecase
 		fx.Provide(usecase.NewSchedulePlanUseCase),
-		fx.Provide(usecase.NewScheduleGroupUseCase),
 		fx.Provide(usecase.NewScheduleTaskUseCase),
 		fx.Provide(usecase.NewAvailabilityCalendarUseCase),
 		fx.Provide(usecase.NewCalendarExceptionUseCase),
@@ -80,7 +74,6 @@ func All() fx.Option {
 
 		// Provide controller
 		fx.Provide(controller.NewSchedulePlanController),
-		fx.Provide(controller.NewScheduleGroupController),
 		fx.Provide(controller.NewScheduleTaskController),
 		fx.Provide(controller.NewAvailabilityCalendarController),
 		fx.Provide(controller.NewCalendarExceptionController),

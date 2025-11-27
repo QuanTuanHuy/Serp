@@ -6,10 +6,10 @@ Description: Part of Serp Project
 package entity
 
 type NoteAttachment struct {
-	Name string `json:"name"`
-	URL  string `json:"url"`
-	Size int64  `json:"size"`
-	Type string `json:"type"`
+	Name string `json:"name,omitempty"`
+	URL  string `json:"url,omitempty"`
+	Size int64  `json:"size,omitempty"`
+	Type string `json:"type,omitempty"`
 }
 
 type NoteEntity struct {

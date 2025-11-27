@@ -28,8 +28,7 @@ type IScheduleTaskService interface {
 	UpdateScheduleTask(ctx context.Context, tx *gorm.DB, ID int64, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error)
 	DeleteScheduleTask(ctx context.Context, tx *gorm.DB, ID int64) error
 	GetScheduleTaskByID(ctx context.Context, ID int64) (*entity.ScheduleTaskEntity, error)
-	GetScheduleTaskByTaskID(ctx context.Context, taskID int64) (*entity.ScheduleTaskEntity, error)
-	GetByTaskBatch(ctx context.Context, schedulePlanID int64, taskBatch int32) ([]*entity.ScheduleTaskEntity, error)
+	GetScheduleTaskByTaskID(ctx context.Context, taskID int64) ([]*entity.ScheduleTaskEntity, error)
 	GetBySchedulePlanID(ctx context.Context, schedulePlanID int64) ([]*entity.ScheduleTaskEntity, error)
 	GetTopNewestTasks(ctx context.Context, schedulePlanID int64, limit int) ([]*entity.ScheduleTaskEntity, error)
 }
@@ -58,16 +57,13 @@ func (s *ScheduleTaskService) GetScheduleTaskByID(ctx context.Context, ID int64)
 	return scheduleTask, nil
 }
 
-func (s *ScheduleTaskService) GetScheduleTaskByTaskID(ctx context.Context, taskID int64) (*entity.ScheduleTaskEntity, error) {
-	scheduleTask, err := s.scheduleTaskPort.GetScheduleTaskByTaskID(ctx, taskID)
+func (s *ScheduleTaskService) GetScheduleTaskByTaskID(ctx context.Context, taskID int64) ([]*entity.ScheduleTaskEntity, error) {
+	scheduleTasks, err := s.scheduleTaskPort.GetScheduleTaskByTaskID(ctx, taskID)
 	if err != nil {
 		log.Error(ctx, "Failed to get schedule task by task ID: ", taskID, err)
 		return nil, err
 	}
-	if scheduleTask == nil {
-		return nil, errors.New(constant.ScheduleTaskNotFound)
-	}
-	return scheduleTask, nil
+	return scheduleTasks, nil
 }
 
 func (s *ScheduleTaskService) CreateScheduleTask(ctx context.Context, tx *gorm.DB, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error) {
@@ -101,15 +97,6 @@ func (s *ScheduleTaskService) GetBySchedulePlanID(ctx context.Context, scheduleP
 	scheduleTasks, err := s.scheduleTaskPort.GetBySchedulePlanID(ctx, schedulePlanID)
 	if err != nil {
 		log.Error(ctx, "Failed to get schedule tasks by schedule plan ID: ", err)
-		return nil, err
-	}
-	return scheduleTasks, nil
-}
-
-func (s *ScheduleTaskService) GetByTaskBatch(ctx context.Context, schedulePlanID int64, taskBatch int32) ([]*entity.ScheduleTaskEntity, error) {
-	scheduleTasks, err := s.scheduleTaskPort.GetByTaskBatch(ctx, schedulePlanID, taskBatch)
-	if err != nil {
-		log.Error(ctx, "Failed to get schedule tasks by task batch: ", err)
 		return nil, err
 	}
 	return scheduleTasks, nil

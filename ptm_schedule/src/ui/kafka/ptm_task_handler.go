@@ -41,28 +41,28 @@ func (c *PtmTaskHandler) HandleMessage(ctx context.Context, topic, key string, v
 			log.Error(ctx, "Failed to create schedule task: ", err)
 			return err
 		}
-	case message.UPDATE_TASK:
-		var updateTaskMsg message.KafkaUpdateTaskMessage
-		if err := message.BindData(&kafkaMessage, &updateTaskMsg); err != nil {
-			log.Error(ctx, "Failed to bind update task message data: ", err)
-			return err
-		}
-		_, err := c.scheduleTaskUseCase.UpdateScheduleTask(ctx, updateTaskMsg.UserID, updateTaskMsg.TaskID, &updateTaskMsg)
-		if err != nil {
-			log.Error(ctx, "Failed to update schedule task: ", err)
-			return err
-		}
-	case message.DELETE_TASK:
-		var deleteTaskMsg message.KafkaDeleteTaskMessage
-		if err := message.BindData(&kafkaMessage, &deleteTaskMsg); err != nil {
-			log.Error(ctx, "Failed to bind delete task message data: ", err)
-			return err
-		}
-		err := c.scheduleTaskUseCase.DeleteScheduleTask(ctx, deleteTaskMsg.TaskID)
-		if err != nil {
-			log.Error(ctx, "Failed to delete schedule task: ", err)
-			return err
-		}
+	// case message.UPDATE_TASK:
+	// 	var updateTaskMsg message.KafkaUpdateTaskMessage
+	// 	if err := message.BindData(&kafkaMessage, &updateTaskMsg); err != nil {
+	// 		log.Error(ctx, "Failed to bind update task message data: ", err)
+	// 		return err
+	// 	}
+	// 	_, err := c.scheduleTaskUseCase.UpdateScheduleTask(ctx, updateTaskMsg.UserID, updateTaskMsg.TaskID, &updateTaskMsg)
+	// 	if err != nil {
+	// 		log.Error(ctx, "Failed to update schedule task: ", err)
+	// 		return err
+	// 	}
+	// case message.DELETE_TASK:
+	// 	var deleteTaskMsg message.KafkaDeleteTaskMessage
+	// 	if err := message.BindData(&kafkaMessage, &deleteTaskMsg); err != nil {
+	// 		log.Error(ctx, "Failed to bind delete task message data: ", err)
+	// 		return err
+	// 	}
+	// 	err := c.scheduleTaskUseCase.DeleteScheduleTask(ctx, deleteTaskMsg.TaskID)
+	// 	if err != nil {
+	// 		log.Error(ctx, "Failed to delete schedule task: ", err)
+	// 		return err
+	// 	}
 	default:
 		log.Warn(ctx, "Unknown Kafka command: ", kafkaMessage.Cmd)
 	}

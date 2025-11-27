@@ -28,13 +28,13 @@ func NewNoteAdapter(db *gorm.DB) store.INotePort {
 	}
 }
 
-func (a *NoteAdapter) CreateNote(ctx context.Context, tx *gorm.DB, note *entity.NoteEntity) error {
+func (a *NoteAdapter) CreateNote(ctx context.Context, tx *gorm.DB, note *entity.NoteEntity) (*entity.NoteEntity, error) {
 	db := a.getDB(tx)
 	noteModel := a.mapper.ToModel(note)
 	if err := db.WithContext(ctx).Create(noteModel).Error; err != nil {
-		return fmt.Errorf("failed to create note: %w", err)
+		return nil, fmt.Errorf("failed to create note: %w", err)
 	}
-	return nil
+	return a.mapper.ToEntity(noteModel), nil
 }
 
 func (a *NoteAdapter) CreateNotes(ctx context.Context, tx *gorm.DB, notes []*entity.NoteEntity) error {

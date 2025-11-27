@@ -9,6 +9,7 @@ import (
 	"github.com/serp/ptm-task/src/core/domain/dto/request"
 	"github.com/serp/ptm-task/src/core/domain/dto/response"
 	"github.com/serp/ptm-task/src/core/domain/entity"
+	"github.com/serp/ptm-task/src/core/port/store"
 )
 
 type NoteMapper struct{}
@@ -70,4 +71,17 @@ func (m *NoteMapper) EntitiesToResponses(notes []*entity.NoteEntity) []*response
 		responses = append(responses, m.EntityToResponse(note))
 	}
 	return responses
+}
+
+func (m *NoteMapper) FilterMapper(req *request.NoteFilterRequest) *store.NoteFilter {
+	return &store.NoteFilter{
+		TaskID:      req.TaskID,
+		ProjectID:   req.ProjectID,
+		CreatedFrom: req.CreatedFrom,
+		CreatedTo:   req.CreatedTo,
+		Limit:       req.PageSize,
+		Offset:      req.Page * req.PageSize,
+		SortBy:      req.SortBy,
+		SortOrder:   req.SortOrder,
+	}
 }
