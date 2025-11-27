@@ -220,4 +220,18 @@ public class KeycloakAdapter implements IKeycloakPort {
 
         userResource.resetPassword(credential);
     }
+
+    @Override
+    public void logoutUser(String userId) {
+        try {
+            RealmResource realmResource = keycloakAdmin.realm(keycloakProperties.getRealm());
+            UserResource userResource = realmResource.users().get(userId);
+            // Logout user from all sessions - this invalidates all access/refresh tokens
+            userResource.logout();
+            log.info("Successfully logged out user {} from all sessions", userId);
+        } catch (Exception e) {
+            log.error("Error logging out user {}: {}", userId, e.getMessage());
+            throw new AppException(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
+        }
+    }
 }
