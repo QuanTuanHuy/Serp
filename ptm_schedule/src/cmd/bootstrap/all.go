@@ -54,6 +54,8 @@ func All() fx.Option {
 		fx.Provide(adapter.NewCalendarExceptionAdapter),
 		fx.Provide(adapter.NewScheduleWindowAdapter),
 		fx.Provide(adapter.NewScheduleEventAdapter),
+		fx.Provide(adapter.NewProcessedEventAdapter),
+		fx.Provide(adapter.NewFailedEventAdapter),
 
 		// Provide service
 		fx.Provide(service.NewTransactionService),
@@ -63,6 +65,7 @@ func All() fx.Option {
 		fx.Provide(service.NewCalendarExceptionService),
 		fx.Provide(service.NewScheduleWindowService),
 		fx.Provide(service.NewScheduleEventService),
+		fx.Provide(service.NewIdempotencyService),
 
 		// Provide usecase
 		fx.Provide(usecase.NewSchedulePlanUseCase),
@@ -91,7 +94,11 @@ func All() fx.Option {
 		golibgin.OnStopHttpServerOpt(),
 
 		// Kafka consumer
+		fx.Provide(kafkahandler.NewMessageProcessingMiddleware),
 		fx.Provide(kafkahandler.NewPtmTaskHandler),
 		fx.Invoke(InitializeKafkaConsumer),
+
+		// Background job
+		fx.Invoke(InitializeEventCleanupJob),
 	)
 }

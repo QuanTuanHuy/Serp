@@ -8,6 +8,6 @@ package enum
 type KafkaTopic string
 
 const (
-	TASK_MANAGER_TOPIC  KafkaTopic = "ptm.task.topic"
+	TASK_MANAGER_TOPIC  KafkaTopic = "serp.ptm.task.events"
 	SCHEDULE_TASK_TOPIC KafkaTopic = "ptm.schedule-task.topic"
 )

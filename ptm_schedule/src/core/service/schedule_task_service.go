@@ -9,14 +9,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 
 	"github.com/golibs-starter/golib/log"
 	"github.com/serp/ptm-schedule/src/core/domain/constant"
-	"github.com/serp/ptm-schedule/src/core/domain/dto/message"
 	"github.com/serp/ptm-schedule/src/core/domain/entity"
-	"github.com/serp/ptm-schedule/src/core/domain/enum"
-	"github.com/serp/ptm-schedule/src/core/domain/mapper"
 	port2 "github.com/serp/ptm-schedule/src/core/port/client"
 	port "github.com/serp/ptm-schedule/src/core/port/store"
 	"gorm.io/gorm"
@@ -24,7 +20,6 @@ import (
 
 type IScheduleTaskService interface {
 	CreateScheduleTask(ctx context.Context, tx *gorm.DB, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error)
-	PushCreateScheduleTaskMessage(ctx context.Context, scheduleTask *entity.ScheduleTaskEntity) error
 	UpdateScheduleTask(ctx context.Context, tx *gorm.DB, ID int64, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error)
 	DeleteScheduleTask(ctx context.Context, tx *gorm.DB, ID int64) error
 	GetScheduleTaskByID(ctx context.Context, ID int64) (*entity.ScheduleTaskEntity, error)
@@ -37,12 +32,6 @@ type ScheduleTaskService struct {
 	scheduleTaskPort port.IScheduleTaskPort
 	kafkaProducer    port2.IKafkaProducerPort
 	dbTxPort         port.IDBTransactionPort
-}
-
-func (s *ScheduleTaskService) PushCreateScheduleTaskMessage(ctx context.Context, scheduleTask *entity.ScheduleTaskEntity) error {
-	createScheduleTaskMsg := mapper.ToCreateScheduleTaskMessage(scheduleTask)
-	kafkaMessage := message.CreateKafkaMessage(message.CREATE_SCHEDULE_TASK, "00", "Successful", createScheduleTaskMsg)
-	return s.kafkaProducer.SendMessageAsync(ctx, string(enum.SCHEDULE_TASK_TOPIC), strconv.FormatInt(scheduleTask.TaskID, 10), kafkaMessage)
 }
 
 func (s *ScheduleTaskService) GetScheduleTaskByID(ctx context.Context, ID int64) (*entity.ScheduleTaskEntity, error) {
