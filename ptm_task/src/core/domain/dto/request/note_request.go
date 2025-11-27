@@ -8,8 +8,8 @@ package request
 import "github.com/serp/ptm-task/src/core/domain/entity"
 
 type CreateNoteRequest struct {
-	TaskID    *int64 `json:"taskId,omitempty"`
-	ProjectID *int64 `json:"projectId,omitempty"`
+	TaskID    *int64 `json:"taskId,omitempty" validate:"omitempty,min=1"`
+	ProjectID *int64 `json:"projectId,omitempty" validate:"omitempty,min=1"`
 
 	Content string `json:"content" validate:"required"`
 
@@ -24,23 +24,18 @@ type UpdateNoteRequest struct {
 }
 
 type NoteFilterRequest struct {
-	TaskID    *int64 `json:"taskId,omitempty"`
-	ProjectID *int64 `json:"projectId,omitempty"`
+	BaseFilterRequest
+	TaskID    *int64 `form:"taskId,omitempty"`
+	ProjectID *int64 `form:"projectId,omitempty"`
 
-	IsPinned       *bool `json:"isPinned,omitempty"`
-	HasAttachments *bool `json:"hasAttachments,omitempty"`
+	IsPinned       *bool `form:"isPinned,omitempty"`
+	HasAttachments *bool `form:"hasAttachments,omitempty"`
 
-	CreatedFrom *int64 `json:"createdFrom,omitempty"`
-	CreatedTo   *int64 `json:"createdTo,omitempty"`
-
-	SortBy    *string `json:"sortBy,omitempty" validate:"omitempty,oneof=created_at updated_at"`
-	SortOrder *string `json:"sortOrder,omitempty" validate:"omitempty,oneof=ASC DESC"`
-
-	Limit  *int `json:"limit,omitempty" validate:"omitempty,min=1,max=100"`
-	Offset *int `json:"offset,omitempty" validate:"omitempty,min=0"`
+	CreatedFrom *int64 `form:"createdFrom,omitempty"`
+	CreatedTo   *int64 `form:"createdTo,omitempty"`
 }
 
 type SearchNotesRequest struct {
-	Query  string             `json:"query" validate:"required"`
-	Filter *NoteFilterRequest `json:"filter,omitempty"`
+	Query string `form:"query" validate:"required"`
+	NoteFilterRequest
 }
