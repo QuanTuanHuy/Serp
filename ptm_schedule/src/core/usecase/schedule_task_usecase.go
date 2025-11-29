@@ -53,7 +53,7 @@ func (s *ScheduleTaskUseCase) DeleteTaskFromSource(ctx context.Context, event *m
 
 func (s *ScheduleTaskUseCase) CreateScheduleTask(ctx context.Context, userID int64, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error) {
 	result, err := s.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
-		schedulePlan, err := s.schedulePlanService.CreateSchedulePlan(ctx, tx, userID)
+		schedulePlan, err := s.schedulePlanService.GetActivePlanByUserID(ctx, userID)
 		if err != nil {
 			return nil, err
 		}

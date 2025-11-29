@@ -41,17 +41,6 @@ const (
 	Yearly  RepeatLevel = "YEARLY"
 )
 
-type Tag string
-
-const (
-	Work   Tag = "WORK"
-	Eat    Tag = "EAT"
-	Sleep  Tag = "SLEEP"
-	Travel Tag = "TRAVEL"
-	Relax  Tag = "RELAX"
-	Other  Tag = "OTHER"
-)
-
 type ScheduleEventStatus string
 
 const (

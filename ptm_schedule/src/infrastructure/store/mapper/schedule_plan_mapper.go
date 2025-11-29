@@ -74,3 +74,11 @@ func ToSchedulePlanEntity(schedulePlanModel *model.SchedulePlanModel) *entity.Sc
 		Status:                 enum.PlanStatus(schedulePlanModel.Status),
 	}
 }
+
+func ToSchedulePlanEntities(schedulePlanModels []model.SchedulePlanModel) []*entity.SchedulePlanEntity {
+	schedulePlans := make([]*entity.SchedulePlanEntity, 0, len(schedulePlanModels))
+	for _, model := range schedulePlanModels {
+		schedulePlans = append(schedulePlans, ToSchedulePlanEntity(&model))
+	}
+	return schedulePlans
+}
