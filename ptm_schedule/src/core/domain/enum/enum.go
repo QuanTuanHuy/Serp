@@ -26,9 +26,9 @@ const (
 type Priority string
 
 const (
-	Low    Priority = "LOW"
-	Medium Priority = "MEDIUM"
-	High   Priority = "HIGH"
+	PriorityLow    Priority = "LOW"
+	PriorityMedium Priority = "MEDIUM"
+	PriorityHigh   Priority = "HIGH"
 )
 
 type RepeatLevel string

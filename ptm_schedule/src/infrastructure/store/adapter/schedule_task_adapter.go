@@ -10,7 +10,6 @@ import (
 	"errors"
 
 	"github.com/serp/ptm-schedule/src/core/domain/entity"
-	"github.com/serp/ptm-schedule/src/core/domain/enum"
 	port "github.com/serp/ptm-schedule/src/core/port/store"
 	"github.com/serp/ptm-schedule/src/infrastructure/store/mapper"
 	"github.com/serp/ptm-schedule/src/infrastructure/store/model"
@@ -74,18 +73,6 @@ func (s *ScheduleTaskStoreAdapter) UpdateScheduleTask(ctx context.Context, tx *g
 		return nil, err
 	}
 	return mapper.ToScheduleTaskEntity(scheduleTaskModel), nil
-}
-
-func (s *ScheduleTaskStoreAdapter) GetTopNewestTasks(ctx context.Context, schedulePlanID int64, limit int) ([]*entity.ScheduleTaskEntity, error) {
-	var scheduleTasks []*model.ScheduleTaskModel
-	if err := s.db.WithContext(ctx).
-		Where("schedule_plan_id = ? AND status != ? AND active_status = ?", schedulePlanID, enum.Done, enum.Active).
-		Order("created_at desc").
-		Limit(limit).
-		Find(&scheduleTasks).Error; err != nil {
-		return nil, err
-	}
-	return mapper.ToScheduleTaskEntities(scheduleTasks), nil
 }
 
 func NewScheduleTaskStoreAdapter(db *gorm.DB) port.IScheduleTaskPort {

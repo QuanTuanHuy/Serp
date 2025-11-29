@@ -5,7 +5,14 @@ Description: Part of Serp Project
 
 package entity
 
-import "github.com/serp/ptm-schedule/src/core/domain/enum"
+import (
+	"crypto/md5"
+	"fmt"
+	"io"
+	"time"
+
+	"github.com/serp/ptm-schedule/src/core/domain/enum"
+)
 
 type ScheduleTaskEntity struct {
 	BaseEntity
@@ -42,4 +49,132 @@ type ScheduleTaskEntity struct {
 
 	ScheduleStatus    enum.ScheduleTaskStatus `json:"scheduleStatus"`
 	UnscheduledReason *string                 `json:"unscheduledReason,omitempty"`
+}
+
+// Snapshot & Change Detection
+
+func (e *ScheduleTaskEntity) CalculateSnapshotHash() string {
+	h := md5.New()
+
+	io.WriteString(h, e.Title)
+	io.WriteString(h, fmt.Sprintf("%d", e.DurationMin))
+	io.WriteString(h, string(e.Priority))
+
+	if e.DeadlineMs != nil {
+		io.WriteString(h, fmt.Sprintf("%d", *e.DeadlineMs))
+	}
+	if e.EarliestStartMs != nil {
+		io.WriteString(h, fmt.Sprintf("%d", *e.EarliestStartMs))
+	}
+
+	io.WriteString(h, fmt.Sprintf("%v-%d-%d", e.AllowSplit, e.MinSplitDurationMin, e.MaxSplitCount))
+
+	io.WriteString(h, fmt.Sprintf("%v", e.DependentTaskIDs))
+
+	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
+func (e *ScheduleTaskEntity) HasConstraintsChanged(incomingHash string) bool {
+	return e.TaskSnapshotHash != incomingHash
+}
+
+func (e *ScheduleTaskEntity) UpdateFromSource(title string, duration int, priority enum.Priority, deadline *int64) {
+	e.Title = title
+	e.DurationMin = duration
+	e.Priority = priority
+	e.DeadlineMs = deadline
+
+	e.TaskSnapshotHash = e.CalculateSnapshotHash()
+	e.ScheduleStatus = enum.ScheduleTaskPending
+}
+
+// Pinning & Locking
+
+func (e *ScheduleTaskEntity) PinTo(startMs, endMs int64) {
+	e.IsPinned = true
+	e.PinnedStartMs = &startMs
+	e.PinnedEndMs = &endMs
+
+	// Khi đã Pin, coi như nó đã được xếp lịch (nhưng là kiểu Manual)
+	e.ScheduleStatus = enum.ScheduleTaskScheduled
+	e.UpdatedAt = time.Now().UnixMilli()
+}
+
+func (e *ScheduleTaskEntity) Unpin() {
+	e.IsPinned = false
+	e.PinnedStartMs = nil
+	e.PinnedEndMs = nil
+	e.ScheduleStatus = enum.ScheduleTaskPending
+	e.UpdatedAt = time.Now().UnixMilli()
+}
+
+// Scoring
+
+func (e *ScheduleTaskEntity) RecalculatePriorityScore(nowMs int64) {
+	baseScore := 0.0
+	switch e.Priority {
+	case enum.PriorityHigh:
+		baseScore = 100.0
+	case enum.PriorityMedium:
+		baseScore = 50.0
+	case enum.PriorityLow:
+		baseScore = 10.0
+	}
+
+	urgencyBoost := 0.0
+	if e.DeadlineMs != nil {
+		timeRemainingMin := (*e.DeadlineMs - nowMs) / 60000
+
+		if timeRemainingMin <= 0 {
+			urgencyBoost = 500.0
+		} else if timeRemainingMin < 1440 {
+			urgencyBoost = 200.0
+		} else if timeRemainingMin < 4320 {
+			urgencyBoost = 50.0
+		}
+	}
+
+	deepWorkBonus := 0.0
+	if e.IsDeepWork {
+		deepWorkBonus = 20.0
+	}
+
+	e.PriorityScore = baseScore + urgencyBoost + deepWorkBonus
+}
+
+// business logic
+
+func (e *ScheduleTaskEntity) IsValidChunk(durationMin int) bool {
+	if !e.AllowSplit {
+		return durationMin >= e.DurationMin
+	}
+	return durationMin >= e.MinSplitDurationMin
+}
+
+func (e *ScheduleTaskEntity) GetTotalDurationWithBuffer() int {
+	return e.DurationMin + e.BufferBeforeMin + e.BufferAfterMin
+}
+
+func (e *ScheduleTaskEntity) IsOverdue(nowMs int64) bool {
+	if e.DeadlineMs == nil {
+		return false
+	}
+	return *e.DeadlineMs < nowMs
+}
+
+// Lifecycle Methods
+
+func (e *ScheduleTaskEntity) MarkAsScheduled() {
+	e.ScheduleStatus = enum.ScheduleTaskScheduled
+	e.UnscheduledReason = nil
+}
+
+func (e *ScheduleTaskEntity) MarkAsFailed(reason string) {
+	e.ScheduleStatus = enum.ScheduleTaskUnschedulable
+	e.UnscheduledReason = &reason
+}
+
+func (e *ScheduleTaskEntity) ResetStatus() {
+	e.ScheduleStatus = enum.ScheduleTaskPending
+	e.UnscheduledReason = nil
 }

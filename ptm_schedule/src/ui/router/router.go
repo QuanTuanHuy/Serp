@@ -40,10 +40,9 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 	requiredAuthV1 := group.Group("/api/v1")
 	requiredAuthV1.Use(p.JWTMiddleware.AuthenticateJWT(), p.JWTMiddleware.RequireAnyRole(string(enum.PTM_ADMIN), string(enum.PTM_USER)))
 	{
-		schedulePlanV1 := requiredAuthV1.Group("/schedule-plans")
-		{
-			schedulePlanV1.POST("", p.SchedulePlanController.CreateSchedulePlan)
-		}
+		// schedulePlanV1 := requiredAuthV1.Group("/schedule-plans")
+		// {
+		// }
 
 		availabilityV1 := requiredAuthV1.Group("/availability-calendar")
 		{
