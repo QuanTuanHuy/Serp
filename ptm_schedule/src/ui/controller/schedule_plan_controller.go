@@ -22,7 +22,7 @@ func (s *SchedulePlanController) CreateSchedulePlan(c *gin.Context) {
 		return
 	}
 
-	schedulePlan, err := s.schedulePlanUseCase.CreateSchedulePlan(c, userID)
+	schedulePlan, err := s.schedulePlanUseCase.CreatePlan(c, userID, 0, 0)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return
