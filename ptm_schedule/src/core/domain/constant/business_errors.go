@@ -6,6 +6,9 @@ Description: Part of Serp Project
 package constant
 
 const (
+	// General errors
+	ForbiddenAccess = "forbidden access"
+
 	InvalidQueryParameters = "invalid query parameters"
 	InvalidDateRange       = "invalid date range: fromDateMs must be less than or equal to toDateMs"
 	InvalidPlanID          = "invalid planID: must be positive"
