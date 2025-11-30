@@ -31,6 +31,15 @@ const (
 	PriorityHigh   Priority = "HIGH"
 )
 
+func (p Priority) IsValid() bool {
+	switch p {
+	case PriorityLow, PriorityMedium, PriorityHigh:
+		return true
+	default:
+		return false
+	}
+}
+
 type RepeatLevel string
 
 const (

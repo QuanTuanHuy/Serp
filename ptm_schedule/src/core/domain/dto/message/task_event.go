@@ -47,7 +47,9 @@ type TaskUpdatedEvent struct {
 }
 
 type TaskDeletedEvent struct {
-	TaskID int64 `json:"taskId"`
+	TaskID   int64 `json:"taskId"`
+	UserID   int64 `json:"userId"`
+	TenantID int64 `json:"tenantId"`
 }
 
 // TaskCompletedFromScheduleEvent is sent from ptm_schedule to ptm_task

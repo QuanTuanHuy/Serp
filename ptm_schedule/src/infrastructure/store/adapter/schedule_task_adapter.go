@@ -67,6 +67,25 @@ func (s *ScheduleTaskStoreAdapter) DeleteScheduleTask(ctx context.Context, tx *g
 		Delete(&model.ScheduleTaskModel{}).Error
 }
 
+func (s *ScheduleTaskStoreAdapter) DeleteByTaskID(ctx context.Context, tx *gorm.DB, taskID int64) error {
+	return tx.WithContext(ctx).
+		Where("task_id = ?", taskID).
+		Delete(&model.ScheduleTaskModel{}).Error
+}
+
+func (s *ScheduleTaskStoreAdapter) GetByPlanIDAndTaskID(ctx context.Context, planID, taskID int64) (*entity.ScheduleTaskEntity, error) {
+	var scheduleTaskModel model.ScheduleTaskModel
+	if err := s.db.WithContext(ctx).
+		Where("schedule_plan_id = ? AND task_id = ?", planID, taskID).
+		First(&scheduleTaskModel).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return mapper.ToScheduleTaskEntity(&scheduleTaskModel), nil
+}
+
 func (s *ScheduleTaskStoreAdapter) UpdateScheduleTask(ctx context.Context, tx *gorm.DB, ID int64, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error) {
 	scheduleTaskModel := mapper.ToScheduleTaskModel(scheduleTask)
 	if err := tx.WithContext(ctx).Where("id = ?", ID).Updates(scheduleTaskModel).Error; err != nil {

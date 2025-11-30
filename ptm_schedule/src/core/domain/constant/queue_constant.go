@@ -12,7 +12,7 @@ const (
 	DebounceWindowMs   = 300
 	MaxDebounceWait    = 2 * time.Second
 	MaxDebounceWaitMs  = 2000
-	WorkerPollInterval = 200 * time.Millisecond
+	WorkerPollInterval = 5 * time.Second
 	MaxPlansPerPoll    = 10
 	MaxRetryCount      = 3
 )
