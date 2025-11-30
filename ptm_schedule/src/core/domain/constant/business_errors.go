@@ -38,6 +38,10 @@ const (
 	EventInvalidActualTime       = "actualStartMin and actualEndMin required for DONE status"
 	EventInvalidActualTimeRange  = "invalid actual time range"
 	EventStatusUpdateFailed      = "failed to set status: validation failed"
+	EventCannotBeModified        = "event cannot be modified in current status"
+	EventCannotBeSplit           = "event cannot be split: duration too short or status not allowed"
+	EventInvalidSplitPoint       = "invalid split point: would create parts smaller than minimum duration"
+	EventInvalidTimeRange        = "invalid time range for event"
 
 	// Schedule Plan/Group/Task errors
 	SchedulePlanNotFound         = "schedule plan not found"

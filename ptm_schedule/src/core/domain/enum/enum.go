@@ -44,7 +44,7 @@ const (
 type ScheduleEventStatus string
 
 const (
-	PLANNED ScheduleEventStatus = "PLANNED"
-	DONE    ScheduleEventStatus = "DONE"
-	SKIPPED ScheduleEventStatus = "SKIPPED"
+	ScheduleEventPlanned ScheduleEventStatus = "PLANNED"
+	ScheduleEventDone    ScheduleEventStatus = "DONE"
+	ScheduleEventSkipped ScheduleEventStatus = "SKIPPED"
 )

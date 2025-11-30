@@ -10,13 +10,24 @@ import "time"
 type ScheduleEventModel struct {
 	BaseModel
 	SchedulePlanID int64     `gorm:"index:idx_ev_plan_date,priority:1;not null"`
-	ScheduleTaskID int64     `gorm:"index;not null"`
+	ScheduleTaskID int64     `gorm:"index:idx_ev_task;not null"`
 	Date           time.Time `gorm:"type:date;index:idx_ev_plan_date,priority:2;not null"`
 	StartMin       int       `gorm:"not null"`
 	EndMin         int       `gorm:"not null"`
-	Status         string    `gorm:"type:varchar(20);not null"`
-	ActualStartMin *int      `gorm:""`
-	ActualEndMin   *int      `gorm:""`
+
+	Title string `gorm:"type:varchar(500)"`
+
+	PartIndex     int    `gorm:"default:1"`
+	TotalParts    int    `gorm:"default:1"`
+	LinkedEventID *int64 `gorm:"index"`
+
+	Status   string `gorm:"type:varchar(20);not null;default:'PLANNED'"`
+	IsPinned bool   `gorm:"default:false"`
+
+	UtilityScore *float64 `gorm:""`
+
+	ActualStartMin *int `gorm:""`
+	ActualEndMin   *int `gorm:""`
 }
 
 func (ScheduleEventModel) TableName() string {
