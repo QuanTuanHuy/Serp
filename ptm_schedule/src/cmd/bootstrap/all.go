@@ -59,7 +59,6 @@ func All() fx.Option {
 		// Provide client adapters
 		fx.Provide(clientadapter.NewKafkaProducerAdapter),
 		fx.Provide(clientadapter.NewKafkaConsumer),
-		fx.Provide(clientadapter.NewLocalRescheduleStrategy),
 
 		// Provide service
 		fx.Provide(service.NewTransactionService),
@@ -71,6 +70,7 @@ func All() fx.Option {
 		fx.Provide(service.NewScheduleEventService),
 		fx.Provide(service.NewIdempotencyService),
 		fx.Provide(service.NewRescheduleQueueService),
+		fx.Provide(service.NewRescheduleStrategyService),
 
 		// Provide worker
 		fx.Provide(worker.NewRescheduleWorker),

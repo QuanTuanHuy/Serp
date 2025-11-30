@@ -5,7 +5,10 @@ Description: Part of Serp Project
 
 package entity
 
-import "github.com/serp/ptm-schedule/src/core/domain/enum"
+import (
+	"github.com/serp/ptm-schedule/src/core/domain/constant"
+	"github.com/serp/ptm-schedule/src/core/domain/enum"
+)
 
 type RescheduleQueueItem struct {
 	BaseEntity
@@ -62,4 +65,20 @@ func (b *RescheduleBatch) DetermineStrategy() enum.RescheduleStrategy {
 		return enum.StrategyInsertion
 	}
 	return enum.StrategyRipple
+}
+
+func (b *RescheduleBatch) AffectedScheduleTaskIDs() []int64 {
+	seen := make(map[int64]bool)
+	result := make([]int64, 0)
+
+	for _, item := range b.Items {
+		if item.EntityType == constant.EntityTypeTask && item.EntityID > 0 {
+			if !seen[item.EntityID] {
+				seen[item.EntityID] = true
+				result = append(result, item.EntityID)
+			}
+		}
+	}
+
+	return result
 }

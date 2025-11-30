@@ -14,16 +14,15 @@ import (
 	"github.com/serp/ptm-schedule/src/core/domain/constant"
 	"github.com/serp/ptm-schedule/src/core/domain/entity"
 	"github.com/serp/ptm-schedule/src/core/domain/enum"
-	"github.com/serp/ptm-schedule/src/core/port"
 	storePort "github.com/serp/ptm-schedule/src/core/port/store"
 	"github.com/serp/ptm-schedule/src/core/service"
 	"gorm.io/gorm"
 )
 
 type RescheduleWorker struct {
-	queuePort storePort.IRescheduleQueuePort
-	strategy  port.IRescheduleStrategyPort
-	txService service.ITransactionService
+	queuePort       storePort.IRescheduleQueuePort
+	strategyService service.IRescheduleStrategyService
+	txService       service.ITransactionService
 
 	stopCh     chan struct{}
 	wg         sync.WaitGroup
@@ -32,14 +31,14 @@ type RescheduleWorker struct {
 
 func NewRescheduleWorker(
 	queuePort storePort.IRescheduleQueuePort,
-	strategy port.IRescheduleStrategyPort,
+	strategyService service.IRescheduleStrategyService,
 	txService service.ITransactionService,
 ) *RescheduleWorker {
 	return &RescheduleWorker{
-		queuePort: queuePort,
-		strategy:  strategy,
-		txService: txService,
-		stopCh:    make(chan struct{}),
+		queuePort:       queuePort,
+		strategyService: strategyService,
+		txService:       txService,
+		stopCh:          make(chan struct{}),
 	}
 }
 
@@ -132,16 +131,16 @@ func (w *RescheduleWorker) processSinglePlan(ctx context.Context, planID int64) 
 	}
 }
 
-func (w *RescheduleWorker) executeStrategy(ctx context.Context, batch *entity.RescheduleBatch) (*port.RescheduleResult, error) {
+func (w *RescheduleWorker) executeStrategy(ctx context.Context, batch *entity.RescheduleBatch) (*service.RescheduleResult, error) {
 	switch batch.Strategy {
 	case enum.StrategyRipple:
-		return w.strategy.RunRipple(ctx, batch.PlanID, batch)
+		return w.strategyService.RunRipple(ctx, batch.PlanID, batch)
 	case enum.StrategyInsertion:
-		return w.strategy.RunInsertion(ctx, batch.PlanID, batch)
+		return w.strategyService.RunInsertion(ctx, batch.PlanID, batch)
 	case enum.StrategyFullReplan:
-		return w.strategy.RunFullReplan(ctx, batch.PlanID, batch)
+		return w.strategyService.RunFullReplan(ctx, batch.PlanID, batch)
 	default:
-		return w.strategy.RunRipple(ctx, batch.PlanID, batch)
+		return w.strategyService.RunRipple(ctx, batch.PlanID, batch)
 	}
 }
 
