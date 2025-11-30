@@ -43,7 +43,7 @@ func (c *PtmTaskHandler) handleTaskEvent(ctx context.Context, topic, key string,
 			log.Error(ctx, "Failed to bind create task message data: ", err)
 			return err
 		}
-		err := c.scheduleTaskUseCase.SyncTaskFromSource(ctx, &createdEvent)
+		err := c.scheduleTaskUseCase.HandleTaskCreated(ctx, &createdEvent)
 		if err != nil {
 			log.Error(ctx, "Failed to sync schedule task from source: ", err)
 			return err
@@ -56,7 +56,7 @@ func (c *PtmTaskHandler) handleTaskEvent(ctx context.Context, topic, key string,
 			log.Error(ctx, "Failed to bind update task message data: ", err)
 			return err
 		}
-		err := c.scheduleTaskUseCase.UpdateTaskFromSource(ctx, &updatedEvent)
+		err := c.scheduleTaskUseCase.HandleTaskUpdated(ctx, &updatedEvent)
 		if err != nil {
 			log.Error(ctx, "Failed to update schedule task from source: ", err)
 			return err
@@ -69,7 +69,7 @@ func (c *PtmTaskHandler) handleTaskEvent(ctx context.Context, topic, key string,
 			log.Error(ctx, "Failed to bind delete task message data: ", err)
 			return err
 		}
-		err := c.scheduleTaskUseCase.DeleteTaskFromSource(ctx, &deletedEvent)
+		err := c.scheduleTaskUseCase.HandleTaskDeleted(ctx, &deletedEvent)
 		if err != nil {
 			log.Error(ctx, "Failed to delete schedule task from source: ", err)
 			return err
