@@ -11,7 +11,7 @@ import (
 	golibgin "github.com/golibs-starter/golib-gin"
 	"github.com/serp/ptm-schedule/src/core/service"
 	"github.com/serp/ptm-schedule/src/core/usecase"
-	adapter2 "github.com/serp/ptm-schedule/src/infrastructure/client"
+	clientadapter "github.com/serp/ptm-schedule/src/infrastructure/client"
 	"github.com/serp/ptm-schedule/src/infrastructure/store/adapter"
 	"github.com/serp/ptm-schedule/src/kernel/properties"
 	"github.com/serp/ptm-schedule/src/kernel/utils"
@@ -19,6 +19,7 @@ import (
 	kafkahandler "github.com/serp/ptm-schedule/src/ui/kafka"
 	"github.com/serp/ptm-schedule/src/ui/middleware"
 	"github.com/serp/ptm-schedule/src/ui/router"
+	"github.com/serp/ptm-schedule/src/ui/worker"
 	"go.uber.org/fx"
 )
 
@@ -43,10 +44,7 @@ func All() fx.Option {
 
 		fx.Invoke(InitializeDB),
 
-		// Provide adapter
-		fx.Provide(adapter2.NewKafkaProducerAdapter),
-		fx.Provide(adapter2.NewKafkaConsumer),
-
+		// Provide store adapters
 		fx.Provide(adapter.NewDBTransactionAdapter),
 		fx.Provide(adapter.NewSchedulePlanStoreAdapter),
 		fx.Provide(adapter.NewScheduleTaskStoreAdapter),
@@ -56,6 +54,11 @@ func All() fx.Option {
 		fx.Provide(adapter.NewScheduleEventAdapter),
 		fx.Provide(adapter.NewProcessedEventAdapter),
 		fx.Provide(adapter.NewFailedEventAdapter),
+		fx.Provide(adapter.NewRescheduleQueueAdapter),
+
+		// Provide client adapters
+		fx.Provide(clientadapter.NewKafkaProducerAdapter),
+		fx.Provide(clientadapter.NewKafkaConsumer),
 
 		// Provide service
 		fx.Provide(service.NewTransactionService),
@@ -66,6 +69,11 @@ func All() fx.Option {
 		fx.Provide(service.NewScheduleWindowService),
 		fx.Provide(service.NewScheduleEventService),
 		fx.Provide(service.NewIdempotencyService),
+		fx.Provide(service.NewRescheduleQueueService),
+		fx.Provide(service.NewRescheduleStrategyService),
+
+		// Provide worker
+		fx.Provide(worker.NewRescheduleWorker),
 
 		// Provide usecase
 		fx.Provide(usecase.NewSchedulePlanUseCase),
@@ -100,5 +108,6 @@ func All() fx.Option {
 
 		// Background job
 		fx.Invoke(InitializeEventCleanupJob),
+		fx.Invoke(InitializeRescheduleWorker),
 	)
 }

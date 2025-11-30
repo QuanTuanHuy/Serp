@@ -26,10 +26,19 @@ const (
 type Priority string
 
 const (
-	Low    Priority = "LOW"
-	Medium Priority = "MEDIUM"
-	High   Priority = "HIGH"
+	PriorityLow    Priority = "LOW"
+	PriorityMedium Priority = "MEDIUM"
+	PriorityHigh   Priority = "HIGH"
 )
+
+func (p Priority) IsValid() bool {
+	switch p {
+	case PriorityLow, PriorityMedium, PriorityHigh:
+		return true
+	default:
+		return false
+	}
+}
 
 type RepeatLevel string
 
@@ -44,7 +53,7 @@ const (
 type ScheduleEventStatus string
 
 const (
-	PLANNED ScheduleEventStatus = "PLANNED"
-	DONE    ScheduleEventStatus = "DONE"
-	SKIPPED ScheduleEventStatus = "SKIPPED"
+	ScheduleEventPlanned ScheduleEventStatus = "PLANNED"
+	ScheduleEventDone    ScheduleEventStatus = "DONE"
+	ScheduleEventSkipped ScheduleEventStatus = "SKIPPED"
 )

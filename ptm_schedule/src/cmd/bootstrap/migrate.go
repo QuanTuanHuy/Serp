@@ -22,6 +22,7 @@ func InitializeDB(db *gorm.DB) {
 		&model.ScheduleEventModel{},
 		&model.ProcessedEventModel{},
 		&model.FailedEventModel{},
+		&model.RescheduleQueueModel{},
 	)
 	if err != nil {
 		log.Fatal("Failed to run migrations: ", err)

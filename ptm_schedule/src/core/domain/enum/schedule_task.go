@@ -3,8 +3,8 @@ package enum
 type ScheduleTaskStatus string
 
 const (
-	ScheduleTaskStatusPending       ScheduleTaskStatus = "PENDING"
-	ScheduleTaskStatusScheduled     ScheduleTaskStatus = "SCHEDULED"
-	ScheduleTaskStatusUnschedulable ScheduleTaskStatus = "UNSCHEDULABLE"
-	ScheduleTaskStatusPartial       ScheduleTaskStatus = "PARTIAL"
+	ScheduleTaskPending       ScheduleTaskStatus = "PENDING"
+	ScheduleTaskScheduled     ScheduleTaskStatus = "SCHEDULED"
+	ScheduleTaskUnschedulable ScheduleTaskStatus = "UNSCHEDULABLE"
+	ScheduleTaskPartial       ScheduleTaskStatus = "PARTIAL"
 )

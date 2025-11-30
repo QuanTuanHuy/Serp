@@ -17,11 +17,11 @@ func ConvertPriority(priorities []enum.Priority) int32 {
 	}
 	priority := priorities[0]
 	switch priority {
-	case enum.Low:
+	case enum.PriorityLow:
 		return 1
-	case enum.Medium:
+	case enum.PriorityMedium:
 		return 2
-	case enum.High:
+	case enum.PriorityHigh:
 		return 3
 	default:
 		return 0
@@ -34,11 +34,11 @@ func ToPriorityEnum(priorities []string) []enum.Priority {
 		pCopy := strings.ToLower(p)
 		switch pCopy {
 		case "low":
-			result = append(result, enum.Low)
+			result = append(result, enum.PriorityLow)
 		case "medium":
-			result = append(result, enum.Medium)
+			result = append(result, enum.PriorityMedium)
 		case "high":
-			result = append(result, enum.High)
+			result = append(result, enum.PriorityHigh)
 		}
 	}
 	return result
@@ -48,11 +48,11 @@ func ToPriorityString(priorities []enum.Priority) []string {
 	var result []string
 	for _, priority := range priorities {
 		switch priority {
-		case enum.Low:
+		case enum.PriorityLow:
 			result = append(result, "LOW")
-		case enum.Medium:
+		case enum.PriorityMedium:
 			result = append(result, "MEDIUM")
-		case enum.High:
+		case enum.PriorityHigh:
 			result = append(result, "HIGH")
 		default:
 			result = append(result, "UNKNOWN")
