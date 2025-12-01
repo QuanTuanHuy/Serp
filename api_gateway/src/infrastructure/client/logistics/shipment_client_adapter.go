@@ -22,12 +22,13 @@ type ShipmentClientAdapter struct {
 	circuitBreaker *utils.CircuitBreaker
 }
 
-func NewShipmentClientAdapter(
-	externalServiceProps properties.ExternalServiceProperties,
-) port.IShipmentClientPort {
-	logisticsProps := externalServiceProps.LogisticsService
+func NewShipmentClientAdapter(props *properties.ExternalServiceProperties) port.IShipmentClientPort {
+	baseURL := fmt.Sprintf("http://%s:%s",
+		props.LogisticsService.Host,
+		props.LogisticsService.Port)
+
 	return &ShipmentClientAdapter{
-		apiClient:      utils.NewBaseAPIClient(logisticsProps.Host, logisticsProps.Timeout),
+		apiClient:      utils.NewBaseAPIClient(baseURL, props.LogisticsService.Timeout),
 		circuitBreaker: utils.NewDefaultCircuitBreaker(),
 	}
 }

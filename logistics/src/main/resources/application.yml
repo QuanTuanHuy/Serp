@@ -9,7 +9,7 @@ spring:
           issuer-uri: ${KEYCLOAK_URL}/realms/serp
 
 server:
-  port: ${SERVER_PORT:8088}
+  port: ${SERVER_PORT:8089}
 
 security:
   role-prefix: ROLE_
@@ -42,4 +42,3 @@ security:
         roles:
           - LOGISTICS_ADMIN
           - LOGISTICS_EMPLOYEE
-

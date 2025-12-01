@@ -4,7 +4,7 @@ app:
   redis:
     host: ${REDIS_HOST}
     port: ${REDIS_PORT}
-  
+
   keycloak:
     url: ${KEYCLOAK_URL}
     realm: serp
@@ -12,7 +12,7 @@ app:
     client-secret: ${CLIENT_SECRET}
     jwk-set-uri: ${KEYCLOAK_URL}/realms/serp/protocol/openid-connect/certs
     expected-issuer: ${KEYCLOAK_URL}/realms/serp
-    expected-audience: 
+    expected-audience:
 
   cors:
     allowedOrigins:
@@ -29,7 +29,7 @@ app:
       - Content-Type
     allowCredentials: true
     maxAge: 3600
-    allowFiles: true 
+    allowFiles: true
 
 external:
   services:
@@ -44,4 +44,8 @@ external:
     purchaseService:
       host: ${PURCHASE_SERVICE_HOST}
       port: ${PURCHASE_SERVICE_PORT}
+      timeout: 15s
+    logisticsService:
+      host: ${LOGISTICS_SERVICE_HOST}
+      port: ${LOGISTICS_SERVICE_PORT}
       timeout: 15s
