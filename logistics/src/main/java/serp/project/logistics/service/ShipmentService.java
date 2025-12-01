@@ -121,7 +121,11 @@ public class ShipmentService {
             inventoryItemService.createInventoryItem(item);
         }
 
-        List<OrderItemEntity> orderItems = orderItemRepository.findByTenantIdAndOrderId(tenantId, shipmentId);
+        List<OrderItemEntity> orderItems = orderItemRepository.findByTenantIdAndOrderId(tenantId, shipment.getOrderId());
+        if (orderItems.isEmpty()) {
+            log.error("[OrderService] No orderItems found for order {} and tenant {}", shipment.getOrderId(), tenantId);
+            throw new AppException(AppErrorCode.NOT_FOUND);
+        }
         Map<String, Integer> itemQuantityMap = orderItems.stream().collect(Collectors.toMap(
                 OrderItemEntity::getId,
                 OrderItemEntity::getQuantity));
@@ -143,19 +147,16 @@ public class ShipmentService {
             String orderItemId = entry.getKey();
             int orderedQuantity = entry.getValue();
             int deliveredQuantity = deliveredQuantityMap.getOrDefault(orderItemId, 0);
+            log.info("[OrderService] Order item {} has delivered quantity {}/{}", orderItemId, deliveredQuantity, orderedQuantity);
             if (deliveredQuantity != orderedQuantity) {
                 log.info(
-                        "[OrderService] Order {} is not fully delivery. Order item {} has delivered quantity {}/{}",
-                        shipment.getOrderId(), orderItemId, deliveredQuantity, orderedQuantity);
+                        "[OrderService] Order {} is not fully delivery.",
+                        shipment.getOrderId());
                 return;
             }
         }
         orderRepository.updateOrderStatus(shipment.getOrderId(), OrderStatus.FULLY_DELIVERED.value(), tenantId);
         log.info("[OrderService] Marked order {} as fully delivery for tenant {}", shipment.getOrderId(), tenantId);
-    }
-
-    public List<ShipmentEntity> findByOrderId(String orderId, Long tenantId) {
-        return shipmentRepository.findByTenantIdAndOrderId(tenantId, orderId);
     }
 
     public ShipmentEntity getShipment(String shipmentId, Long tenantId) {
