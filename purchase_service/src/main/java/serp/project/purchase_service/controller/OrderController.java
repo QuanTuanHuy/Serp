@@ -128,11 +128,7 @@ public class OrderController {
         @PatchMapping("/update/{orderId}/ready")
         public ResponseEntity<GeneralResponse<?>> markOrderAsReady(
                         @PathVariable String orderId) {
-                Long tenantId = authUtils.getCurrentTenantId()
-                                .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
-                log.info("[OrderController] Mark order {} as ready for delivery for tenantId {}", orderId, tenantId);
-                orderService.readyForDeliveryOrder(orderId, tenantId);
-                return ResponseEntity.ok(GeneralResponse.success("Order marked as ready for delivery successfully"));
+                throw new AppException(AppErrorCode.UNIMPLEMENTED);
         }
 
         @GetMapping("/search/{orderId}")

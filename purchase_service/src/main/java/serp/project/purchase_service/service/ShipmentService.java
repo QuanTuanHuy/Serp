@@ -28,8 +28,6 @@ public class ShipmentService {
 
     private final ShipmentRepository shipmentRepository;
     private final InventoryItemDetailService inventoryItemDetailService;
-    private final InvoiceService invoiceService;
-    private final InventoryItemService inventoryItemService;
     private final OrderRepository orderRepository;
     private final InventoryItemDetailRepository inventoryItemDetailRepository;
 
@@ -98,44 +96,6 @@ public class ShipmentService {
         inventoryItemDetailService.updateFacility(shipmentId, facilityId, tenantId);
         log.info("[ShipmentService] Updated facility {} for shipment {} and tenant {}", facilityId, shipmentId,
                 tenantId);
-    }
-
-    @Transactional(rollbackFor = Exception.class)
-    public void importShipment(String shipmentId, Long userId, Long tenantId) {
-        ShipmentEntity shipment = shipmentRepository.findById(shipmentId).orElse(null);
-        if (shipment == null || !shipment.getTenantId().equals(tenantId)) {
-            log.error("[ShipmentService] Shipment {} not found for tenant {}", shipmentId, tenantId);
-            throw new AppException(AppErrorCode.NOT_FOUND);
-        }
-        if (!shipment.getStatusId().equals(ShipmentStatus.READY.value())) {
-            log.error("[ShipmentService] Invalid status transition for shipment {} with status {} for tenant {}",
-                    shipmentId, shipment.getStatusId(), tenantId);
-            throw new AppException(AppErrorCode.INVALID_STATUS_TRANSITION);
-        }
-        shipment.setStatusId(ShipmentStatus.IMPORTED.value());
-        shipment.setHandledByUserId(userId);
-
-        shipmentRepository.save(shipment);
-        log.info("[ShipmentService] Imported shipment {} for tenant {}", shipmentId, tenantId);
-
-        log.info("[ShipmentService] Creating inventory items for shipment {} and tenant {}", shipmentId, tenantId);
-        List<InventoryItemDetailEntity> items = inventoryItemDetailService.getItemsByShipmentId(shipmentId, tenantId);
-        for (var item : items) {
-            inventoryItemService.createInventoryItem(item);
-        }
-
-        int shipmentNotDeliveredCount = shipmentRepository.countShipmentEntitiesByTenantIdAndOrderIdAndStatusId(
-                tenantId, shipment.getOrderId(), ShipmentStatus.CREATED.value());
-        if (shipmentNotDeliveredCount == 0) {
-            log.info("[ShipmentService] All shipments delivered for order {} and tenant {}", shipment.getOrderId(),
-                    tenantId);
-            log.info("[ShipmentService] Creating invoice for order {} and tenant {}", shipment.getOrderId(), tenantId);
-            invoiceService.createInvoice(shipment.getOrderId());
-
-            log.info("[ShipmentService] Updated order status to FULLY_DELIVERED for order {} and tenant {}",
-                    shipment.getOrderId(), tenantId);
-            orderRepository.updateOrderStatus(shipment.getOrderId(), OrderStatus.FULLY_DELIVERED.value(), tenantId);
-        }
     }
 
     public List<ShipmentEntity> findByOrderId(String orderId, Long tenantId) {

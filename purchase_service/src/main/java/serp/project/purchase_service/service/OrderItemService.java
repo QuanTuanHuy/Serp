@@ -39,13 +39,11 @@ public class OrderItemService {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
         String orderStatus = orderRepository.getOrderStatus(orderId, tenantId);
-        if (OrderStatus.fromValue(orderStatus).ordinal() > OrderStatus.CANCELLED.ordinal()) {
+        if (OrderStatus.fromValue(orderStatus).ordinal() > OrderStatus.CREATED.ordinal()) {
             log.info("[OrderItemService] Cannot add order item to order {} in status {} for tenant {}", orderId,
                     orderStatus, tenantId);
             throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
         }
-        orderRepository.resetOrderStatus(orderId, tenantId);
-        log.info("[OrderItemService] Reset order status for order {} and tenant {}", orderId, tenantId);
 
         String orderItemId = IdUtils.generateOrderItemId();
         OrderItemEntity orderItem = OrderItemEntity.builder()
@@ -77,13 +75,11 @@ public class OrderItemService {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
         String orderStatus = orderRepository.getOrderStatus(orderId, tenantId);
-        if (OrderStatus.fromValue(orderStatus).ordinal() > OrderStatus.CANCELLED.ordinal()) {
+        if (OrderStatus.fromValue(orderStatus).ordinal() > OrderStatus.CREATED.ordinal()) {
             log.info("[OrderItemService] Cannot update order item {} for order {} in status {} for tenant {}",
                     orderItemId, orderId, orderStatus, tenantId);
             throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
         }
-        orderRepository.resetOrderStatus(orderId, tenantId);
-        log.info("[OrderItemService] Reset order status for order {} and tenant {}", orderId, tenantId);
 
         orderItem.setOrderItemSeqId(form.getOrderItemSeqId());
         orderItem.setQuantity(form.getQuantity());
@@ -102,22 +98,17 @@ public class OrderItemService {
     @Transactional(rollbackFor = Exception.class)
     public void deleteOrderItem(String orderItemId, String orderId, Long tenantId) {
         String orderStatus = orderRepository.getOrderStatus(orderId, tenantId);
-        if (OrderStatus.fromValue(orderStatus).ordinal() > OrderStatus.CANCELLED.ordinal()) {
+        if (OrderStatus.fromValue(orderStatus).ordinal() > OrderStatus.CREATED.ordinal()) {
             log.info("[OrderItemService] Cannot delete order item {} for order {} in status {} for tenant {}",
                     orderItemId, orderId, orderStatus, tenantId);
             throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
         }
-        orderRepository.resetOrderStatus(orderId, tenantId);
-        log.info("[OrderItemService] Reset order status for order {} and tenant {}", orderId, tenantId);
         OrderItemEntity orderItem = orderItemRepository.findById(orderItemId).orElse(null);
         if (orderItem == null || !orderItem.getTenantId().equals(tenantId) || !orderItem.getOrderId().equals(orderId)) {
             log.info("[OrderItemService] Order item ID {} not found for order {} and tenant {}", orderItemId, orderId,
                     tenantId);
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
-        inventoryItemDetailRepository.deleteByOrderItemId(orderItemId);
-        log.info("[OrderItemService] Deleted inventory item details for order item {} for tenant {}", orderItemId,
-                tenantId);
         orderItemRepository.delete(orderItem);
         log.info("[OrderItemService] Deleted order item {} for order {} and tenant {}", orderItemId, orderId,
                 tenantId);
