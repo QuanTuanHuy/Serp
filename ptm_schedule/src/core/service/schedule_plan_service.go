@@ -20,6 +20,7 @@ import (
 type ISchedulePlanService interface {
 	CreatePlan(ctx context.Context, tx *gorm.DB, plan *entity.SchedulePlanEntity) (*entity.SchedulePlanEntity, error)
 	UpdatePlan(ctx context.Context, tx *gorm.DB, schedulePlan *entity.SchedulePlanEntity) (*entity.SchedulePlanEntity, error)
+	UpdatePlanWithOptimisticLock(ctx context.Context, tx *gorm.DB, plan *entity.SchedulePlanEntity, expectedUpdatedAt int64) (*entity.SchedulePlanEntity, error)
 	ApplyPlan(ctx context.Context, tx *gorm.DB, userID, planID int64) (*entity.SchedulePlanEntity, error)
 	DiscardPlan(ctx context.Context, tx *gorm.DB, userID, planID int64) (*entity.SchedulePlanEntity, error)
 	RevertToPlan(ctx context.Context, tx *gorm.DB, userID, targetPlanID int64) (*entity.SchedulePlanEntity, error)
@@ -29,6 +30,12 @@ type ISchedulePlanService interface {
 	GetActivePlanByUserID(ctx context.Context, userID int64) (*entity.SchedulePlanEntity, error)
 	GetPlansByUserID(ctx context.Context, userID int64, filter *port.PlanFilter) ([]*entity.SchedulePlanEntity, error)
 	GetLatestProposedPlanByUserID(ctx context.Context, userID int64) (*entity.SchedulePlanEntity, error)
+	CountPlansByUserID(ctx context.Context, userID int64, filter *port.PlanFilter) (int64, error)
+
+	// Optimization lifecycle
+	StartOptimization(ctx context.Context, tx *gorm.DB, plan *entity.SchedulePlanEntity, algo enum.Algorithm) error
+	CompleteOptimization(ctx context.Context, tx *gorm.DB, plan *entity.SchedulePlanEntity, score float64, durationMs int64) error
+	FailOptimization(ctx context.Context, tx *gorm.DB, plan *entity.SchedulePlanEntity, reason string) error
 }
 
 type SchedulePlanService struct {
@@ -192,8 +199,57 @@ func (s *SchedulePlanService) RevertToPlan(ctx context.Context, tx *gorm.DB, use
 
 	return createdPlan, nil
 }
+
 func (s *SchedulePlanService) UpdatePlan(ctx context.Context, tx *gorm.DB, schedulePlan *entity.SchedulePlanEntity) (*entity.SchedulePlanEntity, error) {
 	return s.schedulePlanPort.UpdatePlan(ctx, tx, schedulePlan)
+}
+
+func (s *SchedulePlanService) UpdatePlanWithOptimisticLock(ctx context.Context, tx *gorm.DB, plan *entity.SchedulePlanEntity, expectedUpdatedAt int64) (*entity.SchedulePlanEntity, error) {
+	// Check if plan has been modified by another process
+	currentPlan, err := s.schedulePlanPort.GetPlanByID(ctx, plan.ID)
+	if err != nil {
+		return nil, err
+	}
+	if currentPlan == nil {
+		return nil, fmt.Errorf(constant.SchedulePlanNotFound)
+	}
+	if currentPlan.UpdatedAt != expectedUpdatedAt {
+		return nil, fmt.Errorf(constant.OptimisticLockConflict)
+	}
+
+	return s.schedulePlanPort.UpdatePlan(ctx, tx, plan)
+}
+
+func (s *SchedulePlanService) CountPlansByUserID(ctx context.Context, userID int64, filter *port.PlanFilter) (int64, error) {
+	plans, err := s.schedulePlanPort.ListPlansByUserID(ctx, userID, filter)
+	if err != nil {
+		return 0, err
+	}
+	return int64(len(plans)), nil
+}
+
+// Optimization lifecycle methods
+
+func (s *SchedulePlanService) StartOptimization(ctx context.Context, tx *gorm.DB, plan *entity.SchedulePlanEntity, algo enum.Algorithm) error {
+	if err := plan.StartOptimization(algo); err != nil {
+		return err
+	}
+	_, err := s.schedulePlanPort.UpdatePlan(ctx, tx, plan)
+	return err
+}
+
+func (s *SchedulePlanService) CompleteOptimization(ctx context.Context, tx *gorm.DB, plan *entity.SchedulePlanEntity, score float64, durationMs int64) error {
+	if err := plan.CompleteOptimization(score, durationMs); err != nil {
+		return err
+	}
+	_, err := s.schedulePlanPort.UpdatePlan(ctx, tx, plan)
+	return err
+}
+
+func (s *SchedulePlanService) FailOptimization(ctx context.Context, tx *gorm.DB, plan *entity.SchedulePlanEntity, reason string) error {
+	plan.FailOptimization(reason)
+	_, err := s.schedulePlanPort.UpdatePlan(ctx, tx, plan)
+	return err
 }
 
 func NewSchedulePlanService(schedulePlanPort port.ISchedulePlanPort, dbTxPort port.IDBTransactionPort) ISchedulePlanService {
