@@ -54,10 +54,12 @@ func All() fx.Option {
 		// Use cases
 		fx.Provide(usecase.NewProjectUseCase),
 		fx.Provide(usecase.NewTaskUseCase),
+		fx.Provide(usecase.NewNoteUseCase),
 
 		// Controllers
 		fx.Provide(controller.NewProjectController),
 		fx.Provide(controller.NewTaskController),
+		fx.Provide(controller.NewNoteController),
 
 		// Router
 		fx.Provide(NewRouterConfig),

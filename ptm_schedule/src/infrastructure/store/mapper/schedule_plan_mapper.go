@@ -18,8 +18,8 @@ func ToSchedulePlanModel(schedulePlan *entity.SchedulePlanEntity) *model.Schedul
 		return nil
 	}
 	var endDate *time.Time
-	if schedulePlan.EndDate != nil {
-		temp := time.UnixMilli(*schedulePlan.EndDate)
+	if schedulePlan.EndDateMs != nil {
+		temp := time.UnixMilli(*schedulePlan.EndDateMs)
 		endDate = &temp
 	}
 
@@ -27,12 +27,19 @@ func ToSchedulePlanModel(schedulePlan *entity.SchedulePlanEntity) *model.Schedul
 		BaseModel: model.BaseModel{
 			ID: schedulePlan.ID,
 		},
-		UserID:            schedulePlan.UserID,
-		StartDate:         time.UnixMilli(schedulePlan.StartDate),
-		EndDate:           endDate,
-		ActiveStatus:      string(schedulePlan.ActiveStatus),
-		ActiveTaskBatch:   schedulePlan.ActiveTaskBatch,
-		IsActiveTaskBatch: schedulePlan.IsActiveTaskBatch,
+		UserID:                 schedulePlan.UserID,
+		TenantID:               schedulePlan.TenantID,
+		StartDateMs:            time.UnixMilli(schedulePlan.StartDateMs),
+		EndDateMs:              endDate,
+		PlanName:               schedulePlan.PlanName,
+		PlanType:               schedulePlan.PlanType,
+		AlgorithmUsed:          string(schedulePlan.AlgorithmUsed),
+		OptimizationScore:      schedulePlan.OptimizationScore,
+		OptimizationTimestamp:  schedulePlan.OptimizationTimestamp,
+		OptimizationDurationMs: schedulePlan.OptimizationDurationMs,
+		Version:                schedulePlan.Version,
+		ParentPlanID:           schedulePlan.ParentPlanID,
+		Status:                 string(schedulePlan.Status),
 	}
 }
 
@@ -41,8 +48,8 @@ func ToSchedulePlanEntity(schedulePlanModel *model.SchedulePlanModel) *entity.Sc
 		return nil
 	}
 	var endDate *int64
-	if schedulePlanModel.EndDate != nil {
-		temp := schedulePlanModel.EndDate.UnixMilli()
+	if schedulePlanModel.EndDateMs != nil {
+		temp := schedulePlanModel.EndDateMs.UnixMilli()
 		endDate = &temp
 	}
 
@@ -52,11 +59,26 @@ func ToSchedulePlanEntity(schedulePlanModel *model.SchedulePlanModel) *entity.Sc
 			CreatedAt: schedulePlanModel.CreatedAt.UnixMilli(),
 			UpdatedAt: schedulePlanModel.UpdatedAt.UnixMilli(),
 		},
-		UserID:            schedulePlanModel.UserID,
-		StartDate:         schedulePlanModel.StartDate.UnixMilli(),
-		EndDate:           endDate,
-		ActiveStatus:      enum.ActiveStatus(schedulePlanModel.ActiveStatus),
-		ActiveTaskBatch:   schedulePlanModel.ActiveTaskBatch,
-		IsActiveTaskBatch: schedulePlanModel.IsActiveTaskBatch,
+		UserID:                 schedulePlanModel.UserID,
+		StartDateMs:            schedulePlanModel.StartDateMs.UnixMilli(),
+		EndDateMs:              endDate,
+		PlanName:               schedulePlanModel.PlanName,
+		PlanType:               schedulePlanModel.PlanType,
+		TenantID:               schedulePlanModel.TenantID,
+		AlgorithmUsed:          enum.Algorithm(schedulePlanModel.AlgorithmUsed),
+		OptimizationScore:      schedulePlanModel.OptimizationScore,
+		OptimizationTimestamp:  schedulePlanModel.OptimizationTimestamp,
+		OptimizationDurationMs: schedulePlanModel.OptimizationDurationMs,
+		Version:                schedulePlanModel.Version,
+		ParentPlanID:           schedulePlanModel.ParentPlanID,
+		Status:                 enum.PlanStatus(schedulePlanModel.Status),
 	}
+}
+
+func ToSchedulePlanEntities(schedulePlanModels []model.SchedulePlanModel) []*entity.SchedulePlanEntity {
+	schedulePlans := make([]*entity.SchedulePlanEntity, 0, len(schedulePlanModels))
+	for _, model := range schedulePlanModels {
+		schedulePlans = append(schedulePlans, ToSchedulePlanEntity(&model))
+	}
+	return schedulePlans
 }

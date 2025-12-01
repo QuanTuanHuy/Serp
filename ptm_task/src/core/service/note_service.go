@@ -150,7 +150,8 @@ func (s *noteService) CreateNote(ctx context.Context, tx *gorm.DB, userID int64,
 		return nil, err
 	}
 
-	if err := s.notePort.CreateNote(ctx, tx, note); err != nil {
+	note, err := s.notePort.CreateNote(ctx, tx, note)
+	if err != nil {
 		return nil, err
 	}
 

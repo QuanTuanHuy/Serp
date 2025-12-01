@@ -11,23 +11,39 @@ import (
 
 type ScheduleTaskModel struct {
 	BaseModel
-	TaskID               int64     `json:"taskId" gorm:"column:task_id;not null"`
-	Title                string    `json:"title" gorm:"column:title;not null"`
-	Priority             string    `json:"priority" gorm:"column:priority"`
-	Status               string    `json:"status" gorm:"column:status;not null"`
-	StartDate            time.Time `json:"startDate" gorm:"column:start_date;not null"`
-	Deadline             time.Time `json:"deadline" gorm:"column:deadline;not null"`
-	Duration             float64   `json:"duration" gorm:"column:duration;not null"`
-	ActiveStatus         string    `json:"activeStatus" gorm:"column:active_status;not null"`
-	IsSynchronizedWithWO bool      `json:"isSynchronizedWithWO" gorm:"column:is_synchronized_with_wo;not null"`
-	PreferenceLevel      int32     `json:"preferenceLevel" gorm:"column:preference_level"`
-	TaskOrder            int32     `json:"taskOrder" gorm:"column:task_order"`
-	Weight               float64   `json:"weight" gorm:"column:weight"`
-	StopTime             float64   `json:"stopTime" gorm:"column:stop_time"`
-	TaskBatch            int32     `json:"taskBatch" gorm:"column:task_batch"`
-	SchedulePlanID       int64     `json:"schedulePlanId" gorm:"column:schedule_plan_id;not null"`
-	Repeat               string    `json:"repeat" gorm:"column:repeat"`
-	ScheduleGroupID      int64     `json:"scheduleGroupId" gorm:"column:schedule_group_id;not null"`
+	UserID   int64 `json:"userId" gorm:"column:user_id;not null;index"`
+	TenantID int64 `json:"tenantId" gorm:"column:tenant_id"`
+
+	SchedulePlanID int64 `json:"schedulePlanId" gorm:"column:schedule_plan_id;not null;index"`
+
+	TaskID           int64  `json:"taskId" gorm:"column:task_id;not null;index"`
+	TaskSnapshotHash string `json:"taskSnapshotHash" gorm:"column:task_snapshot_hash"`
+	Title            string `json:"title" gorm:"column:title;not null"`
+
+	DurationMin   int     `json:"durationMin" gorm:"column:duration_min;not null"`
+	Priority      string  `json:"priority" gorm:"column:priority;not null"`
+	PriorityScore float64 `json:"priorityScore" gorm:"column:priority_score"`
+	Category      *string `json:"category" gorm:"column:category"`
+	IsDeepWork    bool    `json:"isDeepWork" gorm:"column:is_deep_work;not null"`
+
+	EarliestStartMs  *time.Time `json:"earliestStartMs" gorm:"column:earliest_start_ms"`
+	DeadlineMs       *time.Time `json:"deadlineMs" gorm:"column:deadline_ms"`
+	PreferredStartMs *time.Time `json:"preferredStartMs" gorm:"column:preferred_start_ms"`
+
+	AllowSplit          bool `json:"allowSplit" gorm:"column:allow_split;not null"`
+	MinSplitDurationMin int  `json:"minSplitDurationMin" gorm:"column:min_split_duration_min"`
+	MaxSplitCount       int  `json:"maxSplitCount" gorm:"column:max_split_count"`
+
+	IsPinned      bool       `json:"isPinned" gorm:"column:is_pinned;not null"`
+	PinnedStartMs *time.Time `json:"pinnedStartMs" gorm:"column:pinned_start_ms"`
+	PinnedEndMs   *time.Time `json:"pinnedEndMs" gorm:"column:pinned_end_ms"`
+
+	DependentTaskIDs string `json:"dependentTaskIds" gorm:"column:dependent_task_ids"`
+	BufferBeforeMin  int    `json:"bufferBeforeMin" gorm:"column:buffer_before_min"`
+	BufferAfterMin   int    `json:"bufferAfterMin" gorm:"column:buffer_after_min"`
+
+	ScheduleStatus    string  `json:"scheduleStatus" gorm:"column:schedule_status;not null"`
+	UnscheduledReason *string `json:"unscheduledReason" gorm:"column:unscheduled_reason"`
 }
 
 func (ScheduleTaskModel) TableName() string {

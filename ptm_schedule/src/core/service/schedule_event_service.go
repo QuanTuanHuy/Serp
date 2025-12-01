@@ -16,27 +16,72 @@ import (
 	"gorm.io/gorm"
 )
 
+type MoveEventResult struct {
+	Event             *dom.ScheduleEventEntity
+	HasConflicts      bool
+	ConflictingEvents []*dom.ScheduleEventEntity
+}
+
+type CompleteEventResult struct {
+	Event             *dom.ScheduleEventEntity
+	AllPartsCompleted bool
+	RemainingParts    int
+	ScheduleTaskID    int64
+	TotalActualMin    int
+}
+
+type SplitEventResult struct {
+	OriginalEvent *dom.ScheduleEventEntity
+	NewEvent      *dom.ScheduleEventEntity
+	TotalParts    int
+}
+
 type IScheduleEventService interface {
 	GetByID(ctx context.Context, id int64) (*dom.ScheduleEventEntity, error)
 	ListEventsByPlanAndDateRange(ctx context.Context, planID int64, fromDateMs, toDateMs int64) ([]*dom.ScheduleEventEntity, error)
+	GetEventsByScheduleTaskID(ctx context.Context, scheduleTaskID int64) ([]*dom.ScheduleEventEntity, error)
+	GetPinnedEvents(ctx context.Context, planID int64) ([]*dom.ScheduleEventEntity, error)
+
 	ValidateEvents(planID int64, events []*dom.ScheduleEventEntity) error
 	ValidateNoOverlapWithExisting(ctx context.Context, planID int64, events []*dom.ScheduleEventEntity) error
 	ValidateStatusUpdate(status enum.ScheduleEventStatus, actualStartMin, actualEndMin *int) error
-	UpdateEventStatus(ctx context.Context, tx *gorm.DB, eventID int64, newStatus enum.ScheduleEventStatus, actualStartMin, actualEndMin *int) error
+	FindConflictingEvents(ctx context.Context, planID int64, dateMs int64, startMin, endMin int, excludeEventID int64) ([]*dom.ScheduleEventEntity, error)
+
 	CreateBatch(ctx context.Context, tx *gorm.DB, items []*dom.ScheduleEventEntity) error
 	UpdateBatch(ctx context.Context, tx *gorm.DB, items []*dom.ScheduleEventEntity) error
+	UpdateEventStatus(ctx context.Context, tx *gorm.DB, eventID int64, newStatus enum.ScheduleEventStatus, actualStartMin, actualEndMin *int) error
+
+	MoveAndPinEvent(ctx context.Context, tx *gorm.DB, eventID int64, newDateMs int64, newStartMin, newEndMin int) (*MoveEventResult, error)
+	CompleteEvent(ctx context.Context, tx *gorm.DB, eventID int64, actualStartMin, actualEndMin int) (*CompleteEventResult, error)
+	SplitEvent(ctx context.Context, tx *gorm.DB, eventID int64, splitPointMin int, minSplitDuration int) (*SplitEventResult, error)
+	SkipEvent(ctx context.Context, tx *gorm.DB, eventID int64) error
 }
 
 type ScheduleEventService struct {
-	store port.IScheduleEventStorePort
+	store port.IScheduleEventPort
 }
 
 func (s *ScheduleEventService) GetByID(ctx context.Context, id int64) (*dom.ScheduleEventEntity, error) {
-	return s.store.GetByID(ctx, id)
+	event, err := s.store.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if event == nil {
+		return nil, errors.New(constant.EventNotFound)
+	}
+	return event, nil
 }
 
 func (s *ScheduleEventService) ListEventsByPlanAndDateRange(ctx context.Context, planID int64, fromDateMs, toDateMs int64) ([]*dom.ScheduleEventEntity, error) {
 	return s.store.ListEventsByPlanAndDateRange(ctx, planID, fromDateMs, toDateMs)
+}
+
+func (s *ScheduleEventService) GetEventsByScheduleTaskID(ctx context.Context, scheduleTaskID int64) ([]*dom.ScheduleEventEntity, error) {
+	return s.store.GetByScheduleTaskID(ctx, scheduleTaskID)
+}
+
+func (s *ScheduleEventService) GetPinnedEvents(ctx context.Context, planID int64) ([]*dom.ScheduleEventEntity, error) {
+	return s.store.GetPinnedEvents(ctx, planID)
 }
 
 func (s *ScheduleEventService) ValidateEvents(planID int64, events []*dom.ScheduleEventEntity) error {
@@ -48,7 +93,7 @@ func (s *ScheduleEventService) ValidateEvents(planID int64, events []*dom.Schedu
 			return errors.New(constant.EventInvalidItem)
 		}
 		if ev.Status == "" {
-			ev.Status = enum.PLANNED
+			ev.Status = enum.ScheduleEventPlanned
 		}
 	}
 
@@ -99,15 +144,15 @@ func (s *ScheduleEventService) ValidateNoOverlapWithExisting(ctx context.Context
 
 func (s *ScheduleEventService) ValidateStatusUpdate(status enum.ScheduleEventStatus, actualStartMin, actualEndMin *int) error {
 	validStatuses := map[enum.ScheduleEventStatus]bool{
-		enum.PLANNED: true,
-		enum.DONE:    true,
-		enum.SKIPPED: true,
+		enum.ScheduleEventPlanned: true,
+		enum.ScheduleEventDone:    true,
+		enum.ScheduleEventSkipped: true,
 	}
 	if !validStatuses[status] {
 		return errors.New(constant.EventInvalidStatus)
 	}
 
-	if status == enum.DONE {
+	if status == enum.ScheduleEventDone {
 		if actualStartMin == nil || actualEndMin == nil {
 			return errors.New(constant.EventInvalidActualTime)
 		}
@@ -117,6 +162,32 @@ func (s *ScheduleEventService) ValidateStatusUpdate(status enum.ScheduleEventSta
 	}
 
 	return nil
+}
+
+func (s *ScheduleEventService) FindConflictingEvents(ctx context.Context, planID int64, dateMs int64, startMin, endMin int, excludeEventID int64) ([]*dom.ScheduleEventEntity, error) {
+	events, err := s.store.ListEventsByPlanAndDateRange(ctx, planID, dateMs, dateMs)
+	if err != nil {
+		return nil, err
+	}
+
+	var conflicts []*dom.ScheduleEventEntity
+	for _, ev := range events {
+		if ev.ID == excludeEventID {
+			continue
+		}
+		if startMin < ev.EndMin && endMin > ev.StartMin {
+			conflicts = append(conflicts, ev)
+		}
+	}
+	return conflicts, nil
+}
+
+func (s *ScheduleEventService) CreateBatch(ctx context.Context, tx *gorm.DB, items []*dom.ScheduleEventEntity) error {
+	return s.store.CreateBatch(ctx, tx, items)
+}
+
+func (s *ScheduleEventService) UpdateBatch(ctx context.Context, tx *gorm.DB, items []*dom.ScheduleEventEntity) error {
+	return s.store.UpdateBatch(ctx, tx, items)
 }
 
 func (s *ScheduleEventService) UpdateEventStatus(ctx context.Context, tx *gorm.DB, eventID int64, newStatus enum.ScheduleEventStatus, actualStartMin, actualEndMin *int) error {
@@ -135,14 +206,137 @@ func (s *ScheduleEventService) UpdateEventStatus(ctx context.Context, tx *gorm.D
 	return s.store.UpdateBatch(ctx, tx, []*dom.ScheduleEventEntity{event})
 }
 
-func (s *ScheduleEventService) CreateBatch(ctx context.Context, tx *gorm.DB, items []*dom.ScheduleEventEntity) error {
-	return s.store.CreateBatch(ctx, tx, items)
+func (s *ScheduleEventService) MoveAndPinEvent(ctx context.Context, tx *gorm.DB, eventID int64, newDateMs int64, newStartMin, newEndMin int) (*MoveEventResult, error) {
+	event, err := s.GetByID(ctx, eventID)
+	if err != nil {
+		return nil, err
+	}
+
+	if !event.CanBeModified() {
+		return nil, errors.New(constant.EventCannotBeModified)
+	}
+
+	conflicts, err := s.FindConflictingEvents(ctx, event.SchedulePlanID, newDateMs, newStartMin, newEndMin, eventID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := event.MoveAndPin(newDateMs, newStartMin, newEndMin); err != nil {
+		return nil, err
+	}
+
+	if err := s.store.UpdateBatch(ctx, tx, []*dom.ScheduleEventEntity{event}); err != nil {
+		return nil, err
+	}
+
+	return &MoveEventResult{
+		Event:             event,
+		HasConflicts:      len(conflicts) > 0,
+		ConflictingEvents: conflicts,
+	}, nil
 }
 
-func (s *ScheduleEventService) UpdateBatch(ctx context.Context, tx *gorm.DB, items []*dom.ScheduleEventEntity) error {
-	return s.store.UpdateBatch(ctx, tx, items)
+func (s *ScheduleEventService) CompleteEvent(ctx context.Context, tx *gorm.DB, eventID int64, actualStartMin, actualEndMin int) (*CompleteEventResult, error) {
+	event, err := s.GetByID(ctx, eventID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := event.MarkDone(actualStartMin, actualEndMin); err != nil {
+		return nil, err
+	}
+
+	if err := s.store.UpdateBatch(ctx, tx, []*dom.ScheduleEventEntity{event}); err != nil {
+		return nil, err
+	}
+
+	pendingCount, err := s.store.CountPendingEventsByScheduleTaskID(ctx, event.ScheduleTaskID)
+	if err != nil {
+		return nil, err
+	}
+
+	allEvents, err := s.store.GetByScheduleTaskID(ctx, event.ScheduleTaskID)
+	if err != nil {
+		return nil, err
+	}
+
+	totalActualMin := 0
+	for _, ev := range allEvents {
+		if ev.IsDone() && ev.HasActualTimes() {
+			totalActualMin += ev.GetActualDuration()
+		}
+	}
+
+	return &CompleteEventResult{
+		Event:             event,
+		AllPartsCompleted: pendingCount == 0,
+		RemainingParts:    int(pendingCount),
+		ScheduleTaskID:    event.ScheduleTaskID,
+		TotalActualMin:    totalActualMin,
+	}, nil
 }
 
-func NewScheduleEventService(store port.IScheduleEventStorePort) IScheduleEventService {
+func (s *ScheduleEventService) SplitEvent(ctx context.Context, tx *gorm.DB, eventID int64, splitPointMin int, minSplitDuration int) (*SplitEventResult, error) {
+	if minSplitDuration <= 0 {
+		minSplitDuration = dom.DefaultMinSplitDuration
+	}
+
+	event, err := s.GetByID(ctx, eventID)
+	if err != nil {
+		return nil, err
+	}
+
+	if !event.CanSplit(minSplitDuration) {
+		return nil, errors.New(constant.EventCannotBeSplit)
+	}
+
+	newPart, err := event.Split(splitPointMin, minSplitDuration)
+	if err != nil {
+		return nil, errors.New(constant.EventInvalidSplitPoint)
+	}
+
+	newTotalParts := event.TotalParts + 1
+
+	if err := s.store.IncrementPartIndexAfter(ctx, tx, event.ScheduleTaskID, event.PartIndex); err != nil {
+		return nil, err
+	}
+
+	if err := s.store.UpdateTotalPartsForTask(ctx, tx, event.ScheduleTaskID, newTotalParts); err != nil {
+		return nil, err
+	}
+
+	event.TotalParts = newTotalParts
+	newPart.PartIndex = event.PartIndex + 1
+	newPart.TotalParts = newTotalParts
+
+	if err := s.store.UpdateBatch(ctx, tx, []*dom.ScheduleEventEntity{event}); err != nil {
+		return nil, err
+	}
+
+	if err := s.store.CreateBatch(ctx, tx, []*dom.ScheduleEventEntity{newPart}); err != nil {
+		return nil, err
+	}
+
+	return &SplitEventResult{
+		OriginalEvent: event,
+		NewEvent:      newPart,
+		TotalParts:    newTotalParts,
+	}, nil
+}
+
+func (s *ScheduleEventService) SkipEvent(ctx context.Context, tx *gorm.DB, eventID int64) error {
+	event, err := s.GetByID(ctx, eventID)
+	if err != nil {
+		return err
+	}
+
+	if err := event.MarkSkipped(); err != nil {
+		return err
+	}
+
+	return s.store.UpdateBatch(ctx, tx, []*dom.ScheduleEventEntity{event})
+}
+
+func NewScheduleEventService(store port.IScheduleEventPort) IScheduleEventService {
 	return &ScheduleEventService{store: store}
 }

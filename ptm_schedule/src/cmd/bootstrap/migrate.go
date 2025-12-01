@@ -15,14 +15,14 @@ import (
 func InitializeDB(db *gorm.DB) {
 	err := db.AutoMigrate(
 		&model.SchedulePlanModel{},
-		&model.ScheduleGroupModel{},
 		&model.ScheduleTaskModel{},
-		&model.TimeBubblesModel{},
-		&model.ScheduleDayModel{},
 		&model.AvailabilityCalendarModel{},
 		&model.CalendarExceptionModel{},
 		&model.ScheduleWindowModel{},
 		&model.ScheduleEventModel{},
+		&model.ProcessedEventModel{},
+		&model.FailedEventModel{},
+		&model.RescheduleQueueModel{},
 	)
 	if err != nil {
 		log.Fatal("Failed to run migrations: ", err)

@@ -8,6 +8,7 @@ package mapper
 import (
 	"time"
 
+	"github.com/serp/ptm-task/src/core/domain/dto/message"
 	"github.com/serp/ptm-task/src/core/domain/dto/request"
 	"github.com/serp/ptm-task/src/core/domain/dto/response"
 	"github.com/serp/ptm-task/src/core/domain/entity"
@@ -53,6 +54,26 @@ func (m *TaskMapper) CreateRequestToEntity(req *request.CreateTaskRequest, userI
 	}
 
 	return task
+}
+
+func (m *TaskMapper) CreateTaskCreatedEvent(task *entity.TaskEntity) *message.TaskCreatedEvent {
+	return &message.TaskCreatedEvent{
+		TaskID:               task.ID,
+		UserID:               task.UserID,
+		TenantID:             task.TenantID,
+		Title:                task.Title,
+		Priority:             task.Priority,
+		EstimatedDurationMin: task.EstimatedDurationMin,
+		PreferredStartDateMs: task.PreferredStartDateMs,
+		DeadlineMs:           task.DeadlineMs,
+		EarliestStartMs:      task.EarliestStartMs,
+		Category:             task.Category,
+		Tags:                 task.Tags,
+		IsDeepWork:           task.IsDeepWork,
+		IsMeeting:            task.IsMeeting,
+		IsFlexible:           task.IsFlexible,
+		Status:               task.Status,
+	}
 }
 
 func (m *TaskMapper) UpdateRequestToEntity(req *request.UpdateTaskRequest, existing *entity.TaskEntity) *entity.TaskEntity {
@@ -118,6 +139,26 @@ func (m *TaskMapper) UpdateRequestToEntity(req *request.UpdateTaskRequest, exist
 	}
 
 	return existing
+}
+
+func (m *TaskMapper) CreateTaskUpdatedEvent(task *entity.TaskEntity, req *request.UpdateTaskRequest) *message.TaskUpdatedEvent {
+	return &message.TaskUpdatedEvent{
+		TaskID:               task.ID,
+		UserID:               task.UserID,
+		TenantID:             task.TenantID,
+		Title:                req.Title,
+		Priority:             req.Priority,
+		EstimatedDurationMin: req.EstimatedDurationMin,
+		PreferredStartDateMs: req.PreferredStartDateMs,
+		DeadlineMs:           req.DeadlineMs,
+		EarliestStartMs:      req.EarliestStartMs,
+		Category:             req.Category,
+		Tags:                 req.Tags,
+		IsDeepWork:           req.IsDeepWork,
+		IsMeeting:            req.IsMeeting,
+		IsFlexible:           req.IsFlexible,
+		Status:               req.Status,
+	}
 }
 
 func (m *TaskMapper) EntityToResponse(task *entity.TaskEntity) *response.TaskResponse {

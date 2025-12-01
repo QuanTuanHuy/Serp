@@ -1,41 +1,47 @@
-# --- Stage 1: Build the Next.js app ---
+# --- Stage 1: Install dependencies ---
+FROM node:18-alpine AS deps
+
+RUN apk add --no-cache libc6-compat
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+
+RUN npm ci --only=production=false
+
+# --- Stage 2: Build the Next.js app ---
 FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-
-# Cài dependencies (dùng npm ci để đảm bảo build reproducible)
-RUN npm ci
-
-# Copy toàn bộ mã nguồn
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-ENV NEXT_PUBLIC_API_BASE_URL=https://api.serp.texkis.com
+ARG NEXT_PUBLIC_API_BASE_URL=https://api.serp.texkis.com
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 
-# Build Next.js app (xuất ra thư mục .next)
+ENV NEXT_TELEMETRY_DISABLED=1
+
 RUN npm run build
 
-# --- Stage 2: Tạo image production nhỏ gọn ---
+# --- Stage 3: Production runner (minimal image) ---
 FROM node:18-alpine AS runner
 
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
-ENV NEXT_PUBLIC_API_BASE_URL=https://api.serp.texkis.com
+ENV HOSTNAME="0.0.0.0"
 
-# Copy các file cần thiết từ stage builder
+ARG NEXT_PUBLIC_API_BASE_URL=https://api.serp.texkis.com
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+
+
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/next.config.ts ./next.config.ts
-# Nếu bạn dùng .env.production, có thể COPY thêm:
-# COPY .env.production .env.production
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
 EXPOSE 3000
 
-# Chạy app ở chế độ production
-CMD ["npm", "start"]
+CMD ["node", "server.js"]

@@ -21,6 +21,7 @@ type RouterConfig struct {
 	Engine            *gin.Engine
 	ProjectController *controller.ProjectController
 	TaskController    *controller.TaskController
+	NoteController    *controller.NoteController
 	JWTMiddleware     *middleware.JWTMiddleware
 	RoleMiddleware    *middleware.RoleMiddleware
 	Logger            *zap.Logger
@@ -43,6 +44,7 @@ func RegisterRoutes(config *RouterConfig) {
 			projects.GET("", config.ProjectController.GetAllProjects)
 			projects.GET("/:id", config.ProjectController.GetProjectByID)
 			projects.GET("/:id/tasks", config.ProjectController.GetTasksByProjectID)
+			projects.GET("/:id/notes", config.NoteController.GetNotesByProjectID)
 			projects.PATCH("/:id", config.ProjectController.UpdateProject)
 			projects.DELETE("/:id", config.ProjectController.DeleteProject)
 		}
@@ -52,8 +54,18 @@ func RegisterRoutes(config *RouterConfig) {
 			tasks.POST("", config.TaskController.CreateTask)
 			tasks.GET("", config.TaskController.GetTasksByUserID)
 			tasks.GET("/:id", config.TaskController.GetTaskByID)
+			tasks.GET("/:id/notes", config.NoteController.GetNotesByTaskID)
 			tasks.PATCH("/:id", config.TaskController.UpdateTask)
 			tasks.DELETE("/:id", config.TaskController.DeleteTask)
+		}
+
+		notes := apiV1.Group("/notes")
+		{
+			notes.POST("", config.NoteController.CreateNote)
+			notes.GET("/search", config.NoteController.SearchNotes)
+			notes.GET("/:id", config.NoteController.GetNoteByID)
+			notes.PATCH("/:id", config.NoteController.UpdateNote)
+			notes.DELETE("/:id", config.NoteController.DeleteNote)
 		}
 	}
 

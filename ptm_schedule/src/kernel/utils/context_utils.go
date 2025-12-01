@@ -18,6 +18,15 @@ func GetUserIDFromContext(c *gin.Context) (int64, bool) {
 	return 0, false
 }
 
+func GetTenantIDFromContext(c *gin.Context) (int64, bool) {
+	if tenantID, exists := c.Get("tenantID"); exists {
+		if id, ok := tenantID.(int64); ok {
+			return id, true
+		}
+	}
+	return 0, false
+}
+
 func GetUserEmailFromContext(c *gin.Context) (string, bool) {
 	if email, exists := c.Get("userEmail"); exists {
 		if emailStr, ok := email.(string); ok {

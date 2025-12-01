@@ -35,7 +35,7 @@ func InitializeKafkaConsumer(
 				return err
 			}
 
-			consumer.RegisterHandler(string(enum.TASK_MANAGER_TOPIC), ptmTaskHandler.HandleMessage)
+			consumer.RegisterHandler(string(enum.TASK_MANAGER_TOPIC), ptmTaskHandler.GetWrappedHandler())
 
 			consumerCtx, consumerCancel = context.WithCancel(context.Background())
 			if err := consumer.StartConsumer(consumerCtx); err != nil {

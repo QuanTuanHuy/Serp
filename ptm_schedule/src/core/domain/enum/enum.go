@@ -26,11 +26,19 @@ const (
 type Priority string
 
 const (
-	Low    Priority = "LOW"
-	Medium Priority = "MEDIUM"
-	High   Priority = "HIGH"
-	Star   Priority = "STAR"
+	PriorityLow    Priority = "LOW"
+	PriorityMedium Priority = "MEDIUM"
+	PriorityHigh   Priority = "HIGH"
 )
+
+func (p Priority) IsValid() bool {
+	switch p {
+	case PriorityLow, PriorityMedium, PriorityHigh:
+		return true
+	default:
+		return false
+	}
+}
 
 type RepeatLevel string
 
@@ -42,21 +50,10 @@ const (
 	Yearly  RepeatLevel = "YEARLY"
 )
 
-type Tag string
-
-const (
-	Work   Tag = "WORK"
-	Eat    Tag = "EAT"
-	Sleep  Tag = "SLEEP"
-	Travel Tag = "TRAVEL"
-	Relax  Tag = "RELAX"
-	Other  Tag = "OTHER"
-)
-
 type ScheduleEventStatus string
 
 const (
-	PLANNED ScheduleEventStatus = "PLANNED"
-	DONE    ScheduleEventStatus = "DONE"
-	SKIPPED ScheduleEventStatus = "SKIPPED"
+	ScheduleEventPlanned ScheduleEventStatus = "PLANNED"
+	ScheduleEventDone    ScheduleEventStatus = "DONE"
+	ScheduleEventSkipped ScheduleEventStatus = "SKIPPED"
 )

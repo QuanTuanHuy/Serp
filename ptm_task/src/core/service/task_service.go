@@ -12,8 +12,11 @@ import (
 	"time"
 
 	"github.com/serp/ptm-task/src/core/domain/constant"
+	"github.com/serp/ptm-task/src/core/domain/dto/message"
+	"github.com/serp/ptm-task/src/core/domain/dto/request"
 	"github.com/serp/ptm-task/src/core/domain/entity"
 	"github.com/serp/ptm-task/src/core/domain/enum"
+	"github.com/serp/ptm-task/src/core/domain/mapper"
 	client "github.com/serp/ptm-task/src/core/port/client"
 	"github.com/serp/ptm-task/src/core/port/store"
 	"github.com/serp/ptm-task/src/kernel/utils"
@@ -46,19 +49,21 @@ type ITaskService interface {
 	GetDependentTasks(ctx context.Context, taskID int64) ([]*entity.TaskEntity, error)
 
 	PushTaskCreatedEvent(ctx context.Context, task *entity.TaskEntity) error
-	PushTaskUpdatedEvent(ctx context.Context, task *entity.TaskEntity) error
+	PushTaskUpdatedEvent(ctx context.Context, task *entity.TaskEntity, req *request.UpdateTaskRequest) error
 	PushTaskDeletedEvent(ctx context.Context, taskID int64) error
 }
 
 type taskService struct {
 	taskPort      store.ITaskPort
 	kafkaProducer client.IKafkaProducerPort
+	mapper        *mapper.TaskMapper
 }
 
 func NewTaskService(taskPort store.ITaskPort, kafkaProducer client.IKafkaProducerPort) ITaskService {
 	return &taskService{
 		taskPort:      taskPort,
 		kafkaProducer: kafkaProducer,
+		mapper:        mapper.NewTaskMapper(),
 	}
 }
 
@@ -286,16 +291,21 @@ func (s *taskService) GetDeepWorkTasks(ctx context.Context, userID int64) ([]*en
 }
 
 func (s *taskService) PushTaskCreatedEvent(ctx context.Context, task *entity.TaskEntity) error {
-	message := utils.BuildCreatedEvent(ctx, "task", task)
+	event := s.mapper.CreateTaskCreatedEvent(task)
+	message := utils.BuildCreatedEvent(ctx, "task", event)
+	return s.kafkaProducer.SendMessage(ctx, string(constant.TASK_TOPIC), strconv.FormatInt(task.ID, 10), message)
+}
+
+func (s *taskService) PushTaskUpdatedEvent(ctx context.Context, task *entity.TaskEntity, req *request.UpdateTaskRequest) error {
+	event := s.mapper.CreateTaskUpdatedEvent(task, req)
+	message := utils.BuildUpdatedEvent(ctx, "task", event)
 	return s.kafkaProducer.SendMessage(ctx, string(constant.TASK_TOPIC), strconv.FormatInt(task.ID, 10), message)
 }
 
 func (s *taskService) PushTaskDeletedEvent(ctx context.Context, taskID int64) error {
-	message := utils.BuildDeletedEvent(ctx, "task", taskID)
+	event := &message.TaskDeletedEvent{
+		TaskID: taskID,
+	}
+	message := utils.BuildDeletedEvent(ctx, "task", event)
 	return s.kafkaProducer.SendMessage(ctx, string(constant.TASK_TOPIC), strconv.FormatInt(taskID, 10), message)
-}
-
-func (s *taskService) PushTaskUpdatedEvent(ctx context.Context, task *entity.TaskEntity) error {
-	message := utils.BuildUpdatedEvent(ctx, "task", task)
-	return s.kafkaProducer.SendMessage(ctx, string(constant.TASK_TOPIC), strconv.FormatInt(task.ID, 10), message)
 }

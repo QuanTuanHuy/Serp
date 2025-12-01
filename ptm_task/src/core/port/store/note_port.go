@@ -13,7 +13,7 @@ import (
 )
 
 type INotePort interface {
-	CreateNote(ctx context.Context, tx *gorm.DB, note *entity.NoteEntity) error
+	CreateNote(ctx context.Context, tx *gorm.DB, note *entity.NoteEntity) (*entity.NoteEntity, error)
 
 	GetNoteByID(ctx context.Context, id int64) (*entity.NoteEntity, error)
 	GetNotesByTaskID(ctx context.Context, taskID int64, filter *NoteFilter) ([]*entity.NoteEntity, error)
@@ -52,7 +52,7 @@ type NoteFilter struct {
 
 func NewNoteFilter() *NoteFilter {
 	return &NoteFilter{
-		SortBy:    "created_at",
+		SortBy:    "id",
 		SortOrder: "DESC",
 		Limit:     20,
 		Offset:    0,

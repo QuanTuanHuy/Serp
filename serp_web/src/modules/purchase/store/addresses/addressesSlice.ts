@@ -107,6 +107,7 @@ export const selectAddressesDialogMode = (state: RootState) =>
   state.purchase.addresses.dialogMode;
 export const selectSelectedAddressId = (state: RootState) =>
   state.purchase.addresses.selectedAddressId;
-export const selectAddressesUiState = (state: RootState) => state.purchase.addresses;
+export const selectAddressesUiState = (state: RootState) =>
+  state.purchase.addresses;
 
 export default addressesSlice.reducer;
