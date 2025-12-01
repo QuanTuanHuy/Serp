@@ -29,7 +29,7 @@ app:
       - Content-Type
     allowCredentials: true
     maxAge: 3600
-    allowFiles: false 
+    allowFiles: false
 
 external:
   services:
@@ -44,4 +44,8 @@ external:
     purchaseService:
       host: localhost
       port: "8088"
+      timeout: 15s
+    logisticsService:
+      host: localhost
+      port: "8089"
       timeout: 15s
