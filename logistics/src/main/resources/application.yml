@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: logistics
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${KEYCLOAK_URL}/realms/serp/protocol/openid-connect/certs
+          issuer-uri: ${KEYCLOAK_URL}/realms/serp
+
+server:
+  port: ${SERVER_PORT:8088}
+
+security:
+  role-prefix: ROLE_
+  roles:
+    serp_service: ${SECURITY_ROLE_SERP_SERVICE:SERP_SERVICES}
+  urls:
+    public-urls:
+      - first: "/v2/api-docs"
+        second: GET
+      - first: "/v3/api-docs"
+        second: GET
+      - first: "/v3/api-docs/**"
+        second: GET
+      - first: "/swagger-resources"
+        second: GET
+      - first: "/swagger-resources/**"
+        second: GET
+      - first: "/configuration/ui"
+        second: GET
+      - first: "/configuration/security"
+        second: GET
+      - first: "/swagger-ui/**"
+        second: GET
+      - first: "/webjars/**"
+        second: GET
+      - first: "/swagger-ui.html"
+        second: GET
+    protected-urls:
+      - url-pattern: /purchase-service/api/v1/**
+        roles:
+          - LOGISTICS_ADMIN
+          - LOGISTICS_EMPLOYEE
+
