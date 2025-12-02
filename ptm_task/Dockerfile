@@ -16,6 +16,8 @@ WORKDIR /app
 
 COPY --from=builder /app/main .
 
+COPY --from=builder /app/src/config ./config
+
 EXPOSE 8083
 
 CMD ["./main"]
