@@ -189,7 +189,7 @@ func (u *taskUseCase) DeleteTask(ctx context.Context, userID int64, taskID int64
 		if err := u.taskService.DeleteTask(ctx, tx, userID, taskID); err != nil {
 			return err
 		}
-		err := u.taskService.PushTaskDeletedEvent(ctx, taskID)
+		err := u.taskService.PushTaskDeletedEvent(ctx, taskID, userID)
 		if err != nil {
 			u.logger.Error("failed to push task deleted event", zap.Error(err))
 			return err
@@ -211,7 +211,7 @@ func (u *taskUseCase) BulkDeleteTasks(ctx context.Context, userID int64, taskIDs
 			if err := u.taskService.DeleteTask(ctx, tx, userID, taskID); err != nil {
 				return err
 			}
-			err := u.taskService.PushTaskDeletedEvent(ctx, taskID)
+			err := u.taskService.PushTaskDeletedEvent(ctx, taskID, userID)
 			if err != nil {
 				u.logger.Error("failed to push task deleted event", zap.Error(err))
 				return err

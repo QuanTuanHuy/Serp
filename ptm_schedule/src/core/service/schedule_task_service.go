@@ -25,6 +25,7 @@ type IScheduleTaskService interface {
 	DeleteSnapshot(ctx context.Context, tx *gorm.DB, planID, taskID int64) error
 
 	GetBySchedulePlanID(ctx context.Context, schedulePlanID int64) ([]*entity.ScheduleTaskEntity, error)
+	GetByScheduleTaskIDs(ctx context.Context, scheduleTaskIDs []int64) ([]*entity.ScheduleTaskEntity, error)
 	GetByPlanIDAndTaskID(ctx context.Context, planID, taskID int64) (*entity.ScheduleTaskEntity, error)
 }
 
@@ -203,6 +204,15 @@ func (s *ScheduleTaskService) GetBySchedulePlanID(ctx context.Context, scheduleP
 	scheduleTasks, err := s.scheduleTaskPort.GetBySchedulePlanID(ctx, schedulePlanID)
 	if err != nil {
 		log.Error(ctx, "Failed to get schedule tasks by schedule plan ID: ", err)
+		return nil, err
+	}
+	return scheduleTasks, nil
+}
+
+func (s *ScheduleTaskService) GetByScheduleTaskIDs(ctx context.Context, scheduleTaskIDs []int64) ([]*entity.ScheduleTaskEntity, error) {
+	scheduleTasks, err := s.scheduleTaskPort.GetScheduleTasksByIDs(ctx, scheduleTaskIDs)
+	if err != nil {
+		log.Error(ctx, "Failed to get schedule tasks by IDs: ", err)
 		return nil, err
 	}
 	return scheduleTasks, nil

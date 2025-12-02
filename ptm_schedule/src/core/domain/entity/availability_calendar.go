@@ -31,3 +31,34 @@ func (e *AvailabilityCalendarEntity) OverlapsWith(other *AvailabilityCalendarEnt
 	}
 	return e.StartMin < other.EndMin && other.StartMin < e.EndMin
 }
+
+// DefaultWorkdayAvailability returns default 9-17 availability for weekdays (Mon-Fri)
+// Used when user hasn't configured their availability yet
+func DefaultWorkdayAvailability(userID int64) []*AvailabilityCalendarEntity {
+	defaults := make([]*AvailabilityCalendarEntity, 0, 5)
+	// Monday (1) to Friday (5)
+	for day := 1; day <= 5; day++ {
+		defaults = append(defaults, &AvailabilityCalendarEntity{
+			UserID:       userID,
+			DayOfWeek:    day,
+			StartMin:     9 * 60,
+			EndMin:       17 * 60,
+			ActiveStatus: enum.Active,
+		})
+	}
+	return defaults
+}
+
+func DefaultFullDayAvailability(userID int64) []*AvailabilityCalendarEntity {
+	defaults := make([]*AvailabilityCalendarEntity, 0, 7)
+	for day := 0; day <= 6; day++ {
+		defaults = append(defaults, &AvailabilityCalendarEntity{
+			UserID:       userID,
+			DayOfWeek:    day,
+			StartMin:     8 * 60,
+			EndMin:       22 * 60,
+			ActiveStatus: enum.Active,
+		})
+	}
+	return defaults
+}

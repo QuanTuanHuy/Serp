@@ -40,9 +40,19 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 	requiredAuthV1 := group.Group("/api/v1")
 	requiredAuthV1.Use(p.JWTMiddleware.AuthenticateJWT(), p.JWTMiddleware.RequireAnyRole(string(enum.PTM_ADMIN), string(enum.PTM_USER)))
 	{
-		// schedulePlanV1 := requiredAuthV1.Group("/schedule-plans")
-		// {
-		// }
+		planV1 := requiredAuthV1.Group("/schedule-plans")
+		{
+			planV1.GET("/active", p.SchedulePlanController.GetActivePlan)
+			planV1.GET("/active/detail", p.SchedulePlanController.GetActivePlanDetail)
+			planV1.POST("/active", p.SchedulePlanController.GetOrCreateActivePlan)
+			planV1.GET("/history", p.SchedulePlanController.GetPlanHistory)
+			planV1.POST("/reschedule", p.SchedulePlanController.TriggerReschedule)
+			planV1.GET("/:id", p.SchedulePlanController.GetPlanByID)
+			planV1.GET("/:id/events", p.SchedulePlanController.GetPlanWithEvents)
+			planV1.POST("/:id/apply", p.SchedulePlanController.ApplyProposedPlan)
+			planV1.POST("/:id/revert", p.SchedulePlanController.RevertToPlan)
+			planV1.DELETE("/:id", p.SchedulePlanController.DiscardProposedPlan)
+		}
 
 		availabilityV1 := requiredAuthV1.Group("/availability-calendar")
 		{

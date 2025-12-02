@@ -3,6 +3,8 @@
 
 // Env
 .env
+.env.local
+.env.prod
 
 copilot-instructions.md
 

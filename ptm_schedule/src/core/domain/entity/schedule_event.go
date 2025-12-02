@@ -297,3 +297,39 @@ func (e *ScheduleEventEntity) GetDurationVariance() int {
 	}
 	return e.GetActualDuration() - e.DurationMinutes()
 }
+
+// Clone creates a deep copy of the event
+func (e *ScheduleEventEntity) Clone() *ScheduleEventEntity {
+	clone := &ScheduleEventEntity{
+		BaseEntity:     BaseEntity{}, // Will get new ID when saved
+		SchedulePlanID: e.SchedulePlanID,
+		ScheduleTaskID: e.ScheduleTaskID,
+		DateMs:         e.DateMs,
+		StartMin:       e.StartMin,
+		EndMin:         e.EndMin,
+		Title:          e.Title,
+		PartIndex:      e.PartIndex,
+		TotalParts:     e.TotalParts,
+		Status:         e.Status,
+		IsPinned:       e.IsPinned,
+	}
+
+	if e.LinkedEventID != nil {
+		linkedID := *e.LinkedEventID
+		clone.LinkedEventID = &linkedID
+	}
+	if e.UtilityScore != nil {
+		score := *e.UtilityScore
+		clone.UtilityScore = &score
+	}
+	if e.ActualStartMin != nil {
+		start := *e.ActualStartMin
+		clone.ActualStartMin = &start
+	}
+	if e.ActualEndMin != nil {
+		end := *e.ActualEndMin
+		clone.ActualEndMin = &end
+	}
+
+	return clone
+}

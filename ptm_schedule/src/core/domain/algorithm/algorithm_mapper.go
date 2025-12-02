@@ -66,15 +66,21 @@ func (m *AlgorithmMapper) WindowEntitiesToWindows(windows []*entity.ScheduleWind
 
 // Assignment conversion
 
-func (m *AlgorithmMapper) EventEntityToAssignment(event *entity.ScheduleEventEntity) *Assignment {
+// EventEntityToAssignmentWithTask converts with proper TaskID from ScheduleTaskEntity
+func (m *AlgorithmMapper) EventEntityToAssignmentWithTask(event *entity.ScheduleEventEntity, task *entity.ScheduleTaskEntity) *Assignment {
 	var utilityScore float64
 	if event.UtilityScore != nil {
 		utilityScore = *event.UtilityScore
 	}
 
+	taskID := int64(0)
+	if task != nil {
+		taskID = task.TaskID
+	}
+
 	return &Assignment{
 		EventID:        &event.ID,
-		TaskID:         event.ScheduleTaskID, // This maps to original TaskID via ScheduleTask
+		TaskID:         taskID,
 		ScheduleTaskID: event.ScheduleTaskID,
 		DateMs:         event.DateMs,
 		StartMin:       event.StartMin,
@@ -87,10 +93,15 @@ func (m *AlgorithmMapper) EventEntityToAssignment(event *entity.ScheduleEventEnt
 	}
 }
 
-func (m *AlgorithmMapper) EventEntitiesToAssignments(events []*entity.ScheduleEventEntity) []*Assignment {
+// EventEntitiesToAssignmentsWithTaskMap converts events with proper TaskID resolution
+func (m *AlgorithmMapper) EventEntitiesToAssignmentsWithTaskMap(
+	events []*entity.ScheduleEventEntity,
+	taskMap map[int64]*entity.ScheduleTaskEntity,
+) []*Assignment {
 	result := make([]*Assignment, len(events))
 	for i, e := range events {
-		result[i] = m.EventEntityToAssignment(e)
+		task := taskMap[e.ScheduleTaskID]
+		result[i] = m.EventEntityToAssignmentWithTask(e, task)
 	}
 	return result
 }
@@ -143,10 +154,15 @@ func (m *AlgorithmMapper) BuildScheduleInput(
 	windows []*entity.ScheduleWindowEntity,
 	existingEvents []*entity.ScheduleEventEntity,
 ) *ScheduleInput {
+	taskMap := make(map[int64]*entity.ScheduleTaskEntity)
+	for _, t := range tasks {
+		taskMap[t.ID] = t
+	}
+
 	return &ScheduleInput{
 		Tasks:          m.TaskEntitiesToInputs(tasks),
 		Windows:        m.WindowEntitiesToWindows(windows),
-		ExistingEvents: m.EventEntitiesToAssignments(existingEvents),
+		ExistingEvents: m.EventEntitiesToAssignmentsWithTaskMap(existingEvents, taskMap),
 	}
 }
 
