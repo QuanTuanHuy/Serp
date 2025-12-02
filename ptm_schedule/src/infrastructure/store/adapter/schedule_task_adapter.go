@@ -30,6 +30,16 @@ func (s *ScheduleTaskStoreAdapter) GetScheduleTaskByTaskID(ctx context.Context, 
 	return mapper.ToScheduleTaskEntities(scheduleTasksModel), nil
 }
 
+func (s *ScheduleTaskStoreAdapter) GetScheduleTasksByIDs(ctx context.Context, scheduleTaskIDs []int64) ([]*entity.ScheduleTaskEntity, error) {
+	var scheduleTasksModel []*model.ScheduleTaskModel
+	if err := s.db.WithContext(ctx).
+		Where("id IN ?", scheduleTaskIDs).
+		Find(&scheduleTasksModel).Error; err != nil {
+		return nil, err
+	}
+	return mapper.ToScheduleTaskEntities(scheduleTasksModel), nil
+}
+
 func (s *ScheduleTaskStoreAdapter) CreateScheduleTask(ctx context.Context, tx *gorm.DB, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error) {
 	scheduleTaskModel := mapper.ToScheduleTaskModel(scheduleTask)
 	if err := tx.WithContext(ctx).Create(scheduleTaskModel).Error; err != nil {

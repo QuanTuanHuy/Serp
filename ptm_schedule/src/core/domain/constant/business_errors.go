@@ -48,4 +48,19 @@ const (
 	ScheduleGroupNotFound        = "schedule group not found"
 	DeleteScheduleGroupForbidden = "delete schedule group forbidden"
 	ScheduleTaskNotFound         = "schedule task not found"
+
+	// Concurrent update errors
+	OptimisticLockConflict = "optimistic lock conflict: data was modified by another process"
+	PlanVersionMismatch    = "plan version mismatch: please refresh and try again"
+
+	// Plan state transition errors
+	PlanAlreadyActive       = "plan is already active"
+	PlanNotProposed         = "plan must be in PROPOSED status to apply"
+	PlanNotArchived         = "plan must be in ARCHIVED status to revert"
+	PlanCannotBeDiscarded   = "only PROPOSED or DRAFT plans can be discarded"
+	PlanAlreadyProcessing   = "plan optimization is already in progress"
+	PlanOptimizationFailed  = "plan optimization failed"
+	PlanNoEventsToSchedule  = "no events to schedule in plan"
+	PlanEventCloneFailed    = "failed to clone events from archived plan"
+	PlanHistoryLimitReached = "maximum archived plan history limit reached"
 )
