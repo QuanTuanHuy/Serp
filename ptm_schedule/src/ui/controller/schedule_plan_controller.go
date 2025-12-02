@@ -8,7 +8,7 @@ package controller
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/serp/ptm-schedule/src/core/domain/constant"
-	"github.com/serp/ptm-schedule/src/core/domain/dto"
+	"github.com/serp/ptm-schedule/src/core/domain/dto/request"
 	"github.com/serp/ptm-schedule/src/core/usecase"
 	"github.com/serp/ptm-schedule/src/kernel/utils"
 )
@@ -23,12 +23,9 @@ func NewSchedulePlanController(schedulePlanUseCase usecase.ISchedulePlanUseCase)
 	}
 }
 
-// GetActivePlan returns the active schedule plan for the authenticated user
-// GET /api/v1/schedule-plans/active
 func (ctrl *SchedulePlanController) GetActivePlan(c *gin.Context) {
 	userID, ok := utils.GetUserIDFromContext(c)
 	if !ok {
-		utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
 		return
 	}
 
@@ -43,12 +40,9 @@ func (ctrl *SchedulePlanController) GetActivePlan(c *gin.Context) {
 	utils.SuccessfulHandle(c, plan)
 }
 
-// GetActivePlanDetail returns the active plan with events within date range
-// GET /api/v1/schedule-plans/active/detail?fromDateMs=xxx&toDateMs=xxx
 func (ctrl *SchedulePlanController) GetActivePlanDetail(c *gin.Context) {
 	userID, ok := utils.GetUserIDFromContext(c)
 	if !ok {
-		utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
 		return
 	}
 
@@ -72,12 +66,9 @@ func (ctrl *SchedulePlanController) GetActivePlanDetail(c *gin.Context) {
 	utils.SuccessfulHandle(c, response)
 }
 
-// GetOrCreateActivePlan gets or creates an active plan for the user
-// POST /api/v1/schedule-plans/active
 func (ctrl *SchedulePlanController) GetOrCreateActivePlan(c *gin.Context) {
 	userID, ok := utils.GetUserIDFromContext(c)
 	if !ok {
-		utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
 		return
 	}
 	tenantID, _ := utils.GetTenantIDFromContext(c)
@@ -93,12 +84,9 @@ func (ctrl *SchedulePlanController) GetOrCreateActivePlan(c *gin.Context) {
 	utils.SuccessfulHandle(c, plan)
 }
 
-// GetPlanByID returns a specific plan by ID
-// GET /api/v1/schedule-plans/:id
 func (ctrl *SchedulePlanController) GetPlanByID(c *gin.Context) {
 	userID, ok := utils.GetUserIDFromContext(c)
 	if !ok {
-		utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
 		return
 	}
 
@@ -118,12 +106,9 @@ func (ctrl *SchedulePlanController) GetPlanByID(c *gin.Context) {
 	utils.SuccessfulHandle(c, plan)
 }
 
-// GetPlanWithEvents returns a plan with its events within date range
-// GET /api/v1/schedule-plans/:id/events?fromDateMs=xxx&toDateMs=xxx
 func (ctrl *SchedulePlanController) GetPlanWithEvents(c *gin.Context) {
 	userID, ok := utils.GetUserIDFromContext(c)
 	if !ok {
-		utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
 		return
 	}
 
@@ -152,12 +137,9 @@ func (ctrl *SchedulePlanController) GetPlanWithEvents(c *gin.Context) {
 	utils.SuccessfulHandle(c, response)
 }
 
-// ApplyProposedPlan activates a proposed plan
-// POST /api/v1/schedule-plans/:id/apply
 func (ctrl *SchedulePlanController) ApplyProposedPlan(c *gin.Context) {
 	userID, ok := utils.GetUserIDFromContext(c)
 	if !ok {
-		utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
 		return
 	}
 
@@ -177,12 +159,9 @@ func (ctrl *SchedulePlanController) ApplyProposedPlan(c *gin.Context) {
 	utils.SuccessfulHandle(c, plan)
 }
 
-// DiscardProposedPlan discards a proposed or draft plan
-// DELETE /api/v1/schedule-plans/:id
 func (ctrl *SchedulePlanController) DiscardProposedPlan(c *gin.Context) {
 	userID, ok := utils.GetUserIDFromContext(c)
 	if !ok {
-		utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
 		return
 	}
 
@@ -202,12 +181,9 @@ func (ctrl *SchedulePlanController) DiscardProposedPlan(c *gin.Context) {
 	utils.SuccessfulHandle(c, nil)
 }
 
-// RevertToPlan reverts to an archived plan
-// POST /api/v1/schedule-plans/:id/revert
 func (ctrl *SchedulePlanController) RevertToPlan(c *gin.Context) {
 	userID, ok := utils.GetUserIDFromContext(c)
 	if !ok {
-		utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
 		return
 	}
 
@@ -227,16 +203,13 @@ func (ctrl *SchedulePlanController) RevertToPlan(c *gin.Context) {
 	utils.SuccessfulHandle(c, plan)
 }
 
-// TriggerReschedule triggers schedule optimization
-// POST /api/v1/schedule-plans/reschedule
 func (ctrl *SchedulePlanController) TriggerReschedule(c *gin.Context) {
 	userID, ok := utils.GetUserIDFromContext(c)
 	if !ok {
-		utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
 		return
 	}
 
-	var req dto.TriggerRescheduleRequest
+	var req request.TriggerRescheduleRequest
 	if !utils.ValidateAndBindJSON(c, &req) {
 		return
 	}
@@ -252,12 +225,9 @@ func (ctrl *SchedulePlanController) TriggerReschedule(c *gin.Context) {
 	utils.SuccessfulHandle(c, result)
 }
 
-// GetPlanHistory returns the plan history for the user
-// GET /api/v1/schedule-plans/history?page=1&pageSize=10
 func (ctrl *SchedulePlanController) GetPlanHistory(c *gin.Context) {
 	userID, ok := utils.GetUserIDFromContext(c)
 	if !ok {
-		utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
 		return
 	}
 

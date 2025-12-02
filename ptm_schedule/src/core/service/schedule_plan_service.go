@@ -23,7 +23,7 @@ type ISchedulePlanService interface {
 	UpdatePlanWithOptimisticLock(ctx context.Context, tx *gorm.DB, plan *entity.SchedulePlanEntity, expectedUpdatedAt int64) (*entity.SchedulePlanEntity, error)
 	ApplyPlan(ctx context.Context, tx *gorm.DB, userID, planID int64) (*entity.SchedulePlanEntity, error)
 	DiscardPlan(ctx context.Context, tx *gorm.DB, userID, planID int64) (*entity.SchedulePlanEntity, error)
-	RevertToPlan(ctx context.Context, tx *gorm.DB, userID, targetPlanID int64) (*entity.SchedulePlanEntity, error)
+	RevertToPlan(ctx context.Context, tx *gorm.DB, userID int64, targetPlan *entity.SchedulePlanEntity) (*entity.SchedulePlanEntity, error)
 
 	GetPlanByID(ctx context.Context, ID int64) (*entity.SchedulePlanEntity, error)
 	GetOrCreateActivePlan(ctx context.Context, tx *gorm.DB, userID, tenantID int64) (*entity.SchedulePlanEntity, error)
@@ -32,7 +32,6 @@ type ISchedulePlanService interface {
 	GetLatestProposedPlanByUserID(ctx context.Context, userID int64) (*entity.SchedulePlanEntity, error)
 	CountPlansByUserID(ctx context.Context, userID int64, filter *port.PlanFilter) (int64, error)
 
-	// Optimization lifecycle
 	StartOptimization(ctx context.Context, tx *gorm.DB, plan *entity.SchedulePlanEntity, algo enum.Algorithm) error
 	CompleteOptimization(ctx context.Context, tx *gorm.DB, plan *entity.SchedulePlanEntity, score float64, durationMs int64) error
 	FailOptimization(ctx context.Context, tx *gorm.DB, plan *entity.SchedulePlanEntity, reason string) error
@@ -175,10 +174,12 @@ func (s *SchedulePlanService) GetPlansByUserID(ctx context.Context, userID int64
 	return s.schedulePlanPort.ListPlansByUserID(ctx, userID, filter)
 }
 
-func (s *SchedulePlanService) RevertToPlan(ctx context.Context, tx *gorm.DB, userID int64, targetPlanID int64) (*entity.SchedulePlanEntity, error) {
-	targetPlan, err := s.GetPlanByID(ctx, targetPlanID)
-	if err != nil {
-		return nil, err
+func (s *SchedulePlanService) RevertToPlan(ctx context.Context, tx *gorm.DB, userID int64, targetPlan *entity.SchedulePlanEntity) (*entity.SchedulePlanEntity, error) {
+	if targetPlan.UserID != userID {
+		return nil, fmt.Errorf(constant.ForbiddenAccess)
+	}
+	if targetPlan.Status != enum.PlanArchived {
+		return nil, fmt.Errorf(constant.PlanNotArchived)
 	}
 
 	newPlanVersion := targetPlan.CreateNextVersion()

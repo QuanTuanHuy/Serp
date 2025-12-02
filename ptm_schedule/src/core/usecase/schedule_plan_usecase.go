@@ -12,7 +12,8 @@ import (
 
 	"github.com/golibs-starter/golib/log"
 	"github.com/serp/ptm-schedule/src/core/domain/constant"
-	"github.com/serp/ptm-schedule/src/core/domain/dto"
+	"github.com/serp/ptm-schedule/src/core/domain/dto/request"
+	"github.com/serp/ptm-schedule/src/core/domain/dto/response"
 	"github.com/serp/ptm-schedule/src/core/domain/entity"
 	"github.com/serp/ptm-schedule/src/core/domain/enum"
 	port "github.com/serp/ptm-schedule/src/core/port/store"
@@ -28,14 +29,14 @@ const (
 
 type ISchedulePlanUseCase interface {
 	// Core CRUD
-	CreatePlan(ctx context.Context, userID, tenantID int64, req *dto.CreateProposedPlanRequest) (*entity.SchedulePlanEntity, error)
+	CreatePlan(ctx context.Context, userID, tenantID int64, req *request.CreateProposedPlanRequest) (*entity.SchedulePlanEntity, error)
 	GetActivePlanByUserID(ctx context.Context, userID int64) (*entity.SchedulePlanEntity, error)
 	GetPlanByID(ctx context.Context, userID, planID int64) (*entity.SchedulePlanEntity, error)
 
 	// Plan with events
 	GetOrCreateActivePlan(ctx context.Context, userID, tenantID int64) (*entity.SchedulePlanEntity, error)
-	GetPlanWithEvents(ctx context.Context, userID, planID int64, fromDateMs, toDateMs int64) (*dto.PlanDetailResponse, error)
-	GetActivePlanDetail(ctx context.Context, userID int64, fromDateMs, toDateMs int64) (*dto.PlanDetailResponse, error)
+	GetPlanWithEvents(ctx context.Context, userID, planID int64, fromDateMs, toDateMs int64) (*response.PlanDetailResponse, error)
+	GetActivePlanDetail(ctx context.Context, userID int64, fromDateMs, toDateMs int64) (*response.PlanDetailResponse, error)
 
 	// Plan lifecycle
 	ApplyProposedPlan(ctx context.Context, userID, planID int64) (*entity.SchedulePlanEntity, error)
@@ -43,10 +44,10 @@ type ISchedulePlanUseCase interface {
 	RevertToPlan(ctx context.Context, userID, targetPlanID int64) (*entity.SchedulePlanEntity, error)
 
 	// Optimization
-	TriggerReschedule(ctx context.Context, userID int64, req *dto.TriggerRescheduleRequest) (*dto.OptimizationResult, error)
+	TriggerReschedule(ctx context.Context, userID int64, req *request.TriggerRescheduleRequest) (*response.OptimizationResult, error)
 
 	// History & Cleanup
-	GetPlanHistory(ctx context.Context, userID int64, page, pageSize int) (*dto.PlanHistoryResponse, error)
+	GetPlanHistory(ctx context.Context, userID int64, page, pageSize int) (*response.PlanHistoryResponse, error)
 	CleanupOldPlans(ctx context.Context, userID int64) (int, error)
 }
 
@@ -85,14 +86,11 @@ func (s *SchedulePlanUseCase) GetOrCreateActivePlan(ctx context.Context, userID,
 	return result.(*entity.SchedulePlanEntity), nil
 }
 
-func (s *SchedulePlanUseCase) CreatePlan(ctx context.Context, userID, tenantID int64, req *dto.CreateProposedPlanRequest) (*entity.SchedulePlanEntity, error) {
+func (s *SchedulePlanUseCase) CreatePlan(ctx context.Context, userID, tenantID int64, req *request.CreateProposedPlanRequest) (*entity.SchedulePlanEntity, error) {
 	result, err := s.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
-		// Create new plan in DRAFT status
 		newPlan := entity.NewRollingPlan(userID, tenantID, constant.DefaultSchedulePlanDurationDays)
-		newPlan.Status = enum.PlanDraft
 		newPlan.AlgorithmUsed = req.Algorithm
 
-		// Get current active plan to set as parent
 		activePlan, _ := s.schedulePlanService.GetActivePlanByUserID(ctx, userID)
 		if activePlan != nil {
 			newPlan.ParentPlanID = &activePlan.ID
@@ -111,7 +109,7 @@ func (s *SchedulePlanUseCase) CreatePlan(ctx context.Context, userID, tenantID i
 	return result.(*entity.SchedulePlanEntity), nil
 }
 
-func (s *SchedulePlanUseCase) GetPlanWithEvents(ctx context.Context, userID, planID int64, fromDateMs, toDateMs int64) (*dto.PlanDetailResponse, error) {
+func (s *SchedulePlanUseCase) GetPlanWithEvents(ctx context.Context, userID, planID int64, fromDateMs, toDateMs int64) (*response.PlanDetailResponse, error) {
 	plan, err := s.GetPlanByID(ctx, userID, planID)
 	if err != nil {
 		return nil, err
@@ -126,14 +124,18 @@ func (s *SchedulePlanUseCase) GetPlanWithEvents(ctx context.Context, userID, pla
 		return nil, err
 	}
 
-	tasks, err := s.scheduleTaskPort.GetBySchedulePlanID(ctx, planID)
+	scheduleTaskIDs := make([]int64, 0, len(events))
+	for _, e := range events {
+		scheduleTaskIDs = append(scheduleTaskIDs, e.ScheduleTaskID)
+	}
+	tasks, err := s.scheduleTaskService.GetByScheduleTaskIDs(ctx, scheduleTaskIDs)
 	if err != nil {
 		return nil, err
 	}
 
 	stats := s.calculatePlanStats(tasks, events)
 
-	return &dto.PlanDetailResponse{
+	return &response.PlanDetailResponse{
 		Plan:   plan,
 		Events: events,
 		Tasks:  tasks,
@@ -141,7 +143,7 @@ func (s *SchedulePlanUseCase) GetPlanWithEvents(ctx context.Context, userID, pla
 	}, nil
 }
 
-func (s *SchedulePlanUseCase) GetActivePlanDetail(ctx context.Context, userID int64, fromDateMs, toDateMs int64) (*dto.PlanDetailResponse, error) {
+func (s *SchedulePlanUseCase) GetActivePlanDetail(ctx context.Context, userID int64, fromDateMs, toDateMs int64) (*response.PlanDetailResponse, error) {
 	plan, err := s.schedulePlanService.GetActivePlanByUserID(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -151,25 +153,24 @@ func (s *SchedulePlanUseCase) GetActivePlanDetail(ctx context.Context, userID in
 }
 
 func (s *SchedulePlanUseCase) ApplyProposedPlan(ctx context.Context, userID, planID int64) (*entity.SchedulePlanEntity, error) {
-	result, err := s.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
-		plan, err := s.schedulePlanService.GetPlanByID(ctx, planID)
-		if err != nil {
-			return nil, err
-		}
-		if plan.UserID != userID {
-			return nil, fmt.Errorf(constant.ForbiddenAccess)
-		}
-		if plan.Status != enum.PlanProposed {
-			return nil, fmt.Errorf(constant.PlanNotProposed)
-		}
+	plan, err := s.schedulePlanService.GetPlanByID(ctx, planID)
+	if err != nil {
+		return nil, err
+	}
+	if plan.UserID != userID {
+		return nil, fmt.Errorf(constant.ForbiddenAccess)
+	}
+	if plan.Status != enum.PlanProposed {
+		return nil, fmt.Errorf(constant.PlanNotProposed)
+	}
 
+	result, err := s.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
 		return s.schedulePlanService.ApplyPlan(ctx, tx, userID, planID)
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	// Trigger async cleanup of old plans
 	go func() {
 		ctx := context.Background()
 		if count, err := s.CleanupOldPlans(ctx, userID); err != nil {
@@ -184,17 +185,6 @@ func (s *SchedulePlanUseCase) ApplyProposedPlan(ctx context.Context, userID, pla
 
 func (s *SchedulePlanUseCase) DiscardProposedPlan(ctx context.Context, userID, planID int64) error {
 	_, err := s.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
-		plan, err := s.schedulePlanService.GetPlanByID(ctx, planID)
-		if err != nil {
-			return nil, err
-		}
-		if plan.UserID != userID {
-			return nil, fmt.Errorf(constant.ForbiddenAccess)
-		}
-		if plan.Status != enum.PlanProposed && plan.Status != enum.PlanDraft {
-			return nil, fmt.Errorf(constant.PlanCannotBeDiscarded)
-		}
-
 		return s.schedulePlanService.DiscardPlan(ctx, tx, userID, planID)
 	})
 	return err
@@ -202,32 +192,24 @@ func (s *SchedulePlanUseCase) DiscardProposedPlan(ctx context.Context, userID, p
 
 func (s *SchedulePlanUseCase) RevertToPlan(ctx context.Context, userID, targetPlanID int64) (*entity.SchedulePlanEntity, error) {
 	result, err := s.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
-		// Verify target plan ownership and status
 		targetPlan, err := s.schedulePlanService.GetPlanByID(ctx, targetPlanID)
 		if err != nil {
 			return nil, err
 		}
-		if targetPlan.UserID != userID {
-			return nil, fmt.Errorf(constant.ForbiddenAccess)
-		}
-		if targetPlan.Status != enum.PlanArchived {
-			return nil, fmt.Errorf(constant.PlanNotArchived)
-		}
 
 		// Create new plan from target
-		newPlan, err := s.schedulePlanService.RevertToPlan(ctx, tx, userID, targetPlanID)
+		newPlan, err := s.schedulePlanService.RevertToPlan(ctx, tx, userID, targetPlan)
 		if err != nil {
 			return nil, err
 		}
 
 		// Clone events from target plan to new plan
-		// Use a wide date range to get all events
 		fromDateMs := targetPlan.StartDateMs
 		toDateMs := int64(0)
 		if targetPlan.EndDateMs != nil {
 			toDateMs = *targetPlan.EndDateMs
 		} else {
-			toDateMs = time.Now().AddDate(0, 6, 0).UnixMilli() // 6 months forward
+			toDateMs = time.Now().AddDate(0, 6, 0).UnixMilli()
 		}
 
 		events, err := s.scheduleEventService.ListEventsByPlanAndDateRange(ctx, targetPlanID, fromDateMs, toDateMs)
@@ -243,7 +225,7 @@ func (s *SchedulePlanUseCase) RevertToPlan(ctx context.Context, userID, targetPl
 				clone.SchedulePlanID = newPlan.ID
 				clonedEvents = append(clonedEvents, clone)
 			}
-			if err := s.scheduleEventPort.CreateBatch(ctx, tx, clonedEvents); err != nil {
+			if err := s.scheduleEventService.CreateBatch(ctx, tx, clonedEvents); err != nil {
 				return nil, fmt.Errorf("%s: %w", constant.PlanEventCloneFailed, err)
 			}
 		}
@@ -260,7 +242,7 @@ func (s *SchedulePlanUseCase) RevertToPlan(ctx context.Context, userID, targetPl
 	return result.(*entity.SchedulePlanEntity), nil
 }
 
-func (s *SchedulePlanUseCase) TriggerReschedule(ctx context.Context, userID int64, req *dto.TriggerRescheduleRequest) (*dto.OptimizationResult, error) {
+func (s *SchedulePlanUseCase) TriggerReschedule(ctx context.Context, userID int64, req *request.TriggerRescheduleRequest) (*response.OptimizationResult, error) {
 	activePlan, err := s.schedulePlanService.GetActivePlanByUserID(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -278,7 +260,7 @@ func (s *SchedulePlanUseCase) TriggerReschedule(ctx context.Context, userID int6
 		return nil, s.schedulePlanService.StartOptimization(ctx, tx, activePlan, enum.HybridAlgorithm)
 	})
 	if err != nil {
-		return &dto.OptimizationResult{
+		return &response.OptimizationResult{
 			Success:      false,
 			ErrorMessage: err.Error(),
 		}, nil
@@ -309,7 +291,7 @@ func (s *SchedulePlanUseCase) TriggerReschedule(ctx context.Context, userID int6
 		s.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
 			return nil, s.schedulePlanService.FailOptimization(ctx, tx, activePlan, err.Error())
 		})
-		return &dto.OptimizationResult{
+		return &response.OptimizationResult{
 			Success:      false,
 			DurationMs:   durationMs,
 			ErrorMessage: err.Error(),
@@ -328,7 +310,7 @@ func (s *SchedulePlanUseCase) TriggerReschedule(ctx context.Context, userID int6
 		log.Warn(ctx, "Failed to complete optimization: ", err)
 	}
 
-	return &dto.OptimizationResult{
+	return &response.OptimizationResult{
 		Success:          rescheduleResult.Success,
 		DurationMs:       int64(rescheduleResult.DurationMs),
 		TasksScheduled:   len(rescheduleResult.UpdatedEventIDs),
@@ -336,7 +318,7 @@ func (s *SchedulePlanUseCase) TriggerReschedule(ctx context.Context, userID int6
 	}, nil
 }
 
-func (s *SchedulePlanUseCase) GetPlanHistory(ctx context.Context, userID int64, page, pageSize int) (*dto.PlanHistoryResponse, error) {
+func (s *SchedulePlanUseCase) GetPlanHistory(ctx context.Context, userID int64, page, pageSize int) (*response.PlanHistoryResponse, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -359,7 +341,7 @@ func (s *SchedulePlanUseCase) GetPlanHistory(ctx context.Context, userID int64, 
 		return nil, err
 	}
 
-	return &dto.PlanHistoryResponse{
+	return &response.PlanHistoryResponse{
 		Plans:      plans,
 		TotalCount: int(totalCount),
 	}, nil
@@ -411,7 +393,7 @@ func (s *SchedulePlanUseCase) CleanupOldPlans(ctx context.Context, userID int64)
 	return deletedCount, nil
 }
 
-func (s *SchedulePlanUseCase) calculatePlanStats(tasks []*entity.ScheduleTaskEntity, events []*entity.ScheduleEventEntity) *dto.PlanStats {
+func (s *SchedulePlanUseCase) calculatePlanStats(tasks []*entity.ScheduleTaskEntity, events []*entity.ScheduleEventEntity) *response.PlanStats {
 	totalTasks := len(tasks)
 	scheduledTaskIDs := make(map[int64]bool)
 	totalDurationMin := 0
@@ -434,7 +416,7 @@ func (s *SchedulePlanUseCase) calculatePlanStats(tasks []*entity.ScheduleTaskEnt
 		utilizationPct = float64(scheduledMin) / float64(totalDurationMin) * 100
 	}
 
-	return &dto.PlanStats{
+	return &response.PlanStats{
 		TotalTasks:       totalTasks,
 		ScheduledTasks:   scheduledTasks,
 		UnscheduledTasks: unscheduledTasks,
