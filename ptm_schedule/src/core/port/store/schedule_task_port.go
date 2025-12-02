@@ -9,9 +9,11 @@ import (
 
 type IScheduleTaskPort interface {
 	CreateScheduleTask(ctx context.Context, tx *gorm.DB, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error)
+	CreateBatch(ctx context.Context, tx *gorm.DB, tasks []*entity.ScheduleTaskEntity) error
 	UpdateScheduleTask(ctx context.Context, tx *gorm.DB, ID int64, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error)
 	DeleteScheduleTask(ctx context.Context, tx *gorm.DB, scheduleTaskID int64) error
 	DeleteByTaskID(ctx context.Context, tx *gorm.DB, taskID int64) error
+	DeleteByPlanID(ctx context.Context, tx *gorm.DB, planID int64) error
 
 	GetScheduleTaskByID(ctx context.Context, scheduleTaskID int64) (*entity.ScheduleTaskEntity, error)
 	GetScheduleTasksByIDs(ctx context.Context, scheduleTaskIDs []int64) ([]*entity.ScheduleTaskEntity, error)

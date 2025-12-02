@@ -23,6 +23,8 @@ type IScheduleTaskService interface {
 	CreateSnapshot(ctx context.Context, tx *gorm.DB, planID int64, event *message.TaskCreatedEvent) (*entity.ScheduleTaskEntity, error)
 	SyncSnapshot(ctx context.Context, tx *gorm.DB, planID int64, event *message.TaskUpdatedEvent) (enum.ChangeType, error)
 	DeleteSnapshot(ctx context.Context, tx *gorm.DB, planID, taskID int64) error
+	CloneTasksForPlan(ctx context.Context, tx *gorm.DB, srcPlanID, destPlanID int64) (map[int64]int64, error)
+	DeleteByPlanID(ctx context.Context, tx *gorm.DB, planID int64) error
 
 	GetBySchedulePlanID(ctx context.Context, schedulePlanID int64) ([]*entity.ScheduleTaskEntity, error)
 	GetByScheduleTaskIDs(ctx context.Context, scheduleTaskIDs []int64) ([]*entity.ScheduleTaskEntity, error)
@@ -228,4 +230,51 @@ func (s *ScheduleTaskService) GetByPlanIDAndTaskID(ctx context.Context, planID, 
 		return nil, fmt.Errorf(constant.ScheduleTaskNotFound)
 	}
 	return scheduleTask, nil
+}
+
+// Returns a map of old schedule_task_id -> new schedule_task_id
+func (s *ScheduleTaskService) CloneTasksForPlan(ctx context.Context, tx *gorm.DB, srcPlanID, destPlanID int64) (map[int64]int64, error) {
+	srcTasks, err := s.scheduleTaskPort.GetBySchedulePlanID(ctx, srcPlanID)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(srcTasks) == 0 {
+		return make(map[int64]int64), nil
+	}
+
+	clonedTasks := make([]*entity.ScheduleTaskEntity, 0, len(srcTasks))
+	for _, t := range srcTasks {
+		clone := t.Clone()
+		clone.SchedulePlanID = destPlanID
+		clonedTasks = append(clonedTasks, clone)
+	}
+
+	if err := s.scheduleTaskPort.CreateBatch(ctx, tx, clonedTasks); err != nil {
+		return nil, err
+	}
+
+	taskIDMapping := make(map[int64]int64) // old schedule_task_id -> new schedule_task_id
+	newTasks, err := s.scheduleTaskPort.GetBySchedulePlanID(ctx, destPlanID)
+	if err != nil {
+		return nil, err
+	}
+
+	taskIDToNewID := make(map[int64]int64)
+	for _, t := range newTasks {
+		taskIDToNewID[t.TaskID] = t.ID
+	}
+
+	for _, srcTask := range srcTasks {
+		if newID, ok := taskIDToNewID[srcTask.TaskID]; ok {
+			taskIDMapping[srcTask.ID] = newID
+		}
+	}
+
+	log.Info(ctx, "Cloned ", len(clonedTasks), " tasks from plan ", srcPlanID, " to plan ", destPlanID)
+	return taskIDMapping, nil
+}
+
+func (s *ScheduleTaskService) DeleteByPlanID(ctx context.Context, tx *gorm.DB, planID int64) error {
+	return s.scheduleTaskPort.DeleteByPlanID(ctx, tx, planID)
 }

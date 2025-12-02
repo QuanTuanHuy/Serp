@@ -48,6 +48,17 @@ func (s *ScheduleTaskStoreAdapter) CreateScheduleTask(ctx context.Context, tx *g
 	return mapper.ToScheduleTaskEntity(scheduleTaskModel), nil
 }
 
+func (s *ScheduleTaskStoreAdapter) CreateBatch(ctx context.Context, tx *gorm.DB, tasks []*entity.ScheduleTaskEntity) error {
+	if len(tasks) == 0 {
+		return nil
+	}
+	if tx == nil {
+		tx = s.db
+	}
+	models := mapper.ToScheduleTaskModels(tasks)
+	return tx.WithContext(ctx).Create(&models).Error
+}
+
 func (s *ScheduleTaskStoreAdapter) GetBySchedulePlanID(ctx context.Context, schedulePlanID int64) ([]*entity.ScheduleTaskEntity, error) {
 	var scheduleTasksModel []*model.ScheduleTaskModel
 	if err := s.db.WithContext(ctx).
@@ -102,6 +113,12 @@ func (s *ScheduleTaskStoreAdapter) UpdateScheduleTask(ctx context.Context, tx *g
 		return nil, err
 	}
 	return mapper.ToScheduleTaskEntity(scheduleTaskModel), nil
+}
+
+func (s *ScheduleTaskStoreAdapter) DeleteByPlanID(ctx context.Context, tx *gorm.DB, planID int64) error {
+	return tx.WithContext(ctx).
+		Where("schedule_plan_id = ?", planID).
+		Delete(&model.ScheduleTaskModel{}).Error
 }
 
 func NewScheduleTaskStoreAdapter(db *gorm.DB) port.IScheduleTaskPort {

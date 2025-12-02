@@ -50,11 +50,15 @@ type IScheduleEventService interface {
 	CreateBatch(ctx context.Context, tx *gorm.DB, items []*dom.ScheduleEventEntity) error
 	UpdateBatch(ctx context.Context, tx *gorm.DB, items []*dom.ScheduleEventEntity) error
 	UpdateEventStatus(ctx context.Context, tx *gorm.DB, eventID int64, newStatus enum.ScheduleEventStatus, actualStartMin, actualEndMin *int) error
+	DeleteByPlanID(ctx context.Context, tx *gorm.DB, planID int64) error
 
 	MoveAndPinEvent(ctx context.Context, tx *gorm.DB, eventID int64, newDateMs int64, newStartMin, newEndMin int) (*MoveEventResult, error)
 	CompleteEvent(ctx context.Context, tx *gorm.DB, eventID int64, actualStartMin, actualEndMin int) (*CompleteEventResult, error)
 	SplitEvent(ctx context.Context, tx *gorm.DB, eventID int64, splitPointMin int, minSplitDuration int) (*SplitEventResult, error)
 	SkipEvent(ctx context.Context, tx *gorm.DB, eventID int64) error
+
+	CloneEventsForPlan(ctx context.Context, tx *gorm.DB, newPlanID int64, events []*dom.ScheduleEventEntity,
+		taskIDMapping map[int64]int64) ([]*dom.ScheduleEventEntity, error)
 }
 
 type ScheduleEventService struct {
@@ -335,6 +339,28 @@ func (s *ScheduleEventService) SkipEvent(ctx context.Context, tx *gorm.DB, event
 	}
 
 	return s.store.UpdateBatch(ctx, tx, []*dom.ScheduleEventEntity{event})
+}
+
+func (s *ScheduleEventService) CloneEventsForPlan(ctx context.Context, tx *gorm.DB, newPlanID int64, events []*dom.ScheduleEventEntity,
+	taskIDMapping map[int64]int64) ([]*dom.ScheduleEventEntity, error) {
+	clonedEvents := make([]*dom.ScheduleEventEntity, 0, len(events))
+	for _, ev := range events {
+		clone := ev.Clone()
+		clone.SchedulePlanID = newPlanID
+		clone.ID = 0
+		if newTaskID, ok := taskIDMapping[ev.ScheduleTaskID]; ok {
+			clone.ScheduleTaskID = newTaskID
+		}
+		clonedEvents = append(clonedEvents, clone)
+	}
+	if err := s.store.CreateBatch(ctx, tx, clonedEvents); err != nil {
+		return nil, err
+	}
+	return clonedEvents, nil
+}
+
+func (s *ScheduleEventService) DeleteByPlanID(ctx context.Context, tx *gorm.DB, planID int64) error {
+	return s.store.DeleteByPlanID(ctx, tx, planID)
 }
 
 func NewScheduleEventService(store port.IScheduleEventPort) IScheduleEventService {

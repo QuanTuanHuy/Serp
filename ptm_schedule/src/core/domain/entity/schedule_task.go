@@ -178,3 +178,59 @@ func (e *ScheduleTaskEntity) ResetStatus() {
 	e.ScheduleStatus = enum.ScheduleTaskPending
 	e.UnscheduledReason = nil
 }
+
+func (e *ScheduleTaskEntity) Clone() *ScheduleTaskEntity {
+	clone := &ScheduleTaskEntity{
+		UserID:              e.UserID,
+		TenantID:            e.TenantID,
+		TaskID:              e.TaskID,
+		TaskSnapshotHash:    e.TaskSnapshotHash,
+		Title:               e.Title,
+		DurationMin:         e.DurationMin,
+		Priority:            e.Priority,
+		PriorityScore:       e.PriorityScore,
+		IsDeepWork:          e.IsDeepWork,
+		AllowSplit:          e.AllowSplit,
+		MinSplitDurationMin: e.MinSplitDurationMin,
+		MaxSplitCount:       e.MaxSplitCount,
+		IsPinned:            e.IsPinned,
+		BufferBeforeMin:     e.BufferBeforeMin,
+		BufferAfterMin:      e.BufferAfterMin,
+		ScheduleStatus:      e.ScheduleStatus,
+	}
+
+	if e.Category != nil {
+		cat := *e.Category
+		clone.Category = &cat
+	}
+	if e.EarliestStartMs != nil {
+		val := *e.EarliestStartMs
+		clone.EarliestStartMs = &val
+	}
+	if e.DeadlineMs != nil {
+		val := *e.DeadlineMs
+		clone.DeadlineMs = &val
+	}
+	if e.PreferredStartMs != nil {
+		val := *e.PreferredStartMs
+		clone.PreferredStartMs = &val
+	}
+	if e.PinnedStartMs != nil {
+		val := *e.PinnedStartMs
+		clone.PinnedStartMs = &val
+	}
+	if e.PinnedEndMs != nil {
+		val := *e.PinnedEndMs
+		clone.PinnedEndMs = &val
+	}
+	if e.UnscheduledReason != nil {
+		val := *e.UnscheduledReason
+		clone.UnscheduledReason = &val
+	}
+	if len(e.DependentTaskIDs) > 0 {
+		clone.DependentTaskIDs = make([]int64, len(e.DependentTaskIDs))
+		copy(clone.DependentTaskIDs, e.DependentTaskIDs)
+	}
+
+	return clone
+}

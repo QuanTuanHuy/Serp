@@ -30,6 +30,7 @@ type RescheduleResult struct {
 }
 
 type IRescheduleStrategyService interface {
+	Execute(ctx context.Context, planID int64, batch *entity.RescheduleBatch) (*RescheduleResult, error)
 	RunRipple(ctx context.Context, planID int64, batch *entity.RescheduleBatch) (*RescheduleResult, error)
 	RunInsertion(ctx context.Context, planID int64, batch *entity.RescheduleBatch) (*RescheduleResult, error)
 	RunFullReplan(ctx context.Context, planID int64, batch *entity.RescheduleBatch) (*RescheduleResult, error)
@@ -54,6 +55,19 @@ func NewRescheduleStrategyService(
 		windowService: windowService,
 		scheduler:     algorithm.NewHybridScheduler(),
 		mapper:        algorithm.NewAlgorithmMapper(),
+	}
+}
+
+func (s *RescheduleStrategyService) Execute(ctx context.Context, planID int64, batch *entity.RescheduleBatch) (*RescheduleResult, error) {
+	switch batch.Strategy {
+	case enum.StrategyRipple:
+		return s.RunRipple(ctx, planID, batch)
+	case enum.StrategyInsertion:
+		return s.RunInsertion(ctx, planID, batch)
+	case enum.StrategyFullReplan:
+		return s.RunFullReplan(ctx, planID, batch)
+	default:
+		return s.RunRipple(ctx, planID, batch)
 	}
 }
 
