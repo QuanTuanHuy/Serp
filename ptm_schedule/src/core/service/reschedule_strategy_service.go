@@ -36,24 +36,24 @@ type IRescheduleStrategyService interface {
 }
 
 type RescheduleStrategyService struct {
-	taskPort   storePort.IScheduleTaskPort
-	eventPort  storePort.IScheduleEventPort
-	windowPort storePort.IScheduleWindowStorePort
-	scheduler  *algorithm.HybridScheduler
-	mapper     *algorithm.AlgorithmMapper
+	taskPort      storePort.IScheduleTaskPort
+	eventPort     storePort.IScheduleEventPort
+	windowService IScheduleWindowService
+	scheduler     *algorithm.HybridScheduler
+	mapper        *algorithm.AlgorithmMapper
 }
 
 func NewRescheduleStrategyService(
 	taskPort storePort.IScheduleTaskPort,
 	eventPort storePort.IScheduleEventPort,
-	windowPort storePort.IScheduleWindowStorePort,
+	windowService IScheduleWindowService,
 ) IRescheduleStrategyService {
 	return &RescheduleStrategyService{
-		taskPort:   taskPort,
-		eventPort:  eventPort,
-		windowPort: windowPort,
-		scheduler:  algorithm.NewHybridScheduler(),
-		mapper:     algorithm.NewAlgorithmMapper(),
+		taskPort:      taskPort,
+		eventPort:     eventPort,
+		windowService: windowService,
+		scheduler:     algorithm.NewHybridScheduler(),
+		mapper:        algorithm.NewAlgorithmMapper(),
 	}
 }
 
@@ -168,9 +168,13 @@ func (s *RescheduleStrategyService) loadScheduleData(
 	fromMs := now.UnixMilli()
 	toMs := now.AddDate(0, 0, DefaultScheduleRangeDays).UnixMilli()
 
-	windows, err := s.windowPort.ListAvailabilityWindows(ctx, userID, fromMs, toMs)
+	windows, usingDefaults, err := s.windowService.GetOrCreateWindowsWithInfo(ctx, userID, fromMs, toMs)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	if usingDefaults {
+		log.Infof("User %d has no availability configured, using defaults for scheduling", userID)
 	}
 
 	events, err := s.eventPort.ListEventsByPlanAndDateRange(ctx, planID, fromMs, toMs)

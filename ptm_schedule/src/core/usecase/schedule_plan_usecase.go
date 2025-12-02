@@ -57,8 +57,6 @@ type SchedulePlanUseCase struct {
 	scheduleTaskService  service.IScheduleTaskService
 	rescheduleService    service.IRescheduleStrategyService
 	txService            service.ITransactionService
-	scheduleEventPort    port.IScheduleEventPort
-	scheduleTaskPort     port.IScheduleTaskPort
 }
 
 func (s *SchedulePlanUseCase) GetActivePlanByUserID(ctx context.Context, userID int64) (*entity.SchedulePlanEntity, error) {
@@ -157,9 +155,6 @@ func (s *SchedulePlanUseCase) ApplyProposedPlan(ctx context.Context, userID, pla
 	if err != nil {
 		return nil, err
 	}
-	if plan.UserID != userID {
-		return nil, fmt.Errorf(constant.ForbiddenAccess)
-	}
 	if plan.Status != enum.PlanProposed {
 		return nil, fmt.Errorf(constant.PlanNotProposed)
 	}
@@ -248,7 +243,6 @@ func (s *SchedulePlanUseCase) TriggerReschedule(ctx context.Context, userID int6
 		return nil, err
 	}
 
-	// Check if plan is already being optimized
 	if activePlan.Status == enum.PlanProcessing {
 		return nil, fmt.Errorf(constant.PlanAlreadyProcessing)
 	}
@@ -432,8 +426,6 @@ func NewSchedulePlanUseCase(
 	scheduleTaskService service.IScheduleTaskService,
 	rescheduleService service.IRescheduleStrategyService,
 	txService service.ITransactionService,
-	scheduleEventPort port.IScheduleEventPort,
-	scheduleTaskPort port.IScheduleTaskPort,
 ) ISchedulePlanUseCase {
 	return &SchedulePlanUseCase{
 		schedulePlanService:  schedulePlanService,
@@ -441,7 +433,5 @@ func NewSchedulePlanUseCase(
 		scheduleTaskService:  scheduleTaskService,
 		rescheduleService:    rescheduleService,
 		txService:            txService,
-		scheduleEventPort:    scheduleEventPort,
-		scheduleTaskPort:     scheduleTaskPort,
 	}
 }

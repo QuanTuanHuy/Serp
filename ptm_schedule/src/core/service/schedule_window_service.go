@@ -7,8 +7,10 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
+	"github.com/serp/ptm-schedule/src/core/domain/constant"
 	dom "github.com/serp/ptm-schedule/src/core/domain/entity"
 	port "github.com/serp/ptm-schedule/src/core/port/store"
 	"github.com/serp/ptm-schedule/src/kernel/utils"
@@ -20,29 +22,86 @@ type IScheduleWindowService interface {
 	CreateBatch(ctx context.Context, tx *gorm.DB, items []*dom.ScheduleWindowEntity) error
 	UpdateBatch(ctx context.Context, tx *gorm.DB, items []*dom.ScheduleWindowEntity) error
 	DeleteByDateRange(ctx context.Context, tx *gorm.DB, userID int64, fromDateMs, toDateMs int64) error
-	// Business logic methods
+
 	ExpandAvailabilityToWindows(availCalendar []*dom.AvailabilityCalendarEntity, fromDateMs, toDateMs int64) []*dom.ScheduleWindowEntity
 	SubtractExceptions(windows []*dom.ScheduleWindowEntity, exceptions []*dom.CalendarExceptionEntity) []*dom.ScheduleWindowEntity
+
+	GetOrCreateWindows(ctx context.Context, userID int64, fromDateMs, toDateMs int64) ([]*dom.ScheduleWindowEntity, error)
+	GetOrCreateWindowsWithInfo(ctx context.Context, userID int64, fromDateMs, toDateMs int64) ([]*dom.ScheduleWindowEntity, bool, error)
 }
 
 type ScheduleWindowService struct {
-	store port.IScheduleWindowStorePort
+	windowStore       port.IScheduleWindowStorePort
+	availabilityStore port.IAvailabilityCalendarStorePort
+	exceptionStore    port.ICalendarExceptionStorePort
+}
+
+func (s *ScheduleWindowService) GetOrCreateWindows(ctx context.Context, userID int64, fromDateMs int64, toDateMs int64) ([]*dom.ScheduleWindowEntity, error) {
+	windows, _, err := s.GetOrCreateWindowsWithInfo(ctx, userID, fromDateMs, toDateMs)
+	return windows, err
+}
+
+func (s *ScheduleWindowService) GetOrCreateWindowsWithInfo(ctx context.Context, userID int64, fromDateMs int64, toDateMs int64) ([]*dom.ScheduleWindowEntity, bool, error) {
+	if fromDateMs > toDateMs {
+		return nil, false, fmt.Errorf(constant.InvalidDateRange)
+	}
+
+	windows, err := s.windowStore.ListAvailabilityWindows(ctx, userID, fromDateMs, toDateMs)
+	if err != nil {
+		return nil, false, err
+	}
+	if len(windows) > 0 {
+		return windows, false, nil
+	}
+
+	availCalendar, err := s.availabilityStore.ListByUser(ctx, userID)
+	if err != nil {
+		return nil, false, err
+	}
+
+	usingDefaults := false
+	if len(availCalendar) == 0 {
+		availCalendar = dom.DefaultFullDayAvailability(userID)
+		usingDefaults = true
+	}
+
+	exceptions, err := s.exceptionStore.ListExceptions(ctx, userID, fromDateMs, toDateMs)
+	if err != nil {
+		return nil, false, err
+	}
+
+	windows = s.ExpandAvailabilityToWindows(availCalendar, fromDateMs, toDateMs)
+	windows = s.SubtractExceptions(windows, exceptions)
+
+	if len(windows) == 0 {
+		return nil, usingDefaults, nil
+	}
+
+	// Only persist if using actual user configuration (not defaults)
+	if !usingDefaults {
+		err = s.windowStore.CreateBatch(ctx, nil, windows)
+		if err != nil {
+			return nil, false, err
+		}
+	}
+
+	return windows, usingDefaults, nil
 }
 
 func (s *ScheduleWindowService) DeleteByDateRange(ctx context.Context, tx *gorm.DB, userID int64, fromDateMs int64, toDateMs int64) error {
-	return s.store.DeleteByDateRange(ctx, tx, userID, fromDateMs, toDateMs)
+	return s.windowStore.DeleteByDateRange(ctx, tx, userID, fromDateMs, toDateMs)
 }
 
 func (s *ScheduleWindowService) ListAvailabilityWindows(ctx context.Context, userID int64, fromDateMs, toDateMs int64) ([]*dom.ScheduleWindowEntity, error) {
-	return s.store.ListAvailabilityWindows(ctx, userID, fromDateMs, toDateMs)
+	return s.windowStore.ListAvailabilityWindows(ctx, userID, fromDateMs, toDateMs)
 }
 
 func (s *ScheduleWindowService) CreateBatch(ctx context.Context, tx *gorm.DB, items []*dom.ScheduleWindowEntity) error {
-	return s.store.CreateBatch(ctx, tx, items)
+	return s.windowStore.CreateBatch(ctx, tx, items)
 }
 
 func (s *ScheduleWindowService) UpdateBatch(ctx context.Context, tx *gorm.DB, items []*dom.ScheduleWindowEntity) error {
-	return s.store.UpdateBatch(ctx, tx, items)
+	return s.windowStore.UpdateBatch(ctx, tx, items)
 }
 
 func (s *ScheduleWindowService) ExpandAvailabilityToWindows(
@@ -158,6 +217,14 @@ func (s *ScheduleWindowService) subtractIntervalsFromWindow(
 	return result
 }
 
-func NewScheduleWindowService(store port.IScheduleWindowStorePort) IScheduleWindowService {
-	return &ScheduleWindowService{store: store}
+func NewScheduleWindowService(
+	windowStore port.IScheduleWindowStorePort,
+	availabilityStore port.IAvailabilityCalendarStorePort,
+	exceptionStore port.ICalendarExceptionStorePort,
+) IScheduleWindowService {
+	return &ScheduleWindowService{
+		windowStore:       windowStore,
+		availabilityStore: availabilityStore,
+		exceptionStore:    exceptionStore,
+	}
 }
