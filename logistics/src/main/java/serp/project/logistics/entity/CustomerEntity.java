@@ -27,6 +27,7 @@ public class CustomerEntity {
     @Column(name = "current_address_id")
     private String currentAddressId;
 
+    @Column(name = "status_id")
     private String statusId;
 
     private String phone;
