@@ -32,12 +32,17 @@ type IScheduleTaskService interface {
 }
 
 type ScheduleTaskService struct {
-	scheduleTaskPort port.IScheduleTaskPort
+	scheduleTaskPort  port.IScheduleTaskPort
+	scheduleEventPort port.IScheduleEventPort
 }
 
-func NewScheduleTaskService(scheduleTaskPort port.IScheduleTaskPort) IScheduleTaskService {
+func NewScheduleTaskService(
+	scheduleTaskPort port.IScheduleTaskPort,
+	scheduleEventPort port.IScheduleEventPort,
+) IScheduleTaskService {
 	return &ScheduleTaskService{
-		scheduleTaskPort: scheduleTaskPort,
+		scheduleTaskPort:  scheduleTaskPort,
+		scheduleEventPort: scheduleEventPort,
 	}
 }
 
@@ -149,6 +154,11 @@ func (s *ScheduleTaskService) DeleteSnapshot(ctx context.Context, tx *gorm.DB, p
 	if currentTask == nil {
 		log.Warn(ctx, "Schedule task not found for deletion. PlanID: ", planID, ", TaskID: ", taskID)
 		return nil
+	}
+
+	if err := s.scheduleEventPort.DeleteByScheduleTaskID(ctx, tx, currentTask.ID); err != nil {
+		log.Error(ctx, "Failed to delete associated events for task: ", currentTask.ID, ", error: ", err)
+		return err
 	}
 
 	if err := s.scheduleTaskPort.DeleteScheduleTask(ctx, tx, currentTask.ID); err != nil {

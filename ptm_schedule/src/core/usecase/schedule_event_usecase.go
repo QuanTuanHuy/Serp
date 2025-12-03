@@ -125,9 +125,10 @@ func (u *ScheduleEventUseCase) ManuallyMoveEvent(ctx context.Context, userID int
 
 		if result.HasConflicts {
 			payload := map[string]any{
-				"newDateMs":   newDateMs,
-				"newStartMin": newStartMin,
-				"newEndMin":   newEndMin,
+				"newDateMs":      newDateMs,
+				"newStartMin":    newStartMin,
+				"newEndMin":      newEndMin,
+				"scheduleTaskID": result.Event.ScheduleTaskID,
 			}
 			return u.rescheduleQueue.EnqueueEventMove(ctx, tx, result.Event.SchedulePlanID, userID, eventID, payload)
 		}

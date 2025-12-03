@@ -76,11 +76,23 @@ func (s *HybridScheduler) Schedule(input *ScheduleInput) *ScheduleOutput {
 func (s *HybridScheduler) ScheduleIncremental(input *ScheduleInput, newTaskIDs []int64) *ScheduleOutput {
 	output := NewScheduleOutput()
 
-	// Start with existing events
-	currentSchedule := make([]*Assignment, len(input.ExistingEvents))
-	copy(currentSchedule, input.ExistingEvents)
+	// Identify ScheduleTaskIDs to exclude from existing events
+	// Include all newTaskIDs directly (handles both existing tasks with changed constraints
+	// AND deleted tasks whose events should be excluded)
+	affectedTaskIDs := make(map[int64]bool)
+	for _, id := range newTaskIDs {
+		affectedTaskIDs[id] = true
+	}
 
-	// Filter to only new tasks
+	// Start with existing events, excluding those belonging to affected tasks
+	currentSchedule := make([]*Assignment, 0, len(input.ExistingEvents))
+	for _, e := range input.ExistingEvents {
+		if !affectedTaskIDs[e.ScheduleTaskID] {
+			currentSchedule = append(currentSchedule, e)
+		}
+	}
+
+	// Filter to only new tasks (tasks that still exist and need rescheduling)
 	newTasks := s.filterTasksByIDs(input.Tasks, newTaskIDs)
 	sortedNewTasks := s.sortTasksByScore(newTasks)
 
@@ -309,7 +321,7 @@ func (s *HybridScheduler) tryRippleEffect(
 
 // Helper methods
 
-func (s *HybridScheduler) extractPinnedAssignments(tasks []*TaskInput, existing []*Assignment) []*Assignment {
+func (s *HybridScheduler) extractPinnedAssignments(_ []*TaskInput, existing []*Assignment) []*Assignment {
 	pinned := make([]*Assignment, 0)
 	for _, a := range existing {
 		if a.IsPinned {
@@ -353,7 +365,7 @@ func (s *HybridScheduler) filterTasksByIDs(tasks []*TaskInput, ids []int64) []*T
 
 	result := make([]*TaskInput, 0)
 	for _, t := range tasks {
-		if idSet[t.TaskID] {
+		if idSet[t.ScheduleTaskID] {
 			result = append(result, t)
 		}
 	}

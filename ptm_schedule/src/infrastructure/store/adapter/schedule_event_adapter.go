@@ -125,6 +125,12 @@ func (a *ScheduleEventAdapter) DeleteFutureEventsByTaskID(ctx context.Context, t
 		Delete(&m.ScheduleEventModel{}).Error
 }
 
+func (a *ScheduleEventAdapter) DeleteByScheduleTaskID(ctx context.Context, tx *gorm.DB, scheduleTaskID int64) error {
+	return a.WithTx(tx).WithContext(ctx).
+		Where("schedule_task_id = ?", scheduleTaskID).
+		Delete(&m.ScheduleEventModel{}).Error
+}
+
 func (a *ScheduleEventAdapter) IncrementPartIndexAfter(ctx context.Context, tx *gorm.DB, scheduleTaskID int64, afterPartIndex int) error {
 	return a.WithTx(tx).WithContext(ctx).
 		Model(&m.ScheduleEventModel{}).

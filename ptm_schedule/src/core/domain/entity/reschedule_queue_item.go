@@ -6,6 +6,8 @@ Description: Part of Serp Project
 package entity
 
 import (
+	"encoding/json"
+
 	"github.com/serp/ptm-schedule/src/core/domain/constant"
 	"github.com/serp/ptm-schedule/src/core/domain/enum"
 )
@@ -72,11 +74,22 @@ func (b *RescheduleBatch) AffectedScheduleTaskIDs() []int64 {
 	result := make([]int64, 0)
 
 	for _, item := range b.Items {
+		var taskID int64
+
 		if item.EntityType == constant.EntityTypeTask && item.EntityID > 0 {
-			if !seen[item.EntityID] {
-				seen[item.EntityID] = true
-				result = append(result, item.EntityID)
+			taskID = item.EntityID
+		} else if item.EntityType == constant.EntityTypeEvent && item.ChangePayload != "" {
+			var payload map[string]any
+			if json.Unmarshal([]byte(item.ChangePayload), &payload) == nil {
+				if id, ok := payload["scheduleTaskID"].(float64); ok {
+					taskID = int64(id)
+				}
 			}
+		}
+
+		if taskID > 0 && !seen[taskID] {
+			seen[taskID] = true
+			result = append(result, taskID)
 		}
 	}
 
