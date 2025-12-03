@@ -139,6 +139,16 @@ export const api = createApi({
     'purchase/Facility',
     'purchase/Shipment',
     'purchase/Address',
+    // Logistics tags
+    'logistics/Address',
+    'logistics/Category',
+    'logistics/Customer',
+    'logistics/Facility',
+    'logistics/InventoryItem',
+    'logistics/Order',
+    'logistics/Product',
+    'logistics/Shipment',
+    'logistics/Supplier',
   ],
 
   // Define endpoints in separate files for each module

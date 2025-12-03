@@ -101,18 +101,23 @@ type ProductUpdateForm struct {
 }
 
 type ShipmentCreationForm struct {
-	ShipmentName     string                    `json:"shipmentName"`
-	ShipmentTypeId   string                    `json:"shipmentTypeId"`
-	StatusId         string                    `json:"statusId"`
-	FromSupplierId   string                    `json:"fromSupplierId"`
-	ToCustomerId     string                    `json:"toCustomerId"`
-	OrderId          string                    `json:"orderId"`
-	InventoryDetails []InventoryItemDetailForm `json:"inventoryDetails"`
+	ShipmentName         string                    `json:"shipmentName"`
+	ShipmentTypeId       string                    `json:"shipmentTypeId"`
+	StatusId             string                    `json:"statusId"`
+	FromSupplierId       string                    `json:"fromSupplierId"`
+	ToCustomerId         string                    `json:"toCustomerId"`
+	OrderId              string                    `json:"orderId"`
+	Note                 string                    `json:"note"`
+	ExpectedDeliveryDate string                    `json:"expectedDeliveryDate"`
+	Items                []InventoryItemDetailForm `json:"items"`
 }
 
 type InventoryItemDetailForm struct {
 	ProductId         string `json:"productId"`
 	Quantity          int    `json:"quantity"`
+	OrderItemId       string `json:"orderItemId"`
+	Note              string `json:"note"`
+	LotId             string `json:"lotId"`
 	FacilityId        string `json:"facilityId"`
 	ExpirationDate    string `json:"expirationDate"`
 	ManufacturingDate string `json:"manufacturingDate"`

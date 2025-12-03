@@ -25,6 +25,7 @@ export type ModuleCode =
   | 'CRM'
   | 'PURCHASE'
   | 'SALES'
+  | 'LOGISTICS'
   | 'MARKETING'
   | 'PTM'
   | 'PROJECT'
@@ -98,6 +99,11 @@ export const MODULE_ICONS: Record<ModuleCode, ModuleIconConfig> = {
     icon: ShoppingCart,
     color: 'text-blue-600',
     bgColor: 'bg-blue-50 dark:bg-blue-950',
+  },
+  LOGISTICS: {
+    icon: MapPin,
+    color: 'text-green-600',
+    bgColor: 'bg-green-50 dark:bg-green-950',
   },
 
   // Finance
