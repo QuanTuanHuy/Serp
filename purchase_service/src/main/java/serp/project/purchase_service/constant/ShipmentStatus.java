@@ -2,7 +2,6 @@ package serp.project.purchase_service.constant;
 
 public enum ShipmentStatus {
     CREATED("CREATED"),
-    READY("READY"),
     IMPORTED("IMPORTED"),
     EXPORTED("EXPORTED")
     ;

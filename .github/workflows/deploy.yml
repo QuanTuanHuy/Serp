@@ -25,6 +25,7 @@ jobs:
       crm: ${{ steps.changes.outputs.crm }}
       serp-web: ${{ steps.changes.outputs.serp-web }}
       purchase: ${{ steps.changes.outputs.purchase }}
+      logistics: ${{ steps.changes.outputs.logistics }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -49,7 +50,8 @@ jobs:
               - 'serp_web/**'
             purchase:
               - 'purchase_service/**'
-
+            logistics:
+              - 'logistics/**'
 
   deploy-account:
     needs: check-changes
@@ -203,6 +205,25 @@ jobs:
             docker compose up -d --remove-orphans
             docker image prune -f
 
+  deploy-logistics:
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.logistics == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Logistics
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}/serp_logistics
+            export IMAGE_TAG=${{ github.sha }}
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker image prune -f
+
   notify-deployment:
     needs: check-changes
     if: always()
@@ -219,4 +240,3 @@ jobs:
           echo "- PTM Optimization: ${{ needs.check-changes.outputs.ptm-optimization }}" >> $GITHUB_STEP_SUMMARY
           echo "- CRM: ${{ needs.check-changes.outputs.crm }}" >> $GITHUB_STEP_SUMMARY
           echo "- Serp Web: ${{ needs.check-changes.outputs.serp-web }}" >> $GITHUB_STEP_SUMMARY
-
