@@ -16,11 +16,13 @@ import (
 )
 
 type CalendarExceptionAdapter struct {
-	db *gorm.DB
+	BaseStoreAdapter
 }
 
 func NewCalendarExceptionAdapter(db *gorm.DB) p.ICalendarExceptionStorePort {
-	return &CalendarExceptionAdapter{db: db}
+	return &CalendarExceptionAdapter{
+		BaseStoreAdapter: BaseStoreAdapter{db: db},
+	}
 }
 
 func (a *CalendarExceptionAdapter) ListExceptions(ctx context.Context, userID int64, fromDateMs, toDateMs int64) ([]*dom.CalendarExceptionEntity, error) {
@@ -39,21 +41,14 @@ func (a *CalendarExceptionAdapter) CreateBatch(ctx context.Context, tx *gorm.DB,
 		return nil
 	}
 	models := mp.ToCalendarExceptionModels(items)
-	dbx := tx
-	if dbx == nil {
-		dbx = a.db
-	}
-	return dbx.WithContext(ctx).Create(&models).Error
+	return a.WithTx(tx).WithContext(ctx).Create(&models).Error
 }
 
 func (a *CalendarExceptionAdapter) UpdateBatch(ctx context.Context, tx *gorm.DB, items []*dom.CalendarExceptionEntity) error {
 	if len(items) == 0 {
 		return nil
 	}
-	dbx := tx
-	if dbx == nil {
-		dbx = a.db
-	}
+	dbx := a.WithTx(tx).WithContext(ctx)
 
 	for _, item := range items {
 		if item == nil {
@@ -61,12 +56,12 @@ func (a *CalendarExceptionAdapter) UpdateBatch(ctx context.Context, tx *gorm.DB,
 		}
 		mdl := mp.ToCalendarExceptionModel(item)
 		if item.IsNew() {
-			if err := dbx.WithContext(ctx).Create(mdl).Error; err != nil {
+			if err := dbx.Create(mdl).Error; err != nil {
 				return err
 			}
 			continue
 		}
-		if err := dbx.WithContext(ctx).Model(&m.CalendarExceptionModel{}).
+		if err := dbx.Model(&m.CalendarExceptionModel{}).
 			Where("id = ?", mdl.ID).
 			Updates(mdl).Error; err != nil {
 			return err
@@ -79,19 +74,11 @@ func (a *CalendarExceptionAdapter) DeleteByIDs(ctx context.Context, tx *gorm.DB,
 	if len(ids) == 0 {
 		return nil
 	}
-	dbx := tx
-	if dbx == nil {
-		dbx = a.db
-	}
-	return dbx.WithContext(ctx).Where("id IN ?", ids).Delete(&m.CalendarExceptionModel{}).Error
+	return a.WithTx(tx).WithContext(ctx).Where("id IN ?", ids).Delete(&m.CalendarExceptionModel{}).Error
 }
 
 func (a *CalendarExceptionAdapter) DeleteByDateRange(ctx context.Context, tx *gorm.DB, userID int64, fromDateMs, toDateMs int64) error {
-	dbx := tx
-	if dbx == nil {
-		dbx = a.db
-	}
-	return dbx.WithContext(ctx).
+	return a.WithTx(tx).WithContext(ctx).
 		Where("user_id = ? AND date >= ? AND date <= ?", userID, mp.DayStartUTC(fromDateMs), mp.DayStartUTC(toDateMs)).
 		Delete(&m.CalendarExceptionModel{}).Error
 }

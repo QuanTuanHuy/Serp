@@ -16,17 +16,13 @@ import (
 )
 
 type ScheduleWindowAdapter struct {
-	db *gorm.DB
+	BaseStoreAdapter
 }
 
 func (a *ScheduleWindowAdapter) DeleteByDateRange(ctx context.Context, tx *gorm.DB, userID int64, fromDateMs int64, toDateMs int64) error {
-	return a.db.WithContext(ctx).
+	return a.WithTx(tx).WithContext(ctx).
 		Where("user_id = ? AND date >= ? AND date <= ?", userID, mp.DayStartUTC(fromDateMs), mp.DayStartUTC(toDateMs)).
 		Delete(&m.ScheduleWindowModel{}).Error
-}
-
-func NewScheduleWindowAdapter(db *gorm.DB) p.IScheduleWindowStorePort {
-	return &ScheduleWindowAdapter{db: db}
 }
 
 func (a *ScheduleWindowAdapter) ListAvailabilityWindows(ctx context.Context, userID int64, fromDateMs, toDateMs int64) ([]*dom.ScheduleWindowEntity, error) {
@@ -45,22 +41,14 @@ func (a *ScheduleWindowAdapter) CreateBatch(ctx context.Context, tx *gorm.DB, it
 		return nil
 	}
 	models := mp.ToScheduleWindowModels(items)
-	dbx := tx
-	if dbx == nil {
-		dbx = a.db
-	}
-	return dbx.WithContext(ctx).Create(&models).Error
+	return a.WithTx(tx).WithContext(ctx).Create(&models).Error
 }
 
 func (a *ScheduleWindowAdapter) UpdateBatch(ctx context.Context, tx *gorm.DB, items []*dom.ScheduleWindowEntity) error {
 	if len(items) == 0 {
 		return nil
 	}
-	dbx := tx
-	if dbx == nil {
-		dbx = a.db
-	}
-
+	dbx := a.WithTx(tx).WithContext(ctx)
 	for _, item := range items {
 		if item == nil {
 			continue
@@ -68,16 +56,22 @@ func (a *ScheduleWindowAdapter) UpdateBatch(ctx context.Context, tx *gorm.DB, it
 
 		mdl := mp.ToScheduleWindowModel(item)
 		if item.IsNew() {
-			if err := dbx.WithContext(ctx).Create(mdl).Error; err != nil {
+			if err := dbx.Create(mdl).Error; err != nil {
 				return err
 			}
 			continue
 		}
-		if err := dbx.WithContext(ctx).Model(&m.ScheduleWindowModel{}).
+		if err := dbx.Model(&m.ScheduleWindowModel{}).
 			Where("id = ?", mdl.ID).
 			Updates(mdl).Error; err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func NewScheduleWindowAdapter(db *gorm.DB) p.IScheduleWindowStorePort {
+	return &ScheduleWindowAdapter{
+		BaseStoreAdapter: BaseStoreAdapter{db: db},
+	}
 }
