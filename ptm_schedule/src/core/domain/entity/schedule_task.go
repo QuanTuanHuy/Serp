@@ -74,8 +74,63 @@ func (e *ScheduleTaskEntity) CalculateSnapshotHash() string {
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
-func (e *ScheduleTaskEntity) HasConstraintsChanged(incomingHash string) bool {
+func (e *ScheduleTaskEntity) HasChanged(incomingHash string) bool {
 	return e.TaskSnapshotHash != incomingHash
+}
+
+func (e *ScheduleTaskEntity) ApplyMedataChanges(title *string, category *string) bool {
+	changed := false
+	if title != nil && *title != e.Title {
+		e.Title = *title
+		changed = true
+	}
+	if category != nil {
+		if e.Category == nil || *category != *e.Category {
+			e.Category = category
+			changed = true
+		}
+	}
+	return changed
+}
+
+func (e *ScheduleTaskEntity) ApplyConstraintChanges(
+	duration *int,
+	priority *string,
+	deadlineMs *int64,
+	earliestStartMs *int64,
+	preferredStartMs *int64,
+	isDeepWork *bool,
+) bool {
+	changed := false
+
+	if duration != nil && *duration != e.DurationMin {
+		e.DurationMin = *duration
+		changed = true
+	}
+	if priority != nil {
+		newPriority := enum.Priority(*priority)
+		if newPriority.IsValid() && newPriority != e.Priority {
+			e.Priority = newPriority
+			changed = true
+		}
+	}
+	if deadlineMs != nil {
+		e.DeadlineMs = deadlineMs
+		changed = true
+	}
+	if earliestStartMs != nil {
+		e.EarliestStartMs = earliestStartMs
+		changed = true
+	}
+	if preferredStartMs != nil {
+		e.PreferredStartMs = preferredStartMs
+		// changed = true
+	}
+	if isDeepWork != nil && *isDeepWork != e.IsDeepWork {
+		e.IsDeepWork = *isDeepWork
+		// changed = true
+	}
+	return changed
 }
 
 func (e *ScheduleTaskEntity) UpdateFromSource(title string, duration int, priority enum.Priority, deadline *int64) {

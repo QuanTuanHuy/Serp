@@ -100,11 +100,18 @@ func (s *ScheduleTaskService) SyncSnapshot(ctx context.Context, tx *gorm.DB, pla
 		return enum.ChangeNone, nil
 	}
 
-	hasMetadataChange := s.applyMetadataChanges(currentTask, event)
-	hasConstraintChange := s.applyConstraintChanges(currentTask, event)
+	hasMetadataChange := currentTask.ApplyMedataChanges(event.Title, event.Category)
+	hasConstraintChange := currentTask.ApplyConstraintChanges(
+		event.EstimatedDurationMin,
+		event.Priority,
+		event.DeadlineMs,
+		event.EarliestStartMs,
+		event.PreferredStartDateMs,
+		event.IsDeepWork,
+	)
 
 	newHash := currentTask.CalculateSnapshotHash()
-	hasSnapshotChange := newHash != currentTask.TaskSnapshotHash
+	hasSnapshotChange := currentTask.HasChanged(newHash)
 
 	if hasSnapshotChange {
 		currentTask.TaskSnapshotHash = newHash
@@ -131,55 +138,6 @@ func (s *ScheduleTaskService) SyncSnapshot(ctx context.Context, tx *gorm.DB, pla
 
 	log.Info(ctx, "Schedule task metadata updated. PlanID: ", planID, ", TaskID: ", event.TaskID)
 	return enum.ChangeMetadata, nil
-}
-
-func (s *ScheduleTaskService) applyMetadataChanges(task *entity.ScheduleTaskEntity, event *message.TaskUpdatedEvent) bool {
-	changed := false
-
-	if event.Title != nil && *event.Title != task.Title {
-		task.Title = *event.Title
-		changed = true
-	}
-	if event.Category != nil {
-		task.Category = event.Category
-		changed = true
-	}
-	if event.IsDeepWork != nil && *event.IsDeepWork != task.IsDeepWork {
-		task.IsDeepWork = *event.IsDeepWork
-		changed = true
-	}
-
-	return changed
-}
-
-func (s *ScheduleTaskService) applyConstraintChanges(task *entity.ScheduleTaskEntity, event *message.TaskUpdatedEvent) bool {
-	changed := false
-
-	if event.EstimatedDurationMin != nil && *event.EstimatedDurationMin != task.DurationMin {
-		task.DurationMin = *event.EstimatedDurationMin
-		changed = true
-	}
-	if event.Priority != nil {
-		newPriority := enum.Priority(*event.Priority)
-		if newPriority.IsValid() && newPriority != task.Priority {
-			task.Priority = newPriority
-			changed = true
-		}
-	}
-	if event.DeadlineMs != nil {
-		task.DeadlineMs = event.DeadlineMs
-		changed = true
-	}
-	if event.EarliestStartMs != nil {
-		task.EarliestStartMs = event.EarliestStartMs
-		changed = true
-	}
-	if event.PreferredStartDateMs != nil {
-		task.PreferredStartMs = event.PreferredStartDateMs
-		changed = true
-	}
-
-	return changed
 }
 
 func (s *ScheduleTaskService) DeleteSnapshot(ctx context.Context, tx *gorm.DB, planID, taskID int64) error {
