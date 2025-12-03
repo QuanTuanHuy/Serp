@@ -19,8 +19,8 @@ type CalendarExceptionController struct {
 }
 
 func (e *CalendarExceptionController) ListExceptions(c *gin.Context) {
-	userID, exists := utils.GetUserIDFromContext(c)
-	if !exists {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
 		return
 	}
 	fromDateMs, valid := utils.ValidateAndParseQueryID(c, "fromDateMs")
@@ -44,8 +44,8 @@ func (e *CalendarExceptionController) ListExceptions(c *gin.Context) {
 }
 
 func (e *CalendarExceptionController) SaveExceptions(c *gin.Context) {
-	userID, exists := utils.GetUserIDFromContext(c)
-	if !exists {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
 		return
 	}
 	var req request.SaveExceptionsRequest
@@ -65,8 +65,8 @@ func (e *CalendarExceptionController) SaveExceptions(c *gin.Context) {
 }
 
 func (e *CalendarExceptionController) ReplaceExceptions(c *gin.Context) {
-	userID, exists := utils.GetUserIDFromContext(c)
-	if !exists {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
 		return
 	}
 
@@ -87,8 +87,8 @@ func (e *CalendarExceptionController) ReplaceExceptions(c *gin.Context) {
 }
 
 func (e *CalendarExceptionController) DeleteExceptions(c *gin.Context) {
-	userID, exists := utils.GetUserIDFromContext(c)
-	if !exists {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
 		return
 	}
 	fromDateMs, valid := utils.ValidateAndParseQueryID(c, "fromDateMs")

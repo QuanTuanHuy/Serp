@@ -19,8 +19,8 @@ type AvailabilityCalendarController struct {
 }
 
 func (a *AvailabilityCalendarController) GetAvailability(c *gin.Context) {
-	userID, exists := utils.GetUserIDFromContext(c)
-	if !exists {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
 		return
 	}
 
@@ -36,8 +36,8 @@ func (a *AvailabilityCalendarController) GetAvailability(c *gin.Context) {
 }
 
 func (a *AvailabilityCalendarController) SetAvailability(c *gin.Context) {
-	userID, exists := utils.GetUserIDFromContext(c)
-	if !exists {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
 		return
 	}
 	var req request.SetAvailabilityRequest
@@ -57,8 +57,8 @@ func (a *AvailabilityCalendarController) SetAvailability(c *gin.Context) {
 }
 
 func (a *AvailabilityCalendarController) ReplaceAvailability(c *gin.Context) {
-	userID, exists := utils.GetUserIDFromContext(c)
-	if !exists {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
 		return
 	}
 	var req request.ReplaceAvailabilityRequest

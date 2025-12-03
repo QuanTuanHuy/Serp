@@ -93,8 +93,8 @@ func All() fx.Option {
 
 		// Provide JWT components
 		fx.Provide(utils.NewKeycloakJwksUtils),
-		fx.Provide(utils.NewJWTUtils),
 		fx.Provide(middleware.NewJWTMiddleware),
+		fx.Provide(middleware.NewRoleMiddleware),
 
 		// Http server
 		golibgin.GinHttpServerOpt(),

@@ -28,7 +28,8 @@ type RegisterRoutersIn struct {
 	ScheduleWindowController       *controller.ScheduleWindowController
 	ScheduleEventController        *controller.ScheduleEventController
 
-	JWTMiddleware *middleware.JWTMiddleware
+	JWTMiddleware  *middleware.JWTMiddleware
+	RoleMiddleware *middleware.RoleMiddleware
 }
 
 func RegisterGinRouters(p RegisterRoutersIn) {
@@ -38,7 +39,7 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 	group.GET("/actuator/info", gin.WrapF(p.Actuator.Info))
 
 	requiredAuthV1 := group.Group("/api/v1")
-	requiredAuthV1.Use(p.JWTMiddleware.AuthenticateJWT(), p.JWTMiddleware.RequireAnyRole(string(enum.PTM_ADMIN), string(enum.PTM_USER)))
+	requiredAuthV1.Use(p.JWTMiddleware.AuthenticateJWT(), p.RoleMiddleware.RequireRole(string(enum.PTM_ADMIN), string(enum.PTM_USER)))
 	{
 		planV1 := requiredAuthV1.Group("/schedule-plans")
 		{

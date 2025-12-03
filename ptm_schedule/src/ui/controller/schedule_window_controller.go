@@ -19,8 +19,8 @@ type ScheduleWindowController struct {
 }
 
 func (s *ScheduleWindowController) ListAvailabilityWindows(c *gin.Context) {
-	userID, exists := utils.GetUserIDFromContext(c)
-	if !exists {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
 		return
 	}
 	fromDateMs, valid := utils.ValidateAndParseQueryID(c, "fromDateMs")
@@ -44,8 +44,8 @@ func (s *ScheduleWindowController) ListAvailabilityWindows(c *gin.Context) {
 }
 
 func (s *ScheduleWindowController) MaterializeWindows(c *gin.Context) {
-	userID, exists := utils.GetUserIDFromContext(c)
-	if !exists {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
 		return
 	}
 	var req request.MaterializeWindowsRequest
