@@ -16,7 +16,7 @@ import (
 )
 
 type ProcessedEventAdapter struct {
-	db *gorm.DB
+	BaseStoreAdapter
 }
 
 func (p *ProcessedEventAdapter) IsEventProcessed(ctx context.Context, eventID string) (bool, error) {
@@ -64,6 +64,6 @@ func (p *ProcessedEventAdapter) CleanupOldEvents(ctx context.Context, olderThan 
 
 func NewProcessedEventAdapter(db *gorm.DB) port.IProcessedEventPort {
 	return &ProcessedEventAdapter{
-		db: db,
+		BaseStoreAdapter: BaseStoreAdapter{db: db},
 	}
 }

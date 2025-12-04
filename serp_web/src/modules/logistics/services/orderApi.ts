@@ -31,11 +31,19 @@ export const orderApi = logisticsApi.injectEndpoints({
           ...(params?.statusId && { statusId: params.statusId }),
           ...(params?.orderTypeId && { orderTypeId: params.orderTypeId }),
           ...(params?.toCustomerId && { toCustomerId: params.toCustomerId }),
-          ...(params?.fromSupplierId && { fromSupplierId: params.fromSupplierId }),
+          ...(params?.fromSupplierId && {
+            fromSupplierId: params.fromSupplierId,
+          }),
           ...(params?.saleChannelId && { saleChannelId: params.saleChannelId }),
-          ...(params?.orderDateAfter && { orderDateAfter: params.orderDateAfter }),
-          ...(params?.orderDateBefore && { orderDateBefore: params.orderDateBefore }),
-          ...(params?.deliveryBefore && { deliveryBefore: params.deliveryBefore }),
+          ...(params?.orderDateAfter && {
+            orderDateAfter: params.orderDateAfter,
+          }),
+          ...(params?.orderDateBefore && {
+            orderDateBefore: params.orderDateBefore,
+          }),
+          ...(params?.deliveryBefore && {
+            deliveryBefore: params.deliveryBefore,
+          }),
           ...(params?.deliveryAfter && { deliveryAfter: params.deliveryAfter }),
         },
       }),

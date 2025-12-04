@@ -26,3 +26,18 @@ type UpdateEventStatusRequest struct {
 	ActualStartMin *int                     `json:"actualStartMin"`
 	ActualEndMin   *int                     `json:"actualEndMin"`
 }
+
+type MoveEventRequest struct {
+	NewDateMs   int64 `json:"newDateMs" binding:"required,gt=0"`
+	NewStartMin int   `json:"newStartMin" binding:"required,gte=0,lte=1440"`
+	NewEndMin   int   `json:"newEndMin" binding:"required,gte=0,lte=1440"`
+}
+
+type CompleteEventRequest struct {
+	ActualStartMin int `json:"actualStartMin" binding:"required,gte=0,lte=1440"`
+	ActualEndMin   int `json:"actualEndMin" binding:"required,gte=0,lte=1440"`
+}
+
+type SplitEventRequest struct {
+	SplitPointMin int `json:"splitPointMin" binding:"required,gte=0,lte=1440"`
+}

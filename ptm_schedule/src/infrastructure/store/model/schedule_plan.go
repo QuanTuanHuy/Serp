@@ -26,7 +26,8 @@ type SchedulePlanModel struct {
 	Version      int32  `json:"version" gorm:"not null"`
 	ParentPlanID *int64 `json:"parentPlanId" gorm:""`
 
-	Status string `json:"status" gorm:"size:100;not null"`
+	Status  string `json:"status" gorm:"size:100;not null"`
+	IsStale bool   `json:"isStale" gorm:"not null;default:false"`
 }
 
 func (SchedulePlanModel) TableName() string {

@@ -20,18 +20,17 @@ import (
 )
 
 type RescheduleQueueAdapter struct {
-	db *gorm.DB
+	BaseStoreAdapter
 }
 
 func NewRescheduleQueueAdapter(db *gorm.DB) port.IRescheduleQueuePort {
-	return &RescheduleQueueAdapter{db: db}
+	return &RescheduleQueueAdapter{BaseStoreAdapter: BaseStoreAdapter{db: db}}
 }
 
 func (a *RescheduleQueueAdapter) Upsert(ctx context.Context, tx *gorm.DB, item *entity.RescheduleQueueItem) error {
-	db := a.getDB(tx)
 	mo := mapper.RescheduleQueueMapper.ToModel(item)
 
-	return db.WithContext(ctx).Clauses(clause.OnConflict{
+	return a.WithTx(tx).WithContext(ctx).Clauses(clause.OnConflict{
 		Columns: []clause.Column{
 			{Name: "schedule_plan_id"},
 			{Name: "entity_id"},
@@ -68,12 +67,11 @@ func (a *RescheduleQueueAdapter) GetDirtyPlanIDs(ctx context.Context, limit int)
 }
 
 func (a *RescheduleQueueAdapter) FetchAndLockBatch(ctx context.Context, tx *gorm.DB, planID int64) ([]*entity.RescheduleQueueItem, error) {
-	db := a.getDB(tx)
 	var models []*model.RescheduleQueueModel
 	now := time.Now()
 	maxWaitTime := now.Add(-constant.MaxDebounceWait)
 
-	err := db.WithContext(ctx).
+	err := a.WithTx(tx).WithContext(ctx).
 		Clauses(clause.Locking{Strength: "UPDATE", Options: "SKIP LOCKED"}).
 		Where("schedule_plan_id = ?", planID).
 		Where("status = ?", string(enum.QueuePending)).
@@ -91,7 +89,6 @@ func (a *RescheduleQueueAdapter) UpdateBatchStatus(ctx context.Context, tx *gorm
 	if len(ids) == 0 {
 		return nil
 	}
-	db := a.getDB(tx)
 	updates := map[string]any{
 		"status":     status,
 		"updated_at": time.Now(),
@@ -103,7 +100,7 @@ func (a *RescheduleQueueAdapter) UpdateBatchStatus(ctx context.Context, tx *gorm
 	if errMsg != nil {
 		updates["error_message"] = errMsg
 	}
-	return db.WithContext(ctx).
+	return a.WithTx(tx).WithContext(ctx).
 		Model(&model.RescheduleQueueModel{}).
 		Where("id IN ?", ids).
 		Updates(updates).Error
@@ -117,8 +114,7 @@ func (a *RescheduleQueueAdapter) IncrementRetryCount(ctx context.Context, tx *go
 	if len(ids) == 0 {
 		return nil
 	}
-	db := a.getDB(tx)
-	return db.WithContext(ctx).
+	return a.WithTx(tx).WithContext(ctx).
 		Model(&model.RescheduleQueueModel{}).
 		Where("id IN ?", ids).
 		UpdateColumn("retry_count", gorm.Expr("retry_count + 1")).Error
@@ -126,16 +122,9 @@ func (a *RescheduleQueueAdapter) IncrementRetryCount(ctx context.Context, tx *go
 
 func (a *RescheduleQueueAdapter) DeleteCompleted(ctx context.Context, olderThan int64) (int64, error) {
 	cutoff := time.UnixMilli(olderThan)
-	result := a.db.WithContext(ctx).
+	result := a.WithTx(nil).WithContext(ctx).
 		Where("status = ?", string(enum.QueueCompleted)).
 		Where("processed_at < ?", cutoff).
 		Delete(&model.RescheduleQueueModel{})
 	return result.RowsAffected, result.Error
-}
-
-func (a *RescheduleQueueAdapter) getDB(tx *gorm.DB) *gorm.DB {
-	if tx != nil {
-		return tx
-	}
-	return a.db
 }

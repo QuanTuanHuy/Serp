@@ -46,10 +46,8 @@ export const useAddresses = (entityId?: string, entityTypeId?: string) => {
       }
     );
 
-  const [createAddress, { isLoading: isCreating }] =
-    useCreateAddressMutation();
-  const [updateAddress, { isLoading: isUpdating }] =
-    useUpdateAddressMutation();
+  const [createAddress, { isLoading: isCreating }] = useCreateAddressMutation();
+  const [updateAddress, { isLoading: isUpdating }] = useUpdateAddressMutation();
 
   // Handlers
   const openDialog = useCallback(

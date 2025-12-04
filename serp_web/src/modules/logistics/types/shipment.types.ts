@@ -5,7 +5,11 @@
  * @description Part of Serp Project - Shipment domain types
  */
 
-export type ShipmentStatus = 'PENDING' | 'IN_TRANSIT' | 'DELIVERED' | 'CANCELLED';
+export type ShipmentStatus =
+  | 'PENDING'
+  | 'IN_TRANSIT'
+  | 'DELIVERED'
+  | 'CANCELLED';
 
 export interface InventoryItemDetail {
   id: string;

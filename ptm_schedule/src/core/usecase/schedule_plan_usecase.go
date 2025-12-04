@@ -198,7 +198,11 @@ func (s *SchedulePlanUseCase) RevertToPlan(ctx context.Context, userID, targetPl
 			return nil, err
 		}
 
-		// Clone events from target plan to new plan
+		taskIDMapping, err := s.scheduleTaskService.CloneTasksForPlan(ctx, tx, targetPlanID, newPlan.ID)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", constant.PlanTaskCloneFailed, err)
+		}
+
 		fromDateMs := targetPlan.StartDateMs
 		toDateMs := int64(0)
 		if targetPlan.EndDateMs != nil {
@@ -206,28 +210,16 @@ func (s *SchedulePlanUseCase) RevertToPlan(ctx context.Context, userID, targetPl
 		} else {
 			toDateMs = time.Now().AddDate(0, 6, 0).UnixMilli()
 		}
-
 		events, err := s.scheduleEventService.ListEventsByPlanAndDateRange(ctx, targetPlanID, fromDateMs, toDateMs)
 		if err != nil {
 			return nil, err
 		}
 
 		if len(events) > 0 {
-			clonedEvents := make([]*entity.ScheduleEventEntity, 0, len(events))
-			for _, e := range events {
-				clone := e.Clone()
-				clone.ID = 0
-				clone.SchedulePlanID = newPlan.ID
-				clonedEvents = append(clonedEvents, clone)
-			}
-			if err := s.scheduleEventService.CreateBatch(ctx, tx, clonedEvents); err != nil {
+			if _, err := s.scheduleEventService.CloneEventsForPlan(ctx, tx, newPlan.ID, events, taskIDMapping); err != nil {
 				return nil, fmt.Errorf("%s: %w", constant.PlanEventCloneFailed, err)
 			}
 		}
-
-		// Note: ScheduleTasks are not cloned here because they are managed separately
-		// and linked to external PTM tasks. The events reference schedule_task_id which
-		// should still be valid if tasks haven't been deleted.
 
 		return newPlan, nil
 	})
@@ -243,15 +235,45 @@ func (s *SchedulePlanUseCase) TriggerReschedule(ctx context.Context, userID int6
 		return nil, err
 	}
 
-	if activePlan.Status == enum.PlanProcessing {
-		return nil, fmt.Errorf(constant.PlanAlreadyProcessing)
+	existingProposed, _ := s.schedulePlanService.GetLatestProposedPlanByUserID(ctx, userID)
+	if existingProposed != nil {
+		return nil, fmt.Errorf(constant.ProposedPlanAlreadyExists)
 	}
 
 	startTime := time.Now()
 
-	// Start optimization in transaction
+	var proposedPlan *entity.SchedulePlanEntity
+	var taskIDMapping map[int64]int64
 	_, err = s.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
-		return nil, s.schedulePlanService.StartOptimization(ctx, tx, activePlan, enum.HybridAlgorithm)
+		newPlan := activePlan.CreateNextVersion()
+		newPlan.AlgorithmUsed = enum.HybridAlgorithm
+
+		created, err := s.schedulePlanService.CreatePlan(ctx, tx, newPlan)
+		if err != nil {
+			return nil, err
+		}
+		proposedPlan = created
+
+		taskIDMapping, err = s.scheduleTaskService.CloneTasksForPlan(ctx, tx, activePlan.ID, proposedPlan.ID)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", constant.PlanTaskCloneFailed, err)
+		}
+
+		events, err := s.scheduleEventService.ListEventsByPlanAndDateRange(
+			ctx, activePlan.ID, activePlan.StartDateMs,
+			time.Now().AddDate(0, 6, 0).UnixMilli(),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(events) > 0 {
+			if _, err := s.scheduleEventService.CloneEventsForPlan(ctx, tx, proposedPlan.ID, events, taskIDMapping); err != nil {
+				return nil, fmt.Errorf("%s: %w", constant.PlanEventCloneFailed, err)
+			}
+		}
+
+		return nil, nil
 	})
 	if err != nil {
 		return &response.OptimizationResult{
@@ -260,31 +282,26 @@ func (s *SchedulePlanUseCase) TriggerReschedule(ctx context.Context, userID int6
 		}, nil
 	}
 
-	// Create batch with all tasks
-	batch := &entity.RescheduleBatch{
-		UserID: userID,
+	err = s.schedulePlanService.StartOptimization(ctx, nil, proposedPlan, enum.HybridAlgorithm)
+	if err != nil {
+		return &response.OptimizationResult{
+			Success:      false,
+			ErrorMessage: err.Error(),
+		}, nil
 	}
 
-	// Run reschedule based on strategy
-	var rescheduleResult *service.RescheduleResult
-	switch req.Strategy {
-	case enum.StrategyRipple:
-		rescheduleResult, err = s.rescheduleService.RunRipple(ctx, activePlan.ID, batch)
-	case enum.StrategyInsertion:
-		rescheduleResult, err = s.rescheduleService.RunInsertion(ctx, activePlan.ID, batch)
-	case enum.StrategyFullReplan:
-		rescheduleResult, err = s.rescheduleService.RunFullReplan(ctx, activePlan.ID, batch)
-	default:
-		rescheduleResult, err = s.rescheduleService.RunRipple(ctx, activePlan.ID, batch)
+	batch := &entity.RescheduleBatch{
+		UserID:   userID,
+		PlanID:   proposedPlan.ID,
+		Strategy: req.Strategy,
 	}
+	rescheduleResult, err := s.rescheduleService.Execute(ctx, proposedPlan.ID, batch)
 
 	durationMs := time.Since(startTime).Milliseconds()
 
 	if err != nil {
-		// Mark optimization as failed
-		s.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
-			return nil, s.schedulePlanService.FailOptimization(ctx, tx, activePlan, err.Error())
-		})
+		// Mark optimization as failed and cleanup
+		s.schedulePlanService.FailOptimization(ctx, nil, proposedPlan, err.Error())
 		return &response.OptimizationResult{
 			Success:      false,
 			DurationMs:   durationMs,
@@ -292,23 +309,30 @@ func (s *SchedulePlanUseCase) TriggerReschedule(ctx context.Context, userID int6
 		}, nil
 	}
 
-	// Complete optimization
-	_, err = s.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
-		score := 0.0
-		if rescheduleResult.Success {
-			score = 1.0
-		}
-		return nil, s.schedulePlanService.CompleteOptimization(ctx, tx, activePlan, score, durationMs)
-	})
+	score := 0.0
+	if rescheduleResult.Success {
+		score = 1.0
+	}
+	err = s.schedulePlanService.CompleteOptimization(ctx, nil, proposedPlan, score, durationMs)
 	if err != nil {
 		log.Warn(ctx, "Failed to complete optimization: ", err)
+	}
+
+	proposedDetail, err := s.GetPlanWithEvents(
+		ctx, userID, proposedPlan.ID,
+		proposedPlan.StartDateMs,
+		time.Now().AddDate(0, 1, 0).UnixMilli(),
+	)
+	if err != nil {
+		log.Warn(ctx, "Failed to get proposed plan detail: ", err)
 	}
 
 	return &response.OptimizationResult{
 		Success:          rescheduleResult.Success,
 		DurationMs:       int64(rescheduleResult.DurationMs),
 		TasksScheduled:   len(rescheduleResult.UpdatedEventIDs),
-		TasksUnscheduled: 0, // TODO: get from reschedule result
+		TasksUnscheduled: 0,
+		ProposedPlan:     proposedDetail,
 	}, nil
 }
 
@@ -344,7 +368,6 @@ func (s *SchedulePlanUseCase) GetPlanHistory(ctx context.Context, userID int64, 
 func (s *SchedulePlanUseCase) CleanupOldPlans(ctx context.Context, userID int64) (int, error) {
 	deletedCount := 0
 
-	// 1. Delete discarded plans older than DiscardedRetentionDays
 	discardedCutoff := time.Now().AddDate(0, 0, -DiscardedRetentionDays).UnixMilli()
 	discardedFilter := port.NewPlanFilter()
 	discardedFilter.Statuses = []string{string(enum.PlanDiscarded)}
@@ -356,13 +379,14 @@ func (s *SchedulePlanUseCase) CleanupOldPlans(ctx context.Context, userID int64)
 
 	for _, plan := range discardedPlans {
 		if plan.UpdatedAt < discardedCutoff {
-			// TODO: implement DeletePlan in service/port
-			// s.schedulePlanService.DeletePlan(ctx, plan.ID)
+			if err := s.deletePlanWithRelatedData(ctx, plan.ID); err != nil {
+				log.Warn(ctx, "Failed to delete discarded plan: ", plan.ID, " error: ", err)
+				continue
+			}
 			deletedCount++
 		}
 	}
 
-	// 2. Keep only MaxArchivedPlans archived plans (newest)
 	archivedFilter := port.NewPlanFilter()
 	archivedFilter.Statuses = []string{string(enum.PlanArchived)}
 
@@ -371,20 +395,40 @@ func (s *SchedulePlanUseCase) CleanupOldPlans(ctx context.Context, userID int64)
 		return deletedCount, err
 	}
 
-	// Plans are sorted by UpdatedAt DESC, delete oldest beyond limit
+	// Delete oldest beyond limit
 	if len(archivedPlans) > MaxArchivedPlans {
 		for i := MaxArchivedPlans; i < len(archivedPlans); i++ {
-			// Check if also older than ArchivedRetentionDays
 			retentionCutoff := time.Now().AddDate(0, 0, -ArchivedRetentionDays).UnixMilli()
 			if archivedPlans[i].UpdatedAt < retentionCutoff {
-				// TODO: implement DeletePlan in service/port
-				// s.schedulePlanService.DeletePlan(ctx, archivedPlans[i].ID)
+				if err := s.deletePlanWithRelatedData(ctx, archivedPlans[i].ID); err != nil {
+					log.Warn(ctx, "Failed to delete archived plan: ", archivedPlans[i].ID, " error: ", err)
+					continue
+				}
 				deletedCount++
 			}
 		}
 	}
 
 	return deletedCount, nil
+}
+
+func (s *SchedulePlanUseCase) deletePlanWithRelatedData(ctx context.Context, planID int64) error {
+	_, err := s.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
+		if err := s.scheduleEventService.DeleteByPlanID(ctx, tx, planID); err != nil {
+			return nil, fmt.Errorf("failed to delete events for plan %d: %w", planID, err)
+		}
+
+		if err := s.scheduleTaskService.DeleteByPlanID(ctx, tx, planID); err != nil {
+			return nil, fmt.Errorf("failed to delete tasks for plan %d: %w", planID, err)
+		}
+
+		if err := s.schedulePlanService.DeletePlan(ctx, tx, planID); err != nil {
+			return nil, fmt.Errorf("failed to delete plan %d: %w", planID, err)
+		}
+
+		return nil, nil
+	})
+	return err
 }
 
 func (s *SchedulePlanUseCase) calculatePlanStats(tasks []*entity.ScheduleTaskEntity, events []*entity.ScheduleEventEntity) *response.PlanStats {

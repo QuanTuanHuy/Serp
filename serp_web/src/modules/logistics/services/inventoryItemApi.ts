@@ -42,10 +42,18 @@ export const inventoryItemApi = logisticsApi.injectEndpoints({
           query: params?.query || '',
           ...(params?.productId && { productId: params.productId }),
           ...(params?.facilityId && { facilityId: params.facilityId }),
-          ...(params?.expirationDateFrom && { expirationDateFrom: params.expirationDateFrom }),
-          ...(params?.expirationDateTo && { expirationDateTo: params.expirationDateTo }),
-          ...(params?.manufacturingDateFrom && { manufacturingDateFrom: params.manufacturingDateFrom }),
-          ...(params?.manufacturingDateTo && { manufacturingDateTo: params.manufacturingDateTo }),
+          ...(params?.expirationDateFrom && {
+            expirationDateFrom: params.expirationDateFrom,
+          }),
+          ...(params?.expirationDateTo && {
+            expirationDateTo: params.expirationDateTo,
+          }),
+          ...(params?.manufacturingDateFrom && {
+            manufacturingDateFrom: params.manufacturingDateFrom,
+          }),
+          ...(params?.manufacturingDateTo && {
+            manufacturingDateTo: params.manufacturingDateTo,
+          }),
           ...(params?.statusId && { statusId: params.statusId }),
         },
       }),

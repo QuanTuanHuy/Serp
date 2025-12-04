@@ -36,10 +36,11 @@ type PlanHistoryResponse struct {
 
 // OptimizationResult represents the result of schedule optimization
 type OptimizationResult struct {
-	Success          bool    `json:"success"`
-	Score            float64 `json:"score"`
-	DurationMs       int64   `json:"durationMs"`
-	TasksScheduled   int     `json:"tasksScheduled"`
-	TasksUnscheduled int     `json:"tasksUnscheduled"`
-	ErrorMessage     string  `json:"errorMessage,omitempty"`
+	Success          bool   `json:"success"`
+	DurationMs       int64  `json:"durationMs"`
+	TasksScheduled   int    `json:"tasksScheduled"`
+	TasksUnscheduled int    `json:"tasksUnscheduled"`
+	ErrorMessage     string `json:"errorMessage,omitempty"`
+
+	ProposedPlan *PlanDetailResponse `json:"proposedPlan,omitempty"`
 }

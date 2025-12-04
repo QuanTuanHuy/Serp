@@ -61,6 +61,10 @@ func (u *ScheduleTaskUseCase) HandleTaskCreated(ctx context.Context, event *mess
 			return nil, err
 		}
 
+		if err := u.schedulePlanService.MarkProposedPlanAsStale(ctx, tx, event.UserID); err != nil {
+			log.Warn(ctx, "Failed to mark proposed plan as stale: ", err)
+		}
+
 		return nil, nil
 	})
 
@@ -91,6 +95,10 @@ func (u *ScheduleTaskUseCase) HandleTaskUpdated(ctx context.Context, event *mess
 			if err != nil {
 				log.Error(ctx, "Failed to enqueue constraint change: ", err)
 				return nil, err
+			}
+
+			if err := u.schedulePlanService.MarkProposedPlanAsStale(ctx, tx, event.UserID); err != nil {
+				log.Warn(ctx, "Failed to mark proposed plan as stale: ", err)
 			}
 		}
 
@@ -124,6 +132,10 @@ func (u *ScheduleTaskUseCase) HandleTaskDeleted(ctx context.Context, event *mess
 		if err != nil {
 			log.Error(ctx, "Failed to enqueue task deletion: ", err)
 			return nil, err
+		}
+
+		if err := u.schedulePlanService.MarkProposedPlanAsStale(ctx, tx, event.UserID); err != nil {
+			log.Warn(ctx, "Failed to mark proposed plan as stale: ", err)
 		}
 
 		return nil, nil

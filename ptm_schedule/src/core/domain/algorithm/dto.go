@@ -24,6 +24,7 @@ type TaskInput struct {
 	BufferBeforeMin int
 	BufferAfterMin  int
 	IsPinned        bool
+	IsCompleted     bool
 	PinnedDateMs    *int64
 	PinnedStartMin  *int
 	PinnedEndMin    *int

@@ -61,16 +61,10 @@ export {
 } from './productSlice';
 
 // Customer
-export {
-  selectCustomer,
-  selectSelectedCustomerId,
-} from './customerSlice';
+export { selectCustomer, selectSelectedCustomerId } from './customerSlice';
 
 // Supplier
-export {
-  selectSupplier,
-  selectSelectedSupplierId,
-} from './supplierSlice';
+export { selectSupplier, selectSelectedSupplierId } from './supplierSlice';
 
 // Facility
 export {

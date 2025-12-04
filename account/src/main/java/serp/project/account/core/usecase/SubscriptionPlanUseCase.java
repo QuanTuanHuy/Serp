@@ -293,19 +293,17 @@ public class SubscriptionPlanUseCase {
                         return;
                     }
 
-                    var usersInOrganization = userService.getUsersByOrganizationId(subscription.getOrganizationId());
-                    usersInOrganization.forEach(user -> {
-                        if (!user.isActive()) {
-                            return;
-                        }
-                        userModuleAccessService.registerUserToModuleWithExpiration(
-                                user.getId(),
-                                moduleId,
-                                organization.getId(),
-                                organization.getOwnerId(),
-                                subscription.getEndDate());
-                        combineRoleService.assignRolesToUser(user, rolesInModule);
-                    });
+                    var orgOwner = userService.getUserById(organization.getOwnerId());
+                    if (!orgOwner.isActive()) {
+                        return;
+                    }
+                    userModuleAccessService.registerUserToModuleWithExpiration(
+                            orgOwner.getId(),
+                            moduleId,
+                            organization.getId(),
+                            organization.getOwnerId(),
+                            subscription.getEndDate());
+                    combineRoleService.assignRolesToUser(orgOwner, rolesInModule);
                 } catch (Exception e) {
                     log.error("Error adding module access for subscription {}: {}", subscription.getId(),
                             e.getMessage());

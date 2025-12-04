@@ -41,7 +41,7 @@ func AbortErrorResponseHandle(c *gin.Context, errorResponse *ErrorResponse) {
 	})
 }
 
-func SuccessfulHandle(c *gin.Context, data interface{}) {
+func SuccessfulHandle(c *gin.Context, data any) {
 	c.JSON(http.StatusOK, gin.H{
 		"code":    constant.GeneralSuccess,
 		"status":  constant.HttpStatusSuccess,
@@ -50,14 +50,23 @@ func SuccessfulHandle(c *gin.Context, data interface{}) {
 	})
 }
 
-func MakeDataResponseWithPagination(data interface{}, total int64) (response gin.H) {
+func SuccessfulHandleWithMessage(c *gin.Context, data any, message string) {
+	c.JSON(http.StatusOK, gin.H{
+		"code":    constant.GeneralSuccess,
+		"status":  constant.HttpStatusSuccess,
+		"message": message,
+		"data":    data,
+	})
+}
+
+func MakeDataResponseWithPagination(data any, total int64) (response gin.H) {
 	return gin.H{
 		"total": total,
 		"data":  data,
 	}
 }
 
-func BuildResponseListRequestForApp(limit, offset, total int64, objects map[string]interface{}) gin.H {
+func BuildResponseListRequestForApp(limit, offset, total int64, objects map[string]any) gin.H {
 	response := gin.H{
 		"limit":  limit,
 		"offset": offset,

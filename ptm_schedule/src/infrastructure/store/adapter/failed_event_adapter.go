@@ -17,7 +17,7 @@ import (
 )
 
 type FailedEventAdapter struct {
-	db *gorm.DB
+	BaseStoreAdapter
 }
 
 func (f *FailedEventAdapter) GetFailedEvent(ctx context.Context, eventID string) (*entity.FailedEventEntity, error) {
@@ -86,6 +86,6 @@ func (f *FailedEventAdapter) DeleteFailedEvent(ctx context.Context, eventID stri
 
 func NewFailedEventAdapter(db *gorm.DB) port.IFailedEventPort {
 	return &FailedEventAdapter{
-		db: db,
+		BaseStoreAdapter: BaseStoreAdapter{db: db},
 	}
 }

@@ -30,6 +30,7 @@ type RescheduleResult struct {
 }
 
 type IRescheduleStrategyService interface {
+	Execute(ctx context.Context, planID int64, batch *entity.RescheduleBatch) (*RescheduleResult, error)
 	RunRipple(ctx context.Context, planID int64, batch *entity.RescheduleBatch) (*RescheduleResult, error)
 	RunInsertion(ctx context.Context, planID int64, batch *entity.RescheduleBatch) (*RescheduleResult, error)
 	RunFullReplan(ctx context.Context, planID int64, batch *entity.RescheduleBatch) (*RescheduleResult, error)
@@ -54,6 +55,19 @@ func NewRescheduleStrategyService(
 		windowService: windowService,
 		scheduler:     algorithm.NewHybridScheduler(),
 		mapper:        algorithm.NewAlgorithmMapper(),
+	}
+}
+
+func (s *RescheduleStrategyService) Execute(ctx context.Context, planID int64, batch *entity.RescheduleBatch) (*RescheduleResult, error) {
+	switch batch.Strategy {
+	case enum.StrategyRipple:
+		return s.RunRipple(ctx, planID, batch)
+	case enum.StrategyInsertion:
+		return s.RunInsertion(ctx, planID, batch)
+	case enum.StrategyFullReplan:
+		return s.RunFullReplan(ctx, planID, batch)
+	default:
+		return s.RunRipple(ctx, planID, batch)
 	}
 }
 
@@ -103,7 +117,7 @@ func (s *RescheduleStrategyService) runSchedule(
 		affectedTaskIDs := batch.AffectedScheduleTaskIDs()
 		if len(affectedTaskIDs) == 0 {
 			for _, t := range input.Tasks {
-				affectedTaskIDs = append(affectedTaskIDs, t.TaskID)
+				affectedTaskIDs = append(affectedTaskIDs, t.ScheduleTaskID)
 			}
 		}
 		output = s.scheduler.ScheduleIncremental(input, affectedTaskIDs)
@@ -164,6 +178,13 @@ func (s *RescheduleStrategyService) loadScheduleData(
 		return nil, nil, err
 	}
 
+	activeTasks := make([]*entity.ScheduleTaskEntity, 0, len(tasks))
+	for _, t := range tasks {
+		if !t.IsCompleted() {
+			activeTasks = append(activeTasks, t)
+		}
+	}
+
 	now := time.Now()
 	fromMs := now.UnixMilli()
 	toMs := now.AddDate(0, 0, DefaultScheduleRangeDays).UnixMilli()
@@ -182,12 +203,26 @@ func (s *RescheduleStrategyService) loadScheduleData(
 		return nil, nil, err
 	}
 
-	taskMap := make(map[int64]*entity.ScheduleTaskEntity)
+	// Filter out events of completed tasks - keep them in schedule but don't reschedule
+	activeEvents := make([]*entity.ScheduleEventEntity, 0, len(events))
+	completedTaskIDs := make(map[int64]bool)
 	for _, t := range tasks {
+		if t.IsCompleted() {
+			completedTaskIDs[t.ID] = true
+		}
+	}
+	for _, e := range events {
+		if !completedTaskIDs[e.ScheduleTaskID] {
+			activeEvents = append(activeEvents, e)
+		}
+	}
+
+	taskMap := make(map[int64]*entity.ScheduleTaskEntity)
+	for _, t := range activeTasks {
 		taskMap[t.ID] = t
 	}
 
-	input := s.mapper.BuildScheduleInput(tasks, windows, events)
+	input := s.mapper.BuildScheduleInput(activeTasks, windows, activeEvents)
 	return input, taskMap, nil
 }
 

@@ -9,7 +9,8 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { RootState } from '@/lib/store/store';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
 
 // Custom base query for logistics - no /api/v1 prefix
 // Logistics backend uses /logistics/api/v1/* pattern (different from other modules)
@@ -18,12 +19,12 @@ const logisticsBaseQuery = fetchBaseQuery({
   prepareHeaders: (headers, { getState }) => {
     const state = getState() as RootState;
     const token = state.account.auth?.token;
-    
+
     if (token) {
       headers.set('authorization', `Bearer ${token}`);
     }
     headers.set('content-type', 'application/json');
-    
+
     return headers;
   },
 });
@@ -33,7 +34,7 @@ export const logisticsApi = createApi({
   baseQuery: logisticsBaseQuery,
   tagTypes: [
     'logistics/Address',
-    'logistics/Category', 
+    'logistics/Category',
     'logistics/Customer',
     'logistics/Facility',
     'logistics/InventoryItem',

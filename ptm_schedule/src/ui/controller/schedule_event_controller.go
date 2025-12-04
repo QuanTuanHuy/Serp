@@ -19,6 +19,10 @@ type ScheduleEventController struct {
 }
 
 func (s *ScheduleEventController) ListEvents(c *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		return
+	}
 	planID, valid := utils.ValidateAndParseQueryID(c, "planId")
 	if !valid {
 		return
@@ -32,7 +36,7 @@ func (s *ScheduleEventController) ListEvents(c *gin.Context) {
 		return
 	}
 
-	entities, err := s.eventUseCase.ListEvents(c, planID, fromDateMs, toDateMs)
+	entities, err := s.eventUseCase.ListEvents(c, userID, planID, fromDateMs, toDateMs)
 	if err != nil {
 		if !utils.HandleBusinessError(c, err) {
 			utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
@@ -40,44 +44,96 @@ func (s *ScheduleEventController) ListEvents(c *gin.Context) {
 		return
 	}
 
-	utils.SuccessfulHandle(c, mapper.ToScheduleEventResponses(entities))
+	utils.SuccessfulHandleWithMessage(c, mapper.ToScheduleEventResponses(entities), "Events retrieved successfully")
 }
 
 func (s *ScheduleEventController) SaveEvents(c *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		return
+	}
 	var req request.SaveEventsRequest
 	if !utils.ValidateAndBindJSON(c, &req) {
 		return
 	}
 
 	entities := mapper.ToScheduleEventEntities(req.SchedulePlanID, req.Events)
-	if err := s.eventUseCase.SaveEvents(c, req.SchedulePlanID, entities); err != nil {
+	if err := s.eventUseCase.SaveEvents(c, userID, req.SchedulePlanID, entities); err != nil {
 		if !utils.HandleBusinessError(c, err) {
 			utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		}
 		return
 	}
 
-	utils.SuccessfulHandle(c, "Events saved successfully")
+	utils.SuccessfulHandleWithMessage(c, nil, "Events saved successfully")
 }
 
-func (s *ScheduleEventController) UpdateEventStatus(c *gin.Context) {
+func (s *ScheduleEventController) ManuallyMoveEvent(c *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		return
+	}
 	eventID, valid := utils.ValidateAndParseID(c, "id")
 	if !valid {
 		return
 	}
 
-	var req request.UpdateEventStatusRequest
+	var req request.MoveEventRequest
 	if !utils.ValidateAndBindJSON(c, &req) {
 		return
 	}
-	if err := s.eventUseCase.UpdateEventStatus(c, eventID, req.Status, req.ActualStartMin, req.ActualEndMin); err != nil {
+	if err := s.eventUseCase.ManuallyMoveEvent(c.Request.Context(), userID, eventID, req.NewDateMs, req.NewStartMin, req.NewEndMin); err != nil {
 		if !utils.HandleBusinessError(c, err) {
 			utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		}
 		return
 	}
+	utils.SuccessfulHandleWithMessage(c, nil, "Event moved successfully")
+}
 
-	utils.SuccessfulHandle(c, "Event status updated successfully")
+func (s *ScheduleEventController) CompleteEvent(c *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		return
+	}
+	eventID, valid := utils.ValidateAndParseID(c, "id")
+	if !valid {
+		return
+	}
+	var req request.CompleteEventRequest
+	if !utils.ValidateAndBindJSON(c, &req) {
+		return
+	}
+	if err := s.eventUseCase.CompleteEvent(c.Request.Context(), userID, eventID, req.ActualStartMin, req.ActualEndMin); err != nil {
+		if !utils.HandleBusinessError(c, err) {
+			utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
+		}
+		return
+	}
+	utils.SuccessfulHandleWithMessage(c, nil, "Event completed successfully")
+}
+
+func (s *ScheduleEventController) SplitEvent(c *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		return
+	}
+	eventID, valid := utils.ValidateAndParseID(c, "id")
+	if !valid {
+		return
+	}
+	var req request.SplitEventRequest
+	if !utils.ValidateAndBindJSON(c, &req) {
+		return
+	}
+	splitResult, err := s.eventUseCase.SplitEvent(c.Request.Context(), userID, eventID, req.SplitPointMin)
+	if err != nil {
+		if !utils.HandleBusinessError(c, err) {
+			utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
+		}
+		return
+	}
+	utils.SuccessfulHandleWithMessage(c, splitResult, "Event split successfully")
 }
 
 func NewScheduleEventController(eventUseCase usecase.IScheduleEventUseCase) *ScheduleEventController {

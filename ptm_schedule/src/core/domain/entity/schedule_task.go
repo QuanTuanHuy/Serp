@@ -74,8 +74,63 @@ func (e *ScheduleTaskEntity) CalculateSnapshotHash() string {
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
-func (e *ScheduleTaskEntity) HasConstraintsChanged(incomingHash string) bool {
+func (e *ScheduleTaskEntity) HasChanged(incomingHash string) bool {
 	return e.TaskSnapshotHash != incomingHash
+}
+
+func (e *ScheduleTaskEntity) ApplyMedataChanges(title *string, category *string) bool {
+	changed := false
+	if title != nil && *title != e.Title {
+		e.Title = *title
+		changed = true
+	}
+	if category != nil {
+		if e.Category == nil || *category != *e.Category {
+			e.Category = category
+			changed = true
+		}
+	}
+	return changed
+}
+
+func (e *ScheduleTaskEntity) ApplyConstraintChanges(
+	duration *int,
+	priority *string,
+	deadlineMs *int64,
+	earliestStartMs *int64,
+	preferredStartMs *int64,
+	isDeepWork *bool,
+) bool {
+	changed := false
+
+	if duration != nil && *duration != e.DurationMin {
+		e.DurationMin = *duration
+		changed = true
+	}
+	if priority != nil {
+		newPriority := enum.Priority(*priority)
+		if newPriority.IsValid() && newPriority != e.Priority {
+			e.Priority = newPriority
+			changed = true
+		}
+	}
+	if deadlineMs != nil {
+		e.DeadlineMs = deadlineMs
+		changed = true
+	}
+	if earliestStartMs != nil {
+		e.EarliestStartMs = earliestStartMs
+		changed = true
+	}
+	if preferredStartMs != nil {
+		e.PreferredStartMs = preferredStartMs
+		// changed = true
+	}
+	if isDeepWork != nil && *isDeepWork != e.IsDeepWork {
+		e.IsDeepWork = *isDeepWork
+		// changed = true
+	}
+	return changed
 }
 
 func (e *ScheduleTaskEntity) UpdateFromSource(title string, duration int, priority enum.Priority, deadline *int64) {
@@ -123,20 +178,24 @@ func (e *ScheduleTaskEntity) RecalculatePriorityScore(nowMs int64) {
 
 	urgencyBoost := 0.0
 	if e.DeadlineMs != nil {
-		timeRemainingMin := (*e.DeadlineMs - nowMs) / 60000
+		hoursRemaining := (*e.DeadlineMs - nowMs) / 3600000
 
-		if timeRemainingMin <= 0 {
-			urgencyBoost = 500.0
-		} else if timeRemainingMin < 1440 {
-			urgencyBoost = 200.0
-		} else if timeRemainingMin < 4320 {
+		if hoursRemaining <= 0 {
+			urgencyBoost = 100.0
+		} else if hoursRemaining < 24 {
+			urgencyBoost = 80.0
+		} else if hoursRemaining < 72 {
 			urgencyBoost = 50.0
+		} else if hoursRemaining < 168 {
+			urgencyBoost = 20.0
+		} else {
+			urgencyBoost = 5.0
 		}
 	}
 
 	deepWorkBonus := 0.0
 	if e.IsDeepWork {
-		deepWorkBonus = 20.0
+		deepWorkBonus = 10.0
 	}
 
 	e.PriorityScore = baseScore + urgencyBoost + deepWorkBonus
@@ -162,6 +221,10 @@ func (e *ScheduleTaskEntity) IsOverdue(nowMs int64) bool {
 	return *e.DeadlineMs < nowMs
 }
 
+func (e *ScheduleTaskEntity) IsCompleted() bool {
+	return e.ScheduleStatus == enum.ScheduleTaskCompleted
+}
+
 // Lifecycle Methods
 
 func (e *ScheduleTaskEntity) MarkAsScheduled() {
@@ -174,7 +237,73 @@ func (e *ScheduleTaskEntity) MarkAsFailed(reason string) {
 	e.UnscheduledReason = &reason
 }
 
+func (e *ScheduleTaskEntity) MarkAsPartial() {
+	e.ScheduleStatus = enum.ScheduleTaskPartial
+	e.UnscheduledReason = nil
+}
+
+func (e *ScheduleTaskEntity) MarkAsCompleted() {
+	e.ScheduleStatus = enum.ScheduleTaskCompleted
+	e.UnscheduledReason = nil
+}
+
 func (e *ScheduleTaskEntity) ResetStatus() {
 	e.ScheduleStatus = enum.ScheduleTaskPending
 	e.UnscheduledReason = nil
+}
+
+func (e *ScheduleTaskEntity) Clone() *ScheduleTaskEntity {
+	clone := &ScheduleTaskEntity{
+		UserID:              e.UserID,
+		TenantID:            e.TenantID,
+		TaskID:              e.TaskID,
+		TaskSnapshotHash:    e.TaskSnapshotHash,
+		Title:               e.Title,
+		DurationMin:         e.DurationMin,
+		Priority:            e.Priority,
+		PriorityScore:       e.PriorityScore,
+		IsDeepWork:          e.IsDeepWork,
+		AllowSplit:          e.AllowSplit,
+		MinSplitDurationMin: e.MinSplitDurationMin,
+		MaxSplitCount:       e.MaxSplitCount,
+		IsPinned:            e.IsPinned,
+		BufferBeforeMin:     e.BufferBeforeMin,
+		BufferAfterMin:      e.BufferAfterMin,
+		ScheduleStatus:      e.ScheduleStatus,
+	}
+
+	if e.Category != nil {
+		cat := *e.Category
+		clone.Category = &cat
+	}
+	if e.EarliestStartMs != nil {
+		val := *e.EarliestStartMs
+		clone.EarliestStartMs = &val
+	}
+	if e.DeadlineMs != nil {
+		val := *e.DeadlineMs
+		clone.DeadlineMs = &val
+	}
+	if e.PreferredStartMs != nil {
+		val := *e.PreferredStartMs
+		clone.PreferredStartMs = &val
+	}
+	if e.PinnedStartMs != nil {
+		val := *e.PinnedStartMs
+		clone.PinnedStartMs = &val
+	}
+	if e.PinnedEndMs != nil {
+		val := *e.PinnedEndMs
+		clone.PinnedEndMs = &val
+	}
+	if e.UnscheduledReason != nil {
+		val := *e.UnscheduledReason
+		clone.UnscheduledReason = &val
+	}
+	if len(e.DependentTaskIDs) > 0 {
+		clone.DependentTaskIDs = make([]int64, len(e.DependentTaskIDs))
+		copy(clone.DependentTaskIDs, e.DependentTaskIDs)
+	}
+
+	return clone
 }
