@@ -178,6 +178,13 @@ func (s *RescheduleStrategyService) loadScheduleData(
 		return nil, nil, err
 	}
 
+	activeTasks := make([]*entity.ScheduleTaskEntity, 0, len(tasks))
+	for _, t := range tasks {
+		if !t.IsCompleted() {
+			activeTasks = append(activeTasks, t)
+		}
+	}
+
 	now := time.Now()
 	fromMs := now.UnixMilli()
 	toMs := now.AddDate(0, 0, DefaultScheduleRangeDays).UnixMilli()
@@ -196,12 +203,26 @@ func (s *RescheduleStrategyService) loadScheduleData(
 		return nil, nil, err
 	}
 
-	taskMap := make(map[int64]*entity.ScheduleTaskEntity)
+	// Filter out events of completed tasks - keep them in schedule but don't reschedule
+	activeEvents := make([]*entity.ScheduleEventEntity, 0, len(events))
+	completedTaskIDs := make(map[int64]bool)
 	for _, t := range tasks {
+		if t.IsCompleted() {
+			completedTaskIDs[t.ID] = true
+		}
+	}
+	for _, e := range events {
+		if !completedTaskIDs[e.ScheduleTaskID] {
+			activeEvents = append(activeEvents, e)
+		}
+	}
+
+	taskMap := make(map[int64]*entity.ScheduleTaskEntity)
+	for _, t := range activeTasks {
 		taskMap[t.ID] = t
 	}
 
-	input := s.mapper.BuildScheduleInput(tasks, windows, events)
+	input := s.mapper.BuildScheduleInput(activeTasks, windows, activeEvents)
 	return input, taskMap, nil
 }
 

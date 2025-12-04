@@ -174,7 +174,7 @@ func (u *ScheduleEventUseCase) CompleteEvent(ctx context.Context, userID int64, 
 			return err
 		}
 		if result.AllPartsCompleted && task != nil {
-			task.MarkAsScheduled()
+			task.MarkAsCompleted()
 			if _, err := u.scheduleTaskService.Update(ctx, tx, task.ID, task); err != nil {
 				return err
 			}

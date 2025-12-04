@@ -259,6 +259,17 @@ func (s *HybridScheduler) tryRippleEffect(
 			return false
 		}
 
+		// Cannot displace events whose task is not in taskMap (e.g., completed tasks)
+		victimTask, exists := taskMap[conflict.ScheduleTaskID]
+		if !exists {
+			return false
+		}
+
+		// Cannot displace completed tasks' events
+		if victimTask.IsCompleted {
+			return false
+		}
+
 		// Cannot displace higher priority tasks
 		if conflict.UtilityScore >= urgentScore {
 			return false

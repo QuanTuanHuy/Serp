@@ -221,6 +221,10 @@ func (e *ScheduleTaskEntity) IsOverdue(nowMs int64) bool {
 	return *e.DeadlineMs < nowMs
 }
 
+func (e *ScheduleTaskEntity) IsCompleted() bool {
+	return e.ScheduleStatus == enum.ScheduleTaskCompleted
+}
+
 // Lifecycle Methods
 
 func (e *ScheduleTaskEntity) MarkAsScheduled() {
@@ -231,6 +235,16 @@ func (e *ScheduleTaskEntity) MarkAsScheduled() {
 func (e *ScheduleTaskEntity) MarkAsFailed(reason string) {
 	e.ScheduleStatus = enum.ScheduleTaskUnschedulable
 	e.UnscheduledReason = &reason
+}
+
+func (e *ScheduleTaskEntity) MarkAsPartial() {
+	e.ScheduleStatus = enum.ScheduleTaskPartial
+	e.UnscheduledReason = nil
+}
+
+func (e *ScheduleTaskEntity) MarkAsCompleted() {
+	e.ScheduleStatus = enum.ScheduleTaskCompleted
+	e.UnscheduledReason = nil
 }
 
 func (e *ScheduleTaskEntity) ResetStatus() {
