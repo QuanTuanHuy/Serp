@@ -20,7 +20,7 @@ import {
 import {
   Send,
   Paperclip,
-  Image,
+  ImageIcon,
   AtSign,
   Smile,
   X,
@@ -181,7 +181,7 @@ export const AddNoteDialog: React.FC<AddNoteDialogProps> = ({
                 }}
                 title='Thêm hình ảnh'
               >
-                <Image className='h-4 w-4' />
+                <ImageIcon className='h-4 w-4' />
               </Button>
               <Button
                 variant='ghost'

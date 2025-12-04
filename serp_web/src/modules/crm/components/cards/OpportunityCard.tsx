@@ -9,6 +9,16 @@
 import React from 'react';
 import { cn } from '@/shared/utils';
 import {
+  Card,
+  CardContent,
+  Button,
+  Badge,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/shared/components/ui';
+import {
   Building2,
   Calendar,
   User,
@@ -17,7 +27,6 @@ import {
   Edit,
   Trash2,
   TrendingUp,
-  TrendingDown,
   Target,
   CheckCircle2,
   XCircle,
@@ -190,23 +199,17 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
   className,
   variant = 'default',
 }) => {
-  const [showMenu, setShowMenu] = React.useState(false);
   const stage = stageStyles[opportunity.stage] || stageStyles.PROSPECTING;
   const type = typeStyles[opportunity.type] || typeStyles.NEW_BUSINESS;
   const StageIcon = stage.icon;
   const closeDateInfo = getDaysUntil(opportunity.expectedCloseDate);
 
-  const handleMenuClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowMenu(!showMenu);
-  };
-
   // Pipeline card variant (for Kanban/Pipeline view)
   if (variant === 'pipeline') {
     return (
-      <div
+      <Card
         className={cn(
-          'group p-3 rounded-lg border bg-card shadow-sm',
+          'group p-3 shadow-sm',
           'hover:shadow-md hover:border-primary/20 transition-all duration-200 cursor-pointer',
           className
         )}
@@ -243,16 +246,16 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
             </span>
           </div>
         </div>
-      </div>
+      </Card>
     );
   }
 
   // Compact card variant
   if (variant === 'compact') {
     return (
-      <div
+      <Card
         className={cn(
-          'group flex items-center gap-3 p-3 rounded-lg border bg-card',
+          'group flex flex-row items-center gap-3 p-3',
           'hover:shadow-md hover:border-primary/20 transition-all duration-200 cursor-pointer',
           className
         )}
@@ -285,15 +288,15 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
             {opportunity.probability}%
           </p>
         </div>
-      </div>
+      </Card>
     );
   }
 
   // Default full card
   return (
-    <div
+    <Card
       className={cn(
-        'group relative overflow-hidden rounded-xl border bg-card',
+        'group relative overflow-hidden',
         'hover:shadow-lg hover:border-primary/20 transition-all duration-200 cursor-pointer',
         className
       )}
@@ -302,7 +305,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
       {/* Stage indicator gradient */}
       <div className={cn('h-1.5', stage.bg)} />
 
-      <div className='p-5'>
+      <CardContent className='p-5'>
         {/* Top Row */}
         <div className='flex items-start justify-between mb-3'>
           <div className='flex items-center gap-3 min-w-0'>
@@ -325,81 +328,64 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
           </div>
 
           {/* Menu */}
-          <div className='relative'>
-            <button
-              onClick={handleMenuClick}
-              className='p-1.5 rounded-md hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity'
-            >
-              <MoreHorizontal className='h-4 w-4 text-muted-foreground' />
-            </button>
-
-            {showMenu && (
-              <div className='absolute right-0 top-full mt-1 w-36 rounded-lg border bg-popover shadow-lg z-10'>
-                <div className='p-1'>
-                  {onClick && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onClick();
-                        setShowMenu(false);
-                      }}
-                      className='w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-muted'
-                    >
-                      <ExternalLink className='h-4 w-4' />
-                      View Details
-                    </button>
-                  )}
-                  {onEdit && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEdit();
-                        setShowMenu(false);
-                      }}
-                      className='w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-muted'
-                    >
-                      <Edit className='h-4 w-4' />
-                      Edit
-                    </button>
-                  )}
-                  {onDelete && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete();
-                        setShowMenu(false);
-                      }}
-                      className='w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-muted text-destructive'
-                    >
-                      <Trash2 className='h-4 w-4' />
-                      Delete
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant='ghost'
+                size='icon'
+                className='h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity'
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreHorizontal className='h-4 w-4 text-muted-foreground' />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
+              {onClick && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onClick();
+                  }}
+                >
+                  <ExternalLink className='h-4 w-4 mr-2' />
+                  View Details
+                </DropdownMenuItem>
+              )}
+              {onEdit && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit();
+                  }}
+                >
+                  <Edit className='h-4 w-4 mr-2' />
+                  Edit
+                </DropdownMenuItem>
+              )}
+              {onDelete && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                  className='text-destructive focus:text-destructive'
+                >
+                  <Trash2 className='h-4 w-4 mr-2' />
+                  Delete
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Stage & Type Badges */}
         <div className='flex items-center gap-2 mb-4'>
-          <span
-            className={cn(
-              'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium',
-              stage.bg,
-              stage.text
-            )}
-          >
+          <Badge variant='secondary' className={cn(stage.bg, stage.text)}>
             {opportunity.stage.replace('_', ' ')}
-          </span>
-          <span
-            className={cn(
-              'px-2 py-0.5 rounded-full text-xs font-medium bg-muted',
-              type.color
-            )}
-          >
+          </Badge>
+          <Badge variant='outline' className={type.color}>
             {type.label}
-          </span>
+          </Badge>
         </div>
 
         {/* Stage Progress */}
@@ -482,7 +468,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
             )}
           </div>
         )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };

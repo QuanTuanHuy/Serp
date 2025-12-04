@@ -8,6 +8,7 @@
 
 import React from 'react';
 import { cn } from '@/shared/utils';
+import { Card, Skeleton } from '@/shared/components/ui';
 import {
   TrendingUp,
   TrendingDown,
@@ -87,29 +88,29 @@ export const StatsCard: React.FC<StatsCardProps> = ({
 
   if (isLoading) {
     return (
-      <div
+      <Card
         className={cn(
-          'relative overflow-hidden rounded-xl border p-5 shadow-sm animate-pulse',
+          'relative overflow-hidden p-5 shadow-sm',
           styles.card,
           className
         )}
       >
         <div className='flex items-start justify-between gap-4'>
           <div className='space-y-3 flex-1'>
-            <div className='h-4 w-24 bg-muted rounded' />
-            <div className='h-8 w-32 bg-muted rounded' />
-            <div className='h-3 w-20 bg-muted rounded' />
+            <Skeleton className='h-4 w-24' />
+            <Skeleton className='h-8 w-32' />
+            <Skeleton className='h-3 w-20' />
           </div>
-          <div className='h-12 w-12 bg-muted rounded-xl' />
+          <Skeleton className='h-12 w-12 rounded-xl' />
         </div>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div
+    <Card
       className={cn(
-        'group relative overflow-hidden rounded-xl border p-5 shadow-sm transition-all duration-200 hover:shadow-md cursor-pointer',
+        'group relative overflow-hidden p-5 shadow-sm transition-all duration-200 hover:shadow-md cursor-pointer',
         styles.card,
         className
       )}
@@ -182,7 +183,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
           <Icon className='h-6 w-6' />
         </div>
       </div>
-    </div>
+    </Card>
   );
 };
 

@@ -8,6 +8,14 @@
 
 import React from 'react';
 import { cn } from '@/shared/utils';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  Skeleton,
+} from '@/shared/components/ui';
 import { ArrowRight, TrendingUp } from 'lucide-react';
 
 export interface PipelineStage {
@@ -90,34 +98,28 @@ export const PipelineFunnel: React.FC<PipelineFunnelProps> = ({
 
   if (isLoading) {
     return (
-      <div
-        className={cn('rounded-xl border bg-card p-6 animate-pulse', className)}
-      >
-        <div className='mb-6'>
-          <div className='h-5 w-32 bg-muted rounded mb-2' />
-          <div className='h-4 w-48 bg-muted rounded' />
-        </div>
-        <div className='space-y-3'>
+      <Card className={className}>
+        <CardHeader>
+          <Skeleton className='h-5 w-32 mb-2' />
+          <Skeleton className='h-4 w-48' />
+        </CardHeader>
+        <CardContent className='space-y-3'>
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className='h-14 bg-muted rounded-lg' />
+            <Skeleton key={i} className='h-14 rounded-lg' />
           ))}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className={cn('rounded-xl border bg-card p-6', className)}>
-      {/* Header */}
-      <div className='mb-6'>
-        <h3 className='text-lg font-semibold text-foreground'>{title}</h3>
-        {subtitle && (
-          <p className='text-sm text-muted-foreground mt-1'>{subtitle}</p>
-        )}
-      </div>
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle className='text-lg font-semibold'>{title}</CardTitle>
+        {subtitle && <CardDescription>{subtitle}</CardDescription>}
+      </CardHeader>
 
-      {/* Funnel Stages */}
-      <div className='space-y-3'>
+      <CardContent className='space-y-3'>
         {stages.map((stage, index) => {
           const colors = stageColors[stage.color] || stageColors.blue;
           const widthPercentage =
@@ -196,18 +198,18 @@ export const PipelineFunnel: React.FC<PipelineFunnelProps> = ({
             </div>
           );
         })}
-      </div>
 
-      {/* Total Summary */}
-      <div className='mt-6 pt-4 border-t flex items-center justify-between'>
-        <div className='text-sm text-muted-foreground'>
-          Total Pipeline Value
+        {/* Total Summary */}
+        <div className='mt-6 pt-4 border-t flex items-center justify-between'>
+          <span className='text-sm text-muted-foreground'>
+            Total Pipeline Value
+          </span>
+          <span className='text-xl font-bold text-foreground'>
+            {formatCurrency(totalValue)}
+          </span>
         </div>
-        <div className='text-xl font-bold text-foreground'>
-          {formatCurrency(totalValue)}
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 

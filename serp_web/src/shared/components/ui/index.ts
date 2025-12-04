@@ -112,3 +112,6 @@ export { Progress } from './progress';
 
 // Separator Component
 export { Separator } from './separator';
+
+// Skeleton Component
+export { Skeleton } from './skeleton';

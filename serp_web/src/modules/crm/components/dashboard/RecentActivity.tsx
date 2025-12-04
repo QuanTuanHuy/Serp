@@ -9,6 +9,14 @@
 import React from 'react';
 import { cn } from '@/shared/utils';
 import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Button,
+  Skeleton,
+} from '@/shared/components/ui';
+import {
   UserPlus,
   Target,
   DollarSign,
@@ -139,42 +147,37 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
 
   if (isLoading) {
     return (
-      <div
-        className={cn('rounded-xl border bg-card p-6 animate-pulse', className)}
-      >
-        <div className='h-5 w-32 bg-muted rounded mb-6' />
-        <div className='space-y-4'>
+      <Card className={className}>
+        <CardHeader>
+          <Skeleton className='h-5 w-32' />
+        </CardHeader>
+        <CardContent className='space-y-4'>
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className='flex items-start gap-3'>
-              <div className='h-9 w-9 bg-muted rounded-full' />
+              <Skeleton className='h-9 w-9 rounded-full' />
               <div className='flex-1 space-y-2'>
-                <div className='h-4 w-3/4 bg-muted rounded' />
-                <div className='h-3 w-1/2 bg-muted rounded' />
+                <Skeleton className='h-4 w-3/4' />
+                <Skeleton className='h-3 w-1/2' />
               </div>
             </div>
           ))}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className={cn('rounded-xl border bg-card p-6', className)}>
-      {/* Header */}
-      <div className='flex items-center justify-between mb-6'>
-        <h3 className='text-lg font-semibold text-foreground'>{title}</h3>
+    <Card className={className}>
+      <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-4'>
+        <CardTitle className='text-lg font-semibold'>{title}</CardTitle>
         {onViewAll && (
-          <button
-            onClick={onViewAll}
-            className='text-sm text-primary hover:text-primary/80 font-medium transition-colors'
-          >
+          <Button variant='link' size='sm' onClick={onViewAll} className='px-0'>
             View all
-          </button>
+          </Button>
         )}
-      </div>
+      </CardHeader>
 
-      {/* Activity List */}
-      <div className='space-y-1'>
+      <CardContent className='space-y-1'>
         {displayedActivities.length === 0 ? (
           <div className='text-center py-8 text-muted-foreground'>
             <MessageSquare className='h-12 w-12 mx-auto mb-3 opacity-20' />
@@ -238,8 +241,8 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
             );
           })
         )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 

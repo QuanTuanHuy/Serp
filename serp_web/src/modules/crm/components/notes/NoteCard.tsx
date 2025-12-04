@@ -5,6 +5,7 @@ Description: Part of Serp Project - Note Card Component for CRM
 
 'use client';
 
+import Image from 'next/image';
 import {
   Card,
   CardContent,
@@ -105,7 +106,13 @@ export const NoteCard: React.FC<NoteCardProps> = ({
           {/* Avatar */}
           <Avatar className='h-9 w-9'>
             {note.createdBy.avatar ? (
-              <img src={note.createdBy.avatar} alt={note.createdBy.name} />
+              <Image
+                src={note.createdBy.avatar}
+                alt={note.createdBy.name}
+                width={36}
+                height={36}
+                className='rounded-full object-cover'
+              />
             ) : (
               <AvatarFallback className='bg-primary/10 text-primary text-xs'>
                 {initials}

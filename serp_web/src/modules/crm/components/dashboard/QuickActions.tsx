@@ -9,6 +9,14 @@
 import React from 'react';
 import { cn } from '@/shared/utils';
 import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Skeleton,
+  Badge,
+} from '@/shared/components/ui';
+import {
   UserPlus,
   Target,
   FileText,
@@ -117,21 +125,23 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
 }) => {
   if (isLoading) {
     return (
-      <div
-        className={cn('rounded-xl border bg-card p-6 animate-pulse', className)}
-      >
-        <div className='h-5 w-32 bg-muted rounded mb-6' />
-        <div
-          className={cn(
-            'grid gap-3',
-            columns === 2 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3'
-          )}
-        >
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className='h-20 bg-muted rounded-lg' />
-          ))}
-        </div>
-      </div>
+      <Card className={className}>
+        <CardHeader>
+          <Skeleton className='h-5 w-32' />
+        </CardHeader>
+        <CardContent>
+          <div
+            className={cn(
+              'grid gap-3',
+              columns === 2 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3'
+            )}
+          >
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton key={i} className='h-20 rounded-lg' />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -144,64 +154,69 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   };
 
   return (
-    <div className={cn('rounded-xl border bg-card p-6', className)}>
-      {/* Header */}
-      <h3 className='text-lg font-semibold text-foreground mb-4'>{title}</h3>
+    <Card className={className}>
+      <CardHeader className='pb-4'>
+        <CardTitle className='text-lg font-semibold'>{title}</CardTitle>
+      </CardHeader>
 
-      {/* Actions Grid */}
-      <div
-        className={cn(
-          'grid gap-3',
-          columns === 2 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3'
-        )}
-      >
-        {actions.map((action) => {
-          const styles = variantStyles[action.variant || 'default'];
-          const Icon = action.icon;
+      <CardContent>
+        <div
+          className={cn(
+            'grid gap-3',
+            columns === 2 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3'
+          )}
+        >
+          {actions.map((action) => {
+            const styles = variantStyles[action.variant || 'default'];
+            const Icon = action.icon;
 
-          return (
-            <button
-              key={action.id}
-              onClick={() => handleClick(action)}
-              className={cn(
-                'group relative flex flex-col items-center justify-center gap-2 p-4 rounded-xl border transition-all duration-200',
-                'hover:shadow-md cursor-pointer',
-                styles.bg,
-                styles.border
-              )}
-            >
-              {/* Badge */}
-              {action.badge && (
-                <span className='absolute -top-1.5 -right-1.5 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs font-medium bg-rose-500 text-white rounded-full'>
-                  {action.badge}
-                </span>
-              )}
-
-              {/* Icon */}
-              <div
+            return (
+              <button
+                key={action.id}
+                onClick={() => handleClick(action)}
                 className={cn(
-                  'flex h-10 w-10 items-center justify-center rounded-lg shadow-sm transition-transform duration-200 group-hover:scale-110',
-                  styles.icon
+                  'group relative flex flex-col items-center justify-center gap-2 p-4 rounded-xl border transition-all duration-200',
+                  'hover:shadow-md cursor-pointer',
+                  styles.bg,
+                  styles.border
                 )}
               >
-                <Icon className='h-5 w-5' />
-              </div>
-
-              {/* Label */}
-              <div className='text-center'>
-                <p className='text-sm font-medium text-foreground'>
-                  {action.label}
-                </p>
-                {action.description && (
-                  <p className='text-xs text-muted-foreground mt-0.5 hidden md:block'>
-                    {action.description}
-                  </p>
+                {/* Badge */}
+                {action.badge && (
+                  <Badge
+                    variant='destructive'
+                    className='absolute -top-1.5 -right-1.5 h-5 min-w-5 flex items-center justify-center px-1.5'
+                  >
+                    {action.badge}
+                  </Badge>
                 )}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    </div>
+
+                {/* Icon */}
+                <div
+                  className={cn(
+                    'flex h-10 w-10 items-center justify-center rounded-lg shadow-sm transition-transform duration-200 group-hover:scale-110',
+                    styles.icon
+                  )}
+                >
+                  <Icon className='h-5 w-5' />
+                </div>
+
+                {/* Label */}
+                <div className='text-center'>
+                  <p className='text-sm font-medium text-foreground'>
+                    {action.label}
+                  </p>
+                  {action.description && (
+                    <p className='text-xs text-muted-foreground mt-0.5 hidden md:block'>
+                      {action.description}
+                    </p>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 };

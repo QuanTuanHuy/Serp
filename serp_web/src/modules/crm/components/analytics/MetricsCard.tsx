@@ -1,6 +1,11 @@
 // MetricsCard Component (authors: QuanTuanHuy, Description: Part of Serp Project)
 
-import { Card, CardContent, CardHeader } from '@/shared/components/ui';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  Skeleton,
+} from '@/shared/components/ui';
 import { cn, formatCurrency } from '@/shared/utils';
 
 interface MetricsCardProps {
@@ -20,9 +25,12 @@ interface MetricsCardProps {
 
 const variantStyles = {
   default: 'border-border',
-  success: 'border-green-200 bg-green-50',
-  warning: 'border-yellow-200 bg-yellow-50',
-  danger: 'border-red-200 bg-red-50',
+  success:
+    'border-emerald-200 bg-emerald-50 dark:border-emerald-800/50 dark:bg-emerald-950/20',
+  warning:
+    'border-amber-200 bg-amber-50 dark:border-amber-800/50 dark:bg-amber-950/20',
+  danger:
+    'border-rose-200 bg-rose-50 dark:border-rose-800/50 dark:bg-rose-950/20',
 };
 
 const formatValue = (value: string | number): string => {
@@ -51,16 +59,16 @@ export const MetricsCard: React.FC<MetricsCardProps> = ({
 }) => {
   if (isLoading) {
     return (
-      <Card className={cn('animate-pulse', variantStyles[variant], className)}>
+      <Card className={cn(variantStyles[variant], className)}>
         <CardHeader className='pb-2'>
           <div className='flex items-center justify-between'>
-            <div className='h-4 bg-muted rounded w-24'></div>
-            <div className='h-6 w-6 bg-muted rounded'></div>
+            <Skeleton className='h-4 w-24' />
+            <Skeleton className='h-6 w-6 rounded' />
           </div>
         </CardHeader>
         <CardContent>
-          <div className='h-8 bg-muted rounded w-32 mb-2'></div>
-          <div className='h-3 bg-muted rounded w-40'></div>
+          <Skeleton className='h-8 w-32 mb-2' />
+          <Skeleton className='h-3 w-40' />
         </CardContent>
       </Card>
     );
@@ -91,7 +99,9 @@ export const MetricsCard: React.FC<MetricsCardProps> = ({
             <div
               className={cn(
                 'flex items-center text-sm font-medium',
-                trend.isPositive ? 'text-green-600' : 'text-red-600'
+                trend.isPositive
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : 'text-rose-600 dark:text-rose-400'
               )}
             >
               <span className='mr-1'>{trend.isPositive ? '↗' : '↘'}</span>

@@ -9,6 +9,13 @@
 import React from 'react';
 import { cn } from '@/shared/utils';
 import { TrendingUp, TrendingDown, ArrowRight } from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Skeleton,
+} from '@/shared/components/ui';
 
 export interface SalesDataPoint {
   label: string;
@@ -67,32 +74,31 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
 
   if (isLoading) {
     return (
-      <div
-        className={cn('rounded-xl border bg-card p-6 animate-pulse', className)}
-      >
-        <div className='mb-6'>
-          <div className='h-5 w-32 bg-muted rounded mb-2' />
-          <div className='h-4 w-48 bg-muted rounded' />
-        </div>
-        <div className='flex items-end gap-2 h-48'>
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div
-              key={i}
-              className='flex-1 bg-muted rounded-t'
-              style={{ height: `${20 + Math.random() * 60}%` }}
-            />
-          ))}
-        </div>
-      </div>
+      <Card className={cn('animate-pulse', className)}>
+        <CardHeader>
+          <Skeleton className='h-5 w-32 mb-2' />
+          <Skeleton className='h-4 w-48' />
+        </CardHeader>
+        <CardContent>
+          <div className='flex items-end gap-2 h-48'>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton
+                key={i}
+                className='flex-1 rounded-t'
+                style={{ height: `${20 + Math.random() * 60}%` }}
+              />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className={cn('rounded-xl border bg-card p-6', className)}>
-      {/* Header */}
-      <div className='flex items-start justify-between mb-6'>
+    <Card className={className}>
+      <CardHeader className='flex-row items-start justify-between space-y-0 pb-2'>
         <div>
-          <h3 className='text-lg font-semibold text-foreground'>{title}</h3>
+          <CardTitle className='text-lg font-semibold'>{title}</CardTitle>
           {subtitle && (
             <p className='text-sm text-muted-foreground mt-1'>{subtitle}</p>
           )}
@@ -112,134 +118,137 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
           )}
           {Math.abs(overallTrend).toFixed(1)}%
         </div>
-      </div>
+      </CardHeader>
 
-      {/* Chart */}
-      <div className='relative'>
-        {/* Y-axis labels */}
-        <div className='absolute left-0 top-0 bottom-6 w-12 flex flex-col justify-between text-xs text-muted-foreground'>
-          <span>{formatValue(maxValue, valuePrefix)}</span>
-          <span>{formatValue(maxValue / 2, valuePrefix)}</span>
-          <span>{formatValue(0, valuePrefix)}</span>
-        </div>
-
-        {/* Chart area */}
-        <div className='ml-14'>
-          {/* Grid lines */}
-          <div className='absolute left-14 right-0 top-0 bottom-6 flex flex-col justify-between pointer-events-none'>
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className='border-t border-dashed border-border/50 w-full'
-              />
-            ))}
+      <CardContent>
+        {/* Chart */}
+        <div className='relative'>
+          {/* Y-axis labels */}
+          <div className='absolute left-0 top-0 bottom-6 w-12 flex flex-col justify-between text-xs text-muted-foreground'>
+            <span>{formatValue(maxValue, valuePrefix)}</span>
+            <span>{formatValue(maxValue / 2, valuePrefix)}</span>
+            <span>{formatValue(0, valuePrefix)}</span>
           </div>
 
-          {/* Bars */}
-          <div className='flex items-end gap-2 h-48'>
-            {data.map((point, index) => {
-              const heightPercentage =
-                maxValue > 0 ? (point.value / maxValue) * 100 : 0;
-              const prevHeightPercentage =
-                point.previousValue && maxValue > 0
-                  ? (point.previousValue / maxValue) * 100
-                  : 0;
-              const change = point.previousValue
-                ? ((point.value - point.previousValue) / point.previousValue) *
-                  100
-                : 0;
-              const isUp = change >= 0;
-
-              return (
+          {/* Chart area */}
+          <div className='ml-14'>
+            {/* Grid lines */}
+            <div className='absolute left-14 right-0 top-0 bottom-6 flex flex-col justify-between pointer-events-none'>
+              {[0, 1, 2].map((i) => (
                 <div
-                  key={index}
-                  className='flex-1 flex flex-col items-center gap-1 group'
-                >
-                  {/* Tooltip */}
-                  <div className='opacity-0 group-hover:opacity-100 transition-opacity absolute -top-2 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground text-xs rounded-lg shadow-lg border px-3 py-2 pointer-events-none z-10 whitespace-nowrap'>
-                    <div className='font-semibold'>
-                      {formatValue(point.value, valuePrefix)}
+                  key={i}
+                  className='border-t border-dashed border-border/50 w-full'
+                />
+              ))}
+            </div>
+
+            {/* Bars */}
+            <div className='flex items-end gap-2 h-48'>
+              {data.map((point, index) => {
+                const heightPercentage =
+                  maxValue > 0 ? (point.value / maxValue) * 100 : 0;
+                const prevHeightPercentage =
+                  point.previousValue && maxValue > 0
+                    ? (point.previousValue / maxValue) * 100
+                    : 0;
+                const change = point.previousValue
+                  ? ((point.value - point.previousValue) /
+                      point.previousValue) *
+                    100
+                  : 0;
+                const isUp = change >= 0;
+
+                return (
+                  <div
+                    key={index}
+                    className='flex-1 flex flex-col items-center gap-1 group'
+                  >
+                    {/* Tooltip */}
+                    <div className='opacity-0 group-hover:opacity-100 transition-opacity absolute -top-2 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground text-xs rounded-lg shadow-lg border px-3 py-2 pointer-events-none z-10 whitespace-nowrap'>
+                      <div className='font-semibold'>
+                        {formatValue(point.value, valuePrefix)}
+                      </div>
+                      {point.previousValue && (
+                        <div
+                          className={cn(
+                            'text-xs',
+                            isUp ? 'text-emerald-500' : 'text-rose-500'
+                          )}
+                        >
+                          {isUp ? '+' : ''}
+                          {change.toFixed(1)}% vs previous
+                        </div>
+                      )}
                     </div>
-                    {point.previousValue && (
+
+                    {/* Bar container */}
+                    <div className='relative w-full flex justify-center items-end h-full'>
+                      {/* Previous period bar (comparison) */}
+                      {showComparison && point.previousValue && (
+                        <div
+                          className='absolute w-2/3 bg-muted/50 rounded-t transition-all duration-300'
+                          style={{ height: `${prevHeightPercentage}%` }}
+                        />
+                      )}
+
+                      {/* Current bar */}
                       <div
                         className={cn(
-                          'text-xs',
-                          isUp ? 'text-emerald-500' : 'text-rose-500'
+                          'relative w-full max-w-10 rounded-t transition-all duration-300 cursor-pointer',
+                          'bg-gradient-to-t from-blue-600 to-blue-400',
+                          'hover:from-blue-700 hover:to-blue-500',
+                          'dark:from-blue-500 dark:to-blue-300',
+                          'shadow-sm hover:shadow-md'
                         )}
+                        style={{
+                          height: `${Math.max(heightPercentage, 2)}%`,
+                          minHeight: '4px',
+                        }}
                       >
-                        {isUp ? '+' : ''}
-                        {change.toFixed(1)}% vs previous
+                        {/* Shine effect */}
+                        <div className='absolute inset-0 bg-gradient-to-r from-white/20 to-transparent rounded-t' />
                       </div>
-                    )}
-                  </div>
-
-                  {/* Bar container */}
-                  <div className='relative w-full flex justify-center items-end h-full'>
-                    {/* Previous period bar (comparison) */}
-                    {showComparison && point.previousValue && (
-                      <div
-                        className='absolute w-2/3 bg-muted/50 rounded-t transition-all duration-300'
-                        style={{ height: `${prevHeightPercentage}%` }}
-                      />
-                    )}
-
-                    {/* Current bar */}
-                    <div
-                      className={cn(
-                        'relative w-full max-w-10 rounded-t transition-all duration-300 cursor-pointer',
-                        'bg-gradient-to-t from-blue-600 to-blue-400',
-                        'hover:from-blue-700 hover:to-blue-500',
-                        'dark:from-blue-500 dark:to-blue-300',
-                        'shadow-sm hover:shadow-md'
-                      )}
-                      style={{
-                        height: `${Math.max(heightPercentage, 2)}%`,
-                        minHeight: '4px',
-                      }}
-                    >
-                      {/* Shine effect */}
-                      <div className='absolute inset-0 bg-gradient-to-r from-white/20 to-transparent rounded-t' />
                     </div>
-                  </div>
 
-                  {/* X-axis label */}
-                  <span className='text-xs text-muted-foreground mt-2 truncate max-w-full'>
-                    {point.label}
-                  </span>
-                </div>
-              );
-            })}
+                    {/* X-axis label */}
+                    <span className='text-xs text-muted-foreground mt-2 truncate max-w-full'>
+                      {point.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Summary */}
-      <div className='mt-6 pt-4 border-t grid grid-cols-3 gap-4'>
-        <div>
-          <p className='text-xs text-muted-foreground'>Total</p>
-          <p className='text-lg font-semibold'>
-            {formatValue(totalValue, valuePrefix)}
-          </p>
+        {/* Summary */}
+        <div className='mt-6 pt-4 border-t grid grid-cols-3 gap-4'>
+          <div>
+            <p className='text-xs text-muted-foreground'>Total</p>
+            <p className='text-lg font-semibold'>
+              {formatValue(totalValue, valuePrefix)}
+            </p>
+          </div>
+          <div>
+            <p className='text-xs text-muted-foreground'>Average</p>
+            <p className='text-lg font-semibold'>
+              {formatValue(avgValue, valuePrefix)}
+            </p>
+          </div>
+          <div>
+            <p className='text-xs text-muted-foreground'>Best Period</p>
+            <p className='text-lg font-semibold'>
+              {data.length > 0
+                ? data.reduce(
+                    (max, d) => (d.value > max.value ? d : max),
+                    data[0]
+                  ).label
+                : '-'}
+            </p>
+          </div>
         </div>
-        <div>
-          <p className='text-xs text-muted-foreground'>Average</p>
-          <p className='text-lg font-semibold'>
-            {formatValue(avgValue, valuePrefix)}
-          </p>
-        </div>
-        <div>
-          <p className='text-xs text-muted-foreground'>Best Period</p>
-          <p className='text-lg font-semibold'>
-            {data.length > 0
-              ? data.reduce(
-                  (max, d) => (d.value > max.value ? d : max),
-                  data[0]
-                ).label
-              : '-'}
-          </p>
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 

@@ -9,6 +9,16 @@
 import React from 'react';
 import { cn } from '@/shared/utils';
 import {
+  Card,
+  CardContent,
+  Button,
+  Badge,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/shared/components/ui';
+import {
   Mail,
   Phone,
   Building2,
@@ -92,21 +102,15 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({
   className,
   variant = 'default',
 }) => {
-  const [showMenu, setShowMenu] = React.useState(false);
   const status = statusStyles[customer.status] || statusStyles.ACTIVE;
   const type = typeStyles[customer.customerType] || typeStyles.INDIVIDUAL;
   const TypeIcon = type.icon;
 
-  const handleMenuClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowMenu(!showMenu);
-  };
-
   if (variant === 'compact') {
     return (
-      <div
+      <Card
         className={cn(
-          'group flex items-center gap-3 p-3 rounded-lg border bg-card',
+          'group flex flex-row items-center gap-3 p-3',
           'hover:shadow-md hover:border-primary/20 transition-all duration-200 cursor-pointer',
           className
         )}
@@ -127,14 +131,14 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({
 
         {/* Status */}
         <div className={cn('h-2 w-2 rounded-full', status.dot)} />
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div
+    <Card
       className={cn(
-        'group relative overflow-hidden rounded-xl border bg-card',
+        'group relative overflow-hidden',
         'hover:shadow-lg hover:border-primary/20 transition-all duration-200 cursor-pointer',
         className
       )}
@@ -143,8 +147,7 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({
       {/* Header with gradient accent */}
       <div className='relative h-2 bg-gradient-to-r from-primary/60 via-primary/40 to-primary/20' />
 
-      {/* Content */}
-      <div className='p-5'>
+      <CardContent className='p-5'>
         {/* Top Row - Avatar & Actions */}
         <div className='flex items-start justify-between mb-4'>
           {/* Avatar & Name */}
@@ -173,78 +176,69 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({
           </div>
 
           {/* Actions Menu */}
-          <div className='relative'>
-            <button
-              onClick={handleMenuClick}
-              className='p-1.5 rounded-md hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity'
-            >
-              <MoreHorizontal className='h-4 w-4 text-muted-foreground' />
-            </button>
-
-            {showMenu && (
-              <div className='absolute right-0 top-full mt-1 w-36 rounded-lg border bg-popover shadow-lg z-10'>
-                <div className='p-1'>
-                  {onClick && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onClick();
-                        setShowMenu(false);
-                      }}
-                      className='w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-muted'
-                    >
-                      <ExternalLink className='h-4 w-4' />
-                      View Details
-                    </button>
-                  )}
-                  {onEdit && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEdit();
-                        setShowMenu(false);
-                      }}
-                      className='w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-muted'
-                    >
-                      <Edit className='h-4 w-4' />
-                      Edit
-                    </button>
-                  )}
-                  {onDelete && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete();
-                        setShowMenu(false);
-                      }}
-                      className='w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-muted text-destructive'
-                    >
-                      <Trash2 className='h-4 w-4' />
-                      Delete
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant='ghost'
+                size='icon'
+                className='h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity'
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreHorizontal className='h-4 w-4 text-muted-foreground' />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
+              {onClick && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onClick();
+                  }}
+                >
+                  <ExternalLink className='h-4 w-4 mr-2' />
+                  View Details
+                </DropdownMenuItem>
+              )}
+              {onEdit && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit();
+                  }}
+                >
+                  <Edit className='h-4 w-4 mr-2' />
+                  Edit
+                </DropdownMenuItem>
+              )}
+              {onDelete && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                  className='text-destructive focus:text-destructive'
+                >
+                  <Trash2 className='h-4 w-4 mr-2' />
+                  Delete
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Status & Type Badges */}
         <div className='flex items-center gap-2 mb-4'>
-          <span
-            className={cn(
-              'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium',
-              status.bg,
-              status.text
-            )}
+          <Badge
+            variant='secondary'
+            className={cn('gap-1', status.bg, status.text)}
           >
             <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
             {customer.status.charAt(0) + customer.status.slice(1).toLowerCase()}
-          </span>
-          <span className='inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground'>
+          </Badge>
+          <Badge variant='outline' className='gap-1'>
             <TypeIcon className='h-3 w-3' />
             {type.label}
-          </span>
+          </Badge>
         </div>
 
         {/* Contact Info */}
@@ -310,32 +304,36 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({
           {/* Quick Action Buttons */}
           <div className='flex items-center gap-1'>
             {onEmailClick && (
-              <button
+              <Button
+                variant='ghost'
+                size='icon'
+                className='h-9 w-9 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400'
                 onClick={(e) => {
                   e.stopPropagation();
                   onEmailClick();
                 }}
-                className='p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 transition-colors'
                 title='Send Email'
               >
                 <Mail className='h-4 w-4' />
-              </button>
+              </Button>
             )}
             {onCallClick && customer.phone && (
-              <button
+              <Button
+                variant='ghost'
+                size='icon'
+                className='h-9 w-9 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
                 onClick={(e) => {
                   e.stopPropagation();
                   onCallClick();
                 }}
-                className='p-2 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 transition-colors'
                 title='Call'
               >
                 <Phone className='h-4 w-4' />
-              </button>
+              </Button>
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
