@@ -1,5 +1,7 @@
 // CustomerForm Component (authors: QuanTuanHuy, Description: Part of Serp Project)
 
+'use client';
+
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,7 +12,16 @@ import {
   Card,
   CardContent,
   CardHeader,
+  CardTitle,
+  Textarea,
+  Badge,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/shared/components/ui';
+import { X } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import type {
   Customer,
@@ -127,97 +138,122 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
   };
 
   return (
-    <Card className={cn('w-full max-w-2xl mx-auto', className)}>
-      <CardHeader>
-        <h2 className='text-xl font-semibold'>
+    <Card className={cn('w-full', className)}>
+      <CardHeader className='pb-4'>
+        <CardTitle className='text-xl'>
           {isEditing ? 'Edit Customer' : 'Create Customer'}
-        </h2>
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={onFormSubmit} className='space-y-6'>
           {/* Basic Information */}
           <div className='space-y-4'>
-            <h3 className='text-lg font-medium'>Basic Information</h3>
+            <h3 className='text-base font-medium text-foreground'>
+              Basic Information
+            </h3>
 
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-              <div>
+              <div className='space-y-2'>
                 <Label htmlFor='name'>Name *</Label>
                 <Input
                   id='name'
                   {...register('name')}
-                  className={errors.name ? 'border-red-500' : ''}
+                  className={cn(errors.name && 'border-destructive')}
                   disabled={isLoading}
+                  placeholder='Enter customer name'
                 />
                 {errors.name && (
-                  <p className='text-sm text-red-600 mt-1'>
+                  <p className='text-sm text-destructive'>
                     {errors.name.message}
                   </p>
                 )}
               </div>
 
-              <div>
+              <div className='space-y-2'>
                 <Label htmlFor='email'>Email *</Label>
                 <Input
                   id='email'
                   type='email'
                   {...register('email')}
-                  className={errors.email ? 'border-red-500' : ''}
+                  className={cn(errors.email && 'border-destructive')}
                   disabled={isLoading}
+                  placeholder='email@example.com'
                 />
                 {errors.email && (
-                  <p className='text-sm text-red-600 mt-1'>
+                  <p className='text-sm text-destructive'>
                     {errors.email.message}
                   </p>
                 )}
               </div>
 
-              <div>
+              <div className='space-y-2'>
                 <Label htmlFor='phone'>Phone</Label>
-                <Input id='phone' {...register('phone')} disabled={isLoading} />
+                <Input
+                  id='phone'
+                  {...register('phone')}
+                  disabled={isLoading}
+                  placeholder='+84 xxx xxx xxx'
+                />
               </div>
 
-              <div>
+              <div className='space-y-2'>
                 <Label htmlFor='customerType'>Customer Type *</Label>
-                <select
-                  {...register('customerType')}
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                <Select
+                  value={watch('customerType')}
+                  onValueChange={(value) =>
+                    setValue('customerType', value as CustomerType)
+                  }
                   disabled={isLoading}
                 >
-                  <option value='INDIVIDUAL'>Individual</option>
-                  <option value='COMPANY'>Company</option>
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder='Select type' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='INDIVIDUAL'>Individual</SelectItem>
+                    <SelectItem value='COMPANY'>Company</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div>
+              <div className='space-y-2'>
                 <Label htmlFor='status'>Status *</Label>
-                <select
-                  {...register('status')}
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                <Select
+                  value={watch('status')}
+                  onValueChange={(value) =>
+                    setValue('status', value as CustomerStatus)
+                  }
                   disabled={isLoading}
                 >
-                  <option value='POTENTIAL'>Potential</option>
-                  <option value='ACTIVE'>Active</option>
-                  <option value='INACTIVE'>Inactive</option>
-                  <option value='BLOCKED'>Blocked</option>
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder='Select status' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='POTENTIAL'>Potential</SelectItem>
+                    <SelectItem value='ACTIVE'>Active</SelectItem>
+                    <SelectItem value='INACTIVE'>Inactive</SelectItem>
+                    <SelectItem value='BLOCKED'>Blocked</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div>
+              <div className='space-y-2'>
                 <Label htmlFor='assignedSalesRep'>Assigned Sales Rep</Label>
                 <Input
                   id='assignedSalesRep'
                   {...register('assignedSalesRep')}
                   disabled={isLoading}
+                  placeholder='Sales representative name'
                 />
               </div>
             </div>
 
-            <div>
+            <div className='space-y-2'>
               <Label htmlFor='address'>Address</Label>
               <Input
                 id='address'
                 {...register('address')}
                 disabled={isLoading}
+                placeholder='Enter full address'
               />
             </div>
           </div>
@@ -225,38 +261,43 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
           {/* Company Information */}
           {customerType === 'COMPANY' && (
             <div className='space-y-4'>
-              <h3 className='text-lg font-medium'>Company Information</h3>
+              <h3 className='text-base font-medium text-foreground'>
+                Company Information
+              </h3>
 
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                <div>
+                <div className='space-y-2'>
                   <Label htmlFor='companyName'>Company Name</Label>
                   <Input
                     id='companyName'
                     {...register('companyName')}
                     disabled={isLoading}
+                    placeholder='Enter company name'
                   />
                 </div>
 
-                <div>
+                <div className='space-y-2'>
                   <Label htmlFor='taxNumber'>Tax Number</Label>
                   <Input
                     id='taxNumber'
                     {...register('taxNumber')}
                     disabled={isLoading}
+                    placeholder='Tax identification number'
                   />
                 </div>
 
-                <div className='md:col-span-2'>
+                <div className='md:col-span-2 space-y-2'>
                   <Label htmlFor='website'>Website</Label>
                   <Input
                     id='website'
                     type='url'
                     {...register('website')}
-                    className={errors.website ? 'border-red-500' : ''}
+                    className={cn(errors.website && 'border-destructive')}
                     disabled={isLoading}
+                    placeholder='https://example.com'
                   />
                   {errors.website && (
-                    <p className='text-sm text-red-600 mt-1'>
+                    <p className='text-sm text-destructive'>
                       {errors.website.message}
                     </p>
                   )}
@@ -267,58 +308,55 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
 
           {/* Additional Information */}
           <div className='space-y-4'>
-            <h3 className='text-lg font-medium'>Additional Information</h3>
+            <h3 className='text-base font-medium text-foreground'>
+              Additional Information
+            </h3>
 
-            <div>
+            <div className='space-y-2'>
               <Label htmlFor='notes'>Notes</Label>
-              <textarea
+              <Textarea
                 id='notes'
                 {...register('notes')}
                 rows={3}
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
                 disabled={isLoading}
+                placeholder='Add any additional notes about this customer...'
               />
             </div>
 
             {/* Tags */}
-            <div>
+            <div className='space-y-2'>
               <Label>Tags</Label>
-              <div className='flex flex-wrap gap-2 mt-2'>
+              <div className='flex flex-wrap gap-2'>
                 {watch('tags').map((tag, index) => (
-                  <span
-                    key={index}
-                    className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800'
-                  >
+                  <Badge key={index} variant='secondary' className='gap-1 pr-1'>
                     {tag}
                     <button
                       type='button'
                       onClick={() => handleTagRemove(tag)}
-                      className='ml-1 text-blue-600 hover:text-blue-800'
+                      className='ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5'
                       disabled={isLoading}
                     >
-                      ×
+                      <X className='h-3 w-3' />
                     </button>
-                  </span>
+                  </Badge>
                 ))}
               </div>
-              <div className='flex mt-2'>
-                <Input
-                  placeholder='Add tag and press Enter'
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleTagAdd(e.currentTarget.value);
-                      e.currentTarget.value = '';
-                    }
-                  }}
-                  disabled={isLoading}
-                />
-              </div>
+              <Input
+                placeholder='Type a tag and press Enter'
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleTagAdd(e.currentTarget.value);
+                    e.currentTarget.value = '';
+                  }
+                }}
+                disabled={isLoading}
+              />
             </div>
           </div>
 
           {/* Actions */}
-          <div className='flex justify-end space-x-3 pt-6 border-t'>
+          <div className='flex justify-end gap-3 pt-6 border-t'>
             {onCancel && (
               <Button
                 type='button'
