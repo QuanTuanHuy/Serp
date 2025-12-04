@@ -2,3 +2,4 @@
 
 export { default as OpportunityListPage } from './OpportunityListPage';
 export { OpportunityDetailPage } from './OpportunityDetailPage';
+export { EditOpportunityPage } from './EditOpportunityPage';
