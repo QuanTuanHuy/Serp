@@ -12,7 +12,6 @@ import (
 	"github.com/serp/ptm-schedule/src/core/domain/constant"
 	dom "github.com/serp/ptm-schedule/src/core/domain/entity"
 	"github.com/serp/ptm-schedule/src/core/domain/enum"
-	storePort "github.com/serp/ptm-schedule/src/core/port/store"
 	"github.com/serp/ptm-schedule/src/core/service"
 	"gorm.io/gorm"
 )
@@ -29,10 +28,10 @@ type IScheduleEventUseCase interface {
 }
 
 type ScheduleEventUseCase struct {
-	eventSvc         service.IScheduleEventService
-	scheduleTaskPort storePort.IScheduleTaskPort
-	rescheduleQueue  service.IRescheduleQueueService
-	txService        service.ITransactionService
+	eventSvc            service.IScheduleEventService
+	scheduleTaskService service.IScheduleTaskService
+	rescheduleQueue     service.IRescheduleQueueService
+	txService           service.ITransactionService
 }
 
 func (u *ScheduleEventUseCase) ListEvents(ctx context.Context, planID int64, fromDateMs, toDateMs int64) ([]*dom.ScheduleEventEntity, error) {
@@ -108,18 +107,15 @@ func (u *ScheduleEventUseCase) ManuallyMoveEvent(ctx context.Context, userID int
 			return err
 		}
 
-		task, err := u.scheduleTaskPort.GetScheduleTaskByID(ctx, result.Event.ScheduleTaskID)
+		task, err := u.scheduleTaskService.GetByScheduleTaskID(ctx, result.Event.ScheduleTaskID)
 		if err != nil {
 			return err
-		}
-		if task == nil {
-			return errors.New(constant.ScheduleTaskNotFound)
 		}
 
 		startMs := newDateMs + int64(newStartMin)*60*1000
 		endMs := newDateMs + int64(newEndMin)*60*1000
 		task.PinTo(startMs, endMs)
-		if _, err := u.scheduleTaskPort.UpdateScheduleTask(ctx, tx, task.ID, task); err != nil {
+		if _, err := u.scheduleTaskService.Update(ctx, tx, task.ID, task); err != nil {
 			return err
 		}
 
@@ -148,19 +144,18 @@ func (u *ScheduleEventUseCase) CompleteEvent(ctx context.Context, userID int64, 
 			return err
 		}
 
-		task, err := u.scheduleTaskPort.GetScheduleTaskByID(ctx, result.ScheduleTaskID)
+		task, err := u.scheduleTaskService.GetByScheduleTaskID(ctx, result.ScheduleTaskID)
 		if err != nil {
 			return err
 		}
-
 		if result.AllPartsCompleted && task != nil {
 			task.MarkAsScheduled()
-			if _, err := u.scheduleTaskPort.UpdateScheduleTask(ctx, tx, task.ID, task); err != nil {
+			if _, err := u.scheduleTaskService.Update(ctx, tx, task.ID, task); err != nil {
 				return err
 			}
 		}
 
-		return u.rescheduleQueue.EnqueueEventComplete(ctx, tx, result.Event.SchedulePlanID, userID, eventID)
+		return nil
 	})
 }
 
@@ -174,7 +169,7 @@ func (u *ScheduleEventUseCase) SplitEvent(ctx context.Context, userID int64, eve
 		return nil, err
 	}
 
-	task, err := u.scheduleTaskPort.GetScheduleTaskByID(ctx, event.ScheduleTaskID)
+	task, err := u.scheduleTaskService.GetByScheduleTaskID(ctx, event.ScheduleTaskID)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +204,7 @@ func (u *ScheduleEventUseCase) SkipEvent(ctx context.Context, userID int64, even
 	}
 
 	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
-		event, err := u.eventSvc.GetByID(ctx, eventID)
+		_, err := u.eventSvc.GetByID(ctx, eventID)
 		if err != nil {
 			return err
 		}
@@ -218,20 +213,21 @@ func (u *ScheduleEventUseCase) SkipEvent(ctx context.Context, userID int64, even
 			return err
 		}
 
-		return u.rescheduleQueue.EnqueueEventComplete(ctx, tx, event.SchedulePlanID, userID, eventID)
+		// return u.rescheduleQueue.EnqueueEventSkip(ctx, tx, event.SchedulePlanID, userID, eventID)
+		return nil
 	})
 }
 
 func NewScheduleEventUseCase(
 	eventSvc service.IScheduleEventService,
-	scheduleTaskPort storePort.IScheduleTaskPort,
+	scheduleTaskService service.IScheduleTaskService,
 	rescheduleQueue service.IRescheduleQueueService,
 	txService service.ITransactionService,
 ) IScheduleEventUseCase {
 	return &ScheduleEventUseCase{
-		eventSvc:         eventSvc,
-		scheduleTaskPort: scheduleTaskPort,
-		rescheduleQueue:  rescheduleQueue,
-		txService:        txService,
+		eventSvc:            eventSvc,
+		scheduleTaskService: scheduleTaskService,
+		rescheduleQueue:     rescheduleQueue,
+		txService:           txService,
 	}
 }
