@@ -193,6 +193,10 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
     setShowQuickAdd(false);
   };
 
+  const handleViewActivity = (activityId: string) => {
+    router.push(`/crm/activities/${activityId}`);
+  };
+
   const hasActiveFilters = searchQuery || typeFilter || statusFilter;
 
   const getActivityIcon = (type: ActivityType) => {
@@ -445,6 +449,7 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
               <Card
                 key={activity.id}
                 className='hover:shadow-md transition-shadow cursor-pointer'
+                onClick={() => handleViewActivity(activity.id)}
               >
                 <CardContent className='p-4'>
                   <div className='flex items-start gap-4'>
