@@ -21,6 +21,9 @@ import { cn } from '@/shared/utils';
 import { CustomerCard } from '../../components/cards';
 import { CustomerForm } from '../../components/forms';
 import { StatsCard } from '../../components/dashboard';
+import { ExportDropdown } from '../../components/shared';
+import { QuickAddCustomerDialog } from '../../components/dialogs';
+import { CUSTOMER_EXPORT_COLUMNS } from '../../utils/export';
 import { MOCK_CUSTOMERS } from '../../mocks';
 import type { Customer, CustomerFilters, CustomerStatus } from '../../types';
 
@@ -48,6 +51,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
 
   const pageSize = 12;
 
@@ -123,6 +127,11 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
     setShowCreateForm(false);
   };
 
+  const handleQuickAddCustomer = async (data: any) => {
+    console.log('Quick adding customer:', data);
+    setShowQuickAdd(false);
+  };
+
   const handleEditCustomer = (customer: Customer) => {
     setEditingCustomer(customer);
   };
@@ -177,10 +186,28 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
             Manage your customer relationships
           </p>
         </div>
-        <Button onClick={() => setShowCreateForm(true)} className='gap-2'>
-          <Plus className='h-4 w-4' />
-          Add Customer
-        </Button>
+        <div className='flex items-center gap-2'>
+          <ExportDropdown
+            data={filteredCustomers}
+            columns={CUSTOMER_EXPORT_COLUMNS}
+            filename='customers'
+            onExportComplete={(format, count) => {
+              console.log(`Exported ${count} customers as ${format}`);
+            }}
+          />
+          <Button
+            variant='outline'
+            onClick={() => setShowQuickAdd(true)}
+            className='gap-2'
+          >
+            <Plus className='h-4 w-4' />
+            Thêm nhanh
+          </Button>
+          <Button onClick={() => setShowCreateForm(true)} className='gap-2'>
+            <Plus className='h-4 w-4' />
+            Add Customer
+          </Button>
+        </div>
       </div>
 
       {/* Quick Stats */}
@@ -497,6 +524,13 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
           </div>
         </div>
       )}
+
+      {/* Quick Add Dialog */}
+      <QuickAddCustomerDialog
+        open={showQuickAdd}
+        onOpenChange={setShowQuickAdd}
+        onSubmit={handleQuickAddCustomer}
+      />
     </div>
   );
 };

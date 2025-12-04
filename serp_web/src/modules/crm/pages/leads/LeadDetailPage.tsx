@@ -67,12 +67,12 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
     return (
       <div className={cn('p-6', className)}>
         <div className='animate-pulse space-y-6'>
-          <div className='h-8 bg-gray-200 rounded w-1/3'></div>
+          <div className='h-8 bg-muted rounded w-1/3'></div>
           <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
             <div className='md:col-span-2'>
-              <div className='h-64 bg-gray-200 rounded'></div>
+              <div className='h-64 bg-muted rounded'></div>
             </div>
-            <div className='h-64 bg-gray-200 rounded'></div>
+            <div className='h-64 bg-muted rounded'></div>
           </div>
         </div>
       </div>
@@ -109,7 +109,7 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
             ← Back
           </Button>
           <div>
-            <h1 className='text-2xl font-bold text-gray-900'>
+            <h1 className='text-2xl font-bold text-foreground'>
               {lead.firstName} {lead.lastName}
             </h1>
             <div className='flex items-center space-x-2 mt-1'>
@@ -172,19 +172,19 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
                 <CardContent>
                   <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                     <div>
-                      <label className='text-sm font-medium text-gray-500'>
+                      <label className='text-sm font-medium text-muted-foreground'>
                         Email
                       </label>
                       <p className='text-sm'>{lead.email}</p>
                     </div>
                     <div>
-                      <label className='text-sm font-medium text-gray-500'>
+                      <label className='text-sm font-medium text-muted-foreground'>
                         Phone
                       </label>
                       <p className='text-sm'>{lead.phone || 'Not provided'}</p>
                     </div>
                     <div>
-                      <label className='text-sm font-medium text-gray-500'>
+                      <label className='text-sm font-medium text-muted-foreground'>
                         Company
                       </label>
                       <p className='text-sm'>
@@ -192,7 +192,7 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
                       </p>
                     </div>
                     <div>
-                      <label className='text-sm font-medium text-gray-500'>
+                      <label className='text-sm font-medium text-muted-foreground'>
                         Position
                       </label>
                       <p className='text-sm'>
@@ -211,13 +211,13 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
                 <CardContent>
                   <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                     <div>
-                      <label className='text-sm font-medium text-gray-500'>
+                      <label className='text-sm font-medium text-muted-foreground'>
                         Source
                       </label>
                       <p className='text-sm'>{lead.source}</p>
                     </div>
                     <div>
-                      <label className='text-sm font-medium text-gray-500'>
+                      <label className='text-sm font-medium text-muted-foreground'>
                         Priority
                       </label>
                       <p className='text-sm'>
@@ -225,7 +225,7 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
                       </p>
                     </div>
                     <div>
-                      <label className='text-sm font-medium text-gray-500'>
+                      <label className='text-sm font-medium text-muted-foreground'>
                         Estimated Value
                       </label>
                       <p className='text-sm'>
@@ -235,7 +235,7 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
                       </p>
                     </div>
                     <div>
-                      <label className='text-sm font-medium text-gray-500'>
+                      <label className='text-sm font-medium text-muted-foreground'>
                         Expected Timeline
                       </label>
                       <p className='text-sm'>
@@ -252,7 +252,7 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
                   <h3 className='text-lg font-semibold'>Notes</h3>
                 </CardHeader>
                 <CardContent>
-                  <p className='text-sm text-gray-600'>
+                  <p className='text-sm text-muted-foreground'>
                     {lead.notes || 'No notes available.'}
                   </p>
                 </CardContent>
@@ -291,7 +291,7 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
                 <CardContent>
                   <div className='space-y-4'>
                     <div>
-                      <label className='text-sm font-medium text-gray-500'>
+                      <label className='text-sm font-medium text-muted-foreground'>
                         Created
                       </label>
                       <p className='text-sm'>
@@ -299,7 +299,7 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
                       </p>
                     </div>
                     <div>
-                      <label className='text-sm font-medium text-gray-500'>
+                      <label className='text-sm font-medium text-muted-foreground'>
                         Last Updated
                       </label>
                       <p className='text-sm'>
@@ -308,7 +308,7 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
                     </div>
                     {lead.lastActivityDate && (
                       <div>
-                        <label className='text-sm font-medium text-gray-500'>
+                        <label className='text-sm font-medium text-muted-foreground'>
                           Last Activity
                         </label>
                         <p className='text-sm'>
@@ -374,7 +374,7 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
             </CardHeader>
             <CardContent>
               <div className='text-center py-8'>
-                <p className='text-gray-600 mb-4'>
+                <p className='text-muted-foreground mb-4'>
                   No activities recorded yet.
                 </p>
                 <Button>Log First Activity</Button>
@@ -393,7 +393,7 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
             </CardHeader>
             <CardContent>
               <div className='space-y-4'>
-                <div className='bg-gray-50 p-4 rounded-lg'>
+                <div className='bg-muted p-4 rounded-lg'>
                   <p className='text-sm'>
                     {lead.notes || 'No notes available.'}
                   </p>

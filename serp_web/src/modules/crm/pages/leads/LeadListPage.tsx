@@ -25,6 +25,9 @@ import { cn } from '@/shared/utils';
 import { LeadCard } from '../../components/cards';
 import { LeadForm } from '../../components/forms';
 import { StatsCard } from '../../components/dashboard';
+import { ExportDropdown } from '../../components/shared';
+import { QuickAddLeadDialog } from '../../components/dialogs';
+import { LEAD_EXPORT_COLUMNS } from '../../utils/export';
 import { MOCK_LEADS } from '../../mocks';
 import type { Lead, LeadFilters, LeadStatus, LeadSource } from '../../types';
 
@@ -57,6 +60,7 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'kanban'>('grid');
   const [showFilters, setShowFilters] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
 
   const pageSize = viewMode === 'kanban' ? 100 : 12;
 
@@ -157,6 +161,11 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
     setShowCreateForm(false);
   };
 
+  const handleQuickAddLead = async (data: any) => {
+    console.log('Quick adding lead:', data);
+    setShowQuickAdd(false);
+  };
+
   const handleEditLead = (lead: Lead) => {
     setEditingLead(lead);
   };
@@ -213,10 +222,28 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
             Manage and convert your sales prospects
           </p>
         </div>
-        <Button onClick={() => setShowCreateForm(true)} className='gap-2'>
-          <Plus className='h-4 w-4' />
-          Add Lead
-        </Button>
+        <div className='flex items-center gap-2'>
+          <ExportDropdown
+            data={filteredLeads}
+            columns={LEAD_EXPORT_COLUMNS}
+            filename='leads'
+            onExportComplete={(format, count) => {
+              console.log(`Exported ${count} leads as ${format}`);
+            }}
+          />
+          <Button
+            variant='outline'
+            onClick={() => setShowQuickAdd(true)}
+            className='gap-2'
+          >
+            <Plus className='h-4 w-4' />
+            Thêm nhanh
+          </Button>
+          <Button onClick={() => setShowCreateForm(true)} className='gap-2'>
+            <Plus className='h-4 w-4' />
+            Add Lead
+          </Button>
+        </div>
       </div>
 
       {/* Quick Stats */}
@@ -612,6 +639,13 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
           </div>
         </div>
       )}
+
+      {/* Quick Add Dialog */}
+      <QuickAddLeadDialog
+        open={showQuickAdd}
+        onOpenChange={setShowQuickAdd}
+        onSubmit={handleQuickAddLead}
+      />
     </div>
   );
 };

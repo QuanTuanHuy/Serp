@@ -38,10 +38,12 @@ export const CreateCustomerPage: React.FC<CreateCustomerPageProps> = ({
             ← Back
           </Button>
           <div>
-            <h1 className='text-2xl font-bold text-gray-900'>
+            <h1 className='text-2xl font-bold text-foreground'>
               Create New Customer
             </h1>
-            <p className='text-gray-600'>Add a new customer to your CRM</p>
+            <p className='text-muted-foreground'>
+              Add a new customer to your CRM
+            </p>
           </div>
         </div>
       </div>

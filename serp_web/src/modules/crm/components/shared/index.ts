@@ -5,6 +5,7 @@ export { PriorityBadge } from './PriorityBadge';
 export { EntityCard } from './EntityCard';
 export { SearchInput } from './SearchInput';
 export { ActionMenu, EditAction, DeleteAction } from './ActionMenu';
+export { ExportDropdown } from './ExportDropdown';
 
 // Re-export types for convenience
 export type {
@@ -18,3 +19,6 @@ export type {
   ActivityStatus,
   CustomerStatus,
 } from '../../types';
+
+// Re-export export types
+export type { ExportDropdownProps } from './ExportDropdown';

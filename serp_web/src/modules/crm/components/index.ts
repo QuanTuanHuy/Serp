@@ -20,3 +20,12 @@ export * from './dashboard';
 
 // Card Components
 export * from './cards';
+
+// Contact Components
+export * from './contacts';
+
+// Notes Components
+export * from './notes';
+
+// Dialog Components
+export * from './dialogs';

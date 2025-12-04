@@ -23,6 +23,9 @@ import {
 import { cn } from '@/shared/utils';
 import { OpportunityCard } from '../../components/cards';
 import { StatsCard } from '../../components/dashboard';
+import { ExportDropdown } from '../../components/shared';
+import { QuickAddOpportunityDialog } from '../../components/dialogs';
+import { OPPORTUNITY_EXPORT_COLUMNS } from '../../utils/export';
 import { MOCK_OPPORTUNITIES } from '../../mocks';
 import type { Opportunity, OpportunityStage } from '../../types';
 
@@ -61,6 +64,7 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
     'pipeline'
   );
   const [showFilters, setShowFilters] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
 
   const pageSize = viewMode === 'pipeline' ? 100 : 12;
 
@@ -175,6 +179,11 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
     router.push(`/crm/opportunities/${opportunityId}`);
   };
 
+  const handleQuickAddOpportunity = async (data: unknown) => {
+    console.log('Quick adding opportunity:', data);
+    setShowQuickAdd(false);
+  };
+
   const clearFilters = () => {
     setSearchQuery('');
     setStageFilter('');
@@ -193,10 +202,28 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
             Track and manage your sales pipeline
           </p>
         </div>
-        <Button className='gap-2'>
-          <Plus className='h-4 w-4' />
-          Add Opportunity
-        </Button>
+        <div className='flex items-center gap-2'>
+          <ExportDropdown
+            data={filteredOpportunities}
+            columns={OPPORTUNITY_EXPORT_COLUMNS}
+            filename='opportunities'
+            onExportComplete={(format, count) => {
+              console.log(`Exported ${count} opportunities as ${format}`);
+            }}
+          />
+          <Button
+            variant='outline'
+            onClick={() => setShowQuickAdd(true)}
+            className='gap-2'
+          >
+            <Plus className='h-4 w-4' />
+            Thêm nhanh
+          </Button>
+          <Button className='gap-2'>
+            <Plus className='h-4 w-4' />
+            Add Opportunity
+          </Button>
+        </div>
       </div>
 
       {/* Quick Stats */}
@@ -516,6 +543,13 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
           </div>
         </div>
       )}
+
+      {/* Quick Add Dialog */}
+      <QuickAddOpportunityDialog
+        open={showQuickAdd}
+        onOpenChange={setShowQuickAdd}
+        onSubmit={handleQuickAddOpportunity}
+      />
     </div>
   );
 };
