@@ -280,9 +280,16 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
   const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isLostDialogOpen, setIsLostDialogOpen] = useState(false);
+  const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
   const [selectedStage, setSelectedStage] = useState<OpportunityStage | ''>('');
   const [noteText, setNoteText] = useState('');
   const [lostReason, setLostReason] = useState('');
+  const [activityForm, setActivityForm] = useState({
+    type: 'CALL',
+    subject: '',
+    description: '',
+    scheduledDate: '',
+  });
 
   // Find opportunity from mock data
   const opportunity = useMemo(() => {
@@ -491,6 +498,10 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
               <DropdownMenuItem onClick={() => setIsNoteDialogOpen(true)}>
                 <MessageSquare className='w-4 h-4 mr-2' />
                 Add Note
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsActivityDialogOpen(true)}>
+                <Plus className='w-4 h-4 mr-2' />
+                Add Activity
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -1312,6 +1323,128 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
             </Button>
             <Button variant='destructive' onClick={handleDelete}>
               Delete Opportunity
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Activity Dialog */}
+      <Dialog
+        open={isActivityDialogOpen}
+        onOpenChange={setIsActivityDialogOpen}
+      >
+        <DialogContent className='sm:max-w-md'>
+          <DialogHeader>
+            <DialogTitle>Add Activity</DialogTitle>
+            <DialogDescription>
+              Log a new activity for {opportunity.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className='space-y-4 py-4'>
+            <div className='space-y-2'>
+              <label className='text-sm font-medium'>Activity Type</label>
+              <Select
+                value={activityForm.type}
+                onValueChange={(value) =>
+                  setActivityForm({ ...activityForm, type: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder='Select type' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='CALL'>
+                    <div className='flex items-center gap-2'>
+                      <Phone className='h-4 w-4' />
+                      Call
+                    </div>
+                  </SelectItem>
+                  <SelectItem value='EMAIL'>
+                    <div className='flex items-center gap-2'>
+                      <Mail className='h-4 w-4' />
+                      Email
+                    </div>
+                  </SelectItem>
+                  <SelectItem value='MEETING'>
+                    <div className='flex items-center gap-2'>
+                      <Calendar className='h-4 w-4' />
+                      Meeting
+                    </div>
+                  </SelectItem>
+                  <SelectItem value='DEMO'>
+                    <div className='flex items-center gap-2'>
+                      <Target className='h-4 w-4' />
+                      Demo
+                    </div>
+                  </SelectItem>
+                  <SelectItem value='NOTE'>
+                    <div className='flex items-center gap-2'>
+                      <FileText className='h-4 w-4' />
+                      Note
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className='space-y-2'>
+              <label className='text-sm font-medium'>Subject</label>
+              <Input
+                placeholder='Enter activity subject...'
+                value={activityForm.subject}
+                onChange={(e) =>
+                  setActivityForm({ ...activityForm, subject: e.target.value })
+                }
+              />
+            </div>
+            <div className='space-y-2'>
+              <label className='text-sm font-medium'>Description</label>
+              <Textarea
+                placeholder='Enter description...'
+                value={activityForm.description}
+                onChange={(e) =>
+                  setActivityForm({
+                    ...activityForm,
+                    description: e.target.value,
+                  })
+                }
+                rows={3}
+              />
+            </div>
+            <div className='space-y-2'>
+              <label className='text-sm font-medium'>Scheduled Date</label>
+              <Input
+                type='datetime-local'
+                value={activityForm.scheduledDate}
+                onChange={(e) =>
+                  setActivityForm({
+                    ...activityForm,
+                    scheduledDate: e.target.value,
+                  })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant='outline'
+              onClick={() => setIsActivityDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                console.log('Adding activity:', activityForm);
+                setIsActivityDialogOpen(false);
+                setActivityForm({
+                  type: 'CALL',
+                  subject: '',
+                  description: '',
+                  scheduledDate: '',
+                });
+              }}
+              disabled={!activityForm.subject.trim()}
+            >
+              Add Activity
             </Button>
           </DialogFooter>
         </DialogContent>

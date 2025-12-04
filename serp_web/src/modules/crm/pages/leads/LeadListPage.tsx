@@ -231,15 +231,7 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
               console.log(`Exported ${count} leads as ${format}`);
             }}
           />
-          <Button
-            variant='outline'
-            onClick={() => setShowQuickAdd(true)}
-            className='gap-2'
-          >
-            <Plus className='h-4 w-4' />
-            Thêm nhanh
-          </Button>
-          <Button onClick={() => setShowCreateForm(true)} className='gap-2'>
+          <Button onClick={() => setShowQuickAdd(true)} className='gap-2'>
             <Plus className='h-4 w-4' />
             Add Lead
           </Button>
