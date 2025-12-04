@@ -44,10 +44,8 @@ const (
 	EventInvalidTimeRange        = "invalid time range for event"
 
 	// Schedule Plan/Group/Task errors
-	SchedulePlanNotFound         = "schedule plan not found"
-	ScheduleGroupNotFound        = "schedule group not found"
-	DeleteScheduleGroupForbidden = "delete schedule group forbidden"
-	ScheduleTaskNotFound         = "schedule task not found"
+	SchedulePlanNotFound = "schedule plan not found"
+	ScheduleTaskNotFound = "schedule task not found"
 
 	// Concurrent update errors
 	OptimisticLockConflict = "optimistic lock conflict: data was modified by another process"

@@ -80,7 +80,9 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		{
 			eventV1.GET("", p.ScheduleEventController.ListEvents)
 			eventV1.POST("", p.ScheduleEventController.SaveEvents)
-			eventV1.PATCH("/:id/status", p.ScheduleEventController.UpdateEventStatus)
+			eventV1.POST("/:id/move", p.ScheduleEventController.ManuallyMoveEvent)
+			eventV1.POST("/:id/complete", p.ScheduleEventController.CompleteEvent)
+			eventV1.POST("/:id/split", p.ScheduleEventController.SplitEvent)
 		}
 	}
 
