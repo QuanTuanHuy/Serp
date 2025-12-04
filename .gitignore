@@ -19,3 +19,5 @@ DEPLOY*.md
 CLEANUP_GUIDE.md
 
 .github/prompts/
+
+.shared/

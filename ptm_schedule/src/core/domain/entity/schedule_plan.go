@@ -26,7 +26,8 @@ type SchedulePlanEntity struct {
 	Version      int32  `json:"version"`
 	ParentPlanID *int64 `json:"parentPlanId"`
 
-	Status enum.PlanStatus `json:"status"`
+	Status  enum.PlanStatus `json:"status"`
+	IsStale bool            `json:"isStale"`
 }
 
 // Factory methods

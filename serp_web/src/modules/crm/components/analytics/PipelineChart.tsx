@@ -1,6 +1,12 @@
 // PipelineChart Component (authors: QuanTuanHuy, Description: Part of Serp Project)
 
-import { Card, CardContent, CardHeader } from '@/shared/components/ui';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Skeleton,
+} from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import {
   BarChart,
@@ -44,16 +50,16 @@ const getStageColor = (stage: string): string => {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className='bg-white p-3 border border-gray-200 rounded-lg shadow-lg'>
-        <p className='font-medium text-gray-900'>{label}</p>
-        <p className='text-sm text-gray-600'>
+      <div className='bg-popover text-popover-foreground p-3 border border-border rounded-lg shadow-lg'>
+        <p className='font-medium'>{label}</p>
+        <p className='text-sm text-muted-foreground'>
           Count:{' '}
-          <span className='font-medium text-blue-600'>{payload[0].value}</span>
+          <span className='font-medium text-primary'>{payload[0].value}</span>
         </p>
         {payload[0].payload.totalValue && (
-          <p className='text-sm text-gray-600'>
+          <p className='text-sm text-muted-foreground'>
             Value:{' '}
-            <span className='font-medium text-green-600'>
+            <span className='font-medium text-emerald-600 dark:text-emerald-400'>
               ${payload[0].payload.totalValue.toLocaleString()}
             </span>
           </p>
@@ -66,13 +72,13 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 // Loading skeleton
 const LoadingSkeleton = () => (
-  <div className='animate-pulse'>
-    <div className='h-6 bg-gray-200 rounded w-48 mb-4'></div>
+  <div className='space-y-4'>
+    <Skeleton className='h-6 w-48' />
     <div className='space-y-3'>
-      <div className='h-4 bg-gray-200 rounded'></div>
-      <div className='h-4 bg-gray-200 rounded w-5/6'></div>
-      <div className='h-4 bg-gray-200 rounded w-4/6'></div>
-      <div className='h-4 bg-gray-200 rounded w-3/6'></div>
+      <Skeleton className='h-4 w-full' />
+      <Skeleton className='h-4 w-5/6' />
+      <Skeleton className='h-4 w-4/6' />
+      <Skeleton className='h-4 w-3/6' />
     </div>
   </div>
 );
@@ -96,10 +102,10 @@ export const PipelineChart: React.FC<PipelineChartProps> = ({
     return (
       <Card className={cn('p-6', className)}>
         <CardHeader>
-          <h3 className='text-lg font-semibold'>Pipeline Overview</h3>
+          <CardTitle>Pipeline Overview</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className='flex items-center justify-center h-64 text-gray-500'>
+          <div className='flex items-center justify-center h-64 text-muted-foreground'>
             <div className='text-center'>
               <p>No pipeline data available</p>
               <p className='text-sm mt-1'>
@@ -127,11 +133,11 @@ export const PipelineChart: React.FC<PipelineChartProps> = ({
     <Card className={cn('', className)}>
       <CardHeader>
         <div className='flex items-center justify-between'>
-          <h3 className='text-lg font-semibold'>Pipeline Overview</h3>
-          <div className='text-sm text-gray-500'>
+          <CardTitle>Pipeline Overview</CardTitle>
+          <span className='text-sm text-muted-foreground'>
             Total: {data.reduce((sum, item) => sum + item.count, 0)}{' '}
             opportunities
-          </div>
+          </span>
         </div>
       </CardHeader>
       <CardContent>
@@ -186,24 +192,26 @@ export const PipelineChart: React.FC<PipelineChartProps> = ({
         {/* Pipeline Summary */}
         {showValue && (
           <div className='mt-6 grid grid-cols-2 md:grid-cols-3 gap-4'>
-            <div className='text-center p-3 bg-gray-50 rounded-lg'>
-              <p className='text-sm text-gray-600'>Total Opportunities</p>
-              <p className='text-xl font-bold text-gray-900'>
+            <div className='text-center p-3 bg-muted/50 rounded-lg'>
+              <p className='text-sm text-muted-foreground'>
+                Total Opportunities
+              </p>
+              <p className='text-xl font-bold text-foreground'>
                 {data.reduce((sum, item) => sum + item.count, 0)}
               </p>
             </div>
-            <div className='text-center p-3 bg-gray-50 rounded-lg'>
-              <p className='text-sm text-gray-600'>Total Value</p>
-              <p className='text-xl font-bold text-green-600'>
+            <div className='text-center p-3 bg-muted/50 rounded-lg'>
+              <p className='text-sm text-muted-foreground'>Total Value</p>
+              <p className='text-xl font-bold text-emerald-600 dark:text-emerald-400'>
                 $
                 {data
                   .reduce((sum, item) => sum + item.value, 0)
                   .toLocaleString()}
               </p>
             </div>
-            <div className='text-center p-3 bg-gray-50 rounded-lg col-span-2 md:col-span-1'>
-              <p className='text-sm text-gray-600'>Avg Deal Size</p>
-              <p className='text-xl font-bold text-blue-600'>
+            <div className='text-center p-3 bg-muted/50 rounded-lg col-span-2 md:col-span-1'>
+              <p className='text-sm text-muted-foreground'>Avg Deal Size</p>
+              <p className='text-xl font-bold text-primary'>
                 $
                 {(
                   data.reduce((sum, item) => sum + item.value, 0) /

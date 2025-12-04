@@ -24,18 +24,28 @@ type IScheduleTaskService interface {
 	SyncSnapshot(ctx context.Context, tx *gorm.DB, planID int64, event *message.TaskUpdatedEvent) (enum.ChangeType, error)
 	DeleteSnapshot(ctx context.Context, tx *gorm.DB, planID, taskID int64) error
 
+	CloneTasksForPlan(ctx context.Context, tx *gorm.DB, srcPlanID, destPlanID int64) (map[int64]int64, error)
+	Update(ctx context.Context, tx *gorm.DB, scheduleTaskID int64, task *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error)
+	DeleteByPlanID(ctx context.Context, tx *gorm.DB, planID int64) error
+
 	GetBySchedulePlanID(ctx context.Context, schedulePlanID int64) ([]*entity.ScheduleTaskEntity, error)
+	GetByScheduleTaskID(ctx context.Context, scheduleTaskID int64) (*entity.ScheduleTaskEntity, error)
 	GetByScheduleTaskIDs(ctx context.Context, scheduleTaskIDs []int64) ([]*entity.ScheduleTaskEntity, error)
 	GetByPlanIDAndTaskID(ctx context.Context, planID, taskID int64) (*entity.ScheduleTaskEntity, error)
 }
 
 type ScheduleTaskService struct {
-	scheduleTaskPort port.IScheduleTaskPort
+	scheduleTaskPort  port.IScheduleTaskPort
+	scheduleEventPort port.IScheduleEventPort
 }
 
-func NewScheduleTaskService(scheduleTaskPort port.IScheduleTaskPort) IScheduleTaskService {
+func NewScheduleTaskService(
+	scheduleTaskPort port.IScheduleTaskPort,
+	scheduleEventPort port.IScheduleEventPort,
+) IScheduleTaskService {
 	return &ScheduleTaskService{
-		scheduleTaskPort: scheduleTaskPort,
+		scheduleTaskPort:  scheduleTaskPort,
+		scheduleEventPort: scheduleEventPort,
 	}
 }
 
@@ -98,11 +108,18 @@ func (s *ScheduleTaskService) SyncSnapshot(ctx context.Context, tx *gorm.DB, pla
 		return enum.ChangeNone, nil
 	}
 
-	hasMetadataChange := s.applyMetadataChanges(currentTask, event)
-	hasConstraintChange := s.applyConstraintChanges(currentTask, event)
+	hasMetadataChange := currentTask.ApplyMedataChanges(event.Title, event.Category)
+	hasConstraintChange := currentTask.ApplyConstraintChanges(
+		event.EstimatedDurationMin,
+		event.Priority,
+		event.DeadlineMs,
+		event.EarliestStartMs,
+		event.PreferredStartDateMs,
+		event.IsDeepWork,
+	)
 
 	newHash := currentTask.CalculateSnapshotHash()
-	hasSnapshotChange := newHash != currentTask.TaskSnapshotHash
+	hasSnapshotChange := currentTask.HasChanged(newHash)
 
 	if hasSnapshotChange {
 		currentTask.TaskSnapshotHash = newHash
@@ -131,55 +148,6 @@ func (s *ScheduleTaskService) SyncSnapshot(ctx context.Context, tx *gorm.DB, pla
 	return enum.ChangeMetadata, nil
 }
 
-func (s *ScheduleTaskService) applyMetadataChanges(task *entity.ScheduleTaskEntity, event *message.TaskUpdatedEvent) bool {
-	changed := false
-
-	if event.Title != nil && *event.Title != task.Title {
-		task.Title = *event.Title
-		changed = true
-	}
-	if event.Category != nil {
-		task.Category = event.Category
-		changed = true
-	}
-	if event.IsDeepWork != nil && *event.IsDeepWork != task.IsDeepWork {
-		task.IsDeepWork = *event.IsDeepWork
-		changed = true
-	}
-
-	return changed
-}
-
-func (s *ScheduleTaskService) applyConstraintChanges(task *entity.ScheduleTaskEntity, event *message.TaskUpdatedEvent) bool {
-	changed := false
-
-	if event.EstimatedDurationMin != nil && *event.EstimatedDurationMin != task.DurationMin {
-		task.DurationMin = *event.EstimatedDurationMin
-		changed = true
-	}
-	if event.Priority != nil {
-		newPriority := enum.Priority(*event.Priority)
-		if newPriority.IsValid() && newPriority != task.Priority {
-			task.Priority = newPriority
-			changed = true
-		}
-	}
-	if event.DeadlineMs != nil {
-		task.DeadlineMs = event.DeadlineMs
-		changed = true
-	}
-	if event.EarliestStartMs != nil {
-		task.EarliestStartMs = event.EarliestStartMs
-		changed = true
-	}
-	if event.PreferredStartDateMs != nil {
-		task.PreferredStartMs = event.PreferredStartDateMs
-		changed = true
-	}
-
-	return changed
-}
-
 func (s *ScheduleTaskService) DeleteSnapshot(ctx context.Context, tx *gorm.DB, planID, taskID int64) error {
 	currentTask, err := s.scheduleTaskPort.GetByPlanIDAndTaskID(ctx, planID, taskID)
 	if err != nil {
@@ -189,6 +157,11 @@ func (s *ScheduleTaskService) DeleteSnapshot(ctx context.Context, tx *gorm.DB, p
 	if currentTask == nil {
 		log.Warn(ctx, "Schedule task not found for deletion. PlanID: ", planID, ", TaskID: ", taskID)
 		return nil
+	}
+
+	if err := s.scheduleEventPort.DeleteByScheduleTaskID(ctx, tx, currentTask.ID); err != nil {
+		log.Error(ctx, "Failed to delete associated events for task: ", currentTask.ID, ", error: ", err)
+		return err
 	}
 
 	if err := s.scheduleTaskPort.DeleteScheduleTask(ctx, tx, currentTask.ID); err != nil {
@@ -207,6 +180,18 @@ func (s *ScheduleTaskService) GetBySchedulePlanID(ctx context.Context, scheduleP
 		return nil, err
 	}
 	return scheduleTasks, nil
+}
+
+func (s *ScheduleTaskService) GetByScheduleTaskID(ctx context.Context, scheduleTaskID int64) (*entity.ScheduleTaskEntity, error) {
+	scheduleTask, err := s.scheduleTaskPort.GetScheduleTaskByID(ctx, scheduleTaskID)
+	if err != nil {
+		log.Error(ctx, "Failed to get schedule task by ID: ", err)
+		return nil, err
+	}
+	if scheduleTask == nil {
+		return nil, fmt.Errorf(constant.ScheduleTaskNotFound)
+	}
+	return scheduleTask, nil
 }
 
 func (s *ScheduleTaskService) GetByScheduleTaskIDs(ctx context.Context, scheduleTaskIDs []int64) ([]*entity.ScheduleTaskEntity, error) {
@@ -228,4 +213,55 @@ func (s *ScheduleTaskService) GetByPlanIDAndTaskID(ctx context.Context, planID, 
 		return nil, fmt.Errorf(constant.ScheduleTaskNotFound)
 	}
 	return scheduleTask, nil
+}
+
+// Returns a map of old schedule_task_id -> new schedule_task_id
+func (s *ScheduleTaskService) CloneTasksForPlan(ctx context.Context, tx *gorm.DB, srcPlanID, destPlanID int64) (map[int64]int64, error) {
+	srcTasks, err := s.scheduleTaskPort.GetBySchedulePlanID(ctx, srcPlanID)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(srcTasks) == 0 {
+		return make(map[int64]int64), nil
+	}
+
+	clonedTasks := make([]*entity.ScheduleTaskEntity, 0, len(srcTasks))
+	for _, t := range srcTasks {
+		clone := t.Clone()
+		clone.SchedulePlanID = destPlanID
+		clonedTasks = append(clonedTasks, clone)
+	}
+
+	if err := s.scheduleTaskPort.CreateBatch(ctx, tx, clonedTasks); err != nil {
+		return nil, err
+	}
+
+	taskIDMapping := make(map[int64]int64) // old schedule_task_id -> new schedule_task_id
+	newTasks, err := s.scheduleTaskPort.GetBySchedulePlanID(ctx, destPlanID)
+	if err != nil {
+		return nil, err
+	}
+
+	taskIDToNewID := make(map[int64]int64)
+	for _, t := range newTasks {
+		taskIDToNewID[t.TaskID] = t.ID
+	}
+
+	for _, srcTask := range srcTasks {
+		if newID, ok := taskIDToNewID[srcTask.TaskID]; ok {
+			taskIDMapping[srcTask.ID] = newID
+		}
+	}
+
+	log.Info(ctx, "Cloned ", len(clonedTasks), " tasks from plan ", srcPlanID, " to plan ", destPlanID)
+	return taskIDMapping, nil
+}
+
+func (s *ScheduleTaskService) DeleteByPlanID(ctx context.Context, tx *gorm.DB, planID int64) error {
+	return s.scheduleTaskPort.DeleteByPlanID(ctx, tx, planID)
+}
+
+func (s *ScheduleTaskService) Update(ctx context.Context, tx *gorm.DB, scheduleTaskID int64, task *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error) {
+	return s.scheduleTaskPort.UpdateScheduleTask(ctx, tx, scheduleTaskID, task)
 }

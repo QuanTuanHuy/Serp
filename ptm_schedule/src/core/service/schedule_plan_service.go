@@ -21,9 +21,11 @@ type ISchedulePlanService interface {
 	CreatePlan(ctx context.Context, tx *gorm.DB, plan *entity.SchedulePlanEntity) (*entity.SchedulePlanEntity, error)
 	UpdatePlan(ctx context.Context, tx *gorm.DB, schedulePlan *entity.SchedulePlanEntity) (*entity.SchedulePlanEntity, error)
 	UpdatePlanWithOptimisticLock(ctx context.Context, tx *gorm.DB, plan *entity.SchedulePlanEntity, expectedUpdatedAt int64) (*entity.SchedulePlanEntity, error)
+	DeletePlan(ctx context.Context, tx *gorm.DB, planID int64) error
 	ApplyPlan(ctx context.Context, tx *gorm.DB, userID, planID int64) (*entity.SchedulePlanEntity, error)
 	DiscardPlan(ctx context.Context, tx *gorm.DB, userID, planID int64) (*entity.SchedulePlanEntity, error)
 	RevertToPlan(ctx context.Context, tx *gorm.DB, userID int64, targetPlan *entity.SchedulePlanEntity) (*entity.SchedulePlanEntity, error)
+	MarkProposedPlanAsStale(ctx context.Context, tx *gorm.DB, userID int64) error
 
 	GetPlanByID(ctx context.Context, ID int64) (*entity.SchedulePlanEntity, error)
 	GetOrCreateActivePlan(ctx context.Context, tx *gorm.DB, userID, tenantID int64) (*entity.SchedulePlanEntity, error)
@@ -196,8 +198,6 @@ func (s *SchedulePlanService) RevertToPlan(ctx context.Context, tx *gorm.DB, use
 		s.schedulePlanPort.UpdatePlan(ctx, tx, currentActive)
 	}
 
-	// Lưu ý: Cần logic copy ScheduleEvents từ targetPlan sang createdPlan (làm ở tầng UseCase)
-
 	return createdPlan, nil
 }
 
@@ -251,6 +251,27 @@ func (s *SchedulePlanService) FailOptimization(ctx context.Context, tx *gorm.DB,
 	plan.FailOptimization(reason)
 	_, err := s.schedulePlanPort.UpdatePlan(ctx, tx, plan)
 	return err
+}
+
+func (s *SchedulePlanService) MarkProposedPlanAsStale(ctx context.Context, tx *gorm.DB, userID int64) error {
+	proposedPlan, err := s.GetLatestProposedPlanByUserID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if proposedPlan == nil {
+		return nil
+	}
+
+	proposedPlan.IsStale = true
+	_, err = s.schedulePlanPort.UpdatePlan(ctx, tx, proposedPlan)
+	if err != nil {
+		log.Warn(ctx, "Failed to mark proposed plan as stale: ", err)
+	}
+	return err
+}
+
+func (s *SchedulePlanService) DeletePlan(ctx context.Context, tx *gorm.DB, planID int64) error {
+	return s.schedulePlanPort.DeletePlan(ctx, tx, planID)
 }
 
 func NewSchedulePlanService(schedulePlanPort port.ISchedulePlanPort, dbTxPort port.IDBTransactionPort) ISchedulePlanService {

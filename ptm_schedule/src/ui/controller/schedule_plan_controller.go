@@ -24,8 +24,8 @@ func NewSchedulePlanController(schedulePlanUseCase usecase.ISchedulePlanUseCase)
 }
 
 func (ctrl *SchedulePlanController) GetActivePlan(c *gin.Context) {
-	userID, ok := utils.GetUserIDFromContext(c)
-	if !ok {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
 		return
 	}
 
@@ -41,8 +41,8 @@ func (ctrl *SchedulePlanController) GetActivePlan(c *gin.Context) {
 }
 
 func (ctrl *SchedulePlanController) GetActivePlanDetail(c *gin.Context) {
-	userID, ok := utils.GetUserIDFromContext(c)
-	if !ok {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
 		return
 	}
 
@@ -67,8 +67,8 @@ func (ctrl *SchedulePlanController) GetActivePlanDetail(c *gin.Context) {
 }
 
 func (ctrl *SchedulePlanController) GetOrCreateActivePlan(c *gin.Context) {
-	userID, ok := utils.GetUserIDFromContext(c)
-	if !ok {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
 		return
 	}
 	tenantID, _ := utils.GetTenantIDFromContext(c)
@@ -85,8 +85,8 @@ func (ctrl *SchedulePlanController) GetOrCreateActivePlan(c *gin.Context) {
 }
 
 func (ctrl *SchedulePlanController) GetPlanByID(c *gin.Context) {
-	userID, ok := utils.GetUserIDFromContext(c)
-	if !ok {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
 		return
 	}
 
@@ -107,8 +107,8 @@ func (ctrl *SchedulePlanController) GetPlanByID(c *gin.Context) {
 }
 
 func (ctrl *SchedulePlanController) GetPlanWithEvents(c *gin.Context) {
-	userID, ok := utils.GetUserIDFromContext(c)
-	if !ok {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
 		return
 	}
 
@@ -138,8 +138,8 @@ func (ctrl *SchedulePlanController) GetPlanWithEvents(c *gin.Context) {
 }
 
 func (ctrl *SchedulePlanController) ApplyProposedPlan(c *gin.Context) {
-	userID, ok := utils.GetUserIDFromContext(c)
-	if !ok {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
 		return
 	}
 
@@ -160,8 +160,8 @@ func (ctrl *SchedulePlanController) ApplyProposedPlan(c *gin.Context) {
 }
 
 func (ctrl *SchedulePlanController) DiscardProposedPlan(c *gin.Context) {
-	userID, ok := utils.GetUserIDFromContext(c)
-	if !ok {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
 		return
 	}
 
@@ -170,7 +170,7 @@ func (ctrl *SchedulePlanController) DiscardProposedPlan(c *gin.Context) {
 		return
 	}
 
-	err := ctrl.schedulePlanUseCase.DiscardProposedPlan(c, userID, planID)
+	err = ctrl.schedulePlanUseCase.DiscardProposedPlan(c, userID, planID)
 	if err != nil {
 		if !utils.HandleBusinessError(c, err) {
 			utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
@@ -182,8 +182,8 @@ func (ctrl *SchedulePlanController) DiscardProposedPlan(c *gin.Context) {
 }
 
 func (ctrl *SchedulePlanController) RevertToPlan(c *gin.Context) {
-	userID, ok := utils.GetUserIDFromContext(c)
-	if !ok {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
 		return
 	}
 
@@ -204,8 +204,8 @@ func (ctrl *SchedulePlanController) RevertToPlan(c *gin.Context) {
 }
 
 func (ctrl *SchedulePlanController) TriggerReschedule(c *gin.Context) {
-	userID, ok := utils.GetUserIDFromContext(c)
-	if !ok {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
 		return
 	}
 
@@ -226,8 +226,8 @@ func (ctrl *SchedulePlanController) TriggerReschedule(c *gin.Context) {
 }
 
 func (ctrl *SchedulePlanController) GetPlanHistory(c *gin.Context) {
-	userID, ok := utils.GetUserIDFromContext(c)
-	if !ok {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
 		return
 	}
 

@@ -7,4 +7,5 @@ const (
 	ScheduleTaskScheduled     ScheduleTaskStatus = "SCHEDULED"
 	ScheduleTaskUnschedulable ScheduleTaskStatus = "UNSCHEDULABLE"
 	ScheduleTaskPartial       ScheduleTaskStatus = "PARTIAL"
+	ScheduleTaskCompleted     ScheduleTaskStatus = "COMPLETED"
 )

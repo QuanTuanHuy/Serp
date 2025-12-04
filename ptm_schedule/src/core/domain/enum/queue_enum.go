@@ -15,6 +15,7 @@ const (
 	TriggerAvailability     TriggerType = "AVAILABILITY_CHANGE"
 	TriggerEventSplit       TriggerType = "EVENT_SPLIT"
 	TriggerEventComplete    TriggerType = "EVENT_COMPLETE"
+	TriggerEventSkip        TriggerType = "EVENT_SKIP"
 )
 
 func (t TriggerType) Priority() int {

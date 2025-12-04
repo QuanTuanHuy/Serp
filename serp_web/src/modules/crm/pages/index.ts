@@ -8,3 +8,9 @@ export * from './leads';
 
 // Opportunity Pages
 export * from './opportunities';
+
+// Activity Pages
+export * from './activities';
+
+// Analytics Pages
+export * from './analytics';

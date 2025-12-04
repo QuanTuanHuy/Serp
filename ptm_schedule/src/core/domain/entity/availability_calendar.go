@@ -29,7 +29,7 @@ func (e *AvailabilityCalendarEntity) OverlapsWith(other *AvailabilityCalendarEnt
 	if e.DayOfWeek != other.DayOfWeek {
 		return false
 	}
-	return e.StartMin < other.EndMin && other.StartMin < e.EndMin
+	return max(e.StartMin, other.StartMin) < min(e.EndMin, other.EndMin)
 }
 
 // DefaultWorkdayAvailability returns default 9-17 availability for weekdays (Mon-Fri)

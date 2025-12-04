@@ -6,194 +6,184 @@ Description: Part of Serp Project
 package middleware
 
 import (
+	"fmt"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/golibs-starter/golib/log"
 	"github.com/serp/ptm-schedule/src/core/domain/constant"
+	"github.com/serp/ptm-schedule/src/kernel/properties"
 	"github.com/serp/ptm-schedule/src/kernel/utils"
 )
 
 type JWTMiddleware struct {
-	jwtUtils *utils.JWTUtils
+	keycloakProps *properties.KeycloakProperties
+	jwksUtils     *utils.KeycloakJwksUtils
 }
 
-func NewJWTMiddleware(jwtUtils *utils.JWTUtils) *JWTMiddleware {
+func NewJWTMiddleware(
+	keycloakProps *properties.KeycloakProperties,
+	jwksUtils *utils.KeycloakJwksUtils) *JWTMiddleware {
 	return &JWTMiddleware{
-		jwtUtils: jwtUtils,
+		keycloakProps: keycloakProps,
+		jwksUtils:     jwksUtils,
 	}
 }
 
-// AuthenticateJWT validates JWT token and extracts user information
+type Claims struct {
+	UserID         int64                     `json:"uid"`
+	TenantID       int64                     `json:"tid"`
+	Email          string                    `json:"email"`
+	FullName       string                    `json:"name"`
+	RealmAccess    map[string]any            `json:"realm_access"`
+	ResourceAccess map[string]map[string]any `json:"resource_access"`
+	jwt.RegisteredClaims
+}
+
 func (m *JWTMiddleware) AuthenticateJWT() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Missing or invalid authorization header")
+			utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Missing authorization header")
 			c.Abort()
 			return
 		}
-
 		const bearerPrefix = "Bearer "
 		if !strings.HasPrefix(authHeader, bearerPrefix) {
-			utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Missing or invalid authorization header")
+			utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Invalid authorization header format")
+			c.Abort()
+			return
+		}
+		tokenString := strings.TrimPrefix(authHeader, bearerPrefix)
+		if tokenString == "" {
+			utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Missing token")
 			c.Abort()
 			return
 		}
 
-		token := strings.TrimPrefix(authHeader, bearerPrefix)
-		if token == "" {
-			utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Missing or invalid authorization header")
-			c.Abort()
-			return
-		}
+		token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
+			kid, ok := token.Header["kid"].(string)
+			if !ok {
+				return nil, fmt.Errorf("missing or invalid kid in token header")
+			}
 
-		claims, err := m.jwtUtils.ValidateToken(token)
+			publicKey, err := m.jwksUtils.GetPublicKey(kid)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get public key: %w", err)
+			}
+
+			return publicKey, nil
+		})
+
 		if err != nil {
+			log.Error(c, "Failed to parse and verify JWT: ", err)
 			utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Invalid or expired token")
 			c.Abort()
 			return
 		}
 
-		if !m.jwtUtils.IsAccessToken(token) {
-			utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Invalid token type")
+		if !token.Valid {
+			utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Invalid token")
 			c.Abort()
 			return
 		}
+
+		claims, ok := token.Claims.(*Claims)
+		if !ok {
+			utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Invalid token claims")
+			c.Abort()
+			return
+		}
+
+		if claims.ExpiresAt != nil && claims.ExpiresAt.Time.Before(time.Now()) {
+			utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Token has expired")
+			c.Abort()
+			return
+		}
+
+		expectedIss := m.keycloakProps.ExpectedIssuer
+		if expectedIss != "" && claims.Issuer != expectedIss {
+			log.Error(c, "Token issuer mismatch, expected: ", expectedIss, ", actual: ", claims.Issuer)
+			utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Invalid token issuer")
+			c.Abort()
+			return
+		}
+
+		realmRoles := m.extractRealmRoles(claims)
+		resourceRoles := m.extractResourceRoles(claims)
+		allRoles := m.mergeRoles(realmRoles, resourceRoles)
 
 		// Set user information in context
 		c.Set("userID", claims.UserID)
+		c.Set("tenantID", claims.TenantID)
 		c.Set("userEmail", claims.Email)
 		c.Set("userFullName", claims.FullName)
-		c.Set("preferredUsername", claims.PreferredUsername)
-		c.Set("emailVerified", claims.EmailVerified)
-		c.Set("token", token)
+		c.Set("token", tokenString)
+		c.Set("authenticated", true)
+		c.Set("realmRoles", realmRoles)
+		c.Set("resourceRoles", resourceRoles)
+		c.Set("allRoles", allRoles)
 
-		roles, err := m.jwtUtils.ExtractRoles(token)
-		if err != nil {
-			log.Warn(c, "Failed to extract roles: ", err)
-			roles = []string{}
-		}
-		c.Set("roles", roles)
+		log.Debug(c, "JWT authentication successful, userID: ", claims.UserID,
+			", tenantID: ", claims.TenantID, ", email: ", claims.Email)
 
 		c.Next()
 	}
 }
 
-// RequireRole checks if user has specific role
-func (m *JWTMiddleware) RequireRole(roleName string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		token, exists := c.Get("token")
-		if !exists {
-			utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
-			c.Abort()
-			return
-		}
-
-		tokenStr, ok := token.(string)
-		if !ok {
-			utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
-			c.Abort()
-			return
-		}
-
-		if !m.jwtUtils.HasRole(tokenStr, roleName) {
-			utils.AbortErrorHandle(c, constant.GeneralForbidden)
-			c.Abort()
-			return
-		}
-
-		c.Next()
-	}
-}
-
-// RequireAnyRole checks if user has any of the specified roles
-func (m *JWTMiddleware) RequireAnyRole(roleNames ...string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		token, exists := c.Get("token")
-		if !exists {
-			utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
-			c.Abort()
-			return
-		}
-
-		tokenStr, ok := token.(string)
-		if !ok {
-			utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
-			c.Abort()
-			return
-		}
-
-		hasAnyRole := false
-		for _, roleName := range roleNames {
-			if m.jwtUtils.HasRole(tokenStr, roleName) {
-				hasAnyRole = true
-				break
+func (m *JWTMiddleware) extractRealmRoles(claims *Claims) []string {
+	roles := []string{}
+	if claims.RealmAccess != nil {
+		if rolesInterface, ok := claims.RealmAccess["roles"]; ok {
+			if rolesList, ok := rolesInterface.([]any); ok {
+				for _, role := range rolesList {
+					if roleStr, ok := role.(string); ok {
+						roles = append(roles, roleStr)
+					}
+				}
 			}
 		}
-
-		if !hasAnyRole {
-			utils.AbortErrorHandle(c, constant.GeneralForbidden)
-			c.Abort()
-			return
-		}
-
-		c.Next()
 	}
+	return roles
 }
 
-// RequireRealmRole checks if user has specific realm role in Keycloak
-func (m *JWTMiddleware) RequireRealmRole(roleName string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		token, exists := c.Get("token")
-		if !exists {
-			utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
-			c.Abort()
-			return
+func (m *JWTMiddleware) extractResourceRoles(claims *Claims) []string {
+	roles := []string{}
+	if claims.ResourceAccess != nil {
+		for _, clientAccess := range claims.ResourceAccess {
+			if rolesInterface, ok := clientAccess["roles"]; ok {
+				if rolesList, ok := rolesInterface.([]any); ok {
+					for _, role := range rolesList {
+						if roleStr, ok := role.(string); ok {
+							roles = append(roles, roleStr)
+						}
+					}
+				}
+			}
 		}
-
-		tokenStr, ok := token.(string)
-		if !ok {
-			utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
-			c.Abort()
-			return
-		}
-
-		if !m.jwtUtils.HasRealmRole(tokenStr, roleName) {
-			utils.AbortErrorHandle(c, constant.GeneralForbidden)
-			c.Abort()
-			return
-		}
-
-		c.Next()
 	}
+	return roles
 }
 
-// RequireResourceRole checks if user has specific resource role for a client
-func (m *JWTMiddleware) RequireResourceRole(clientId string, roleName string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		token, exists := c.Get("token")
-		if !exists {
-			utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
-			c.Abort()
-			return
-		}
-
-		tokenStr, ok := token.(string)
-		if !ok {
-			utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
-			c.Abort()
-			return
-		}
-
-		if !m.jwtUtils.HasResourceRole(tokenStr, clientId, roleName) {
-			utils.AbortErrorHandle(c, constant.GeneralForbidden)
-			c.Abort()
-			return
-		}
-
-		c.Next()
+func (m *JWTMiddleware) mergeRoles(realmRoles, resourceRoles []string) []string {
+	roleMap := make(map[string]bool)
+	for _, role := range realmRoles {
+		roleMap[role] = true
 	}
+	for _, role := range resourceRoles {
+		roleMap[role] = true
+	}
+
+	allRoles := make([]string, 0, len(roleMap))
+	for role := range roleMap {
+		allRoles = append(allRoles, role)
+	}
+	return allRoles
 }
 
 // OptionalJWT extracts user information if token is present but doesn't require authentication
@@ -211,30 +201,59 @@ func (m *JWTMiddleware) OptionalJWT() gin.HandlerFunc {
 			return
 		}
 
-		token := strings.TrimPrefix(authHeader, bearerPrefix)
-		if token == "" {
+		tokenString := strings.TrimPrefix(authHeader, bearerPrefix)
+		if tokenString == "" {
 			c.Next()
 			return
 		}
 
-		claims, err := m.jwtUtils.ValidateToken(token)
+		token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
+			kid, ok := token.Header["kid"].(string)
+			if !ok {
+				return nil, fmt.Errorf("missing or invalid kid in token header")
+			}
+
+			publicKey, err := m.jwksUtils.GetPublicKey(kid)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get public key: %w", err)
+			}
+
+			return publicKey, nil
+		})
+
 		if err != nil {
 			log.Warn(c, "Optional JWT validation failed: ", err)
 			c.Next()
 			return
 		}
 
+		if !token.Valid {
+			c.Next()
+			return
+		}
+
+		claims, ok := token.Claims.(*Claims)
+		if !ok {
+			c.Next()
+			return
+		}
+
+		realmRoles := m.extractRealmRoles(claims)
+		resourceRoles := m.extractResourceRoles(claims)
+		allRoles := m.mergeRoles(realmRoles, resourceRoles)
+
 		c.Set("userID", claims.UserID)
+		c.Set("tenantID", claims.TenantID)
 		c.Set("userEmail", claims.Email)
 		c.Set("userFullName", claims.FullName)
-		c.Set("preferredUsername", claims.PreferredUsername)
-		c.Set("emailVerified", claims.EmailVerified)
-		c.Set("token", token)
+		c.Set("token", tokenString)
 		c.Set("authenticated", true)
-
-		if roles, err := m.jwtUtils.ExtractRoles(token); err == nil {
-			c.Set("roles", roles)
-		}
+		c.Set("realmRoles", realmRoles)
+		c.Set("resourceRoles", resourceRoles)
+		c.Set("allRoles", allRoles)
 
 		c.Next()
 	}

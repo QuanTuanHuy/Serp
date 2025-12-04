@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/serp/ptm-schedule/src/core/domain/enum"
-	"github.com/serp/ptm-schedule/src/kernel/utils/mathutils"
 )
 
 const DefaultMinSplitDuration = 30
@@ -161,7 +160,7 @@ func (e *ScheduleEventEntity) OverlapsWith(other *ScheduleEventEntity) bool {
 	if e.DateMs != other.DateMs || e.SchedulePlanID != other.SchedulePlanID {
 		return false
 	}
-	return mathutils.Max(e.StartMin, other.StartMin) < mathutils.Min(e.EndMin, other.EndMin)
+	return max(e.StartMin, other.StartMin) < min(e.EndMin, other.EndMin)
 }
 
 func (e *ScheduleEventEntity) ContainsTime(dateMs int64, timeMin int) bool {

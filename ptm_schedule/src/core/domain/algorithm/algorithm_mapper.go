@@ -33,6 +33,7 @@ func (m *AlgorithmMapper) TaskEntityToInput(task *entity.ScheduleTaskEntity) *Ta
 		MinSplitMin:     task.MinSplitDurationMin,
 		MaxSplitCount:   task.MaxSplitCount,
 		IsPinned:        task.IsPinned,
+		IsCompleted:     task.IsCompleted(),
 		BufferBeforeMin: task.BufferBeforeMin,
 	}
 }

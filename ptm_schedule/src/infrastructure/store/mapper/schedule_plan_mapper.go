@@ -40,6 +40,7 @@ func ToSchedulePlanModel(schedulePlan *entity.SchedulePlanEntity) *model.Schedul
 		Version:                schedulePlan.Version,
 		ParentPlanID:           schedulePlan.ParentPlanID,
 		Status:                 string(schedulePlan.Status),
+		IsStale:                schedulePlan.IsStale,
 	}
 }
 
@@ -72,6 +73,7 @@ func ToSchedulePlanEntity(schedulePlanModel *model.SchedulePlanModel) *entity.Sc
 		Version:                schedulePlanModel.Version,
 		ParentPlanID:           schedulePlanModel.ParentPlanID,
 		Status:                 enum.PlanStatus(schedulePlanModel.Status),
+		IsStale:                schedulePlanModel.IsStale,
 	}
 }
 

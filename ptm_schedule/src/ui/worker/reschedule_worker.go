@@ -116,7 +116,7 @@ func (w *RescheduleWorker) processSinglePlan(ctx context.Context, planID int64) 
 			return err
 		}
 
-		result, err := w.executeStrategy(ctx, batch)
+		result, err := w.strategyService.Execute(ctx, batch.PlanID, batch)
 		if err != nil {
 			w.handleFailure(ctx, tx, ids, err)
 			return nil
@@ -128,19 +128,6 @@ func (w *RescheduleWorker) processSinglePlan(ctx context.Context, planID int64) 
 
 	if err != nil {
 		log.Errorf("processSinglePlan error for plan %d: %v", planID, err)
-	}
-}
-
-func (w *RescheduleWorker) executeStrategy(ctx context.Context, batch *entity.RescheduleBatch) (*service.RescheduleResult, error) {
-	switch batch.Strategy {
-	case enum.StrategyRipple:
-		return w.strategyService.RunRipple(ctx, batch.PlanID, batch)
-	case enum.StrategyInsertion:
-		return w.strategyService.RunInsertion(ctx, batch.PlanID, batch)
-	case enum.StrategyFullReplan:
-		return w.strategyService.RunFullReplan(ctx, batch.PlanID, batch)
-	default:
-		return w.strategyService.RunRipple(ctx, batch.PlanID, batch)
 	}
 }
 

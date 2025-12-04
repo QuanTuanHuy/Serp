@@ -63,7 +63,6 @@ func HandleBusinessError(c *gin.Context, err error) bool {
 	notFoundErrors := []string{
 		constant.EventNotFound,
 		constant.SchedulePlanNotFound,
-		constant.ScheduleGroupNotFound,
 		constant.ScheduleTaskNotFound,
 		constant.AvailabilityCalendarNotFound,
 	}
@@ -77,7 +76,6 @@ func HandleBusinessError(c *gin.Context, err error) bool {
 
 	// Forbidden errors (403 Forbidden)
 	forbiddenErrors := []string{
-		constant.DeleteScheduleGroupForbidden,
 		constant.ForbiddenAccess,
 	}
 

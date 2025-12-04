@@ -390,7 +390,7 @@ func TestScheduleIncremental_AddNewTask(t *testing.T) {
 		},
 	}
 
-	output := scheduler.ScheduleIncremental(input, []int64{2})
+	output := scheduler.ScheduleIncremental(input, []int64{101})
 
 	assert.Len(t, output.Assignments, 2)
 	assert.Empty(t, output.UnscheduledTasks)
@@ -405,6 +405,224 @@ func TestScheduleIncremental_AddNewTask(t *testing.T) {
 	}
 	assert.NotNil(t, existingAssignment)
 	assert.Equal(t, 10*60, existingAssignment.StartMin)
+}
+
+// TestScheduleIncremental_ConstraintChange tests that when a task's constraint changes,
+// its old events are removed and the task is rescheduled fresh (fixes TriggerConstraintChange bug)
+func TestScheduleIncremental_ConstraintChange(t *testing.T) {
+	scheduler := NewHybridScheduler()
+	now := time.Now().Truncate(24 * time.Hour).UnixMilli()
+	existingEventID := int64(999)
+
+	// Task 100 was scheduled at 9:00-10:00 (60 min)
+	// Now task duration changed to 90 min - old event should be removed and rescheduled
+	input := &ScheduleInput{
+		Tasks: []*TaskInput{
+			{
+				TaskID:         1,
+				ScheduleTaskID: 100,
+				Title:          "Task with changed duration",
+				DurationMin:    90, // Changed from 60 to 90
+				Priority:       enum.PriorityMedium,
+				PriorityScore:  50,
+			},
+		},
+		Windows: []*Window{
+			{
+				DateMs:   now,
+				StartMin: 9 * 60,
+				EndMin:   17 * 60,
+			},
+		},
+		ExistingEvents: []*Assignment{
+			{
+				EventID:        &existingEventID,
+				TaskID:         1,
+				ScheduleTaskID: 100,
+				DateMs:         now,
+				StartMin:       9 * 60,
+				EndMin:         10 * 60, // Old duration: 60 min
+				PartIndex:      1,
+				TotalParts:     1,
+			},
+		},
+	}
+
+	// Pass ScheduleTaskID 100 as affected task
+	output := scheduler.ScheduleIncremental(input, []int64{100})
+
+	assert.Len(t, output.Assignments, 1)
+	assert.Empty(t, output.UnscheduledTasks)
+
+	// The new assignment should have 90 min duration
+	assert.Equal(t, 90, output.Assignments[0].Duration())
+	// Old event should NOT be in the output (was excluded)
+	for _, a := range output.Assignments {
+		if a.EventID != nil && *a.EventID == existingEventID {
+			t.Error("Old event should have been excluded from schedule")
+		}
+	}
+}
+
+// TestScheduleIncremental_ExcludesAffectedTaskEvents tests that events belonging
+// to affected tasks are properly excluded before rescheduling
+func TestScheduleIncremental_ExcludesAffectedTaskEvents(t *testing.T) {
+	scheduler := NewHybridScheduler()
+	now := time.Now().Truncate(24 * time.Hour).UnixMilli()
+	event1ID := int64(999)
+	event2ID := int64(1000)
+
+	input := &ScheduleInput{
+		Tasks: []*TaskInput{
+			{
+				TaskID:         1,
+				ScheduleTaskID: 100,
+				Title:          "Unaffected Task",
+				DurationMin:    60,
+				Priority:       enum.PriorityMedium,
+				PriorityScore:  50,
+			},
+			{
+				TaskID:         2,
+				ScheduleTaskID: 101,
+				Title:          "Affected Task",
+				DurationMin:    60,
+				Priority:       enum.PriorityHigh,
+				PriorityScore:  80,
+			},
+		},
+		Windows: []*Window{
+			{
+				DateMs:   now,
+				StartMin: 9 * 60,
+				EndMin:   17 * 60,
+			},
+		},
+		ExistingEvents: []*Assignment{
+			{
+				EventID:        &event1ID,
+				TaskID:         1,
+				ScheduleTaskID: 100,
+				DateMs:         now,
+				StartMin:       10 * 60,
+				EndMin:         11 * 60,
+				PartIndex:      1,
+				TotalParts:     1,
+			},
+			{
+				EventID:        &event2ID,
+				TaskID:         2,
+				ScheduleTaskID: 101,
+				DateMs:         now,
+				StartMin:       14 * 60,
+				EndMin:         15 * 60,
+				PartIndex:      1,
+				TotalParts:     1,
+			},
+		},
+	}
+
+	// Only task 101 is affected
+	output := scheduler.ScheduleIncremental(input, []int64{101})
+
+	assert.Len(t, output.Assignments, 2)
+
+	// Task 1's event should be preserved at original position
+	var task1Event *Assignment
+	var task2Event *Assignment
+	for _, a := range output.Assignments {
+		if a.ScheduleTaskID == 100 {
+			task1Event = a
+		}
+		if a.ScheduleTaskID == 101 {
+			task2Event = a
+		}
+	}
+
+	assert.NotNil(t, task1Event)
+	assert.NotNil(t, task2Event)
+
+	// Task 1 should keep its original event (preserved)
+	assert.NotNil(t, task1Event.EventID)
+	assert.Equal(t, event1ID, *task1Event.EventID)
+	assert.Equal(t, 10*60, task1Event.StartMin)
+
+	// Task 2 should have a NEW assignment (old one was excluded)
+	// The new one won't have EventID (it's a new assignment)
+	assert.Nil(t, task2Event.EventID)
+}
+
+// TestScheduleIncremental_DeletedTaskEventsNotIncluded simulates the scenario
+// where a task is deleted - when its ScheduleTaskID is passed as affected,
+// its existing events should be excluded from the schedule.
+// Note: In production, DeleteSnapshot() deletes events BEFORE calling reschedule,
+// but this test verifies the scheduler also handles it correctly.
+func TestScheduleIncremental_DeletedTaskEventsNotIncluded(t *testing.T) {
+	scheduler := NewHybridScheduler()
+	now := time.Now().Truncate(24 * time.Hour).UnixMilli()
+	event1ID := int64(999)
+	orphanEventID := int64(1000)
+
+	// Task 101 was deleted - in production its events are deleted by DeleteSnapshot,
+	// but we also pass its ID to ScheduleIncremental so any remaining events are excluded
+	input := &ScheduleInput{
+		Tasks: []*TaskInput{
+			{
+				TaskID:         1,
+				ScheduleTaskID: 100,
+				Title:          "Remaining Task",
+				DurationMin:    60,
+				Priority:       enum.PriorityMedium,
+				PriorityScore:  50,
+			},
+			// Task 101 is NOT in the list (deleted)
+		},
+		Windows: []*Window{
+			{
+				DateMs:   now,
+				StartMin: 9 * 60,
+				EndMin:   17 * 60,
+			},
+		},
+		ExistingEvents: []*Assignment{
+			{
+				EventID:        &event1ID,
+				TaskID:         1,
+				ScheduleTaskID: 100,
+				DateMs:         now,
+				StartMin:       10 * 60,
+				EndMin:         11 * 60,
+				PartIndex:      1,
+				TotalParts:     1,
+			},
+			// Simulate orphan event - in production this would be deleted by DeleteSnapshot
+			{
+				EventID:        &orphanEventID,
+				TaskID:         2,
+				ScheduleTaskID: 101, // This task was deleted
+				DateMs:         now,
+				StartMin:       14 * 60,
+				EndMin:         15 * 60,
+				PartIndex:      1,
+				TotalParts:     1,
+			},
+		},
+	}
+
+	// When processing deleted task, we pass the deleted task's ScheduleTaskID
+	// The scheduler will exclude events belonging to this ID
+	output := scheduler.ScheduleIncremental(input, []int64{101})
+
+	// Only task 1's event should remain
+	assert.Len(t, output.Assignments, 1)
+	assert.Equal(t, int64(100), output.Assignments[0].ScheduleTaskID)
+
+	// The orphan event (from deleted task) should NOT be in output
+	for _, a := range output.Assignments {
+		if a.ScheduleTaskID == 101 {
+			t.Error("Deleted task's events should not be in schedule output")
+		}
+	}
 }
 
 func TestTryRippleEffect_DisplaceLowerPriority(t *testing.T) {

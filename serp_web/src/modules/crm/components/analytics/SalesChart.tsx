@@ -1,6 +1,12 @@
 // SalesChart Component (authors: QuanTuanHuy, Description: Part of Serp Project)
 
-import { Card, CardContent, CardHeader } from '@/shared/components/ui';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Skeleton,
+} from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import {
   LineChart,
@@ -28,8 +34,8 @@ interface SalesChartProps {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className='bg-white p-3 border border-gray-200 rounded-lg shadow-lg'>
-        <p className='font-medium text-gray-900'>{label}</p>
+      <div className='bg-popover text-popover-foreground p-3 border border-border rounded-lg shadow-lg'>
+        <p className='font-medium'>{label}</p>
         <div className='space-y-1'>
           {payload.map((entry: any, index: number) => (
             <p key={index} className='text-sm' style={{ color: entry.color }}>
@@ -45,9 +51,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 // Loading skeleton
 const LoadingSkeleton = () => (
-  <div className='animate-pulse'>
-    <div className='h-6 bg-gray-200 rounded w-48 mb-4'></div>
-    <div className='h-64 bg-gray-200 rounded'></div>
+  <div className='space-y-4'>
+    <Skeleton className='h-6 w-48' />
+    <Skeleton className='h-64 w-full' />
   </div>
 );
 
@@ -71,10 +77,10 @@ export const SalesChart: React.FC<SalesChartProps> = ({
     return (
       <Card className={cn('p-6', className)}>
         <CardHeader>
-          <h3 className='text-lg font-semibold'>{period} Sales Performance</h3>
+          <CardTitle>{period} Sales Performance</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className='flex items-center justify-center h-64 text-gray-500'>
+          <div className='flex items-center justify-center h-64 text-muted-foreground'>
             <div className='text-center'>
               <p>No sales data available</p>
               <p className='text-sm mt-1'>
@@ -114,14 +120,14 @@ export const SalesChart: React.FC<SalesChartProps> = ({
       <CardHeader>
         <div className='flex items-center justify-between'>
           <div>
-            <h3 className='text-lg font-semibold'>
-              {period} Sales Performance
-            </h3>
+            <CardTitle>{period} Sales Performance</CardTitle>
             {showTrend && trend && (
               <p
                 className={cn(
                   'text-sm font-medium',
-                  trend.isPositive ? 'text-green-600' : 'text-red-600'
+                  trend.isPositive
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-rose-600 dark:text-rose-400'
                 )}
               >
                 {trend.isPositive ? '↗' : '↘'} {trend.value.toFixed(1)}% vs
@@ -130,8 +136,8 @@ export const SalesChart: React.FC<SalesChartProps> = ({
             )}
           </div>
           <div className='text-right'>
-            <p className='text-sm text-gray-500'>Total Revenue</p>
-            <p className='text-xl font-bold text-green-600'>
+            <p className='text-sm text-muted-foreground'>Total Revenue</p>
+            <p className='text-xl font-bold text-emerald-600 dark:text-emerald-400'>
               $
               {data
                 .reduce((sum, item) => sum + item.revenue, 0)
@@ -212,15 +218,15 @@ export const SalesChart: React.FC<SalesChartProps> = ({
 
         {/* Sales Summary */}
         <div className='mt-6 grid grid-cols-2 md:grid-cols-4 gap-4'>
-          <div className='text-center p-3 bg-gray-50 rounded-lg'>
-            <p className='text-sm text-gray-600'>Total Deals</p>
-            <p className='text-xl font-bold text-blue-600'>
+          <div className='text-center p-3 bg-muted/50 rounded-lg'>
+            <p className='text-sm text-muted-foreground'>Total Deals</p>
+            <p className='text-xl font-bold text-primary'>
               {data.reduce((sum, item) => sum + item.deals, 0)}
             </p>
           </div>
-          <div className='text-center p-3 bg-gray-50 rounded-lg'>
-            <p className='text-sm text-gray-600'>Avg Deal Size</p>
-            <p className='text-xl font-bold text-purple-600'>
+          <div className='text-center p-3 bg-muted/50 rounded-lg'>
+            <p className='text-sm text-muted-foreground'>Avg Deal Size</p>
+            <p className='text-xl font-bold text-violet-600 dark:text-violet-400'>
               $
               {(
                 data.reduce((sum, item) => sum + item.revenue, 0) /
@@ -231,21 +237,23 @@ export const SalesChart: React.FC<SalesChartProps> = ({
               ).toLocaleString()}
             </p>
           </div>
-          <div className='text-center p-3 bg-gray-50 rounded-lg'>
-            <p className='text-sm text-gray-600'>Best Month</p>
-            <p className='text-xl font-bold text-green-600'>
+          <div className='text-center p-3 bg-muted/50 rounded-lg'>
+            <p className='text-sm text-muted-foreground'>Best Month</p>
+            <p className='text-xl font-bold text-emerald-600 dark:text-emerald-400'>
               {data.reduce(
                 (max, item) => (item.revenue > max.revenue ? item : max),
                 data[0]
               )?.period || 'N/A'}
             </p>
           </div>
-          <div className='text-center p-3 bg-gray-50 rounded-lg'>
-            <p className='text-sm text-gray-600'>Growth Rate</p>
+          <div className='text-center p-3 bg-muted/50 rounded-lg'>
+            <p className='text-sm text-muted-foreground'>Growth Rate</p>
             <p
               className={cn(
                 'text-xl font-bold',
-                trend?.isPositive ? 'text-green-600' : 'text-red-600'
+                trend?.isPositive
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : 'text-rose-600 dark:text-rose-400'
               )}
             >
               {trend
