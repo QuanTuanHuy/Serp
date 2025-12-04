@@ -117,7 +117,7 @@ func (s *RescheduleStrategyService) runSchedule(
 		affectedTaskIDs := batch.AffectedScheduleTaskIDs()
 		if len(affectedTaskIDs) == 0 {
 			for _, t := range input.Tasks {
-				affectedTaskIDs = append(affectedTaskIDs, t.TaskID)
+				affectedTaskIDs = append(affectedTaskIDs, t.ScheduleTaskID)
 			}
 		}
 		output = s.scheduler.ScheduleIncremental(input, affectedTaskIDs)

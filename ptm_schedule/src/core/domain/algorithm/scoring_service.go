@@ -7,6 +7,8 @@ package algorithm
 
 import (
 	"time"
+
+	"github.com/serp/ptm-schedule/src/core/domain/enum"
 )
 
 const (
@@ -28,11 +30,20 @@ func (s *ScoringService) CalculateTaskScore(task *TaskInput) float64 {
 	urgencyScore := s.getUrgencyScore(task)
 	deepWorkBonus := s.getDeepWorkBonus(task)
 
-	return (priorityScore * WeightPriority) + (urgencyScore * WeightDeadline) + deepWorkBonus
+	return (priorityScore * WeightPriority) + (urgencyScore * WeightDeadline) + (deepWorkBonus * WeightDeepWork)
 }
 
 func (s *ScoringService) getPriorityBaseScore(task *TaskInput) float64 {
-	return task.PriorityScore
+	switch task.Priority {
+	case enum.PriorityHigh:
+		return 100.0
+	case enum.PriorityMedium:
+		return 50.0
+	case enum.PriorityLow:
+		return 10.0
+	default:
+		return 0.0
+	}
 }
 
 func (s *ScoringService) getUrgencyScore(task *TaskInput) float64 {
@@ -61,7 +72,7 @@ func (s *ScoringService) getUrgencyScore(task *TaskInput) float64 {
 
 func (s *ScoringService) getDeepWorkBonus(task *TaskInput) float64 {
 	if task.IsDeepWork {
-		return WeightDeepWork
+		return 5.0
 	}
 	return 0
 }

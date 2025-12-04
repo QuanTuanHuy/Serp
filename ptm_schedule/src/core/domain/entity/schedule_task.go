@@ -178,20 +178,24 @@ func (e *ScheduleTaskEntity) RecalculatePriorityScore(nowMs int64) {
 
 	urgencyBoost := 0.0
 	if e.DeadlineMs != nil {
-		timeRemainingMin := (*e.DeadlineMs - nowMs) / 60000
+		hoursRemaining := (*e.DeadlineMs - nowMs) / 3600000
 
-		if timeRemainingMin <= 0 {
-			urgencyBoost = 500.0
-		} else if timeRemainingMin < 1440 {
-			urgencyBoost = 200.0
-		} else if timeRemainingMin < 4320 {
+		if hoursRemaining <= 0 {
+			urgencyBoost = 100.0
+		} else if hoursRemaining < 24 {
+			urgencyBoost = 80.0
+		} else if hoursRemaining < 72 {
 			urgencyBoost = 50.0
+		} else if hoursRemaining < 168 {
+			urgencyBoost = 20.0
+		} else {
+			urgencyBoost = 5.0
 		}
 	}
 
 	deepWorkBonus := 0.0
 	if e.IsDeepWork {
-		deepWorkBonus = 20.0
+		deepWorkBonus = 10.0
 	}
 
 	e.PriorityScore = baseScore + urgencyBoost + deepWorkBonus
