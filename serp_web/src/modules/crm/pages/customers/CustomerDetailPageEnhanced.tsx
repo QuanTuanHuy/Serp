@@ -274,7 +274,14 @@ export const CustomerDetailPageEnhanced: React.FC<
   const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
+  const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
   const [noteText, setNoteText] = useState('');
+  const [activityForm, setActivityForm] = useState({
+    type: 'CALL' as 'CALL' | 'EMAIL' | 'MEETING' | 'TASK',
+    subject: '',
+    description: '',
+    scheduledDate: '',
+  });
 
   // Find customer from mock data
   const customer = useMemo(() => {
@@ -331,6 +338,20 @@ export const CustomerDetailPageEnhanced: React.FC<
       console.log('Adding note:', noteText);
       setIsNoteDialogOpen(false);
       setNoteText('');
+    }
+  };
+
+  const handleAddActivity = () => {
+    if (activityForm.subject.trim()) {
+      console.log('Adding activity:', activityForm);
+      // TODO: Implement API call when backend is ready
+      setIsActivityDialogOpen(false);
+      setActivityForm({
+        type: 'CALL',
+        subject: '',
+        description: '',
+        scheduledDate: '',
+      });
     }
   };
 
@@ -1056,7 +1077,7 @@ export const CustomerDetailPageEnhanced: React.FC<
           <Card>
             <CardHeader className='flex flex-row items-center justify-between'>
               <h3 className='font-semibold'>Recent Activities</h3>
-              <Button>
+              <Button onClick={() => setIsActivityDialogOpen(true)}>
                 <Plus className='w-4 h-4 mr-2' />
                 Log Activity
               </Button>
@@ -1125,7 +1146,9 @@ export const CustomerDetailPageEnhanced: React.FC<
                   <p className='text-muted-foreground mb-4'>
                     No activities recorded yet.
                   </p>
-                  <Button>Log First Activity</Button>
+                  <Button onClick={() => setIsActivityDialogOpen(true)}>
+                    Log First Activity
+                  </Button>
                 </div>
               )}
             </CardContent>
@@ -1260,6 +1283,100 @@ export const CustomerDetailPageEnhanced: React.FC<
             </Button>
             <Button variant='destructive' onClick={handleDelete}>
               Delete Customer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Log Activity Dialog */}
+      <Dialog
+        open={isActivityDialogOpen}
+        onOpenChange={setIsActivityDialogOpen}
+      >
+        <DialogContent className='sm:max-w-[500px]'>
+          <DialogHeader>
+            <DialogTitle>Log Activity</DialogTitle>
+            <DialogDescription>
+              Record an activity for {customer.name}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className='py-4 space-y-4'>
+            <div>
+              <label className='text-sm font-medium mb-1.5 block'>
+                Activity Type
+              </label>
+              <select
+                value={activityForm.type}
+                onChange={(e) =>
+                  setActivityForm({
+                    ...activityForm,
+                    type: e.target.value as typeof activityForm.type,
+                  })
+                }
+                className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
+              >
+                <option value='CALL'>Call</option>
+                <option value='EMAIL'>Email</option>
+                <option value='MEETING'>Meeting</option>
+                <option value='TASK'>Task</option>
+              </select>
+            </div>
+            <div>
+              <label className='text-sm font-medium mb-1.5 block'>
+                Subject *
+              </label>
+              <Input
+                placeholder='Enter activity subject...'
+                value={activityForm.subject}
+                onChange={(e) =>
+                  setActivityForm({ ...activityForm, subject: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label className='text-sm font-medium mb-1.5 block'>
+                Description
+              </label>
+              <Textarea
+                placeholder='Enter activity description...'
+                value={activityForm.description}
+                onChange={(e) =>
+                  setActivityForm({
+                    ...activityForm,
+                    description: e.target.value,
+                  })
+                }
+                rows={3}
+              />
+            </div>
+            <div>
+              <label className='text-sm font-medium mb-1.5 block'>
+                Scheduled Date
+              </label>
+              <Input
+                type='datetime-local'
+                value={activityForm.scheduledDate}
+                onChange={(e) =>
+                  setActivityForm({
+                    ...activityForm,
+                    scheduledDate: e.target.value,
+                  })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant='outline'
+              onClick={() => setIsActivityDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddActivity}
+              disabled={!activityForm.subject.trim()}
+            >
+              Log Activity
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -4,7 +4,18 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, Card, CardContent, Input } from '@/shared/components/ui';
+import {
+  Button,
+  Card,
+  CardContent,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Label,
+} from '@/shared/components/ui';
 import {
   Search,
   Plus,
@@ -211,15 +222,7 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
               console.log(`Exported ${count} opportunities as ${format}`);
             }}
           />
-          <Button
-            variant='outline'
-            onClick={() => setShowQuickAdd(true)}
-            className='gap-2'
-          >
-            <Plus className='h-4 w-4' />
-            Thêm nhanh
-          </Button>
-          <Button className='gap-2'>
+          <Button onClick={() => setShowQuickAdd(true)} className='gap-2'>
             <Plus className='h-4 w-4' />
             Add Opportunity
           </Button>
@@ -337,49 +340,53 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
         <Card>
           <CardContent className='p-4'>
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-              <div>
-                <label className='text-sm font-medium mb-1.5 block'>
-                  Stage
-                </label>
-                <select
+              <div className='space-y-2'>
+                <Label>Stage</Label>
+                <Select
                   value={stageFilter}
-                  onChange={(e) => {
-                    setStageFilter(e.target.value as OpportunityStage | '');
+                  onValueChange={(value) => {
+                    setStageFilter(value as OpportunityStage | '');
                     setCurrentPage(1);
                   }}
-                  className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
                 >
-                  <option value=''>All Stages</option>
-                  <option value='PROSPECTING'>Prospecting</option>
-                  <option value='QUALIFICATION'>Qualification</option>
-                  <option value='PROPOSAL'>Proposal</option>
-                  <option value='NEGOTIATION'>Negotiation</option>
-                  <option value='CLOSED_WON'>Closed Won</option>
-                  <option value='CLOSED_LOST'>Closed Lost</option>
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder='All Stages' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value=''>All Stages</SelectItem>
+                    <SelectItem value='PROSPECTING'>Prospecting</SelectItem>
+                    <SelectItem value='QUALIFICATION'>Qualification</SelectItem>
+                    <SelectItem value='PROPOSAL'>Proposal</SelectItem>
+                    <SelectItem value='NEGOTIATION'>Negotiation</SelectItem>
+                    <SelectItem value='CLOSED_WON'>Closed Won</SelectItem>
+                    <SelectItem value='CLOSED_LOST'>Closed Lost</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div>
-                <label className='text-sm font-medium mb-1.5 block'>
-                  Sort By
-                </label>
-                <select
+              <div className='space-y-2'>
+                <Label>Sort By</Label>
+                <Select
                   value={`${sortBy}-${sortOrder}`}
-                  onChange={(e) => {
-                    const [field, order] = e.target.value.split('-');
+                  onValueChange={(value) => {
+                    const [field, order] = value.split('-');
                     setSortBy(field as typeof sortBy);
                     setSortOrder(order as 'asc' | 'desc');
                     setCurrentPage(1);
                   }}
-                  className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
                 >
-                  <option value='createdAt-desc'>Newest First</option>
-                  <option value='createdAt-asc'>Oldest First</option>
-                  <option value='name-asc'>Name A-Z</option>
-                  <option value='name-desc'>Name Z-A</option>
-                  <option value='value-desc'>Highest Value</option>
-                  <option value='value-asc'>Lowest Value</option>
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder='Sort by' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='createdAt-desc'>Newest First</SelectItem>
+                    <SelectItem value='createdAt-asc'>Oldest First</SelectItem>
+                    <SelectItem value='name-asc'>Name A-Z</SelectItem>
+                    <SelectItem value='name-desc'>Name Z-A</SelectItem>
+                    <SelectItem value='value-desc'>Highest Value</SelectItem>
+                    <SelectItem value='value-asc'>Lowest Value</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

@@ -180,8 +180,15 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
   const [showConvertDialog, setShowConvertDialog] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [showAddNoteDialog, setShowAddNoteDialog] = useState(false);
+  const [showActivityDialog, setShowActivityDialog] = useState(false);
   const [newStatus, setNewStatus] = useState<LeadStatus | ''>('');
   const [newNote, setNewNote] = useState('');
+  const [activityForm, setActivityForm] = useState({
+    type: 'CALL',
+    subject: '',
+    description: '',
+    scheduledDate: '',
+  });
   const [convertForm, setConvertForm] = useState({
     customerType: 'COMPANY',
     createOpportunity: true,
@@ -379,7 +386,7 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                 <Phone className='mr-2 h-4 w-4' />
                 Gọi điện
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowActivityDialog(true)}>
                 <Activity className='mr-2 h-4 w-4' />
                 Thêm hoạt động
               </DropdownMenuItem>
@@ -1019,6 +1026,119 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
             </Button>
             <Button onClick={handleAddNote} disabled={!newNote.trim()}>
               Thêm ghi chú
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Activity Dialog */}
+      <Dialog open={showActivityDialog} onOpenChange={setShowActivityDialog}>
+        <DialogContent className='sm:max-w-md'>
+          <DialogHeader>
+            <DialogTitle>Thêm hoạt động mới</DialogTitle>
+            <DialogDescription>
+              Ghi nhận hoạt động cho lead {lead.firstName} {lead.lastName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className='space-y-4 py-4'>
+            <div className='space-y-2'>
+              <Label>Loại hoạt động</Label>
+              <Select
+                value={activityForm.type}
+                onValueChange={(value) =>
+                  setActivityForm({ ...activityForm, type: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder='Chọn loại' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='CALL'>
+                    <div className='flex items-center gap-2'>
+                      <Phone className='h-4 w-4' />
+                      Cuộc gọi
+                    </div>
+                  </SelectItem>
+                  <SelectItem value='EMAIL'>
+                    <div className='flex items-center gap-2'>
+                      <Mail className='h-4 w-4' />
+                      Email
+                    </div>
+                  </SelectItem>
+                  <SelectItem value='MEETING'>
+                    <div className='flex items-center gap-2'>
+                      <Calendar className='h-4 w-4' />
+                      Cuộc họn
+                    </div>
+                  </SelectItem>
+                  <SelectItem value='NOTE'>
+                    <div className='flex items-center gap-2'>
+                      <FileText className='h-4 w-4' />
+                      Ghi chú
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className='space-y-2'>
+              <Label>Tiêu đề</Label>
+              <Input
+                placeholder='Nhập tiêu đề hoạt động...'
+                value={activityForm.subject}
+                onChange={(e) =>
+                  setActivityForm({ ...activityForm, subject: e.target.value })
+                }
+              />
+            </div>
+            <div className='space-y-2'>
+              <Label>Mô tả</Label>
+              <Textarea
+                placeholder='Mô tả chi tiết...'
+                value={activityForm.description}
+                onChange={(e) =>
+                  setActivityForm({
+                    ...activityForm,
+                    description: e.target.value,
+                  })
+                }
+                rows={3}
+              />
+            </div>
+            <div className='space-y-2'>
+              <Label>Ngày thực hiện</Label>
+              <Input
+                type='datetime-local'
+                value={activityForm.scheduledDate}
+                onChange={(e) =>
+                  setActivityForm({
+                    ...activityForm,
+                    scheduledDate: e.target.value,
+                  })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant='outline'
+              onClick={() => setShowActivityDialog(false)}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={() => {
+                console.log('Adding activity:', activityForm);
+                setShowActivityDialog(false);
+                setActivityForm({
+                  type: 'CALL',
+                  subject: '',
+                  description: '',
+                  scheduledDate: '',
+                });
+              }}
+              disabled={!activityForm.subject.trim()}
+            >
+              Thêm hoạt động
             </Button>
           </DialogFooter>
         </DialogContent>
