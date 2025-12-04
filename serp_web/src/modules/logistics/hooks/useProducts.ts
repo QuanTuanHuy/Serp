@@ -52,12 +52,9 @@ export const useProducts = () => {
     });
 
   // Mutations
-  const [createProduct, { isLoading: isCreating }] =
-    useCreateProductMutation();
-  const [updateProduct, { isLoading: isUpdating }] =
-    useUpdateProductMutation();
-  const [deleteProduct, { isLoading: isDeleting }] =
-    useDeleteProductMutation();
+  const [createProduct, { isLoading: isCreating }] = useCreateProductMutation();
+  const [updateProduct, { isLoading: isUpdating }] = useUpdateProductMutation();
+  const [deleteProduct, { isLoading: isDeleting }] = useDeleteProductMutation();
 
   // Handlers
   const handleSetFilters = useCallback(

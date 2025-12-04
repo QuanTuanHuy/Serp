@@ -41,9 +41,13 @@ export const shipmentApi = logisticsApi.injectEndpoints({
           sortDirection: params?.sortDirection || 'desc',
           query: params?.query || '',
           ...(params?.statusId && { statusId: params.statusId }),
-          ...(params?.shipmentTypeId && { shipmentTypeId: params.shipmentTypeId }),
+          ...(params?.shipmentTypeId && {
+            shipmentTypeId: params.shipmentTypeId,
+          }),
           ...(params?.toCustomerId && { toCustomerId: params.toCustomerId }),
-          ...(params?.fromSupplierId && { fromSupplierId: params.fromSupplierId }),
+          ...(params?.fromSupplierId && {
+            fromSupplierId: params.fromSupplierId,
+          }),
           ...(params?.orderId && { orderId: params.orderId }),
         },
       }),
@@ -156,7 +160,11 @@ export const shipmentApi = logisticsApi.injectEndpoints({
     // Update item in shipment
     updateItemInShipment: builder.mutation<
       void,
-      { shipmentId: string; itemId: string; data: UpdateInventoryItemDetailRequest }
+      {
+        shipmentId: string;
+        itemId: string;
+        data: UpdateInventoryItemDetailRequest;
+      }
     >({
       query: ({ shipmentId, itemId, data }) => ({
         url: `/logistics/api/v1/shipment/update/${shipmentId}/update/${itemId}`,

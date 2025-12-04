@@ -5,7 +5,11 @@
  * @description Part of Serp Project - Product domain types
  */
 
-export type ProductStatus = 'ACTIVE' | 'INACTIVE' | 'OUT_OF_STOCK' | 'DISCONTINUED';
+export type ProductStatus =
+  | 'ACTIVE'
+  | 'INACTIVE'
+  | 'OUT_OF_STOCK'
+  | 'DISCONTINUED';
 
 export interface Product {
   id: string;
