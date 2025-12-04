@@ -5,7 +5,13 @@
  * @description Part of Serp Project - Order domain types
  */
 
-export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+export type OrderStatus =
+  | 'PENDING'
+  | 'CONFIRMED'
+  | 'PROCESSING'
+  | 'SHIPPED'
+  | 'DELIVERED'
+  | 'CANCELLED';
 export type SaleChannel = 'ONLINE' | 'OFFLINE' | 'WHOLESALE' | 'RETAIL';
 
 export interface OrderItem {

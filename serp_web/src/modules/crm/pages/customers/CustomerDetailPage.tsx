@@ -77,12 +77,12 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
     return (
       <div className={cn('p-6', className)}>
         <div className='animate-pulse space-y-6'>
-          <div className='h-8 bg-gray-200 rounded w-1/3'></div>
+          <div className='h-8 bg-muted rounded w-1/3'></div>
           <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
             <div className='md:col-span-2'>
-              <div className='h-64 bg-gray-200 rounded'></div>
+              <div className='h-64 bg-muted rounded'></div>
             </div>
-            <div className='h-64 bg-gray-200 rounded'></div>
+            <div className='h-64 bg-muted rounded'></div>
           </div>
         </div>
       </div>
@@ -119,7 +119,7 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
             ← Back
           </Button>
           <div>
-            <h1 className='text-2xl font-bold text-gray-900'>
+            <h1 className='text-2xl font-bold text-foreground'>
               {customer.name}
             </h1>
             <div className='flex items-center space-x-2 mt-1'>
@@ -180,13 +180,13 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
                 <CardContent>
                   <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                     <div>
-                      <label className='text-sm font-medium text-gray-500'>
+                      <label className='text-sm font-medium text-muted-foreground'>
                         Email
                       </label>
                       <p className='text-sm'>{customer.email}</p>
                     </div>
                     <div>
-                      <label className='text-sm font-medium text-gray-500'>
+                      <label className='text-sm font-medium text-muted-foreground'>
                         Phone
                       </label>
                       <p className='text-sm'>
@@ -194,7 +194,7 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
                       </p>
                     </div>
                     <div className='md:col-span-2'>
-                      <label className='text-sm font-medium text-gray-500'>
+                      <label className='text-sm font-medium text-muted-foreground'>
                         Address
                       </label>
                       <p className='text-sm'>
@@ -216,7 +216,7 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
                   <CardContent>
                     <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                       <div>
-                        <label className='text-sm font-medium text-gray-500'>
+                        <label className='text-sm font-medium text-muted-foreground'>
                           Company Name
                         </label>
                         <p className='text-sm'>
@@ -224,13 +224,13 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
                         </p>
                       </div>
                       <div>
-                        <label className='text-sm font-medium text-gray-500'>
+                        <label className='text-sm font-medium text-muted-foreground'>
                           Business Type
                         </label>
                         <p className='text-sm'>{'Not specified'}</p>
                       </div>
                       <div>
-                        <label className='text-sm font-medium text-gray-500'>
+                        <label className='text-sm font-medium text-muted-foreground'>
                           Website
                         </label>
                         <p className='text-sm'>
@@ -249,7 +249,7 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
                         </p>
                       </div>
                       <div>
-                        <label className='text-sm font-medium text-gray-500'>
+                        <label className='text-sm font-medium text-muted-foreground'>
                           Tax Number
                         </label>
                         <p className='text-sm'>
@@ -267,7 +267,7 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
                   <h3 className='text-lg font-semibold'>Notes</h3>
                 </CardHeader>
                 <CardContent>
-                  <p className='text-sm text-gray-600'>
+                  <p className='text-sm text-muted-foreground'>
                     {customer.notes || 'No notes available.'}
                   </p>
                 </CardContent>
@@ -284,7 +284,7 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
                 <CardContent>
                   <div className='space-y-4'>
                     <div>
-                      <label className='text-sm font-medium text-gray-500'>
+                      <label className='text-sm font-medium text-muted-foreground'>
                         Total Value
                       </label>
                       <p className='text-lg font-semibold'>
@@ -292,7 +292,7 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
                       </p>
                     </div>
                     <div>
-                      <label className='text-sm font-medium text-gray-500'>
+                      <label className='text-sm font-medium text-muted-foreground'>
                         Last Contact
                       </label>
                       <p className='text-sm'>
@@ -304,7 +304,7 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
                       </p>
                     </div>
                     <div>
-                      <label className='text-sm font-medium text-gray-500'>
+                      <label className='text-sm font-medium text-muted-foreground'>
                         Customer Since
                       </label>
                       <p className='text-sm'>
@@ -391,11 +391,11 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
                     >
                       <div className='flex items-center justify-between'>
                         <h4 className='font-medium'>{activity.title}</h4>
-                        <span className='text-sm text-gray-500'>
+                        <span className='text-sm text-muted-foreground'>
                           {new Date(activity.createdAt).toLocaleDateString()}
                         </span>
                       </div>
-                      <p className='text-sm text-gray-600 mt-1'>
+                      <p className='text-sm text-muted-foreground mt-1'>
                         {activity.description}
                       </p>
                       <Badge variant='outline' className='mt-2'>
@@ -406,7 +406,7 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
                 </div>
               ) : (
                 <div className='text-center py-8'>
-                  <p className='text-gray-600 mb-4'>
+                  <p className='text-muted-foreground mb-4'>
                     No activities recorded yet.
                   </p>
                   <Button>Log First Activity</Button>
@@ -441,7 +441,9 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
                 </div>
               ) : (
                 <div className='text-center py-8'>
-                  <p className='text-gray-600 mb-4'>No opportunities yet.</p>
+                  <p className='text-muted-foreground mb-4'>
+                    No opportunities yet.
+                  </p>
                   <Button>Create First Opportunity</Button>
                 </div>
               )}
@@ -459,7 +461,9 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
             </CardHeader>
             <CardContent>
               <div className='text-center py-8'>
-                <p className='text-gray-600 mb-4'>No documents uploaded yet.</p>
+                <p className='text-muted-foreground mb-4'>
+                  No documents uploaded yet.
+                </p>
                 <Button variant='outline'>Upload First Document</Button>
               </div>
             </CardContent>

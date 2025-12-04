@@ -3,65 +3,167 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Button, Card, CardContent, CardHeader } from '@/shared/components/ui';
-import { cn } from '@/shared/utils';
-import { useGetLeadsQuery } from '../../api/crmApi';
+import { useRouter } from 'next/navigation';
+import { Button, Card, CardContent, Input } from '@/shared/components/ui';
 import {
-  EntityCard,
-  SearchInput,
-  StatusBadge,
-  ActionMenu,
-} from '../../components/shared';
+  Search,
+  Plus,
+  Grid3X3,
+  List,
+  LayoutGrid,
+  SlidersHorizontal,
+  Target,
+  UserCheck,
+  Clock,
+  Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  ArrowRight,
+} from 'lucide-react';
+import { cn } from '@/shared/utils';
+import { LeadCard } from '../../components/cards';
 import { LeadForm } from '../../components/forms';
+import { StatsCard } from '../../components/dashboard';
+import { ExportDropdown } from '../../components/shared';
+import { QuickAddLeadDialog } from '../../components/dialogs';
+import { LEAD_EXPORT_COLUMNS } from '../../utils/export';
+import { MOCK_LEADS } from '../../mocks';
 import type { Lead, LeadFilters, LeadStatus, LeadSource } from '../../types';
+
+// Status configuration for kanban view
+const LEAD_STATUSES: { status: LeadStatus; label: string; color: string }[] = [
+  { status: 'NEW', label: 'New', color: 'bg-blue-500' },
+  { status: 'CONTACTED', label: 'Contacted', color: 'bg-yellow-500' },
+  { status: 'QUALIFIED', label: 'Qualified', color: 'bg-green-500' },
+  { status: 'CONVERTED', label: 'Converted', color: 'bg-purple-500' },
+  { status: 'LOST', label: 'Lost', color: 'bg-red-500' },
+];
 
 interface LeadListPageProps {
   className?: string;
 }
 
 export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
+  const router = useRouter();
+
   // State management
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<LeadStatus | ''>('');
   const [sourceFilter, setSourceFilter] = useState<LeadSource | ''>('');
-  const [sortBy, setSortBy] = useState<'name' | 'createdAt' | 'score'>(
+  const [sortBy, setSortBy] = useState<'name' | 'createdAt' | 'estimatedValue'>(
     'createdAt'
   );
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'kanban'>('grid');
+  const [showFilters, setShowFilters] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
 
-  const pageSize = 12;
+  const pageSize = viewMode === 'kanban' ? 100 : 12;
 
-  // Build filters
-  const filters: LeadFilters = useMemo(
-    () => ({
-      search: searchQuery || undefined,
-      status: statusFilter ? [statusFilter] : undefined,
-      source: sourceFilter ? [sourceFilter] : undefined,
-    }),
-    [searchQuery, statusFilter, sourceFilter]
-  );
+  // Filter and sort mock data
+  const filteredLeads = useMemo(() => {
+    let result = [...MOCK_LEADS];
 
-  // Fetch leads
-  const {
-    data: leadsResponse,
-    isLoading,
-    error,
-  } = useGetLeadsQuery({
-    filters,
-    pagination: { page: currentPage, limit: pageSize, sortBy, sortOrder },
-  });
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (l) =>
+          `${l.firstName} ${l.lastName}`.toLowerCase().includes(query) ||
+          l.email.toLowerCase().includes(query) ||
+          l.company?.toLowerCase().includes(query)
+      );
+    }
 
-  const leads = leadsResponse?.data?.data || [];
-  const totalPages = leadsResponse?.data?.pagination?.totalPages || 0;
-  const total = leadsResponse?.data?.pagination?.total || 0;
+    // Apply status filter
+    if (statusFilter) {
+      result = result.filter((l) => l.status === statusFilter);
+    }
+
+    // Apply source filter
+    if (sourceFilter) {
+      result = result.filter((l) => l.source === sourceFilter);
+    }
+
+    // Apply sorting
+    result.sort((a, b) => {
+      let comparison = 0;
+      if (sortBy === 'name') {
+        comparison = `${a.firstName} ${a.lastName}`.localeCompare(
+          `${b.firstName} ${b.lastName}`
+        );
+      } else if (sortBy === 'createdAt') {
+        comparison =
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      } else if (sortBy === 'estimatedValue') {
+        comparison = (a.estimatedValue || 0) - (b.estimatedValue || 0);
+      }
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    return result;
+  }, [searchQuery, statusFilter, sourceFilter, sortBy, sortOrder]);
+
+  // Pagination
+  const total = filteredLeads.length;
+  const totalPages = Math.ceil(total / pageSize);
+  const leads =
+    viewMode === 'kanban'
+      ? filteredLeads
+      : filteredLeads.slice(
+          (currentPage - 1) * pageSize,
+          currentPage * pageSize
+        );
+  const isLoading = false;
+  const error = null;
+
+  // Calculate stats
+  const stats = useMemo(() => {
+    return {
+      total: MOCK_LEADS.length,
+      new: MOCK_LEADS.filter((l) => l.status === 'NEW').length,
+      qualified: MOCK_LEADS.filter((l) => l.status === 'QUALIFIED').length,
+      contacted: MOCK_LEADS.filter((l) => l.status === 'CONTACTED').length,
+      converted: MOCK_LEADS.filter((l) => l.status === 'CONVERTED').length,
+      avgValue: MOCK_LEADS.length
+        ? Math.round(
+            MOCK_LEADS.reduce((sum, l) => sum + (l.estimatedValue || 0), 0) /
+              MOCK_LEADS.length
+          )
+        : 0,
+    };
+  }, []);
+
+  // Group leads by status for kanban view
+  const leadsByStatus = useMemo(() => {
+    const grouped: Record<LeadStatus, Lead[]> = {
+      NEW: [],
+      CONTACTED: [],
+      QUALIFIED: [],
+      CONVERTED: [],
+      LOST: [],
+    };
+    filteredLeads.forEach((lead) => {
+      if (grouped[lead.status]) {
+        grouped[lead.status].push(lead);
+      }
+    });
+    return grouped;
+  }, [filteredLeads]);
 
   // Handle actions
   const handleCreateLead = async (data: any) => {
     console.log('Creating lead:', data);
     setShowCreateForm(false);
+  };
+
+  const handleQuickAddLead = async (data: any) => {
+    console.log('Quick adding lead:', data);
+    setShowQuickAdd(false);
   };
 
   const handleEditLead = (lead: Lead) => {
@@ -81,15 +183,23 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
     console.log('Converting lead to customer:', leadId);
   };
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
+  const handleViewLead = (leadId: string) => {
+    router.push(`/crm/leads/${leadId}`);
+  };
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setStatusFilter('');
+    setSourceFilter('');
     setCurrentPage(1);
   };
+
+  const hasActiveFilters = searchQuery || statusFilter || sourceFilter;
 
   // Show create/edit form
   if (showCreateForm || editingLead) {
     return (
-      <div className={cn('p-6', className)}>
+      <div className={cn('', className)}>
         <LeadForm
           lead={editingLead || undefined}
           onSubmit={editingLead ? handleUpdateLead : handleCreateLead}
@@ -103,162 +213,243 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
   }
 
   return (
-    <div className={cn('p-6', className)}>
-      {/* Header */}
-      <div className='flex items-center justify-between mb-6'>
+    <div className={cn('space-y-6', className)}>
+      {/* Page Header */}
+      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
         <div>
-          <h1 className='text-2xl font-bold'>Leads</h1>
-          <p className='text-muted-foreground'>Manage your sales prospects</p>
+          <h1 className='text-2xl font-bold tracking-tight'>Leads</h1>
+          <p className='text-muted-foreground'>
+            Manage and convert your sales prospects
+          </p>
         </div>
-        <Button onClick={() => setShowCreateForm(true)}>Add Lead</Button>
+        <div className='flex items-center gap-2'>
+          <ExportDropdown
+            data={filteredLeads}
+            columns={LEAD_EXPORT_COLUMNS}
+            filename='leads'
+            onExportComplete={(format, count) => {
+              console.log(`Exported ${count} leads as ${format}`);
+            }}
+          />
+          <Button
+            variant='outline'
+            onClick={() => setShowQuickAdd(true)}
+            className='gap-2'
+          >
+            <Plus className='h-4 w-4' />
+            Thêm nhanh
+          </Button>
+          <Button onClick={() => setShowCreateForm(true)} className='gap-2'>
+            <Plus className='h-4 w-4' />
+            Add Lead
+          </Button>
+        </div>
       </div>
-
-      {/* Filters and Search */}
-      <Card className='mb-6'>
-        <CardHeader>
-          <h3 className='text-lg font-semibold'>Filters</h3>
-        </CardHeader>
-        <CardContent>
-          <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
-            <div>
-              <SearchInput
-                placeholder='Search leads...'
-                onSearch={handleSearch}
-                value={searchQuery}
-              />
-            </div>
-
-            <div>
-              <select
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value as LeadStatus | '');
-                  setCurrentPage(1);
-                }}
-                className='w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring'
-              >
-                <option value=''>All Statuses</option>
-                <option value='NEW'>New</option>
-                <option value='CONTACTED'>Contacted</option>
-                <option value='QUALIFIED'>Qualified</option>
-                <option value='UNQUALIFIED'>Unqualified</option>
-                <option value='CONVERTED'>Converted</option>
-              </select>
-            </div>
-
-            <div>
-              <select
-                value={sourceFilter}
-                onChange={(e) => {
-                  setSourceFilter(e.target.value as LeadSource | '');
-                  setCurrentPage(1);
-                }}
-                className='w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring'
-              >
-                <option value=''>All Sources</option>
-                <option value='WEBSITE'>Website</option>
-                <option value='REFERRAL'>Referral</option>
-                <option value='SOCIAL_MEDIA'>Social Media</option>
-                <option value='ADVERTISEMENT'>Advertisement</option>
-                <option value='EVENT'>Event</option>
-                <option value='COLD_CALL'>Cold Call</option>
-                <option value='OTHER'>Other</option>
-              </select>
-            </div>
-
-            <div>
-              <select
-                value={`${sortBy}-${sortOrder}`}
-                onChange={(e) => {
-                  const [field, order] = e.target.value.split('-');
-                  setSortBy(field as typeof sortBy);
-                  setSortOrder(order as 'asc' | 'desc');
-                  setCurrentPage(1);
-                }}
-                className='w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring'
-              >
-                <option value='createdAt-desc'>Newest First</option>
-                <option value='createdAt-asc'>Oldest First</option>
-                <option value='name-asc'>Name A-Z</option>
-                <option value='name-desc'>Name Z-A</option>
-                <option value='score-desc'>Highest Score</option>
-                <option value='score-asc'>Lowest Score</option>
-              </select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Quick Stats */}
-      <div className='grid grid-cols-1 md:grid-cols-4 gap-4 mb-6'>
-        <Card>
-          <CardContent className='p-4'>
-            <div className='text-2xl font-bold text-blue-600'>{total}</div>
-            <p className='text-sm text-muted-foreground'>Total Leads</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className='p-4'>
-            <div className='text-2xl font-bold text-green-600'>
-              {leads.filter((l) => l.status === 'QUALIFIED').length}
-            </div>
-            <p className='text-sm text-muted-foreground'>Qualified</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className='p-4'>
-            <div className='text-2xl font-bold text-yellow-600'>
-              {leads.filter((l) => l.status === 'CONTACTED').length}
-            </div>
-            <p className='text-sm text-muted-foreground'>In Progress</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className='p-4'>
-            <div className='text-2xl font-bold text-purple-600'>
-              {leads.filter((l) => l.status === 'CONVERTED').length}
-            </div>
-            <p className='text-sm text-muted-foreground'>Converted</p>
-          </CardContent>
-        </Card>
+      <div className='grid grid-cols-2 sm:grid-cols-5 gap-4'>
+        <StatsCard
+          title='Total Leads'
+          value={stats.total}
+          icon={Target}
+          variant='primary'
+        />
+        <StatsCard
+          title='New'
+          value={stats.new}
+          icon={Sparkles}
+          variant='default'
+        />
+        <StatsCard
+          title='Contacted'
+          value={stats.contacted}
+          icon={Clock}
+          variant='warning'
+        />
+        <StatsCard
+          title='Qualified'
+          value={stats.qualified}
+          icon={UserCheck}
+          variant='success'
+        />
+        <StatsCard
+          title='Avg. Value'
+          value={`$${stats.avgValue.toLocaleString()}`}
+          icon={Target}
+          variant='danger'
+        />
       </div>
 
-      {/* Results Summary */}
-      <div className='flex items-center justify-between mb-4'>
-        <p className='text-sm text-muted-foreground'>
-          {isLoading ? 'Loading...' : `${total} leads found`}
-        </p>
+      {/* Search & Filters Bar */}
+      <div className='flex flex-col sm:flex-row gap-3'>
+        {/* Search */}
+        <div className='relative flex-1'>
+          <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
+          <Input
+            placeholder='Search leads by name, email, or company...'
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
+            className='pl-10 pr-10'
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className='absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground'
+            >
+              <X className='h-4 w-4' />
+            </button>
+          )}
+        </div>
 
-        {total > pageSize && (
-          <div className='flex items-center space-x-2'>
-            <Button
-              variant='outline'
-              size='sm'
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(currentPage - 1)}
-            >
-              Previous
-            </Button>
-            <span className='text-sm text-muted-foreground'>
-              Page {currentPage} of {totalPages}
-            </span>
-            <Button
-              variant='outline'
-              size='sm'
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage(currentPage + 1)}
-            >
-              Next
-            </Button>
-          </div>
-        )}
+        {/* Filter Toggle */}
+        <Button
+          variant={showFilters ? 'secondary' : 'outline'}
+          onClick={() => setShowFilters(!showFilters)}
+          className='gap-2'
+        >
+          <SlidersHorizontal className='h-4 w-4' />
+          Filters
+          {hasActiveFilters && (
+            <span className='h-2 w-2 rounded-full bg-primary' />
+          )}
+        </Button>
+
+        {/* View Toggle */}
+        <div className='flex rounded-lg border bg-muted p-1'>
+          <button
+            onClick={() => setViewMode('grid')}
+            className={cn(
+              'flex items-center justify-center h-8 w-8 rounded-md transition-colors',
+              viewMode === 'grid'
+                ? 'bg-background shadow-sm'
+                : 'hover:bg-background/50'
+            )}
+            title='Grid view'
+          >
+            <Grid3X3 className='h-4 w-4' />
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={cn(
+              'flex items-center justify-center h-8 w-8 rounded-md transition-colors',
+              viewMode === 'list'
+                ? 'bg-background shadow-sm'
+                : 'hover:bg-background/50'
+            )}
+            title='List view'
+          >
+            <List className='h-4 w-4' />
+          </button>
+          <button
+            onClick={() => setViewMode('kanban')}
+            className={cn(
+              'flex items-center justify-center h-8 w-8 rounded-md transition-colors',
+              viewMode === 'kanban'
+                ? 'bg-background shadow-sm'
+                : 'hover:bg-background/50'
+            )}
+            title='Kanban board'
+          >
+            <LayoutGrid className='h-4 w-4' />
+          </button>
+        </div>
       </div>
+
+      {/* Expanded Filters */}
+      {showFilters && (
+        <Card>
+          <CardContent className='p-4'>
+            <div className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
+              <div>
+                <label className='text-sm font-medium mb-1.5 block'>
+                  Status
+                </label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value as LeadStatus | '');
+                    setCurrentPage(1);
+                  }}
+                  className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
+                >
+                  <option value=''>All Statuses</option>
+                  <option value='NEW'>New</option>
+                  <option value='CONTACTED'>Contacted</option>
+                  <option value='QUALIFIED'>Qualified</option>
+                  <option value='CONVERTED'>Converted</option>
+                  <option value='LOST'>Lost</option>
+                </select>
+              </div>
+
+              <div>
+                <label className='text-sm font-medium mb-1.5 block'>
+                  Source
+                </label>
+                <select
+                  value={sourceFilter}
+                  onChange={(e) => {
+                    setSourceFilter(e.target.value as LeadSource | '');
+                    setCurrentPage(1);
+                  }}
+                  className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
+                >
+                  <option value=''>All Sources</option>
+                  <option value='WEBSITE'>Website</option>
+                  <option value='REFERRAL'>Referral</option>
+                  <option value='SOCIAL_MEDIA'>Social Media</option>
+                  <option value='ADVERTISEMENT'>Advertisement</option>
+                  <option value='EVENT'>Event</option>
+                  <option value='COLD_CALL'>Cold Call</option>
+                  <option value='OTHER'>Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className='text-sm font-medium mb-1.5 block'>
+                  Sort By
+                </label>
+                <select
+                  value={`${sortBy}-${sortOrder}`}
+                  onChange={(e) => {
+                    const [field, order] = e.target.value.split('-');
+                    setSortBy(field as typeof sortBy);
+                    setSortOrder(order as 'asc' | 'desc');
+                    setCurrentPage(1);
+                  }}
+                  className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
+                >
+                  <option value='createdAt-desc'>Newest First</option>
+                  <option value='createdAt-asc'>Oldest First</option>
+                  <option value='name-asc'>Name A-Z</option>
+                  <option value='name-desc'>Name Z-A</option>
+                  <option value='score-desc'>Highest Score</option>
+                  <option value='score-asc'>Lowest Score</option>
+                </select>
+              </div>
+            </div>
+
+            {hasActiveFilters && (
+              <div className='mt-4 pt-4 border-t flex items-center justify-between'>
+                <p className='text-sm text-muted-foreground'>
+                  {total} results found
+                </p>
+                <Button variant='ghost' size='sm' onClick={clearFilters}>
+                  Clear all filters
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Error State */}
       {error && (
-        <Card className='mb-6 border-red-200 bg-red-50'>
+        <Card className='border-destructive/50 bg-destructive/5'>
           <CardContent className='p-4'>
-            <p className='text-red-600'>
+            <p className='text-destructive'>
               Error loading leads. Please try again.
             </p>
           </CardContent>
@@ -267,53 +458,108 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
 
       {/* Loading State */}
       {isLoading && (
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-          {Array.from({ length: 6 }).map((_, index) => (
-            <Card key={index} className='animate-pulse'>
-              <CardContent className='p-4'>
-                <div className='space-y-3'>
-                  <div className='h-4 bg-muted rounded w-3/4'></div>
-                  <div className='h-3 bg-muted rounded w-1/2'></div>
-                  <div className='h-3 bg-muted rounded w-2/3'></div>
+        <div
+          className={cn(
+            'gap-4',
+            viewMode === 'kanban'
+              ? 'grid grid-cols-4'
+              : viewMode === 'grid'
+                ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+                : 'flex flex-col'
+          )}
+        >
+          {Array.from({ length: viewMode === 'kanban' ? 4 : 6 }).map(
+            (_, index) => (
+              <Card key={index} className='animate-pulse'>
+                <CardContent className='p-5'>
+                  <div className='flex items-center gap-3 mb-4'>
+                    <div className='h-10 w-10 bg-muted rounded-full' />
+                    <div className='flex-1'>
+                      <div className='h-4 bg-muted rounded w-3/4 mb-2' />
+                      <div className='h-3 bg-muted rounded w-1/2' />
+                    </div>
+                  </div>
+                  <div className='space-y-2'>
+                    <div className='h-3 bg-muted rounded w-full' />
+                    <div className='h-3 bg-muted rounded w-2/3' />
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          )}
+        </div>
+      )}
+
+      {/* Kanban Board View */}
+      {!isLoading && viewMode === 'kanban' && leads.length > 0 && (
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
+          {LEAD_STATUSES.map(({ status, label, color }) => (
+            <div
+              key={status}
+              className='bg-muted/30 rounded-xl p-4 min-h-[400px]'
+            >
+              {/* Column Header */}
+              <div className='flex items-center justify-between mb-4'>
+                <div className='flex items-center gap-2'>
+                  <div className={cn('w-3 h-3 rounded-full', color)} />
+                  <h3 className='font-semibold'>{label}</h3>
                 </div>
-              </CardContent>
-            </Card>
+                <span className='text-sm text-muted-foreground px-2 py-1 bg-background rounded-full'>
+                  {leadsByStatus[status]?.length || 0}
+                </span>
+              </div>
+
+              {/* Cards */}
+              <div className='space-y-3'>
+                {leadsByStatus[status]?.map((lead) => (
+                  <LeadCard
+                    key={lead.id}
+                    lead={lead}
+                    variant='kanban'
+                    onClick={() => handleViewLead(lead.id)}
+                    onConvert={
+                      status === 'QUALIFIED'
+                        ? () => handleConvertLead(lead.id)
+                        : undefined
+                    }
+                  />
+                ))}
+                {(!leadsByStatus[status] ||
+                  leadsByStatus[status].length === 0) && (
+                  <p className='text-sm text-muted-foreground text-center py-8'>
+                    No leads
+                  </p>
+                )}
+              </div>
+            </div>
           ))}
         </div>
       )}
 
-      {/* Lead Grid */}
-      {!isLoading && leads.length > 0 && (
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+      {/* Grid/List View */}
+      {!isLoading && viewMode !== 'kanban' && leads.length > 0 && (
+        <div
+          className={cn(
+            'gap-4',
+            viewMode === 'grid'
+              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+              : 'flex flex-col'
+          )}
+        >
           {leads.map((lead) => (
-            <div key={lead.id} className='relative'>
-              <EntityCard
-                type='lead'
-                entity={lead}
-                onClick={() => {
-                  console.log('View lead:', lead.id);
-                }}
-                onEdit={() => handleEditLead(lead)}
-                onDelete={() => handleDeleteLead(lead.id)}
-                className='h-full'
-              />
-              {/* Quick Convert Button for Qualified Leads */}
-              {lead.status === 'QUALIFIED' && (
-                <div className='absolute top-2 right-2'>
-                  <Button
-                    size='sm'
-                    variant='outline'
-                    className='bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleConvertLead(lead.id);
-                    }}
-                  >
-                    Convert
-                  </Button>
-                </div>
-              )}
-            </div>
+            <LeadCard
+              key={lead.id}
+              lead={lead}
+              variant={viewMode === 'list' ? 'compact' : 'default'}
+              onClick={() => handleViewLead(lead.id)}
+              onEdit={() => handleEditLead(lead)}
+              onDelete={() => handleDeleteLead(lead.id)}
+              onConvert={
+                lead.status === 'QUALIFIED'
+                  ? () => handleConvertLead(lead.id)
+                  : undefined
+              }
+            />
           ))}
         </div>
       )}
@@ -321,34 +567,85 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
       {/* Empty State */}
       {!isLoading && leads.length === 0 && !error && (
         <Card>
-          <CardContent className='p-12 text-center'>
-            <div className='mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4'>
-              <svg
-                className='w-12 h-12 text-muted-foreground'
-                fill='none'
-                stroke='currentColor'
-                viewBox='0 0 24 24'
-              >
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth='2'
-                  d='M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'
-                />
-              </svg>
+          <CardContent className='py-16 text-center'>
+            <div className='mx-auto w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4'>
+              <Target className='w-10 h-10 text-muted-foreground' />
             </div>
             <h3 className='text-lg font-semibold mb-2'>No leads found</h3>
-            <p className='text-muted-foreground mb-4'>
-              {searchQuery || statusFilter || sourceFilter
+            <p className='text-muted-foreground mb-6 max-w-sm mx-auto'>
+              {hasActiveFilters
                 ? 'Try adjusting your filters to see more results.'
                 : 'Get started by adding your first lead.'}
             </p>
-            <Button onClick={() => setShowCreateForm(true)}>
-              Add First Lead
-            </Button>
+            {hasActiveFilters ? (
+              <Button variant='outline' onClick={clearFilters}>
+                Clear Filters
+              </Button>
+            ) : (
+              <Button onClick={() => setShowCreateForm(true)}>
+                <Plus className='h-4 w-4 mr-2' />
+                Add First Lead
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}
+
+      {/* Pagination (not for kanban) */}
+      {viewMode !== 'kanban' && total > pageSize && (
+        <div className='flex items-center justify-between pt-4'>
+          <p className='text-sm text-muted-foreground'>
+            Showing {(currentPage - 1) * pageSize + 1} to{' '}
+            {Math.min(currentPage * pageSize, total)} of {total} leads
+          </p>
+          <div className='flex items-center gap-2'>
+            <Button
+              variant='outline'
+              size='sm'
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(currentPage - 1)}
+            >
+              <ChevronLeft className='h-4 w-4' />
+              Previous
+            </Button>
+            <div className='flex items-center gap-1'>
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                const pageNum = i + 1;
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={cn(
+                      'h-8 w-8 rounded-md text-sm font-medium transition-colors',
+                      currentPage === pageNum
+                        ? 'bg-primary text-primary-foreground'
+                        : 'hover:bg-muted'
+                    )}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
+            <Button
+              variant='outline'
+              size='sm'
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(currentPage + 1)}
+            >
+              Next
+              <ChevronRight className='h-4 w-4' />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Add Dialog */}
+      <QuickAddLeadDialog
+        open={showQuickAdd}
+        onOpenChange={setShowQuickAdd}
+        onSubmit={handleQuickAddLead}
+      />
     </div>
   );
 };

@@ -2,5 +2,6 @@
 
 export { default as LeadListPage } from './LeadListPage';
 export { default as LeadDetailPage } from './LeadDetailPage';
+export { LeadDetailPage as LeadDetailPageEnhanced } from './LeadDetailPageEnhanced';
 export { default as CreateLeadPage } from './CreateLeadPage';
 export { default as EditLeadPage } from './EditLeadPage';

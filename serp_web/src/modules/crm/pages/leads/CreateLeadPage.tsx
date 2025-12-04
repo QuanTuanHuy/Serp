@@ -38,10 +38,10 @@ export const CreateLeadPage: React.FC<CreateLeadPageProps> = ({
             ← Back
           </Button>
           <div>
-            <h1 className='text-2xl font-bold text-gray-900'>
+            <h1 className='text-2xl font-bold text-foreground'>
               Create New Lead
             </h1>
-            <p className='text-gray-600'>Add a new sales prospect</p>
+            <p className='text-muted-foreground'>Add a new sales prospect</p>
           </div>
         </div>
       </div>

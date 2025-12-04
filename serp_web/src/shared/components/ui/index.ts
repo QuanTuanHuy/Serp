@@ -103,3 +103,12 @@ export {
   TooltipContent,
   TooltipProvider,
 } from './tooltip';
+
+// Textarea Component
+export { Textarea } from './textarea';
+
+// Progress Component
+export { Progress } from './progress';
+
+// Separator Component
+export { Separator } from './separator';
