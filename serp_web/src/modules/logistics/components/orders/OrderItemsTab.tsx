@@ -14,6 +14,7 @@ import {
 } from '@/shared/components/ui';
 import { DataTable } from '@/shared/components';
 import { useGetOrderQuery } from '../../services';
+import { useProducts } from '../../hooks';
 
 interface OrderItemsTabProps {
   orderId: string;
@@ -21,6 +22,12 @@ interface OrderItemsTabProps {
 
 export const OrderItemsTab: React.FC<OrderItemsTabProps> = ({ orderId }) => {
   const { data: orderDetail, isLoading } = useGetOrderQuery(orderId);
+  const { products } = useProducts();
+
+  const getProductName = (productId: string) => {
+    const product = products?.find((p) => p.id === productId);
+    return product?.name || productId;
+  };
 
   const formatCurrency = (amount?: number) => {
     if (amount === undefined || amount === null) return '-';
@@ -44,10 +51,12 @@ export const OrderItemsTab: React.FC<OrderItemsTabProps> = ({ orderId }) => {
       },
       {
         id: 'productId',
-        header: 'Mã sản phẩm',
+        header: 'Sản phẩm',
         accessor: 'productId',
         cell: ({ row }: any) => (
-          <div className='font-mono text-xs'>{row.productId}</div>
+          <div className='text-sm font-medium'>
+            {getProductName(row.productId)}
+          </div>
         ),
       },
       {

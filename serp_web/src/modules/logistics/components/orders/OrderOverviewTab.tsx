@@ -158,20 +158,6 @@ export const OrderOverviewTab: React.FC<OrderOverviewTabProps> = ({
               </label>
               <p className='mt-1'>{order.saleChannelId || '-'}</p>
             </div>
-            <div>
-              <label className='text-sm font-medium text-muted-foreground'>
-                Tổng số lượng
-              </label>
-              <p className='mt-1 font-medium'>{order.totalQuantity || 0}</p>
-            </div>
-            <div>
-              <label className='text-sm font-medium text-muted-foreground'>
-                Tổng tiền
-              </label>
-              <p className='mt-1 font-semibold text-lg'>
-                {formatCurrency(order.totalAmount || 0)}
-              </p>
-            </div>
           </div>
         </CardContent>
       </Card>

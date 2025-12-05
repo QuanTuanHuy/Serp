@@ -7,32 +7,37 @@
 
 export interface InventoryItem {
   id: string;
-  tenantId: number;
   productId: string;
   quantity: number;
   facilityId: string;
-  expirationDate: string; // LocalDate format
-  manufacturingDate: string; // LocalDate format
+  createdStamp: string; // ISO DateTime format
+  lotId: string;
+  lastUpdatedStamp: string; // ISO DateTime format
+  expirationDate: string; // LocalDate format (YYYY-MM-DD)
+  manufacturingDate: string; // LocalDate format (YYYY-MM-DD)
   statusId: string;
-  activeStatus: 'ACTIVE' | 'INACTIVE';
-  createdStamp: number;
-  lastUpdatedStamp: number;
+  receivedDate: string; // LocalDate format (YYYY-MM-DD)
+  tenantId: number;
 }
 
 export interface CreateInventoryItemRequest {
   productId: string;
   quantity: number;
   facilityId: string;
-  expirationDate: string;
-  manufacturingDate: string;
-  statusId: string;
+  lotId?: string;
+  expirationDate?: string;
+  manufacturingDate?: string;
+  statusId?: string;
+  receivedDate?: string;
 }
 
 export interface UpdateInventoryItemRequest {
-  quantity: number;
-  expirationDate: string;
-  manufacturingDate: string;
-  statusId: string;
+  quantity?: number;
+  lotId?: string;
+  expirationDate?: string;
+  manufacturingDate?: string;
+  statusId?: string;
+  receivedDate?: string;
 }
 
 export interface InventoryItemFilters {
@@ -43,9 +48,12 @@ export interface InventoryItemFilters {
   query?: string;
   productId?: string;
   facilityId?: string;
+  lotId?: string;
   expirationDateFrom?: string;
   expirationDateTo?: string;
   manufacturingDateFrom?: string;
   manufacturingDateTo?: string;
+  receivedDateFrom?: string;
+  receivedDateTo?: string;
   statusId?: string;
 }

@@ -18,3 +18,7 @@ export { OrderShipmentsTab } from './orders/OrderShipmentsTab';
 
 // Shipment Components
 export { CreateShipmentDialog } from './shipments/CreateShipmentDialog';
+
+// Inventory Components
+export { InventoryItemDetailDialog } from './inventory/InventoryItemDetailDialog';
+export { InventoryItemEditDialog } from './inventory/InventoryItemEditDialog';

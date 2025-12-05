@@ -98,7 +98,7 @@ export const useOrders = () => {
     orders: ordersData?.items || [],
     totalItems: ordersData?.totalItems || 0,
     totalPages: ordersData?.totalPages || 0,
-    currentPage: ordersData?.currentPage || 1,
+    currentPage: filters.page,
     selectedOrder,
 
     // Loading states

@@ -11,3 +11,5 @@ export * from './OrderItemsTab';
 export * from './OrderShipmentsTab';
 export * from './OrderEditDialog';
 export * from './CancelOrderDialog';
+// ShipmentFormDialog removed - shipments are read-only in purchase module
+// ShipmentDetailDialog is not exported - used internally in OrderShipmentsTab
