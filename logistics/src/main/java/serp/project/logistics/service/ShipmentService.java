@@ -53,12 +53,12 @@ public class ShipmentService {
         String shipmentId = IdUtils.generateShipmentId();
         String shipmentName = StringUtils.hasText(form.getShipmentName()) ? form.getShipmentName()
                 : "INBOUND".equals(form.getShipmentTypeId()) ? "Phiếu nhập tự động mã " + shipmentId
-                : "Phiếu xuất tự động mã " + shipmentId;
+                        : "Phiếu xuất tự động mã " + shipmentId;
         ShipmentEntity shipment = ShipmentEntity.builder()
                 .id(shipmentId)
                 .shipmentTypeId(form.getShipmentTypeId())
-                .toCustomerId(form.getToCustomerId())
-                .fromSupplierId(form.getFromSupplierId())
+                .toCustomerId(StringUtils.hasText(form.getToCustomerId()) ? form.getToCustomerId() : null)
+                .fromSupplierId(StringUtils.hasText(form.getFromSupplierId()) ? form.getFromSupplierId() : null)
                 .createdByUserId(userId)
                 .orderId(form.getOrderId())
                 .shipmentName(shipmentName)
@@ -121,7 +121,8 @@ public class ShipmentService {
             inventoryItemService.createInventoryItem(item);
         }
 
-        List<OrderItemEntity> orderItems = orderItemRepository.findByTenantIdAndOrderId(tenantId, shipment.getOrderId());
+        List<OrderItemEntity> orderItems = orderItemRepository.findByTenantIdAndOrderId(tenantId,
+                shipment.getOrderId());
         if (orderItems.isEmpty()) {
             log.error("[OrderService] No orderItems found for order {} and tenant {}", shipment.getOrderId(), tenantId);
             throw new AppException(AppErrorCode.NOT_FOUND);
@@ -130,9 +131,11 @@ public class ShipmentService {
                 OrderItemEntity::getId,
                 OrderItemEntity::getQuantity));
         Map<String, Integer> deliveredQuantityMap = new HashMap<>();
-        List<ShipmentEntity> importedShipments = shipmentRepository.findByTenantIdAndOrderIdAndStatusId(tenantId, shipment.getOrderId(), ShipmentStatus.IMPORTED.value());
+        List<ShipmentEntity> importedShipments = shipmentRepository.findByTenantIdAndOrderIdAndStatusId(tenantId,
+                shipment.getOrderId(), ShipmentStatus.IMPORTED.value());
         if (importedShipments.isEmpty()) {
-            log.warn("[OrderService] No importedShipments found for order {} and tenant {}", shipment.getOrderId(), tenantId);
+            log.warn("[OrderService] No importedShipments found for order {} and tenant {}", shipment.getOrderId(),
+                    tenantId);
             return;
         }
         for (ShipmentEntity importedShipment : importedShipments) {
@@ -147,7 +150,8 @@ public class ShipmentService {
             String orderItemId = entry.getKey();
             int orderedQuantity = entry.getValue();
             int deliveredQuantity = deliveredQuantityMap.getOrDefault(orderItemId, 0);
-            log.info("[OrderService] Order item {} has delivered quantity {}/{}", orderItemId, deliveredQuantity, orderedQuantity);
+            log.info("[OrderService] Order item {} has delivered quantity {}/{}", orderItemId, deliveredQuantity,
+                    orderedQuantity);
             if (deliveredQuantity != orderedQuantity) {
                 log.info(
                         "[OrderService] Order {} is not fully delivery.",
@@ -179,13 +183,12 @@ public class ShipmentService {
             int page,
             int size,
             String sortBy,
-            String sortDirection
-    ) {
+            String sortDirection) {
         Pageable pageable = PaginationUtils.createPageable(page, size, sortBy, sortDirection);
         return shipmentRepository.findAll(
-                ShipmentSpecification.satisfy(query, shipmentTypeId, fromSupplierId, toCustomerId, orderId, statusId, tenantId),
-                pageable
-        );
+                ShipmentSpecification.satisfy(query, shipmentTypeId, fromSupplierId, toCustomerId, orderId, statusId,
+                        tenantId),
+                pageable);
     }
 
     @Transactional(rollbackFor = Exception.class)

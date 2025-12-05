@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import serp.project.logistics.dto.request.InventoryItemCreationForm;
 import serp.project.logistics.dto.request.InventoryItemUpdateForm;
 import serp.project.logistics.dto.response.GeneralResponse;
+import serp.project.logistics.dto.response.PageResponse;
 import serp.project.logistics.entity.InventoryItemEntity;
 import serp.project.logistics.exception.AppErrorCode;
 import serp.project.logistics.exception.AppException;
@@ -31,85 +32,88 @@ import serp.project.logistics.util.AuthUtils;
 @Slf4j
 public class InventoryItemController {
 
-    private final InventoryItemService inventoryItemService;
-    private final AuthUtils authUtils;
+        private final InventoryItemService inventoryItemService;
+        private final AuthUtils authUtils;
 
-    @PostMapping("/create")
-    public ResponseEntity<GeneralResponse<?>> createInventoryItem(
-            @RequestBody InventoryItemCreationForm form) {
-        Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
-        log.info("[InventoryItemController] Creating inventory item for product ID: {} for tenantId: {}",
-                form.getProductId(), tenantId);
-        inventoryItemService.createInventoryItem(form, tenantId);
-        return ResponseEntity.ok(GeneralResponse.success("Inventory item created successfully"));
-    }
+        @PostMapping("/create")
+        public ResponseEntity<GeneralResponse<?>> createInventoryItem(
+                        @RequestBody InventoryItemCreationForm form) {
+                Long tenantId = authUtils.getCurrentTenantId()
+                                .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
+                log.info("[InventoryItemController] Creating inventory item for product ID: {} for tenantId: {}",
+                                form.getProductId(), tenantId);
+                inventoryItemService.createInventoryItem(form, tenantId);
+                return ResponseEntity.ok(GeneralResponse.success("Inventory item created successfully"));
+        }
 
-    @PatchMapping("/update/{inventoryItemId}")
-    public ResponseEntity<GeneralResponse<?>> updateInventoryItem(
-            @RequestBody InventoryItemUpdateForm form,
-            @PathVariable("inventoryItemId") String inventoryItemId) {
-        Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
-        log.info("[InventoryItemController] Updating inventory item with ID {} for tenantId: {}", inventoryItemId,
-                tenantId);
-        inventoryItemService.updateInventoryItem(inventoryItemId, form, tenantId);
-        return ResponseEntity.ok(GeneralResponse.success("Inventory item updated successfully"));
-    }
+        @PatchMapping("/update/{inventoryItemId}")
+        public ResponseEntity<GeneralResponse<?>> updateInventoryItem(
+                        @RequestBody InventoryItemUpdateForm form,
+                        @PathVariable("inventoryItemId") String inventoryItemId) {
+                Long tenantId = authUtils.getCurrentTenantId()
+                                .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
+                log.info("[InventoryItemController] Updating inventory item with ID {} for tenantId: {}",
+                                inventoryItemId,
+                                tenantId);
+                inventoryItemService.updateInventoryItem(inventoryItemId, form, tenantId);
+                return ResponseEntity.ok(GeneralResponse.success("Inventory item updated successfully"));
+        }
 
-    @DeleteMapping("/delete/{inventoryItemId}")
-    public ResponseEntity<GeneralResponse<?>> deleteInventoryItem(
-            @PathVariable("inventoryItemId") String inventoryItemId) {
-        throw new AppException(AppErrorCode.UNIMPLEMENTED);
-    }
+        @DeleteMapping("/delete/{inventoryItemId}")
+        public ResponseEntity<GeneralResponse<?>> deleteInventoryItem(
+                        @PathVariable("inventoryItemId") String inventoryItemId) {
+                throw new AppException(AppErrorCode.UNIMPLEMENTED);
+        }
 
-    @GetMapping("/search/{inventoryItemId}")
-    public ResponseEntity<GeneralResponse<InventoryItemEntity>> searchInventoryItem(
-            @PathVariable("inventoryItemId") String inventoryItemId) {
-        Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
-        log.info("[InventoryItemController] Retrieving inventory item with ID {} for tenantId: {}", inventoryItemId,
-                tenantId);
-        return ResponseEntity.ok(GeneralResponse.success(
-                "Inventory item retrieved successfully",
-                inventoryItemService.getInventoryItem(inventoryItemId, tenantId)));
-    }
+        @GetMapping("/search/{inventoryItemId}")
+        public ResponseEntity<GeneralResponse<InventoryItemEntity>> searchInventoryItem(
+                        @PathVariable("inventoryItemId") String inventoryItemId) {
+                Long tenantId = authUtils.getCurrentTenantId()
+                                .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
+                log.info("[InventoryItemController] Retrieving inventory item with ID {} for tenantId: {}",
+                                inventoryItemId,
+                                tenantId);
+                return ResponseEntity.ok(GeneralResponse.success(
+                                "Inventory item retrieved successfully",
+                                inventoryItemService.getInventoryItem(inventoryItemId, tenantId)));
+        }
 
-    @GetMapping("/search")
-    public ResponseEntity<GeneralResponse<Page<InventoryItemEntity>>> searchInventoryItems(
-            @RequestParam(required = false, defaultValue = "1") int page,
-            @RequestParam(required = false, defaultValue = "10") int size,
-            @RequestParam(required = false, defaultValue = "createdStamp") String sortBy,
-            @RequestParam(required = false, defaultValue = "desc") String sortDirection,
-            @RequestParam(required = false) String query,
-            @RequestParam(required = false) String productId,
-            @RequestParam(required = false) String facilityId,
-            @RequestParam(required = false) LocalDate expirationDateFrom,
-            @RequestParam(required = false) LocalDate expirationDateTo,
-            @RequestParam(required = false) LocalDate manufacturingDateFrom,
-            @RequestParam(required = false) LocalDate manufacturingDateTo,
-            @RequestParam(required = false) String statusId) {
-        Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
-        log.info("[InventoryItemController] Retrieving inventory items of page {}/{} for tenantId: {}", page, size,
-                tenantId);
-        Page<InventoryItemEntity> result = inventoryItemService.getInventoryItems(
-                query,
-                productId,
-                facilityId,
-                expirationDateFrom,
-                expirationDateTo,
-                manufacturingDateFrom,
-                manufacturingDateTo,
-                statusId,
-                tenantId,
-                page,
-                size,
-                sortBy,
-                sortDirection);
-        return ResponseEntity.ok(GeneralResponse.success(
-                "Inventory items retrieved successfully",
-                result));
-    }
+        @GetMapping("/search")
+        public ResponseEntity<GeneralResponse<PageResponse<InventoryItemEntity>>> searchInventoryItems(
+                        @RequestParam(required = false, defaultValue = "1") int page,
+                        @RequestParam(required = false, defaultValue = "10") int size,
+                        @RequestParam(required = false, defaultValue = "createdStamp") String sortBy,
+                        @RequestParam(required = false, defaultValue = "desc") String sortDirection,
+                        @RequestParam(required = false) String query,
+                        @RequestParam(required = false) String productId,
+                        @RequestParam(required = false) String facilityId,
+                        @RequestParam(required = false) LocalDate expirationDateFrom,
+                        @RequestParam(required = false) LocalDate expirationDateTo,
+                        @RequestParam(required = false) LocalDate manufacturingDateFrom,
+                        @RequestParam(required = false) LocalDate manufacturingDateTo,
+                        @RequestParam(required = false) String statusId) {
+                Long tenantId = authUtils.getCurrentTenantId()
+                                .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
+                log.info("[InventoryItemController] Retrieving inventory items of page {}/{} for tenantId: {}", page,
+                                size,
+                                tenantId);
+                Page<InventoryItemEntity> result = inventoryItemService.getInventoryItems(
+                                query,
+                                productId,
+                                facilityId,
+                                expirationDateFrom,
+                                expirationDateTo,
+                                manufacturingDateFrom,
+                                manufacturingDateTo,
+                                statusId,
+                                tenantId,
+                                page,
+                                size,
+                                sortBy,
+                                sortDirection);
+                return ResponseEntity.ok(GeneralResponse.success(
+                                "Inventory items retrieved successfully",
+                                PageResponse.of(result)));
+        }
 
 }
