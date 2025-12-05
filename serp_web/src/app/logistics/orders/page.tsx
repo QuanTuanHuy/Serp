@@ -423,11 +423,11 @@ export default function LogisticsOrdersPage() {
           isLoading={isLoadingOrders}
           keyExtractor={(row) => row.id}
           pagination={{
-            currentPage: currentPage,
+            currentPage: (currentPage || 1) - 1,
             totalPages: totalPages,
             totalItems: totalItems,
             onPageChange: (page: number) => {
-              setPage(page);
+              setPage(page + 1);
             },
           }}
         />

@@ -28,10 +28,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/shared/components/ui/table';
-import { Package, Plus, PackageCheck, Trash2 } from 'lucide-react';
+import { Package } from 'lucide-react';
 import { formatDate } from '@/shared/utils';
 import { useShipments } from '../../hooks/useShipments';
-import { ShipmentFormDialog } from './ShipmentFormDialog';
 import { ShipmentDetailDialog } from './ShipmentDetailDialog';
 import type { OrderDetail } from '../../types';
 
@@ -42,32 +41,12 @@ interface OrderShipmentsTabProps {
 export const OrderShipmentsTab: React.FC<OrderShipmentsTabProps> = ({
   order,
 }) => {
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedShipmentId, setSelectedShipmentId] = useState<string | null>(
     null
   );
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [shipmentToDelete, setShipmentToDelete] = useState<string | null>(null);
 
-  const {
-    shipments,
-    isLoadingShipments,
-    canEdit,
-    handleCreateShipment,
-    handleUpdateShipment,
-    handleDeleteShipment,
-    handleImportShipment,
-    handleAddItem,
-    handleUpdateItem,
-    handleDeleteItem,
-    handleUpdateFacility,
-    isCreating,
-    isDeleting,
-    isImporting,
-  } = useShipments(order.id);
-
-  const showActions = canEdit && order.statusId === 'APPROVED';
+  const { shipments, isLoadingShipments } = useShipments(order.id);
 
   const getStatusBadge = (statusId: string) => {
     const statusMap: Record<string, { label: string; variant: any }> = {
@@ -87,23 +66,6 @@ export const OrderShipmentsTab: React.FC<OrderShipmentsTabProps> = ({
   const handleViewDetail = (shipmentId: string) => {
     setSelectedShipmentId(shipmentId);
     setDetailDialogOpen(true);
-  };
-
-  const handleDeleteClick = (shipmentId: string) => {
-    setShipmentToDelete(shipmentId);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (shipmentToDelete) {
-      await handleDeleteShipment(shipmentToDelete);
-      setDeleteDialogOpen(false);
-      setShipmentToDelete(null);
-    }
-  };
-
-  const handleImportClick = async (shipmentId: string) => {
-    await handleImportShipment(shipmentId);
   };
 
   // Show placeholder if order is not approved
@@ -134,19 +96,7 @@ export const OrderShipmentsTab: React.FC<OrderShipmentsTabProps> = ({
     <>
       <Card>
         <CardHeader>
-          <div className='flex items-center justify-between'>
-            <CardTitle>Danh sách phiếu nhập</CardTitle>
-            {showActions && (
-              <Button
-                size='sm'
-                onClick={() => setCreateDialogOpen(true)}
-                disabled={isCreating}
-              >
-                <Plus className='h-4 w-4 mr-2' />
-                Tạo phiếu nhập
-              </Button>
-            )}
-          </div>
+          <CardTitle>Danh sách phiếu nhập</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoadingShipments ? (
@@ -163,14 +113,8 @@ export const OrderShipmentsTab: React.FC<OrderShipmentsTabProps> = ({
               </div>
               <h3 className='text-lg font-semibold mb-2'>Chưa có phiếu nhập</h3>
               <p className='text-sm text-muted-foreground mb-4'>
-                Bắt đầu bằng cách tạo phiếu nhập đầu tiên cho đơn hàng này
+                Chờ phiếu nhập được tạo từ lãnh đạo
               </p>
-              {showActions && (
-                <Button size='sm' onClick={() => setCreateDialogOpen(true)}>
-                  <Plus className='h-4 w-4 mr-2' />
-                  Tạo phiếu nhập
-                </Button>
-              )}
             </div>
           ) : (
             <div className='border rounded-lg overflow-hidden'>
@@ -182,7 +126,6 @@ export const OrderShipmentsTab: React.FC<OrderShipmentsTabProps> = ({
                     <TableHead>Trạng thái</TableHead>
                     <TableHead>Ngày tạo</TableHead>
                     <TableHead>Ngày giao dự kiến</TableHead>
-                    <TableHead className='text-right'>Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -206,34 +149,6 @@ export const OrderShipmentsTab: React.FC<OrderShipmentsTabProps> = ({
                           ? formatDate(shipment.expectedDeliveryDate)
                           : '-'}
                       </TableCell>
-                      <TableCell className='text-right'>
-                        <div className='flex items-center justify-end gap-2'>
-                          {canEdit &&
-                            order.statusId === 'READY_FOR_DELIVERY' &&
-                            shipment.statusId === 'READY' && (
-                              <Button
-                                size='sm'
-                                variant='ghost'
-                                onClick={() => handleImportClick(shipment.id)}
-                                disabled={isImporting}
-                                title='Nhập hàng'
-                              >
-                                <PackageCheck className='h-4 w-4 text-green-600' />
-                              </Button>
-                            )}
-                          {showActions && (
-                            <Button
-                              size='sm'
-                              variant='ghost'
-                              onClick={() => handleDeleteClick(shipment.id)}
-                              disabled={isDeleting}
-                              title='Xóa phiếu nhập'
-                            >
-                              <Trash2 className='h-4 w-4 text-destructive' />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -243,57 +158,13 @@ export const OrderShipmentsTab: React.FC<OrderShipmentsTabProps> = ({
         </CardContent>
       </Card>
 
-      {/* Create Shipment Dialog */}
-      <ShipmentFormDialog
-        open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
-        order={order}
-        existingShipments={shipments}
-        onSubmit={handleCreateShipment}
-        isLoading={isCreating}
-      />
-
       {/* Shipment Detail Dialog */}
       <ShipmentDetailDialog
         open={detailDialogOpen}
         onOpenChange={setDetailDialogOpen}
         shipmentId={selectedShipmentId}
         order={order}
-        canEdit={canEdit}
-        existingShipments={shipments}
-        onUpdateShipment={handleUpdateShipment}
-        onUpdateFacility={handleUpdateFacility}
-        onAddItem={handleAddItem}
-        onUpdateItem={handleUpdateItem}
-        onDeleteItem={handleDeleteItem}
       />
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Xác nhận xóa phiếu nhập</DialogTitle>
-            <DialogDescription>
-              Bạn có chắc chắn muốn xóa phiếu nhập này? Hành động này không thể
-              hoàn tác.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant='outline'
-              onClick={() => setDeleteDialogOpen(false)}
-            >
-              Hủy
-            </Button>
-            <Button
-              onClick={handleConfirmDelete}
-              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
-            >
-              Xóa
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 };
