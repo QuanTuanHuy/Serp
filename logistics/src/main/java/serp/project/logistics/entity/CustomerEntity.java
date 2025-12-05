@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 public class CustomerEntity {
 
     @Id
-    private Long id;
+    private String id;
 
     private String name;
 
