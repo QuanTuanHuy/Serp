@@ -120,6 +120,9 @@ public class ShipmentController {
                                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
                 log.info("[ShipmentController] Get shipment detail {} for tenantId {}", shipmentId, tenantId);
                 ShipmentEntity shipment = shipmentService.getShipment(shipmentId, tenantId);
+                if (shipment == null) {
+                        throw new AppException(AppErrorCode.NOT_FOUND);
+                }
                 List<InventoryItemDetailEntity> items = inventoryItemDetailService.getItemsByShipmentId(shipmentId,
                                 tenantId);
                 ShipmentDetailResponse response = ShipmentDetailResponse.fromEntity(shipment, items);

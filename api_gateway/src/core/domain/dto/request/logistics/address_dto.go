@@ -125,17 +125,16 @@ type InventoryItemDetailForm struct {
 }
 
 type ShipmentUpdateForm struct {
-	ShipmentName   string `json:"shipmentName"`
-	ShipmentTypeId string `json:"shipmentTypeId"`
-	StatusId       string `json:"statusId"`
-	FromSupplierId string `json:"fromSupplierId"`
-	ToCustomerId   string `json:"toCustomerId"`
-	OrderId        string `json:"orderId"`
+	ShipmentName         string `json:"shipmentName"`
+	Note                 string `json:"note"`
+	ExpectedDeliveryDate string `json:"expectedDeliveryDate"`
 }
 
 type InventoryItemDetailUpdateForm struct {
 	Quantity          int    `json:"quantity"`
+	Note              string `json:"note"`
+	LotId             string `json:"lotId"`
 	ExpirationDate    string `json:"expirationDate"`
 	ManufacturingDate string `json:"manufacturingDate"`
-	StatusId          string `json:"statusId"`
+	FacilityId        string `json:"facilityId"`
 }

@@ -124,7 +124,7 @@ public class ShipmentService {
         List<OrderItemEntity> orderItems = orderItemRepository.findByTenantIdAndOrderId(tenantId,
                 shipment.getOrderId());
         if (orderItems.isEmpty()) {
-            log.error("[OrderService] No orderItems found for order {} and tenant {}", shipment.getOrderId(), tenantId);
+            log.error("[ShipmentService] No orderItems found for order {} and tenant {}", shipment.getOrderId(), tenantId);
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
         Map<String, Integer> itemQuantityMap = orderItems.stream().collect(Collectors.toMap(
@@ -134,7 +134,7 @@ public class ShipmentService {
         List<ShipmentEntity> importedShipments = shipmentRepository.findByTenantIdAndOrderIdAndStatusId(tenantId,
                 shipment.getOrderId(), ShipmentStatus.IMPORTED.value());
         if (importedShipments.isEmpty()) {
-            log.warn("[OrderService] No importedShipments found for order {} and tenant {}", shipment.getOrderId(),
+            log.warn("[ShipmentService] No importedShipments found for order {} and tenant {}", shipment.getOrderId(),
                     tenantId);
             return;
         }
@@ -150,17 +150,17 @@ public class ShipmentService {
             String orderItemId = entry.getKey();
             int orderedQuantity = entry.getValue();
             int deliveredQuantity = deliveredQuantityMap.getOrDefault(orderItemId, 0);
-            log.info("[OrderService] Order item {} has delivered quantity {}/{}", orderItemId, deliveredQuantity,
+            log.info("[ShipmentService] Order item {} has delivered quantity {}/{}", orderItemId, deliveredQuantity,
                     orderedQuantity);
             if (deliveredQuantity != orderedQuantity) {
                 log.info(
-                        "[OrderService] Order {} is not fully delivery.",
+                        "[ShipmentService] Order {} is not fully delivery.",
                         shipment.getOrderId());
                 return;
             }
         }
         orderRepository.updateOrderStatus(shipment.getOrderId(), OrderStatus.FULLY_DELIVERED.value(), tenantId);
-        log.info("[OrderService] Marked order {} as fully delivery for tenant {}", shipment.getOrderId(), tenantId);
+        log.info("[ShipmentService] Marked order {} as fully delivery for tenant {}", shipment.getOrderId(), tenantId);
     }
 
     public ShipmentEntity getShipment(String shipmentId, Long tenantId) {
