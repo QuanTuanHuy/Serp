@@ -172,7 +172,8 @@ export const OrderShipmentsTab: React.FC<OrderShipmentsTabProps> = ({
               header: 'Thao tác',
               accessor: 'id',
               cell: ({ row }: any) =>
-                row.statusId === 'CREATED' ? (
+                row.statusId === 'CREATED' &&
+                orderDetail?.statusId === 'APPROVED' ? (
                   <Button
                     size='sm'
                     variant='outline'
@@ -187,7 +188,7 @@ export const OrderShipmentsTab: React.FC<OrderShipmentsTabProps> = ({
           ]
         : []),
     ],
-    [hasLogisticsAccess]
+    [hasLogisticsAccess, orderDetail?.statusId]
   );
 
   return (
@@ -204,7 +205,7 @@ export const OrderShipmentsTab: React.FC<OrderShipmentsTabProps> = ({
                 {orderShipments.length} phiếu nhập
               </Badge>
             </div>
-            {hasLogisticsAccess && (
+            {hasLogisticsAccess && orderDetail?.statusId === 'APPROVED' && (
               <Button
                 size='sm'
                 onClick={() => setCreateDialogOpen(true)}

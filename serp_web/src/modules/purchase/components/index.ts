@@ -23,8 +23,7 @@ export { OrderItemsTab } from './orders/OrderItemsTab';
 export { OrderShipmentsTab } from './orders/OrderShipmentsTab';
 export { OrderEditDialog } from './orders/OrderEditDialog';
 export { CancelOrderDialog } from './orders/CancelOrderDialog';
-export { ShipmentFormDialog } from './orders/ShipmentFormDialog';
-export { ShipmentDetailDialog } from './orders/ShipmentDetailDialog';
+// ShipmentFormDialog and ShipmentDetailDialog removed - shipments are read-only
 
 // Address Components
 export { AddressForm } from './addresses/AddressForm';

@@ -64,7 +64,7 @@ public class InventoryItemDetailService {
                     tenantId);
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
-
+        log.info("[InventoryItemDetailService] facility: {}", form.getFacilityId());
         entity.setQuantity(form.getQuantity());
         entity.setNote(form.getNote());
         entity.setLotId(form.getLotId());

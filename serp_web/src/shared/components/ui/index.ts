@@ -96,6 +96,21 @@ export {
 // Alert Components
 export { Alert, AlertTitle, AlertDescription } from './alert';
 
+// AlertDialog Components
+export {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+  AlertDialogOverlay,
+  AlertDialogPortal,
+} from './alert-dialog';
+
 // Tooltip Components
 export {
   Tooltip,

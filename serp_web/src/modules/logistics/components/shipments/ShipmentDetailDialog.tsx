@@ -12,6 +12,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from '@/shared/components/ui';
 import {
   Button,
@@ -26,7 +34,9 @@ import {
   useGetShipmentQuery,
   useImportShipmentMutation,
   useDeleteItemFromShipmentMutation,
+  useDeleteShipmentMutation,
 } from '../../services';
+import { useAuth } from '@/modules/account/hooks';
 import { useNotification } from '@/shared/hooks';
 import { useProducts, useFacilities } from '../../hooks';
 import { EditShipmentDialog } from './EditShipmentDialog';
@@ -46,6 +56,7 @@ export const ShipmentDetailDialog: React.FC<ShipmentDetailDialogProps> = ({
   shipmentId,
 }) => {
   const notification = useNotification();
+  const { user } = useAuth();
   const { products } = useProducts();
   const { facilities } = useFacilities();
   const { data: shipment, isLoading } = useGetShipmentQuery(shipmentId, {
@@ -55,10 +66,21 @@ export const ShipmentDetailDialog: React.FC<ShipmentDetailDialogProps> = ({
     useImportShipmentMutation();
   const [deleteItem, { isLoading: isDeleting }] =
     useDeleteItemFromShipmentMutation();
+  const [deleteShipment, { isLoading: isDeletingShipment }] =
+    useDeleteShipmentMutation();
+
+  // Check if user has logistics role
+  const hasLogisticsAccess = React.useMemo(() => {
+    if (!user?.roles) return false;
+    return user.roles.some(
+      (role) => role === 'LOGISTICS_ADMIN' || role === 'LOGISTICS_EMPLOYEE'
+    );
+  }, [user]);
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [addItemDialogOpen, setAddItemDialogOpen] = useState(false);
   const [editItemDialogOpen, setEditItemDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItemDetail | null>(
     null
   );
@@ -132,14 +154,30 @@ export const ShipmentDetailDialog: React.FC<ShipmentDetailDialogProps> = ({
     }
   };
 
-  const canImport = shipment?.statusId === 'CREATED';
+  const handleDeleteShipment = async () => {
+    try {
+      await deleteShipment(shipmentId).unwrap();
+      notification.success('Thành công', {
+        description: 'Xóa phiếu thành công',
+      });
+      setDeleteDialogOpen(false);
+      onOpenChange(false);
+    } catch (error: any) {
+      notification.error('Lỗi', {
+        description: error?.data?.message || 'Có lỗi xảy ra khi xóa phiếu',
+      });
+    }
+  };
+
+  const canImport = shipment?.statusId === 'CREATED' && hasLogisticsAccess;
 
   const getProductName = (productId: string) => {
     const product = products?.find((p) => p.id === productId);
     return product?.name || productId.substring(0, 12);
   };
 
-  const getFacilityName = (facilityId: string) => {
+  const getFacilityName = (facilityId: string | null | undefined) => {
+    if (!facilityId) return '-';
     const facility = facilities?.find((f) => f.id === facilityId);
     return facility?.name || facilityId.substring(0, 12);
   };
@@ -169,14 +207,16 @@ export const ShipmentDetailDialog: React.FC<ShipmentDetailDialogProps> = ({
                     <CardTitle className='text-base'>
                       Thông tin cơ bản
                     </CardTitle>
-                    <Button
-                      size='sm'
-                      variant='outline'
-                      onClick={() => setEditDialogOpen(true)}
-                    >
-                      <Edit className='h-3.5 w-3.5 mr-1' />
-                      Sửa
-                    </Button>
+                    {canImport && (
+                      <Button
+                        size='sm'
+                        variant='outline'
+                        onClick={() => setEditDialogOpen(true)}
+                      >
+                        <Edit className='h-3.5 w-3.5 mr-1' />
+                        Sửa
+                      </Button>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent className='grid grid-cols-2 gap-4'>
@@ -330,18 +370,34 @@ export const ShipmentDetailDialog: React.FC<ShipmentDetailDialogProps> = ({
           ) : null}
 
           <DialogFooter>
-            <Button variant='outline' onClick={() => onOpenChange(false)}>
-              Đóng
-            </Button>
-            {canImport && (
-              <Button onClick={handleImport} disabled={isImporting}>
-                {isImporting && (
-                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+            <div className='flex items-center justify-between w-full'>
+              <div>
+                {canImport && (
+                  <Button
+                    variant='destructive'
+                    onClick={() => setDeleteDialogOpen(true)}
+                    disabled={isDeletingShipment}
+                  >
+                    <Trash2 className='mr-2 h-4 w-4' />
+                    Xóa phiếu
+                  </Button>
                 )}
-                <FileUp className='mr-2 h-4 w-4' />
-                Nhập hàng
-              </Button>
-            )}
+              </div>
+              <div className='flex gap-2'>
+                <Button variant='outline' onClick={() => onOpenChange(false)}>
+                  Đóng
+                </Button>
+                {canImport && (
+                  <Button onClick={handleImport} disabled={isImporting}>
+                    {isImporting && (
+                      <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                    )}
+                    <FileUp className='mr-2 h-4 w-4' />
+                    Nhập hàng
+                  </Button>
+                )}
+              </div>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -374,6 +430,44 @@ export const ShipmentDetailDialog: React.FC<ShipmentDetailDialogProps> = ({
           item={selectedItem}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận xóa phiếu</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn xóa phiếu này không? Hành động này không thể
+              hoàn tác và sẽ xóa tất cả sản phẩm trong phiếu.
+              {shipment && (
+                <div className='mt-3 space-y-1 text-sm text-foreground'>
+                  <div>
+                    <strong>Mã phiếu:</strong> {shipment.id.substring(0, 16)}
+                  </div>
+                  <div>
+                    <strong>Tên phiếu:</strong> {shipment.shipmentName || '-'}
+                  </div>
+                  <div>
+                    <strong>Số sản phẩm:</strong> {shipment.items?.length || 0}
+                  </div>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingShipment}>
+              Hủy
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteShipment}
+              disabled={isDeletingShipment}
+              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+            >
+              {isDeletingShipment ? 'Đang xóa...' : 'Xóa phiếu'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
