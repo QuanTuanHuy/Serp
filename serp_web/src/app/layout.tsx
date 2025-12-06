@@ -20,10 +20,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'SERP - Enterprise Resource Planning',
+  title: 'Smart Enterprise Resource Planning | SERP',
   description: 'Modern ERP system built with Next.js and TypeScript',
   keywords: ['ERP', 'CRM', 'Accounting', 'Inventory', 'Business Management'],
   authors: [{ name: 'QuanTuanHuy' }],
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 export const viewport = 'width=device-width, initial-scale=1';
