@@ -380,24 +380,24 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
             <DropdownMenuContent align='end'>
               <DropdownMenuItem>
                 <Mail className='mr-2 h-4 w-4' />
-                Gửi email
+                Send Email
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <Phone className='mr-2 h-4 w-4' />
-                Gọi điện
+                Make Call
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setShowActivityDialog(true)}>
                 <Activity className='mr-2 h-4 w-4' />
-                Thêm hoạt động
+                Add Activity
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem>
                 <Copy className='mr-2 h-4 w-4' />
-                Tạo bản sao
+                Duplicate
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <ExternalLink className='mr-2 h-4 w-4' />
-                Xuất PDF
+                Export PDF
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -481,7 +481,7 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                 <CardHeader className='pb-3'>
                   <CardTitle className='flex items-center text-lg font-semibold'>
                     <User className='mr-2 h-5 w-5 text-muted-foreground' />
-                    Thông tin liên hệ
+                    Contact Information
                   </CardTitle>
                 </CardHeader>
                 <CardContent className='grid gap-4 sm:grid-cols-2'>
@@ -504,9 +504,7 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                       <Phone className='h-4 w-4 text-green-600 dark:text-green-400' />
                     </div>
                     <div>
-                      <p className='text-sm text-muted-foreground'>
-                        Điện thoại
-                      </p>
+                      <p className='text-sm text-muted-foreground'>Phone</p>
                       {lead.phone ? (
                         <a
                           href={`tel:${lead.phone}`}
@@ -515,7 +513,7 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                           {lead.phone}
                         </a>
                       ) : (
-                        <p className='text-muted-foreground'>Chưa có</p>
+                        <p className='text-muted-foreground'>Not available</p>
                       )}
                     </div>
                   </div>
@@ -524,9 +522,9 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                       <Building2 className='h-4 w-4 text-purple-600 dark:text-purple-400' />
                     </div>
                     <div>
-                      <p className='text-sm text-muted-foreground'>Công ty</p>
+                      <p className='text-sm text-muted-foreground'>Company</p>
                       <p className='font-medium text-foreground'>
-                        {lead.company || 'Chưa có'}
+                        {lead.company || 'Not available'}
                       </p>
                     </div>
                   </div>
@@ -535,9 +533,9 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                       <Briefcase className='h-4 w-4 text-orange-600 dark:text-orange-400' />
                     </div>
                     <div>
-                      <p className='text-sm text-muted-foreground'>Chức vụ</p>
+                      <p className='text-sm text-muted-foreground'>Job Title</p>
                       <p className='font-medium text-foreground'>
-                        {lead.jobTitle || 'Chưa có'}
+                        {lead.jobTitle || 'Not available'}
                       </p>
                     </div>
                   </div>
@@ -549,7 +547,7 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                 <CardHeader className='pb-3'>
                   <CardTitle className='flex items-center text-lg font-semibold'>
                     <Target className='mr-2 h-5 w-5 text-muted-foreground' />
-                    Chi tiết Lead
+                    Lead Details
                   </CardTitle>
                 </CardHeader>
                 <CardContent className='grid gap-4 sm:grid-cols-2'>
@@ -559,7 +557,7 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                     </div>
                     <div>
                       <p className='text-sm text-muted-foreground'>
-                        Giá trị ước tính
+                        Estimated Value
                       </p>
                       <p className='font-medium text-foreground'>
                         {formatCurrency(lead.estimatedValue)}
@@ -572,7 +570,7 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                     </div>
                     <div>
                       <p className='text-sm text-muted-foreground'>
-                        Ngày chốt dự kiến
+                        Expected Close Date
                       </p>
                       <p className='font-medium text-foreground'>
                         {formatDate(lead.expectedCloseDate)}
@@ -584,7 +582,7 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                       <SourceIcon className='h-4 w-4 text-cyan-600 dark:text-cyan-400' />
                     </div>
                     <div>
-                      <p className='text-sm text-muted-foreground'>Nguồn</p>
+                      <p className='text-sm text-muted-foreground'>Source</p>
                       <p className='font-medium text-foreground'>
                         {sourceConfig.label}
                       </p>
@@ -596,7 +594,7 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                     </div>
                     <div>
                       <p className='text-sm text-muted-foreground'>
-                        Hoạt động cuối
+                        Last Activity
                       </p>
                       <p className='font-medium text-foreground'>
                         {formatDate(lead.lastActivityDate)}
@@ -708,7 +706,7 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
               <div className='flex justify-end'>
                 <Button onClick={() => setShowAddNoteDialog(true)}>
                   <MessageSquare className='mr-2 h-4 w-4' />
-                  Thêm ghi chú
+                  Add Note
                 </Button>
               </div>
 
@@ -814,10 +812,10 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
               </div>
               <p className='mt-4 text-center text-sm text-muted-foreground'>
                 {leadScore >= 75
-                  ? 'Lead có tiềm năng cao'
+                  ? 'High potential lead'
                   : leadScore >= 50
-                    ? 'Lead có tiềm năng trung bình'
-                    : 'Cần thu thập thêm thông tin'}
+                    ? 'Medium potential lead'
+                    : 'Need to collect more information'}
               </p>
             </CardContent>
           </Card>
@@ -826,7 +824,7 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
           <Card className='border-none shadow-sm'>
             <CardHeader className='pb-3'>
               <CardTitle className='text-lg font-semibold'>
-                Người phụ trách
+                Assigned To
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -836,7 +834,7 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                     <AvatarFallback>NV</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className='font-medium text-foreground'>Nguyễn Văn An</p>
+                    <p className='font-medium text-foreground'>Nguyen Van An</p>
                     <p className='text-sm text-muted-foreground'>
                       Sales Representative
                     </p>
@@ -844,9 +842,9 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                 </div>
               ) : (
                 <div className='text-center'>
-                  <p className='text-muted-foreground'>Chưa phân công</p>
+                  <p className='text-muted-foreground'>Not assigned</p>
                   <Button variant='outline' size='sm' className='mt-2'>
-                    Phân công
+                    Assign
                   </Button>
                 </div>
               )}
@@ -856,25 +854,29 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
           {/* Lead Info */}
           <Card className='border-none shadow-sm'>
             <CardHeader className='pb-3'>
-              <CardTitle className='text-lg font-semibold'>Thông tin</CardTitle>
+              <CardTitle className='text-lg font-semibold'>
+                Information
+              </CardTitle>
             </CardHeader>
             <CardContent className='space-y-4'>
               <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>Mã lead</span>
+                <span className='text-sm text-muted-foreground'>Lead ID</span>
                 <span className='font-mono text-sm text-foreground'>
                   #{lead.id}
                 </span>
               </div>
               <Separator />
               <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>Ngày tạo</span>
+                <span className='text-sm text-muted-foreground'>
+                  Created Date
+                </span>
                 <span className='text-sm text-foreground'>
                   {new Date(lead.createdAt).toLocaleDateString('vi-VN')}
                 </span>
               </div>
               <Separator />
               <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>Cập nhật</span>
+                <span className='text-sm text-muted-foreground'>Updated</span>
                 <span className='text-sm text-foreground'>
                   {new Date(lead.updatedAt).toLocaleDateString('vi-VN')}
                 </span>
@@ -884,7 +886,7 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                   <Separator />
                   <div className='flex items-center justify-between'>
                     <span className='text-sm text-muted-foreground'>
-                      Ngày chuyển đổi
+                      Conversion Date
                     </span>
                     <span className='text-sm text-green-600 font-medium'>
                       {new Date(lead.conversionDate).toLocaleDateString(
@@ -950,10 +952,10 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
               variant='outline'
               onClick={() => setShowDeleteDialog(false)}
             >
-              Hủy
+              Cancel
             </Button>
             <Button variant='destructive' onClick={handleDelete}>
-              Xóa lead
+              Delete lead
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -963,9 +965,9 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
       <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cập nhật trạng thái</DialogTitle>
+            <DialogTitle>Update Status</DialogTitle>
             <DialogDescription>
-              Chọn trạng thái mới cho lead này
+              Select new status for this lead
             </DialogDescription>
           </DialogHeader>
           <div className='py-4'>
@@ -974,7 +976,7 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
               onValueChange={(value) => setNewStatus(value as LeadStatus)}
             >
               <SelectTrigger>
-                <SelectValue placeholder='Chọn trạng thái' />
+                <SelectValue placeholder='Select status' />
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(LEAD_STATUS_CONFIG).map(([key, config]) => (
@@ -993,10 +995,10 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
               variant='outline'
               onClick={() => setShowStatusDialog(false)}
             >
-              Hủy
+              Cancel
             </Button>
             <Button onClick={handleStatusChange} disabled={!newStatus}>
-              Cập nhật
+              Update
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1148,9 +1150,9 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
       <Dialog open={showConvertDialog} onOpenChange={setShowConvertDialog}>
         <DialogContent className='sm:max-w-lg'>
           <DialogHeader>
-            <DialogTitle>Chuyển đổi Lead thành Khách hàng</DialogTitle>
+            <DialogTitle>Convert Lead to Customer</DialogTitle>
             <DialogDescription>
-              Tạo khách hàng mới từ thông tin lead này
+              Create new customer from this lead information
             </DialogDescription>
           </DialogHeader>
           <div className='space-y-4 py-4'>

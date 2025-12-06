@@ -225,129 +225,125 @@ import type { Customer, Lead, Opportunity, Activity } from '../types';
 
 export const CUSTOMER_EXPORT_COLUMNS: ExportColumn<Customer>[] = [
   { key: 'id', header: 'ID' },
-  { key: 'name', header: 'Tên khách hàng' },
+  { key: 'name', header: 'Customer Name' },
   { key: 'email', header: 'Email' },
-  { key: 'phone', header: 'Số điện thoại' },
+  { key: 'phone', header: 'Phone Number' },
   {
     key: 'customerType',
-    header: 'Loại',
-    formatter: (v) => (v === 'INDIVIDUAL' ? 'Cá nhân' : 'Doanh nghiệp'),
+    header: 'Type',
+    formatter: (v) => (v === 'INDIVIDUAL' ? 'Individual' : 'Company'),
   },
   {
     key: 'status',
-    header: 'Trạng thái',
+    header: 'Status',
     formatter: (v) =>
-      v === 'ACTIVE'
-        ? 'Đang hoạt động'
-        : v === 'INACTIVE'
-          ? 'Không hoạt động'
-          : 'Tiềm năng',
+      v === 'ACTIVE' ? 'Active' : v === 'INACTIVE' ? 'Inactive' : 'Potential',
   },
-  { key: 'companyName', header: 'Công ty' },
-  { key: 'address', header: 'Địa chỉ' },
+  { key: 'companyName', header: 'Company' },
+  { key: 'address', header: 'Address' },
   {
     key: 'createdAt',
-    header: 'Ngày tạo',
+    header: 'Created Date',
     formatter: (v) => formatDateForExport(v as string),
   },
   {
     key: 'lastContactDate',
-    header: 'Liên hệ cuối',
+    header: 'Last Contact',
     formatter: (v) => formatDateForExport(v as string),
   },
   {
     key: 'totalValue',
-    header: 'Tổng giá trị',
+    header: 'Total Value',
     formatter: (v) => formatCurrencyForExport(v as number),
   },
 ];
 
 export const LEAD_EXPORT_COLUMNS: ExportColumn<Lead>[] = [
   { key: 'id', header: 'ID' },
-  { key: 'firstName', header: 'Họ' },
-  { key: 'lastName', header: 'Tên' },
+  { key: 'firstName', header: 'First Name' },
+  { key: 'lastName', header: 'Last Name' },
   { key: 'email', header: 'Email' },
-  { key: 'phone', header: 'Số điện thoại' },
-  { key: 'company', header: 'Công ty' },
-  { key: 'jobTitle', header: 'Chức vụ' },
-  { key: 'source', header: 'Nguồn' },
-  { key: 'status', header: 'Trạng thái' },
-  { key: 'priority', header: 'Ưu tiên' },
+  { key: 'phone', header: 'Phone Number' },
+  { key: 'company', header: 'Company' },
+  { key: 'jobTitle', header: 'Job Title' },
+  { key: 'source', header: 'Source' },
+  { key: 'status', header: 'Status' },
+  { key: 'priority', header: 'Priority' },
   {
     key: 'estimatedValue',
-    header: 'Giá trị ước tính',
+    header: 'Estimated Value',
     formatter: (v) => formatCurrencyForExport(v as number),
   },
   {
     key: 'expectedCloseDate',
-    header: 'Ngày dự kiến chốt',
+    header: 'Expected Close Date',
     formatter: (v) => formatDateForExport(v as string),
   },
   {
     key: 'createdAt',
-    header: 'Ngày tạo',
+    header: 'Created Date',
     formatter: (v) => formatDateForExport(v as string),
   },
   {
     key: 'lastActivityDate',
-    header: 'Hoạt động cuối',
+    header: 'Last Activity',
     formatter: (v) => formatDateForExport(v as string),
   },
 ];
 
 export const OPPORTUNITY_EXPORT_COLUMNS: ExportColumn<Opportunity>[] = [
   { key: 'id', header: 'ID' },
-  { key: 'name', header: 'Tên cơ hội' },
-  { key: 'customerName', header: 'Khách hàng' },
+  { key: 'name', header: 'Opportunity Name' },
+  { key: 'customerName', header: 'Customer' },
   {
     key: 'value',
-    header: 'Giá trị',
+    header: 'Value',
     formatter: (v) => formatCurrencyForExport(v as number),
   },
-  { key: 'stage', header: 'Giai đoạn' },
+  { key: 'stage', header: 'Stage' },
   {
     key: 'probability',
-    header: 'Xác suất',
+    header: 'Probability',
     formatter: (v) => formatPercentageForExport(v as number),
   },
   {
     key: 'expectedCloseDate',
-    header: 'Ngày dự kiến chốt',
+    header: 'Expected Close Date',
     formatter: (v) => formatDateForExport(v as string),
   },
-  { key: 'type', header: 'Loại' },
+  { key: 'type', header: 'Type' },
   {
     key: 'createdAt',
-    header: 'Ngày tạo',
+    header: 'Created Date',
     formatter: (v) => formatDateForExport(v as string),
   },
   {
     key: 'updatedAt',
-    header: 'Cập nhật cuối',
+    header: 'Last Updated',
     formatter: (v) => formatDateForExport(v as string),
   },
 ];
 
 export const ACTIVITY_EXPORT_COLUMNS: ExportColumn<Activity>[] = [
   { key: 'id', header: 'ID' },
-  { key: 'type', header: 'Loại' },
-  { key: 'subject', header: 'Tiêu đề' },
-  { key: 'description', header: 'Mô tả' },
-  { key: 'status', header: 'Trạng thái' },
-  { key: 'priority', header: 'Ưu tiên' },
+  { key: 'type', header: 'Type' },
+  { key: 'subject', header: 'Subject' },
+  { key: 'description', header: 'Description' },
+  { key: 'status', header: 'Status' },
+  { key: 'priority', header: 'Priority' },
   {
     key: 'scheduledDate',
-    header: 'Ngày lên lịch',
+    header: 'Scheduled Date',
     formatter: (v) => formatDateTimeForExport(v as string),
   },
   {
     key: 'createdAt',
-    header: 'Ngày tạo',
+    header: 'Created Date',
     formatter: (v) => formatDateForExport(v as string),
   },
   {
     key: 'actualDate',
-    header: 'Ngày thực hiện',
+    header: 'Actual Date',
     formatter: (v) => formatDateTimeForExport(v as string),
   },
 ];

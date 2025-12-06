@@ -68,24 +68,24 @@ export const ContactForm: React.FC<ContactFormProps> = ({
     const newErrors: Partial<Record<keyof ContactFormData, string>> = {};
 
     if (!formData.firstName.trim()) {
-      newErrors.firstName = 'Vui lòng nhập tên';
+      newErrors.firstName = 'Please enter first name';
     }
 
     if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Vui lòng nhập họ';
+      newErrors.lastName = 'Please enter last name';
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = 'Vui lòng nhập email';
+      newErrors.email = 'Please enter email';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Email không hợp lệ';
+      newErrors.email = 'Invalid email';
     }
 
     if (
       formData.linkedInUrl &&
       !formData.linkedInUrl.includes('linkedin.com')
     ) {
-      newErrors.linkedInUrl = 'URL LinkedIn không hợp lệ';
+      newErrors.linkedInUrl = 'Invalid LinkedIn URL';
     }
 
     setErrors(newErrors);
@@ -116,7 +116,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
         <div className='space-y-2'>
           <Label htmlFor='firstName' className='flex items-center gap-2'>
             <User className='h-4 w-4 text-muted-foreground' />
-            Tên <span className='text-red-500'>*</span>
+            First Name <span className='text-red-500'>*</span>
           </Label>
           <Input
             id='firstName'
@@ -232,13 +232,13 @@ export const ContactForm: React.FC<ContactFormProps> = ({
       <div className='space-y-2'>
         <Label htmlFor='notes' className='flex items-center gap-2'>
           <FileText className='h-4 w-4 text-muted-foreground' />
-          Ghi chú
+          Notes
         </Label>
         <Textarea
           id='notes'
           value={formData.notes}
           onChange={(e) => handleChange('notes', e.target.value)}
-          placeholder='Thêm ghi chú về liên hệ này...'
+          placeholder='Add notes about this contact...'
           rows={3}
         />
       </div>
@@ -247,10 +247,10 @@ export const ContactForm: React.FC<ContactFormProps> = ({
       <div className='flex items-center justify-between p-3 bg-muted rounded-lg'>
         <div>
           <Label htmlFor='isPrimary' className='cursor-pointer'>
-            Liên hệ chính
+            Primary Contact
           </Label>
           <p className='text-xs text-muted-foreground'>
-            Đặt làm người liên hệ chính cho khách hàng này
+            Set as primary contact for this customer
           </p>
         </div>
         <Switch
@@ -263,18 +263,18 @@ export const ContactForm: React.FC<ContactFormProps> = ({
       {/* Actions */}
       <div className='flex justify-end gap-3 pt-4 border-t'>
         <Button type='button' variant='outline' onClick={onCancel}>
-          Hủy
+          Cancel
         </Button>
         <Button type='submit' disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-              Đang lưu...
+              Saving...
             </>
           ) : isEditing ? (
-            'Cập nhật'
+            'Update'
           ) : (
-            'Thêm liên hệ'
+            'Add Contact'
           )}
         </Button>
       </div>

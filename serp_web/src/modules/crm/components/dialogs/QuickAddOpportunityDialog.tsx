@@ -98,19 +98,19 @@ export const QuickAddOpportunityDialog: React.FC<
       {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Vui lòng nhập tên cơ hội';
+      newErrors.name = 'Please enter opportunity name';
     }
 
     if (!formData.customerId) {
-      newErrors.customerId = 'Vui lòng chọn khách hàng';
+      newErrors.customerId = 'Please select a customer';
     }
 
     if (formData.value <= 0) {
-      newErrors.value = 'Giá trị phải lớn hơn 0';
+      newErrors.value = 'Value must be greater than 0';
     }
 
     if (!formData.expectedCloseDate) {
-      newErrors.expectedCloseDate = 'Vui lòng chọn ngày đóng dự kiến';
+      newErrors.expectedCloseDate = 'Please select expected close date';
     }
 
     setErrors(newErrors);
@@ -168,9 +168,9 @@ export const QuickAddOpportunityDialog: React.FC<
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='!max-w-3xl max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
-          <DialogTitle>Tạo cơ hội kinh doanh</DialogTitle>
+          <DialogTitle>Create Business Opportunity</DialogTitle>
           <DialogDescription>
-            Nhập thông tin cơ hội kinh doanh mới
+            Enter new business opportunity information
           </DialogDescription>
         </DialogHeader>
 
@@ -179,13 +179,13 @@ export const QuickAddOpportunityDialog: React.FC<
           <div className='space-y-2'>
             <Label htmlFor='name' className='flex items-center gap-2'>
               <Target className='h-4 w-4 text-muted-foreground' />
-              Tên cơ hội <span className='text-red-500'>*</span>
+              Opportunity Name <span className='text-red-500'>*</span>
             </Label>
             <Input
               id='name'
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
-              placeholder='VD: Hợp đồng dịch vụ Q1 2025'
+              placeholder='E.g.: Q1 2025 Service Contract'
               className={cn(errors.name && 'border-red-500')}
             />
             {errors.name && (
@@ -197,7 +197,7 @@ export const QuickAddOpportunityDialog: React.FC<
           <div className='space-y-2'>
             <Label className='flex items-center gap-2'>
               <Building2 className='h-4 w-4 text-muted-foreground' />
-              Khách hàng <span className='text-red-500'>*</span>
+              Customer <span className='text-red-500'>*</span>
             </Label>
             <Select
               value={formData.customerId}
@@ -206,7 +206,7 @@ export const QuickAddOpportunityDialog: React.FC<
               <SelectTrigger
                 className={cn(errors.customerId && 'border-red-500')}
               >
-                <SelectValue placeholder='Chọn khách hàng' />
+                <SelectValue placeholder='Select customer' />
               </SelectTrigger>
               <SelectContent>
                 {MOCK_CUSTOMERS.map((customer) => (
@@ -233,7 +233,7 @@ export const QuickAddOpportunityDialog: React.FC<
             <div className='space-y-2'>
               <Label className='flex items-center gap-2'>
                 <TrendingUp className='h-4 w-4 text-muted-foreground' />
-                Loại
+                Type
               </Label>
               <Select
                 value={formData.type}
@@ -245,9 +245,9 @@ export const QuickAddOpportunityDialog: React.FC<
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value='NEW_BUSINESS'>Kinh doanh mới</SelectItem>
-                  <SelectItem value='EXISTING_BUSINESS'>Mở rộng</SelectItem>
-                  <SelectItem value='RENEWAL'>Gia hạn</SelectItem>
+                  <SelectItem value='NEW_BUSINESS'>New Business</SelectItem>
+                  <SelectItem value='EXISTING_BUSINESS'>Expansion</SelectItem>
+                  <SelectItem value='RENEWAL'>Renewal</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -267,12 +267,12 @@ export const QuickAddOpportunityDialog: React.FC<
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value='PROSPECTING'>Tìm kiếm</SelectItem>
-                  <SelectItem value='QUALIFICATION'>Đánh giá</SelectItem>
-                  <SelectItem value='PROPOSAL'>Đề xuất</SelectItem>
-                  <SelectItem value='NEGOTIATION'>Đàm phán</SelectItem>
-                  <SelectItem value='CLOSED_WON'>Thắng</SelectItem>
-                  <SelectItem value='CLOSED_LOST'>Thua</SelectItem>
+                  <SelectItem value='PROSPECTING'>Prospecting</SelectItem>
+                  <SelectItem value='QUALIFICATION'>Qualification</SelectItem>
+                  <SelectItem value='PROPOSAL'>Proposal</SelectItem>
+                  <SelectItem value='NEGOTIATION'>Negotiation</SelectItem>
+                  <SelectItem value='CLOSED_WON'>Closed Won</SelectItem>
+                  <SelectItem value='CLOSED_LOST'>Closed Lost</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -91,17 +91,17 @@ export const QuickAddLeadDialog: React.FC<QuickAddLeadDialogProps> = ({
     const newErrors: Partial<Record<keyof QuickLeadFormData, string>> = {};
 
     if (!formData.firstName.trim()) {
-      newErrors.firstName = 'Vui lòng nhập tên';
+      newErrors.firstName = 'Please enter first name';
     }
 
     if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Vui lòng nhập họ';
+      newErrors.lastName = 'Please enter last name';
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = 'Vui lòng nhập email';
+      newErrors.email = 'Please enter email';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Email không hợp lệ';
+      newErrors.email = 'Invalid email';
     }
 
     setErrors(newErrors);
@@ -148,9 +148,9 @@ export const QuickAddLeadDialog: React.FC<QuickAddLeadDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='!max-w-3xl max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
-          <DialogTitle>Thêm Lead mới</DialogTitle>
+          <DialogTitle>Add New Lead</DialogTitle>
           <DialogDescription>
-            Nhập thông tin lead tiềm năng mới
+            Enter new potential lead information
           </DialogDescription>
         </DialogHeader>
 
@@ -159,13 +159,13 @@ export const QuickAddLeadDialog: React.FC<QuickAddLeadDialogProps> = ({
           <div className='grid grid-cols-2 gap-4'>
             <div className='space-y-2'>
               <Label htmlFor='firstName'>
-                Tên <span className='text-red-500'>*</span>
+                First Name <span className='text-red-500'>*</span>
               </Label>
               <Input
                 id='firstName'
                 value={formData.firstName}
                 onChange={(e) => handleChange('firstName', e.target.value)}
-                placeholder='Nhập tên'
+                placeholder='Enter first name'
                 className={cn(errors.firstName && 'border-red-500')}
               />
               {errors.firstName && (
@@ -175,13 +175,13 @@ export const QuickAddLeadDialog: React.FC<QuickAddLeadDialogProps> = ({
 
             <div className='space-y-2'>
               <Label htmlFor='lastName'>
-                Họ <span className='text-red-500'>*</span>
+                Last Name <span className='text-red-500'>*</span>
               </Label>
               <Input
                 id='lastName'
                 value={formData.lastName}
                 onChange={(e) => handleChange('lastName', e.target.value)}
-                placeholder='Nhập họ'
+                placeholder='Enter last name'
                 className={cn(errors.lastName && 'border-red-500')}
               />
               {errors.lastName && (
@@ -229,26 +229,26 @@ export const QuickAddLeadDialog: React.FC<QuickAddLeadDialogProps> = ({
             <div className='space-y-2'>
               <Label htmlFor='company' className='flex items-center gap-2'>
                 <Building2 className='h-4 w-4 text-muted-foreground' />
-                Công ty
+                Company
               </Label>
               <Input
                 id='company'
                 value={formData.company}
                 onChange={(e) => handleChange('company', e.target.value)}
-                placeholder='Tên công ty'
+                placeholder='Company name'
               />
             </div>
 
             <div className='space-y-2'>
               <Label htmlFor='jobTitle' className='flex items-center gap-2'>
                 <Briefcase className='h-4 w-4 text-muted-foreground' />
-                Chức vụ
+                Job Title
               </Label>
               <Input
                 id='jobTitle'
                 value={formData.jobTitle}
                 onChange={(e) => handleChange('jobTitle', e.target.value)}
-                placeholder='VD: Giám đốc'
+                placeholder='E.g.: Director'
               />
             </div>
           </div>
@@ -258,7 +258,7 @@ export const QuickAddLeadDialog: React.FC<QuickAddLeadDialogProps> = ({
             <div className='space-y-2'>
               <Label className='flex items-center gap-2'>
                 <Globe className='h-4 w-4 text-muted-foreground' />
-                Nguồn
+                Source
               </Label>
               <Select
                 value={formData.source}
@@ -271,12 +271,12 @@ export const QuickAddLeadDialog: React.FC<QuickAddLeadDialogProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value='WEBSITE'>Website</SelectItem>
-                  <SelectItem value='REFERRAL'>Giới thiệu</SelectItem>
+                  <SelectItem value='REFERRAL'>Referral</SelectItem>
                   <SelectItem value='EMAIL'>Email</SelectItem>
-                  <SelectItem value='PHONE'>Điện thoại</SelectItem>
-                  <SelectItem value='SOCIAL_MEDIA'>Mạng xã hội</SelectItem>
-                  <SelectItem value='TRADE_SHOW'>Triển lãm</SelectItem>
-                  <SelectItem value='OTHER'>Khác</SelectItem>
+                  <SelectItem value='PHONE'>Phone</SelectItem>
+                  <SelectItem value='SOCIAL_MEDIA'>Social Media</SelectItem>
+                  <SelectItem value='TRADE_SHOW'>Trade Show</SelectItem>
+                  <SelectItem value='OTHER'>Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -284,7 +284,7 @@ export const QuickAddLeadDialog: React.FC<QuickAddLeadDialogProps> = ({
             <div className='space-y-2'>
               <Label className='flex items-center gap-2'>
                 <Target className='h-4 w-4 text-muted-foreground' />
-                Mức độ ưu tiên
+                Priority Level
               </Label>
               <Select
                 value={formData.priority}
@@ -296,10 +296,10 @@ export const QuickAddLeadDialog: React.FC<QuickAddLeadDialogProps> = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value='LOW'>Thấp</SelectItem>
-                  <SelectItem value='MEDIUM'>Trung bình</SelectItem>
-                  <SelectItem value='HIGH'>Cao</SelectItem>
-                  <SelectItem value='URGENT'>Khẩn cấp</SelectItem>
+                  <SelectItem value='LOW'>Low</SelectItem>
+                  <SelectItem value='MEDIUM'>Medium</SelectItem>
+                  <SelectItem value='HIGH'>High</SelectItem>
+                  <SelectItem value='URGENT'>Urgent</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -313,7 +313,7 @@ export const QuickAddLeadDialog: React.FC<QuickAddLeadDialogProps> = ({
                 className='flex items-center gap-2'
               >
                 <DollarSign className='h-4 w-4 text-muted-foreground' />
-                Giá trị ước tính
+                Estimated Value
               </Label>
               <Input
                 id='estimatedValue'
@@ -352,13 +352,13 @@ export const QuickAddLeadDialog: React.FC<QuickAddLeadDialogProps> = ({
           <div className='space-y-2'>
             <Label htmlFor='notes' className='flex items-center gap-2'>
               <FileText className='h-4 w-4 text-muted-foreground' />
-              Ghi chú
+              Notes
             </Label>
             <Textarea
               id='notes'
               value={formData.notes}
               onChange={(e) => handleChange('notes', e.target.value)}
-              placeholder='Thêm ghi chú về lead...'
+              placeholder='Add notes about lead...'
               rows={3}
             />
           </div>
@@ -372,7 +372,7 @@ export const QuickAddLeadDialog: React.FC<QuickAddLeadDialogProps> = ({
                 resetForm();
               }}
             >
-              Hủy
+              Cancel
             </Button>
             <Button type='submit' disabled={isLoading}>
               {isLoading ? (

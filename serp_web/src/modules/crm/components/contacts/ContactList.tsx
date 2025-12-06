@@ -143,7 +143,7 @@ export const ContactList: React.FC<ContactListProps> = ({
             </div>
             <Button size='sm' onClick={() => setShowAddDialog(true)}>
               <Plus className='h-4 w-4 mr-2' />
-              Thêm liên hệ
+              Add Contact
             </Button>
           </div>
         </div>
@@ -152,7 +152,7 @@ export const ContactList: React.FC<ContactListProps> = ({
         <div className='relative mt-4'>
           <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
           <Input
-            placeholder='Tìm kiếm liên hệ...'
+            placeholder='Search contacts...'
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className='pl-9'
@@ -184,12 +184,12 @@ export const ContactList: React.FC<ContactListProps> = ({
           <div className='text-center py-8'>
             <Users className='h-12 w-12 text-muted-foreground mx-auto mb-3' />
             <p className='text-muted-foreground mb-4'>
-              {searchQuery ? 'Không tìm thấy liên hệ phù hợp' : emptyMessage}
+              {searchQuery ? 'No matching contacts found' : emptyMessage}
             </p>
             {!searchQuery && (
               <Button onClick={() => setShowAddDialog(true)}>
                 <Plus className='h-4 w-4 mr-2' />
-                Thêm liên hệ đầu tiên
+                Add First Contact
               </Button>
             )}
           </div>
@@ -200,8 +200,8 @@ export const ContactList: React.FC<ContactListProps> = ({
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className='max-w-lg'>
           <DialogHeader>
-            <DialogTitle>Thêm liên hệ mới</DialogTitle>
-            <DialogDescription>Nhập thông tin liên hệ mới</DialogDescription>
+            <DialogTitle>Add New Contact</DialogTitle>
+            <DialogDescription>Enter new contact information</DialogDescription>
           </DialogHeader>
           <ContactForm
             onSubmit={handleAddSubmit}
@@ -214,8 +214,8 @@ export const ContactList: React.FC<ContactListProps> = ({
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className='max-w-lg'>
           <DialogHeader>
-            <DialogTitle>Chỉnh sửa liên hệ</DialogTitle>
-            <DialogDescription>Cập nhật thông tin liên hệ</DialogDescription>
+            <DialogTitle>Edit Contact</DialogTitle>
+            <DialogDescription>Update contact information</DialogDescription>
           </DialogHeader>
           {selectedContact && (
             <ContactForm
