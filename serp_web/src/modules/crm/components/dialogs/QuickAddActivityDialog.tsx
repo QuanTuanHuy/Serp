@@ -106,11 +106,11 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
     const newErrors: Partial<Record<string, string>> = {};
 
     if (!formData.subject.trim()) {
-      newErrors.subject = 'Vui lòng nhập tiêu đề';
+      newErrors.subject = 'Please enter subject';
     }
 
     if (!formData.relatedTo.id) {
-      newErrors.relatedToId = 'Vui lòng chọn đối tượng liên quan';
+      newErrors.relatedToId = 'Please select related object';
     }
 
     setErrors(newErrors);
@@ -251,16 +251,16 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value='CUSTOMER'>Khách hàng</SelectItem>
+                  <SelectItem value='CUSTOMER'>Customer</SelectItem>
                   <SelectItem value='LEAD'>Lead</SelectItem>
-                  <SelectItem value='OPPORTUNITY'>Cơ hội</SelectItem>
+                  <SelectItem value='OPPORTUNITY'>Opportunity</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className='space-y-2'>
               <Label>
-                Chọn đối tượng <span className='text-red-500'>*</span>
+                Select Object <span className='text-red-500'>*</span>
               </Label>
               <Select
                 value={formData.relatedTo.id}
@@ -269,7 +269,7 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
                 <SelectTrigger
                   className={cn(errors.relatedToId && 'border-red-500')}
                 >
-                  <SelectValue placeholder='Chọn...' />
+                  <SelectValue placeholder='Select...' />
                 </SelectTrigger>
                 <SelectContent>
                   {relatedOptions.map((option) => (
@@ -421,7 +421,7 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
               id='description'
               value={formData.description}
               onChange={(e) => handleChange('description', e.target.value)}
-              placeholder='Thêm mô tả chi tiết...'
+              placeholder='Add detailed description...'
               rows={3}
             />
           </div>
@@ -435,7 +435,7 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
                 resetForm();
               }}
             >
-              Hủy
+              Cancel
             </Button>
             <Button type='submit' disabled={isLoading}>
               {isLoading ? (

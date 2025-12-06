@@ -145,25 +145,25 @@ const ACTIVITY_STATUS_CONFIG: Record<
   { label: string; color: string; bgColor: string; icon: React.ElementType }
 > = {
   PLANNED: {
-    label: 'Đã lên kế hoạch',
+    label: 'Planned',
     color: 'text-blue-700',
     bgColor: 'bg-blue-100',
     icon: Calendar,
   },
   IN_PROGRESS: {
-    label: 'Đang thực hiện',
+    label: 'In Progress',
     color: 'text-yellow-700',
     bgColor: 'bg-yellow-100',
     icon: Clock,
   },
   COMPLETED: {
-    label: 'Hoàn thành',
+    label: 'Completed',
     color: 'text-green-700',
     bgColor: 'bg-green-100',
     icon: CheckCircle,
   },
   CANCELLED: {
-    label: 'Đã hủy',
+    label: 'Cancelled',
     color: 'text-gray-700 dark:text-gray-300',
     bgColor: 'bg-gray-100 dark:bg-gray-800',
     icon: AlertCircle,
@@ -611,7 +611,7 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
               <div className='flex justify-end'>
                 <Button onClick={() => setShowAddNoteDialog(true)}>
                   <MessageSquare className='mr-2 h-4 w-4' />
-                  Thêm ghi chú
+                  Add Note
                 </Button>
               </div>
 

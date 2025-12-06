@@ -42,9 +42,9 @@ export const AddNoteDialog: React.FC<AddNoteDialogProps> = ({
   open,
   onOpenChange,
   onSubmit,
-  placeholder = 'Nhập nội dung ghi chú...',
-  title = 'Thêm ghi chú mới',
-  description = 'Ghi chú sẽ được lưu và hiển thị trong timeline',
+  placeholder = 'Enter note content...',
+  title = 'Add New Note',
+  description = 'Note will be saved and displayed in timeline',
   isLoading = false,
 }) => {
   const [content, setContent] = useState('');
@@ -179,7 +179,7 @@ export const AddNoteDialog: React.FC<AddNoteDialogProps> = ({
                     fileInputRef.current.accept = '';
                   }
                 }}
-                title='Thêm hình ảnh'
+                title='Add image'
               >
                 <ImageIcon className='h-4 w-4' />
               </Button>
@@ -188,7 +188,7 @@ export const AddNoteDialog: React.FC<AddNoteDialogProps> = ({
                 size='icon'
                 className='h-8 w-8'
                 onClick={() => setContent((prev) => prev + '@')}
-                title='Đề cập người dùng'
+                title='Mention user'
               >
                 <AtSign className='h-4 w-4' />
               </Button>
@@ -196,14 +196,14 @@ export const AddNoteDialog: React.FC<AddNoteDialogProps> = ({
                 variant='ghost'
                 size='icon'
                 className='h-8 w-8'
-                title='Thêm emoji'
+                title='Add emoji'
               >
                 <Smile className='h-4 w-4' />
               </Button>
             </div>
 
             <p className='text-xs text-muted-foreground'>
-              Nhấn Ctrl+Enter để gửi
+              Press Ctrl+Enter to send
             </p>
           </div>
         </div>

@@ -248,8 +248,8 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
             onClick={() => setShowQuickAdd(true)}
             className='gap-2'
           >
-            <Plus className='h-4 w-4' />
-            Thêm nhanh
+            <Plus className='h-4 w-4 mr-2' />
+            Quick Add
           </Button>
           <Button className='gap-2'>
             <Plus className='h-4 w-4' />

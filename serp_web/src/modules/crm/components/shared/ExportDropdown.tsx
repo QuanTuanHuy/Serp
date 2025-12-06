@@ -101,12 +101,12 @@ export function ExportDropdown<T = any>({
           ) : (
             <Download className='h-4 w-4' />
           )}
-          Xuất dữ liệu
+          Export Data
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align='end' className='w-48'>
         <DropdownMenuLabel className='text-xs text-muted-foreground'>
-          {data.length} bản ghi
+          {data.length} records
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem
@@ -114,21 +114,21 @@ export function ExportDropdown<T = any>({
           className='gap-2 cursor-pointer'
         >
           <FileText className='h-4 w-4 text-green-600' />
-          <span>Xuất CSV</span>
+          <span>Export CSV</span>
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => handleExport('excel')}
           className='gap-2 cursor-pointer'
         >
           <FileSpreadsheet className='h-4 w-4 text-emerald-600' />
-          <span>Xuất Excel</span>
+          <span>Export Excel</span>
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => handleExport('json')}
           className='gap-2 cursor-pointer'
         >
           <FileJson className='h-4 w-4 text-blue-600' />
-          <span>Xuất JSON</span>
+          <span>Export JSON</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
