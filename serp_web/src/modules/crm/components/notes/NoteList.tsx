@@ -156,7 +156,7 @@ export const NoteList: React.FC<NoteListProps> = ({
             </Button>
             <Button size='sm' onClick={() => setShowAddDialog(true)}>
               <Plus className='h-4 w-4 mr-2' />
-              Thêm ghi chú
+              Add Note
             </Button>
           </div>
         </div>
@@ -166,7 +166,7 @@ export const NoteList: React.FC<NoteListProps> = ({
           <div className='relative mt-4'>
             <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
             <Input
-              placeholder='Tìm kiếm ghi chú...'
+              placeholder='Search notes...'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className='pl-9'
@@ -192,12 +192,12 @@ export const NoteList: React.FC<NoteListProps> = ({
           <div className='text-center py-8'>
             <MessageSquare className='h-12 w-12 text-muted-foreground mx-auto mb-3' />
             <p className='text-muted-foreground mb-4'>
-              {searchQuery ? 'Không tìm thấy ghi chú phù hợp' : emptyMessage}
+              {searchQuery ? 'No matching notes found' : emptyMessage}
             </p>
             {!searchQuery && (
               <Button onClick={() => setShowAddDialog(true)}>
                 <Plus className='h-4 w-4 mr-2' />
-                Thêm ghi chú đầu tiên
+                Add First Note
               </Button>
             )}
           </div>

@@ -81,13 +81,13 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
     const newErrors: Partial<Record<keyof QuickCustomerFormData, string>> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Vui lòng nhập tên khách hàng';
+      newErrors.name = 'Please enter customer name';
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = 'Vui lòng nhập email';
+      newErrors.email = 'Please enter email';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Email không hợp lệ';
+      newErrors.email = 'Invalid email';
     }
 
     setErrors(newErrors);
@@ -124,16 +124,16 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='!max-w-3xl max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
-          <DialogTitle>Thêm khách hàng mới</DialogTitle>
+          <DialogTitle>Add New Customer</DialogTitle>
           <DialogDescription>
-            Nhập thông tin cơ bản để tạo khách hàng mới
+            Enter basic information to create a new customer
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className='space-y-4 py-4'>
           {/* Customer Type */}
           <div className='space-y-2'>
-            <Label>Loại khách hàng</Label>
+            <Label>Customer Type</Label>
             <Select
               value={formData.customerType}
               onValueChange={(value: CustomerType) =>
@@ -147,13 +147,13 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
                 <SelectItem value='INDIVIDUAL'>
                   <div className='flex items-center gap-2'>
                     <User className='h-4 w-4' />
-                    Cá nhân
+                    Individual
                   </div>
                 </SelectItem>
                 <SelectItem value='COMPANY'>
                   <div className='flex items-center gap-2'>
                     <Building2 className='h-4 w-4' />
-                    Doanh nghiệp
+                    Company
                   </div>
                 </SelectItem>
               </SelectContent>
@@ -164,13 +164,13 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
           <div className='space-y-2'>
             <Label htmlFor='name' className='flex items-center gap-2'>
               <User className='h-4 w-4 text-muted-foreground' />
-              Tên khách hàng <span className='text-red-500'>*</span>
+              Customer Name <span className='text-red-500'>*</span>
             </Label>
             <Input
               id='name'
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
-              placeholder='Nhập tên khách hàng'
+              placeholder='Enter customer name'
               className={cn(errors.name && 'border-red-500')}
             />
             {errors.name && (
@@ -201,7 +201,7 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
           <div className='space-y-2'>
             <Label htmlFor='phone' className='flex items-center gap-2'>
               <Phone className='h-4 w-4 text-muted-foreground' />
-              Số điện thoại
+              Phone Number
             </Label>
             <Input
               id='phone'
@@ -217,13 +217,13 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
             <div className='space-y-2'>
               <Label htmlFor='companyName' className='flex items-center gap-2'>
                 <Building2 className='h-4 w-4 text-muted-foreground' />
-                Tên công ty
+                Company Name
               </Label>
               <Input
                 id='companyName'
                 value={formData.companyName}
                 onChange={(e) => handleChange('companyName', e.target.value)}
-                placeholder='Nhập tên công ty'
+                placeholder='Enter company name'
               />
             </div>
           )}
@@ -247,19 +247,19 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
           <div className='space-y-2'>
             <Label htmlFor='address' className='flex items-center gap-2'>
               <MapPin className='h-4 w-4 text-muted-foreground' />
-              Địa chỉ
+              Address
             </Label>
             <Input
               id='address'
               value={formData.address}
               onChange={(e) => handleChange('address', e.target.value)}
-              placeholder='Nhập địa chỉ'
+              placeholder='Enter address'
             />
           </div>
 
           {/* Status */}
           <div className='space-y-2'>
-            <Label>Trạng thái</Label>
+            <Label>Status</Label>
             <Select
               value={formData.status}
               onValueChange={(value: CustomerStatus) =>
@@ -270,9 +270,9 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value='ACTIVE'>Hoạt động</SelectItem>
-                <SelectItem value='POTENTIAL'>Tiềm năng</SelectItem>
-                <SelectItem value='INACTIVE'>Không hoạt động</SelectItem>
+                <SelectItem value='ACTIVE'>Active</SelectItem>
+                <SelectItem value='POTENTIAL'>Potential</SelectItem>
+                <SelectItem value='INACTIVE'>Inactive</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -281,13 +281,13 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
           <div className='space-y-2'>
             <Label htmlFor='notes' className='flex items-center gap-2'>
               <FileText className='h-4 w-4 text-muted-foreground' />
-              Ghi chú
+              Notes
             </Label>
             <Textarea
               id='notes'
               value={formData.notes}
               onChange={(e) => handleChange('notes', e.target.value)}
-              placeholder='Thêm ghi chú...'
+              placeholder='Add notes...'
               rows={3}
             />
           </div>
@@ -298,16 +298,16 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
               variant='outline'
               onClick={() => onOpenChange(false)}
             >
-              Hủy
+              Cancel
             </Button>
             <Button type='submit' disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                  Đang tạo...
+                  Creating...
                 </>
               ) : (
-                'Tạo khách hàng'
+                'Create Customer'
               )}
             </Button>
           </DialogFooter>

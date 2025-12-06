@@ -65,7 +65,9 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
 
   // State management
   const [searchQuery, setSearchQuery] = useState('');
-  const [stageFilter, setStageFilter] = useState<OpportunityStage | ''>('');
+  const [stageFilter, setStageFilter] = useState<OpportunityStage | 'ALL'>(
+    'ALL'
+  );
   const [sortBy, setSortBy] = useState<'name' | 'createdAt' | 'value'>(
     'createdAt'
   );
@@ -94,7 +96,7 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
     }
 
     // Stage filter
-    if (stageFilter) {
+    if (stageFilter && stageFilter !== 'ALL') {
       result = result.filter((opp) => opp.stage === stageFilter);
     }
 
@@ -197,11 +199,12 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
 
   const clearFilters = () => {
     setSearchQuery('');
-    setStageFilter('');
+    setStageFilter('ALL');
     setCurrentPage(1);
   };
 
-  const hasActiveFilters = searchQuery || stageFilter;
+  const hasActiveFilters =
+    searchQuery || (stageFilter && stageFilter !== 'ALL');
 
   return (
     <div className={cn('space-y-6', className)}>
@@ -345,7 +348,7 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
                 <Select
                   value={stageFilter}
                   onValueChange={(value) => {
-                    setStageFilter(value as OpportunityStage | '');
+                    setStageFilter(value as OpportunityStage | 'ALL');
                     setCurrentPage(1);
                   }}
                 >
@@ -353,7 +356,7 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
                     <SelectValue placeholder='All Stages' />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value=''>All Stages</SelectItem>
+                    <SelectItem value='ALL'>All Stages</SelectItem>
                     <SelectItem value='PROSPECTING'>Prospecting</SelectItem>
                     <SelectItem value='QUALIFICATION'>Qualification</SelectItem>
                     <SelectItem value='PROPOSAL'>Proposal</SelectItem>
