@@ -9,12 +9,16 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 import serp.project.crm.core.domain.dto.PageRequest;
+import serp.project.crm.core.domain.dto.request.LeadFilterRequest;
 import serp.project.crm.core.domain.entity.LeadEntity;
 import serp.project.crm.core.domain.enums.LeadSource;
 import serp.project.crm.core.domain.enums.LeadStatus;
 import serp.project.crm.core.port.store.ILeadPort;
 import serp.project.crm.infrastructure.store.mapper.LeadMapper;
+import serp.project.crm.infrastructure.store.model.LeadModel;
 import serp.project.crm.infrastructure.store.repository.LeadRepository;
+import serp.project.crm.infrastructure.store.specification.LeadSpecification;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.util.List;
 import java.util.Optional;
@@ -121,5 +125,14 @@ public class LeadAdapter implements ILeadPort {
     @Override
     public List<LeadEntity> findByExpectedCloseDateBetween(Long startDate, Long endDate, Long tenantId) {
         return List.of();
+    }
+
+    @Override
+    public Pair<List<LeadEntity>, Long> filter(LeadFilterRequest filter, PageRequest pageRequest, Long tenantId) {
+        var pageable = leadMapper.toPageable(pageRequest);
+        Specification<LeadModel> spec = LeadSpecification.build(filter, tenantId);
+        var page = leadRepository.findAll(spec, pageable)
+                .map(leadMapper::toEntity);
+        return leadMapper.pageToPair(page);
     }
 }

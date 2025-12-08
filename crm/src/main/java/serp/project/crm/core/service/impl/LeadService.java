@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import serp.project.crm.core.domain.constant.Constants;
 import serp.project.crm.core.domain.constant.ErrorMessage;
 import serp.project.crm.core.domain.dto.PageRequest;
+import serp.project.crm.core.domain.dto.request.LeadFilterRequest;
 import serp.project.crm.core.domain.entity.LeadEntity;
 import serp.project.crm.core.domain.enums.LeadSource;
 import serp.project.crm.core.domain.enums.LeadStatus;
@@ -129,6 +130,13 @@ public class LeadService implements ILeadService {
     public Pair<List<LeadEntity>, Long> getQualifiedLeads(Long tenantId, PageRequest pageRequest) {
         pageRequest.validate();
         return leadPort.findQualifiedLeads(tenantId, pageRequest);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Pair<List<LeadEntity>, Long> filterLeads(LeadFilterRequest filter, Long tenantId, PageRequest pageRequest) {
+        pageRequest.validate();
+        return leadPort.filter(filter, pageRequest, tenantId);
     }
 
     @Transactional(readOnly = true)

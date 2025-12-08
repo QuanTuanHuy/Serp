@@ -7,6 +7,7 @@ package serp.project.crm.core.port.store;
 
 import org.springframework.data.util.Pair;
 import serp.project.crm.core.domain.dto.PageRequest;
+import serp.project.crm.core.domain.dto.request.OpportunityFilterRequest;
 import serp.project.crm.core.domain.entity.OpportunityEntity;
 import serp.project.crm.core.domain.enums.OpportunityStage;
 
@@ -45,4 +46,6 @@ public interface IOpportunityPort {
     BigDecimal calculateTotalPipelineValue(Long tenantId);
 
     List<OpportunityEntity> findClosingThisMonth(Long tenantId);
+
+    Pair<List<OpportunityEntity>, Long> filter(OpportunityFilterRequest filter, PageRequest pageRequest, Long tenantId);
 }

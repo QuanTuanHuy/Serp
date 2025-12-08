@@ -7,6 +7,7 @@ package serp.project.crm.core.port.store;
 
 import org.springframework.data.util.Pair;
 import serp.project.crm.core.domain.dto.PageRequest;
+import serp.project.crm.core.domain.dto.request.LeadFilterRequest;
 import serp.project.crm.core.domain.entity.LeadEntity;
 import serp.project.crm.core.domain.enums.LeadSource;
 import serp.project.crm.core.domain.enums.LeadStatus;
@@ -43,4 +44,6 @@ public interface ILeadPort {
     Pair<List<LeadEntity>, Long> findByIndustry(String industry, Long tenantId, PageRequest pageRequest);
 
     List<LeadEntity> findByExpectedCloseDateBetween(Long startDate, Long endDate, Long tenantId);
+
+    Pair<List<LeadEntity>, Long> filter(LeadFilterRequest filter, PageRequest pageRequest, Long tenantId);
 }

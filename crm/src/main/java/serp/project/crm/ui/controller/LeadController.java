@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import serp.project.crm.core.domain.dto.PageRequest;
 import serp.project.crm.core.domain.dto.request.ConvertLeadRequest;
 import serp.project.crm.core.domain.dto.request.CreateLeadRequest;
+import serp.project.crm.core.domain.dto.request.LeadFilterRequest;
 import serp.project.crm.core.domain.dto.request.QualifyLeadRequest;
 import serp.project.crm.core.domain.dto.request.UpdateLeadRequest;
 import serp.project.crm.core.usecase.LeadUseCase;
@@ -71,6 +72,17 @@ public class LeadController {
                 .build();
 
         var response = leadUseCase.getAllLeads(tenantId, pageRequest);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PostMapping("/search")
+    public ResponseEntity<?> filterLeads(@RequestBody(required = false) LeadFilterRequest request) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new IllegalArgumentException("Tenant ID not found in token"));
+
+        LeadFilterRequest safeRequest = request != null ? request : LeadFilterRequest.builder().build();
+
+        var response = leadUseCase.filterLeads(safeRequest, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 

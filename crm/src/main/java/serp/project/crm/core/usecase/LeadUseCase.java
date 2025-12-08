@@ -16,6 +16,7 @@ import serp.project.crm.core.domain.dto.PageRequest;
 import serp.project.crm.core.domain.dto.PageResponse;
 import serp.project.crm.core.domain.dto.request.ConvertLeadRequest;
 import serp.project.crm.core.domain.dto.request.CreateLeadRequest;
+import serp.project.crm.core.domain.dto.request.LeadFilterRequest;
 import serp.project.crm.core.domain.dto.request.QualifyLeadRequest;
 import serp.project.crm.core.domain.dto.request.UpdateLeadRequest;
 import serp.project.crm.core.domain.dto.response.LeadConversionResponse;
@@ -190,6 +191,28 @@ public class LeadUseCase {
         } catch (Exception e) {
             log.error("Error fetching leads: {}", e.getMessage(), e);
             return responseUtils.internalServerError("Failed to fetch leads");
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public GeneralResponse<?> filterLeads(LeadFilterRequest request, Long tenantId) {
+        try {
+            LeadFilterRequest safeRequest = request != null ? request : LeadFilterRequest.builder().build();
+            PageRequest pageRequest = safeRequest.toPageRequest();
+            var result = leadService.filterLeads(safeRequest, tenantId, pageRequest);
+
+            List<LeadResponse> leadResponses = result.getFirst().stream()
+                    .map(leadDtoMapper::toResponse)
+                    .toList();
+
+            PageResponse<LeadResponse> pageResponse = PageResponse.of(
+                    leadResponses, pageRequest, result.getSecond());
+
+            return responseUtils.success(pageResponse);
+
+        } catch (Exception e) {
+            log.error("Error filtering leads: {}", e.getMessage(), e);
+            return responseUtils.internalServerError("Failed to filter leads");
         }
     }
 

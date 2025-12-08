@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.crm.core.domain.constant.Constants;
 import serp.project.crm.core.domain.dto.PageRequest;
+import serp.project.crm.core.domain.dto.request.OpportunityFilterRequest;
 import serp.project.crm.core.domain.entity.OpportunityEntity;
 import serp.project.crm.core.domain.enums.OpportunityStage;
 import serp.project.crm.core.port.client.IKafkaPublisher;
@@ -20,7 +21,6 @@ import serp.project.crm.core.service.ICustomerService;
 import serp.project.crm.core.service.IOpportunityService;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -242,6 +242,14 @@ public class OpportunityService implements IOpportunityService {
         publishOpportunityDeletedEvent(opportunity);
 
         log.info("Opportunity {} deleted successfully", id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Pair<List<OpportunityEntity>, Long> filterOpportunities(OpportunityFilterRequest filter, Long tenantId,
+            PageRequest pageRequest) {
+        pageRequest.validate();
+        return opportunityPort.filter(filter, pageRequest, tenantId);
     }
 
     // ========== Event Publishing ==========

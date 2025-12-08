@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.util.Pair;
 import serp.project.crm.core.domain.constant.Constants;
 import serp.project.crm.core.domain.dto.PageRequest;
+import serp.project.crm.core.domain.dto.request.CustomerFilterRequest;
 import serp.project.crm.core.domain.entity.CustomerEntity;
 import serp.project.crm.core.domain.enums.ActiveStatus;
 import serp.project.crm.core.port.store.ICustomerPort;
@@ -184,6 +185,14 @@ public class CustomerService implements ICustomerService {
 
         customerPort.save(customer);
 
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Pair<List<CustomerEntity>, Long> filterCustomers(CustomerFilterRequest filter, Long tenantId,
+            PageRequest pageRequest) {
+        pageRequest.validate();
+        return customerPort.filter(filter, pageRequest, tenantId);
     }
 
     private void publishCustomerCreatedEvent(CustomerEntity customer) {
