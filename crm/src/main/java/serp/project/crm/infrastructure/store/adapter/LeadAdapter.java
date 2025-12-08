@@ -29,8 +29,7 @@ public class LeadAdapter implements ILeadPort {
     @Override
     public LeadEntity save(LeadEntity leadEntity) {
         var model = leadMapper.toModel(leadEntity);
-        var savedModel = leadRepository.save(model);
-        return leadMapper.toEntity(savedModel);
+        return leadMapper.toEntity(leadRepository.save(model));
     }
 
     @Override

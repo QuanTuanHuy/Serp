@@ -14,10 +14,13 @@ import serp.project.crm.core.domain.enums.OpportunityStage;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
 @Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class OpportunityResponse {
     private Long id;
     

@@ -25,6 +25,8 @@ public interface IActivityPort {
 
     Pair<List<ActivityEntity>, Long> findByLeadId(Long leadId, Long tenantId, PageRequest pageRequest);
 
+    List<ActivityEntity> findByLeadId(Long leadId, Long tenantId);
+
     Pair<List<ActivityEntity>, Long> findByCustomerId(Long customerId, Long tenantId, PageRequest pageRequest);
 
     Pair<List<ActivityEntity>, Long> findByOpportunityId(Long opportunityId, Long tenantId, PageRequest pageRequest);

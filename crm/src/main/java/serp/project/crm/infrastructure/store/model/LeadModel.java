@@ -90,4 +90,10 @@ public class LeadModel extends BaseModel {
 
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
+
+    @Column(name = "converted_opportunity_id")
+    private Long convertedOpportunityId;
+
+    @Column(name = "converted_customer_id")
+    private Long convertedCustomerId;
 }

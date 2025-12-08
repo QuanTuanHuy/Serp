@@ -36,14 +36,16 @@ public class LeadController {
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<?> updateLead(
             @PathVariable Long id,
             @Valid @RequestBody UpdateLeadRequest request) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new IllegalArgumentException("User ID not found in token"));
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new IllegalArgumentException("Tenant ID not found in token"));
 
-        var response = leadUseCase.updateLead(id, request, tenantId);
+        var response = leadUseCase.updateLead(id, userId, request, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 

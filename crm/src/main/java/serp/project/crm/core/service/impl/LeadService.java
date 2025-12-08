@@ -11,12 +11,14 @@ import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.crm.core.domain.constant.Constants;
+import serp.project.crm.core.domain.constant.ErrorMessage;
 import serp.project.crm.core.domain.dto.PageRequest;
 import serp.project.crm.core.domain.entity.LeadEntity;
 import serp.project.crm.core.domain.enums.LeadSource;
 import serp.project.crm.core.domain.enums.LeadStatus;
-import serp.project.crm.core.port.client.IKafkaPublisher;
+import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.port.store.ILeadPort;
+import serp.project.crm.core.service.ILeadScoringService;
 import serp.project.crm.core.service.ILeadService;
 
 import java.time.LocalDate;
@@ -29,20 +31,19 @@ import java.util.Optional;
 public class LeadService implements ILeadService {
 
     private final ILeadPort leadPort;
-    private final IKafkaPublisher kafkaPublisher;
+    private final ILeadScoringService leadScoringService;
 
     private static final int QUALIFICATION_SCORE_THRESHOLD = 70;
 
     @Transactional
     public LeadEntity createLead(LeadEntity lead, Long tenantId) {
-        log.info("Creating lead with email {} for tenant {}", lead.getEmail(), tenantId);
-
         if (leadPort.existsByEmail(lead.getEmail(), tenantId)) {
-            throw new IllegalArgumentException("Lead with email " + lead.getEmail() + " already exists");
+            throw new AppException(String.format(ErrorMessage.LEAD_ALREADY_EXISTS, lead.getEmail()));
         }
 
         lead.setTenantId(tenantId);
         lead.setDefaults();
+        lead.setProbability(leadScoringService.calculateSmartScore(lead));
 
         LeadEntity saved = leadPort.save(lead);
 
@@ -53,21 +54,22 @@ public class LeadService implements ILeadService {
 
     @Transactional
     public LeadEntity updateLead(Long id, LeadEntity updates, Long tenantId) {
-
         LeadEntity existing = leadPort.findById(id, tenantId)
-                .orElseThrow(() -> new IllegalArgumentException("Lead not found"));
-
+                .orElseThrow(() -> new AppException(ErrorMessage.LEAD_NOT_FOUND));
         if (updates.getEmail() != null && !updates.getEmail().equals(existing.getEmail())) {
             if (leadPort.existsByEmail(updates.getEmail(), tenantId)) {
-                throw new IllegalArgumentException("Lead with email " + updates.getEmail() + " already exists");
+                throw new AppException(String.format(ErrorMessage.LEAD_ALREADY_EXISTS, updates.getEmail()));
             }
         }
 
-        existing.updateFrom(updates);
-
+        try {
+            existing.updateFrom(updates);
+        } catch (IllegalStateException e) {
+            throw new AppException(e.getMessage());
+        }
         if (updates.getLeadSource() != null || updates.getIndustry() != null ||
                 updates.getCompanySize() != null || updates.getEstimatedValue() != null) {
-            existing.setProbability(calculateLeadScore(existing));
+            existing.setProbability(leadScoringService.calculateSmartScore(existing));
         }
 
         LeadEntity updated = leadPort.save(existing);
@@ -176,9 +178,8 @@ public class LeadService implements ILeadService {
 
     @Transactional
     public LeadEntity convertLead(Long id, Long tenantId) {
-
         LeadEntity lead = leadPort.findById(id, tenantId)
-                .orElseThrow(() -> new IllegalArgumentException("Lead not found"));
+                .orElseThrow(() -> new AppException(ErrorMessage.LEAD_NOT_FOUND));
 
         lead.markAsConverted(tenantId);
         LeadEntity converted = leadPort.save(lead);
@@ -189,13 +190,23 @@ public class LeadService implements ILeadService {
     }
 
     @Transactional
+    public LeadEntity convertLead(Long id, Long customerId, Long opportunityId, Long tenantId) {
+        LeadEntity lead = leadPort.findById(id, tenantId)
+                .orElseThrow(() -> new AppException(ErrorMessage.LEAD_NOT_FOUND));
+
+        lead.markAsConverted(tenantId, opportunityId, customerId);
+        LeadEntity converted = leadPort.save(lead);
+
+        return converted;
+    }
+
+    @Transactional
     public void deleteLead(Long id, Long tenantId) {
 
         LeadEntity lead = leadPort.findById(id, tenantId)
-                .orElseThrow(() -> new IllegalArgumentException("Lead not found"));
-
+                .orElseThrow(() -> new AppException(ErrorMessage.LEAD_NOT_FOUND));
         if (lead.getLeadStatus() == LeadStatus.CONVERTED) {
-            throw new IllegalStateException("Cannot delete converted leads");
+            throw new AppException(ErrorMessage.CANNOT_DELETE_CONVERTED_LEAD);
         }
 
         leadPort.deleteById(id, tenantId);
@@ -204,104 +215,25 @@ public class LeadService implements ILeadService {
 
     }
 
-    // ========== Business Logic ==========
-
-    /**
-     * Calculate lead score based on multiple factors
-     * Scoring algorithm:
-     * - Lead source: 30 points (referral highest)
-     * - Industry: 20 points (technology/finance highest)
-     * - Estimated value: 30 points (higher = better)
-     * - Company size: 20 points (larger = better)
-     * Total: 100 points
-     */
-    private Integer calculateLeadScore(LeadEntity lead) {
-        int score = 0;
-
-        // Lead source scoring (0-30 points)
-        if (lead.getLeadSource() != null) {
-            score += switch (lead.getLeadSource()) {
-                case REFERRAL -> 30;
-                case SOCIAL_MEDIA -> 20;
-                case EMAIL_CAMPAIGN -> 15;
-                case WEBSITE -> 10;
-                case COLD_CALL -> 5;
-            };
-        }
-
-        // Industry scoring (0-20 points)
-        if (lead.getIndustry() != null) {
-            String industry = lead.getIndustry().toLowerCase();
-            if (industry.contains("technology") || industry.contains("software")) {
-                score += 20;
-            } else if (industry.contains("finance") || industry.contains("healthcare")) {
-                score += 15;
-            } else if (industry.contains("retail") || industry.contains("manufacturing")) {
-                score += 10;
-            } else {
-                score += 5;
-            }
-        }
-
-        // Estimated value scoring (0-30 points)
-        if (lead.getEstimatedValue() != null) {
-            double value = lead.getEstimatedValue().doubleValue();
-            if (value >= 1_000_000) {
-                score += 30;
-            } else if (value >= 500_000) {
-                score += 25;
-            } else if (value >= 100_000) {
-                score += 20;
-            } else if (value >= 50_000) {
-                score += 15;
-            } else if (value >= 10_000) {
-                score += 10;
-            } else {
-                score += 5;
-            }
-        }
-
-        // Company size scoring (0-20 points)
-        if (lead.getCompanySize() != null) {
-            String size = lead.getCompanySize().toLowerCase();
-            if (size.contains("enterprise") || size.contains("1000+")) {
-                score += 20;
-            } else if (size.contains("large") || size.contains("500")) {
-                score += 15;
-            } else if (size.contains("medium") || size.contains("100")) {
-                score += 10;
-            } else {
-                score += 5;
-            }
-        }
-
-        return score;
-    }
-
     // ========== Event Publishing ==========
 
     private void publishLeadCreatedEvent(LeadEntity lead) {
-        // TODO: Implement event publishing
         log.debug("Event: Lead created - ID: {}, Topic: {}", lead.getId(), Constants.KafkaTopic.LEAD);
     }
 
     private void publishLeadUpdatedEvent(LeadEntity lead) {
-        // TODO: Implement event publishing
         log.debug("Event: Lead updated - ID: {}, Topic: {}", lead.getId(), Constants.KafkaTopic.LEAD);
     }
 
     private void publishLeadQualifiedEvent(LeadEntity lead) {
-        // TODO: Implement event publishing
         log.debug("Event: Lead qualified - ID: {}, Topic: {}", lead.getId(), Constants.KafkaTopic.LEAD);
     }
 
     private void publishLeadConvertedEvent(LeadEntity lead) {
-        // TODO: Implement event publishing
         log.debug("Event: Lead converted - ID: {}, Topic: {}", lead.getId(), Constants.KafkaTopic.LEAD);
     }
 
     private void publishLeadDeletedEvent(LeadEntity lead) {
-        // TODO: Implement event publishing
         log.debug("Event: Lead deleted - ID: {}, Topic: {}", lead.getId(), Constants.KafkaTopic.LEAD);
     }
 }
