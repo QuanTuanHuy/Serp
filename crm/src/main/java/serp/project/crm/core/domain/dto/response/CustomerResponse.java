@@ -13,10 +13,13 @@ import serp.project.crm.core.domain.enums.ActiveStatus;
 
 import java.math.BigDecimal;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
 @Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class CustomerResponse {
     private Long id;
     

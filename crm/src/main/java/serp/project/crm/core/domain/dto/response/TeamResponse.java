@@ -12,10 +12,13 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
 @Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class TeamResponse {
     private Long id;
     private String name;

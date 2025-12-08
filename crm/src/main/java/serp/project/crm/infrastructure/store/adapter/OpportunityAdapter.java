@@ -11,11 +11,15 @@ import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
 import serp.project.crm.core.domain.dto.PageRequest;
+import serp.project.crm.core.domain.dto.request.OpportunityFilterRequest;
 import serp.project.crm.core.domain.entity.OpportunityEntity;
 import serp.project.crm.core.domain.enums.OpportunityStage;
 import serp.project.crm.core.port.store.IOpportunityPort;
 import serp.project.crm.infrastructure.store.mapper.OpportunityMapper;
+import serp.project.crm.infrastructure.store.model.OpportunityModel;
 import serp.project.crm.infrastructure.store.repository.OpportunityRepository;
+import serp.project.crm.infrastructure.store.specification.OpportunitySpecification;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -132,5 +136,14 @@ public class OpportunityAdapter implements IOpportunityPort {
     @Override
     public List<OpportunityEntity> findClosingThisMonth(Long tenantId) {
         return List.of();
+    }
+
+    @Override
+    public Pair<List<OpportunityEntity>, Long> filter(OpportunityFilterRequest filter, PageRequest pageRequest, Long tenantId) {
+        var pageable = opportunityMapper.toPageable(pageRequest);
+        Specification<OpportunityModel> spec = OpportunitySpecification.build(filter, tenantId);
+        var page = opportunityRepository.findAll(spec, pageable)
+                .map(opportunityMapper::toEntity);
+        return opportunityMapper.pageToPair(page);
     }
 }

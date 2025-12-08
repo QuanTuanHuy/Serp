@@ -32,10 +32,13 @@ public class ErrorMessage {
     // Lead errors
     public static final String LEAD_NOT_FOUND = "Lead not found";
     public static final String LEAD_ALREADY_CONVERTED = "Lead has already been converted";
+    public static final String LEAD_ALREADY_EXISTS = "Lead with email %s already exists";
     public static final String LEAD_NOT_QUALIFIED = "Lead is not qualified for conversion";
     public static final String LEAD_ALREADY_QUALIFIED = "Lead is already qualified";
     public static final String LEAD_ALREADY_DISQUALIFIED = "Lead is already disqualified";
     public static final String LEAD_INVALID_STATUS = "Invalid lead status";
+    public static final String LEAD_CANNOT_BE_CONVERTED = "Lead cannot be converted in its current status";
+    public static final String CANNOT_DELETE_CONVERTED_LEAD = "Cannot delete converted lead";
     
     // Opportunity errors
     public static final String OPPORTUNITY_NOT_FOUND = "Opportunity not found";

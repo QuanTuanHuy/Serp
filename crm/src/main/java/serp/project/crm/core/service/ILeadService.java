@@ -7,6 +7,7 @@ package serp.project.crm.core.service;
 
 import org.springframework.data.util.Pair;
 import serp.project.crm.core.domain.dto.PageRequest;
+import serp.project.crm.core.domain.dto.request.LeadFilterRequest;
 import serp.project.crm.core.domain.entity.LeadEntity;
 import serp.project.crm.core.domain.enums.LeadSource;
 import serp.project.crm.core.domain.enums.LeadStatus;
@@ -39,6 +40,8 @@ public interface ILeadService {
 
     Pair<List<LeadEntity>, Long> getQualifiedLeads(Long tenantId, PageRequest pageRequest);
 
+    Pair<List<LeadEntity>, Long> filterLeads(LeadFilterRequest filter, Long tenantId, PageRequest pageRequest);
+
     List<LeadEntity> getLeadsByCloseDateRange(LocalDate startDate, LocalDate endDate, Long tenantId);
 
     LeadEntity assignLead(Long leadId, Long userId, Long tenantId);
@@ -46,6 +49,8 @@ public interface ILeadService {
     LeadEntity qualifyLead(Long id, Long tenantId);
 
     LeadEntity convertLead(Long id, Long tenantId);
+
+    LeadEntity convertLead(Long id, Long customerId, Long opportunityId, Long tenantId);
 
     void deleteLead(Long id, Long tenantId);
 }
