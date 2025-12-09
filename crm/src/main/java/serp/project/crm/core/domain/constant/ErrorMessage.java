@@ -46,6 +46,8 @@ public class ErrorMessage {
     public static final String OPPORTUNITY_INVALID_STAGE = "Invalid opportunity stage";
     public static final String OPPORTUNITY_INVALID_STAGE_TRANSITION = "Cannot transition to this stage from current stage";
     public static final String OPPORTUNITY_MISSING_REQUIRED_FIELDS = "Missing required fields for opportunity";
+    public static final String OPPORTUNITY_ALREADY_EXISTS = "Opportunity with this name already exists for the customer";
+    public static final String CANNOT_DELETE_WON_OPPORTUNITY = "Cannot delete an opportunity that has been won";
     
     // Contact errors
     public static final String CONTACT_NOT_FOUND = "Contact not found";

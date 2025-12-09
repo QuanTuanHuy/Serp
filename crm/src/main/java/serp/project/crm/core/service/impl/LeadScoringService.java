@@ -48,7 +48,7 @@ public class LeadScoringService implements ILeadScoringService {
         }
 
         int profileScore = calculateProfileScore(lead);
-        int engagementScore = calculateEngagementScore(lead.getId(), lead.getTenantId());
+        int engagementScore = lead.getId() != null ? calculateEngagementScore(lead.getId(), lead.getTenantId()) : 0;
         int totalScore = profileScore + engagementScore;
         return Math.min(totalScore, 100);
     }

@@ -12,14 +12,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import serp.project.crm.core.domain.dto.PageRequest;
 import serp.project.crm.core.domain.dto.request.CreateOpportunityRequest;
+import serp.project.crm.core.domain.dto.request.OpportunityFilterRequest;
 import serp.project.crm.core.domain.dto.request.UpdateOpportunityRequest;
 import serp.project.crm.core.domain.enums.OpportunityStage;
 import serp.project.crm.core.usecase.OpportunityUseCase;
 import serp.project.crm.kernel.utils.AuthUtils;
 
-/**
- * Opportunity Controller - REST API endpoints for opportunity management
- */
 @RestController
 @RequestMapping("/api/v1/opportunities")
 @RequiredArgsConstructor
@@ -31,31 +29,40 @@ public class OpportunityController {
 
     @PostMapping
     public ResponseEntity<?> createOpportunity(@Valid @RequestBody CreateOpportunityRequest request) {
-        Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new IllegalArgumentException("Tenant ID not found in token"));
-        
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        if (tenantId == null || userId == null) {
+            return null;
+        }
+
         log.info("POST /api/v1/opportunities - Creating opportunity for tenant: {}", tenantId);
-        var response = opportunityUseCase.createOpportunity(request, tenantId);
+        var response = opportunityUseCase.createOpportunity(request, userId, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<?> updateOpportunity(
             @PathVariable Long id,
             @Valid @RequestBody UpdateOpportunityRequest request) {
-        Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new IllegalArgumentException("Tenant ID not found in token"));
-        
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        if (tenantId == null || userId == null) {
+            return null;
+        }
+
         log.info("PUT /api/v1/opportunities/{} - Updating opportunity for tenant: {}", id, tenantId);
-        var response = opportunityUseCase.updateOpportunity(id, request, tenantId);
+        var response = opportunityUseCase.updateOpportunity(id, request, userId, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getOpportunityById(@PathVariable Long id) {
-        Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new IllegalArgumentException("Tenant ID not found in token"));
-        
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        if (tenantId == null || userId == null) {
+            return null;
+        }
+
         log.info("GET /api/v1/opportunities/{} - Fetching opportunity for tenant: {}", id, tenantId);
         var response = opportunityUseCase.getOpportunityById(id, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
@@ -65,17 +72,36 @@ public class OpportunityController {
     public ResponseEntity<?> getAllOpportunities(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer size) {
-        Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new IllegalArgumentException("Tenant ID not found in token"));
-        
-        log.info("GET /api/v1/opportunities - Fetching all opportunities for tenant: {}, page: {}, size: {}", tenantId, page, size);
-        
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        if (tenantId == null || userId == null) {
+            return null;
+        }
+
+        log.info("GET /api/v1/opportunities - Fetching all opportunities for tenant: {}, page: {}, size: {}",
+                tenantId, page, size);
+
         PageRequest pageRequest = PageRequest.builder()
                 .page(page)
                 .size(size)
                 .build();
-        
+
         var response = opportunityUseCase.getAllOpportunities(tenantId, pageRequest);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PostMapping("/search")
+    public ResponseEntity<?> filterOpportunities(@RequestBody(required = false) OpportunityFilterRequest request) {
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        if (tenantId == null || userId == null) {
+            return null;
+        }
+
+        OpportunityFilterRequest safeRequest = request != null ? request : OpportunityFilterRequest.builder().build();
+
+        log.info("POST /api/v1/opportunities/search - Filtering opportunities for tenant: {}", tenantId);
+        var response = opportunityUseCase.filterOpportunities(safeRequest, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
@@ -83,19 +109,25 @@ public class OpportunityController {
     public ResponseEntity<?> changeStage(
             @PathVariable Long id,
             @RequestParam OpportunityStage newStage) {
-        Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new IllegalArgumentException("Tenant ID not found in token"));
-        
-        log.info("PATCH /api/v1/opportunities/{}/stage - Changing stage to {} for tenant: {}", id, newStage, tenantId);
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        if (tenantId == null || userId == null) {
+            return null;
+        }
+
+        log.info("PATCH /api/v1/opportunities/{}/stage - Changing stage to {} for tenant: {}", id, newStage,
+                tenantId);
         var response = opportunityUseCase.changeOpportunityStage(id, newStage, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
     @PostMapping("/{id}/close-won")
     public ResponseEntity<?> closeAsWon(@PathVariable Long id) {
-        Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new IllegalArgumentException("Tenant ID not found in token"));
-        
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        if (tenantId == null || userId == null) {
+            return null;
+        }
         log.info("POST /api/v1/opportunities/{}/close-won - Closing as won for tenant: {}", id, tenantId);
         var response = opportunityUseCase.closeOpportunityAsWon(id, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
@@ -105,9 +137,12 @@ public class OpportunityController {
     public ResponseEntity<?> closeAsLost(
             @PathVariable Long id,
             @RequestParam String lostReason) {
-        Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new IllegalArgumentException("Tenant ID not found in token"));
-        
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        if (tenantId == null || userId == null) {
+            return null;
+        }
+
         log.info("POST /api/v1/opportunities/{}/close-lost - Closing as lost for tenant: {}", id, tenantId);
         var response = opportunityUseCase.closeOpportunityAsLost(id, lostReason, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
@@ -115,9 +150,12 @@ public class OpportunityController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteOpportunity(@PathVariable Long id) {
-        Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new IllegalArgumentException("Tenant ID not found in token"));
-        
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        if (tenantId == null || userId == null) {
+            return null;
+        }
+
         log.info("DELETE /api/v1/opportunities/{} - Deleting opportunity for tenant: {}", id, tenantId);
         var response = opportunityUseCase.deleteOpportunity(id, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);

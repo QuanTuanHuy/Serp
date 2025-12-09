@@ -23,17 +23,18 @@ public interface IOpportunityService {
 
     Optional<OpportunityEntity> getOpportunityById(Long id, Long tenantId);
 
+    boolean existByCustomerIdAndName(Long customerId, String name, Long tenantId);
+
     Pair<List<OpportunityEntity>, Long> getAllOpportunities(Long tenantId, PageRequest pageRequest);
 
     Pair<List<OpportunityEntity>, Long> getOpportunitiesByCustomer(Long customerId, Long tenantId,
             PageRequest pageRequest);
 
-    Pair<List<OpportunityEntity>, Long> getOpportunitiesByLead(Long leadId, Long tenantId, PageRequest pageRequest);
-
     Pair<List<OpportunityEntity>, Long> getOpportunitiesByStage(OpportunityStage stage, Long tenantId,
             PageRequest pageRequest);
 
-    Pair<List<OpportunityEntity>, Long> getOpportunitiesAssignedTo(Long userId, Long tenantId, PageRequest pageRequest);
+    Pair<List<OpportunityEntity>, Long> getOpportunitiesAssignedTo(Long userId, Long tenantId,
+            PageRequest pageRequest);
 
     BigDecimal getTotalPipelineValue(Long tenantId);
 
@@ -47,6 +48,6 @@ public interface IOpportunityService {
 
     void deleteOpportunity(Long id, Long tenantId);
 
-        Pair<List<OpportunityEntity>, Long> filterOpportunities(OpportunityFilterRequest filter, Long tenantId,
-                        PageRequest pageRequest);
+    Pair<List<OpportunityEntity>, Long> filterOpportunities(OpportunityFilterRequest filter, Long tenantId,
+            PageRequest pageRequest);
 }

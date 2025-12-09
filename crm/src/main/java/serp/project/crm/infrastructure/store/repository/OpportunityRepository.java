@@ -19,7 +19,8 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface OpportunityRepository extends JpaRepository<OpportunityModel, Long>, JpaSpecificationExecutor<OpportunityModel> {
+public interface OpportunityRepository
+        extends JpaRepository<OpportunityModel, Long>, JpaSpecificationExecutor<OpportunityModel> {
 
     Optional<OpportunityModel> findByIdAndTenantId(Long id, Long tenantId);
 
@@ -55,4 +56,6 @@ public interface OpportunityRepository extends JpaRepository<OpportunityModel, L
             "WHERE o.tenantId = :tenantId AND o.stage = :stage")
     BigDecimal sumEstimatedValueByTenantIdAndStage(@Param("tenantId") Long tenantId,
             @Param("stage") String stage);
+
+    boolean existsByTenantIdAndCustomerIdAndName(Long tenantId, Long customerId, String name);
 }

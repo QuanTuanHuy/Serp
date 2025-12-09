@@ -139,11 +139,17 @@ public class OpportunityAdapter implements IOpportunityPort {
     }
 
     @Override
-    public Pair<List<OpportunityEntity>, Long> filter(OpportunityFilterRequest filter, PageRequest pageRequest, Long tenantId) {
+    public Pair<List<OpportunityEntity>, Long> filter(OpportunityFilterRequest filter, PageRequest pageRequest,
+            Long tenantId) {
         var pageable = opportunityMapper.toPageable(pageRequest);
         Specification<OpportunityModel> spec = OpportunitySpecification.build(filter, tenantId);
         var page = opportunityRepository.findAll(spec, pageable)
                 .map(opportunityMapper::toEntity);
         return opportunityMapper.pageToPair(page);
+    }
+
+    @Override
+    public boolean existsByCustomerIdAndName(Long customerId, String name, Long tenantId) {
+        return opportunityRepository.existsByTenantIdAndCustomerIdAndName(tenantId, customerId, name);
     }
 }

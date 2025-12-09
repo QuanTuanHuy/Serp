@@ -48,4 +48,6 @@ public interface IOpportunityPort {
     List<OpportunityEntity> findClosingThisMonth(Long tenantId);
 
     Pair<List<OpportunityEntity>, Long> filter(OpportunityFilterRequest filter, PageRequest pageRequest, Long tenantId);
+
+    boolean existsByCustomerIdAndName(Long customerId, String name, Long tenantId);
 }

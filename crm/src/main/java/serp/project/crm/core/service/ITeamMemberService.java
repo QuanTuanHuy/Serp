@@ -21,6 +21,8 @@ public interface ITeamMemberService {
 
     Optional<TeamMemberEntity> getTeamMemberById(Long id, Long tenantId);
 
+    Optional<TeamMemberEntity> getTeamMemberByUserId(Long userId, Long tenantId);
+
     Pair<List<TeamMemberEntity>, Long> getTeamMembersByTeam(Long teamId, Long tenantId, PageRequest pageRequest);
 
     Pair<List<TeamMemberEntity>, Long> getTeamMembersByUser(Long userId, Long tenantId, PageRequest pageRequest);

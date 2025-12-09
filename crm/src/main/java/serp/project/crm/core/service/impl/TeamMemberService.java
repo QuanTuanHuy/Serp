@@ -84,6 +84,12 @@ public class TeamMemberService implements ITeamMemberService {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<TeamMemberEntity> getTeamMemberByUserId(Long userId, Long tenantId) {
+        return teamMemberPort.findByUserId(userId, tenantId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Pair<List<TeamMemberEntity>, Long> getTeamMembersByTeam(Long teamId, Long tenantId,
             PageRequest pageRequest) {
         pageRequest.validate();
