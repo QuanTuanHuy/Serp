@@ -32,17 +32,17 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
-          issuer-uri: http://localhost:8180/realms/serp
+          jwk-set-uri: ${KEYCLOAK_URL}/realms/serp/protocol/openid-connect/certs
+          issuer-uri: ${KEYCLOAK_URL}/realms/serp
 
 app:
   keycloak:
-    url: http://localhost:8180
-    jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
-    expected-issuer: http://localhost:8180/realms/serp
-    expected-audience: serp-crm
+    url: ${KEYCLOAK_URL}
+    jwk-set-uri: ${KEYCLOAK_URL}/realms/serp/protocol/openid-connect/certs
+    expected-issuer: ${KEYCLOAK_URL}/realms/serp
+    expected-audience: 
     realm: serp
-    client-id: serp-crm
+    client-id: ${CLIENT_ID:serp-crm}
     client-secret: ${CLIENT_SECRET}
 
   security:
@@ -51,6 +51,6 @@ app:
       protectedUrls:
 
 server:
-  port: 8086
+  port: ${SERVER_PORT:8086}
   servlet:
     context-path: /crm
