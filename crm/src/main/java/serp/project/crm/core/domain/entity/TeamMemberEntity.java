@@ -35,6 +35,8 @@ public class TeamMemberEntity extends BaseEntity {
             this.phone = updates.getPhone();
         if (updates.getRole() != null)
             this.role = updates.getRole();
+        if (updates.getStatus() != null)
+            this.status = updates.getStatus();
     }
 
     public void setDefaults() {

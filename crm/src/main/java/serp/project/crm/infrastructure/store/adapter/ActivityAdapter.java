@@ -66,6 +66,14 @@ public class ActivityAdapter implements IActivityPort {
     }
 
     @Override
+    public List<ActivityEntity> findByLeadId(Long leadId, Long tenantId) {
+        return activityRepository.findByTenantIdAndLeadId(tenantId, leadId)
+                .stream()
+                .map(activityMapper::toEntity)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public Pair<List<ActivityEntity>, Long> findByCustomerId(Long customerId, Long tenantId, PageRequest pageRequest) {
         List<ActivityEntity> allActivities = activityRepository.findByTenantIdAndCustomerId(tenantId, customerId)
                 .stream()

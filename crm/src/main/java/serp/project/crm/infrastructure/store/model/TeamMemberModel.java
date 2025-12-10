@@ -18,6 +18,8 @@ import lombok.experimental.SuperBuilder;
         @Index(name = "idx_team_members_team_id", columnList = "team_id"),
         @Index(name = "idx_team_members_user_id", columnList = "user_id"),
         @Index(name = "idx_team_members_email", columnList = "email")
+}, uniqueConstraints = {
+        @UniqueConstraint(name = "uk_team_members_tenant_user", columnNames = { "tenant_id", "user_id" })
 })
 @NoArgsConstructor
 @AllArgsConstructor
@@ -41,7 +43,7 @@ public class TeamMemberModel extends BaseModel {
     @Column(name = "team_id", nullable = false)
     private Long teamId;
 
-    @Column(name = "user_id")
+    @Column(name = "user_id", nullable = false)
     private Long userId;
 
     @Column(name = "role", length = 100)

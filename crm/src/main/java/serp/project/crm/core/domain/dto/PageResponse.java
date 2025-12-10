@@ -18,7 +18,7 @@ import java.util.List;
 @Builder
 public class PageResponse<T> {
 
-    private List<T> content;
+    private List<T> items;
 
     private PaginationInfo pagination;
 
@@ -29,26 +29,26 @@ public class PageResponse<T> {
     public static class PaginationInfo {
         private Integer page;
         private Integer size;
-        private Long totalElements;
+        private Long totalItems;
         private Integer totalPages;
         private Boolean hasNext;
         private Boolean hasPrevious;
     }
 
-    public static <T> PageResponse<T> of(List<T> content, PageRequest pageRequest, long totalElements) {
+    public static <T> PageResponse<T> of(List<T> items, PageRequest pageRequest, long totalElements) {
         int totalPages = (int) Math.ceil((double) totalElements / pageRequest.getSize());
 
         PaginationInfo pagination = PaginationInfo.builder()
                 .page(pageRequest.getPage())
                 .size(pageRequest.getSize())
-                .totalElements(totalElements)
+                .totalItems(totalElements)
                 .totalPages(totalPages)
                 .hasNext(pageRequest.getPage() < totalPages)
                 .hasPrevious(pageRequest.getPage() > 1)
                 .build();
 
         return PageResponse.<T>builder()
-                .content(content)
+                .items(items)
                 .pagination(pagination)
                 .build();
     }

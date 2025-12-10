@@ -22,7 +22,6 @@ public class OpportunityDtoMapper {
         return OpportunityEntity.builder()
                 .name(request.getName())
                 .description(request.getDescription())
-                .leadId(request.getLeadId())
                 .customerId(request.getCustomerId())
                 .stage(request.getStage())
                 .estimatedValue(request.getEstimatedValue())

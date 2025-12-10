@@ -36,7 +36,6 @@ public class OpportunityEntity extends BaseEntity {
     private String notes;
     private String lossReason;
 
-    private LeadEntity lead;
     private CustomerEntity customer;
 
     // Stage management
@@ -124,14 +123,17 @@ public class OpportunityEntity extends BaseEntity {
             this.description = updates.getDescription();
         if (updates.getEstimatedValue() != null)
             this.estimatedValue = updates.getEstimatedValue();
-        if (updates.getProbability() != null)
-            this.probability = updates.getProbability();
         if (updates.getExpectedCloseDate() != null)
             this.expectedCloseDate = updates.getExpectedCloseDate();
         if (updates.getAssignedTo() != null)
             this.assignedTo = updates.getAssignedTo();
         if (updates.getNotes() != null)
             this.notes = updates.getNotes();
+        if (updates.getStage() != null && !updates.getStage().equals(this.stage)) {
+            advanceToStage(updates.getStage(), updates.getUpdatedBy());
+        }
+        if (updates.getProbability() != null)
+            this.probability = updates.getProbability();
     }
 
     public void closeAsWon() {
