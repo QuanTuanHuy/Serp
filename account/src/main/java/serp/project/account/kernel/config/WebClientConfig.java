@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -17,8 +18,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.transport.ProxyProvider;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.exception.AppException;
+import serp.project.account.kernel.utils.DataUtils;
+
+import java.net.URI;
 
 @Configuration
 @Slf4j
@@ -30,11 +36,38 @@ public class WebClientConfig {
     @Bean
     public WebClient webClient(WebClient.Builder builder) {
         return builder
+                .clientConnector(new ReactorClientHttpConnector(httpClientWithProxy()))
                 .filter(logRequest())
                 .filter(logResponse())
                 .filter(errorHandlingFilter())
                 .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(1024 * 1024))
                 .build();
+    }
+
+    private HttpClient httpClientWithProxy() {
+        String proxyEnv = System.getenv("HTTPS_PROXY");
+        if (DataUtils.isNullOrEmpty(proxyEnv)) {
+            proxyEnv = System.getenv("HTTP_PROXY");
+        }
+
+        if (DataUtils.isNullOrEmpty(proxyEnv)) {
+            return HttpClient.create();
+        }
+
+        try {
+            URI proxyUri = URI.create(proxyEnv);
+            String host = proxyUri.getHost();
+            int port = proxyUri.getPort();
+
+            if (DataUtils.isNullOrEmpty(host) || port == -1) {
+                return HttpClient.create();
+            }
+
+            return HttpClient.create()
+                    .proxy(spec -> spec.type(ProxyProvider.Proxy.HTTP).host(host).port(port));
+        } catch (IllegalArgumentException ex) {
+            return HttpClient.create();
+        }
     }
 
     private ExchangeFilterFunction logRequest() {

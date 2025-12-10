@@ -20,4 +20,8 @@ public class GeneralResponse<T> {
     private Integer code;
     private String message;
     private T data;
+
+    public boolean isSuccess() {
+        return code != null && code >= 200 && code < 300;
+    }
 }
