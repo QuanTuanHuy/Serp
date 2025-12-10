@@ -7,6 +7,8 @@ package serp.project.crm.core.domain.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Map;
+import java.util.Set;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -22,6 +24,7 @@ import serp.project.crm.core.domain.enums.LeadStatus;
 @Setter
 @SuperBuilder
 public class LeadEntity extends BaseEntity {
+
     private String company;
     private String industry;
     private String companySize;
@@ -43,6 +46,18 @@ public class LeadEntity extends BaseEntity {
 
     private LocalDate expectedCloseDate;
     private String notes;
+
+    private Long convertedOpportunityId;
+    private Long convertedCustomerId;
+
+    private static final Map<LeadStatus, Set<LeadStatus>> ALLOWED_STATUS_TRANSITIONS = Map.of(
+            LeadStatus.NEW, Set.of(LeadStatus.CONTACTED, LeadStatus.NURTURING, LeadStatus.QUALIFIED,
+                    LeadStatus.DISQUALIFIED),
+            LeadStatus.CONTACTED, Set.of(LeadStatus.NURTURING, LeadStatus.QUALIFIED, LeadStatus.DISQUALIFIED),
+            LeadStatus.NURTURING, Set.of(LeadStatus.QUALIFIED, LeadStatus.DISQUALIFIED),
+            LeadStatus.QUALIFIED, Set.of(LeadStatus.CONVERTED, LeadStatus.DISQUALIFIED),
+            LeadStatus.DISQUALIFIED, Set.of(),
+            LeadStatus.CONVERTED, Set.of());
 
     // Lead qualification
     public boolean isQualified() {
@@ -98,6 +113,17 @@ public class LeadEntity extends BaseEntity {
         this.setUpdatedBy(convertedBy);
     }
 
+    public void markAsConverted(Long convertedBy, Long opportunityId, Long customerId) {
+        if (!canBeConverted()) {
+            throw new IllegalStateException(
+                    "Lead cannot be converted. Ensure it is qualified and has a valid estimated value.");
+        }
+        this.leadStatus = LeadStatus.CONVERTED;
+        this.convertedOpportunityId = opportunityId;
+        this.convertedCustomerId = customerId;
+        this.setUpdatedBy(convertedBy);
+    }
+
     // Helper method
     public boolean isOverdue() {
         return expectedCloseDate != null &&
@@ -125,7 +151,7 @@ public class LeadEntity extends BaseEntity {
         if (updates.getEstimatedValue() != null)
             this.estimatedValue = updates.getEstimatedValue();
         if (updates.getLeadStatus() != null)
-            this.leadStatus = updates.getLeadStatus();
+            this.updateStatus(updates.getLeadStatus(), updates.getUpdatedBy(), updates.getNotes());
         if (updates.getAssignedTo() != null)
             this.assignedTo = updates.getAssignedTo();
         if (updates.getWebsite() != null)
@@ -138,6 +164,39 @@ public class LeadEntity extends BaseEntity {
             this.expectedCloseDate = updates.getExpectedCloseDate();
         if (updates.getProbability() != null)
             this.probability = updates.getProbability();
+    }
+
+    public void updateStatus(LeadStatus newStatus, Long updatedBy, String notes) {
+        if (newStatus == null) {
+            return;
+        }
+
+        LeadStatus currentStatus = this.leadStatus != null ? this.leadStatus : LeadStatus.NEW;
+
+        if (newStatus.equals(currentStatus)) {
+            if (notes != null) {
+                this.notes = notes;
+            }
+            if (updatedBy != null) {
+                this.setUpdatedBy(updatedBy);
+            }
+            return;
+        }
+
+        Set<LeadStatus> allowedNextStatuses = ALLOWED_STATUS_TRANSITIONS
+                .getOrDefault(currentStatus, Set.of());
+        if (!allowedNextStatuses.contains(newStatus)) {
+            throw new IllegalStateException(
+                    String.format("Invalid lead status transition: %s -> %s", currentStatus, newStatus));
+        }
+
+        this.leadStatus = newStatus;
+        if (notes != null) {
+            this.notes = notes;
+        }
+        if (updatedBy != null) {
+            this.setUpdatedBy(updatedBy);
+        }
     }
 
     public void setDefaults() {

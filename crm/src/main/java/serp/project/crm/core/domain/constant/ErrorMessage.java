@@ -32,10 +32,13 @@ public class ErrorMessage {
     // Lead errors
     public static final String LEAD_NOT_FOUND = "Lead not found";
     public static final String LEAD_ALREADY_CONVERTED = "Lead has already been converted";
+    public static final String LEAD_ALREADY_EXISTS = "Lead with email %s already exists";
     public static final String LEAD_NOT_QUALIFIED = "Lead is not qualified for conversion";
     public static final String LEAD_ALREADY_QUALIFIED = "Lead is already qualified";
     public static final String LEAD_ALREADY_DISQUALIFIED = "Lead is already disqualified";
     public static final String LEAD_INVALID_STATUS = "Invalid lead status";
+    public static final String LEAD_CANNOT_BE_CONVERTED = "Lead cannot be converted in its current status";
+    public static final String CANNOT_DELETE_CONVERTED_LEAD = "Cannot delete converted lead";
     
     // Opportunity errors
     public static final String OPPORTUNITY_NOT_FOUND = "Opportunity not found";
@@ -43,6 +46,8 @@ public class ErrorMessage {
     public static final String OPPORTUNITY_INVALID_STAGE = "Invalid opportunity stage";
     public static final String OPPORTUNITY_INVALID_STAGE_TRANSITION = "Cannot transition to this stage from current stage";
     public static final String OPPORTUNITY_MISSING_REQUIRED_FIELDS = "Missing required fields for opportunity";
+    public static final String OPPORTUNITY_ALREADY_EXISTS = "Opportunity with this name already exists for the customer";
+    public static final String CANNOT_DELETE_WON_OPPORTUNITY = "Cannot delete an opportunity that has been won";
     
     // Contact errors
     public static final String CONTACT_NOT_FOUND = "Contact not found";
@@ -62,6 +67,14 @@ public class ErrorMessage {
     public static final String TEAM_MEMBER_NOT_FOUND = "Team member not found";
     public static final String TEAM_MEMBER_ALREADY_EXISTS = "User is already a member of this team";
     public static final String TEAM_LEADER_NOT_FOUND = "Team leader not found";
+    public static final String TEAM_NAME_ALREADY_EXISTS = "Team with this name already exists";
+
+    // Team member errors
+    public static final String MEMBER_NOT_BELONG_TO_ORGANIZATION = "Member does not belong to the organization";
+    public static final String MEMBER_ALREADY_IN_TEAM = "Member is already in one of your teams";
+    public static final String MEMBER_ALREADY_IN_ANOTHER_TEAM = "Member is already in another team";
+    public static final String MEMBER_IS_NOT_ACTIVE = "Member is not active";
+    public static final String MEMBER_NOT_HAS_CRM_ROLE = "Member does not have permission to be assigned to CRM";
     
     // Validation errors
     public static final String INVALID_EMAIL_FORMAT = "Invalid email format";

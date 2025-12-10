@@ -7,6 +7,7 @@ package serp.project.crm.core.port.store;
 
 import org.springframework.data.util.Pair;
 import serp.project.crm.core.domain.dto.PageRequest;
+import serp.project.crm.core.domain.dto.request.CustomerFilterRequest;
 import serp.project.crm.core.domain.entity.CustomerEntity;
 import serp.project.crm.core.domain.enums.ActiveStatus;
 
@@ -38,4 +39,6 @@ public interface ICustomerPort {
     List<CustomerEntity> findTopByRevenue(Long tenantId, int limit);
 
     Pair<List<CustomerEntity>, Long> findByIndustry(String industry, Long tenantId, PageRequest pageRequest);
+
+    Pair<List<CustomerEntity>, Long> filter(CustomerFilterRequest filter, PageRequest pageRequest, Long tenantId);
 }

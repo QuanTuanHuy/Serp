@@ -27,9 +27,7 @@ public class CreateOpportunityRequest {
     @Size(max = 1000, message = "Description must not exceed 1000 characters")
     private String description;
 
-    @NotNull(message = "Lead ID is required")
-    private Long leadId;
-
+    @NotNull(message = "Customer ID is required")
     private Long customerId;
 
     private OpportunityStage stage;

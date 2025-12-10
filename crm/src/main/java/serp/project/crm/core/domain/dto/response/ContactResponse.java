@@ -5,6 +5,8 @@
 
 package serp.project.crm.core.domain.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,6 +18,7 @@ import serp.project.crm.core.domain.enums.ContactType;
 @AllArgsConstructor
 @Data
 @Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ContactResponse {
     private Long id;
     
