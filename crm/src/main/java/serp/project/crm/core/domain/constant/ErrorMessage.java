@@ -67,6 +67,13 @@ public class ErrorMessage {
     public static final String TEAM_MEMBER_NOT_FOUND = "Team member not found";
     public static final String TEAM_MEMBER_ALREADY_EXISTS = "User is already a member of this team";
     public static final String TEAM_LEADER_NOT_FOUND = "Team leader not found";
+    public static final String TEAM_NAME_ALREADY_EXISTS = "Team with this name already exists";
+
+    // Team member errors
+    public static final String MEMBER_NOT_BELONG_TO_ORGANIZATION = "Member does not belong to the organization";
+    public static final String MEMBER_ALREADY_IN_TEAM = "Member is already in the team";
+    public static final String MEMBER_IS_NOT_ACTIVE = "Member is not active";
+    public static final String MEMBER_NOT_HAS_CRM_ROLE = "Member does not have permission to be assigned to CRM";
     
     // Validation errors
     public static final String INVALID_EMAIL_FORMAT = "Invalid email format";

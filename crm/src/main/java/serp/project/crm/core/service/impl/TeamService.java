@@ -11,9 +11,11 @@ import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.crm.core.domain.constant.Constants;
+import serp.project.crm.core.domain.constant.ErrorMessage;
 import serp.project.crm.core.domain.dto.PageRequest;
 import serp.project.crm.core.domain.entity.TeamEntity;
-import serp.project.crm.core.port.client.IKafkaPublisher;
+import serp.project.crm.core.exception.AppException;
+import serp.project.crm.core.port.client.IUserProfileClient;
 import serp.project.crm.core.port.store.ITeamPort;
 import serp.project.crm.core.service.ITeamService;
 
@@ -26,18 +28,11 @@ import java.util.Optional;
 public class TeamService implements ITeamService {
 
     private final ITeamPort teamPort;
-    private final IKafkaPublisher kafkaPublisher;
+    private final IUserProfileClient userProfileClient;
 
     @Override
     @Transactional
     public TeamEntity createTeam(TeamEntity team, Long tenantId) {
-
-        if (teamPort.existsByName(team.getName(), tenantId)) {
-            throw new IllegalArgumentException("Team with name " + team.getName() + " already exists");
-        }
-
-        // TODO: Validate leader exists
-
         team.setTenantId(tenantId);
         team.setDefaults();
 
@@ -52,11 +47,11 @@ public class TeamService implements ITeamService {
     @Transactional
     public TeamEntity updateTeam(Long id, TeamEntity updates, Long tenantId) {
         TeamEntity existing = teamPort.findById(id, tenantId)
-                .orElseThrow(() -> new IllegalArgumentException("Team not found"));
+                .orElseThrow(() -> new AppException(ErrorMessage.TEAM_NOT_FOUND));
 
         if (updates.getName() != null && !updates.getName().equals(existing.getName())) {
             if (teamPort.existsByName(updates.getName(), tenantId)) {
-                throw new IllegalArgumentException("Team with name " + updates.getName() + " already exists");
+                throw new AppException(ErrorMessage.TEAM_NAME_ALREADY_EXISTS);
             }
         }
 
@@ -99,6 +94,27 @@ public class TeamService implements ITeamService {
         teamPort.deleteById(id, tenantId);
 
         publishTeamDeletedEvent(team);
+    }
+
+    @Override
+    public void validateUserIdsExist(List<Long> userIds, Long tenantId) {
+        for (Long userId : userIds) {
+            var userProfile = userProfileClient.getUserProfileById(userId);
+            if (userProfile == null || !userProfile.belongsToOrganization(tenantId)) {
+                throw new AppException(ErrorMessage.MEMBER_NOT_BELONG_TO_ORGANIZATION);
+            }
+            if (!userProfile.isActive()) {
+                throw new AppException(ErrorMessage.MEMBER_IS_NOT_ACTIVE);
+            }
+            if (!userProfile.canBeAssignedToCrm()) {
+                throw new AppException(ErrorMessage.MEMBER_NOT_HAS_CRM_ROLE);
+            }
+        }
+    }
+
+    @Override
+    public boolean isTeamNameExists(String name, Long tenantId) {
+        return teamPort.existsByName(name, tenantId);
     }
 
     private void publishTeamCreatedEvent(TeamEntity team) {

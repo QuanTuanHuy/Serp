@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import serp.project.crm.core.domain.constant.ErrorMessage;
 import serp.project.crm.core.domain.dto.GeneralResponse;
 import serp.project.crm.core.domain.dto.PageRequest;
 import serp.project.crm.core.domain.dto.PageResponse;
@@ -16,7 +18,11 @@ import serp.project.crm.core.domain.dto.request.CreateTeamRequest;
 import serp.project.crm.core.domain.dto.request.UpdateTeamRequest;
 import serp.project.crm.core.domain.dto.response.TeamResponse;
 import serp.project.crm.core.domain.entity.TeamEntity;
+import serp.project.crm.core.domain.entity.TeamMemberEntity;
+import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.mapper.TeamDtoMapper;
+import serp.project.crm.core.mapper.TeamMemberDtoMapper;
+import serp.project.crm.core.service.ITeamMemberService;
 import serp.project.crm.core.service.ITeamService;
 import serp.project.crm.kernel.utils.ResponseUtils;
 
@@ -28,25 +34,44 @@ import java.util.List;
 public class TeamUseCase {
 
     private final ITeamService teamService;
+    private final ITeamMemberService teamMemberService;
+
     private final TeamDtoMapper teamDtoMapper;
+    private final TeamMemberDtoMapper memberDtoMapper;
     private final ResponseUtils responseUtils;
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> createTeam(CreateTeamRequest request, Long tenantId) {
         try {
+            if (teamService.isTeamNameExists(request.getName(), tenantId)) {
+                throw new AppException(ErrorMessage.TEAM_NAME_ALREADY_EXISTS);
+            }
+
+            var leaderProfile = teamMemberService.getAndValidateUserProfiles(
+                    List.of(request.getLeaderId()), tenantId).stream().findFirst().orElse(null);
+            if (leaderProfile == null) {
+                return null; // throw exception in getAndValidateUserProfiles
+            }
+
             TeamEntity teamEntity = teamDtoMapper.toEntity(request);
             TeamEntity createdTeam = teamService.createTeam(teamEntity, tenantId);
+
+            TeamMemberEntity leaderMember = memberDtoMapper.toEntity(leaderProfile, createdTeam.getId());
+            leaderMember = teamMemberService.addTeamMember(leaderMember, tenantId);
+
+            createdTeam.setLeaderId(leaderMember.getId());
+            createdTeam = teamService.updateTeam(createdTeam.getId(), createdTeam, tenantId);
             TeamResponse response = teamDtoMapper.toResponse(createdTeam);
 
-            log.info("Team created successfully with ID: {}", createdTeam.getId());
+            log.info("[TeamUseCase] Team created successfully with ID: {}", createdTeam.getId());
             return responseUtils.success(response, "Team created successfully");
 
-        } catch (IllegalArgumentException e) {
-            log.error("Validation error creating team: {}", e.getMessage());
-            return responseUtils.badRequest(e.getMessage());
+        } catch (AppException e) {
+            log.error("[TeamUseCase] Error creating team: {}", e.getMessage());
+            throw e;
         } catch (Exception e) {
-            log.error("Unexpected error creating team: {}", e.getMessage(), e);
-            return responseUtils.internalServerError("Failed to create team");
+            log.error("[TeamUseCase] Unexpected error creating team: {}", e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -75,7 +100,7 @@ public class TeamUseCase {
             TeamEntity team = teamService.getTeamById(id, tenantId).orElse(null);
 
             if (team == null) {
-                return responseUtils.notFound("Team not found");
+                return responseUtils.notFound(ErrorMessage.TEAM_NOT_FOUND);
             }
 
             TeamResponse response = teamDtoMapper.toResponse(team);

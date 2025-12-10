@@ -17,6 +17,7 @@ import serp.project.crm.core.domain.dto.request.UpdateTeamMemberRequest;
 import serp.project.crm.core.domain.dto.response.TeamMemberResponse;
 import serp.project.crm.core.domain.entity.TeamMemberEntity;
 import serp.project.crm.core.domain.enums.TeamMemberStatus;
+import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.mapper.TeamMemberDtoMapper;
 import serp.project.crm.core.service.ITeamMemberService;
 import serp.project.crm.kernel.utils.ResponseUtils;
@@ -42,12 +43,12 @@ public class TeamMemberUseCase {
             log.info("Team member added successfully with ID: {}", createdMember.getId());
             return responseUtils.success(response, "Team member added successfully");
 
-        } catch (IllegalArgumentException e) {
+        } catch (AppException e) {
             log.error("Validation error adding team member: {}", e.getMessage());
-            return responseUtils.badRequest(e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Unexpected error adding team member: {}", e.getMessage(), e);
-            return responseUtils.internalServerError("Failed to add team member");
+            throw e;
         }
     }
 
@@ -61,12 +62,12 @@ public class TeamMemberUseCase {
             log.info("Team member updated successfully: {}", id);
             return responseUtils.success(response, "Team member updated successfully");
 
-        } catch (IllegalArgumentException e) {
+        } catch (AppException e) {
             log.error("Validation error updating team member: {}", e.getMessage());
-            return responseUtils.badRequest(e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Unexpected error updating team member: {}", e.getMessage(), e);
-            return responseUtils.internalServerError("Failed to update team member");
+            throw e;
         }
     }
 
@@ -117,12 +118,12 @@ public class TeamMemberUseCase {
             log.info("Team member role changed successfully: {}", id);
             return responseUtils.success(response, "Role changed successfully");
 
-        } catch (IllegalArgumentException e) {
+        } catch (AppException e) {
             log.error("Validation error changing role: {}", e.getMessage());
-            return responseUtils.badRequest(e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Unexpected error changing role: {}", e.getMessage(), e);
-            return responseUtils.internalServerError("Failed to change role");
+            throw e;
         }
     }
 
@@ -135,12 +136,12 @@ public class TeamMemberUseCase {
             log.info("Team member status changed successfully: {}", id);
             return responseUtils.success(response, "Status changed successfully");
 
-        } catch (IllegalArgumentException e) {
+        } catch (AppException e) {
             log.error("Validation error changing status: {}", e.getMessage());
-            return responseUtils.badRequest(e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Unexpected error changing status: {}", e.getMessage(), e);
-            return responseUtils.internalServerError("Failed to change status");
+            throw e;
         }
     }
 
@@ -152,12 +153,12 @@ public class TeamMemberUseCase {
             log.info("Team member removed successfully: {}", id);
             return responseUtils.status("Team member removed successfully");
 
-        } catch (IllegalArgumentException e) {
+        } catch (AppException e) {
             log.error("Validation error removing team member: {}", e.getMessage());
-            return responseUtils.badRequest(e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Unexpected error removing team member: {}", e.getMessage(), e);
-            return responseUtils.internalServerError("Failed to remove team member");
+            throw e;
         }
     }
 }

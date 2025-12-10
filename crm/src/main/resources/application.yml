@@ -44,7 +44,12 @@ app:
     realm: serp
     client-id: serp-crm
     client-secret: ${CLIENT_SECRET}
-
+  
+  external:
+    services:
+      - name: account-service
+        url: ${ACCOUNT_SERVICE_URL}
+      
   security:
     filter:
       publicUrls:

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriBuilder;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
@@ -159,6 +160,14 @@ public class HttpClientHelper {
     }
 
     private URI buildUri(UriBuilder uriBuilder, String uri, MultiValueMap<String, String> queryParams) {
+        if (uri.startsWith("http://") || uri.startsWith("https://")) {
+            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(uri);
+            if (queryParams != null) {
+                builder.queryParams(queryParams);
+            }
+            return builder.build().toUri();
+        }
+
         uriBuilder.path(uri);
         if (queryParams != null) {
             uriBuilder.queryParams(queryParams);

@@ -45,6 +45,11 @@ app:
     client-id: ${CLIENT_ID:serp-crm}
     client-secret: ${CLIENT_SECRET}
 
+  external:
+    services:
+      - name: account-service
+        url: ${ACCOUNT_SERVICE_URL}
+
   security:
     filter:
       publicUrls:

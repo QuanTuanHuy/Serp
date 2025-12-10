@@ -64,7 +64,11 @@ public class WebClientConfig {
             }
 
             return HttpClient.create()
-                    .proxy(spec -> spec.type(ProxyProvider.Proxy.HTTP).host(host).port(port));
+                    .proxy(spec -> spec
+                            .type(ProxyProvider.Proxy.HTTP)
+                            .host(host)
+                            .port(port)
+                            .nonProxyHosts("localhost|127.*|[::1]"));
         } catch (IllegalArgumentException ex) {
             return HttpClient.create();
         }

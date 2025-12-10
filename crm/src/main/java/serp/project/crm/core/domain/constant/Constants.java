@@ -11,6 +11,12 @@ import lombok.experimental.UtilityClass;
 public class Constants {
 
     public static final String SERVICE_NAME = "crm";
+    
+    @UtilityClass
+    public static class ServiceNames {
+        public static final String ACCOUNT_SERVICE = "account-service";
+    }
+
 
     @UtilityClass
     public static class HttpStatus {
