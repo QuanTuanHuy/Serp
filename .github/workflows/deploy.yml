@@ -27,36 +27,25 @@ jobs:
       purchase: ${{ steps.changes.outputs.purchase }}
       logistics: ${{ steps.changes.outputs.logistics }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Download changes artifact
+        uses: actions/download-artifact@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-          fetch-depth: 2
+          name: build-changes
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: dorny/paths-filter@v2
+      - name: Read changes
         id: changes
-        with:
-          base: ${{ github.event.workflow_run.head_sha }}^
-          ref: ${{ github.event.workflow_run.head_sha }}
-          filters: |
-            account:
-              - 'account/**'
-            api-gateway:
-              - 'api_gateway/**'
-            ptm-task:
-              - 'ptm_task/**'
-            ptm-schedule:
-              - 'ptm_schedule/**'
-            ptm-optimization:
-              - 'ptm_optimization/**'
-            crm:
-              - 'crm/**'
-            serp-web:
-              - 'serp_web/**'
-            purchase:
-              - 'purchase_service/**'
-            logistics:
-              - 'logistics/**'
+        run: |
+          echo "account=$(jq -r .account changes.json)" >> $GITHUB_OUTPUT
+          echo "api-gateway=$(jq -r '."api-gateway"' changes.json)" >> $GITHUB_OUTPUT
+          echo "ptm-task=$(jq -r '."ptm-task"' changes.json)" >> $GITHUB_OUTPUT
+          echo "ptm-schedule=$(jq -r '."ptm-schedule"' changes.json)" >> $GITHUB_OUTPUT
+          echo "ptm-optimization=$(jq -r '."ptm-optimization"' changes.json)" >> $GITHUB_OUTPUT
+          echo "crm=$(jq -r .crm changes.json)" >> $GITHUB_OUTPUT
+          echo "serp-web=$(jq -r '."serp-web"' changes.json)" >> $GITHUB_OUTPUT
+          echo "purchase=$(jq -r .purchase changes.json)" >> $GITHUB_OUTPUT
+          echo "logistics=$(jq -r .logistics changes.json)" >> $GITHUB_OUTPUT
 
   deploy-account:
     needs: check-changes
