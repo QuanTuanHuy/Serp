@@ -74,10 +74,6 @@ public class TeamMemberService implements ITeamMemberService {
 
         existing.updateFrom(updates);
 
-        if (updates.getStatus() != null) {
-            existing.setStatus(updates.getStatus());
-        }
-
         TeamMemberEntity updated = teamMemberPort.save(existing);
 
         publishTeamMemberUpdatedEvent(updated);
@@ -129,44 +125,6 @@ public class TeamMemberService implements ITeamMemberService {
     @Transactional(readOnly = true)
     public Optional<TeamMemberEntity> getTeamMemberByTeamAndUser(Long teamId, Long userId, Long tenantId) {
         return teamMemberPort.findByTeamIdAndUserId(teamId, userId, tenantId);
-    }
-
-    @Override
-    @Transactional
-    public TeamMemberEntity changeRole(Long id, String newRole, Long tenantId) {
-
-        TeamMemberEntity teamMember = teamMemberPort.findById(id, tenantId)
-                .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND));
-
-        if (!ALLOWED_ROLES.contains(newRole)) {
-            throw new AppException("Invalid role. Must be LEADER, MEMBER, or VIEWER");
-        }
-
-        teamMember.changeRole(newRole, tenantId);
-        TeamMemberEntity updated = teamMemberPort.save(teamMember);
-
-        publishTeamMemberUpdatedEvent(updated);
-
-        return updated;
-    }
-
-    @Override
-    @Transactional
-    public TeamMemberEntity changeStatus(Long id, TeamMemberStatus newStatus, Long tenantId) {
-        TeamMemberEntity teamMember = teamMemberPort.findById(id, tenantId)
-                .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND));
-
-        switch (newStatus) {
-            case CONFIRMED -> teamMember.confirmMember(tenantId);
-            case ARCHIVED -> teamMember.archiveMember(tenantId);
-            case INVITED -> teamMember.setStatus(TeamMemberStatus.INVITED);
-        }
-
-        TeamMemberEntity updated = teamMemberPort.save(teamMember);
-
-        publishTeamMemberUpdatedEvent(updated);
-
-        return updated;
     }
 
     @Override

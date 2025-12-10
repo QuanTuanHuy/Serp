@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import serp.project.crm.core.domain.constant.ErrorMessage;
 import serp.project.crm.core.domain.dto.GeneralResponse;
 import serp.project.crm.core.domain.dto.PageRequest;
 import serp.project.crm.core.domain.dto.PageResponse;
@@ -16,7 +18,6 @@ import serp.project.crm.core.domain.dto.request.CreateTeamMemberRequest;
 import serp.project.crm.core.domain.dto.request.UpdateTeamMemberRequest;
 import serp.project.crm.core.domain.dto.response.TeamMemberResponse;
 import serp.project.crm.core.domain.entity.TeamMemberEntity;
-import serp.project.crm.core.domain.enums.TeamMemberStatus;
 import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.mapper.TeamMemberDtoMapper;
 import serp.project.crm.core.service.ITeamMemberService;
@@ -33,21 +34,30 @@ public class TeamMemberUseCase {
     private final TeamMemberDtoMapper teamMemberDtoMapper;
     private final ResponseUtils responseUtils;
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> addTeamMember(CreateTeamMemberRequest request, Long tenantId) {
         try {
-            TeamMemberEntity teamMemberEntity = teamMemberDtoMapper.toEntity(request);
+            var userProfile = teamMemberService.getAndValidateUserProfiles(List.of(request.getUserId()), tenantId)
+                    .stream().findFirst().orElse(null);
+            if (userProfile == null) {
+                return null; // throw exception in getAndValidateUserProfiles
+            }
+            if (teamMemberService.getTeamMemberByUserId(userProfile.getId(), tenantId).isPresent()) {
+                throw new AppException(ErrorMessage.MEMBER_ALREADY_IN_TEAM);
+            }
+
+            TeamMemberEntity teamMemberEntity = teamMemberDtoMapper.toEntity(request, userProfile);
             TeamMemberEntity createdMember = teamMemberService.addTeamMember(teamMemberEntity, tenantId);
             TeamMemberResponse response = teamMemberDtoMapper.toResponse(createdMember);
 
-            log.info("Team member added successfully with ID: {}", createdMember.getId());
+            log.info("[TeamMemberUseCase] Team member added successfully with ID: {}", createdMember.getId());
             return responseUtils.success(response, "Team member added successfully");
 
         } catch (AppException e) {
-            log.error("Validation error adding team member: {}", e.getMessage());
+            log.error("[TeamMemberUseCase] Error adding team member: {}", e.getMessage());
             throw e;
         } catch (Exception e) {
-            log.error("Unexpected error adding team member: {}", e.getMessage(), e);
+            log.error("[TeamMemberUseCase] Unexpected error adding team member: {}", e.getMessage(), e);
             throw e;
         }
     }
@@ -59,14 +69,14 @@ public class TeamMemberUseCase {
             TeamMemberEntity updatedMember = teamMemberService.updateTeamMember(id, updates, tenantId);
             TeamMemberResponse response = teamMemberDtoMapper.toResponse(updatedMember);
 
-            log.info("Team member updated successfully: {}", id);
+            log.info("[TeamMemberUseCase] Team member updated successfully: {}", id);
             return responseUtils.success(response, "Team member updated successfully");
 
         } catch (AppException e) {
-            log.error("Validation error updating team member: {}", e.getMessage());
+            log.error("[TeamMemberUseCase] Error updating team member: {}", e.getMessage());
             throw e;
         } catch (Exception e) {
-            log.error("Unexpected error updating team member: {}", e.getMessage(), e);
+            log.error("[TeamMemberUseCase] Unexpected error updating team member: {}", e.getMessage(), e);
             throw e;
         }
     }
@@ -84,7 +94,7 @@ public class TeamMemberUseCase {
             return responseUtils.success(response);
 
         } catch (Exception e) {
-            log.error("Error fetching team member: {}", e.getMessage(), e);
+            log.error("[TeamMemberUseCase] Error fetching team member: {}", e.getMessage(), e);
             return responseUtils.internalServerError("Failed to fetch team member");
         }
     }
@@ -104,44 +114,8 @@ public class TeamMemberUseCase {
             return responseUtils.success(pageResponse);
 
         } catch (Exception e) {
-            log.error("Error fetching team members: {}", e.getMessage(), e);
+            log.error("[TeamMemberUseCase] Error fetching team members: {}", e.getMessage(), e);
             return responseUtils.internalServerError("Failed to fetch team members");
-        }
-    }
-
-    @Transactional
-    public GeneralResponse<?> changeRole(Long id, String newRole, Long tenantId) {
-        try {
-            TeamMemberEntity updatedMember = teamMemberService.changeRole(id, newRole, tenantId);
-            TeamMemberResponse response = teamMemberDtoMapper.toResponse(updatedMember);
-
-            log.info("Team member role changed successfully: {}", id);
-            return responseUtils.success(response, "Role changed successfully");
-
-        } catch (AppException e) {
-            log.error("Validation error changing role: {}", e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error("Unexpected error changing role: {}", e.getMessage(), e);
-            throw e;
-        }
-    }
-
-    @Transactional
-    public GeneralResponse<?> changeStatus(Long id, TeamMemberStatus newStatus, Long tenantId) {
-        try {
-            TeamMemberEntity updatedMember = teamMemberService.changeStatus(id, newStatus, tenantId);
-            TeamMemberResponse response = teamMemberDtoMapper.toResponse(updatedMember);
-
-            log.info("Team member status changed successfully: {}", id);
-            return responseUtils.success(response, "Status changed successfully");
-
-        } catch (AppException e) {
-            log.error("Validation error changing status: {}", e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error("Unexpected error changing status: {}", e.getMessage(), e);
-            throw e;
         }
     }
 
@@ -150,14 +124,14 @@ public class TeamMemberUseCase {
         try {
             teamMemberService.removeTeamMember(id, tenantId);
 
-            log.info("Team member removed successfully: {}", id);
+            log.info("[TeamMemberUseCase] Team member removed successfully: {}", id);
             return responseUtils.status("Team member removed successfully");
 
         } catch (AppException e) {
-            log.error("Validation error removing team member: {}", e.getMessage());
+            log.error("[TeamMemberUseCase] Error removing team member: {}", e.getMessage());
             throw e;
         } catch (Exception e) {
-            log.error("Unexpected error removing team member: {}", e.getMessage(), e);
+            log.error("[TeamMemberUseCase] Unexpected error removing team member: {}", e.getMessage(), e);
             throw e;
         }
     }

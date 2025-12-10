@@ -52,6 +52,10 @@ public class TeamUseCase {
             if (leaderProfile == null) {
                 return null; // throw exception in getAndValidateUserProfiles
             }
+            teamMemberService.getTeamMemberByUserId(leaderProfile.getId(), tenantId)
+                    .ifPresent(existing -> {
+                        throw new AppException(ErrorMessage.MEMBER_ALREADY_IN_ANOTHER_TEAM);
+                    });
 
             TeamEntity teamEntity = teamDtoMapper.toEntity(request);
             TeamEntity createdTeam = teamService.createTeam(teamEntity, tenantId);
@@ -78,19 +82,20 @@ public class TeamUseCase {
     @Transactional
     public GeneralResponse<?> updateTeam(Long id, UpdateTeamRequest request, Long tenantId) {
         try {
+            // TODO: Validate if leader is being changed and handle accordingly
             TeamEntity updates = teamDtoMapper.toEntity(request);
             TeamEntity updatedTeam = teamService.updateTeam(id, updates, tenantId);
             TeamResponse response = teamDtoMapper.toResponse(updatedTeam);
 
-            log.info("Team updated successfully: {}", id);
+            log.info("[TeamUseCase] Team updated successfully: {}", id);
             return responseUtils.success(response, "Team updated successfully");
 
-        } catch (IllegalArgumentException e) {
-            log.error("Validation error updating team: {}", e.getMessage());
-            return responseUtils.badRequest(e.getMessage());
+        } catch (AppException e) {
+            log.error("[TeamUseCase] Error updating team: {}", e.getMessage());
+            throw e;
         } catch (Exception e) {
-            log.error("Unexpected error updating team: {}", e.getMessage(), e);
-            return responseUtils.internalServerError("Failed to update team");
+            log.error("[TeamUseCase] Unexpected error updating team: {}", e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -107,7 +112,7 @@ public class TeamUseCase {
             return responseUtils.success(response);
 
         } catch (Exception e) {
-            log.error("Error fetching team: {}", e.getMessage(), e);
+            log.error("[TeamUseCase] Unexpected error fetching team: {}", e.getMessage(), e);
             return responseUtils.internalServerError("Failed to fetch team");
         }
     }
@@ -127,7 +132,7 @@ public class TeamUseCase {
             return responseUtils.success(pageResponse);
 
         } catch (Exception e) {
-            log.error("Error fetching teams: {}", e.getMessage(), e);
+            log.error("[TeamUseCase] Unexpected error fetching teams: {}", e.getMessage(), e);
             return responseUtils.internalServerError("Failed to fetch teams");
         }
     }
@@ -137,14 +142,14 @@ public class TeamUseCase {
         try {
             teamService.deleteTeam(id, tenantId);
 
-            log.info("Team deleted successfully: {}", id);
+            log.info("[TeamUseCase] Team deleted successfully: {}", id);
             return responseUtils.status("Team deleted successfully");
 
-        } catch (IllegalArgumentException e) {
-            log.error("Validation error deleting team: {}", e.getMessage());
-            return responseUtils.badRequest(e.getMessage());
+        } catch (AppException e) {
+            log.error("[TeamUseCase] Error deleting team: {}", e.getMessage());
+            throw e;
         } catch (Exception e) {
-            log.error("Unexpected error deleting team: {}", e.getMessage(), e);
+            log.error("[TeamUseCase] Unexpected error deleting team: {}", e.getMessage(), e);
             return responseUtils.internalServerError("Failed to delete team");
         }
     }

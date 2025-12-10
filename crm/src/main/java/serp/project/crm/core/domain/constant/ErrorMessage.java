@@ -71,7 +71,8 @@ public class ErrorMessage {
 
     // Team member errors
     public static final String MEMBER_NOT_BELONG_TO_ORGANIZATION = "Member does not belong to the organization";
-    public static final String MEMBER_ALREADY_IN_TEAM = "Member is already in the team";
+    public static final String MEMBER_ALREADY_IN_TEAM = "Member is already in one of your teams";
+    public static final String MEMBER_ALREADY_IN_ANOTHER_TEAM = "Member is already in another team";
     public static final String MEMBER_IS_NOT_ACTIVE = "Member is not active";
     public static final String MEMBER_NOT_HAS_CRM_ROLE = "Member does not have permission to be assigned to CRM";
     

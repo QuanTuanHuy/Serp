@@ -27,8 +27,6 @@ public interface ITeamMemberService {
             PageRequest pageRequest);
     Optional<TeamMemberEntity> getTeamMemberByTeamAndUser(Long teamId, Long userId, Long tenantId);
 
-    TeamMemberEntity changeRole(Long id, String newRole, Long tenantId);
-    TeamMemberEntity changeStatus(Long id, TeamMemberStatus newStatus, Long tenantId);
     void removeTeamMember(Long id, Long tenantId);
 
     List<UserProfileResponse> getAndValidateUserProfiles(List<Long> userIds, Long tenantId);

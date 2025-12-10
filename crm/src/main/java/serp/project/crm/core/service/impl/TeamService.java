@@ -87,7 +87,7 @@ public class TeamService implements ITeamService {
     @Transactional
     public void deleteTeam(Long id, Long tenantId) {
         TeamEntity team = teamPort.findById(id, tenantId)
-                .orElseThrow(() -> new IllegalArgumentException("Team not found"));
+                .orElseThrow(() -> new AppException(ErrorMessage.TEAM_NOT_FOUND));
 
         // TODO: Check if team has members before deleting
 
