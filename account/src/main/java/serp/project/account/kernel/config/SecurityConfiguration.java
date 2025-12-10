@@ -25,6 +25,8 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.client.RestTemplate;
+
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.constant.KeyCloakConstants;
 import serp.project.account.core.domain.enums.ExternalServices;
@@ -39,6 +41,8 @@ public class SecurityConfiguration {
     private final RequestFilter requestFilter;
 
     private final KeycloakProperties keycloakProperties;
+
+    private final RestTemplate restTemplate;
 
     @Bean
     @Order(1)
@@ -102,6 +106,7 @@ public class SecurityConfiguration {
     public JwtDecoder jwtDecoder() {
         return NimbusJwtDecoder
                 .withJwkSetUri(keycloakProperties.getJwkSetUri())
+                .restOperations(restTemplate)
                 .build();
     }
 
