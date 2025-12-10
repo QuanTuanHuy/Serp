@@ -8,6 +8,10 @@ on:
     branches:
       - main
 
+permissions:
+  actions: read
+  contents: read
+
 env:
   DOCKER_REGISTRY: ${{ secrets.DOCKER_USERNAME }}
   IMAGE_TAG: ${{ github.sha }}
