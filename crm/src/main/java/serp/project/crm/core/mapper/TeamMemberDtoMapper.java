@@ -15,18 +15,18 @@ import serp.project.crm.core.domain.entity.TeamMemberEntity;
 @Component
 public class TeamMemberDtoMapper {
 
-    public TeamMemberEntity toEntity(CreateTeamMemberRequest request) {
+    public TeamMemberEntity toEntity(CreateTeamMemberRequest request, UserProfileResponse user) {
         if (request == null) {
             return null;
         }
 
         return TeamMemberEntity.builder()
-                .name(request.getName())
-                .email(request.getEmail())
-                .phone(request.getPhone())
+                .name(user.getFullName())
+                .email(user.getEmail())
+                .phone(user.getPhoneNumber())
                 .teamId(request.getTeamId())
                 .userId(request.getUserId())
-                .role(request.getRole())
+                .role(user.getRolesInCrm())
                 .build();
     }
 
