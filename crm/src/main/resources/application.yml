@@ -54,7 +54,7 @@ app:
     filter:
       publicUrls:
       protectedUrls:
-
+  
 
 server:
   port: 8086

@@ -50,6 +50,27 @@ jobs:
             logistics:
               - 'logistics/**'
 
+      - name: Create changes file
+        run: |
+          echo '{
+            "account": "${{ steps.changes.outputs.account }}",
+            "api-gateway": "${{ steps.changes.outputs.api-gateway }}",
+            "ptm-task": "${{ steps.changes.outputs.ptm-task }}",
+            "ptm-schedule": "${{ steps.changes.outputs.ptm-schedule }}",
+            "ptm-optimization": "${{ steps.changes.outputs.ptm-optimization }}",
+            "serp-web": "${{ steps.changes.outputs.serp-web }}",
+            "crm": "${{ steps.changes.outputs.crm }}",
+            "purchase": "${{ steps.changes.outputs.purchase }}",
+            "logistics": "${{ steps.changes.outputs.logistics }}"
+          }' > changes.json
+
+      - name: Upload changes artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-changes
+          path: changes.json
+          retention-days: 1
+
   build-account:
     needs: changes
     if: ${{ needs.changes.outputs.account == 'true' }}
