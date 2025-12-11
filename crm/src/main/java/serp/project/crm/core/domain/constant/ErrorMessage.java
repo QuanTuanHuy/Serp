@@ -28,6 +28,8 @@ public class ErrorMessage {
     public static final String CUSTOMER_ALREADY_EXISTS = "Customer with this email already exists";
     public static final String CUSTOMER_INACTIVE = "Customer is inactive";
     public static final String CUSTOMER_HAS_ACTIVE_OPPORTUNITIES = "Cannot delete customer with active opportunities";
+    public static final String CUSTOMER_CANNOT_BE_OWN_PARENT = "Customer cannot be its own parent";
+    public static final String CANNOT_DELETE_CUSTOMER_WITH_CHILDREN = "Cannot delete customer with child customers";
     
     // Lead errors
     public static final String LEAD_NOT_FOUND = "Lead not found";
