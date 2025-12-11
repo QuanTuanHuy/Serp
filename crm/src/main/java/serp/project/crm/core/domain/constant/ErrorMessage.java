@@ -56,6 +56,7 @@ public class ErrorMessage {
     public static final String CONTACT_ALREADY_EXISTS = "Contact with this email already exists for this customer";
     public static final String CONTACT_CUSTOMER_REQUIRED = "Customer ID is required for contact";
     public static final String CONTACT_ALREADY_PRIMARY = "A primary contact already exists for this customer";
+    public static final String CONTACT_CANNOT_BE_PRIMARY = "Contact cannot be set as primary without a customer";
     
     // Activity errors
     public static final String ACTIVITY_NOT_FOUND = "Activity not found";

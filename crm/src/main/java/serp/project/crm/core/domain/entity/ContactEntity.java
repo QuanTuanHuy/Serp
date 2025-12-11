@@ -98,7 +98,7 @@ public class ContactEntity extends BaseEntity {
             this.isPrimary = false;
         }
         if (this.contactType == null) {
-            this.contactType = ContactType.INDIVIDUAL;
+            this.contactType = ContactType.SECONDARY;
         }
     }
 }
