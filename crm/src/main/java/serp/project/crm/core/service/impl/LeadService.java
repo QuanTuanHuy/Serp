@@ -185,19 +185,6 @@ public class LeadService implements ILeadService {
     }
 
     @Transactional
-    public LeadEntity convertLead(Long id, Long tenantId) {
-        LeadEntity lead = leadPort.findById(id, tenantId)
-                .orElseThrow(() -> new AppException(ErrorMessage.LEAD_NOT_FOUND));
-
-        lead.markAsConverted(tenantId);
-        LeadEntity converted = leadPort.save(lead);
-
-        publishLeadConvertedEvent(converted);
-
-        return converted;
-    }
-
-    @Transactional
     public LeadEntity convertLead(Long id, Long customerId, Long opportunityId, Long tenantId) {
         LeadEntity lead = leadPort.findById(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.LEAD_NOT_FOUND));

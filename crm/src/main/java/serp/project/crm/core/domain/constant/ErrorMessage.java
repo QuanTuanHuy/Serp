@@ -59,11 +59,17 @@ public class ErrorMessage {
     public static final String CONTACT_CANNOT_BE_PRIMARY = "Contact cannot be set as primary without a customer";
     
     // Activity errors
+    public static final String ACTIVITY_DUE_DATE_PAST = "Due date cannot be in the past";
     public static final String ACTIVITY_NOT_FOUND = "Activity not found";
     public static final String ACTIVITY_ALREADY_COMPLETED = "Activity is already completed";
     public static final String ACTIVITY_ALREADY_CANCELLED = "Activity is already cancelled";
     public static final String ACTIVITY_INVALID_STATUS = "Invalid activity status";
-    public static final String ACTIVITY_MISSING_ENTITY_REFERENCE = "Activity must be linked to a lead, customer, or opportunity";
+    public static final String ACTIVITY_MISSING_ENTITY_REFERENCE = "Activity must be linked to at least one of lead, contact, customer, or opportunity";
+    public static final String ACTIVITY_TYPE_REQUIRED = "Activity type is required";
+    public static final String ACTIVITY_SUBJECT_REQUIRED = "Activity subject is required";
+    public static final String ACTIVITY_PROGRESS_INVALID = "Activity progressPercent must be between 0 and 100";
+    public static final String ACTIVITY_DURATION_INVALID = "Activity durationMinutes must be greater than zero";
+    public static final String ACTIVITY_DUE_DATE_REQUIRED_FOR_TASK = "Due date is required for task activities";
     
     // Team errors
     public static final String TEAM_NOT_FOUND = "Team not found";
