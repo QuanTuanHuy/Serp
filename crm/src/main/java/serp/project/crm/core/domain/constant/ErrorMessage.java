@@ -28,6 +28,8 @@ public class ErrorMessage {
     public static final String CUSTOMER_ALREADY_EXISTS = "Customer with this email already exists";
     public static final String CUSTOMER_INACTIVE = "Customer is inactive";
     public static final String CUSTOMER_HAS_ACTIVE_OPPORTUNITIES = "Cannot delete customer with active opportunities";
+    public static final String CUSTOMER_CANNOT_BE_OWN_PARENT = "Customer cannot be its own parent";
+    public static final String CANNOT_DELETE_CUSTOMER_WITH_CHILDREN = "Cannot delete customer with child customers";
     
     // Lead errors
     public static final String LEAD_NOT_FOUND = "Lead not found";
@@ -54,13 +56,20 @@ public class ErrorMessage {
     public static final String CONTACT_ALREADY_EXISTS = "Contact with this email already exists for this customer";
     public static final String CONTACT_CUSTOMER_REQUIRED = "Customer ID is required for contact";
     public static final String CONTACT_ALREADY_PRIMARY = "A primary contact already exists for this customer";
+    public static final String CONTACT_CANNOT_BE_PRIMARY = "Contact cannot be set as primary without a customer";
     
     // Activity errors
+    public static final String ACTIVITY_DUE_DATE_PAST = "Due date cannot be in the past";
     public static final String ACTIVITY_NOT_FOUND = "Activity not found";
     public static final String ACTIVITY_ALREADY_COMPLETED = "Activity is already completed";
     public static final String ACTIVITY_ALREADY_CANCELLED = "Activity is already cancelled";
     public static final String ACTIVITY_INVALID_STATUS = "Invalid activity status";
-    public static final String ACTIVITY_MISSING_ENTITY_REFERENCE = "Activity must be linked to a lead, customer, or opportunity";
+    public static final String ACTIVITY_MISSING_ENTITY_REFERENCE = "Activity must be linked to at least one of lead, contact, customer, or opportunity";
+    public static final String ACTIVITY_TYPE_REQUIRED = "Activity type is required";
+    public static final String ACTIVITY_SUBJECT_REQUIRED = "Activity subject is required";
+    public static final String ACTIVITY_PROGRESS_INVALID = "Activity progressPercent must be between 0 and 100";
+    public static final String ACTIVITY_DURATION_INVALID = "Activity durationMinutes must be greater than zero";
+    public static final String ACTIVITY_DUE_DATE_REQUIRED_FOR_TASK = "Due date is required for task activities";
     
     // Team errors
     public static final String TEAM_NOT_FOUND = "Team not found";

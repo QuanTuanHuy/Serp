@@ -9,9 +9,12 @@ import lombok.Getter;
 
 @Getter
 public enum ContactType {
-    INDIVIDUAL("Individual"),
-    COMPANY("Company");
-
+    PRIMARY("Primary"),
+    SECONDARY("Secondary"),
+    BILLING("Billing"),
+    TECHNICAL("Technical"),
+    ;
+    
     private final String typeName;
 
     ContactType(String typeName) {

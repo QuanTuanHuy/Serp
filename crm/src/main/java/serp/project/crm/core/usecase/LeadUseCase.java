@@ -133,7 +133,7 @@ public class LeadUseCase {
             }
 
             ContactEntity contact = leadDtoMapper.toContactEntity(lead, customerId);
-            ContactEntity createdContact = contactService.createContact(contact, tenantId);
+            ContactEntity createdContact = contactService.createContact(contact, tenantId, tenantId); // TODO: fix userId
             log.info("Created contact ID: {} from lead", createdContact.getId());
 
             OpportunityEntity opportunity = leadDtoMapper.toOpportunityEntity(lead, customerId, request);

@@ -49,3 +49,7 @@ external:
       host: localhost
       port: "8089"
       timeout: 15s
+    crmService:
+      host: localhost
+      port: "8086"
+      timeout: 15s

@@ -22,6 +22,7 @@ type ExternalServiceProperties struct {
 	PTMTask          ServiceProperty
 	PurchaseService  ServiceProperty
 	LogisticsService ServiceProperty
+	CrmService       ServiceProperty
 }
 
 func (e ExternalServiceProperties) Prefix() string {

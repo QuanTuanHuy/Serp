@@ -89,7 +89,7 @@ public class LeadScoringService implements ILeadScoringService {
     }
 
     private int calculateEngagementScore(long leadId, long tenantId) {
-        List<ActivityEntity> activities = activityPort.findByLeadId(leadId, tenantId);
+        List<ActivityEntity> activities = activityPort.findAllByLeadId(leadId, tenantId);
 
         int score = 0;
         for (var activity : activities) {

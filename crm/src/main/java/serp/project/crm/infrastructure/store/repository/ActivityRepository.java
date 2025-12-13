@@ -22,20 +22,13 @@ public interface ActivityRepository extends JpaRepository<ActivityModel, Long> {
     Optional<ActivityModel> findByIdAndTenantId(Long id, Long tenantId);
 
     Page<ActivityModel> findByTenantId(Long tenantId, Pageable pageable);
-
     Page<ActivityModel> findByTenantIdAndStatus(Long tenantId, String status, Pageable pageable);
-
     Page<ActivityModel> findByTenantIdAndActivityType(Long tenantId, String activityType, Pageable pageable);
-
     Page<ActivityModel> findByTenantIdAndAssignedTo(Long tenantId, Long assignedTo, Pageable pageable);
-
-    List<ActivityModel> findByTenantIdAndLeadId(Long tenantId, Long leadId);
-
-    List<ActivityModel> findByTenantIdAndCustomerId(Long tenantId, Long customerId);
-
-    List<ActivityModel> findByTenantIdAndOpportunityId(Long tenantId, Long opportunityId);
-
-    List<ActivityModel> findByTenantIdAndContactId(Long tenantId, Long contactId);
+    Page<ActivityModel> findByTenantIdAndLeadId(Long tenantId, Long leadId, Pageable pageable);
+    Page<ActivityModel> findByTenantIdAndCustomerId(Long tenantId, Long customerId, Pageable pageable);
+    Page<ActivityModel> findByTenantIdAndOpportunityId(Long tenantId, Long opportunityId, Pageable pageable);
+    Page<ActivityModel> findByTenantIdAndContactId(Long tenantId, Long contactId, Pageable pageable);
 
     @Query("SELECT a FROM ActivityModel a WHERE a.tenantId = :tenantId " +
             "AND (LOWER(a.subject) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
@@ -55,6 +48,8 @@ public interface ActivityRepository extends JpaRepository<ActivityModel, Long> {
     List<ActivityModel> findUpcomingActivities(@Param("tenantId") Long tenantId,
             @Param("startTime") Long startTime,
             @Param("endTime") Long endTime);
+
+    List<ActivityModel> findByLeadId(Long leadId);
 
     long countByTenantId(Long tenantId);
 

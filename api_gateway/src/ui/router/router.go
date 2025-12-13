@@ -10,6 +10,7 @@ import (
 	"github.com/golibs-starter/golib"
 	"github.com/golibs-starter/golib/web/actuator"
 	account "github.com/serp/api-gateway/src/ui/controller/account"
+	crm "github.com/serp/api-gateway/src/ui/controller/crm"
 	logistics "github.com/serp/api-gateway/src/ui/controller/logistics"
 	ptm "github.com/serp/api-gateway/src/ui/controller/ptm"
 	purchase "github.com/serp/api-gateway/src/ui/controller/purchase"
@@ -35,6 +36,11 @@ type RegisterRoutersIn struct {
 	MenuDisplayController      *account.MenuDisplayController
 	OrganizationController     *account.OrganizationController
 	DepartmentController       *account.DepartmentController
+
+	LeadController        *crm.LeadController
+	OpportunityController *crm.OpportunityController
+	CustomerController    *crm.CustomerController
+	ContactController     *crm.ContactController
 
 	ProjectController   *ptm.ProjectController
 	GroupTaskController *ptm.GroupTaskController
@@ -87,6 +93,14 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		p.MenuDisplayController,
 		p.DepartmentController,
 		p.OrganizationController,
+	)
+
+	RegisterCrmRoutes(
+		group,
+		p.LeadController,
+		p.OpportunityController,
+		p.CustomerController,
+		p.ContactController,
 	)
 
 	RegisterPtmRoutes(

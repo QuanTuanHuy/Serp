@@ -25,7 +25,8 @@ public interface ContactRepository extends JpaRepository<ContactModel, Long> {
 
     List<ContactModel> findByTenantIdAndCustomerId(Long tenantId, Long customerId);
 
-    Optional<ContactModel> findByTenantIdAndCustomerIdAndIsPrimary(Long tenantId, Long customerId, Boolean isPrimary);
+    Optional<ContactModel> findByTenantIdAndCustomerIdAndIsPrimary(Long tenantId, Long customerId,
+            Boolean isPrimary);
 
     Page<ContactModel> findByTenantIdAndActiveStatus(Long tenantId, String activeStatus, Pageable pageable);
 

@@ -23,6 +23,7 @@ func All() fx.Option {
 
 		// Business modules
 		modules.AccountModule(),
+		modules.CrmModule(),
 		modules.PtmModule(),
 		modules.PurchaseModule(),
 		modules.LogisticsModule(),
