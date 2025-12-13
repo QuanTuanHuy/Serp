@@ -11,13 +11,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.util.Pair;
 import serp.project.crm.core.domain.constant.Constants;
+import serp.project.crm.core.domain.constant.ErrorMessage;
 import serp.project.crm.core.domain.dto.PageRequest;
 import serp.project.crm.core.domain.dto.request.CustomerFilterRequest;
 import serp.project.crm.core.domain.entity.CustomerEntity;
 import serp.project.crm.core.domain.enums.ActiveStatus;
+import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.port.store.ICustomerPort;
 import serp.project.crm.core.service.ICustomerService;
-import serp.project.crm.core.port.client.IKafkaPublisher;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -29,19 +30,16 @@ import java.util.Optional;
 public class CustomerService implements ICustomerService {
 
     private final ICustomerPort customerPort;
-    private final IKafkaPublisher kafkaPublisher;
 
     @Transactional
     public CustomerEntity createCustomer(CustomerEntity customer, Long tenantId) {
-        log.info("Creating customer with email {} for tenant {}", customer.getEmail(), tenantId);
-
         if (customerPort.existsByEmail(customer.getEmail(), tenantId)) {
-            throw new IllegalArgumentException("Customer with email " + customer.getEmail() + " already exists");
+            throw new AppException(ErrorMessage.CUSTOMER_ALREADY_EXISTS);
         }
 
         if (customer.getParentCustomerId() != null) {
             customerPort.findById(customer.getParentCustomerId(), tenantId)
-                    .orElseThrow(() -> new IllegalArgumentException("Parent customer not found"));
+                    .orElseThrow(() -> new AppException(ErrorMessage.CUSTOMER_NOT_FOUND));
         }
 
         customer.setTenantId(tenantId);
@@ -56,24 +54,22 @@ public class CustomerService implements ICustomerService {
 
     @Transactional
     public CustomerEntity updateCustomer(Long id, CustomerEntity updates, Long tenantId) {
-        log.info("Updating customer {} for tenant {}", id, tenantId);
-
         CustomerEntity existing = customerPort.findById(id, tenantId)
-                .orElseThrow(() -> new IllegalArgumentException("Customer not found"));
+                .orElseThrow(() -> new AppException(ErrorMessage.CUSTOMER_NOT_FOUND));
 
         if (updates.getEmail() != null && !updates.getEmail().equals(existing.getEmail())) {
             if (customerPort.existsByEmail(updates.getEmail(), tenantId)) {
-                throw new IllegalArgumentException("Customer with email " + updates.getEmail() + " already exists");
+                throw new AppException(ErrorMessage.CUSTOMER_ALREADY_EXISTS);
             }
         }
 
         if (updates.getParentCustomerId() != null
                 && !updates.getParentCustomerId().equals(existing.getParentCustomerId())) {
             if (updates.getParentCustomerId().equals(id)) {
-                throw new IllegalArgumentException("Customer cannot be its own parent");
+                throw new AppException(ErrorMessage.CUSTOMER_CANNOT_BE_OWN_PARENT);
             }
             customerPort.findById(updates.getParentCustomerId(), tenantId)
-                    .orElseThrow(() -> new IllegalArgumentException("Parent customer not found"));
+                    .orElseThrow(() -> new AppException(ErrorMessage.CUSTOMER_NOT_FOUND));
         }
 
         existing.updateFrom(updates);
@@ -152,18 +148,17 @@ public class CustomerService implements ICustomerService {
         customer.setActiveStatus(ActiveStatus.INACTIVE);
         customerPort.save(customer);
 
-        // Publish event
         publishCustomerDeletedEvent(customer);
     }
 
     @Transactional
     public void deleteCustomer(Long id, Long tenantId) {
         CustomerEntity customer = customerPort.findById(id, tenantId)
-                .orElseThrow(() -> new IllegalArgumentException("Customer not found"));
+                .orElseThrow(() -> new AppException(ErrorMessage.CUSTOMER_NOT_FOUND));
 
         List<CustomerEntity> children = customerPort.findByParentCustomerId(id, tenantId);
         if (!children.isEmpty()) {
-            throw new IllegalStateException("Cannot delete customer with child customers");
+            throw new AppException(ErrorMessage.CANNOT_DELETE_CUSTOMER_WITH_CHILDREN);
         }
 
         // TODO: Validation: No active opportunities
@@ -189,6 +184,12 @@ public class CustomerService implements ICustomerService {
 
     @Override
     @Transactional(readOnly = true)
+    public boolean isEmailExists(String email, Long tenantId) {
+        return customerPort.existsByEmail(email, tenantId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Pair<List<CustomerEntity>, Long> filterCustomers(CustomerFilterRequest filter, Long tenantId,
             PageRequest pageRequest) {
         pageRequest.validate();
@@ -196,17 +197,14 @@ public class CustomerService implements ICustomerService {
     }
 
     private void publishCustomerCreatedEvent(CustomerEntity customer) {
-        // TODO: Implement event publishing
         log.debug("Event: Customer created - ID: {}, Topic: {}", customer.getId(), Constants.KafkaTopic.CUSTOMER);
     }
 
     private void publishCustomerUpdatedEvent(CustomerEntity customer) {
-        // TODO: Implement event publishing
         log.debug("Event: Customer updated - ID: {}, Topic: {}", customer.getId(), Constants.KafkaTopic.CUSTOMER);
     }
 
     private void publishCustomerDeletedEvent(CustomerEntity customer) {
-        // TODO: Implement event publishing
         log.debug("Event: Customer deleted - ID: {}, Topic: {}", customer.getId(), Constants.KafkaTopic.CUSTOMER);
     }
 }
