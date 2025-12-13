@@ -166,7 +166,7 @@ public class LeadDtoMapper {
                 .email(lead.getEmail())
                 .phone(lead.getPhone())
                 .jobPosition(lead.getJobTitle())
-                .contactType(ContactType.INDIVIDUAL)
+                .contactType(ContactType.SECONDARY)
                 .isPrimary(true)
                 .activeStatus(ActiveStatus.ACTIVE)
                 .build();
