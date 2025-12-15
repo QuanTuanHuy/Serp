@@ -44,9 +44,37 @@ public class ActivityEntity extends BaseEntity {
 
     private List<String> attachments;
 
+    public boolean hasAnyLink() {
+        return leadId != null || contactId != null || customerId != null || opportunityId != null;
+    }
+
+    public boolean isTask() {
+        return ActivityType.TASK.equals(this.activityType);
+    }
+
+    public boolean isMeeting() {
+        return ActivityType.MEETING.equals(this.activityType);
+    }
+
+    public boolean isCall() {
+        return ActivityType.CALL.equals(this.activityType);
+    }
+
+    public boolean isProgressValid() {
+        return progressPercent == null || (progressPercent >= 0 && progressPercent <= 100);
+    }
+
+    public boolean isDurationValid() {
+        return durationMinutes == null || durationMinutes > 0;
+    }
+
     // State management
     public boolean isCompleted() {
         return ActivityStatus.COMPLETED.equals(this.status);
+    }
+
+    public boolean isCancelled() {
+        return ActivityStatus.CANCELLED.equals(this.status);
     }
 
     public boolean isOverdue() {

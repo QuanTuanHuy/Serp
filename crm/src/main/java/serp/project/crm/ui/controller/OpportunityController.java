@@ -15,6 +15,7 @@ import serp.project.crm.core.domain.dto.request.CreateOpportunityRequest;
 import serp.project.crm.core.domain.dto.request.OpportunityFilterRequest;
 import serp.project.crm.core.domain.dto.request.UpdateOpportunityRequest;
 import serp.project.crm.core.domain.enums.OpportunityStage;
+import serp.project.crm.core.usecase.ActivityUseCase;
 import serp.project.crm.core.usecase.OpportunityUseCase;
 import serp.project.crm.kernel.utils.AuthUtils;
 
@@ -25,6 +26,8 @@ import serp.project.crm.kernel.utils.AuthUtils;
 public class OpportunityController {
 
     private final OpportunityUseCase opportunityUseCase;
+    private final ActivityUseCase activityUseCase;
+
     private final AuthUtils authUtils;
 
     @PostMapping
@@ -65,6 +68,27 @@ public class OpportunityController {
 
         log.info("GET /api/v1/opportunities/{} - Fetching opportunity for tenant: {}", id, tenantId);
         var response = opportunityUseCase.getOpportunityById(id, tenantId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @GetMapping("/{id}/activities")
+    public ResponseEntity<?> getActivitiesByOpportunityId(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer size) {
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        if (tenantId == null) {
+            return null;
+        }
+
+        log.info("GET /api/v1/opportunities/{}/activities - Fetching activities for tenant: {}, page: {}, size: {}",
+                id, tenantId, page, size);
+
+        PageRequest pageRequest = PageRequest.builder()
+                .page(page)
+                .size(size)
+                .build();
+        var response = activityUseCase.getActivitiesByOpportunity(id, tenantId, pageRequest);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 

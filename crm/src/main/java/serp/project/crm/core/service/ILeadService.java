@@ -48,8 +48,6 @@ public interface ILeadService {
 
     LeadEntity qualifyLead(Long id, Long tenantId);
 
-    LeadEntity convertLead(Long id, Long tenantId);
-
     LeadEntity convertLead(Long id, Long customerId, Long opportunityId, Long tenantId);
 
     void deleteLead(Long id, Long tenantId);

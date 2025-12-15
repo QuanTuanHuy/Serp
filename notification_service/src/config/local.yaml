@@ -1,0 +1,32 @@
+app:
+  datasource:
+    driver: postgres
+    host: ${DB_HOST:-localhost}
+    port: ${DB_PORT:-5432}
+    database: ${DB_NAME:-serp_notification}
+    username: ${DB_USERNAME:-serp}
+    password: ${DB_PASSWORD:-serp}
+    logLevel: info
+  redis:
+    host: ${REDIS_HOST:-localhost}
+    port: ${REDIS_PORT:-6379}
+  keycloak:
+    url: ${KEYCLOAK_URL}
+    realm: serp
+    client-id: serp-notification
+    client-secret: ${CLIENT_SECRET}
+    jwk-set-uri: ${KEYCLOAK_URL}/realms/serp/protocol/openid-connect/certs
+    expected-issuer: ${KEYCLOAK_URL}/realms/serp
+    expected-audience: 
+  kafka:
+    consumer:
+      bootstrapServers:
+        - ${KAFKA_BOOTSTRAP_SERVERS}
+      groupId: ptm-notification-group
+      autoOffsetReset: earliest
+      enableAutoCommit: false
+      sessionTimeoutMs: 30000
+      heartbeatMs: 10000
+      maxPollRecords: 100
+      fetchMinBytes: 1
+      fetchMaxWaitMs: 500
