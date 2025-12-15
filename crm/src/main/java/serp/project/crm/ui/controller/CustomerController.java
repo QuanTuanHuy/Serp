@@ -14,6 +14,7 @@ import serp.project.crm.core.domain.dto.PageRequest;
 import serp.project.crm.core.domain.dto.request.CreateCustomerRequest;
 import serp.project.crm.core.domain.dto.request.CustomerFilterRequest;
 import serp.project.crm.core.domain.dto.request.UpdateCustomerRequest;
+import serp.project.crm.core.usecase.ActivityUseCase;
 import serp.project.crm.core.usecase.CustomerUseCase;
 import serp.project.crm.kernel.utils.AuthUtils;
 
@@ -24,6 +25,8 @@ import serp.project.crm.kernel.utils.AuthUtils;
 public class CustomerController {
 
     private final CustomerUseCase customerUseCase;
+    private final ActivityUseCase activityUseCase;
+
     private final AuthUtils authUtils;
 
     @PostMapping
@@ -58,6 +61,25 @@ public class CustomerController {
         }
 
         var response = customerUseCase.getCustomerById(id, tenantId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @GetMapping("/{id}/activities")
+    public ResponseEntity<?> getActivitiesByCustomerId(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer size) {
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        if (tenantId == null) {
+            return null;
+        }
+
+        PageRequest pageRequest = PageRequest.builder()
+                .page(page)
+                .size(size)
+                .build();
+
+        var response = activityUseCase.getActivitiesByCustomer(id, tenantId, pageRequest);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 

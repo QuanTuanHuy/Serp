@@ -10,13 +10,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import serp.project.crm.core.domain.constant.Constants;
+import serp.project.crm.core.domain.constant.ErrorMessage;
 import serp.project.crm.core.domain.dto.PageRequest;
 import serp.project.crm.core.domain.entity.ActivityEntity;
 import serp.project.crm.core.domain.enums.ActivityStatus;
 import serp.project.crm.core.domain.enums.ActivityType;
-import serp.project.crm.core.port.client.IKafkaPublisher;
+import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.port.store.IActivityPort;
+import serp.project.crm.core.port.store.IContactPort;
+import serp.project.crm.core.port.store.ICustomerPort;
+import serp.project.crm.core.port.store.ILeadPort;
+import serp.project.crm.core.port.store.IOpportunityPort;
+import serp.project.crm.core.port.store.ITeamMemberPort;
 import serp.project.crm.core.service.IActivityService;
 
 import java.time.LocalDateTime;
@@ -28,19 +35,25 @@ import java.util.Optional;
 @Slf4j
 public class ActivityService implements IActivityService {
 
+    private static final int DEFAULT_MEETING_DURATION_MINUTES = 60;
+    private static final int DEFAULT_CALL_DURATION_MINUTES = 15;
+
     private final IActivityPort activityPort;
-    private final IKafkaPublisher kafkaPublisher;
+    private final ILeadPort leadPort;
+    private final IOpportunityPort opportunityPort;
+    private final ICustomerPort customerPort;
+    private final ITeamMemberPort teamMemberPort;
+
+    private final IContactPort contactPort;
 
     @Override
     @Transactional
-    public ActivityEntity createActivity(ActivityEntity activity, Long tenantId) {
-        Long now = System.currentTimeMillis();
-        if (activity.getDueDate() != null && activity.getDueDate() < now) {
-            throw new IllegalArgumentException("Due date cannot be in the past");
-        }
-
+    public ActivityEntity createActivity(ActivityEntity activity, Long userId, Long tenantId) {
         activity.setTenantId(tenantId);
         activity.setDefaults();
+        applyTypeDefaults(activity);
+        applyAssignDefault(activity, userId);
+        validateBusinessRules(activity, tenantId);
 
         ActivityEntity saved = activityPort.save(activity);
 
@@ -52,11 +65,12 @@ public class ActivityService implements IActivityService {
     @Override
     @Transactional
     public ActivityEntity updateActivity(Long id, ActivityEntity updates, Long tenantId) {
-
         ActivityEntity existing = activityPort.findById(id, tenantId)
-                .orElseThrow(() -> new IllegalArgumentException("Activity not found"));
+                .orElseThrow(() -> new AppException(ErrorMessage.ACTIVITY_NOT_FOUND));
 
         existing.updateFrom(updates);
+        applyTypeDefaults(existing);
+        validateBusinessRules(existing, tenantId);
 
         ActivityEntity updated = activityPort.save(existing);
 
@@ -159,7 +173,14 @@ public class ActivityService implements IActivityService {
     @Transactional
     public ActivityEntity completeActivity(Long id, Long tenantId) {
         ActivityEntity activity = activityPort.findById(id, tenantId)
-                .orElseThrow(() -> new IllegalArgumentException("Activity not found"));
+                .orElseThrow(() -> new AppException(ErrorMessage.ACTIVITY_NOT_FOUND));
+
+        if (activity.isCompleted()) {
+            throw new AppException(ErrorMessage.ACTIVITY_ALREADY_COMPLETED);
+        }
+        if (activity.isCancelled()) {
+            throw new AppException(ErrorMessage.ACTIVITY_ALREADY_CANCELLED);
+        }
 
         activity.markAsCompleted(tenantId);
 
@@ -174,7 +195,15 @@ public class ActivityService implements IActivityService {
     @Transactional
     public ActivityEntity cancelActivity(Long id, Long tenantId) {
         ActivityEntity activity = activityPort.findById(id, tenantId)
-                .orElseThrow(() -> new IllegalArgumentException("Activity not found"));
+                .orElseThrow(() -> new AppException(ErrorMessage.ACTIVITY_NOT_FOUND));
+
+        if (activity.isCompleted()) {
+            throw new AppException(ErrorMessage.ACTIVITY_ALREADY_COMPLETED);
+        }
+        if (activity.isCancelled()) {
+            log.info("Activity already cancelled: {}", id);
+            return activity;
+        }
 
         activity.markAsCancelled(tenantId);
 
@@ -189,7 +218,7 @@ public class ActivityService implements IActivityService {
     @Transactional
     public void deleteActivity(Long id, Long tenantId) {
         ActivityEntity activity = activityPort.findById(id, tenantId)
-                .orElseThrow(() -> new IllegalArgumentException("Activity not found"));
+                .orElseThrow(() -> new AppException(ErrorMessage.ACTIVITY_NOT_FOUND));
 
         activityPort.deleteById(id, tenantId);
 
@@ -197,28 +226,101 @@ public class ActivityService implements IActivityService {
 
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public void validateRelations(ActivityEntity activity, Long tenantId) {
+        if (activity.getLeadId() != null && leadPort.findById(activity.getLeadId(), tenantId).isEmpty()) {
+            throw new AppException(ErrorMessage.LEAD_NOT_FOUND);
+        }
+        if (activity.getOpportunityId() != null
+                && opportunityPort.findById(activity.getOpportunityId(), tenantId).isEmpty()) {
+            throw new AppException(ErrorMessage.OPPORTUNITY_NOT_FOUND);
+        }
+        if (activity.getCustomerId() != null
+                && customerPort.findById(activity.getCustomerId(), tenantId).isEmpty()) {
+            throw new AppException(ErrorMessage.CUSTOMER_NOT_FOUND);
+        }
+        if (activity.getContactId() != null
+                && contactPort.findById(activity.getContactId(), tenantId).isEmpty()) {
+            throw new AppException(ErrorMessage.CONTACT_NOT_FOUND);
+        }
+    }
+
+    private void applyTypeDefaults(ActivityEntity activity) {
+        if (activity.isMeeting() && activity.getDurationMinutes() == null) {
+            activity.setDurationMinutes(DEFAULT_MEETING_DURATION_MINUTES);
+        }
+        if (activity.isCall() && activity.getDurationMinutes() == null) {
+            activity.setDurationMinutes(DEFAULT_CALL_DURATION_MINUTES);
+        }
+    }
+
+    private void applyAssignDefault(ActivityEntity activity, Long userId) {
+        if (activity.getAssignedTo() == null) {
+            var member = teamMemberPort.findByUserId(userId, activity.getTenantId()).orElse(null);
+            if (member != null) {
+                activity.setAssignedTo(member.getId());
+            }
+        }
+    }
+
+    private void validateBusinessRules(ActivityEntity activity, Long tenantId) {
+        if (activity.getActivityType() == null) {
+            throw new AppException(ErrorMessage.ACTIVITY_TYPE_REQUIRED);
+        }
+
+        if (!StringUtils.hasText(activity.getSubject())) {
+            throw new AppException(ErrorMessage.ACTIVITY_SUBJECT_REQUIRED);
+        }
+
+        if (!activity.hasAnyLink()) {
+            throw new AppException(ErrorMessage.ACTIVITY_MISSING_ENTITY_REFERENCE);
+        }
+
+        if (!activity.isProgressValid()) {
+            throw new AppException(ErrorMessage.ACTIVITY_PROGRESS_INVALID);
+        }
+
+        if (!activity.isDurationValid()) {
+            throw new AppException(ErrorMessage.ACTIVITY_DURATION_INVALID);
+        }
+
+        if (activity.isTask() && activity.getDueDate() == null) {
+            throw new AppException(ErrorMessage.ACTIVITY_DUE_DATE_REQUIRED_FOR_TASK);
+        }
+
+        long now = System.currentTimeMillis();
+        if (activity.getDueDate() != null && activity.getDueDate() < now) {
+            throw new AppException(ErrorMessage.ACTIVITY_DUE_DATE_PAST);
+        }
+
+        if (activity.isMeeting()
+                || activity.isCall()
+                && activity.getActivityDate() != null && activity.getActivityDate() < now) {
+            log.warn("Activity date is in the past for {} activity {}", activity.getActivityType(), activity.getId());
+        }
+
+        validateRelations(activity, tenantId);
+    }
+
+
     private void publishActivityCreatedEvent(ActivityEntity activity) {
-        // TODO: Implement event publishing
         log.debug("Event: Activity created - ID: {}, Topic: {}", activity.getId(), Constants.KafkaTopic.ACTIVITY);
     }
 
     private void publishActivityUpdatedEvent(ActivityEntity activity) {
-        // TODO: Implement event publishing
         log.debug("Event: Activity updated - ID: {}, Topic: {}", activity.getId(), Constants.KafkaTopic.ACTIVITY);
     }
 
     private void publishActivityCompletedEvent(ActivityEntity activity) {
-        // TODO: Implement event publishing
         log.debug("Event: Activity completed - ID: {}, Topic: {}", activity.getId(), Constants.KafkaTopic.ACTIVITY);
     }
 
     private void publishActivityCancelledEvent(ActivityEntity activity) {
-        // TODO: Implement event publishing
         log.debug("Event: Activity cancelled - ID: {}, Topic: {}", activity.getId(), Constants.KafkaTopic.ACTIVITY);
     }
 
     private void publishActivityDeletedEvent(ActivityEntity activity) {
-        // TODO: Implement event publishing
         log.debug("Event: Activity deleted - ID: {}, Topic: {}", activity.getId(), Constants.KafkaTopic.ACTIVITY);
     }
 }
