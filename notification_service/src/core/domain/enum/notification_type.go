@@ -17,3 +17,12 @@ const (
 func (nt NotificationType) String() string {
 	return string(nt)
 }
+
+func IsValidNotificationType(nt NotificationType) bool {
+	switch nt {
+	case TypeInfo, TypeSuccess, TypeWarning, TypeError:
+		return true
+	default:
+		return false
+	}
+}

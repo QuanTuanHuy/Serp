@@ -17,6 +17,8 @@ var (
 	ErrTitleTooLong    = "notification title exceeds 255 characters"
 	ErrInvalidType     = "invalid notification type"
 	ErrInvalidPriority = "invalid notification priority"
+
+	ErrNotifcationNotFound = "notification not found"
 )
 
 type BusinessErrorResponse struct {
@@ -34,4 +36,6 @@ var BusinessErrorResponseMap = map[string]BusinessErrorResponse{
 	ErrTitleTooLong:    {HTTPCode: http.StatusBadRequest, Message: ErrTitleTooLong},
 	ErrInvalidType:     {HTTPCode: http.StatusBadRequest, Message: ErrInvalidType},
 	ErrInvalidPriority: {HTTPCode: http.StatusBadRequest, Message: ErrInvalidPriority},
+
+	ErrNotifcationNotFound: {HTTPCode: http.StatusNotFound, Message: ErrNotifcationNotFound},
 }

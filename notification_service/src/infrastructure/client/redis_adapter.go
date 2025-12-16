@@ -101,6 +101,15 @@ func (r *RedisAdapter) SetToRedis(ctx context.Context, key string, value any, tt
 	return nil
 }
 
+func (r *RedisAdapter) DecrementInRedis(ctx context.Context, key string) (int64, error) {
+	result, err := r.redisClient.Decr(ctx, key).Result()
+	if err != nil {
+		r.logger.Error("Failed to decrement key in redis "+key, zap.Error(err))
+		return 0, err
+	}
+	return result, nil
+}
+
 func NewRedisAdapter(redisClient *redis.Client) port.IRedisPort {
 	return &RedisAdapter{
 		redisClient: redisClient,

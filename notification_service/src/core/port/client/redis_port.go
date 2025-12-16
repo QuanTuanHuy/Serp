@@ -15,4 +15,5 @@ type IRedisPort interface {
 	DeleteKeyFromRedis(ctx context.Context, key string) error
 	GetKeysFromRedis(ctx context.Context, pattern string) ([]string, error)
 	ExistsInRedis(ctx context.Context, key string) (bool, error)
+	DecrementInRedis(ctx context.Context, key string) (int64, error)
 }
