@@ -19,9 +19,18 @@ app:
     expected-issuer: ${KEYCLOAK_URL}/realms/serp
     expected-audience: 
   kafka:
+    producer:
+      bootstrapServers:
+        - ${KAFKA_BOOTSTRAP_SERVERS:-localhost:9092}
+      requireAcks: 1
+      maxMessageBytes: 1048576
+      retryMax: 3
+      retryBackoffMs: 100
+      flushFrequencyMs: 500
+      flushMessages: 100
     consumer:
       bootstrapServers:
-        - ${KAFKA_BOOTSTRAP_SERVERS}
+        - ${KAFKA_BOOTSTRAP_SERVERS:-localhost:9092}
       groupId: ptm-notification-group
       autoOffsetReset: earliest
       enableAutoCommit: false

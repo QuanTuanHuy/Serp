@@ -6,6 +6,9 @@ Description: Part of Serp Project
 package bootstrap
 
 import (
+	"github.com/serp/notification-service/src/core/service"
+	client "github.com/serp/notification-service/src/infrastructure/client"
+	store "github.com/serp/notification-service/src/infrastructure/store/adapter"
 	"github.com/serp/notification-service/src/kernel/utils"
 	"github.com/serp/notification-service/src/ui/middleware"
 	"github.com/serp/notification-service/src/ui/router"
@@ -30,8 +33,13 @@ func All() fx.Option {
 		fx.Provide(utils.NewKeycloakJwksUtils),
 
 		// Adapter
+		fx.Provide(client.NewRedisAdapter),
+		fx.Provide(client.NewKafkaProducerAdapter),
+
+		fx.Provide(store.NewDBTransactionAdapter),
 
 		// Services
+		fx.Provide(service.NewTransactionService),
 
 		// Use cases
 
