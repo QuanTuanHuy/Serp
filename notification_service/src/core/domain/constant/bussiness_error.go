@@ -19,6 +19,9 @@ var (
 	ErrInvalidPriority = "invalid notification priority"
 
 	ErrNotifcationNotFound = "notification not found"
+
+	ErrPreferenceNotFound = "notification preference not found"
+	ErrInvalidQuietHours  = "invalid quiet hours settings"
 )
 
 type BusinessErrorResponse struct {
@@ -38,4 +41,7 @@ var BusinessErrorResponseMap = map[string]BusinessErrorResponse{
 	ErrInvalidPriority: {HTTPCode: http.StatusBadRequest, Message: ErrInvalidPriority},
 
 	ErrNotifcationNotFound: {HTTPCode: http.StatusNotFound, Message: ErrNotifcationNotFound},
+
+	ErrPreferenceNotFound: {HTTPCode: http.StatusNotFound, Message: ErrPreferenceNotFound},
+	ErrInvalidQuietHours:  {HTTPCode: http.StatusBadRequest, Message: ErrInvalidQuietHours},
 }

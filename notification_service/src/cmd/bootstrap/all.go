@@ -7,9 +7,11 @@ package bootstrap
 
 import (
 	"github.com/serp/notification-service/src/core/service"
+	"github.com/serp/notification-service/src/core/usecase"
 	client "github.com/serp/notification-service/src/infrastructure/client"
 	store "github.com/serp/notification-service/src/infrastructure/store/adapter"
 	"github.com/serp/notification-service/src/kernel/utils"
+	"github.com/serp/notification-service/src/ui/controller.go"
 	"github.com/serp/notification-service/src/ui/middleware"
 	"github.com/serp/notification-service/src/ui/router"
 	"go.uber.org/fx"
@@ -40,10 +42,13 @@ func All() fx.Option {
 
 		// Services
 		fx.Provide(service.NewTransactionService),
+		fx.Provide(service.NewPreferenceService),
 
 		// Use cases
+		fx.Provide(usecase.NewPreferenceUseCase),
 
 		// Controllers
+		fx.Provide(controller.NewPreferenceController),
 
 		// Router
 		fx.Provide(NewRouterConfig),
