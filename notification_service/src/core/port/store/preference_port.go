@@ -15,5 +15,5 @@ import (
 type IPreferencePort interface {
 	Create(ctx context.Context, tx *gorm.DB, preference *entity.NotificationPreferenceEntity) (*entity.NotificationPreferenceEntity, error)
 	Update(ctx context.Context, tx *gorm.DB, preference *entity.NotificationPreferenceEntity) (*entity.NotificationPreferenceEntity, error)
-	GetByUserID(ctx context.Context, tx *gorm.DB, userID int64) (*entity.NotificationPreferenceEntity, error)
+	GetByUserID(ctx context.Context, userID int64) (*entity.NotificationPreferenceEntity, error)
 }
