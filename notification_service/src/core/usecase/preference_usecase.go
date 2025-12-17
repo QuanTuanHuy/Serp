@@ -60,5 +60,6 @@ func NewPreferenceUseCase(
 ) IPreferenceUseCase {
 	return &PreferenceUseCase{
 		preferenceService: preferenceService,
+		txService:         txService,
 	}
 }

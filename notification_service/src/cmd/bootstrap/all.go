@@ -39,10 +39,13 @@ func All() fx.Option {
 		fx.Provide(client.NewKafkaProducerAdapter),
 
 		fx.Provide(store.NewDBTransactionAdapter),
+		fx.Provide(store.NewNotificationAdapter),
+		fx.Provide(store.NewPreferenceAdapter),
 
 		// Services
 		fx.Provide(service.NewTransactionService),
 		fx.Provide(service.NewPreferenceService),
+		fx.Provide(service.NewNotificationService),
 
 		// Use cases
 		fx.Provide(usecase.NewPreferenceUseCase),

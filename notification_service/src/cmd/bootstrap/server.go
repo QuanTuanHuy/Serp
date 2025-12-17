@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/serp/notification-service/src/kernel/properties"
+	"github.com/serp/notification-service/src/ui/controller.go"
 	"github.com/serp/notification-service/src/ui/middleware"
 	"github.com/serp/notification-service/src/ui/router"
 	"go.uber.org/fx"
@@ -23,6 +24,8 @@ func NewRouterConfig(
 	jwtMiddleware *middleware.JWTMiddleware,
 	roleMiddleware *middleware.RoleMiddleware,
 	logger *zap.Logger,
+
+	prefController *controller.PreferenceController,
 ) *router.RouterConfig {
 	return &router.RouterConfig{
 		AppProps:       appProps,
@@ -30,6 +33,8 @@ func NewRouterConfig(
 		JWTMiddleware:  jwtMiddleware,
 		RoleMiddleware: roleMiddleware,
 		Logger:         logger,
+
+		PreferenceController: prefController,
 	}
 }
 

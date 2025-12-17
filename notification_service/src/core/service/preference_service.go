@@ -203,6 +203,12 @@ func (p *PreferenceService) Update(
 		p.logger.Error("failed to update preference", zap.Int64("userID", userID), zap.Error(err))
 		return nil, err
 	}
+
+	go func() {
+		cacheKey := fmt.Sprintf(PreferenceCacheKey, userID)
+		_ = p.redisPort.SetToRedis(ctx, cacheKey, updated, PreferenceCacheTTLSeconds)
+	}()
+
 	return updated, nil
 }
 

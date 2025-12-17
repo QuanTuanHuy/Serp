@@ -15,14 +15,7 @@ type NotificationPreferenceEntity struct {
 	EnableEmail bool `json:"enableEmail"`
 	EnablePush  bool `json:"enablePush"`
 
-	CategorySettings map[string]CategoryPreference `json:"categorySettings"`
-
 	QuietHoursEnabled  bool `json:"quietHoursEnabled"`
 	QuietHoursStartMin *int `json:"quietHoursStart,omitempty"`
 	QuietHoursEndMin   *int `json:"quietHoursEnd,omitempty"`
-}
-
-type CategoryPreference struct {
-	Enabled  bool     `json:"enabled"`
-	Channels []string `json:"channels"` // ["in_app", "email"]
 }
