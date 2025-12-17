@@ -22,7 +22,8 @@ type RouterConfig struct {
 	RoleMiddleware *middleware.RoleMiddleware
 	Logger         *zap.Logger
 
-	PreferenceController *controller.PreferenceController
+	PreferenceController   *controller.PreferenceController
+	NotificationController *controller.NotificationController
 }
 
 func RegisterRoutes(config *RouterConfig) {
@@ -40,6 +41,12 @@ func RegisterRoutes(config *RouterConfig) {
 		{
 			preferences.GET("", config.PreferenceController.GetPreferences)
 			preferences.PATCH("", config.PreferenceController.UpdatePreferences)
+		}
+
+		notifications := apiV1.Group("/notifications")
+		{
+			notifications.POST("", config.NotificationController.CreateNotification)
+			notifications.GET("", config.NotificationController.GetNotifications)
 		}
 	}
 

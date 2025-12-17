@@ -8,6 +8,7 @@ package bootstrap
 import (
 	"github.com/serp/notification-service/src/core/service"
 	"github.com/serp/notification-service/src/core/usecase"
+	"github.com/serp/notification-service/src/core/websocket"
 	client "github.com/serp/notification-service/src/infrastructure/client"
 	store "github.com/serp/notification-service/src/infrastructure/store/adapter"
 	"github.com/serp/notification-service/src/kernel/utils"
@@ -46,12 +47,18 @@ func All() fx.Option {
 		fx.Provide(service.NewTransactionService),
 		fx.Provide(service.NewPreferenceService),
 		fx.Provide(service.NewNotificationService),
+		fx.Provide(service.NewDeliveryService),
+
+		// WebSocket Hub
+		fx.Provide(websocket.NewHub),
 
 		// Use cases
 		fx.Provide(usecase.NewPreferenceUseCase),
+		fx.Provide(usecase.NewNotificationUseCase),
 
 		// Controllers
 		fx.Provide(controller.NewPreferenceController),
+		fx.Provide(controller.NewNotificationController),
 
 		// Router
 		fx.Provide(NewRouterConfig),
