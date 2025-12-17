@@ -27,6 +27,7 @@ func NewRouterConfig(
 
 	prefController *controller.PreferenceController,
 	notificationController *controller.NotificationController,
+	websocketController *controller.WebSocketController,
 ) *router.RouterConfig {
 	return &router.RouterConfig{
 		AppProps:       appProps,
@@ -37,6 +38,7 @@ func NewRouterConfig(
 
 		PreferenceController:   prefController,
 		NotificationController: notificationController,
+		WebSocketController:    websocketController,
 	}
 }
 

@@ -12,6 +12,10 @@ import (
 )
 
 type IWebSocketHub interface {
+	// Client management
+	RegisterClient(client *Client)
+	UnregisterClient(client *Client)
+
 	// Send to specific user (all devices)
 	SendToUser(userID int64, message []byte) error
 
@@ -72,7 +76,7 @@ type Hub struct {
 }
 
 func NewHub(logger *zap.Logger) IWebSocketHub {
-	return &Hub{
+	hub := &Hub{
 		clients:    make(map[int64]map[*Client]bool),
 		tenants:    make(map[int64]map[*Client]bool),
 		register:   make(chan *Client),
@@ -80,6 +84,8 @@ func NewHub(logger *zap.Logger) IWebSocketHub {
 		broadcast:  make(chan *BroadcastMessage),
 		logger:     logger,
 	}
+	go hub.Run()
+	return hub
 }
 
 func (h *Hub) Run() {
@@ -88,16 +94,16 @@ func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.register:
-			h.registerClient(client)
+			h.RegisterClient(client)
 		case client := <-h.unregister:
-			h.unregisterClient(client)
+			h.UnregisterClient(client)
 		case message := <-h.broadcast:
 			h.broadcastMessage(message)
 		}
 	}
 }
 
-func (h *Hub) registerClient(client *Client) {
+func (h *Hub) RegisterClient(client *Client) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 
@@ -124,7 +130,7 @@ func (h *Hub) registerClient(client *Client) {
 	)
 }
 
-func (h *Hub) unregisterClient(client *Client) {
+func (h *Hub) UnregisterClient(client *Client) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 

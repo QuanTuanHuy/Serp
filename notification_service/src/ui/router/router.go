@@ -24,6 +24,7 @@ type RouterConfig struct {
 
 	PreferenceController   *controller.PreferenceController
 	NotificationController *controller.NotificationController
+	WebSocketController    *controller.WebSocketController
 }
 
 func RegisterRoutes(config *RouterConfig) {
@@ -48,6 +49,12 @@ func RegisterRoutes(config *RouterConfig) {
 			notifications.POST("", config.NotificationController.CreateNotification)
 			notifications.GET("", config.NotificationController.GetNotifications)
 		}
+
+		websocket := apiV1.Group("/ws")
+		{
+			websocket.GET("", config.WebSocketController.HandleWebSocket)
+		}
+
 	}
 
 	config.Logger.Info("Routes registered successfully")

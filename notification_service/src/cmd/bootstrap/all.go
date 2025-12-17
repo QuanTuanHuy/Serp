@@ -59,6 +59,7 @@ func All() fx.Option {
 		// Controllers
 		fx.Provide(controller.NewPreferenceController),
 		fx.Provide(controller.NewNotificationController),
+		fx.Provide(controller.NewWebSocketController),
 
 		// Router
 		fx.Provide(NewRouterConfig),
