@@ -1,7 +1,13 @@
+/*
+Author: QuanTuanHuy
+Description: Part of Serp Project
+*/
+
 package websocket
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
@@ -33,7 +39,7 @@ type Client struct {
 	id string
 
 	// Reference to hub
-	hub *Hub
+	hub IWebSocketHub
 
 	// WebSocket connection
 	conn *websocket.Conn
@@ -57,7 +63,7 @@ type Client struct {
 }
 
 func NewClient(
-	hub *Hub,
+	hub IWebSocketHub,
 	conn *websocket.Conn,
 	userID, tenantID int64,
 	userAgent, remoteAddr string,
@@ -82,7 +88,7 @@ func NewClient(
 // Runs in its own goroutine per client
 func (c *Client) ReadPump() {
 	defer func() {
-		c.hub.unregister <- c
+		c.hub.UnregisterClient(c)
 		c.conn.Close()
 		c.logger.Info("ReadPump closed",
 			zap.String("clientID", c.id),
@@ -280,7 +286,7 @@ func (c *Client) sendSubscriptionConfirmation(categories []string, subscribed bo
 		Type:      action,
 		Timestamp: time.Now().UnixMilli(),
 		MessageID: uuid.NewString(),
-		Payload:   mustMarshal(SubscribePayload{Categories: categories}),
+		Payload:   MustMarshal(SubscribePayload{Categories: categories}),
 	}
 
 	data, _ := json.Marshal(response)
@@ -325,4 +331,25 @@ func (c *Client) GetInfo() ClientInfo {
 
 func (c *Client) ConnectionDuration() time.Duration {
 	return time.Since(c.connectedAt)
+}
+
+func (c *Client) Send(message []byte) error {
+	select {
+	case c.send <- message:
+		return nil
+	default:
+		return fmt.Errorf("send buffer full for client ID %s", c.id)
+	}
+}
+
+func (c *Client) UserID() int64 {
+	return c.userID
+}
+
+func (c *Client) TenantID() int64 {
+	return c.tenantID
+}
+
+func (c *Client) ID() string {
+	return c.id
 }

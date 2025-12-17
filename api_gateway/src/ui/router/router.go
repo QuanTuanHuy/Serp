@@ -12,6 +12,7 @@ import (
 	account "github.com/serp/api-gateway/src/ui/controller/account"
 	crm "github.com/serp/api-gateway/src/ui/controller/crm"
 	logistics "github.com/serp/api-gateway/src/ui/controller/logistics"
+	notification "github.com/serp/api-gateway/src/ui/controller/notification"
 	ptm "github.com/serp/api-gateway/src/ui/controller/ptm"
 	purchase "github.com/serp/api-gateway/src/ui/controller/purchase"
 	"github.com/serp/api-gateway/src/ui/middleware"
@@ -23,6 +24,8 @@ type RegisterRoutersIn struct {
 	App      *golib.App
 	Engine   *gin.Engine
 	Actuator *actuator.Endpoint
+
+	NotificationProxyController *notification.NotificationProxyController
 
 	AuthController             *account.AuthController
 	UserController             *account.UserController
@@ -135,5 +138,11 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		p.LogisticsProductController,
 		p.LogisticsSupplierController,
 		p.LogisticsShipmentController,
+	)
+
+	RegisterNotificationRoutes(
+		group,
+		p.NotificationProxyController,
+		p.JWTMiddleware,
 	)
 }
