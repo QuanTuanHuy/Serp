@@ -1,6 +1,6 @@
 app:
   name: Notification Service
   path: /notification
-  port: 8088
+  port: 8090
   logging:
     level: info

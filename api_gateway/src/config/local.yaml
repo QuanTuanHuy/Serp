@@ -6,12 +6,12 @@ app:
     port: 6379
 
   keycloak:
-    url: http://localhost:8180
+    url: ${KEYCLOAK_URL}
     realm: serp
     client-id: serp-api-gateway
     client-secret: ${CLIENT_SECRET}
-    jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
-    expected-issuer: http://localhost:8180/realms/serp
+    jwk-set-uri: ${KEYCLOAK_URL}/realms/serp/protocol/openid-connect/certs
+    expected-issuer: ${KEYCLOAK_URL}/realms/serp
     expected-audience:
 
   cors:
@@ -52,4 +52,8 @@ external:
     crmService:
       host: localhost
       port: "8086"
+      timeout: 15s
+    notificationService:
+      host: localhost
+      port: "8090"
       timeout: 15s
