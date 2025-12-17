@@ -26,6 +26,8 @@ func NewRouterConfig(
 	logger *zap.Logger,
 
 	prefController *controller.PreferenceController,
+	notificationController *controller.NotificationController,
+	websocketController *controller.WebSocketController,
 ) *router.RouterConfig {
 	return &router.RouterConfig{
 		AppProps:       appProps,
@@ -34,7 +36,9 @@ func NewRouterConfig(
 		RoleMiddleware: roleMiddleware,
 		Logger:         logger,
 
-		PreferenceController: prefController,
+		PreferenceController:   prefController,
+		NotificationController: notificationController,
+		WebSocketController:    websocketController,
 	}
 }
 

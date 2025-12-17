@@ -2,6 +2,7 @@ package mapper
 
 import (
 	"github.com/serp/notification-service/src/core/domain/dto/request"
+	"github.com/serp/notification-service/src/core/domain/dto/response"
 	"github.com/serp/notification-service/src/core/domain/entity"
 	"github.com/serp/notification-service/src/core/domain/enum"
 )
@@ -41,4 +42,37 @@ func CreateRequestToEntity(req *request.CreateNotificationRequest) *entity.Notif
 
 		Metadata: req.Metadata,
 	}
+}
+
+func NotificationEntityToResponse(entity *entity.NotificationEntity) *response.NotificationResponse {
+	if entity == nil {
+		return nil
+	}
+
+	return &response.NotificationResponse{
+		ID:            entity.ID,
+		Title:         entity.Title,
+		Message:       entity.Message,
+		Type:          string(entity.Type),
+		Category:      string(entity.Category),
+		Priority:      string(entity.Priority),
+		SourceService: entity.SourceService,
+		ActionURL:     entity.ActionURL,
+		ActionType:    entity.ActionType,
+		EntityType:    entity.EntityType,
+		EntityID:      entity.EntityID,
+		IsRead:        entity.IsRead,
+		ReadAt:        entity.ReadAt,
+		IsArchived:    entity.IsArchived,
+		CreatedAt:     entity.CreatedAt,
+		Metadata:      entity.Metadata,
+	}
+}
+
+func NotificationEntitiesToResponses(entities []*entity.NotificationEntity) []*response.NotificationResponse {
+	responses := make([]*response.NotificationResponse, 0, len(entities))
+	for _, entity := range entities {
+		responses = append(responses, NotificationEntityToResponse(entity))
+	}
+	return responses
 }

@@ -1,3 +1,8 @@
+/*
+Author: QuanTuanHuy
+Description: Part of Serp Project
+*/
+
 package websocket
 
 import (
@@ -23,7 +28,13 @@ type SubscribePayload struct {
 	Categories []string `json:"categories"`
 }
 
-func mustMarshal(v interface{}) json.RawMessage {
+type UnreadCountPayload struct {
+	TotalUnread int              `json:"totalUnread"`
+	ByCategory  map[string]int64 `json:"byCategory"`
+	HasUrgent   bool             `json:"hasUrgent"`
+}
+
+func MustMarshal(v any) json.RawMessage {
 	data, _ := json.Marshal(v)
 	return data
 }
