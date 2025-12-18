@@ -11,6 +11,7 @@ import (
 	"github.com/serp/notification-service/src/core/domain/dto/request"
 	"github.com/serp/notification-service/src/core/domain/dto/response"
 	"github.com/serp/notification-service/src/core/domain/entity"
+	"github.com/serp/notification-service/src/core/domain/enum"
 	"github.com/serp/notification-service/src/core/domain/mapper"
 	"github.com/serp/notification-service/src/core/service"
 	"go.uber.org/zap"
@@ -19,6 +20,7 @@ import (
 
 type INotificationUseCase interface {
 	CreateNotification(ctx context.Context, userID int64, req *request.CreateNotificationRequest) (*response.NotificationResponse, error)
+	CreateBulkNotifications(ctx context.Context, req *request.CreateBulkNotificationRequest) error
 
 	GetNotifications(ctx context.Context, userID int64, params *request.GetNotificationParams) (*response.NotificationListResponse, error)
 	GetNotificationByID(ctx context.Context, userID, id int64) (*response.NotificationResponse, error)
@@ -61,6 +63,46 @@ func (n *NotificationUseCase) CreateNotification(ctx context.Context, userID int
 		}
 	}()
 	return mapper.NotificationEntityToResponse(notification), nil
+}
+
+func (n *NotificationUseCase) CreateBulkNotifications(ctx context.Context, req *request.CreateBulkNotificationRequest) error {
+	if req == nil || len(req.UserIDs) == 0 {
+		return nil
+	}
+
+	notifications := make([]*entity.NotificationEntity, 0, len(req.UserIDs))
+	for _, userID := range req.UserIDs {
+		notifications = append(notifications, &entity.NotificationEntity{
+			UserID:   userID,
+			TenantID: req.TenantID,
+
+			Title:   req.Title,
+			Message: req.Message,
+			Type:    enum.NotificationType(req.Type),
+
+			Category: enum.NotificationCategory(req.Category),
+			Priority: enum.NotificationPriority(req.Priority),
+
+			SourceService: req.SourceService,
+			ActionURL:     req.ActionURL,
+			Metadata:      req.Metadata,
+		})
+	}
+
+	err := n.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
+		return n.notificationService.CreateBulk(ctx, tx, notifications)
+	})
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		if deliveryErr := n.deliveryService.DeliverBulk(context.Background(), notifications); deliveryErr != nil {
+			n.logger.Error("failed to deliver bulk notifications", zap.Error(deliveryErr))
+		}
+	}()
+
+	return nil
 }
 
 func (n *NotificationUseCase) GetNotifications(ctx context.Context, userID int64, params *request.GetNotificationParams) (*response.NotificationListResponse, error) {

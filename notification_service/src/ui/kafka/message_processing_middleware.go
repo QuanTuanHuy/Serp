@@ -127,10 +127,15 @@ func (m *MessageProcessingMiddleware) sendToDLQ(ctx context.Context, originalTop
 func NewMessageProcessingMiddleware(
 	idempotencyService service.IIdempotencyService,
 	kafkaProducer port.IKafkaProducerPort,
+	logger *zap.Logger,
 ) *MessageProcessingMiddleware {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
 	return &MessageProcessingMiddleware{
 		idempotencyService: idempotencyService,
 		kafkaProducer:      kafkaProducer,
+		logger:             logger,
 	}
 }
 
