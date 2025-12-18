@@ -12,21 +12,24 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"github.com/serp/notification-service/src/core/domain/constant"
 	ws "github.com/serp/notification-service/src/core/websocket"
 	"github.com/serp/notification-service/src/kernel/utils"
 	"go.uber.org/zap"
 )
 
 type WebSocketController struct {
-	hub     ws.IWebSocketHub
-	upgrade websocket.Upgrader
-	logger  *zap.Logger
+	hub      ws.IWebSocketHub
+	upgrade  websocket.Upgrader
+	jwtUtils *utils.JWTUtils
+	logger   *zap.Logger
 }
 
-func NewWebSocketController(hub ws.IWebSocketHub, logger *zap.Logger) *WebSocketController {
+func NewWebSocketController(hub ws.IWebSocketHub, jwtUtils *utils.JWTUtils, logger *zap.Logger) *WebSocketController {
 	return &WebSocketController{
-		hub:    hub,
-		logger: logger,
+		hub:      hub,
+		jwtUtils: jwtUtils,
+		logger:   logger,
 		upgrade: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
@@ -38,6 +41,18 @@ func NewWebSocketController(hub ws.IWebSocketHub, logger *zap.Logger) *WebSocket
 }
 
 func (w *WebSocketController) HandleWebSocket(c *gin.Context) {
+	token := c.Query("token")
+	if token == "" {
+		utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
+		return
+	}
+
+	valid, err := w.jwtUtils.ValidateToken(c, token)
+	if err != nil || !valid {
+		utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
+		return
+	}
+
 	userID, err := utils.GetUserIDFromContext(c)
 	if err != nil {
 		return

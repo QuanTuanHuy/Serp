@@ -7,6 +7,7 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/serp/api-gateway/src/ui/controller/common"
 	crm "github.com/serp/api-gateway/src/ui/controller/crm"
 	"github.com/serp/api-gateway/src/ui/middleware"
 )
@@ -17,7 +18,11 @@ func RegisterCrmRoutes(
 	opportunityController *crm.OpportunityController,
 	customerController *crm.CustomerController,
 	contactController *crm.ContactController,
+	genericProxyController *common.GenericProxyController,
 ) {
+	// Proxy experiment
+	group.Any("/crm/api/v1/proxy/*proxyPath", genericProxyController.ProxyToCRM)
+
 	leadsV1 := group.Group("/crm/api/v1/leads")
 	{
 		leadsV1.Use(middleware.AuthMiddleware()).POST("", leadController.CreateLead)

@@ -50,11 +50,11 @@ func RegisterRoutes(config *RouterConfig) {
 			notifications.GET("", config.NotificationController.GetNotifications)
 		}
 
-		websocket := apiV1.Group("/ws")
-		{
-			websocket.GET("", config.WebSocketController.HandleWebSocket)
-		}
+	}
 
+	websocket := config.Engine.Group(fmt.Sprintf("%s/ws", config.AppProps.Path))
+	{
+		websocket.GET("", config.WebSocketController.HandleWebSocket)
 	}
 
 	config.Logger.Info("Routes registered successfully")
