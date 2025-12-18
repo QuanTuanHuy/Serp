@@ -25,6 +25,7 @@ import {
 } from '@/shared/components/ui';
 import { useAuth, useModules, useUser } from '@/modules/account';
 import { getModuleIcon, getModuleRoute } from '@/shared/constants/moduleIcons';
+import { NotificationDropdown } from '@/modules/notifications';
 
 export function Header() {
   const { isAuthenticated, user, logout } = useAuth();
@@ -151,6 +152,9 @@ export function Header() {
 
           {isAuthenticated ? (
             <div className='flex items-center space-x-3'>
+              {/* Notification Bell */}
+              <NotificationDropdown />
+
               <div className='relative group'>
                 <Avatar className='h-8 w-8 cursor-pointer'>
                   {user?.avatarUrl && (

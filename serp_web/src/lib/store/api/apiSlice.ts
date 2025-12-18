@@ -149,6 +149,8 @@ export const api = createApi({
     'logistics/Product',
     'logistics/Shipment',
     'logistics/Supplier',
+    // Notification tags
+    'Notification',
   ],
 
   // Define endpoints in separate files for each module

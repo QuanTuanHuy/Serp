@@ -19,6 +19,7 @@ import {
 import { Search, Bell, User, ChevronDown, Home, Building2 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import { useAuth, useUser } from '@/modules/account';
+import { NotificationButton } from '@/modules/notifications';
 
 interface SettingsHeaderProps {
   className?: string;
@@ -31,7 +32,6 @@ export const SettingsHeader: React.FC<SettingsHeaderProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [notifications] = useState(0);
   const { getDisplayName, user } = useUser();
   const [hidden, setHidden] = useState(false);
 
@@ -152,22 +152,7 @@ export const SettingsHeader: React.FC<SettingsHeaderProps> = ({
         <div className='flex items-center space-x-3'>
           {/* Notifications */}
           <div className='relative'>
-            <Button
-              variant='ghost'
-              size='sm'
-              onClick={() => {
-                // TODO: Open notifications panel
-                console.log('Open notifications');
-              }}
-              className='relative'
-            >
-              <Bell className='h-5 w-5' />
-              {notifications > 0 && (
-                <span className='absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-xs font-medium text-white flex items-center justify-center'>
-                  {notifications > 9 ? '9+' : notifications}
-                </span>
-              )}
-            </Button>
+            <NotificationButton settingsPath='' />
           </div>
 
           {/* Theme Toggle */}

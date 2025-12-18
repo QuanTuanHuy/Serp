@@ -13,15 +13,8 @@ import {
   ThemeToggle,
   Input,
 } from '@/shared/components';
-import {
-  Search,
-  Plus,
-  Bell,
-  Settings,
-  User,
-  ChevronDown,
-  Home,
-} from 'lucide-react';
+import { Search, Plus, Settings, User, ChevronDown, Home } from 'lucide-react';
+import { NotificationButton } from '@/modules/notifications';
 import { cn } from '@/shared/utils';
 import { useUser } from '@/modules/account';
 
@@ -36,7 +29,6 @@ export const CRMHeader: React.FC<CRMHeaderProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [notifications, setNotifications] = useState(3);
   const [hidden, setHidden] = useState(false);
 
   const { getInitials, getDisplayName, user } = useUser();
@@ -180,21 +172,10 @@ export const CRMHeader: React.FC<CRMHeaderProps> = ({
           </Button>
 
           {/* Notifications */}
-          <div className='relative'>
-            <Button
-              variant='ghost'
-              size='sm'
-              onClick={() => router.push('/crm/activities')}
-              className='relative'
-            >
-              <Bell className='h-5 w-5' />
-              {notifications > 0 && (
-                <span className='absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-xs font-medium text-white flex items-center justify-center'>
-                  {notifications > 9 ? '9+' : notifications}
-                </span>
-              )}
-            </Button>
-          </div>
+          <NotificationButton
+            settingsPath='/crm/settings'
+            allNotificationsPath='/crm/activities'
+          />
 
           {/* Theme Toggle */}
           <ThemeToggle />

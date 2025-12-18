@@ -16,6 +16,7 @@ import {
 
 let socket: WebSocket | null = null;
 let reconnectTimer: NodeJS.Timeout | null = null;
+let pingInterval: NodeJS.Timeout | null = null;
 
 export const websocketMiddleware: Middleware =
   (store) => (next) => (action: any) => {
@@ -43,6 +44,18 @@ export const websocketMiddleware: Middleware =
             clearTimeout(reconnectTimer);
             reconnectTimer = null;
           }
+
+          // Start ping interval to keep connection alive
+          if (pingInterval) {
+            clearInterval(pingInterval);
+          }
+          pingInterval = setInterval(() => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+              socket.send(
+                JSON.stringify({ type: 'PING', timestamp: Date.now() })
+              );
+            }
+          }, 30000); // Ping every 30 seconds
         };
 
         socket.onmessage = (event) => {
@@ -57,6 +70,12 @@ export const websocketMiddleware: Middleware =
         socket.onclose = () => {
           store.dispatch(wsDisconnected());
           socket = null;
+
+          // Clear ping interval
+          if (pingInterval) {
+            clearInterval(pingInterval);
+            pingInterval = null;
+          }
 
           // Reconnect if still authenticated
           const currentToken = store.getState().account.auth?.token;
@@ -79,6 +98,10 @@ export const websocketMiddleware: Middleware =
 
     // Helper to disconnect
     const disconnect = () => {
+      if (pingInterval) {
+        clearInterval(pingInterval);
+        pingInterval = null;
+      }
       if (socket) {
         socket.close();
         socket = null;
