@@ -17,6 +17,7 @@ import {
 import storage from 'redux-persist/lib/storage';
 import { api } from './api';
 import { logisticsApi } from '@/modules/logistics/services/api';
+import { websocketMiddleware } from './middleware/websocketMiddleware';
 
 // Import feature slices
 import { authSlice, userSlice } from '@/modules/account/store';
@@ -62,7 +63,8 @@ export const store = configureStore({
     })
       // Add RTK Query middleware
       .concat(api.middleware)
-      .concat(logisticsApi.middleware),
+      .concat(logisticsApi.middleware)
+      .concat(websocketMiddleware),
 
   // Enable Redux DevTools in development
   devTools: process.env.NODE_ENV !== 'production',

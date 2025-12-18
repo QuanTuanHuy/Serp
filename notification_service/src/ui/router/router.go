@@ -52,7 +52,7 @@ func RegisterRoutes(config *RouterConfig) {
 
 	}
 
-	websocket := config.Engine.Group(fmt.Sprintf("%s/api/v1/ws", config.AppProps.Path))
+	websocket := config.Engine.Group(fmt.Sprintf("%s/ws", config.AppProps.Path))
 	{
 		websocket.GET("", config.WebSocketController.HandleWebSocket)
 	}
