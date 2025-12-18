@@ -17,7 +17,7 @@ func RegisterNotificationRoutes(
 	jwtMiddleware *middleware.JWTMiddleware,
 ) {
 	notificationGroup := group.Group("/api/v1/notifications")
-	notificationGroup.Use(jwtMiddleware.AuthenticateJWT())
+	// notificationGroup.Use(jwtMiddleware.AuthenticateJWT())
 	{
 		notificationGroup.GET("/ws", notificationProxyController.ProxyWebSocket)
 	}
