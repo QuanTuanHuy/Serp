@@ -21,6 +21,13 @@ type INotificationUseCase interface {
 	CreateNotification(ctx context.Context, userID int64, req *request.CreateNotificationRequest) (*response.NotificationResponse, error)
 
 	GetNotifications(ctx context.Context, userID int64, params *request.GetNotificationParams) (*response.NotificationListResponse, error)
+	GetNotificationByID(ctx context.Context, userID, id int64) (*response.NotificationResponse, error)
+
+	UpdateNotificationByID(ctx context.Context, userID, id int64, req *request.UpdateNotificationRequest) (*response.NotificationResponse, error)
+	MarkAllAsRead(ctx context.Context, userID int64) error
+	DeleteNotificationByID(ctx context.Context, userID, id int64) error
+
+	GetUnreadCount(ctx context.Context, userID int64) (int64, error)
 }
 
 type NotificationUseCase struct {
@@ -72,6 +79,49 @@ func (n *NotificationUseCase) GetNotifications(ctx context.Context, userID int64
 		Page:          params.Page,
 		PageSize:      params.PageSize,
 	}, nil
+}
+
+func (n *NotificationUseCase) DeleteNotificationByID(ctx context.Context, userID int64, id int64) error {
+	return n.notificationService.Delete(ctx, nil, id, userID)
+}
+
+func (n *NotificationUseCase) GetNotificationByID(ctx context.Context, userID int64, id int64) (*response.NotificationResponse, error) {
+	notification, err := n.notificationService.GetByIDAndUserID(ctx, id, userID)
+	if err != nil {
+		return nil, err
+	}
+	return mapper.NotificationEntityToResponse(notification), nil
+}
+
+func (n *NotificationUseCase) GetUnreadCount(ctx context.Context, userID int64) (int64, error) {
+	return n.notificationService.GetUnreadCount(ctx, userID)
+}
+
+func (n *NotificationUseCase) MarkAllAsRead(ctx context.Context, userID int64) error {
+	return n.notificationService.MarkAllAsRead(ctx, nil, userID)
+}
+
+func (n *NotificationUseCase) UpdateNotificationByID(
+	ctx context.Context,
+	userID int64,
+	id int64,
+	req *request.UpdateNotificationRequest,
+) (*response.NotificationResponse, error) {
+	notification, err := n.notificationService.GetByIDAndUserID(ctx, id, userID)
+	if err != nil {
+		return nil, err
+	}
+	if req.IsRead != nil {
+		notification.IsRead = *req.IsRead
+	}
+	if req.IsArchived != nil {
+		notification.IsArchived = *req.IsArchived
+	}
+	updatedNotification, err := n.notificationService.Update(ctx, nil, notification)
+	if err != nil {
+		return nil, err
+	}
+	return mapper.NotificationEntityToResponse(updatedNotification), nil
 }
 
 func NewNotificationUseCase(

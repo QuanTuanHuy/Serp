@@ -23,6 +23,7 @@ import (
 
 type INotificationService interface {
 	Create(ctx context.Context, tx *gorm.DB, userID int64, req *request.CreateNotificationRequest) (*entity.NotificationEntity, error)
+	Update(ctx context.Context, tx *gorm.DB, notification *entity.NotificationEntity) (*entity.NotificationEntity, error)
 	GetByID(ctx context.Context, id int64) (*entity.NotificationEntity, error)
 	GetByIDAndUserID(ctx context.Context, id int64, userID int64) (*entity.NotificationEntity, error)
 	GetList(ctx context.Context, userID int64, params *request.GetNotificationParams) ([]*entity.NotificationEntity, int64, error)
@@ -70,6 +71,15 @@ func (n *NotificationService) Create(ctx context.Context, tx *gorm.DB, userID in
 	}()
 
 	return created, nil
+}
+
+func (n *NotificationService) Update(ctx context.Context, tx *gorm.DB, notification *entity.NotificationEntity) (*entity.NotificationEntity, error) {
+	updated, err := n.notificationPort.Update(ctx, tx, notification.ID, notification)
+	if err != nil {
+		n.logger.Error("failed to update notification", zap.Int64("notificationID", notification.ID), zap.Int64("userID", notification.UserID), zap.Error(err))
+		return nil, err
+	}
+	return updated, nil
 }
 
 func (n *NotificationService) CreateBulk(ctx context.Context, tx *gorm.DB, notifications []*entity.NotificationEntity) error {
