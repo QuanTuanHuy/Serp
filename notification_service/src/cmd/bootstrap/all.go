@@ -35,6 +35,7 @@ func All() fx.Option {
 
 		// Utils
 		fx.Provide(utils.NewKeycloakJwksUtils),
+		fx.Provide(utils.NewJWTUtils),
 
 		// Adapter
 		fx.Provide(client.NewRedisAdapter),

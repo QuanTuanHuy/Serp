@@ -51,7 +51,7 @@ func (c *NotificationProxyController) ProxyWebSocket(ctx *gin.Context) {
 	proxy.Director = func(req *http.Request) {
 		originalDirector(req)
 		// Rewrite path to match notification service expectation
-		req.URL.Path = "/notification/api/v1/ws"
+		req.URL.Path = "/notification/ws"
 		req.Host = targetURL.Host
 
 		if auth := ctx.GetHeader("Authorization"); auth != "" {

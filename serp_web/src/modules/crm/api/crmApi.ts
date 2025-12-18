@@ -37,10 +37,11 @@ export const crmApi = api.injectEndpoints({
       { filters?: CustomerFilters; pagination: PaginationParams }
     >({
       query: ({ filters = {}, pagination }) => ({
-        url: '/crm/customers',
+        url: '/customers',
         method: 'GET',
         params: { ...filters, ...pagination },
       }),
+      extraOptions: { service: 'crm' },
       providesTags: (result) =>
         result?.data?.data
           ? [
@@ -55,9 +56,10 @@ export const crmApi = api.injectEndpoints({
 
     getCustomer: builder.query<APIResponse<Customer>, string>({
       query: (id) => ({
-        url: `/crm/customers/${id}`,
+        url: `/customers/${id}`,
         method: 'GET',
       }),
+      extraOptions: { service: 'crm' },
       providesTags: (result, error, id) => [{ type: 'Customer', id }],
     }),
 
@@ -66,10 +68,11 @@ export const crmApi = api.injectEndpoints({
       CreateCustomerRequest
     >({
       query: (data) => ({
-        url: '/crm/customers',
+        url: '/customers',
         method: 'POST',
         body: data,
       }),
+      extraOptions: { service: 'crm' },
       invalidatesTags: [{ type: 'Customer', id: 'LIST' }],
     }),
 
@@ -78,10 +81,11 @@ export const crmApi = api.injectEndpoints({
       { id: string; data: UpdateCustomerRequest }
     >({
       query: ({ id, data }) => ({
-        url: `/crm/customers/${id}`,
+        url: `/customers/${id}`,
         method: 'PUT',
         body: data,
       }),
+      extraOptions: { service: 'crm' },
       invalidatesTags: (result, error, { id }) => [
         { type: 'Customer', id },
         { type: 'Customer', id: 'LIST' },
@@ -91,9 +95,10 @@ export const crmApi = api.injectEndpoints({
     deleteCustomer: builder.mutation<APIResponse<{ deleted: boolean }>, string>(
       {
         query: (id) => ({
-          url: `/crm/customers/${id}`,
+          url: `/customers/${id}`,
           method: 'DELETE',
         }),
+        extraOptions: { service: 'crm' },
         invalidatesTags: (result, error, id) => [
           { type: 'Customer', id },
           { type: 'Customer', id: 'LIST' },
@@ -107,10 +112,11 @@ export const crmApi = api.injectEndpoints({
       { filters?: LeadFilters; pagination: PaginationParams }
     >({
       query: ({ filters = {}, pagination }) => ({
-        url: '/crm/leads',
+        url: '/leads',
         method: 'GET',
         params: { ...filters, ...pagination },
       }),
+      extraOptions: { service: 'crm' },
       providesTags: (result) =>
         result?.data?.data
           ? [
@@ -124,16 +130,21 @@ export const crmApi = api.injectEndpoints({
     }),
 
     getLead: builder.query<APIResponse<Lead>, string>({
-      query: (id) => `/crm/leads/${id}`,
+      query: (id) => ({
+        url: `/leads/${id}`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'crm' },
       providesTags: (result, error, id) => [{ type: 'Lead', id }],
     }),
 
     createLead: builder.mutation<APIResponse<Lead>, CreateLeadRequest>({
       query: (data) => ({
-        url: '/crm/leads',
+        url: '/leads',
         method: 'POST',
         body: data,
       }),
+      extraOptions: { service: 'crm' },
       invalidatesTags: [{ type: 'Lead', id: 'LIST' }],
     }),
 
@@ -142,10 +153,11 @@ export const crmApi = api.injectEndpoints({
       { id: string; data: UpdateLeadRequest }
     >({
       query: ({ id, data }) => ({
-        url: `/crm/leads/${id}`,
+        url: `/leads/${id}`,
         method: 'PUT',
         body: data,
       }),
+      extraOptions: { service: 'crm' },
       invalidatesTags: (result, error, { id }) => [
         { type: 'Lead', id },
         { type: 'Lead', id: 'LIST' },
@@ -154,9 +166,10 @@ export const crmApi = api.injectEndpoints({
 
     deleteLead: builder.mutation<APIResponse<{ deleted: boolean }>, string>({
       query: (id) => ({
-        url: `/crm/leads/${id}`,
+        url: `/leads/${id}`,
         method: 'DELETE',
       }),
+      extraOptions: { service: 'crm' },
       invalidatesTags: (result, error, id) => [
         { type: 'Lead', id },
         { type: 'Lead', id: 'LIST' },
@@ -168,10 +181,11 @@ export const crmApi = api.injectEndpoints({
       { id: string; opportunityData?: CreateOpportunityRequest }
     >({
       query: ({ id, opportunityData }) => ({
-        url: `/crm/leads/${id}/convert`,
+        url: `/leads/${id}/convert`,
         method: 'POST',
         body: { opportunityData },
       }),
+      extraOptions: { service: 'crm' },
       invalidatesTags: [
         { type: 'Lead', id: 'LIST' },
         { type: 'Customer', id: 'LIST' },
@@ -185,10 +199,11 @@ export const crmApi = api.injectEndpoints({
       { filters?: OpportunityFilters; pagination: PaginationParams }
     >({
       query: ({ filters = {}, pagination }) => ({
-        url: '/crm/opportunities',
+        url: '/opportunities',
         method: 'GET',
         params: { ...filters, ...pagination },
       }),
+      extraOptions: { service: 'crm' },
       providesTags: (result) =>
         result?.data?.data
           ? [
@@ -202,7 +217,11 @@ export const crmApi = api.injectEndpoints({
     }),
 
     getOpportunity: builder.query<APIResponse<Opportunity>, string>({
-      query: (id) => `/crm/opportunities/${id}`,
+      query: (id) => ({
+        url: `/opportunities/${id}`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'crm' },
       providesTags: (result, error, id) => [{ type: 'Opportunity', id }],
     }),
 
@@ -211,10 +230,11 @@ export const crmApi = api.injectEndpoints({
       CreateOpportunityRequest
     >({
       query: (data) => ({
-        url: '/crm/opportunities',
+        url: '/opportunities',
         method: 'POST',
         body: data,
       }),
+      extraOptions: { service: 'crm' },
       invalidatesTags: [{ type: 'Opportunity', id: 'LIST' }],
     }),
 
@@ -223,10 +243,11 @@ export const crmApi = api.injectEndpoints({
       { id: string; data: UpdateOpportunityRequest }
     >({
       query: ({ id, data }) => ({
-        url: `/crm/opportunities/${id}`,
+        url: `/opportunities/${id}`,
         method: 'PUT',
         body: data,
       }),
+      extraOptions: { service: 'crm' },
       invalidatesTags: (result, error, { id }) => [
         { type: 'Opportunity', id },
         { type: 'Opportunity', id: 'LIST' },
@@ -238,9 +259,10 @@ export const crmApi = api.injectEndpoints({
       string
     >({
       query: (id) => ({
-        url: `/crm/opportunities/${id}`,
+        url: `/opportunities/${id}`,
         method: 'DELETE',
       }),
+      extraOptions: { service: 'crm' },
       invalidatesTags: (result, error, id) => [
         { type: 'Opportunity', id },
         { type: 'Opportunity', id: 'LIST' },
@@ -253,10 +275,11 @@ export const crmApi = api.injectEndpoints({
       { filters?: ActivityFilters; pagination: PaginationParams }
     >({
       query: ({ filters = {}, pagination }) => ({
-        url: '/crm/activities',
+        url: '/activities',
         method: 'GET',
         params: { ...filters, ...pagination },
       }),
+      extraOptions: { service: 'crm' },
       providesTags: (result) =>
         result?.data?.data
           ? [
@@ -270,7 +293,11 @@ export const crmApi = api.injectEndpoints({
     }),
 
     getActivity: builder.query<APIResponse<Activity>, string>({
-      query: (id) => `/crm/activities/${id}`,
+      query: (id) => ({
+        url: `/activities/${id}`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'crm' },
       providesTags: (result, error, id) => [{ type: 'Activity', id }],
     }),
 
@@ -279,10 +306,11 @@ export const crmApi = api.injectEndpoints({
       CreateActivityRequest
     >({
       query: (data) => ({
-        url: '/crm/activities',
+        url: '/activities',
         method: 'POST',
         body: data,
       }),
+      extraOptions: { service: 'crm' },
       invalidatesTags: [{ type: 'Activity', id: 'LIST' }],
     }),
 
@@ -291,10 +319,11 @@ export const crmApi = api.injectEndpoints({
       { id: string; data: UpdateActivityRequest }
     >({
       query: ({ id, data }) => ({
-        url: `/crm/activities/${id}`,
+        url: `/activities/${id}`,
         method: 'PUT',
         body: data,
       }),
+      extraOptions: { service: 'crm' },
       invalidatesTags: (result, error, { id }) => [
         { type: 'Activity', id },
         { type: 'Activity', id: 'LIST' },
@@ -304,9 +333,10 @@ export const crmApi = api.injectEndpoints({
     deleteActivity: builder.mutation<APIResponse<{ deleted: boolean }>, string>(
       {
         query: (id) => ({
-          url: `/crm/activities/${id}`,
+          url: `/activities/${id}`,
           method: 'DELETE',
         }),
+        extraOptions: { service: 'crm' },
         invalidatesTags: (result, error, id) => [
           { type: 'Activity', id },
           { type: 'Activity', id: 'LIST' },
@@ -316,12 +346,20 @@ export const crmApi = api.injectEndpoints({
 
     // Analytics endpoints
     getCRMMetrics: builder.query<APIResponse<CRMMetrics>, void>({
-      query: () => '/crm/analytics/metrics',
+      query: () => ({
+        url: '/analytics/metrics',
+        method: 'GET',
+      }),
+      extraOptions: { service: 'crm' },
       providesTags: [{ type: 'Analytics', id: 'METRICS' }],
     }),
 
     getPipelineMetrics: builder.query<APIResponse<PipelineMetrics[]>, void>({
-      query: () => '/crm/analytics/pipeline',
+      query: () => ({
+        url: '/analytics/pipeline',
+        method: 'GET',
+      }),
+      extraOptions: { service: 'crm' },
       providesTags: [{ type: 'Analytics', id: 'PIPELINE' }],
     }),
 
@@ -330,15 +368,20 @@ export const crmApi = api.injectEndpoints({
       { period?: string }
     >({
       query: ({ period = 'monthly' }) => ({
-        url: '/crm/analytics/sales',
+        url: '/analytics/sales',
         params: { period },
       }),
+      extraOptions: { service: 'crm' },
       providesTags: [{ type: 'Analytics', id: 'SALES' }],
     }),
 
     getLeadSourceMetrics: builder.query<APIResponse<LeadSourceMetrics[]>, void>(
       {
-        query: () => '/crm/analytics/lead-sources',
+        query: () => ({
+          url: '/analytics/lead-sources',
+          method: 'GET',
+        }),
+        extraOptions: { service: 'crm' },
         providesTags: [{ type: 'Analytics', id: 'LEAD_SOURCES' }],
       }
     ),
@@ -349,10 +392,11 @@ export const crmApi = api.injectEndpoints({
       string[]
     >({
       query: (ids) => ({
-        url: '/crm/customers/bulk-delete',
+        url: '/customers/bulk-delete',
         method: 'POST',
         body: { ids },
       }),
+      extraOptions: { service: 'crm' },
       invalidatesTags: [{ type: 'Customer', id: 'LIST' }],
     }),
 
@@ -361,10 +405,11 @@ export const crmApi = api.injectEndpoints({
       string[]
     >({
       query: (ids) => ({
-        url: '/crm/leads/bulk-delete',
+        url: '/leads/bulk-delete',
         method: 'POST',
         body: { ids },
       }),
+      extraOptions: { service: 'crm' },
       invalidatesTags: [{ type: 'Lead', id: 'LIST' }],
     }),
 
@@ -373,10 +418,11 @@ export const crmApi = api.injectEndpoints({
       string[]
     >({
       query: (ids) => ({
-        url: '/crm/opportunities/bulk-delete',
+        url: '/opportunities/bulk-delete',
         method: 'POST',
         body: { ids },
       }),
+      extraOptions: { service: 'crm' },
       invalidatesTags: [{ type: 'Opportunity', id: 'LIST' }],
     }),
 
@@ -385,10 +431,11 @@ export const crmApi = api.injectEndpoints({
       string[]
     >({
       query: (ids) => ({
-        url: '/crm/activities/bulk-delete',
+        url: '/activities/bulk-delete',
         method: 'POST',
         body: { ids },
       }),
+      extraOptions: { service: 'crm' },
       invalidatesTags: [{ type: 'Activity', id: 'LIST' }],
     }),
   }),

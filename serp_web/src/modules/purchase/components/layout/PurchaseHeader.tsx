@@ -19,7 +19,6 @@ import {
 import {
   Search,
   Plus,
-  Bell,
   Settings,
   User,
   ChevronDown,
@@ -28,6 +27,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import { useUser } from '@/modules/account';
+import { NotificationButton } from '@/modules/notifications';
 
 interface PurchaseHeaderProps {
   className?: string;
@@ -40,7 +40,6 @@ export const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [notifications, setNotifications] = useState(2);
   const [hidden, setHidden] = useState(false);
 
   const { getInitials, getDisplayName, user } = useUser();
@@ -206,16 +205,10 @@ export const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
           </div>
 
           {/* Notifications */}
-          <div className='relative'>
-            <Button variant='ghost' size='icon' className='relative'>
-              <Bell className='h-5 w-5' />
-              {notifications > 0 && (
-                <span className='absolute top-1 right-1 h-4 w-4 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center'>
-                  {notifications}
-                </span>
-              )}
-            </Button>
-          </div>
+          <NotificationButton
+            settingsPath='/purchase/settings'
+            allNotificationsPath='/purchase/activity'
+          />
 
           {/* Theme Toggle */}
           <ThemeToggle />

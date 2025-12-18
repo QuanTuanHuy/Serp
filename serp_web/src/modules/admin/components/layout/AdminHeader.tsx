@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import { useAuth, useUser } from '@/modules/account';
+import { NotificationButton } from '@/modules/notifications';
 
 interface AdminHeaderProps {
   className?: string;
@@ -161,22 +162,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
         <div className='flex items-center space-x-3'>
           {/* Notifications */}
           <div className='relative'>
-            <Button
-              variant='ghost'
-              size='sm'
-              onClick={() => {
-                // TODO: Open notifications panel
-                console.log('Open notifications');
-              }}
-              className='relative'
-            >
-              <Bell className='h-5 w-5' />
-              {notifications > 0 && (
-                <span className='absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-xs font-medium text-white flex items-center justify-center'>
-                  {notifications > 9 ? '9+' : notifications}
-                </span>
-              )}
-            </Button>
+            <NotificationButton settingsPath='/admin/settings' />
           </div>
 
           {/* Theme Toggle */}
