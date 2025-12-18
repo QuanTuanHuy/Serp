@@ -22,7 +22,7 @@ type ProductClientAdapter struct {
 	circuitBreaker *utils.CircuitBreaker
 }
 
-func (p *ProductClientAdapter) CreateProduct(ctx context.Context, req *request.CreateProductRequest) (*response.BaseResponse, error) {
+func (p *ProductClientAdapter) CreateProduct(ctx context.Context, req map[string]interface{}) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	var httpResponse *utils.HTTPResponse
 	err := p.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
@@ -47,7 +47,7 @@ func (p *ProductClientAdapter) CreateProduct(ctx context.Context, req *request.C
 	return &result, nil
 }
 
-func (p *ProductClientAdapter) UpdateProduct(ctx context.Context, productId string, req *request.UpdateProductRequest) (*response.BaseResponse, error) {
+func (p *ProductClientAdapter) UpdateProduct(ctx context.Context, productId string, req map[string]interface{}) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	var httpResponse *utils.HTTPResponse
 	err := p.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {

@@ -18,13 +18,13 @@ type FacilityController struct {
 }
 
 func (f *FacilityController) CreateFacility(ctx *gin.Context) {
-	var req request.CreateFacilityRequest
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := f.facilityService.CreateFacility(ctx.Request.Context(), &req)
+	res, err := f.facilityService.CreateFacility(ctx.Request.Context(), req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralInternalServerError)
 		return
@@ -39,13 +39,13 @@ func (f *FacilityController) UpdateFacility(ctx *gin.Context) {
 		return
 	}
 
-	var req request.UpdateFacilityRequest
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := f.facilityService.UpdateFacility(ctx.Request.Context(), facilityId, &req)
+	res, err := f.facilityService.UpdateFacility(ctx.Request.Context(), facilityId, req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralInternalServerError)
 		return

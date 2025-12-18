@@ -18,13 +18,13 @@ type CategoryController struct {
 }
 
 func (c *CategoryController) CreateCategory(ctx *gin.Context) {
-	var req request.CreateCategoryRequest
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := c.categoryService.CreateCategory(ctx.Request.Context(), &req)
+	res, err := c.categoryService.CreateCategory(ctx.Request.Context(), req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralInternalServerError)
 		return
@@ -39,13 +39,13 @@ func (c *CategoryController) UpdateCategory(ctx *gin.Context) {
 		return
 	}
 
-	var req request.UpdateCategoryRequest
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := c.categoryService.UpdateCategory(ctx.Request.Context(), categoryId, &req)
+	res, err := c.categoryService.UpdateCategory(ctx.Request.Context(), categoryId, req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralInternalServerError)
 		return

@@ -62,6 +62,9 @@ public class InventoryItemDetailEntity {
 
     private long price;
 
+    @Column(name = "inventory_item_id")
+    private String inventoryItemId;
+
     @Column(name = "tenant_id")
     private Long tenantId;
 

@@ -22,7 +22,7 @@ type SupplierClientAdapter struct {
 	circuitBreaker *utils.CircuitBreaker
 }
 
-func (s *SupplierClientAdapter) CreateSupplier(ctx context.Context, req *request.CreateSupplierRequest) (*response.BaseResponse, error) {
+func (s *SupplierClientAdapter) CreateSupplier(ctx context.Context, req map[string]interface{}) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
@@ -47,7 +47,7 @@ func (s *SupplierClientAdapter) CreateSupplier(ctx context.Context, req *request
 	return &result, nil
 }
 
-func (s *SupplierClientAdapter) UpdateSupplier(ctx context.Context, supplierId string, req *request.UpdateSupplierRequest) (*response.BaseResponse, error) {
+func (s *SupplierClientAdapter) UpdateSupplier(ctx context.Context, supplierId string, req map[string]interface{}) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {

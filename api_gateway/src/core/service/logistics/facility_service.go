@@ -9,17 +9,16 @@ import (
 	"context"
 
 	"github.com/golibs-starter/golib/log"
-	request "github.com/serp/api-gateway/src/core/domain/dto/request/purchase"
 	"github.com/serp/api-gateway/src/core/domain/dto/response"
-	port "github.com/serp/api-gateway/src/core/port/client/purchase"
+	port "github.com/serp/api-gateway/src/core/port/client/logistics"
 )
 
 type IFacilityService interface {
 	CreateFacility(ctx context.Context, req map[string]interface{}) (*response.BaseResponse, error)
 	UpdateFacility(ctx context.Context, facilityId string, req map[string]interface{}) (*response.BaseResponse, error)
-	DeleteFacility(ctx context.Context, facilityId string) (*response.BaseResponse, error)
+	GetFacilities(ctx context.Context, page, size int, sortBy, sortDirection, query, statusId string) (*response.BaseResponse, error)
 	GetFacility(ctx context.Context, facilityId string) (*response.BaseResponse, error)
-	GetFacilities(ctx context.Context, params *request.GetFacilityParams) (*response.BaseResponse, error)
+	DeleteFacility(ctx context.Context, facilityId string) (*response.BaseResponse, error)
 }
 
 type FacilityService struct {
@@ -44,10 +43,10 @@ func (f *FacilityService) UpdateFacility(ctx context.Context, facilityId string,
 	return res, nil
 }
 
-func (f *FacilityService) DeleteFacility(ctx context.Context, facilityId string) (*response.BaseResponse, error) {
-	res, err := f.facilityClient.DeleteFacility(ctx, facilityId)
+func (f *FacilityService) GetFacilities(ctx context.Context, page, size int, sortBy, sortDirection, query, statusId string) (*response.BaseResponse, error) {
+	res, err := f.facilityClient.GetFacilities(ctx, page, size, sortBy, sortDirection, query, statusId)
 	if err != nil {
-		log.Error(ctx, "FacilityService: DeleteFacility error: ", err.Error())
+		log.Error(ctx, "FacilityService: GetFacilities error: ", err.Error())
 		return nil, err
 	}
 	return res, nil
@@ -62,10 +61,10 @@ func (f *FacilityService) GetFacility(ctx context.Context, facilityId string) (*
 	return res, nil
 }
 
-func (f *FacilityService) GetFacilities(ctx context.Context, params *request.GetFacilityParams) (*response.BaseResponse, error) {
-	res, err := f.facilityClient.GetFacilities(ctx, params)
+func (f *FacilityService) DeleteFacility(ctx context.Context, facilityId string) (*response.BaseResponse, error) {
+	res, err := f.facilityClient.DeleteFacility(ctx, facilityId)
 	if err != nil {
-		log.Error(ctx, "FacilityService: GetFacilities error: ", err.Error())
+		log.Error(ctx, "FacilityService: DeleteFacility error: ", err.Error())
 		return nil, err
 	}
 	return res, nil

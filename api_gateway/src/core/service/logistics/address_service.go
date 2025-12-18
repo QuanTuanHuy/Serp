@@ -10,7 +10,7 @@ import (
 
 	"github.com/golibs-starter/golib/log"
 	"github.com/serp/api-gateway/src/core/domain/dto/response"
-	port "github.com/serp/api-gateway/src/core/port/client/purchase"
+	port "github.com/serp/api-gateway/src/core/port/client/logistics"
 )
 
 type IAddressService interface {

@@ -18,13 +18,13 @@ type ProductController struct {
 }
 
 func (p *ProductController) CreateProduct(c *gin.Context) {
-	var req request.CreateProductRequest
+	var req map[string]interface{}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := p.productService.CreateProduct(c.Request.Context(), &req)
+	res, err := p.productService.CreateProduct(c.Request.Context(), req)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return
@@ -39,13 +39,13 @@ func (p *ProductController) UpdateProduct(c *gin.Context) {
 		return
 	}
 
-	var req request.UpdateProductRequest
+	var req map[string]interface{}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := p.productService.UpdateProduct(c.Request.Context(), productId, &req)
+	res, err := p.productService.UpdateProduct(c.Request.Context(), productId, req)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return

@@ -8,7 +8,6 @@ package controller
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/serp/api-gateway/src/core/domain/constant"
-	request "github.com/serp/api-gateway/src/core/domain/dto/request/logistics"
 	service "github.com/serp/api-gateway/src/core/service/logistics"
 	"github.com/serp/api-gateway/src/kernel/utils"
 )
@@ -18,13 +17,13 @@ type AddressController struct {
 }
 
 func (a *AddressController) CreateAddress(c *gin.Context) {
-	var req request.AddressCreationForm
+	var req map[string]interface{}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := a.addressService.CreateAddress(c.Request.Context(), &req)
+	res, err := a.addressService.CreateAddress(c.Request.Context(), req)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
 		return
@@ -39,13 +38,13 @@ func (a *AddressController) UpdateAddress(c *gin.Context) {
 		return
 	}
 
-	var req request.AddressUpdateForm
+	var req map[string]interface{}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := a.addressService.UpdateAddress(c.Request.Context(), addressId, &req)
+	res, err := a.addressService.UpdateAddress(c.Request.Context(), addressId, req)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralUnauthorized)
 		return
@@ -79,13 +78,13 @@ type CategoryController struct {
 }
 
 func (c *CategoryController) CreateCategory(ctx *gin.Context) {
-	var req request.CategoryForm
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := c.categoryService.CreateCategory(ctx.Request.Context(), &req)
+	res, err := c.categoryService.CreateCategory(ctx.Request.Context(), req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralUnauthorized)
 		return
@@ -100,13 +99,13 @@ func (c *CategoryController) UpdateCategory(ctx *gin.Context) {
 		return
 	}
 
-	var req request.CategoryForm
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := c.categoryService.UpdateCategory(ctx.Request.Context(), categoryId, &req)
+	res, err := c.categoryService.UpdateCategory(ctx.Request.Context(), categoryId, req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralUnauthorized)
 		return
@@ -239,13 +238,13 @@ type FacilityController struct {
 }
 
 func (f *FacilityController) CreateFacility(ctx *gin.Context) {
-	var req request.FacilityCreationForm
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := f.facilityService.CreateFacility(ctx.Request.Context(), &req)
+	res, err := f.facilityService.CreateFacility(ctx.Request.Context(), req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralUnauthorized)
 		return
@@ -260,13 +259,13 @@ func (f *FacilityController) UpdateFacility(ctx *gin.Context) {
 		return
 	}
 
-	var req request.FacilityUpdateForm
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := f.facilityService.UpdateFacility(ctx.Request.Context(), facilityId, &req)
+	res, err := f.facilityService.UpdateFacility(ctx.Request.Context(), facilityId, req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralUnauthorized)
 		return
@@ -352,13 +351,13 @@ type InventoryItemController struct {
 }
 
 func (i *InventoryItemController) CreateInventoryItem(ctx *gin.Context) {
-	var req request.InventoryItemCreationForm
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := i.inventoryItemService.CreateInventoryItem(ctx.Request.Context(), &req)
+	res, err := i.inventoryItemService.CreateInventoryItem(ctx.Request.Context(), req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralUnauthorized)
 		return
@@ -373,13 +372,13 @@ func (i *InventoryItemController) UpdateInventoryItem(ctx *gin.Context) {
 		return
 	}
 
-	var req request.InventoryItemUpdateForm
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := i.inventoryItemService.UpdateInventoryItem(ctx.Request.Context(), inventoryItemId, &req)
+	res, err := i.inventoryItemService.UpdateInventoryItem(ctx.Request.Context(), inventoryItemId, req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralUnauthorized)
 		return
@@ -609,13 +608,13 @@ type ProductController struct {
 }
 
 func (p *ProductController) CreateProduct(ctx *gin.Context) {
-	var req request.ProductCreationForm
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := p.productService.CreateProduct(ctx.Request.Context(), &req)
+	res, err := p.productService.CreateProduct(ctx.Request.Context(), req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralUnauthorized)
 		return
@@ -630,13 +629,13 @@ func (p *ProductController) UpdateProduct(ctx *gin.Context) {
 		return
 	}
 
-	var req request.ProductUpdateForm
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := p.productService.UpdateProduct(ctx.Request.Context(), productId, &req)
+	res, err := p.productService.UpdateProduct(ctx.Request.Context(), productId, req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralUnauthorized)
 		return
@@ -795,13 +794,13 @@ type ShipmentController struct {
 }
 
 func (s *ShipmentController) CreateShipment(ctx *gin.Context) {
-	var req request.ShipmentCreationForm
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := s.shipmentService.CreateShipment(ctx.Request.Context(), &req)
+	res, err := s.shipmentService.CreateShipment(ctx.Request.Context(), req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralUnauthorized)
 		return
@@ -816,13 +815,13 @@ func (s *ShipmentController) UpdateShipment(ctx *gin.Context) {
 		return
 	}
 
-	var req request.ShipmentUpdateForm
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := s.shipmentService.UpdateShipment(ctx.Request.Context(), shipmentId, &req)
+	res, err := s.shipmentService.UpdateShipment(ctx.Request.Context(), shipmentId, req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralUnauthorized)
 		return
@@ -867,13 +866,13 @@ func (s *ShipmentController) AddItemToShipment(ctx *gin.Context) {
 		return
 	}
 
-	var req request.InventoryItemDetailForm
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := s.shipmentService.AddItemToShipment(ctx.Request.Context(), shipmentId, &req)
+	res, err := s.shipmentService.AddItemToShipment(ctx.Request.Context(), shipmentId, req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralUnauthorized)
 		return
@@ -889,13 +888,13 @@ func (s *ShipmentController) UpdateItemInShipment(ctx *gin.Context) {
 		return
 	}
 
-	var req request.InventoryItemDetailUpdateForm
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := s.shipmentService.UpdateItemInShipment(ctx.Request.Context(), shipmentId, itemId, &req)
+	res, err := s.shipmentService.UpdateItemInShipment(ctx.Request.Context(), shipmentId, itemId, req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralUnauthorized)
 		return

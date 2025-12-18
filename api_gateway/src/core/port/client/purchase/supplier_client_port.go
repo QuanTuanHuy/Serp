@@ -13,8 +13,8 @@ import (
 )
 
 type ISupplierClientPort interface {
-	CreateSupplier(ctx context.Context, req *request.CreateSupplierRequest) (*response.BaseResponse, error)
-	UpdateSupplier(ctx context.Context, supplierId string, req *request.UpdateSupplierRequest) (*response.BaseResponse, error)
+	CreateSupplier(ctx context.Context, req map[string]interface{}) (*response.BaseResponse, error)
+	UpdateSupplier(ctx context.Context, supplierId string, req map[string]interface{}) (*response.BaseResponse, error)
 	DeleteSupplier(ctx context.Context, supplierId string) (*response.BaseResponse, error)
 	GetSupplier(ctx context.Context, supplierId string) (*response.BaseResponse, error)
 	GetSuppliers(ctx context.Context, params *request.GetSupplierParams) (*response.BaseResponse, error)

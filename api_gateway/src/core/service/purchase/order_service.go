@@ -15,18 +15,18 @@ import (
 )
 
 type IOrderService interface {
-	CreateOrder(ctx context.Context, req *request.CreateOrderRequest) (*response.BaseResponse, error)
-	UpdateOrder(ctx context.Context, orderId string, req *request.UpdateOrderRequest) (*response.BaseResponse, error)
+	CreateOrder(ctx context.Context, req map[string]interface{}) (*response.BaseResponse, error)
+	UpdateOrder(ctx context.Context, orderId string, req map[string]interface{}) (*response.BaseResponse, error)
 	DeleteOrder(ctx context.Context, orderId string) (*response.BaseResponse, error)
 	GetOrder(ctx context.Context, orderId string) (*response.BaseResponse, error)
 	GetOrders(ctx context.Context, params *request.GetOrderParams) (*response.BaseResponse, error)
 
-	AddProductToOrder(ctx context.Context, orderId string, req *request.AddOrderItemRequest) (*response.BaseResponse, error)
+	AddProductToOrder(ctx context.Context, orderId string, req map[string]interface{}) (*response.BaseResponse, error)
 	DeleteProductFromOrder(ctx context.Context, orderId string, orderItemId string) (*response.BaseResponse, error)
-	UpdateProductInOrder(ctx context.Context, orderId string, orderItemId string, req *request.UpdateOrderItemRequest) (*response.BaseResponse, error)
+	UpdateProductInOrder(ctx context.Context, orderId string, orderItemId string, req map[string]interface{}) (*response.BaseResponse, error)
 
 	ApproveOrder(ctx context.Context, orderId string) (*response.BaseResponse, error)
-	CancelOrder(ctx context.Context, orderId string, req *request.CancelOrderRequest) (*response.BaseResponse, error)
+	CancelOrder(ctx context.Context, orderId string, req map[string]interface{}) (*response.BaseResponse, error)
 	MarkOrderAsReady(ctx context.Context, orderId string) (*response.BaseResponse, error)
 }
 
@@ -34,7 +34,7 @@ type OrderService struct {
 	orderClient port.IOrderClientPort
 }
 
-func (o *OrderService) CreateOrder(ctx context.Context, req *request.CreateOrderRequest) (*response.BaseResponse, error) {
+func (o *OrderService) CreateOrder(ctx context.Context, req map[string]interface{}) (*response.BaseResponse, error) {
 	res, err := o.orderClient.CreateOrder(ctx, req)
 	if err != nil {
 		log.Error(ctx, "OrderService: CreateOrder error: ", err.Error())
@@ -43,7 +43,7 @@ func (o *OrderService) CreateOrder(ctx context.Context, req *request.CreateOrder
 	return res, nil
 }
 
-func (o *OrderService) UpdateOrder(ctx context.Context, orderId string, req *request.UpdateOrderRequest) (*response.BaseResponse, error) {
+func (o *OrderService) UpdateOrder(ctx context.Context, orderId string, req map[string]interface{}) (*response.BaseResponse, error) {
 	res, err := o.orderClient.UpdateOrder(ctx, orderId, req)
 	if err != nil {
 		log.Error(ctx, "OrderService: UpdateOrder error: ", err.Error())
@@ -79,7 +79,7 @@ func (o *OrderService) GetOrders(ctx context.Context, params *request.GetOrderPa
 	return res, nil
 }
 
-func (o *OrderService) AddProductToOrder(ctx context.Context, orderId string, req *request.AddOrderItemRequest) (*response.BaseResponse, error) {
+func (o *OrderService) AddProductToOrder(ctx context.Context, orderId string, req map[string]interface{}) (*response.BaseResponse, error) {
 	res, err := o.orderClient.AddProductToOrder(ctx, orderId, req)
 	if err != nil {
 		log.Error(ctx, "OrderService: AddProductToOrder error: ", err.Error())
@@ -97,7 +97,7 @@ func (o *OrderService) DeleteProductFromOrder(ctx context.Context, orderId strin
 	return res, nil
 }
 
-func (o *OrderService) UpdateProductInOrder(ctx context.Context, orderId string, orderItemId string, req *request.UpdateOrderItemRequest) (*response.BaseResponse, error) {
+func (o *OrderService) UpdateProductInOrder(ctx context.Context, orderId string, orderItemId string, req map[string]interface{}) (*response.BaseResponse, error) {
 	res, err := o.orderClient.UpdateProductInOrder(ctx, orderId, orderItemId, req)
 	if err != nil {
 		log.Error(ctx, "OrderService: UpdateProductInOrder error: ", err.Error())
@@ -115,7 +115,7 @@ func (o *OrderService) ApproveOrder(ctx context.Context, orderId string) (*respo
 	return res, nil
 }
 
-func (o *OrderService) CancelOrder(ctx context.Context, orderId string, req *request.CancelOrderRequest) (*response.BaseResponse, error) {
+func (o *OrderService) CancelOrder(ctx context.Context, orderId string, req map[string]interface{}) (*response.BaseResponse, error) {
 	res, err := o.orderClient.CancelOrder(ctx, orderId, req)
 	if err != nil {
 		log.Error(ctx, "OrderService: CancelOrder error: ", err.Error())

@@ -4,20 +4,28 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.util.StringUtils;
+import serp.project.purchase_service.constant.OrderStatus;
+import serp.project.purchase_service.dto.request.OrderCreationForm;
+import serp.project.purchase_service.dto.request.OrderUpdateForm;
+import serp.project.purchase_service.exception.AppErrorCode;
+import serp.project.purchase_service.exception.AppException;
+import serp.project.purchase_service.util.IdUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
-@Builder
 @Entity
 @Table(name = "wms2_order_header")
 public class OrderEntity {
@@ -95,4 +103,98 @@ public class OrderEntity {
 
     @Column(name = "tenant_id")
     private Long tenantId;
+
+    @Transient
+    private List<OrderItemEntity> orderItems = new ArrayList<>();
+
+    public OrderEntity(OrderCreationForm form, List<OrderItemEntity> orderItems, Long userId, Long tenantId) {
+        String orderId = IdUtils.generateOrderId();
+        this.id = orderId;
+        this.orderTypeId = "PURCHASE";
+        this.fromSupplierId = form.getFromSupplierId();
+        this.createdByUserId = userId;
+        this.orderDate = LocalDate.now();
+        this.statusId = OrderStatus.CREATED.name();
+        this.deliveryBeforeDate = form.getDeliveryBeforeDate();
+        this.deliveryAfterDate = form.getDeliveryAfterDate();
+        this.note = form.getNote();
+        this.orderName = StringUtils.hasText(form.getOrderName()) ? form.getOrderName() : "Đơn hàng mua mã " + orderId;
+        this.priority = form.getPriority() != 0 ? form.getPriority() : 20;
+        this.saleChannelId = form.getSaleChannelId();
+        this.tenantId = tenantId;
+
+        this.orderItems = orderItems;
+
+        this.totalAmount = 0L;
+        for (OrderItemEntity item : orderItems) {
+            this.totalAmount += item.getAmount();
+        }
+    }
+
+    public void update(OrderUpdateForm form) {
+        if (OrderStatus.valueOf(this.statusId).ordinal() > OrderStatus.CREATED.ordinal()) {
+            throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
+        }
+
+        if (form.getDeliveryBeforeDate() != null)
+            this.deliveryBeforeDate = form.getDeliveryBeforeDate();
+        if (form.getDeliveryAfterDate() != null)
+            this.deliveryAfterDate = form.getDeliveryAfterDate();
+        if (form.getNote() != null)
+            this.note = form.getNote();
+        if (form.getOrderName() != null)
+            this.orderName = form.getOrderName();
+        if (form.getPriority() != 0)
+            this.priority = form.getPriority();
+        if (form.getSaleChannelId() != null)
+            this.saleChannelId = form.getSaleChannelId();
+    }
+
+    public void addOrderItem(OrderItemEntity item) {
+        if (OrderStatus.valueOf(this.statusId).ordinal() > OrderStatus.CREATED.ordinal()) {
+            throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
+        }
+
+        this.orderItems.add(item);
+        this.totalAmount += item.getAmount();
+    }
+
+    public void updateOrderItem(OrderItemEntity oldItem, OrderItemEntity newItem) {
+        if (OrderStatus.valueOf(this.statusId).ordinal() > OrderStatus.CREATED.ordinal()) {
+            throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
+        }
+
+        this.orderItems.remove(oldItem);
+        this.orderItems.add(newItem);
+        this.totalAmount = this.totalAmount - oldItem.getAmount() + newItem.getAmount();
+    }
+
+    public void removeOrderItem(OrderItemEntity item) {
+        if (OrderStatus.valueOf(this.statusId).ordinal() > OrderStatus.CREATED.ordinal()) {
+            throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
+        }
+
+        this.orderItems.remove(item);
+        this.totalAmount -= item.getAmount();
+    }
+
+    public void approve(Long userId) {
+        if (OrderStatus.valueOf(this.statusId).ordinal() > OrderStatus.CREATED.ordinal()) {
+            throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
+        }
+
+        this.statusId = OrderStatus.APPROVED.name();
+        this.userApprovedId = userId;
+    }
+
+    public void cancel(String cancellationNote, Long userId) {
+        if (OrderStatus.valueOf(this.statusId).ordinal() > OrderStatus.CREATED.ordinal()) {
+            throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
+        }
+
+        this.statusId = OrderStatus.CANCELLED.name();
+        this.cancellationNote = cancellationNote;
+        this.userCancelledId = userId;
+    }
+
 }

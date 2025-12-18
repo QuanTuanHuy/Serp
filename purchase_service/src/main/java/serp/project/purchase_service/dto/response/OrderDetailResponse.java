@@ -1,10 +1,7 @@
 package serp.project.purchase_service.dto.response;
 
-import jakarta.persistence.Column;
 import lombok.Builder;
 import lombok.Data;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 import serp.project.purchase_service.entity.OrderEntity;
 import serp.project.purchase_service.entity.OrderItemEntity;
 
@@ -44,8 +41,7 @@ public class OrderDetailResponse {
 
     public static OrderDetailResponse fromEntity(
             OrderEntity order,
-            List<OrderItemEntity> orderItems
-    ) {
+            List<OrderItemEntity> orderItems) {
         return OrderDetailResponse.builder()
                 .id(order.getId())
                 .orderTypeId(order.getOrderTypeId())

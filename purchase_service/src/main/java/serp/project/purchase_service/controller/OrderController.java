@@ -16,7 +16,6 @@ import serp.project.purchase_service.dto.response.PageResponse;
 import serp.project.purchase_service.entity.OrderEntity;
 import serp.project.purchase_service.exception.AppErrorCode;
 import serp.project.purchase_service.exception.AppException;
-import serp.project.purchase_service.service.OrderItemService;
 import serp.project.purchase_service.service.OrderService;
 import serp.project.purchase_service.util.AuthUtils;
 
@@ -30,7 +29,6 @@ import java.time.LocalDate;
 public class OrderController {
 
         private final OrderService orderService;
-        private final OrderItemService orderItemService;
         private final AuthUtils authUtils;
 
         @PostMapping("/create")
@@ -65,7 +63,7 @@ public class OrderController {
                                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
                 log.info("[OrderController] Add product ID {} to order ID {} for tenantId {}", itemForm.getProductId(),
                                 orderId, tenantId);
-                orderItemService.createOrderItems(itemForm, orderId, tenantId);
+                orderService.createOrderItems(itemForm, orderId, tenantId);
                 return ResponseEntity.ok(GeneralResponse.success("Product added to order successfully"));
         }
 
@@ -77,7 +75,7 @@ public class OrderController {
                                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
                 log.info("[OrderController] Delete order item ID {} from order ID {} for tenantId {}", orderItemId,
                                 orderId, tenantId);
-                orderItemService.deleteOrderItem(orderItemId, orderId, tenantId);
+                orderService.deleteOrderItem(orderItemId, orderId, tenantId);
                 return ResponseEntity.ok(GeneralResponse.success("Product removed from order successfully"));
         }
 
@@ -90,7 +88,7 @@ public class OrderController {
                                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
                 log.info("[OrderController] Update order item ID {} in order ID {} for tenantId {}", orderItemId,
                                 orderId, tenantId);
-                orderItemService.updateOrderItem(orderItemId, itemForm, orderId, tenantId);
+                orderService.updateOrderItem(orderItemId, itemForm, orderId, tenantId);
                 return ResponseEntity.ok(GeneralResponse.success("Product updated in order successfully"));
         }
 
@@ -125,12 +123,6 @@ public class OrderController {
                 return ResponseEntity.ok(GeneralResponse.success("Order cancelled successfully"));
         }
 
-        @PatchMapping("/update/{orderId}/ready")
-        public ResponseEntity<GeneralResponse<?>> markOrderAsReady(
-                        @PathVariable String orderId) {
-                throw new AppException(AppErrorCode.UNIMPLEMENTED);
-        }
-
         @GetMapping("/search/{orderId}")
         public ResponseEntity<GeneralResponse<OrderDetailResponse>> getOrderDetail(
                         @PathVariable String orderId) {
@@ -141,7 +133,7 @@ public class OrderController {
                         throw new AppException(AppErrorCode.NOT_FOUND);
                 }
                 log.info("[OrderController] Get order detail for order ID {} and tenantId {}", orderId, tenantId);
-                var orderItems = orderItemService.findByOrderId(orderId, tenantId);
+                var orderItems = orderService.findByOrderId(orderId, tenantId);
                 OrderDetailResponse response = OrderDetailResponse.fromEntity(
                                 order,
                                 orderItems);

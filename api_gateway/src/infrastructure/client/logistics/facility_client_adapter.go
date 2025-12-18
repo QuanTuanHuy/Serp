@@ -10,7 +10,6 @@ import (
 	"fmt"
 
 	"github.com/golibs-starter/golib/log"
-	request "github.com/serp/api-gateway/src/core/domain/dto/request/logistics"
 	"github.com/serp/api-gateway/src/core/domain/dto/response"
 	port "github.com/serp/api-gateway/src/core/port/client/logistics"
 	"github.com/serp/api-gateway/src/kernel/properties"
@@ -22,7 +21,7 @@ type FacilityClientAdapter struct {
 	circuitBreaker *utils.CircuitBreaker
 }
 
-func (f *FacilityClientAdapter) CreateFacility(ctx context.Context, req *request.FacilityCreationForm) (*response.BaseResponse, error) {
+func (f *FacilityClientAdapter) CreateFacility(ctx context.Context, req map[string]interface{}) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	var httpResponse *utils.HTTPResponse
 	err := f.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
@@ -47,7 +46,7 @@ func (f *FacilityClientAdapter) CreateFacility(ctx context.Context, req *request
 	return &result, nil
 }
 
-func (f *FacilityClientAdapter) UpdateFacility(ctx context.Context, facilityId string, req *request.FacilityUpdateForm) (*response.BaseResponse, error) {
+func (f *FacilityClientAdapter) UpdateFacility(ctx context.Context, facilityId string, req map[string]interface{}) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	path := fmt.Sprintf("/logistics/api/v1/facility/update/%s", facilityId)
 

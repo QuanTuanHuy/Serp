@@ -22,7 +22,7 @@ type FacilityClientAdapter struct {
 	circuitBreaker *utils.CircuitBreaker
 }
 
-func (f *FacilityClientAdapter) CreateFacility(ctx context.Context, req *request.CreateFacilityRequest) (*response.BaseResponse, error) {
+func (f *FacilityClientAdapter) CreateFacility(ctx context.Context, req map[string]interface{}) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	var httpResponse *utils.HTTPResponse
 	err := f.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
@@ -47,7 +47,7 @@ func (f *FacilityClientAdapter) CreateFacility(ctx context.Context, req *request
 	return &result, nil
 }
 
-func (f *FacilityClientAdapter) UpdateFacility(ctx context.Context, facilityId string, req *request.UpdateFacilityRequest) (*response.BaseResponse, error) {
+func (f *FacilityClientAdapter) UpdateFacility(ctx context.Context, facilityId string, req map[string]interface{}) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	var httpResponse *utils.HTTPResponse
 	err := f.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {

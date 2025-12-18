@@ -8,7 +8,6 @@ package controller
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/serp/api-gateway/src/core/domain/constant"
-	request "github.com/serp/api-gateway/src/core/domain/dto/request/purchase"
 	service "github.com/serp/api-gateway/src/core/service/purchase"
 	"github.com/serp/api-gateway/src/kernel/utils"
 )
@@ -18,13 +17,13 @@ type ShipmentController struct {
 }
 
 func (s *ShipmentController) CreateShipment(ctx *gin.Context) {
-	var req request.CreateShipmentRequest
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := s.shipmentService.CreateShipment(ctx.Request.Context(), &req)
+	res, err := s.shipmentService.CreateShipment(ctx.Request.Context(), req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralInternalServerError)
 		return
@@ -39,13 +38,13 @@ func (s *ShipmentController) UpdateShipment(ctx *gin.Context) {
 		return
 	}
 
-	var req request.UpdateShipmentRequest
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := s.shipmentService.UpdateShipment(ctx.Request.Context(), shipmentId, &req)
+	res, err := s.shipmentService.UpdateShipment(ctx.Request.Context(), shipmentId, req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralInternalServerError)
 		return
@@ -120,13 +119,13 @@ func (s *ShipmentController) AddItemToShipment(ctx *gin.Context) {
 		return
 	}
 
-	var req request.AddItemToShipmentRequest
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := s.shipmentService.AddItemToShipment(ctx.Request.Context(), shipmentId, &req)
+	res, err := s.shipmentService.AddItemToShipment(ctx.Request.Context(), shipmentId, req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralInternalServerError)
 		return
@@ -142,13 +141,13 @@ func (s *ShipmentController) UpdateItemInShipment(ctx *gin.Context) {
 		return
 	}
 
-	var req request.UpdateItemInShipmentRequest
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := s.shipmentService.UpdateItemInShipment(ctx.Request.Context(), shipmentId, itemId, &req)
+	res, err := s.shipmentService.UpdateItemInShipment(ctx.Request.Context(), shipmentId, itemId, req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralInternalServerError)
 		return
@@ -179,13 +178,13 @@ func (s *ShipmentController) UpdateShipmentFacility(ctx *gin.Context) {
 		return
 	}
 
-	var req request.UpdateShipmentFacilityRequest
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := s.shipmentService.UpdateShipmentFacility(ctx.Request.Context(), shipmentId, &req)
+	res, err := s.shipmentService.UpdateShipmentFacility(ctx.Request.Context(), shipmentId, req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralInternalServerError)
 		return

@@ -18,13 +18,13 @@ type SupplierController struct {
 }
 
 func (s *SupplierController) CreateSupplier(ctx *gin.Context) {
-	var req request.CreateSupplierRequest
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := s.supplierService.CreateSupplier(ctx.Request.Context(), &req)
+	res, err := s.supplierService.CreateSupplier(ctx.Request.Context(), req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralInternalServerError)
 		return
@@ -39,13 +39,13 @@ func (s *SupplierController) UpdateSupplier(ctx *gin.Context) {
 		return
 	}
 
-	var req request.UpdateSupplierRequest
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := s.supplierService.UpdateSupplier(ctx.Request.Context(), supplierId, &req)
+	res, err := s.supplierService.UpdateSupplier(ctx.Request.Context(), supplierId, req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralInternalServerError)
 		return

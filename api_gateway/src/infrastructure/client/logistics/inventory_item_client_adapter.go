@@ -10,7 +10,6 @@ import (
 	"fmt"
 
 	"github.com/golibs-starter/golib/log"
-	request "github.com/serp/api-gateway/src/core/domain/dto/request/logistics"
 	"github.com/serp/api-gateway/src/core/domain/dto/response"
 	port "github.com/serp/api-gateway/src/core/port/client/logistics"
 	"github.com/serp/api-gateway/src/kernel/properties"
@@ -22,7 +21,7 @@ type InventoryItemClientAdapter struct {
 	circuitBreaker *utils.CircuitBreaker
 }
 
-func (a *InventoryItemClientAdapter) CreateInventoryItem(ctx context.Context, req *request.InventoryItemCreationForm) (*response.BaseResponse, error) {
+func (a *InventoryItemClientAdapter) CreateInventoryItem(ctx context.Context, req map[string]interface{}) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	var httpResponse *utils.HTTPResponse
 	err := a.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
@@ -47,7 +46,7 @@ func (a *InventoryItemClientAdapter) CreateInventoryItem(ctx context.Context, re
 	return &result, nil
 }
 
-func (a *InventoryItemClientAdapter) UpdateInventoryItem(ctx context.Context, inventoryItemId string, req *request.InventoryItemUpdateForm) (*response.BaseResponse, error) {
+func (a *InventoryItemClientAdapter) UpdateInventoryItem(ctx context.Context, inventoryItemId string, req map[string]interface{}) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	path := fmt.Sprintf("/logistics/api/v1/inventory-item/update/%s", inventoryItemId)
 

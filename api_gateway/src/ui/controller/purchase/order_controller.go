@@ -18,13 +18,13 @@ type OrderController struct {
 }
 
 func (o *OrderController) CreateOrder(ctx *gin.Context) {
-	var req request.CreateOrderRequest
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := o.orderService.CreateOrder(ctx.Request.Context(), &req)
+	res, err := o.orderService.CreateOrder(ctx.Request.Context(), req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralInternalServerError)
 		return
@@ -39,13 +39,13 @@ func (o *OrderController) UpdateOrder(ctx *gin.Context) {
 		return
 	}
 
-	var req request.UpdateOrderRequest
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := o.orderService.UpdateOrder(ctx.Request.Context(), orderId, &req)
+	res, err := o.orderService.UpdateOrder(ctx.Request.Context(), orderId, req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralInternalServerError)
 		return
@@ -130,13 +130,13 @@ func (o *OrderController) AddProductToOrder(ctx *gin.Context) {
 		return
 	}
 
-	var req request.AddOrderItemRequest
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := o.orderService.AddProductToOrder(ctx.Request.Context(), orderId, &req)
+	res, err := o.orderService.AddProductToOrder(ctx.Request.Context(), orderId, req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralInternalServerError)
 		return
@@ -168,13 +168,13 @@ func (o *OrderController) UpdateProductInOrder(ctx *gin.Context) {
 		return
 	}
 
-	var req request.UpdateOrderItemRequest
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := o.orderService.UpdateProductInOrder(ctx.Request.Context(), orderId, orderItemId, &req)
+	res, err := o.orderService.UpdateProductInOrder(ctx.Request.Context(), orderId, orderItemId, req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralInternalServerError)
 		return
@@ -204,13 +204,13 @@ func (o *OrderController) CancelOrder(ctx *gin.Context) {
 		return
 	}
 
-	var req request.CancelOrderRequest
+	var req map[string]interface{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := o.orderService.CancelOrder(ctx.Request.Context(), orderId, &req)
+	res, err := o.orderService.CancelOrder(ctx.Request.Context(), orderId, req)
 	if err != nil {
 		utils.AbortErrorHandle(ctx, constant.GeneralInternalServerError)
 		return

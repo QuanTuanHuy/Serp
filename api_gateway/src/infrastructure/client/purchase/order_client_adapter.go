@@ -22,7 +22,7 @@ type OrderClientAdapter struct {
 	circuitBreaker *utils.CircuitBreaker
 }
 
-func (o *OrderClientAdapter) CreateOrder(ctx context.Context, req *request.CreateOrderRequest) (*response.BaseResponse, error) {
+func (o *OrderClientAdapter) CreateOrder(ctx context.Context, req map[string]interface{}) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	var httpResponse *utils.HTTPResponse
 	err := o.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
@@ -47,7 +47,7 @@ func (o *OrderClientAdapter) CreateOrder(ctx context.Context, req *request.Creat
 	return &result, nil
 }
 
-func (o *OrderClientAdapter) UpdateOrder(ctx context.Context, orderId string, req *request.UpdateOrderRequest) (*response.BaseResponse, error) {
+func (o *OrderClientAdapter) UpdateOrder(ctx context.Context, orderId string, req map[string]interface{}) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	var httpResponse *utils.HTTPResponse
 	err := o.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
@@ -186,7 +186,7 @@ func (o *OrderClientAdapter) GetOrders(ctx context.Context, params *request.GetO
 	return &result, nil
 }
 
-func (o *OrderClientAdapter) AddProductToOrder(ctx context.Context, orderId string, req *request.AddOrderItemRequest) (*response.BaseResponse, error) {
+func (o *OrderClientAdapter) AddProductToOrder(ctx context.Context, orderId string, req map[string]interface{}) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	var httpResponse *utils.HTTPResponse
 	err := o.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
@@ -238,7 +238,7 @@ func (o *OrderClientAdapter) DeleteProductFromOrder(ctx context.Context, orderId
 	return &result, nil
 }
 
-func (o *OrderClientAdapter) UpdateProductInOrder(ctx context.Context, orderId string, orderItemId string, req *request.UpdateOrderItemRequest) (*response.BaseResponse, error) {
+func (o *OrderClientAdapter) UpdateProductInOrder(ctx context.Context, orderId string, orderItemId string, req map[string]interface{}) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	var httpResponse *utils.HTTPResponse
 	err := o.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
@@ -290,7 +290,7 @@ func (o *OrderClientAdapter) ApproveOrder(ctx context.Context, orderId string) (
 	return &result, nil
 }
 
-func (o *OrderClientAdapter) CancelOrder(ctx context.Context, orderId string, req *request.CancelOrderRequest) (*response.BaseResponse, error) {
+func (o *OrderClientAdapter) CancelOrder(ctx context.Context, orderId string, req map[string]interface{}) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	var httpResponse *utils.HTTPResponse
 	err := o.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {

@@ -10,7 +10,6 @@ import (
 	"fmt"
 
 	"github.com/golibs-starter/golib/log"
-	request "github.com/serp/api-gateway/src/core/domain/dto/request/logistics"
 	"github.com/serp/api-gateway/src/core/domain/dto/response"
 	port "github.com/serp/api-gateway/src/core/port/client/logistics"
 	"github.com/serp/api-gateway/src/kernel/properties"
@@ -22,7 +21,7 @@ type ProductClientAdapter struct {
 	circuitBreaker *utils.CircuitBreaker
 }
 
-func (a *ProductClientAdapter) CreateProduct(ctx context.Context, req *request.ProductCreationForm) (*response.BaseResponse, error) {
+func (a *ProductClientAdapter) CreateProduct(ctx context.Context, req map[string]interface{}) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
 	var httpResponse *utils.HTTPResponse
@@ -48,7 +47,7 @@ func (a *ProductClientAdapter) CreateProduct(ctx context.Context, req *request.P
 	return &result, nil
 }
 
-func (a *ProductClientAdapter) UpdateProduct(ctx context.Context, productId string, req *request.ProductUpdateForm) (*response.BaseResponse, error) {
+func (a *ProductClientAdapter) UpdateProduct(ctx context.Context, productId string, req map[string]interface{}) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	path := fmt.Sprintf("/logistics/api/v1/product/update/%s", productId)
 

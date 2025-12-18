@@ -4,14 +4,19 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.purchase_service.constant.EntityType;
+import serp.project.purchase_service.dto.request.AddressCreationForm;
+import serp.project.purchase_service.dto.request.FacilityCreationForm;
+import serp.project.purchase_service.util.IdUtils;
+
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @NoArgsConstructor
@@ -55,5 +60,32 @@ public class FacilityEntity {
 
     @Column(name = "tenant_id")
     private Long tenantId;
+
+    @Transient
+    private AddressEntity address;
+
+    public FacilityEntity(FacilityCreationForm form, Long tenantId) {
+        String facilityId = IdUtils.generateFacilityId();
+        this.id = facilityId;
+        this.name = form.getName();
+        this.statusId = form.getStatusId();
+        this.isDefault = true;
+        this.phone = form.getPhone();
+        this.postalCode = form.getPostalCode();
+        this.length = form.getLength();
+        this.width = form.getWidth();
+        this.height = form.getHeight();
+        this.tenantId = tenantId;
+
+        AddressCreationForm addressForm = new AddressCreationForm();
+        addressForm.setEntityId(this.id);
+        addressForm.setEntityType(EntityType.FACILITY.name());
+        addressForm.setAddressType(form.getAddressType());
+        addressForm.setLatitude(form.getLatitude());
+        addressForm.setLongitude(form.getLongitude());
+        addressForm.setDefault(true);
+        addressForm.setFullAddress(form.getFullAddress());
+        this.address = new AddressEntity(addressForm, tenantId);
+    }
 
 }

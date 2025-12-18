@@ -9,17 +9,16 @@ import (
 	"context"
 
 	"github.com/golibs-starter/golib/log"
-	request "github.com/serp/api-gateway/src/core/domain/dto/request/purchase"
 	"github.com/serp/api-gateway/src/core/domain/dto/response"
-	port "github.com/serp/api-gateway/src/core/port/client/purchase"
+	port "github.com/serp/api-gateway/src/core/port/client/logistics"
 )
 
 type ICategoryService interface {
 	CreateCategory(ctx context.Context, req map[string]interface{}) (*response.BaseResponse, error)
 	UpdateCategory(ctx context.Context, categoryId string, req map[string]interface{}) (*response.BaseResponse, error)
-	DeleteCategory(ctx context.Context, categoryId string) (*response.BaseResponse, error)
+	GetCategories(ctx context.Context, page, size int, sortBy, sortDirection, query, statusId string) (*response.BaseResponse, error)
 	GetCategory(ctx context.Context, categoryId string) (*response.BaseResponse, error)
-	GetCategories(ctx context.Context, params *request.GetCategoryParams) (*response.BaseResponse, error)
+	DeleteCategory(ctx context.Context, categoryId string) (*response.BaseResponse, error)
 }
 
 type CategoryService struct {
@@ -44,10 +43,10 @@ func (c *CategoryService) UpdateCategory(ctx context.Context, categoryId string,
 	return res, nil
 }
 
-func (c *CategoryService) DeleteCategory(ctx context.Context, categoryId string) (*response.BaseResponse, error) {
-	res, err := c.categoryClient.DeleteCategory(ctx, categoryId)
+func (c *CategoryService) GetCategories(ctx context.Context, page, size int, sortBy, sortDirection, query, statusId string) (*response.BaseResponse, error) {
+	res, err := c.categoryClient.GetCategories(ctx, page, size, sortBy, sortDirection, query, statusId)
 	if err != nil {
-		log.Error(ctx, "CategoryService: DeleteCategory error: ", err.Error())
+		log.Error(ctx, "CategoryService: GetCategories error: ", err.Error())
 		return nil, err
 	}
 	return res, nil
@@ -62,10 +61,10 @@ func (c *CategoryService) GetCategory(ctx context.Context, categoryId string) (*
 	return res, nil
 }
 
-func (c *CategoryService) GetCategories(ctx context.Context, params *request.GetCategoryParams) (*response.BaseResponse, error) {
-	res, err := c.categoryClient.GetCategories(ctx, params)
+func (c *CategoryService) DeleteCategory(ctx context.Context, categoryId string) (*response.BaseResponse, error) {
+	res, err := c.categoryClient.DeleteCategory(ctx, categoryId)
 	if err != nil {
-		log.Error(ctx, "CategoryService: GetCategories error: ", err.Error())
+		log.Error(ctx, "CategoryService: DeleteCategory error: ", err.Error())
 		return nil, err
 	}
 	return res, nil

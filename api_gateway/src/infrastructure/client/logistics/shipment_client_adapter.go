@@ -10,7 +10,6 @@ import (
 	"fmt"
 
 	"github.com/golibs-starter/golib/log"
-	request "github.com/serp/api-gateway/src/core/domain/dto/request/logistics"
 	"github.com/serp/api-gateway/src/core/domain/dto/response"
 	port "github.com/serp/api-gateway/src/core/port/client/logistics"
 	"github.com/serp/api-gateway/src/kernel/properties"
@@ -33,7 +32,7 @@ func NewShipmentClientAdapter(props *properties.ExternalServiceProperties) port.
 	}
 }
 
-func (s *ShipmentClientAdapter) CreateShipment(ctx context.Context, req *request.ShipmentCreationForm) (*response.BaseResponse, error) {
+func (s *ShipmentClientAdapter) CreateShipment(ctx context.Context, req map[string]interface{}) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
@@ -58,7 +57,7 @@ func (s *ShipmentClientAdapter) CreateShipment(ctx context.Context, req *request
 	return &result, nil
 }
 
-func (s *ShipmentClientAdapter) UpdateShipment(ctx context.Context, shipmentId string, req *request.ShipmentUpdateForm) (*response.BaseResponse, error) {
+func (s *ShipmentClientAdapter) UpdateShipment(ctx context.Context, shipmentId string, req map[string]interface{}) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
@@ -136,7 +135,7 @@ func (s *ShipmentClientAdapter) DeleteShipment(ctx context.Context, shipmentId s
 	return &result, nil
 }
 
-func (s *ShipmentClientAdapter) AddItemToShipment(ctx context.Context, shipmentId string, req *request.InventoryItemDetailForm) (*response.BaseResponse, error) {
+func (s *ShipmentClientAdapter) AddItemToShipment(ctx context.Context, shipmentId string, req map[string]interface{}) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
@@ -162,7 +161,7 @@ func (s *ShipmentClientAdapter) AddItemToShipment(ctx context.Context, shipmentI
 	return &result, nil
 }
 
-func (s *ShipmentClientAdapter) UpdateItemInShipment(ctx context.Context, shipmentId, itemId string, req *request.InventoryItemDetailUpdateForm) (*response.BaseResponse, error) {
+func (s *ShipmentClientAdapter) UpdateItemInShipment(ctx context.Context, shipmentId, itemId string, req map[string]interface{}) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	var httpResponse *utils.HTTPResponse
 	err := s.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {

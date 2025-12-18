@@ -8,6 +8,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.purchase_service.dto.request.AddressCreationForm;
+import serp.project.purchase_service.dto.request.AddressUpdateForm;
+import serp.project.purchase_service.util.IdUtils;
+
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -53,5 +57,26 @@ public class AddressEntity {
 
     @Column(name = "tenant_id")
     private Long tenantId;
+
+    public AddressEntity(AddressCreationForm form, Long tenantId) {
+        String addressId = IdUtils.generateAddressId();
+        this.id = addressId;
+        this.entityId = form.getEntityId();
+        this.entityType = form.getEntityType();
+        this.addressType = form.getAddressType();
+        this.latitude = form.getLatitude();
+        this.longitude = form.getLongitude();
+        this.isDefault = form.isDefault();
+        this.fullAddress = form.getFullAddress();
+        this.tenantId = tenantId;
+    }
+
+    public void update(AddressUpdateForm form) {
+        this.addressType = form.getAddressType();
+        this.latitude = form.getLatitude();
+        this.longitude = form.getLongitude();
+        this.isDefault = form.isDefault();
+        this.fullAddress = form.getFullAddress();
+    }
 
 }

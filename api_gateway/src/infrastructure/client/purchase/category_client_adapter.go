@@ -22,7 +22,7 @@ type CategoryClientAdapter struct {
 	circuitBreaker *utils.CircuitBreaker
 }
 
-func (c *CategoryClientAdapter) CreateCategory(ctx context.Context, req *request.CreateCategoryRequest) (*response.BaseResponse, error) {
+func (c *CategoryClientAdapter) CreateCategory(ctx context.Context, req map[string]interface{}) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	var httpResponse *utils.HTTPResponse
 	err := c.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
@@ -47,7 +47,7 @@ func (c *CategoryClientAdapter) CreateCategory(ctx context.Context, req *request
 	return &result, nil
 }
 
-func (c *CategoryClientAdapter) UpdateCategory(ctx context.Context, categoryId string, req *request.UpdateCategoryRequest) (*response.BaseResponse, error) {
+func (c *CategoryClientAdapter) UpdateCategory(ctx context.Context, categoryId string, req map[string]interface{}) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	var httpResponse *utils.HTTPResponse
 	err := c.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
