@@ -10,6 +10,7 @@ import (
 	"github.com/golibs-starter/golib"
 	"github.com/golibs-starter/golib/web/actuator"
 	account "github.com/serp/api-gateway/src/ui/controller/account"
+	"github.com/serp/api-gateway/src/ui/controller/common"
 	crm "github.com/serp/api-gateway/src/ui/controller/crm"
 	logistics "github.com/serp/api-gateway/src/ui/controller/logistics"
 	notification "github.com/serp/api-gateway/src/ui/controller/notification"
@@ -26,6 +27,7 @@ type RegisterRoutersIn struct {
 	Actuator *actuator.Endpoint
 
 	NotificationProxyController *notification.NotificationProxyController
+	GenericProxyController      *common.GenericProxyController
 
 	AuthController             *account.AuthController
 	UserController             *account.UserController
@@ -104,6 +106,7 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		p.OpportunityController,
 		p.CustomerController,
 		p.ContactController,
+		p.GenericProxyController,
 	)
 
 	RegisterPtmRoutes(
