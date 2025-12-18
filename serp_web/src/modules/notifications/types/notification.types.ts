@@ -40,13 +40,11 @@ export interface NotificationResponse {
 
 // List Response
 export interface NotificationListResponse {
-  data: NotificationResponse[];
-  meta: {
-    totalElements: number;
-    totalPages: number;
-    page: number;
-    pageSize: number;
-  };
+  notifications: NotificationResponse[];
+  totalCount: number;
+  unreadCount: number;
+  page: number;
+  pageSize: number;
 }
 
 // Query Params

@@ -24,9 +24,10 @@ export const scheduleApi = ptmApi.injectEndpoints({
     // Get schedule plans
     getSchedulePlans: builder.query<SchedulePlan[], void>({
       query: () => ({
-        url: '/api/v2/schedule/plans',
+        url: '/schedule/plans',
         method: 'GET',
       }),
+      extraOptions: { service: 'ptm' },
       transformResponse: createDataTransform<SchedulePlan[]>(),
       providesTags: [{ type: 'ptm/Schedule', id: 'LIST' }],
     }),
@@ -34,9 +35,10 @@ export const scheduleApi = ptmApi.injectEndpoints({
     // Get active schedule plan
     getActiveSchedulePlan: builder.query<SchedulePlan, void>({
       query: () => ({
-        url: '/api/v2/schedule/plans/active',
+        url: '/schedule/plans/active',
         method: 'GET',
       }),
+      extraOptions: { service: 'ptm' },
       transformResponse: createDataTransform<SchedulePlan>(),
       providesTags: [{ type: 'ptm/Schedule', id: 'ACTIVE' }],
     }),
@@ -47,10 +49,11 @@ export const scheduleApi = ptmApi.injectEndpoints({
       CreateSchedulePlanRequest
     >({
       query: (body) => ({
-        url: '/api/v2/schedule/plans',
+        url: '/schedule/plans',
         method: 'POST',
         body,
       }),
+      extraOptions: { service: 'ptm' },
       transformResponse: createDataTransform<SchedulePlan>(),
       invalidatesTags: [
         { type: 'ptm/Schedule', id: 'LIST' },
@@ -193,9 +196,10 @@ export const scheduleApi = ptmApi.injectEndpoints({
     // Get focus time blocks
     getFocusTimeBlocks: builder.query<FocusTimeBlock[], void>({
       query: () => ({
-        url: '/api/v2/schedule/focus-blocks',
+        url: '/schedule/focus-blocks',
         method: 'GET',
       }),
+      extraOptions: { service: 'ptm' },
       transformResponse: createDataTransform<FocusTimeBlock[]>(),
       providesTags: [{ type: 'ptm/FocusTime', id: 'LIST' }],
     }),
@@ -206,10 +210,11 @@ export const scheduleApi = ptmApi.injectEndpoints({
       Partial<FocusTimeBlock>
     >({
       query: (body) => ({
-        url: '/api/v2/schedule/focus-blocks',
+        url: '/schedule/focus-blocks',
         method: 'POST',
         body,
       }),
+      extraOptions: { service: 'ptm' },
       transformResponse: createDataTransform<FocusTimeBlock>(),
       invalidatesTags: [
         { type: 'ptm/FocusTime', id: 'LIST' },
@@ -223,10 +228,11 @@ export const scheduleApi = ptmApi.injectEndpoints({
       { id: string } & Partial<FocusTimeBlock>
     >({
       query: ({ id, ...patch }) => ({
-        url: `/api/v2/schedule/focus-blocks/${id}`,
+        url: `/schedule/focus-blocks/${id}`,
         method: 'PUT',
         body: patch,
       }),
+      extraOptions: { service: 'ptm' },
       transformResponse: createDataTransform<FocusTimeBlock>(),
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'ptm/FocusTime', id },
@@ -238,9 +244,10 @@ export const scheduleApi = ptmApi.injectEndpoints({
     // Delete focus time block
     deleteFocusTimeBlock: builder.mutation<void, string>({
       query: (id) => ({
-        url: `/api/v2/schedule/focus-blocks/${id}`,
+        url: `/schedule/focus-blocks/${id}`,
         method: 'DELETE',
       }),
+      extraOptions: { service: 'ptm' },
       invalidatesTags: (_result, _error, id) => [
         { type: 'ptm/FocusTime', id },
         { type: 'ptm/FocusTime', id: 'LIST' },
@@ -251,9 +258,10 @@ export const scheduleApi = ptmApi.injectEndpoints({
     // Get availability calendar
     getAvailabilityCalendar: builder.query<AvailabilityCalendar[], void>({
       query: () => ({
-        url: '/api/v2/schedule/availability',
+        url: '/schedule/availability',
         method: 'GET',
       }),
+      extraOptions: { service: 'ptm' },
       transformResponse: createDataTransform<AvailabilityCalendar[]>(),
       providesTags: [{ type: 'ptm/Availability', id: 'LIST' }],
     }),
@@ -264,10 +272,11 @@ export const scheduleApi = ptmApi.injectEndpoints({
       CreateAvailabilityRequest
     >({
       query: (body) => ({
-        url: '/api/v2/schedule/availability/set',
+        url: '/schedule/availability/set',
         method: 'POST',
         body,
       }),
+      extraOptions: { service: 'ptm' },
       transformResponse: createDataTransform<AvailabilityCalendar[]>(),
       invalidatesTags: [
         { type: 'ptm/Availability', id: 'LIST' },
@@ -281,10 +290,11 @@ export const scheduleApi = ptmApi.injectEndpoints({
       UpdateAvailabilityRequest
     >({
       query: (body) => ({
-        url: '/api/v2/schedule/availability/replace',
+        url: '/schedule/availability/replace',
         method: 'PUT',
         body,
       }),
+      extraOptions: { service: 'ptm' },
       transformResponse: createDataTransform<AvailabilityCalendar[]>(),
       invalidatesTags: [
         { type: 'ptm/Availability', id: 'LIST' },

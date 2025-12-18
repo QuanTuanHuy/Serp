@@ -60,7 +60,8 @@ export function NotificationButton({
   const [markAsReadApi] = useMarkNotificationAsReadMutation();
   const [markAllAsReadApi] = useMarkAllNotificationsAsReadMutation();
 
-  const displayNotifications = data?.data || notifications.slice(0, maxItems);
+  const displayNotifications =
+    data?.notifications || notifications.slice(0, maxItems);
 
   const handleMarkAsRead = useCallback(
     async (id: number) => {

@@ -1,5 +1,5 @@
 /**
- * PTM v2 - Project API Endpoints
+ * PTM - Project API Endpoints
  *
  * @author QuanTuanHuy
  * @description Part of Serp Project - Project CRUD operations

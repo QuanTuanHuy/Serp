@@ -3,15 +3,21 @@
  * Description: Part of Serp Project - Base API configuration for all services
  */
 
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import {
+  createApi,
+  fetchBaseQuery,
+  BaseQueryFn,
+  FetchArgs,
+  FetchBaseQueryError,
+} from '@reduxjs/toolkit/query/react';
 import type { RootState } from '../store';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
 
-// Base query with authentication
-const baseQuery = fetchBaseQuery({
-  baseUrl: `${API_BASE_URL}/api/v1`,
+// Raw base query with authentication
+const rawBaseQuery = fetchBaseQuery({
+  baseUrl: API_BASE_URL,
   prepareHeaders: (headers, { getState }) => {
     const state = getState() as RootState;
     const token = state.account.auth?.token;
@@ -25,9 +31,41 @@ const baseQuery = fetchBaseQuery({
   },
 });
 
+// Dynamic base query to handle different services
+const dynamicBaseQuery: BaseQueryFn<
+  string | FetchArgs,
+  unknown,
+  FetchBaseQueryError
+> = async (args, api, extraOptions: any) => {
+  const service = extraOptions?.service;
+  // Default to 'account' behavior (no prefix before /api/v1)
+  // If service is provided and not 'account', prepend /service
+
+  let urlPrefix = '/api/v1';
+
+  if (service && service !== 'account') {
+    urlPrefix = `/${service}/api/v1`;
+  }
+
+  let adjustedArgs = args;
+  if (typeof args === 'string') {
+    const path = args.startsWith('/') ? args : `/${args}`;
+    adjustedArgs = `${urlPrefix}${path}`;
+  } else {
+    const path = args.url.startsWith('/') ? args.url : `/${args.url}`;
+    adjustedArgs = { ...args, url: `${urlPrefix}${path}` };
+  }
+
+  return rawBaseQuery(adjustedArgs, api, extraOptions);
+};
+
 // Base query with error handling and token refresh
-const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
-  let result = await baseQuery(args, api, extraOptions);
+const baseQueryWithReauth: BaseQueryFn<
+  string | FetchArgs,
+  unknown,
+  FetchBaseQueryError
+> = async (args, api, extraOptions) => {
+  let result = await dynamicBaseQuery(args, api, extraOptions);
 
   // Handle 401 unauthorized - token refresh logic
   if (result.error && result.error.status === 401) {
@@ -35,14 +73,14 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
     const refreshToken = state.account.auth?.refreshToken;
 
     if (refreshToken) {
-      const refreshResult = await baseQuery(
+      const refreshResult = await dynamicBaseQuery(
         {
           url: '/auth/refresh-token',
           method: 'POST',
           body: { refreshToken },
         },
         api,
-        extraOptions
+        { ...extraOptions, service: 'account' }
       );
 
       if (refreshResult.data) {
@@ -62,7 +100,7 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
             })
           );
 
-          result = await baseQuery(args, api, extraOptions);
+          result = await dynamicBaseQuery(args, api, extraOptions);
         } else {
           // Refresh response indicates failure
           const { clearAuth } = await import('@/modules/account/store');

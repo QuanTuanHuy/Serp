@@ -54,7 +54,8 @@ export function NotificationDropdown({
   const [markAllAsReadApi] = useMarkAllNotificationsAsReadMutation();
 
   // Use data from API if available, otherwise use from Redux state (real-time updates)
-  const displayNotifications = data?.data || notifications.slice(0, maxItems);
+  const displayNotifications =
+    data?.notifications || notifications.slice(0, maxItems);
 
   const handleMarkAsRead = useCallback(
     async (id: number) => {
