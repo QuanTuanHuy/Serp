@@ -45,7 +45,7 @@ When given a feature/module request, extract and clarify:
 
 ## DDD Template
 
-```markdown
+````markdown
 # [Module Name] - Detailed Design Document
 
 ## 1. Document Information
@@ -606,6 +606,8 @@ X-Request-ID: <UUID>
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | [Date] | [Author] | Initial draft |
+
+````
 
 ---
 
