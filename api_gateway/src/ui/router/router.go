@@ -146,6 +146,7 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 	RegisterNotificationRoutes(
 		group,
 		p.NotificationProxyController,
+		p.GenericProxyController,
 		p.JWTMiddleware,
 	)
 }

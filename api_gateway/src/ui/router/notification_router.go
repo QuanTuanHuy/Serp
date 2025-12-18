@@ -7,6 +7,7 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/serp/api-gateway/src/ui/controller/common"
 	"github.com/serp/api-gateway/src/ui/controller/notification"
 	"github.com/serp/api-gateway/src/ui/middleware"
 )
@@ -14,11 +15,16 @@ import (
 func RegisterNotificationRoutes(
 	group *gin.RouterGroup,
 	notificationProxyController *notification.NotificationProxyController,
+	genericProxyController *common.GenericProxyController,
 	jwtMiddleware *middleware.JWTMiddleware,
 ) {
-	notificationGroup := group.Group("ws/notifications")
-	// notificationGroup.Use(jwtMiddleware.AuthenticateJWT())
+	notificationWSGroup := group.Group("ws/notifications")
 	{
-		notificationGroup.GET("", notificationProxyController.ProxyWebSocket)
+		notificationWSGroup.GET("", notificationProxyController.ProxyWebSocket)
+	}
+
+	notificationGroup := group.Group("/ns/api/v1")
+	{
+		notificationGroup.Use(jwtMiddleware.AuthenticateJWT()).Any("/*proxyPath", genericProxyController.ProxyToNotification)
 	}
 }
