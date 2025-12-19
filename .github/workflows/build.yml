@@ -62,7 +62,8 @@ jobs:
             "serp-web": "${{ steps.changes.outputs.serp-web }}",
             "crm": "${{ steps.changes.outputs.crm }}",
             "purchase": "${{ steps.changes.outputs.purchase }}",
-            "logistics": "${{ steps.changes.outputs.logistics }}"
+            "logistics": "${{ steps.changes.outputs.logistics }}",
+            "notification": "${{ steps.changes.outputs.notification }}"
           }' > changes.json
 
       - name: Upload changes artifact
