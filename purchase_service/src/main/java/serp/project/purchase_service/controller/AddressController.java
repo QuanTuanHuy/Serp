@@ -3,7 +3,10 @@ package serp.project.purchase_service.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
 import serp.project.purchase_service.dto.request.AddressCreationForm;
 import serp.project.purchase_service.dto.request.AddressUpdateForm;
 import serp.project.purchase_service.dto.response.GeneralResponse;
@@ -18,6 +21,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/purchase-service/api/v1/address")
+@Validated
 @Slf4j
 public class AddressController {
 
@@ -25,7 +29,7 @@ public class AddressController {
     private final AuthUtils authUtils;
 
     @PostMapping("/create")
-    public ResponseEntity<GeneralResponse<?>> createAddress(@RequestBody AddressCreationForm form) {
+    public ResponseEntity<GeneralResponse<?>> createAddress(@Valid @RequestBody AddressCreationForm form) {
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
         log.info("[AddressController] Creating address {} for tenantId: {}", form.getFullAddress(), tenantId);
@@ -34,7 +38,7 @@ public class AddressController {
     }
 
     @PatchMapping("/update/{addressId}")
-    public ResponseEntity<GeneralResponse<?>> updateAddress(@RequestBody AddressUpdateForm form,
+    public ResponseEntity<GeneralResponse<?>> updateAddress(@Valid @RequestBody AddressUpdateForm form,
             @PathVariable("addressId") String addressId) {
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));

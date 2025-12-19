@@ -5,11 +5,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import serp.project.logistics.entity.OrderEntity;
+import serp.project.logistics.entity.OrderItemEntity;
+import serp.project.logistics.repository.OrderItemRepository;
 import serp.project.logistics.repository.OrderRepository;
 import serp.project.logistics.repository.specification.OrderSpecification;
 import serp.project.logistics.util.PaginationUtils;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -17,6 +20,7 @@ import java.time.LocalDate;
 public class OrderService {
 
     private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
 
     public Page<OrderEntity> findOrders(
             String query,
@@ -57,6 +61,10 @@ public class OrderService {
             return null;
         }
         return orderEntity;
+    }
+
+    public List<OrderItemEntity> findByOrderId(String orderId, Long tenantId) {
+        return orderItemRepository.findByTenantIdAndOrderId(tenantId, orderId);
     }
 
 }

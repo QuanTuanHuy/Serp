@@ -12,6 +12,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.util.StringUtils;
 import serp.project.purchase_service.constant.OrderStatus;
+import serp.project.purchase_service.constant.OrderType;
 import serp.project.purchase_service.dto.request.OrderCreationForm;
 import serp.project.purchase_service.dto.request.OrderUpdateForm;
 import serp.project.purchase_service.exception.AppErrorCode;
@@ -105,12 +106,15 @@ public class OrderEntity {
     private Long tenantId;
 
     @Transient
-    private List<OrderItemEntity> orderItems = new ArrayList<>();
+    private List<OrderItemEntity> items = new ArrayList<>();
+
+    @Transient
+    private List<ShipmentEntity> shipments = new ArrayList<>();
 
     public OrderEntity(OrderCreationForm form, List<OrderItemEntity> orderItems, Long userId, Long tenantId) {
         String orderId = IdUtils.generateOrderId();
         this.id = orderId;
-        this.orderTypeId = "PURCHASE";
+        this.orderTypeId = OrderType.PURCHASE.name();
         this.fromSupplierId = form.getFromSupplierId();
         this.createdByUserId = userId;
         this.orderDate = LocalDate.now();
@@ -123,7 +127,7 @@ public class OrderEntity {
         this.saleChannelId = form.getSaleChannelId();
         this.tenantId = tenantId;
 
-        this.orderItems = orderItems;
+        this.items = orderItems;
 
         this.totalAmount = 0L;
         for (OrderItemEntity item : orderItems) {
@@ -140,13 +144,13 @@ public class OrderEntity {
             this.deliveryBeforeDate = form.getDeliveryBeforeDate();
         if (form.getDeliveryAfterDate() != null)
             this.deliveryAfterDate = form.getDeliveryAfterDate();
-        if (form.getNote() != null)
+        if (StringUtils.hasText(form.getNote()))
             this.note = form.getNote();
-        if (form.getOrderName() != null)
+        if (StringUtils.hasText(form.getOrderName()))
             this.orderName = form.getOrderName();
         if (form.getPriority() != 0)
             this.priority = form.getPriority();
-        if (form.getSaleChannelId() != null)
+        if (StringUtils.hasText(form.getSaleChannelId()))
             this.saleChannelId = form.getSaleChannelId();
     }
 
@@ -155,18 +159,8 @@ public class OrderEntity {
             throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
         }
 
-        this.orderItems.add(item);
+        this.items.add(item);
         this.totalAmount += item.getAmount();
-    }
-
-    public void updateOrderItem(OrderItemEntity oldItem, OrderItemEntity newItem) {
-        if (OrderStatus.valueOf(this.statusId).ordinal() > OrderStatus.CREATED.ordinal()) {
-            throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
-        }
-
-        this.orderItems.remove(oldItem);
-        this.orderItems.add(newItem);
-        this.totalAmount = this.totalAmount - oldItem.getAmount() + newItem.getAmount();
     }
 
     public void removeOrderItem(OrderItemEntity item) {
@@ -174,7 +168,7 @@ public class OrderEntity {
             throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
         }
 
-        this.orderItems.remove(item);
+        this.items.remove(item);
         this.totalAmount -= item.getAmount();
     }
 

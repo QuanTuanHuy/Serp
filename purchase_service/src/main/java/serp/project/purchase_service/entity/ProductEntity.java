@@ -14,6 +14,7 @@ import serp.project.purchase_service.util.IdUtils;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 
@@ -94,13 +95,13 @@ public class ProductEntity {
     }
 
     public void update(ProductUpdateForm form) {
-        if (form.getName() != null)
+        if (StringUtils.hasText(form.getName()))
             this.setName(form.getName());
         if (form.getWeight() != 0)
             this.setWeight(form.getWeight());
         if (form.getHeight() != 0)
             this.setHeight(form.getHeight());
-        if (form.getUnit() != null)
+        if (StringUtils.hasText(form.getUnit()))
             this.setUnit(form.getUnit());
         if (form.getCostPrice() != 0)
             this.setCostPrice(form.getCostPrice());
@@ -108,16 +109,16 @@ public class ProductEntity {
             this.setWholeSalePrice(form.getWholeSalePrice());
         if (form.getRetailPrice() != 0)
             this.setRetailPrice(form.getRetailPrice());
-        if (form.getStatusId() != null)
+        if (StringUtils.hasText(form.getStatusId()))
             this.setStatusId(form.getStatusId());
-        if (form.getImageId() != null)
+        if (StringUtils.hasText(form.getImageId()))
             this.setImageId(form.getImageId());
-        if (form.getExtraProps() != null)
+        if (StringUtils.hasText(form.getExtraProps()))
             this.setExtraProps(form.getExtraProps());
 
         this.setVatRate(form.getVatRate());
 
-        if (form.getSkuCode() != null)
+        if (StringUtils.hasText(form.getSkuCode()))
             this.setSkuCode(form.getSkuCode());
     }
 

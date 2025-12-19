@@ -14,6 +14,7 @@ import serp.project.purchase_service.util.IdUtils;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 
@@ -72,11 +73,16 @@ public class AddressEntity {
     }
 
     public void update(AddressUpdateForm form) {
-        this.addressType = form.getAddressType();
+        if (StringUtils.hasText(form.getAddressType()))
+            this.addressType = form.getAddressType();
+
         this.latitude = form.getLatitude();
         this.longitude = form.getLongitude();
+
         this.isDefault = form.isDefault();
-        this.fullAddress = form.getFullAddress();
+
+        if (StringUtils.hasText(form.getFullAddress()))
+            this.fullAddress = form.getFullAddress();
     }
 
 }

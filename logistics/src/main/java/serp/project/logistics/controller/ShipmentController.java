@@ -5,15 +5,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import serp.project.logistics.dto.request.*;
 import serp.project.logistics.dto.response.GeneralResponse;
 import serp.project.logistics.dto.response.PageResponse;
-import serp.project.logistics.dto.response.ShipmentDetailResponse;
 import serp.project.logistics.entity.InventoryItemDetailEntity;
 import serp.project.logistics.entity.ShipmentEntity;
 import serp.project.logistics.exception.AppErrorCode;
 import serp.project.logistics.exception.AppException;
-import serp.project.logistics.service.InventoryItemDetailService;
 import serp.project.logistics.service.ShipmentService;
 import serp.project.logistics.util.AuthUtils;
 
@@ -27,12 +28,11 @@ import java.util.List;
 public class ShipmentController {
 
         private final ShipmentService shipmentService;
-        private final InventoryItemDetailService inventoryItemDetailService;
         private final AuthUtils authUtils;
 
         @PostMapping("/create")
         public ResponseEntity<GeneralResponse<?>> createShipment(
-                        @RequestBody ShipmentCreationForm form) {
+                        @Valid @RequestBody ShipmentCreationForm form) {
                 Long tenantId = authUtils.getCurrentTenantId()
                                 .orElseThrow(() -> new RuntimeException("Unauthorized"));
                 Long userId = authUtils.getCurrentUserId()
@@ -45,7 +45,7 @@ public class ShipmentController {
 
         @PatchMapping("/update/{shipmentId}")
         public ResponseEntity<GeneralResponse<?>> updateShipment(
-                        @RequestBody ShipmentUpdateForm form,
+                        @Valid @RequestBody ShipmentUpdateForm form,
                         @PathVariable String shipmentId) {
                 Long tenantId = authUtils.getCurrentTenantId()
                                 .orElseThrow(() -> new RuntimeException("Unauthorized"));
@@ -80,11 +80,11 @@ public class ShipmentController {
         @PostMapping("/create/{shipmentId}/add")
         public ResponseEntity<GeneralResponse<?>> addItemToShipment(
                         @PathVariable String shipmentId,
-                        @RequestBody ShipmentCreationForm.InventoryItemDetail form) {
+                        @Valid @RequestBody ShipmentCreationForm.InventoryItemDetail form) {
                 Long tenantId = authUtils.getCurrentTenantId()
                                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
                 log.info("[ShipmentController] Add item to shipment {} for tenantId {}", shipmentId, tenantId);
-                inventoryItemDetailService.createInventoryItemDetails(shipmentId, form, tenantId);
+                shipmentService.createInventoryItemDetails(form, shipmentId, tenantId);
                 return ResponseEntity.ok(GeneralResponse.success("Item added to shipment successfully"));
         }
 
@@ -92,12 +92,12 @@ public class ShipmentController {
         public ResponseEntity<GeneralResponse<?>> updateItemInShipment(
                         @PathVariable String shipmentId,
                         @PathVariable String itemId,
-                        @RequestBody InventoryItemDetailUpdateForm itemForm) {
+                        @Valid @RequestBody InventoryItemDetailUpdateForm itemForm) {
                 Long tenantId = authUtils.getCurrentTenantId()
                                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
                 log.info("[ShipmentController] Update item {} in shipment {} for tenantId {}", itemId, shipmentId,
                                 tenantId);
-                inventoryItemDetailService.updateInventoryItemDetail(itemId, itemForm, shipmentId, tenantId);
+                shipmentService.updateInventoryItemDetail(itemId, itemForm, shipmentId, tenantId);
                 return ResponseEntity.ok(GeneralResponse.success("Item updated in shipment successfully"));
         }
 
@@ -109,12 +109,12 @@ public class ShipmentController {
                                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
                 log.info("[ShipmentController] Delete item {} from shipment {} for tenantId {}", itemId, shipmentId,
                                 tenantId);
-                inventoryItemDetailService.deleteItem(itemId, shipmentId, tenantId);
+                shipmentService.deleteItem(itemId, shipmentId, tenantId);
                 return ResponseEntity.ok(GeneralResponse.success("Item removed from shipment successfully"));
         }
 
         @GetMapping("/search/{shipmentId}")
-        public ResponseEntity<GeneralResponse<ShipmentDetailResponse>> getShipmentDetail(
+        public ResponseEntity<GeneralResponse<ShipmentEntity>> getShipmentDetail(
                         @PathVariable String shipmentId) {
                 Long tenantId = authUtils.getCurrentTenantId()
                                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
@@ -123,41 +123,40 @@ public class ShipmentController {
                 if (shipment == null) {
                         throw new AppException(AppErrorCode.NOT_FOUND);
                 }
-                List<InventoryItemDetailEntity> items = inventoryItemDetailService.getItemsByShipmentId(shipmentId,
+                List<InventoryItemDetailEntity> items = shipmentService.getItemsByShipmentId(shipmentId,
                                 tenantId);
-                ShipmentDetailResponse response = ShipmentDetailResponse.fromEntity(shipment, items);
-                return ResponseEntity.ok(GeneralResponse.success("Successfully get shipment detail", response));
+                shipment.setItems(items);
+                return ResponseEntity.ok(GeneralResponse.success("Successfully get shipment detail", shipment));
         }
 
-    @GetMapping("/search")
-    public ResponseEntity<GeneralResponse<PageResponse<ShipmentEntity>>> getOrders(
-            @RequestParam(required = false, defaultValue = "1") int page,
-            @RequestParam(required = false, defaultValue = "10") int size,
-            @RequestParam(required = false, defaultValue = "createdStamp") String sortBy,
-            @RequestParam(required = false, defaultValue = "desc") String sortDirection,
-            @RequestParam(required = false) String query,
-            @RequestParam(required = false) String statusId,
-            @RequestParam(required = false) String shipmentTypeId,
-            @RequestParam(required = false) String toCustomerId,
-            @RequestParam(required = false) String fromSupplierId,
-            @RequestParam(required = false) String orderId
-    ) {
-        Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
-        log.info("[OrderController] Search orders of page {}/{} for tenantId {}", page, size, tenantId);
-        var orders = shipmentService.findShipments(
-                query,
-                shipmentTypeId,
-                fromSupplierId,
-                toCustomerId,
-                orderId,
-                statusId,
-                tenantId,
-                page,
-                size,
-                sortBy,
-                sortDirection);
-        return ResponseEntity.ok(GeneralResponse.success("Successfully get orders", PageResponse.of(orders)));
-    }
+        @GetMapping("/search")
+        public ResponseEntity<GeneralResponse<PageResponse<ShipmentEntity>>> getShipments(
+                        @Min(0) @RequestParam(required = false, defaultValue = "0") int page,
+                        @RequestParam(required = false, defaultValue = "10") int size,
+                        @RequestParam(required = false, defaultValue = "createdStamp") String sortBy,
+                        @RequestParam(required = false, defaultValue = "desc") String sortDirection,
+                        @RequestParam(required = false) String query,
+                        @RequestParam(required = false) String statusId,
+                        @RequestParam(required = false) String shipmentTypeId,
+                        @RequestParam(required = false) String toCustomerId,
+                        @RequestParam(required = false) String fromSupplierId,
+                        @RequestParam(required = false) String orderId) {
+                Long tenantId = authUtils.getCurrentTenantId()
+                                .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
+                log.info("[OrderController] Search orders of page {}/{} for tenantId {}", page, size, tenantId);
+                var orders = shipmentService.findShipments(
+                                query,
+                                shipmentTypeId,
+                                fromSupplierId,
+                                toCustomerId,
+                                orderId,
+                                statusId,
+                                tenantId,
+                                page,
+                                size,
+                                sortBy,
+                                sortDirection);
+                return ResponseEntity.ok(GeneralResponse.success("Successfully get orders", PageResponse.of(orders)));
+        }
 
 }

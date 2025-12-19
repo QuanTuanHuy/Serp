@@ -1,38 +1,50 @@
 package serp.project.purchase_service.dto.request;
 
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import serp.project.purchase_service.constant.ProductStatus;
+import serp.project.purchase_service.validator.EnumValidator;
 
 @Data
 public class ProductCreationForm {
 
-    @NotBlank(message = "name is mandatory")
+    @NotBlank(message = "Product name must not be blank")
     private String name;
 
+    @Min(value = 0, message = "Weight must be non-negative")
     private double weight;
+
+    @Min(value = 0, message = "Height must be non-negative")
     private double height;
 
-    @NotBlank(message = "unit is mandatory")
+    @NotBlank(message = "Unit must not be blank")
     private String unit;
 
-    @NotBlank(message = "cost price is mandatory")
+    @Min(value = 0, message = "Cost price must be non-negative")
     private long costPrice;
 
-    @NotBlank(message = "whole sale price is mandatory")
+    @Min(value = 0, message = "Wholesale price must be non-negative")
     private long wholeSalePrice;
 
+    @Min(value = 0, message = "Retail price must be non-negative")
     private long retailPrice;
 
-    @NotBlank(message = "categoryId is mandatory")
+    @NotBlank(message = "Category ID must not be blank")
     private String categoryId;
 
+    @NotNull(message = "Status ID must not be blank")
+    @EnumValidator(enumClass = ProductStatus.class)
     private String statusId;
 
     private String imageId;
     private String extraProps;
+
+    @Min(value = 0, message = "VAT rate must be non-negative")
     private float vatRate;
 
-    @NotBlank(message = "skuCode is mandatory")
+    @NotBlank(message = "SKU code must not be blank")
     private String skuCode;
 
 }

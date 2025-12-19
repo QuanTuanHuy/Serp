@@ -6,16 +6,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import serp.project.logistics.constant.EntityType;
-import serp.project.logistics.dto.request.AddressCreationForm;
 import serp.project.logistics.dto.request.FacilityCreationForm;
 import serp.project.logistics.dto.request.FacilityUpdateForm;
 import serp.project.logistics.entity.FacilityEntity;
 import serp.project.logistics.exception.AppErrorCode;
 import serp.project.logistics.exception.AppException;
+import serp.project.logistics.repository.AddressRepository;
 import serp.project.logistics.repository.FacilityRepository;
 import serp.project.logistics.repository.specification.FacilitySpecification;
-import serp.project.logistics.util.IdUtils;
 import serp.project.logistics.util.PaginationUtils;
 
 @Service
@@ -24,40 +22,20 @@ import serp.project.logistics.util.PaginationUtils;
 public class FacilityService {
 
         private final FacilityRepository facilityRepository;
-        private final AddressService addressService;
+        private final AddressRepository addressRepository;
 
         @Transactional(rollbackFor = Exception.class)
         public void createFacility(FacilityCreationForm form, Long tenantId) {
-                String facilityId = IdUtils.generateFacilityId();
-                FacilityEntity facility = FacilityEntity.builder()
-                                .id(facilityId)
-                                .name(form.getName())
-                                .statusId(form.getStatusId())
-                                .isDefault(true)
-                                .phone(form.getPhone())
-                                .postalCode(form.getPostalCode())
-                                .length(form.getLength())
-                                .width(form.getWidth())
-                                .height(form.getHeight())
-                                .tenantId(tenantId)
-                                .build();
+                FacilityEntity facility = new FacilityEntity(form, tenantId);
                 facilityRepository.save(facility);
                 log.info("[FacilityService] Generated facility {} with ID {} for tenantId {}", form.getName(),
-                                facilityId,
+                                facility.getId(),
                                 tenantId);
 
-                AddressCreationForm addressForm = new AddressCreationForm();
-                addressForm.setEntityId(facility.getId());
-                addressForm.setEntityType(EntityType.FACILITY.value());
-                addressForm.setAddressType(form.getAddressType());
-                addressForm.setLatitude(form.getLatitude());
-                addressForm.setLongitude(form.getLongitude());
-                addressForm.setDefault(true);
-                addressForm.setFullAddress(form.getFullAddress());
-                addressService.createAddress(addressForm, tenantId);
+                addressRepository.save(facility.getAddress());
                 log.info("[FacilityService] Created address {} for facility ID {} and tenantId {}",
-                                addressForm.getFullAddress(),
-                                facilityId, tenantId);
+                                facility.getAddress().getFullAddress(),
+                                facility.getId(), tenantId);
         }
 
         @Transactional(rollbackFor = Exception.class)
@@ -66,14 +44,7 @@ public class FacilityService {
                 if (facility == null || !facility.getTenantId().equals(tenantId)) {
                         throw new AppException(AppErrorCode.NOT_FOUND);
                 }
-                facility.setName(form.getName());
-                facility.setPhone(form.getPhone());
-                facility.setStatusId(form.getStatusId());
-                facility.setDefault(form.isDefault());
-                facility.setPostalCode(form.getPostalCode());
-                facility.setLength(form.getLength());
-                facility.setWidth(form.getWidth());
-                facility.setHeight(form.getHeight());
+                facility.update(form);
                 facilityRepository.save(facility);
                 log.info("[FacilityService] Updated facility {} with ID {} for tenantId {}", form.getName(), facilityId,
                                 tenantId);

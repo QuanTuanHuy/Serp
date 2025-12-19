@@ -12,6 +12,7 @@ import serp.project.purchase_service.util.IdUtils;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 
@@ -46,7 +47,8 @@ public class CategoryEntity {
     }
 
     public void update(CategoryForm form) {
-        this.name = form.getName();
+        if (StringUtils.hasText(form.getName()))
+            this.name = form.getName();
     }
 
 }

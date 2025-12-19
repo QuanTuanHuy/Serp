@@ -8,7 +8,11 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.logistics.exception.AppErrorCode;
+import serp.project.logistics.exception.AppException;
+
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Formula;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
@@ -35,6 +39,13 @@ public class OrderItemEntity {
 
     private int quantity;
 
+    @Formula("(quantity - (" +
+            "   SELECT COALESCE(SUM(iid.quantity), 0) " +
+            "   FROM wms2_inventory_item_detail iid " +
+            "   WHERE iid.order_item_id = id " +
+            "))")
+    private int quantityRemaining;
+
     private long amount;
 
     @Column(name = "status_id")
@@ -58,5 +69,16 @@ public class OrderItemEntity {
 
     @Column(name = "tenant_id")
     private Long tenantId;
+
+    public void addDeliveredItem(InventoryItemDetailEntity item) {
+        if (this.quantityRemaining < item.getQuantity()) {
+            throw new AppException(AppErrorCode.EXCEED_REMAINING_QUANTITY);
+        }
+        this.quantityRemaining -= item.getQuantity();
+    }
+
+    public void removeDeliveredItem(InventoryItemDetailEntity item) {
+        this.quantityRemaining += item.getQuantity();
+    }
 
 }

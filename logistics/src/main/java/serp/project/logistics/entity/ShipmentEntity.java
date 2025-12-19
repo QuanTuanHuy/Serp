@@ -4,15 +4,28 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.logistics.constant.OrderStatus;
+import serp.project.logistics.constant.OrderType;
+import serp.project.logistics.constant.ShipmentStatus;
+import serp.project.logistics.constant.ShipmentType;
+import serp.project.logistics.dto.request.ShipmentCreationForm;
+import serp.project.logistics.dto.request.ShipmentUpdateForm;
+import serp.project.logistics.exception.AppErrorCode;
+import serp.project.logistics.exception.AppException;
+import serp.project.logistics.util.IdUtils;
+
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Phieu nhap / xuat hang
@@ -20,7 +33,6 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
-@Builder
 @Entity
 @Table(name = "wms2_shipment")
 public class ShipmentEntity {
@@ -76,5 +88,71 @@ public class ShipmentEntity {
 
     @Column(name = "tenant_id")
     private Long tenantId;
+
+    @Transient
+    private List<InventoryItemDetailEntity> items = new ArrayList<>();
+
+    public ShipmentEntity(ShipmentCreationForm form, OrderEntity order, List<InventoryItemDetailEntity> items,
+            Long userId,
+            Long tenantId) {
+        if (!order.getStatusId().equals(OrderStatus.APPROVED.name())) {
+            throw new AppException(AppErrorCode.ORDER_NOT_APPROVED_YET);
+        }
+
+        String shipmentId = IdUtils.generateShipmentId();
+        String shipmentType = OrderType.PURCHASE.name().equals(order.getOrderTypeId()) ? ShipmentType.INBOUND.name()
+                : ShipmentType.OUTBOUND.name();
+        String shipmentName = StringUtils.hasText(form.getShipmentName()) ? form.getShipmentName()
+                : ShipmentType.INBOUND.name().equals(shipmentType) ? "Phiếu nhập tự động mã " + shipmentId
+                        : "Phiếu xuất tự động mã " + shipmentId;
+        this.id = shipmentId;
+        this.shipmentTypeId = shipmentType;
+        this.toCustomerId = StringUtils.hasText(order.getToCustomerId()) ? order.getToCustomerId() : null;
+        this.fromSupplierId = StringUtils.hasText(order.getFromSupplierId()) ? order.getFromSupplierId() : null;
+        this.createdByUserId = userId;
+        this.orderId = order.getId();
+        this.shipmentName = shipmentName;
+        this.statusId = ShipmentStatus.CREATED.name();
+        this.note = form.getNote();
+        this.expectedDeliveryDate = form.getExpectedDeliveryDate();
+        this.tenantId = tenantId;
+
+        this.items = items;
+    }
+
+    public void update(ShipmentUpdateForm form) {
+        if (ShipmentStatus.valueOf(this.statusId).ordinal() > ShipmentStatus.CREATED.ordinal()) {
+            throw new AppException(AppErrorCode.INVALID_STATUS_TRANSITION);
+        }
+
+        if (StringUtils.hasText(form.getShipmentName()))
+            this.shipmentName = form.getShipmentName();
+        if (StringUtils.hasText(form.getNote()))
+            this.note = form.getNote();
+        if (form.getExpectedDeliveryDate() != null)
+            this.expectedDeliveryDate = form.getExpectedDeliveryDate();
+    }
+
+    public void addItem(InventoryItemDetailEntity item) {
+        if (ShipmentStatus.valueOf(this.statusId).ordinal() > ShipmentStatus.CREATED.ordinal()) {
+            throw new AppException(AppErrorCode.INVALID_STATUS_TRANSITION);
+        }
+        this.items.add(item);
+    }
+
+    public void removeItem(InventoryItemDetailEntity item) {
+        if (ShipmentStatus.valueOf(this.statusId).ordinal() > ShipmentStatus.CREATED.ordinal()) {
+            throw new AppException(AppErrorCode.INVALID_STATUS_TRANSITION);
+        }
+        this.items.remove(item);
+    }
+
+    public void importShipment(Long userId) {
+        if (!this.statusId.equals(ShipmentStatus.CREATED.name())) {
+            throw new AppException(AppErrorCode.INVALID_STATUS_TRANSITION);
+        }
+        this.statusId = ShipmentStatus.IMPORTED.name();
+        this.handledByUserId = userId;
+    }
 
 }

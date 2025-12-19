@@ -6,17 +6,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import serp.project.purchase_service.dto.request.OrderCancellationForm;
 import serp.project.purchase_service.dto.request.OrderCreationForm;
 import serp.project.purchase_service.dto.request.OrderItemUpdateForm;
 import serp.project.purchase_service.dto.request.OrderUpdateForm;
 import serp.project.purchase_service.dto.response.GeneralResponse;
-import serp.project.purchase_service.dto.response.OrderDetailResponse;
 import serp.project.purchase_service.dto.response.PageResponse;
 import serp.project.purchase_service.entity.OrderEntity;
 import serp.project.purchase_service.exception.AppErrorCode;
 import serp.project.purchase_service.exception.AppException;
 import serp.project.purchase_service.service.OrderService;
+import serp.project.purchase_service.service.ShipmentService;
 import serp.project.purchase_service.util.AuthUtils;
 
 import java.time.LocalDate;
@@ -29,10 +32,11 @@ import java.time.LocalDate;
 public class OrderController {
 
         private final OrderService orderService;
+        private final ShipmentService shipmentService;
         private final AuthUtils authUtils;
 
         @PostMapping("/create")
-        public ResponseEntity<GeneralResponse<?>> createOrder(@RequestBody OrderCreationForm form) {
+        public ResponseEntity<GeneralResponse<?>> createOrder(@Valid @RequestBody OrderCreationForm form) {
                 Long tenantId = authUtils.getCurrentTenantId()
                                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
                 Long userId = authUtils.getCurrentUserId()
@@ -45,7 +49,7 @@ public class OrderController {
 
         @PatchMapping("/update/{orderId}")
         public ResponseEntity<GeneralResponse<?>> updateOrder(
-                        @RequestBody OrderUpdateForm form,
+                        @Valid @RequestBody OrderUpdateForm form,
                         @PathVariable String orderId) {
 
                 Long tenantId = authUtils.getCurrentTenantId()
@@ -57,7 +61,7 @@ public class OrderController {
 
         @PostMapping("/create/{orderId}/add")
         public ResponseEntity<GeneralResponse<?>> addProductToOrder(
-                        @RequestBody OrderCreationForm.OrderItem itemForm,
+                        @Valid @RequestBody OrderCreationForm.OrderItem itemForm,
                         @PathVariable String orderId) {
                 Long tenantId = authUtils.getCurrentTenantId()
                                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
@@ -81,7 +85,7 @@ public class OrderController {
 
         @PatchMapping("/update/{orderId}/update/{orderItemId}")
         public ResponseEntity<GeneralResponse<?>> updateProductInOrder(
-                        @RequestBody OrderItemUpdateForm itemForm,
+                        @Valid @RequestBody OrderItemUpdateForm itemForm,
                         @PathVariable String orderId,
                         @PathVariable String orderItemId) {
                 Long tenantId = authUtils.getCurrentTenantId()
@@ -113,7 +117,7 @@ public class OrderController {
         @PatchMapping("/manage/{orderId}/cancel")
         public ResponseEntity<GeneralResponse<?>> cancelOrder(
                         @PathVariable String orderId,
-                        @RequestBody OrderCancellationForm form) {
+                        @Valid @RequestBody OrderCancellationForm form) {
                 Long tenantId = authUtils.getCurrentTenantId()
                                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
                 Long userId = authUtils.getCurrentUserId()
@@ -124,7 +128,7 @@ public class OrderController {
         }
 
         @GetMapping("/search/{orderId}")
-        public ResponseEntity<GeneralResponse<OrderDetailResponse>> getOrderDetail(
+        public ResponseEntity<GeneralResponse<OrderEntity>> getOrderDetail(
                         @PathVariable String orderId) {
                 Long tenantId = authUtils.getCurrentTenantId()
                                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
@@ -132,17 +136,16 @@ public class OrderController {
                 if (order == null) {
                         throw new AppException(AppErrorCode.NOT_FOUND);
                 }
-                log.info("[OrderController] Get order detail for order ID {} and tenantId {}", orderId, tenantId);
                 var orderItems = orderService.findByOrderId(orderId, tenantId);
-                OrderDetailResponse response = OrderDetailResponse.fromEntity(
-                                order,
-                                orderItems);
-                return ResponseEntity.ok(GeneralResponse.success("Successfully get order detail", response));
+                var shipments = shipmentService.findByOrderId(orderId, tenantId);
+                order.setItems(orderItems);
+                order.setShipments(shipments);
+                return ResponseEntity.ok(GeneralResponse.success("Successfully get order detail", order));
         }
 
         @GetMapping("/search")
         public ResponseEntity<GeneralResponse<PageResponse<OrderEntity>>> getOrders(
-                        @RequestParam(required = false, defaultValue = "1") int page,
+                        @Min(0) @RequestParam(required = false, defaultValue = "0") int page,
                         @RequestParam(required = false, defaultValue = "10") int size,
                         @RequestParam(required = false, defaultValue = "createdStamp") String sortBy,
                         @RequestParam(required = false, defaultValue = "desc") String sortDirection,

@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import serp.project.logistics.dto.response.GeneralResponse;
@@ -30,7 +31,7 @@ public class CustomerController {
 
         @GetMapping("/search")
         public ResponseEntity<GeneralResponse<PageResponse<CustomerEntity>>> getCustomers(
-                        @RequestParam(required = false, defaultValue = "1") int page,
+                        @Min(0) @RequestParam(required = false, defaultValue = "0") int page,
                         @RequestParam(required = false, defaultValue = "10") int size,
                         @RequestParam(required = false, defaultValue = "createdStamp") String sortBy,
                         @RequestParam(required = false, defaultValue = "desc") String sortDirection,

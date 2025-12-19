@@ -17,6 +17,7 @@ import serp.project.purchase_service.util.IdUtils;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 
@@ -78,10 +79,17 @@ public class SupplierEntity {
     }
 
     public void update(SupplierUpdateForm form) {
-        this.name = form.getName();
-        this.email = form.getEmail();
-        this.phone = form.getPhone();
-        this.statusId = form.getStatusId();
+        if (StringUtils.hasText(form.getName()))
+            this.name = form.getName();
+
+        if (StringUtils.hasText(form.getEmail()))
+            this.email = form.getEmail();
+
+        if (StringUtils.hasText(form.getPhone()))
+            this.phone = form.getPhone();
+
+        if (StringUtils.hasText(form.getStatusId()))
+            this.statusId = form.getStatusId();
     }
 
 }

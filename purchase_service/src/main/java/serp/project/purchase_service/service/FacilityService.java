@@ -45,14 +45,7 @@ public class FacilityService {
                 if (facility == null || !facility.getTenantId().equals(tenantId)) {
                         throw new AppException(AppErrorCode.NOT_FOUND);
                 }
-                facility.setName(form.getName());
-                facility.setPhone(form.getPhone());
-                facility.setStatusId(form.getStatusId());
-                facility.setDefault(form.isDefault());
-                facility.setPostalCode(form.getPostalCode());
-                facility.setLength(form.getLength());
-                facility.setWidth(form.getWidth());
-                facility.setHeight(form.getHeight());
+                facility.update(form);
                 facilityRepository.save(facility);
                 log.info("[FacilityService] Updated facility {} with ID {} for tenantId {}", form.getName(), facilityId,
                                 tenantId);

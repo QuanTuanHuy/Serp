@@ -11,7 +11,7 @@ public class LogisticsApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(LogisticsApplication.class, args);
-		log.info("Logistics v0.1.0 is running...");
+		log.info("Logistics v0.2.0 is running...");
 	}
 
 }

@@ -37,7 +37,7 @@ public class OrderService {
     public void createOrder(OrderCreationForm form, Long userId, Long tenantId) {
 
         List<OrderItemEntity> orderItems = new ArrayList<>();
-        for (OrderCreationForm.OrderItem itemForm : form.getOrderItems()) {
+        for (OrderCreationForm.OrderItem itemForm : form.getItems()) {
             ProductEntity product = productRepository.findById(itemForm.getProductId()).orElse(null);
             if (product == null || !product.getTenantId().equals(tenantId)) {
                 log.info("[OrderService] Product ID {} not found for tenant {}", itemForm.getProductId(), tenantId);
@@ -140,14 +140,16 @@ public class OrderService {
             log.info("[OrderItemService] Product ID {} not found for tenant {}", itemForm.getProductId(), tenantId);
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
-        OrderItemEntity orderItem = new OrderItemEntity(itemForm, product, tenantId);
 
         OrderEntity order = orderRepository.findById(orderId).orElse(null);
         if (order == null || !order.getTenantId().equals(tenantId)) {
             log.info("[OrderItemService] Order ID {} not found for tenant {}", orderId, tenantId);
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
+
+        OrderItemEntity orderItem = new OrderItemEntity(itemForm, product, tenantId);
         order.addOrderItem(orderItem);
+
         orderRepository.save(order);
         log.info("[OrderItemService] Modified order {} due to add order item {} for tenant {}", orderItem.getId(),
                 orderId,
@@ -168,15 +170,16 @@ public class OrderService {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
 
-        OrderItemEntity oldOrderItem = new OrderItemEntity(orderItem);
-        orderItem.update(form);
-
         OrderEntity order = orderRepository.findById(orderId).orElse(null);
         if (order == null || !order.getTenantId().equals(tenantId)) {
             log.info("[OrderItemService] Order ID {} not found for tenant {}", orderId, tenantId);
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
-        order.updateOrderItem(oldOrderItem, orderItem);
+
+        order.removeOrderItem(orderItem);
+        orderItem.update(form);
+        order.addOrderItem(orderItem);
+
         orderRepository.save(order);
         log.info("[OrderItemService] Modified order {} due to update order item {} for tenant {}", orderItemId,
                 orderId,

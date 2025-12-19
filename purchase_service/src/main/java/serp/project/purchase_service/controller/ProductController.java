@@ -8,6 +8,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import serp.project.purchase_service.dto.request.ProductCreationForm;
 import serp.project.purchase_service.dto.request.ProductUpdateForm;
 import serp.project.purchase_service.dto.response.GeneralResponse;
@@ -64,7 +65,7 @@ public class ProductController {
 
         @GetMapping("/search")
         public ResponseEntity<GeneralResponse<PageResponse<ProductEntity>>> getProducts(
-                        @RequestParam(required = false, defaultValue = "1") int page,
+                        @Min(0) @RequestParam(required = false, defaultValue = "0") int page,
                         @RequestParam(required = false, defaultValue = "10") int size,
                         @RequestParam(required = false, defaultValue = "createdStamp") String sortBy,
                         @RequestParam(required = false, defaultValue = "desc") String sortDirection,

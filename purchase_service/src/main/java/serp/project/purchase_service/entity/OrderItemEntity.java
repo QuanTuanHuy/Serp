@@ -16,6 +16,7 @@ import serp.project.purchase_service.util.CalculatorUtils;
 import serp.project.purchase_service.util.IdUtils;
 
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Formula;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
@@ -41,6 +42,13 @@ public class OrderItemEntity {
     private String productId;
 
     private int quantity;
+
+    @Formula("(quantity - (" +
+            "   SELECT COALESCE(SUM(iid.quantity), 0) " +
+            "   FROM wms2_inventory_item_detail iid " +
+            "   WHERE iid.order_item_id = id " +
+            "))")
+    private int quantityRemaining;
 
     private long amount;
 

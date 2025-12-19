@@ -25,11 +25,7 @@ public class CategoryService {
     @Transactional(rollbackFor = Exception.class)
     public void createCategory(CategoryForm form, Long tenantId) {
         String categoryId = IdUtils.generateCategoryId();
-        var category = CategoryEntity.builder()
-                .id(categoryId)
-                .name(form.getName())
-                .tenantId(tenantId)
-                .build();
+        var category = new CategoryEntity(form, tenantId);
         categoryRepository.save(category);
         log.info("[CategoryService] Created category {} with ID {} for tenantId: {}", category.getName(), categoryId,
                 tenantId);
@@ -41,7 +37,7 @@ public class CategoryService {
         if (category == null || !category.getTenantId().equals(tenantId)) {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
-        category.setName(form.getName());
+        category.update(form);
         categoryRepository.save(category);
         log.info("[CategoryService] Updated category {} with ID {} for tenantId: {}", category.getName(), categoryId,
                 tenantId);

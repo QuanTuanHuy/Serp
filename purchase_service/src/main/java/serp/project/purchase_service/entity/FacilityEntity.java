@@ -12,10 +12,12 @@ import lombok.NoArgsConstructor;
 import serp.project.purchase_service.constant.EntityType;
 import serp.project.purchase_service.dto.request.AddressCreationForm;
 import serp.project.purchase_service.dto.request.FacilityCreationForm;
+import serp.project.purchase_service.dto.request.FacilityUpdateForm;
 import serp.project.purchase_service.util.IdUtils;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 
@@ -86,6 +88,29 @@ public class FacilityEntity {
         addressForm.setDefault(true);
         addressForm.setFullAddress(form.getFullAddress());
         this.address = new AddressEntity(addressForm, tenantId);
+    }
+
+    public void update(FacilityUpdateForm form) {
+        if (StringUtils.hasText(form.getName()))
+            this.name = form.getName();
+
+        if (StringUtils.hasText(form.getPhone()))
+            this.phone = form.getPhone();
+
+        if (StringUtils.hasText(form.getStatusId()))
+            this.statusId = form.getStatusId();
+
+        this.isDefault = form.isDefault();
+
+        if (StringUtils.hasText(form.getPostalCode()))
+            this.postalCode = form.getPostalCode();
+
+        if (form.getLength() != 0)
+            this.length = form.getLength();
+        if (form.getWidth() != 0)
+            this.width = form.getWidth();
+        if (form.getHeight() != 0)
+            this.height = form.getHeight();
     }
 
 }
