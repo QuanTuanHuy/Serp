@@ -23,15 +23,15 @@ The system is composed of multiple microservices communicating via an API Gatewa
 | **ptm_schedule** | 8084 | Go | Scheduling and Calendar |
 | **ptm_optimization** | 8085 | Java | Task optimization algorithms |
 | **crm** | 8086 | Java | Customer Relationship Management |
-| **sales** | 8088 | Go | Order management, quotations |
-| **serp_llm** | 8089 | Python | AI Assistant (RAG, Chat) |
-| **mailservice** | 8090 | Java | Email management |
-| **notification_service** | 8088 | Go | Notification management |
+| **sales** | 8087 | Go | Order management, quotations |
 | **purchase_service** | 8088 | Java | Purchase management |
 | **logistics** | 8089 | Java | Logistics management |
-| **serp_web** | 3000 | TypeScript | Web Frontend |
+| **serp_llm** | 8089 | Python | AI Assistant (RAG, Chat) |
+| **notification_service** | 8090 | Go | Push notifications |
+| **mailservice** | 8091 | Java | Email templates |
+| **serp_web** | 3000 | TypeScript | Web Frontend (Next.js 15 + Redux + Shadcn) |
 
-> **Note:** Several services are configured to use ports 8088 and 8089 by default. You may need to configure `SERVER_PORT` or `PORT` environment variables to avoid conflicts if running all services simultaneously.
+> **Note:** `logistics` and `serp_llm` share port 8089. Configure `SERVER_PORT` or `PORT` environment variable to avoid conflicts when running both.
 
 ## 🛠️ Getting Started
 

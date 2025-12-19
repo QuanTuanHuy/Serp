@@ -72,6 +72,7 @@ func All() fx.Option {
 
 		// Kafka consumer
 		fx.Provide(kafkahandler.NewMessageProcessingMiddleware),
+		fx.Provide(kafkahandler.NewUserNotificationHandler),
 		fx.Invoke(InitializeKafkaConsumer),
 
 		// Lifecycle

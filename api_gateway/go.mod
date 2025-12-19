@@ -9,6 +9,7 @@ require (
 	github.com/golibs-starter/golib v1.0.1
 	github.com/golibs-starter/golib-data v1.0.0
 	github.com/golibs-starter/golib-gin v1.0.0
+	github.com/sony/gobreaker/v2 v2.3.0
 	go.uber.org/fx v1.20.0
 )
 

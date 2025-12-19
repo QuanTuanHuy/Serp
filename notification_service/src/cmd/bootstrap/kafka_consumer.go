@@ -9,14 +9,16 @@ import (
 	"context"
 	"log"
 
-	"github.com/serp/notification-service/src/core/domain/enum"
+	"github.com/serp/notification-service/src/core/domain/constant"
 	adapter "github.com/serp/notification-service/src/infrastructure/client"
+	kafkahandler "github.com/serp/notification-service/src/ui/kafka"
 	"go.uber.org/fx"
 )
 
 func InitializeKafkaConsumer(
 	lc fx.Lifecycle,
 	consumer *adapter.KafkaConsumer,
+	userNotificationHandler *kafkahandler.UserNotificationHandler,
 ) {
 	var consumerCtx context.Context
 	var consumerCancel context.CancelFunc
@@ -26,8 +28,10 @@ func InitializeKafkaConsumer(
 			log.Println("Starting Kafka consumer ...")
 
 			topics := []string{
-				string(enum.USER_NOTIFICATION_TOPIC),
+				string(constant.USER_NOTIFICATION_TOPIC),
 			}
+
+			consumer.RegisterHandler(string(constant.USER_NOTIFICATION_TOPIC), userNotificationHandler.GetWrappedHandler())
 			if err := consumer.Subscribe(topics); err != nil {
 				log.Println("Failed to subscribe to topics: ", err)
 				return err
