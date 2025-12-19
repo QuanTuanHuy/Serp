@@ -1,7 +1,7 @@
-package serp.project.logistics.repository;
+package serp.project.sales.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import serp.project.logistics.entity.OrderItemEntity;
+import serp.project.sales.entity.OrderItemEntity;
 
 import java.util.List;
 

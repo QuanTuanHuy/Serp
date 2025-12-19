@@ -1,23 +1,12 @@
-package serp.project.logistics.entity;
+package serp.project.sales.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import serp.project.logistics.constant.InventoryItemStatus;
-import serp.project.logistics.dto.request.InventoryItemCreationForm;
-import serp.project.logistics.dto.request.InventoryItemDetailUpdateForm;
-import serp.project.logistics.dto.request.ShipmentCreationForm.InventoryItemDetail;
-import serp.project.logistics.util.IdUtils;
-
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -78,53 +67,5 @@ public class InventoryItemDetailEntity {
 
     @Transient
     private InventoryItemEntity inventoryItem;
-
-    public InventoryItemDetailEntity(InventoryItemDetail form, OrderItemEntity orderItem, Long tenantId) {
-        this.id = IdUtils.generateInventoryItemDetailId();
-        this.productId = orderItem.getProductId();
-        this.quantity = form.getQuantity();
-        this.orderItemId = form.getOrderItemId();
-        this.note = form.getNote();
-        this.lotId = form.getLotId();
-        this.expirationDate = form.getExpirationDate();
-        this.manufacturingDate = form.getManufacturingDate();
-        this.facilityId = form.getFacilityId();
-        this.unit = orderItem.getUnit();
-        this.price = orderItem.getPrice();
-        this.tenantId = tenantId;
-    }
-
-    public void update(InventoryItemDetailUpdateForm form) {
-        this.quantity = form.getQuantity();
-
-        if (StringUtils.hasText(form.getNote()))
-            this.note = form.getNote();
-        if (StringUtils.hasText(form.getLotId()))
-            this.lotId = form.getLotId();
-        if (form.getExpirationDate() != null)
-            this.expirationDate = form.getExpirationDate();
-        if (form.getManufacturingDate() != null)
-            this.manufacturingDate = form.getManufacturingDate();
-        if (StringUtils.hasText(form.getFacilityId()))
-            this.facilityId = form.getFacilityId();
-    }
-
-    public InventoryItemEntity getInventoryItem() {
-        if (this.inventoryItem != null)
-            return this.inventoryItem;
-        InventoryItemCreationForm form = new InventoryItemCreationForm();
-        form.setProductId(this.productId);
-        form.setQuantity(this.quantity);
-        form.setLotId(this.lotId);
-        form.setFacilityId(this.facilityId);
-        form.setExpirationDate(this.expirationDate);
-        form.setManufacturingDate(this.manufacturingDate);
-        form.setStatusId(InventoryItemStatus.VALID.name());
-        this.inventoryItem = new InventoryItemEntity(form, this.tenantId);
-
-        this.inventoryItemId = this.inventoryItem.getId();
-
-        return this.inventoryItem;
-    }
 
 }

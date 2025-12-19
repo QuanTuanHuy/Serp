@@ -1,10 +1,9 @@
-package serp.project.logistics.dto.request;
+package serp.project.sales.dto.request;
 
+import jakarta.validation.constraints.Min;
 import lombok.Data;
 
 import java.time.LocalDate;
-
-import jakarta.validation.constraints.Min;
 
 @Data
 public class InventoryItemDetailUpdateForm {

@@ -1,4 +1,4 @@
-package serp.project.logistics.entity;
+package serp.project.sales.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,9 +8,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import serp.project.logistics.exception.AppErrorCode;
-import serp.project.logistics.exception.AppException;
-
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.Formula;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -69,16 +66,5 @@ public class OrderItemEntity {
 
     @Column(name = "tenant_id")
     private Long tenantId;
-
-    public void addDeliveredItem(InventoryItemDetailEntity item) {
-        if (this.quantityRemaining < item.getQuantity()) {
-            throw new AppException(AppErrorCode.EXCEED_REMAINING_QUANTITY);
-        }
-        this.quantityRemaining -= item.getQuantity();
-    }
-
-    public void removeDeliveredItem(InventoryItemDetailEntity item) {
-        this.quantityRemaining += item.getQuantity();
-    }
 
 }

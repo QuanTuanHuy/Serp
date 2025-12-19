@@ -1,9 +1,9 @@
-package serp.project.logistics.dto.request;
+package serp.project.sales.dto.request;
 
 import jakarta.validation.constraints.Min;
 import lombok.Data;
-import serp.project.logistics.constant.ProductStatus;
-import serp.project.logistics.validator.EnumValidator;
+import serp.project.sales.constant.ProductStatus;
+import serp.project.sales.validator.EnumValidator;
 
 @Data
 public class ProductUpdateForm {

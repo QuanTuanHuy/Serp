@@ -1,7 +1,8 @@
-package serp.project.logistics.validator;
+package serp.project.sales.validator;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;
+
 import java.lang.annotation.*;
 
 @Documented

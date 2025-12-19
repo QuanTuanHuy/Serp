@@ -1,12 +1,11 @@
-package serp.project.logistics.repository.specification;
-
-import java.time.LocalDate;
-
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.util.StringUtils;
+package serp.project.sales.repository.specification;
 
 import jakarta.persistence.criteria.Predicate;
-import serp.project.logistics.entity.InventoryItemEntity;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.util.StringUtils;
+import serp.project.sales.entity.InventoryItemEntity;
+
+import java.time.LocalDate;
 
 public class InventoryItemSpecification {
 

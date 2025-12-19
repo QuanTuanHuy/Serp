@@ -1,4 +1,4 @@
-package serp.project.logistics.config;
+package serp.project.sales.config;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

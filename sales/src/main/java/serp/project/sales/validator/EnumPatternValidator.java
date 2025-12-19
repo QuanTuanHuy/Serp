@@ -1,7 +1,8 @@
-package serp.project.logistics.validator;
+package serp.project.sales.validator;
 
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
+
 import java.util.List;
 import java.util.stream.Stream;
 

@@ -1,11 +1,11 @@
-package serp.project.logistics.dto.request;
+package serp.project.sales.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-import serp.project.logistics.constant.AddressType;
-import serp.project.logistics.constant.EntityType;
-import serp.project.logistics.validator.EnumValidator;
+import serp.project.sales.constant.AddressType;
+import serp.project.sales.constant.EntityType;
+import serp.project.sales.validator.EnumValidator;
 
 @Data
 public class AddressCreationForm {

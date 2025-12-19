@@ -1,4 +1,4 @@
-package serp.project.logistics.service;
+package serp.project.sales.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -6,14 +6,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import serp.project.logistics.dto.request.CategoryForm;
-import serp.project.logistics.entity.CategoryEntity;
-import serp.project.logistics.exception.AppErrorCode;
-import serp.project.logistics.exception.AppException;
-import serp.project.logistics.repository.CategoryRepository;
-import serp.project.logistics.repository.specification.CategorySpecification;
-import serp.project.logistics.util.IdUtils;
-import serp.project.logistics.util.PaginationUtils;
+import serp.project.sales.dto.request.CategoryForm;
+import serp.project.sales.entity.CategoryEntity;
+import serp.project.sales.exception.AppErrorCode;
+import serp.project.sales.exception.AppException;
+import serp.project.sales.repository.CategoryRepository;
+import serp.project.sales.repository.specification.CategorySpecification;
+import serp.project.sales.util.IdUtils;
+import serp.project.sales.util.PaginationUtils;
 
 @Service
 @RequiredArgsConstructor

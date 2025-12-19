@@ -1,4 +1,4 @@
-package serp.project.logistics.dto.request;
+package serp.project.sales.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;

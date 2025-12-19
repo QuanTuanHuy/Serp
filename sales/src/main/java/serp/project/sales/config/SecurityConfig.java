@@ -1,4 +1,4 @@
-package serp.project.logistics.config;
+package serp.project.sales.config;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -51,7 +51,7 @@ public class SecurityConfig {
     @Bean
     @Order(2)
     public SecurityFilterChain publicApiFilterChain(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity.securityMatcher("/logistics/api/**")
+        httpSecurity.securityMatcher("/sales/api/**")
                 .authorizeHttpRequests(request -> {
                     urlProperties.getPublicUrls().forEach(url -> request.requestMatchers(
                                     HttpMethod.valueOf(url.getSecond()), url.getFirst())

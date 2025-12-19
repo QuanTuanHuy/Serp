@@ -1,23 +1,18 @@
-package serp.project.logistics.entity;
+package serp.project.sales.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import serp.project.logistics.constant.EntityType;
-import serp.project.logistics.dto.request.AddressCreationForm;
-import serp.project.logistics.dto.request.FacilityCreationForm;
-import serp.project.logistics.dto.request.FacilityUpdateForm;
-import serp.project.logistics.util.IdUtils;
-
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.util.StringUtils;
+import serp.project.sales.constant.EntityType;
+import serp.project.sales.dto.request.AddressCreationForm;
+import serp.project.sales.dto.request.FacilityCreationForm;
+import serp.project.sales.dto.request.FacilityUpdateForm;
+import serp.project.sales.util.IdUtils;
 
 import java.time.LocalDateTime;
 
@@ -67,8 +62,7 @@ public class FacilityEntity {
     private AddressEntity address;
 
     public FacilityEntity(FacilityCreationForm form, Long tenantId) {
-        String facilityId = IdUtils.generateFacilityId();
-        this.id = facilityId;
+        this.id = IdUtils.generateFacilityId();
         this.name = form.getName();
         this.statusId = form.getStatusId();
         this.isDefault = true;

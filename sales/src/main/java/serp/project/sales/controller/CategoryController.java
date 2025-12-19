@@ -1,26 +1,25 @@
-package serp.project.purchase_service.controller;
+package serp.project.sales.controller;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import serp.project.purchase_service.dto.request.CategoryForm;
-import serp.project.purchase_service.dto.response.GeneralResponse;
-import serp.project.purchase_service.dto.response.PageResponse;
-import serp.project.purchase_service.entity.CategoryEntity;
-import serp.project.purchase_service.exception.AppErrorCode;
-import serp.project.purchase_service.exception.AppException;
-import serp.project.purchase_service.service.CategoryService;
-import serp.project.purchase_service.util.AuthUtils;
+import serp.project.sales.dto.request.CategoryForm;
+import serp.project.sales.dto.response.GeneralResponse;
+import serp.project.sales.dto.response.PageResponse;
+import serp.project.sales.entity.CategoryEntity;
+import serp.project.sales.exception.AppErrorCode;
+import serp.project.sales.exception.AppException;
+import serp.project.sales.service.CategoryService;
+import serp.project.sales.util.AuthUtils;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/purchase-service/api/v1/category")
+@RequestMapping("/sales/api/v1/category")
 @Validated
 @Slf4j
 public class CategoryController {

@@ -1,4 +1,4 @@
-package serp.project.purchase_service.controller;
+package serp.project.sales.controller;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -6,9 +6,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import serp.project.purchase_service.dto.response.GeneralResponse;
-import serp.project.purchase_service.exception.AppErrorCode;
-import serp.project.purchase_service.exception.AppException;
+import serp.project.sales.dto.response.GeneralResponse;
+import serp.project.sales.exception.AppErrorCode;
+import serp.project.sales.exception.AppException;
 
 @ControllerAdvice
 @Slf4j

@@ -3,19 +3,18 @@ package serp.project.logistics.controller;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import serp.project.logistics.dto.response.GeneralResponse;
 import serp.project.logistics.dto.response.PageResponse;
+import serp.project.logistics.entity.AddressEntity;
 import serp.project.logistics.entity.CustomerEntity;
 import serp.project.logistics.exception.AppErrorCode;
 import serp.project.logistics.exception.AppException;
+import serp.project.logistics.service.AddressService;
 import serp.project.logistics.service.CustomerService;
 import serp.project.logistics.util.AuthUtils;
 
@@ -27,6 +26,7 @@ import serp.project.logistics.util.AuthUtils;
 public class CustomerController {
 
         private final CustomerService customerService;
+        private final AddressService addressService;
         private final AuthUtils authUtils;
 
         @GetMapping("/search")
@@ -51,5 +51,22 @@ public class CustomerController {
                 return ResponseEntity.ok(GeneralResponse.success("Successfully get list of customers at page " + page,
                                 PageResponse.of(customers)));
         }
+
+    @GetMapping("/search/{customerId}")
+    public ResponseEntity<GeneralResponse<CustomerEntity>> getDetailCustomer(
+            @PathVariable("customerId") String customerId) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
+        log.info("[CustomerController] Getting detail customer with ID {} for tenantId {}", customerId,
+                tenantId);
+        CustomerEntity customer = customerService.getCustomer(customerId, tenantId);
+        if (customer == null) {
+            throw new AppException(AppErrorCode.NOT_FOUND);
+        }
+        AddressEntity address = addressService.findByEntityId(customerId, tenantId).stream()
+                .filter(AddressEntity::isDefault).findFirst().orElse(null);
+        customer.setAddress(address);
+        return ResponseEntity.ok(GeneralResponse.success("Successfully get customer detail", customer));
+    }
 
 }

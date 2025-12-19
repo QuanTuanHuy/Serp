@@ -1,4 +1,4 @@
-package serp.project.logistics.exception;
+package serp.project.sales.exception;
 
 import lombok.Getter;
 

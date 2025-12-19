@@ -1,11 +1,11 @@
-package serp.project.logistics.dto.request;
+package serp.project.sales.dto.request;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-import serp.project.logistics.constant.ProductStatus;
-import serp.project.logistics.validator.EnumValidator;
+import serp.project.sales.constant.ProductStatus;
+import serp.project.sales.validator.EnumValidator;
 
 @Data
 public class ProductCreationForm {

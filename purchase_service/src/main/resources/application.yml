@@ -1,6 +1,8 @@
 spring:
   application:
-    name: purchase-service
+    app:
+      name: "@project.name@"
+      version: "@project.version@"
   security:
     oauth2:
       resourceserver:

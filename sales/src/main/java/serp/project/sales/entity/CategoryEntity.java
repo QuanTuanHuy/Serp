@@ -1,4 +1,4 @@
-package serp.project.logistics.entity;
+package serp.project.sales.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,12 +8,11 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import serp.project.logistics.dto.request.CategoryForm;
-import serp.project.logistics.util.IdUtils;
-
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.util.StringUtils;
+import serp.project.sales.dto.request.CategoryForm;
+import serp.project.sales.util.IdUtils;
 
 import java.time.LocalDateTime;
 
@@ -42,8 +41,7 @@ public class CategoryEntity {
     private LocalDateTime lastUpdatedStamp;
 
     public CategoryEntity(CategoryForm form, Long tenantId) {
-        String categoryId = IdUtils.generateCategoryId();
-        this.id = categoryId;
+        this.id = IdUtils.generateCategoryId();
         this.name = form.getName();
         this.tenantId = tenantId;
     }

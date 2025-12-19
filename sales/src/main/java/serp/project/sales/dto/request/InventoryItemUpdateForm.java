@@ -1,11 +1,11 @@
-package serp.project.logistics.dto.request;
-
-import java.time.LocalDate;
+package serp.project.sales.dto.request;
 
 import jakarta.validation.constraints.Min;
 import lombok.Data;
-import serp.project.logistics.constant.InventoryItemStatus;
-import serp.project.logistics.validator.EnumValidator;
+import serp.project.sales.constant.InventoryItemStatus;
+import serp.project.sales.validator.EnumValidator;
+
+import java.time.LocalDate;
 
 @Data
 public class InventoryItemUpdateForm {

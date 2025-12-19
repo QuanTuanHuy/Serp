@@ -1,4 +1,4 @@
-package serp.project.logistics.dto.response;
+package serp.project.sales.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

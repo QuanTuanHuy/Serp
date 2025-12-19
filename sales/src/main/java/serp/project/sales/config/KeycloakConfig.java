@@ -1,4 +1,4 @@
-package serp.project.logistics.config;
+package serp.project.sales.config;
 
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Value;

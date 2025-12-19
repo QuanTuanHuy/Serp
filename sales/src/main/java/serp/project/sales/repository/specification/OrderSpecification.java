@@ -1,9 +1,9 @@
-package serp.project.logistics.repository.specification;
+package serp.project.sales.repository.specification;
 
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.StringUtils;
-import serp.project.logistics.entity.OrderEntity;
+import serp.project.sales.entity.OrderEntity;
 
 import java.time.LocalDate;
 

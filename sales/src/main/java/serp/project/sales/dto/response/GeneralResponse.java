@@ -1,4 +1,4 @@
-package serp.project.logistics.dto.response;
+package serp.project.sales.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;

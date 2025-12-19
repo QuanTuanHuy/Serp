@@ -1,26 +1,25 @@
-package serp.project.purchase_service.controller;
+package serp.project.sales.controller;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
-import serp.project.purchase_service.dto.request.ProductCreationForm;
-import serp.project.purchase_service.dto.request.ProductUpdateForm;
-import serp.project.purchase_service.dto.response.GeneralResponse;
-import serp.project.purchase_service.dto.response.PageResponse;
-import serp.project.purchase_service.entity.ProductEntity;
-import serp.project.purchase_service.exception.AppErrorCode;
-import serp.project.purchase_service.exception.AppException;
-import serp.project.purchase_service.service.ProductService;
-import serp.project.purchase_service.util.AuthUtils;
+import serp.project.sales.dto.request.ProductCreationForm;
+import serp.project.sales.dto.request.ProductUpdateForm;
+import serp.project.sales.dto.response.GeneralResponse;
+import serp.project.sales.dto.response.PageResponse;
+import serp.project.sales.entity.ProductEntity;
+import serp.project.sales.exception.AppErrorCode;
+import serp.project.sales.exception.AppException;
+import serp.project.sales.service.ProductService;
+import serp.project.sales.util.AuthUtils;
 
 @RestController
-@RequestMapping("/purchase-service/api/v1/product")
+@RequestMapping("/sales/api/v1/product")
 @RequiredArgsConstructor
 @Validated
 @Slf4j

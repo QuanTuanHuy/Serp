@@ -1,4 +1,4 @@
-package serp.project.logistics.util;
+package serp.project.sales.util;
 
 import java.util.UUID;
 

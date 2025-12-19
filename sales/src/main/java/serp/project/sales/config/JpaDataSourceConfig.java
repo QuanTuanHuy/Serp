@@ -1,4 +1,4 @@
-package serp.project.logistics.config;
+package serp.project.sales.config;
 
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.beans.factory.annotation.Value;
@@ -53,7 +53,7 @@ public class JpaDataSourceConfig {
     public LocalContainerEntityManagerFactoryBean entityManagerFactory(DataSource dataSource) {
         LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
         em.setDataSource(dataSource);
-        em.setPackagesToScan("serp.project.logistics.entity");
+        em.setPackagesToScan("serp.project.sales.entity");
         em.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
         return em;
     }

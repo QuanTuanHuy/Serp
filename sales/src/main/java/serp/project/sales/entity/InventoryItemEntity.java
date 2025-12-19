@@ -1,4 +1,4 @@
-package serp.project.logistics.entity;
+package serp.project.sales.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,12 +8,11 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import serp.project.logistics.dto.request.InventoryItemCreationForm;
-import serp.project.logistics.dto.request.InventoryItemUpdateForm;
-import serp.project.logistics.util.IdUtils;
-
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import serp.project.sales.dto.request.InventoryItemCreationForm;
+import serp.project.sales.dto.request.InventoryItemUpdateForm;
+import serp.project.sales.util.IdUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;

@@ -1,10 +1,10 @@
-package serp.project.logistics.repository;
+package serp.project.sales.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
-import serp.project.logistics.entity.OrderEntity;
+import serp.project.sales.entity.OrderEntity;
 
 public interface OrderRepository extends JpaRepository<OrderEntity, String>, JpaSpecificationExecutor<OrderEntity> {
 

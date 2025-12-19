@@ -1,15 +1,15 @@
-package serp.project.logistics.service;
+package serp.project.sales.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import serp.project.logistics.dto.request.AddressCreationForm;
-import serp.project.logistics.dto.request.AddressUpdateForm;
-import serp.project.logistics.entity.AddressEntity;
-import serp.project.logistics.exception.AppErrorCode;
-import serp.project.logistics.exception.AppException;
-import serp.project.logistics.repository.AddressRepository;
+import serp.project.sales.dto.request.AddressCreationForm;
+import serp.project.sales.dto.request.AddressUpdateForm;
+import serp.project.sales.entity.AddressEntity;
+import serp.project.sales.exception.AppErrorCode;
+import serp.project.sales.exception.AppException;
+import serp.project.sales.repository.AddressRepository;
 
 import java.util.List;
 

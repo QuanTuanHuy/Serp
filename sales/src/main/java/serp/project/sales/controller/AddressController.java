@@ -1,26 +1,25 @@
-package serp.project.purchase_service.controller;
+package serp.project.sales.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
-import jakarta.validation.Valid;
-import serp.project.purchase_service.dto.request.AddressCreationForm;
-import serp.project.purchase_service.dto.request.AddressUpdateForm;
-import serp.project.purchase_service.dto.response.GeneralResponse;
-import serp.project.purchase_service.entity.AddressEntity;
-import serp.project.purchase_service.exception.AppErrorCode;
-import serp.project.purchase_service.exception.AppException;
-import serp.project.purchase_service.service.AddressService;
-import serp.project.purchase_service.util.AuthUtils;
+import serp.project.sales.dto.request.AddressCreationForm;
+import serp.project.sales.dto.request.AddressUpdateForm;
+import serp.project.sales.dto.response.GeneralResponse;
+import serp.project.sales.entity.AddressEntity;
+import serp.project.sales.exception.AppErrorCode;
+import serp.project.sales.exception.AppException;
+import serp.project.sales.service.AddressService;
+import serp.project.sales.util.AuthUtils;
 
 import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/purchase-service/api/v1/address")
+@RequestMapping("/sales/api/v1/address")
 @Validated
 @Slf4j
 public class AddressController {

@@ -1,4 +1,4 @@
-package serp.project.logistics.entity;
+package serp.project.sales.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,13 +8,12 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import serp.project.logistics.dto.request.ProductCreationForm;
-import serp.project.logistics.dto.request.ProductUpdateForm;
-import serp.project.logistics.util.IdUtils;
-
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.util.StringUtils;
+import serp.project.sales.dto.request.ProductCreationForm;
+import serp.project.sales.dto.request.ProductUpdateForm;
+import serp.project.sales.util.IdUtils;
 
 import java.time.LocalDateTime;
 
@@ -76,8 +75,7 @@ public class ProductEntity {
     private Long tenantId;
 
     public ProductEntity(ProductCreationForm form, Long tenantId) {
-        String productId = IdUtils.generateProductId();
-        this.id = productId;
+        this.id = IdUtils.generateProductId();
         this.name = form.getName();
         this.weight = form.getWeight();
         this.height = form.getHeight();

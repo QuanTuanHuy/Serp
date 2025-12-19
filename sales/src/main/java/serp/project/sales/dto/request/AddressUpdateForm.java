@@ -1,8 +1,8 @@
-package serp.project.logistics.dto.request;
+package serp.project.sales.dto.request;
 
 import lombok.Data;
-import serp.project.logistics.constant.AddressType;
-import serp.project.logistics.validator.EnumValidator;
+import serp.project.sales.constant.AddressType;
+import serp.project.sales.validator.EnumValidator;
 
 @Data
 public class AddressUpdateForm {

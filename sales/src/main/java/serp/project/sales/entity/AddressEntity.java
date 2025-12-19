@@ -1,4 +1,4 @@
-package serp.project.logistics.entity;
+package serp.project.sales.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,13 +8,13 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import serp.project.logistics.dto.request.AddressCreationForm;
-import serp.project.logistics.dto.request.AddressUpdateForm;
-import serp.project.logistics.util.IdUtils;
-
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.util.StringUtils;
+import serp.project.sales.dto.request.AddressCreationForm;
+import serp.project.sales.dto.request.AddressUpdateForm;
+import serp.project.sales.util.IdUtils;
+
 
 import java.time.LocalDateTime;
 
@@ -60,8 +60,7 @@ public class AddressEntity {
     private Long tenantId;
 
     public AddressEntity(AddressCreationForm form, Long tenantId) {
-        String addressId = IdUtils.generateAddressId();
-        this.id = addressId;
+        this.id = IdUtils.generateAddressId();
         this.entityId = form.getEntityId();
         this.entityType = form.getEntityType();
         this.addressType = form.getAddressType();
