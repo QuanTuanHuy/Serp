@@ -51,6 +51,7 @@ jobs:
           echo "serp-web=$(jq -r '."serp-web"' changes.json)" >> $GITHUB_OUTPUT
           echo "purchase=$(jq -r .purchase changes.json)" >> $GITHUB_OUTPUT
           echo "logistics=$(jq -r .logistics changes.json)" >> $GITHUB_OUTPUT
+          echo "notification=$(jq -r .notification changes.json)" >> $GITHUB_OUTPUT
 
   deploy-account:
     needs: check-changes

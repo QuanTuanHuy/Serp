@@ -1,6 +1,6 @@
 app:
   logging:
-    level: warn
+    level: info
   datasource:
     driver: postgres
     host: ${DB_HOST}
