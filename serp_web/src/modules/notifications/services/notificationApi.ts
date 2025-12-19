@@ -58,8 +58,11 @@ export const notificationApi = api.injectEndpoints({
 
     markNotificationAsRead: builder.mutation<NotificationResponse, number>({
       query: (id) => ({
-        url: `/notifications/${id}/read`,
+        url: `/notifications/${id}`,
         method: 'PATCH',
+        body: {
+          isRead: true,
+        },
       }),
       extraOptions: { service: 'ns' },
       invalidatesTags: (result, error, id) => [
@@ -80,8 +83,11 @@ export const notificationApi = api.injectEndpoints({
 
     archiveNotification: builder.mutation<NotificationResponse, number>({
       query: (id) => ({
-        url: `/notifications/${id}/archive`,
+        url: `/notifications/${id}`,
         method: 'PATCH',
+        body: {
+          isArchived: true,
+        },
       }),
       extraOptions: { service: 'ns' },
       invalidatesTags: (result, error, id) => [

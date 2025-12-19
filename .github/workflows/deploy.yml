@@ -30,6 +30,7 @@ jobs:
       serp-web: ${{ steps.changes.outputs.serp-web }}
       purchase: ${{ steps.changes.outputs.purchase }}
       logistics: ${{ steps.changes.outputs.logistics }}
+      notification: ${{ steps.changes.outputs.notification }}
     steps:
       - name: Download changes artifact
         uses: actions/download-artifact@v4
@@ -217,6 +218,25 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
             cd ${{ secrets.DEPLOY_PATH }}/serp_logistics
+            export IMAGE_TAG=${{ github.sha }}
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker image prune -f
+
+  deploy-notification:
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.notification == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Notification Service
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}/serp_notification
             export IMAGE_TAG=${{ github.sha }}
             docker compose pull
             docker compose up -d --remove-orphans

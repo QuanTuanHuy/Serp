@@ -5,9 +5,11 @@ Description: Part of Serp Project
 
 package message
 
+import "encoding/json"
+
 type BaseKafkaMessage struct {
 	Meta MessageMetadata `json:"meta"`
-	Data any             `json:"data"`
+	Data json.RawMessage `json:"data"`
 }
 
 func (m BaseKafkaMessage) GetEventType() string {
@@ -22,7 +24,7 @@ func (m BaseKafkaMessage) GetSource() string {
 	return m.Meta.GetSource()
 }
 
-func (m BaseKafkaMessage) GetData() any {
+func (m BaseKafkaMessage) GetData() json.RawMessage {
 	return m.Data
 }
 

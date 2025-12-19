@@ -38,6 +38,12 @@ export interface NotificationResponse {
   updatedAt?: number;
 }
 
+// Update Request
+export interface UpdateNotificationRequest {
+  isRead?: boolean;
+  isArchived?: boolean;
+}
+
 // List Response
 export interface NotificationListResponse {
   notifications: NotificationResponse[];

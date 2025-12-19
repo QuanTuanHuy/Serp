@@ -40,6 +40,7 @@ func NewKafkaConsumer(appProps *properties.AppProperties, logger *zap.Logger) (*
 	}
 	config.Consumer.Group.Session.Timeout = time.Duration(consumerProperties.SessionTimeoutMs) * time.Millisecond
 	config.Consumer.Group.Heartbeat.Interval = time.Duration(consumerProperties.HeartBeatMs) * time.Millisecond
+	config.Consumer.Offsets.AutoCommit.Enable = consumerProperties.EnableAutoCommit
 	config.Consumer.Return.Errors = true
 	config.Consumer.Fetch.Min = int32(consumerProperties.FetchMinBytes)
 	config.Consumer.MaxWaitTime = time.Duration(consumerProperties.FetchMaxWaitMs) * time.Millisecond
@@ -59,7 +60,13 @@ func NewKafkaConsumer(appProps *properties.AppProperties, logger *zap.Logger) (*
 }
 
 func (k *KafkaConsumer) StartConsumer(ctx context.Context) error {
-	k.wg.Go(func() {
+	if len(k.topics) == 0 {
+		return fmt.Errorf("no topics subscribed")
+	}
+
+	k.wg.Add(1)
+	go func() {
+		defer k.wg.Done()
 		handler := &ConsumerGroupHandler{kafkaConsumer: k}
 		for {
 			select {
@@ -74,7 +81,7 @@ func (k *KafkaConsumer) StartConsumer(ctx context.Context) error {
 				}
 			}
 		}
-	})
+	}()
 	return nil
 }
 

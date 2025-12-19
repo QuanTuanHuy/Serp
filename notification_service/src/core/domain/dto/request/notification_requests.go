@@ -43,6 +43,11 @@ type CreateBulkNotificationRequest struct {
 	Metadata      map[string]any `json:"metadata,omitempty"`
 }
 
+type UpdateNotificationRequest struct {
+	IsRead     *bool `json:"isRead,omitempty"`
+	IsArchived *bool `json:"isArchived,omitempty"`
+}
+
 type MarkReadRequest struct {
 	NotificationIDs []int64 `json:"notificationIds" binding:"required,min=1"`
 }

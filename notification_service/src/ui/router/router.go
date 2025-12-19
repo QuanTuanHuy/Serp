@@ -48,6 +48,11 @@ func RegisterRoutes(config *RouterConfig) {
 		{
 			notifications.POST("", config.NotificationController.CreateNotification)
 			notifications.GET("", config.NotificationController.GetNotifications)
+			notifications.GET("/:id", config.NotificationController.GetNotificationByID)
+			notifications.PATCH("/:id", config.NotificationController.UpdateNotificationByID)
+			notifications.PATCH("/read-all", config.NotificationController.MarkAllAsRead)
+			notifications.DELETE("/:id", config.NotificationController.DeleteNotificationByID)
+			notifications.GET("/unread-count", config.NotificationController.GetUnreadCount)
 		}
 
 	}
