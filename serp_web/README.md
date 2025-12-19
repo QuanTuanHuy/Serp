@@ -18,31 +18,31 @@ Modern Enterprise Resource Planning (ERP) system built with Next.js 15, TypeScri
 ```
 src/
 ├── app/                    # Next.js App Router
-│   ├── |── settings/      # Settings for organizaiton
-│   │   ├── crm/           # CRM module pages
-│   │   ├── accounting/    # Accounting module pages
-│   │   └── inventory/     # Inventory module pages
+│   ├── crm/               # CRM module pages
+│   ├── ptm/               # PTM module pages  
+│   ├── settings/          # Organization settings
+│   ├── purchase/          # Purchase module pages
+│   ├── logistics/         # Logistics module pages
 │   └── layout.tsx
-├── modules/               # Business Logic Modules
+├── modules/               # Business Logic Modules (self-contained)
 │   ├── crm/
+│   │   ├── api/           # RTK Query endpoints (crmApi.ts)
 │   │   ├── components/    # CRM-specific UI
-│   │   ├── hooks/         # CRM custom hooks
-│   │   ├── services/      # CRM API calls
-│   │   ├── store/         # CRM Redux slices
-│   │   ├── types/         # CRM TypeScript types
+│   │   ├── store/         # Redux slices
+│   │   ├── types/         # TypeScript types
 │   │   └── index.ts       # Barrel exports
-│   ├── accounting/        # Same structure
-│   └── inventory/         # Same structure
-│   └── ptm/               # Same structure
+│   ├── account/           # Auth & user management
+│   ├── settings/          # Organization settings
+│   ├── purchase/          # Purchase management
+│   ├── logistics/         # Inventory & shipping
+│   ├── ptm/               # Personal task management
+│   └── notifications/     # Push notifications
 ├── shared/                # Cross-Module Resources
-│   ├── components/        # Reusable UI components
-│   ├── hooks/            # Common hooks
-│   ├── services/         # Shared API utilities
-│   ├── types/            # Common types
-│   └── utils/            # Helper functions
-└── lib/                  # Core Configuration
-    ├── store.ts          # Redux store setup
-    └── api/              # API configuration
+│   ├── components/ui/     # Shadcn UI components
+│   ├── hooks/             # Common hooks
+│   └── utils/             # Helper functions
+└── lib/
+    └── store/api/         # Base RTK Query config (apiSlice.ts)
 ```
 
 ## 🚦 Getting Started
@@ -123,4 +123,4 @@ npm run type-check       # TypeScript type checking
 **Built with ❤️ using Next.js 15, TypeScript, and modern web technologies**
 
 **Author**: QuanTuanHuy  
-**Last Updated**: September 14, 2025
+**Last Updated**: December 19, 2025

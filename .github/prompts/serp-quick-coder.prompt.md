@@ -312,22 +312,20 @@ if err == nil {
 ```go
 userID, err := utils.GetUserIDFromContext(ctx)
 if err != nil {
-    utils.ResponseError(ctx, http.StatusUnauthorized, "unauthorized")
     return
 }
 ```
 
 ### Extract User from Context (Java)
 ```java
-Long userId = AuthUtils.getCurrentUserId();
-Long orgId = AuthUtils.getCurrentOrganizationId();
+Optional<Long> userId = AuthUtils.getCurrentUserId();
+Optional<Long> orgId = AuthUtils.getCurrentOrganizationId();
 ```
 
 ### Response Utils (Go)
 ```go
-utils.ResponseSuccess(ctx, http.StatusOK, data)
-utils.ResponseError(ctx, http.StatusBadRequest, "error message")
-utils.ResponsePagination(ctx, http.StatusOK, data, total, page, size)
+utils.SuccessfulHandle(c, [message], notifications)
+utils.ErrorHandle(ctx, err)
 ```
 
 ---

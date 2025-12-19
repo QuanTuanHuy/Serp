@@ -4,47 +4,49 @@
 
 ### ✅ **Existing Strengths**
 
-- **Module separation**: `src/modules/` với accounting, crm, inventory
+- **Module separation**: `src/modules/` với account, crm, settings, purchase, logistics, ptm, notifications
 - **Modern tech stack**: Next.js 15, Redux Toolkit, TypeScript, Shadcn/ui
-- **Clean exports**: CRM module có barrel exports pattern
+- **Clean exports**: Modules có barrel exports pattern (`index.ts`)
 - **Type safety**: TypeScript với proper type definitions
+- **RTK Query**: API endpoints với `api.injectEndpoints()` pattern
+- **Shared layer**: `shared/components/ui/` với Shadcn components
 
-### ⚠️ **Current Gaps**
+### ⚠️ **Areas for Improvement**
 
-- **Incomplete module structure**: Modules chưa có đầy đủ components, hooks, services
-- **Missing shared layer**: Không có shared components/utilities
-- **No routing strategy**: Chưa có App Router pages cho modules
-- **Store integration**: Modules chưa integrate với Redux store
+- **Module isolation**: Ensure no cross-module imports (communicate via Redux)
+- **Consistent API pattern**: All modules should use `extraOptions: { service: 'moduleName' }`
+- **Lazy loading**: Implement module-level code splitting
 
-## **Recommended Modular Structure**
+## **Current Modular Structure**
 
 ```
 src/
 ├── app/                    # Next.js App Router
-│   ├── (dashboard)/        # Dashboard route group
-│   │   ├── crm/           # CRM module pages
-│   │   ├── accounting/    # Accounting module pages
-│   │   └── inventory/     # Inventory module pages
+│   ├── crm/               # CRM module pages
+│   ├── ptm/               # PTM module pages
+│   ├── settings/          # Settings pages
+│   ├── purchase/          # Purchase pages
+│   ├── logistics/         # Logistics pages
 │   └── layout.tsx
 ├── modules/               # 🎯 Business Logic Modules
 │   ├── crm/
+│   │   ├── api/           # RTK Query endpoints (crmApi.ts)
 │   │   ├── components/    # CRM-specific UI
-│   │   ├── hooks/         # CRM custom hooks
-│   │   ├── services/      # CRM API calls
 │   │   ├── store/         # CRM Redux slices
 │   │   ├── types/         # CRM TypeScript types
 │   │   └── index.ts       # ✅ Barrel exports
-│   ├── accounting/        # Same structure
-│   └── inventory/         # Same structure
+│   ├── account/           # Auth, users
+│   ├── settings/          # Organization, departments
+│   ├── purchase/          # Orders, suppliers
+│   ├── logistics/         # Inventory, shipping
+│   ├── ptm/               # Tasks, projects
+│   └── notifications/     # Push notifications
 ├── shared/                # 🔄 Cross-Module Resources
-│   ├── components/        # Reusable UI components
-│   ├── hooks/            # Common hooks
-│   ├── services/         # Shared API utilities
-│   ├── types/            # Common types
-│   └── utils/            # Helper functions
-└── lib/                  # 🔧 Core Configuration
-    ├── store.ts          # ✅ Redux store setup
-    └── api/              # API configuration
+│   ├── components/ui/     # Shadcn UI components
+│   ├── hooks/             # Common hooks
+│   └── utils/             # Helper functions
+└── lib/                   # 🔧 Core Configuration
+    └── store/api/         # apiSlice.ts (base RTK Query config)
 ```
 
 ## **Key Principles**
@@ -55,13 +57,32 @@ src/
 - No direct imports between modules
 - Communication via shared state or events
 
-### 2. **Barrel Exports Pattern** ✅
+### 2. **RTK Query API Pattern** ✅
+
+```typescript
+// modules/crm/api/crmApi.ts
+import { api } from '@/lib/store/api';
+
+export const crmApi = api.injectEndpoints({
+  endpoints: (builder) => ({
+    getCustomers: builder.query<APIResponse<Customer[]>, Filters>({
+      query: (filters) => ({ url: '/customers', params: filters }),
+      extraOptions: { service: 'crm' }, // Routes to /crm/api/v1/customers
+      providesTags: ['Customer'],
+    }),
+  }),
+});
+
+export const { useGetCustomersQuery } = crmApi;
+```
+
+### 3. **Barrel Exports Pattern** ✅
 
 ```typescript
 // modules/crm/index.ts
-export { CRMDashboard } from './components/crm-dashboard';
-export { useCRMData } from './hooks/use-crm-data';
-export { crmSlice } from './store/crm-slice';
+export * from './api/crmApi';
+export * from './components';
+export * from './types';
 ```
 
 ### 3. **Feature-Based Routing**
@@ -77,26 +98,6 @@ export { crmSlice } from './store/crm-slice';
 - **UI Components**: Button, Table, Modal trong `shared/components`
 - **Business Logic**: Module-specific trong `modules/*/`
 - **API Layer**: Shared utilities trong `shared/services`
-
-## **Implementation Priority**
-
-### Phase 1: Foundation
-
-1. Create `shared/` structure
-2. Move common UI to `shared/components`
-3. Setup App Router pages
-
-### Phase 2: Module Enhancement
-
-1. Complete CRM module structure
-2. Integrate modules with Redux store
-3. Create module-specific pages
-
-### Phase 3: Advanced Features
-
-1. Module lazy loading
-2. Module permissions
-3. Inter-module communication
 
 ## **Benefits for ERP System**
 
