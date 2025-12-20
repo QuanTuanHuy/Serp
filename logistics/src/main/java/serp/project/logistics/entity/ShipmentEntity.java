@@ -12,7 +12,9 @@ import serp.project.logistics.constant.OrderStatus;
 import serp.project.logistics.constant.OrderType;
 import serp.project.logistics.constant.ShipmentStatus;
 import serp.project.logistics.constant.ShipmentType;
+import serp.project.logistics.dto.request.InventoryItemDetailUpdateForm;
 import serp.project.logistics.dto.request.ShipmentCreationForm;
+import serp.project.logistics.dto.request.ShipmentCreationForm.InventoryItemDetail;
 import serp.project.logistics.dto.request.ShipmentUpdateForm;
 import serp.project.logistics.exception.AppErrorCode;
 import serp.project.logistics.exception.AppException;
@@ -92,9 +94,7 @@ public class ShipmentEntity {
     @Transient
     private List<InventoryItemDetailEntity> items = new ArrayList<>();
 
-    public ShipmentEntity(ShipmentCreationForm form, OrderEntity order, List<InventoryItemDetailEntity> items,
-            Long userId,
-            Long tenantId) {
+    public ShipmentEntity(ShipmentCreationForm form, OrderEntity order, Long userId, Long tenantId) {
         if (!order.getStatusId().equals(OrderStatus.APPROVED.name())) {
             throw new AppException(AppErrorCode.ORDER_NOT_APPROVED_YET);
         }
@@ -116,8 +116,6 @@ public class ShipmentEntity {
         this.note = form.getNote();
         this.expectedDeliveryDate = form.getExpectedDeliveryDate();
         this.tenantId = tenantId;
-
-        this.items = items;
     }
 
     public void update(ShipmentUpdateForm form) {
@@ -137,6 +135,17 @@ public class ShipmentEntity {
         if (ShipmentStatus.valueOf(this.statusId).ordinal() > ShipmentStatus.CREATED.ordinal()) {
             throw new AppException(AppErrorCode.INVALID_STATUS_TRANSITION);
         }
+        item.setShipmentId(this.id);
+        this.items.add(item);
+    }
+
+    public void addItem(InventoryItemDetail form, OrderItemEntity orderItem) {
+        if (ShipmentStatus.valueOf(this.statusId).ordinal() > ShipmentStatus.CREATED.ordinal()) {
+            throw new AppException(AppErrorCode.INVALID_STATUS_TRANSITION);
+        }
+
+        InventoryItemDetailEntity item = new InventoryItemDetailEntity(form, orderItem, this.tenantId);
+        item.setShipmentId(this.id);
         this.items.add(item);
     }
 
@@ -144,7 +153,16 @@ public class ShipmentEntity {
         if (ShipmentStatus.valueOf(this.statusId).ordinal() > ShipmentStatus.CREATED.ordinal()) {
             throw new AppException(AppErrorCode.INVALID_STATUS_TRANSITION);
         }
+
         this.items.remove(item);
+    }
+
+    public void updateItem(InventoryItemDetailEntity item, InventoryItemDetailUpdateForm form) {
+        if (ShipmentStatus.valueOf(this.statusId).ordinal() > ShipmentStatus.CREATED.ordinal()) {
+            throw new AppException(AppErrorCode.INVALID_STATUS_TRANSITION);
+        }
+
+        item.update(form);
     }
 
     public void importShipment(Long userId) {
@@ -153,6 +171,8 @@ public class ShipmentEntity {
         }
         this.statusId = ShipmentStatus.IMPORTED.name();
         this.handledByUserId = userId;
+
+        this.items.forEach(InventoryItemDetailEntity::importInventoryItem);
     }
 
 }

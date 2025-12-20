@@ -9,10 +9,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Formula;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.util.StringUtils;
 import serp.project.sales.dto.request.ProductCreationForm;
 import serp.project.sales.dto.request.ProductUpdateForm;
+import serp.project.sales.exception.AppErrorCode;
+import serp.project.sales.exception.AppException;
 import serp.project.sales.util.IdUtils;
 
 import java.time.LocalDateTime;
@@ -74,6 +77,12 @@ public class ProductEntity {
     @Column(name = "tenant_id")
     private Long tenantId;
 
+    @Formula("(SELECT SUM(COALESCE(i.quantity_on_hand, 0) - COALESCE(i.quantity_reserved, 0) - COALESCE(i.quantity_committed, 0)) "
+            +
+            "FROM wms2_inventory_item i " +
+            "WHERE i.product_id = id)")
+    private int quantityAvailable;
+
     public ProductEntity(ProductCreationForm form, Long tenantId) {
         this.id = IdUtils.generateProductId();
         this.name = form.getName();
@@ -118,6 +127,13 @@ public class ProductEntity {
 
         if (StringUtils.hasText(form.getSkuCode()))
             this.setSkuCode(form.getSkuCode());
+    }
+
+    public void addReservedQuantity(int quantity) {
+        if (quantity > this.quantityAvailable) {
+            throw new AppException(AppErrorCode.INSUFFICIENT_PRODUCT_QUANTITY);
+        }
+        this.quantityAvailable -= quantity;
     }
 
 }

@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -70,15 +71,18 @@ public class OrderItemEntity {
     @Column(name = "tenant_id")
     private Long tenantId;
 
-    public void addDeliveredItem(InventoryItemDetailEntity item) {
-        if (this.quantityRemaining < item.getQuantity()) {
+    @Transient
+    private ProductEntity product;
+
+    public void addDeliveredQuantity(int quantity) {
+        if (this.quantityRemaining < quantity) {
             throw new AppException(AppErrorCode.EXCEED_REMAINING_QUANTITY);
         }
-        this.quantityRemaining -= item.getQuantity();
+        this.quantityRemaining -= quantity;
     }
 
-    public void removeDeliveredItem(InventoryItemDetailEntity item) {
-        this.quantityRemaining += item.getQuantity();
+    public void cancelDeliveredQuantity(int quantity) {
+        this.quantityRemaining += quantity;
     }
 
 }

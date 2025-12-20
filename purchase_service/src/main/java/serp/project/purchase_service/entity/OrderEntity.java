@@ -14,6 +14,7 @@ import org.springframework.util.StringUtils;
 import serp.project.purchase_service.constant.OrderStatus;
 import serp.project.purchase_service.constant.OrderType;
 import serp.project.purchase_service.dto.request.OrderCreationForm;
+import serp.project.purchase_service.dto.request.OrderItemUpdateForm;
 import serp.project.purchase_service.dto.request.OrderUpdateForm;
 import serp.project.purchase_service.exception.AppErrorCode;
 import serp.project.purchase_service.exception.AppException;
@@ -111,7 +112,7 @@ public class OrderEntity {
     @Transient
     private List<ShipmentEntity> shipments = new ArrayList<>();
 
-    public OrderEntity(OrderCreationForm form, List<OrderItemEntity> orderItems, Long userId, Long tenantId) {
+    public OrderEntity(OrderCreationForm form, Long userId, Long tenantId) {
         String orderId = IdUtils.generateOrderId();
         this.id = orderId;
         this.orderTypeId = OrderType.PURCHASE.name();
@@ -127,12 +128,7 @@ public class OrderEntity {
         this.saleChannelId = form.getSaleChannelId();
         this.tenantId = tenantId;
 
-        this.items = orderItems;
-
         this.totalAmount = 0L;
-        for (OrderItemEntity item : orderItems) {
-            this.totalAmount += item.getAmount();
-        }
     }
 
     public void update(OrderUpdateForm form) {
@@ -154,22 +150,44 @@ public class OrderEntity {
             this.saleChannelId = form.getSaleChannelId();
     }
 
-    public void addOrderItem(OrderItemEntity item) {
+    public void addItem(OrderItemEntity item) {
         if (OrderStatus.valueOf(this.statusId).ordinal() > OrderStatus.CREATED.ordinal()) {
             throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
         }
 
+        item.setOrderId(this.id);
         this.items.add(item);
         this.totalAmount += item.getAmount();
     }
 
-    public void removeOrderItem(OrderItemEntity item) {
+    public void addItem(OrderCreationForm.OrderItem itemForm, ProductEntity product) {
+        if (OrderStatus.valueOf(this.statusId).ordinal() > OrderStatus.CREATED.ordinal()) {
+            throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
+        }
+
+        OrderItemEntity item = new OrderItemEntity(itemForm, product, this.tenantId);
+        item.setOrderId(this.id);
+        this.items.add(item);
+        this.totalAmount += item.getAmount();
+    }
+
+    public void removeItem(OrderItemEntity item) {
         if (OrderStatus.valueOf(this.statusId).ordinal() > OrderStatus.CREATED.ordinal()) {
             throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
         }
 
         this.items.remove(item);
         this.totalAmount -= item.getAmount();
+    }
+
+    public void updateItem(OrderItemEntity item, OrderItemUpdateForm form) {
+        if (OrderStatus.valueOf(this.statusId).ordinal() > OrderStatus.CREATED.ordinal()) {
+            throw new AppException(AppErrorCode.CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS);
+        }
+
+        this.totalAmount -= item.getAmount();
+        item.update(form);
+        this.totalAmount += item.getAmount();
     }
 
     public void approve(Long userId) {

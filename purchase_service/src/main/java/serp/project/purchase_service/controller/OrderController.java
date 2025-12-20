@@ -43,7 +43,7 @@ public class OrderController {
                                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
                 log.info("[OrderController] Create order {} by userId {} and tenantId {}",
                                 form.getOrderName(), userId, tenantId);
-                orderService.createOrder(form, userId, tenantId);
+                orderService.createPurchaseOrder(form, userId, tenantId);
                 return ResponseEntity.ok(GeneralResponse.success("Order created successfully"));
         }
 
@@ -67,7 +67,7 @@ public class OrderController {
                                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
                 log.info("[OrderController] Add product ID {} to order ID {} for tenantId {}", itemForm.getProductId(),
                                 orderId, tenantId);
-                orderService.createOrderItems(itemForm, orderId, tenantId);
+                orderService.createOrderItem(itemForm, orderId, tenantId);
                 return ResponseEntity.ok(GeneralResponse.success("Product added to order successfully"));
         }
 
@@ -99,7 +99,11 @@ public class OrderController {
         @DeleteMapping("/delete/{orderId}")
         public ResponseEntity<GeneralResponse<?>> deleteOrder(
                         @PathVariable String orderId) {
-                throw new AppException(AppErrorCode.UNIMPLEMENTED);
+                Long tenantId = authUtils.getCurrentTenantId()
+                                .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
+                log.info("[OrderController] Delete order {} for tenantId {}", orderId, tenantId);
+                orderService.deleteOrder(orderId, tenantId);
+                return ResponseEntity.ok(GeneralResponse.success("Order deleted successfully"));
         }
 
         @PatchMapping("/manage/{orderId}/approve")

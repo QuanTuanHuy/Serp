@@ -26,7 +26,6 @@ import serp.project.logistics.repository.ShipmentRepository;
 import serp.project.logistics.repository.specification.ShipmentSpecification;
 import serp.project.logistics.util.PaginationUtils;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -48,27 +47,27 @@ public class ShipmentService {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
 
-        List<InventoryItemDetailEntity> items = new ArrayList<>();
-        for (ShipmentCreationForm.InventoryItemDetail itemDetail : form.getItems()) {
-            OrderItemEntity orderItem = orderItemRepository.findById(itemDetail.getOrderItemId()).orElse(null);
-            InventoryItemDetailEntity item = new InventoryItemDetailEntity(itemDetail, orderItem, tenantId);
-            orderItem.addDeliveredItem(item);
-            items.add(item);
+        ShipmentEntity shipment = new ShipmentEntity(form, order, userId, tenantId);
+
+        for (ShipmentCreationForm.InventoryItemDetail itemForm : form.getItems()) {
+            OrderItemEntity orderItem = orderItemRepository.findById(itemForm.getOrderItemId()).orElse(null);
+            if (orderItem == null || !orderItem.getTenantId().equals(tenantId)) {
+                log.error("[ShipmentService] Order Item ID {} not found for tenant {}", itemForm.getOrderItemId(),
+                        tenantId);
+                throw new AppException(AppErrorCode.NOT_FOUND);
+            }
+
+            shipment.addItem(itemForm, orderItem);
         }
 
-        ShipmentEntity shipment = new ShipmentEntity(form, order, items, userId, tenantId);
         shipmentRepository.save(shipment);
         log.info("[ShipmentService] Created shipment {} for order {} and tenant {}", shipment.getId(),
                 form.getOrderId(),
                 tenantId);
 
-        for (InventoryItemDetailEntity item : items) {
-            item.setShipmentId(shipment.getId());
-            inventoryItemDetailRepository.save(item);
-        }
-        log.info("[ShipmentService] Created {} items for shipment {} and tenant {}", form.getItems().size(),
-                shipment.getId(),
-                tenantId);
+        inventoryItemDetailRepository.saveAll(shipment.getItems());
+        log.info("[ShipmentService] Created {} inventory item details for shipment {} and tenant {}",
+                shipment.getItems().size(), shipment.getId(), tenantId);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -80,6 +79,7 @@ public class ShipmentService {
         }
 
         shipment.update(form);
+
         shipmentRepository.save(shipment);
         log.info("[ShipmentService] Updated shipment {} for tenant {}", shipmentId, tenantId);
     }
@@ -92,22 +92,31 @@ public class ShipmentService {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
 
+        List<InventoryItemDetailEntity> items = inventoryItemDetailRepository.findByTenantIdAndShipmentId(tenantId,
+                shipmentId);
+        shipment.setItems(items);
+
         shipment.importShipment(userId);
+
+        List<InventoryItemDetailEntity> itemsToUpdate = shipment.getItems();
+        List<InventoryItemEntity> inventoryItemsToSave = itemsToUpdate.stream()
+                .map(InventoryItemDetailEntity::getInventoryItem)
+                .toList();
+
         shipmentRepository.save(shipment);
         log.info("[ShipmentService] Marked shipment {} as imported for tenant {}", shipmentId, tenantId);
 
-        List<InventoryItemDetailEntity> items = inventoryItemDetailRepository.findByTenantIdAndShipmentId(tenantId,
-                shipmentId);
-        for (InventoryItemDetailEntity item : items) {
-            InventoryItemEntity inventoryItem = item.getInventoryItem();
-            inventoryItemRepository.save(inventoryItem);
-            log.info("[ShipmentService] Saved inventory item {} for tenant {}", inventoryItem.getId(), tenantId);
+        inventoryItemRepository.saveAll(inventoryItemsToSave);
+        log.info("[ShipmentService] Saved {} inventory items for shipment {} and tenant {}",
+                inventoryItemsToSave.size(),
+                shipmentId, tenantId);
 
-            inventoryItemDetailRepository.save(item);
-            log.info("[ShipmentService] Updated inventory item detail {} according to inventory item {} for tenant {}",
-                    item.getId(), inventoryItem.getId(), tenantId);
-        }
+        inventoryItemDetailRepository.saveAll(itemsToUpdate);
+        log.info("[ShipmentService] Updated {} inventory item details for shipment {} and tenant {}",
+                itemsToUpdate.size(),
+                shipmentId, tenantId);
 
+        // Check and update order status
         OrderEntity order = orderRepository.findById(shipment.getOrderId()).orElse(null);
         if (order == null || !order.getTenantId().equals(tenantId)) {
             log.error("[ShipmentService] Order {} not found for tenant {}", shipment.getOrderId(), tenantId);
@@ -116,10 +125,12 @@ public class ShipmentService {
         order.setItems(orderItemRepository.findByTenantIdAndOrderId(tenantId, order.getId()));
         order.setShipments(
                 shipmentRepository.findByTenantIdAndOrderId(tenantId, order.getId()));
-        if (order.tryMarkAsFullyDelivered()) {
-            orderRepository.save(order);
-            log.info("[ShipmentService] Marked order {} as FULLY_DELIVERED for tenant {}", order.getId(), tenantId);
+        if (!order.tryMarkAsFullyDelivered()) {
+            log.info("[ShipmentService] Order {} is not fully delivered yet for tenant {}", order.getId(), tenantId);
+            return;
         }
+        orderRepository.save(order);
+        log.info("[ShipmentService] Marked order {} as FULLY_DELIVERED for tenant {}", order.getId(), tenantId);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -194,13 +205,10 @@ public class ShipmentService {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
 
-        InventoryItemDetailEntity item = new InventoryItemDetailEntity(form, orderItem, tenantId);
-        shipment.addItem(item);
-        orderItem.addDeliveredItem(item);
-
-        item.setShipmentId(shipmentId);
-        inventoryItemDetailRepository.save(item);
-
+        shipment.addItem(form, orderItem);
+        inventoryItemDetailRepository.saveAll(shipment.getItems());
+        log.info("[InventoryItemDetailService] Created inventory item detail for shipment {} and tenant {}", shipmentId,
+                tenantId);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -226,11 +234,9 @@ public class ShipmentService {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
 
-        shipment.removeItem(item);
-        orderItem.removeDeliveredItem(item);
-        item.update(form);
-        shipment.addItem(item);
-        orderItem.addDeliveredItem(item);
+        item.setOrderItem(orderItem);
+
+        shipment.updateItem(item, form);
 
         inventoryItemDetailRepository.save(item);
         log.info("[InventoryItemDetailService] Inventory Item Detail ID {} updated for tenant {}", itemId,
@@ -257,6 +263,7 @@ public class ShipmentService {
         }
 
         shipment.removeItem(item);
+
         inventoryItemDetailRepository.delete(item);
         log.info("[InventoryItemDetailService] Inventory Item Detail ID {} deleted", itemId);
     }

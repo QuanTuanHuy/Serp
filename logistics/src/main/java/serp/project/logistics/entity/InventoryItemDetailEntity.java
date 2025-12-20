@@ -79,6 +79,9 @@ public class InventoryItemDetailEntity {
     @Transient
     private InventoryItemEntity inventoryItem;
 
+    @Transient
+    private OrderItemEntity orderItem;
+
     public InventoryItemDetailEntity(InventoryItemDetail form, OrderItemEntity orderItem, Long tenantId) {
         this.id = IdUtils.generateInventoryItemDetailId();
         this.productId = orderItem.getProductId();
@@ -92,11 +95,14 @@ public class InventoryItemDetailEntity {
         this.unit = orderItem.getUnit();
         this.price = orderItem.getPrice();
         this.tenantId = tenantId;
+
+        orderItem.addDeliveredQuantity(this.quantity);
+        this.orderItem = orderItem;
     }
 
     public void update(InventoryItemDetailUpdateForm form) {
-        this.quantity = form.getQuantity();
-
+        if (form.getQuantity() != this.quantity)
+            changeQuantity(form.getQuantity());
         if (StringUtils.hasText(form.getNote()))
             this.note = form.getNote();
         if (StringUtils.hasText(form.getLotId()))
@@ -109,9 +115,13 @@ public class InventoryItemDetailEntity {
             this.facilityId = form.getFacilityId();
     }
 
-    public InventoryItemEntity getInventoryItem() {
-        if (this.inventoryItem != null)
-            return this.inventoryItem;
+    public void changeQuantity(int newQuantity) {
+        this.orderItem.cancelDeliveredQuantity(this.quantity);
+        this.orderItem.addDeliveredQuantity(newQuantity);
+        this.quantity = newQuantity;
+    }
+
+    public void importInventoryItem() {
         InventoryItemCreationForm form = new InventoryItemCreationForm();
         form.setProductId(this.productId);
         form.setQuantity(this.quantity);
@@ -120,11 +130,9 @@ public class InventoryItemDetailEntity {
         form.setExpirationDate(this.expirationDate);
         form.setManufacturingDate(this.manufacturingDate);
         form.setStatusId(InventoryItemStatus.VALID.name());
+
         this.inventoryItem = new InventoryItemEntity(form, this.tenantId);
-
         this.inventoryItemId = this.inventoryItem.getId();
-
-        return this.inventoryItem;
     }
 
 }

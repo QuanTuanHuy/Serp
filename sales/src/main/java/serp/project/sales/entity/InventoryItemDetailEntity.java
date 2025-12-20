@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.sales.util.IdUtils;
+
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -67,5 +69,36 @@ public class InventoryItemDetailEntity {
 
     @Transient
     private InventoryItemEntity inventoryItem;
+
+    public InventoryItemDetailEntity(InventoryItemEntity iventoryItem, ProductEntity product, String orderItemId,
+            int quantity) {
+        this.id = IdUtils.generateInventoryItemDetailId();
+        this.productId = iventoryItem.getProductId();
+        this.inventoryItemId = iventoryItem.getId();
+        this.quantity = quantity;
+        this.orderItemId = orderItemId;
+        this.lotId = iventoryItem.getLotId();
+        this.expirationDate = iventoryItem.getExpirationDate();
+        this.manufacturingDate = iventoryItem.getManufacturingDate();
+        this.facilityId = iventoryItem.getFacilityId();
+        this.unit = product.getUnit();
+        this.price = product.getWholeSalePrice();
+        this.tenantId = iventoryItem.getTenantId();
+
+        iventoryItem.reserveQuantity(quantity);
+        this.inventoryItem = iventoryItem;
+    }
+
+    public void commit() {
+        if (this.inventoryItem != null) {
+            this.inventoryItem.commitQuantity(this.quantity);
+        }
+    }
+
+    public void cleanup() {
+        if (this.inventoryItem != null) {
+            this.inventoryItem.releaseReservedQuantity(this.quantity);
+        }
+    }
 
 }

@@ -6,13 +6,17 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import serp.project.logistics.entity.OrderEntity;
 import serp.project.logistics.entity.OrderItemEntity;
+import serp.project.logistics.entity.ProductEntity;
 import serp.project.logistics.repository.OrderItemRepository;
 import serp.project.logistics.repository.OrderRepository;
+import serp.project.logistics.repository.ProductRepository;
 import serp.project.logistics.repository.specification.OrderSpecification;
 import serp.project.logistics.util.PaginationUtils;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +24,7 @@ import java.util.List;
 public class OrderService {
 
     private final OrderRepository orderRepository;
+    private final ProductRepository productRepository;
     private final OrderItemRepository orderItemRepository;
 
     public Page<OrderEntity> findOrders(
@@ -64,7 +69,16 @@ public class OrderService {
     }
 
     public List<OrderItemEntity> findByOrderId(String orderId, Long tenantId) {
-        return orderItemRepository.findByTenantIdAndOrderId(tenantId, orderId);
+        List<OrderItemEntity> orderItems = orderItemRepository.findByTenantIdAndOrderId(tenantId, orderId);
+        List<String> productIds = orderItems.stream()
+                .map(OrderItemEntity::getProductId)
+                .distinct()
+                .toList();
+        List<ProductEntity> products = productRepository.findAllById(productIds);
+        Map<String, ProductEntity> productMap = products.stream()
+                .collect(Collectors.toMap(ProductEntity::getId, p -> p));
+        orderItems.forEach(item -> item.setProduct(productMap.get(item.getProductId())));
+        return orderItems;
     }
 
 }

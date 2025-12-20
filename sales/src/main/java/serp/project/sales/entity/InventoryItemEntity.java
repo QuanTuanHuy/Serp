@@ -16,6 +16,7 @@ import serp.project.sales.util.IdUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -96,6 +97,35 @@ public class InventoryItemEntity {
 
         if (form.getStatusId() != null)
             this.statusId = form.getStatusId();
+    }
+
+    public void reserveQuantity(int quantity) {
+        this.quantityReserved += quantity;
+    }
+
+    public void releaseReservedQuantity(int quantity) {
+        this.quantityReserved -= quantity;
+    }
+
+    public void commitQuantity(int quantity) {
+        this.quantityReserved -= quantity;
+        this.quantityCommitted += quantity;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        InventoryItemEntity inventoryItem = (InventoryItemEntity) o;
+        return Objects.equals(id, inventoryItem.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 
 }

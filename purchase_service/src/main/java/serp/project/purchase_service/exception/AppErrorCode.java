@@ -15,6 +15,8 @@ public enum AppErrorCode {
     CANNOT_UPDATE_ORDER_IN_CURRENT_STATUS("PURCHASE-BIZ-005", "Cannot update order in its current status",
             HttpStatus.BAD_REQUEST),
     DATA_INTEGRITY_VIOLATION("PURCHASE-BIZ-006", "Data integrity violation", HttpStatus.BAD_REQUEST),
+    CANNOT_DELETE_ORDER_IN_CURRENT_STATUS("PURCHASE-BIZ-007", "Cannot delete order in its current status",
+            HttpStatus.BAD_REQUEST),
 
     UNKNOWN_ENUM_VALUE("PURCHASE-VAL-001", "Unknown enum value provided", HttpStatus.BAD_REQUEST),
     REQUEST_VALIDATION_FAILED("PURCHASE-VAL-002", "Request validation failed", HttpStatus.BAD_REQUEST),
