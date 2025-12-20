@@ -50,6 +50,8 @@ jobs:
               - 'purchase_service/**'
             logistics:
               - 'logistics/**'
+            notification:
+              - 'notification_service/**'
 
       - name: Create changes file
         run: |
