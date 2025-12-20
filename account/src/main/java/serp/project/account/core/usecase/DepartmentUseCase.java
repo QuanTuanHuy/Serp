@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
+import serp.project.account.core.domain.dto.message.CreateNotificationEvent;
 import serp.project.account.core.domain.dto.request.AssignUserToDepartmentRequest;
 import serp.project.account.core.domain.dto.request.AssignUserToModuleRequest;
 import serp.project.account.core.domain.dto.request.CreateDepartmentRequest;
@@ -24,6 +25,7 @@ import serp.project.account.core.domain.entity.DepartmentEntity;
 import serp.project.account.core.domain.entity.OrganizationEntity;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.IDepartmentService;
+import serp.project.account.core.service.INotificationService;
 import serp.project.account.core.service.IOrganizationService;
 import serp.project.account.core.service.IUserDepartmentService;
 import serp.project.account.core.service.IUserModuleAccessService;
@@ -41,6 +43,8 @@ public class DepartmentUseCase {
     private final IUserService userService;
     private final IUserModuleAccessService userModuleAccessService;
     private final IOrganizationService organizationService;
+
+    private final INotificationService notificationService;
 
     private final ModuleAccessUseCase moduleAccessUseCase;
 
@@ -221,6 +225,15 @@ public class DepartmentUseCase {
                     }
                 }
             }
+
+            var notificationEvent = CreateNotificationEvent.builder()
+                    .userId(user.getId())
+                    .tenantId(organization.getId())
+                    .title("Assigned to Department")
+                    .message("You have been assigned to the department: " + department.getName())
+                    .actionUrl("/departments/" + department.getId())
+                    .build();
+            notificationService.sendNotification(notificationEvent);
 
             return responseUtils.success("User assigned to department successfully");
         } catch (AppException e) {
