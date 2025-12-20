@@ -15,12 +15,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
+import serp.project.account.core.domain.dto.message.CreateNotificationEvent;
 import serp.project.account.core.domain.dto.request.*;
 import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.ICombineRoleService;
 import serp.project.account.core.service.IModuleService;
+import serp.project.account.core.service.INotificationService;
 import serp.project.account.core.service.IOrganizationService;
 import serp.project.account.core.service.ISubscriptionService;
 import serp.project.account.core.service.IRoleService;
@@ -45,6 +47,8 @@ public class SubscriptionUseCase {
     private final IUserService userService;
     private final ICombineRoleService combineRoleService;
     private final IModuleService moduleService;
+
+    private final INotificationService notificationService;
 
     private final ResponseUtils responseUtils;
     private final PaginationUtils paginationUtils;
@@ -399,6 +403,16 @@ public class SubscriptionUseCase {
                 log.error("Error auto-granting modules to owner: {}", e.getMessage());
             }
 
+            // Send notification to org owner
+            var notificationEvent = CreateNotificationEvent.builder()
+                    .userId(organization.getOwnerId())
+                    .tenantId(organization.getId())
+                    .title("Your Subscription is Activated")
+                    .message("Your subscription to the plan " + plan.getPlanName() + " has been activated.")
+                    .actionUrl("/home")
+                    .build();
+            notificationService.sendNotification(notificationEvent);
+
             log.info("[UseCase] Successfully activated subscription {}", subscriptionId);
             return responseUtils.success(subscription);
         } catch (AppException e) {
@@ -417,6 +431,13 @@ public class SubscriptionUseCase {
             log.info("[UseCase] Rejecting subscription {}", subscriptionId);
 
             subscriptionService.rejectSubscription(subscriptionId, request.getReason(), rejectedBy);
+
+            var notificationEvent = CreateNotificationEvent.builder()
+                    .title("Subscription Rejected")
+                    .message("Your subscription has been rejected. Reason: " + request.getReason())
+                    .actionUrl("/contact-support")
+                    .build();
+            notificationService.sendNotification(notificationEvent);
 
             log.info("[UseCase] Successfully rejected subscription {}", subscriptionId);
             return responseUtils.success("Subscription rejected successfully");

@@ -83,7 +83,7 @@ export default function SettingsSecurityPage() {
     {
       id: '1',
       name: 'Production API',
-      key: 'sk_live_abc123def456ghi789jkl012mno345pqr678',
+      key: '',
       prefix: 'sk_live',
       permissions: ['read', 'write'],
       status: 'ACTIVE',
@@ -93,7 +93,7 @@ export default function SettingsSecurityPage() {
     {
       id: '2',
       name: 'Development API',
-      key: 'sk_test_xyz789uvw456rst123opq890lmn567ijk234',
+      key: '',
       prefix: 'sk_test',
       permissions: ['read'],
       status: 'ACTIVE',
@@ -103,7 +103,7 @@ export default function SettingsSecurityPage() {
     {
       id: '3',
       name: 'Legacy Integration',
-      key: 'sk_live_old123old456old789old012old345old678',
+      key: '',
       prefix: 'sk_live',
       permissions: ['read', 'write'],
       status: 'INACTIVE',
