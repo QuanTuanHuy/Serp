@@ -1,5 +1,5 @@
 # --- Stage 1: Install dependencies ---
-FROM node:18-alpine AS deps
+FROM node:20-alpine AS deps
 
 RUN apk add --no-cache libc6-compat
 
@@ -10,7 +10,7 @@ COPY package.json package-lock.json* ./
 RUN npm ci --only=production=false
 
 # --- Stage 2: Build the Next.js app ---
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -25,7 +25,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 # --- Stage 3: Production runner (minimal image) ---
-FROM node:18-alpine AS runner
+FROM node:20-alpine AS runner
 
 WORKDIR /app
 
