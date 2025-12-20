@@ -20,6 +20,9 @@ COPY . .
 ARG NEXT_PUBLIC_API_BASE_URL=https://api.serp.texkis.com
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 
+ARG NEXT_PUBLIC_WS_URL=ws://api.serp.texkis.com
+ENV NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL}
+
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN npm run build
@@ -36,6 +39,9 @@ ENV HOSTNAME="0.0.0.0"
 
 ARG NEXT_PUBLIC_API_BASE_URL=https://api.serp.texkis.com
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+
+ARG NEXT_PUBLIC_WS_URL=ws://api.serp.texkis.com
+ENV NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL}
 
 
 COPY --from=builder /app/public ./public

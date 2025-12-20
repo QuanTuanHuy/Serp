@@ -19,7 +19,7 @@ Modern Enterprise Resource Planning (ERP) system built with Next.js 15, TypeScri
 src/
 ├── app/                    # Next.js App Router
 │   ├── crm/               # CRM module pages
-│   ├── ptm/               # PTM module pages  
+│   ├── ptm/               # PTM module pages
 │   ├── settings/          # Organization settings
 │   ├── purchase/          # Purchase module pages
 │   ├── logistics/         # Logistics module pages
