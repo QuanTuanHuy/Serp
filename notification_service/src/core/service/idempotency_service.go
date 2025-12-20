@@ -137,10 +137,12 @@ func (s *IdempotencyService) CleanupExpiredEvents(ctx context.Context) (int64, e
 func NewIdempotencyService(
 	processedEventPort port.IProcessedEventPort,
 	failedEventPort port.IFailedEventPort,
+	logger *zap.Logger,
 ) IIdempotencyService {
 	return &IdempotencyService{
 		processedEventPort: processedEventPort,
 		failedEventPort:    failedEventPort,
+		logger:             logger,
 		eventTTL:           DefaultEventTTL,
 	}
 }

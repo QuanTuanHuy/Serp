@@ -16,6 +16,8 @@ func InitializeDB(db *gorm.DB) {
 	err := db.AutoMigrate(
 		&model.NotificationModel{},
 		&model.NotificationPreferenceModel{},
+		&model.ProcessedEventModel{},
+		&model.FailedEventModel{},
 	)
 	if err != nil {
 		log.Fatal("Failed to run migrations: ", err)
