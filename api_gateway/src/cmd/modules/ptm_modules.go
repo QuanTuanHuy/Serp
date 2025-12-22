@@ -14,19 +14,37 @@ import (
 
 func PtmModule() fx.Option {
 	return fx.Module("ptm",
-		// Provide adapter
+		// Provide adapter - PTM Task
 		fx.Provide(adapter.NewProjectClientAdapter),
 		fx.Provide(adapter.NewTaskClientAdapter),
 		fx.Provide(adapter.NewNoteClientAdapter),
 
-		// Provide service
+		// Provide adapter - PTM Schedule
+		fx.Provide(adapter.NewSchedulePlanClientAdapter),
+		fx.Provide(adapter.NewAvailabilityCalendarClientAdapter),
+		fx.Provide(adapter.NewScheduleWindowClientAdapter),
+		fx.Provide(adapter.NewScheduleEventClientAdapter),
+
+		// Provide service - PTM Task
 		fx.Provide(service.NewProjectService),
 		fx.Provide(service.NewTaskService),
 		fx.Provide(service.NewNoteService),
 
-		// Provide controller
+		// Provide service - PTM Schedule
+		fx.Provide(service.NewSchedulePlanService),
+		fx.Provide(service.NewAvailabilityCalendarService),
+		fx.Provide(service.NewScheduleWindowService),
+		fx.Provide(service.NewScheduleEventService),
+
+		// Provide controller - PTM Task
 		fx.Provide(controller.NewProjectController),
 		fx.Provide(controller.NewTaskController),
 		fx.Provide(controller.NewNoteController),
+
+		// Provide controller - PTM Schedule
+		fx.Provide(controller.NewSchedulePlanController),
+		fx.Provide(controller.NewAvailabilityCalendarController),
+		fx.Provide(controller.NewScheduleWindowController),
+		fx.Provide(controller.NewScheduleEventController),
 	)
 }

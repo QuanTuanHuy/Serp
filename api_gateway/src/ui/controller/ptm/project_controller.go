@@ -32,7 +32,7 @@ func (p *ProjectController) CreateProject(c *gin.Context) {
 }
 
 func (p *ProjectController) GetAllProjects(c *gin.Context) {
-	payload := map[string]any{}
+	payload := map[string]string{}
 	queryParams := c.Request.URL.Query()
 	for key, values := range queryParams {
 		if len(values) > 0 {

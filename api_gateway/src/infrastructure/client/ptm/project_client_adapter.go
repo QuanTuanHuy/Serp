@@ -47,20 +47,13 @@ func (p *ProjectClientAdapter) CreateProject(ctx context.Context, payload map[st
 	return &result, nil
 }
 
-func (p *ProjectClientAdapter) GetAllProjects(ctx context.Context, payload map[string]any) (*response.BaseResponse, error) {
+func (p *ProjectClientAdapter) GetAllProjects(ctx context.Context, payload map[string]string) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
-
-	queryParams := make(map[string]string)
-	for key, value := range payload {
-		if strValue, ok := value.(string); ok {
-			queryParams[key] = strValue
-		}
-	}
 
 	var httpResponse *utils.HTTPResponse
 	err := p.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		httpResponse, err = p.apiClient.GETWithQuery(ctx, "/api/v1/projects", queryParams, headers)
+		httpResponse, err = p.apiClient.GETWithQuery(ctx, "/api/v1/projects", payload, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call get all projects API: %w", err)
 		}
