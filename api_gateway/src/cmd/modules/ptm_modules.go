@@ -16,26 +16,17 @@ func PtmModule() fx.Option {
 	return fx.Module("ptm",
 		// Provide adapter
 		fx.Provide(adapter.NewProjectClientAdapter),
-		fx.Provide(adapter.NewGroupTaskClientAdapter),
 		fx.Provide(adapter.NewTaskClientAdapter),
-		fx.Provide(adapter.NewCommentClientAdapter),
 		fx.Provide(adapter.NewNoteClientAdapter),
-		fx.Provide(adapter.NewUserTagClientAdapter),
 
 		// Provide service
 		fx.Provide(service.NewProjectService),
-		fx.Provide(service.NewGroupTaskService),
 		fx.Provide(service.NewTaskService),
-		fx.Provide(service.NewCommentService),
 		fx.Provide(service.NewNoteService),
-		fx.Provide(service.NewUserTagService),
 
 		// Provide controller
 		fx.Provide(controller.NewProjectController),
-		fx.Provide(controller.NewGroupTaskController),
 		fx.Provide(controller.NewTaskController),
-		fx.Provide(controller.NewCommentController),
 		fx.Provide(controller.NewNoteController),
-		fx.Provide(controller.NewUserTagController),
 	)
 }

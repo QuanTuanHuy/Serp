@@ -10,7 +10,6 @@ import (
 	"fmt"
 
 	"github.com/golibs-starter/golib/log"
-	request "github.com/serp/api-gateway/src/core/domain/dto/request/ptm"
 	"github.com/serp/api-gateway/src/core/domain/dto/response"
 	port "github.com/serp/api-gateway/src/core/port/client/ptm"
 	"github.com/serp/api-gateway/src/kernel/properties"
@@ -22,75 +21,61 @@ type ProjectClientAdapter struct {
 	circuitBreaker *utils.CircuitBreaker
 }
 
-func (p *ProjectClientAdapter) GetProjectsByUserID(ctx context.Context) (*response.BaseResponse, error) {
+func (p *ProjectClientAdapter) CreateProject(ctx context.Context, payload map[string]any) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
-	var res *utils.HTTPResponse
+	var httpResponse *utils.HTTPResponse
 	err := p.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		res, err = p.apiClient.GET(ctx, "/api/v1/projects/all", headers)
-		return err
+		httpResponse, err = p.apiClient.POST(ctx, "/api/v1/projects", payload, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call create project API: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	if !p.apiClient.IsSuccessStatusCode(res.StatusCode) {
-		log.Error(ctx, fmt.Sprintf("GetProjectsByUserID API returned error status: %d", res.StatusCode))
+	if !p.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("CreateProject API returned error status: %d", httpResponse.StatusCode))
 	}
 
 	var result response.BaseResponse
-	err = p.apiClient.UnmarshalResponse(ctx, res, &result)
-	if err != nil {
-		return nil, err
+	if err := p.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal create project response: %w", err)
 	}
 	return &result, nil
 }
 
-func (p *ProjectClientAdapter) CreateProject(ctx context.Context, req *request.CreateProjectRequest) (*response.BaseResponse, error) {
+func (p *ProjectClientAdapter) GetAllProjects(ctx context.Context, payload map[string]any) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
-	var res *utils.HTTPResponse
+	queryParams := make(map[string]string)
+	for key, value := range payload {
+		if strValue, ok := value.(string); ok {
+			queryParams[key] = strValue
+		}
+	}
+
+	var httpResponse *utils.HTTPResponse
 	err := p.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		res, err = p.apiClient.POST(ctx, "/api/v1/projects", req, headers)
-		return err
+		httpResponse, err = p.apiClient.GETWithQuery(ctx, "/api/v1/projects", queryParams, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call get all projects API: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	if !p.apiClient.IsSuccessStatusCode(res.StatusCode) {
-		log.Error(ctx, fmt.Sprintf("CreateProject API returned error status: %d", res.StatusCode))
+	if !p.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("GetAllProjects API returned error status: %d", httpResponse.StatusCode))
 	}
 
 	var result response.BaseResponse
-	err = p.apiClient.UnmarshalResponse(ctx, res, &result)
-	if err != nil {
-		return nil, err
-	}
-	return &result, nil
-}
-
-func (p *ProjectClientAdapter) UpdateProject(ctx context.Context, projectID int64, req *request.UpdateProjectRequest) (*response.BaseResponse, error) {
-	headers := utils.BuildHeadersFromContext(ctx)
-	url := fmt.Sprintf("/api/v1/projects/%d", projectID)
-
-	var res *utils.HTTPResponse
-	err := p.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
-		var err error
-		res, err = p.apiClient.PUT(ctx, url, req, headers)
-		return err
-	})
-	if err != nil {
-		return nil, err
-	}
-	if !p.apiClient.IsSuccessStatusCode(res.StatusCode) {
-		log.Error(ctx, fmt.Sprintf("UpdateProject API returned error status: %d", res.StatusCode))
-	}
-
-	var result response.BaseResponse
-	err = p.apiClient.UnmarshalResponse(ctx, res, &result)
-	if err != nil {
-		return nil, err
+	if err := p.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal get all projects response: %w", err)
 	}
 	return &result, nil
 }
@@ -99,131 +84,112 @@ func (p *ProjectClientAdapter) GetProjectByID(ctx context.Context, projectID int
 	headers := utils.BuildHeadersFromContext(ctx)
 	url := fmt.Sprintf("/api/v1/projects/%d", projectID)
 
-	var res *utils.HTTPResponse
+	var httpResponse *utils.HTTPResponse
 	err := p.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		res, err = p.apiClient.GET(ctx, url, headers)
-		return err
+		httpResponse, err = p.apiClient.GET(ctx, url, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call get project API: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	if !p.apiClient.IsSuccessStatusCode(res.StatusCode) {
-		log.Error(ctx, fmt.Sprintf("GetProjectByID API returned error status: %d", res.StatusCode))
+	if !p.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("GetProjectByID API returned error status: %d", httpResponse.StatusCode))
 	}
 
 	var result response.BaseResponse
-	err = p.apiClient.UnmarshalResponse(ctx, res, &result)
-	if err != nil {
-		return nil, err
+	if err := p.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal get project response: %w", err)
 	}
 	return &result, nil
 }
 
-func (p *ProjectClientAdapter) GetProjects(ctx context.Context, params *request.GetProjectsRequest) (*response.BaseResponse, error) {
+func (p *ProjectClientAdapter) GetTasksByProjectID(ctx context.Context, projectID int64) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
+	url := fmt.Sprintf("/api/v1/projects/%d/tasks", projectID)
 
-	queryParams := utils.BuildQueryParams(params)
-	url := "/api/v1/projects" + queryParams
-
-	var res *utils.HTTPResponse
+	var httpResponse *utils.HTTPResponse
 	err := p.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		res, err = p.apiClient.GET(ctx, url, headers)
-		return err
+		httpResponse, err = p.apiClient.GET(ctx, url, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call get tasks by project API: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	if !p.apiClient.IsSuccessStatusCode(res.StatusCode) {
-		log.Error(ctx, fmt.Sprintf("GetProjects API returned error status: %d", res.StatusCode))
+	if !p.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("GetTasksByProjectID API returned error status: %d", httpResponse.StatusCode))
 	}
 
 	var result response.BaseResponse
-	err = p.apiClient.UnmarshalResponse(ctx, res, &result)
-	if err != nil {
-		return nil, err
+	if err := p.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal get tasks by project response: %w", err)
 	}
 	return &result, nil
 }
 
-func (p *ProjectClientAdapter) GetProjectsByName(ctx context.Context, name string) (*response.BaseResponse, error) {
+func (p *ProjectClientAdapter) UpdateProject(ctx context.Context, projectID int64, payload map[string]any) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
-	url := fmt.Sprintf("/api/v1/projects/search?name=%s", name)
+	url := fmt.Sprintf("/api/v1/projects/%d", projectID)
 
-	var res *utils.HTTPResponse
+	var httpResponse *utils.HTTPResponse
 	err := p.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		res, err = p.apiClient.GET(ctx, url, headers)
-		return err
+		httpResponse, err = p.apiClient.PATCH(ctx, url, payload, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call update project API: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	if !p.apiClient.IsSuccessStatusCode(res.StatusCode) {
-		log.Error(ctx, fmt.Sprintf("GetProjectsByName API returned error status: %d", res.StatusCode))
+	if !p.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("UpdateProject API returned error status: %d", httpResponse.StatusCode))
 	}
 
 	var result response.BaseResponse
-	err = p.apiClient.UnmarshalResponse(ctx, res, &result)
-	if err != nil {
-		return nil, err
+	if err := p.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal update project response: %w", err)
 	}
 	return &result, nil
 }
 
-func (p *ProjectClientAdapter) ArchiveProject(ctx context.Context, projectID int64) (*response.BaseResponse, error) {
+func (p *ProjectClientAdapter) DeleteProject(ctx context.Context, projectID int64) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
-	url := fmt.Sprintf("/api/v1/projects/%d/archive", projectID)
+	url := fmt.Sprintf("/api/v1/projects/%d", projectID)
 
-	var res *utils.HTTPResponse
+	var httpResponse *utils.HTTPResponse
 	err := p.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		res, err = p.apiClient.PUT(ctx, url, nil, headers)
-		return err
+		httpResponse, err = p.apiClient.DELETE(ctx, url, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call delete project API: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	if !p.apiClient.IsSuccessStatusCode(res.StatusCode) {
-		log.Error(ctx, fmt.Sprintf("ArchiveProject API returned error status: %d", res.StatusCode))
+	if !p.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("DeleteProject API returned error status: %d", httpResponse.StatusCode))
 	}
 
 	var result response.BaseResponse
-	err = p.apiClient.UnmarshalResponse(ctx, res, &result)
-	if err != nil {
-		return nil, err
-	}
-	return &result, nil
-}
-
-func (p *ProjectClientAdapter) GetGroupTasksByProjectID(ctx context.Context, projectID int64) (*response.BaseResponse, error) {
-	headers := utils.BuildHeadersFromContext(ctx)
-	url := fmt.Sprintf("/api/v1/projects/%d/group-tasks", projectID)
-
-	var res *utils.HTTPResponse
-	err := p.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
-		var err error
-		res, err = p.apiClient.GET(ctx, url, headers)
-		return err
-	})
-	if err != nil {
-		return nil, err
-	}
-	if !p.apiClient.IsSuccessStatusCode(res.StatusCode) {
-		log.Error(ctx, fmt.Sprintf("GetGroupTasksByProjectID API returned error status: %d", res.StatusCode))
-	}
-
-	var result response.BaseResponse
-	err = p.apiClient.UnmarshalResponse(ctx, res, &result)
-	if err != nil {
-		return nil, err
+	if err := p.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal delete project response: %w", err)
 	}
 	return &result, nil
 }
 
 func NewProjectClientAdapter(taskManagerProps *properties.ExternalServiceProperties) port.IProjectClientPort {
-	baseURL := "http://" + taskManagerProps.PTMTask.Host + ":" + taskManagerProps.PTMTask.Port + "/ptm/task-manager"
+	baseURL := "http://" + taskManagerProps.PTMTask.Host + ":" + taskManagerProps.PTMTask.Port + "/ptm-task"
 	apiClient := utils.NewBaseAPIClient(baseURL, taskManagerProps.PTMTask.Timeout)
 
 	circuitBreaker := utils.NewDefaultCircuitBreaker()
