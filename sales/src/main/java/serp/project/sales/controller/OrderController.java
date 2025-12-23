@@ -31,7 +31,7 @@ import serp.project.sales.util.AuthUtils;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/purchase-service/api/v1/order")
+@RequestMapping("/sales/api/v1/order")
 @Validated
 @Slf4j
 public class OrderController {

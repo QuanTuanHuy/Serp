@@ -18,6 +18,8 @@ public enum AppErrorCode {
         DATA_INTEGRITY_VIOLATION("SALES-BIZ-006", "Data integrity violation", HttpStatus.BAD_REQUEST),
         CANNOT_DELETE_ORDER_IN_CURRENT_STATUS("SALES-BIZ-007", "Cannot delete order in its current status",
                         HttpStatus.BAD_REQUEST),
+        INSUFFICIENT_INVENTORY_TO_ALLOCATE("SALES-BIZ-008", "Insufficient inventory to allocate for the order",
+                        HttpStatus.BAD_REQUEST),
 
         UNKNOWN_ENUM_VALUE("SALES-VAL-001", "Unknown enum value provided", HttpStatus.BAD_REQUEST),
         REQUEST_VALIDATION_FAILED("SALES-VAL-002", "Request validation failed", HttpStatus.BAD_REQUEST),

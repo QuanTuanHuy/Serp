@@ -22,7 +22,7 @@ import serp.project.sales.util.AuthUtils;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("sales/api/v1/customer")
+@RequestMapping("/sales/api/v1/customer")
 @Validated
 @Slf4j
 public class CustomerController {

@@ -10,6 +10,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import serp.project.sales.constant.OrderItemStatus;
 import serp.project.sales.dto.request.OrderCreationForm.OrderItem;
+import serp.project.sales.exception.AppErrorCode;
+import serp.project.sales.exception.AppException;
 import serp.project.sales.util.CalculatorUtils;
 import serp.project.sales.util.IdUtils;
 
@@ -109,6 +111,9 @@ public class OrderItemEntity {
 
             this.allocatedInventoryItems.add(detail);
             remainingQty -= allocQty;
+        }
+        if (remainingQty > 0) {
+            throw new AppException(AppErrorCode.INSUFFICIENT_INVENTORY_TO_ALLOCATE);
         }
     }
 

@@ -46,12 +46,14 @@ public class OrderService {
         public void createSaleOrder(OrderCreationForm form, Long userId, Long tenantId) {
                 OrderEntity order = new OrderEntity(form, userId, tenantId);
                 for (OrderCreationForm.OrderItem itemForm : form.getItems()) {
-                        ProductEntity product = productRepository.findById(itemForm.getProductId()).orElse(null);
-                        if (product == null || !product.getTenantId().equals(tenantId)) {
-                                log.error("[OrderService] Product ID {} not found for tenant {}",
-                                                itemForm.getProductId(), tenantId);
-                                throw new AppException(AppErrorCode.NOT_FOUND);
-                        }
+                    if (itemForm.getExpireAfter() == null) itemForm.setExpireAfter(LocalDate.now());
+
+                    ProductEntity product = productRepository.findById(itemForm.getProductId()).orElse(null);
+                    if (product == null || !product.getTenantId().equals(tenantId)) {
+                        log.error("[OrderService] Product ID {} not found for tenant {}",
+                                        itemForm.getProductId(), tenantId);
+                        throw new AppException(AppErrorCode.NOT_FOUND);
+                    }
 
                         List<InventoryItemEntity> availableItems = inventoryItemRepository
                                         .findAvailableInventoryItemByProductIdAndExpireAfter(
@@ -261,6 +263,8 @@ public class OrderService {
         }
 
         public void createOrderItem(OrderItem itemForm, String orderId, Long tenantId) {
+                if (itemForm.getExpireAfter() == null) itemForm.setExpireAfter(LocalDate.now());
+
                 OrderEntity order = orderRepository.findById(orderId).orElse(null);
                 if (order == null || !order.getTenantId().equals(tenantId)) {
                         log.error("[OrderService] Order ID {} not found for tenant {}", orderId, tenantId);
