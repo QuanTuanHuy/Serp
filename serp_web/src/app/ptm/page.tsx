@@ -1,120 +1,28 @@
 /**
- * PTM v2 - Dashboard Page
+ * PTM Page
  *
  * @author QuanTuanHuy
- * @description Part of Serp Project - Main dashboard view
+ * @description Part of Serp Project
  */
 
 'use client';
 
 import { useEffect } from 'react';
-import { useDispatch } from 'react-redux';
-import { CheckSquare, Target, Clock, AlertCircle } from 'lucide-react';
-import { setActiveView } from '@/modules/ptm/store/uiSlice';
-import {
-  StatsCard,
-  TodaySchedule,
-  RecentTasks,
-  WeeklyOverview,
-} from '@/modules/ptm/components/dashboard';
-import { QuickAddTask } from '@/modules/ptm';
-import { useDashboardStats } from '@/modules/ptm/hooks';
+import { useRouter } from 'next/navigation';
 
-export default function PTMDashboardPage() {
-  const dispatch = useDispatch();
-  const { stats, isLoading } = useDashboardStats();
+export default function PTMPage() {
+  const router = useRouter();
 
   useEffect(() => {
-    dispatch(setActiveView('dashboard'));
-  }, [dispatch]);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd/Ctrl + R to refresh dashboard
-      if ((e.metaKey || e.ctrlKey) && e.key === 'r') {
-        e.preventDefault();
-        window.location.reload();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+    router.replace('/ptm/dashboard');
+  }, [router]);
 
   return (
-    <div className='space-y-6'>
-      {/* Header */}
-      <div className='flex items-center justify-between'>
-        <div>
-          <h1 className='text-2xl font-bold'>Dashboard</h1>
-          <p className='text-muted-foreground'>
-            Welcome back! Here's your productivity overview.
-          </p>
-        </div>
-        <QuickAddTask showIcon={true} variant='default' />
-      </div>
-
-      {/* Stats Grid */}
-      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
-        <StatsCard
-          title='Total Tasks'
-          value={stats.totalTasks}
-          subtitle={`${stats.completedTasks} completed`}
-          icon={CheckSquare}
-          color='blue'
-          isLoading={isLoading}
-        />
-
-        <StatsCard
-          title='Completion Rate'
-          value={`${stats.completionRate.toFixed(0)}%`}
-          subtitle='of all tasks'
-          icon={Target}
-          color='green'
-          trend={{
-            value: stats.trends.completionRateTrend,
-            label: 'from last week',
-            isPositive: stats.trends.completionRateTrend > 0,
-          }}
-          isLoading={isLoading}
-        />
-
-        <StatsCard
-          title='Focus Time Today'
-          value={`${stats.focusTimeToday.toFixed(1)}h`}
-          subtitle={`${stats.tasksToday} tasks scheduled`}
-          icon={Clock}
-          color='purple'
-          trend={{
-            value: stats.trends.focusTimeTrend,
-            label: 'from last week',
-            isPositive: stats.trends.focusTimeTrend > 0,
-          }}
-          isLoading={isLoading}
-        />
-
-        <StatsCard
-          title='Overdue Tasks'
-          value={stats.overdueTasks}
-          subtitle='need attention'
-          icon={AlertCircle}
-          color={stats.overdueTasks > 0 ? 'red' : 'amber'}
-          isLoading={isLoading}
-        />
-      </div>
-
-      {/* Main Content Grid */}
-      <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
-        {/* Left Column - 2/3 width */}
-        <div className='lg:col-span-2 space-y-6'>
-          <TodaySchedule />
-          <WeeklyOverview />
-        </div>
-
-        {/* Right Column - 1/3 width */}
-        <div className='lg:col-span-1'>
-          <RecentTasks />
+    <div className='flex h-full items-center justify-center'>
+      <div className='text-center'>
+        <div className='text-lg font-semibold'>Loading PTM Dashboard...</div>
+        <div className='mt-2 text-sm text-muted-foreground'>
+          Redirecting to your personal task management dashboard
         </div>
       </div>
     </div>
