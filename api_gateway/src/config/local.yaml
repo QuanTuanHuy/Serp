@@ -61,3 +61,7 @@ external:
       host: localhost
       port: "8090"
       timeout: 15s
+    salesService:
+      host: localhost
+      port: "8090"
+      timeout: 15s

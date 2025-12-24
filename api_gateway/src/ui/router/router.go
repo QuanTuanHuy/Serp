@@ -152,4 +152,10 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		p.GenericProxyController,
 		p.JWTMiddleware,
 	)
+
+	RegisterSalesRoutes(
+		group,
+		p.GenericProxyController,
+		p.JWTMiddleware,
+	)
 }
