@@ -95,15 +95,18 @@ func (u *taskUseCase) CreateTask(ctx context.Context, userID, tenantID int64, re
 			return nil, err
 		}
 
+		if project != nil {
+			project.UpdateStatsForAddedTask(false)
+			err = u.projectService.UpdateProjectProgress(ctx, tx, project.ID, project.TotalTasks, project.CompletedTasks)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		return task, nil
 	})
 	if err != nil {
 		return nil, err
-	}
-
-	if project != nil {
-		project.UpdateStatsForAddedTask(false)
-		err = u.projectService.UpdateProjectProgress(ctx, nil, project.ID, project.TotalTasks, project.CompletedTasks)
 	}
 
 	return result.(*entity.TaskEntity), nil
