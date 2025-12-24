@@ -463,7 +463,7 @@ export const mockApiHandlers = {
         tenantId: 1,
         title: data.title || 'New Project',
         description: data.description,
-        status: 'ACTIVE',
+        status: 'NEW',
         priority: data.priority || 'MEDIUM',
         progressPercentage: 0,
         color: data.color || '#3B82F6',

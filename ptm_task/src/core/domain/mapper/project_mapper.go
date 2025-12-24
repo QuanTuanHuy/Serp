@@ -81,6 +81,7 @@ func (m *ProjectMapper) EntityToResponse(project *entity.ProjectEntity, includeS
 		Title:              project.Title,
 		Description:        project.Description,
 		Status:             project.Status,
+		ActiveStatus:       project.ActiveStatus,
 		Priority:           project.Priority,
 		StartDateMs:        project.StartDateMs,
 		DeadlineMs:         project.DeadlineMs,

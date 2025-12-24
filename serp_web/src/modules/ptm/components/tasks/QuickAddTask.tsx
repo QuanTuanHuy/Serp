@@ -57,7 +57,8 @@ export function QuickAddTask({
   const [quickAddTask, { isLoading: isQuickAdding }] =
     useQuickAddTaskMutation();
   const [createTask, { isLoading: isCreating }] = useCreateTaskMutation();
-  const { data: projects } = useGetProjectsQuery({});
+  const { data: projectsResponse } = useGetProjectsQuery({});
+  const projects = projectsResponse?.data.items || [];
 
   const isLoading = isQuickAdding || isCreating;
 

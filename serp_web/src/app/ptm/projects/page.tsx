@@ -1,9 +1,7 @@
-/**
- * PTM v2 - Projects Page (Optimized)
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - Clean, focused project management
- */
+/*
+Author: QuanTuanHuy
+Description: Part of Serp Project
+*/
 
 'use client';
 
@@ -16,26 +14,15 @@ import {
 import { Card } from '@/shared/components/ui/card';
 import { Button } from '@/shared/components/ui/button';
 import { FolderKanban, Plus, CheckCircle2, Clock } from 'lucide-react';
-import { useGetProjectsQuery } from '@/modules/ptm/services/projectApi';
+import { useProjectStats } from '@/modules/ptm/hooks';
 
 export default function ProjectsPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(
     null
   );
 
-  const { data: projects = [] } = useGetProjectsQuery({});
+  const { stats, isLoading } = useProjectStats();
 
-  // Calculate stats from real data
-  const activeProjects = projects.filter((p) => p.status === 'ACTIVE').length;
-  const completedProjects = projects.filter(
-    (p) => p.status === 'COMPLETED'
-  ).length;
-  const totalHours = projects.reduce(
-    (sum, p) => sum + (p.estimatedHours || 0),
-    0
-  );
-
-  // If project is selected, show detail view
   if (selectedProjectId) {
     return (
       <ProjectDetailView
@@ -79,12 +66,12 @@ export default function ProjectsPage() {
           <div className='flex items-center justify-between'>
             <div>
               <p className='text-sm text-muted-foreground font-medium'>
-                Active Projects
+                Active
               </p>
-              <p className='text-3xl font-bold mt-1'>{activeProjects}</p>
+              <p className='text-3xl font-bold mt-1'>{stats.active}</p>
             </div>
-            <div className='p-3 rounded-full bg-primary/10'>
-              <FolderKanban className='h-6 w-6 text-primary' />
+            <div className='p-3 rounded-full bg-orange-500/10'>
+              <FolderKanban className='h-6 w-6 text-orange-600 dark:text-orange-400' />
             </div>
           </div>
         </Card>
@@ -95,7 +82,7 @@ export default function ProjectsPage() {
               <p className='text-sm text-muted-foreground font-medium'>
                 Completed
               </p>
-              <p className='text-3xl font-bold mt-1'>{completedProjects}</p>
+              <p className='text-3xl font-bold mt-1'>{stats.completed}</p>
             </div>
             <div className='p-3 rounded-full bg-green-500/10'>
               <CheckCircle2 className='h-6 w-6 text-green-600 dark:text-green-400' />
@@ -109,7 +96,7 @@ export default function ProjectsPage() {
               <p className='text-sm text-muted-foreground font-medium'>
                 Total Hours
               </p>
-              <p className='text-3xl font-bold mt-1'>{totalHours}h</p>
+              <p className='text-3xl font-bold mt-1'>{stats.totalHours}h</p>
             </div>
             <div className='p-3 rounded-full bg-blue-500/10'>
               <Clock className='h-6 w-6 text-blue-600 dark:text-blue-400' />

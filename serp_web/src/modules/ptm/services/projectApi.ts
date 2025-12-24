@@ -1,112 +1,107 @@
-/**
- * PTM - Project API Endpoints
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - Project CRUD operations
- */
+/*
+Author: QuanTuanHuy
+Description: Part of Serp Project
+*/
 
 import { ptmApi } from './api';
-import { createDataTransform } from '@/lib/store/api/utils';
-import { USE_MOCK_DATA, mockApiHandlers } from '../mocks/mockHandlers';
+import {
+  createDataTransform,
+  createPaginatedTransform,
+} from '@/lib/store/api/utils';
 import type {
   Project,
   CreateProjectRequest,
   UpdateProjectRequest,
+  Task,
+  ProjectFilterParams,
 } from '../types';
+import type { PaginatedResponse } from '@/lib/store/api/types';
 
 export const projectApi = ptmApi.injectEndpoints({
   endpoints: (builder) => ({
-    // Get all projects
-    getProjects: builder.query<Project[], { status?: string }>({
-      queryFn: async (params) => {
-        if (USE_MOCK_DATA) {
-          const data = await mockApiHandlers.projects.getAll(params);
-          return { data };
-        }
-        return {
-          error: {
-            status: 'CUSTOM_ERROR',
-            error: 'API not implemented',
-          } as any,
-        };
-      },
-      providesTags: (result) =>
-        result
-          ? [
-              ...result.map(({ id }) => ({ type: 'ptm/Project' as const, id })),
-              { type: 'ptm/Project', id: 'LIST' },
-            ]
-          : [{ type: 'ptm/Project', id: 'LIST' }],
-    }),
+    getProjects: builder.query<PaginatedResponse<Project>, ProjectFilterParams>(
+      {
+        query: (params = {}) => ({
+          url: '/projects',
+          method: 'GET',
+          params: {
+            ...(params.status && { status: params.status }),
+            ...(params.priority && { priority: params.priority }),
+            page: params.page ?? 0,
+            pageSize: params.pageSize ?? 20,
+          },
+        }),
+        extraOptions: { service: 'ptm' },
+        transformResponse: createPaginatedTransform<Project>(),
+        providesTags: (result) =>
+          result?.data.items
+            ? [
+                ...result.data.items.map(({ id }) => ({
+                  type: 'ptm/Project' as const,
+                  id,
+                })),
+                { type: 'ptm/Project', id: 'LIST' },
+              ]
+            : [{ type: 'ptm/Project', id: 'LIST' }],
+      }
+    ),
 
-    // Get single project
     getProject: builder.query<Project, number>({
-      queryFn: async (id) => {
-        if (USE_MOCK_DATA) {
-          const data = await mockApiHandlers.projects.getById(id);
-          return { data };
-        }
-        return {
-          error: {
-            status: 'CUSTOM_ERROR',
-            error: 'API not implemented',
-          } as any,
-        };
-      },
+      query: (id) => ({
+        url: `/projects/${id}`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'ptm' },
+      transformResponse: createDataTransform<Project>(),
       providesTags: (_result, _error, id) => [{ type: 'ptm/Project', id }],
     }),
 
-    // Create project
+    getProjectTasks: builder.query<Task[], number>({
+      query: (projectId) => ({
+        url: `/projects/${projectId}/tasks`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'ptm' },
+      transformResponse: createDataTransform<Task[]>(),
+      providesTags: (result, _error, projectId) =>
+        result
+          ? [
+              ...result.map(({ id }) => ({ type: 'ptm/Task' as const, id })),
+              { type: 'ptm/Task', id: `PROJECT_${projectId}` },
+            ]
+          : [{ type: 'ptm/Task', id: `PROJECT_${projectId}` }],
+    }),
+
     createProject: builder.mutation<Project, CreateProjectRequest>({
-      queryFn: async (body) => {
-        if (USE_MOCK_DATA) {
-          const data = await mockApiHandlers.projects.create(body);
-          return { data };
-        }
-        return {
-          error: {
-            status: 'CUSTOM_ERROR',
-            error: 'API not implemented',
-          } as any,
-        };
-      },
+      query: (body) => ({
+        url: '/projects',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'ptm' },
+      transformResponse: createDataTransform<Project>(),
       invalidatesTags: [{ type: 'ptm/Project', id: 'LIST' }],
     }),
 
-    // Update project
-    updateProject: builder.mutation<Project, UpdateProjectRequest>({
-      queryFn: async ({ id, ...patch }) => {
-        if (USE_MOCK_DATA) {
-          const data = await mockApiHandlers.projects.update(id, patch);
-          return { data };
-        }
-        return {
-          error: {
-            status: 'CUSTOM_ERROR',
-            error: 'API not implemented',
-          } as any,
-        };
-      },
+    updateProject: builder.mutation<void, UpdateProjectRequest>({
+      query: ({ id, ...patch }) => ({
+        url: `/projects/${id}`,
+        method: 'PATCH',
+        body: patch,
+      }),
+      extraOptions: { service: 'ptm' },
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'ptm/Project', id },
         { type: 'ptm/Project', id: 'LIST' },
       ],
     }),
 
-    // Delete project
     deleteProject: builder.mutation<void, number>({
-      queryFn: async (id) => {
-        if (USE_MOCK_DATA) {
-          await mockApiHandlers.projects.delete(id);
-          return { data: undefined };
-        }
-        return {
-          error: {
-            status: 'CUSTOM_ERROR',
-            error: 'API not implemented',
-          } as any,
-        };
-      },
+      query: (id) => ({
+        url: `/projects/${id}`,
+        method: 'DELETE',
+      }),
+      extraOptions: { service: 'ptm' },
       invalidatesTags: (_result, _error, id) => [
         { type: 'ptm/Project', id },
         { type: 'ptm/Project', id: 'LIST' },
@@ -119,6 +114,7 @@ export const projectApi = ptmApi.injectEndpoints({
 export const {
   useGetProjectsQuery,
   useGetProjectQuery,
+  useGetProjectTasksQuery,
   useCreateProjectMutation,
   useUpdateProjectMutation,
   useDeleteProjectMutation,

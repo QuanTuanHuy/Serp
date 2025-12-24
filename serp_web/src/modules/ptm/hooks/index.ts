@@ -7,3 +7,7 @@
 
 export { useDashboardStats } from './useDashboardStats';
 export type { DashboardStats } from './useDashboardStats';
+
+export { useProjects } from './useProjects';
+export { useProjectStats } from './useProjectStats';
+export { useProjectForm } from './useProjectForm';
