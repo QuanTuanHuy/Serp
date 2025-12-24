@@ -8,7 +8,6 @@ package controller
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/serp/api-gateway/src/core/domain/constant"
-	request "github.com/serp/api-gateway/src/core/domain/dto/request/ptm"
 	service "github.com/serp/api-gateway/src/core/service/ptm"
 	"github.com/serp/api-gateway/src/kernel/utils"
 )
@@ -18,13 +17,13 @@ type NoteController struct {
 }
 
 func (n *NoteController) CreateNote(c *gin.Context) {
-	var req request.CreateNoteRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	var payload map[string]any
+	if err := c.ShouldBindJSON(&payload); err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := n.noteService.CreateNote(c.Request.Context(), &req)
+	res, err := n.noteService.CreateNote(c.Request.Context(), payload)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return
@@ -32,8 +31,16 @@ func (n *NoteController) CreateNote(c *gin.Context) {
 	c.JSON(res.Code, res)
 }
 
-func (n *NoteController) GetAllNotes(c *gin.Context) {
-	res, err := n.noteService.GetAllNotes(c.Request.Context())
+func (n *NoteController) SearchNotes(c *gin.Context) {
+	payload := map[string]any{}
+	queryParams := c.Request.URL.Query()
+	for key, values := range queryParams {
+		if len(values) > 0 {
+			payload[key] = values[0]
+		}
+	}
+
+	res, err := n.noteService.SearchNotes(c.Request.Context(), payload)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return
@@ -55,6 +62,26 @@ func (n *NoteController) GetNoteByID(c *gin.Context) {
 	c.JSON(res.Code, res)
 }
 
+func (n *NoteController) UpdateNote(c *gin.Context) {
+	noteID, valid := utils.ValidateAndParseID(c, "id")
+	if !valid {
+		return
+	}
+
+	var payload map[string]any
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+		return
+	}
+
+	res, err := n.noteService.UpdateNote(c.Request.Context(), noteID, payload)
+	if err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
+		return
+	}
+	c.JSON(res.Code, res)
+}
+
 func (n *NoteController) DeleteNote(c *gin.Context) {
 	noteID, valid := utils.ValidateAndParseID(c, "id")
 	if !valid {
@@ -69,13 +96,13 @@ func (n *NoteController) DeleteNote(c *gin.Context) {
 	c.JSON(res.Code, res)
 }
 
-func (n *NoteController) LockNote(c *gin.Context) {
-	noteID, valid := utils.ValidateAndParseID(c, "id")
+func (n *NoteController) GetNotesByProjectID(c *gin.Context) {
+	projectID, valid := utils.ValidateAndParseID(c, "id")
 	if !valid {
 		return
 	}
 
-	res, err := n.noteService.LockNote(c.Request.Context(), noteID)
+	res, err := n.noteService.GetNotesByProjectID(c.Request.Context(), projectID)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return
@@ -83,13 +110,13 @@ func (n *NoteController) LockNote(c *gin.Context) {
 	c.JSON(res.Code, res)
 }
 
-func (n *NoteController) UnlockNote(c *gin.Context) {
-	noteID, valid := utils.ValidateAndParseID(c, "id")
+func (n *NoteController) GetNotesByTaskID(c *gin.Context) {
+	taskID, valid := utils.ValidateAndParseID(c, "id")
 	if !valid {
 		return
 	}
 
-	res, err := n.noteService.UnlockNote(c.Request.Context(), noteID)
+	res, err := n.noteService.GetNotesByTaskID(c.Request.Context(), taskID)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return

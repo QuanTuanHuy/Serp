@@ -16,11 +16,13 @@ import (
 )
 
 type AvailabilityCalendarAdapter struct {
-	db *gorm.DB
+	BaseStoreAdapter
 }
 
 func NewAvailabilityCalendarAdapter(db *gorm.DB) p.IAvailabilityCalendarStorePort {
-	return &AvailabilityCalendarAdapter{db: db}
+	return &AvailabilityCalendarAdapter{
+		BaseStoreAdapter: BaseStoreAdapter{db: db},
+	}
 }
 
 func (a *AvailabilityCalendarAdapter) ListByUser(ctx context.Context, userID int64) ([]*dom.AvailabilityCalendarEntity, error) {
@@ -39,34 +41,25 @@ func (a *AvailabilityCalendarAdapter) CreateBatch(ctx context.Context, tx *gorm.
 		return nil
 	}
 	models := mp.ToAvailabilityCalendarModels(items)
-	dbx := tx
-	if dbx == nil {
-		dbx = a.db
-	}
-	return dbx.WithContext(ctx).Create(&models).Error
+	return a.WithTx(tx).WithContext(ctx).Create(&models).Error
 }
 
 func (a *AvailabilityCalendarAdapter) UpdateBatch(ctx context.Context, tx *gorm.DB, items []*dom.AvailabilityCalendarEntity) error {
 	if len(items) == 0 {
 		return nil
 	}
-	dbx := tx
-	if dbx == nil {
-		dbx = a.db
-	}
-
 	for _, item := range items {
 		if item == nil {
 			continue
 		}
 		mdl := mp.ToAvailabilityCalendarModel(item)
 		if item.IsNew() {
-			if err := dbx.WithContext(ctx).Create(mdl).Error; err != nil {
+			if err := a.WithTx(tx).WithContext(ctx).Create(mdl).Error; err != nil {
 				return err
 			}
 			continue
 		}
-		if err := dbx.WithContext(ctx).Model(&m.AvailabilityCalendarModel{}).
+		if err := a.WithTx(tx).WithContext(ctx).Model(&m.AvailabilityCalendarModel{}).
 			Where("id = ?", mdl.ID).
 			Updates(mdl).Error; err != nil {
 			return err
@@ -76,20 +69,12 @@ func (a *AvailabilityCalendarAdapter) UpdateBatch(ctx context.Context, tx *gorm.
 }
 
 func (a *AvailabilityCalendarAdapter) DeleteByUser(ctx context.Context, tx *gorm.DB, userID int64) error {
-	dbx := tx
-	if dbx == nil {
-		dbx = a.db
-	}
-	return dbx.WithContext(ctx).Where("user_id = ?", userID).Delete(&m.AvailabilityCalendarModel{}).Error
+	return a.WithTx(tx).WithContext(ctx).Where("user_id = ?", userID).Delete(&m.AvailabilityCalendarModel{}).Error
 }
 
 func (a *AvailabilityCalendarAdapter) DeleteByUserAndDays(ctx context.Context, tx *gorm.DB, userID int64, days []int) error {
 	if len(days) == 0 {
 		return nil
 	}
-	dbx := tx
-	if dbx == nil {
-		dbx = a.db
-	}
-	return dbx.WithContext(ctx).Where("user_id = ? AND day_of_week IN ?", userID, days).Delete(&m.AvailabilityCalendarModel{}).Error
+	return a.WithTx(tx).WithContext(ctx).Where("user_id = ? AND day_of_week IN ?", userID, days).Delete(&m.AvailabilityCalendarModel{}).Error
 }

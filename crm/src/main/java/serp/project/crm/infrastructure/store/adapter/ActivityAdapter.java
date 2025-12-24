@@ -21,7 +21,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -33,8 +32,7 @@ public class ActivityAdapter implements IActivityPort {
     @Override
     public ActivityEntity save(ActivityEntity activityEntity) {
         var model = activityMapper.toModel(activityEntity);
-        var savedModel = activityRepository.save(model);
-        return activityMapper.toEntity(savedModel);
+        return activityMapper.toEntity(activityRepository.save(model));
     }
 
     @Override
@@ -53,59 +51,35 @@ public class ActivityAdapter implements IActivityPort {
 
     @Override
     public Pair<List<ActivityEntity>, Long> findByLeadId(Long leadId, Long tenantId, PageRequest pageRequest) {
-        List<ActivityEntity> allActivities = activityRepository.findByTenantIdAndLeadId(tenantId, leadId)
-                .stream()
-                .map(activityMapper::toEntity)
-                .collect(Collectors.toList());
-
-        int start = pageRequest.getOffset();
-        int end = Math.min(start + pageRequest.getSize(), allActivities.size());
-        List<ActivityEntity> pageContent = allActivities.subList(start, end);
-
-        return Pair.of(pageContent, (long) allActivities.size());
+        var pageable = activityMapper.toPageable(pageRequest);
+        var page = activityRepository.findByTenantIdAndLeadId(tenantId, leadId, pageable)
+                .map(activityMapper::toEntity);
+        return activityMapper.pageToPair(page);
     }
 
     @Override
     public Pair<List<ActivityEntity>, Long> findByCustomerId(Long customerId, Long tenantId, PageRequest pageRequest) {
-        List<ActivityEntity> allActivities = activityRepository.findByTenantIdAndCustomerId(tenantId, customerId)
-                .stream()
-                .map(activityMapper::toEntity)
-                .collect(Collectors.toList());
-
-        int start = pageRequest.getOffset();
-        int end = Math.min(start + pageRequest.getSize(), allActivities.size());
-        List<ActivityEntity> pageContent = allActivities.subList(start, end);
-
-        return Pair.of(pageContent, (long) allActivities.size());
+        var pageable = activityMapper.toPageable(pageRequest);
+        var page = activityRepository.findByTenantIdAndCustomerId(tenantId, customerId, pageable)
+                .map(activityMapper::toEntity);
+        return activityMapper.pageToPair(page);
     }
 
     @Override
     public Pair<List<ActivityEntity>, Long> findByOpportunityId(Long opportunityId, Long tenantId,
             PageRequest pageRequest) {
-        List<ActivityEntity> allActivities = activityRepository.findByTenantIdAndOpportunityId(tenantId, opportunityId)
-                .stream()
-                .map(activityMapper::toEntity)
-                .collect(Collectors.toList());
-
-        int start = pageRequest.getOffset();
-        int end = Math.min(start + pageRequest.getSize(), allActivities.size());
-        List<ActivityEntity> pageContent = allActivities.subList(start, end);
-
-        return Pair.of(pageContent, (long) allActivities.size());
+        var pageable = activityMapper.toPageable(pageRequest);
+        var page = activityRepository.findByTenantIdAndOpportunityId(tenantId, opportunityId, pageable)
+                .map(activityMapper::toEntity);
+        return activityMapper.pageToPair(page);
     }
 
     @Override
     public Pair<List<ActivityEntity>, Long> findByContactId(Long contactId, Long tenantId, PageRequest pageRequest) {
-        List<ActivityEntity> allActivities = activityRepository.findByTenantIdAndContactId(tenantId, contactId)
-                .stream()
-                .map(activityMapper::toEntity)
-                .collect(Collectors.toList());
-
-        int start = pageRequest.getOffset();
-        int end = Math.min(start + pageRequest.getSize(), allActivities.size());
-        List<ActivityEntity> pageContent = allActivities.subList(start, end);
-
-        return Pair.of(pageContent, (long) allActivities.size());
+        var pageable = activityMapper.toPageable(pageRequest);
+        var page = activityRepository.findByTenantIdAndContactId(tenantId, contactId, pageable)
+                .map(activityMapper::toEntity);
+        return activityMapper.pageToPair(page);
     }
 
     @Override
@@ -142,6 +116,14 @@ public class ActivityAdapter implements IActivityPort {
     }
 
     @Override
+    public List<ActivityEntity> findAllByLeadId(Long leadId, Long tenantId) {
+        return activityRepository.findByLeadId(leadId)
+                .stream()
+                .map(activityMapper::toEntity)
+                .toList();
+    }
+
+    @Override
     public List<ActivityEntity> findOverdueActivities(Long tenantId) {
         Long currentTimestamp = LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
         // Repository returns Page, get all with large pageable
@@ -149,7 +131,7 @@ public class ActivityAdapter implements IActivityPort {
         return activityRepository.findOverdueActivities(tenantId, currentTimestamp, pageable)
                 .stream()
                 .map(activityMapper::toEntity)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -160,7 +142,7 @@ public class ActivityAdapter implements IActivityPort {
         return activityRepository.findUpcomingActivities(tenantId, currentTimestamp, nextWeekTimestamp)
                 .stream()
                 .map(activityMapper::toEntity)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override

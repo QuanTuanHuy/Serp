@@ -6,6 +6,7 @@ import {
   NotificationProvider,
   StoreProvider,
 } from '@/shared/providers';
+import { NotificationToastProvider } from '@/modules/notifications';
 
 import './globals.css';
 
@@ -20,10 +21,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'SERP - Enterprise Resource Planning',
+  title: 'Smart Enterprise Resource Planning | SERP',
   description: 'Modern ERP system built with Next.js and TypeScript',
   keywords: ['ERP', 'CRM', 'Accounting', 'Inventory', 'Business Management'],
   authors: [{ name: 'QuanTuanHuy' }],
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 export const viewport = 'width=device-width, initial-scale=1';
@@ -40,7 +44,10 @@ export default function RootLayout({
       >
         <StoreProvider>
           <ThemeProvider>
-            <NotificationProvider>{children}</NotificationProvider>
+            <NotificationProvider>
+              <NotificationToastProvider />
+              {children}
+            </NotificationProvider>
           </ThemeProvider>
         </StoreProvider>
       </body>

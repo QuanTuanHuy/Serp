@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/serp/ptm-schedule/src/core/domain/enum"
-	"github.com/serp/ptm-schedule/src/kernel/utils/mathutils"
 )
 
 const DefaultMinSplitDuration = 30
@@ -161,7 +160,7 @@ func (e *ScheduleEventEntity) OverlapsWith(other *ScheduleEventEntity) bool {
 	if e.DateMs != other.DateMs || e.SchedulePlanID != other.SchedulePlanID {
 		return false
 	}
-	return mathutils.Max(e.StartMin, other.StartMin) < mathutils.Min(e.EndMin, other.EndMin)
+	return max(e.StartMin, other.StartMin) < min(e.EndMin, other.EndMin)
 }
 
 func (e *ScheduleEventEntity) ContainsTime(dateMs int64, timeMin int) bool {
@@ -296,4 +295,40 @@ func (e *ScheduleEventEntity) GetDurationVariance() int {
 		return 0
 	}
 	return e.GetActualDuration() - e.DurationMinutes()
+}
+
+// Clone creates a deep copy of the event
+func (e *ScheduleEventEntity) Clone() *ScheduleEventEntity {
+	clone := &ScheduleEventEntity{
+		BaseEntity:     BaseEntity{}, // Will get new ID when saved
+		SchedulePlanID: e.SchedulePlanID,
+		ScheduleTaskID: e.ScheduleTaskID,
+		DateMs:         e.DateMs,
+		StartMin:       e.StartMin,
+		EndMin:         e.EndMin,
+		Title:          e.Title,
+		PartIndex:      e.PartIndex,
+		TotalParts:     e.TotalParts,
+		Status:         e.Status,
+		IsPinned:       e.IsPinned,
+	}
+
+	if e.LinkedEventID != nil {
+		linkedID := *e.LinkedEventID
+		clone.LinkedEventID = &linkedID
+	}
+	if e.UtilityScore != nil {
+		score := *e.UtilityScore
+		clone.UtilityScore = &score
+	}
+	if e.ActualStartMin != nil {
+		start := *e.ActualStartMin
+		clone.ActualStartMin = &start
+	}
+	if e.ActualEndMin != nil {
+		end := *e.ActualEndMin
+		clone.ActualEndMin = &end
+	}
+
+	return clone
 }

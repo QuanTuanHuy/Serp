@@ -63,13 +63,6 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
     isLoading: permissionsLoading,
   } = usePermissions();
 
-  console.log('RoleGuard Debug:', {
-    isAuthenticated,
-    isLoading,
-    user,
-    userPermissions,
-  });
-
   // Show loading state
   if (isLoading || permissionsLoading) {
     return (

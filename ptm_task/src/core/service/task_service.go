@@ -50,7 +50,7 @@ type ITaskService interface {
 
 	PushTaskCreatedEvent(ctx context.Context, task *entity.TaskEntity) error
 	PushTaskUpdatedEvent(ctx context.Context, task *entity.TaskEntity, req *request.UpdateTaskRequest) error
-	PushTaskDeletedEvent(ctx context.Context, taskID int64) error
+	PushTaskDeletedEvent(ctx context.Context, taskID, userID int64) error
 }
 
 type taskService struct {
@@ -302,9 +302,10 @@ func (s *taskService) PushTaskUpdatedEvent(ctx context.Context, task *entity.Tas
 	return s.kafkaProducer.SendMessage(ctx, string(constant.TASK_TOPIC), strconv.FormatInt(task.ID, 10), message)
 }
 
-func (s *taskService) PushTaskDeletedEvent(ctx context.Context, taskID int64) error {
+func (s *taskService) PushTaskDeletedEvent(ctx context.Context, taskID, userID int64) error {
 	event := &message.TaskDeletedEvent{
 		TaskID: taskID,
+		UserID: userID,
 	}
 	message := utils.BuildDeletedEvent(ctx, "task", event)
 	return s.kafkaProducer.SendMessage(ctx, string(constant.TASK_TOPIC), strconv.FormatInt(taskID, 10), message)

@@ -41,14 +41,14 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
-          issuer-uri: http://localhost:8180/realms/serp
+          jwk-set-uri: ${KEYCLOAK_URL}/realms/serp/protocol/openid-connect/certs
+          issuer-uri: ${KEYCLOAK_URL}/realms/serp
 
 app:
   keycloak:
-    url: http://localhost:8180
-    jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
-    expected-issuer: http://localhost:8180/realms/serp
+    url: ${KEYCLOAK_URL}
+    jwk-set-uri: ${KEYCLOAK_URL}/realms/serp/protocol/openid-connect/certs
+    expected-issuer: ${KEYCLOAK_URL}/realms/serp
     expected-audience: serp-account
     realm: serp
     client-id: serp-account
@@ -61,8 +61,8 @@ app:
 
   security:
     admin:
-      email: serp.org@gmail.com
-      password: SuperAdmin@123
+      email: ${ADMIN_EMAIL}
+      password: ${ADMIN_PASSWORD}
 
     filter:
       publicUrls:
@@ -309,7 +309,7 @@ app:
             - SYSTEM_MODERATOR
             - ORG_OWNER
             - ORG_ADMIN
-          permissions:
+          permissions: 
 
 server:
   port: 8081

@@ -18,7 +18,6 @@ import {
 } from '@/shared/components';
 import {
   Search,
-  Bell,
   Settings,
   User,
   ChevronDown,
@@ -28,6 +27,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import { useUser } from '@/modules/account';
+import { NotificationButton } from '@/modules/notifications';
 
 interface LogisticsHeaderProps {
   className?: string;
@@ -40,7 +40,6 @@ export const LogisticsHeader: React.FC<LogisticsHeaderProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [notifications, setNotifications] = useState(2);
   const [hidden, setHidden] = useState(false);
 
   const { getInitials, getDisplayName, user } = useUser();
@@ -215,16 +214,10 @@ export const LogisticsHeader: React.FC<LogisticsHeaderProps> = ({
           </div>
 
           {/* Notifications */}
-          <div className='relative'>
-            <Button variant='ghost' size='icon' className='relative'>
-              <Bell className='h-5 w-5' />
-              {notifications > 0 && (
-                <span className='absolute top-1 right-1 h-4 w-4 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center'>
-                  {notifications}
-                </span>
-              )}
-            </Button>
-          </div>
+          <NotificationButton
+            settingsPath='/logistics/settings'
+            allNotificationsPath='/logistics/activity'
+          />
 
           {/* Theme Toggle */}
           <ThemeToggle />

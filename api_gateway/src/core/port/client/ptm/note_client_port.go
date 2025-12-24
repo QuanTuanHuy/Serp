@@ -8,15 +8,15 @@ package port
 import (
 	"context"
 
-	request "github.com/serp/api-gateway/src/core/domain/dto/request/ptm"
 	"github.com/serp/api-gateway/src/core/domain/dto/response"
 )
 
 type INoteClientPort interface {
-	CreateNote(ctx context.Context, req *request.CreateNoteRequest) (*response.BaseResponse, error)
-	GetAllNotes(ctx context.Context) (*response.BaseResponse, error)
+	CreateNote(ctx context.Context, payload map[string]any) (*response.BaseResponse, error)
+	SearchNotes(ctx context.Context, payload map[string]any) (*response.BaseResponse, error)
 	GetNoteByID(ctx context.Context, noteID int64) (*response.BaseResponse, error)
+	UpdateNote(ctx context.Context, noteID int64, payload map[string]any) (*response.BaseResponse, error)
 	DeleteNote(ctx context.Context, noteID int64) (*response.BaseResponse, error)
-	LockNote(ctx context.Context, noteID int64) (*response.BaseResponse, error)
-	UnlockNote(ctx context.Context, noteID int64) (*response.BaseResponse, error)
+	GetNotesByProjectID(ctx context.Context, projectID int64) (*response.BaseResponse, error)
+	GetNotesByTaskID(ctx context.Context, taskID int64) (*response.BaseResponse, error)
 }

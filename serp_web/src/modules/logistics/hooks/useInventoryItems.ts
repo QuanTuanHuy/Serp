@@ -41,9 +41,7 @@ export const useInventoryItems = () => {
   const filters = useAppSelector(selectInventoryItemFilters);
   const dialogOpen = useAppSelector(selectInventoryItemDialogOpen);
   const dialogMode = useAppSelector(selectInventoryItemDialogMode);
-  const selectedInventoryItemId = useAppSelector(
-    selectSelectedInventoryItemId
-  );
+  const selectedInventoryItemId = useAppSelector(selectSelectedInventoryItemId);
 
   // RTK Query hooks
   const { data: inventoryItemsData, isLoading: isLoadingInventoryItems } =

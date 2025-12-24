@@ -12,6 +12,7 @@ import (
 	"github.com/serp/api-gateway/src/cmd/modules"
 	"github.com/serp/api-gateway/src/kernel/properties"
 	"github.com/serp/api-gateway/src/kernel/utils"
+	"github.com/serp/api-gateway/src/ui/controller/common"
 	"github.com/serp/api-gateway/src/ui/middleware"
 	"github.com/serp/api-gateway/src/ui/router"
 	"go.uber.org/fx"
@@ -23,9 +24,11 @@ func All() fx.Option {
 
 		// Business modules
 		modules.AccountModule(),
+		modules.CrmModule(),
 		modules.PtmModule(),
 		modules.PurchaseModule(),
 		modules.LogisticsModule(),
+		modules.NotificationModule(),
 
 		// HTTP server and routing
 		HttpServerModule(),
@@ -55,6 +58,7 @@ func CoreInfrastructure() fx.Option {
 		fx.Provide(utils.NewKeycloakJwksUtils),
 		fx.Provide(middleware.NewJWTMiddleware),
 		fx.Provide(middleware.NewCorsMiddleware),
+		fx.Provide(common.NewGenericProxyController),
 	)
 }
 

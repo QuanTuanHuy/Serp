@@ -17,6 +17,7 @@ import {
 import storage from 'redux-persist/lib/storage';
 import { api } from './api';
 import { logisticsApi } from '@/modules/logistics/services/api';
+import { websocketMiddleware } from './middleware/websocketMiddleware';
 
 // Import feature slices
 import { authSlice, userSlice } from '@/modules/account/store';
@@ -25,6 +26,7 @@ import { adminReducer } from '@/modules/admin/store';
 import { ptmReducer } from '@/modules/ptm';
 import { purchaseReducer } from '@/modules/purchase/store';
 import { logisticsReducer } from '@/modules/logistics/store';
+import { notificationReducer } from '@/modules/notifications';
 
 // Persist configuration
 const accountPersistConfig = {
@@ -49,6 +51,7 @@ const rootReducer = combineReducers({
   ptm: ptmReducer,
   purchase: purchaseReducer,
   logistics: logisticsReducer,
+  notifications: notificationReducer,
 });
 
 // Configure store
@@ -62,7 +65,8 @@ export const store = configureStore({
     })
       // Add RTK Query middleware
       .concat(api.middleware)
-      .concat(logisticsApi.middleware),
+      .concat(logisticsApi.middleware)
+      .concat(websocketMiddleware),
 
   // Enable Redux DevTools in development
   devTools: process.env.NODE_ENV !== 'production',

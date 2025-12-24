@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import serp.project.crm.core.domain.constant.ErrorMessage;
 import serp.project.crm.core.domain.dto.GeneralResponse;
 import serp.project.crm.core.domain.dto.PageRequest;
 import serp.project.crm.core.domain.dto.PageResponse;
@@ -16,6 +18,7 @@ import serp.project.crm.core.domain.dto.request.CreateContactRequest;
 import serp.project.crm.core.domain.dto.request.UpdateContactRequest;
 import serp.project.crm.core.domain.dto.response.ContactResponse;
 import serp.project.crm.core.domain.entity.ContactEntity;
+import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.mapper.ContactDtoMapper;
 import serp.project.crm.core.service.IContactService;
 import serp.project.crm.kernel.utils.ResponseUtils;
@@ -31,59 +34,41 @@ public class ContactUseCase {
     private final ContactDtoMapper contactDtoMapper;
     private final ResponseUtils responseUtils;
 
-    @Transactional
-    public GeneralResponse<?> createContact(CreateContactRequest request, Long tenantId) {
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> createContact(CreateContactRequest request, Long userId, Long tenantId) {
         try {
             ContactEntity contactEntity = contactDtoMapper.toEntity(request);
-            ContactEntity createdContact = contactService.createContact(contactEntity, tenantId);
+            ContactEntity createdContact = contactService.createContact(contactEntity, userId, tenantId);
             ContactResponse response = contactDtoMapper.toResponse(createdContact);
 
-            log.info("Contact created successfully with ID: {}", createdContact.getId());
+            log.info("[ContactUseCase] Contact created successfully with ID: {}", createdContact.getId());
             return responseUtils.success(response, "Contact created successfully");
 
-        } catch (IllegalArgumentException e) {
-            log.error("Validation error creating contact: {}", e.getMessage());
-            return responseUtils.badRequest(e.getMessage());
+        } catch (AppException e) {
+            log.error("[ContactUseCase] Error creating contact: {}", e.getMessage());
+            throw e;
         } catch (Exception e) {
-            log.error("Unexpected error creating contact: {}", e.getMessage(), e);
-            return responseUtils.internalServerError("Failed to create contact");
+            log.error("[ContactUseCase] Unexpected error creating contact: {}", e.getMessage(), e);
+            throw e;
         }
     }
 
-    @Transactional
-    public GeneralResponse<?> updateContact(Long id, UpdateContactRequest request, Long tenantId) {
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> updateContact(Long id, UpdateContactRequest request, Long userId, Long tenantId) {
         try {
             ContactEntity updates = contactDtoMapper.toEntity(request);
-            ContactEntity updatedContact = contactService.updateContact(id, updates, tenantId);
+            ContactEntity updatedContact = contactService.updateContact(id, updates, userId, tenantId);
             ContactResponse response = contactDtoMapper.toResponse(updatedContact);
 
-            log.info("Contact updated successfully: {}", id);
+            log.info("[ContactUseCase] Contact updated successfully: {}", id);
             return responseUtils.success(response, "Contact updated successfully");
 
-        } catch (IllegalArgumentException e) {
-            log.error("Validation error updating contact: {}", e.getMessage());
-            return responseUtils.badRequest(e.getMessage());
+        } catch (AppException e) {
+            log.error("[ContactUseCase] Error updating contact: {}", e.getMessage());
+            throw e;
         } catch (Exception e) {
-            log.error("Unexpected error updating contact: {}", e.getMessage(), e);
-            return responseUtils.internalServerError("Failed to update contact");
-        }
-    }
-
-    @Transactional
-    public GeneralResponse<?> setPrimaryContact(Long contactId, Long tenantId) {
-        try {
-            ContactEntity contact = contactService.setPrimaryContact(contactId, tenantId);
-            ContactResponse response = contactDtoMapper.toResponse(contact);
-
-            log.info("Primary contact set successfully: {}", contactId);
-            return responseUtils.success(response, "Primary contact set successfully");
-
-        } catch (IllegalArgumentException e) {
-            log.error("Error setting primary contact: {}", e.getMessage());
-            return responseUtils.badRequest(e.getMessage());
-        } catch (Exception e) {
-            log.error("Unexpected error setting primary contact: {}", e.getMessage(), e);
-            return responseUtils.internalServerError("Failed to set primary contact");
+            log.error("[ContactUseCase] Unexpected error updating contact: {}", e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -94,15 +79,32 @@ public class ContactUseCase {
                     .orElse(null);
 
             if (contact == null) {
-                return responseUtils.notFound("Contact not found");
+                return responseUtils.notFound(ErrorMessage.CONTACT_NOT_FOUND);
             }
 
             ContactResponse response = contactDtoMapper.toResponse(contact);
             return responseUtils.success(response);
 
         } catch (Exception e) {
-            log.error("Error fetching contact: {}", e.getMessage(), e);
+            log.error("[ContactUseCase] Error fetching contact: {}", e.getMessage(), e);
             return responseUtils.internalServerError("Failed to fetch contact");
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public GeneralResponse<?> getContactsByCustomerId(Long customerId, Long tenantId) {
+        try {
+            List<ContactEntity> contacts = contactService.getContactsByCustomerId(customerId, tenantId);
+
+            List<ContactResponse> contactResponses = contacts.stream()
+                    .map(contactDtoMapper::toResponse)
+                    .toList();
+
+            return responseUtils.success(contactResponses);
+
+        } catch (Exception e) {
+            log.error("[ContactUseCase] Error fetching contacts by customer ID: {}", e.getMessage(), e);
+            return responseUtils.internalServerError("Failed to fetch contacts");
         }
     }
 
@@ -121,25 +123,25 @@ public class ContactUseCase {
             return responseUtils.success(pageResponse);
 
         } catch (Exception e) {
-            log.error("Error fetching contacts: {}", e.getMessage(), e);
+            log.error("[ContactUseCase] Error fetching contacts: {}", e.getMessage(), e);
             return responseUtils.internalServerError("Failed to fetch contacts");
         }
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> deleteContact(Long id, Long tenantId) {
         try {
             contactService.deleteContact(id, tenantId);
 
-            log.info("Contact deleted successfully: {}", id);
+            log.info("[ContactUseCase] Contact deleted successfully: {}", id);
             return responseUtils.status("Contact deleted successfully");
 
-        } catch (IllegalArgumentException e) {
-            log.error("Validation error deleting contact: {}", e.getMessage());
-            return responseUtils.badRequest(e.getMessage());
+        } catch (AppException e) {
+            log.error("[ContactUseCase] Error deleting contact: {}", e.getMessage());
+            throw e;
         } catch (Exception e) {
-            log.error("Unexpected error deleting contact: {}", e.getMessage(), e);
-            return responseUtils.internalServerError("Failed to delete contact");
+            log.error("[ContactUseCase] Unexpected error deleting contact: {}", e.getMessage(), e);
+            throw e;
         }
     }
 }

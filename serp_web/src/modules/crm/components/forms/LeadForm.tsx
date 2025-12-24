@@ -1,5 +1,7 @@
 // LeadForm Component (authors: QuanTuanHuy, Description: Part of Serp Project)
 
+'use client';
+
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,7 +12,16 @@ import {
   Card,
   CardContent,
   CardHeader,
+  CardTitle,
+  Textarea,
+  Badge,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/shared/components/ui';
+import { X } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import type {
   Lead,
@@ -151,47 +162,47 @@ export const LeadForm: React.FC<LeadFormProps> = ({
             <h3 className='text-lg font-medium'>Personal Information</h3>
 
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-              <div>
+              <div className='space-y-2'>
                 <Label htmlFor='firstName'>First Name *</Label>
                 <Input
                   id='firstName'
                   {...register('firstName')}
-                  className={errors.firstName ? 'border-red-500' : ''}
+                  className={errors.firstName ? 'border-destructive' : ''}
                   disabled={isLoading}
                 />
                 {errors.firstName && (
-                  <p className='text-sm text-red-600 mt-1'>
+                  <p className='text-sm text-destructive'>
                     {errors.firstName.message}
                   </p>
                 )}
               </div>
 
-              <div>
+              <div className='space-y-2'>
                 <Label htmlFor='lastName'>Last Name *</Label>
                 <Input
                   id='lastName'
                   {...register('lastName')}
-                  className={errors.lastName ? 'border-red-500' : ''}
+                  className={errors.lastName ? 'border-destructive' : ''}
                   disabled={isLoading}
                 />
                 {errors.lastName && (
-                  <p className='text-sm text-red-600 mt-1'>
+                  <p className='text-sm text-destructive'>
                     {errors.lastName.message}
                   </p>
                 )}
               </div>
 
-              <div>
+              <div className='space-y-2'>
                 <Label htmlFor='email'>Email *</Label>
                 <Input
                   id='email'
                   type='email'
                   {...register('email')}
-                  className={errors.email ? 'border-red-500' : ''}
+                  className={errors.email ? 'border-destructive' : ''}
                   disabled={isLoading}
                 />
                 {errors.email && (
-                  <p className='text-sm text-red-600 mt-1'>
+                  <p className='text-sm text-destructive'>
                     {errors.email.message}
                   </p>
                 )}
@@ -224,56 +235,77 @@ export const LeadForm: React.FC<LeadFormProps> = ({
 
           {/* Lead Information */}
           <div className='space-y-4'>
-            <h3 className='text-lg font-medium'>Lead Information</h3>
+            <CardTitle className='text-lg'>Lead Information</CardTitle>
 
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-              <div>
+              <div className='space-y-2'>
                 <Label htmlFor='source'>Source *</Label>
-                <select
-                  {...register('source')}
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                <Select
+                  value={watch('source')}
+                  onValueChange={(value) =>
+                    setValue('source', value as LeadSource)
+                  }
                   disabled={isLoading}
                 >
-                  <option value='WEBSITE'>Website</option>
-                  <option value='REFERRAL'>Referral</option>
-                  <option value='EMAIL'>Email</option>
-                  <option value='PHONE'>Phone</option>
-                  <option value='SOCIAL_MEDIA'>Social Media</option>
-                  <option value='TRADE_SHOW'>Trade Show</option>
-                  <option value='OTHER'>Other</option>
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder='Select source' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='WEBSITE'>Website</SelectItem>
+                    <SelectItem value='REFERRAL'>Referral</SelectItem>
+                    <SelectItem value='EMAIL'>Email</SelectItem>
+                    <SelectItem value='PHONE'>Phone</SelectItem>
+                    <SelectItem value='SOCIAL_MEDIA'>Social Media</SelectItem>
+                    <SelectItem value='TRADE_SHOW'>Trade Show</SelectItem>
+                    <SelectItem value='OTHER'>Other</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div>
+              <div className='space-y-2'>
                 <Label htmlFor='status'>Status *</Label>
-                <select
-                  {...register('status')}
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                <Select
+                  value={watch('status')}
+                  onValueChange={(value) =>
+                    setValue('status', value as LeadStatus)
+                  }
                   disabled={isLoading}
                 >
-                  <option value='NEW'>New</option>
-                  <option value='CONTACTED'>Contacted</option>
-                  <option value='QUALIFIED'>Qualified</option>
-                  <option value='CONVERTED'>Converted</option>
-                  <option value='LOST'>Lost</option>
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder='Select status' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='NEW'>New</SelectItem>
+                    <SelectItem value='CONTACTED'>Contacted</SelectItem>
+                    <SelectItem value='QUALIFIED'>Qualified</SelectItem>
+                    <SelectItem value='CONVERTED'>Converted</SelectItem>
+                    <SelectItem value='LOST'>Lost</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div>
+              <div className='space-y-2'>
                 <Label htmlFor='priority'>Priority *</Label>
-                <select
-                  {...register('priority')}
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                <Select
+                  value={watch('priority')}
+                  onValueChange={(value) =>
+                    setValue('priority', value as Priority)
+                  }
                   disabled={isLoading}
                 >
-                  <option value='LOW'>Low</option>
-                  <option value='MEDIUM'>Medium</option>
-                  <option value='HIGH'>High</option>
-                  <option value='URGENT'>Urgent</option>
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder='Select priority' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='LOW'>Low</SelectItem>
+                    <SelectItem value='MEDIUM'>Medium</SelectItem>
+                    <SelectItem value='HIGH'>High</SelectItem>
+                    <SelectItem value='URGENT'>Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div>
+              <div className='space-y-2'>
                 <Label htmlFor='assignedTo'>Assigned To</Label>
                 <Input
                   id='assignedTo'
@@ -286,53 +318,52 @@ export const LeadForm: React.FC<LeadFormProps> = ({
 
           {/* Additional Information */}
           <div className='space-y-4'>
-            <h3 className='text-lg font-medium'>Additional Information</h3>
+            <CardTitle className='text-lg'>Additional Information</CardTitle>
 
-            <div>
+            <div className='space-y-2'>
               <Label htmlFor='notes'>Notes</Label>
-              <textarea
+              <Textarea
                 id='notes'
                 {...register('notes')}
                 rows={3}
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                placeholder='Enter any additional notes about this lead...'
                 disabled={isLoading}
               />
             </div>
 
             {/* Tags */}
-            <div>
+            <div className='space-y-2'>
               <Label>Tags</Label>
-              <div className='flex flex-wrap gap-2 mt-2'>
+              <div className='flex flex-wrap gap-2'>
                 {watch('tags').map((tag, index) => (
-                  <span
+                  <Badge
                     key={index}
-                    className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800'
+                    variant='secondary'
+                    className='flex items-center gap-1'
                   >
                     {tag}
                     <button
                       type='button'
                       onClick={() => handleTagRemove(tag)}
-                      className='ml-1 text-blue-600 hover:text-blue-800'
+                      className='hover:text-destructive'
                       disabled={isLoading}
                     >
-                      ×
+                      <X className='h-3 w-3' />
                     </button>
-                  </span>
+                  </Badge>
                 ))}
               </div>
-              <div className='flex mt-2'>
-                <Input
-                  placeholder='Add tag and press Enter'
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleTagAdd(e.currentTarget.value);
-                      e.currentTarget.value = '';
-                    }
-                  }}
-                  disabled={isLoading}
-                />
-              </div>
+              <Input
+                placeholder='Add tag and press Enter'
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleTagAdd(e.currentTarget.value);
+                    e.currentTarget.value = '';
+                  }
+                }}
+                disabled={isLoading}
+              />
             </div>
           </div>
 

@@ -11,37 +11,46 @@ import (
 
 	"github.com/serp/ptm-schedule/src/core/domain/constant"
 	dom "github.com/serp/ptm-schedule/src/core/domain/entity"
-	"github.com/serp/ptm-schedule/src/core/domain/enum"
-	storePort "github.com/serp/ptm-schedule/src/core/port/store"
 	"github.com/serp/ptm-schedule/src/core/service"
 	"gorm.io/gorm"
 )
 
 type IScheduleEventUseCase interface {
-	ListEvents(ctx context.Context, planID int64, fromDateMs, toDateMs int64) ([]*dom.ScheduleEventEntity, error)
+	ListEvents(ctx context.Context, userID, planID int64, fromDateMs, toDateMs int64) ([]*dom.ScheduleEventEntity, error)
 	GetEventsByScheduleTaskID(ctx context.Context, scheduleTaskID int64) ([]*dom.ScheduleEventEntity, error)
-	SaveEvents(ctx context.Context, planID int64, events []*dom.ScheduleEventEntity) error
-	UpdateEventStatus(ctx context.Context, eventID int64, status enum.ScheduleEventStatus, actualStartMin, actualEndMin *int) error
+
+	SaveEvents(ctx context.Context, userID, planID int64, events []*dom.ScheduleEventEntity) error
+
 	ManuallyMoveEvent(ctx context.Context, userID int64, eventID int64, newDateMs int64, newStartMin, newEndMin int) error
+
 	CompleteEvent(ctx context.Context, userID int64, eventID int64, actualStartMin, actualEndMin int) error
 	SplitEvent(ctx context.Context, userID int64, eventID int64, splitPointMin int) (*service.SplitEventResult, error)
 	SkipEvent(ctx context.Context, userID int64, eventID int64) error
 }
 
 type ScheduleEventUseCase struct {
-	eventSvc         service.IScheduleEventService
-	scheduleTaskPort storePort.IScheduleTaskPort
-	rescheduleQueue  service.IRescheduleQueueService
-	txService        service.ITransactionService
+	eventSvc            service.IScheduleEventService
+	planService         service.ISchedulePlanService
+	scheduleTaskService service.IScheduleTaskService
+	rescheduleQueue     service.IRescheduleQueueService
+	txService           service.ITransactionService
 }
 
-func (u *ScheduleEventUseCase) ListEvents(ctx context.Context, planID int64, fromDateMs, toDateMs int64) ([]*dom.ScheduleEventEntity, error) {
+func (u *ScheduleEventUseCase) ListEvents(ctx context.Context, userID, planID int64, fromDateMs, toDateMs int64) ([]*dom.ScheduleEventEntity, error) {
 	if planID <= 0 {
 		return nil, errors.New(constant.InvalidPlanID)
 	}
 	if fromDateMs > toDateMs {
 		return nil, errors.New(constant.InvalidDateRange)
 	}
+	plan, err := u.planService.GetPlanByID(ctx, planID)
+	if err != nil {
+		return nil, err
+	}
+	if plan.UserID != userID {
+		return nil, errors.New(constant.ForbiddenAccess)
+	}
+
 	return u.eventSvc.ListEventsByPlanAndDateRange(ctx, planID, fromDateMs, toDateMs)
 }
 
@@ -49,15 +58,43 @@ func (u *ScheduleEventUseCase) GetEventsByScheduleTaskID(ctx context.Context, sc
 	return u.eventSvc.GetEventsByScheduleTaskID(ctx, scheduleTaskID)
 }
 
-func (u *ScheduleEventUseCase) SaveEvents(ctx context.Context, planID int64, events []*dom.ScheduleEventEntity) error {
+func (u *ScheduleEventUseCase) SaveEvents(ctx context.Context, userID, planID int64, events []*dom.ScheduleEventEntity) error {
 	if planID <= 0 {
 		return errors.New(constant.InvalidPlanID)
+	}
+	plan, err := u.planService.GetPlanByID(ctx, planID)
+	if err != nil {
+		return err
+	}
+	if plan.UserID != userID {
+		return errors.New(constant.ForbiddenAccess)
 	}
 	if err := u.eventSvc.ValidateEvents(planID, events); err != nil {
 		return err
 	}
 	if err := u.eventSvc.ValidateNoOverlapWithExisting(ctx, planID, events); err != nil {
 		return err
+	}
+
+	scheduleTaskIDs := make([]int64, 0, len(events))
+	for _, ev := range events {
+		scheduleTaskIDs = append(scheduleTaskIDs, ev.ScheduleTaskID)
+	}
+	tasks, err := u.scheduleTaskService.GetByScheduleTaskIDs(ctx, scheduleTaskIDs)
+	if err != nil {
+		return err
+	}
+	taskMap := make(map[int64]*dom.ScheduleTaskEntity)
+	for _, t := range tasks {
+		taskMap[t.ID] = t
+	}
+	for _, ev := range events {
+		task, exists := taskMap[ev.ScheduleTaskID]
+		if !exists {
+			return errors.New(constant.ScheduleTaskNotFound)
+		}
+		ev.Title = task.Title
+
 	}
 
 	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
@@ -84,19 +121,6 @@ func (u *ScheduleEventUseCase) SaveEvents(ctx context.Context, planID int64, eve
 	})
 }
 
-func (u *ScheduleEventUseCase) UpdateEventStatus(ctx context.Context, eventID int64, status enum.ScheduleEventStatus, actualStartMin, actualEndMin *int) error {
-	if eventID <= 0 {
-		return errors.New(constant.InvalidEventID)
-	}
-	if err := u.eventSvc.ValidateStatusUpdate(status, actualStartMin, actualEndMin); err != nil {
-		return err
-	}
-
-	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
-		return u.eventSvc.UpdateEventStatus(ctx, tx, eventID, status, actualStartMin, actualEndMin)
-	})
-}
-
 func (u *ScheduleEventUseCase) ManuallyMoveEvent(ctx context.Context, userID int64, eventID int64, newDateMs int64, newStartMin, newEndMin int) error {
 	if eventID <= 0 {
 		return errors.New(constant.InvalidEventID)
@@ -108,26 +132,24 @@ func (u *ScheduleEventUseCase) ManuallyMoveEvent(ctx context.Context, userID int
 			return err
 		}
 
-		task, err := u.scheduleTaskPort.GetScheduleTaskByID(ctx, result.Event.ScheduleTaskID)
+		task, err := u.scheduleTaskService.GetByScheduleTaskID(ctx, result.Event.ScheduleTaskID)
 		if err != nil {
 			return err
-		}
-		if task == nil {
-			return errors.New(constant.ScheduleTaskNotFound)
 		}
 
 		startMs := newDateMs + int64(newStartMin)*60*1000
 		endMs := newDateMs + int64(newEndMin)*60*1000
 		task.PinTo(startMs, endMs)
-		if _, err := u.scheduleTaskPort.UpdateScheduleTask(ctx, tx, task.ID, task); err != nil {
+		if _, err := u.scheduleTaskService.Update(ctx, tx, task.ID, task); err != nil {
 			return err
 		}
 
 		if result.HasConflicts {
 			payload := map[string]any{
-				"newDateMs":   newDateMs,
-				"newStartMin": newStartMin,
-				"newEndMin":   newEndMin,
+				"newDateMs":      newDateMs,
+				"newStartMin":    newStartMin,
+				"newEndMin":      newEndMin,
+				"scheduleTaskID": result.Event.ScheduleTaskID,
 			}
 			return u.rescheduleQueue.EnqueueEventMove(ctx, tx, result.Event.SchedulePlanID, userID, eventID, payload)
 		}
@@ -147,19 +169,18 @@ func (u *ScheduleEventUseCase) CompleteEvent(ctx context.Context, userID int64, 
 			return err
 		}
 
-		task, err := u.scheduleTaskPort.GetScheduleTaskByID(ctx, result.ScheduleTaskID)
+		task, err := u.scheduleTaskService.GetByScheduleTaskID(ctx, result.ScheduleTaskID)
 		if err != nil {
 			return err
 		}
-
 		if result.AllPartsCompleted && task != nil {
-			task.MarkAsScheduled()
-			if _, err := u.scheduleTaskPort.UpdateScheduleTask(ctx, tx, task.ID, task); err != nil {
+			task.MarkAsCompleted()
+			if _, err := u.scheduleTaskService.Update(ctx, tx, task.ID, task); err != nil {
 				return err
 			}
 		}
 
-		return u.rescheduleQueue.EnqueueEventComplete(ctx, tx, result.Event.SchedulePlanID, userID, eventID)
+		return nil
 	})
 }
 
@@ -173,7 +194,7 @@ func (u *ScheduleEventUseCase) SplitEvent(ctx context.Context, userID int64, eve
 		return nil, err
 	}
 
-	task, err := u.scheduleTaskPort.GetScheduleTaskByID(ctx, event.ScheduleTaskID)
+	task, err := u.scheduleTaskService.GetByScheduleTaskID(ctx, event.ScheduleTaskID)
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +229,7 @@ func (u *ScheduleEventUseCase) SkipEvent(ctx context.Context, userID int64, even
 	}
 
 	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
-		event, err := u.eventSvc.GetByID(ctx, eventID)
+		_, err := u.eventSvc.GetByID(ctx, eventID)
 		if err != nil {
 			return err
 		}
@@ -217,20 +238,23 @@ func (u *ScheduleEventUseCase) SkipEvent(ctx context.Context, userID int64, even
 			return err
 		}
 
-		return u.rescheduleQueue.EnqueueEventComplete(ctx, tx, event.SchedulePlanID, userID, eventID)
+		// return u.rescheduleQueue.EnqueueEventSkip(ctx, tx, event.SchedulePlanID, userID, eventID)
+		return nil
 	})
 }
 
 func NewScheduleEventUseCase(
 	eventSvc service.IScheduleEventService,
-	scheduleTaskPort storePort.IScheduleTaskPort,
+	planService service.ISchedulePlanService,
+	scheduleTaskService service.IScheduleTaskService,
 	rescheduleQueue service.IRescheduleQueueService,
 	txService service.ITransactionService,
 ) IScheduleEventUseCase {
 	return &ScheduleEventUseCase{
-		eventSvc:         eventSvc,
-		scheduleTaskPort: scheduleTaskPort,
-		rescheduleQueue:  rescheduleQueue,
-		txService:        txService,
+		eventSvc:            eventSvc,
+		planService:         planService,
+		scheduleTaskService: scheduleTaskService,
+		rescheduleQueue:     rescheduleQueue,
+		txService:           txService,
 	}
 }

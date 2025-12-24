@@ -76,7 +76,7 @@ func (m *JWTMiddleware) AuthenticateJWT() gin.HandlerFunc {
 		}
 		c.Set("roles", roles)
 
-		log.Info(c, "JWT authentication successful for user: ", claims.UserID, " (", claims.Email, ")")
+		log.Debugc(c, "JWT authentication successful for user: ", claims.UserID, " (", claims.Email, ")")
 		c.Next()
 	}
 }

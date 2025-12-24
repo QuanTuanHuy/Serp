@@ -43,6 +43,13 @@ func HandleBusinessError(c *gin.Context, err error) bool {
 		constant.InvalidPlanID,
 		constant.InvalidEventID,
 		constant.InvalidQueryParameters,
+		// Plan state errors
+		constant.PlanNotProposed,
+		constant.PlanNotArchived,
+		constant.PlanCannotBeDiscarded,
+		constant.PlanAlreadyProcessing,
+		constant.OptimisticLockConflict,
+		constant.PlanVersionMismatch,
 	}
 
 	for _, validationErr := range validationErrors {
@@ -56,7 +63,6 @@ func HandleBusinessError(c *gin.Context, err error) bool {
 	notFoundErrors := []string{
 		constant.EventNotFound,
 		constant.SchedulePlanNotFound,
-		constant.ScheduleGroupNotFound,
 		constant.ScheduleTaskNotFound,
 		constant.AvailabilityCalendarNotFound,
 	}
@@ -70,7 +76,7 @@ func HandleBusinessError(c *gin.Context, err error) bool {
 
 	// Forbidden errors (403 Forbidden)
 	forbiddenErrors := []string{
-		constant.DeleteScheduleGroupForbidden,
+		constant.ForbiddenAccess,
 	}
 
 	for _, forbiddenErr := range forbiddenErrors {

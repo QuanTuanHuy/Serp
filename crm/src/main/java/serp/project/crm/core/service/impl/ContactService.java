@@ -11,14 +11,15 @@ import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.crm.core.domain.constant.Constants;
+import serp.project.crm.core.domain.constant.ErrorMessage;
 import serp.project.crm.core.domain.dto.PageRequest;
 import serp.project.crm.core.domain.entity.ContactEntity;
 import serp.project.crm.core.domain.enums.ActiveStatus;
 import serp.project.crm.core.domain.enums.ContactType;
-import serp.project.crm.core.port.client.IKafkaPublisher;
+import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.port.store.IContactPort;
+import serp.project.crm.core.port.store.ICustomerPort;
 import serp.project.crm.core.service.IContactService;
-import serp.project.crm.core.service.ICustomerService;
 
 import java.util.List;
 import java.util.Optional;
@@ -29,22 +30,18 @@ import java.util.Optional;
 public class ContactService implements IContactService {
 
     private final IContactPort contactPort;
-    private final IKafkaPublisher kafkaPublisher;
-    private final ICustomerService customerService;
+    private final ICustomerPort customerPort;
 
     @Override
     @Transactional
-    public ContactEntity createContact(ContactEntity contact, Long tenantId) {
+    public ContactEntity createContact(ContactEntity contact, Long userId, Long tenantId) {
         if (contact.getCustomerId() != null) {
-            customerService.getCustomerById(contact.getCustomerId(), tenantId)
-                    .orElseThrow(() -> new IllegalArgumentException("Customer not found"));
-        }
-
-        if (contact.getEmail() != null && !contact.getEmail().matches(Constants.Validation.EMAIL_REGEX)) {
-            throw new IllegalArgumentException("Invalid email format");
+            customerPort.findById(contact.getCustomerId(), tenantId)
+                    .orElseThrow(() -> new AppException(ErrorMessage.CUSTOMER_NOT_FOUND));
         }
 
         contact.setTenantId(tenantId);
+        contact.setCreatedBy(userId);
         contact.setDefaults();
 
         ContactEntity saved = contactPort.save(contact);
@@ -56,17 +53,35 @@ public class ContactService implements IContactService {
 
     @Override
     @Transactional
-    public ContactEntity updateContact(Long id, ContactEntity updates, Long tenantId) {
+    public ContactEntity updateContact(Long id, ContactEntity updates, Long userId, Long tenantId) {
         ContactEntity existing = contactPort.findById(id, tenantId)
-                .orElseThrow(() -> new IllegalArgumentException("Contact not found"));
+                .orElseThrow(() -> new AppException(ErrorMessage.CONTACT_NOT_FOUND));
 
         existing.updateFrom(updates);
+        existing.setUpdatedBy(userId);
+        if (updates.getIsPrimary() != null && updates.getIsPrimary() && !existing.getIsPrimary()) {
+            setPrimaryContact(existing, userId, tenantId);
+        }
 
         ContactEntity updated = contactPort.save(existing);
 
         publishContactUpdatedEvent(updated);
 
         return updated;
+    }
+
+    private void setPrimaryContact(ContactEntity contact, Long userId, Long tenantId) {
+        if (contact.getCustomerId() == null) {
+            throw new AppException(ErrorMessage.CONTACT_CANNOT_BE_PRIMARY);
+        }
+
+        contactPort.findPrimaryContact(contact.getCustomerId(), tenantId)
+                .ifPresent(existing -> {
+                    existing.removePrimaryStatus(tenantId);
+                    contactPort.save(existing);
+                });
+
+        contact.setPrimaryContact(userId);
     }
 
     @Override
@@ -84,17 +99,8 @@ public class ContactService implements IContactService {
 
     @Override
     @Transactional(readOnly = true)
-    public Pair<List<ContactEntity>, Long> getContactsByCustomer(Long customerId, Long tenantId,
-            PageRequest pageRequest) {
-        pageRequest.validate();
-
-        // Implement later
-        List<ContactEntity> allContacts = contactPort.findByCustomerId(customerId, tenantId);
-        int start = pageRequest.getOffset();
-        int end = Math.min(start + pageRequest.getSize(), allContacts.size());
-        List<ContactEntity> pageContent = allContacts.subList(start, end);
-
-        return Pair.of(pageContent, (long) allContacts.size());
+    public List<ContactEntity> getContactsByCustomerId(Long customerId, Long tenantId) {
+        return contactPort.findByCustomerId(customerId, tenantId);
     }
 
     @Override
@@ -127,34 +133,10 @@ public class ContactService implements IContactService {
 
     @Override
     @Transactional
-    public ContactEntity setPrimaryContact(Long id, Long tenantId) {
-        ContactEntity contact = contactPort.findById(id, tenantId)
-                .orElseThrow(() -> new IllegalArgumentException("Contact not found"));
-
-        if (contact.getCustomerId() == null) {
-            throw new IllegalStateException("Contact must belong to a customer to be set as primary");
-        }
-
-        contactPort.findPrimaryContact(contact.getCustomerId(), tenantId)
-                .ifPresent(existing -> {
-                    existing.removePrimaryStatus(tenantId);
-                    contactPort.save(existing);
-                });
-
-        contact.setPrimaryContact(tenantId);
-        ContactEntity updated = contactPort.save(contact);
-
-        publishContactUpdatedEvent(updated);
-
-        return updated;
-    }
-
-    @Override
-    @Transactional
     public void deactivateContact(Long id, Long tenantId) {
 
         ContactEntity contact = contactPort.findById(id, tenantId)
-                .orElseThrow(() -> new IllegalArgumentException("Contact not found"));
+                .orElseThrow(() -> new AppException(ErrorMessage.CONTACT_NOT_FOUND));
 
         contact.deactivate(tenantId);
         contactPort.save(contact);
@@ -167,7 +149,7 @@ public class ContactService implements IContactService {
     @Transactional
     public void deleteContact(Long id, Long tenantId) {
         ContactEntity contact = contactPort.findById(id, tenantId)
-                .orElseThrow(() -> new IllegalArgumentException("Contact not found"));
+                .orElseThrow(() -> new AppException(ErrorMessage.CONTACT_NOT_FOUND));
 
         contactPort.deleteById(id, tenantId);
 
@@ -176,17 +158,14 @@ public class ContactService implements IContactService {
     }
 
     private void publishContactCreatedEvent(ContactEntity contact) {
-        // TODO: Implement event publishing
         log.debug("Event: Contact created - ID: {}, Topic: {}", contact.getId(), Constants.KafkaTopic.CONTACT);
     }
 
     private void publishContactUpdatedEvent(ContactEntity contact) {
-        // TODO: Implement event publishing
         log.debug("Event: Contact updated - ID: {}, Topic: {}", contact.getId(), Constants.KafkaTopic.CONTACT);
     }
 
     private void publishContactDeletedEvent(ContactEntity contact) {
-        // TODO: Implement event publishing
         log.debug("Event: Contact deleted - ID: {}, Topic: {}", contact.getId(), Constants.KafkaTopic.CONTACT);
     }
 }

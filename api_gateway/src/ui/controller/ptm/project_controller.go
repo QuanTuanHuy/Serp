@@ -8,7 +8,6 @@ package controller
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/serp/api-gateway/src/core/domain/constant"
-	request "github.com/serp/api-gateway/src/core/domain/dto/request/ptm"
 	service "github.com/serp/api-gateway/src/core/service/ptm"
 	"github.com/serp/api-gateway/src/kernel/utils"
 )
@@ -17,23 +16,14 @@ type ProjectController struct {
 	projectService service.IProjectService
 }
 
-func (p *ProjectController) GetProjectsByUserID(c *gin.Context) {
-	res, err := p.projectService.GetProjectsByUserID(c.Request.Context())
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
-		return
-	}
-	c.JSON(res.Code, res)
-}
-
 func (p *ProjectController) CreateProject(c *gin.Context) {
-	var req request.CreateProjectRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	var payload map[string]any
+	if err := c.ShouldBindJSON(&payload); err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
 		return
 	}
 
-	res, err := p.projectService.CreateProject(c.Request.Context(), &req)
+	res, err := p.projectService.CreateProject(c.Request.Context(), payload)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return
@@ -41,19 +31,16 @@ func (p *ProjectController) CreateProject(c *gin.Context) {
 	c.JSON(res.Code, res)
 }
 
-func (p *ProjectController) UpdateProject(c *gin.Context) {
-	projectID, valid := utils.ValidateAndParseID(c, "id")
-	if !valid {
-		return
+func (p *ProjectController) GetAllProjects(c *gin.Context) {
+	payload := map[string]string{}
+	queryParams := c.Request.URL.Query()
+	for key, values := range queryParams {
+		if len(values) > 0 {
+			payload[key] = values[0]
+		}
 	}
 
-	var req request.UpdateProjectRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
-		return
-	}
-
-	res, err := p.projectService.UpdateProject(c.Request.Context(), projectID, &req)
+	res, err := p.projectService.GetAllProjects(c.Request.Context(), payload)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return
@@ -75,50 +62,13 @@ func (p *ProjectController) GetProjectByID(c *gin.Context) {
 	c.JSON(res.Code, res)
 }
 
-func (p *ProjectController) GetProjects(c *gin.Context) {
-	var params request.GetProjectsRequest
-	if err := c.ShouldBindQuery(&params); err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
-		return
-	}
-
-	if params.Page == 0 {
-		params.Page = 1
-	}
-	if params.PageSize == 0 {
-		params.PageSize = 10
-	}
-
-	res, err := p.projectService.GetProjects(c.Request.Context(), &params)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
-		return
-	}
-	c.JSON(res.Code, res)
-}
-
-func (p *ProjectController) GetProjectsByName(c *gin.Context) {
-	name := c.Query("name")
-	if name == "" {
-		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
-		return
-	}
-
-	res, err := p.projectService.GetProjectsByName(c.Request.Context(), name)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
-		return
-	}
-	c.JSON(res.Code, res)
-}
-
-func (p *ProjectController) ArchiveProject(c *gin.Context) {
+func (p *ProjectController) GetTasksByProjectID(c *gin.Context) {
 	projectID, valid := utils.ValidateAndParseID(c, "id")
 	if !valid {
 		return
 	}
 
-	res, err := p.projectService.ArchiveProject(c.Request.Context(), projectID)
+	res, err := p.projectService.GetTasksByProjectID(c.Request.Context(), projectID)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return
@@ -126,13 +76,33 @@ func (p *ProjectController) ArchiveProject(c *gin.Context) {
 	c.JSON(res.Code, res)
 }
 
-func (p *ProjectController) GetGroupTasksByProjectID(c *gin.Context) {
+func (p *ProjectController) UpdateProject(c *gin.Context) {
 	projectID, valid := utils.ValidateAndParseID(c, "id")
 	if !valid {
 		return
 	}
 
-	res, err := p.projectService.GetGroupTasksByProjectID(c.Request.Context(), projectID)
+	var payload map[string]any
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+		return
+	}
+
+	res, err := p.projectService.UpdateProject(c.Request.Context(), projectID, payload)
+	if err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
+		return
+	}
+	c.JSON(res.Code, res)
+}
+
+func (p *ProjectController) DeleteProject(c *gin.Context) {
+	projectID, valid := utils.ValidateAndParseID(c, "id")
+	if !valid {
+		return
+	}
+
+	res, err := p.projectService.DeleteProject(c.Request.Context(), projectID)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return

@@ -19,7 +19,7 @@ import (
 )
 
 type SchedulePlanAdapter struct {
-	db *gorm.DB
+	BaseStoreAdapter
 }
 
 func (s *SchedulePlanAdapter) GetPlanByID(ctx context.Context, ID int64) (*entity.SchedulePlanEntity, error) {
@@ -34,18 +34,15 @@ func (s *SchedulePlanAdapter) GetPlanByID(ctx context.Context, ID int64) (*entit
 }
 
 func (s *SchedulePlanAdapter) CreatePlan(ctx context.Context, tx *gorm.DB, plan *entity.SchedulePlanEntity) (*entity.SchedulePlanEntity, error) {
-	if tx == nil {
-		tx = s.db
-	}
 	planModel := mapper.ToSchedulePlanModel(plan)
-	if err := tx.WithContext(ctx).Create(planModel).Error; err != nil {
+	if err := s.WithTx(tx).WithContext(ctx).Create(planModel).Error; err != nil {
 		return nil, err
 	}
 	return mapper.ToSchedulePlanEntity(planModel), nil
 }
 
 func (s *SchedulePlanAdapter) DeletePlan(ctx context.Context, tx *gorm.DB, ID int64) error {
-	return tx.WithContext(ctx).Where("id = ?", ID).Delete(&model.SchedulePlanModel{}).Error
+	return s.WithTx(tx).WithContext(ctx).Where("id = ?", ID).Delete(&model.SchedulePlanModel{}).Error
 }
 
 func (s *SchedulePlanAdapter) GetActivePlanByUserID(ctx context.Context, userID int64) (*entity.SchedulePlanEntity, error) {
@@ -70,7 +67,7 @@ func (s *SchedulePlanAdapter) ListPlansByUserID(ctx context.Context, userID int6
 
 func (s *SchedulePlanAdapter) UpdatePlan(ctx context.Context, tx *gorm.DB, plan *entity.SchedulePlanEntity) (*entity.SchedulePlanEntity, error) {
 	planModel := mapper.ToSchedulePlanModel(plan)
-	if err := tx.WithContext(ctx).Save(planModel).Error; err != nil {
+	if err := s.WithTx(tx).WithContext(ctx).Save(planModel).Error; err != nil {
 		return nil, err
 	}
 	return mapper.ToSchedulePlanEntity(planModel), nil
@@ -108,11 +105,11 @@ func (c *SchedulePlanAdapter) BuildPlanQuery(userID int64, filter *port.PlanFilt
 }
 
 func (s *SchedulePlanAdapter) UpdatePlanStatus(ctx context.Context, tx *gorm.DB, planID int64, status string) error {
-	return tx.WithContext(ctx).Model(&model.SchedulePlanModel{}).Where("id = ?", planID).Update("status", status).Error
+	return s.WithTx(tx).WithContext(ctx).Model(&model.SchedulePlanModel{}).Where("id = ?", planID).Update("status", status).Error
 }
 
 func NewSchedulePlanStoreAdapter(db *gorm.DB) port.ISchedulePlanPort {
 	return &SchedulePlanAdapter{
-		db: db,
+		BaseStoreAdapter: BaseStoreAdapter{db: db},
 	}
 }

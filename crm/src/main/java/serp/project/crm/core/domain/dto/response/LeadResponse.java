@@ -15,10 +15,13 @@ import serp.project.crm.core.domain.enums.LeadStatus;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
 @Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class LeadResponse {
     private Long id;
     
@@ -45,6 +48,9 @@ public class LeadResponse {
     private Integer probability;
     private LocalDate expectedCloseDate;
     private String notes;
+
+    private Long convertedOpportunityId;
+    private Long convertedCustomerId;
 
     // Metadata
     private Long tenantId;

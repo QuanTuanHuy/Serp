@@ -6,79 +6,121 @@ Description: Part of Serp Project
 package utils
 
 import (
+	"errors"
+
 	"github.com/gin-gonic/gin"
 )
 
-func GetUserIDFromContext(c *gin.Context) (int64, bool) {
-	if userID, exists := c.Get("userID"); exists {
-		if id, ok := userID.(int64); ok {
-			return id, true
-		}
+func GetUserIDFromContext(c *gin.Context) (int64, error) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		return 0, errors.New("userID not found in context")
 	}
-	return 0, false
+
+	id, ok := userID.(int64)
+	if !ok {
+		return 0, errors.New("userID is not of type int64")
+	}
+
+	return id, nil
 }
 
-func GetTenantIDFromContext(c *gin.Context) (int64, bool) {
-	if tenantID, exists := c.Get("tenantID"); exists {
-		if id, ok := tenantID.(int64); ok {
-			return id, true
-		}
+func GetTenantIDFromContext(c *gin.Context) (int64, error) {
+	tenantID, exists := c.Get("tenantID")
+	if !exists {
+		return 0, errors.New("tenantID not found in context")
 	}
-	return 0, false
+
+	id, ok := tenantID.(int64)
+	if !ok {
+		return 0, errors.New("tenantID is not of type int64")
+	}
+
+	return id, nil
 }
 
-func GetUserEmailFromContext(c *gin.Context) (string, bool) {
-	if email, exists := c.Get("userEmail"); exists {
-		if emailStr, ok := email.(string); ok {
-			return emailStr, true
-		}
+func GetUserEmailFromContext(c *gin.Context) (string, error) {
+	email, exists := c.Get("userEmail")
+	if !exists {
+		return "", errors.New("userEmail not found in context")
 	}
-	return "", false
+
+	str, ok := email.(string)
+	if !ok {
+		return "", errors.New("userEmail is not of type string")
+	}
+
+	return str, nil
 }
 
-func GetUserFullNameFromContext(c *gin.Context) (string, bool) {
-	if fullName, exists := c.Get("userFullName"); exists {
-		if nameStr, ok := fullName.(string); ok {
-			return nameStr, true
-		}
+func GetUserFullNameFromContext(c *gin.Context) (string, error) {
+	fullName, exists := c.Get("userFullName")
+	if !exists {
+		return "", errors.New("userFullName not found in context")
 	}
-	return "", false
+
+	str, ok := fullName.(string)
+	if !ok {
+		return "", errors.New("userFullName is not of type string")
+	}
+
+	return str, nil
 }
 
-func GetTokenFromContext(c *gin.Context) (string, bool) {
-	if token, exists := c.Get("token"); exists {
-		if tokenStr, ok := token.(string); ok {
-			return tokenStr, true
-		}
+func GetTokenFromContext(c *gin.Context) (string, error) {
+	token, exists := c.Get("token")
+	if !exists {
+		return "", errors.New("token not found in context")
 	}
-	return "", false
+
+	str, ok := token.(string)
+	if !ok {
+		return "", errors.New("token is not of type string")
+	}
+
+	return str, nil
 }
 
-func GetRolesFromContext(c *gin.Context) ([]string, bool) {
-	if roles, exists := c.Get("roles"); exists {
-		if roleSlice, ok := roles.([]string); ok {
-			return roleSlice, true
-		}
+func GetRealmRolesFromContext(c *gin.Context) ([]string, error) {
+	roles, exists := c.Get("realmRoles")
+	if !exists {
+		return []string{}, errors.New("realmRoles not found in context")
 	}
-	return nil, false
+
+	rolesList, ok := roles.([]string)
+	if !ok {
+		return []string{}, errors.New("realmRoles is not of type []string")
+	}
+
+	return rolesList, nil
 }
 
-func GetPermissionsFromContext(c *gin.Context) ([]string, bool) {
-	if permissions, exists := c.Get("permissions"); exists {
-		if permSlice, ok := permissions.([]string); ok {
-			return permSlice, true
-		}
+func GetResourceRolesFromContext(c *gin.Context) ([]string, error) {
+	roles, exists := c.Get("resourceRoles")
+	if !exists {
+		return []string{}, errors.New("resourceRoles not found in context")
 	}
-	return nil, false
+
+	rolesList, ok := roles.([]string)
+	if !ok {
+		return []string{}, errors.New("resourceRoles is not of type []string")
+	}
+
+	return rolesList, nil
 }
 
-func GetAuthoritiesFromContext(c *gin.Context) ([]string, bool) {
-	if authorities, exists := c.Get("authorities"); exists {
-		if authSlice, ok := authorities.([]string); ok {
-			return authSlice, true
-		}
+func GetAllRolesFromContext(c *gin.Context) ([]string, error) {
+	roles, exists := c.Get("allRoles")
+	if !exists {
+		return []string{}, errors.New("allRoles not found in context")
 	}
-	return nil, false
+
+	rolesList, ok := roles.([]string)
+	if !ok {
+		return []string{}, errors.New("allRoles is not of type []string")
+	}
+
+	return rolesList, nil
 }
 
 func IsAuthenticated(c *gin.Context) bool {
@@ -88,17 +130,17 @@ func IsAuthenticated(c *gin.Context) bool {
 		}
 	}
 	// If authenticated flag is not set, check if userID exists
-	_, exists := GetUserIDFromContext(c)
-	return exists
+	_, err := GetUserIDFromContext(c)
+	return err == nil
 }
 
 func HasRole(c *gin.Context, roleName string) bool {
-	roles, exists := GetRolesFromContext(c)
-	if !exists {
+	allRoles, err := GetAllRolesFromContext(c)
+	if err != nil {
 		return false
 	}
 
-	for _, role := range roles {
+	for _, role := range allRoles {
 		if role == roleName {
 			return true
 		}
@@ -106,14 +148,28 @@ func HasRole(c *gin.Context, roleName string) bool {
 	return false
 }
 
-func HasPermission(c *gin.Context, permissionName string) bool {
-	permissions, exists := GetPermissionsFromContext(c)
-	if !exists {
+func HasRealmRole(c *gin.Context, roleName string) bool {
+	realmRoles, err := GetRealmRolesFromContext(c)
+	if err != nil {
 		return false
 	}
 
-	for _, permission := range permissions {
-		if permission == permissionName {
+	for _, role := range realmRoles {
+		if role == roleName {
+			return true
+		}
+	}
+	return false
+}
+
+func HasResourceRole(c *gin.Context, roleName string) bool {
+	resourceRoles, err := GetResourceRolesFromContext(c)
+	if err != nil {
+		return false
+	}
+
+	for _, role := range resourceRoles {
+		if role == roleName {
 			return true
 		}
 	}
@@ -123,15 +179,6 @@ func HasPermission(c *gin.Context, permissionName string) bool {
 func HasAnyRole(c *gin.Context, roleNames ...string) bool {
 	for _, roleName := range roleNames {
 		if HasRole(c, roleName) {
-			return true
-		}
-	}
-	return false
-}
-
-func HasAnyPermission(c *gin.Context, permissionNames ...string) bool {
-	for _, permissionName := range permissionNames {
-		if HasPermission(c, permissionName) {
 			return true
 		}
 	}

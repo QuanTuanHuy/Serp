@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
+import serp.project.account.core.domain.dto.message.CreateNotificationEvent;
 import serp.project.account.core.domain.dto.request.AssignUserToModuleRequest;
 import serp.project.account.core.domain.dto.request.BulkAssignUsersRequest;
 import serp.project.account.core.domain.dto.response.OrgModuleAccessResponse;
@@ -25,6 +26,7 @@ import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.ICombineRoleService;
 import serp.project.account.core.service.IKeycloakUserService;
 import serp.project.account.core.service.IModuleService;
+import serp.project.account.core.service.INotificationService;
 import serp.project.account.core.service.IOrganizationService;
 import serp.project.account.core.service.ISubscriptionService;
 import serp.project.account.core.service.IRoleService;
@@ -47,7 +49,9 @@ public class ModuleAccessUseCase {
     private final IRoleService roleService;
     private final ICombineRoleService combineRoleService;
     private final IOrganizationService organizationService;
+
     private final IKeycloakUserService keycloakUserService;
+    private final INotificationService notificationService;
 
     private final ResponseUtils responseUtils;
 
@@ -195,7 +199,14 @@ public class ModuleAccessUseCase {
                 log.info("Logged out user {} to refresh permissions", request.getUserId());
             }
 
-            // Implement later: Send notification
+            var notificationEvent = CreateNotificationEvent.builder()
+                    .userId(request.getUserId())
+                    .tenantId(organizationId)
+                    .title("Module Access Granted")
+                    .message("You have been assigned to the module: " + module.getModuleName())
+                    .actionUrl("/" + module.getCode().toLowerCase())
+                    .build();
+            notificationService.sendNotification(notificationEvent);
 
             log.info("[UseCase] Successfully assigned user {} to module {}",
                     request.getUserId(), request.getModuleId());

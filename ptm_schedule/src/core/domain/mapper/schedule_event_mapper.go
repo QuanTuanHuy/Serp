@@ -11,7 +11,6 @@ import (
 	"github.com/serp/ptm-schedule/src/core/domain/entity"
 )
 
-// ToScheduleEventEntity converts request DTO to entity
 func ToScheduleEventEntity(planID int64, req *request.ScheduleEventItemRequest) *entity.ScheduleEventEntity {
 	return &entity.ScheduleEventEntity{
 		BaseEntity: entity.BaseEntity{
@@ -26,7 +25,6 @@ func ToScheduleEventEntity(planID int64, req *request.ScheduleEventItemRequest) 
 	}
 }
 
-// ToScheduleEventEntities converts request DTOs to entities
 func ToScheduleEventEntities(planID int64, items []*request.ScheduleEventItemRequest) []*entity.ScheduleEventEntity {
 	result := make([]*entity.ScheduleEventEntity, 0, len(items))
 	for _, item := range items {
@@ -35,7 +33,6 @@ func ToScheduleEventEntities(planID int64, items []*request.ScheduleEventItemReq
 	return result
 }
 
-// ToScheduleEventResponse converts entity to response DTO
 func ToScheduleEventResponse(e *entity.ScheduleEventEntity) *response.ScheduleEventResponse {
 	return &response.ScheduleEventResponse{
 		ID:             e.ID,
@@ -52,7 +49,6 @@ func ToScheduleEventResponse(e *entity.ScheduleEventEntity) *response.ScheduleEv
 	}
 }
 
-// ToScheduleEventResponses converts entities to response DTOs
 func ToScheduleEventResponses(entities []*entity.ScheduleEventEntity) []*response.ScheduleEventResponse {
 	result := make([]*response.ScheduleEventResponse, 0, len(entities))
 	for _, e := range entities {

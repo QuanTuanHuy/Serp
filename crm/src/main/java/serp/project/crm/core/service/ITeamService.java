@@ -15,14 +15,14 @@ import java.util.Optional;
 public interface ITeamService {
 
     TeamEntity createTeam(TeamEntity team, Long tenantId);
-
     TeamEntity updateTeam(Long id, TeamEntity updates, Long tenantId);
+    void deleteTeam(Long id, Long tenantId);
 
     Optional<TeamEntity> getTeamById(Long id, Long tenantId);
-
     Pair<List<TeamEntity>, Long> getAllTeams(Long tenantId, PageRequest pageRequest);
-
     Pair<List<TeamEntity>, Long> getTeamsByLeader(Long leaderId, Long tenantId, PageRequest pageRequest);
 
-    void deleteTeam(Long id, Long tenantId);
+    boolean isTeamNameExists(String name, Long tenantId);
+
+    void validateUserIdsExist(List<Long> userIds, Long tenantId);
 }

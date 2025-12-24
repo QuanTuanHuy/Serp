@@ -2,6 +2,7 @@
 
 export { CustomerForm } from './CustomerForm';
 export { LeadForm } from './LeadForm';
+export { OpportunityForm } from './OpportunityForm';
 
 // Re-export types for convenience
 export type {

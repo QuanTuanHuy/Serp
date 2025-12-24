@@ -8,6 +8,10 @@ on:
     branches:
       - main
 
+permissions:
+  actions: read
+  contents: read
+
 env:
   DOCKER_REGISTRY: ${{ secrets.DOCKER_USERNAME }}
   IMAGE_TAG: ${{ github.sha }}
@@ -26,32 +30,28 @@ jobs:
       serp-web: ${{ steps.changes.outputs.serp-web }}
       purchase: ${{ steps.changes.outputs.purchase }}
       logistics: ${{ steps.changes.outputs.logistics }}
+      notification: ${{ steps.changes.outputs.notification }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - uses: dorny/paths-filter@v2
-        id: changes
+      - name: Download changes artifact
+        uses: actions/download-artifact@v4
         with:
-          filters: |
-            account:
-              - 'account/**'
-            api-gateway:
-              - 'api_gateway/**'
-            ptm-task:
-              - 'ptm_task/**'
-            ptm-schedule:
-              - 'ptm_schedule/**'
-            ptm-optimization:
-              - 'ptm_optimization/**'
-            crm:
-              - 'crm/**'
-            serp-web:
-              - 'serp_web/**'
-            purchase:
-              - 'purchase_service/**'
-            logistics:
-              - 'logistics/**'
+          name: build-changes
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read changes
+        id: changes
+        run: |
+          echo "account=$(jq -r .account changes.json)" >> $GITHUB_OUTPUT
+          echo "api-gateway=$(jq -r '."api-gateway"' changes.json)" >> $GITHUB_OUTPUT
+          echo "ptm-task=$(jq -r '."ptm-task"' changes.json)" >> $GITHUB_OUTPUT
+          echo "ptm-schedule=$(jq -r '."ptm-schedule"' changes.json)" >> $GITHUB_OUTPUT
+          echo "ptm-optimization=$(jq -r '."ptm-optimization"' changes.json)" >> $GITHUB_OUTPUT
+          echo "crm=$(jq -r .crm changes.json)" >> $GITHUB_OUTPUT
+          echo "serp-web=$(jq -r '."serp-web"' changes.json)" >> $GITHUB_OUTPUT
+          echo "purchase=$(jq -r .purchase changes.json)" >> $GITHUB_OUTPUT
+          echo "logistics=$(jq -r .logistics changes.json)" >> $GITHUB_OUTPUT
+          echo "notification=$(jq -r .notification changes.json)" >> $GITHUB_OUTPUT
 
   deploy-account:
     needs: check-changes
@@ -219,6 +219,25 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
             cd ${{ secrets.DEPLOY_PATH }}/serp_logistics
+            export IMAGE_TAG=${{ github.sha }}
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker image prune -f
+
+  deploy-notification:
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.notification == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Notification Service
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}/serp_notification
             export IMAGE_TAG=${{ github.sha }}
             docker compose pull
             docker compose up -d --remove-orphans

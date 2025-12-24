@@ -127,6 +127,7 @@ public class LeadDtoMapper {
                 .probability(entity.getProbability())
                 .expectedCloseDate(entity.getExpectedCloseDate())
                 .notes(entity.getNotes())
+                .convertedOpportunityId(entity.getConvertedOpportunityId())
                 .tenantId(entity.getTenantId())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
@@ -165,7 +166,7 @@ public class LeadDtoMapper {
                 .email(lead.getEmail())
                 .phone(lead.getPhone())
                 .jobPosition(lead.getJobTitle())
-                .contactType(ContactType.INDIVIDUAL)
+                .contactType(ContactType.SECONDARY)
                 .isPrimary(true)
                 .activeStatus(ActiveStatus.ACTIVE)
                 .build();
@@ -179,11 +180,12 @@ public class LeadDtoMapper {
         return OpportunityEntity.builder()
                 .name(request.getOpportunityName() != null ? request.getOpportunityName()
                         : lead.getCompany() + " - " + lead.getName())
+                .description(request.getOpportunityDescription())
+                .leadId(lead.getId())
                 .customerId(customerId)
+                .stage(OpportunityStage.PROSPECTING)
                 .estimatedValue(request.getOpportunityAmount() != null ? request.getOpportunityAmount()
                         : lead.getEstimatedValue())
-                .description(request.getOpportunityDescription())
-                .stage(OpportunityStage.PROSPECTING)
                 .expectedCloseDate(lead.getExpectedCloseDate())
                 .build();
     }

@@ -17,7 +17,7 @@ import (
 )
 
 type ScheduleTaskStoreAdapter struct {
-	db *gorm.DB
+	BaseStoreAdapter
 }
 
 func (s *ScheduleTaskStoreAdapter) GetScheduleTaskByTaskID(ctx context.Context, taskID int64) ([]*entity.ScheduleTaskEntity, error) {
@@ -30,12 +30,30 @@ func (s *ScheduleTaskStoreAdapter) GetScheduleTaskByTaskID(ctx context.Context, 
 	return mapper.ToScheduleTaskEntities(scheduleTasksModel), nil
 }
 
+func (s *ScheduleTaskStoreAdapter) GetScheduleTasksByIDs(ctx context.Context, scheduleTaskIDs []int64) ([]*entity.ScheduleTaskEntity, error) {
+	var scheduleTasksModel []*model.ScheduleTaskModel
+	if err := s.db.WithContext(ctx).
+		Where("id IN ?", scheduleTaskIDs).
+		Find(&scheduleTasksModel).Error; err != nil {
+		return nil, err
+	}
+	return mapper.ToScheduleTaskEntities(scheduleTasksModel), nil
+}
+
 func (s *ScheduleTaskStoreAdapter) CreateScheduleTask(ctx context.Context, tx *gorm.DB, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error) {
 	scheduleTaskModel := mapper.ToScheduleTaskModel(scheduleTask)
-	if err := tx.WithContext(ctx).Create(scheduleTaskModel).Error; err != nil {
+	if err := s.WithTx(tx).WithContext(ctx).Create(scheduleTaskModel).Error; err != nil {
 		return nil, err
 	}
 	return mapper.ToScheduleTaskEntity(scheduleTaskModel), nil
+}
+
+func (s *ScheduleTaskStoreAdapter) CreateBatch(ctx context.Context, tx *gorm.DB, tasks []*entity.ScheduleTaskEntity) error {
+	if len(tasks) == 0 {
+		return nil
+	}
+	models := mapper.ToScheduleTaskModels(tasks)
+	return s.WithTx(tx).WithContext(ctx).Create(&models).Error
 }
 
 func (s *ScheduleTaskStoreAdapter) GetBySchedulePlanID(ctx context.Context, schedulePlanID int64) ([]*entity.ScheduleTaskEntity, error) {
@@ -62,13 +80,13 @@ func (s *ScheduleTaskStoreAdapter) GetScheduleTaskByID(ctx context.Context, sche
 }
 
 func (s *ScheduleTaskStoreAdapter) DeleteScheduleTask(ctx context.Context, tx *gorm.DB, scheduleTaskID int64) error {
-	return tx.WithContext(ctx).
+	return s.WithTx(tx).WithContext(ctx).
 		Where("id = ?", scheduleTaskID).
 		Delete(&model.ScheduleTaskModel{}).Error
 }
 
 func (s *ScheduleTaskStoreAdapter) DeleteByTaskID(ctx context.Context, tx *gorm.DB, taskID int64) error {
-	return tx.WithContext(ctx).
+	return s.WithTx(tx).WithContext(ctx).
 		Where("task_id = ?", taskID).
 		Delete(&model.ScheduleTaskModel{}).Error
 }
@@ -88,14 +106,20 @@ func (s *ScheduleTaskStoreAdapter) GetByPlanIDAndTaskID(ctx context.Context, pla
 
 func (s *ScheduleTaskStoreAdapter) UpdateScheduleTask(ctx context.Context, tx *gorm.DB, ID int64, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error) {
 	scheduleTaskModel := mapper.ToScheduleTaskModel(scheduleTask)
-	if err := tx.WithContext(ctx).Where("id = ?", ID).Updates(scheduleTaskModel).Error; err != nil {
+	if err := s.WithTx(tx).WithContext(ctx).Where("id = ?", ID).Updates(scheduleTaskModel).Error; err != nil {
 		return nil, err
 	}
 	return mapper.ToScheduleTaskEntity(scheduleTaskModel), nil
 }
 
+func (s *ScheduleTaskStoreAdapter) DeleteByPlanID(ctx context.Context, tx *gorm.DB, planID int64) error {
+	return s.WithTx(tx).WithContext(ctx).
+		Where("schedule_plan_id = ?", planID).
+		Delete(&model.ScheduleTaskModel{}).Error
+}
+
 func NewScheduleTaskStoreAdapter(db *gorm.DB) port.IScheduleTaskPort {
 	return &ScheduleTaskStoreAdapter{
-		db: db,
+		BaseStoreAdapter: BaseStoreAdapter{db: db},
 	}
 }

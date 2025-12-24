@@ -10,10 +10,10 @@ import "time"
 type RescheduleQueueModel struct {
 	BaseModel
 	UserID         int64 `gorm:"not null;index"`
-	SchedulePlanID int64 `gorm:"not null;index:idx_queue_ready"`
+	SchedulePlanID int64 `gorm:"not null;index:idx_queue_ready;uniqueIndex:idx_queue_upsert"`
 
-	TriggerType string `gorm:"size:50;not null"`
-	EntityID    int64  `gorm:"index:idx_queue_coalesce"`
+	TriggerType string `gorm:"size:50;not null;uniqueIndex:idx_queue_upsert"`
+	EntityID    int64  `gorm:"index:idx_queue_coalesce;uniqueIndex:idx_queue_upsert"`
 	EntityType  string `gorm:"size:20"`
 
 	ChangePayload string `gorm:"type:jsonb"`

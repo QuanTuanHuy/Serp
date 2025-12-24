@@ -6,6 +6,8 @@
 
 package serp.project.crm.core.domain.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,4 +22,9 @@ public class GeneralResponse<T> {
     private Integer code;
     private String message;
     private T data;
+
+    @JsonIgnore
+    public boolean isSuccess() {
+        return code != null && code >= 200 && code < 300;
+    }
 }

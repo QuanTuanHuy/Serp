@@ -17,7 +17,7 @@ import (
 )
 
 type ScheduleEventAdapter struct {
-	db *gorm.DB
+	BaseStoreAdapter
 }
 
 func (a *ScheduleEventAdapter) GetByID(ctx context.Context, id int64) (*dom.ScheduleEventEntity, error) {
@@ -80,11 +80,7 @@ func (a *ScheduleEventAdapter) CreateBatch(ctx context.Context, tx *gorm.DB, ite
 		return nil
 	}
 	models := mp.ToScheduleEventModels(items)
-	dbx := tx
-	if dbx == nil {
-		dbx = a.db
-	}
-	if err := dbx.WithContext(ctx).Create(&models).Error; err != nil {
+	if err := a.WithTx(tx).WithContext(ctx).Create(&models).Error; err != nil {
 		return err
 	}
 	for i, model := range models {
@@ -97,17 +93,13 @@ func (a *ScheduleEventAdapter) UpdateBatch(ctx context.Context, tx *gorm.DB, ite
 	if len(items) == 0 {
 		return nil
 	}
-	dbx := tx
-	if dbx == nil {
-		dbx = a.db
-	}
 
 	for _, item := range items {
 		if item == nil {
 			continue
 		}
 		mdl := mp.ToScheduleEventModel(item)
-		if err := dbx.WithContext(ctx).Model(&m.ScheduleEventModel{}).
+		if err := a.WithTx(tx).WithContext(ctx).Model(&m.ScheduleEventModel{}).
 			Where("id = ?", mdl.ID).
 			Updates(mdl).Error; err != nil {
 			return err
@@ -117,56 +109,44 @@ func (a *ScheduleEventAdapter) UpdateBatch(ctx context.Context, tx *gorm.DB, ite
 }
 
 func (a *ScheduleEventAdapter) DeleteByID(ctx context.Context, tx *gorm.DB, eventID int64) error {
-	dbx := tx
-	if dbx == nil {
-		dbx = a.db
-	}
-	return dbx.WithContext(ctx).Delete(&m.ScheduleEventModel{}, eventID).Error
+	return a.WithTx(tx).WithContext(ctx).Delete(&m.ScheduleEventModel{}, eventID).Error
 }
 
 func (a *ScheduleEventAdapter) DeleteByPlanID(ctx context.Context, tx *gorm.DB, planID int64) error {
-	dbx := tx
-	if dbx == nil {
-		dbx = a.db
-	}
-	return dbx.WithContext(ctx).
+	return a.WithTx(tx).WithContext(ctx).
 		Where("schedule_plan_id = ?", planID).
 		Delete(&m.ScheduleEventModel{}).Error
 }
 
 func (a *ScheduleEventAdapter) DeleteFutureEventsByTaskID(ctx context.Context, tx *gorm.DB, scheduleTaskID int64, afterDateMs int64) error {
-	dbx := tx
-	if dbx == nil {
-		dbx = a.db
-	}
-	return dbx.WithContext(ctx).
+	return a.WithTx(tx).WithContext(ctx).
 		Where("schedule_task_id = ? AND date > ? AND status = ?",
 			scheduleTaskID, mp.DayStartUTC(afterDateMs), string(enum.ScheduleEventPlanned)).
 		Delete(&m.ScheduleEventModel{}).Error
 }
 
+func (a *ScheduleEventAdapter) DeleteByScheduleTaskID(ctx context.Context, tx *gorm.DB, scheduleTaskID int64) error {
+	return a.WithTx(tx).WithContext(ctx).
+		Where("schedule_task_id = ?", scheduleTaskID).
+		Delete(&m.ScheduleEventModel{}).Error
+}
+
 func (a *ScheduleEventAdapter) IncrementPartIndexAfter(ctx context.Context, tx *gorm.DB, scheduleTaskID int64, afterPartIndex int) error {
-	dbx := tx
-	if dbx == nil {
-		dbx = a.db
-	}
-	return dbx.WithContext(ctx).
+	return a.WithTx(tx).WithContext(ctx).
 		Model(&m.ScheduleEventModel{}).
 		Where("schedule_task_id = ? AND part_index > ?", scheduleTaskID, afterPartIndex).
 		UpdateColumn("part_index", gorm.Expr("part_index + 1")).Error
 }
 
 func (a *ScheduleEventAdapter) UpdateTotalPartsForTask(ctx context.Context, tx *gorm.DB, scheduleTaskID int64, totalParts int) error {
-	dbx := tx
-	if dbx == nil {
-		dbx = a.db
-	}
-	return dbx.WithContext(ctx).
+	return a.WithTx(tx).WithContext(ctx).
 		Model(&m.ScheduleEventModel{}).
 		Where("schedule_task_id = ?", scheduleTaskID).
 		Update("total_parts", totalParts).Error
 }
 
 func NewScheduleEventAdapter(db *gorm.DB) p.IScheduleEventPort {
-	return &ScheduleEventAdapter{db: db}
+	return &ScheduleEventAdapter{
+		BaseStoreAdapter: BaseStoreAdapter{db: db},
+	}
 }

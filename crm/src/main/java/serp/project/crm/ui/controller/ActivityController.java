@@ -27,10 +27,12 @@ public class ActivityController {
 
     @PostMapping
     public ResponseEntity<?> createActivity(@Valid @RequestBody CreateActivityRequest request) {
-        Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new IllegalArgumentException("Tenant ID not found in token"));
-
-        var response = activityUseCase.createActivity(request, tenantId);
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        if (tenantId == null || userId == null) {
+            return null;
+        }
+        var response = activityUseCase.createActivity(request, userId, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
@@ -38,17 +40,20 @@ public class ActivityController {
     public ResponseEntity<?> updateActivity(
             @PathVariable Long id,
             @Valid @RequestBody UpdateActivityRequest request) {
-        Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new IllegalArgumentException("Tenant ID not found in token"));
-
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        if (tenantId == null) {
+            return null;
+        }
         var response = activityUseCase.updateActivity(id, request, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getActivityById(@PathVariable Long id) {
-        Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new IllegalArgumentException("Tenant ID not found in token"));
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        if (tenantId == null) {
+            return null;
+        }
 
         var response = activityUseCase.getActivityById(id, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
@@ -58,9 +63,10 @@ public class ActivityController {
     public ResponseEntity<?> getAllActivities(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer size) {
-        Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new IllegalArgumentException("Tenant ID not found in token"));
-
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        if (tenantId == null) {
+            return null;
+        }
         PageRequest pageRequest = PageRequest.builder()
                 .page(page)
                 .size(size)
@@ -72,8 +78,10 @@ public class ActivityController {
 
     @PostMapping("/{id}/complete")
     public ResponseEntity<?> completeActivity(@PathVariable Long id) {
-        Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new IllegalArgumentException("Tenant ID not found in token"));
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        if (tenantId == null) {
+            return null;
+        }
 
         var response = activityUseCase.completeActivity(id, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
@@ -81,8 +89,10 @@ public class ActivityController {
 
     @PostMapping("/{id}/cancel")
     public ResponseEntity<?> cancelActivity(@PathVariable Long id) {
-        Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new IllegalArgumentException("Tenant ID not found in token"));
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        if (tenantId == null) {
+            return null;
+        }
 
         var response = activityUseCase.cancelActivity(id, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
@@ -90,8 +100,10 @@ public class ActivityController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteActivity(@PathVariable Long id) {
-        Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new IllegalArgumentException("Tenant ID not found in token"));
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        if (tenantId == null) {
+            return null;
+        }
 
         var response = activityUseCase.deleteActivity(id, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);

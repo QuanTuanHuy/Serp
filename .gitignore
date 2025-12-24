@@ -3,6 +3,8 @@
 
 // Env
 .env
+.env.local
+.env.prod
 
 copilot-instructions.md
 
@@ -16,4 +18,9 @@ deploy/
 DEPLOY*.md
 CLEANUP_GUIDE.md
 
-.github/prompts/
+# .github/prompts/
+
+.shared/
+.claude/
+ui-ux*
+backend-expert.prompt.md

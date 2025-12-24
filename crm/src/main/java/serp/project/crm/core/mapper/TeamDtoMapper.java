@@ -32,7 +32,6 @@ public class TeamDtoMapper {
         return TeamEntity.builder()
                 .name(request.getName())
                 .description(request.getDescription())
-                .leaderId(request.getLeaderId())
                 .notes(request.getNotes())
                 .build();
     }

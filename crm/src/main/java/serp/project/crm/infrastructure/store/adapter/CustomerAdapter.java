@@ -11,11 +11,15 @@ import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
 import serp.project.crm.core.domain.dto.PageRequest;
+import serp.project.crm.core.domain.dto.request.CustomerFilterRequest;
 import serp.project.crm.core.domain.entity.CustomerEntity;
 import serp.project.crm.core.domain.enums.ActiveStatus;
 import serp.project.crm.core.port.store.ICustomerPort;
 import serp.project.crm.infrastructure.store.mapper.CustomerMapper;
+import serp.project.crm.infrastructure.store.model.CustomerModel;
 import serp.project.crm.infrastructure.store.repository.CustomerRepository;
+import serp.project.crm.infrastructure.store.specification.CustomerSpecification;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.util.List;
 import java.util.Optional;
@@ -105,6 +109,15 @@ public class CustomerAdapter implements ICustomerPort {
     public Pair<List<CustomerEntity>, Long> findByIndustry(String industry, Long tenantId, PageRequest pageRequest) {
         var page = customerRepository
                 .findByTenantIdAndIndustry(tenantId, industry, customerMapper.toPageable(pageRequest))
+                .map(customerMapper::toEntity);
+        return customerMapper.pageToPair(page);
+    }
+
+    @Override
+    public Pair<List<CustomerEntity>, Long> filter(CustomerFilterRequest filter, PageRequest pageRequest, Long tenantId) {
+        var pageable = customerMapper.toPageable(pageRequest);
+        Specification<CustomerModel> spec = CustomerSpecification.build(filter, tenantId);
+        var page = customerRepository.findAll(spec, pageable)
                 .map(customerMapper::toEntity);
         return customerMapper.pageToPair(page);
     }

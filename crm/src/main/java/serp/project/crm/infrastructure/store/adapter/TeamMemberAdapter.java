@@ -48,6 +48,12 @@ public class TeamMemberAdapter implements ITeamMemberPort {
     }
 
     @Override
+    public Optional<TeamMemberEntity> findByUserId(Long userId, Long tenantId) {
+        return teamMemberRepository.findByTenantIdAndUserId(tenantId, userId)
+                .map(teamMemberMapper::toEntity);
+    }
+
+    @Override
     public Pair<List<TeamMemberEntity>, Long> findByTeamId(Long teamId, Long tenantId, PageRequest pageRequest) {
         var pageable = teamMemberMapper.toPageable(pageRequest);
         var page = teamMemberRepository.findByTenantIdAndTeamId(tenantId, teamId, pageable)
@@ -64,7 +70,18 @@ public class TeamMemberAdapter implements ITeamMemberPort {
     @Override
     public Pair<List<TeamMemberEntity>, Long> findByStatus(TeamMemberStatus status, Long tenantId,
             PageRequest pageRequest) {
-        return Pair.of(List.of(), 0L);
+        var pageable = teamMemberMapper.toPageable(pageRequest);
+        var page = teamMemberRepository.findByTenantIdAndStatus(tenantId, status.name(), pageable)
+                .map(teamMemberMapper::toEntity);
+        return teamMemberMapper.pageToPair(page);
+    }
+
+    @Override
+    public Pair<List<TeamMemberEntity>, Long> findByRole(String role, Long tenantId, PageRequest pageRequest) {
+        var pageable = teamMemberMapper.toPageable(pageRequest);
+        var page = teamMemberRepository.findByTenantIdAndRole(tenantId, role, pageable)
+                .map(teamMemberMapper::toEntity);
+        return teamMemberMapper.pageToPair(page);
     }
 
     @Override

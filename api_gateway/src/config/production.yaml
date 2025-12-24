@@ -41,6 +41,10 @@ external:
       host: ${PTM_TASK_SERVICE_HOST}
       port: ${PTM_TASK_SERVICE_PORT}
       timeout: 15s
+    ptmSchedule:
+      host: ${PTM_SCHEDULE_SERVICE_HOST}
+      port: ${PTM_SCHEDULE_SERVICE_PORT}
+      timeout: 15s
     purchaseService:
       host: ${PURCHASE_SERVICE_HOST}
       port: ${PURCHASE_SERVICE_PORT}
@@ -48,4 +52,12 @@ external:
     logisticsService:
       host: ${LOGISTICS_SERVICE_HOST}
       port: ${LOGISTICS_SERVICE_PORT}
+      timeout: 15s
+    crmService:
+      host: ${CRM_SERVICE_HOST}
+      port: ${CRM_SERVICE_PORT}
+      timeout: 15s
+    notificationService:
+      host: ${NOTIFICATION_SERVICE_HOST}
+      port: ${NOTIFICATION_SERVICE_PORT}
       timeout: 15s

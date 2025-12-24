@@ -13,7 +13,6 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   Search,
-  Bell,
   User,
   Command,
   Plus,
@@ -21,6 +20,7 @@ import {
   Home,
   ChevronDown,
 } from 'lucide-react';
+import { NotificationButton } from '@/modules/notifications';
 import {
   Button,
   Avatar,
@@ -42,7 +42,6 @@ interface PTMHeaderProps {
 export function PTMHeader({ scrollContainerRef, className }: PTMHeaderProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [notifications, setNotifications] = useState(3); // Mock notification count
   const [hidden, setHidden] = useState(false);
 
   const dispatch = useDispatch();
@@ -179,21 +178,10 @@ export function PTMHeader({ scrollContainerRef, className }: PTMHeaderProps) {
           </Button>
 
           {/* Notifications */}
-          <div className='relative'>
-            <Button
-              variant='ghost'
-              size='sm'
-              onClick={() => router.push('/ptm/activity')}
-              className='relative'
-            >
-              <Bell className='h-5 w-5' />
-              {notifications > 0 && (
-                <span className='absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-xs font-medium text-white flex items-center justify-center'>
-                  {notifications > 9 ? '9+' : notifications}
-                </span>
-              )}
-            </Button>
-          </div>
+          <NotificationButton
+            settingsPath='/ptm/settings'
+            allNotificationsPath='/ptm/activity'
+          />
 
           {/* Theme Toggle */}
           <ThemeToggle />

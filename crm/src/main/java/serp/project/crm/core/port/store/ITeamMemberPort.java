@@ -25,6 +25,10 @@ public interface ITeamMemberPort {
 
     Optional<TeamMemberEntity> findByTeamIdAndUserId(Long teamId, Long userId, Long tenantId);
 
+    Pair<List<TeamMemberEntity>, Long> findByRole(String role, Long tenantId, PageRequest pageRequest);
+
+    Optional<TeamMemberEntity> findByUserId(Long userId, Long tenantId);
+
     Pair<List<TeamMemberEntity>, Long> findByStatus(TeamMemberStatus status, Long tenantId, PageRequest pageRequest);
 
     Long countByTeamIdAndStatus(Long teamId, TeamMemberStatus status, Long tenantId);
