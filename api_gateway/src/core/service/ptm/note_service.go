@@ -9,37 +9,37 @@ import (
 	"context"
 
 	"github.com/golibs-starter/golib/log"
-	request "github.com/serp/api-gateway/src/core/domain/dto/request/ptm"
 	"github.com/serp/api-gateway/src/core/domain/dto/response"
 	port "github.com/serp/api-gateway/src/core/port/client/ptm"
 )
 
 type INoteService interface {
-	CreateNote(ctx context.Context, req *request.CreateNoteRequest) (*response.BaseResponse, error)
-	GetAllNotes(ctx context.Context) (*response.BaseResponse, error)
+	CreateNote(ctx context.Context, payload map[string]any) (*response.BaseResponse, error)
+	SearchNotes(ctx context.Context, payload map[string]any) (*response.BaseResponse, error)
 	GetNoteByID(ctx context.Context, noteID int64) (*response.BaseResponse, error)
+	UpdateNote(ctx context.Context, noteID int64, payload map[string]any) (*response.BaseResponse, error)
 	DeleteNote(ctx context.Context, noteID int64) (*response.BaseResponse, error)
-	LockNote(ctx context.Context, noteID int64) (*response.BaseResponse, error)
-	UnlockNote(ctx context.Context, noteID int64) (*response.BaseResponse, error)
+	GetNotesByProjectID(ctx context.Context, projectID int64) (*response.BaseResponse, error)
+	GetNotesByTaskID(ctx context.Context, taskID int64) (*response.BaseResponse, error)
 }
 
 type NoteService struct {
 	noteClient port.INoteClientPort
 }
 
-func (n *NoteService) CreateNote(ctx context.Context, req *request.CreateNoteRequest) (*response.BaseResponse, error) {
-	res, err := n.noteClient.CreateNote(ctx, req)
+func (n *NoteService) CreateNote(ctx context.Context, payload map[string]any) (*response.BaseResponse, error) {
+	res, err := n.noteClient.CreateNote(ctx, payload)
 	if err != nil {
-		log.Error(ctx, "Error creating note: %v", err)
+		log.Error(ctx, "NoteService: CreateNote error: ", err.Error())
 		return nil, err
 	}
 	return res, nil
 }
 
-func (n *NoteService) GetAllNotes(ctx context.Context) (*response.BaseResponse, error) {
-	res, err := n.noteClient.GetAllNotes(ctx)
+func (n *NoteService) SearchNotes(ctx context.Context, payload map[string]any) (*response.BaseResponse, error) {
+	res, err := n.noteClient.SearchNotes(ctx, payload)
 	if err != nil {
-		log.Error(ctx, "Error getting all notes: %v", err)
+		log.Error(ctx, "NoteService: SearchNotes error: ", err.Error())
 		return nil, err
 	}
 	return res, nil
@@ -48,7 +48,16 @@ func (n *NoteService) GetAllNotes(ctx context.Context) (*response.BaseResponse, 
 func (n *NoteService) GetNoteByID(ctx context.Context, noteID int64) (*response.BaseResponse, error) {
 	res, err := n.noteClient.GetNoteByID(ctx, noteID)
 	if err != nil {
-		log.Error(ctx, "Error getting note by ID: %v", err)
+		log.Error(ctx, "NoteService: GetNoteByID error: ", err.Error())
+		return nil, err
+	}
+	return res, nil
+}
+
+func (n *NoteService) UpdateNote(ctx context.Context, noteID int64, payload map[string]any) (*response.BaseResponse, error) {
+	res, err := n.noteClient.UpdateNote(ctx, noteID, payload)
+	if err != nil {
+		log.Error(ctx, "NoteService: UpdateNote error: ", err.Error())
 		return nil, err
 	}
 	return res, nil
@@ -57,25 +66,25 @@ func (n *NoteService) GetNoteByID(ctx context.Context, noteID int64) (*response.
 func (n *NoteService) DeleteNote(ctx context.Context, noteID int64) (*response.BaseResponse, error) {
 	res, err := n.noteClient.DeleteNote(ctx, noteID)
 	if err != nil {
-		log.Error(ctx, "Error deleting note: %v", err)
+		log.Error(ctx, "NoteService: DeleteNote error: ", err.Error())
 		return nil, err
 	}
 	return res, nil
 }
 
-func (n *NoteService) LockNote(ctx context.Context, noteID int64) (*response.BaseResponse, error) {
-	res, err := n.noteClient.LockNote(ctx, noteID)
+func (n *NoteService) GetNotesByProjectID(ctx context.Context, projectID int64) (*response.BaseResponse, error) {
+	res, err := n.noteClient.GetNotesByProjectID(ctx, projectID)
 	if err != nil {
-		log.Error(ctx, "Error locking note: %v", err)
+		log.Error(ctx, "NoteService: GetNotesByProjectID error: ", err.Error())
 		return nil, err
 	}
 	return res, nil
 }
 
-func (n *NoteService) UnlockNote(ctx context.Context, noteID int64) (*response.BaseResponse, error) {
-	res, err := n.noteClient.UnlockNote(ctx, noteID)
+func (n *NoteService) GetNotesByTaskID(ctx context.Context, taskID int64) (*response.BaseResponse, error) {
+	res, err := n.noteClient.GetNotesByTaskID(ctx, taskID)
 	if err != nil {
-		log.Error(ctx, "Error unlocking note: %v", err)
+		log.Error(ctx, "NoteService: GetNotesByTaskID error: ", err.Error())
 		return nil, err
 	}
 	return res, nil

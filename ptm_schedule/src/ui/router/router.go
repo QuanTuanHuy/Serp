@@ -43,9 +43,9 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 	{
 		planV1 := requiredAuthV1.Group("/schedule-plans")
 		{
+			planV1.POST("", p.SchedulePlanController.GetOrCreateActivePlan)
 			planV1.GET("/active", p.SchedulePlanController.GetActivePlan)
 			planV1.GET("/active/detail", p.SchedulePlanController.GetActivePlanDetail)
-			planV1.POST("/active", p.SchedulePlanController.GetOrCreateActivePlan)
 			planV1.GET("/history", p.SchedulePlanController.GetPlanHistory)
 			planV1.POST("/reschedule", p.SchedulePlanController.TriggerReschedule)
 			planV1.GET("/:id", p.SchedulePlanController.GetPlanByID)
@@ -62,13 +62,13 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 			availabilityV1.PUT("", p.AvailabilityCalendarController.ReplaceAvailability)
 		}
 
-		exceptionV1 := requiredAuthV1.Group("/calendar-exceptions")
-		{
-			exceptionV1.GET("", p.CalendarExceptionController.ListExceptions)
-			exceptionV1.POST("", p.CalendarExceptionController.SaveExceptions)
-			exceptionV1.PUT("", p.CalendarExceptionController.ReplaceExceptions)
-			exceptionV1.DELETE("", p.CalendarExceptionController.DeleteExceptions)
-		}
+		// exceptionV1 := requiredAuthV1.Group("/calendar-exceptions")
+		// {
+		// 	exceptionV1.GET("", p.CalendarExceptionController.ListExceptions)
+		// 	exceptionV1.POST("", p.CalendarExceptionController.SaveExceptions)
+		// 	exceptionV1.PUT("", p.CalendarExceptionController.ReplaceExceptions)
+		// 	exceptionV1.DELETE("", p.CalendarExceptionController.DeleteExceptions)
+		// }
 
 		windowV1 := requiredAuthV1.Group("/schedule-windows")
 		{

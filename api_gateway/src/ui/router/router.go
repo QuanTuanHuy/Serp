@@ -47,12 +47,14 @@ type RegisterRoutersIn struct {
 	CustomerController    *crm.CustomerController
 	ContactController     *crm.ContactController
 
-	ProjectController   *ptm.ProjectController
-	GroupTaskController *ptm.GroupTaskController
-	TaskController      *ptm.TaskController
-	CommentController   *ptm.CommentController
-	NoteController      *ptm.NoteController
-	UserTagController   *ptm.UserTagController
+	ProjectController *ptm.ProjectController
+	TaskController    *ptm.TaskController
+	NoteController    *ptm.NoteController
+
+	SchedulePlanController         *ptm.SchedulePlanController
+	AvailabilityCalendarController *ptm.AvailabilityCalendarController
+	ScheduleWindowController       *ptm.ScheduleWindowController
+	ScheduleEventController        *ptm.ScheduleEventController
 
 	ProductController  *purchase.ProductController
 	AddressController  *purchase.AddressController
@@ -112,11 +114,12 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 	RegisterPtmRoutes(
 		group,
 		p.ProjectController,
-		p.GroupTaskController,
 		p.TaskController,
-		p.CommentController,
 		p.NoteController,
-		p.UserTagController,
+		p.SchedulePlanController,
+		p.AvailabilityCalendarController,
+		p.ScheduleWindowController,
+		p.ScheduleEventController,
 	)
 
 	RegisterPurchaseRoutes(

@@ -8,14 +8,13 @@ package port
 import (
 	"context"
 
-	request "github.com/serp/api-gateway/src/core/domain/dto/request/ptm"
 	"github.com/serp/api-gateway/src/core/domain/dto/response"
 )
 
 type ITaskClientPort interface {
-	CreateTask(ctx context.Context, req *request.CreateTaskRequest) (*response.BaseResponse, error)
+	CreateTask(ctx context.Context, payload map[string]any) (*response.BaseResponse, error)
+	GetTasksByUserID(ctx context.Context) (*response.BaseResponse, error)
 	GetTaskByID(ctx context.Context, taskID int64) (*response.BaseResponse, error)
-	UpdateTask(ctx context.Context, taskID int64, req *request.UpdateTaskRequest) (*response.BaseResponse, error)
+	UpdateTask(ctx context.Context, taskID int64, payload map[string]any) (*response.BaseResponse, error)
 	DeleteTask(ctx context.Context, taskID int64) (*response.BaseResponse, error)
-	GetCommentsByTaskID(ctx context.Context, taskID int64) (*response.BaseResponse, error)
 }
