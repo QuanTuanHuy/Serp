@@ -99,9 +99,10 @@ export function DependencyGraph({
   projectId,
   className,
 }: DependencyGraphProps) {
-  const { data: allTasks = [] } = useGetTasksQuery(
+  const { data: paginatedData } = useGetTasksQuery(
     projectId ? { projectId } : {}
   );
+  const allTasks = paginatedData?.data?.items || [];
 
   // Get all dependencies for the project/tasks
   // In production, this would be a single API call: GET /api/v1/dependencies?projectId=X

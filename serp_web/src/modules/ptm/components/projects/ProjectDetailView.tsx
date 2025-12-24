@@ -76,7 +76,7 @@ export function ProjectDetailView({
   } = useGetProjectQuery(numericProjectId, {
     skip: !numericProjectId,
   });
-  const { data: tasks = [], isLoading: isLoadingTasks } = useGetTasksQuery(
+  const { data: paginatedTasks, isLoading: isLoadingTasks } = useGetTasksQuery(
     {
       projectId: numericProjectId,
     },
@@ -84,6 +84,7 @@ export function ProjectDetailView({
       skip: !numericProjectId,
     }
   );
+  const tasks = paginatedTasks?.data?.items || [];
   const { data: notes = [] } = useGetNotesByProjectQuery(numericProjectId, {
     skip: !numericProjectId,
   });

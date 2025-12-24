@@ -25,7 +25,10 @@ export interface DashboardStats {
 }
 
 export function useDashboardStats() {
-  const { data: tasks = [], isLoading: isLoadingTasks } = useGetTasksQuery({});
+  const { data: paginatedData, isLoading: isLoadingTasks } = useGetTasksQuery(
+    {}
+  );
+  const tasks = paginatedData?.data?.items || [];
 
   // Get today's schedule events
   const today = new Date();

@@ -44,7 +44,8 @@ export default function SchedulePage() {
   );
 
   // Fetch data
-  const { data: allTasks = [] } = useGetTasksQuery({});
+  const { data: paginatedData } = useGetTasksQuery({});
+  const allTasks = paginatedData?.data?.items || [];
   const { data: focusBlocks = [] } = useGetFocusTimeBlocksQuery();
   const [triggerOptimization, { isLoading: isOptimizing }] =
     useTriggerOptimizationMutation();

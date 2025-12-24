@@ -44,7 +44,8 @@ import type { Task, TaskStatus } from '../../types';
 
 export function RecentTasks() {
   const router = useRouter();
-  const { data: allTasks = [], isLoading } = useGetTasksQuery({});
+  const { data: paginatedData, isLoading } = useGetTasksQuery({});
+  const allTasks = paginatedData?.data?.items || [];
   const [updateTask] = useUpdateTaskMutation();
   const [deleteTask] = useDeleteTaskMutation();
 

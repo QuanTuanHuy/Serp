@@ -22,16 +22,26 @@ import { CheckSquare, Circle, Clock, Network } from 'lucide-react';
 
 export default function TasksPage() {
   const [activeTab, setActiveTab] = useState('list');
-  const { data: tasks = [], isLoading } = useGetTasksQuery({});
+  const [page, setPage] = useState(0);
+  const pageSize = 20;
+
+  const { data: paginatedData, isLoading } = useGetTasksQuery({
+    page,
+    pageSize,
+  });
+
+  const tasks = paginatedData?.data?.items || [];
+  const totalItems = paginatedData?.data?.totalItems || 0;
+  const totalPages = paginatedData?.data?.totalPages || 0;
 
   // Calculate real-time stats
   const stats = useMemo(() => {
-    const total = tasks.length;
+    const total = totalItems;
     const completed = tasks.filter((t) => t.status === 'DONE').length;
     const inProgress = tasks.filter((t) => t.status === 'IN_PROGRESS').length;
 
     return { total, completed, inProgress };
-  }, [tasks]);
+  }, [tasks, totalItems]);
 
   return (
     <div className='space-y-6'>

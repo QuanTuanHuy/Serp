@@ -28,7 +28,8 @@ interface DayData {
 }
 
 export function WeeklyOverview() {
-  const { data: tasks = [], isLoading } = useGetTasksQuery({});
+  const { data: paginatedData, isLoading } = useGetTasksQuery({});
+  const tasks = paginatedData?.data?.items || [];
 
   const weekData = useMemo<DayData[]>(() => {
     const today = new Date();

@@ -34,7 +34,8 @@ export function DependencyList({ taskId, className }: DependencyListProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const { data: dependencies = [] } = useGetTaskDependenciesQuery(taskId);
-  const { data: allTasks = [] } = useGetTasksQuery({});
+  const { data: paginatedTasks } = useGetTasksQuery({});
+  const allTasks = paginatedTasks?.data?.items || [];
   const [removeDependency] = useRemoveDependencyMutation();
 
   const dependentTasks = dependencies

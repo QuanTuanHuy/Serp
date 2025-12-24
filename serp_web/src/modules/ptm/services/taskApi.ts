@@ -6,7 +6,10 @@
  */
 
 import { ptmApi } from './api';
-import { createDataTransform } from '@/lib/store/api/utils';
+import {
+  createDataTransform,
+  createPaginatedTransform,
+} from '@/lib/store/api/utils';
 import { USE_MOCK_DATA, mockApiHandlers } from '../mocks/mockHandlers';
 import type {
   Task,
@@ -17,31 +20,52 @@ import type {
   CreateDependencyRequest,
   DependencyValidationResult,
 } from '../types';
+import type { PaginatedResponse } from '@/lib/store/api/types';
+
+export interface TaskFilterParams {
+  status?: string;
+  priority?: string;
+  projectId?: number;
+  category?: string;
+  tags?: string[];
+  isDeepWork?: boolean;
+  isOverdue?: boolean;
+  page?: number;
+  pageSize?: number;
+}
 
 export const taskApi = ptmApi.injectEndpoints({
   endpoints: (builder) => ({
-    // Get all tasks
-    getTasks: builder.query<
-      Task[],
-      { status?: string; projectId?: number | string }
-    >({
-      queryFn: async (params) => {
-        if (USE_MOCK_DATA) {
-          const data = await mockApiHandlers.tasks.getAll(params);
-          return { data };
-        }
-        // Real API call would go here
-        return {
-          error: {
-            status: 'CUSTOM_ERROR',
-            error: 'API not implemented',
-          } as any,
-        };
-      },
+    // Get all tasks (with pagination)
+    getTasks: builder.query<PaginatedResponse<Task>, TaskFilterParams>({
+      query: (params = {}) => ({
+        url: '/tasks',
+        method: 'GET',
+        params: {
+          ...(params.status && { status: params.status }),
+          ...(params.priority && { priority: params.priority }),
+          ...(params.projectId && { projectId: params.projectId }),
+          ...(params.category && { category: params.category }),
+          ...(params.tags && { tags: params.tags }),
+          ...(params.isDeepWork !== undefined && {
+            isDeepWork: params.isDeepWork,
+          }),
+          ...(params.isOverdue !== undefined && {
+            isOverdue: params.isOverdue,
+          }),
+          page: params.page ?? 0,
+          pageSize: params.pageSize ?? 20,
+        },
+      }),
+      extraOptions: { service: 'ptm' },
+      transformResponse: createPaginatedTransform<Task>(),
       providesTags: (result) =>
-        result
+        result?.data.items
           ? [
-              ...result.map(({ id }) => ({ type: 'ptm/Task' as const, id })),
+              ...result.data.items.map(({ id }) => ({
+                type: 'ptm/Task' as const,
+                id,
+              })),
               { type: 'ptm/Task', id: 'LIST' },
             ]
           : [{ type: 'ptm/Task', id: 'LIST' }],
@@ -49,35 +73,24 @@ export const taskApi = ptmApi.injectEndpoints({
 
     // Get single task
     getTask: builder.query<Task, number>({
-      queryFn: async (id) => {
-        if (USE_MOCK_DATA) {
-          const data = await mockApiHandlers.tasks.getById(id);
-          return { data };
-        }
-        return {
-          error: {
-            status: 'CUSTOM_ERROR',
-            error: 'API not implemented',
-          } as any,
-        };
-      },
+      query: (id) => ({
+        url: `/tasks/${id}`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'ptm' },
+      transformResponse: createDataTransform<Task>(),
       providesTags: (_result, _error, id) => [{ type: 'ptm/Task', id }],
     }),
 
     // Create task
     createTask: builder.mutation<Task, CreateTaskRequest>({
-      queryFn: async (body) => {
-        if (USE_MOCK_DATA) {
-          const data = await mockApiHandlers.tasks.create(body);
-          return { data };
-        }
-        return {
-          error: {
-            status: 'CUSTOM_ERROR',
-            error: 'API not implemented',
-          } as any,
-        };
-      },
+      query: (body) => ({
+        url: '/tasks',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'ptm' },
+      transformResponse: createDataTransform<Task>(),
       invalidatesTags: [
         { type: 'ptm/Task', id: 'LIST' },
         { type: 'ptm/Schedule', id: 'LIST' },
@@ -106,18 +119,13 @@ export const taskApi = ptmApi.injectEndpoints({
 
     // Update task
     updateTask: builder.mutation<Task, UpdateTaskRequest>({
-      queryFn: async ({ id, ...patch }) => {
-        if (USE_MOCK_DATA) {
-          const data = await mockApiHandlers.tasks.update(id, patch);
-          return { data };
-        }
-        return {
-          error: {
-            status: 'CUSTOM_ERROR',
-            error: 'API not implemented',
-          } as any,
-        };
-      },
+      query: ({ id, ...patch }) => ({
+        url: `/tasks/${id}`,
+        method: 'PATCH',
+        body: patch,
+      }),
+      extraOptions: { service: 'ptm' },
+      transformResponse: createDataTransform<Task>(),
 
       // Optimistic update
       async onQueryStarted({ id, ...patch }, { dispatch, queryFulfilled }) {
@@ -143,18 +151,11 @@ export const taskApi = ptmApi.injectEndpoints({
 
     // Delete task
     deleteTask: builder.mutation<void, number>({
-      queryFn: async (id) => {
-        if (USE_MOCK_DATA) {
-          await mockApiHandlers.tasks.delete(id);
-          return { data: undefined };
-        }
-        return {
-          error: {
-            status: 'CUSTOM_ERROR',
-            error: 'API not implemented',
-          } as any,
-        };
-      },
+      query: (id) => ({
+        url: `/tasks/${id}`,
+        method: 'DELETE',
+      }),
+      extraOptions: { service: 'ptm' },
       invalidatesTags: (_result, _error, id) => [
         { type: 'ptm/Task', id },
         { type: 'ptm/Task', id: 'LIST' },
@@ -202,18 +203,19 @@ export const taskApi = ptmApi.injectEndpoints({
 
     // Get subtasks for a parent task
     getSubtasks: builder.query<Task[], number>({
-      queryFn: async (parentTaskId) => {
-        if (USE_MOCK_DATA) {
-          const data = await mockApiHandlers.tasks.getSubtasks(parentTaskId);
-          return { data };
-        }
-        // Real API call
-        return {
-          error: {
-            status: 'CUSTOM_ERROR',
-            error: 'API not implemented',
-          } as any,
-        };
+      query: (parentTaskId) => ({
+        url: '/tasks',
+        method: 'GET',
+        params: {
+          parentTaskId,
+          page: 0,
+          pageSize: 100,
+        },
+      }),
+      extraOptions: { service: 'ptm' },
+      transformResponse: (response: any) => {
+        // Extract items from paginated response
+        return response?.data?.items || [];
       },
       providesTags: (_result, _error, parentTaskId) => [
         { type: 'ptm/Task', id: `SUBTASKS_${parentTaskId}` },
@@ -276,22 +278,27 @@ export const taskApi = ptmApi.injectEndpoints({
       void,
       { taskIds: number[]; newParentId?: number }
     >({
-      queryFn: async ({ taskIds, newParentId }) => {
-        if (USE_MOCK_DATA) {
+      async queryFn({ taskIds, newParentId }, _api, _extraOptions, baseQuery) {
+        try {
+          // Call updateTask for each task to change parentTaskId
           for (const taskId of taskIds) {
-            await mockApiHandlers.tasks.update(taskId, {
-              parentTaskId: newParentId,
+            await baseQuery({
+              url: `/tasks/${taskId}`,
+              method: 'PATCH',
+              body: { parentTaskId: newParentId || null },
             });
           }
           return { data: undefined };
+        } catch (error: any) {
+          return {
+            error: {
+              status: error.status || 'CUSTOM_ERROR',
+              error: error.message || 'Failed to reparent tasks',
+            },
+          };
         }
-        return {
-          error: {
-            status: 'CUSTOM_ERROR',
-            error: 'API not implemented',
-          } as any,
-        };
       },
+      extraOptions: { service: 'ptm' },
       invalidatesTags: [{ type: 'ptm/Task', id: 'LIST' }],
     }),
 

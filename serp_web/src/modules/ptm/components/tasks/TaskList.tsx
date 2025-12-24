@@ -43,21 +43,33 @@ export function TaskList({
   );
   const [sortBy, setSortBy] = useState<SortOption>('deadline');
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [page, setPage] = useState(0);
+  const pageSize = 20;
 
-  const { data: tasks = [], isLoading } = useGetTasksQuery({
-    projectId,
+  const { data: paginatedData, isLoading } = useGetTasksQuery({
+    projectId: projectId ? Number(projectId) : undefined,
+    status: statusFilter !== 'ALL' ? statusFilter : undefined,
+    priority: priorityFilter !== 'ALL' ? priorityFilter : undefined,
+    page,
+    pageSize,
   });
 
-  // Filter and sort tasks
+  const tasks = paginatedData?.data?.items || [];
+  const totalItems = paginatedData?.data?.totalItems || 0;
+  const totalPages = paginatedData?.data?.totalPages || 0;
+
+  // Client-side filtering for search (API doesn't support search yet)
   const filteredTasks = useMemo(() => {
     let filtered = [...tasks];
 
     // Filter by project if filterProjectId is provided
     if (filterProjectId) {
-      filtered = filtered.filter((task) => task.projectId === filterProjectId);
+      filtered = filtered.filter(
+        (task) => task.projectId === Number(filterProjectId)
+      );
     }
 
-    // Search filter
+    // Search filter (client-side)
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -68,17 +80,7 @@ export function TaskList({
       );
     }
 
-    // Status filter
-    if (statusFilter !== 'ALL') {
-      filtered = filtered.filter((task) => task.status === statusFilter);
-    }
-
-    // Priority filter
-    if (priorityFilter !== 'ALL') {
-      filtered = filtered.filter((task) => task.priority === priorityFilter);
-    }
-
-    // Sort
+    // Sort (client-side)
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'deadline':
@@ -87,12 +89,16 @@ export function TaskList({
           return a.deadlineMs - b.deadlineMs;
 
         case 'priority': {
-          const priorityOrder: Record<TaskPriority, number> = {
-            HIGH: 0,
-            MEDIUM: 1,
-            LOW: 2,
+          const priorityOrder: Record<string, number> = {
+            URGENT: 0,
+            HIGH: 1,
+            MEDIUM: 2,
+            LOW: 3,
           };
-          return priorityOrder[a.priority] - priorityOrder[b.priority];
+          return (
+            (priorityOrder[a.priority] || 99) -
+            (priorityOrder[b.priority] || 99)
+          );
         }
 
         case 'created':
@@ -109,14 +115,7 @@ export function TaskList({
     });
 
     return filtered;
-  }, [
-    tasks,
-    searchQuery,
-    statusFilter,
-    priorityFilter,
-    sortBy,
-    filterProjectId,
-  ]);
+  }, [tasks, searchQuery, sortBy, filterProjectId]);
 
   // Virtualization setup
   const parentRef = useRef<HTMLDivElement>(null);

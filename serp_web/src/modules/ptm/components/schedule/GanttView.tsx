@@ -29,9 +29,10 @@ interface GanttTask extends Task {
 }
 
 export function GanttView({ projectId, className }: GanttViewProps) {
-  const { data: allTasks = [] } = useGetTasksQuery(
+  const { data: paginatedData } = useGetTasksQuery(
     projectId ? { projectId } : {}
   );
+  const allTasks = paginatedData?.data?.items || [];
 
   // Filter tasks with deadlines and calculate Gantt data
   const ganttTasks: GanttTask[] = useMemo(() => {

@@ -51,8 +51,11 @@ export default function ProjectDetailPage({
   const tab = searchParams.get('tab');
 
   const { data: project, isLoading } = useGetProjectQuery(projectId);
-  const { data: projectTasks = [], isLoading: isLoadingTasks } =
-    useGetTasksQuery({ projectId }, { skip: !projectId });
+  const { data: paginatedTasks, isLoading: isLoadingTasks } = useGetTasksQuery(
+    { projectId },
+    { skip: !projectId }
+  );
+  const projectTasks = paginatedTasks?.data?.items || [];
   const { data: activities = [] } = useGetEntityActivitiesQuery(
     {
       entityType: 'project',

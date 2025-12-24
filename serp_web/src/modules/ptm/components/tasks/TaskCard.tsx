@@ -63,7 +63,8 @@ export function TaskCard({
   const [updateTask] = useUpdateTaskMutation();
   const [deleteTask] = useDeleteTaskMutation();
 
-  const { data: allTasks = [] } = useGetTasksQuery({});
+  const { data: paginatedTasks } = useGetTasksQuery({});
+  const allTasks = paginatedTasks?.data?.items || [];
 
   const subtasks = allTasks.filter((t) => t.parentTaskId === task.id);
   const completedSubtasks = subtasks.filter((t) => t.status === 'DONE').length;
