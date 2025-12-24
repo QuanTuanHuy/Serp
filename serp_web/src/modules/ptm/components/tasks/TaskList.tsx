@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo, useState, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Filter, SortAsc, Search } from 'lucide-react';
 import {
@@ -19,9 +19,10 @@ import {
 } from '@/shared/components/ui/select';
 import { TaskCard } from './TaskCard';
 import { TaskDetail } from './TaskDetail';
-import { useGetTasksQuery } from '../../services/taskApi';
-import type { Task, TaskStatus, TaskPriority } from '../../types';
+import { useTasks } from '../../hooks';
+import type { TaskStatus, TaskPriority } from '../../types';
 import { Skeleton } from '@/shared/components/ui/skeleton';
+import { useState } from 'react';
 
 interface TaskListProps {
   projectId?: number | string;
@@ -29,93 +30,29 @@ interface TaskListProps {
   className?: string;
 }
 
-type SortOption = 'deadline' | 'priority' | 'created' | 'title';
-
 export function TaskList({
   projectId,
   filterProjectId,
   className,
 }: TaskListProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<TaskStatus | 'ALL'>('ALL');
-  const [priorityFilter, setPriorityFilter] = useState<TaskPriority | 'ALL'>(
-    'ALL'
-  );
-  const [sortBy, setSortBy] = useState<SortOption>('deadline');
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
-  const [page, setPage] = useState(0);
-  const pageSize = 20;
 
-  const { data: paginatedData, isLoading } = useGetTasksQuery({
-    projectId: projectId ? Number(projectId) : undefined,
-    status: statusFilter !== 'ALL' ? statusFilter : undefined,
-    priority: priorityFilter !== 'ALL' ? priorityFilter : undefined,
-    page,
-    pageSize,
+  const {
+    tasks: filteredTasks,
+    isLoading,
+    searchQuery,
+    setSearchQuery,
+    statusFilter,
+    setStatusFilter,
+    priorityFilter,
+    setPriorityFilter,
+    sortBy,
+    setSortBy,
+    clearFilters,
+  } = useTasks({
+    projectId: filterProjectId || projectId,
+    initialSortBy: 'deadline',
   });
-
-  const tasks = paginatedData?.data?.items || [];
-  const totalItems = paginatedData?.data?.totalItems || 0;
-  const totalPages = paginatedData?.data?.totalPages || 0;
-
-  // Client-side filtering for search (API doesn't support search yet)
-  const filteredTasks = useMemo(() => {
-    let filtered = [...tasks];
-
-    // Filter by project if filterProjectId is provided
-    if (filterProjectId) {
-      filtered = filtered.filter(
-        (task) => task.projectId === Number(filterProjectId)
-      );
-    }
-
-    // Search filter (client-side)
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (task) =>
-          task.title.toLowerCase().includes(query) ||
-          task.description?.toLowerCase().includes(query) ||
-          task.tags?.some((tag: string) => tag.toLowerCase().includes(query))
-      );
-    }
-
-    // Sort (client-side)
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'deadline':
-          if (!a.deadlineMs) return 1;
-          if (!b.deadlineMs) return -1;
-          return a.deadlineMs - b.deadlineMs;
-
-        case 'priority': {
-          const priorityOrder: Record<string, number> = {
-            URGENT: 0,
-            HIGH: 1,
-            MEDIUM: 2,
-            LOW: 3,
-          };
-          return (
-            (priorityOrder[a.priority] || 99) -
-            (priorityOrder[b.priority] || 99)
-          );
-        }
-
-        case 'created':
-          return (
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-
-        case 'title':
-          return a.title.localeCompare(b.title);
-
-        default:
-          return 0;
-      }
-    });
-
-    return filtered;
-  }, [tasks, searchQuery, sortBy, filterProjectId]);
 
   // Virtualization setup
   const parentRef = useRef<HTMLDivElement>(null);
@@ -144,9 +81,7 @@ export function TaskList({
 
       // Escape to clear filters
       if (e.key === 'Escape') {
-        setSearchQuery('');
-        setStatusFilter('ALL');
-        setPriorityFilter('ALL');
+        clearFilters();
       }
 
       // Arrow down/up for task navigation when no input is focused
@@ -258,7 +193,11 @@ export function TaskList({
 
             <Select
               value={sortBy}
-              onValueChange={(value) => setSortBy(value as SortOption)}
+              onValueChange={(value) =>
+                setSortBy(
+                  value as 'deadline' | 'priority' | 'created' | 'title' | 'id'
+                )
+              }
             >
               <SelectTrigger className='w-[140px]'>
                 <SortAsc className='mr-2 h-4 w-4' />

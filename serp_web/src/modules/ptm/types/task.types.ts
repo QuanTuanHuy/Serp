@@ -153,3 +153,21 @@ export interface UpdateTaskRequest {
   category?: string;
   tags?: string[];
 }
+
+export interface TaskFilterParams {
+  status?: string;
+  priority?: string;
+  projectId?: number;
+  parentTaskId?: number;
+  category?: string;
+  tags?: string[];
+  isDeepWork?: boolean;
+  isMeeting?: boolean;
+  isRecurring?: boolean;
+  deadlineFrom?: number;
+  deadlineTo?: number;
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC';
+}

@@ -16,23 +16,14 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/shared/components/ui/tabs';
-import { useGetTasksQuery } from '@/modules/ptm/services/taskApi';
+import { useTasks } from '@/modules/ptm/hooks';
 import { DependencyGraph } from '@/modules/ptm/components/tasks/DependencyGraph';
 import { CheckSquare, Circle, Clock, Network } from 'lucide-react';
 
 export default function TasksPage() {
   const [activeTab, setActiveTab] = useState('list');
-  const [page, setPage] = useState(0);
-  const pageSize = 20;
 
-  const { data: paginatedData, isLoading } = useGetTasksQuery({
-    page,
-    pageSize,
-  });
-
-  const tasks = paginatedData?.data?.items || [];
-  const totalItems = paginatedData?.data?.totalItems || 0;
-  const totalPages = paginatedData?.data?.totalPages || 0;
+  const { tasks, totalItems, isLoading } = useTasks();
 
   // Calculate real-time stats
   const stats = useMemo(() => {

@@ -19,20 +19,9 @@ import type {
   TaskDependency,
   CreateDependencyRequest,
   DependencyValidationResult,
+  TaskFilterParams,
 } from '../types';
 import type { PaginatedResponse } from '@/lib/store/api/types';
-
-export interface TaskFilterParams {
-  status?: string;
-  priority?: string;
-  projectId?: number;
-  category?: string;
-  tags?: string[];
-  isDeepWork?: boolean;
-  isOverdue?: boolean;
-  page?: number;
-  pageSize?: number;
-}
 
 export const taskApi = ptmApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -45,16 +34,24 @@ export const taskApi = ptmApi.injectEndpoints({
           ...(params.status && { status: params.status }),
           ...(params.priority && { priority: params.priority }),
           ...(params.projectId && { projectId: params.projectId }),
+          ...(params.parentTaskId && { parentTaskId: params.parentTaskId }),
           ...(params.category && { category: params.category }),
           ...(params.tags && { tags: params.tags }),
           ...(params.isDeepWork !== undefined && {
             isDeepWork: params.isDeepWork,
           }),
-          ...(params.isOverdue !== undefined && {
-            isOverdue: params.isOverdue,
+          ...(params.isMeeting !== undefined && {
+            isMeeting: params.isMeeting,
           }),
+          ...(params.isRecurring !== undefined && {
+            isRecurring: params.isRecurring,
+          }),
+          ...(params.deadlineFrom && { deadlineFrom: params.deadlineFrom }),
+          ...(params.deadlineTo && { deadlineTo: params.deadlineTo }),
           page: params.page ?? 0,
           pageSize: params.pageSize ?? 20,
+          ...(params.sortBy && { sortBy: params.sortBy }),
+          ...(params.sortOrder && { sortOrder: params.sortOrder }),
         },
       }),
       extraOptions: { service: 'ptm' },
