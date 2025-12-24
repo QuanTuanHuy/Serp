@@ -47,13 +47,13 @@ func (t *TaskClientAdapter) CreateTask(ctx context.Context, payload map[string]a
 	return &result, nil
 }
 
-func (t *TaskClientAdapter) GetTasksByUserID(ctx context.Context) (*response.BaseResponse, error) {
+func (t *TaskClientAdapter) GetTasksByUserID(ctx context.Context, params map[string]string) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
 	var httpResponse *utils.HTTPResponse
 	err := t.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		httpResponse, err = t.apiClient.GET(ctx, "/api/v1/tasks", headers)
+		httpResponse, err = t.apiClient.GETWithQuery(ctx, "/api/v1/tasks", params, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call get tasks API: %w", err)
 		}

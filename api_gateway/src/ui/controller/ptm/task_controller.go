@@ -32,7 +32,14 @@ func (t *TaskController) CreateTask(c *gin.Context) {
 }
 
 func (t *TaskController) GetTasksByUserID(c *gin.Context) {
-	res, err := t.taskService.GetTasksByUserID(c.Request.Context())
+	params := map[string]string{}
+	queryParams := c.Request.URL.Query()
+	for key, values := range queryParams {
+		if len(values) > 0 {
+			params[key] = values[0]
+		}
+	}
+	res, err := t.taskService.GetTasksByUserID(c.Request.Context(), params)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return
