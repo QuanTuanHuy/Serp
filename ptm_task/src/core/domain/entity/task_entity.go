@@ -70,6 +70,10 @@ func (t *TaskEntity) IsOverdue(currentTimeMs int64) bool {
 	return currentTimeMs > *t.DeadlineMs && t.Status != "DONE" && t.Status != "CANCELLED"
 }
 
+func (t *TaskEntity) IsCompleted() bool {
+	return enum.TaskStatus(t.Status).IsCompleted()
+}
+
 func (t *TaskEntity) CanBeScheduled(currentTimeMs int64) bool {
 	if t.EarliestStartMs == nil {
 		return true

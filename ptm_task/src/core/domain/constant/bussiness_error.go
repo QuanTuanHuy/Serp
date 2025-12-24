@@ -17,6 +17,8 @@ const (
 	UpdateTaskForbidden            = "you don't have permission to update this task"
 	DeleteTaskForbidden            = "you don't have permission to delete this task"
 	CannotCompleteTaskWithSubtasks = "cannot complete task with incomplete subtasks"
+	ParentTaskDoesNotBelongToUser  = "parent task does not belong to user"
+	ParentTaskNotFound             = "parent task not found"
 )
 
 const (
@@ -111,6 +113,8 @@ var BusinessErrorResponseMap = map[string]BusinessErrorResponse{
 	UpdateTaskForbidden:            {HTTPCode: http.StatusForbidden, Message: UpdateTaskForbidden},
 	DeleteTaskForbidden:            {HTTPCode: http.StatusForbidden, Message: DeleteTaskForbidden},
 	CannotCompleteTaskWithSubtasks: {HTTPCode: http.StatusBadRequest, Message: CannotCompleteTaskWithSubtasks},
+	ParentTaskDoesNotBelongToUser:  {HTTPCode: http.StatusBadRequest, Message: ParentTaskDoesNotBelongToUser},
+	ParentTaskNotFound:             {HTTPCode: http.StatusNotFound, Message: ParentTaskNotFound},
 
 	TemplateNotFound:            {HTTPCode: http.StatusNotFound, Message: TemplateNotFound},
 	TemplateNameRequired:        {HTTPCode: http.StatusBadRequest, Message: TemplateNameRequired},

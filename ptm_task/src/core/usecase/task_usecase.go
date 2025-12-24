@@ -8,7 +8,6 @@ package usecase
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/serp/ptm-task/src/core/domain/constant"
 	"github.com/serp/ptm-task/src/core/domain/dto/request"
@@ -26,8 +25,6 @@ type ITaskUseCase interface {
 	CreateTaskFromTemplate(ctx context.Context, userID int64, templateID int64, variables map[string]string) (*entity.TaskEntity, error)
 
 	UpdateTask(ctx context.Context, userID, taskID int64, req *request.UpdateTaskRequest) (*entity.TaskEntity, error)
-	UpdateTaskStatus(ctx context.Context, userID int64, taskID int64, status string) error
-	CompleteTask(ctx context.Context, userID int64, taskID int64, actualDurationMin int, quality int) error
 
 	DeleteTask(ctx context.Context, userID int64, taskID int64) error
 	BulkDeleteTasks(ctx context.Context, userID int64, taskIDs []int64) error
@@ -38,8 +35,6 @@ type ITaskUseCase interface {
 	CountTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) (int64, error)
 	GetOverdueTasks(ctx context.Context, userID int64) ([]*entity.TaskEntity, error)
 	GetDeepWorkTasks(ctx context.Context, userID int64) ([]*entity.TaskEntity, error)
-
-	RefreshProjectProgressForTask(ctx context.Context, taskID int64) error
 }
 
 type taskUseCase struct {
@@ -72,6 +67,21 @@ func NewTaskUseCase(
 }
 
 func (u *taskUseCase) CreateTask(ctx context.Context, userID, tenantID int64, req *request.CreateTaskRequest) (*entity.TaskEntity, error) {
+	var err error
+	if req.ParentTaskID != nil {
+		_, err = u.taskService.GetTaskByUserIDAndID(ctx, userID, *req.ParentTaskID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	var project *entity.ProjectEntity
+	if req.ProjectID != nil {
+		project, err = u.projectService.GetProjectByUserIDAndID(ctx, userID, *req.ProjectID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	task := u.mapper.CreateRequestToEntity(req, userID, tenantID)
 	result, err := u.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
 		task, err := u.taskService.CreateTask(ctx, tx, userID, task)
@@ -90,6 +100,12 @@ func (u *taskUseCase) CreateTask(ctx context.Context, userID, tenantID int64, re
 	if err != nil {
 		return nil, err
 	}
+
+	if project != nil {
+		project.UpdateStatsForAddedTask(false)
+		err = u.projectService.UpdateProjectProgress(ctx, nil, project.ID, project.TotalTasks, project.CompletedTasks)
+	}
+
 	return result.(*entity.TaskEntity), nil
 }
 
@@ -139,22 +155,51 @@ func (u *taskUseCase) CreateTaskFromTemplate(ctx context.Context, userID int64, 
 }
 
 func (u *taskUseCase) UpdateTask(ctx context.Context, userID, taskID int64, req *request.UpdateTaskRequest) (*entity.TaskEntity, error) {
-	task, err := u.taskService.GetTaskByID(ctx, taskID)
+	oldTask, err := u.taskService.GetTaskByID(ctx, taskID)
 	if err != nil {
 		return nil, err
 	}
-	task = u.mapper.UpdateRequestToEntity(req, task)
-	result, err := u.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
-		task, err := u.taskService.UpdateTask(ctx, tx, userID, task)
+	if oldTask.UserID != userID {
+		return nil, errors.New(constant.UpdateTaskForbidden)
+	}
+
+	oldProjectID := oldTask.ProjectID
+	wasCompleted := oldTask.IsCompleted()
+
+	if req.ProjectID != nil && (oldProjectID == nil || *oldProjectID != *req.ProjectID) {
+		_, err = u.projectService.GetProjectByUserIDAndID(ctx, userID, *req.ProjectID)
 		if err != nil {
 			return nil, err
 		}
-		err = u.taskService.PushTaskUpdatedEvent(ctx, task, req)
+	}
+	if req.ParentTaskID != nil && (oldTask.ParentTaskID == nil || *oldTask.ParentTaskID != *req.ParentTaskID) {
+		_, err = u.taskService.GetTaskByUserIDAndID(ctx, userID, *req.ParentTaskID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	newTask := *oldTask
+	u.mapper.UpdateRequestToEntity(req, &newTask)
+	isCompleted := newTask.IsCompleted()
+
+	result, err := u.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
+		updatedTask, err := u.taskService.UpdateTask(ctx, tx, userID, oldTask, &newTask)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := u.handleProjectProgressUpdate(ctx, tx, oldProjectID, newTask.ProjectID, wasCompleted, isCompleted); err != nil {
+			return nil, err
+		}
+
+		err = u.taskService.PushTaskUpdatedEvent(ctx, updatedTask, req)
 		if err != nil {
 			u.logger.Error("failed to push task updated event", zap.Error(err))
 			return nil, err
 		}
-		return task, nil
+
+		return updatedTask, nil
 	})
 	if err != nil {
 		return nil, err
@@ -162,55 +207,83 @@ func (u *taskUseCase) UpdateTask(ctx context.Context, userID, taskID int64, req 
 	return result.(*entity.TaskEntity), nil
 }
 
-func (u *taskUseCase) UpdateTaskStatus(ctx context.Context, userID int64, taskID int64, status string) error {
-	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
-		return u.taskService.UpdateTaskStatus(ctx, tx, userID, taskID, status)
-	})
-}
-
-func (u *taskUseCase) CompleteTask(ctx context.Context, userID int64, taskID int64, actualDurationMin int, quality int) error {
-	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
-		if err := u.taskService.CompleteTask(ctx, tx, userID, taskID, actualDurationMin, quality); err != nil {
-			return err
-		}
-
-		go func() {
-			if err := u.RefreshProjectProgressForTask(ctx, taskID); err != nil {
-				u.logger.Error("failed to refresh project progress", zap.Error(err))
-			}
-		}()
-
-		return nil
-	})
-}
-
 func (u *taskUseCase) DeleteTask(ctx context.Context, userID int64, taskID int64) error {
+	task, err := u.taskService.GetTaskByID(ctx, taskID)
+	if err != nil {
+		return err
+	}
+	if task.UserID != userID {
+		return errors.New(constant.DeleteTaskForbidden)
+	}
+
+	projectID := task.ProjectID
+	wasCompleted := task.IsCompleted()
+
 	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
 		if err := u.taskService.DeleteTask(ctx, tx, userID, taskID); err != nil {
 			return err
 		}
+
+		if projectID != nil {
+			if err := u.decrementProjectStats(ctx, tx, *projectID, wasCompleted); err != nil {
+				return err
+			}
+		}
+
 		err := u.taskService.PushTaskDeletedEvent(ctx, taskID, userID)
 		if err != nil {
 			u.logger.Error("failed to push task deleted event", zap.Error(err))
 			return err
 		}
 
-		go func() {
-			if err := u.RefreshProjectProgressForTask(ctx, taskID); err != nil {
-				u.logger.Error("failed to refresh project progress", zap.Error(err))
-			}
-		}()
-
 		return nil
 	})
 }
 
 func (u *taskUseCase) BulkDeleteTasks(ctx context.Context, userID int64, taskIDs []int64) error {
+	// Collect tasks info before deletion
+	type taskInfo struct {
+		projectID    *int64
+		wasCompleted bool
+	}
+	tasksInfo := make(map[int64]taskInfo)
+
+	for _, taskID := range taskIDs {
+		task, err := u.taskService.GetTaskByID(ctx, taskID)
+		if err != nil {
+			return err
+		}
+		if task.UserID != userID {
+			return errors.New(constant.DeleteTaskForbidden)
+		}
+		tasksInfo[taskID] = taskInfo{
+			projectID:    task.ProjectID,
+			wasCompleted: enum.TaskStatus(task.Status).IsCompleted(),
+		}
+	}
+
 	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
+		// Aggregate changes per project
+		projectDeltas := make(map[int64]struct {
+			totalDelta     int
+			completedDelta int
+		})
+
 		for _, taskID := range taskIDs {
 			if err := u.taskService.DeleteTask(ctx, tx, userID, taskID); err != nil {
 				return err
 			}
+
+			info := tasksInfo[taskID]
+			if info.projectID != nil {
+				delta := projectDeltas[*info.projectID]
+				delta.totalDelta--
+				if info.wasCompleted {
+					delta.completedDelta--
+				}
+				projectDeltas[*info.projectID] = delta
+			}
+
 			err := u.taskService.PushTaskDeletedEvent(ctx, taskID, userID)
 			if err != nil {
 				u.logger.Error("failed to push task deleted event", zap.Error(err))
@@ -218,13 +291,24 @@ func (u *taskUseCase) BulkDeleteTasks(ctx context.Context, userID int64, taskIDs
 			}
 		}
 
-		go func() {
-			for _, taskID := range taskIDs {
-				if err := u.RefreshProjectProgressForTask(ctx, taskID); err != nil {
-					u.logger.Error(fmt.Sprintf("failed to refresh project progress for task %d", taskID))
-				}
+		// Apply aggregated deltas to each project
+		for projectID, delta := range projectDeltas {
+			project, err := u.projectService.GetProjectByID(ctx, projectID)
+			if err != nil {
+				return err
 			}
-		}()
+			newTotal := project.TotalTasks + delta.totalDelta
+			newCompleted := project.CompletedTasks + delta.completedDelta
+			if newTotal < 0 {
+				newTotal = 0
+			}
+			if newCompleted < 0 {
+				newCompleted = 0
+			}
+			if err := u.projectService.UpdateProjectProgress(ctx, tx, projectID, newTotal, newCompleted); err != nil {
+				return err
+			}
+		}
 
 		return nil
 	})
@@ -271,28 +355,72 @@ func (u *taskUseCase) GetDeepWorkTasks(ctx context.Context, userID int64) ([]*en
 	return u.taskService.GetDeepWorkTasks(ctx, userID)
 }
 
-func (u *taskUseCase) RefreshProjectProgressForTask(ctx context.Context, taskID int64) error {
-	task, err := u.taskService.GetTaskByID(ctx, taskID)
-	if err != nil {
-		return err
-	}
-	if task.ProjectID == nil {
+// handleProjectProgressUpdate handles incremental project progress updates
+// when a task's status or project assignment changes
+func (u *taskUseCase) handleProjectProgressUpdate(
+	ctx context.Context,
+	tx *gorm.DB,
+	oldProjectID, newProjectID *int64,
+	wasCompleted, isCompleted bool,
+) error {
+	sameProject := (oldProjectID == nil && newProjectID == nil) ||
+		(oldProjectID != nil && newProjectID != nil && *oldProjectID == *newProjectID)
+
+	if sameProject {
+		if oldProjectID != nil && wasCompleted != isCompleted {
+			return u.updateProjectCompletedCount(ctx, tx, *oldProjectID, isCompleted)
+		}
 		return nil
 	}
 
-	tasks, err := u.taskService.GetTaskByProjectID(ctx, *task.ProjectID)
-	if err != nil {
-		return err
-	}
-	totalTasks := len(tasks)
-	completedTasks := 0
-	for _, t := range tasks {
-		if enum.TaskStatus(t.Status).IsCompleted() {
-			completedTasks++
+	if oldProjectID != nil {
+		if err := u.decrementProjectStats(ctx, tx, *oldProjectID, wasCompleted); err != nil {
+			return err
 		}
 	}
 
-	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
-		return u.projectService.UpdateProjectProgress(ctx, tx, *task.ProjectID, totalTasks, completedTasks)
-	})
+	if newProjectID != nil {
+		if err := u.incrementProjectStats(ctx, tx, *newProjectID, isCompleted); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (u *taskUseCase) updateProjectCompletedCount(ctx context.Context, tx *gorm.DB, projectID int64, increment bool) error {
+	project, err := u.projectService.GetProjectByID(ctx, projectID)
+	if err != nil {
+		return err
+	}
+
+	if increment {
+		project.CompletedTasks++
+	} else {
+		if project.CompletedTasks > 0 {
+			project.CompletedTasks--
+		}
+	}
+
+	return u.projectService.UpdateProjectProgress(ctx, tx, projectID, project.TotalTasks, project.CompletedTasks)
+}
+
+func (u *taskUseCase) incrementProjectStats(ctx context.Context, tx *gorm.DB, projectID int64, isCompleted bool) error {
+	project, err := u.projectService.GetProjectByID(ctx, projectID)
+	if err != nil {
+		return err
+	}
+
+	project.UpdateStatsForAddedTask(isCompleted)
+	return u.projectService.UpdateProjectProgress(ctx, tx, projectID, project.TotalTasks, project.CompletedTasks)
+}
+
+func (u *taskUseCase) decrementProjectStats(ctx context.Context, tx *gorm.DB, projectID int64, wasCompleted bool) error {
+	project, err := u.projectService.GetProjectByID(ctx, projectID)
+	if err != nil {
+		return err
+	}
+
+	project.UpdateStatsForRemovedTask(wasCompleted)
+	return u.projectService.UpdateProjectProgress(ctx, tx, projectID, project.TotalTasks, project.CompletedTasks)
 }

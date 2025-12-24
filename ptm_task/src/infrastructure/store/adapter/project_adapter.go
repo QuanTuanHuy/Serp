@@ -112,7 +112,7 @@ func (a *ProjectAdapter) UpdateProject(ctx context.Context, tx *gorm.DB, project
 	db := a.getDB(tx)
 	projectModel := a.mapper.ToModel(project)
 
-	if err := db.WithContext(ctx).Updates(projectModel).Error; err != nil {
+	if err := db.WithContext(ctx).Save(projectModel).Error; err != nil {
 		return fmt.Errorf("failed to update project: %w", err)
 	}
 
@@ -131,12 +131,16 @@ func (a *ProjectAdapter) UpdateProjectStatus(ctx context.Context, tx *gorm.DB, p
 	return nil
 }
 
-func (a *ProjectAdapter) UpdateProjectProgress(ctx context.Context, tx *gorm.DB, projectID int64, progressPercentage int) error {
+func (a *ProjectAdapter) UpdateProjectProgress(ctx context.Context, tx *gorm.DB, projectID int64, totalTasks, completedTasks, progressPercentage int) error {
 	db := a.getDB(tx)
 
 	if err := db.WithContext(ctx).Model(&model.ProjectModel{}).
 		Where("id = ?", projectID).
-		Update("progress_percentage", progressPercentage).Error; err != nil {
+		Updates(map[string]interface{}{
+			"total_tasks":         totalTasks,
+			"completed_tasks":     completedTasks,
+			"progress_percentage": progressPercentage,
+		}).Error; err != nil {
 		return fmt.Errorf("failed to update project progress: %w", err)
 	}
 
@@ -188,10 +192,9 @@ func (a *ProjectAdapter) GetProjectStats(ctx context.Context, projectID int64) (
 	}
 
 	stats := &store.ProjectStats{
-		ProjectID:          projectID,
-		TotalTasks:         int(totalTasks),
-		CompletedTasks:     int(completedTasks),
-		ProgressPercentage: projectModel.ProgressPercentage,
+		ProjectID:      projectID,
+		TotalTasks:     int(totalTasks),
+		CompletedTasks: int(completedTasks),
 	}
 
 	return stats, nil
@@ -250,6 +253,8 @@ func (a *ProjectAdapter) buildProjectQuery(userID int64, filter *store.ProjectFi
 	}
 	if filter.ActiveStatus != nil {
 		query = query.Where("active_status = ?", *filter.ActiveStatus)
+	} else {
+		query = query.Where("active_status = ?", "ACTIVE")
 	}
 
 	if filter.DeadlineFrom != nil {
