@@ -6,10 +6,7 @@ Description: Part of Serp Project
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import {
-  useCreateProjectMutation,
-  useUpdateProjectMutation,
-} from '../services/projectApi';
+import { useCreateProjectMutation, useUpdateProjectMutation } from '../api';
 import type { ProjectPriority, ProjectStatus, Project } from '../types';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib';

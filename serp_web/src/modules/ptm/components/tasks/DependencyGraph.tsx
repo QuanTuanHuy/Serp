@@ -24,7 +24,7 @@ import { Card } from '@/shared/components/ui/card';
 import { Badge } from '@/shared/components/ui/badge';
 import { cn } from '@/shared/utils';
 
-import { useGetTasksQuery } from '../../services/taskApi';
+import { useGetTasksQuery } from '../../api';
 import type { Task, TaskDependency } from '../../types';
 import { getMockTaskDependencies } from '../../mocks/mockData';
 

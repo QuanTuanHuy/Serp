@@ -5,7 +5,6 @@
  * @description Part of Serp Project - Schedule & calendar operations
  */
 
-import { ptmApi } from './api';
 import { createDataTransform } from '@/lib/store/api/utils';
 import { USE_MOCK_DATA, mockApiHandlers } from '../mocks/mockHandlers';
 import type {
@@ -18,8 +17,9 @@ import type {
   CreateAvailabilityRequest,
   UpdateAvailabilityRequest,
 } from '../types';
+import { api } from '@/lib';
 
-export const scheduleApi = ptmApi.injectEndpoints({
+export const scheduleApi = api.injectEndpoints({
   endpoints: (builder) => ({
     // Get schedule plans
     getSchedulePlans: builder.query<SchedulePlan[], void>({

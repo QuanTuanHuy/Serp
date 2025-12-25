@@ -16,7 +16,6 @@ import {
   EventDetailSheet,
 } from '@/modules/ptm';
 import type { OptimizationConfig, ScheduleEvent } from '@/modules/ptm';
-import { useGetTasksQuery } from '@/modules/ptm/services/taskApi';
 import { GanttView } from '@/modules/ptm/components/schedule/GanttView';
 import {
   Tabs,
@@ -31,7 +30,8 @@ import {
   useCreateScheduleEventMutation,
   useUpdateScheduleEventMutation,
   useDeleteScheduleEventMutation,
-} from '@/modules/ptm/services/scheduleApi';
+  useGetTasksQuery,
+} from '@/modules/ptm/api';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 

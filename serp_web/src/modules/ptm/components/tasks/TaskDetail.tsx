@@ -53,13 +53,13 @@ import {
   useGetTaskQuery,
   useUpdateTaskMutation,
   useDeleteTaskMutation,
-} from '../../services/taskApi';
+} from '../../api';
 import {
   useGetNotesByTaskQuery,
   useCreateNoteMutation,
   useUpdateNoteMutation,
   useDeleteNoteMutation,
-} from '../../services/noteApi';
+} from '../../api';
 import { NoteCard } from '../notes/NoteCard';
 import { NoteEditorNovel } from '../notes/NoteEditorNovel';
 import type { Task, TaskPriority } from '../../types';

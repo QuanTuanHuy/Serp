@@ -17,7 +17,7 @@ import {
 } from '@/shared/components/ui/card';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { cn } from '@/shared/utils';
-import { useGetTasksQuery } from '../../services/taskApi';
+import { useGetTasksQuery } from '../../api';
 import type { Task } from '../../types';
 
 interface DayData {

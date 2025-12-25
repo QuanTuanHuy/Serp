@@ -42,7 +42,7 @@ import {
   useGetTasksQuery,
   useUpdateTaskMutation,
   useDeleteTaskMutation,
-} from '../../services/taskApi';
+} from '../../api';
 import type { Task } from '../../types';
 import { toast } from 'sonner';
 

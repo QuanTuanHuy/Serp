@@ -22,11 +22,8 @@ import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { Textarea } from '@/shared/components/ui/textarea';
 import { cn } from '@/shared/utils';
-import {
-  useCreateTaskMutation,
-  useQuickAddTaskMutation,
-} from '../../services/taskApi';
-import { useGetProjectsQuery } from '../../services/projectApi';
+import { useCreateTaskMutation, useQuickAddTaskMutation } from '../../api';
+import { useGetProjectsQuery } from '../../api';
 import type { TaskPriority, Project, RepeatConfig } from '../../types';
 import { RecurringTaskConfig } from './RecurringTaskConfig';
 import { toast } from 'sonner';

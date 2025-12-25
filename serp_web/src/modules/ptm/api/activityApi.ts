@@ -3,7 +3,7 @@
  * Description: Part of Serp Project - Activity Tracking API Endpoints
  */
 
-import { ptmApi } from './api';
+import { api } from '@/lib';
 import { USE_MOCK_DATA, mockApiHandlers } from '../mocks/mockHandlers';
 import type {
   ActivityEvent,
@@ -11,7 +11,7 @@ import type {
   ActivityFeedFilters,
 } from '../types';
 
-export const activityApi = ptmApi.injectEndpoints({
+export const activityApi = api.injectEndpoints({
   endpoints: (builder) => ({
     // Get paginated activity feed
     getActivityFeed: builder.query<ActivityFeedResponse, ActivityFeedFilters>({

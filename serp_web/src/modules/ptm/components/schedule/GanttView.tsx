@@ -11,10 +11,7 @@ import { useMemo } from 'react';
 import { Card } from '@/shared/components/ui/card';
 import { Badge } from '@/shared/components/ui/badge';
 import { cn } from '@/shared/utils';
-import {
-  useGetTasksQuery,
-  useGetTaskDependenciesQuery,
-} from '../../services/taskApi';
+import { useGetTasksQuery, useGetTaskDependenciesQuery } from '../../api';
 import type { Task } from '../../types';
 
 interface GanttViewProps {

@@ -4,7 +4,7 @@ Description: Part of Serp Project
 */
 
 import { useMemo } from 'react';
-import { useGetProjectsQuery } from '../services/projectApi';
+import { useGetProjectsQuery } from '../api';
 
 export function useProjectStats() {
   const { data: response, isLoading } = useGetProjectsQuery({ pageSize: 100 });

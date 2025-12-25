@@ -5,11 +5,11 @@
  * @description Part of Serp Project - Note CRUD operations
  */
 
-import { ptmApi } from './api';
+import { api } from '@/lib';
 import { USE_MOCK_DATA, mockApiHandlers } from '../mocks/mockHandlers';
 import type { Note, CreateNoteRequest, UpdateNoteRequest } from '../types';
 
-export const noteApi = ptmApi.injectEndpoints({
+export const noteApi = api.injectEndpoints({
   endpoints: (builder) => ({
     // Get notes by task
     getNotesByTask: builder.query<Note[], number>({

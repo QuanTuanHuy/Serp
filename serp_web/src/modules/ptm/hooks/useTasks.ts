@@ -8,7 +8,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useGetTasksQuery } from '../services/taskApi';
+import { useGetTasksQuery } from '../api';
 import type { Task, TaskStatus, TaskPriority } from '../types';
 
 export interface UseTasksOptions {

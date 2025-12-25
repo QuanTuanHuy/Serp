@@ -37,14 +37,14 @@ import {
   useGetProjectQuery,
   useUpdateProjectMutation,
   useDeleteProjectMutation,
-} from '../../services/projectApi';
-import { useGetTasksQuery } from '../../services/taskApi';
+} from '../../api';
+import { useGetTasksQuery } from '../../api';
 import {
   useGetNotesByProjectQuery,
   useCreateNoteMutation,
   useUpdateNoteMutation,
   useDeleteNoteMutation,
-} from '../../services/noteApi';
+} from '../../api';
 import { EditProjectDialog } from './EditProjectDialog';
 import { TaskList } from '../tasks/TaskList';
 import { NoteCard } from '../notes/NoteCard';

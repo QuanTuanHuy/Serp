@@ -6,8 +6,7 @@
  */
 
 import { useMemo } from 'react';
-import { useGetTasksQuery } from '../services/taskApi';
-import { useGetScheduleEventsQuery } from '../services/scheduleApi';
+import { useGetScheduleEventsQuery, useGetTasksQuery } from '../api';
 
 export interface DashboardStats {
   totalTasks: number;

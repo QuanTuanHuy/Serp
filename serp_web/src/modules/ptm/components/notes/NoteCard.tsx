@@ -12,10 +12,7 @@ import { Pin, Trash2, Clock, Paperclip } from 'lucide-react';
 import { Card, CardContent } from '@/shared/components/ui/card';
 import { Button } from '@/shared/components/ui/button';
 import { cn } from '@/shared/utils';
-import {
-  useUpdateNoteMutation,
-  useDeleteNoteMutation,
-} from '../../services/noteApi';
+import { useUpdateNoteMutation, useDeleteNoteMutation } from '../../api';
 import type { Note } from '../../types';
 import { toast } from 'sonner';
 import { RichTextPreview } from './RichTextPreview';

@@ -26,7 +26,7 @@ import {
   useGetTasksQuery,
   useAddDependencyMutation,
   useValidateDependencyMutation,
-} from '../../services/taskApi';
+} from '../../api';
 import { StatusBadge, PriorityBadge } from '../shared';
 import type { Task } from '../../types';
 

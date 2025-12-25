@@ -20,7 +20,7 @@ import {
   useGetTaskDependenciesQuery,
   useGetTasksQuery,
   useRemoveDependencyMutation,
-} from '../../services/taskApi';
+} from '../../api';
 import { DependencyPicker } from './DependencyPicker';
 import { StatusBadge } from '../shared';
 import type { Task } from '../../types';

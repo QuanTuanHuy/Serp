@@ -5,7 +5,6 @@
  * @description Part of Serp Project - Task CRUD operations
  */
 
-import { ptmApi } from './api';
 import {
   createDataTransform,
   createPaginatedTransform,
@@ -22,8 +21,9 @@ import type {
   TaskFilterParams,
 } from '../types';
 import type { PaginatedResponse } from '@/lib/store/api/types';
+import { api } from '@/lib';
 
-export const taskApi = ptmApi.injectEndpoints({
+export const taskApi = api.injectEndpoints({
   endpoints: (builder) => ({
     // Get all tasks (with pagination)
     getTasks: builder.query<PaginatedResponse<Task>, TaskFilterParams>({

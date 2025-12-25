@@ -27,10 +27,7 @@ import {
   DropdownMenuSeparator,
 } from '@/shared/components/ui/dropdown-menu';
 import { cn } from '@/shared/utils';
-import {
-  useUpdateProjectMutation,
-  useDeleteProjectMutation,
-} from '../../services/projectApi';
+import { useUpdateProjectMutation, useDeleteProjectMutation } from '../../api';
 import { EditProjectDialog } from './EditProjectDialog';
 import type { Project } from '../../types';
 import { toast } from 'sonner';

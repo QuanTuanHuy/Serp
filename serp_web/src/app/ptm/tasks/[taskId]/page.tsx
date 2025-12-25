@@ -18,10 +18,12 @@ import {
   TabsTrigger,
 } from '@/shared/components/ui/tabs';
 import { Badge } from '@/shared/components/ui/badge';
-import { useGetTaskQuery } from '@/modules/ptm/services/taskApi';
-import { useGetEntityActivitiesQuery } from '@/modules/ptm/services/activityApi';
 import { TaskDetail } from '@/modules/ptm/components/tasks/TaskDetail';
 import { TaskActivityTimeline } from '@/modules/ptm/components/tasks/TaskActivityTimeline';
+import {
+  useGetEntityActivitiesQuery,
+  useGetTaskQuery,
+} from '@/modules/ptm/api';
 
 export default function TaskDetailPage({
   params,

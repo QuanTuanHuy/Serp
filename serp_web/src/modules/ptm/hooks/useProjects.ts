@@ -6,7 +6,7 @@ Description: Part of Serp Project
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useGetProjectsQuery } from '../services/projectApi';
+import { useGetProjectsQuery } from '../api';
 import type { ProjectStatus, ProjectPriority, Project } from '../types';
 
 interface UseProjectsOptions {

@@ -5,7 +5,6 @@
  * @description Part of Serp Project - Barrel exports for services
  */
 
-export * from './api';
 export * from './taskApi';
 export * from './projectApi';
 export * from './scheduleApi';

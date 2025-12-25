@@ -3,7 +3,6 @@ Author: QuanTuanHuy
 Description: Part of Serp Project
 */
 
-import { ptmApi } from './api';
 import {
   createDataTransform,
   createPaginatedTransform,
@@ -16,8 +15,9 @@ import type {
   ProjectFilterParams,
 } from '../types';
 import type { PaginatedResponse } from '@/lib/store/api/types';
+import { api } from '@/lib';
 
-export const projectApi = ptmApi.injectEndpoints({
+export const projectApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getProjects: builder.query<PaginatedResponse<Project>, ProjectFilterParams>(
       {

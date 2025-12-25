@@ -38,7 +38,7 @@ import {
   useGetTasksQuery,
   useUpdateTaskMutation,
   useDeleteTaskMutation,
-} from '../../services/taskApi';
+} from '../../api';
 import { StatusBadge, PriorityBadge } from '../shared';
 import type { Task, TaskStatus } from '../../types';
 
