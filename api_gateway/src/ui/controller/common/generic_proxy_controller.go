@@ -67,6 +67,16 @@ func (c *GenericProxyController) ProxyToSales(ctx *gin.Context) {
 	c.proxyWithResilience(ctx, target, "/sales/api/v1", "/sales/api/v1", ServiceSales)
 }
 
+func (c *GenericProxyController) ProxyToPurchase(ctx *gin.Context) {
+	target := fmt.Sprintf("http://%s:%s", c.props.PurchaseService.Host, c.props.PurchaseService.Port)
+	c.proxyWithResilience(ctx, target, "/purchase/api/v1", "/purchase/api/v1", ServicePurchase)
+}
+
+func (c *GenericProxyController) ProxyToLogistics(ctx *gin.Context) {
+	target := fmt.Sprintf("http://%s:%s", c.props.LogisticsService.Host, c.props.LogisticsService.Port)
+	c.proxyWithResilience(ctx, target, "/logistics/api/v1", "/logistics/api/v1", ServiceLogistics)
+}
+
 func (c *GenericProxyController) createCircuitBreaker(name string) *gobreaker.CircuitBreaker[*http.Response] {
 	settings := gobreaker.Settings{
 		Name:        fmt.Sprintf("proxy-%s", name),
