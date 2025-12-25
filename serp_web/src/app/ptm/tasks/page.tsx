@@ -8,20 +8,22 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { QuickAddTask, TaskList } from '@/modules/ptm';
-import { Card } from '@/shared/components/ui/card';
+import { TaskList } from '@/modules/ptm';
+import { CreateTaskDialog } from '@/modules/ptm/components/tasks/dialogs';
+import { Card, Button } from '@/shared/components/ui';
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from '@/shared/components/ui/tabs';
-import { useTasks } from '@/modules/ptm/hooks';
+} from '@/shared/components/ui';
+import { useTasks, useTaskDialogs } from '@/modules/ptm/hooks';
 import { DependencyGraph } from '@/modules/ptm/components/tasks/DependencyGraph';
-import { CheckSquare, Circle, Clock, Network } from 'lucide-react';
+import { CheckSquare, Circle, Clock, Network, Plus } from 'lucide-react';
 
 export default function TasksPage() {
   const [activeTab, setActiveTab] = useState('list');
+  const { createDialog } = useTaskDialogs();
 
   const { tasks, totalItems, isLoading } = useTasks();
 
@@ -49,7 +51,10 @@ export default function TasksPage() {
             Stay organized and focused on what matters most
           </p>
         </div>
-        <QuickAddTask />
+        <Button onClick={createDialog.openCreate}>
+          <Plus className='mr-2 h-4 w-4' />
+          Add Task
+        </Button>
       </div>
 
       {/* Stats Overview */}
@@ -133,6 +138,9 @@ export default function TasksPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Dialogs */}
+      <CreateTaskDialog {...createDialog} />
     </div>
   );
 }

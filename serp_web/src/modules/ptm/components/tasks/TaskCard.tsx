@@ -2,7 +2,7 @@
  * PTM v2 - Task Card Component
  *
  * @author QuanTuanHuy
- * @description Part of Serp Project - Task card for list display
+ * @description Part of Serp Project - Task card for list display (Refactored)
  */
 
 'use client';
@@ -20,6 +20,8 @@ import {
   ExternalLink,
   Link as LinkIcon,
   AlertCircle,
+  Edit,
+  Trash2,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/shared/components/ui/card';
@@ -38,18 +40,18 @@ import { cn } from '@/shared/utils';
 import { StatusBadge } from '../shared/StatusBadge';
 import { PriorityBadge } from '../shared/PriorityBadge';
 import { RecurringBadge } from './RecurringBadge';
-import {
-  useGetTasksQuery,
-  useUpdateTaskMutation,
-  useDeleteTaskMutation,
-} from '../../api';
-import type { Task } from '../../types';
-import { toast } from 'sonner';
+import { useGetTasksQuery } from '../../api';
+import type { Task, TaskStatus } from '../../types';
 
 interface TaskCardProps {
   task: Task;
   onClick?: (taskId: number) => void;
-  onNavigate?: boolean; // If true, navigate to detail page instead of opening sheet
+  onNavigate?: boolean;
+  onToggleComplete?: (taskId: number, currentStatus: TaskStatus) => void;
+  onStart?: (taskId: number) => void;
+  onPause?: (taskId: number) => void;
+  onEdit?: (taskId: number) => void;
+  onDelete?: (task: Task) => void;
   className?: string;
 }
 
@@ -57,12 +59,16 @@ export function TaskCard({
   task,
   onClick,
   onNavigate = false,
+  onToggleComplete,
+  onStart,
+  onPause,
+  onEdit,
+  onDelete,
   className,
 }: TaskCardProps) {
   const router = useRouter();
-  const [updateTask] = useUpdateTaskMutation();
-  const [deleteTask] = useDeleteTaskMutation();
 
+  // Fetch all tasks to calculate subtasks count
   const { data: paginatedTasks } = useGetTasksQuery({});
   const allTasks = paginatedTasks?.data?.items || [];
 
@@ -73,56 +79,26 @@ export function TaskCard({
   const isOverdue =
     task.status !== 'DONE' && task.deadlineMs && task.deadlineMs < Date.now();
 
-  const handleToggleComplete = async () => {
-    try {
-      await updateTask({
-        id: task.id,
-        status: task.status === 'DONE' ? 'TODO' : 'DONE',
-        progressPercentage:
-          task.status === 'DONE' ? task.progressPercentage : 100,
-      }).unwrap();
-
-      toast.success(
-        task.status === 'DONE' ? 'Task marked as incomplete' : 'Task completed!'
-      );
-    } catch (error) {
-      toast.error('Failed to update task');
-    }
+  const handleToggleComplete = () => {
+    onToggleComplete?.(task.id, task.status);
   };
 
-  const handleStart = async () => {
-    try {
-      await updateTask({
-        id: task.id,
-        status: 'IN_PROGRESS',
-      }).unwrap();
-      toast.success('Task started!');
-    } catch (error) {
-      toast.error('Failed to start task');
-    }
+  const handleStart = () => {
+    onStart?.(task.id);
   };
 
-  const handlePause = async () => {
-    try {
-      await updateTask({
-        id: task.id,
-        status: 'TODO',
-      }).unwrap();
-      toast.success('Task paused');
-    } catch (error) {
-      toast.error('Failed to pause task');
-    }
+  const handlePause = () => {
+    onPause?.(task.id);
   };
 
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this task?')) return;
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEdit?.(task.id);
+  };
 
-    try {
-      await deleteTask(task.id).unwrap();
-      toast.success('Task deleted');
-    } catch (error) {
-      toast.error('Failed to delete task');
-    }
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete?.(task);
   };
 
   const handleCardClick = () => {
@@ -307,28 +283,39 @@ export function TaskCard({
               Open Detail
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            {task.status === 'TODO' && (
+            {task.status === 'TODO' && onStart && (
               <DropdownMenuItem onClick={handleStart}>
                 <Play className='mr-2 h-4 w-4' />
                 Start
               </DropdownMenuItem>
             )}
-            {task.status === 'IN_PROGRESS' && (
+            {task.status === 'IN_PROGRESS' && onPause && (
               <DropdownMenuItem onClick={handlePause}>
                 <Pause className='mr-2 h-4 w-4' />
                 Pause
               </DropdownMenuItem>
             )}
-            {task.status !== 'DONE' && (
+            {task.status !== 'DONE' && onToggleComplete && (
               <DropdownMenuItem onClick={handleToggleComplete}>
                 <Check className='mr-2 h-4 w-4' />
                 Mark Complete
               </DropdownMenuItem>
             )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleDelete} className='text-red-600'>
-              Delete
-            </DropdownMenuItem>
+            {onEdit && (
+              <DropdownMenuItem onClick={handleEdit}>
+                <Edit className='mr-2 h-4 w-4' />
+                Edit
+              </DropdownMenuItem>
+            )}
+            {(onStart || onPause || onToggleComplete || onEdit) && onDelete && (
+              <DropdownMenuSeparator />
+            )}
+            {onDelete && (
+              <DropdownMenuItem onClick={handleDelete} className='text-red-600'>
+                <Trash2 className='mr-2 h-4 w-4' />
+                Delete
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

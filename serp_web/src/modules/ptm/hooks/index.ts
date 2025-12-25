@@ -14,3 +14,9 @@ export { useProjectForm } from './useProjectForm';
 
 export { useTasks } from './useTasks';
 export type { UseTasksOptions, UseTasksResult } from './useTasks';
+
+export { useTaskDialogs } from './useTaskDialogs';
+export type { TaskWithTitle } from './useTaskDialogs';
+
+export { useTaskManagement } from './useTaskManagement';
+export type { UseTaskManagementOptions } from './useTaskManagement';

@@ -19,10 +19,12 @@ import {
 } from '@/shared/components/ui/select';
 import { TaskCard } from './TaskCard';
 import { TaskDetail } from './TaskDetail';
-import { useTasks } from '../../hooks';
+import { useTasks, useTaskManagement, useTaskDialogs } from '../../hooks';
 import type { TaskStatus, TaskPriority } from '../../types';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { useState } from 'react';
+import { EditTaskDialog } from './dialogs/EditTaskDialog';
+import { DeleteTaskDialog } from './dialogs/DeleteTaskDialog';
 
 interface TaskListProps {
   projectId?: number | string;
@@ -53,6 +55,13 @@ export function TaskList({
     projectId: filterProjectId || projectId,
     initialSortBy: 'deadline',
   });
+
+  // Task CRUD operations
+  const { handleToggleComplete, handleStart, handlePause } =
+    useTaskManagement();
+
+  // Dialog state management
+  const { editDialog, deleteDialog } = useTaskDialogs();
 
   // Virtualization setup
   const parentRef = useRef<HTMLDivElement>(null);
@@ -254,7 +263,17 @@ export function TaskList({
                     }}
                   >
                     <div className='px-1 pb-3'>
-                      <TaskCard task={task} onClick={setSelectedTaskId} />
+                      <TaskCard
+                        task={task}
+                        onClick={setSelectedTaskId}
+                        onToggleComplete={handleToggleComplete}
+                        onStart={handleStart}
+                        onPause={handlePause}
+                        onEdit={editDialog.openEdit}
+                        onDelete={(task) =>
+                          deleteDialog.openDelete(task.id, task.title)
+                        }
+                      />
                     </div>
                   </div>
                 );
@@ -268,6 +287,19 @@ export function TaskList({
           taskId={selectedTaskId}
           open={!!selectedTaskId}
           onOpenChange={(open) => !open && setSelectedTaskId(null)}
+        />
+
+        {/* Edit & Delete Dialogs */}
+        <EditTaskDialog
+          taskId={editDialog.taskId}
+          open={editDialog.open}
+          onOpenChange={editDialog.onOpenChange}
+        />
+        <DeleteTaskDialog
+          taskId={deleteDialog.taskId}
+          taskTitle={deleteDialog.taskTitle}
+          open={deleteDialog.open}
+          onOpenChange={deleteDialog.onOpenChange}
         />
       </CardContent>
     </Card>
