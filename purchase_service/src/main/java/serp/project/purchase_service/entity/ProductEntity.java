@@ -8,8 +8,13 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.purchase_service.dto.request.ProductCreationForm;
+import serp.project.purchase_service.dto.request.ProductUpdateForm;
+import serp.project.purchase_service.util.IdUtils;
+
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 
@@ -69,5 +74,52 @@ public class ProductEntity {
 
     @Column(name = "tenant_id")
     private Long tenantId;
+
+    public ProductEntity(ProductCreationForm form, Long tenantId) {
+        String productId = IdUtils.generateProductId();
+        this.id = productId;
+        this.name = form.getName();
+        this.weight = form.getWeight();
+        this.height = form.getHeight();
+        this.unit = form.getUnit();
+        this.costPrice = form.getCostPrice();
+        this.wholeSalePrice = form.getWholeSalePrice();
+        this.retailPrice = form.getRetailPrice();
+        this.categoryId = form.getCategoryId();
+        this.statusId = form.getStatusId();
+        this.imageId = form.getImageId();
+        this.extraProps = form.getExtraProps();
+        this.vatRate = form.getVatRate(); // Default: 0.0f
+        this.skuCode = form.getSkuCode();
+        this.tenantId = tenantId;
+    }
+
+    public void update(ProductUpdateForm form) {
+        if (StringUtils.hasText(form.getName()))
+            this.setName(form.getName());
+        if (form.getWeight() != 0)
+            this.setWeight(form.getWeight());
+        if (form.getHeight() != 0)
+            this.setHeight(form.getHeight());
+        if (StringUtils.hasText(form.getUnit()))
+            this.setUnit(form.getUnit());
+        if (form.getCostPrice() != 0)
+            this.setCostPrice(form.getCostPrice());
+        if (form.getWholeSalePrice() != 0)
+            this.setWholeSalePrice(form.getWholeSalePrice());
+        if (form.getRetailPrice() != 0)
+            this.setRetailPrice(form.getRetailPrice());
+        if (StringUtils.hasText(form.getStatusId()))
+            this.setStatusId(form.getStatusId());
+        if (StringUtils.hasText(form.getImageId()))
+            this.setImageId(form.getImageId());
+        if (StringUtils.hasText(form.getExtraProps()))
+            this.setExtraProps(form.getExtraProps());
+
+        this.setVatRate(form.getVatRate());
+
+        if (StringUtils.hasText(form.getSkuCode()))
+            this.setSkuCode(form.getSkuCode());
+    }
 
 }

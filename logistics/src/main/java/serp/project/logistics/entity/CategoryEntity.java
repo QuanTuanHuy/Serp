@@ -8,8 +8,12 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.logistics.dto.request.CategoryForm;
+import serp.project.logistics.util.IdUtils;
+
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 
@@ -36,4 +40,16 @@ public class CategoryEntity {
     @UpdateTimestamp
     @Column(name = "last_updated_stamp")
     private LocalDateTime lastUpdatedStamp;
+
+    public CategoryEntity(CategoryForm form, Long tenantId) {
+        String categoryId = IdUtils.generateCategoryId();
+        this.id = categoryId;
+        this.name = form.getName();
+        this.tenantId = tenantId;
+    }
+
+    public void update(CategoryForm form) {
+        if (StringUtils.hasText(form.getName()))
+            this.name = form.getName();
+    }
 }

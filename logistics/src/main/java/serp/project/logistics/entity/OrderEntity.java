@@ -4,22 +4,28 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import serp.project.logistics.constant.OrderStatus;
+import serp.project.logistics.constant.ShipmentStatus;
+
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
-@Builder
 @Entity
 @Table(name = "wms2_order_header")
+@Slf4j
 public class OrderEntity {
 
     @Id
@@ -95,4 +101,32 @@ public class OrderEntity {
 
     @Column(name = "tenant_id")
     private Long tenantId;
+
+    @Transient
+    private List<OrderItemEntity> items = new ArrayList<>();
+
+    @Transient
+    private List<ShipmentEntity> shipments = new ArrayList<>();
+
+    public boolean tryMarkAsFullyDelivered() {
+        for (OrderItemEntity item : items) {
+            if (item.getQuantityRemaining() != 0) {
+                log.info(
+                        "[OrderEntity] Order {} cannot be marked as FULLY_DELIVERED because item {} has remaining quantity {}",
+                        id, item.getId(), item.getQuantityRemaining());
+                return false;
+            }
+        }
+        for (ShipmentEntity shipment : shipments) {
+            if (!shipment.getStatusId().equals(ShipmentStatus.IMPORTED.name())) {
+                log.info(
+                        "[OrderEntity] Order {} cannot be marked as FULLY_DELIVERED because shipment {} has status {}",
+                        id, shipment.getId(), shipment.getStatusId());
+                return false;
+            }
+        }
+
+        this.statusId = OrderStatus.FULLY_DELIVERED.name();
+        return true;
+    }
 }

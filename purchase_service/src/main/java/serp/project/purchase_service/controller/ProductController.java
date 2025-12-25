@@ -6,6 +6,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import serp.project.purchase_service.dto.request.ProductCreationForm;
 import serp.project.purchase_service.dto.request.ProductUpdateForm;
 import serp.project.purchase_service.dto.response.GeneralResponse;
@@ -27,7 +30,7 @@ public class ProductController {
         private final AuthUtils authUtils;
 
         @PostMapping("/create")
-        public ResponseEntity<GeneralResponse<?>> createProduct(@RequestBody ProductCreationForm form) {
+        public ResponseEntity<GeneralResponse<?>> createProduct(@Valid @RequestBody ProductCreationForm form) {
                 Long tenantId = authUtils.getCurrentTenantId()
                                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
                 log.info("[ProductController] Create product {} for tenantId {}", form.getName(), tenantId);
@@ -38,7 +41,7 @@ public class ProductController {
         @PatchMapping("/update/{productId}")
         public ResponseEntity<GeneralResponse<?>> updateProduct(
                         @PathVariable String productId,
-                        @RequestBody ProductUpdateForm form) {
+                        @Valid @RequestBody ProductUpdateForm form) {
                 Long tenantId = authUtils.getCurrentTenantId()
                                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
                 log.info("[ProductController] Update product {} for tenantId {}", productId, tenantId);
@@ -62,7 +65,7 @@ public class ProductController {
 
         @GetMapping("/search")
         public ResponseEntity<GeneralResponse<PageResponse<ProductEntity>>> getProducts(
-                        @RequestParam(required = false, defaultValue = "1") int page,
+                        @Min(0) @RequestParam(required = false, defaultValue = "0") int page,
                         @RequestParam(required = false, defaultValue = "10") int size,
                         @RequestParam(required = false, defaultValue = "createdStamp") String sortBy,
                         @RequestParam(required = false, defaultValue = "desc") String sortDirection,

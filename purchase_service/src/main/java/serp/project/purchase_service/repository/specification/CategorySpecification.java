@@ -4,7 +4,6 @@ import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.StringUtils;
 import serp.project.purchase_service.entity.CategoryEntity;
-import serp.project.purchase_service.entity.ProductEntity;
 
 public class CategorySpecification {
 
@@ -18,9 +17,7 @@ public class CategorySpecification {
                 String likePattern = "%" + _query.toLowerCase() + "%";
                 predicates.add(
                         criteriaBuilder.or(
-                                criteriaBuilder.like(criteriaBuilder.lower(root.get("name")), likePattern)
-                        )
-                );
+                                criteriaBuilder.like(criteriaBuilder.lower(root.get("name")), likePattern)));
             }
 
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));

@@ -1,29 +1,29 @@
 # Build stage
-FROM golang:1.25.0-alpine AS builder
+FROM eclipse-temurin:21-jdk-jammy AS build
 
 WORKDIR /app
 
-# Copy go mod files
-COPY go.mod go.sum ./
-RUN go mod download
+COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
 
-# Copy source code
-COPY . .
+RUN chmod +x ./mvnw
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -o main src/main.go
+RUN ./mvnw dependency:go-offline -B
 
-# Run stage
-FROM alpine:latest
+COPY src/ ./src/
+
+RUN ./mvnw clean package -DskipTests -B
+
+# Runtime stage
+FROM eclipse-temurin:21-jre-jammy
 
 WORKDIR /app
 
-# Copy the binary from builder
-COPY --from=builder /app/main .
-COPY --from=builder /app/src/config ./src/config
+COPY --from=build /app/target/sales-*.jar app.jar
 
-# Expose port
-EXPOSE 8088
 
-# Run the application
-CMD ["./main"]
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:+UseStringDeduplication -Djava.security.egd=file:/dev/./urandom"
+
+EXPOSE 8089
+
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

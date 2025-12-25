@@ -1,5 +1,6 @@
 package serp.project.purchase_service.controller;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,7 +11,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import serp.project.purchase_service.dto.request.FacilityCreationForm;
 import serp.project.purchase_service.dto.request.FacilityUpdateForm;
-import serp.project.purchase_service.dto.response.FacilityDetailResponse;
 import serp.project.purchase_service.dto.response.GeneralResponse;
 import serp.project.purchase_service.dto.response.PageResponse;
 import serp.project.purchase_service.entity.AddressEntity;
@@ -33,7 +33,7 @@ public class FacilityController {
         private final AuthUtils authUtils;
 
         @PostMapping("/create")
-        public ResponseEntity<GeneralResponse<?>> createFacility(@RequestBody FacilityCreationForm form) {
+        public ResponseEntity<GeneralResponse<?>> createFacility(@Valid @RequestBody FacilityCreationForm form) {
                 Long tenantId = authUtils.getCurrentTenantId()
                                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
                 log.info("[FacilityController] Creating facility {} for tenantId: {}", form.getName(), tenantId);
@@ -42,7 +42,7 @@ public class FacilityController {
         }
 
         @PatchMapping("/update/{facilityId}")
-        public ResponseEntity<GeneralResponse<?>> updateFacility(@RequestBody FacilityUpdateForm form,
+        public ResponseEntity<GeneralResponse<?>> updateFacility(@Valid @RequestBody FacilityUpdateForm form,
                         @PathVariable("facilityId") String facilityId) {
                 Long tenantId = authUtils.getCurrentTenantId()
                                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
@@ -54,7 +54,7 @@ public class FacilityController {
 
         @GetMapping("/search")
         public ResponseEntity<GeneralResponse<PageResponse<FacilityEntity>>> getFacilities(
-                        @Min(1) @RequestParam(required = false, defaultValue = "1") int page,
+                        @Min(0) @RequestParam(required = false, defaultValue = "0") int page,
                         @RequestParam(required = false, defaultValue = "10") int size,
                         @RequestParam(required = false, defaultValue = "createdStamp") String sortBy,
                         @RequestParam(required = false, defaultValue = "desc") String sortDirection,
@@ -87,7 +87,7 @@ public class FacilityController {
         }
 
         @GetMapping("/search/{facilityId}")
-        public ResponseEntity<GeneralResponse<FacilityDetailResponse>> getFacilityDetail(
+        public ResponseEntity<GeneralResponse<FacilityEntity>> getFacilityDetail(
                         @PathVariable("facilityId") String facilityId) {
                 Long tenantId = authUtils.getCurrentTenantId()
                                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
@@ -99,10 +99,8 @@ public class FacilityController {
                 }
                 AddressEntity address = addressService.findByEntityId(facilityId, tenantId).stream().findFirst()
                                 .orElse(null);
-                FacilityDetailResponse response = FacilityDetailResponse.fromEntity(
-                                facility,
-                                address);
-                return ResponseEntity.ok(GeneralResponse.success("Successfully get facility detail", response));
+                facility.setAddress(address);
+                return ResponseEntity.ok(GeneralResponse.success("Successfully get facility detail", facility));
         }
 
 }

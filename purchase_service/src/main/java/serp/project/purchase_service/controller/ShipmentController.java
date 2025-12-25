@@ -6,9 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import serp.project.purchase_service.dto.request.*;
 import serp.project.purchase_service.dto.response.GeneralResponse;
-import serp.project.purchase_service.dto.response.ShipmentDetailResponse;
 import serp.project.purchase_service.entity.InventoryItemDetailEntity;
 import serp.project.purchase_service.entity.ShipmentEntity;
 import serp.project.purchase_service.exception.AppErrorCode;
@@ -30,62 +28,8 @@ public class ShipmentController {
         private final InventoryItemDetailService inventoryItemDetailService;
         private final AuthUtils authUtils;
 
-        @PostMapping("/create")
-        public ResponseEntity<GeneralResponse<?>> createShipment(
-                        @RequestBody ShipmentCreationForm form) {
-                throw new AppException(AppErrorCode.UNIMPLEMENTED);
-        }
-
-        @PatchMapping("/update/{shipmentId}")
-        public ResponseEntity<GeneralResponse<?>> updateShipment(
-                        @RequestBody ShipmentUpdateForm form,
-                        @PathVariable String shipmentId) {
-                throw new AppException(AppErrorCode.UNIMPLEMENTED);
-        }
-
-        @PatchMapping("/manage/{shipmentId}/import")
-        public ResponseEntity<GeneralResponse<?>> importShipment(
-                        @PathVariable String shipmentId) {
-                throw new AppException(AppErrorCode.UNIMPLEMENTED);
-        }
-
-        @DeleteMapping("/delete/{shipmentId}")
-        public ResponseEntity<GeneralResponse<?>> deleteShipment(
-                        @PathVariable String shipmentId) {
-                throw new AppException(AppErrorCode.UNIMPLEMENTED);
-        }
-
-        @PostMapping("/create/{shipmentId}/add")
-        public ResponseEntity<GeneralResponse<?>> addItemToShipment(
-                        @PathVariable String shipmentId,
-                        @RequestBody ShipmentItemAddForm form) {
-                throw new AppException(AppErrorCode.UNIMPLEMENTED);
-        }
-
-        @PatchMapping("/update/{shipmentId}/update/{itemId}")
-        public ResponseEntity<GeneralResponse<?>> updateItemInShipment(
-                        @PathVariable String shipmentId,
-                        @PathVariable String itemId,
-                        @RequestBody InventoryItemDetailUpdateForm itemForm) {
-                throw new AppException(AppErrorCode.UNIMPLEMENTED);
-        }
-
-        @PatchMapping("/update/{shipmentId}/delete/{itemId}")
-        public ResponseEntity<GeneralResponse<?>> deleteItemFromShipment(
-                        @PathVariable String shipmentId,
-                        @PathVariable String itemId) {
-                throw new AppException(AppErrorCode.UNIMPLEMENTED);
-        }
-
-        @PatchMapping("/update/{shipmentId}/facility")
-        public ResponseEntity<GeneralResponse<?>> updateShipmentFacility(
-                        @PathVariable String shipmentId,
-                        @RequestBody ShipmentFacilityUpdateForm form) {
-                throw new AppException(AppErrorCode.UNIMPLEMENTED);
-        }
-
         @GetMapping("/search/{shipmentId}")
-        public ResponseEntity<GeneralResponse<ShipmentDetailResponse>> getShipmentDetail(
+        public ResponseEntity<GeneralResponse<ShipmentEntity>> getShipmentDetail(
                         @PathVariable String shipmentId) {
                 Long tenantId = authUtils.getCurrentTenantId()
                                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
@@ -93,8 +37,8 @@ public class ShipmentController {
                 ShipmentEntity shipment = shipmentService.getShipment(shipmentId, tenantId);
                 List<InventoryItemDetailEntity> items = inventoryItemDetailService.getItemsByShipmentId(shipmentId,
                                 tenantId);
-                ShipmentDetailResponse response = ShipmentDetailResponse.fromEntity(shipment, items);
-                return ResponseEntity.ok(GeneralResponse.success("Successfully get shipment detail", response));
+                shipment.setItems(items);
+                return ResponseEntity.ok(GeneralResponse.success("Successfully get shipment detail", shipment));
         }
 
         @GetMapping("/search/by-order/{orderId}")

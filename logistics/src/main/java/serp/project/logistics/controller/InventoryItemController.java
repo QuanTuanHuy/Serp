@@ -4,6 +4,7 @@ import java.time.LocalDate;
 
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -14,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import serp.project.logistics.dto.request.InventoryItemCreationForm;
@@ -29,6 +32,7 @@ import serp.project.logistics.util.AuthUtils;
 @RestController
 @RequestMapping("logistics/api/v1/inventory-item")
 @RequiredArgsConstructor
+@Validated
 @Slf4j
 public class InventoryItemController {
 
@@ -37,7 +41,7 @@ public class InventoryItemController {
 
         @PostMapping("/create")
         public ResponseEntity<GeneralResponse<?>> createInventoryItem(
-                        @RequestBody InventoryItemCreationForm form) {
+                        @Valid @RequestBody InventoryItemCreationForm form) {
                 Long tenantId = authUtils.getCurrentTenantId()
                                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
                 log.info("[InventoryItemController] Creating inventory item for product ID: {} for tenantId: {}",
@@ -48,7 +52,7 @@ public class InventoryItemController {
 
         @PatchMapping("/update/{inventoryItemId}")
         public ResponseEntity<GeneralResponse<?>> updateInventoryItem(
-                        @RequestBody InventoryItemUpdateForm form,
+                        @Valid @RequestBody InventoryItemUpdateForm form,
                         @PathVariable("inventoryItemId") String inventoryItemId) {
                 Long tenantId = authUtils.getCurrentTenantId()
                                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
@@ -80,7 +84,7 @@ public class InventoryItemController {
 
         @GetMapping("/search")
         public ResponseEntity<GeneralResponse<PageResponse<InventoryItemEntity>>> searchInventoryItems(
-                        @RequestParam(required = false, defaultValue = "1") int page,
+                        @Min(0) @RequestParam(required = false, defaultValue = "0") int page,
                         @RequestParam(required = false, defaultValue = "10") int size,
                         @RequestParam(required = false, defaultValue = "createdStamp") String sortBy,
                         @RequestParam(required = false, defaultValue = "desc") String sortDirection,

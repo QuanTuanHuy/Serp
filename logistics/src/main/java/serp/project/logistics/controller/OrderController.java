@@ -5,14 +5,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.constraints.Min;
 import serp.project.logistics.dto.response.GeneralResponse;
-import serp.project.logistics.dto.response.OrderDetailResponse;
 import serp.project.logistics.dto.response.PageResponse;
 import serp.project.logistics.entity.OrderEntity;
 import serp.project.logistics.exception.AppErrorCode;
 import serp.project.logistics.exception.AppException;
-import serp.project.logistics.service.OrderItemService;
 import serp.project.logistics.service.OrderService;
+import serp.project.logistics.service.ShipmentService;
 import serp.project.logistics.util.AuthUtils;
 
 import java.time.LocalDate;
@@ -25,11 +26,11 @@ import java.time.LocalDate;
 public class OrderController {
 
         private final OrderService orderService;
-        private final OrderItemService orderItemService;
+        private final ShipmentService shipmentService;
         private final AuthUtils authUtils;
 
         @GetMapping("/search/{orderId}")
-        public ResponseEntity<GeneralResponse<OrderDetailResponse>> getOrderDetail(
+        public ResponseEntity<GeneralResponse<OrderEntity>> getOrderDetail(
                         @PathVariable String orderId) {
                 Long tenantId = authUtils.getCurrentTenantId()
                                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
@@ -37,17 +38,18 @@ public class OrderController {
                 if (order == null) {
                         throw new AppException(AppErrorCode.NOT_FOUND);
                 }
-                log.info("[OrderController] Get order detail for order ID {} and tenantId {}", orderId, tenantId);
-                var orderItems = orderItemService.findByOrderId(orderId, tenantId);
-                OrderDetailResponse response = OrderDetailResponse.fromEntity(
-                                order,
-                                orderItems);
-                return ResponseEntity.ok(GeneralResponse.success("Successfully get order detail", response));
+
+                var orderItems = orderService.findByOrderId(orderId, tenantId);
+                var shipments = shipmentService.findByOrderId(orderId, tenantId);
+                order.setItems(orderItems);
+                order.setShipments(shipments);
+
+                return ResponseEntity.ok(GeneralResponse.success("Successfully get order detail", order));
         }
 
         @GetMapping("/search")
         public ResponseEntity<GeneralResponse<PageResponse<OrderEntity>>> getOrders(
-                        @RequestParam(required = false, defaultValue = "1") int page,
+                        @Min(0) @RequestParam(required = false, defaultValue = "0") int page,
                         @RequestParam(required = false, defaultValue = "10") int size,
                         @RequestParam(required = false, defaultValue = "createdStamp") String sortBy,
                         @RequestParam(required = false, defaultValue = "desc") String sortDirection,

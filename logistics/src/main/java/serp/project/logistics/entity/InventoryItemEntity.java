@@ -8,6 +8,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.logistics.dto.request.InventoryItemCreationForm;
+import serp.project.logistics.dto.request.InventoryItemUpdateForm;
+import serp.project.logistics.util.IdUtils;
+
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -28,7 +32,14 @@ public class InventoryItemEntity {
     @Column(name = "product_id")
     private String productId;
 
-    private int quantity;
+    @Column(name = "quantity_on_hand")
+    private int quantityOnHand;
+
+    @Column(name = "quantity_reserved")
+    private int quantityReserved;
+
+    @Column(name = "quantity_committed")
+    private int quantityCommitted;
 
     @Column(name = "facility_id")
     private String facilityId;
@@ -58,5 +69,34 @@ public class InventoryItemEntity {
 
     @Column(name = "tenant_id")
     private Long tenantId;
+
+    public InventoryItemEntity(InventoryItemCreationForm form, Long tenantId) {
+        String inventoryItemId = IdUtils.generateInventoryItemId();
+        this.id = inventoryItemId;
+        this.productId = form.getProductId();
+        this.quantityOnHand = form.getQuantity();
+        this.quantityReserved = 0;
+        this.quantityCommitted = 0;
+        this.lotId = form.getLotId();
+        this.facilityId = form.getFacilityId();
+        this.expirationDate = form.getExpirationDate();
+        this.manufacturingDate = form.getManufacturingDate();
+        this.statusId = form.getStatusId();
+        this.tenantId = tenantId;
+    }
+
+    public void update(InventoryItemUpdateForm form) {
+        if (form.getQuantity() >= this.quantityReserved + this.quantityCommitted)
+            this.quantityOnHand = form.getQuantity();
+
+        if (form.getExpirationDate() != null)
+            this.expirationDate = form.getExpirationDate();
+
+        if (form.getManufacturingDate() != null)
+            this.manufacturingDate = form.getManufacturingDate();
+
+        if (form.getStatusId() != null)
+            this.statusId = form.getStatusId();
+    }
 
 }
