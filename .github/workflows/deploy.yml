@@ -30,6 +30,7 @@ jobs:
       serp-web: ${{ steps.changes.outputs.serp-web }}
       purchase: ${{ steps.changes.outputs.purchase }}
       logistics: ${{ steps.changes.outputs.logistics }}
+      sales: ${{ steps.changes.outputs.sales }}
       notification: ${{ steps.changes.outputs.notification }}
     steps:
       - name: Download changes artifact
@@ -51,6 +52,7 @@ jobs:
           echo "serp-web=$(jq -r '."serp-web"' changes.json)" >> $GITHUB_OUTPUT
           echo "purchase=$(jq -r .purchase changes.json)" >> $GITHUB_OUTPUT
           echo "logistics=$(jq -r .logistics changes.json)" >> $GITHUB_OUTPUT
+          echo "sales=$(jq -r .sales changes.json)" >> $GITHUB_OUTPUT
           echo "notification=$(jq -r .notification changes.json)" >> $GITHUB_OUTPUT
 
   deploy-account:
@@ -219,6 +221,25 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
             cd ${{ secrets.DEPLOY_PATH }}/serp_logistics
+            export IMAGE_TAG=${{ github.sha }}
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker image prune -f
+
+  deploy-sales:
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.sales == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Sales
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}/serp_sales
             export IMAGE_TAG=${{ github.sha }}
             docker compose pull
             docker compose up -d --remove-orphans
