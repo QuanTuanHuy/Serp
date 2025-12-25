@@ -91,6 +91,10 @@ func (m *ProjectMapper) EntityToResponse(project *entity.ProjectEntity, includeS
 		IsFavorite:         project.IsFavorite,
 		CreatedAt:          project.CreatedAt,
 		UpdatedAt:          project.UpdatedAt,
+		TotalTasks:         &project.TotalTasks,
+		CompletedTasks:     &project.CompletedTasks,
+		EstimatedHours:     &project.EstimatedHours,
+		ActualHours:        &project.ActualHours,
 	}
 
 	if includeStats {
