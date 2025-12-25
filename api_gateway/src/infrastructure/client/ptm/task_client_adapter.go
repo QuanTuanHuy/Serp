@@ -100,6 +100,33 @@ func (t *TaskClientAdapter) GetTaskByID(ctx context.Context, taskID int64) (*res
 	return &result, nil
 }
 
+func (t *TaskClientAdapter) GetTaskTreeByTaskID(ctx context.Context, taskID int64) (*response.BaseResponse, error) {
+	headers := utils.BuildHeadersFromContext(ctx)
+	url := fmt.Sprintf("/api/v1/tasks/%d/tree", taskID)
+
+	var httpResponse *utils.HTTPResponse
+	err := t.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
+		var err error
+		httpResponse, err = t.apiClient.GET(ctx, url, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call get task tree API: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !t.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("GetTaskTreeByTaskID API returned error status: %d", httpResponse.StatusCode))
+	}
+
+	var result response.BaseResponse
+	if err := t.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal get task tree response: %w", err)
+	}
+	return &result, nil
+}
+
 func (t *TaskClientAdapter) UpdateTask(ctx context.Context, taskID int64, payload map[string]any) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	url := fmt.Sprintf("/api/v1/tasks/%d", taskID)

@@ -30,6 +30,7 @@ type ITaskUseCase interface {
 	BulkDeleteTasks(ctx context.Context, userID int64, taskIDs []int64) error
 
 	GetTaskByID(ctx context.Context, userID int64, taskID int64) (*entity.TaskEntity, error)
+	GetTaskTreeByTaskID(ctx context.Context, userID, taskID int64) (*entity.TaskEntity, error)
 	GetTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) ([]*entity.TaskEntity, error)
 	GetTasksByProjectID(ctx context.Context, userID int64, projectID int64) ([]*entity.TaskEntity, error)
 	CountTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) (int64, error)
@@ -326,6 +327,17 @@ func (u *taskUseCase) GetTaskByID(ctx context.Context, userID int64, taskID int6
 		return nil, errors.New(constant.GetTaskForbidden)
 	}
 	return task, nil
+}
+
+func (u *taskUseCase) GetTaskTreeByTaskID(ctx context.Context, userID, taskID int64) (*entity.TaskEntity, error) {
+	task, err := u.taskService.GetTaskByID(ctx, taskID)
+	if err != nil {
+		return nil, err
+	}
+	if task.UserID != userID {
+		return nil, errors.New(constant.GetTaskForbidden)
+	}
+	return u.taskService.GetTaskTreeByTaskID(ctx, taskID)
 }
 
 func (u *taskUseCase) GetTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) ([]*entity.TaskEntity, error) {

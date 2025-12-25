@@ -219,6 +219,17 @@ func (m *TaskMapper) EntitiesToResponses(tasks []*entity.TaskEntity) []*response
 	return responses
 }
 
+func (m *TaskMapper) EntitiesToTreeResponses(task *entity.TaskEntity) *response.TaskResponse {
+	resp := m.EntityToResponse(task)
+	if len(task.SubTasks) > 0 {
+		resp.SubTasks = make([]*response.TaskResponse, 0, len(task.SubTasks))
+		for _, subTask := range task.SubTasks {
+			resp.SubTasks = append(resp.SubTasks, m.EntitiesToTreeResponses(subTask))
+		}
+	}
+	return resp
+}
+
 func (m *TaskMapper) FilterMapper(req *request.TaskFilterRequest) *store.TaskFilter {
 	filter := store.NewTaskFilter()
 

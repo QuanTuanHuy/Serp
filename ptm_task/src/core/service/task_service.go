@@ -39,6 +39,7 @@ type ITaskService interface {
 	DeleteTask(ctx context.Context, tx *gorm.DB, userID int64, taskID int64) error
 
 	GetTaskByID(ctx context.Context, taskID int64) (*entity.TaskEntity, error)
+	GetTaskTreeByTaskID(ctx context.Context, taskID int64) (*entity.TaskEntity, error)
 	GetTaskByUserIDAndID(ctx context.Context, userID, taskID int64) (*entity.TaskEntity, error)
 	GetTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) ([]*entity.TaskEntity, error)
 	CountTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) (int64, error)
@@ -243,6 +244,34 @@ func (s *taskService) GetTaskByID(ctx context.Context, taskID int64) (*entity.Ta
 		return nil, errors.New(constant.TaskNotFound)
 	}
 	return task, nil
+}
+
+func (s *taskService) GetTaskTreeByTaskID(ctx context.Context, rootID int64) (*entity.TaskEntity, error) {
+	tasks, err := s.taskPort.GetTasksByRootID(ctx, rootID)
+	if err != nil {
+		return nil, err
+	}
+	if len(tasks) == 0 {
+		return nil, errors.New(constant.TaskNotFound)
+	}
+	taskMap := make(map[int64]*entity.TaskEntity)
+	for _, task := range tasks {
+		task.SubTasks = []*entity.TaskEntity{}
+		taskMap[task.ID] = task
+	}
+	var rootTask *entity.TaskEntity
+	for _, task := range tasks {
+		if task.ParentTaskID != nil {
+			parentTask, exists := taskMap[*task.ParentTaskID]
+			if exists {
+				parentTask.SubTasks = append(parentTask.SubTasks, task)
+			}
+		}
+		if task.ID == rootID {
+			rootTask = task
+		}
+	}
+	return rootTask, nil
 }
 
 func (s *taskService) GetTaskByUserIDAndID(ctx context.Context, userID, taskID int64) (*entity.TaskEntity, error) {

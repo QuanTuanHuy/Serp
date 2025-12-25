@@ -17,6 +17,7 @@ type ITaskService interface {
 	CreateTask(ctx context.Context, payload map[string]any) (*response.BaseResponse, error)
 	GetTasksByUserID(ctx context.Context, params map[string]string) (*response.BaseResponse, error)
 	GetTaskByID(ctx context.Context, taskID int64) (*response.BaseResponse, error)
+	GetTaskTreeByTaskID(ctx context.Context, taskID int64) (*response.BaseResponse, error)
 	UpdateTask(ctx context.Context, taskID int64, payload map[string]any) (*response.BaseResponse, error)
 	DeleteTask(ctx context.Context, taskID int64) (*response.BaseResponse, error)
 }
@@ -47,6 +48,15 @@ func (t *TaskService) GetTaskByID(ctx context.Context, taskID int64) (*response.
 	res, err := t.taskClient.GetTaskByID(ctx, taskID)
 	if err != nil {
 		log.Error(ctx, "TaskService: GetTaskByID error: ", err.Error())
+		return nil, err
+	}
+	return res, nil
+}
+
+func (t *TaskService) GetTaskTreeByTaskID(ctx context.Context, taskID int64) (*response.BaseResponse, error) {
+	res, err := t.taskClient.GetTaskTreeByTaskID(ctx, taskID)
+	if err != nil {
+		log.Error(ctx, "TaskService: GetTaskTreeByTaskID error: ", err.Error())
 		return nil, err
 	}
 	return res, nil

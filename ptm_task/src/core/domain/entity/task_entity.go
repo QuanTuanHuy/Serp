@@ -50,6 +50,8 @@ type TaskEntity struct {
 	Source     string  `json:"source"`
 
 	CompletedAt *int64 `json:"completedAt,omitempty"`
+
+	SubTasks []*TaskEntity `json:"subTasks,omitempty"`
 }
 
 func NewTaskEntity() *TaskEntity {

@@ -53,6 +53,8 @@ type TaskResponse struct {
 	CreatedAt int64 `json:"createdAt"`
 	UpdatedAt int64 `json:"updatedAt"`
 
+	SubTasks []*TaskResponse `json:"subTasks,omitempty"`
+
 	// Computed fields
 	IsOverdue           *bool  `json:"isOverdue,omitempty"`
 	CanBeScheduled      *bool  `json:"canBeScheduled,omitempty"`

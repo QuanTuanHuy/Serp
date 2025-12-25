@@ -61,6 +61,19 @@ func (t *TaskController) GetTaskByID(c *gin.Context) {
 	c.JSON(res.Code, res)
 }
 
+func (t *TaskController) GetTaskTreeByTaskID(c *gin.Context) {
+	taskID, valid := utils.ValidateAndParseID(c, "id")
+	if !valid {
+		return
+	}
+	res, err := t.taskService.GetTaskTreeByTaskID(c.Request.Context(), taskID)
+	if err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
+		return
+	}
+	c.JSON(res.Code, res)
+}
+
 func (t *TaskController) UpdateTask(c *gin.Context) {
 	taskID, valid := utils.ValidateAndParseID(c, "id")
 	if !valid {

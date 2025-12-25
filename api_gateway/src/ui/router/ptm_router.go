@@ -42,6 +42,7 @@ func RegisterPtmRoutes(
 			taskV1.POST("", taskController.CreateTask)
 			taskV1.GET("", taskController.GetTasksByUserID)
 			taskV1.GET("/:id", taskController.GetTaskByID)
+			taskV1.GET("/:id/tree", taskController.GetTaskTreeByTaskID)
 			taskV1.GET("/:id/notes", noteController.GetNotesByTaskID)
 			taskV1.PATCH("/:id", taskController.UpdateTask)
 			taskV1.DELETE("/:id", taskController.DeleteTask)

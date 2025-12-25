@@ -54,6 +54,7 @@ func RegisterRoutes(config *RouterConfig) {
 			tasks.POST("", config.TaskController.CreateTask)
 			tasks.GET("", config.TaskController.GetTasksByUserID)
 			tasks.GET("/:id", config.TaskController.GetTaskByID)
+			tasks.GET("/:id/tree", config.TaskController.GetTaskTreeByTaskID)
 			tasks.GET("/:id/notes", config.NoteController.GetNotesByTaskID)
 			tasks.PATCH("/:id", config.TaskController.UpdateTask)
 			tasks.DELETE("/:id", config.TaskController.DeleteTask)
