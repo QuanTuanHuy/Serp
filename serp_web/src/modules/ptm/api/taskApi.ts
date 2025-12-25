@@ -115,7 +115,7 @@ export const taskApi = api.injectEndpoints({
     }),
 
     // Update task
-    updateTask: builder.mutation<Task, UpdateTaskRequest>({
+    updateTask: builder.mutation<Task, { id: number } & UpdateTaskRequest>({
       query: ({ id, ...patch }) => ({
         url: `/tasks/${id}`,
         method: 'PATCH',

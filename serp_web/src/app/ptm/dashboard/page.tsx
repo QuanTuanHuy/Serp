@@ -9,7 +9,7 @@
 
 import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
-import { CheckSquare, Target, Clock, AlertCircle } from 'lucide-react';
+import { CheckSquare, Target, Clock, AlertCircle, Plus } from 'lucide-react';
 import { setActiveView } from '@/modules/ptm/store/uiSlice';
 import {
   StatsCard,
@@ -17,12 +17,15 @@ import {
   RecentTasks,
   WeeklyOverview,
 } from '@/modules/ptm/components/dashboard';
-import { QuickAddTask } from '@/modules/ptm';
-import { useDashboardStats } from '@/modules/ptm/hooks';
+
+import { useDashboardStats, useTaskDialogs } from '@/modules/ptm/hooks';
+import { Button } from '@/shared';
+import { CreateTaskDialog } from '@/modules/ptm/components/tasks/dialogs';
 
 export default function PTMDashboardPage() {
   const dispatch = useDispatch();
   const { stats, isLoading } = useDashboardStats();
+  const { createDialog } = useTaskDialogs();
 
   useEffect(() => {
     dispatch(setActiveView('dashboard'));
@@ -52,7 +55,10 @@ export default function PTMDashboardPage() {
             Welcome back! Here's your productivity overview.
           </p>
         </div>
-        <QuickAddTask showIcon={true} variant='default' />
+        <Button onClick={createDialog.openCreate}>
+          <Plus className='mr-2 h-4 w-4' />
+          Add Task
+        </Button>
       </div>
 
       {/* Stats Grid */}
@@ -117,6 +123,9 @@ export default function PTMDashboardPage() {
           <RecentTasks />
         </div>
       </div>
+
+      {/* Dialogs */}
+      <CreateTaskDialog {...createDialog} />
     </div>
   );
 }

@@ -40,8 +40,8 @@ export function GanttView({ projectId, className }: GanttViewProps) {
       .filter((task) => task.deadlineMs)
       .map((task) => {
         const endDate = new Date(task.deadlineMs!);
-        const durationDays = task.estimatedDurationHours
-          ? Math.ceil(task.estimatedDurationHours / 8)
+        const durationDays = task.estimatedDurationMin
+          ? Math.ceil(task.estimatedDurationMin / 60 / 8)
           : 1;
         const startDate = new Date(endDate);
         startDate.setDate(startDate.getDate() - durationDays);

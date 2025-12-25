@@ -67,7 +67,6 @@ export function useTaskManagement(options: UseTaskManagementOptions = {}) {
         await updateTask({
           id: taskId,
           status: currentStatus === 'DONE' ? 'TODO' : 'DONE',
-          progressPercentage: currentStatus === 'DONE' ? 0 : 100,
         }).unwrap();
 
         toast.success(

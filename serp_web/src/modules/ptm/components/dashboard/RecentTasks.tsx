@@ -238,10 +238,12 @@ function TaskItem({
           <PriorityBadge priority={task.priority} showLabel={false} />
           <StatusBadge status={task.status} />
 
-          {task.estimatedDurationHours > 0 && (
+          {task.estimatedDurationMin && task.estimatedDurationMin > 0 && (
             <span className='text-xs text-muted-foreground flex items-center gap-1'>
               <Clock className='h-3 w-3' />
-              {task.estimatedDurationHours}h
+              {task.estimatedDurationMin >= 60
+                ? `${Math.floor(task.estimatedDurationMin / 60)}h ${task.estimatedDurationMin % 60}m`
+                : `${task.estimatedDurationMin}m`}
             </span>
           )}
 
@@ -259,7 +261,7 @@ function TaskItem({
             </span>
           )}
 
-          {task.tags.length > 0 && (
+          {task.tags?.length > 0 && (
             <div className='flex gap-1'>
               {task.tags.slice(0, 2).map((tag) => (
                 <span

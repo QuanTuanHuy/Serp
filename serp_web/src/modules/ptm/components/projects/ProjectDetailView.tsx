@@ -52,6 +52,8 @@ import { NoteEditorNovel } from '../notes/NoteEditorNovel';
 import { cn } from '@/shared/utils';
 import { toast } from 'sonner';
 import { Skeleton } from '@/shared/components/ui/skeleton';
+import { CreateTaskDialog } from '../tasks/dialogs';
+import { useTaskDialogs } from '../../hooks';
 
 interface ProjectDetailViewProps {
   projectId: number | string;
@@ -93,6 +95,8 @@ export function ProjectDetailView({
   const [createNote] = useCreateNoteMutation();
   const [updateNote] = useUpdateNoteMutation();
   const [deleteNote] = useDeleteNoteMutation();
+
+  const { createDialog } = useTaskDialogs();
 
   const handleToggleFavorite = async () => {
     if (!project) return;
@@ -385,7 +389,7 @@ export function ProjectDetailView({
           <TabsContent value='tasks' className='space-y-4 mt-6'>
             <div className='flex items-center justify-between'>
               <h3 className='text-lg font-semibold'>Project Tasks</h3>
-              <Button>
+              <Button onClick={createDialog.openCreate}>
                 <Plus className='h-4 w-4 mr-2' />
                 Add Task
               </Button>
@@ -475,6 +479,9 @@ export function ProjectDetailView({
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
       />
+
+      {/* Task Dialogs */}
+      <CreateTaskDialog {...createDialog} />
     </>
   );
 }

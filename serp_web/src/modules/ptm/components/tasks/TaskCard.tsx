@@ -22,6 +22,7 @@ import {
   AlertCircle,
   Edit,
   Trash2,
+  Repeat,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/shared/components/ui/card';
@@ -83,11 +84,13 @@ export function TaskCard({
     onToggleComplete?.(task.id, task.status);
   };
 
-  const handleStart = () => {
+  const handleStart = (e: React.MouseEvent) => {
+    e.stopPropagation();
     onStart?.(task.id);
   };
 
-  const handlePause = () => {
+  const handlePause = (e: React.MouseEvent) => {
+    e.stopPropagation();
     onPause?.(task.id);
   };
 
@@ -158,10 +161,14 @@ export function TaskCard({
           {/* Meta Info */}
           <div className='flex flex-wrap items-center gap-3 text-xs text-muted-foreground'>
             {/* Duration */}
-            {task.estimatedDurationHours > 0 && (
+            {task.estimatedDurationMin && task.estimatedDurationMin > 0 && (
               <div className='flex items-center gap-1'>
                 <Clock className='h-3 w-3' />
-                <span>{task.estimatedDurationHours}h</span>
+                <span>
+                  {task.estimatedDurationMin >= 60
+                    ? `${Math.floor(task.estimatedDurationMin / 60)}h ${task.estimatedDurationMin % 60}m`
+                    : `${task.estimatedDurationMin}m`}
+                </span>
               </div>
             )}
 
@@ -185,8 +192,11 @@ export function TaskCard({
             <StatusBadge status={task.status} />
 
             {/* Recurring Badge */}
-            {task.repeatConfig && (
-              <RecurringBadge repeatConfig={task.repeatConfig} />
+            {task.isRecurring && (
+              <div className='flex items-center gap-1 text-blue-600 dark:text-blue-400'>
+                <Repeat className='h-3 w-3' />
+                <span className='font-medium'>Recurring</span>
+              </div>
             )}
 
             {/* Deep Work Indicator */}
@@ -228,17 +238,6 @@ export function TaskCard({
               </Badge>
             )}
           </div>
-
-          {/* Progress Bar */}
-          {task.progressPercentage > 0 && task.status !== 'DONE' && (
-            <div className='space-y-1'>
-              <div className='flex items-center justify-between text-xs'>
-                <span className='text-muted-foreground'>Progress</span>
-                <span className='font-medium'>{task.progressPercentage}%</span>
-              </div>
-              <Progress value={task.progressPercentage} className='h-1.5' />
-            </div>
-          )}
 
           {/* Tags */}
           {task.tags && task.tags.length > 0 && (

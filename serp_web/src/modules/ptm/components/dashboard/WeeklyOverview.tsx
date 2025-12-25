@@ -56,7 +56,8 @@ export function WeeklyOverview() {
       const focusTime = dayTasks
         .filter((t) => t.isDeepWork)
         .reduce(
-          (acc, t) => acc + (t.actualDurationHours || t.estimatedDurationHours),
+          (acc, t) =>
+            acc + (t.actualDurationMin || t.estimatedDurationMin || 0) / 60,
           0
         );
 
@@ -98,7 +99,8 @@ export function WeeklyOverview() {
       prevWeekFocusTime += dayTasks
         .filter((t) => t.isDeepWork)
         .reduce(
-          (acc, t) => acc + (t.actualDurationHours || t.estimatedDurationHours),
+          (acc, t) =>
+            acc + (t.actualDurationMin || t.estimatedDurationMin || 0) / 60,
           0
         );
     }

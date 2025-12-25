@@ -145,7 +145,7 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
         title: task.title,
         description: task.description,
         priority: task.priority,
-        estimatedDurationHours: task.estimatedDurationHours,
+        estimatedDurationMin: task.estimatedDurationMin,
       });
       setIsEditing(true);
     }
@@ -170,19 +170,6 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
   const handleCancel = () => {
     setEditForm({});
     setIsEditing(false);
-  };
-
-  const handleProgressChange = async (value: number[]) => {
-    if (!task) return;
-
-    try {
-      await updateTask({
-        id: task.id,
-        progressPercentage: value[0],
-      }).unwrap();
-    } catch (error) {
-      toast.error('Failed to update progress');
-    }
   };
 
   const handleDelete = async () => {
@@ -364,25 +351,6 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
                     )}
                   </div>
 
-                  {/* Progress */}
-                  <div className='space-y-3'>
-                    <div className='flex items-center justify-between'>
-                      <Label>Progress</Label>
-                      <span className='text-sm font-medium'>
-                        {task.progressPercentage}%
-                      </span>
-                    </div>
-                    <Slider
-                      value={[task.progressPercentage]}
-                      max={100}
-                      step={10}
-                      onValueChange={handleProgressChange}
-                      className='cursor-pointer'
-                      disabled={isEditing}
-                    />
-                    <Progress value={task.progressPercentage} className='h-2' />
-                  </div>
-
                   {/* Subtasks Section */}
                   <div className='p-4 bg-muted/30 rounded-lg'>
                     <SubtaskList
@@ -408,21 +376,24 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
                       {isEditing ? (
                         <Input
                           type='number'
-                          step='0.5'
-                          value={editForm.estimatedDurationHours || ''}
+                          step='15'
+                          placeholder='Minutes'
+                          value={editForm.estimatedDurationMin || ''}
                           onChange={(e) =>
                             setEditForm({
                               ...editForm,
-                              estimatedDurationHours: parseFloat(
-                                e.target.value
-                              ),
+                              estimatedDurationMin: parseFloat(e.target.value),
                             })
                           }
                         />
                       ) : (
                         <div className='flex items-center gap-2 text-sm'>
                           <Clock className='h-4 w-4' />
-                          <span>{task.estimatedDurationHours}h estimated</span>
+                          <span>
+                            {task.estimatedDurationMin
+                              ? `${Math.floor(task.estimatedDurationMin / 60)}h ${task.estimatedDurationMin % 60}m estimated`
+                              : 'Not set'}
+                          </span>
                         </div>
                       )}
                     </div>

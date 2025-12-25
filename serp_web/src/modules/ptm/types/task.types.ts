@@ -21,23 +21,40 @@ export interface Task {
   priority: TaskPriority;
   status: TaskStatus;
 
-  estimatedDurationHours: number;
-  actualDurationHours?: number;
+  // Duration fields (in minutes, matching backend)
+  estimatedDurationMin?: number;
+  actualDurationMin?: number;
+  isDurationLearned: boolean;
 
+  // Priority scoring
+  priorityScore?: number;
+
+  // Date fields (timestamps in milliseconds)
   preferredStartDateMs?: number;
   deadlineMs?: number;
+  earliestStartMs?: number;
   completedAt?: string;
 
-  isDeepWork: boolean;
+  // Categorization
   category?: string;
   tags: string[];
 
-  dependentTaskIds: number[];
-  repeatConfig?: RepeatConfig;
+  // Recurrence fields
+  isRecurring: boolean;
+  recurrencePattern?: string;
+  recurrenceConfig?: string;
+  parentRecurringTaskId?: number;
+
+  // Task attributes
+  isDeepWork: boolean;
+  isMeeting: boolean;
+  isFlexible: boolean;
+
+  // External integration
   source: TaskSource;
   externalId?: string;
 
-  progressPercentage: number;
+  // Status
   activeStatus: 'ACTIVE' | 'INACTIVE';
   createdAt: string;
   updatedAt: string;
@@ -49,13 +66,7 @@ export interface Task {
   blockingTasksCount?: number; // Number of tasks waiting for this
   completedSubtasksCount?: number;
   totalSubtasksCount?: number;
-}
-
-export interface RepeatConfig {
-  frequency: 'daily' | 'weekly' | 'monthly';
-  interval: number;
-  endDate?: string;
-  daysOfWeek?: number[];
+  dependentTaskIds: number[]; // Computed from dependencies
 }
 
 // NEW: Dependency types
@@ -111,7 +122,7 @@ export interface TaskTemplate {
   titleTemplate: string;
   descriptionTemplate?: string;
 
-  estimatedDurationHours: number;
+  estimatedDurationMin?: number;
   priority: TaskPriority;
   category?: string;
   tags: string[];
@@ -130,28 +141,45 @@ export interface CreateTaskRequest {
   title: string;
   description?: string;
   priority?: TaskPriority;
-  estimatedDurationHours?: number;
+  estimatedDurationMin?: number;
+  preferredStartDateMs?: number;
   deadlineMs?: number;
-  projectId?: number;
-  parentTaskId?: number;
+  earliestStartMs?: number;
   category?: string;
   tags?: string[];
+  parentTaskId?: number;
+  projectId?: number;
+  isRecurring?: boolean;
+  recurrencePattern?: string;
+  recurrenceConfig?: string;
   isDeepWork?: boolean;
-  repeatConfig?: RepeatConfig;
+  isMeeting?: boolean;
+  isFlexible?: boolean;
+  externalId?: string;
+  source?: TaskSource;
 }
 
 export interface UpdateTaskRequest {
-  id: number;
   title?: string;
   description?: string;
   priority?: TaskPriority;
-  status?: TaskStatus;
-  estimatedDurationHours?: number;
+  priorityScore?: number;
+  estimatedDurationMin?: number;
+  actualDurationMin?: number;
+  preferredStartDateMs?: number;
   deadlineMs?: number;
-  progressPercentage?: number;
-  isDeepWork?: boolean;
+  earliestStartMs?: number;
   category?: string;
   tags?: string[];
+  parentTaskId?: number;
+  projectId?: number;
+  isRecurring?: boolean;
+  recurrencePattern?: string;
+  recurrenceConfig?: string;
+  isDeepWork?: boolean;
+  isMeeting?: boolean;
+  isFlexible?: boolean;
+  status?: TaskStatus;
 }
 
 export interface TaskFilterParams {

@@ -24,6 +24,12 @@ import { Button } from '@/shared/components/ui/button';
 import { Separator } from '@/shared/components/ui/separator';
 import { RecurringBadge } from '../RecurringBadge';
 import type { Task } from '../../../types';
+import {
+  formatDate,
+  formatDateTime,
+  formatDuration,
+  getRecurrenceDisplay,
+} from '../../../utils';
 
 interface TaskDetailContentProps {
   task: Task;
@@ -32,23 +38,8 @@ interface TaskDetailContentProps {
 export function TaskDetailContent({ task }: TaskDetailContentProps) {
   const router = useRouter();
 
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  // Parse and format recurrence config
+  const recurrenceInfo = getRecurrenceDisplay(task);
 
   return (
     <div className='space-y-6'>
@@ -109,13 +100,13 @@ export function TaskDetailContent({ task }: TaskDetailContentProps) {
               <div className='flex items-center gap-2'>
                 <Clock className='h-4 w-4 text-muted-foreground' />
                 <p className='text-sm font-semibold'>
-                  {task.estimatedDurationHours}h
+                  {formatDuration(task.estimatedDurationMin)}
                 </p>
               </div>
             </div>
           </Card>
 
-          {task.actualDurationHours !== undefined && (
+          {task.actualDurationMin !== undefined && (
             <Card className='p-4'>
               <div className='space-y-2'>
                 <p className='text-xs text-muted-foreground font-medium'>
@@ -124,7 +115,7 @@ export function TaskDetailContent({ task }: TaskDetailContentProps) {
                 <div className='flex items-center gap-2'>
                   <Activity className='h-4 w-4 text-muted-foreground' />
                   <p className='text-sm font-semibold'>
-                    {task.actualDurationHours}h
+                    {formatDuration(task.actualDurationMin)}
                   </p>
                 </div>
               </div>
@@ -157,22 +148,6 @@ export function TaskDetailContent({ task }: TaskDetailContentProps) {
                   <Calendar className='h-4 w-4 text-muted-foreground' />
                   <p className='text-sm font-semibold'>
                     {formatDate(task.preferredStartDateMs)}
-                  </p>
-                </div>
-              </div>
-            </Card>
-          )}
-
-          {task.progressPercentage > 0 && (
-            <Card className='p-4'>
-              <div className='space-y-2'>
-                <p className='text-xs text-muted-foreground font-medium'>
-                  Progress
-                </p>
-                <div className='flex items-center gap-2'>
-                  <Activity className='h-4 w-4 text-muted-foreground' />
-                  <p className='text-sm font-semibold'>
-                    {task.progressPercentage}%
                   </p>
                 </div>
               </div>
@@ -234,57 +209,32 @@ export function TaskDetailContent({ task }: TaskDetailContentProps) {
         )}
 
         {/* Recurring Config */}
-        {task.repeatConfig && (
+        {task.isRecurring && recurrenceInfo && (
           <div className='flex items-start gap-3'>
             <Repeat className='h-5 w-5 text-muted-foreground mt-0.5' />
             <div className='flex-1'>
               <p className='text-sm font-medium text-muted-foreground mb-2'>
                 Recurring Task
               </p>
-              <RecurringBadge repeatConfig={task.repeatConfig} />
-              <div className='mt-2 text-sm text-muted-foreground'>
-                <p>
-                  Frequency:{' '}
-                  <span className='font-medium capitalize'>
-                    {task.repeatConfig.frequency}
-                  </span>
+              <Badge variant='outline' className='mb-2'>
+                {recurrenceInfo.displayText}
+              </Badge>
+              {recurrenceInfo.endDate && (
+                <p className='text-xs text-muted-foreground mt-2'>
+                  Until {new Date(recurrenceInfo.endDate).toLocaleDateString()}
                 </p>
-                <p>
-                  Interval:{' '}
-                  <span className='font-medium'>
-                    Every {task.repeatConfig.interval}{' '}
-                    {task.repeatConfig.frequency === 'daily'
-                      ? 'day(s)'
-                      : task.repeatConfig.frequency === 'weekly'
-                        ? 'week(s)'
-                        : 'month(s)'}
-                  </span>
-                </p>
-                {task.repeatConfig.endDate && (
-                  <p>
-                    End Date:{' '}
-                    <span className='font-medium'>
-                      {new Date(task.repeatConfig.endDate).toLocaleDateString()}
-                    </span>
+              )}
+              {/* Raw config for debugging */}
+              {task.recurrenceConfig && (
+                <details className='mt-2'>
+                  <summary className='text-xs text-muted-foreground cursor-pointer'>
+                    View raw config
+                  </summary>
+                  <p className='font-mono text-xs bg-muted p-2 rounded mt-1'>
+                    {task.recurrenceConfig}
                   </p>
-                )}
-                {task.repeatConfig.daysOfWeek &&
-                  task.repeatConfig.daysOfWeek.length > 0 && (
-                    <p>
-                      Days:{' '}
-                      <span className='font-medium'>
-                        {task.repeatConfig.daysOfWeek
-                          .map(
-                            (d) =>
-                              ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][
-                                d
-                              ]
-                          )
-                          .join(', ')}
-                      </span>
-                    </p>
-                  )}
-              </div>
+                </details>
+              )}
             </div>
           </div>
         )}

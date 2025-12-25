@@ -105,20 +105,24 @@ export const mockApiHandlers = {
         description: data.description,
         priority: data.priority || 'MEDIUM',
         status: 'TODO',
-        estimatedDurationHours: data.estimatedDurationHours || 1,
+        estimatedDurationMin: data.estimatedDurationMin || 60, // Default 1 hour in minutes
+        isDurationLearned: data.isDurationLearned || false,
         isDeepWork: data.isDeepWork || false,
+        isRecurring: data.isRecurring || false,
+        isMeeting: data.isMeeting || false,
+        isFlexible: data.isFlexible || false,
         category: data.category,
         tags: data.tags || [],
         dependentTaskIds: [],
-        repeatConfig: data.repeatConfig,
         source: 'manual',
-        progressPercentage: 0,
         activeStatus: 'ACTIVE',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         projectId: data.projectId,
         deadlineMs: data.deadlineMs,
         parentTaskId: data.parentTaskId,
+        recurrencePattern: data.recurrencePattern,
+        recurrenceConfig: data.recurrenceConfig,
       };
 
       tasksStore = [...tasksStore, newTask];
@@ -151,7 +155,7 @@ export const mockApiHandlers = {
       return mockApiHandlers.tasks.create({
         title: data.title,
         priority: 'MEDIUM',
-        estimatedDurationHours: 1,
+        estimatedDurationMin: 60, // 1 hour in minutes
       });
     },
 
@@ -184,7 +188,7 @@ export const mockApiHandlers = {
         title,
         description,
         priority: template.priority,
-        estimatedDurationHours: template.estimatedDurationHours,
+        estimatedDurationMin: template.estimatedDurationMin,
         category: template.category,
         tags: template.tags,
         isDeepWork: template.isDeepWork,

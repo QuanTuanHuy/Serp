@@ -79,7 +79,7 @@ export function SubtaskList({
         title: title.trim(),
         parentTaskId,
         priority: 'MEDIUM',
-        estimatedDurationHours: 1,
+        estimatedDurationMin: 60,
         isDeepWork: false,
         tags: [],
       }).unwrap();
@@ -95,7 +95,6 @@ export function SubtaskList({
     await updateTask({
       id: subtask.id,
       status: newStatus,
-      progressPercentage: newStatus === 'DONE' ? 100 : 0,
     });
   };
 
@@ -349,9 +348,11 @@ function SubtaskItem({
                   </span>
                 )}
 
-                {subtask.estimatedDurationHours && (
+                {subtask.estimatedDurationMin && (
                   <Badge variant='outline' className='text-xs h-5'>
-                    {subtask.estimatedDurationHours}h
+                    {subtask.estimatedDurationMin >= 60
+                      ? `${Math.floor(subtask.estimatedDurationMin / 60)}h ${subtask.estimatedDurationMin % 60}m`
+                      : `${subtask.estimatedDurationMin}m`}
                   </Badge>
                 )}
 

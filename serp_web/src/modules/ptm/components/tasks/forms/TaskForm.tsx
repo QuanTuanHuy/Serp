@@ -29,20 +29,25 @@ import {
   Checkbox,
 } from '@/shared/components/ui';
 import { useGetProjectsQuery } from '../../../api';
-import type { Task, TaskPriority, RepeatConfig } from '../../../types';
-import { RecurringTaskConfig } from '../RecurringTaskConfig';
+import type { Task, TaskPriority } from '../../../types';
+import { RecurringTaskConfig, RepeatConfig } from '../RecurringTaskConfig';
+import { backendToRepeatConfig, repeatConfigToBackend } from '../../../utils';
 
 const taskSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
+  title: z.string().min(1, 'Title is required').max(500, 'Title too long'),
   description: z.string().max(2000, 'Description too long').optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).default('MEDIUM'),
-  estimatedDurationHours: z.coerce.number().min(0).max(1000).optional(),
+  estimatedDurationMin: z.coerce.number().min(1).max(10000).optional(),
+  preferredStartDateMs: z.coerce.number().optional(),
   deadlineMs: z.coerce.number().optional(),
+  earliestStartMs: z.coerce.number().optional(),
   projectId: z.coerce.number().optional(),
   parentTaskId: z.coerce.number().optional(),
-  category: z.string().max(50).optional(),
+  category: z.string().max(100).optional(),
   tags: z.array(z.string()).default([]),
   isDeepWork: z.boolean().default(false),
+  isMeeting: z.boolean().default(false),
+  isFlexible: z.boolean().default(true),
   repeatConfig: z
     .object({
       frequency: z.enum(['daily', 'weekly', 'monthly']),
@@ -50,6 +55,7 @@ const taskSchema = z.object({
       endDate: z.string().optional(),
       daysOfWeek: z.array(z.number()).optional(),
     })
+    .nullable()
     .optional(),
 });
 
@@ -74,9 +80,12 @@ export function TaskForm({
       title: '',
       description: '',
       priority: 'MEDIUM',
-      estimatedDurationHours: undefined,
+      estimatedDurationMin: undefined,
       tags: [],
       isDeepWork: false,
+      isMeeting: false,
+      isFlexible: true,
+      repeatConfig: backendToRepeatConfig(defaultValues || {}),
       ...defaultValues,
     },
   });
@@ -92,9 +101,30 @@ export function TaskForm({
     form.setValue('tags', tagsArray);
   };
 
+  const handleTagsBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    handleTagsChange(e.target.value);
+  };
+
+  // Convert form data to backend format
+  const handleFormSubmit = async (data: TaskFormValues) => {
+    const submitData: any = { ...data };
+
+    // Convert repeatConfig to backend format using utility
+    const recurrenceData = repeatConfigToBackend(data.repeatConfig);
+    Object.assign(submitData, recurrenceData);
+
+    // Remove repeatConfig before submitting
+    delete submitData.repeatConfig;
+
+    await onSubmit(submitData);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit as any)} className='space-y-4'>
+      <form
+        onSubmit={form.handleSubmit(handleFormSubmit as any)}
+        className='space-y-4'
+      >
         {/* Title */}
         <FormField
           control={form.control as any}
@@ -154,19 +184,19 @@ export function TaskForm({
             )}
           />
 
-          {/* Estimated Hours */}
+          {/* Estimated Duration (Minutes) */}
           <FormField
             control={form.control as any}
-            name='estimatedDurationHours'
+            name='estimatedDurationMin'
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Estimated Hours</FormLabel>
+                <FormLabel>Estimated Minutes</FormLabel>
                 <FormControl>
                   <Input
                     type='number'
-                    step='0.5'
-                    min='0'
-                    placeholder='0'
+                    step='1'
+                    min='1'
+                    placeholder='60'
                     {...field}
                     value={field.value || ''}
                   />
@@ -234,8 +264,8 @@ export function TaskForm({
               <FormControl>
                 <Input
                   placeholder='Enter tags separated by commas'
-                  value={field.value?.join(', ') || ''}
-                  onChange={(e) => handleTagsChange(e.target.value)}
+                  defaultValue={field.value?.join(', ') || ''}
+                  onBlur={handleTagsBlur}
                 />
               </FormControl>
               <FormDescription>Separate tags with commas</FormDescription>
@@ -262,7 +292,43 @@ export function TaskForm({
           )}
         />
 
-        {/* Recurring Config */}
+        {/* Is Meeting */}
+        <FormField
+          control={form.control as any}
+          name='isMeeting'
+          render={({ field }) => (
+            <FormItem className='flex items-center space-x-2'>
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+              <FormLabel className='!mt-0'>Meeting Task</FormLabel>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Is Flexible */}
+        <FormField
+          control={form.control as any}
+          name='isFlexible'
+          render={({ field }) => (
+            <FormItem className='flex items-center space-x-2'>
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+              <FormLabel className='!mt-0'>Flexible Schedule</FormLabel>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Recurring Task Config */}
         <FormField
           control={form.control as any}
           name='repeatConfig'

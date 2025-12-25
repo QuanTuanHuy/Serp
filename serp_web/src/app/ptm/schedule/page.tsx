@@ -107,7 +107,7 @@ export default function SchedulePage() {
     const scheduledTasks = totalTasks - unscheduledTasks.length;
     const plannedHours = allTasks
       .filter((t) => t.status !== 'DONE' && t.status !== 'CANCELLED')
-      .reduce((sum, task) => sum + task.estimatedDurationHours, 0);
+      .reduce((sum, task) => sum + (task.estimatedDurationMin || 0) / 60, 0);
     const activeFocusBlocks = focusBlocks.filter((b) => b.isEnabled).length;
 
     // Mock optimization percentage (would come from backend)
