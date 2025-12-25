@@ -59,6 +59,9 @@ export interface Task {
   createdAt: string;
   updatedAt: string;
 
+  // Recursive subtask tree (from backend SubTasks field)
+  subTasks?: Task[];
+
   // NEW: Computed fields for hierarchy and dependencies
   depth?: number; // 0=root, 1=subtask, 2=sub-subtask
   hasSubtasks?: boolean; // Quick check

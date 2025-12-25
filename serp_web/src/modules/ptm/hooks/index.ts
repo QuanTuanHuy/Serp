@@ -20,3 +20,5 @@ export type { TaskWithTitle } from './useTaskDialogs';
 
 export { useTaskManagement } from './useTaskManagement';
 export type { UseTaskManagementOptions } from './useTaskManagement';
+
+export { useTaskActions } from './useTaskActions';

@@ -8,11 +8,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import {
-  useGetTasksQuery,
-  useUpdateTaskMutation,
-  useDeleteTaskMutation,
-} from '../api';
+import { useGetTasksQuery, useUpdateTaskMutation } from '../api';
 import { toast } from 'sonner';
 import type { TaskStatus, TaskPriority } from '../types';
 

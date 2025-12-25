@@ -17,6 +17,7 @@ import {
 } from '@/shared/components/ui/tabs';
 import { Badge } from '@/shared/components/ui/badge';
 import { TaskDetailContent } from './TaskDetailContent';
+import { SubtasksTab } from './SubtasksTab';
 import { TaskActivityTimeline } from '../TaskActivityTimeline';
 import { useGetEntityActivitiesQuery } from '../../../api';
 import type { Task } from '../../../types';
@@ -69,6 +70,14 @@ export function TaskDetailTabs({ taskId, task }: TaskDetailTabsProps) {
     <Tabs value={activeTab} onValueChange={setActiveTab}>
       <TabsList>
         <TabsTrigger value='details'>Details</TabsTrigger>
+        <TabsTrigger value='subtasks'>
+          Subtasks
+          {task.subTasks && task.subTasks.length > 0 && (
+            <Badge variant='secondary' className='ml-2'>
+              {task.subTasks.length}
+            </Badge>
+          )}
+        </TabsTrigger>
         <TabsTrigger value='activity'>
           Activity History
           {activities.length > 0 && (
@@ -81,6 +90,10 @@ export function TaskDetailTabs({ taskId, task }: TaskDetailTabsProps) {
 
       <TabsContent value='details' className='mt-6'>
         <TaskDetailContent task={task} />
+      </TabsContent>
+
+      <TabsContent value='subtasks' className='mt-6'>
+        <SubtasksTab task={task} />
       </TabsContent>
 
       <TabsContent value='activity'>

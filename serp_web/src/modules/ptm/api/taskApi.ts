@@ -20,7 +20,7 @@ import type {
   DependencyValidationResult,
   TaskFilterParams,
 } from '../types';
-import type { PaginatedResponse } from '@/lib/store/api/types';
+import type { ApiResponse, PaginatedResponse } from '@/lib/store/api/types';
 import { api } from '@/lib';
 
 export const taskApi = api.injectEndpoints({
@@ -220,28 +220,13 @@ export const taskApi = api.injectEndpoints({
       ],
     }),
 
-    // Get full task tree (task + all descendants + ancestors)
-    getTaskTree: builder.query<
-      {
-        task: Task;
-        children: Task[];
-        descendants: Task[];
-        ancestors: Task[];
-      },
-      number
-    >({
-      queryFn: async (taskId) => {
-        if (USE_MOCK_DATA) {
-          const data = await mockApiHandlers.tasks.getTaskTree(taskId);
-          return { data };
-        }
-        return {
-          error: {
-            status: 'CUSTOM_ERROR',
-            error: 'API not implemented',
-          } as any,
-        };
-      },
+    // Get full task tree (task + all descendants as nested subTasks)
+    getTaskTree: builder.query<ApiResponse<Task>, number>({
+      query: (taskId) => ({
+        url: `/tasks/${taskId}/tree`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'ptm' },
       providesTags: (_result, _error, taskId) => [
         { type: 'ptm/Task', id: taskId },
         { type: 'ptm/Task', id: `TREE_${taskId}` },
