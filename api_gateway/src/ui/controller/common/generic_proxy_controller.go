@@ -29,6 +29,7 @@ const (
 	ServicePTM          = "ptm"
 	ServicePurchase     = "purchase"
 	ServiceLogistics    = "logistics"
+	ServiceSales        = "sales"
 )
 
 type GenericProxyController struct {
@@ -43,7 +44,7 @@ func NewGenericProxyController(props *properties.ExternalServiceProperties) *Gen
 		breakers: make(map[string]*gobreaker.CircuitBreaker[*http.Response]),
 	}
 
-	services := []string{ServiceCRM, ServiceNotification, ServiceAccount, ServicePTM, ServicePurchase, ServiceLogistics}
+	services := []string{ServiceCRM, ServiceNotification, ServiceAccount, ServicePTM, ServicePurchase, ServiceLogistics, ServiceSales}
 	for _, svc := range services {
 		controller.breakers[svc] = controller.createCircuitBreaker(svc)
 	}
@@ -59,6 +60,21 @@ func (c *GenericProxyController) ProxyToCRM(ctx *gin.Context) {
 func (c *GenericProxyController) ProxyToNotification(ctx *gin.Context) {
 	target := fmt.Sprintf("http://%s:%s", c.props.NotificationService.Host, c.props.NotificationService.Port)
 	c.proxyWithResilience(ctx, target, "/ns/api/v1", "/notification/api/v1", ServiceNotification)
+}
+
+func (c *GenericProxyController) ProxyToSales(ctx *gin.Context) {
+	target := fmt.Sprintf("http://%s:%s", c.props.SalesService.Host, c.props.SalesService.Port)
+	c.proxyWithResilience(ctx, target, "/sales/api/v1", "/sales/api/v1", ServiceSales)
+}
+
+func (c *GenericProxyController) ProxyToPurchase(ctx *gin.Context) {
+	target := fmt.Sprintf("http://%s:%s", c.props.PurchaseService.Host, c.props.PurchaseService.Port)
+	c.proxyWithResilience(ctx, target, "/purchase/api/v1", "/purchase/api/v1", ServicePurchase)
+}
+
+func (c *GenericProxyController) ProxyToLogistics(ctx *gin.Context) {
+	target := fmt.Sprintf("http://%s:%s", c.props.LogisticsService.Host, c.props.LogisticsService.Port)
+	c.proxyWithResilience(ctx, target, "/logistics/api/v1", "/logistics/api/v1", ServiceLogistics)
 }
 
 func (c *GenericProxyController) createCircuitBreaker(name string) *gobreaker.CircuitBreaker[*http.Response] {

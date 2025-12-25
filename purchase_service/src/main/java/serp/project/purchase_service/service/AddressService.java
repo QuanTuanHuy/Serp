@@ -11,8 +11,6 @@ import serp.project.purchase_service.entity.AddressEntity;
 import serp.project.purchase_service.exception.AppErrorCode;
 import serp.project.purchase_service.exception.AppException;
 import serp.project.purchase_service.repository.AddressRepository;
-import serp.project.purchase_service.util.IdUtils;
-
 import java.util.List;
 
 @Service
@@ -24,20 +22,10 @@ public class AddressService {
 
     @Transactional(rollbackFor = Exception.class)
     public void createAddress(AddressCreationForm form, Long tenantId) {
-        String addressId = IdUtils.generateAddressId();
-        AddressEntity address = AddressEntity.builder()
-                .id(addressId)
-                .entityId(form.getEntityId())
-                .entityType(form.getEntityType())
-                .addressType(form.getAddressType())
-                .latitude(form.getLatitude())
-                .longitude(form.getLongitude())
-                .isDefault(form.isDefault())
-                .fullAddress(form.getFullAddress())
-                .tenantId(tenantId)
-                .build();
+        AddressEntity address = new AddressEntity(form, tenantId);
         addressRepository.save(address);
-        log.info("[AddressService] Created address {} with ID {} for tenantId: {}", address.getFullAddress(), addressId,
+        log.info("[AddressService] Created address {} with ID {} for tenantId: {}", address.getFullAddress(),
+                address.getId(),
                 tenantId);
     }
 
@@ -47,11 +35,7 @@ public class AddressService {
         if (address == null || !address.getTenantId().equals(tenantId)) {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
-        address.setAddressType(form.getAddressType());
-        address.setLatitude(form.getLatitude());
-        address.setLongitude(form.getLongitude());
-        address.setDefault(form.isDefault());
-        address.setFullAddress(form.getFullAddress());
+        address.update(form);
         addressRepository.save(address);
         log.info("[AddressService] Updated address {} with ID {} for tenantId: {}", address.getFullAddress(), addressId,
                 tenantId);

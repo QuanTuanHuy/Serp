@@ -4,11 +4,16 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.logistics.exception.AppErrorCode;
+import serp.project.logistics.exception.AppException;
+
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Formula;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
@@ -35,6 +40,13 @@ public class OrderItemEntity {
 
     private int quantity;
 
+    @Formula("(quantity - (" +
+            "   SELECT COALESCE(SUM(iid.quantity), 0) " +
+            "   FROM wms2_inventory_item_detail iid " +
+            "   WHERE iid.order_item_id = id " +
+            "))")
+    private int quantityRemaining;
+
     private long amount;
 
     @Column(name = "status_id")
@@ -58,5 +70,19 @@ public class OrderItemEntity {
 
     @Column(name = "tenant_id")
     private Long tenantId;
+
+    @Transient
+    private ProductEntity product;
+
+    public void addDeliveredQuantity(int quantity) {
+        if (this.quantityRemaining < quantity) {
+            throw new AppException(AppErrorCode.EXCEED_REMAINING_QUANTITY);
+        }
+        this.quantityRemaining -= quantity;
+    }
+
+    public void cancelDeliveredQuantity(int quantity) {
+        this.quantityRemaining += quantity;
+    }
 
 }

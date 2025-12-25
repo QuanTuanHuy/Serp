@@ -25,6 +25,7 @@ type ExternalServiceProperties struct {
 	LogisticsService    ServiceProperty
 	CrmService          ServiceProperty
 	NotificationService ServiceProperty
+	SalesService        ServiceProperty
 }
 
 func (e ExternalServiceProperties) Prefix() string {

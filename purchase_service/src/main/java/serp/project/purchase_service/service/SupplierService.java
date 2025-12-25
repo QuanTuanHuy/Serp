@@ -7,16 +7,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import serp.project.purchase_service.constant.EntityType;
-import serp.project.purchase_service.dto.request.AddressCreationForm;
 import serp.project.purchase_service.dto.request.SupplierCreationForm;
 import serp.project.purchase_service.dto.request.SupplierUpdateForm;
 import serp.project.purchase_service.entity.SupplierEntity;
 import serp.project.purchase_service.exception.AppErrorCode;
 import serp.project.purchase_service.exception.AppException;
+import serp.project.purchase_service.repository.AddressRepository;
 import serp.project.purchase_service.repository.SupplierRepository;
 import serp.project.purchase_service.repository.specification.SupplierSpecification;
-import serp.project.purchase_service.util.IdUtils;
 import serp.project.purchase_service.util.PaginationUtils;
 
 @Service
@@ -25,34 +23,18 @@ import serp.project.purchase_service.util.PaginationUtils;
 public class SupplierService {
 
     private final SupplierRepository supplierRepository;
-    private final AddressService addressService;
+    private final AddressRepository addressRepository;
 
     @Transactional(rollbackFor = Exception.class)
     public void createSupplier(SupplierCreationForm form, Long tenantId) {
 
-        String supplierId = IdUtils.generateSupplierId();
-        SupplierEntity supplier = SupplierEntity.builder()
-                .id(supplierId)
-                .name(form.getName())
-                .email(form.getEmail())
-                .phone(form.getPhone())
-                .statusId(form.getStatusId())
-                .tenantId(tenantId)
-                .build();
+        SupplierEntity supplier = new SupplierEntity(form, tenantId);
         supplierRepository.save(supplier);
-        log.info("[SupplierService] Generated supplier {} with ID {} for tenantId {}", form.getName(), supplierId,
+        log.info("[SupplierService] Generated supplier {} with ID {} for tenantId {}", form.getName(), supplier.getId(),
                 tenantId);
 
-        AddressCreationForm addressForm = new AddressCreationForm();
-        addressForm.setEntityId(supplierId);
-        addressForm.setEntityType(EntityType.SUPPLIER.value());
-        addressForm.setAddressType(form.getAddressType());
-        addressForm.setLatitude(form.getLatitude());
-        addressForm.setLongitude(form.getLongitude());
-        addressForm.setDefault(true);
-        addressForm.setFullAddress(form.getFullAddress());
-        addressService.createAddress(addressForm, tenantId);
-        log.info("[SupplierService] Created address for supplier ID {} for tenantId {}", supplierId, tenantId);
+        addressRepository.save(supplier.getAddress());
+        log.info("[SupplierService] Created address for supplier ID {} for tenantId {}", supplier.getId(), tenantId);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -62,10 +44,7 @@ public class SupplierService {
             log.error("[SupplierService] Supplier with ID {} not found for tenantId {}", id, tenantId);
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
-        supplier.setName(form.getName());
-        supplier.setEmail(form.getEmail());
-        supplier.setPhone(form.getPhone());
-        supplier.setStatusId(form.getStatusId());
+        supplier.update(form);
         supplierRepository.save(supplier);
         log.info("[SupplierService] Updated supplier {} with ID {} for tenantId {}", form.getName(), id, tenantId);
     }

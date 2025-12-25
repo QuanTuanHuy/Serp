@@ -53,6 +53,10 @@ external:
       host: ${LOGISTICS_SERVICE_HOST}
       port: ${LOGISTICS_SERVICE_PORT}
       timeout: 15s
+    salesService:
+      host: ${SALES_SERVICE_HOST}
+      port: ${SALES_SERVICE_PORT}
+      timeout: 15s
     crmService:
       host: ${CRM_SERVICE_HOST}
       port: ${CRM_SERVICE_PORT}

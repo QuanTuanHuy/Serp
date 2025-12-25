@@ -1,6 +1,8 @@
 spring:
   application:
-    name: logistics
+    app:
+      name: "@project.name@"
+      version: "@project.version@"
   security:
     oauth2:
       resourceserver:
@@ -38,7 +40,7 @@ security:
       - first: "/swagger-ui.html"
         second: GET
     protected-urls:
-      - url-pattern: /purchase-service/api/v1/**
+      - url-pattern: /logistics/api/v1/**
         roles:
           - LOGISTICS_ADMIN
           - LOGISTICS_EMPLOYEE

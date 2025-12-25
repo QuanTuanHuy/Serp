@@ -9,13 +9,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import serp.project.logistics.dto.request.InventoryItemCreationForm;
 import serp.project.logistics.dto.request.InventoryItemUpdateForm;
-import serp.project.logistics.entity.InventoryItemDetailEntity;
 import serp.project.logistics.entity.InventoryItemEntity;
 import serp.project.logistics.exception.AppErrorCode;
 import serp.project.logistics.exception.AppException;
 import serp.project.logistics.repository.InventoryItemRepository;
 import serp.project.logistics.repository.specification.InventoryItemSpecification;
-import serp.project.logistics.util.IdUtils;
 import serp.project.logistics.util.PaginationUtils;
 
 import java.time.LocalDate;
@@ -23,55 +21,25 @@ import java.time.LocalDate;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional(rollbackFor = Exception.class)
 public class InventoryItemService {
 
     private final InventoryItemRepository inventoryItemRepository;
 
-    @Transactional(rollbackFor = Exception.class)
-    public void createInventoryItem(InventoryItemDetailEntity item) {
-        String inventoryItemId = IdUtils.generateInventoryItemId();
-        InventoryItemEntity inventoryItem = InventoryItemEntity.builder()
-                .id(inventoryItemId)
-                .productId(item.getProductId())
-                .quantity(item.getQuantity())
-                .facilityId(item.getFacilityId())
-                .lotId(item.getLotId())
-                .expirationDate(item.getExpirationDate())
-                .manufacturingDate(item.getManufacturingDate())
-                .statusId("VALID")
-                .receivedDate(LocalDate.now())
-                .tenantId(item.getTenantId())
-                .build();
-        inventoryItemRepository.save(inventoryItem);
-        log.info("[InventoryItemService] Created inventory item with ID {} for product ID: {}", inventoryItemId,
-                item.getProductId());
-    }
-
     public void createInventoryItem(InventoryItemCreationForm form, Long tenantId) {
-        String inventoryItemId = IdUtils.generateInventoryItemId();
-        InventoryItemEntity inventoryItem = InventoryItemEntity.builder()
-                .id(inventoryItemId)
-                .productId(form.getProductId())
-                .quantity(form.getQuantity())
-                .facilityId(form.getFacilityId())
-                .expirationDate(form.getExpirationDate())
-                .manufacturingDate(form.getManufacturingDate())
-                .statusId("VALID")
-                .tenantId(tenantId)
-                .build();
+        InventoryItemEntity inventoryItem = new InventoryItemEntity(form, tenantId);
         inventoryItemRepository.save(inventoryItem);
-        log.info("[InventoryItemService] Created inventory item with ID {} for product ID: {}", inventoryItemId,
+        log.info("[InventoryItemService] Created inventory item with ID {} for product ID: {}", inventoryItem.getId(),
                 form.getProductId());
     }
 
     public void updateInventoryItem(String id, InventoryItemUpdateForm form, Long tenantId) {
         InventoryItemEntity inventoryItem = getInventoryItem(id, tenantId);
+        if (inventoryItem == null) {
+            throw new AppException(AppErrorCode.NOT_FOUND);
+        }
 
-        inventoryItem.setQuantity(form.getQuantity());
-        inventoryItem.setExpirationDate(form.getExpirationDate());
-        inventoryItem.setManufacturingDate(form.getManufacturingDate());
-        inventoryItem.setStatusId(form.getStatusId());
-
+        inventoryItem.update(form);
         inventoryItemRepository.save(inventoryItem);
         log.info("[InventoryItemService] Updated inventory item with ID {}", id);
     }
@@ -79,8 +47,8 @@ public class InventoryItemService {
     public InventoryItemEntity getInventoryItem(String id, Long tenantId) {
         InventoryItemEntity inventoryItem = inventoryItemRepository.findById(id).orElse(null);
         if (inventoryItem == null || !inventoryItem.getTenantId().equals(tenantId)) {
-            log.error("[InventoryItemService] Inventory item with ID {} not found or tenant ID mismatch", id);
-            throw new AppException(AppErrorCode.NOT_FOUND);
+            log.info("[InventoryItemService] Inventory item with ID {} not found or tenant ID mismatch", id);
+            return null;
         }
         return inventoryItem;
     }
@@ -98,8 +66,7 @@ public class InventoryItemService {
             int page,
             int size,
             String sortBy,
-            String sortDirection
-    ) {
+            String sortDirection) {
         Pageable pageable = PaginationUtils.createPageable(page, size, sortBy, sortDirection);
         return inventoryItemRepository.findAll(
                 InventoryItemSpecification.satisfy(
@@ -111,10 +78,8 @@ public class InventoryItemService {
                         manufacturingDateFrom,
                         manufacturingDateTo,
                         statusId,
-                        tenantId
-                ),
-                pageable
-        );
+                        tenantId),
+                pageable);
     }
 
 }

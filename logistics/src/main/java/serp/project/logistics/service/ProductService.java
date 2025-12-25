@@ -11,7 +11,6 @@ import serp.project.logistics.dto.request.ProductUpdateForm;
 import serp.project.logistics.entity.ProductEntity;
 import serp.project.logistics.repository.ProductRepository;
 import serp.project.logistics.repository.specification.ProductSpecification;
-import serp.project.logistics.util.IdUtils;
 import serp.project.logistics.util.PaginationUtils;
 
 @Service
@@ -23,24 +22,7 @@ public class ProductService {
 
     @Transactional(rollbackFor = Exception.class)
     public void createProduct(ProductCreationForm form, Long tenantId) {
-        String productId = IdUtils.generateProductId();
-        ProductEntity product = ProductEntity.builder()
-                .id(productId)
-                .name(form.getName())
-                .weight(form.getWeight())
-                .height(form.getHeight())
-                .unit(form.getUnit())
-                .costPrice(form.getCostPrice())
-                .wholeSalePrice(form.getWholeSalePrice())
-                .retailPrice(form.getRetailPrice())
-                .categoryId(form.getCategoryId())
-                .statusId(form.getStatusId())
-                .imageId(form.getImageId())
-                .extraProps(form.getExtraProps())
-                .vatRate(form.getVatRate())
-                .skuCode(form.getSkuCode())
-                .tenantId(tenantId)
-                .build();
+        ProductEntity product = new ProductEntity(form, tenantId);
         productRepository.save(product);
         log.info("[ProductService] Created product {} with ID {} for tenantId {}", product.getId(), product.getId(),
                 tenantId);
@@ -52,19 +34,7 @@ public class ProductService {
         if (product == null || !product.getTenantId().equals(tenantId)) {
             throw new RuntimeException("Product not found or access denied");
         }
-        product.setName(form.getName());
-        product.setWeight(form.getWeight());
-        product.setHeight(form.getHeight());
-        product.setUnit(form.getUnit());
-        product.setCostPrice(form.getCostPrice());
-        product.setWholeSalePrice(form.getWholeSalePrice());
-        product.setRetailPrice(form.getRetailPrice());
-        product.setStatusId(form.getStatusId());
-        product.setImageId(form.getImageId());
-        product.setExtraProps(form.getExtraProps());
-        product.setVatRate(form.getVatRate());
-        product.setSkuCode(form.getSkuCode());
-
+        product.update(form);
         productRepository.save(product);
         log.info("[ProductService] Updated product {} with ID {} for tenantId {}", product.getName(), product.getId(),
                 tenantId);

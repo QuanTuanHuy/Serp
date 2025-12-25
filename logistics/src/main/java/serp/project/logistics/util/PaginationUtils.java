@@ -7,7 +7,7 @@ import org.springframework.data.domain.Sort;
 public class PaginationUtils {
 
     public static Pageable createPageable(int page, int size, String sortBy, String sortDirection) {
-        return PageRequest.of(page - 1, size,
+        return PageRequest.of(page, size,
                 sortDirection.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending());
     }
 

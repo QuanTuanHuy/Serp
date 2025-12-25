@@ -23,6 +23,7 @@ jobs:
       crm: ${{ steps.changes.outputs.crm }}
       purchase: ${{ steps.changes.outputs.purchase }}
       logistics: ${{ steps.changes.outputs.logistics }}
+      sales: ${{ steps.changes.outputs.sales }}
       notification: ${{ steps.changes.outputs.notification }}
     steps:
       - name: Checkout code
@@ -50,6 +51,8 @@ jobs:
               - 'purchase_service/**'
             logistics:
               - 'logistics/**'
+            sales:
+              - 'sales/**'
             notification:
               - 'notification_service/**'
 
@@ -65,6 +68,7 @@ jobs:
             "crm": "${{ steps.changes.outputs.crm }}",
             "purchase": "${{ steps.changes.outputs.purchase }}",
             "logistics": "${{ steps.changes.outputs.logistics }}",
+            "sales": "${{ steps.changes.outputs.sales }}",
             "notification": "${{ steps.changes.outputs.notification }}"
           }' > changes.json
 
@@ -461,6 +465,48 @@ jobs:
           tags: |
             ${{ env.DOCKER_REGISTRY }}/serp-logistics:${{ env.IMAGE_TAG }}
             ${{ env.DOCKER_REGISTRY }}/serp-logistics:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-sales:
+    needs: changes
+    if: ${{ needs.changes.outputs.sales == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: "maven"
+
+      - name: Build Sales
+        run: |
+          cd sales
+          chmod +x ./mvnw
+          ./mvnw clean package -DskipTests
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./sales
+          file: ./sales/Dockerfile
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY }}/serp-sales:${{ env.IMAGE_TAG }}
+            ${{ env.DOCKER_REGISTRY }}/serp-sales:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
