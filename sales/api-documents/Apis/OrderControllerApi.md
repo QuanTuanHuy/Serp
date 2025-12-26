@@ -1,32 +1,31 @@
 # OrderControllerApi
 
-All URIs are relative to *http://localhost:8090*
+All URIs are relative to _http://localhost:8090_
 
-| Method | HTTP request | Description |
-|------------- | ------------- | -------------|
-| [**addProductToOrder**](OrderControllerApi.md#addProductToOrder) | **POST** /sales/api/v1/order/create/{orderId}/add |  |
-| [**approveOrder**](OrderControllerApi.md#approveOrder) | **PATCH** /sales/api/v1/order/manage/{orderId}/approve |  |
-| [**cancelOrder**](OrderControllerApi.md#cancelOrder) | **PATCH** /sales/api/v1/order/manage/{orderId}/cancel |  |
-| [**createOrder**](OrderControllerApi.md#createOrder) | **POST** /sales/api/v1/order/create |  |
-| [**deleteOrder**](OrderControllerApi.md#deleteOrder) | **DELETE** /sales/api/v1/order/delete/{orderId} |  |
-| [**deleteProductFromOrder**](OrderControllerApi.md#deleteProductFromOrder) | **PATCH** /sales/api/v1/order/update/{orderId}/delete/{orderItemId} |  |
-| [**getOrderDetail**](OrderControllerApi.md#getOrderDetail) | **GET** /sales/api/v1/order/search/{orderId} |  |
-| [**getOrders**](OrderControllerApi.md#getOrders) | **GET** /sales/api/v1/order/search |  |
-| [**updateOrder**](OrderControllerApi.md#updateOrder) | **PATCH** /sales/api/v1/order/update/{orderId} |  |
-
+| Method                                                                     | HTTP request                                                        | Description |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------- | ----------- |
+| [**addProductToOrder**](OrderControllerApi.md#addProductToOrder)           | **POST** /sales/api/v1/order/create/{orderId}/add                   |             |
+| [**approveOrder**](OrderControllerApi.md#approveOrder)                     | **PATCH** /sales/api/v1/order/manage/{orderId}/approve              |             |
+| [**cancelOrder**](OrderControllerApi.md#cancelOrder)                       | **PATCH** /sales/api/v1/order/manage/{orderId}/cancel               |             |
+| [**createOrder**](OrderControllerApi.md#createOrder)                       | **POST** /sales/api/v1/order/create                                 |             |
+| [**deleteOrder**](OrderControllerApi.md#deleteOrder)                       | **DELETE** /sales/api/v1/order/delete/{orderId}                     |             |
+| [**deleteProductFromOrder**](OrderControllerApi.md#deleteProductFromOrder) | **PATCH** /sales/api/v1/order/update/{orderId}/delete/{orderItemId} |             |
+| [**getOrderDetail**](OrderControllerApi.md#getOrderDetail)                 | **GET** /sales/api/v1/order/search/{orderId}                        |             |
+| [**getOrders**](OrderControllerApi.md#getOrders)                           | **GET** /sales/api/v1/order/search                                  |             |
+| [**updateOrder**](OrderControllerApi.md#updateOrder)                       | **PATCH** /sales/api/v1/order/update/{orderId}                      |             |
 
 <a name="addProductToOrder"></a>
+
 # **addProductToOrder**
+
 > GeneralResponseObject addProductToOrder(orderId, OrderItem)
 
-
-
 ### Parameters
 
-|Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **orderId** | **String**|  | [default to null] |
-| **OrderItem** | [**OrderItem**](../Models/OrderItem.md)|  | |
+| Name          | Type                                    | Description | Notes             |
+| ------------- | --------------------------------------- | ----------- | ----------------- |
+| **orderId**   | **String**                              |             | [default to null] |
+| **OrderItem** | [**OrderItem**](../Models/OrderItem.md) |             |                   |
 
 ### Return type
 
@@ -39,19 +38,19 @@ All URIs are relative to *http://localhost:8090*
 ### HTTP request headers
 
 - **Content-Type**: application/json
-- **Accept**: */*
+- **Accept**: _/_
 
 <a name="approveOrder"></a>
+
 # **approveOrder**
+
 > GeneralResponseObject approveOrder(orderId)
 
-
-
 ### Parameters
 
-|Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **orderId** | **String**|  | [default to null] |
+| Name        | Type       | Description | Notes             |
+| ----------- | ---------- | ----------- | ----------------- |
+| **orderId** | **String** |             | [default to null] |
 
 ### Return type
 
@@ -64,20 +63,20 @@ All URIs are relative to *http://localhost:8090*
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: */*
+- **Accept**: _/_
 
 <a name="cancelOrder"></a>
+
 # **cancelOrder**
+
 > GeneralResponseObject cancelOrder(orderId, OrderCancellationForm)
 
-
-
 ### Parameters
 
-|Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **orderId** | **String**|  | [default to null] |
-| **OrderCancellationForm** | [**OrderCancellationForm**](../Models/OrderCancellationForm.md)|  | |
+| Name                      | Type                                                            | Description | Notes             |
+| ------------------------- | --------------------------------------------------------------- | ----------- | ----------------- |
+| **orderId**               | **String**                                                      |             | [default to null] |
+| **OrderCancellationForm** | [**OrderCancellationForm**](../Models/OrderCancellationForm.md) |             |                   |
 
 ### Return type
 
@@ -90,19 +89,19 @@ All URIs are relative to *http://localhost:8090*
 ### HTTP request headers
 
 - **Content-Type**: application/json
-- **Accept**: */*
+- **Accept**: _/_
 
 <a name="createOrder"></a>
+
 # **createOrder**
+
 > GeneralResponseObject createOrder(OrderCreationForm)
-
-
 
 ### Parameters
 
-|Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **OrderCreationForm** | [**OrderCreationForm**](../Models/OrderCreationForm.md)|  | |
+| Name                  | Type                                                    | Description | Notes |
+| --------------------- | ------------------------------------------------------- | ----------- | ----- |
+| **OrderCreationForm** | [**OrderCreationForm**](../Models/OrderCreationForm.md) |             |       |
 
 ### Return type
 
@@ -115,19 +114,19 @@ All URIs are relative to *http://localhost:8090*
 ### HTTP request headers
 
 - **Content-Type**: application/json
-- **Accept**: */*
+- **Accept**: _/_
 
 <a name="deleteOrder"></a>
+
 # **deleteOrder**
+
 > GeneralResponseObject deleteOrder(orderId)
 
-
-
 ### Parameters
 
-|Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **orderId** | **String**|  | [default to null] |
+| Name        | Type       | Description | Notes             |
+| ----------- | ---------- | ----------- | ----------------- |
+| **orderId** | **String** |             | [default to null] |
 
 ### Return type
 
@@ -140,20 +139,20 @@ All URIs are relative to *http://localhost:8090*
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: */*
+- **Accept**: _/_
 
 <a name="deleteProductFromOrder"></a>
+
 # **deleteProductFromOrder**
+
 > GeneralResponseObject deleteProductFromOrder(orderId, orderItemId)
-
-
 
 ### Parameters
 
-|Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **orderId** | **String**|  | [default to null] |
-| **orderItemId** | **String**|  | [default to null] |
+| Name            | Type       | Description | Notes             |
+| --------------- | ---------- | ----------- | ----------------- |
+| **orderId**     | **String** |             | [default to null] |
+| **orderItemId** | **String** |             | [default to null] |
 
 ### Return type
 
@@ -166,19 +165,19 @@ All URIs are relative to *http://localhost:8090*
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: */*
+- **Accept**: _/_
 
 <a name="getOrderDetail"></a>
+
 # **getOrderDetail**
+
 > GeneralResponseOrderEntity getOrderDetail(orderId)
-
-
 
 ### Parameters
 
-|Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **orderId** | **String**|  | [default to null] |
+| Name        | Type       | Description | Notes             |
+| ----------- | ---------- | ----------- | ----------------- |
+| **orderId** | **String** |             | [default to null] |
 
 ### Return type
 
@@ -191,30 +190,30 @@ All URIs are relative to *http://localhost:8090*
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: */*
+- **Accept**: _/_
 
 <a name="getOrders"></a>
+
 # **getOrders**
-> GeneralResponsePageResponseOrderEntity getOrders(page, size, sortBy, sortDirection, query, statusId, fromSupplierId, saleChannelId, orderDateAfter, orderDateBefore, deliveryBefore, deliveryAfter)
 
-
+> GeneralResponsePageResponseOrderEntity getOrders(page, size, sortBy, sortDirection, query, statusId, toCustomerId, saleChannelId, orderDateAfter, orderDateBefore, deliveryBefore, deliveryAfter)
 
 ### Parameters
 
-|Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **page** | **Integer**|  | [optional] [default to 0] |
-| **size** | **Integer**|  | [optional] [default to 10] |
-| **sortBy** | **String**|  | [optional] [default to createdStamp] |
-| **sortDirection** | **String**|  | [optional] [default to desc] |
-| **query** | **String**|  | [optional] [default to null] |
-| **statusId** | **String**|  | [optional] [default to null] |
-| **fromSupplierId** | **String**|  | [optional] [default to null] |
-| **saleChannelId** | **String**|  | [optional] [default to null] |
-| **orderDateAfter** | **date**|  | [optional] [default to null] |
-| **orderDateBefore** | **date**|  | [optional] [default to null] |
-| **deliveryBefore** | **date**|  | [optional] [default to null] |
-| **deliveryAfter** | **date**|  | [optional] [default to null] |
+| Name                | Type        | Description | Notes                                |
+| ------------------- | ----------- | ----------- | ------------------------------------ |
+| **page**            | **Integer** |             | [optional] [default to 0]            |
+| **size**            | **Integer** |             | [optional] [default to 10]           |
+| **sortBy**          | **String**  |             | [optional] [default to createdStamp] |
+| **sortDirection**   | **String**  |             | [optional] [default to desc]         |
+| **query**           | **String**  |             | [optional] [default to null]         |
+| **statusId**        | **String**  |             | [optional] [default to null]         |
+| **toCustomerId**    | **String**  |             | [optional] [default to null]         |
+| **saleChannelId**   | **String**  |             | [optional] [default to null]         |
+| **orderDateAfter**  | **date**    |             | [optional] [default to null]         |
+| **orderDateBefore** | **date**    |             | [optional] [default to null]         |
+| **deliveryBefore**  | **date**    |             | [optional] [default to null]         |
+| **deliveryAfter**   | **date**    |             | [optional] [default to null]         |
 
 ### Return type
 
@@ -227,20 +226,20 @@ All URIs are relative to *http://localhost:8090*
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: */*
+- **Accept**: _/_
 
 <a name="updateOrder"></a>
+
 # **updateOrder**
+
 > GeneralResponseObject updateOrder(orderId, OrderUpdateForm)
-
-
 
 ### Parameters
 
-|Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **orderId** | **String**|  | [default to null] |
-| **OrderUpdateForm** | [**OrderUpdateForm**](../Models/OrderUpdateForm.md)|  | |
+| Name                | Type                                                | Description | Notes             |
+| ------------------- | --------------------------------------------------- | ----------- | ----------------- |
+| **orderId**         | **String**                                          |             | [default to null] |
+| **OrderUpdateForm** | [**OrderUpdateForm**](../Models/OrderUpdateForm.md) |             |                   |
 
 ### Return type
 
@@ -253,5 +252,4 @@ All URIs are relative to *http://localhost:8090*
 ### HTTP request headers
 
 - **Content-Type**: application/json
-- **Accept**: */*
-
+- **Accept**: _/_

@@ -26,6 +26,7 @@ import { adminReducer } from '@/modules/admin/store';
 import { ptmReducer } from '@/modules/ptm';
 import { purchaseReducer } from '@/modules/purchase/store';
 import { logisticsReducer } from '@/modules/logistics/store';
+import { salesReducer } from '@/modules/sales/store';
 import { notificationReducer } from '@/modules/notifications';
 
 // Persist configuration
@@ -51,6 +52,7 @@ const rootReducer = combineReducers({
   ptm: ptmReducer,
   purchase: purchaseReducer,
   logistics: logisticsReducer,
+  sales: salesReducer,
   notifications: notificationReducer,
 });
 

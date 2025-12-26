@@ -51,9 +51,9 @@ export const salesApi = api.injectEndpoints({
       }),
       extraOptions: { service: 'sales' },
       providesTags: (result) =>
-        result?.data?.data
+        result?.data?.items
           ? [
-              ...result.data.data.map(({ id }) => ({
+              ...result.data.items.map(({ id }) => ({
                 type: 'SalesCustomer' as const,
                 id,
               })),
@@ -192,9 +192,9 @@ export const salesApi = api.injectEndpoints({
       }),
       extraOptions: { service: 'sales' },
       providesTags: (result) =>
-        result?.data?.data
+        result?.data?.items
           ? [
-              ...result.data.data.map(({ id }) => ({
+              ...result.data.items.map(({ id }) => ({
                 type: 'Category' as const,
                 id,
               })),
@@ -265,9 +265,9 @@ export const salesApi = api.injectEndpoints({
       }),
       extraOptions: { service: 'sales' },
       providesTags: (result) =>
-        result?.data?.data
+        result?.data?.items
           ? [
-              ...result.data.data.map(({ id }) => ({
+              ...result.data.items.map(({ id }) => ({
                 type: 'Facility' as const,
                 id,
               })),
@@ -341,9 +341,9 @@ export const salesApi = api.injectEndpoints({
       }),
       extraOptions: { service: 'sales' },
       providesTags: (result) =>
-        result?.data?.data
+        result?.data?.items
           ? [
-              ...result.data.data.map(({ id }) => ({
+              ...result.data.items.map(({ id }) => ({
                 type: 'InventoryItem' as const,
                 id,
               })),
@@ -417,9 +417,9 @@ export const salesApi = api.injectEndpoints({
       }),
       extraOptions: { service: 'sales' },
       providesTags: (result) =>
-        result?.data?.data
+        result?.data?.items
           ? [
-              ...result.data.data.map(({ id }) => ({
+              ...result.data.items.map(({ id }) => ({
                 type: 'Product' as const,
                 id,
               })),
@@ -491,9 +491,9 @@ export const salesApi = api.injectEndpoints({
       }),
       extraOptions: { service: 'sales' },
       providesTags: (result) =>
-        result?.data?.data
+        result?.data?.items
           ? [
-              ...result.data.data.map(({ id }) => ({
+              ...result.data.items.map(({ id }) => ({
                 type: 'Order' as const,
                 id,
               })),

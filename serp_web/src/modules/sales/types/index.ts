@@ -1,6 +1,18 @@
 // Sales Types & Interfaces (authors: QuanTuanHuy, Description: Part of Serp Project)
 
-// Base types
+// Constants
+export type ResponseStatus = "SUCCESS" | "FAILED";
+export type EntityType = "PRODUCT" | "SUPPLIER" | "CUSTOMER" | "FACILITY";
+export type AddressType = "FACILIY" | "SHIPPING" | "BUSSINESS";
+export type CustomerStatus = "ACTIVE" | "INACTIVE";
+export type FacilityStatus = "ACTIVE" | "INACTIVE";
+export type InventoryItemStatus = "VALID" | "EXPIRED" | "DAMAGED";
+export type OrderItemStatus = "CREATED" | "DELIVERED";
+export type OrderStatus = "CREATED" | "APPROVED" | "CANCELLED" | "FULLY_DELIVERED";
+export type OrderType = "PURCHASE" | "SALES";
+export type ProductStatus = "ACTIVE" | "INACTIVE";
+export type SaleChannel = "ONLINE" | "PARTNER" | "RETAIL";
+
 export interface PaginationParams {
   page?: number;
   size?: number;
@@ -9,38 +21,38 @@ export interface PaginationParams {
 }
 
 export interface PaginatedResponse<T> {
-  data: T[];
-  page: number;
-  size: number;
-  total: number;
+  items: T[];
+  totalItems: number;
   totalPages: number;
+  currentPage: number;
 }
 
 export interface APIResponse<T> {
-  data: T;
-  message?: string;
-  success: boolean;
+  code: number;
+  message: string;
+  status: ResponseStatus;
+  data?: T;
 }
 
 // Address related types
 export interface Address {
-  id?: string;
-  entityId?: string;
-  entityType?: string;
-  addressType?: string;
+  id: string;
+  entityId: string;
+  entityType: EntityType;
+  addressType: AddressType;
   latitude?: number;
   longitude?: number;
-  fullAddress?: string;
-  createdStamp?: string;
-  lastUpdatedStamp?: string;
-  tenantId?: number;
-  default?: boolean;
+  fullAddress: string;
+  createdStamp: string;
+  lastUpdatedStamp: string;
+  tenantId: number;
+  default: boolean;
 }
 
 export interface AddressCreationForm {
   entityId: string;
-  entityType: string;
-  addressType?: string;
+  entityType: EntityType;
+  addressType: AddressType;
   latitude?: number;
   longitude?: number;
   fullAddress: string;
@@ -48,7 +60,7 @@ export interface AddressCreationForm {
 }
 
 export interface AddressUpdateForm {
-  addressType?: string;
+  addressType?: AddressType;
   latitude?: number;
   longitude?: number;
   fullAddress?: string;
@@ -57,11 +69,11 @@ export interface AddressUpdateForm {
 
 // Category related types
 export interface Category {
-  id?: string;
-  name?: string;
-  tenantId?: number;
-  createdStamp?: string;
-  lastUpdatedStamp?: string;
+  id: string;
+  name: string;
+  tenantId: number;
+  createdStamp: string;
+  lastUpdatedStamp: string;
 }
 
 export interface CategoryForm {
@@ -70,20 +82,19 @@ export interface CategoryForm {
 
 export interface CategoryFilters {
   query?: string;
-  name?: string;
 }
 
 // Customer related types
 export interface Customer {
-  id?: string;
-  name?: string;
+  id: string;
+  name: string;
   currentAddressId?: string;
-  statusId?: string;
+  statusId: CustomerStatus;
   phone?: string;
   email?: string;
-  tenantId?: number;
-  createdStamp?: string;
-  lastUpdatedStamp?: string;
+  tenantId: number;
+  createdStamp: string;
+  lastUpdatedStamp: string;
   address?: Address;
 }
 
@@ -91,140 +102,176 @@ export interface CustomerCreationForm {
   name: string;
   phone?: string;
   email?: string;
-  statusId?: string;
+  statusId: CustomerStatus;
+  addressType: AddressType;
 }
 
 export interface CustomerUpdateForm {
   name?: string;
-  currentAddressId?: string;
   phone?: string;
   email?: string;
-  statusId?: string;
+  statusId?: CustomerStatus;
 }
 
 export interface CustomerFilters {
   query?: string;
-  name?: string;
-  phone?: string;
-  email?: string;
-  statusId?: string;
+  statusId?: CustomerStatus;
 }
 
 // Facility related types
 export interface Facility {
-  id?: string;
-  name?: string;
-  addressId?: string;
-  facilityTypeId?: string;
-  statusId?: string;
-  capacity?: number;
+  id: string;
+  name: string;
+  statusId: FacilityStatus;
+  currentAddressId?: string;
+  createdStamp: string;
+  lastUpdatedStamp: string;
   phone?: string;
-  email?: string;
-  tenantId?: number;
-  createdStamp?: string;
-  lastUpdatedStamp?: string;
+  postalCode: string;
+  length: number;
+  width: number;
+  height: number;
+  capacity: number;
+  tenantId: number;
   address?: Address;
+  default: boolean;
 }
 
 export interface FacilityCreationForm {
   name: string;
-  facilityTypeId?: string;
-  statusId?: string;
-  capacity?: number;
   phone?: string;
-  email?: string;
+  statusId: string;
+  postalCode: string;
+  length?: number;
+  width?: number;
+  height?: number;
+  addressType: AddressType;
+  latitude?: number;
+  longitude?: number;
+  fullAddress: string;
 }
 
 export interface FacilityUpdateForm {
   name?: string;
-  addressId?: string;
-  facilityTypeId?: string;
-  statusId?: string;
-  capacity?: number;
+  isDefault?: boolean;
+  statusId?: FacilityStatus;
   phone?: string;
-  email?: string;
+  postalCode?: string;
+  length?: number;
+  width?: number;
+  height?: number;
 }
 
 export interface FacilityFilters {
   query?: string;
-  name?: string;
-  facilityTypeId?: string;
-  statusId?: string;
+  statusId?: FacilityStatus;
 }
 
 // Inventory Item related types
 export interface InventoryItem {
-  id?: string;
-  productId?: string;
-  facilityId?: string;
-  quantityOnHand?: number;
-  quantityAvailable?: number;
-  quantityReserved?: number;
-  minStock?: number;
-  maxStock?: number;
-  reorderPoint?: number;
-  reorderQuantity?: number;
-  statusId?: string;
-  tenantId?: number;
-  createdStamp?: string;
-  lastUpdatedStamp?: string;
+  id: string;
+  productId: string;
+  quantityOnHand: number;
+  quantityAvailable: number;
+  quantityReserved: number;
+  facilityId: string;
+  createdStamp: string;
+  lastUpdatedStamp: string;
+  lotId: string;
+  expirationDate?: string;
+  manufacturingDate?: string;
+  statusId: InventoryItemStatus;
+  receivedDate: string;
+  tenantId: number;
 }
 
-export interface InventoryItemDetail extends InventoryItem {
-  productName?: string;
-  facilityName?: string;
+export interface InventoryItemDetail {
+  id: string;
+  productId: string;
+  inventoryItemId: string;
+  quantity: number;
+  shipmentId?: string;
+  orderItemId: string;
+  note?: string;
+  createdStamp: string;
+  lastUpdatedStamp: string;
+  lotId: string;
+  expirationDate?: string;
+  manufacturingDate?: string;
+  facilityId: string;
+  unit: string;
+  price: number;
+  tenantId: number;
+  inventoryItem: InventoryItem;
 }
 
 export interface InventoryItemCreationForm {
   productId: string;
+  quantity: number;
+  lotId: string;
   facilityId: string;
-  quantityOnHand?: number;
-  minStock?: number;
-  maxStock?: number;
-  reorderPoint?: number;
-  reorderQuantity?: number;
-  statusId?: string;
+  expirationDate?: string;
+  manufacturingDate?: string;
+  statusId: InventoryItemStatus;
 }
 
 export interface InventoryItemUpdateForm {
   quantityOnHand?: number;
-  minStock?: number;
-  maxStock?: number;
-  reorderPoint?: number;
-  reorderQuantity?: number;
-  statusId?: string;
+  expirationDate?: string;
+  manufacturingDate?: string;
+  statusId?: InventoryItemStatus;
 }
 
 export interface InventoryItemFilters {
   query?: string;
   productId?: string;
   facilityId?: string;
-  statusId?: string;
+  expirationDateFrom?: string;
+  expirationDateTo?: string;
+  manufacturingDateFrom?: string;
+  manufacturingDateTo?: string;
+  statusId?: InventoryItemStatus;
 }
 
 // Product related types
 export interface Product {
-  id?: string;
-  name?: string;
+  id: string;
+  name: string;
   weight?: number;
   height?: number;
-  unit?: string;
-  costPrice?: number;
-  wholeSalePrice?: number;
-  retailPrice?: number;
-  categoryId?: string;
-  statusId?: string;
+  unit: string;
+  costPrice: number;
+  wholeSalePrice: number;
+  retailPrice: number;
+  categoryId: string;
+  statusId: ProductStatus;
   imageId?: string;
   extraProps?: string;
-  createdStamp?: string;
-  lastUpdatedStamp?: string;
+  createdStamp: string;
+  lastUpdatedStamp: string;
   vatRate?: number;
-  skuCode?: string;
-  tenantId?: number;
-  quantityAvailable?: number;
+  skuCode: string;
+  tenantId: number;
+  quantityAvailable: number;
 }
 
 export interface ProductCreationForm {
+  name: string;
+  weight?: number;
+  height?: number;
+  unit: string;
+  costPrice?: number;
+  wholeSalePrice?: number;
+  retailPrice?: number;
+  categoryId: string;
+  statusId: ProductStatus;
+  imageId?: string;
+  extraProps?: string;
+  vatRate?: number;
+  skuCode: string;
+}
+
+export interface ProductUpdateForm {
   name: string;
   weight?: number;
   height?: number;
@@ -232,24 +279,7 @@ export interface ProductCreationForm {
   costPrice?: number;
   wholeSalePrice?: number;
   retailPrice?: number;
-  categoryId?: string;
-  statusId?: string;
-  imageId?: string;
-  extraProps?: string;
-  vatRate?: number;
-  skuCode?: string;
-}
-
-export interface ProductUpdateForm {
-  name?: string;
-  weight?: number;
-  height?: number;
-  unit?: string;
-  costPrice?: number;
-  wholeSalePrice?: number;
-  retailPrice?: number;
-  categoryId?: string;
-  statusId?: string;
+  statusId?: ProductStatus;
   imageId?: string;
   extraProps?: string;
   vatRate?: number;
@@ -259,42 +289,49 @@ export interface ProductUpdateForm {
 export interface ProductFilters {
   query?: string;
   categoryId?: string;
-  statusId?: string;
-  name?: string;
-  skuCode?: string;
+  statusId?: ProductStatus;
 }
 
 // Order related types
 export interface OrderItem {
   productId: string;
+  orderItemSeqId: number;
   quantity: number;
-  unitPrice?: number;
+  tax?: number;
   discount?: number;
+  expireAfter?: string;
 }
 
 export interface OrderItemEntity {
-  id?: string;
-  orderId?: string;
-  productId?: string;
-  quantity?: number;
-  unitPrice?: number;
-  totalPrice?: number;
+  id: string;
+  orderId: string;
+  orderItemSeqId: number;
+  productId: string;
+  quantity: number;
+  quantityRemaining: number;
+  amount: number;
+  statusId: OrderItemStatus;
+  createdStamp: string;
+  lastUpdatedStamp: string;
+  price: number;
+  tax?: number;
   discount?: number;
-  note?: string;
-  createdStamp?: string;
-  lastUpdatedStamp?: string;
+  unit: string;
+  tenantId: number;
+  product?: Product;
+  allocatedInventoryItems?: InventoryItemDetail[];
 }
 
 export interface Order {
-  id?: string;
-  orderTypeId?: string;
+  id: string;
+  orderTypeId: OrderType;
   fromSupplierId?: string;
-  toCustomerId?: string;
-  createdByUserId?: number;
-  createdStamp?: string;
-  orderDate?: string;
-  statusId?: string;
-  lastUpdatedStamp?: string;
+  toCustomerId: string;
+  createdByUserId: number;
+  createdStamp: string;
+  orderDate: string;
+  statusId: OrderStatus;
+  lastUpdatedStamp: string;
   deliveryBeforeDate?: string;
   deliveryAfterDate?: string;
   note?: string;
@@ -302,49 +339,36 @@ export interface Order {
   priority?: number;
   deliveryAddressId?: string;
   deliveryPhone?: string;
-  saleChannelId?: string;
+  saleChannelId: SaleChannel;
   deliveryFullAddress?: string;
   totalQuantity?: number;
-  totalAmount?: number;
+  totalAmount: number;
   costs?: string;
   userApprovedId?: number;
   userCancelledId?: number;
   cancellationNote?: string;
-  tenantId?: number;
+  tenantId: number;
   items?: OrderItemEntity[];
 }
 
 export interface OrderCreationForm {
-  orderTypeId: string;
-  toCustomerId?: string;
-  fromSupplierId?: string;
-  orderDate?: string;
+  toCustomerId: string;
   deliveryBeforeDate?: string;
   deliveryAfterDate?: string;
   note?: string;
   orderName?: string;
   priority?: number;
-  deliveryAddressId?: string;
-  deliveryPhone?: string;
-  saleChannelId?: string;
-  deliveryFullAddress?: string;
+  saleChannelId: SaleChannel;
   items: OrderItem[];
 }
 
 export interface OrderUpdateForm {
-  orderTypeId?: string;
-  toCustomerId?: string;
-  fromSupplierId?: string;
-  orderDate?: string;
   deliveryBeforeDate?: string;
   deliveryAfterDate?: string;
   note?: string;
   orderName?: string;
   priority?: number;
-  deliveryAddressId?: string;
-  deliveryPhone?: string;
-  saleChannelId?: string;
-  deliveryFullAddress?: string;
+  saleChannelId?: SaleChannel;
 }
 
 export interface OrderCancellationForm {
@@ -353,11 +377,11 @@ export interface OrderCancellationForm {
 
 export interface OrderFilters {
   query?: string;
-  orderTypeId?: string;
   statusId?: string;
   toCustomerId?: string;
-  fromSupplierId?: string;
-  orderDateFrom?: string;
-  orderDateTo?: string;
-  priority?: number;
+  saleChannelId?: SaleChannel;
+  orderDateAfter?: string;
+  orderDateBefore?: string;
+  deliveryDateAfter?: string;
+  deliveryDateBefore?: string;
 }
