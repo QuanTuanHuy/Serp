@@ -13,6 +13,8 @@ import serp.project.sales.repository.ProductRepository;
 import serp.project.sales.repository.specification.ProductSpecification;
 import serp.project.sales.util.PaginationUtils;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -63,6 +65,12 @@ public class ProductService {
             return null;
         }
         return product;
+    }
+
+    public List<ProductEntity> getProducts(List<String> productIds, Long tenantId) {
+        List<ProductEntity> products = productRepository.findAllById(productIds);
+        products.removeIf(product -> !product.getTenantId().equals(tenantId));
+        return products;
     }
 
 }

@@ -187,6 +187,14 @@ export const api = createApi({
     'logistics/Product',
     'logistics/Shipment',
     'logistics/Supplier',
+    // Sales tags
+    'SalesCustomer',
+    'Address',
+    'Category',
+    'Facility',
+    'InventoryItem',
+    'Product',
+    'Order',
     // Notification tags
     'Notification',
   ],
