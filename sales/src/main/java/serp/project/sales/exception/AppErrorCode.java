@@ -20,13 +20,14 @@ public enum AppErrorCode {
                         HttpStatus.BAD_REQUEST),
         INSUFFICIENT_INVENTORY_TO_ALLOCATE("SALES-BIZ-008", "Insufficient inventory to allocate for the order",
                         HttpStatus.BAD_REQUEST),
+    NEED_TO_BE_RESERVED_OR_DELIVERED("SALES-BIZ-009", "There are still items that need to be reserved or delivered", HttpStatus.BAD_REQUEST),
 
         UNKNOWN_ENUM_VALUE("SALES-VAL-001", "Unknown enum value provided", HttpStatus.BAD_REQUEST),
         REQUEST_VALIDATION_FAILED("SALES-VAL-002", "Request validation failed", HttpStatus.BAD_REQUEST),
 
         UNAUTHORIZED("SALES-SEC-001", "Unauthorized access", HttpStatus.UNAUTHORIZED),
         CANNOT_ACCESS("SALES-SEC-002", "Cannot access the requested resource", HttpStatus.FORBIDDEN),
-        ;
+    ;
 
         private final String code;
         private final String message;

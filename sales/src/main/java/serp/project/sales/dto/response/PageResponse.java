@@ -27,7 +27,7 @@ public class PageResponse<T> {
         return PageResponse.<T>builder()
                 .totalItems(page.getTotalElements())
                 .totalPages(page.getTotalPages())
-                .currentPage(page.getNumber() + 1)
+                .currentPage(page.getNumber())
                 .items(page.getContent())
                 .build();
     }

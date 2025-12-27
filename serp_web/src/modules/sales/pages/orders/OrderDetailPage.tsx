@@ -58,7 +58,9 @@ import {
   useAddProductToOrderMutation,
   useDeleteProductFromOrderMutation,
   useGetProductsQuery,
+  useGetCustomerQuery,
 } from '../../api/salesApi';
+import { useGetUsersQuery, UserProfile } from '@/modules/admin';
 import type { OrderItem } from '../../types';
 
 interface OrderDetailPageProps {
@@ -93,6 +95,11 @@ const STATUS_CONFIG = {
   },
 };
 
+const formatFullname = (user: UserProfile | undefined) => {
+  if (!user) return 'N/A';
+  return `${user.firstName || ''} ${user.lastName || ''}`.trim();
+};
+
 export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
   orderId,
 }) => {
@@ -121,13 +128,42 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
   const [deleteProductFromOrder, { isLoading: isDeletingProduct }] =
     useDeleteProductFromOrderMutation();
 
+  const order = orderResponse?.data;
+
+  // Fetch customer data
+  const { data: customerResponse } = useGetCustomerQuery(
+    order?.toCustomerId || '',
+    { skip: !order?.toCustomerId }
+  );
+
+  // Collect unique user IDs from order
+  const userIds = [
+    order?.createdByUserId,
+    order?.userApprovedId,
+    order?.userCancelledId,
+  ].filter((id): id is number => !!id);
+
+  // Fetch users data - get all users and filter by IDs
+  const { data: usersResponse } = useGetUsersQuery(
+    {
+      page: 0,
+      pageSize: 100,
+    },
+    { skip: userIds.length === 0 }
+  );
+
+  // Create user map for quick lookup
+  const userMap = new Map(
+    usersResponse?.data?.items?.map((user) => [user.id, user]) || []
+  );
+
   // Fetch products for search
   const { data: productsResponse } = useGetProductsQuery({
     filters: { query: productSearch },
     pagination: { page: 0, size: 20 },
   });
 
-  const order = orderResponse?.data;
+  const customer = customerResponse?.data;
   const products = productsResponse?.data?.items || [];
 
   const statusConfig = order
@@ -438,9 +474,9 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
                     <FileText className='h-4 w-4 text-muted-foreground' />
                     <span className='text-muted-foreground'>Loại đơn hàng</span>
                   </div>
-                  <span className='font-medium'>
+                  <Badge variant='secondary'>
                     {order.orderTypeId || 'N/A'}
-                  </span>
+                  </Badge>
                 </div>
 
                 <div className='flex items-start justify-between'>
@@ -458,9 +494,7 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
                     <TrendingUp className='h-4 w-4 text-muted-foreground' />
                     <span className='text-muted-foreground'>Độ ưu tiên</span>
                   </div>
-                  <Badge variant='secondary'>
-                    {order.priority || 'Normal'}
-                  </Badge>
+                  <span className='font-medium'>{order.priority || 'N/A'}</span>
                 </div>
 
                 <div className='flex items-start justify-between'>
@@ -468,9 +502,9 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
                     <ShoppingCart className='h-4 w-4 text-muted-foreground' />
                     <span className='text-muted-foreground'>Kênh bán hàng</span>
                   </div>
-                  <span className='font-medium'>
+                  <Badge variant='secondary'>
                     {order.saleChannelId || 'N/A'}
-                  </span>
+                  </Badge>
                 </div>
               </CardContent>
             </Card>
@@ -487,11 +521,22 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
                 <div className='flex items-start justify-between'>
                   <div className='flex items-center gap-2 text-sm'>
                     <User className='h-4 w-4 text-muted-foreground' />
-                    <span className='text-muted-foreground'>Mã khách hàng</span>
+                    <span className='text-muted-foreground'>Khách hàng</span>
                   </div>
-                  <span className='font-medium text-xs'>
-                    {order.toCustomerId.slice(0, 16)}...
-                  </span>
+                  {customer ? (
+                    <button
+                      onClick={() =>
+                        router.push(`/sales/customers/${order.toCustomerId}`)
+                      }
+                      className='font-medium text-primary hover:underline transition-colors'
+                    >
+                      {customer.name}
+                    </button>
+                  ) : (
+                    <span className='font-medium text-xs text-muted-foreground'>
+                      {order.toCustomerId.slice(0, 16)}...
+                    </span>
+                  )}
                 </div>
 
                 {order.deliveryPhone && (
@@ -718,7 +763,10 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
                   <div className='flex-1 pb-8'>
                     <p className='font-medium'>Đơn hàng được tạo</p>
                     <p className='text-sm text-muted-foreground'>
-                      Đơn hàng được tạo bởi {order.createdByUserId}
+                      Đơn hàng được tạo bởi{' '}
+                      {order.createdByUserId
+                        ? formatFullname(userMap.get(order.createdByUserId))
+                        : 'N/A'}
                     </p>
                     <p className='text-sm text-muted-foreground'>
                       {formatDate(order.createdStamp)}
@@ -734,13 +782,21 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
                       </div>
                     </div>
                     <div className='flex-1'>
-                      <p className='font-medium'>Đơn hàng được cập nhật</p>
+                      <p className='font-medium'>
+                        {order.statusId === 'APPROVED'
+                          ? 'Đơn hàng được phê duyệt'
+                          : 'Đơn hàng bị hủy'}
+                      </p>
                       <p className='text-sm text-muted-foreground'>
-                        Trạng thái đơn hàng đã thay đổi thành{' '}
+                        Trạng thái đơn hàng thay đổi thành{' '}
                         <i>{statusConfig.label}</i> bởi{' '}
                         {order.statusId === 'APPROVED'
                           ? order.userApprovedId
-                          : order.userCancelledId}
+                            ? formatFullname(userMap.get(order.userApprovedId))
+                            : 'N/A'
+                          : order.userCancelledId
+                            ? formatFullname(userMap.get(order.userCancelledId))
+                            : 'N/A'}
                       </p>
                       <p className='text-xs text-muted-foreground mt-1'>
                         {formatDate(order.lastUpdatedStamp)}

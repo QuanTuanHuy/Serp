@@ -1,8 +1,8 @@
 /**
- * Order List Page - Enhanced
+ * Inventory List Page - Enhanced
  *
  * @author QuanTuanHuy
- * @description Part of Serp Project - Order management with modern UI
+ * @description Part of Serp Project - Inventory management with modern UI
  */
 
 'use client';
@@ -20,75 +20,77 @@ import {
   Search,
   Plus,
   SlidersHorizontal,
-  ShoppingCart,
   Package,
-  Clock,
+  AlertTriangle,
   CheckCircle2,
   XCircle,
-  DollarSign,
   X,
   ChevronLeft,
   ChevronRight,
   Calendar,
-  User,
+  MapPin,
   Grid3X3,
   List,
-  HandCoins,
-  BanknoteArrowDown,
-  TrendingUp,
+  Box,
+  TrendingDown,
+  Archive,
+  Boxes,
+  TriangleAlert,
+  ShieldX,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
-import { useGetOrdersQuery, useGetCustomersQuery } from '../../api/salesApi';
-import { useAppDispatch, useAppSelector } from '@/lib/store';
-import { setOrderPagination, setOrderFilters } from '../../store';
 import {
-  selectOrderPagination,
-  selectOrderFilters,
+  useGetInventoryItemsQuery,
+  useGetProductsQuery,
+  useGetFacilitiesQuery,
+} from '../../api/salesApi';
+import { useAppDispatch, useAppSelector } from '@/lib/store';
+import {
+  setInventoryItemPagination,
+  setInventoryItemFilters,
+} from '../../store';
+import {
+  selectInventoryItemPagination,
+  selectInventoryItemFilters,
 } from '../../store/selectors';
-import type { Order, OrderStatus } from '../../types';
-import { id } from 'date-fns/locale';
+import type {
+  Facility,
+  InventoryItem,
+  InventoryItemStatus,
+  Product,
+} from '../../types';
 
-interface OrderListPageProps {
+interface InventoryListPageProps {
   className?: string;
 }
 
 const statusStyles = {
-  CREATED: {
-    label: 'Đã tạo',
-    bg: 'bg-blue-100 dark:bg-blue-900/30',
-    text: 'text-blue-700 dark:text-blue-400',
-    dot: 'bg-blue-500',
-    icon: Clock,
-  },
-  APPROVED: {
-    label: 'Đã duyệt',
+  VALID: {
+    label: 'Hợp lệ',
     bg: 'bg-emerald-100 dark:bg-emerald-900/30',
     text: 'text-emerald-700 dark:text-emerald-400',
     dot: 'bg-emerald-500',
     icon: CheckCircle2,
   },
-  CANCELLED: {
-    label: 'Đã hủy',
+  EXPIRED: {
+    label: 'Đã hết hạn',
     bg: 'bg-rose-100 dark:bg-rose-900/30',
     text: 'text-rose-700 dark:text-rose-400',
     dot: 'bg-rose-500',
     icon: XCircle,
   },
-  FULLY_DELIVERED: {
-    label: 'Đã giao hàng',
-    bg: 'bg-purple-100 dark:bg-purple-900/30',
-    text: 'text-purple-700 dark:text-purple-400',
-    dot: 'bg-purple-500',
-    icon: Package,
+  DAMAGED: {
+    label: 'Hư hỏng',
+    bg: 'bg-amber-100 dark:bg-amber-900/30',
+    text: 'text-amber-700 dark:text-amber-400',
+    dot: 'bg-amber-500',
+    icon: AlertTriangle,
   },
 };
 
-const formatCurrency = (value?: number) => {
-  if (!value) return 'đ0';
-  if (value >= 1000000) return `đ${(value / 1000000).toFixed(1)}M`;
-  if (value >= 1000) return `đ${(value / 1000).toFixed(1)}K`;
-  if (value >= 1000000000) return `đ${(value / 1000000000).toFixed(1)}B`;
-  return `đ${value.toLocaleString()}`;
+const formatDate = (dateString?: string) => {
+  if (!dateString) return 'N/A';
+  return new Date(dateString).toLocaleDateString('vi-VN');
 };
 
 // Enhanced StatsCard component
@@ -101,13 +103,7 @@ const StatsCard = ({
   title: string;
   value: number | string;
   icon: any;
-  variant?:
-    | 'default'
-    | 'primary'
-    | 'success'
-    | 'warning'
-    | 'danger'
-    | 'completed';
+  variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
 }) => {
   const variantStyles = {
     default: {
@@ -134,11 +130,6 @@ const StatsCard = ({
       card: 'bg-gradient-to-br from-rose-50 to-rose-100/50 dark:from-rose-950/30 dark:to-rose-900/20 border-rose-200/50 dark:border-rose-800/30',
       icon: 'bg-rose-500 text-white shadow-rose-500/25',
       iconRing: 'ring-4 ring-rose-500/10',
-    },
-    completed: {
-      card: 'bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/30 dark:to-purple-900/20 border-purple-200/50 dark:border-purple-800/30',
-      icon: 'bg-purple-500 text-white shadow-purple-500/25',
-      iconRing: 'ring-4 ring-purple-500/10',
     },
   };
 
@@ -189,20 +180,31 @@ const StatsCard = ({
   );
 };
 
-// Enhanced OrderCard component
-const OrderCard = ({
-  order,
+// Enhanced InventoryCard component
+const InventoryCard = ({
+  item,
   onClick,
-  customerName,
+  product,
+  facility,
 }: {
-  order: Order;
+  item: InventoryItem;
   onClick?: () => void;
-  customerName?: string;
+  product?: Product;
+  facility?: Facility;
 }) => {
   const status =
-    statusStyles[order.statusId as keyof typeof statusStyles] ||
-    statusStyles.CREATED;
+    statusStyles[item.statusId as keyof typeof statusStyles] ||
+    statusStyles.VALID;
   const StatusIcon = status.icon;
+
+  const isExpiringSoon =
+    item.expirationDate &&
+    new Date(item.expirationDate) <
+      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) && // within 30 days
+    new Date(item.expirationDate) >= new Date(); // not yet expired
+
+  const isExpired =
+    item.expirationDate && new Date(item.expirationDate) < new Date(); // already expired
 
   return (
     <Card
@@ -221,64 +223,93 @@ const OrderCard = ({
           <div className='flex-1 min-w-0'>
             <div className='flex items-center gap-2 mb-2'>
               <div className='flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 text-primary'>
-                <ShoppingCart className='h-5 w-5' />
+                <Package className='h-5 w-5' />
               </div>
               <div className='flex-1 min-w-0'>
                 <h3 className='font-semibold text-foreground truncate'>
-                  {order.orderName || `Đơn hàng #${order.id?.slice(0, 8)}...`}
+                  {product?.name || item.productId.slice(0, 8)}
                 </h3>
                 <p className='text-xs text-muted-foreground'>
-                  ID: {order.id?.slice(0, 10) || 'N/A'}...
+                  Lô hàng: {item.lotId}
                 </p>
               </div>
             </div>
 
-            <Badge
-              variant='secondary'
-              className={cn('gap-1', status.bg, status.text)}
-            >
-              <StatusIcon className='h-3 w-3' />
-              <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
-              {status.label}
-            </Badge>
+            <div className='flex items-center gap-2 flex-wrap'>
+              <Badge
+                variant='secondary'
+                className={cn('gap-1', status.bg, status.text)}
+              >
+                <StatusIcon className='h-3 w-3' />
+                <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
+                {status.label}
+              </Badge>
+              {isExpiringSoon && (
+                <Badge
+                  variant='secondary'
+                  className='gap-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
+                >
+                  <AlertTriangle className='h-3 w-3' />
+                  Sắp hết hạn
+                </Badge>
+              )}
+              {isExpired && (
+                <Badge
+                  variant='secondary'
+                  className='gap-1 bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400'
+                >
+                  <XCircle className='h-3 w-3' />
+                  Đã hết hạn
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Order Info */}
+        {/* Inventory Info */}
         <div className='space-y-2 mb-4'>
-          {order.deliveryBeforeDate && (
+          <div className='flex items-center justify-between text-sm'>
+            <span className='text-muted-foreground'>Tồn kho thực:</span>
+            <span className='font-semibold text-purple-700 dark:text-purple-400'>
+              {item.quantityOnHand} {product?.unit || ''}
+            </span>
+          </div>
+
+          <div className='flex items-center gap-2 text-sm pt-2 border-t'>
+            <MapPin className='h-4 w-4 text-muted-foreground shrink-0' />
+            <span className='truncate text-muted-foreground'>
+              {facility?.name || item.facilityId.slice(0, 8)}
+            </span>
+          </div>
+
+          {item.manufacturingDate && (
             <div className='flex items-center gap-2 text-sm'>
               <Calendar className='h-4 w-4 text-muted-foreground shrink-0' />
               <span className='text-muted-foreground'>
-                Giao trước ngày{' '}
-                {new Date(order.deliveryBeforeDate).toLocaleDateString()}
+                NSX: {formatDate(item.manufacturingDate)}
               </span>
             </div>
           )}
-          {order.toCustomerId && (
+
+          {item.expirationDate && (
             <div className='flex items-center gap-2 text-sm'>
-              <User className='h-4 w-4 text-muted-foreground shrink-0' />
-              <span className='truncate text-muted-foreground'>
-                {customerName || `KH: ${order.toCustomerId.slice(0, 8)}...`}
-              </span>
-            </div>
-          )}
-          {order.priority && (
-            <div className='flex items-center gap-2 text-sm'>
-              <TrendingUp className='h-4 w-4 text-muted-foreground shrink-0' />
-              <span className='truncate text-muted-foreground'>
-                Mức ưu tiên: {order.priority || `N/A`}
+              <Calendar className='h-4 w-4 text-muted-foreground shrink-0' />
+              <span className='text-muted-foreground'>
+                HSD: {formatDate(item.expirationDate)}
               </span>
             </div>
           )}
         </div>
 
-        {/* Footer - Total */}
+        {/* Footer */}
         <div className='flex items-center justify-between pt-3 border-t'>
           <div>
-            <p className='text-xs text-muted-foreground'>Tổng thành tiền</p>
-            <p className='text-lg font-bold text-foreground'>
-              {formatCurrency(order.totalAmount)}
+            <p className='text-xs text-muted-foreground'>Khả dụng</p>
+            <p className='text-lg font-bold text-emerald-600 dark:text-emerald-400'>
+              {item.quantityOnHand -
+                item.quantityCommitted -
+                item.quantityReserved}{' '}
+              {product?.unit || ''}
             </p>
           </div>
 
@@ -299,112 +330,153 @@ const OrderCard = ({
   );
 };
 
-export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
+export const InventoryListPage: React.FC<InventoryListPageProps> = ({
+  className,
+}) => {
   const router = useRouter();
   const dispatch = useAppDispatch();
 
-  const pagination = useAppSelector(selectOrderPagination);
-  const filters = useAppSelector(selectOrderFilters);
+  const pagination = useAppSelector(selectInventoryItemPagination);
+  const filters = useAppSelector(selectInventoryItemFilters);
 
-  const { data, isLoading, error } = useGetOrdersQuery({
+  const { data, isLoading, error } = useGetInventoryItemsQuery({
     filters,
     pagination,
   });
 
   // Local state
   const [searchQuery, setSearchQuery] = useState(filters.query || '');
-  const [statusFilter, setStatusFilter] = useState<OrderStatus | ''>('');
+  const [statusFilter, setStatusFilter] = useState<InventoryItemStatus | ''>(
+    ''
+  );
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  const orders = data?.data?.items || [];
+  const items = data?.data?.items || [];
 
-  // Collect unique customer IDs
-  const customerIds = useMemo(() => {
+  // Collect unique product and facility IDs
+  const productIds = useMemo(() => {
     return Array.from(
-      new Set(orders.map((o: Order) => o.toCustomerId).filter(Boolean))
+      new Set(items.map((i: InventoryItem) => i.productId).filter(Boolean))
     );
-  }, [orders]);
+  }, [items]);
 
-  // Fetch all customers
-  const { data: customersResponse } = useGetCustomersQuery(
+  const facilityIds = useMemo(() => {
+    return Array.from(
+      new Set(items.map((i: InventoryItem) => i.facilityId).filter(Boolean))
+    );
+  }, [items]);
+
+  // Fetch products and facilities
+  const { data: productsResponse } = useGetProductsQuery(
     {
       filters: {},
       pagination: { page: 0, size: 100 },
     },
-    { skip: customerIds.length === 0 }
+    { skip: productIds.length === 0 }
   );
 
-  // Create customer map for quick lookup
-  const customerMap = useMemo(() => {
+  const { data: facilitiesResponse } = useGetFacilitiesQuery(
+    {
+      filters: {},
+      pagination: { page: 0, size: 100 },
+    },
+    { skip: facilityIds.length === 0 }
+  );
+
+  // Create maps for quick lookup
+  const productMap = useMemo(() => {
     const map = new Map();
-    customersResponse?.data?.items?.forEach((customer) => {
-      map.set(customer.id, customer);
+    productsResponse?.data?.items?.forEach((product) => {
+      map.set(product.id, product);
     });
     return map;
-  }, [customersResponse]);
+  }, [productsResponse]);
+
+  const facilityMap = useMemo(() => {
+    const map = new Map();
+    facilitiesResponse?.data?.items?.forEach((facility) => {
+      map.set(facility.id, facility);
+    });
+    return map;
+  }, [facilitiesResponse]);
+
   const totalItems = data?.data?.totalItems || 0;
   const totalPages = data?.data?.totalPages || 0;
   const currentPage = data?.data?.currentPage || 0;
 
   // Handle actions
   const handleSearch = () => {
-    dispatch(setOrderFilters({ ...filters, query: searchQuery }));
-    dispatch(setOrderPagination({ ...pagination, page: 0 }));
+    dispatch(setInventoryItemFilters({ ...filters, query: searchQuery }));
+    dispatch(setInventoryItemPagination({ ...pagination, page: 0 }));
   };
 
   const handlePageChange = (newPage: number) => {
-    dispatch(setOrderPagination({ ...pagination, page: newPage }));
+    dispatch(setInventoryItemPagination({ ...pagination, page: newPage }));
   };
 
-  const handleViewOrder = (orderId: string) => {
-    router.push(`/sales/orders/${orderId}`);
+  const handleViewItem = (itemId: string) => {
+    router.push(`/sales/inventory/${itemId}`);
   };
 
   const clearFilters = () => {
     setSearchQuery('');
     setStatusFilter('');
-    dispatch(setOrderFilters({}));
-    dispatch(setOrderPagination({ ...pagination, page: 0 }));
+    dispatch(setInventoryItemFilters({}));
+    dispatch(setInventoryItemPagination({ ...pagination, page: 0 }));
   };
 
   const hasActiveFilters = searchQuery || statusFilter;
 
   // Calculate stats
   const stats = useMemo(() => {
+    const totalOnHand = items.reduce(
+      (sum: number, i: InventoryItem) => sum + (i.quantityOnHand || 0),
+      0
+    );
+    const totalExpiringSoon = items.reduce(
+      (sum: number, i: InventoryItem) =>
+        sum +
+        (i.expirationDate &&
+        new Date(i.expirationDate) <
+          new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) &&
+        new Date(i.expirationDate) >= new Date()
+          ? 1
+          : 0),
+      0
+    );
+    const totalExpired = items.reduce(
+      (sum: number, i: InventoryItem) =>
+        sum +
+        (i.expirationDate && new Date(i.expirationDate) < new Date() ? 1 : 0),
+      0
+    );
+
     return {
-      total: totalItems,
-      approved: orders.filter((o: Order) => o.statusId === 'APPROVED').length,
-      delivered: orders.filter((o: Order) => o.statusId === 'FULLY_DELIVERED')
-        .length,
-      totalRevenue: orders
-        .filter(
-          (o: Order) =>
-            o.statusId === 'APPROVED' || o.statusId === 'FULLY_DELIVERED'
-        )
-        .reduce((sum: number, o: Order) => sum + (o.totalAmount || 0), 0),
+      totalItems,
+      totalOnHand,
+      totalExpiringSoon,
+      totalExpired,
     };
-  }, [totalItems, orders]);
+  }, [totalItems, items]);
 
   return (
     <div className={cn('space-y-6', className)}>
       {/* Page Header */}
       <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
         <div>
-          <h1 className='text-2xl font-bold tracking-tight'>
-            Danh sách đơn hàng
-          </h1>
+          <h1 className='text-2xl font-bold tracking-tight'>Quản lý tồn kho</h1>
           <p className='text-muted-foreground'>
-            Theo dõi và quản lý tất cả các đơn hàng của bạn
+            Theo dõi và quản lý tất cả các mặt hàng trong kho
           </p>
         </div>
         <div className='flex items-center gap-2'>
           <Button
-            onClick={() => router.push('/sales/orders/new')}
+            onClick={() => router.push('/sales/inventory/new')}
             className='gap-2'
           >
             <Plus className='h-4 w-4' />
-            Tạo đơn hàng
+            Nhập kho
           </Button>
         </div>
       </div>
@@ -412,28 +484,28 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
       {/* Quick Stats */}
       <div className='grid grid-cols-2 sm:grid-cols-4 gap-4'>
         <StatsCard
-          title='Tổng đơn hàng'
-          value={stats.total}
-          icon={ShoppingCart}
+          title='Tổng mặt hàng'
+          value={stats.totalItems}
+          icon={Boxes}
           variant='primary'
         />
         <StatsCard
-          title='Đã duyệt'
-          value={stats.approved}
-          icon={CheckCircle2}
+          title='Số lượng tồn kho'
+          value={stats.totalOnHand}
+          icon={Package}
           variant='success'
         />
         <StatsCard
-          title='Đã giao hàng'
-          value={stats.delivered}
-          icon={Package}
-          variant='completed'
+          title='Sắp hết hạn'
+          value={stats.totalExpiringSoon}
+          icon={TriangleAlert}
+          variant='warning'
         />
         <StatsCard
-          title='Doanh thu'
-          value={formatCurrency(stats.totalRevenue)}
-          icon={BanknoteArrowDown}
-          variant='warning'
+          title='Đã hết hạn'
+          value={stats.totalExpired}
+          icon={ShieldX}
+          variant='danger'
         />
       </div>
 
@@ -443,7 +515,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
         <div className='relative flex-1'>
           <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
           <Input
-            placeholder='Tìm kiếm đơn hàng theo tên, khách hàng...'
+            placeholder='Tìm kiếm theo sản phẩm, lot...'
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -514,15 +586,15 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
               <div>
                 <label className='text-sm font-medium mb-1.5 block'>
-                  Trạng thái đơn hàng
+                  Trạng thái
                 </label>
                 <select
                   value={statusFilter}
                   onChange={(e) => {
-                    const value = e.target.value as OrderStatus | '';
+                    const value = e.target.value as InventoryItemStatus | '';
                     setStatusFilter(value);
                     dispatch(
-                      setOrderFilters({
+                      setInventoryItemFilters({
                         ...filters,
                         statusId: value || undefined,
                       })
@@ -531,10 +603,9 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
                   className='w-full px-3 py-2 border rounded-lg bg-background'
                 >
                   <option value=''>Tất cả trạng thái</option>
-                  <option value='CREATED'>Nháp</option>
-                  <option value='APPROVED'>Đã duyệt</option>
-                  <option value='CANCELLED'>Đã hủy</option>
-                  <option value='FULLY_DELIVERED'>Đã giao hàng</option>
+                  <option value='VALID'>Hợp lệ</option>
+                  <option value='EXPIRED'>Đã hết hạn</option>
+                  <option value='DAMAGED'>Hư hỏng</option>
                 </select>
               </div>
             </div>
@@ -558,7 +629,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
         <Card className='border-destructive/50 bg-destructive/5'>
           <CardContent className='p-4'>
             <p className='text-destructive'>
-              Đã xảy ra lỗi khi tải đơn hàng. Vui lòng thử lại sau.
+              Đã xảy ra lỗi khi tải dữ liệu tồn kho. Vui lòng thử lại sau.
             </p>
           </CardContent>
         </Card>
@@ -594,8 +665,8 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
         </div>
       )}
 
-      {/* Order Grid/List */}
-      {!isLoading && orders.length > 0 && (
+      {/* Inventory Grid/List */}
+      {!isLoading && items.length > 0 && (
         <div
           className={cn(
             'gap-4',
@@ -604,40 +675,41 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
               : 'flex flex-col'
           )}
         >
-          {orders.map((order: Order) => (
-            <OrderCard
-              key={order.id}
-              order={order}
-              onClick={() => handleViewOrder(order.id)}
-              customerName={customerMap.get(order.toCustomerId)?.name}
+          {items.map((item: InventoryItem) => (
+            <InventoryCard
+              key={item.id}
+              item={item}
+              onClick={() => handleViewItem(item.id)}
+              product={productMap.get(item.productId)}
+              facility={facilityMap.get(item.facilityId)}
             />
           ))}
         </div>
       )}
 
       {/* Empty State */}
-      {!isLoading && orders.length === 0 && !error && (
+      {!isLoading && items.length === 0 && !error && (
         <Card>
           <CardContent className='py-16 text-center'>
             <div className='mx-auto w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4'>
-              <ShoppingCart className='w-10 h-10 text-muted-foreground' />
+              <Box className='w-10 h-10 text-muted-foreground' />
             </div>
             <h3 className='text-lg font-semibold mb-2'>
-              Không tìm thấy đơn hàng
+              Không tìm thấy mặt hàng
             </h3>
             <p className='text-muted-foreground mb-6 max-w-sm mx-auto'>
               {hasActiveFilters
                 ? 'Thử điều chỉnh bộ lọc để xem thêm kết quả.'
-                : 'Bắt đầu bằng cách tạo đơn hàng đầu tiên của bạn.'}
+                : 'Bắt đầu bằng cách nhập hàng vào kho.'}
             </p>
             {hasActiveFilters ? (
               <Button variant='outline' onClick={clearFilters}>
                 Xóa bộ lọc
               </Button>
             ) : (
-              <Button onClick={() => router.push('/sales/orders/new')}>
+              <Button onClick={() => router.push('/sales/inventory/new')}>
                 <Plus className='h-4 w-4 mr-2' />
-                Tạo đơn hàng đầu tiên
+                Nhập kho
               </Button>
             )}
           </CardContent>
@@ -650,7 +722,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
           <p className='text-sm text-muted-foreground'>
             Hiển thị {currentPage * (pagination.size || 10) + 1} đến{' '}
             {Math.min((currentPage + 1) * (pagination.size || 10), totalItems)}{' '}
-            trong tổng số {totalItems} đơn hàng
+            trong tổng số {totalItems} mặt hàng
           </p>
           <div className='flex items-center gap-2'>
             <Button
