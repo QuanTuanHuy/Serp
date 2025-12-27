@@ -243,17 +243,20 @@ func (s *taskService) DeleteTaskRecursively(ctx context.Context, tx *gorm.DB, us
 	if err != nil {
 		return nil, err
 	}
-	var deletedTasks []*entity.TaskEntity
+	var deleteTaskIDs []int64
+	for _, task := range tasks {
+		deleteTaskIDs = append(deleteTaskIDs, task.ID)
+	}
 	for _, task := range tasks {
 		if err := s.ValidateTaskOwnership(userID, task); err != nil {
 			return nil, err
 		}
-		if err := s.taskPort.SoftDeleteTask(ctx, tx, task.ID); err != nil {
-			return nil, err
-		}
-		deletedTasks = append(deletedTasks, task)
 	}
-	return deletedTasks, nil
+	err = s.taskPort.SoftDeleteTasks(ctx, tx, deleteTaskIDs)
+	if err != nil {
+		return nil, err
+	}
+	return tasks, nil
 }
 
 func (s *taskService) GetTaskByID(ctx context.Context, taskID int64) (*entity.TaskEntity, error) {
