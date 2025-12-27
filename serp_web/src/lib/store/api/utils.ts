@@ -85,6 +85,20 @@ export const createDataTransform = <T>() => {
   };
 };
 
+export const createApiResponseTransform = <T>() => {
+  return (response: any): ApiResponse<T> => {
+    if (response?.code === 200 && response?.status === 'success') {
+      return {
+        code: response.code,
+        status: response.status,
+        message: response.message,
+        data: transformTimestampFields(response.data),
+      };
+    }
+    return response;
+  };
+}
+
 export const createPaginatedTransform = <T>() => {
   return (response: any): PaginatedResponse<T> => {
     if (response?.code === 200 && response?.status === 'success') {
