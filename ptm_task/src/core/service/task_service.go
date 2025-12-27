@@ -37,6 +37,7 @@ type ITaskService interface {
 	CreateTask(ctx context.Context, tx *gorm.DB, userID int64, task *entity.TaskEntity) (*entity.TaskEntity, error)
 	UpdateTask(ctx context.Context, tx *gorm.DB, userID int64, oldTask, newTask *entity.TaskEntity) (*entity.TaskEntity, error)
 	DeleteTask(ctx context.Context, tx *gorm.DB, userID int64, taskID int64) error
+	DeleteTaskRecursively(ctx context.Context, tx *gorm.DB, userID int64, taskID int64) ([]*entity.TaskEntity, error)
 
 	GetTaskByID(ctx context.Context, taskID int64) (*entity.TaskEntity, error)
 	GetTaskTreeByTaskID(ctx context.Context, taskID int64) (*entity.TaskEntity, error)
@@ -44,6 +45,7 @@ type ITaskService interface {
 	GetTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) ([]*entity.TaskEntity, error)
 	CountTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) (int64, error)
 	GetTaskByProjectID(ctx context.Context, projectID int64) ([]*entity.TaskEntity, error)
+	GetTaskByParentID(ctx context.Context, parentTaskID int64) ([]*entity.TaskEntity, error)
 	GetOverdueTasks(ctx context.Context, userID int64, currentTimeMs int64) ([]*entity.TaskEntity, error)
 	GetDeepWorkTasks(ctx context.Context, userID int64) ([]*entity.TaskEntity, error)
 	GetDependentTasks(ctx context.Context, taskID int64) ([]*entity.TaskEntity, error)
@@ -51,6 +53,7 @@ type ITaskService interface {
 	PushTaskCreatedEvent(ctx context.Context, task *entity.TaskEntity) error
 	PushTaskUpdatedEvent(ctx context.Context, task *entity.TaskEntity, req *request.UpdateTaskRequest) error
 	PushTaskDeletedEvent(ctx context.Context, taskID, userID int64) error
+	PushBulkTaskDeletedEvent(ctx context.Context, taskIDs []int64, userID int64) error
 }
 
 type taskService struct {
@@ -225,7 +228,7 @@ func (s *taskService) UpdateTask(ctx context.Context, tx *gorm.DB, userID int64,
 }
 
 func (s *taskService) DeleteTask(ctx context.Context, tx *gorm.DB, userID int64, taskID int64) error {
-	task, err := s.taskPort.GetTaskByID(ctx, taskID)
+	task, err := s.GetTaskByID(ctx, taskID)
 	if err != nil {
 		return err
 	}
@@ -233,6 +236,24 @@ func (s *taskService) DeleteTask(ctx context.Context, tx *gorm.DB, userID int64,
 		return err
 	}
 	return s.taskPort.SoftDeleteTask(ctx, tx, taskID)
+}
+
+func (s *taskService) DeleteTaskRecursively(ctx context.Context, tx *gorm.DB, userID int64, taskID int64) ([]*entity.TaskEntity, error) {
+	tasks, err := s.taskPort.GetTasksByRootID(ctx, taskID)
+	if err != nil {
+		return nil, err
+	}
+	var deletedTasks []*entity.TaskEntity
+	for _, task := range tasks {
+		if err := s.ValidateTaskOwnership(userID, task); err != nil {
+			return nil, err
+		}
+		if err := s.taskPort.SoftDeleteTask(ctx, tx, task.ID); err != nil {
+			return nil, err
+		}
+		deletedTasks = append(deletedTasks, task)
+	}
+	return deletedTasks, nil
 }
 
 func (s *taskService) GetTaskByID(ctx context.Context, taskID int64) (*entity.TaskEntity, error) {
@@ -297,6 +318,10 @@ func (s *taskService) GetTaskByProjectID(ctx context.Context, projectID int64) (
 	return s.taskPort.GetTasksByProjectID(ctx, projectID)
 }
 
+func (s *taskService) GetTaskByParentID(ctx context.Context, parentTaskID int64) ([]*entity.TaskEntity, error) {
+	return s.taskPort.GetTasksByParentID(ctx, parentTaskID)
+}
+
 func (s *taskService) GetOverdueTasks(ctx context.Context, userID int64, currentTimeMs int64) ([]*entity.TaskEntity, error) {
 	return s.taskPort.GetOverdueTasks(ctx, userID, currentTimeMs)
 }
@@ -312,6 +337,9 @@ func (s *taskService) PushTaskCreatedEvent(ctx context.Context, task *entity.Tas
 }
 
 func (s *taskService) PushTaskUpdatedEvent(ctx context.Context, task *entity.TaskEntity, req *request.UpdateTaskRequest) error {
+	if task == nil || req == nil {
+		return nil
+	}
 	event := s.mapper.CreateTaskUpdatedEvent(task, req)
 	message := utils.BuildUpdatedEvent(ctx, "task", event)
 	return s.kafkaProducer.SendMessage(ctx, string(constant.TASK_TOPIC), strconv.FormatInt(task.ID, 10), message)
@@ -324,4 +352,13 @@ func (s *taskService) PushTaskDeletedEvent(ctx context.Context, taskID, userID i
 	}
 	message := utils.BuildDeletedEvent(ctx, "task", event)
 	return s.kafkaProducer.SendMessage(ctx, string(constant.TASK_TOPIC), strconv.FormatInt(taskID, 10), message)
+}
+
+func (s *taskService) PushBulkTaskDeletedEvent(ctx context.Context, taskIDs []int64, userID int64) error {
+	event := &message.BulkTaskDeletedEvent{
+		TaskIDs: taskIDs,
+		UserID:  userID,
+	}
+	message := utils.BuildBulkDeletedEvent(ctx, "task", event)
+	return s.kafkaProducer.SendMessage(ctx, string(constant.TASK_TOPIC), "bulk-"+strconv.FormatInt(userID, 10), message)
 }

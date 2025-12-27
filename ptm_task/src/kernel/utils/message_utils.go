@@ -49,3 +49,8 @@ func BuildDeletedEvent(ctx context.Context, entityName string, data any) message
 	eventType := "ptm" + "." + entityName + ".deleted"
 	return NewMessage(ctx, Source, eventType, data)
 }
+
+func BuildBulkDeletedEvent(ctx context.Context, entityName string, data any) message.BaseKafkaMessage {
+	eventType := "ptm" + "." + entityName + ".bulk_deleted"
+	return NewMessage(ctx, Source, eventType, data)
+}

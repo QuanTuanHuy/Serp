@@ -30,7 +30,10 @@ type TaskEntity struct {
 	Category *string  `json:"category,omitempty"`
 	Tags     []string `json:"tags,omitempty"`
 
-	ParentTaskID *int64 `json:"parentTaskId,omitempty"`
+	ParentTaskID          *int64 `json:"parentTaskId,omitempty"`
+	HasSubtasks           bool   `json:"hasSubtasks"`
+	TotalSubtaskCount     int    `json:"totalSubtaskCount"`
+	CompletedSubtaskCount int    `json:"completedSubtaskCount"`
 
 	ProjectID *int64 `json:"projectId,omitempty"`
 
@@ -90,4 +93,18 @@ func (t *TaskEntity) GetPriorityScore() float64 {
 
 	priority := enum.TaskPriority(t.Priority)
 	return priority.GetScore()
+}
+
+func (t *TaskEntity) IsLeafTask() bool {
+	return !t.HasSubtasks
+}
+
+func (t *TaskEntity) RecalculateSubTaskCounts(subTasks []*TaskEntity) {
+	t.TotalSubtaskCount = len(subTasks)
+	t.CompletedSubtaskCount = 0
+	for _, subTask := range subTasks {
+		if subTask.IsCompleted() {
+			t.CompletedSubtaskCount++
+		}
+	}
 }

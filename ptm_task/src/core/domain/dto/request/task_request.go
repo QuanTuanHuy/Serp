@@ -60,6 +60,11 @@ type UpdateTaskRequest struct {
 	IsFlexible *bool `json:"isFlexible,omitempty"`
 
 	Status *string `json:"status,omitempty" validate:"omitempty,oneof=TODO IN_PROGRESS DONE CANCELLED ARCHIVED"`
+
+	// Use internal only
+	HasSubtasks           *bool `json:"hasSubtasks,omitempty"`
+	TotalSubtaskCount     *int  `json:"totalSubtaskCount,omitempty"`
+	CompletedSubtaskCount *int  `json:"completedSubtaskCount,omitempty"`
 }
 
 type UpdateTaskStatusRequest struct {
