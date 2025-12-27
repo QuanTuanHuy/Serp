@@ -172,7 +172,7 @@ export interface InventoryItem {
   id: string;
   productId: string;
   quantityOnHand: number;
-  quantityAvailable: number;
+  quantityCommitted: number;
   quantityReserved: number;
   facilityId: string;
   createdStamp: string;
@@ -216,7 +216,7 @@ export interface InventoryItemCreationForm {
 }
 
 export interface InventoryItemUpdateForm {
-  quantityOnHand?: number;
+  quantity?: number;
   expirationDate?: string;
   manufacturingDate?: string;
   statusId?: InventoryItemStatus;

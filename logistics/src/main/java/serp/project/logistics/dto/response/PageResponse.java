@@ -22,12 +22,11 @@ public class PageResponse<T> {
 
     private List<T> items;
 
-
     public static <T> PageResponse<T> of(Page<T> page) {
         return PageResponse.<T>builder()
                 .totalItems(page.getTotalElements())
                 .totalPages(page.getTotalPages())
-                .currentPage(page.getNumber() + 1)
+                .currentPage(page.getNumber())
                 .items(page.getContent())
                 .build();
     }

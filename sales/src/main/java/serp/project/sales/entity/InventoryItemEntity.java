@@ -12,6 +12,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import serp.project.sales.dto.request.InventoryItemCreationForm;
 import serp.project.sales.dto.request.InventoryItemUpdateForm;
+import serp.project.sales.exception.AppErrorCode;
+import serp.project.sales.exception.AppException;
 import serp.project.sales.util.IdUtils;
 
 import java.time.LocalDate;
@@ -71,8 +73,7 @@ public class InventoryItemEntity {
     private Long tenantId;
 
     public InventoryItemEntity(InventoryItemCreationForm form, Long tenantId) {
-        String inventoryItemId = IdUtils.generateInventoryItemId();
-        this.id = inventoryItemId;
+        this.id = IdUtils.generateInventoryItemId();
         this.productId = form.getProductId();
         this.quantityOnHand = form.getQuantity();
         this.quantityReserved = 0;
@@ -82,6 +83,7 @@ public class InventoryItemEntity {
         this.expirationDate = form.getExpirationDate();
         this.manufacturingDate = form.getManufacturingDate();
         this.statusId = form.getStatusId();
+        this.receivedDate = LocalDate.now();
         this.tenantId = tenantId;
     }
 
@@ -110,6 +112,12 @@ public class InventoryItemEntity {
     public void commitQuantity(int quantity) {
         this.quantityReserved -= quantity;
         this.quantityCommitted += quantity;
+    }
+
+    public void cleanup() {
+        if (this.quantityCommitted != 0 || this.quantityReserved != 0) {
+            throw new AppException(AppErrorCode.NEED_TO_BE_RESERVED_OR_DELIVERED);
+        }
     }
 
     @Override

@@ -47,6 +47,8 @@ export const SalesHeader: React.FC<SalesHeaderProps> = ({
         return 'Products';
       case 'orders':
         return 'Orders';
+      case 'inventory':
+        return 'Inventory';
       case 'quotes':
         return 'Quotes';
       case 'invoices':
