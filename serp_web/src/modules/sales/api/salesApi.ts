@@ -331,7 +331,7 @@ export const salesApi = api.injectEndpoints({
 
     // Inventory Item endpoints
     getInventoryItems: builder.query<
-      APIResponse<PaginatedResponse<InventoryItemDetail>>,
+      APIResponse<PaginatedResponse<InventoryItem>>,
       { filters?: InventoryItemFilters; pagination: PaginationParams }
     >({
       query: ({ filters = {}, pagination }) => ({
@@ -352,7 +352,7 @@ export const salesApi = api.injectEndpoints({
           : [{ type: 'InventoryItem', id: 'LIST' }],
     }),
 
-    getInventoryItem: builder.query<APIResponse<InventoryItemDetail>, string>({
+    getInventoryItem: builder.query<APIResponse<InventoryItem>, string>({
       query: (inventoryItemId) => ({
         url: `/inventory-item/search/${inventoryItemId}`,
         method: 'GET',

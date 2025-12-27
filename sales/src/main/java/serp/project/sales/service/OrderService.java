@@ -330,12 +330,23 @@ public class OrderService {
 
                 List<InventoryItemDetailEntity> allocatedInventoryItems = inventoryItemDetailRepository
                                 .findByTenantIdAndOrderItemId(tenantId, orderItemId);
-                List<InventoryItemEntity> updatedInventoryItems = allocatedInventoryItems.stream()
+                allocatedInventoryItems.forEach(itemDetail -> {
+                   InventoryItemEntity inventoryItem = inventoryItemRepository.findById(itemDetail.getInventoryItemId())
+                                   .orElse(null);
+                   if (inventoryItem == null || !inventoryItem.getTenantId().equals(tenantId)) {
+                           log.error("[OrderService] Inventory Item ID {} not found for tenant {}",
+                                           itemDetail.getInventoryItemId(), tenantId);
+                           throw new AppException(AppErrorCode.NOT_FOUND);
+                   }
+                   itemDetail.setInventoryItem(inventoryItem);
+                });
+
+                order.removeItem(item);
+
+                List<InventoryItemEntity> updatedInventoryItems = item.getAllocatedInventoryItems().stream()
                                 .map(InventoryItemDetailEntity::getInventoryItem)
                                 .distinct()
                                 .collect(Collectors.toList());
-
-                order.removeItem(item);
 
                 inventoryItemRepository.saveAll(updatedInventoryItems);
                 log.info("[OrderService] Released reserved inventory items for order item {} for tenant {}",

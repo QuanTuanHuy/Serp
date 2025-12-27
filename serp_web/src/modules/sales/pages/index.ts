@@ -11,3 +11,6 @@ export * from './products';
 
 // Order Pages
 export * from './orders';
+
+// Inventory Pages
+export * from './inventory';

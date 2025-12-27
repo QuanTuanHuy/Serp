@@ -1,6 +1,5 @@
 package serp.project.sales.controller;
 
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +21,7 @@ import serp.project.sales.util.AuthUtils;
 import java.time.LocalDate;
 
 @RestController
-@RequestMapping("sales/api/v1/inventory-item")
+@RequestMapping("/sales/api/v1/inventory-item")
 @RequiredArgsConstructor
 @Validated
 @Slf4j
@@ -58,7 +57,13 @@ public class InventoryItemController {
         @DeleteMapping("/delete/{inventoryItemId}")
         public ResponseEntity<GeneralResponse<?>> deleteInventoryItem(
                         @PathVariable("inventoryItemId") String inventoryItemId) {
-                throw new AppException(AppErrorCode.UNIMPLEMENTED);
+                Long tenantId = authUtils.getCurrentTenantId()
+                                .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
+                log.info("[InventoryItemController] Deleting inventory item with ID {} for tenantId: {}",
+                                inventoryItemId,
+                                tenantId);
+                inventoryItemService.deleteInventoryItem(inventoryItemId, tenantId);
+                return ResponseEntity.ok(GeneralResponse.success("Inventory item deleted successfully"));
         }
 
         @GetMapping("/search/{inventoryItemId}")
