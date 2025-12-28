@@ -50,10 +50,7 @@ func (u *ScheduleTaskUseCase) HandleTaskCreated(ctx context.Context, event *mess
 			log.Error(ctx, "Failed to get or create active plan: ", err)
 			return nil, err
 		}
-		existed, err := u.scheduleTaskService.GetByPlanIDAndTaskID(ctx, activePlan.ID, event.TaskID)
-		if err != nil {
-			return nil, err
-		}
+		existed, _ := u.scheduleTaskService.GetByPlanIDAndTaskID(ctx, activePlan.ID, event.TaskID)
 		if existed != nil {
 			log.Warn(ctx, "Schedule task snapshot already exists for task ID: ", event.TaskID)
 			return nil, nil
