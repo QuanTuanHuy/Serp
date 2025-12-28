@@ -14,7 +14,6 @@ export interface Task {
   userId: number;
   tenantId: number;
   projectId?: number;
-  parentTaskId?: number;
 
   title: string;
   description?: string;
@@ -39,6 +38,12 @@ export interface Task {
   category?: string;
   tags: string[];
 
+  // Subtask hierarchy (matches backend)
+  parentTaskId?: number;
+  hasSubtasks: boolean;
+  totalSubtaskCount: number;
+  completedSubtaskCount: number;
+
   // Recurrence fields
   isRecurring: boolean;
   recurrencePattern?: string;
@@ -62,13 +67,10 @@ export interface Task {
   // Recursive subtask tree (from backend SubTasks field)
   subTasks?: Task[];
 
-  // NEW: Computed fields for hierarchy and dependencies
+  // Computed fields for hierarchy and dependencies
   depth?: number; // 0=root, 1=subtask, 2=sub-subtask
-  hasSubtasks?: boolean; // Quick check
   isBlocked?: boolean; // Has incomplete dependencies
   blockingTasksCount?: number; // Number of tasks waiting for this
-  completedSubtasksCount?: number;
-  totalSubtasksCount?: number;
   dependentTaskIds: number[]; // Computed from dependencies
 }
 

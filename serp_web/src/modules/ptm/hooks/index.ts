@@ -22,3 +22,27 @@ export { useTaskManagement } from './useTaskManagement';
 export type { UseTaskManagementOptions } from './useTaskManagement';
 
 export { useTaskActions } from './useTaskActions';
+
+// Task detail operations
+export { useTaskDetail } from './useTaskDetail';
+export type { UseTaskDetailOptions } from './useTaskDetail';
+
+// Note operations
+export { useNoteOperations } from './useNoteOperations';
+export type { UseNoteOperationsOptions } from './useNoteOperations';
+
+// Task edit form
+export { useTaskEditForm } from './useTaskEditForm';
+
+// Task card operations
+export { useTaskCardActions } from './useTaskCardActions';
+export { useTaskSubtasks } from './useTaskSubtasks';
+
+// Keyboard shortcuts (optional enhancement)
+export {
+  useKeyboardShortcuts,
+  useGlobalShortcuts,
+  useConditionalShortcuts,
+  formatShortcut,
+} from './useKeyboardShortcuts';
+export type { KeyboardShortcut } from './useKeyboardShortcuts';

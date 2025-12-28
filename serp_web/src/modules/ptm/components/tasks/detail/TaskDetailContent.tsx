@@ -264,8 +264,8 @@ export function TaskDetailContent({ task }: TaskDetailContentProps) {
                 Subtasks
               </p>
               <p className='text-sm text-muted-foreground'>
-                {task.completedSubtasksCount || 0} of{' '}
-                {task.totalSubtasksCount || 0} completed
+                {task.completedSubtaskCount || 0} of{' '}
+                {task.totalSubtaskCount || 0} completed
               </p>
             </div>
           </div>

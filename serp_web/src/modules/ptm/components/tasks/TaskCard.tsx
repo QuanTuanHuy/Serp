@@ -24,7 +24,6 @@ import {
   Trash2,
   Repeat,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { Card } from '@/shared/components/ui/card';
 import { Badge } from '@/shared/components/ui/badge';
 import { Checkbox } from '@/shared/components/ui/checkbox';
@@ -36,12 +35,10 @@ import {
   DropdownMenuSeparator,
 } from '@/shared/components/ui/dropdown-menu';
 import { Button } from '@/shared/components/ui/button';
-import { Progress } from '@/shared/components/ui/progress';
 import { cn } from '@/shared/utils';
 import { StatusBadge } from '../shared/StatusBadge';
 import { PriorityBadge } from '../shared/PriorityBadge';
-import { RecurringBadge } from './RecurringBadge';
-import { useGetTasksQuery } from '../../api';
+import { useTaskCardActions, useTaskSubtasks } from '../../hooks';
 import type { Task, TaskStatus } from '../../types';
 
 interface TaskCardProps {
@@ -67,50 +64,32 @@ export function TaskCard({
   onDelete,
   className,
 }: TaskCardProps) {
-  const router = useRouter();
+  // Custom hooks for actions and subtasks
+  const {
+    handleCardClick,
+    handleToggleComplete,
+    handleStart,
+    handlePause,
+    handleEdit,
+    handleDelete,
+    handleOpenDetail,
+  } = useTaskCardActions({
+    task,
+    onClick,
+    onNavigate,
+    onToggleComplete,
+    onStart,
+    onPause,
+    onEdit,
+    onDelete,
+  });
 
-  // Fetch all tasks to calculate subtasks count
-  const { data: paginatedTasks } = useGetTasksQuery({});
-  const allTasks = paginatedTasks?.data?.items || [];
-
-  const subtasks = allTasks.filter((t) => t.parentTaskId === task.id);
-  const completedSubtasks = subtasks.filter((t) => t.status === 'DONE').length;
-  const totalSubtasks = subtasks.length;
+  const { completedSubtasks, totalSubtasks } = useTaskSubtasks({
+    task,
+  });
 
   const isOverdue =
     task.status !== 'DONE' && task.deadlineMs && task.deadlineMs < Date.now();
-
-  const handleToggleComplete = () => {
-    onToggleComplete?.(task.id, task.status);
-  };
-
-  const handleStart = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onStart?.(task.id);
-  };
-
-  const handlePause = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onPause?.(task.id);
-  };
-
-  const handleEdit = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onEdit?.(task.id);
-  };
-
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onDelete?.(task);
-  };
-
-  const handleCardClick = () => {
-    if (onNavigate) {
-      router.push(`/ptm/tasks/${task.id}`);
-    } else {
-      onClick?.(task.id);
-    }
-  };
 
   return (
     <Card
@@ -272,12 +251,7 @@ export function TaskCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align='end'>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                router.push(`/ptm/tasks/${task.id}`);
-              }}
-            >
+            <DropdownMenuItem onClick={handleOpenDetail}>
               <ExternalLink className='mr-2 h-4 w-4' />
               Open Detail
             </DropdownMenuItem>

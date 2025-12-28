@@ -15,6 +15,7 @@ import {
   mockNotes,
   getMockActivityEvents,
   getMockTaskDependencies,
+  withTaskDefaults,
   delay,
 } from './mockData';
 import type {
@@ -97,33 +98,15 @@ export const mockApiHandlers = {
 
     create: async (data: Partial<Task>) => {
       await delay();
-      const newTask: Task = {
+      const newTask = withTaskDefaults({
         id: Date.now(),
         userId: 1,
         tenantId: 1,
         title: data.title || 'New Task',
-        description: data.description,
         priority: data.priority || 'MEDIUM',
         status: 'TODO',
-        estimatedDurationMin: data.estimatedDurationMin || 60, // Default 1 hour in minutes
-        isDurationLearned: data.isDurationLearned || false,
-        isDeepWork: data.isDeepWork || false,
-        isRecurring: data.isRecurring || false,
-        isMeeting: data.isMeeting || false,
-        isFlexible: data.isFlexible || false,
-        category: data.category,
-        tags: data.tags || [],
-        dependentTaskIds: [],
-        source: 'manual',
-        activeStatus: 'ACTIVE',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        projectId: data.projectId,
-        deadlineMs: data.deadlineMs,
-        parentTaskId: data.parentTaskId,
-        recurrencePattern: data.recurrencePattern,
-        recurrenceConfig: data.recurrenceConfig,
-      };
+        ...data,
+      });
 
       tasksStore = [...tasksStore, newTask];
       return newTask;

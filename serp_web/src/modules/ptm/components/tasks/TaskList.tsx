@@ -29,15 +29,27 @@ import { DeleteTaskDialog } from './dialogs/DeleteTaskDialog';
 interface TaskListProps {
   projectId?: number | string;
   filterProjectId?: number | string;
+  selectedTaskId?: number | null;
+  onTaskSelect?: (taskId: number | null) => void;
   className?: string;
 }
 
 export function TaskList({
   projectId,
   filterProjectId,
+  selectedTaskId: externalSelectedTaskId,
+  onTaskSelect,
   className,
 }: TaskListProps) {
-  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  // Use external state if provided, otherwise fallback to internal state
+  const [internalSelectedTaskId, setInternalSelectedTaskId] = useState<
+    number | null
+  >(null);
+  const selectedTaskId =
+    externalSelectedTaskId !== undefined
+      ? externalSelectedTaskId
+      : internalSelectedTaskId;
+  const setSelectedTaskId = onTaskSelect || setInternalSelectedTaskId;
 
   const {
     tasks: filteredTasks,
@@ -281,13 +293,6 @@ export function TaskList({
             </div>
           </div>
         )}
-
-        {/* Task Detail Sheet */}
-        <TaskDetail
-          taskId={selectedTaskId}
-          open={!!selectedTaskId}
-          onOpenChange={(open) => !open && setSelectedTaskId(null)}
-        />
 
         {/* Edit & Delete Dialogs */}
         <EditTaskDialog

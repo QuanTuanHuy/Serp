@@ -12,7 +12,10 @@ import { Plus, Network } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { SubtaskList } from '../SubtaskList';
 import { CreateTaskDialog } from '../dialogs/CreateTaskDialog';
+import { EditTaskDialog } from '../dialogs/EditTaskDialog';
+import { DeleteTaskDialog } from '../dialogs/DeleteTaskDialog';
 import { useGetTaskTreeQuery } from '../../../api';
+import { useTaskDialogs } from '../../../hooks';
 import type { Task } from '../../../types';
 
 interface SubtasksTabProps {
@@ -21,6 +24,7 @@ interface SubtasksTabProps {
 
 export function SubtasksTab({ task }: SubtasksTabProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const { editDialog, deleteDialog } = useTaskDialogs();
 
   // Fetch full task tree for visualization
   const { data: taskTreeResponse, isLoading: isLoadingTree } =
@@ -86,15 +90,28 @@ export function SubtasksTab({ task }: SubtasksTabProps) {
         allowNesting={true}
         showFullDetails={true}
         enableDragDrop={true}
+        onEditOpen={editDialog.openEdit}
+        onDeleteOpen={deleteDialog.openDelete}
         className='mt-6'
       />
 
-      {/* Create subtask dialog */}
+      {/* Dialogs */}
       <CreateTaskDialog
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
         parentTaskId={task.id}
         projectId={task.projectId}
+      />
+      <EditTaskDialog
+        taskId={editDialog.taskId}
+        open={editDialog.open}
+        onOpenChange={editDialog.onOpenChange}
+      />
+      <DeleteTaskDialog
+        taskId={deleteDialog.taskId}
+        taskTitle={deleteDialog.taskTitle}
+        open={deleteDialog.open}
+        onOpenChange={deleteDialog.onOpenChange}
       />
     </div>
   );

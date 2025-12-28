@@ -17,9 +17,32 @@ import type {
   TaskDependency,
 } from '../types';
 
+// Helper to add required fields to task mocks
+const withTaskDefaults = (
+  task: Partial<Task> &
+    Pick<Task, 'id' | 'userId' | 'tenantId' | 'title' | 'priority' | 'status'>
+): Task =>
+  ({
+    hasSubtasks: false,
+    totalSubtaskCount: 0,
+    completedSubtaskCount: 0,
+    isDurationLearned: false,
+    isRecurring: false,
+    isDeepWork: false,
+    isMeeting: false,
+    isFlexible: true,
+    tags: [],
+    dependentTaskIds: [],
+    source: 'manual' as const,
+    activeStatus: 'ACTIVE' as const,
+    ...task,
+    createdAt: task.createdAt || new Date().toISOString(),
+    updatedAt: task.updatedAt || new Date().toISOString(),
+  }) as Task;
+
 // Mock Tasks - Using function to ensure mutable arrays
 const _mockTasksData: Task[] = [
-  {
+  withTaskDefaults({
     id: 1,
     userId: 1,
     tenantId: 1,
@@ -30,21 +53,14 @@ const _mockTasksData: Task[] = [
     status: 'IN_PROGRESS',
     estimatedDurationMin: 120, // 2 hours
     actualDurationMin: 90, // 1.5 hours
-    isDurationLearned: false,
     deadlineMs: Date.now() + 3 * 60 * 60 * 1000, // 3 hours from now
     isDeepWork: true,
-    isRecurring: false,
-    isMeeting: false,
-    isFlexible: false,
     category: 'Development',
     tags: ['code-review', 'backend'],
-    dependentTaskIds: [],
-    source: 'manual',
-    activeStatus: 'ACTIVE',
     createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-  },
-  {
+  }),
+  withTaskDefaults({
     id: 2,
     userId: 1,
     tenantId: 1,
@@ -67,8 +83,8 @@ const _mockTasksData: Task[] = [
     activeStatus: 'ACTIVE',
     createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
+  }),
+  withTaskDefaults({
     id: 3,
     userId: 1,
     tenantId: 1,
@@ -92,8 +108,8 @@ const _mockTasksData: Task[] = [
     activeStatus: 'ACTIVE',
     createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-  {
+  }),
+  withTaskDefaults({
     id: 4,
     userId: 1,
     tenantId: 1,
@@ -116,8 +132,8 @@ const _mockTasksData: Task[] = [
     activeStatus: 'ACTIVE',
     createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-  },
-  {
+  }),
+  withTaskDefaults({
     id: 5,
     userId: 1,
     tenantId: 1,
@@ -140,8 +156,8 @@ const _mockTasksData: Task[] = [
     activeStatus: 'ACTIVE',
     createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-  },
-  {
+  }),
+  withTaskDefaults({
     id: 6,
     userId: 1,
     tenantId: 1,
@@ -165,9 +181,9 @@ const _mockTasksData: Task[] = [
     activeStatus: 'ACTIVE',
     createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-  },
+  }),
   // Subtasks for Task 1: Review Pull Requests
-  {
+  withTaskDefaults({
     id: 7,
     userId: 1,
     tenantId: 1,
@@ -193,8 +209,8 @@ const _mockTasksData: Task[] = [
     activeStatus: 'ACTIVE',
     createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-  },
-  {
+  }),
+  withTaskDefaults({
     id: 8,
     userId: 1,
     tenantId: 1,
@@ -220,8 +236,8 @@ const _mockTasksData: Task[] = [
     activeStatus: 'ACTIVE',
     createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-  },
-  {
+  }),
+  withTaskDefaults({
     id: 9,
     userId: 1,
     tenantId: 1,
@@ -247,9 +263,9 @@ const _mockTasksData: Task[] = [
     activeStatus: 'ACTIVE',
     createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-  },
+  }),
   // Subtasks for Task 3: Design System Components
-  {
+  withTaskDefaults({
     id: 10,
     userId: 1,
     tenantId: 1,
@@ -274,8 +290,8 @@ const _mockTasksData: Task[] = [
     activeStatus: 'ACTIVE',
     createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-  },
-  {
+  }),
+  withTaskDefaults({
     id: 11,
     userId: 1,
     tenantId: 1,
@@ -299,8 +315,11 @@ const _mockTasksData: Task[] = [
     activeStatus: 'ACTIVE',
     createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
+  }),
 ];
+
+// Export helper for external use
+export { withTaskDefaults };
 
 export const mockTasks: Task[] = JSON.parse(JSON.stringify(_mockTasksData));
 

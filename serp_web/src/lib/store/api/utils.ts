@@ -97,7 +97,7 @@ export const createApiResponseTransform = <T>() => {
     }
     return response;
   };
-}
+};
 
 export const createPaginatedTransform = <T>() => {
   return (response: any): PaginatedResponse<T> => {

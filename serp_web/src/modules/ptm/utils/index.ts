@@ -7,3 +7,4 @@
 
 export * from './recurrence';
 export * from './date';
+export * from './idConverter';
