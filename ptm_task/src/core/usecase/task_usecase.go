@@ -69,6 +69,7 @@ func (u *taskUseCase) CreateTask(ctx context.Context, userID, tenantID int64, re
 		if parentTask.IsCompleted() {
 			return nil, errors.New(constant.CreateSubtaskUnderCompletedTaskForbidden)
 		}
+		req.ProjectID = parentTask.ProjectID
 	}
 	var project *entity.ProjectEntity
 	if req.ProjectID != nil {
@@ -86,7 +87,7 @@ func (u *taskUseCase) CreateTask(ctx context.Context, userID, tenantID int64, re
 		}
 
 		if parentTask != nil {
-			parentUpdateEntity, parentUpdateReq, err := u.handleParentTaskUpdateOnSubtaskChange(ctx, req.ParentTaskID)
+			parentUpdateEntity, parentUpdateReq, err := u.handleParentTaskUpdateOnSubtaskChange(ctx, tx, req.ParentTaskID)
 			if err != nil {
 				return nil, err
 			}
@@ -166,7 +167,7 @@ func (u *taskUseCase) UpdateTask(ctx context.Context, userID, taskID int64, req 
 
 		if wasCompleted != isCompleted {
 			if oldParentID != nil {
-				oldParent, updateOldParentReq, err := u.handleParentTaskUpdateOnSubtaskChange(ctx, oldParentID)
+				oldParent, updateOldParentReq, err := u.handleParentTaskUpdateOnSubtaskChange(ctx, tx, oldParentID)
 				if err != nil {
 					return nil, err
 				}
@@ -177,7 +178,7 @@ func (u *taskUseCase) UpdateTask(ctx context.Context, userID, taskID int64, req 
 				err = u.taskService.PushTaskUpdatedEvent(ctx, oldParent, updateOldParentReq)
 			}
 			if newParentID != nil && (oldParentID == nil || *newParentID != *oldParentID) {
-				newParent, updateNewParentReq, err := u.handleParentTaskUpdateOnSubtaskChange(ctx, newParentID)
+				newParent, updateNewParentReq, err := u.handleParentTaskUpdateOnSubtaskChange(ctx, tx, newParentID)
 				if err != nil {
 					return nil, err
 				}
@@ -230,7 +231,7 @@ func (u *taskUseCase) DeleteTask(ctx context.Context, userID int64, taskID int64
 		if parentTaskID != nil {
 			parentTask, err = u.taskService.GetTaskByID(ctx, *parentTaskID)
 			if err == nil {
-				subtasks, _ := u.taskService.GetTaskByParentID(ctx, *parentTaskID)
+				subtasks, _ := u.taskService.GetTaskByParentIDWithTx(ctx, tx, *parentTaskID)
 				parentTask.RecalculateSubTaskCounts(subtasks)
 				if len(subtasks) == 0 {
 					parentTask.HasSubtasks = false
@@ -401,6 +402,7 @@ func (u *taskUseCase) refreshProjectStats(ctx context.Context, tx *gorm.DB, proj
 
 func (u *taskUseCase) handleParentTaskUpdateOnSubtaskChange(
 	ctx context.Context,
+	tx *gorm.DB,
 	parentTaskID *int64,
 ) (*entity.TaskEntity, *request.UpdateTaskRequest, error) {
 	if parentTaskID == nil {
@@ -419,7 +421,7 @@ func (u *taskUseCase) handleParentTaskUpdateOnSubtaskChange(
 	newCompletedSubtaskCount := 0
 	newHasSubtasks := false
 
-	subtasks, _ := u.taskService.GetTaskByParentID(ctx, *parentTaskID)
+	subtasks, _ := u.taskService.GetTaskByParentIDWithTx(ctx, tx, *parentTaskID)
 	if len(subtasks) > 0 {
 		newHasSubtasks = true
 		newTotalSubtaskCount = len(subtasks)

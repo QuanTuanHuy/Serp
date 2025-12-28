@@ -149,6 +149,14 @@ func (m *mockTaskService) GetTaskByParentID(ctx context.Context, parentTaskID in
 	return args.Get(0).([]*entity.TaskEntity), args.Error(1)
 }
 
+func (m *mockTaskService) GetTaskByParentIDWithTx(ctx context.Context, tx *gorm.DB, parentTaskID int64) ([]*entity.TaskEntity, error) {
+	args := m.Called(ctx, tx, parentTaskID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*entity.TaskEntity), args.Error(1)
+}
+
 func (m *mockTaskService) GetOverdueTasks(ctx context.Context, userID int64, currentTimeMs int64) ([]*entity.TaskEntity, error) {
 	args := m.Called(ctx, userID, currentTimeMs)
 	if args.Get(0) == nil {
@@ -446,7 +454,7 @@ func TestCreateTask_Success_SubtaskUnderParent(t *testing.T) {
 	taskSvc.On("CreateTask", ctx, mock.Anything, userID, mock.AnythingOfType("*entity.TaskEntity")).
 		Return(newSubtask, nil)
 	taskSvc.On("GetTaskByID", ctx, parentID).Return(parentTask, nil)
-	taskSvc.On("GetTaskByParentID", ctx, parentID).Return([]*entity.TaskEntity{newSubtask}, nil)
+	taskSvc.On("GetTaskByParentIDWithTx", ctx, mock.Anything, parentID).Return([]*entity.TaskEntity{newSubtask}, nil)
 	taskSvc.On("UpdateTask", ctx, mock.Anything, userID, parentTask, parentTask).Return(parentTask, nil)
 	taskSvc.On("PushTaskUpdatedEvent", ctx, parentTask, mock.AnythingOfType("*request.UpdateTaskRequest")).Return(nil)
 	taskSvc.On("PushTaskCreatedEvent", ctx, newSubtask).Return(nil)
@@ -647,7 +655,7 @@ func TestUpdateTask_Success_CompleteSubtask_UpdateParentCount(t *testing.T) {
 	taskSvc.On("GetTaskByID", ctx, parentID).Return(parentTask, nil).Maybe()
 
 	// Get all subtasks of parent to recalculate counts
-	taskSvc.On("GetTaskByParentID", ctx, parentID).Return([]*entity.TaskEntity{updatedSubtask, subtask2}, nil).Maybe()
+	taskSvc.On("GetTaskByParentIDWithTx", ctx, mock.Anything, parentID).Return([]*entity.TaskEntity{updatedSubtask, subtask2}, nil).Maybe()
 
 	// UpdateTask for parent - might be called once or twice depending on logic
 	taskSvc.On("UpdateTask", ctx, mock.Anything, userID, mock.Anything, mock.Anything).
@@ -758,7 +766,7 @@ func TestDeleteTask_Success_SubtaskUpdatesParent(t *testing.T) {
 	taskSvc.On("GetTaskByID", ctx, parentID).Return(parentTask, nil)
 	taskSvc.On("DeleteTaskRecursively", ctx, mock.Anything, userID, subtaskID).
 		Return([]*entity.TaskEntity{subtask}, nil)
-	taskSvc.On("GetTaskByParentID", ctx, parentID).Return([]*entity.TaskEntity{remainingSubtask}, nil)
+	taskSvc.On("GetTaskByParentIDWithTx", ctx, mock.Anything, parentID).Return([]*entity.TaskEntity{remainingSubtask}, nil)
 	taskSvc.On("UpdateTask", ctx, mock.Anything, userID, parentTask, parentTask).Return(parentTask, nil)
 	taskSvc.On("PushBulkTaskDeletedEvent", ctx, []int64{subtaskID}, userID).Return(nil)
 	taskSvc.On("PushTaskUpdatedEvent", ctx, parentTask, mock.AnythingOfType("*request.UpdateTaskRequest")).Return(nil)
@@ -792,7 +800,7 @@ func TestDeleteTask_Success_LastSubtaskClearsParentFlag(t *testing.T) {
 	taskSvc.On("GetTaskByID", ctx, parentID).Return(parentTask, nil)
 	taskSvc.On("DeleteTaskRecursively", ctx, mock.Anything, userID, subtaskID).
 		Return([]*entity.TaskEntity{subtask}, nil)
-	taskSvc.On("GetTaskByParentID", ctx, parentID).Return([]*entity.TaskEntity{}, nil)
+	taskSvc.On("GetTaskByParentIDWithTx", ctx, mock.Anything, parentID).Return([]*entity.TaskEntity{}, nil)
 	taskSvc.On("UpdateTask", ctx, mock.Anything, userID, parentTask, parentTask).Return(parentTask, nil)
 	taskSvc.On("PushBulkTaskDeletedEvent", ctx, []int64{subtaskID}, userID).Return(nil)
 	taskSvc.On("PushTaskUpdatedEvent", ctx, parentTask, mock.AnythingOfType("*request.UpdateTaskRequest")).Return(nil)
@@ -916,10 +924,10 @@ func TestHandleParentTaskUpdateOnSubtaskChange_Success(t *testing.T) {
 	subtask2 := createTestTask(3, 1, "DONE")
 
 	taskSvc.On("GetTaskByID", ctx, parentID).Return(parentTask, nil)
-	taskSvc.On("GetTaskByParentID", ctx, parentID).Return([]*entity.TaskEntity{subtask1, subtask2}, nil)
+	taskSvc.On("GetTaskByParentIDWithTx", ctx, mock.Anything, parentID).Return([]*entity.TaskEntity{subtask1, subtask2}, nil)
 
 	// Act
-	result, req, err := uc.handleParentTaskUpdateOnSubtaskChange(ctx, &parentID)
+	result, req, err := uc.handleParentTaskUpdateOnSubtaskChange(ctx, nil, &parentID)
 
 	// Assert
 	assert.NoError(t, err)
@@ -936,7 +944,7 @@ func TestHandleParentTaskUpdateOnSubtaskChange_NilParent(t *testing.T) {
 	ctx := context.Background()
 
 	// Act
-	result, req, err := uc.handleParentTaskUpdateOnSubtaskChange(ctx, nil)
+	result, req, err := uc.handleParentTaskUpdateOnSubtaskChange(ctx, nil, nil)
 
 	// Assert
 	assert.NoError(t, err)

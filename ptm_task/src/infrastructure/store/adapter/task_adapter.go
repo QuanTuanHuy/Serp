@@ -264,6 +264,19 @@ func (a *TaskAdapter) GetTasksByParentID(ctx context.Context, parentTaskID int64
 	return a.mapper.ToEntities(taskModels), nil
 }
 
+func (a *TaskAdapter) GetTasksByParentIDWithTx(ctx context.Context, tx *gorm.DB, parentTaskID int64) ([]*entity.TaskEntity, error) {
+	var taskModels []*model.TaskModel
+
+	if err := a.getDB(tx).WithContext(ctx).
+		Where("parent_task_id = ? AND active_status = ?", parentTaskID, "ACTIVE").
+		Order("created_at ASC").
+		Find(&taskModels).Error; err != nil {
+		return nil, fmt.Errorf("failed to get tasks by parent id with tx: %w", err)
+	}
+
+	return a.mapper.ToEntities(taskModels), nil
+}
+
 func (a *TaskAdapter) GetTasksByRootID(ctx context.Context, rootTaskID int64) ([]*entity.TaskEntity, error) {
 	var taskModels []*model.TaskModel
 	sql := `

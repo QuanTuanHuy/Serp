@@ -46,6 +46,7 @@ type ITaskService interface {
 	CountTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) (int64, error)
 	GetTaskByProjectID(ctx context.Context, projectID int64) ([]*entity.TaskEntity, error)
 	GetTaskByParentID(ctx context.Context, parentTaskID int64) ([]*entity.TaskEntity, error)
+	GetTaskByParentIDWithTx(ctx context.Context, tx *gorm.DB, parentTaskID int64) ([]*entity.TaskEntity, error)
 	GetOverdueTasks(ctx context.Context, userID int64, currentTimeMs int64) ([]*entity.TaskEntity, error)
 	GetDeepWorkTasks(ctx context.Context, userID int64) ([]*entity.TaskEntity, error)
 	GetDependentTasks(ctx context.Context, taskID int64) ([]*entity.TaskEntity, error)
@@ -98,6 +99,9 @@ func (s *taskService) ValidateTaskData(task *entity.TaskEntity) error {
 }
 
 func (s *taskService) ValidateTaskOwnership(userID int64, task *entity.TaskEntity) error {
+	if task == nil {
+		return errors.New(constant.TaskNotFound)
+	}
 	if task.UserID != userID {
 		return errors.New(constant.UpdateTaskForbidden)
 	}
@@ -323,6 +327,10 @@ func (s *taskService) GetTaskByProjectID(ctx context.Context, projectID int64) (
 
 func (s *taskService) GetTaskByParentID(ctx context.Context, parentTaskID int64) ([]*entity.TaskEntity, error) {
 	return s.taskPort.GetTasksByParentID(ctx, parentTaskID)
+}
+
+func (s *taskService) GetTaskByParentIDWithTx(ctx context.Context, tx *gorm.DB, parentTaskID int64) ([]*entity.TaskEntity, error) {
+	return s.taskPort.GetTasksByParentIDWithTx(ctx, tx, parentTaskID)
 }
 
 func (s *taskService) GetOverdueTasks(ctx context.Context, userID int64, currentTimeMs int64) ([]*entity.TaskEntity, error) {
