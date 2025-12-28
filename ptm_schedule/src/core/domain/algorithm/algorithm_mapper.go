@@ -79,6 +79,12 @@ func (m *AlgorithmMapper) EventEntityToAssignmentWithTask(event *entity.Schedule
 		taskID = task.TaskID
 	}
 
+	var status *string
+	if event.Status != "" {
+		statusStr := string(event.Status)
+		status = &statusStr
+	}
+
 	return &Assignment{
 		EventID:        &event.ID,
 		TaskID:         taskID,
@@ -89,6 +95,7 @@ func (m *AlgorithmMapper) EventEntityToAssignmentWithTask(event *entity.Schedule
 		PartIndex:      event.PartIndex,
 		TotalParts:     event.TotalParts,
 		IsPinned:       event.IsPinned,
+		Status:         status,
 		UtilityScore:   utilityScore,
 		Title:          event.Title,
 	}

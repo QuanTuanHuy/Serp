@@ -15,12 +15,4 @@ docs/
 
 deploy/
 
-DEPLOY*.md
-CLEANUP_GUIDE.md
-
-# .github/prompts/
-
-.shared/
 .claude/
-ui-ux*
-backend-expert.prompt.md

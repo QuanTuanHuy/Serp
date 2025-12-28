@@ -19,6 +19,7 @@ type IScheduleTaskUseCase interface {
 	HandleTaskCreated(ctx context.Context, event *message.TaskCreatedEvent) error
 	HandleTaskUpdated(ctx context.Context, event *message.TaskUpdatedEvent) error
 	HandleTaskDeleted(ctx context.Context, event *message.TaskDeletedEvent) error
+	HandleTaskBulkDeleted(ctx context.Context, event *message.TaskBulkDeletedEvent) error
 }
 
 type ScheduleTaskUseCase struct {
@@ -48,6 +49,14 @@ func (u *ScheduleTaskUseCase) HandleTaskCreated(ctx context.Context, event *mess
 		if err != nil {
 			log.Error(ctx, "Failed to get or create active plan: ", err)
 			return nil, err
+		}
+		existed, err := u.scheduleTaskService.GetByPlanIDAndTaskID(ctx, activePlan.ID, event.TaskID)
+		if err != nil {
+			return nil, err
+		}
+		if existed != nil {
+			log.Warn(ctx, "Schedule task snapshot already exists for task ID: ", event.TaskID)
+			return nil, nil
 		}
 
 		createdTask, err := u.scheduleTaskService.CreateSnapshot(ctx, tx, activePlan.ID, event)
@@ -84,7 +93,7 @@ func (u *ScheduleTaskUseCase) HandleTaskUpdated(ctx context.Context, event *mess
 			return nil, err
 		}
 
-		if changeType == enum.ChangeConstraint {
+		if changeType == enum.ChangeConstraint || changeType == enum.ChangeStructural {
 			scheduleTask, err := u.scheduleTaskService.GetByPlanIDAndTaskID(ctx, activePlan.ID, event.TaskID)
 			if err != nil {
 				log.Warn(ctx, "Schedule task not found after sync: ", err)
@@ -93,7 +102,7 @@ func (u *ScheduleTaskUseCase) HandleTaskUpdated(ctx context.Context, event *mess
 
 			err = u.rescheduleQueueService.EnqueueTaskChange(ctx, tx, activePlan.ID, event.UserID, scheduleTask.ID, enum.TriggerConstraintChange)
 			if err != nil {
-				log.Error(ctx, "Failed to enqueue constraint change: ", err)
+				log.Error(ctx, "Failed to enqueue task change: ", err)
 				return nil, err
 			}
 
@@ -138,6 +147,40 @@ func (u *ScheduleTaskUseCase) HandleTaskDeleted(ctx context.Context, event *mess
 			log.Warn(ctx, "Failed to mark proposed plan as stale: ", err)
 		}
 
+		return nil, nil
+	})
+
+	return err
+}
+
+func (u *ScheduleTaskUseCase) HandleTaskBulkDeleted(ctx context.Context, event *message.TaskBulkDeletedEvent) error {
+	_, err := u.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
+		activePlan, err := u.schedulePlanService.GetActivePlanByUserID(ctx, event.UserID)
+		if err != nil {
+			log.Error(ctx, "Failed to get active plan: ", err)
+			return nil, err
+		}
+
+		for _, taskID := range event.TaskIDs {
+			scheduleTask, err := u.scheduleTaskService.GetByPlanIDAndTaskID(ctx, activePlan.ID, taskID)
+			if err != nil {
+				return nil, err
+			}
+			scheduleTaskID := scheduleTask.ID
+			err = u.scheduleTaskService.DeleteSnapshot(ctx, tx, activePlan.ID, taskID)
+			if err != nil {
+				return nil, err
+			}
+			err = u.rescheduleQueueService.EnqueueTaskChange(ctx, tx, activePlan.ID, event.UserID, scheduleTaskID, enum.TriggerTaskDeleted)
+			if err != nil {
+				log.Error(ctx, "Failed to enqueue task deletion: ", err)
+				return nil, err
+			}
+		}
+
+		if err := u.schedulePlanService.MarkProposedPlanAsStale(ctx, tx, event.UserID); err != nil {
+			log.Warn(ctx, "Failed to mark proposed plan as stale: ", err)
+		}
 		return nil, nil
 	})
 

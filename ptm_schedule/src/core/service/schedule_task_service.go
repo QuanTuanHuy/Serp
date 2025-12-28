@@ -77,11 +77,21 @@ func (s *ScheduleTaskService) CreateSnapshot(ctx context.Context, tx *gorm.DB, p
 		DeadlineMs:       event.DeadlineMs,
 		PreferredStartMs: event.PreferredStartDateMs,
 
+		ParentTaskID:          event.ParentTaskID,
+		HasSubtasks:           event.HasSubtasks,
+		TotalSubtaskCount:     event.TotalSubtaskCount,
+		CompletedSubtaskCount: event.CompletedSubtaskCount,
+
 		AllowSplit:          true,
 		MinSplitDurationMin: 30,
 		MaxSplitCount:       4,
 
-		ScheduleStatus: enum.ScheduleTaskPending,
+		ScheduleStatus: func() enum.ScheduleTaskStatus {
+			if event.HasSubtasks {
+				return enum.ScheduleTaskExcluded
+			}
+			return enum.ScheduleTaskPending
+		}(),
 	}
 
 	newTask.TaskSnapshotHash = newTask.CalculateSnapshotHash()
@@ -118,6 +128,25 @@ func (s *ScheduleTaskService) SyncSnapshot(ctx context.Context, tx *gorm.DB, pla
 		event.IsDeepWork,
 	)
 
+	hasSubtaskChange := false
+	if event.HasSubtasks != nil && *event.HasSubtasks != currentTask.HasSubtasks {
+		hasSubtaskChange = true
+		if *event.HasSubtasks {
+			currentTask.ScheduleStatus = enum.ScheduleTaskExcluded
+			s.scheduleEventPort.DeleteByScheduleTaskID(ctx, tx, currentTask.ID)
+			log.Info(ctx, "Task now has subtasks, excluded from scheduling. PlanID: ", planID, ", TaskID: ", event.TaskID)
+		} else {
+			currentTask.ScheduleStatus = enum.ScheduleTaskPending
+			log.Info(ctx, "Task no longer has subtasks, included in scheduling. PlanID: ", planID, ", TaskID: ", event.TaskID)
+		}
+	}
+	currentTask.ApplySubtaskInfoChanges(
+		event.ParentTaskID,
+		event.HasSubtasks,
+		event.TotalSubtaskCount,
+		event.CompletedSubtaskCount,
+	)
+
 	newHash := currentTask.CalculateSnapshotHash()
 	hasSnapshotChange := currentTask.HasChanged(newHash)
 
@@ -135,13 +164,17 @@ func (s *ScheduleTaskService) SyncSnapshot(ctx context.Context, tx *gorm.DB, pla
 		}
 	}
 
-	if !hasMetadataChange && !hasConstraintChange {
+	if !hasMetadataChange && !hasConstraintChange && !hasSubtaskChange {
 		return enum.ChangeNone, nil
 	}
 
 	if hasConstraintChange {
 		log.Info(ctx, "Schedule task constraint changed. PlanID: ", planID, ", TaskID: ", event.TaskID)
 		return enum.ChangeConstraint, nil
+	}
+	if hasSubtaskChange {
+		log.Info(ctx, "Schedule task subtask info changed. PlanID: ", planID, ", TaskID: ", event.TaskID)
+		return enum.ChangeStructural, nil
 	}
 
 	log.Info(ctx, "Schedule task metadata updated. PlanID: ", planID, ", TaskID: ", event.TaskID)

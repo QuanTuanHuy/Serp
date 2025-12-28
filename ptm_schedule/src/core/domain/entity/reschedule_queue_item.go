@@ -63,9 +63,13 @@ func (b *RescheduleBatch) DetermineStrategy() enum.RescheduleStrategy {
 	if b.HasTrigger(enum.TriggerAvailability) {
 		return enum.StrategyFullReplan
 	}
-	if b.HasTrigger(enum.TriggerConstraintChange) || b.HasTrigger(enum.TriggerTaskAdded) || b.HasTrigger(enum.TriggerTaskDeleted) {
+
+	if b.HasTrigger(enum.TriggerConstraintChange) ||
+		b.HasTrigger(enum.TriggerTaskAdded) ||
+		b.HasTrigger(enum.TriggerTaskDeleted) {
 		return enum.StrategyInsertion
 	}
+
 	return enum.StrategyRipple
 }
 
