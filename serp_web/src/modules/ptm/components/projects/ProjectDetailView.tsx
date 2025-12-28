@@ -47,6 +47,7 @@ import {
 } from '../../api';
 import { EditProjectDialog } from './EditProjectDialog';
 import { TaskList } from '../tasks/TaskList';
+import { TaskDetail } from '../tasks/TaskDetail';
 import { NoteCard } from '../notes/NoteCard';
 import { NoteEditorNovel } from '../notes/NoteEditorNovel';
 import { cn } from '@/shared/utils';
@@ -67,6 +68,7 @@ export function ProjectDetailView({
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'tasks' | 'notes'>('tasks');
   const [showNoteEditor, setShowNoteEditor] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
   const numericProjectId =
     typeof projectId === 'string' ? parseInt(projectId, 10) : projectId;
@@ -406,7 +408,11 @@ export function ProjectDetailView({
                 </div>
               </Card>
             ) : (
-              <TaskList filterProjectId={numericProjectId} />
+              <TaskList
+                filterProjectId={numericProjectId}
+                selectedTaskId={selectedTaskId}
+                onTaskSelect={setSelectedTaskId}
+              />
             )}
           </TabsContent>
 
@@ -482,6 +488,13 @@ export function ProjectDetailView({
 
       {/* Task Dialogs */}
       <CreateTaskDialog {...createDialog} />
+
+      {/* Task Detail Panel */}
+      <TaskDetail
+        taskId={selectedTaskId}
+        open={!!selectedTaskId}
+        onOpenChange={(open) => !open && setSelectedTaskId(null)}
+      />
     </>
   );
 }
