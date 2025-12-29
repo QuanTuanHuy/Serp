@@ -61,7 +61,6 @@ import {
   useGetCustomerQuery,
 } from '../../api/salesApi';
 import { useGetUsersQuery, UserProfile } from '@/modules/admin';
-import type { OrderItem } from '../../types';
 
 interface OrderDetailPageProps {
   orderId: string;

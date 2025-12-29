@@ -24,3 +24,5 @@ CLEANUP_GUIDE.md
 .claude/
 ui-ux*
 backend-expert.prompt.md
+
+plan-*.md

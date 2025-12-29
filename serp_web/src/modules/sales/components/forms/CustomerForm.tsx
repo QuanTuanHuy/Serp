@@ -27,6 +27,7 @@ import type {
   CustomerStatus,
   AddressType,
 } from '../../types';
+import { toast } from 'sonner';
 
 // Validation schema
 const customerSchema = z.object({
@@ -107,7 +108,8 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
         await onSubmit(createData);
       }
     } catch (error) {
-      console.error('Form submission error:', error);
+      console.error('Lỗi xảy ra khi gửi biểu mẫu:', error);
+      toast.error('Có lỗi xảy ra. Vui lòng thử lại.');
     }
   });
 
@@ -115,7 +117,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
     <Card className={cn('w-full', className)}>
       <CardHeader className='pb-4'>
         <CardTitle className='text-xl'>
-          {isEditing ? 'Edit Customer' : 'Create Customer'}
+          {isEditing ? 'Chỉnh sửa khách hàng' : 'Tạo khách hàng mới'}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -123,18 +125,18 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
           {/* Basic Information */}
           <div className='space-y-4'>
             <h3 className='text-base font-medium text-foreground'>
-              Basic Information
+              Thông tin cơ bản
             </h3>
 
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div className='space-y-2'>
-                <Label htmlFor='name'>Name *</Label>
+                <Label htmlFor='name'>Tên *</Label>
                 <Input
                   id='name'
                   {...register('name')}
                   className={cn(errors.name && 'border-destructive')}
                   disabled={isLoading || isSubmitting}
-                  placeholder='Enter customer name'
+                  placeholder='Nhập tên khách hàng'
                 />
                 {errors.name && (
                   <p className='text-sm text-destructive'>
@@ -161,17 +163,17 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
               </div>
 
               <div className='space-y-2'>
-                <Label htmlFor='phone'>Phone</Label>
+                <Label htmlFor='phone'>Số điện thoại</Label>
                 <Input
                   id='phone'
                   {...register('phone')}
                   disabled={isLoading || isSubmitting}
-                  placeholder='+84 xxx xxx xxx'
+                  placeholder='Nhập số điện thoại'
                 />
               </div>
 
               <div className='space-y-2'>
-                <Label htmlFor='statusId'>Status *</Label>
+                <Label htmlFor='statusId'>Trạng thái *</Label>
                 <Select
                   value={statusId}
                   onValueChange={(value) =>
@@ -180,18 +182,18 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
                   disabled={isLoading || isSubmitting}
                 >
                   <SelectTrigger id='statusId'>
-                    <SelectValue placeholder='Select status' />
+                    <SelectValue placeholder='Chọn trạng thái' />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value='ACTIVE'>Active</SelectItem>
-                    <SelectItem value='INACTIVE'>Inactive</SelectItem>
+                    <SelectItem value='ACTIVE'>Hoạt động</SelectItem>
+                    <SelectItem value='INACTIVE'>Không hoạt động</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {!isEditing && (
                 <div className='space-y-2'>
-                  <Label htmlFor='addressType'>Address Type</Label>
+                  <Label htmlFor='addressType'>Loại địa chỉ</Label>
                   <Select
                     defaultValue='SHIPPING'
                     onValueChange={(value) =>
@@ -200,12 +202,12 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
                     disabled={isLoading || isSubmitting}
                   >
                     <SelectTrigger id='addressType'>
-                      <SelectValue placeholder='Select address type' />
+                      <SelectValue placeholder='Chọn loại địa chỉ' />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value='FACILIY'>Facility</SelectItem>
-                      <SelectItem value='SHIPPING'>Shipping</SelectItem>
-                      <SelectItem value='BUSSINESS'>Business</SelectItem>
+                      <SelectItem value='FACILIY'>Cơ sở</SelectItem>
+                      <SelectItem value='SHIPPING'>Giao hàng</SelectItem>
+                      <SelectItem value='BUSSINESS'>Kinh doanh</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -221,14 +223,14 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
               onClick={onCancel}
               disabled={isLoading || isSubmitting}
             >
-              Cancel
+              Hủy
             </Button>
             <Button type='submit' disabled={isLoading || isSubmitting}>
               {isLoading || isSubmitting
-                ? 'Saving...'
+                ? 'Đang lưu...'
                 : isEditing
-                  ? 'Update Customer'
-                  : 'Create Customer'}
+                  ? 'Cập nhật khách hàng'
+                  : 'Tạo khách hàng'}
             </Button>
           </div>
         </form>
