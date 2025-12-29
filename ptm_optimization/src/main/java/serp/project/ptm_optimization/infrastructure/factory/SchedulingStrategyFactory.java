@@ -13,6 +13,7 @@ import serp.project.ptm_optimization.core.port.factory.ISchedulingStrategyFactor
 import serp.project.ptm_optimization.core.port.strategy.ISchedulingStrategy;
 import serp.project.ptm_optimization.kernel.algorithm.strategy.CpSatStrategy;
 import serp.project.ptm_optimization.kernel.algorithm.strategy.HeuristicStrategy;
+import serp.project.ptm_optimization.kernel.algorithm.strategy.LocalSearchStrategy;
 import serp.project.ptm_optimization.kernel.algorithm.strategy.MilpStrategy;
 
 import java.util.List;
@@ -29,6 +30,7 @@ public class SchedulingStrategyFactory implements ISchedulingStrategyFactory {
     private final HeuristicStrategy heuristicStrategy;
     private final MilpStrategy milpStrategy;
     private final CpSatStrategy cpSatStrategy;
+    private final LocalSearchStrategy localSearchStrategy;
 
     /**
      * Create a strategy by type.
@@ -52,6 +54,13 @@ public class SchedulingStrategyFactory implements ISchedulingStrategyFactory {
                     yield milpStrategy.isAvailable() ? milpStrategy : heuristicStrategy;
                 }
                 yield cpSatStrategy;
+            }
+            case LOCAL_SEARCH -> {
+                if (!localSearchStrategy.isAvailable()) {
+                    log.warn("LOCAL_SEARCH not available, falling back to HEURISTIC");
+                    yield heuristicStrategy;
+                }
+                yield localSearchStrategy;
             }
             case AUTO -> createBestFor(0, 0); // Will be set by caller
             default -> {
@@ -100,12 +109,13 @@ public class SchedulingStrategyFactory implements ISchedulingStrategyFactory {
     /**
      * Get all available strategies in priority order for fallback chain.
      *
-     * @return List of strategies (CP-SAT -> MILP -> Heuristic)
+     * @return List of strategies (CP-SAT -> MILP -> Local Search -> Heuristic)
      */
     public List<ISchedulingStrategy> getFallbackChain() {
         return List.of(
                 cpSatStrategy.isAvailable() ? cpSatStrategy : null,
                 milpStrategy.isAvailable() ? milpStrategy : null,
+                localSearchStrategy.isAvailable() ? localSearchStrategy : null,
                 heuristicStrategy
         ).stream().filter(s -> s != null).toList();
     }

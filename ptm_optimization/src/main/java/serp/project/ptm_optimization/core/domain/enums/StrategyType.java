@@ -39,6 +39,12 @@ public enum StrategyType {
     CPSAT("Constraint Programming SAT"),
 
     /**
+     * Local Search using Simulated Annealing.
+     * Refines GapBased solution, scales to 1000+ tasks.
+     */
+    LOCAL_SEARCH("Local Search (Simulated Annealing)"),
+
+    /**
      * Hybrid: Heuristic warm-start + CPSAT/MILP refinement.
      */
     HYBRID("Hybrid (Heuristic + CPSAT/MILP)");

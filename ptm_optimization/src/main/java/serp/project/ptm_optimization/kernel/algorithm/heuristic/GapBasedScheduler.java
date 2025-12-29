@@ -131,7 +131,6 @@ public class GapBasedScheduler {
         BestGapCandidate best = new BestGapCandidate();
         int taskDuration = Optional.ofNullable(task.getDurationMin()).orElse(0);
         
-        // Group windows by date
         Map<Long, List<Window>> windowsByDate = windows.stream()
             .collect(Collectors.groupingBy(Window::getDateMs));
         
@@ -225,7 +224,7 @@ public class GapBasedScheduler {
         }
         
         // End of gap
-        int end = gap.getStartMin() + gapDuration - taskDuration;
+        int end = gap.getEndMin() - taskDuration;
         if (end > gap.getStartMin()) {
             positions.add(end);
         }
