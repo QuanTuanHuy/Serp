@@ -1,201 +1,324 @@
-# Logistics Module
+# Logistics Module API
 
-Quản lý logistics cho Serp ERP system với 9 entities chính.
+## Tổng quan
 
-## Structure
+Module Logistics cung cấp các API endpoints để quản lý:
+
+- **Address**: Địa chỉ (cơ sở, giao hàng, kinh doanh)
+- **Category**: Danh mục sản phẩm
+- **Customer**: Khách hàng (read-only)
+- **Facility**: Cơ sở/kho
+- **Inventory Item**: Tồn kho
+- **Order**: Đơn hàng (read-only)
+- **Product**: Sản phẩm
+- **Shipment**: Lô hàng nhập/xuất
+- **Supplier**: Nhà cung cấp (read-only)
+
+## Cấu trúc
 
 ```
 logistics/
-├── types/              # TypeScript type definitions
-│   ├── address.types.ts
-│   ├── category.types.ts
-│   ├── customer.types.ts
-│   ├── facility.types.ts
-│   ├── inventoryItem.types.ts
-│   ├── order.types.ts
-│   ├── product.types.ts
-│   ├── shipment.types.ts
-│   ├── supplier.types.ts
-│   └── index.ts
-├── services/           # RTK Query API endpoints
-│   ├── api.ts
-│   ├── addressApi.ts
-│   ├── categoryApi.ts
-│   ├── customerApi.ts
-│   ├── productApi.ts
-│   ├── supplierApi.ts
-│   └── index.ts
-│   # TODO: facilityApi, inventoryItemApi, orderApi, shipmentApi
-├── store/              # Redux slices for UI state
-│   ├── addressSlice.ts
-│   ├── categorySlice.ts
-│   ├── customerSlice.ts
-│   ├── facilitySlice.ts
-│   ├── inventoryItemSlice.ts
-│   ├── orderSlice.ts
-│   ├── productSlice.ts
-│   ├── shipmentSlice.ts
-│   ├── supplierSlice.ts
-│   └── index.ts
-├── hooks/              # Custom React hooks
-│   ├── useAddresses.ts
-│   ├── useCategories.ts
-│   ├── useCustomers.ts
-│   ├── useFacilities.ts
-│   ├── useInventoryItems.ts
-│   ├── useOrders.ts
-│   ├── useProducts.ts
-│   ├── useShipments.ts
-│   ├── useSuppliers.ts
-│   └── index.ts
-├── components/         # React components (empty - to be implemented)
-└── index.ts            # Barrel export
+├── api/
+│   └── logisticsApi.ts       # RTK Query endpoints
+├── types/
+│   └── index.ts              # TypeScript types
+└── index.ts                  # Module exports
 ```
 
-## Implementation Status
+## Sử dụng
 
-| Entity        | Types | API Service | Redux Slice | Custom Hook | Status  |
-| ------------- | ----- | ----------- | ----------- | ----------- | ------- |
-| Address       | ✅    | ✅          | ✅          | ✅          | ✅ 100% |
-| Category      | ✅    | ✅          | ✅          | ✅          | ✅ 100% |
-| Customer      | ✅    | ✅          | ✅          | ✅          | ✅ 100% |
-| Facility      | ✅    | ✅          | ✅          | ✅          | ✅ 100% |
-| InventoryItem | ✅    | ✅          | ✅          | ✅          | ✅ 100% |
-| Order         | ✅    | ✅          | ✅          | ✅          | ✅ 100% |
-| Product       | ✅    | ✅          | ✅          | ✅          | ✅ 100% |
-| Shipment      | ✅    | ✅          | ✅          | ✅          | ✅ 100% |
-| Supplier      | ✅    | ✅          | ✅          | ✅          | ✅ 100% |
-
-### ✅ All Entities Completed
-
-All 9 entities now have complete implementation across all 4 layers:
-
-- **Types Layer**: All TypeScript interfaces, DTOs, request/response types, and filters
-- **API Layer**: RTK Query endpoints with proper caching and invalidation
-- **Store Layer**: Redux slices with UI state, actions, and selectors
-- **Hooks Layer**: Custom hooks combining API + Redux + business logic
-
-### 🎯 Ready for Use
-
-All hooks can be imported and used immediately:
+### Import
 
 ```typescript
 import {
-  useAddresses,
-  useCategories,
-  useCustomers,
-  useFacilities,
-  useInventoryItems,
-  useOrders,
-  useProducts,
-  useShipments,
-  useSuppliers,
+  useGetProductsQuery,
+  useCreateProductMutation,
+  useGetInventoryItemsQuery,
+  useGetFacilitiesQuery,
+  useGetShipmentsQuery,
+  // ... other hooks
 } from '@/modules/logistics';
 ```
 
-## Usage Examples
-
-### Category Management
+### Ví dụ: Lấy danh sách sản phẩm
 
 ```typescript
-import { useCategories } from '@/modules/logistics';
+const ProductList = () => {
+  const { data, isLoading, error } = useGetProductsQuery({
+    filters: {
+      query: 'laptop',
+      categoryId: 'cat-123',
+      statusId: 'ACTIVE'
+    },
+    pagination: { page: 0, size: 20 }
+  });
 
-function CategoryList() {
-  const {
-    categories,
-    isLoadingCategories,
-    filters,
-    setPage,
-    search,
-    openDialog,
-    create,
-  } = useCategories();
+  const products = data?.data?.items || [];
 
   return (
     <div>
-      <input onChange={(e) => search(e.target.value)} />
-      {categories.map((category) => (
-        <div key={category.id}>{category.name}</div>
+      {products.map(product => (
+        <div key={product.id}>{product.name}</div>
       ))}
     </div>
   );
-}
+};
 ```
 
-### Product Management
+### Ví dụ: Tạo sản phẩm mới
 
 ```typescript
-import { useProducts } from '@/modules/logistics';
+const CreateProduct = () => {
+  const [createProduct, { isLoading }] = useCreateProductMutation();
 
-function ProductGrid() {
-  const {
-    products,
-    viewMode,
-    setViewMode,
-    setCategoryFilter,
-    openDialog,
-  } = useProducts();
+  const handleSubmit = async (formData) => {
+    try {
+      await createProduct({
+        name: 'Laptop Dell XPS 15',
+        skuCode: 'DELL-XPS-15',
+        categoryId: 'cat-123',
+        retailPrice: 25000000,
+        statusId: 'ACTIVE'
+      }).unwrap();
 
-  return (
-    <div>
-      <button onClick={() => setViewMode('grid')}>Grid</button>
-      <button onClick={() => setViewMode('list')}>List</button>
-      {/* ... */}
-    </div>
-  );
-}
+      toast.success('Tạo sản phẩm thành công');
+    } catch (error) {
+      toast.error('Có lỗi xảy ra');
+    }
+  };
+
+  return <form onSubmit={handleSubmit}>...</form>;
+};
+```
+
+### Ví dụ: Quản lý tồn kho
+
+```typescript
+const InventoryManagement = () => {
+  // Lấy danh sách tồn kho
+  const { data: inventoryData } = useGetInventoryItemsQuery({
+    filters: {
+      productId: 'prod-123',
+      facilityId: 'fac-456',
+      statusId: 'VALID'
+    },
+    pagination: { page: 0, size: 50 }
+  });
+
+  // Tạo inventory item mới
+  const [createInventoryItem] = useCreateInventoryItemMutation();
+
+  // Cập nhật inventory item
+  const [updateInventoryItem] = useUpdateInventoryItemMutation();
+
+  const handleCreateInventory = async () => {
+    await createInventoryItem({
+      productId: 'prod-123',
+      facilityId: 'fac-456',
+      statusId: 'VALID',
+      quantityOnHand: 100,
+      lotId: 'LOT-2024-001',
+      expireDate: '2025-12-31'
+    });
+  };
+
+  return <div>...</div>;
+};
+```
+
+### Ví dụ: Quản lý shipment (lô hàng)
+
+```typescript
+const ShipmentManagement = () => {
+  const [createShipment] = useCreateShipmentMutation();
+  const [addItemToShipment] = useAddItemToShipmentMutation();
+  const [importShipment] = useImportShipmentMutation();
+
+  // Tạo shipment mới
+  const handleCreateShipment = async () => {
+    const result = await createShipment({
+      shipmentTypeId: 'INCOMING',
+      facilityId: 'fac-456',
+      supplierId: 'sup-789',
+      estimatedArrivalDate: '2024-01-15',
+      items: [
+        {
+          productId: 'prod-123',
+          quantity: 100,
+          unitPrice: 200000
+        }
+      ]
+    }).unwrap();
+
+    const shipmentId = result.data.id;
+
+    // Thêm sản phẩm vào shipment
+    await addItemToShipment({
+      shipmentId,
+      data: {
+        productId: 'prod-456',
+        quantity: 50,
+        unitPrice: 150000
+      }
+    });
+
+    // Nhập kho (import shipment)
+    await importShipment({ shipmentId });
+  };
+
+  return <button onClick={handleCreateShipment}>Tạo shipment</button>;
+};
 ```
 
 ## API Endpoints
 
-All endpoints proxy through API Gateway at `http://localhost:8080/logistics/api/v1/`:
+### Products
 
-- `POST /address/create`
-- `PATCH /address/update/:addressId`
-- `GET /address/search/by-entity/:entityId`
-- `POST /category/create`
-- `PATCH /category/update/:categoryId`
-- `GET /category/search`
-- `GET /category/search/:categoryId`
-- `DELETE /category/delete/:categoryId`
-- `GET /customer/search`
-- `POST /product/create`
-- `PATCH /product/update/:productId`
-- `DELETE /product/delete/:productId`
-- `GET /product/search`
-- `GET /product/search/:productId`
-- `GET /supplier/search`
-- `GET /supplier/search/:supplierId`
+- `getProducts` - Lấy danh sách sản phẩm
+- `getProduct` - Lấy chi tiết sản phẩm
+- `createProduct` - Tạo sản phẩm mới
+- `updateProduct` - Cập nhật sản phẩm
+- `deleteProduct` - Xóa sản phẩm
 
-## Integration
+### Inventory Items
 
-Module đã được integrate vào root store:
+- `getInventoryItems` - Lấy danh sách tồn kho
+- `getInventoryItem` - Lấy chi tiết tồn kho
+- `createInventoryItem` - Tạo inventory item
+- `updateInventoryItem` - Cập nhật inventory item
+- `deleteInventoryItem` - Xóa inventory item
+
+### Facilities
+
+- `getFacilities` - Lấy danh sách cơ sở/kho
+- `getFacility` - Lấy chi tiết cơ sở
+- `createFacility` - Tạo cơ sở mới
+- `updateFacility` - Cập nhật cơ sở
+- `deleteFacility` - Xóa cơ sở
+
+### Categories
+
+- `getCategories` - Lấy danh sách danh mục
+- `getCategory` - Lấy chi tiết danh mục
+- `createCategory` - Tạo danh mục mới
+- `updateCategory` - Cập nhật danh mục
+- `deleteCategory` - Xóa danh mục
+
+### Shipments
+
+- `getShipments` - Lấy danh sách lô hàng
+- `getShipment` - Lấy chi tiết lô hàng
+- `createShipment` - Tạo lô hàng mới
+- `updateShipment` - Cập nhật lô hàng
+- `deleteShipment` - Xóa lô hàng
+- `addItemToShipment` - Thêm sản phẩm vào lô hàng
+- `updateItemInShipment` - Cập nhật sản phẩm trong lô hàng
+- `deleteItemFromShipment` - Xóa sản phẩm khỏi lô hàng
+- `importShipment` - Nhập kho (import shipment vào inventory)
+
+### Addresses
+
+- `createAddress` - Tạo địa chỉ mới
+- `getAddressesByEntity` - Lấy địa chỉ theo entity
+- `updateAddress` - Cập nhật địa chỉ
+
+### Read-only Endpoints
+
+- `getLogisticsCustomers` / `getLogisticsCustomer` - Xem khách hàng
+- `getLogisticsOrders` / `getLogisticsOrder` - Xem đơn hàng
+- `getSuppliers` / `getSupplier` - Xem nhà cung cấp
+
+## Types
+
+### Product
 
 ```typescript
-// src/lib/store/store.ts
-import { logisticsReducer } from '@/modules/logistics/store';
-
-const rootReducer = combineReducers({
-  // ...
-  logistics: logisticsReducer,
-});
+interface Product {
+  id: string;
+  name: string;
+  description?: string;
+  skuCode?: string;
+  barcode?: string;
+  categoryId?: string;
+  unitOfMeasure?: string;
+  weight?: number;
+  retailPrice?: number;
+  wholesalePrice?: number;
+  costPrice?: number;
+  quantityAvailable?: number;
+  reorderLevel?: number;
+  statusId: 'ACTIVE' | 'INACTIVE';
+}
 ```
 
-## Next Steps
+### Inventory Item
 
-1. **Complete remaining APIs**: Facility, InventoryItem, Order, Shipment
-2. **Complete Redux slices**: Add slices for remaining entities
-3. **Complete custom hooks**: Implement useCustomers, useSuppliers, etc.
-4. **Build UI components**: Tables, forms, dialogs for each entity
-5. **Add pages**: Create Next.js pages in `src/app/logistics/`
-6. **Write tests**: Unit tests for hooks, integration tests for APIs
-7. **Add validation**: Form validation with Zod schemas
-8. **Implement bulk operations**: Multi-select, bulk delete/update
+```typescript
+interface InventoryItem {
+  id: string;
+  productId: string;
+  facilityId: string;
+  statusId: 'VALID' | 'EXPIRED' | 'DAMAGED';
+  quantityOnHand: number;
+  quantityCommitted?: number;
+  quantityReserved?: number;
+  lotId?: string;
+  manufactureDate?: string;
+  expireDate?: string;
+}
+```
 
-## Notes
+### Shipment
 
-- Tất cả types đã được định nghĩa đầy đủ cho 9 entities
-- API tags đã được thêm vào baseApi.ts cho cache invalidation
-- Cấu trúc tuân thủ Clean Architecture và patterns của dự án
-- Sử dụng RTK Query cho data fetching và caching
-- Redux Toolkit cho UI state management
+```typescript
+interface Shipment {
+  id: string;
+  shipmentName?: string;
+  shipmentTypeId: 'INCOMING' | 'OUTGOING';
+  statusId: 'CREATED' | 'APPROVED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+  facilityId: string;
+  supplierId?: string;
+  estimatedArrivalDate?: string;
+  actualArrivalDate?: string;
+  totalAmount?: number;
+  items?: ShipmentItem[];
+}
+```
+
+## Cache Invalidation
+
+RTK Query tự động quản lý cache với các tag types:
+
+- `logistics/Product`
+- `logistics/InventoryItem`
+- `logistics/Facility`
+- `logistics/Category`
+- `logistics/Shipment`
+- `logistics/Address`
+- `logistics/Customer` (read-only)
+- `logistics/Order` (read-only)
+- `logistics/Supplier` (read-only)
+
+Khi mutation thành công, cache tương ứng sẽ tự động invalidate và refetch.
+
+## API Gateway
+
+Tất cả requests được route qua API Gateway:
+
+- Base URL: `/logistics/api/v1`
+- Authentication: JWT token trong header `Authorization: Bearer <token>`
+- Service: `logistics` (port 8089)
+
+## Lưu ý
+
+1. **Read-only entities**: Customer, Order, Supplier chỉ có quyền đọc từ logistics module
+2. **Import Shipment**: Khi import shipment, inventory items sẽ tự động được tạo/cập nhật
+3. **Tag prefix**: Tất cả tags đều có prefix `logistics/` để tránh conflict với các module khác
+4. **Error handling**: Sử dụng try-catch và toast để xử lý lỗi
+5. **Pagination**: Mặc định page bắt đầu từ 0, size thường là 20-50 items
+
+## Tích hợp với modules khác
+
+- **Sales module**: Chia sẻ Customer, Product, Order types
+- **Purchase module**: Chia sẻ Supplier, Product, Shipment concepts
+- **Account module**: JWT authentication và user management
