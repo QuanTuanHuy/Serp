@@ -14,4 +14,5 @@ import lombok.NoArgsConstructor;
 public class Params {
     private Integer slotMin;
     private Duration timeBudgetLS;
+    private Integer maxTimeSec; // For CP-SAT solver time limit
 }

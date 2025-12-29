@@ -21,6 +21,7 @@ public class TaskInput {
     private Integer durationMin;
     private Double priorityScore;
     private Long deadlineMs;
+    private Long earliestStartMs; // Cannot start before this time
     private Double effort;
     private Double enjoyability;
     private List<Long> dependentTaskIds;
