@@ -164,6 +164,7 @@ export const api = createApi({
     'ptm/Task',
     'ptm/Project',
     'ptm/Schedule',
+    'ptm/ScheduleTask',
     'ptm/FocusTime',
     'ptm/Availability',
     'ptm/Activity',

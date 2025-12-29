@@ -14,8 +14,14 @@ import {
   ScheduleSidebar,
   OptimizationDialog,
   EventDetailSheet,
+  UnscheduledTasksPanel,
+  ScheduleTaskEditDialog,
 } from '@/modules/ptm';
-import type { OptimizationConfig, ScheduleEvent } from '@/modules/ptm';
+import type {
+  OptimizationConfig,
+  ScheduleEvent,
+  ScheduleTask,
+} from '@/modules/ptm';
 import { GanttView } from '@/modules/ptm/components/schedule/GanttView';
 import {
   Tabs,
@@ -42,6 +48,7 @@ export default function SchedulePage() {
   const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(
     null
   );
+  const [editingTask, setEditingTask] = useState<ScheduleTask | null>(null);
 
   // Fetch data
   const { data: paginatedData } = useGetTasksQuery({});
@@ -252,18 +259,14 @@ export default function SchedulePage() {
 
         {/* Calendar View */}
         <TabsContent value='calendar' className='mt-6'>
-          <div className='flex gap-6'>
-            <ScheduleSidebar
-              unscheduledTasks={unscheduledTasks}
-              focusBlocks={focusBlocks}
-              onTaskDragStart={(task) => {
-                console.log('Drag started:', task.title);
-              }}
-              onFocusBlockToggle={(blockId) => {
-                console.log('Focus block toggled:', blockId);
-              }}
+          <div className='grid grid-cols-[320px_1fr] gap-6'>
+            {/* Left Panel: Unscheduled Tasks */}
+            <UnscheduledTasksPanel
+              onEditTask={(task) => setEditingTask(task)}
+              className='h-[calc(100vh-300px)]'
             />
 
+            {/* Main Calendar */}
             <div className='flex-1'>
               <CalendarView
                 onEventSelect={handleEventSelect}
@@ -295,7 +298,6 @@ export default function SchedulePage() {
           event={selectedEvent}
           open={!!selectedEvent}
           onOpenChange={(open) => !open && setSelectedEvent(null)}
-          onMarkComplete={handleMarkComplete}
           onReschedule={handleReschedule}
           onRemove={handleRemoveFromSchedule}
           onViewTask={handleViewTask}
@@ -308,6 +310,13 @@ export default function SchedulePage() {
         onOpenChange={setOptimizationDialogOpen}
         onOptimize={handleOptimize}
         isOptimizing={isOptimizing}
+      />
+
+      {/* Schedule Task Edit Dialog */}
+      <ScheduleTaskEditDialog
+        task={editingTask}
+        open={!!editingTask}
+        onOpenChange={(open) => !open && setEditingTask(null)}
       />
     </div>
   );

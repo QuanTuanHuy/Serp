@@ -211,9 +211,9 @@ function ScheduleEventCard({
             </Badge>
           )}
 
-          {event.taskPart && event.totalParts && event.totalParts > 1 && (
+          {event.totalParts > 1 && (
             <Badge variant='outline' className='text-xs'>
-              Part {event.taskPart}/{event.totalParts}
+              Part {event.partIndex + 1}/{event.totalParts}
             </Badge>
           )}
 

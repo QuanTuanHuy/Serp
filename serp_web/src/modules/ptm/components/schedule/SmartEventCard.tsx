@@ -64,21 +64,15 @@ export function SmartEventCard({
     }
   };
 
-  const getUtilityColor = (utility: number) => {
-    if (utility >= 80) return 'text-green-600 dark:text-green-400';
-    if (utility >= 60) return 'text-amber-600 dark:text-amber-400';
-    return 'text-muted-foreground';
-  };
-
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed':
+      case 'DONE':
         return (
           <CheckCircle2 className='h-3 w-3 text-green-600 dark:text-green-400' />
         );
-      case 'scheduled':
+      case 'PLANNED':
         return <Clock className='h-3 w-3 text-blue-600 dark:text-blue-400' />;
-      case 'cancelled':
+      case 'CANCELLED':
         return (
           <AlertCircle className='h-3 w-3 text-red-600 dark:text-red-400' />
         );
@@ -124,7 +118,7 @@ export function SmartEventCard({
                   )}
                   {event.totalParts > 1 && (
                     <span>
-                      • {event.taskPart}/{event.totalParts}
+                      • {event.partIndex + 1}/{event.totalParts}
                     </span>
                   )}
                 </div>
@@ -171,7 +165,10 @@ export function SmartEventCard({
               <Clock className='h-3.5 w-3.5' />
               <span>
                 {formatTime(event.startMin)} - {formatTime(event.endMin)} (
-                {formatDuration(event.durationMin)})
+                {formatDuration(
+                  event.durationMin ?? event.endMin - event.startMin
+                )}
+                )
               </span>
             </div>
             {event.isDeepWork && (
@@ -184,65 +181,23 @@ export function SmartEventCard({
               <div className='flex items-center gap-2 text-muted-foreground'>
                 <Target className='h-3.5 w-3.5' />
                 <span className='text-xs'>
-                  Part {event.taskPart} of {event.totalParts}
+                  Part {event.partIndex + 1} of {event.totalParts}
                 </span>
               </div>
             )}
           </div>
 
-          {/* Utility Breakdown */}
-          {event.utilityBreakdown && (
+          {/* Optimization Score (if available) */}
+          {event.utilityScore !== undefined && (
             <div className='space-y-2 pt-2 border-t'>
               <div className='flex items-center justify-between'>
                 <span className='text-xs font-semibold text-muted-foreground'>
-                  AI Utility Score
+                  Optimization Score
                 </span>
-                <span
-                  className={cn(
-                    'text-sm font-bold',
-                    getUtilityColor(event.utility)
-                  )}
-                >
-                  {Math.round(event.utility)} pts
+                <span className='text-sm font-bold text-blue-600'>
+                  {event.utilityScore.toFixed(1)} pts
                 </span>
               </div>
-
-              <div className='space-y-1 text-xs'>
-                <div className='flex justify-between'>
-                  <span className='text-muted-foreground'>Priority Score</span>
-                  <span className='font-medium'>
-                    +{event.utilityBreakdown.priorityScore}
-                  </span>
-                </div>
-                <div className='flex justify-between'>
-                  <span className='text-muted-foreground'>Deadline Score</span>
-                  <span className='font-medium'>
-                    +{event.utilityBreakdown.deadlineScore}
-                  </span>
-                </div>
-                {event.utilityBreakdown.focusTimeBonus > 0 && (
-                  <div className='flex justify-between text-green-600 dark:text-green-400'>
-                    <span>Focus Time Bonus</span>
-                    <span className='font-medium'>
-                      +{event.utilityBreakdown.focusTimeBonus}
-                    </span>
-                  </div>
-                )}
-                {event.utilityBreakdown.contextSwitchPenalty < 0 && (
-                  <div className='flex justify-between text-red-600 dark:text-red-400'>
-                    <span>Context Switch</span>
-                    <span className='font-medium'>
-                      {event.utilityBreakdown.contextSwitchPenalty}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {event.utilityBreakdown.reason && (
-                <p className='text-xs text-muted-foreground italic pt-1 border-t'>
-                  {event.utilityBreakdown.reason}
-                </p>
-              )}
             </div>
           )}
 
