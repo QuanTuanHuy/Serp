@@ -7,9 +7,12 @@ package usecase
 
 import (
 	"context"
+	"errors"
 
 	"github.com/golibs-starter/golib/log"
+	"github.com/serp/ptm-schedule/src/core/domain/constant"
 	"github.com/serp/ptm-schedule/src/core/domain/dto/message"
+	"github.com/serp/ptm-schedule/src/core/domain/entity"
 	"github.com/serp/ptm-schedule/src/core/domain/enum"
 	"github.com/serp/ptm-schedule/src/core/service"
 	"gorm.io/gorm"
@@ -20,6 +23,8 @@ type IScheduleTaskUseCase interface {
 	HandleTaskUpdated(ctx context.Context, event *message.TaskUpdatedEvent) error
 	HandleTaskDeleted(ctx context.Context, event *message.TaskDeletedEvent) error
 	HandleTaskBulkDeleted(ctx context.Context, event *message.TaskBulkDeletedEvent) error
+
+	GetScheduleTasksByUserIDAndPlanID(ctx context.Context, userID int64, planID *int64) ([]*entity.ScheduleTaskEntity, error)
 }
 
 type ScheduleTaskUseCase struct {
@@ -182,4 +187,29 @@ func (u *ScheduleTaskUseCase) HandleTaskBulkDeleted(ctx context.Context, event *
 	})
 
 	return err
+}
+
+func (u *ScheduleTaskUseCase) GetScheduleTasksByUserIDAndPlanID(
+	ctx context.Context,
+	userID int64,
+	planID *int64,
+) ([]*entity.ScheduleTaskEntity, error) {
+	var targetPlanID int64
+	if planID != nil && *planID > 0 {
+		targetPlanID = *planID
+		targetPlan, err := u.schedulePlanService.GetPlanByID(ctx, targetPlanID)
+		if err != nil {
+			return nil, err
+		}
+		if targetPlan.UserID != userID {
+			return nil, errors.New(constant.ForbiddenAccess)
+		}
+	} else {
+		activePlan, err := u.schedulePlanService.GetActivePlanByUserID(ctx, userID)
+		if err != nil {
+			return nil, err
+		}
+		targetPlanID = activePlan.ID
+	}
+	return u.scheduleTaskService.GetBySchedulePlanID(ctx, targetPlanID)
 }

@@ -55,6 +55,7 @@ type RegisterRoutersIn struct {
 	AvailabilityCalendarController *ptm.AvailabilityCalendarController
 	ScheduleWindowController       *ptm.ScheduleWindowController
 	ScheduleEventController        *ptm.ScheduleEventController
+	ScheduleTaskController         *ptm.ScheduleTaskController
 
 	ProductController  *purchase.ProductController
 	AddressController  *purchase.AddressController
@@ -120,6 +121,7 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		p.AvailabilityCalendarController,
 		p.ScheduleWindowController,
 		p.ScheduleEventController,
+		p.ScheduleTaskController,
 	)
 
 	RegisterPurchaseRoutes(

@@ -24,6 +24,7 @@ func PtmModule() fx.Option {
 		fx.Provide(adapter.NewAvailabilityCalendarClientAdapter),
 		fx.Provide(adapter.NewScheduleWindowClientAdapter),
 		fx.Provide(adapter.NewScheduleEventClientAdapter),
+		fx.Provide(adapter.NewScheduleTaskClientAdapter),
 
 		// Provide service - PTM Task
 		fx.Provide(service.NewProjectService),
@@ -35,6 +36,7 @@ func PtmModule() fx.Option {
 		fx.Provide(service.NewAvailabilityCalendarService),
 		fx.Provide(service.NewScheduleWindowService),
 		fx.Provide(service.NewScheduleEventService),
+		fx.Provide(service.NewScheduleTaskService),
 
 		// Provide controller - PTM Task
 		fx.Provide(controller.NewProjectController),
@@ -46,5 +48,6 @@ func PtmModule() fx.Option {
 		fx.Provide(controller.NewAvailabilityCalendarController),
 		fx.Provide(controller.NewScheduleWindowController),
 		fx.Provide(controller.NewScheduleEventController),
+		fx.Provide(controller.NewScheduleTaskController),
 	)
 }

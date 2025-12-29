@@ -62,13 +62,10 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 			availabilityV1.PUT("", p.AvailabilityCalendarController.ReplaceAvailability)
 		}
 
-		// exceptionV1 := requiredAuthV1.Group("/calendar-exceptions")
-		// {
-		// 	exceptionV1.GET("", p.CalendarExceptionController.ListExceptions)
-		// 	exceptionV1.POST("", p.CalendarExceptionController.SaveExceptions)
-		// 	exceptionV1.PUT("", p.CalendarExceptionController.ReplaceExceptions)
-		// 	exceptionV1.DELETE("", p.CalendarExceptionController.DeleteExceptions)
-		// }
+		scheduleTaskV1 := requiredAuthV1.Group("/schedule-tasks")
+		{
+			scheduleTaskV1.GET("", p.ScheduleTaskController.GetTasksByPlanID)
+		}
 
 		windowV1 := requiredAuthV1.Group("/schedule-windows")
 		{
@@ -84,6 +81,14 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 			eventV1.POST("/:id/complete", p.ScheduleEventController.CompleteEvent)
 			eventV1.POST("/:id/split", p.ScheduleEventController.SplitEvent)
 		}
+
+		// exceptionV1 := requiredAuthV1.Group("/calendar-exceptions")
+		// {
+		// 	exceptionV1.GET("", p.CalendarExceptionController.ListExceptions)
+		// 	exceptionV1.POST("", p.CalendarExceptionController.SaveExceptions)
+		// 	exceptionV1.PUT("", p.CalendarExceptionController.ReplaceExceptions)
+		// 	exceptionV1.DELETE("", p.CalendarExceptionController.DeleteExceptions)
+		// }
 	}
 
 }
