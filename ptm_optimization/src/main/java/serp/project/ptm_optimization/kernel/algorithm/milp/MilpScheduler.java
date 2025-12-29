@@ -13,6 +13,8 @@ import com.google.ortools.linearsolver.MPVariable;
 
 import java.util.*;
 
+import org.springframework.stereotype.Component;
+
 import serp.project.ptm_optimization.kernel.algorithm.heuristic.dto.input.TaskInput;
 import serp.project.ptm_optimization.kernel.algorithm.heuristic.dto.input.Weights;
 import serp.project.ptm_optimization.kernel.algorithm.heuristic.dto.input.Window;
@@ -33,6 +35,8 @@ import serp.project.ptm_optimization.kernel.algorithm.heuristic.dto.output.UnSch
  * - Added warm-start capability to initialize MILP with heuristic solution
  * - Fallback to heuristic if problem size exceeds limits
  */
+
+@Component
 public class MilpScheduler {
 
     // MILP scalability limits (Phase 1 guards)

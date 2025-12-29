@@ -16,4 +16,8 @@ public class Weights {
     private Double wSwitch;
     private Double wFatigue;
     private Double wEnjoy;
+    
+    // Aliases for CP-SAT compatibility
+    public Double getPriorityWeight() { return wPriority; }
+    public Double getDeadlineWeight() { return wDeadline; }
 }

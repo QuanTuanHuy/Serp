@@ -18,4 +18,5 @@ public class Window {
     private Long dateMs; // midnight timestamp
     private Integer startMin;
     private Integer endMin;
+    private Boolean isDeepWork; // Whether this is a deep work window
 }
