@@ -140,3 +140,6 @@ export { Separator } from './separator';
 
 // Skeleton Component
 export { Skeleton } from './skeleton';
+
+// ScrollArea Component
+export { ScrollArea, ScrollBar } from './scroll-area';

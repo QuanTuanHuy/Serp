@@ -8,6 +8,7 @@ export * from './types';
 
 // API
 export * from './api/discussApi';
-
+// Components
+export * from './components';
 // Mocks
 export * from './mocks/mockData';
