@@ -347,11 +347,18 @@ export function getUserById(id: string) {
 export function createMockMessage(
   channelId: string,
   content: string,
+  attachments: Attachment[] = [],
   userId: string = CURRENT_USER_ID
 ): Message {
   const user = getUserById(userId) || MOCK_USERS[0];
+  const messageId = `msg-${Date.now()}`;
+  const messageAttachments = attachments.map((att) => ({
+    ...att,
+    messageId,
+  }));
+
   return {
-    id: `msg-${Date.now()}`,
+    id: messageId,
     channelId,
     userId,
     userName: user.name,
@@ -361,7 +368,7 @@ export function createMockMessage(
     threadCount: 0,
     mentions: [],
     reactions: [],
-    attachments: [],
+    attachments: messageAttachments,
     isEdited: false,
     isDeleted: false,
     createdAt: new Date().toISOString(),

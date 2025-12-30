@@ -13,6 +13,8 @@ export { MessageItem } from './MessageItem';
 export { EmojiPicker } from './EmojiPicker';
 export { ReactionPicker } from './ReactionPicker';
 export { ThreadIndicator } from './ThreadIndicator';
+export { AttachmentUploader } from './AttachmentUploader';
+export { AttachmentPreview } from './AttachmentPreview';
 export {
   OnlineStatusIndicator,
   OnlineStatusBadge,

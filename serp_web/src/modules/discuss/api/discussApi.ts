@@ -9,11 +9,13 @@ import type {
   Message,
   Activity,
   UserPresence,
+  Attachment,
   CreateChannelRequest,
   UpdateChannelRequest,
   SendMessageRequest,
   EditMessageRequest,
   AddReactionRequest,
+  UploadAttachmentRequest,
   ChannelFilters,
   MessageFilters,
   ActivityFilters,
@@ -335,12 +337,20 @@ export const discussApi = api.injectEndpoints({
      */
     sendMessage: builder.mutation<
       APIResponse<Message>,
-      { channelId: string; data: SendMessageRequest }
+      {
+        channelId: string;
+        data: SendMessageRequest;
+        attachments?: Attachment[];
+      }
     >({
-      queryFn: async ({ channelId, data }) => {
+      queryFn: async ({ channelId, data, attachments = [] }) => {
         await delay(MOCK_DELAY);
 
-        const newMessage = createMockMessage(channelId, data.content);
+        const newMessage = createMockMessage(
+          channelId,
+          data.content,
+          attachments
+        );
 
         if (data.type) {
           newMessage.type = data.type;
@@ -711,6 +721,46 @@ export const discussApi = api.injectEndpoints({
       providesTags: [{ type: 'DiscussActivity', id: 'LIST' }],
     }),
 
+    // ==================== Attachments ====================
+
+    /**
+     * Upload attachment
+     */
+    uploadAttachment: builder.mutation<
+      APIResponse<Attachment>,
+      UploadAttachmentRequest
+    >({
+      queryFn: async ({ file, channelId }) => {
+        await delay(MOCK_DELAY * 2); // Longer delay for file upload
+
+        // Mock file upload - in real app, this would upload to S3/MinIO
+        const mockAttachment: Attachment = {
+          id: `att-${Date.now()}`,
+          messageId: '', // Will be set when message is sent
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+          s3Key: `${channelId}/${Date.now()}-${file.name}`,
+          s3Bucket: 'discuss-attachments',
+          downloadUrl: URL.createObjectURL(file), // Temporary blob URL
+          thumbnailUrl: file.type.startsWith('image/')
+            ? URL.createObjectURL(file)
+            : undefined,
+          virusScanStatus: 'CLEAN',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        return {
+          data: {
+            success: true,
+            message: 'File uploaded successfully',
+            data: mockAttachment,
+          },
+        };
+      },
+    }),
+
     // ==================== Presence ====================
 
     /**
@@ -755,6 +805,9 @@ export const {
   useAddReactionMutation,
   useRemoveReactionMutation,
   useMarkAsReadMutation,
+
+  // Attachments
+  useUploadAttachmentMutation,
 
   // Activity
   useGetActivityFeedQuery,

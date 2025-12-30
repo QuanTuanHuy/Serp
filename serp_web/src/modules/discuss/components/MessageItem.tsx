@@ -16,6 +16,7 @@ import {
 import { Edit2, Trash2, Reply, MoreVertical, Check } from 'lucide-react';
 import type { Message } from '../types';
 import { ReactionPicker } from './ReactionPicker';
+import { AttachmentPreview } from './AttachmentPreview';
 
 interface MessageItemProps {
   message: Message;
@@ -162,6 +163,19 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             <p className='text-sm leading-relaxed break-words whitespace-pre-wrap'>
               {message.content}
             </p>
+
+            {/* Attachments */}
+            {message.attachments && message.attachments.length > 0 && (
+              <div className='mt-3 space-y-2'>
+                {message.attachments.map((attachment) => (
+                  <AttachmentPreview
+                    key={attachment.id}
+                    attachment={attachment}
+                    allAttachments={message.attachments}
+                  />
+                ))}
+              </div>
+            )}
 
             {/* Metadata */}
             <div

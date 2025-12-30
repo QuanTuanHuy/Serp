@@ -35,7 +35,7 @@ import {
   useAddReactionMutation,
   useRemoveReactionMutation,
 } from '../api/discussApi';
-import type { Channel, Message } from '../types';
+import type { Channel, Message, Attachment } from '../types';
 
 interface ChatWindowProps {
   channel: Channel;
@@ -91,15 +91,20 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const pagination = messagesResponse?.data?.pagination;
   const hasMore = pagination ? page < pagination.totalPages : false;
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = async (
+    content: string,
+    attachments?: Attachment[]
+  ) => {
     try {
       await sendMessage({
         channelId: channel.id,
         data: {
           content,
           type: 'TEXT',
+          attachmentIds: attachments?.map((att) => att.id),
           parentId: replyingTo?.id,
         },
+        attachments: attachments || [],
       }).unwrap();
 
       // Clear reply state

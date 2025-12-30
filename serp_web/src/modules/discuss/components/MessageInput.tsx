@@ -8,13 +8,23 @@ Description: Part of Serp Project - Message input component with rich text suppo
 import React, { useState, useRef, KeyboardEvent } from 'react';
 import { cn } from '@/shared/utils';
 import { Button, Textarea } from '@/shared/components/ui';
-import { Send, Paperclip, AtSign, Bold, Italic, Code, X } from 'lucide-react';
-import type { Message } from '../types';
+import {
+  Send,
+  Paperclip,
+  AtSign,
+  Bold,
+  Italic,
+  Code,
+  X,
+  File as FileIcon,
+} from 'lucide-react';
+import type { Message, Attachment } from '../types';
 import { EmojiPicker } from './EmojiPicker';
+import { useUploadAttachmentMutation } from '../api/discussApi';
 
 interface MessageInputProps {
   channelId: string;
-  onSendMessage: (content: string) => void;
+  onSendMessage: (content: string, attachments?: Attachment[]) => void;
   replyingTo?: Message | null;
   onCancelReply?: () => void;
   editingMessage?: Message | null;
@@ -35,7 +45,11 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 }) => {
   const [content, setContent] = useState(editingMessage?.content || '');
   const [isFocused, setIsFocused] = useState(false);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [uploadAttachment, { isLoading: isUploading }] =
+    useUploadAttachmentMutation();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Update content when editing message changes
   React.useEffect(() => {
@@ -47,15 +61,51 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
   const handleSend = () => {
     const trimmedContent = content.trim();
-    if (!trimmedContent) return;
+    if (!trimmedContent && attachments.length === 0) return;
 
-    onSendMessage(trimmedContent);
+    // Send message with attachments
+    onSendMessage(trimmedContent, attachments);
     setContent('');
+    setAttachments([]);
 
     // Reset height
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    for (const file of Array.from(files)) {
+      try {
+        const result = await uploadAttachment({ file, channelId }).unwrap();
+        if (result.success) {
+          setAttachments((prev) => [...prev, result.data]);
+        }
+      } catch (error) {
+        console.error('Upload failed:', error);
+        // TODO: Show error notification
+      }
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveAttachment = (attachmentId: string) => {
+    setAttachments((prev) => prev.filter((att) => att.id !== attachmentId));
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -125,7 +175,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     }, 0);
   };
 
-  const canSend = content.trim().length > 0;
+  const canSend = content.trim().length > 0 || attachments.length > 0;
 
   return (
     <div
@@ -208,12 +258,60 @@ export const MessageInput: React.FC<MessageInputProps> = ({
               triggerClassName='p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors'
             />
             <button
-              className='p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors'
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className='p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-50'
               title='Attach file'
             >
               <Paperclip className='h-4 w-4 text-slate-600 dark:text-slate-400' />
             </button>
+            <input
+              ref={fileInputRef}
+              type='file'
+              multiple
+              onChange={handleFileSelect}
+              className='hidden'
+              accept='image/*,.pdf,.doc,.docx,.zip'
+            />
           </div>
+
+          {/* Attachment previews */}
+          {attachments.length > 0 && (
+            <div className='flex flex-wrap gap-2 pb-2 border-b border-slate-200 dark:border-slate-700'>
+              {attachments.map((attachment) => (
+                <div
+                  key={attachment.id}
+                  className='group relative flex items-center gap-2 px-3 py-2 bg-violet-50 dark:bg-violet-950/30 rounded-lg border border-violet-200 dark:border-violet-800'
+                >
+                  {attachment.fileType.startsWith('image/') ? (
+                    <img
+                      src={attachment.thumbnailUrl || attachment.downloadUrl}
+                      alt={attachment.fileName}
+                      className='w-10 h-10 object-cover rounded'
+                    />
+                  ) : (
+                    <div className='w-10 h-10 bg-violet-100 dark:bg-violet-900/50 rounded flex items-center justify-center'>
+                      <FileIcon className='w-5 h-5 text-violet-600 dark:text-violet-400' />
+                    </div>
+                  )}
+                  <div className='flex-1 min-w-0'>
+                    <p className='text-xs font-medium text-slate-700 dark:text-slate-300 truncate max-w-[120px]'>
+                      {attachment.fileName}
+                    </p>
+                    <p className='text-xs text-slate-500 dark:text-slate-400'>
+                      {formatFileSize(attachment.fileSize)}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleRemoveAttachment(attachment.id)}
+                    className='p-1 hover:bg-violet-200 dark:hover:bg-violet-900 rounded transition-colors'
+                  >
+                    <X className='h-3.5 w-3.5 text-slate-500 dark:text-slate-400' />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Text input */}
           <div className='flex items-end gap-3'>
