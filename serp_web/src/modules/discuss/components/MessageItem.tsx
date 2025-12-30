@@ -13,15 +13,9 @@ import {
   AvatarImage,
   Badge,
 } from '@/shared/components/ui';
-import {
-  Edit2,
-  Trash2,
-  Reply,
-  MoreVertical,
-  Check,
-  CheckCheck,
-} from 'lucide-react';
+import { Edit2, Trash2, Reply, MoreVertical, Check } from 'lucide-react';
 import type { Message } from '../types';
+import { ReactionPicker } from './ReactionPicker';
 
 interface MessageItemProps {
   message: Message;
@@ -31,6 +25,8 @@ interface MessageItemProps {
   onEdit?: (message: Message) => void;
   onDelete?: (message: Message) => void;
   onReply?: (message: Message) => void;
+  onReaction?: (messageId: string, emoji: string) => void;
+  onRemoveReaction?: (messageId: string, emoji: string) => void;
 }
 
 const formatMessageTime = (timestamp: string) => {
@@ -59,8 +55,22 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   onEdit,
   onDelete,
   onReply,
+  onReaction,
+  onRemoveReaction,
 }) => {
   const [isHovered, setIsHovered] = React.useState(false);
+
+  const handleReactionClick = (emoji: string) => {
+    // Check if user already reacted with this emoji
+    const existingReaction = message.reactions.find((r) => r.emoji === emoji);
+    const currentUserId = '1'; // TODO: Get from auth context
+
+    if (existingReaction?.userIds.includes(currentUserId)) {
+      onRemoveReaction?.(message.id, emoji);
+    } else {
+      onReaction?.(message.id, emoji);
+    }
+  };
 
   return (
     <div
@@ -186,16 +196,38 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
           {/* Reactions */}
           {message.reactions && message.reactions.length > 0 && (
-            <div className='absolute -bottom-2 left-4 flex gap-1'>
-              {message.reactions.slice(0, 3).map((reaction, idx) => (
-                <Badge
-                  key={idx}
-                  variant='secondary'
-                  className='h-5 px-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm'
-                >
-                  {reaction.emoji} {reaction.count}
-                </Badge>
-              ))}
+            <div className='absolute -bottom-3 left-4 flex gap-1 flex-wrap'>
+              {message.reactions.map((reaction, idx) => {
+                const currentUserId = '1'; // TODO: Get from auth context
+                const isUserReacted = reaction.userIds.includes(currentUserId);
+
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => handleReactionClick(reaction.emoji)}
+                    className={cn(
+                      'h-6 px-2 text-xs rounded-full transition-all duration-200',
+                      'border shadow-sm hover:shadow-md',
+                      'flex items-center gap-1',
+                      isUserReacted
+                        ? 'bg-gradient-to-r from-violet-100 to-fuchsia-100 dark:from-violet-900/50 dark:to-fuchsia-900/50 border-violet-300 dark:border-violet-700 scale-105'
+                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-violet-300 dark:hover:border-violet-700'
+                    )}
+                  >
+                    <span>{reaction.emoji}</span>
+                    <span
+                      className={cn(
+                        'font-semibold',
+                        isUserReacted
+                          ? 'text-violet-700 dark:text-violet-300'
+                          : 'text-slate-600 dark:text-slate-400'
+                      )}
+                    >
+                      {reaction.count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -207,6 +239,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 isOwn ? 'right-full mr-2' : 'left-full ml-2'
               )}
             >
+              <ReactionPicker
+                onReactionSelect={(emoji) => onReaction?.(message.id, emoji)}
+                existingReactions={message.reactions.map((r) => r.emoji)}
+              />
+
               <button
                 onClick={() => onReply?.(message)}
                 className='p-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors'

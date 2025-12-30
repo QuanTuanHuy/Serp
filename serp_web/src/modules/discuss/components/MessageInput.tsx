@@ -8,17 +8,9 @@ Description: Part of Serp Project - Message input component with rich text suppo
 import React, { useState, useRef, KeyboardEvent } from 'react';
 import { cn } from '@/shared/utils';
 import { Button, Textarea } from '@/shared/components/ui';
-import {
-  Send,
-  Paperclip,
-  Smile,
-  AtSign,
-  Bold,
-  Italic,
-  Code,
-  X,
-} from 'lucide-react';
+import { Send, Paperclip, AtSign, Bold, Italic, Code, X } from 'lucide-react';
 import type { Message } from '../types';
+import { EmojiPicker } from './EmojiPicker';
 
 interface MessageInputProps {
   channelId: string;
@@ -115,6 +107,24 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     }, 0);
   };
 
+  const handleEmojiSelect = (emoji: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const newText =
+      content.substring(0, start) + emoji + content.substring(end);
+
+    setContent(newText);
+
+    // Restore focus and cursor position
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + emoji.length, start + emoji.length);
+    }, 0);
+  };
+
   const canSend = content.trim().length > 0;
 
   return (
@@ -193,12 +203,10 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             >
               <AtSign className='h-4 w-4 text-slate-600 dark:text-slate-400' />
             </button>
-            <button
-              className='p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors'
-              title='Emoji'
-            >
-              <Smile className='h-4 w-4 text-slate-600 dark:text-slate-400' />
-            </button>
+            <EmojiPicker
+              onEmojiSelect={handleEmojiSelect}
+              triggerClassName='p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors'
+            />
             <button
               className='p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors'
               title='Attach file'

@@ -297,10 +297,10 @@ export const discussApi = api.injectEndpoints({
           );
         }
 
-        // Sort by createdAt descending (newest first)
+        // Sort by createdAt ascending (oldest first for chat display)
         messages.sort(
           (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         );
 
         // Apply pagination
@@ -473,9 +473,9 @@ export const discussApi = api.injectEndpoints({
         await delay(MOCK_DELAY);
 
         const messages = getMessagesByChannelId(channelId);
-        const message = messages.find((msg) => msg.id === messageId);
+        const messageIndex = messages.findIndex((msg) => msg.id === messageId);
 
-        if (!message) {
+        if (messageIndex === -1) {
           return {
             error: {
               status: 404,
@@ -484,31 +484,58 @@ export const discussApi = api.injectEndpoints({
           };
         }
 
+        const message = messages[messageIndex];
+
         // Find existing reaction
         const existingReaction = message.reactions.find(
           (r) => r.emoji === data.emoji
         );
 
+        let newReactions;
         if (existingReaction) {
           // Add user to existing reaction
           if (!existingReaction.userIds.includes(CURRENT_USER_ID)) {
-            existingReaction.userIds.push(CURRENT_USER_ID);
-            existingReaction.count = existingReaction.userIds.length;
+            newReactions = message.reactions.map((r) =>
+              r.emoji === data.emoji
+                ? {
+                    ...r,
+                    userIds: [...r.userIds, CURRENT_USER_ID],
+                    count: r.userIds.length + 1,
+                  }
+                : r
+            );
+          } else {
+            newReactions = message.reactions;
           }
         } else {
           // Create new reaction
-          message.reactions.push({
-            emoji: data.emoji,
-            userIds: [CURRENT_USER_ID],
-            count: 1,
-          });
+          newReactions = [
+            ...message.reactions,
+            {
+              emoji: data.emoji,
+              userIds: [CURRENT_USER_ID],
+              count: 1,
+            },
+          ];
         }
+
+        // Create new message object
+        const updatedMessage = {
+          ...message,
+          reactions: newReactions,
+        };
+
+        // Update in MOCK_MESSAGES
+        if (!MOCK_MESSAGES[channelId]) {
+          MOCK_MESSAGES[channelId] = [];
+        }
+        MOCK_MESSAGES[channelId][messageIndex] = updatedMessage;
 
         return {
           data: {
             success: true,
             message: 'Reaction added successfully',
-            data: message,
+            data: updatedMessage,
           },
         };
       },
@@ -528,9 +555,9 @@ export const discussApi = api.injectEndpoints({
         await delay(MOCK_DELAY);
 
         const messages = getMessagesByChannelId(channelId);
-        const message = messages.find((msg) => msg.id === messageId);
+        const messageIndex = messages.findIndex((msg) => msg.id === messageId);
 
-        if (!message) {
+        if (messageIndex === -1) {
           return {
             error: {
               status: 404,
@@ -539,26 +566,47 @@ export const discussApi = api.injectEndpoints({
           };
         }
 
+        const message = messages[messageIndex];
         const reaction = message.reactions.find((r) => r.emoji === emoji);
+
+        let newReactions;
         if (reaction) {
-          reaction.userIds = reaction.userIds.filter(
+          const newUserIds = reaction.userIds.filter(
             (id) => id !== CURRENT_USER_ID
           );
-          reaction.count = reaction.userIds.length;
+          const newCount = newUserIds.length;
 
           // Remove reaction if no users left
-          if (reaction.count === 0) {
-            message.reactions = message.reactions.filter(
-              (r) => r.emoji !== emoji
+          if (newCount === 0) {
+            newReactions = message.reactions.filter((r) => r.emoji !== emoji);
+          } else {
+            newReactions = message.reactions.map((r) =>
+              r.emoji === emoji
+                ? { ...r, userIds: newUserIds, count: newCount }
+                : r
             );
           }
+        } else {
+          newReactions = message.reactions;
         }
+
+        // Create new message object
+        const updatedMessage = {
+          ...message,
+          reactions: newReactions,
+        };
+
+        // Update in MOCK_MESSAGES
+        if (!MOCK_MESSAGES[channelId]) {
+          MOCK_MESSAGES[channelId] = [];
+        }
+        MOCK_MESSAGES[channelId][messageIndex] = updatedMessage;
 
         return {
           data: {
             success: true,
             message: 'Reaction removed successfully',
-            data: message,
+            data: updatedMessage,
           },
         };
       },

@@ -28,7 +28,13 @@ import {
 } from 'lucide-react';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
-import { useGetMessagesQuery, useSendMessageMutation } from '../api/discussApi';
+import { OnlineStatusIndicator } from './OnlineStatusIndicator';
+import {
+  useGetMessagesQuery,
+  useSendMessageMutation,
+  useAddReactionMutation,
+  useRemoveReactionMutation,
+} from '../api/discussApi';
 import type { Channel, Message } from '../types';
 
 interface ChatWindowProps {
@@ -78,6 +84,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   // Send message mutation
   const [sendMessage] = useSendMessageMutation();
+  const [addReaction] = useAddReactionMutation();
+  const [removeReaction] = useRemoveReactionMutation();
 
   const messages = messagesResponse?.data?.data || [];
   const pagination = messagesResponse?.data?.pagination;
@@ -119,6 +127,30 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const handleReplyMessage = (message: Message) => {
     setReplyingTo(message);
     setEditingMessage(null);
+  };
+
+  const handleReaction = async (messageId: string, emoji: string) => {
+    try {
+      await addReaction({
+        messageId,
+        channelId: channel.id,
+        data: { emoji },
+      }).unwrap();
+    } catch (error) {
+      console.error('Failed to add reaction:', error);
+    }
+  };
+
+  const handleRemoveReaction = async (messageId: string, emoji: string) => {
+    try {
+      await removeReaction({
+        messageId,
+        channelId: channel.id,
+        emoji,
+      }).unwrap();
+    } catch (error) {
+      console.error('Failed to remove reaction:', error);
+    }
   };
 
   const handleCancelReply = () => {
@@ -164,9 +196,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               </div>
               <div className='flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400'>
                 {channel.type === 'DIRECT' ? (
-                  <span className='flex items-center gap-1'>
-                    <span className='h-2 w-2 rounded-full bg-emerald-500' />
-                    Online
+                  <span className='flex items-center gap-1.5'>
+                    <OnlineStatusIndicator status='online' size='sm' />
+                    <span className='text-emerald-600 dark:text-emerald-400 font-medium'>
+                      Online
+                    </span>
                   </span>
                 ) : (
                   <>
@@ -254,6 +288,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           onEditMessage={handleEditMessage}
           onDeleteMessage={handleDeleteMessage}
           onReplyMessage={handleReplyMessage}
+          onReaction={handleReaction}
+          onRemoveReaction={handleRemoveReaction}
         />
       </div>
 

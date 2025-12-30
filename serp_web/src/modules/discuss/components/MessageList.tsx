@@ -22,6 +22,8 @@ interface MessageListProps {
   onEditMessage?: (message: Message) => void;
   onDeleteMessage?: (message: Message) => void;
   onReplyMessage?: (message: Message) => void;
+  onReaction?: (messageId: string, emoji: string) => void;
+  onRemoveReaction?: (messageId: string, emoji: string) => void;
   className?: string;
 }
 
@@ -120,6 +122,8 @@ export const MessageList: React.FC<MessageListProps> = ({
   onEditMessage,
   onDeleteMessage,
   onReplyMessage,
+  onReaction,
+  onRemoveReaction,
   className,
 }) => {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -282,6 +286,8 @@ export const MessageList: React.FC<MessageListProps> = ({
                   onEdit={onEditMessage}
                   onDelete={onDeleteMessage}
                   onReply={onReplyMessage}
+                  onReaction={onReaction}
+                  onRemoveReaction={onRemoveReaction}
                 />
               );
             })}
