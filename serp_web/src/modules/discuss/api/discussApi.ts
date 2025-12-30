@@ -234,8 +234,8 @@ export const discussApi = api.injectEndpoints({
       queryFn: async (id) => {
         await delay(MOCK_DELAY);
 
-        const channel = getChannelById(id);
-        if (!channel) {
+        const channelIndex = MOCK_CHANNELS.findIndex((ch) => ch.id === id);
+        if (channelIndex === -1) {
           return {
             error: {
               status: 404,
@@ -244,8 +244,12 @@ export const discussApi = api.injectEndpoints({
           };
         }
 
-        channel.isArchived = true;
-        channel.updatedAt = new Date().toISOString();
+        const channel = {
+          ...MOCK_CHANNELS[channelIndex],
+          isArchived: true,
+          updatedAt: new Date().toISOString(),
+        };
+        MOCK_CHANNELS[channelIndex] = channel;
 
         return {
           data: {
@@ -351,12 +355,17 @@ export const discussApi = api.injectEndpoints({
         }
         MOCK_MESSAGES[channelId].push(newMessage);
 
-        // Update channel's last message
-        const channel = getChannelById(channelId);
-        if (channel) {
-          channel.lastMessage = data.content;
-          channel.lastMessageAt = newMessage.createdAt;
-          channel.updatedAt = newMessage.createdAt;
+        // Update channel's last message (create new object to avoid mutation)
+        const channelIndex = MOCK_CHANNELS.findIndex(
+          (ch) => ch.id === channelId
+        );
+        if (channelIndex !== -1) {
+          MOCK_CHANNELS[channelIndex] = {
+            ...MOCK_CHANNELS[channelIndex],
+            lastMessage: data.content,
+            lastMessageAt: newMessage.createdAt,
+            updatedAt: newMessage.createdAt,
+          };
         }
 
         return {
@@ -568,9 +577,14 @@ export const discussApi = api.injectEndpoints({
       queryFn: async ({ channelId }) => {
         await delay(MOCK_DELAY);
 
-        const channel = getChannelById(channelId);
-        if (channel) {
-          channel.unreadCount = 0;
+        const channelIndex = MOCK_CHANNELS.findIndex(
+          (ch) => ch.id === channelId
+        );
+        if (channelIndex !== -1) {
+          MOCK_CHANNELS[channelIndex] = {
+            ...MOCK_CHANNELS[channelIndex],
+            unreadCount: 0,
+          };
         }
 
         return {
