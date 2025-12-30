@@ -7,7 +7,7 @@ export { ChannelList } from './ChannelList';
 export { ChannelItem } from './ChannelItem';
 export { ChannelGroupHeader } from './ChannelGroupHeader';
 export { ChatWindow } from './ChatWindow';
-export { MessageList } from './MessageList';
+export { MessageList, type MessageListRef } from './MessageList';
 export { MessageInput } from './MessageInput';
 export { MessageItem } from './MessageItem';
 export { EmojiPicker } from './EmojiPicker';
@@ -15,6 +15,9 @@ export { ReactionPicker } from './ReactionPicker';
 export { ThreadIndicator } from './ThreadIndicator';
 export { AttachmentUploader } from './AttachmentUploader';
 export { AttachmentPreview } from './AttachmentPreview';
+export { SearchBar } from './SearchBar';
+export { SearchResults } from './SearchResults';
+export { SearchDialog } from './SearchDialog';
 export {
   OnlineStatusIndicator,
   OnlineStatusBadge,

@@ -5,7 +5,7 @@ Description: Part of Serp Project - Chat window component for discuss module
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { cn } from '@/shared/utils';
 import {
   Avatar,
@@ -26,9 +26,10 @@ import {
   Search,
   MoreVertical,
 } from 'lucide-react';
-import { MessageList } from './MessageList';
+import { MessageList, type MessageListRef } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { OnlineStatusIndicator } from './OnlineStatusIndicator';
+import { SearchDialog } from './SearchDialog';
 import {
   useGetMessagesQuery,
   useSendMessageMutation,
@@ -71,6 +72,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [page, setPage] = useState(1);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const messageListRef = useRef<MessageListRef>(null);
 
   // Fetch messages
   const {
@@ -249,6 +252,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             <Button
               variant='ghost'
               size='sm'
+              onClick={() => setSearchOpen(true)}
               className='text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
             >
               <Search className='h-5 w-5' />
@@ -284,6 +288,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       {/* Messages */}
       <div className='flex-1 overflow-hidden'>
         <MessageList
+          ref={messageListRef}
           messages={messages}
           currentUserId={currentUserId}
           isLoading={isLoading}
@@ -310,6 +315,28 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           placeholder={`Message ${channel.type === 'DIRECT' ? channel.name : `#${channel.name}`}`}
         />
       </div>
+
+      {/* Search Dialog */}
+      <SearchDialog
+        open={searchOpen}
+        onOpenChange={setSearchOpen}
+        onResultClick={(clickedChannelId, messageId) => {
+          if (clickedChannelId === channel.id) {
+            // Same channel - scroll to message
+            messageListRef.current?.scrollToMessage(messageId);
+          } else {
+            // Different channel - show notification
+            console.log('Message is in different channel:', {
+              clickedChannelId,
+              messageId,
+            });
+            // TODO: Navigate to different channel or show toast
+            alert(
+              'This message is in a different channel. Please switch channels to view it.'
+            );
+          }
+        }}
+      />
     </div>
   );
 };

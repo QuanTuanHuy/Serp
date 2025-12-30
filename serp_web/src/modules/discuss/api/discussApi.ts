@@ -19,6 +19,9 @@ import type {
   ChannelFilters,
   MessageFilters,
   ActivityFilters,
+  SearchFilters,
+  SearchResult,
+  GroupedSearchResults,
   PaginationParams,
   APIResponse,
   PaginatedResponse,
@@ -761,6 +764,163 @@ export const discussApi = api.injectEndpoints({
       },
     }),
 
+    // ==================== Search ====================
+
+    /**
+     * Search messages across channels
+     */
+    searchMessages: builder.query<
+      APIResponse<PaginatedResponse<GroupedSearchResults>>,
+      {
+        query: string;
+        filters?: SearchFilters;
+        pagination: PaginationParams;
+      }
+    >({
+      queryFn: async ({ query, filters = {}, pagination }) => {
+        await delay(MOCK_DELAY);
+
+        if (!query || query.trim().length === 0) {
+          return {
+            data: {
+              success: true,
+              message: 'Empty query',
+              data: {
+                data: [],
+                pagination: {
+                  page: pagination.page,
+                  limit: pagination.limit,
+                  total: 0,
+                  totalPages: 0,
+                },
+              },
+            },
+          };
+        }
+
+        const searchTerm = query.toLowerCase().trim();
+
+        // Flatten all messages from all channels
+        const allMessages: Message[] = Object.values(MOCK_MESSAGES).flat();
+
+        // Filter messages based on search query and filters
+        const filteredMessages = allMessages.filter((msg) => {
+          // Text search
+          const matchesText = msg.content.toLowerCase().includes(searchTerm);
+
+          // Channel filter
+          const matchesChannel =
+            !filters.channelIds ||
+            filters.channelIds.length === 0 ||
+            filters.channelIds.includes(msg.channelId);
+
+          // User filter
+          const matchesUser = !filters.userId || msg.userId === filters.userId;
+
+          // Date range filter
+          const matchesDateRange =
+            (!filters.dateFrom ||
+              new Date(msg.createdAt) >= new Date(filters.dateFrom)) &&
+            (!filters.dateTo ||
+              new Date(msg.createdAt) <= new Date(filters.dateTo));
+
+          // Attachment filter
+          const matchesAttachments =
+            !filters.hasAttachments || msg.attachments.length > 0;
+
+          // Type filter
+          const matchesType =
+            !filters.messageType || msg.type === filters.messageType;
+
+          return (
+            matchesText &&
+            matchesChannel &&
+            matchesUser &&
+            matchesDateRange &&
+            matchesAttachments &&
+            matchesType
+          );
+        });
+
+        // Create search results with highlights
+        const searchResults: SearchResult[] = filteredMessages.map((msg) => {
+          const channel = getChannelById(msg.channelId);
+          const content = msg.content;
+          const searchIndex = content.toLowerCase().indexOf(searchTerm);
+
+          // Generate highlights (context around match)
+          const highlights: string[] = [];
+          if (searchIndex !== -1) {
+            const start = Math.max(0, searchIndex - 40);
+            const end = Math.min(
+              content.length,
+              searchIndex + searchTerm.length + 40
+            );
+            const highlight =
+              (start > 0 ? '...' : '') +
+              content.substring(start, end) +
+              (end < content.length ? '...' : '');
+            highlights.push(highlight);
+          }
+
+          return {
+            message: msg,
+            channel: channel!,
+            highlights,
+            relevanceScore: searchIndex === 0 ? 1.0 : 0.5, // Simple scoring
+          };
+        });
+
+        // Group by channel
+        const groupedByChannel = new Map<string, SearchResult[]>();
+        searchResults.forEach((result) => {
+          const channelId = result.channel.id;
+          if (!groupedByChannel.has(channelId)) {
+            groupedByChannel.set(channelId, []);
+          }
+          groupedByChannel.get(channelId)!.push(result);
+        });
+
+        // Convert to GroupedSearchResults
+        const groupedResults: GroupedSearchResults[] = Array.from(
+          groupedByChannel.entries()
+        ).map(([channelId, results]) => {
+          const channel = results[0].channel;
+          return {
+            channelId,
+            channelName: channel.name,
+            channelType: channel.type,
+            results: results.sort(
+              (a, b) => b.relevanceScore - a.relevanceScore
+            ),
+          };
+        });
+
+        // Pagination
+        const { page, limit } = pagination;
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + limit;
+        const paginatedResults = groupedResults.slice(startIndex, endIndex);
+
+        return {
+          data: {
+            success: true,
+            message: 'Search completed successfully',
+            data: {
+              data: paginatedResults,
+              pagination: {
+                page,
+                limit,
+                total: groupedResults.length,
+                totalPages: Math.ceil(groupedResults.length / limit),
+              },
+            },
+          },
+        };
+      },
+      providesTags: [{ type: 'Message', id: 'SEARCH' }],
+    }),
+
     // ==================== Presence ====================
 
     /**
@@ -805,6 +965,9 @@ export const {
   useAddReactionMutation,
   useRemoveReactionMutation,
   useMarkAsReadMutation,
+
+  // Search
+  useSearchMessagesQuery,
 
   // Attachments
   useUploadAttachmentMutation,

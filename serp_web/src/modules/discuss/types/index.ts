@@ -186,6 +186,31 @@ export interface ActivityFilters {
   dateTo?: string;
 }
 
+// ==================== Search ====================
+
+export interface SearchFilters {
+  channelIds?: string[];
+  userId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  hasAttachments?: boolean;
+  messageType?: MessageType;
+}
+
+export interface SearchResult {
+  message: Message;
+  channel: Channel;
+  highlights: string[];
+  relevanceScore: number;
+}
+
+export interface GroupedSearchResults {
+  channelId: string;
+  channelName: string;
+  channelType: ChannelType;
+  results: SearchResult[];
+}
+
 // ==================== Pagination ====================
 
 export interface PaginationParams {
