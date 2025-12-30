@@ -190,6 +190,11 @@ export const api = createApi({
     'logistics/Supplier',
     // Notification tags
     'Notification',
+    // Discuss tags
+    'Channel',
+    'Message',
+    'DiscussActivity',
+    'Presence',
   ],
 
   // Define endpoints in separate files for each module

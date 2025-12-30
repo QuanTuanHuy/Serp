@@ -490,7 +490,7 @@ Testing, optimization, documentation, deployment.
 ### **Week 7: Frontend Module Setup**
 
 #### **Day 1: Module Structure**
-- [ ] Create module directory
+- [x] Create module directory
   ```
   serp_web/src/modules/discuss/
   ├── api/
@@ -507,7 +507,7 @@ Testing, optimization, documentation, deployment.
   ```
 
 #### **Day 2-3: RTK Query API**
-- [ ] Create API endpoints (api/discussApi.ts)
+- [x] Create API endpoints (api/discussApi.ts)
   ```typescript
   export const discussApi = api.injectEndpoints({
     endpoints: (builder) => ({
