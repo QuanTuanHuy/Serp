@@ -5,7 +5,6 @@ Description: Part of Serp Project - Local Search Scheduler (Simulated Annealing)
 
 package serp.project.ptm_optimization.infrastructure.algorithm.localsearch;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +17,7 @@ import serp.project.ptm_optimization.infrastructure.algorithm.dto.output.PlanRes
 import serp.project.ptm_optimization.infrastructure.algorithm.dto.output.UnScheduleReason;
 import serp.project.ptm_optimization.infrastructure.algorithm.heuristic.GapBasedScheduler;
 import serp.project.ptm_optimization.kernel.utils.GapManager;
+import serp.project.ptm_optimization.kernel.utils.SchedulingUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -39,13 +39,23 @@ import java.util.stream.Collectors;
  * - Scales to 1000+ tasks
  */
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class LocalSearchScheduler {
     
     private final GapBasedScheduler gapBasedScheduler;
     private final GapManager gapManager;
+    private final SchedulingUtils schedulingUtils;
     private final Random random = new Random();
+    
+    public LocalSearchScheduler(
+            GapBasedScheduler gapBasedScheduler,
+            GapManager gapManager,
+            SchedulingUtils schedulingUtils
+    ) {
+        this.gapBasedScheduler = gapBasedScheduler;
+        this.gapManager = gapManager;
+        this.schedulingUtils = schedulingUtils;
+    }
     
     public PlanResult schedule(
         List<TaskInput> tasks,
@@ -259,8 +269,8 @@ public class LocalSearchScheduler {
                 return false;
             }
             
-            // Check window constraints
-            if (!isWithinAnyWindow(assignment, windows)) {
+            // Check window constraints using shared utility
+            if (!schedulingUtils.isWithinAnyWindow(assignment, windows)) {
                 return false;
             }
             
@@ -269,25 +279,14 @@ public class LocalSearchScheduler {
                 return false;
             }
             
-            // Check dependencies
-            if (!dependenciesSatisfied(assignment, task, state)) {
+            // Check dependencies using shared utility
+            Map<Long, Assignment> assignmentMap = schedulingUtils.buildAssignmentMap(state.getAssignments());
+            if (!schedulingUtils.dependenciesSatisfied(assignment, task, assignmentMap)) {
                 return false;
             }
         }
         
         return true;
-    }
-    
-    /**
-     * Check if assignment is within any window.
-     */
-    private boolean isWithinAnyWindow(Assignment assignment, List<Window> windows) {
-        return windows.stream()
-            .anyMatch(w -> 
-                Objects.equals(w.getDateMs(), assignment.getDateMs()) &&
-                assignment.getStartMin() >= w.getStartMin() &&
-                assignment.getEndMin() <= w.getEndMin()
-            );
     }
     
     /**
@@ -297,33 +296,6 @@ public class LocalSearchScheduler {
         return state.getAssignmentsOnDate(assignment.getDateMs()).stream()
             .filter(other -> !other.getTaskId().equals(assignment.getTaskId()))
             .anyMatch(other -> gapManager.overlaps(assignment, other));
-    }
-    
-    /**
-     * Check if dependencies are satisfied.
-     */
-    private boolean dependenciesSatisfied(Assignment assignment, TaskInput task, ScheduleState state) {
-        List<Long> deps = Optional.ofNullable(task.getDependentTaskIds()).orElse(Collections.emptyList());
-        
-        for (Long depId : deps) {
-            Assignment depAssignment = state.getAssignment(depId);
-            
-            if (depAssignment == null) {
-                return false; // Dependency not scheduled
-            }
-            
-            // Dependency must be before this task
-            if (depAssignment.getDateMs() > assignment.getDateMs()) {
-                return false;
-            }
-            
-            if (depAssignment.getDateMs().equals(assignment.getDateMs()) &&
-                depAssignment.getEndMin() > assignment.getStartMin()) {
-                return false;
-            }
-        }
-        
-        return true;
     }
     
     /**
@@ -338,27 +310,19 @@ public class LocalSearchScheduler {
     ) {
         double score = 0.0;
         
-        Map<Long, TaskInput> taskMap = tasks.stream()
-            .collect(Collectors.toMap(TaskInput::getTaskId, t -> t));
+        Map<Long, TaskInput> taskMap = schedulingUtils.buildTaskMap(tasks);
         
-        // 1. Priority score
+        // 1. Utility score for each assignment (includes priority and deadline)
         for (Assignment assignment : state.getAssignments()) {
             TaskInput task = taskMap.get(assignment.getTaskId());
-            if (task != null && task.getPriorityScore() != null) {
-                score += task.getPriorityScore() * weights.getWPriority();
-            }
-        }
-        
-        // 2. Deadline penalties
-        for (Assignment assignment : state.getAssignments()) {
-            TaskInput task = taskMap.get(assignment.getTaskId());
-            if (task != null && task.getDeadlineMs() != null) {
-                long endAbsMs = assignment.getDateMs() + assignment.getEndMin() * 60_000L;
-                if (endAbsMs > task.getDeadlineMs()) {
-                    long lateMs = endAbsMs - task.getDeadlineMs();
-                    double lateHours = lateMs / (60.0 * 60.0 * 1000.0);
-                    score -= lateHours * 10.0 * weights.getWDeadline();
-                }
+            if (task != null) {
+                score += schedulingUtils.calculateUtility(
+                    task, 
+                    assignment.getDateMs(), 
+                    assignment.getStartMin(), 
+                    assignment.getEndMin(), 
+                    weights
+                );
             }
         }
         
