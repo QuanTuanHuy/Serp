@@ -6,9 +6,17 @@ Description: Part of Serp Project - Channel list component for discuss module
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { cn } from '@/shared/utils';
 import { Input, ScrollArea, Button } from '@/shared/components/ui';
-import { Search, Plus, Loader2, AlertCircle } from 'lucide-react';
+import {
+  Search,
+  Plus,
+  Loader2,
+  AlertCircle,
+  ArrowLeft,
+  MessageSquare,
+} from 'lucide-react';
 import { ChannelItem } from './ChannelItem';
 import { ChannelGroupHeader } from './ChannelGroupHeader';
 import { useGetChannelsQuery } from '../api/discussApi';
@@ -28,6 +36,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
   className,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isHeaderHovered, setIsHeaderHovered] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<ExpandedState>({
     DIRECT: true,
     GROUP: true,
@@ -138,9 +147,37 @@ export const ChannelList: React.FC<ChannelListProps> = ({
       {/* Header */}
       <div className='flex-shrink-0 px-4 py-3 border-b border-slate-200 dark:border-slate-700'>
         <div className='flex items-center justify-between mb-3'>
-          <h2 className='text-lg font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent'>
-            Discuss
-          </h2>
+          <Link
+            href='/home'
+            className='flex items-center gap-2 group'
+            onMouseEnter={() => setIsHeaderHovered(true)}
+            onMouseLeave={() => setIsHeaderHovered(false)}
+          >
+            <div
+              className={cn(
+                'flex h-8 w-8 items-center justify-center rounded-md transition-all duration-200',
+                isHeaderHovered
+                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                  : 'bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400'
+              )}
+            >
+              {isHeaderHovered ? (
+                <ArrowLeft className='h-5 w-5' />
+              ) : (
+                <MessageSquare className='h-5 w-5' />
+              )}
+            </div>
+            <h2
+              className={cn(
+                'text-lg font-bold transition-colors',
+                !isHeaderHovered &&
+                  'bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent',
+                isHeaderHovered && 'text-slate-700 dark:text-slate-200'
+              )}
+            >
+              Discuss
+            </h2>
+          </Link>
           {totalUnread > 0 && (
             <span className='px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-br from-rose-500 to-pink-500 text-white shadow-sm'>
               {totalUnread > 99 ? '99+' : totalUnread}
