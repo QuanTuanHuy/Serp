@@ -11,10 +11,10 @@ import org.springframework.stereotype.Component;
 import serp.project.ptm_optimization.core.domain.enums.StrategyType;
 import serp.project.ptm_optimization.core.port.factory.ISchedulingStrategyFactory;
 import serp.project.ptm_optimization.core.port.strategy.ISchedulingStrategy;
-import serp.project.ptm_optimization.kernel.algorithm.strategy.CpSatStrategy;
-import serp.project.ptm_optimization.kernel.algorithm.strategy.HeuristicStrategy;
-import serp.project.ptm_optimization.kernel.algorithm.strategy.LocalSearchStrategy;
-import serp.project.ptm_optimization.kernel.algorithm.strategy.MilpStrategy;
+import serp.project.ptm_optimization.infrastructure.algorithm.strategy.CpSatStrategy;
+import serp.project.ptm_optimization.infrastructure.algorithm.strategy.HeuristicStrategy;
+import serp.project.ptm_optimization.infrastructure.algorithm.strategy.LocalSearchStrategy;
+import serp.project.ptm_optimization.infrastructure.algorithm.strategy.MilpStrategy;
 
 import java.util.List;
 

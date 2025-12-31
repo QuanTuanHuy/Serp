@@ -6,9 +6,10 @@
 package serp.project.ptm_optimization.kernel.utils;
 
 import lombok.extern.slf4j.Slf4j;
+import serp.project.ptm_optimization.infrastructure.algorithm.dto.input.Window;
+import serp.project.ptm_optimization.infrastructure.algorithm.dto.output.Assignment;
+
 import org.springframework.stereotype.Component;
-import serp.project.ptm_optimization.kernel.algorithm.heuristic.dto.input.Window;
-import serp.project.ptm_optimization.kernel.algorithm.heuristic.dto.output.Assignment;
 
 import java.util.*;
 import java.util.stream.Collectors;

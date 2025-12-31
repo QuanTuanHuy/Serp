@@ -12,11 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 import serp.project.ptm_optimization.core.domain.enums.StrategyType;
 import serp.project.ptm_optimization.core.port.factory.ISchedulingStrategyFactory;
 import serp.project.ptm_optimization.core.port.strategy.ISchedulingStrategy;
-import serp.project.ptm_optimization.kernel.algorithm.heuristic.dto.input.Params;
-import serp.project.ptm_optimization.kernel.algorithm.heuristic.dto.input.TaskInput;
-import serp.project.ptm_optimization.kernel.algorithm.heuristic.dto.input.Weights;
-import serp.project.ptm_optimization.kernel.algorithm.heuristic.dto.input.Window;
-import serp.project.ptm_optimization.kernel.algorithm.heuristic.dto.output.PlanResult;
+import serp.project.ptm_optimization.infrastructure.algorithm.dto.input.Params;
+import serp.project.ptm_optimization.infrastructure.algorithm.dto.input.TaskInput;
+import serp.project.ptm_optimization.infrastructure.algorithm.dto.input.Weights;
+import serp.project.ptm_optimization.infrastructure.algorithm.dto.input.Window;
+import serp.project.ptm_optimization.infrastructure.algorithm.dto.output.PlanResult;
 
 import java.util.List;
 

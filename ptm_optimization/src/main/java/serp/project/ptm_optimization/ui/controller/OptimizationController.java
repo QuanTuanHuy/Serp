@@ -14,7 +14,7 @@ import serp.project.ptm_optimization.core.domain.dto.request.OptimizationRequest
 import serp.project.ptm_optimization.core.domain.dto.response.StrategyInfoResponse;
 import serp.project.ptm_optimization.core.domain.enums.StrategyType;
 import serp.project.ptm_optimization.core.usecase.OptimizationUseCase;
-import serp.project.ptm_optimization.kernel.algorithm.heuristic.dto.output.PlanResult;
+import serp.project.ptm_optimization.infrastructure.algorithm.dto.output.PlanResult;
 import serp.project.ptm_optimization.kernel.utils.ResponseUtils;
 
 @RestController

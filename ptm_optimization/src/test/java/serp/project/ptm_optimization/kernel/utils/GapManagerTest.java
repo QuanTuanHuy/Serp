@@ -7,8 +7,9 @@ package serp.project.ptm_optimization.kernel.utils;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import serp.project.ptm_optimization.kernel.algorithm.heuristic.dto.input.Window;
-import serp.project.ptm_optimization.kernel.algorithm.heuristic.dto.output.Assignment;
+
+import serp.project.ptm_optimization.infrastructure.algorithm.dto.input.Window;
+import serp.project.ptm_optimization.infrastructure.algorithm.dto.output.Assignment;
 
 import java.util.Arrays;
 import java.util.Collections;
