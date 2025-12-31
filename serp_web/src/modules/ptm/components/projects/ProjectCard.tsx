@@ -15,6 +15,9 @@ import {
   Star,
   AlertCircle,
   ListTodo,
+  ExternalLink,
+  Edit,
+  Trash2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/shared/components/ui/card';
 import { Progress } from '@/shared/components/ui/progress';
@@ -307,6 +310,7 @@ export function ProjectCard({
                       setEditDialogOpen(true);
                     }}
                   >
+                    <Edit className='mr-2 h-4 w-4' />
                     Edit
                   </DropdownMenuItem>
                   <DropdownMenuItem
@@ -315,7 +319,8 @@ export function ProjectCard({
                       onClick?.(project.id);
                     }}
                   >
-                    View Details
+                    <ExternalLink className='mr-2 h-4 w-4' />
+                    Open Details
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -325,6 +330,7 @@ export function ProjectCard({
                     }}
                     className='text-red-600'
                   >
+                    <Trash2 className='mr-2 h-4 w-4' />
                     Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>

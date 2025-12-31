@@ -304,7 +304,7 @@ export function UnscheduledTasksPanel({
 
               {expandedStatus.excluded && (
                 <div className='space-y-2 pl-6'>
-                  {excludedTasks.length === 0 ? (
+                  {excludedTasks?.length === 0 ? (
                     <div className='text-sm text-muted-foreground py-4 text-center'>
                       No excluded tasks
                     </div>
@@ -314,7 +314,7 @@ export function UnscheduledTasksPanel({
                         Parent tasks with subtasks are excluded from scheduling.
                         Schedule the subtasks instead.
                       </div>
-                      {excludedTasks.map(renderTaskCard)}
+                      {excludedTasks?.map(renderTaskCard)}
                     </>
                   )}
                 </div>
