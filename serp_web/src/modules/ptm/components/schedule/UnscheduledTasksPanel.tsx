@@ -295,7 +295,7 @@ export function UnscheduledTasksPanel({
                     <ChevronRight className='h-4 w-4' />
                   )}
                   <Ban className='h-4 w-4 text-muted-foreground' />
-                  <span>Excluded ({excludedTasks.length})</span>
+                  <span>Excluded ({excludedTasks?.length})</span>
                 </div>
                 {loadingExcluded && (
                   <div className='h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin' />

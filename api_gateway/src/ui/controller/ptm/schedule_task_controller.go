@@ -22,7 +22,7 @@ func NewScheduleTaskController(scheduleTaskService service.IScheduleTaskService)
 	}
 }
 
-func (s *ScheduleTaskController) GetTasksByPlanID(c *gin.Context) {
+func (s *ScheduleTaskController) ListScheduleTasks(c *gin.Context) {
 	params := map[string]string{}
 	queryParams := c.Request.URL.Query()
 	for key, values := range queryParams {

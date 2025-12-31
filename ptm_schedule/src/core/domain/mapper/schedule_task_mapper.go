@@ -7,8 +7,10 @@ package mapper
 
 import (
 	"github.com/serp/ptm-schedule/src/core/domain/dto/message"
+	"github.com/serp/ptm-schedule/src/core/domain/dto/request"
 	"github.com/serp/ptm-schedule/src/core/domain/entity"
 	"github.com/serp/ptm-schedule/src/core/domain/enum"
+	port "github.com/serp/ptm-schedule/src/core/port/store"
 )
 
 func TaskCreatedEventToEntity(event *message.TaskCreatedEvent) *entity.ScheduleTaskEntity {
@@ -54,4 +56,23 @@ func TaskUpdatedEventToEntity(event *message.TaskUpdatedEvent, scheduleTask *ent
 	}
 	return scheduleTask
 
+}
+
+func ToTaskFilter(req *request.TaskFilterRequest, userID int64) *port.ScheduleTaskFilter {
+	filter := port.NewScheduleTaskFilter()
+	filter.UserID = &userID
+
+	if req.PlanID != nil {
+		filter.PlanID = req.PlanID
+	}
+	if req.Status != nil {
+		filter.Statuses = []string{*req.Status}
+	}
+
+	filter.Limit = req.PageSize
+	filter.Offset = req.Page * req.PageSize
+	filter.SortBy = req.SortBy
+	filter.SortOrder = req.SortOrder
+
+	return filter
 }

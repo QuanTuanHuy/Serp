@@ -33,6 +33,7 @@ type IScheduleTaskService interface {
 	GetByScheduleTaskID(ctx context.Context, scheduleTaskID int64) (*entity.ScheduleTaskEntity, error)
 	GetByScheduleTaskIDs(ctx context.Context, scheduleTaskIDs []int64) ([]*entity.ScheduleTaskEntity, error)
 	GetByPlanIDAndTaskID(ctx context.Context, planID, taskID int64) (*entity.ScheduleTaskEntity, error)
+	ListScheduleTasks(ctx context.Context, filter *port.ScheduleTaskFilter) ([]*entity.ScheduleTaskEntity, int64, error)
 }
 
 type ScheduleTaskService struct {
@@ -247,6 +248,15 @@ func (s *ScheduleTaskService) GetByPlanIDAndTaskID(ctx context.Context, planID, 
 		return nil, fmt.Errorf(constant.ScheduleTaskNotFound)
 	}
 	return scheduleTask, nil
+}
+
+func (s *ScheduleTaskService) ListScheduleTasks(ctx context.Context, filter *port.ScheduleTaskFilter) ([]*entity.ScheduleTaskEntity, int64, error) {
+	scheduleTasks, totalCount, err := s.scheduleTaskPort.ListScheduleTasks(ctx, filter)
+	if err != nil {
+		log.Error(ctx, "Failed to list schedule tasks: ", err)
+		return nil, 0, err
+	}
+	return scheduleTasks, totalCount, nil
 }
 
 // Returns a map of old schedule_task_id -> new schedule_task_id
