@@ -64,7 +64,7 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 
 		scheduleTaskV1 := requiredAuthV1.Group("/schedule-tasks")
 		{
-			scheduleTaskV1.GET("", p.ScheduleTaskController.GetTasksByPlanID)
+			scheduleTaskV1.GET("", p.ScheduleTaskController.ListScheduleTasks)
 		}
 
 		windowV1 := requiredAuthV1.Group("/schedule-windows")

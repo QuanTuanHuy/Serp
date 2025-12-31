@@ -20,3 +20,10 @@ type UpdateScheduleTaskRequest struct {
 	BufferBeforeMin     *int           `json:"bufferBeforeMin" binding:"omitempty,min=0"`
 	BufferAfterMin      *int           `json:"bufferAfterMin" binding:"omitempty,min=0"`
 }
+
+type TaskFilterRequest struct {
+	BaseFilterRequest
+
+	PlanID *int64  `form:"planId,omitempty"`
+	Status *string `form:"status,omitempty" validate:"omitempty,oneof=PENDING SCHEDULED UNSCHEDULABLE PARTIAL COMPLETED COMPLETED EXCLUDED"`
+}

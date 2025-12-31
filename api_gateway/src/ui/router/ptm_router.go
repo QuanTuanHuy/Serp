@@ -78,7 +78,7 @@ func RegisterPtmRoutes(
 		// PTM Schedule - Schedule Tasks
 		scheduleTaskV1 := ptmV1.Group("/schedule-tasks")
 		{
-			scheduleTaskV1.GET("", scheduleTaskC.GetTasksByPlanID)
+			scheduleTaskV1.GET("", scheduleTaskC.ListScheduleTasks)
 		}
 
 		// PTM Schedule - Availability Calendar

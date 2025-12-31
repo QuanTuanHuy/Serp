@@ -8,6 +8,7 @@ package adapter
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/serp/ptm-schedule/src/core/domain/entity"
 	port "github.com/serp/ptm-schedule/src/core/port/store"
@@ -102,6 +103,54 @@ func (s *ScheduleTaskStoreAdapter) GetByPlanIDAndTaskID(ctx context.Context, pla
 		return nil, err
 	}
 	return mapper.ToScheduleTaskEntity(&scheduleTaskModel), nil
+}
+
+func (s *ScheduleTaskStoreAdapter) ListScheduleTasks(ctx context.Context, filter *port.ScheduleTaskFilter) ([]*entity.ScheduleTaskEntity, int64, error) {
+	var scheduleTasksModel []*model.ScheduleTaskModel
+	var totalCount int64
+
+	query := s.BuildScheduleTaskQuery(filter)
+	if err := query.WithContext(ctx).Find(&scheduleTasksModel).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to list schedule tasks: %w", err)
+	}
+
+	filter.Limit = 0
+	filter.Offset = 0
+	countQuery := s.BuildScheduleTaskQuery(filter)
+	if err := countQuery.WithContext(ctx).Count(&totalCount).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to count schedule tasks: %w", err)
+	}
+
+	return mapper.ToScheduleTaskEntities(scheduleTasksModel), totalCount, nil
+
+}
+
+func (s *ScheduleTaskStoreAdapter) BuildScheduleTaskQuery(filter *port.ScheduleTaskFilter) *gorm.DB {
+	if filter == nil {
+		filter = port.NewScheduleTaskFilter()
+	}
+
+	query := s.db.Model(&model.ScheduleTaskModel{})
+	if filter.UserID != nil {
+		query = query.Where("user_id = ?", *filter.UserID)
+	}
+	if filter.PlanID != nil {
+		query = query.Where("schedule_plan_id = ?", *filter.PlanID)
+	}
+	if len(filter.Statuses) > 0 {
+		query = query.Where("schedule_status IN ?", filter.Statuses)
+	}
+
+	if filter.SortBy != "" && filter.SortOrder != "" {
+		query = query.Order(fmt.Sprintf("%s %s", filter.SortBy, filter.SortOrder))
+	}
+	if filter.Limit > 0 {
+		query = query.Limit(filter.Limit)
+	}
+	if filter.Offset > 0 {
+		query = query.Offset(filter.Offset)
+	}
+	return query
 }
 
 func (s *ScheduleTaskStoreAdapter) UpdateScheduleTask(ctx context.Context, tx *gorm.DB, ID int64, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error) {

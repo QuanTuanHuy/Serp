@@ -14,6 +14,7 @@ import (
 	"github.com/serp/ptm-schedule/src/core/domain/dto/message"
 	"github.com/serp/ptm-schedule/src/core/domain/entity"
 	"github.com/serp/ptm-schedule/src/core/domain/enum"
+	port "github.com/serp/ptm-schedule/src/core/port/store"
 	"github.com/serp/ptm-schedule/src/core/service"
 	"gorm.io/gorm"
 )
@@ -24,7 +25,8 @@ type IScheduleTaskUseCase interface {
 	HandleTaskDeleted(ctx context.Context, event *message.TaskDeletedEvent) error
 	HandleTaskBulkDeleted(ctx context.Context, event *message.TaskBulkDeletedEvent) error
 
-	GetScheduleTasksByUserIDAndPlanID(ctx context.Context, userID int64, planID *int64) ([]*entity.ScheduleTaskEntity, error)
+	ListScheduleTasks(ctx context.Context, userID int64, filter *port.ScheduleTaskFilter) (
+		[]*entity.ScheduleTaskEntity, int64, error)
 }
 
 type ScheduleTaskUseCase struct {
@@ -189,27 +191,28 @@ func (u *ScheduleTaskUseCase) HandleTaskBulkDeleted(ctx context.Context, event *
 	return err
 }
 
-func (u *ScheduleTaskUseCase) GetScheduleTasksByUserIDAndPlanID(
+func (u *ScheduleTaskUseCase) ListScheduleTasks(
 	ctx context.Context,
 	userID int64,
-	planID *int64,
-) ([]*entity.ScheduleTaskEntity, error) {
+	filter *port.ScheduleTaskFilter,
+) ([]*entity.ScheduleTaskEntity, int64, error) {
 	var targetPlanID int64
-	if planID != nil && *planID > 0 {
-		targetPlanID = *planID
+	if filter.PlanID != nil && *filter.PlanID > 0 {
+		targetPlanID = *filter.PlanID
 		targetPlan, err := u.schedulePlanService.GetPlanByID(ctx, targetPlanID)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		if targetPlan.UserID != userID {
-			return nil, errors.New(constant.ForbiddenAccess)
+			return nil, 0, errors.New(constant.ForbiddenAccess)
 		}
 	} else {
 		activePlan, err := u.schedulePlanService.GetActivePlanByUserID(ctx, userID)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		targetPlanID = activePlan.ID
 	}
-	return u.scheduleTaskService.GetBySchedulePlanID(ctx, targetPlanID)
+	filter.PlanID = &targetPlanID
+	return u.scheduleTaskService.ListScheduleTasks(ctx, filter)
 }
