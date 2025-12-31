@@ -22,7 +22,7 @@ export type ScheduleTaskStatus =
   | 'SCHEDULED'
   | 'EXCLUDED'
   | 'COMPLETED';
-export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+export type Priority = 'LOW' | 'MEDIUM' | 'HIGH';
 
 export interface SchedulePlan {
   id: number;

@@ -126,7 +126,7 @@ export function ScheduleTaskEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='max-w-2xl max-h-[90vh] overflow-y-auto'>
+      <DialogContent className='!max-w-2xl max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
           <DialogTitle className='flex items-center gap-2'>
             Edit Scheduling Constraints
@@ -183,7 +183,6 @@ export function ScheduleTaskEditDialog({
                     <SelectItem value='LOW'>Low</SelectItem>
                     <SelectItem value='MEDIUM'>Medium</SelectItem>
                     <SelectItem value='HIGH'>High</SelectItem>
-                    <SelectItem value='URGENT'>Urgent</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -218,12 +217,13 @@ export function ScheduleTaskEditDialog({
               <span>Time Constraints</span>
             </div>
 
-            <div className='space-y-3'>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div className='space-y-2'>
                 <Label htmlFor='deadline'>Deadline (Optional)</Label>
                 <Input
                   id='deadline'
                   type='datetime-local'
+                  className='w-full'
                   value={
                     formData.deadlineMs
                       ? new Date(formData.deadlineMs).toISOString().slice(0, 16)
@@ -245,6 +245,7 @@ export function ScheduleTaskEditDialog({
                 <Input
                   id='earliestStart'
                   type='datetime-local'
+                  className='w-full'
                   value={
                     formData.earliestStartMs
                       ? new Date(formData.earliestStartMs)
@@ -270,6 +271,7 @@ export function ScheduleTaskEditDialog({
                 <Input
                   id='preferredStart'
                   type='datetime-local'
+                  className='w-full'
                   value={
                     formData.preferredStartMs
                       ? new Date(formData.preferredStartMs)
