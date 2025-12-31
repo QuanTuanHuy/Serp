@@ -1,11 +1,19 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics Module Layout
-*/
+/**
+ * Logistics Layout - Logistics Management Layout
+ *
+ * @author QuanTuanHuy
+ * @description Part of Serp Project - Logistics layout with sidebar navigation
+ */
 
-import { ReactNode } from 'react';
-import { LogisticsLayout } from '@/modules/logistics/components';
+import React from 'react';
+import { LogisticsLayout } from '@/modules/logistics/components/layout';
 
-export default function Layout({ children }: { children: ReactNode }) {
+interface LogisticsLayoutPageProps {
+  children: React.ReactNode;
+}
+
+export default function LogisticsLayoutPage({
+  children,
+}: LogisticsLayoutPageProps) {
   return <LogisticsLayout>{children}</LogisticsLayout>;
 }

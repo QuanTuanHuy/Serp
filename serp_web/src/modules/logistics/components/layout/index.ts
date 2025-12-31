@@ -1,9 +1,7 @@
-/**
- * Logistics Module - Layout Components
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - Barrel export for layout components
- */
+/*
+Author: QuanTuanHuy
+Description: Part of Serp Project - Logistics Layout Components
+*/
 
-export { LogisticsLayout } from './LogisticsLayout';
-export { LogisticsHeader } from './LogisticsHeader';
+export * from './LogisticsLayout';
+export * from './LogisticsHeader';

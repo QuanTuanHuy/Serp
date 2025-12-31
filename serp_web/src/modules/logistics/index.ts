@@ -1,21 +1,19 @@
-/**
- * Logistics Module - Main Barrel Export
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - Re-export all logistics module exports
- */
+/*
+Author: QuanTuanHuy
+Description: Part of Serp Project - Logistics Module Index
+*/
 
-// Types
+// Export API
+export * from './api/logisticsApi';
+
+// Export types
 export * from './types';
 
-// Services (RTK Query hooks)
-export * from './services';
-
-// Store (Redux actions and selectors)
+// Export store
 export * from './store';
 
-// Custom hooks
-export * from './hooks';
-
-// Components
+// Export components
 export * from './components';
+
+// Export pages
+export * from './pages';

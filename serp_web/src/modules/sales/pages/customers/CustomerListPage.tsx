@@ -211,7 +211,7 @@ const CustomerCard = ({
                 e.stopPropagation();
                 onEdit?.();
               }}
-              title='Edit'
+              title='Chỉnh sửa'
             >
               <Edit className='h-4 w-4' />
             </Button>
@@ -223,7 +223,7 @@ const CustomerCard = ({
                 e.stopPropagation();
                 onDelete?.();
               }}
-              title='Delete'
+              title='Xóa'
             >
               <Trash2 className='h-4 w-4' />
             </Button>
@@ -258,7 +258,7 @@ const CustomerCard = ({
               e.stopPropagation();
               // Email action
             }}
-            title='Send Email'
+            title='Gửi Email'
           >
             <Mail className='h-4 w-4' />
           </Button>
@@ -271,7 +271,7 @@ const CustomerCard = ({
                 e.stopPropagation();
                 // Call action
               }}
-              title='Call'
+              title='Gọi'
             >
               <Phone className='h-4 w-4' />
             </Button>
@@ -284,7 +284,7 @@ const CustomerCard = ({
               e.stopPropagation();
               onClick?.();
             }}
-            title='View Details'
+            title='Xem chi tiết'
           >
             <ExternalLink className='h-4 w-4' />
           </Button>
@@ -370,10 +370,8 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
       {/* Page Header */}
       <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
         <div>
-          <h1 className='text-2xl font-bold tracking-tight'>Customers</h1>
-          <p className='text-muted-foreground'>
-            Manage your customer relationships
-          </p>
+          <h1 className='text-2xl font-bold tracking-tight'>Khách hàng</h1>
+          <p className='text-muted-foreground'>Quản lý khách hàng của bạn</p>
         </div>
         <div className='flex items-center gap-2'>
           <Button
@@ -381,17 +379,25 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
             className='gap-2'
           >
             <Plus className='h-4 w-4' />
-            Add Customer
+            Thêm khách hàng mới
           </Button>
         </div>
       </div>
 
       {/* Quick Stats */}
       <div className='grid grid-cols-2 sm:grid-cols-3 gap-4'>
-        <StatsCard title='Total Customers' value={stats.total} icon={Users} />
-        <StatsCard title='Active' value={stats.active} icon={Users} />
         <StatsCard
-          title='Inactive'
+          title='Tổng số khách hàng'
+          value={stats.total}
+          icon={Users}
+        />
+        <StatsCard
+          title='Khách hàng hoạt động'
+          value={stats.active}
+          icon={Users}
+        />
+        <StatsCard
+          title='Khách hàng không hoạt động'
           value={stats.total - stats.active}
           icon={Users}
         />
@@ -403,7 +409,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
         <div className='relative flex-1'>
           <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
           <Input
-            placeholder='Search customers by name, email...'
+            placeholder='Tìm kiếm khách hàng theo tên, email...'
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -424,7 +430,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
 
         <Button onClick={handleSearch} variant='secondary'>
           <Search className='h-4 w-4 mr-2' />
-          Search
+          Tìm kiếm
         </Button>
 
         {/* Filter Toggle */}
@@ -434,7 +440,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
           className='gap-2'
         >
           <SlidersHorizontal className='h-4 w-4' />
-          Filters
+          Bộ lọc
           {hasActiveFilters && (
             <span className='h-2 w-2 rounded-full bg-primary' />
           )}
@@ -448,7 +454,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
               <div>
                 <label className='text-sm font-medium mb-1.5 block'>
-                  Status
+                  Trạng thái
                 </label>
                 <select
                   value={statusFilter}
@@ -464,9 +470,9 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
                   }}
                   className='w-full px-3 py-2 border rounded-lg bg-background'
                 >
-                  <option value=''>All Statuses</option>
-                  <option value='ACTIVE'>Active</option>
-                  <option value='INACTIVE'>Inactive</option>
+                  <option value=''>Tất cả trạng thái</option>
+                  <option value='ACTIVE'>Hoạt động</option>
+                  <option value='INACTIVE'>Không hoạt động</option>
                 </select>
               </div>
             </div>
@@ -477,7 +483,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
                   {totalItems} results found
                 </p>
                 <Button variant='ghost' size='sm' onClick={clearFilters}>
-                  Clear all filters
+                  Xóa tất cả bộ lọc
                 </Button>
               </div>
             )}
@@ -490,7 +496,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
         <Card className='border-destructive/50 bg-destructive/5'>
           <CardContent className='p-4'>
             <p className='text-destructive'>
-              Error loading customers. Please try again.
+              Đã xảy ra lỗi khi tải danh sách khách hàng. Vui lòng thử lại.
             </p>
           </CardContent>
         </Card>
@@ -537,20 +543,22 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
             <div className='mx-auto w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4'>
               <Users className='w-10 h-10 text-muted-foreground' />
             </div>
-            <h3 className='text-lg font-semibold mb-2'>No customers found</h3>
+            <h3 className='text-lg font-semibold mb-2'>
+              Không tìm thấy khách hàng
+            </h3>
             <p className='text-muted-foreground mb-6 max-w-sm mx-auto'>
               {hasActiveFilters
-                ? 'Try adjusting your filters to see more results.'
-                : 'Get started by adding your first customer.'}
+                ? 'Hãy điều chỉnh bộ lọc để xem thêm kết quả.'
+                : 'Bắt đầu bằng cách thêm khách hàng đầu tiên của bạn.'}
             </p>
             {hasActiveFilters ? (
               <Button variant='outline' onClick={clearFilters}>
-                Clear Filters
+                Xóa tất cả bộ lọc
               </Button>
             ) : (
               <Button onClick={() => router.push('/sales/customers/new')}>
                 <Plus className='h-4 w-4 mr-2' />
-                Add First Customer
+                Thêm khách hàng đầu tiên
               </Button>
             )}
           </CardContent>
@@ -561,9 +569,9 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
       {totalItems > (pagination.size || 10) && (
         <div className='flex items-center justify-between pt-4'>
           <p className='text-sm text-muted-foreground'>
-            Showing {currentPage * (pagination.size || 10) + 1} to{' '}
+            Hiển thị {currentPage * (pagination.size || 10) + 1} đến{' '}
             {Math.min((currentPage + 1) * (pagination.size || 10), totalItems)}{' '}
-            of {totalItems} customers
+            trong tổng số {totalItems} khách hàng
           </p>
           <div className='flex items-center gap-2'>
             <Button
@@ -573,7 +581,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
               onClick={() => handlePageChange(currentPage - 1)}
             >
               <ChevronLeft className='h-4 w-4' />
-              Previous
+              Trước
             </Button>
             <div className='flex items-center gap-1'>
               {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
@@ -600,7 +608,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
               disabled={currentPage >= totalPages - 1}
               onClick={() => handlePageChange(currentPage + 1)}
             >
-              Next
+              Tiếp
               <ChevronRight className='h-4 w-4' />
             </Button>
           </div>

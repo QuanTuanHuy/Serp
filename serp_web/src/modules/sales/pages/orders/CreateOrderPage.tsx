@@ -10,7 +10,9 @@ import { OrderForm } from '../../components/forms/OrderForm';
 import { useCreateOrderMutation } from '../../api/salesApi';
 import type { OrderCreationForm } from '../../types';
 
-export const CreateOrderPage: React.FC = () => {
+export const CreateOrderPage: React.FC<{ customerId?: string }> = ({
+  customerId,
+}) => {
   const router = useRouter();
   const [createOrder] = useCreateOrderMutation();
 
@@ -32,7 +34,13 @@ export const CreateOrderPage: React.FC = () => {
     router.push('/sales/orders');
   };
 
-  return <OrderForm onSubmit={handleSubmit as any} onCancel={handleCancel} />;
+  return (
+    <OrderForm
+      customerId={customerId}
+      onSubmit={handleSubmit as any}
+      onCancel={handleCancel}
+    />
+  );
 };
 
 export default CreateOrderPage;
