@@ -301,7 +301,7 @@ export const logisticsApi = api.injectEndpoints({
           : [{ type: 'logistics/InventoryItem', id: 'LIST' }],
     }),
 
-    getInventoryItem: builder.query<APIResponse<InventoryItemDetail>, string>({
+    getInventoryItem: builder.query<APIResponse<InventoryItem>, string>({
       query: (inventoryItemId) => ({
         url: `/inventory-item/search/${inventoryItemId}`,
         method: 'GET',

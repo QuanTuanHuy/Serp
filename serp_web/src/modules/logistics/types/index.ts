@@ -61,10 +61,10 @@ export interface Address {
 
 export interface AddressCreationForm {
   entityId: string;
-    entityType: EntityType;
-    addressType: AddressType;
-    latitude: number;
-    longitude: number;
+  entityType: EntityType;
+  addressType: AddressType;
+  latitude: number;
+  longitude: number;
   fullAddress: string;
   default?: boolean;
 }
@@ -197,6 +197,7 @@ export interface InventoryItemDetail {
   unit: string;
   price: number;
   tenantId: number;
+  statusId: InventoryItemStatus;
   inventoryItem: InventoryItem;
 }
 
@@ -281,8 +282,9 @@ export interface OrderItemEntity {
 export interface OrderFilters {
   query?: string;
   statusId?: string;
+  orderTypeId?: OrderType;
   toCustomerId?: string;
-    fromSupplierId?: string;
+  fromSupplierId?: string;
   saleChannelId?: SaleChannel;
   orderDateAfter?: string;
   orderDateBefore?: string;
@@ -372,7 +374,7 @@ export interface Shipment {
 }
 
 export interface ShipmentCreationForm {
-    orderId: string;
+  orderId: string;
   shipmentName?: string;
   note?: string;
   expectedDeliveryDate?: string;
@@ -384,9 +386,9 @@ export interface ShipmentItemForm {
   orderItemId: string;
   note?: string;
   lotId: string;
-    expirationDate?: string;
-    manufacturingDate?: string;
-    facilityId: string;
+  expirationDate?: string;
+  manufacturingDate?: string;
+  facilityId: string;
 }
 
 export interface ShipmentUpdateForm {
@@ -400,8 +402,8 @@ export interface InventoryItemDetailUpdateForm {
   note?: string;
   lotId: string;
   expirationDate?: string;
-    manufacturingDate?: string;
-    facilityId: string;
+  manufacturingDate?: string;
+  facilityId: string;
 }
 
 export interface ShipmentFilters {
