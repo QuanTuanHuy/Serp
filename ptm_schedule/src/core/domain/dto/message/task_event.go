@@ -13,6 +13,11 @@ type TaskCreatedEvent struct {
 	DeadlineMs           *int64 `json:"deadlineMs,omitempty"`
 	EarliestStartMs      *int64 `json:"earliestStartMs,omitempty"`
 
+	ParentTaskID          *int64 `json:"parentTaskId,omitempty"`
+	HasSubtasks           bool   `json:"hasSubtasks"`
+	TotalSubtaskCount     int    `json:"totalSubtaskCount"`
+	CompletedSubtaskCount int    `json:"completedSubtaskCount"`
+
 	Category *string  `json:"category,omitempty"`
 	Tags     []string `json:"tags,omitempty"`
 
@@ -36,6 +41,11 @@ type TaskUpdatedEvent struct {
 	DeadlineMs           *int64 `json:"deadlineMs,omitempty"`
 	EarliestStartMs      *int64 `json:"earliestStartMs,omitempty"`
 
+	ParentTaskID          *int64 `json:"parentTaskId,omitempty"`
+	HasSubtasks           *bool  `json:"hasSubtasks,omitempty"`
+	TotalSubtaskCount     *int   `json:"totalSubtaskCount,omitempty"`
+	CompletedSubtaskCount *int   `json:"completedSubtaskCount,omitempty"`
+
 	Category *string  `json:"category,omitempty"`
 	Tags     []string `json:"tags,omitempty"`
 
@@ -49,6 +59,11 @@ type TaskUpdatedEvent struct {
 type TaskDeletedEvent struct {
 	TaskID int64 `json:"taskId"`
 	UserID int64 `json:"userId"`
+}
+
+type TaskBulkDeletedEvent struct {
+	UserID  int64   `json:"userId"`
+	TaskIDs []int64 `json:"taskIds"`
 }
 
 // TaskCompletedFromScheduleEvent is sent from ptm_schedule to ptm_task

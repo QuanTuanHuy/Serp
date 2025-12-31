@@ -116,6 +116,23 @@ func (t *TaskController) GetTasksByUserID(c *gin.Context) {
 	utils.SuccessfulHandlePagination(c, "Tasks retrieved successfully", t.mapper.EntitiesToResponses(tasks), count, filter.Page, filter.PageSize)
 }
 
+func (t *TaskController) GetTaskTreeByTaskID(c *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		return
+	}
+	taskID, valid := utils.ValidateAndParseID(c, "id")
+	if !valid {
+		return
+	}
+	taskTree, err := t.taskUseCase.GetTaskTreeByTaskID(c.Request.Context(), userID, taskID)
+	if err != nil {
+		utils.ErrorHandle(c, err)
+		return
+	}
+	utils.SuccessfulHandle(c, "Task tree retrieved successfully", t.mapper.EntitiesToTreeResponses(taskTree))
+}
+
 func NewTaskController(taskUseCase usecase.ITaskUseCase) *TaskController {
 	return &TaskController{
 		taskUseCase: taskUseCase,

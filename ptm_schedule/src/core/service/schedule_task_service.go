@@ -23,6 +23,7 @@ type IScheduleTaskService interface {
 	CreateSnapshot(ctx context.Context, tx *gorm.DB, planID int64, event *message.TaskCreatedEvent) (*entity.ScheduleTaskEntity, error)
 	SyncSnapshot(ctx context.Context, tx *gorm.DB, planID int64, event *message.TaskUpdatedEvent) (enum.ChangeType, error)
 	DeleteSnapshot(ctx context.Context, tx *gorm.DB, planID, taskID int64) error
+	UpdateConstraints(ctx context.Context, tx *gorm.DB, scheduleTaskID int64, updates *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error)
 
 	CloneTasksForPlan(ctx context.Context, tx *gorm.DB, srcPlanID, destPlanID int64) (map[int64]int64, error)
 	Update(ctx context.Context, tx *gorm.DB, scheduleTaskID int64, task *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error)
@@ -32,6 +33,7 @@ type IScheduleTaskService interface {
 	GetByScheduleTaskID(ctx context.Context, scheduleTaskID int64) (*entity.ScheduleTaskEntity, error)
 	GetByScheduleTaskIDs(ctx context.Context, scheduleTaskIDs []int64) ([]*entity.ScheduleTaskEntity, error)
 	GetByPlanIDAndTaskID(ctx context.Context, planID, taskID int64) (*entity.ScheduleTaskEntity, error)
+	ListScheduleTasks(ctx context.Context, filter *port.ScheduleTaskFilter) ([]*entity.ScheduleTaskEntity, int64, error)
 }
 
 type ScheduleTaskService struct {
@@ -77,11 +79,21 @@ func (s *ScheduleTaskService) CreateSnapshot(ctx context.Context, tx *gorm.DB, p
 		DeadlineMs:       event.DeadlineMs,
 		PreferredStartMs: event.PreferredStartDateMs,
 
+		ParentTaskID:          event.ParentTaskID,
+		HasSubtasks:           event.HasSubtasks,
+		TotalSubtaskCount:     event.TotalSubtaskCount,
+		CompletedSubtaskCount: event.CompletedSubtaskCount,
+
 		AllowSplit:          true,
 		MinSplitDurationMin: 30,
 		MaxSplitCount:       4,
 
-		ScheduleStatus: enum.ScheduleTaskPending,
+		ScheduleStatus: func() enum.ScheduleTaskStatus {
+			if event.HasSubtasks {
+				return enum.ScheduleTaskExcluded
+			}
+			return enum.ScheduleTaskPending
+		}(),
 	}
 
 	newTask.TaskSnapshotHash = newTask.CalculateSnapshotHash()
@@ -118,6 +130,25 @@ func (s *ScheduleTaskService) SyncSnapshot(ctx context.Context, tx *gorm.DB, pla
 		event.IsDeepWork,
 	)
 
+	hasSubtaskChange := false
+	if event.HasSubtasks != nil && *event.HasSubtasks != currentTask.HasSubtasks {
+		hasSubtaskChange = true
+		if *event.HasSubtasks {
+			currentTask.ScheduleStatus = enum.ScheduleTaskExcluded
+			s.scheduleEventPort.DeleteByScheduleTaskID(ctx, tx, currentTask.ID)
+			log.Info(ctx, "Task now has subtasks, excluded from scheduling. PlanID: ", planID, ", TaskID: ", event.TaskID)
+		} else {
+			currentTask.ScheduleStatus = enum.ScheduleTaskPending
+			log.Info(ctx, "Task no longer has subtasks, included in scheduling. PlanID: ", planID, ", TaskID: ", event.TaskID)
+		}
+	}
+	currentTask.ApplySubtaskInfoChanges(
+		event.ParentTaskID,
+		event.HasSubtasks,
+		event.TotalSubtaskCount,
+		event.CompletedSubtaskCount,
+	)
+
 	newHash := currentTask.CalculateSnapshotHash()
 	hasSnapshotChange := currentTask.HasChanged(newHash)
 
@@ -135,13 +166,17 @@ func (s *ScheduleTaskService) SyncSnapshot(ctx context.Context, tx *gorm.DB, pla
 		}
 	}
 
-	if !hasMetadataChange && !hasConstraintChange {
+	if !hasMetadataChange && !hasConstraintChange && !hasSubtaskChange {
 		return enum.ChangeNone, nil
 	}
 
 	if hasConstraintChange {
 		log.Info(ctx, "Schedule task constraint changed. PlanID: ", planID, ", TaskID: ", event.TaskID)
 		return enum.ChangeConstraint, nil
+	}
+	if hasSubtaskChange {
+		log.Info(ctx, "Schedule task subtask info changed. PlanID: ", planID, ", TaskID: ", event.TaskID)
+		return enum.ChangeStructural, nil
 	}
 
 	log.Info(ctx, "Schedule task metadata updated. PlanID: ", planID, ", TaskID: ", event.TaskID)
@@ -215,6 +250,15 @@ func (s *ScheduleTaskService) GetByPlanIDAndTaskID(ctx context.Context, planID, 
 	return scheduleTask, nil
 }
 
+func (s *ScheduleTaskService) ListScheduleTasks(ctx context.Context, filter *port.ScheduleTaskFilter) ([]*entity.ScheduleTaskEntity, int64, error) {
+	scheduleTasks, totalCount, err := s.scheduleTaskPort.ListScheduleTasks(ctx, filter)
+	if err != nil {
+		log.Error(ctx, "Failed to list schedule tasks: ", err)
+		return nil, 0, err
+	}
+	return scheduleTasks, totalCount, nil
+}
+
 // Returns a map of old schedule_task_id -> new schedule_task_id
 func (s *ScheduleTaskService) CloneTasksForPlan(ctx context.Context, tx *gorm.DB, srcPlanID, destPlanID int64) (map[int64]int64, error) {
 	srcTasks, err := s.scheduleTaskPort.GetBySchedulePlanID(ctx, srcPlanID)
@@ -264,4 +308,85 @@ func (s *ScheduleTaskService) DeleteByPlanID(ctx context.Context, tx *gorm.DB, p
 
 func (s *ScheduleTaskService) Update(ctx context.Context, tx *gorm.DB, scheduleTaskID int64, task *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error) {
 	return s.scheduleTaskPort.UpdateScheduleTask(ctx, tx, scheduleTaskID, task)
+}
+
+func (s *ScheduleTaskService) UpdateConstraints(ctx context.Context, tx *gorm.DB, scheduleTaskID int64, updates *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error) {
+	currentTask, err := s.scheduleTaskPort.GetScheduleTaskByID(ctx, scheduleTaskID)
+	if err != nil {
+		return nil, err
+	}
+	if currentTask == nil {
+		return nil, fmt.Errorf("schedule task not found: %d", scheduleTaskID)
+	}
+
+	hasChange := false
+	nowMs := time.Now().UnixMilli()
+
+	// Update scheduling constraints
+	if updates.DurationMin > 0 && updates.DurationMin != currentTask.DurationMin {
+		currentTask.DurationMin = updates.DurationMin
+		hasChange = true
+	}
+	if updates.Priority.IsValid() && updates.Priority != currentTask.Priority {
+		currentTask.Priority = updates.Priority
+		hasChange = true
+	}
+	if updates.DeadlineMs != nil && (currentTask.DeadlineMs == nil || *updates.DeadlineMs != *currentTask.DeadlineMs) {
+		currentTask.DeadlineMs = updates.DeadlineMs
+		hasChange = true
+	}
+	if updates.EarliestStartMs != nil && (currentTask.EarliestStartMs == nil || *updates.EarliestStartMs != *currentTask.EarliestStartMs) {
+		currentTask.EarliestStartMs = updates.EarliestStartMs
+		hasChange = true
+	}
+	if updates.PreferredStartMs != nil && (currentTask.PreferredStartMs == nil || *updates.PreferredStartMs != *currentTask.PreferredStartMs) {
+		currentTask.PreferredStartMs = updates.PreferredStartMs
+		hasChange = true
+	}
+	if updates.IsDeepWork != currentTask.IsDeepWork {
+		currentTask.IsDeepWork = updates.IsDeepWork
+		hasChange = true
+	}
+
+	// Update split settings
+	if updates.AllowSplit != currentTask.AllowSplit {
+		currentTask.AllowSplit = updates.AllowSplit
+		hasChange = true
+	}
+	if updates.MinSplitDurationMin > 0 && updates.MinSplitDurationMin != currentTask.MinSplitDurationMin {
+		currentTask.MinSplitDurationMin = updates.MinSplitDurationMin
+		hasChange = true
+	}
+	if updates.MaxSplitCount > 0 && updates.MaxSplitCount != currentTask.MaxSplitCount {
+		currentTask.MaxSplitCount = updates.MaxSplitCount
+		hasChange = true
+	}
+
+	// Update buffers
+	if updates.BufferBeforeMin != currentTask.BufferBeforeMin {
+		currentTask.BufferBeforeMin = updates.BufferBeforeMin
+		hasChange = true
+	}
+	if updates.BufferAfterMin != currentTask.BufferAfterMin {
+		currentTask.BufferAfterMin = updates.BufferAfterMin
+		hasChange = true
+	}
+
+	if !hasChange {
+		return currentTask, nil
+	}
+
+	// Recalculate priority score and mark as pending for rescheduling
+	currentTask.RecalculatePriorityScore(nowMs)
+	currentTask.ScheduleStatus = enum.ScheduleTaskPending
+	currentTask.UpdatedAt = nowMs
+
+	updated, err := s.scheduleTaskPort.UpdateScheduleTask(ctx, tx, scheduleTaskID, currentTask)
+	if err != nil {
+		log.Error(ctx, "Failed to update schedule task constraints: ", err)
+		return nil, err
+	}
+
+	log.Info(ctx, "Updated schedule task constraints. ScheduleTaskID: ", scheduleTaskID)
+	return updated, nil
 }

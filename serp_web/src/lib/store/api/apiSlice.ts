@@ -164,6 +164,7 @@ export const api = createApi({
     'ptm/Task',
     'ptm/Project',
     'ptm/Schedule',
+    'ptm/ScheduleTask',
     'ptm/FocusTime',
     'ptm/Availability',
     'ptm/Activity',
@@ -197,6 +198,11 @@ export const api = createApi({
     'Order',
     // Notification tags
     'Notification',
+    // Discuss tags
+    'Channel',
+    'Message',
+    'DiscussActivity',
+    'Presence',
   ],
 
   // Define endpoints in separate files for each module

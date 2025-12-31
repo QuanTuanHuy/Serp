@@ -20,7 +20,7 @@ import (
 type IRescheduleQueueService interface {
 	EnqueueEventMove(ctx context.Context, tx *gorm.DB, planID, userID, eventID int64, payload map[string]any) error
 	EnqueueEventSplit(ctx context.Context, tx *gorm.DB, planID, userID, eventID int64, payload map[string]any) error
-	EnqueueEventComplete(ctx context.Context, tx *gorm.DB, planID, userID, eventID int64) error
+	EnqueueEventComplete(ctx context.Context, tx *gorm.DB, planID, userID, eventID int64, payload map[string]any) error
 	EnqueueEventSkip(ctx context.Context, tx *gorm.DB, planID, userID, eventID int64) error
 	EnqueueTaskChange(ctx context.Context, tx *gorm.DB, planID, userID, taskID int64, trigger enum.TriggerType) error
 	EnqueueAvailabilityChange(ctx context.Context, tx *gorm.DB, planID, userID int64) error
@@ -42,8 +42,8 @@ func (s *RescheduleQueueService) EnqueueEventSplit(ctx context.Context, tx *gorm
 	return s.enqueue(ctx, tx, planID, userID, eventID, constant.EntityTypeEvent, enum.TriggerEventSplit, payload)
 }
 
-func (s *RescheduleQueueService) EnqueueEventComplete(ctx context.Context, tx *gorm.DB, planID, userID, eventID int64) error {
-	return s.enqueue(ctx, tx, planID, userID, eventID, constant.EntityTypeEvent, enum.TriggerEventComplete, nil)
+func (s *RescheduleQueueService) EnqueueEventComplete(ctx context.Context, tx *gorm.DB, planID, userID, eventID int64, payload map[string]any) error {
+	return s.enqueue(ctx, tx, planID, userID, eventID, constant.EntityTypeEvent, enum.TriggerEventComplete, payload)
 }
 
 func (s *RescheduleQueueService) EnqueueEventSkip(ctx context.Context, tx *gorm.DB, planID, userID, eventID int64) error {

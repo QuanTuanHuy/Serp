@@ -32,7 +32,14 @@ func (t *TaskController) CreateTask(c *gin.Context) {
 }
 
 func (t *TaskController) GetTasksByUserID(c *gin.Context) {
-	res, err := t.taskService.GetTasksByUserID(c.Request.Context())
+	params := map[string]string{}
+	queryParams := c.Request.URL.Query()
+	for key, values := range queryParams {
+		if len(values) > 0 {
+			params[key] = values[0]
+		}
+	}
+	res, err := t.taskService.GetTasksByUserID(c.Request.Context(), params)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return
@@ -47,6 +54,19 @@ func (t *TaskController) GetTaskByID(c *gin.Context) {
 	}
 
 	res, err := t.taskService.GetTaskByID(c.Request.Context(), taskID)
+	if err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
+		return
+	}
+	c.JSON(res.Code, res)
+}
+
+func (t *TaskController) GetTaskTreeByTaskID(c *gin.Context) {
+	taskID, valid := utils.ValidateAndParseID(c, "id")
+	if !valid {
+		return
+	}
+	res, err := t.taskService.GetTaskTreeByTaskID(c.Request.Context(), taskID)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return

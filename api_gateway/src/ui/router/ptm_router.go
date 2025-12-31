@@ -19,7 +19,9 @@ func RegisterPtmRoutes(
 	schedulePlanController *controller.SchedulePlanController,
 	availabilityCalendarController *controller.AvailabilityCalendarController,
 	scheduleWindowController *controller.ScheduleWindowController,
-	scheduleEventController *controller.ScheduleEventController) {
+	scheduleEventController *controller.ScheduleEventController,
+	scheduleTaskC *controller.ScheduleTaskController,
+) {
 	ptmV1 := group.Group("/ptm/api/v1")
 
 	ptmV1.Use(middleware.AuthMiddleware())
@@ -42,6 +44,7 @@ func RegisterPtmRoutes(
 			taskV1.POST("", taskController.CreateTask)
 			taskV1.GET("", taskController.GetTasksByUserID)
 			taskV1.GET("/:id", taskController.GetTaskByID)
+			taskV1.GET("/:id/tree", taskController.GetTaskTreeByTaskID)
 			taskV1.GET("/:id/notes", noteController.GetNotesByTaskID)
 			taskV1.PATCH("/:id", taskController.UpdateTask)
 			taskV1.DELETE("/:id", taskController.DeleteTask)
@@ -70,6 +73,12 @@ func RegisterPtmRoutes(
 			schedulePlanV1.POST("/:id/apply", schedulePlanController.ApplyProposedPlan)
 			schedulePlanV1.POST("/:id/revert", schedulePlanController.RevertToPlan)
 			schedulePlanV1.DELETE("/:id", schedulePlanController.DiscardProposedPlan)
+		}
+
+		// PTM Schedule - Schedule Tasks
+		scheduleTaskV1 := ptmV1.Group("/schedule-tasks")
+		{
+			scheduleTaskV1.GET("", scheduleTaskC.ListScheduleTasks)
 		}
 
 		// PTM Schedule - Availability Calendar

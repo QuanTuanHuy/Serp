@@ -9,7 +9,7 @@
 
 import { Repeat } from 'lucide-react';
 import { Badge } from '@/shared/components/ui/badge';
-import type { RepeatConfig } from '../../types';
+import type { RepeatConfig } from './RecurringTaskConfig';
 
 interface RecurringBadgeProps {
   repeatConfig: RepeatConfig;
@@ -31,7 +31,9 @@ export function RecurringBadge({
 
     if (frequency === 'weekly') {
       if (daysOfWeek && daysOfWeek.length > 0 && daysOfWeek.length < 7) {
-        const dayNames = daysOfWeek.map((d) => DAYS_SHORT[d]).join(', ');
+        const dayNames = daysOfWeek
+          .map((d: number) => DAYS_SHORT[d])
+          .join(', ');
         return interval === 1 ? dayNames : `${dayNames} (${interval}w)`;
       }
       return interval === 1 ? 'Weekly' : `Every ${interval}w`;

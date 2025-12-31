@@ -1,0 +1,63 @@
+# Optimization Configuration
+# Configuration for scheduling optimization strategies
+
+optimization:
+  strategy:
+    # Default strategy: AUTO, HEURISTIC, MILP, CPSAT, HYBRID
+    default: AUTO
+    
+    # CP-SAT Solver Configuration
+    cpsat:
+      enabled: true
+      max-time-seconds: 30
+      num-workers: 4  # Parallel search threads
+      log-search-progress: false
+      optimization-step: 0.01  # 1% improvement threshold
+      
+      # Problem size limits for CP-SAT
+      max-recommended-tasks: 100
+      max-recommended-slots: 1000
+      
+    # MILP Solver Configuration
+    milp:
+      enabled: true
+      max-time-seconds: 10
+      
+      # Scalability guards
+      max-tasks: 30
+      max-slots: 500
+      max-variables: 15000
+      
+      # Warm-start from heuristic
+      use-warm-start: true
+      
+    # Heuristic Configuration
+    heuristic:
+      enabled: true
+      local-search-budget-ms: 5000
+      slot-min: 15  # Time slot granularity in minutes
+      
+      # Utility weights
+      priority-weight: 1.0
+      deadline-weight: 0.8
+      context-switch-weight: 0.3
+      fatigue-weight: 0.2
+      
+    # Fallback chain when strategy fails
+    # Strategies are tried in order until one succeeds
+    fallback-chain:
+      - CPSAT
+      - MILP
+      - HEURISTIC
+      
+  # Performance monitoring
+  metrics:
+    enabled: true
+    record-solve-time: true
+    record-solution-quality: true
+    
+  # Caching
+  cache:
+    enabled: true
+    ttl-seconds: 300  # 5 minutes
+    max-entries: 100

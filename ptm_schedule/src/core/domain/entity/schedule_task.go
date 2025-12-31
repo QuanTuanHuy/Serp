@@ -35,6 +35,11 @@ type ScheduleTaskEntity struct {
 	DeadlineMs       *int64 `json:"deadlineMs,omitempty"`
 	PreferredStartMs *int64 `json:"preferredStartMs,omitempty"`
 
+	ParentTaskID          *int64 `json:"parentTaskId,omitempty"`
+	HasSubtasks           bool   `json:"hasSubtasks"`
+	TotalSubtaskCount     int    `json:"totalSubtaskCount"`
+	CompletedSubtaskCount int    `json:"completedSubtaskCount"`
+
 	AllowSplit          bool `json:"allowSplit"`
 	MinSplitDurationMin int  `json:"minSplitDurationMin"`
 	MaxSplitCount       int  `json:"maxSplitCount"`
@@ -67,6 +72,11 @@ func (e *ScheduleTaskEntity) CalculateSnapshotHash() string {
 		io.WriteString(h, fmt.Sprintf("%d", *e.EarliestStartMs))
 	}
 
+	if e.ParentTaskID != nil {
+		io.WriteString(h, fmt.Sprintf("%d", *e.ParentTaskID))
+	}
+
+	io.WriteString(h, fmt.Sprintf("%v-%d-%d", e.HasSubtasks, e.TotalSubtaskCount, e.CompletedSubtaskCount))
 	io.WriteString(h, fmt.Sprintf("%v-%d-%d", e.AllowSplit, e.MinSplitDurationMin, e.MaxSplitCount))
 
 	io.WriteString(h, fmt.Sprintf("%v", e.DependentTaskIDs))
@@ -131,6 +141,26 @@ func (e *ScheduleTaskEntity) ApplyConstraintChanges(
 		// changed = true
 	}
 	return changed
+}
+
+func (e *ScheduleTaskEntity) ApplySubtaskInfoChanges(
+	parentTaskID *int64,
+	hasSubtasks *bool,
+	totalSubtaskCount *int,
+	completedSubtaskCount *int,
+) {
+	if hasSubtasks != nil && *hasSubtasks != e.HasSubtasks {
+		e.HasSubtasks = *hasSubtasks
+	}
+	if totalSubtaskCount != nil {
+		e.TotalSubtaskCount = *totalSubtaskCount
+	}
+	if completedSubtaskCount != nil {
+		e.CompletedSubtaskCount = *completedSubtaskCount
+	}
+	if parentTaskID != nil {
+		e.ParentTaskID = parentTaskID
+	}
 }
 
 func (e *ScheduleTaskEntity) UpdateFromSource(title string, duration int, priority enum.Priority, deadline *int64) {
@@ -223,6 +253,10 @@ func (e *ScheduleTaskEntity) IsOverdue(nowMs int64) bool {
 
 func (e *ScheduleTaskEntity) IsCompleted() bool {
 	return e.ScheduleStatus == enum.ScheduleTaskCompleted
+}
+
+func (e *ScheduleTaskEntity) IsSchedulable() bool {
+	return !e.IsCompleted() && !e.HasSubtasks
 }
 
 // Lifecycle Methods

@@ -23,7 +23,7 @@ type IProjectPort interface {
 
 	UpdateProject(ctx context.Context, tx *gorm.DB, project *entity.ProjectEntity) error
 	UpdateProjectStatus(ctx context.Context, tx *gorm.DB, projectID int64, status string) error
-	UpdateProjectProgress(ctx context.Context, tx *gorm.DB, projectID int64, progressPercentage int) error
+	UpdateProjectProgress(ctx context.Context, tx *gorm.DB, projectID int64, totalTasks, completedTasks, progressPercentage int) error
 
 	SoftDeleteProject(ctx context.Context, tx *gorm.DB, projectID int64) error
 	SoftDeleteProjects(ctx context.Context, tx *gorm.DB, projectIDs []int64) error

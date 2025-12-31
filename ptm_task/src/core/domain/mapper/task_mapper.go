@@ -58,21 +58,25 @@ func (m *TaskMapper) CreateRequestToEntity(req *request.CreateTaskRequest, userI
 
 func (m *TaskMapper) CreateTaskCreatedEvent(task *entity.TaskEntity) *message.TaskCreatedEvent {
 	return &message.TaskCreatedEvent{
-		TaskID:               task.ID,
-		UserID:               task.UserID,
-		TenantID:             task.TenantID,
-		Title:                task.Title,
-		Priority:             task.Priority,
-		EstimatedDurationMin: task.EstimatedDurationMin,
-		PreferredStartDateMs: task.PreferredStartDateMs,
-		DeadlineMs:           task.DeadlineMs,
-		EarliestStartMs:      task.EarliestStartMs,
-		Category:             task.Category,
-		Tags:                 task.Tags,
-		IsDeepWork:           task.IsDeepWork,
-		IsMeeting:            task.IsMeeting,
-		IsFlexible:           task.IsFlexible,
-		Status:               task.Status,
+		TaskID:                task.ID,
+		UserID:                task.UserID,
+		TenantID:              task.TenantID,
+		Title:                 task.Title,
+		Priority:              task.Priority,
+		EstimatedDurationMin:  task.EstimatedDurationMin,
+		PreferredStartDateMs:  task.PreferredStartDateMs,
+		DeadlineMs:            task.DeadlineMs,
+		EarliestStartMs:       task.EarliestStartMs,
+		Category:              task.Category,
+		Tags:                  task.Tags,
+		ParentTaskID:          task.ParentTaskID,
+		HasSubtasks:           task.HasSubtasks,
+		TotalSubtaskCount:     task.TotalSubtaskCount,
+		CompletedSubtaskCount: task.CompletedSubtaskCount,
+		IsDeepWork:            task.IsDeepWork,
+		IsMeeting:             task.IsMeeting,
+		IsFlexible:            task.IsFlexible,
+		Status:                task.Status,
 	}
 }
 
@@ -154,6 +158,9 @@ func (m *TaskMapper) CreateTaskUpdatedEvent(task *entity.TaskEntity, req *reques
 		EarliestStartMs:      req.EarliestStartMs,
 		Category:             req.Category,
 		Tags:                 req.Tags,
+		ParentTaskID:         req.ParentTaskID,
+		HasSubtasks:          &task.HasSubtasks,
+		TotalSubtaskCount:    &task.TotalSubtaskCount,
 		IsDeepWork:           req.IsDeepWork,
 		IsMeeting:            req.IsMeeting,
 		IsFlexible:           req.IsFlexible,
@@ -179,6 +186,9 @@ func (m *TaskMapper) EntityToResponse(task *entity.TaskEntity) *response.TaskRes
 		Category:              task.Category,
 		Tags:                  task.Tags,
 		ParentTaskID:          task.ParentTaskID,
+		HasSubtasks:           task.HasSubtasks,
+		TotalSubtaskCount:     task.TotalSubtaskCount,
+		CompletedSubtaskCount: task.CompletedSubtaskCount,
 		ProjectID:             task.ProjectID,
 		IsRecurring:           task.IsRecurring,
 		RecurrencePattern:     task.RecurrencePattern,
@@ -217,6 +227,17 @@ func (m *TaskMapper) EntitiesToResponses(tasks []*entity.TaskEntity) []*response
 		responses = append(responses, m.EntityToResponse(task))
 	}
 	return responses
+}
+
+func (m *TaskMapper) EntitiesToTreeResponses(task *entity.TaskEntity) *response.TaskResponse {
+	resp := m.EntityToResponse(task)
+	if len(task.SubTasks) > 0 {
+		resp.SubTasks = make([]*response.TaskResponse, 0, len(task.SubTasks))
+		for _, subTask := range task.SubTasks {
+			resp.SubTasks = append(resp.SubTasks, m.EntitiesToTreeResponses(subTask))
+		}
+	}
+	return resp
 }
 
 func (m *TaskMapper) FilterMapper(req *request.TaskFilterRequest) *store.TaskFilter {

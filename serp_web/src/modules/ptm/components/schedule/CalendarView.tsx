@@ -32,7 +32,7 @@ import { cn } from '@/shared/utils';
 import {
   useGetScheduleEventsQuery,
   useUpdateScheduleEventMutation,
-} from '../../services/scheduleApi';
+} from '../../api';
 import { SmartEventCard } from './SmartEventCard';
 import type { ScheduleEvent } from '../../types';
 import { toast } from 'sonner';

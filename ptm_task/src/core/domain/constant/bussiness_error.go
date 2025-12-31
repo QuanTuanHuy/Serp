@@ -3,20 +3,23 @@ package constant
 import "net/http"
 
 const (
-	TaskNotFound                   = "task not found"
-	TaskTitleRequired              = "task title is required"
-	TaskTitleTooLong               = "task title is too long (max 500 characters)"
-	InvalidTaskPriority            = "invalid task priority"
-	InvalidTaskStatus              = "invalid task status"
-	InvalidStatusTransition        = "invalid status transition"
-	InvalidDeadline                = "deadline must be after earliest start time"
-	InvalidDuration                = "estimated duration must be positive"
-	InvalidRecurrencePattern       = "invalid recurrence pattern"
-	InvalidQuality                 = "quality must be between 1 and 5"
-	GetTaskForbidden               = "you don't have permission to access this task"
-	UpdateTaskForbidden            = "you don't have permission to update this task"
-	DeleteTaskForbidden            = "you don't have permission to delete this task"
-	CannotCompleteTaskWithSubtasks = "cannot complete task with incomplete subtasks"
+	TaskNotFound                             = "task not found"
+	TaskTitleRequired                        = "task title is required"
+	TaskTitleTooLong                         = "task title is too long (max 500 characters)"
+	InvalidTaskPriority                      = "invalid task priority"
+	InvalidTaskStatus                        = "invalid task status"
+	InvalidStatusTransition                  = "invalid status transition"
+	InvalidDeadline                          = "deadline must be after earliest start time"
+	InvalidDuration                          = "estimated duration must be positive"
+	InvalidRecurrencePattern                 = "invalid recurrence pattern"
+	InvalidQuality                           = "quality must be between 1 and 5"
+	GetTaskForbidden                         = "you don't have permission to access this task"
+	UpdateTaskForbidden                      = "you don't have permission to update this task"
+	DeleteTaskForbidden                      = "you don't have permission to delete this task"
+	CannotCompleteTaskWithSubtasks           = "cannot complete task with incomplete subtasks"
+	CreateSubtaskUnderCompletedTaskForbidden = "cannot create subtask under a completed task"
+	ParentTaskDoesNotBelongToUser            = "parent task does not belong to user"
+	ParentTaskNotFound                       = "parent task not found"
 )
 
 const (
@@ -97,20 +100,23 @@ type BusinessErrorResponse struct {
 
 var BusinessErrorResponseMap = map[string]BusinessErrorResponse{
 
-	TaskNotFound:                   {HTTPCode: http.StatusNotFound, Message: TaskNotFound},
-	TaskTitleRequired:              {HTTPCode: http.StatusBadRequest, Message: TaskTitleRequired},
-	TaskTitleTooLong:               {HTTPCode: http.StatusBadRequest, Message: TaskTitleTooLong},
-	InvalidTaskPriority:            {HTTPCode: http.StatusBadRequest, Message: InvalidTaskPriority},
-	InvalidTaskStatus:              {HTTPCode: http.StatusBadRequest, Message: InvalidTaskStatus},
-	InvalidStatusTransition:        {HTTPCode: http.StatusBadRequest, Message: InvalidStatusTransition},
-	InvalidDeadline:                {HTTPCode: http.StatusBadRequest, Message: InvalidDeadline},
-	InvalidDuration:                {HTTPCode: http.StatusBadRequest, Message: InvalidDuration},
-	InvalidRecurrencePattern:       {HTTPCode: http.StatusBadRequest, Message: InvalidRecurrencePattern},
-	InvalidQuality:                 {HTTPCode: http.StatusBadRequest, Message: InvalidQuality},
-	GetTaskForbidden:               {HTTPCode: http.StatusForbidden, Message: GetTaskForbidden},
-	UpdateTaskForbidden:            {HTTPCode: http.StatusForbidden, Message: UpdateTaskForbidden},
-	DeleteTaskForbidden:            {HTTPCode: http.StatusForbidden, Message: DeleteTaskForbidden},
-	CannotCompleteTaskWithSubtasks: {HTTPCode: http.StatusBadRequest, Message: CannotCompleteTaskWithSubtasks},
+	TaskNotFound:                             {HTTPCode: http.StatusNotFound, Message: TaskNotFound},
+	TaskTitleRequired:                        {HTTPCode: http.StatusBadRequest, Message: TaskTitleRequired},
+	TaskTitleTooLong:                         {HTTPCode: http.StatusBadRequest, Message: TaskTitleTooLong},
+	InvalidTaskPriority:                      {HTTPCode: http.StatusBadRequest, Message: InvalidTaskPriority},
+	InvalidTaskStatus:                        {HTTPCode: http.StatusBadRequest, Message: InvalidTaskStatus},
+	InvalidStatusTransition:                  {HTTPCode: http.StatusBadRequest, Message: InvalidStatusTransition},
+	InvalidDeadline:                          {HTTPCode: http.StatusBadRequest, Message: InvalidDeadline},
+	InvalidDuration:                          {HTTPCode: http.StatusBadRequest, Message: InvalidDuration},
+	InvalidRecurrencePattern:                 {HTTPCode: http.StatusBadRequest, Message: InvalidRecurrencePattern},
+	InvalidQuality:                           {HTTPCode: http.StatusBadRequest, Message: InvalidQuality},
+	GetTaskForbidden:                         {HTTPCode: http.StatusForbidden, Message: GetTaskForbidden},
+	UpdateTaskForbidden:                      {HTTPCode: http.StatusForbidden, Message: UpdateTaskForbidden},
+	DeleteTaskForbidden:                      {HTTPCode: http.StatusForbidden, Message: DeleteTaskForbidden},
+	CannotCompleteTaskWithSubtasks:           {HTTPCode: http.StatusBadRequest, Message: CannotCompleteTaskWithSubtasks},
+	ParentTaskDoesNotBelongToUser:            {HTTPCode: http.StatusBadRequest, Message: ParentTaskDoesNotBelongToUser},
+	ParentTaskNotFound:                       {HTTPCode: http.StatusNotFound, Message: ParentTaskNotFound},
+	CreateSubtaskUnderCompletedTaskForbidden: {HTTPCode: http.StatusBadRequest, Message: CreateSubtaskUnderCompletedTaskForbidden},
 
 	TemplateNotFound:            {HTTPCode: http.StatusNotFound, Message: TemplateNotFound},
 	TemplateNameRequired:        {HTTPCode: http.StatusBadRequest, Message: TemplateNameRequired},

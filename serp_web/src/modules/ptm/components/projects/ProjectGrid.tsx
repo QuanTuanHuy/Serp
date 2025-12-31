@@ -1,14 +1,19 @@
-/**
- * PTM v2 - Project Grid Component
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - Grid layout for projects
- */
+/*
+Author: QuanTuanHuy
+Description: Part of Serp Project
+*/
 
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Search, Star, Grid3x3, List, FolderKanban } from 'lucide-react';
+import { useState } from 'react';
+import {
+  Search,
+  Grid3x3,
+  List,
+  ChevronLeft,
+  ChevronRight,
+  FolderKanban,
+} from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import {
@@ -19,7 +24,7 @@ import {
   SelectValue,
 } from '@/shared/components/ui/select';
 import { ProjectCard } from './ProjectCard';
-import { useGetProjectsQuery } from '../../services/projectApi';
+import { useProjects } from '../../hooks';
 import type { ProjectStatus, ProjectPriority } from '../../types';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { cn } from '@/shared/utils';
@@ -30,58 +35,22 @@ interface ProjectGridProps {
 }
 
 export function ProjectGrid({ className, onProjectClick }: ProjectGridProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'ALL'>(
-    'ALL'
-  );
-  const [priorityFilter, setPriorityFilter] = useState<ProjectPriority | 'ALL'>(
-    'ALL'
-  );
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  const { data: projects = [], isLoading } = useGetProjectsQuery({});
-
-  // Filter projects
-  const filteredProjects = useMemo(() => {
-    let filtered = [...projects];
-
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (project) =>
-          project.title.toLowerCase().includes(query) ||
-          project.description?.toLowerCase().includes(query)
-      );
-    }
-
-    // Status filter
-    if (statusFilter !== 'ALL') {
-      filtered = filtered.filter((project) => project.status === statusFilter);
-    }
-
-    // Priority filter
-    if (priorityFilter !== 'ALL') {
-      filtered = filtered.filter(
-        (project) => project.priority === priorityFilter
-      );
-    }
-
-    // Favorites filter
-    if (showFavoritesOnly) {
-      filtered = filtered.filter((project) => project.isFavorite);
-    }
-
-    // Sort by favorites first, then by updated date
-    filtered.sort((a, b) => {
-      if (a.isFavorite && !b.isFavorite) return -1;
-      if (!a.isFavorite && b.isFavorite) return 1;
-      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-    });
-
-    return filtered;
-  }, [projects, searchQuery, statusFilter, priorityFilter, showFavoritesOnly]);
+  const {
+    projects,
+    isLoading,
+    searchQuery,
+    setSearchQuery,
+    statusFilter,
+    setStatusFilter,
+    priorityFilter,
+    setPriorityFilter,
+    currentPage,
+    totalPages,
+    handleNextPage,
+    handlePreviousPage,
+  } = useProjects();
 
   if (isLoading) {
     return (
@@ -115,7 +84,6 @@ export function ProjectGrid({ className, onProjectClick }: ProjectGridProps) {
           />
         </div>
 
-        {/* Filters */}
         <div className='flex items-center gap-2 flex-wrap'>
           <Select
             value={statusFilter}
@@ -128,7 +96,8 @@ export function ProjectGrid({ className, onProjectClick }: ProjectGridProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value='ALL'>All Status</SelectItem>
-              <SelectItem value='ACTIVE'>Active</SelectItem>
+              <SelectItem value='NEW'>New</SelectItem>
+              <SelectItem value='IN_PROGRESS'>In Progress</SelectItem>
               <SelectItem value='COMPLETED'>Completed</SelectItem>
               <SelectItem value='ON_HOLD'>On Hold</SelectItem>
               <SelectItem value='ARCHIVED'>Archived</SelectItem>
@@ -152,22 +121,6 @@ export function ProjectGrid({ className, onProjectClick }: ProjectGridProps) {
             </SelectContent>
           </Select>
 
-          <Button
-            variant={showFavoritesOnly ? 'default' : 'outline'}
-            size='sm'
-            onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-            className='h-10'
-          >
-            <Star
-              className={cn(
-                'h-4 w-4 mr-2',
-                showFavoritesOnly && 'fill-current'
-              )}
-            />
-            Favorites
-          </Button>
-
-          {/* View Mode Toggle */}
           <div className='flex items-center gap-1 bg-muted p-1 rounded-lg'>
             <Button
               variant={viewMode === 'grid' ? 'default' : 'ghost'}
@@ -189,50 +142,70 @@ export function ProjectGrid({ className, onProjectClick }: ProjectGridProps) {
         </div>
       </div>
 
-      {/* Results Count */}
-      {filteredProjects.length > 0 && (
+      {projects.length > 0 && (
         <p className='text-sm text-muted-foreground mb-4'>
-          Showing {filteredProjects.length}{' '}
-          {filteredProjects.length === 1 ? 'project' : 'projects'}
-          {(searchQuery ||
-            statusFilter !== 'ALL' ||
-            priorityFilter !== 'ALL' ||
-            showFavoritesOnly) &&
-            ' (filtered)'}
+          Showing {projects.length}{' '}
+          {projects.length === 1 ? 'project' : 'projects'}
         </p>
       )}
 
-      {/* Project Grid/List */}
-      {filteredProjects.length === 0 ? (
+      {projects.length === 0 ? (
         <div className='text-center py-16 text-muted-foreground border-2 border-dashed rounded-lg'>
           <FolderKanban className='h-12 w-12 mx-auto mb-4 opacity-50' />
           <p className='text-lg font-medium'>No projects found</p>
           <p className='text-sm mt-1'>
-            {searchQuery ||
-            statusFilter !== 'ALL' ||
-            priorityFilter !== 'ALL' ||
-            showFavoritesOnly
+            {searchQuery || statusFilter !== 'ALL' || priorityFilter !== 'ALL'
               ? 'Try adjusting your filters'
               : 'Create your first project to get started'}
           </p>
         </div>
       ) : (
-        <div
-          className={cn(
-            viewMode === 'grid'
-              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
-              : 'flex flex-col gap-3'
+        <>
+          <div
+            className={cn(
+              viewMode === 'grid'
+                ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
+                : 'flex flex-col gap-3'
+            )}
+          >
+            {projects.map((project) => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                onClick={onProjectClick}
+                viewMode={viewMode}
+              />
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className='flex items-center justify-between mt-6 pt-4 border-t'>
+              <p className='text-sm text-muted-foreground'>
+                Page {currentPage + 1} of {totalPages}
+              </p>
+              <div className='flex items-center gap-2'>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 0}
+                >
+                  <ChevronLeft className='h-4 w-4 mr-1' />
+                  Previous
+                </Button>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={handleNextPage}
+                  disabled={currentPage >= totalPages - 1}
+                >
+                  Next
+                  <ChevronRight className='h-4 w-4 ml-1' />
+                </Button>
+              </div>
+            </div>
           )}
-        >
-          {filteredProjects.map((project) => (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              onClick={onProjectClick}
-              viewMode={viewMode}
-            />
-          ))}
-        </div>
+        </>
       )}
     </div>
   );

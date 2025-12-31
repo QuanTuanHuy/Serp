@@ -179,7 +179,10 @@ export const crmApi = api.injectEndpoints({
 });
 ```
 
+**Skills:** Read serp frontend module skills for detailed patterns.
+
 **Rules:** Modules are isolated (no cross-imports). Use Shadcn UI. Read `api_gateway` for endpoint routes.
+Always run `npm run lint`, `npm run type-check`, and `npm run format` after changes.
 
 ## Common Gotchas
 

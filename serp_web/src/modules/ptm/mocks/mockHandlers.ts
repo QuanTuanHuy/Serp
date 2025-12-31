@@ -15,6 +15,7 @@ import {
   mockNotes,
   getMockActivityEvents,
   getMockTaskDependencies,
+  withTaskDefaults,
   delay,
 } from './mockData';
 import type {
@@ -97,29 +98,15 @@ export const mockApiHandlers = {
 
     create: async (data: Partial<Task>) => {
       await delay();
-      const newTask: Task = {
+      const newTask = withTaskDefaults({
         id: Date.now(),
         userId: 1,
         tenantId: 1,
         title: data.title || 'New Task',
-        description: data.description,
         priority: data.priority || 'MEDIUM',
         status: 'TODO',
-        estimatedDurationHours: data.estimatedDurationHours || 1,
-        isDeepWork: data.isDeepWork || false,
-        category: data.category,
-        tags: data.tags || [],
-        dependentTaskIds: [],
-        repeatConfig: data.repeatConfig,
-        source: 'manual',
-        progressPercentage: 0,
-        activeStatus: 'ACTIVE',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        projectId: data.projectId,
-        deadlineMs: data.deadlineMs,
-        parentTaskId: data.parentTaskId,
-      };
+        ...data,
+      });
 
       tasksStore = [...tasksStore, newTask];
       return newTask;
@@ -151,7 +138,7 @@ export const mockApiHandlers = {
       return mockApiHandlers.tasks.create({
         title: data.title,
         priority: 'MEDIUM',
-        estimatedDurationHours: 1,
+        estimatedDurationMin: 60, // 1 hour in minutes
       });
     },
 
@@ -184,7 +171,7 @@ export const mockApiHandlers = {
         title,
         description,
         priority: template.priority,
-        estimatedDurationHours: template.estimatedDurationHours,
+        estimatedDurationMin: template.estimatedDurationMin,
         category: template.category,
         tags: template.tags,
         isDeepWork: template.isDeepWork,
@@ -463,7 +450,7 @@ export const mockApiHandlers = {
         tenantId: 1,
         title: data.title || 'New Project',
         description: data.description,
-        status: 'ACTIVE',
+        status: 'NEW',
         priority: data.priority || 'MEDIUM',
         progressPercentage: 0,
         color: data.color || '#3B82F6',
@@ -546,22 +533,15 @@ export const mockApiHandlers = {
         id: Date.now(),
         schedulePlanId: mockSchedulePlan.id,
         scheduleTaskId: data.scheduleTaskId || Date.now(),
+        taskId: data.taskId,
         dateMs: data.dateMs || Date.now(),
         startMin,
         endMin,
-        durationMin,
-        status: 'scheduled',
-        taskPart: 1,
+        status: 'PLANNED',
+        partIndex: 0,
         totalParts: 1,
-        utility: 75,
-        utilityBreakdown: {
-          priorityScore: 20,
-          deadlineScore: 25,
-          contextSwitchPenalty: -5,
-          focusTimeBonus: data.isDeepWork ? 10 : 0,
-          totalUtility: 75,
-          reason: 'Manually scheduled by user',
-        },
+        linkedEventId: undefined,
+        isPinned: false,
         isManualOverride: true,
         title: data.title || 'Untitled Event',
         priority: data.priority,
