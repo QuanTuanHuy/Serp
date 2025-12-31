@@ -15,6 +15,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
+import { isMac as checkIsMac } from '@/shared/utils';
 
 export interface KeyboardShortcut {
   /** Keyboard key (e.g., 'k', 'Enter', 'Escape') */
@@ -25,6 +26,9 @@ export interface KeyboardShortcut {
 
   /** Require Cmd key (macOS) */
   meta?: boolean;
+
+  /** Require Mod key (Cmd on Mac, Ctrl on Win/Linux) */
+  mod?: boolean;
 
   /** Require Shift key */
   shift?: boolean;
@@ -145,6 +149,7 @@ export function useKeyboardShortcuts(
           key,
           ctrl,
           meta,
+          mod,
           shift,
           alt,
           handler,
@@ -155,12 +160,22 @@ export function useKeyboardShortcuts(
         // Match key
         if (e.key.toLowerCase() !== key.toLowerCase()) return;
 
+        const isMac = checkIsMac();
+
+        let targetCtrl = ctrl === true;
+        let targetMeta = meta === true;
+
+        if (mod) {
+          if (isMac) targetMeta = true;
+          else targetCtrl = true;
+        }
+
         // Match all modifiers (strict)
         const modifiersMatch =
-          (ctrl === true ? e.ctrlKey : !e.ctrlKey) &&
-          (meta === true ? e.metaKey : !e.metaKey) &&
-          (shift === true ? e.shiftKey : !e.shiftKey) &&
-          (alt === true ? e.altKey : !e.altKey);
+          e.ctrlKey === targetCtrl &&
+          e.metaKey === targetMeta &&
+          e.shiftKey === (shift === true) &&
+          e.altKey === (alt === true);
 
         if (modifiersMatch) {
           if (preventDefault) e.preventDefault();
@@ -186,10 +201,20 @@ export function useKeyboardShortcuts(
  * Generate unique key for shortcut (for conflict detection)
  */
 function getShortcutKey(shortcut: KeyboardShortcut): string {
-  const { key, ctrl, meta, shift, alt } = shortcut;
+  const { key, ctrl, meta, mod, shift, alt } = shortcut;
+  const isMac = checkIsMac();
+
+  let targetCtrl = ctrl === true;
+  let targetMeta = meta === true;
+
+  if (mod) {
+    if (isMac) targetMeta = true;
+    else targetCtrl = true;
+  }
+
   const modifiers = [
-    ctrl && 'Ctrl',
-    meta && 'Cmd',
+    targetCtrl && 'Ctrl',
+    targetMeta && 'Cmd',
     shift && 'Shift',
     alt && 'Alt',
   ]
@@ -219,15 +244,22 @@ function generateDocumentation(shortcuts: KeyboardShortcut[]): string {
  * formatShortcut({ key: 'Delete', shift: true, meta: true }) // "⇧⌘Delete"
  */
 export function formatShortcut(shortcut: KeyboardShortcut): string {
-  const { key, ctrl, meta, shift, alt } = shortcut;
-  const isMac =
-    typeof navigator !== 'undefined' && navigator.platform.includes('Mac');
+  const { key, ctrl, meta, mod, shift, alt } = shortcut;
+  const isMac = checkIsMac();
+
+  let targetCtrl = ctrl === true;
+  let targetMeta = meta === true;
+
+  if (mod) {
+    if (isMac) targetMeta = true;
+    else targetCtrl = true;
+  }
 
   const modifiers = [
-    ctrl && (isMac ? '⌃' : 'Ctrl'),
+    targetCtrl && (isMac ? '⌃' : 'Ctrl'),
+    targetMeta && (isMac ? '⌘' : 'Cmd'),
     alt && (isMac ? '⌥' : 'Alt'),
     shift && (isMac ? '⇧' : 'Shift'),
-    meta && (isMac ? '⌘' : 'Cmd'),
   ]
     .filter(Boolean)
     .join('');

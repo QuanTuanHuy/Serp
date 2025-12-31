@@ -49,6 +49,7 @@ import { NoteCard } from '../notes/NoteCard';
 import { NoteEditorNovel } from '../notes/NoteEditorNovel';
 import { EditTaskDialog } from './dialogs/EditTaskDialog';
 import { DeleteTaskDialog } from './dialogs/DeleteTaskDialog';
+import { isMac as checkIsMac } from '@/shared/utils';
 import {
   useTaskDetail,
   useNoteOperations,
@@ -78,6 +79,9 @@ export function TaskDetail({
   const [showNoteEditor, setShowNoteEditor] = useState(false);
   const { editDialog: subtaskEditDialog, deleteDialog: subtaskDeleteDialog } =
     useTaskDialogs();
+
+  const isMac = checkIsMac();
+  const modKey = isMac ? '⌘' : 'Ctrl';
 
   // Convert taskId to number for API calls
   const numericTaskId = toNumericId(taskId);
@@ -168,37 +172,37 @@ export function TaskDetail({
       },
       {
         key: 'e',
-        meta: true,
+        mod: true,
         handler: () => (isEditing ? handleSave() : startEdit()),
         description: 'Edit task / Save changes',
       },
       {
         key: 'd',
-        meta: true,
+        mod: true,
         handler: openDeleteDialog,
         description: 'Delete task',
       },
       {
         key: 'l',
-        meta: true,
+        mod: true,
         handler: handleCopyLink,
         description: 'Copy link to clipboard',
       },
       {
         key: '1',
-        meta: true,
+        mod: true,
         handler: () => setActiveTab('details'),
         description: 'Switch to Details tab',
       },
       {
         key: '2',
-        meta: true,
+        mod: true,
         handler: () => setActiveTab('dependencies'),
         description: 'Switch to Dependencies tab',
       },
       {
         key: '3',
-        meta: true,
+        mod: true,
         handler: () => setActiveTab('notes'),
         description: 'Switch to Notes tab',
       },
@@ -261,7 +265,7 @@ export function TaskDetail({
                           variant='ghost'
                           size='icon'
                           onClick={handleCopyLink}
-                          title='Copy link (Cmd+L)'
+                          title={`Copy link (${modKey}+L)`}
                           className='h-8 w-8'
                         >
                           <Copy className='h-4 w-4' />
@@ -272,7 +276,7 @@ export function TaskDetail({
                           variant='ghost'
                           size='icon'
                           onClick={startEdit}
-                          title='Edit (Cmd+E)'
+                          title={`Edit (${modKey}+E)`}
                           className='h-8 w-8'
                         >
                           <Edit className='h-4 w-4' />
@@ -283,7 +287,7 @@ export function TaskDetail({
                           variant='ghost'
                           size='icon'
                           onClick={openDeleteDialog}
-                          title='Delete (Cmd+D)'
+                          title={`Delete (${modKey}+D)`}
                           className='h-8 w-8 text-red-600 hover:text-red-700'
                         >
                           <Trash2 className='h-4 w-4' />
@@ -306,14 +310,14 @@ export function TaskDetail({
                       )}
                       <div className='flex items-center gap-1'>
                         <kbd className='px-1.5 py-0.5 bg-muted rounded border'>
-                          ⌘L
+                          {modKey}+L
                         </kbd>
                         <span>Copy link</span>
                       </div>
                       <span>•</span>
                       <div className='flex items-center gap-1'>
                         <kbd className='px-1.5 py-0.5 bg-muted rounded border'>
-                          ⌘1/2/3
+                          {modKey}+1/2/3
                         </kbd>
                         <span>Tabs</span>
                       </div>
