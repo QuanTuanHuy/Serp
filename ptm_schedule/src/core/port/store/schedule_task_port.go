@@ -20,4 +20,27 @@ type IScheduleTaskPort interface {
 	GetScheduleTaskByTaskID(ctx context.Context, taskID int64) ([]*entity.ScheduleTaskEntity, error)
 	GetByPlanIDAndTaskID(ctx context.Context, planID, taskID int64) (*entity.ScheduleTaskEntity, error)
 	GetBySchedulePlanID(ctx context.Context, schedulePlanID int64) ([]*entity.ScheduleTaskEntity, error)
+	ListScheduleTasks(ctx context.Context, filter *ScheduleTaskFilter) ([]*entity.ScheduleTaskEntity, int64, error)
+}
+
+type ScheduleTaskFilter struct {
+	UserID *int64
+	PlanID *int64
+
+	Statuses []string
+
+	SortBy    string
+	SortOrder string
+
+	Limit  int
+	Offset int
+}
+
+func NewScheduleTaskFilter() *ScheduleTaskFilter {
+	return &ScheduleTaskFilter{
+		SortBy:    "id",
+		SortOrder: "DESC",
+		Limit:     50,
+		Offset:    0,
+	}
 }

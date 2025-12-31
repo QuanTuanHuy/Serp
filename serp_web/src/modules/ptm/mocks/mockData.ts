@@ -17,9 +17,32 @@ import type {
   TaskDependency,
 } from '../types';
 
+// Helper to add required fields to task mocks
+const withTaskDefaults = (
+  task: Partial<Task> &
+    Pick<Task, 'id' | 'userId' | 'tenantId' | 'title' | 'priority' | 'status'>
+): Task =>
+  ({
+    hasSubtasks: false,
+    totalSubtaskCount: 0,
+    completedSubtaskCount: 0,
+    isDurationLearned: false,
+    isRecurring: false,
+    isDeepWork: false,
+    isMeeting: false,
+    isFlexible: true,
+    tags: [],
+    dependentTaskIds: [],
+    source: 'manual' as const,
+    activeStatus: 'ACTIVE' as const,
+    ...task,
+    createdAt: task.createdAt || new Date().toISOString(),
+    updatedAt: task.updatedAt || new Date().toISOString(),
+  }) as Task;
+
 // Mock Tasks - Using function to ensure mutable arrays
 const _mockTasksData: Task[] = [
-  {
+  withTaskDefaults({
     id: 1,
     userId: 1,
     tenantId: 1,
@@ -28,20 +51,16 @@ const _mockTasksData: Task[] = [
     description: 'Review and merge pending PRs for the authentication module',
     priority: 'HIGH',
     status: 'IN_PROGRESS',
-    estimatedDurationHours: 2,
-    actualDurationHours: 1.5,
+    estimatedDurationMin: 120, // 2 hours
+    actualDurationMin: 90, // 1.5 hours
     deadlineMs: Date.now() + 3 * 60 * 60 * 1000, // 3 hours from now
     isDeepWork: true,
     category: 'Development',
     tags: ['code-review', 'backend'],
-    dependentTaskIds: [],
-    source: 'manual',
-    progressPercentage: 60,
-    activeStatus: 'ACTIVE',
     createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-  },
-  {
+  }),
+  withTaskDefaults({
     id: 2,
     userId: 1,
     tenantId: 1,
@@ -50,19 +69,22 @@ const _mockTasksData: Task[] = [
     description: 'Update API documentation with new endpoints',
     priority: 'MEDIUM',
     status: 'TODO',
-    estimatedDurationHours: 1.5,
+    estimatedDurationMin: 90, // 1.5 hours
+    isDurationLearned: false,
     deadlineMs: Date.now() + 24 * 60 * 60 * 1000, // 1 day from now
     isDeepWork: false,
+    isRecurring: false,
+    isMeeting: false,
+    isFlexible: false,
     category: 'Documentation',
     tags: ['docs', 'api'],
     dependentTaskIds: [1],
     source: 'manual',
-    progressPercentage: 0,
     activeStatus: 'ACTIVE',
     createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
+  }),
+  withTaskDefaults({
     id: 3,
     userId: 1,
     tenantId: 1,
@@ -71,20 +93,23 @@ const _mockTasksData: Task[] = [
     description: 'Create reusable UI components for the design system',
     priority: 'HIGH',
     status: 'IN_PROGRESS',
-    estimatedDurationHours: 4,
-    actualDurationHours: 2,
+    estimatedDurationMin: 240, // 4 hours
+    actualDurationMin: 120, // 2 hours
+    isDurationLearned: false,
     deadlineMs: Date.now() + 2 * 24 * 60 * 60 * 1000, // 2 days from now
     isDeepWork: true,
+    isRecurring: false,
+    isMeeting: false,
+    isFlexible: false,
     category: 'Design',
     tags: ['ui', 'components', 'figma'],
     dependentTaskIds: [],
     source: 'manual',
-    progressPercentage: 50,
     activeStatus: 'ACTIVE',
     createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-  {
+  }),
+  withTaskDefaults({
     id: 4,
     userId: 1,
     tenantId: 1,
@@ -92,20 +117,23 @@ const _mockTasksData: Task[] = [
     description: 'Daily standup with the development team',
     priority: 'LOW',
     status: 'DONE',
-    estimatedDurationHours: 0.25,
-    actualDurationHours: 0.25,
+    estimatedDurationMin: 15, // 0.25 hours
+    actualDurationMin: 15, // 0.25 hours
+    isDurationLearned: false,
     completedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
     isDeepWork: false,
+    isRecurring: false,
+    isMeeting: true,
+    isFlexible: false,
     category: 'Meeting',
     tags: ['meeting', 'team'],
     dependentTaskIds: [],
     source: 'manual',
-    progressPercentage: 100,
     activeStatus: 'ACTIVE',
     createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-  },
-  {
+  }),
+  withTaskDefaults({
     id: 5,
     userId: 1,
     tenantId: 1,
@@ -114,19 +142,22 @@ const _mockTasksData: Task[] = [
     description: 'Resolve the issue causing payment failures in production',
     priority: 'HIGH',
     status: 'TODO',
-    estimatedDurationHours: 3,
+    estimatedDurationMin: 180, // 3 hours
+    isDurationLearned: false,
     deadlineMs: Date.now() - 2 * 60 * 60 * 1000, // 2 hours ago (OVERDUE)
     isDeepWork: true,
+    isRecurring: false,
+    isMeeting: false,
+    isFlexible: false,
     category: 'Bug Fix',
     tags: ['critical', 'payment', 'production'],
     dependentTaskIds: [],
     source: 'manual',
-    progressPercentage: 0,
     activeStatus: 'ACTIVE',
     createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-  },
-  {
+  }),
+  withTaskDefaults({
     id: 6,
     userId: 1,
     tenantId: 1,
@@ -135,21 +166,24 @@ const _mockTasksData: Task[] = [
     description: 'Prepare slides and demo for client meeting',
     priority: 'MEDIUM',
     status: 'IN_PROGRESS',
-    estimatedDurationHours: 2,
-    actualDurationHours: 1,
+    estimatedDurationMin: 120, // 2 hours
+    actualDurationMin: 60, // 1 hour
+    isDurationLearned: false,
     deadlineMs: Date.now() + 4 * 60 * 60 * 1000, // 4 hours from now
     isDeepWork: false,
+    isRecurring: false,
+    isMeeting: false,
+    isFlexible: true,
     category: 'Presentation',
     tags: ['client', 'presentation'],
     dependentTaskIds: [],
     source: 'manual',
-    progressPercentage: 40,
     activeStatus: 'ACTIVE',
     createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-  },
+  }),
   // Subtasks for Task 1: Review Pull Requests
-  {
+  withTaskDefaults({
     id: 7,
     userId: 1,
     tenantId: 1,
@@ -158,22 +192,25 @@ const _mockTasksData: Task[] = [
     description: 'Examine the actual code modifications and logic',
     status: 'DONE',
     priority: 'HIGH',
-    estimatedDurationHours: 1,
-    actualDurationHours: 0.8,
+    estimatedDurationMin: 60, // 1 hour
+    actualDurationMin: 48, // 0.8 hours
+    isDurationLearned: false,
     preferredStartDateMs: Date.now() - 8 * 60 * 60 * 1000,
     deadlineMs: Date.now() - 6 * 60 * 60 * 1000,
     completedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
     isDeepWork: true,
+    isRecurring: false,
+    isMeeting: false,
+    isFlexible: false,
     category: 'Development',
     tags: ['code-review', 'backend'],
     dependentTaskIds: [],
     source: 'manual',
-    progressPercentage: 100,
     activeStatus: 'ACTIVE',
     createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-  },
-  {
+  }),
+  withTaskDefaults({
     id: 8,
     userId: 1,
     tenantId: 1,
@@ -182,22 +219,25 @@ const _mockTasksData: Task[] = [
     description: 'Run tests and verify functionality works correctly',
     status: 'DONE',
     priority: 'HIGH',
-    estimatedDurationHours: 0.5,
-    actualDurationHours: 0.3,
+    estimatedDurationMin: 30, // 0.5 hours
+    actualDurationMin: 18, // 0.3 hours
+    isDurationLearned: false,
     preferredStartDateMs: Date.now() - 6 * 60 * 60 * 1000,
     deadlineMs: Date.now() - 5 * 60 * 60 * 1000,
     completedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
     isDeepWork: false,
+    isRecurring: false,
+    isMeeting: false,
+    isFlexible: false,
     category: 'Testing',
     tags: ['testing', 'backend'],
     dependentTaskIds: [7], // Depends on code review completion
     source: 'manual',
-    progressPercentage: 100,
     activeStatus: 'ACTIVE',
     createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-  },
-  {
+  }),
+  withTaskDefaults({
     id: 9,
     userId: 1,
     tenantId: 1,
@@ -206,23 +246,26 @@ const _mockTasksData: Task[] = [
     description: 'Provide constructive feedback and approval/rejection',
     status: 'DONE',
     priority: 'HIGH',
-    estimatedDurationHours: 0.5,
-    actualDurationHours: 0.4,
+    estimatedDurationMin: 30, // 0.5 hours
+    actualDurationMin: 24, // 0.4 hours
+    isDurationLearned: false,
     preferredStartDateMs: Date.now() - 5 * 60 * 60 * 1000,
     deadlineMs: Date.now() - 4 * 60 * 60 * 1000,
     completedAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
     isDeepWork: false,
+    isRecurring: false,
+    isMeeting: false,
+    isFlexible: false,
     category: 'Communication',
     tags: ['feedback', 'communication'],
     dependentTaskIds: [7, 8], // Depends on both code review and testing
     source: 'manual',
-    progressPercentage: 100,
     activeStatus: 'ACTIVE',
     createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-  },
+  }),
   // Subtasks for Task 3: Design System Components
-  {
+  withTaskDefaults({
     id: 10,
     userId: 1,
     tenantId: 1,
@@ -231,21 +274,24 @@ const _mockTasksData: Task[] = [
     description: 'Implement reusable Button component with variants',
     status: 'IN_PROGRESS',
     priority: 'HIGH',
-    estimatedDurationHours: 2,
-    actualDurationHours: 1.5,
+    estimatedDurationMin: 120, // 2 hours
+    actualDurationMin: 90, // 1.5 hours
+    isDurationLearned: false,
     preferredStartDateMs: Date.now() - 2 * 60 * 60 * 1000,
     deadlineMs: Date.now() + 4 * 60 * 60 * 1000,
     isDeepWork: true,
+    isRecurring: false,
+    isMeeting: false,
+    isFlexible: false,
     category: 'Design',
     tags: ['component', 'ui', 'button'],
     dependentTaskIds: [],
     source: 'manual',
-    progressPercentage: 75,
     activeStatus: 'ACTIVE',
     createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-  },
-  {
+  }),
+  withTaskDefaults({
     id: 11,
     userId: 1,
     tenantId: 1,
@@ -254,20 +300,26 @@ const _mockTasksData: Task[] = [
     description: 'Write unit tests and integration tests for components',
     status: 'TODO',
     priority: 'MEDIUM',
-    estimatedDurationHours: 1.5,
+    estimatedDurationMin: 90, // 1.5 hours
+    isDurationLearned: false,
     preferredStartDateMs: Date.now() + 4 * 60 * 60 * 1000,
     deadlineMs: Date.now() + 8 * 60 * 60 * 1000,
     isDeepWork: false,
+    isRecurring: false,
+    isMeeting: false,
+    isFlexible: false,
     category: 'Testing',
     tags: ['testing', 'component'],
     dependentTaskIds: [10], // Depends on component creation
     source: 'manual',
-    progressPercentage: 0,
     activeStatus: 'ACTIVE',
     createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
+  }),
 ];
+
+// Export helper for external use
+export { withTaskDefaults };
 
 export const mockTasks: Task[] = JSON.parse(JSON.stringify(_mockTasksData));
 
@@ -279,7 +331,7 @@ const _mockProjectsData: Project[] = [
     tenantId: 1,
     title: 'Backend Refactoring',
     description: 'Refactor backend services for better performance',
-    status: 'ACTIVE',
+    status: 'IN_PROGRESS',
     priority: 'HIGH',
     startDateMs: Date.now() - 14 * 24 * 60 * 60 * 1000,
     deadlineMs: Date.now() + 14 * 24 * 60 * 60 * 1000,
@@ -301,7 +353,7 @@ const _mockProjectsData: Project[] = [
     tenantId: 1,
     title: 'Design System v2',
     description: 'Build comprehensive design system for all products',
-    status: 'ACTIVE',
+    status: 'IN_PROGRESS',
     priority: 'MEDIUM',
     startDateMs: Date.now() - 7 * 24 * 60 * 60 * 1000,
     deadlineMs: Date.now() + 21 * 24 * 60 * 60 * 1000,
@@ -335,20 +387,13 @@ export const mockScheduleEvents: ScheduleEvent[] = [
     dateMs: today.getTime(),
     startMin: 540, // 9:00 AM
     endMin: 600, // 10:00 AM
-    durationMin: 60,
-    status: 'completed',
-    taskPart: 1,
+    status: 'DONE',
+    partIndex: 0,
     totalParts: 2,
-    utility: 85.5,
-    utilityBreakdown: {
-      priorityScore: 30,
-      deadlineScore: 25,
-      contextSwitchPenalty: -5,
-      focusTimeBonus: 35.5,
-      totalUtility: 85.5,
-      reason: 'High-priority deep work during peak focus time',
-    },
+    linkedEventId: undefined,
+    isPinned: false,
     isManualOverride: false,
+    taskId: 1,
     title: 'Review Pull Requests',
     priority: 'HIGH',
     isDeepWork: true,
@@ -363,20 +408,13 @@ export const mockScheduleEvents: ScheduleEvent[] = [
     dateMs: today.getTime(),
     startMin: 660, // 11:00 AM
     endMin: 780, // 1:00 PM
-    durationMin: 120,
-    status: 'scheduled',
-    taskPart: 1,
+    status: 'PLANNED',
+    partIndex: 0,
     totalParts: 2,
-    utility: 78.2,
-    utilityBreakdown: {
-      priorityScore: 30,
-      deadlineScore: 20,
-      contextSwitchPenalty: -8,
-      focusTimeBonus: 36.2,
-      totalUtility: 78.2,
-      reason: 'Deep work session with minimal context switching',
-    },
+    linkedEventId: undefined,
+    isPinned: false,
     isManualOverride: false,
+    taskId: 3,
     title: 'Design System Components',
     priority: 'HIGH',
     isDeepWork: true,
@@ -391,20 +429,13 @@ export const mockScheduleEvents: ScheduleEvent[] = [
     dateMs: today.getTime(),
     startMin: 840, // 2:00 PM
     endMin: 900, // 3:00 PM
-    durationMin: 60,
-    status: 'scheduled',
-    taskPart: 1,
+    status: 'PLANNED',
+    partIndex: 0,
     totalParts: 2,
-    utility: 65.0,
-    utilityBreakdown: {
-      priorityScore: 20,
-      deadlineScore: 25,
-      contextSwitchPenalty: -5,
-      focusTimeBonus: 25,
-      totalUtility: 65.0,
-      reason: 'Medium priority task in afternoon slot',
-    },
+    linkedEventId: undefined,
+    isPinned: false,
     isManualOverride: false,
+    taskId: 6,
     title: 'Client Presentation Prep',
     priority: 'MEDIUM',
     isDeepWork: false,
@@ -419,20 +450,13 @@ export const mockScheduleEvents: ScheduleEvent[] = [
     dateMs: today.getTime(),
     startMin: 960, // 4:00 PM
     endMin: 1050, // 5:30 PM
-    durationMin: 90,
-    status: 'scheduled',
-    taskPart: 1,
+    status: 'PLANNED',
+    partIndex: 0,
     totalParts: 1,
-    utility: 55.0,
-    utilityBreakdown: {
-      priorityScore: 15,
-      deadlineScore: 20,
-      contextSwitchPenalty: -3,
-      focusTimeBonus: 23,
-      totalUtility: 55.0,
-      reason: 'Documentation task in late afternoon',
-    },
+    linkedEventId: undefined,
+    isPinned: false,
     isManualOverride: false,
+    taskId: 2,
     title: 'Update Documentation',
     priority: 'MEDIUM',
     isDeepWork: false,
@@ -447,14 +471,19 @@ export const mockSchedulePlan: SchedulePlan = {
   id: 1,
   userId: 1,
   tenantId: 1,
+  name: 'Current Week Schedule',
   startDateMs: today.getTime(),
   endDateMs: today.getTime() + 7 * 24 * 60 * 60 * 1000,
-  status: 'active',
+  status: 'ACTIVE',
   algorithmType: 'hybrid',
   totalUtility: 283.7,
+  totalTasks: 6,
   tasksScheduled: 4,
   tasksUnscheduled: 2,
+  totalScheduledTasks: 4,
   version: 1,
+  optimizationScore: 85.5,
+  optimizationDurationMs: 1250,
   activeStatus: 'ACTIVE',
   createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
   updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
@@ -506,7 +535,7 @@ export const mockTaskTemplates: TaskTemplate[] = [
     titleTemplate: 'Review PR: {{pr_number}}',
     descriptionTemplate:
       'Review and provide feedback on pull request #{{pr_number}}',
-    estimatedDurationHours: 1,
+    estimatedDurationMin: 60, // 1 hour
     priority: 'MEDIUM',
     category: 'Development',
     tags: ['code-review'],
@@ -525,7 +554,7 @@ export const mockTaskTemplates: TaskTemplate[] = [
     templateName: 'Weekly Planning',
     titleTemplate: 'Plan Week of {{week_date}}',
     descriptionTemplate: 'Review goals and plan tasks for the upcoming week',
-    estimatedDurationHours: 2,
+    estimatedDurationMin: 120, // 2 hours
     priority: 'HIGH',
     category: 'Planning',
     tags: ['planning', 'weekly'],

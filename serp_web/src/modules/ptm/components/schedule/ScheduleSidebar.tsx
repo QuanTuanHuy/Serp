@@ -169,7 +169,13 @@ export function ScheduleSidebar({
                           </Badge>
                           <div className='flex items-center gap-1 text-xs text-muted-foreground'>
                             <Clock className='h-3 w-3' />
-                            <span>{task.estimatedDurationHours}h</span>
+                            <span>
+                              {task.estimatedDurationMin
+                                ? task.estimatedDurationMin >= 60
+                                  ? `${Math.floor(task.estimatedDurationMin / 60)}h`
+                                  : `${task.estimatedDurationMin}m`
+                                : '0m'}
+                            </span>
                           </div>
                         </div>
                       </div>

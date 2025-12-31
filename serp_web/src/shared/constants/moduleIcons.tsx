@@ -19,6 +19,7 @@ import {
   MapPin,
   Shield,
   LucideIcon,
+  MessageSquare,
 } from 'lucide-react';
 
 export type ModuleCode =
@@ -37,6 +38,7 @@ export type ModuleCode =
   | 'MANUFACTURING'
   | 'HELPDESK'
   | 'FIELD_SERVICE'
+  | 'DISCUSSION'
   | 'ADMIN'
   | 'SETTINGS';
 
@@ -63,6 +65,13 @@ export const MODULE_ICONS: Record<ModuleCode, ModuleIconConfig> = {
     icon: Settings,
     color: 'text-purple-600',
     bgColor: 'bg-purple-50 dark:bg-purple-950',
+  },
+
+  // Communication
+  DISCUSSION: {
+    icon: MessageSquare,
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50 dark:bg-blue-950',
   },
 
   // Sales & Marketing
@@ -168,7 +177,7 @@ export const getModuleIcon = (moduleCode: string): ModuleIconConfig | null => {
 export const getModuleRoute = (moduleCode: string): string => {
   if (moduleCode === 'ADMIN') return '/admin';
   if (moduleCode === 'SETTINGS') return '/settings';
-  if (moduleCode === 'PTM') return '/ptm';
+  if (moduleCode === 'PTM') return '/ptm/dashboard';
   if (moduleCode === 'CRM') return '/crm/dashboard';
   return `/${moduleCode.toLowerCase()}`;
 };

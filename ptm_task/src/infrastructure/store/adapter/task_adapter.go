@@ -264,6 +264,40 @@ func (a *TaskAdapter) GetTasksByParentID(ctx context.Context, parentTaskID int64
 	return a.mapper.ToEntities(taskModels), nil
 }
 
+func (a *TaskAdapter) GetTasksByParentIDWithTx(ctx context.Context, tx *gorm.DB, parentTaskID int64) ([]*entity.TaskEntity, error) {
+	var taskModels []*model.TaskModel
+
+	if err := a.getDB(tx).WithContext(ctx).
+		Where("parent_task_id = ? AND active_status = ?", parentTaskID, "ACTIVE").
+		Order("created_at ASC").
+		Find(&taskModels).Error; err != nil {
+		return nil, fmt.Errorf("failed to get tasks by parent id with tx: %w", err)
+	}
+
+	return a.mapper.ToEntities(taskModels), nil
+}
+
+func (a *TaskAdapter) GetTasksByRootID(ctx context.Context, rootTaskID int64) ([]*entity.TaskEntity, error) {
+	var taskModels []*model.TaskModel
+	sql := `
+	WITH RECURSIVE task_tree AS (
+		SELECT * FROM tasks WHERE id = ?
+		UNION ALL
+		SELECT t.* FROM tasks t
+		INNER JOIN task_tree tt ON t.parent_task_id = tt.id
+	)
+	SELECT * FROM task_tree WHERE active_status = 'ACTIVE';
+	`
+
+	if err := a.db.WithContext(ctx).
+		Raw(sql, rootTaskID).
+		Scan(&taskModels).Error; err != nil {
+		return nil, fmt.Errorf("failed to get tasks by root id: %w", err)
+	}
+
+	return a.mapper.ToEntities(taskModels), nil
+}
+
 func (a *TaskAdapter) GetTasksByProjectID(ctx context.Context, projectID int64) ([]*entity.TaskEntity, error) {
 	var taskModels []*model.TaskModel
 

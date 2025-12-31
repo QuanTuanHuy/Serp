@@ -30,7 +30,10 @@ type TaskEntity struct {
 	Category *string  `json:"category,omitempty"`
 	Tags     []string `json:"tags,omitempty"`
 
-	ParentTaskID *int64 `json:"parentTaskId,omitempty"`
+	ParentTaskID          *int64 `json:"parentTaskId,omitempty"`
+	HasSubtasks           bool   `json:"hasSubtasks"`
+	TotalSubtaskCount     int    `json:"totalSubtaskCount"`
+	CompletedSubtaskCount int    `json:"completedSubtaskCount"`
 
 	ProjectID *int64 `json:"projectId,omitempty"`
 
@@ -50,6 +53,8 @@ type TaskEntity struct {
 	Source     string  `json:"source"`
 
 	CompletedAt *int64 `json:"completedAt,omitempty"`
+
+	SubTasks []*TaskEntity `json:"subTasks,omitempty"`
 }
 
 func NewTaskEntity() *TaskEntity {
@@ -70,6 +75,10 @@ func (t *TaskEntity) IsOverdue(currentTimeMs int64) bool {
 	return currentTimeMs > *t.DeadlineMs && t.Status != "DONE" && t.Status != "CANCELLED"
 }
 
+func (t *TaskEntity) IsCompleted() bool {
+	return enum.TaskStatus(t.Status).IsCompleted()
+}
+
 func (t *TaskEntity) CanBeScheduled(currentTimeMs int64) bool {
 	if t.EarliestStartMs == nil {
 		return true
@@ -84,4 +93,18 @@ func (t *TaskEntity) GetPriorityScore() float64 {
 
 	priority := enum.TaskPriority(t.Priority)
 	return priority.GetScore()
+}
+
+func (t *TaskEntity) IsLeafTask() bool {
+	return !t.HasSubtasks
+}
+
+func (t *TaskEntity) RecalculateSubTaskCounts(subTasks []*TaskEntity) {
+	t.TotalSubtaskCount = len(subTasks)
+	t.CompletedSubtaskCount = 0
+	for _, subTask := range subTasks {
+		if subTask.IsCompleted() {
+			t.CompletedSubtaskCount++
+		}
+	}
 }

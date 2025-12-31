@@ -35,7 +35,15 @@ export const transformTimestampFields = <T>(data: T): T => {
 
   const transformed = { ...data } as any;
 
-  const timestampFields = ['createdAt', 'updatedAt', 'grantedAt'];
+  const timestampFields = [
+    'createdAt',
+    'updatedAt',
+    'grantedAt',
+    'completedAt',
+    'deadlineMs',
+    'startMs',
+    'endMs',
+  ];
 
   timestampFields.forEach((field) => {
     if (transformed[field] && typeof transformed[field] === 'number') {
@@ -72,6 +80,20 @@ export const createDataTransform = <T>() => {
   return (response: any): T => {
     if (response?.code === 200 && response?.status === 'success') {
       return transformTimestampFields(response.data);
+    }
+    return response;
+  };
+};
+
+export const createApiResponseTransform = <T>() => {
+  return (response: any): ApiResponse<T> => {
+    if (response?.code === 200 && response?.status === 'success') {
+      return {
+        code: response.code,
+        status: response.status,
+        message: response.message,
+        data: transformTimestampFields(response.data),
+      };
     }
     return response;
   };

@@ -24,7 +24,7 @@ import {
 } from '@/shared/components/ui/tabs';
 import { RichTextPreview } from './RichTextPreview';
 import { NoteEditorNovel } from './NoteEditorNovel';
-import { useUpdateNoteMutation } from '../../services/noteApi';
+import { useUpdateNoteMutation } from '../../api';
 import type { Note } from '../../types';
 import { toast } from 'sonner';
 

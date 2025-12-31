@@ -30,7 +30,10 @@ type TaskModel struct {
 	Category *string        `gorm:"type:varchar(100)"`
 	Tags     datatypes.JSON `gorm:"type:jsonb;index:idx_task_tags,type:gin"`
 
-	ParentTaskID *int64 `gorm:"index:idx_task_parent"`
+	ParentTaskID          *int64 `gorm:"index:idx_task_parent"`
+	HasSubtasks           bool   `gorm:"not null;default:false"`
+	TotalSubtaskCount     int    `gorm:"not null;default:0"`
+	CompletedSubtaskCount int    `gorm:"not null;default:0"`
 
 	ProjectID *int64 `gorm:"index:idx_task_project_status,priority:1"`
 

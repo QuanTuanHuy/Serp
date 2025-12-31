@@ -30,6 +30,11 @@ type ScheduleTaskModel struct {
 	DeadlineMs       *time.Time `json:"deadlineMs" gorm:"column:deadline_ms"`
 	PreferredStartMs *time.Time `json:"preferredStartMs" gorm:"column:preferred_start_ms"`
 
+	ParentTaskID          *int64 `json:"parentTaskId" gorm:"column:parent_task_id"`
+	HasSubtasks           bool   `json:"hasSubtasks" gorm:"column:has_subtasks;not null;default:false"`
+	TotalSubtaskCount     int    `json:"totalSubtaskCount" gorm:"column:total_subtask_count;not null;default:0"`
+	CompletedSubtaskCount int    `json:"completedSubtaskCount" gorm:"column:completed_subtask_count;not null;default:0"`
+
 	AllowSplit          bool `json:"allowSplit" gorm:"column:allow_split;not null"`
 	MinSplitDurationMin int  `json:"minSplitDurationMin" gorm:"column:min_split_duration_min"`
 	MaxSplitCount       int  `json:"maxSplitCount" gorm:"column:max_split_count"`

@@ -19,6 +19,11 @@ import {
   Trash2,
   ExternalLink,
   TrendingUp,
+  Pin,
+  PinOff,
+  Scissors,
+  XCircle,
+  Link2,
 } from 'lucide-react';
 import {
   Sheet,
@@ -34,12 +39,17 @@ import { Progress } from '@/shared/components/ui/progress';
 import { cn } from '@/shared/utils';
 import type { ScheduleEvent } from '../../types';
 import { toast } from 'sonner';
+import { SplitEventDialog } from './SplitEventDialog';
+import {
+  useUpdateScheduleEventMutation,
+  useCompleteScheduleEventMutation,
+  useSplitScheduleEventMutation,
+} from '../../api';
 
 interface EventDetailSheetProps {
   event: ScheduleEvent | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onMarkComplete?: (eventId: number) => void;
   onReschedule?: (eventId: number) => void;
   onRemove?: (eventId: number) => void;
   onViewTask?: (taskId: number) => void;
@@ -49,11 +59,16 @@ export function EventDetailSheet({
   event,
   open,
   onOpenChange,
-  onMarkComplete,
   onReschedule,
   onRemove,
   onViewTask,
 }: EventDetailSheetProps) {
+  const [splitDialogOpen, setSplitDialogOpen] = useState(false);
+
+  const [updateEvent] = useUpdateScheduleEventMutation();
+  const [completeEvent] = useCompleteScheduleEventMutation();
+  const [splitEvent] = useSplitScheduleEventMutation();
+
   if (!event) return null;
 
   const formatTime = (minutes: number) => {
@@ -82,33 +97,76 @@ export function EventDetailSheet({
     });
   };
 
-  const getUtilityColor = (utility: number) => {
-    if (utility >= 80) return 'text-green-600 dark:text-green-400';
-    if (utility >= 60) return 'text-amber-600 dark:text-amber-400';
-    return 'text-red-600 dark:text-red-400';
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed':
+      case 'DONE':
         return 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20';
-      case 'scheduled':
+      case 'PLANNED':
         return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
-      case 'cancelled':
+      case 'CANCELLED':
+      case 'SKIPPED':
         return 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20';
       default:
         return 'bg-muted text-muted-foreground';
     }
   };
 
-  const handleMarkComplete = () => {
-    if (event.status === 'completed') {
+  const handleMarkComplete = async () => {
+    if (event.status === 'DONE') {
       toast.info('This event is already completed');
       return;
     }
-    onMarkComplete?.(event.id);
-    toast.success('Event marked as completed! 🎉');
-    onOpenChange(false);
+    try {
+      await completeEvent({
+        id: event.id,
+        actualStartMin: event.startMin,
+        actualEndMin: event.endMin,
+      }).unwrap();
+      toast.success('Event marked as completed! 🎉');
+      onOpenChange(false);
+    } catch (error) {
+      toast.error('Failed to mark event as completed');
+    }
+  };
+
+  const handleTogglePin = async () => {
+    try {
+      await updateEvent({
+        id: event.id,
+        isPinned: !event.isPinned,
+      }).unwrap();
+      toast.success(
+        event.isPinned
+          ? 'Event unpinned - can be rescheduled'
+          : 'Event pinned - locked in place'
+      );
+    } catch (error) {
+      toast.error('Failed to toggle pin');
+    }
+  };
+
+  const handleMarkSkipped = async () => {
+    try {
+      await completeEvent({
+        id: event.id,
+        actualStartMin: event.startMin,
+        actualEndMin: event.startMin, // Same as start = skipped
+      }).unwrap();
+      toast.success('Event marked as skipped');
+      onOpenChange(false);
+    } catch (error) {
+      toast.error('Failed to skip event');
+    }
+  };
+
+  const handleSplit = async (eventId: number, splitPointMin: number) => {
+    try {
+      await splitEvent({ id: eventId, splitPointMin }).unwrap();
+      toast.success('Event split successfully');
+      onOpenChange(false);
+    } catch (error) {
+      toast.error('Failed to split event');
+    }
   };
 
   const handleRemove = () => {
@@ -135,6 +193,15 @@ export function EventDetailSheet({
             <div className='flex items-start justify-between gap-4'>
               <div className='space-y-2 flex-1'>
                 <div className='flex items-center gap-2 flex-wrap'>
+                  {event.isPinned && (
+                    <Badge
+                      variant='secondary'
+                      className='bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
+                    >
+                      <Pin className='h-3 w-3 mr-1' />
+                      Pinned
+                    </Badge>
+                  )}
                   {event.isDeepWork && (
                     <Badge
                       variant='secondary'
@@ -199,7 +266,10 @@ export function EventDetailSheet({
                   {formatTime(event.startMin)} - {formatTime(event.endMin)}
                 </p>
                 <p className='text-xs text-muted-foreground'>
-                  Duration: {formatDuration(event.durationMin)}
+                  Duration:{' '}
+                  {formatDuration(
+                    event.durationMin || event.endMin - event.startMin
+                  )}
                 </p>
               </div>
             </div>
@@ -207,82 +277,28 @@ export function EventDetailSheet({
             {event.totalParts > 1 && (
               <div className='flex items-start gap-3'>
                 <div className='p-2 rounded-lg bg-amber-500/10'>
-                  <Target className='h-4 w-4 text-amber-600 dark:text-amber-400' />
+                  <Link2 className='h-4 w-4 text-amber-600 dark:text-amber-400' />
                 </div>
                 <div className='space-y-2 flex-1'>
-                  <p className='text-sm font-medium'>Task Progress</p>
+                  <p className='text-sm font-medium'>Multi-Part Event</p>
                   <p className='text-sm text-muted-foreground'>
-                    Part {event.taskPart} of {event.totalParts}
+                    Part {event.partIndex + 1} of {event.totalParts}
                   </p>
                   <Progress
-                    value={(event.taskPart / event.totalParts) * 100}
+                    value={((event.partIndex + 1) / event.totalParts) * 100}
                     className='h-2'
                   />
+                  {event.linkedEventId && (
+                    <p className='text-xs text-muted-foreground'>
+                      Linked to event #{event.linkedEventId}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
           </div>
 
           <Separator />
-
-          {/* AI Utility Score */}
-          {event.utilityBreakdown && (
-            <div className='space-y-4'>
-              <div className='flex items-center justify-between'>
-                <div className='flex items-center gap-2'>
-                  <TrendingUp className='h-4 w-4 text-primary' />
-                  <h3 className='font-semibold'>AI Utility Score</h3>
-                </div>
-                <span
-                  className={cn(
-                    'text-2xl font-bold',
-                    getUtilityColor(event.utility)
-                  )}
-                >
-                  {Math.round(event.utility)}
-                </span>
-              </div>
-
-              <div className='space-y-3'>
-                <div className='flex items-center justify-between text-sm'>
-                  <span className='text-muted-foreground'>Priority Score</span>
-                  <span className='font-medium'>
-                    +{event.utilityBreakdown.priorityScore}
-                  </span>
-                </div>
-                <div className='flex items-center justify-between text-sm'>
-                  <span className='text-muted-foreground'>Deadline Score</span>
-                  <span className='font-medium'>
-                    +{event.utilityBreakdown.deadlineScore}
-                  </span>
-                </div>
-                {event.utilityBreakdown.focusTimeBonus > 0 && (
-                  <div className='flex items-center justify-between text-sm text-green-600 dark:text-green-400'>
-                    <span>Focus Time Bonus</span>
-                    <span className='font-medium'>
-                      +{event.utilityBreakdown.focusTimeBonus}
-                    </span>
-                  </div>
-                )}
-                {event.utilityBreakdown.contextSwitchPenalty < 0 && (
-                  <div className='flex items-center justify-between text-sm text-red-600 dark:text-red-400'>
-                    <span>Context Switch Penalty</span>
-                    <span className='font-medium'>
-                      {event.utilityBreakdown.contextSwitchPenalty}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {event.utilityBreakdown.reason && (
-                <div className='p-3 rounded-lg bg-muted/50 border'>
-                  <p className='text-sm text-muted-foreground italic'>
-                    "{event.utilityBreakdown.reason}"
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Manual Override Indicator */}
           {event.isManualOverride && (
@@ -306,12 +322,12 @@ export function EventDetailSheet({
 
           {/* Actions */}
           <div className='space-y-2'>
-            {event.scheduleTaskId && (
+            {event.taskId && (
               <Button
                 variant='outline'
                 className='w-full justify-start'
                 onClick={() => {
-                  onViewTask?.(event.scheduleTaskId);
+                  onViewTask?.(event.taskId!);
                 }}
               >
                 <ExternalLink className='h-4 w-4 mr-2' />
@@ -319,7 +335,43 @@ export function EventDetailSheet({
               </Button>
             )}
 
-            {event.status !== 'completed' && (
+            {/* Pin/Unpin */}
+            <Button
+              variant='outline'
+              className={cn(
+                'w-full justify-start',
+                event.isPinned &&
+                  'text-purple-600 hover:text-purple-700 hover:bg-purple-500/10'
+              )}
+              onClick={handleTogglePin}
+            >
+              {event.isPinned ? (
+                <>
+                  <PinOff className='h-4 w-4 mr-2' />
+                  Unpin Event
+                </>
+              ) : (
+                <>
+                  <Pin className='h-4 w-4 mr-2' />
+                  Pin Event (Lock Position)
+                </>
+              )}
+            </Button>
+
+            {/* Split Event */}
+            {event.status === 'PLANNED' && (
+              <Button
+                variant='outline'
+                className='w-full justify-start'
+                onClick={() => setSplitDialogOpen(true)}
+              >
+                <Scissors className='h-4 w-4 mr-2' />
+                Split into Multiple Parts
+              </Button>
+            )}
+
+            {/* Mark Complete */}
+            {event.status !== 'DONE' && event.status !== 'SKIPPED' && (
               <Button
                 variant='outline'
                 className='w-full justify-start text-green-600 hover:text-green-700 hover:bg-green-500/10'
@@ -330,6 +382,19 @@ export function EventDetailSheet({
               </Button>
             )}
 
+            {/* Mark Skipped */}
+            {event.status !== 'DONE' && event.status !== 'SKIPPED' && (
+              <Button
+                variant='outline'
+                className='w-full justify-start text-amber-600 hover:text-amber-700 hover:bg-amber-500/10'
+                onClick={handleMarkSkipped}
+              >
+                <XCircle className='h-4 w-4 mr-2' />
+                Mark as Skipped
+              </Button>
+            )}
+
+            {/* Reschedule */}
             <Button
               variant='outline'
               className='w-full justify-start'
@@ -338,9 +403,10 @@ export function EventDetailSheet({
               }}
             >
               <Edit className='h-4 w-4 mr-2' />
-              Reschedule with AI
+              Trigger Reschedule
             </Button>
 
+            {/* Remove */}
             <Button
               variant='outline'
               className='w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-500/10'
@@ -351,6 +417,14 @@ export function EventDetailSheet({
             </Button>
           </div>
         </div>
+
+        {/* Split Dialog */}
+        <SplitEventDialog
+          event={event}
+          open={splitDialogOpen}
+          onOpenChange={setSplitDialogOpen}
+          onConfirm={handleSplit}
+        />
       </SheetContent>
     </Sheet>
   );

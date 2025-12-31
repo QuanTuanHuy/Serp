@@ -73,8 +73,16 @@ type Assignment struct {
 	PartIndex      int
 	TotalParts     int
 	IsPinned       bool
+	Status         *string
 	UtilityScore   float64
 	Title          string
+}
+
+func (a *Assignment) IsCompleted() bool {
+	if a.Status != nil && *a.Status == "DONE" {
+		return true
+	}
+	return false
 }
 
 func (a *Assignment) Duration() int {

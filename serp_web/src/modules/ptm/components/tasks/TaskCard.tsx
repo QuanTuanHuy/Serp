@@ -2,7 +2,7 @@
  * PTM v2 - Task Card Component
  *
  * @author QuanTuanHuy
- * @description Part of Serp Project - Task card for list display
+ * @description Part of Serp Project - Task card for list display (Refactored)
  */
 
 'use client';
@@ -20,8 +20,10 @@ import {
   ExternalLink,
   Link as LinkIcon,
   AlertCircle,
+  Edit,
+  Trash2,
+  Repeat,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { Card } from '@/shared/components/ui/card';
 import { Badge } from '@/shared/components/ui/badge';
 import { Checkbox } from '@/shared/components/ui/checkbox';
@@ -33,23 +35,21 @@ import {
   DropdownMenuSeparator,
 } from '@/shared/components/ui/dropdown-menu';
 import { Button } from '@/shared/components/ui/button';
-import { Progress } from '@/shared/components/ui/progress';
 import { cn } from '@/shared/utils';
 import { StatusBadge } from '../shared/StatusBadge';
 import { PriorityBadge } from '../shared/PriorityBadge';
-import { RecurringBadge } from './RecurringBadge';
-import {
-  useGetTasksQuery,
-  useUpdateTaskMutation,
-  useDeleteTaskMutation,
-} from '../../services/taskApi';
-import type { Task } from '../../types';
-import { toast } from 'sonner';
+import { useTaskCardActions, useTaskSubtasks } from '../../hooks';
+import type { Task, TaskStatus } from '../../types';
 
 interface TaskCardProps {
   task: Task;
   onClick?: (taskId: number) => void;
-  onNavigate?: boolean; // If true, navigate to detail page instead of opening sheet
+  onNavigate?: boolean;
+  onToggleComplete?: (taskId: number, currentStatus: TaskStatus) => void;
+  onStart?: (taskId: number) => void;
+  onPause?: (taskId: number) => void;
+  onEdit?: (taskId: number) => void;
+  onDelete?: (task: Task) => void;
   className?: string;
 }
 
@@ -57,80 +57,39 @@ export function TaskCard({
   task,
   onClick,
   onNavigate = false,
+  onToggleComplete,
+  onStart,
+  onPause,
+  onEdit,
+  onDelete,
   className,
 }: TaskCardProps) {
-  const router = useRouter();
-  const [updateTask] = useUpdateTaskMutation();
-  const [deleteTask] = useDeleteTaskMutation();
+  // Custom hooks for actions and subtasks
+  const {
+    handleCardClick,
+    handleToggleComplete,
+    handleStart,
+    handlePause,
+    handleEdit,
+    handleDelete,
+    handleOpenDetail,
+  } = useTaskCardActions({
+    task,
+    onClick,
+    onNavigate,
+    onToggleComplete,
+    onStart,
+    onPause,
+    onEdit,
+    onDelete,
+  });
 
-  const { data: allTasks = [] } = useGetTasksQuery({});
-
-  const subtasks = allTasks.filter((t) => t.parentTaskId === task.id);
-  const completedSubtasks = subtasks.filter((t) => t.status === 'DONE').length;
-  const totalSubtasks = subtasks.length;
+  const { completedSubtasks, totalSubtasks } = useTaskSubtasks({
+    task,
+  });
 
   const isOverdue =
     task.status !== 'DONE' && task.deadlineMs && task.deadlineMs < Date.now();
-
-  const handleToggleComplete = async () => {
-    try {
-      await updateTask({
-        id: task.id,
-        status: task.status === 'DONE' ? 'TODO' : 'DONE',
-        progressPercentage:
-          task.status === 'DONE' ? task.progressPercentage : 100,
-      }).unwrap();
-
-      toast.success(
-        task.status === 'DONE' ? 'Task marked as incomplete' : 'Task completed!'
-      );
-    } catch (error) {
-      toast.error('Failed to update task');
-    }
-  };
-
-  const handleStart = async () => {
-    try {
-      await updateTask({
-        id: task.id,
-        status: 'IN_PROGRESS',
-      }).unwrap();
-      toast.success('Task started!');
-    } catch (error) {
-      toast.error('Failed to start task');
-    }
-  };
-
-  const handlePause = async () => {
-    try {
-      await updateTask({
-        id: task.id,
-        status: 'TODO',
-      }).unwrap();
-      toast.success('Task paused');
-    } catch (error) {
-      toast.error('Failed to pause task');
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this task?')) return;
-
-    try {
-      await deleteTask(task.id).unwrap();
-      toast.success('Task deleted');
-    } catch (error) {
-      toast.error('Failed to delete task');
-    }
-  };
-
-  const handleCardClick = () => {
-    if (onNavigate) {
-      router.push(`/ptm/tasks/${task.id}`);
-    } else {
-      onClick?.(task.id);
-    }
-  };
 
   return (
     <Card
@@ -181,10 +140,14 @@ export function TaskCard({
           {/* Meta Info */}
           <div className='flex flex-wrap items-center gap-3 text-xs text-muted-foreground'>
             {/* Duration */}
-            {task.estimatedDurationHours > 0 && (
+            {task.estimatedDurationMin && task.estimatedDurationMin > 0 && (
               <div className='flex items-center gap-1'>
                 <Clock className='h-3 w-3' />
-                <span>{task.estimatedDurationHours}h</span>
+                <span>
+                  {task.estimatedDurationMin >= 60
+                    ? `${Math.floor(task.estimatedDurationMin / 60)}h ${task.estimatedDurationMin % 60}m`
+                    : `${task.estimatedDurationMin}m`}
+                </span>
               </div>
             )}
 
@@ -208,8 +171,11 @@ export function TaskCard({
             <StatusBadge status={task.status} />
 
             {/* Recurring Badge */}
-            {task.repeatConfig && (
-              <RecurringBadge repeatConfig={task.repeatConfig} />
+            {task.isRecurring && (
+              <div className='flex items-center gap-1 text-blue-600 dark:text-blue-400'>
+                <Repeat className='h-3 w-3' />
+                <span className='font-medium'>Recurring</span>
+              </div>
             )}
 
             {/* Deep Work Indicator */}
@@ -252,17 +218,6 @@ export function TaskCard({
             )}
           </div>
 
-          {/* Progress Bar */}
-          {task.progressPercentage > 0 && task.status !== 'DONE' && (
-            <div className='space-y-1'>
-              <div className='flex items-center justify-between text-xs'>
-                <span className='text-muted-foreground'>Progress</span>
-                <span className='font-medium'>{task.progressPercentage}%</span>
-              </div>
-              <Progress value={task.progressPercentage} className='h-1.5' />
-            </div>
-          )}
-
           {/* Tags */}
           {task.tags && task.tags.length > 0 && (
             <div className='flex flex-wrap items-center gap-1'>
@@ -296,38 +251,44 @@ export function TaskCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align='end'>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                router.push(`/ptm/tasks/${task.id}`);
-              }}
-            >
+            <DropdownMenuItem onClick={handleOpenDetail}>
               <ExternalLink className='mr-2 h-4 w-4' />
               Open Detail
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            {task.status === 'TODO' && (
+            {task.status === 'TODO' && onStart && (
               <DropdownMenuItem onClick={handleStart}>
                 <Play className='mr-2 h-4 w-4' />
                 Start
               </DropdownMenuItem>
             )}
-            {task.status === 'IN_PROGRESS' && (
+            {task.status === 'IN_PROGRESS' && onPause && (
               <DropdownMenuItem onClick={handlePause}>
                 <Pause className='mr-2 h-4 w-4' />
                 Pause
               </DropdownMenuItem>
             )}
-            {task.status !== 'DONE' && (
+            {task.status !== 'DONE' && onToggleComplete && (
               <DropdownMenuItem onClick={handleToggleComplete}>
                 <Check className='mr-2 h-4 w-4' />
                 Mark Complete
               </DropdownMenuItem>
             )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleDelete} className='text-red-600'>
-              Delete
-            </DropdownMenuItem>
+            {onEdit && (
+              <DropdownMenuItem onClick={handleEdit}>
+                <Edit className='mr-2 h-4 w-4' />
+                Edit
+              </DropdownMenuItem>
+            )}
+            {(onStart || onPause || onToggleComplete || onEdit) && onDelete && (
+              <DropdownMenuSeparator />
+            )}
+            {onDelete && (
+              <DropdownMenuItem onClick={handleDelete} className='text-red-600'>
+                <Trash2 className='mr-2 h-4 w-4' />
+                Delete
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

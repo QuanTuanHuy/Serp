@@ -26,7 +26,7 @@ import {
   useGetTasksQuery,
   useAddDependencyMutation,
   useValidateDependencyMutation,
-} from '../../services/taskApi';
+} from '../../api';
 import { StatusBadge, PriorityBadge } from '../shared';
 import type { Task } from '../../types';
 
@@ -47,7 +47,8 @@ export function DependencyPicker({
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  const { data: allTasks = [] } = useGetTasksQuery({});
+  const { data: paginatedTasks } = useGetTasksQuery({});
+  const allTasks = paginatedTasks?.data?.items || [];
   const [addDependency, { isLoading: isAdding }] = useAddDependencyMutation();
   const [validateDependency] = useValidateDependencyMutation();
 

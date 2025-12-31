@@ -17,7 +17,7 @@ import {
 } from '@/shared/components/ui/card';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { cn } from '@/shared/utils';
-import { useGetTasksQuery } from '../../services/taskApi';
+import { useGetTasksQuery } from '../../api';
 import type { Task } from '../../types';
 
 interface DayData {
@@ -28,7 +28,8 @@ interface DayData {
 }
 
 export function WeeklyOverview() {
-  const { data: tasks = [], isLoading } = useGetTasksQuery({});
+  const { data: paginatedData, isLoading } = useGetTasksQuery({});
+  const tasks = paginatedData?.data?.items || [];
 
   const weekData = useMemo<DayData[]>(() => {
     const today = new Date();
@@ -55,7 +56,8 @@ export function WeeklyOverview() {
       const focusTime = dayTasks
         .filter((t) => t.isDeepWork)
         .reduce(
-          (acc, t) => acc + (t.actualDurationHours || t.estimatedDurationHours),
+          (acc, t) =>
+            acc + (t.actualDurationMin || t.estimatedDurationMin || 0) / 60,
           0
         );
 
@@ -97,7 +99,8 @@ export function WeeklyOverview() {
       prevWeekFocusTime += dayTasks
         .filter((t) => t.isDeepWork)
         .reduce(
-          (acc, t) => acc + (t.actualDurationHours || t.estimatedDurationHours),
+          (acc, t) =>
+            acc + (t.actualDurationMin || t.estimatedDurationMin || 0) / 60,
           0
         );
     }

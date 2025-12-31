@@ -7,6 +7,7 @@
 
 export { ProjectCard } from './ProjectCard';
 export { ProjectGrid } from './ProjectGrid';
+export { ProjectFormDialog } from './ProjectFormDialog';
 export { CreateProjectDialog } from './CreateProjectDialog';
 export { EditProjectDialog } from './EditProjectDialog';
 export { ProjectDetailView } from './ProjectDetailView';

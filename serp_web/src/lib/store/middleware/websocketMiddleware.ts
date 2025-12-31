@@ -87,7 +87,7 @@ export const websocketMiddleware: Middleware =
 
         socket.onerror = (error) => {
           store.dispatch(wsError('WebSocket error'));
-          console.error('WebSocket error', error);
+          // console.error('WebSocket error', error);
         };
       } catch (e) {
         console.error('Failed to create WebSocket', e);

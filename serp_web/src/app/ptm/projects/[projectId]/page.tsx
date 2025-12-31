@@ -23,9 +23,6 @@ import {
   CardTitle,
 } from '@/shared/components/ui/card';
 import { Progress } from '@/shared/components/ui/progress';
-import { useGetProjectQuery } from '@/modules/ptm/services/projectApi';
-import { useGetTasksQuery } from '@/modules/ptm/services/taskApi';
-import { useGetEntityActivitiesQuery } from '@/modules/ptm/services/activityApi';
 import { EditProjectDialog } from '@/modules/ptm/components/projects/EditProjectDialog';
 import { ProjectActivityTimeline } from '@/modules/ptm/components/projects';
 import { TaskList } from '@/modules/ptm/components/tasks/TaskList';
@@ -33,6 +30,11 @@ import { PriorityBadge } from '@/modules/ptm/components/shared/PriorityBadge';
 import { DependencyGraph } from '@/modules/ptm/components/tasks/DependencyGraph';
 import { GanttView } from '@/modules/ptm/components/schedule/GanttView';
 import { Network, GanttChart } from 'lucide-react';
+import {
+  useGetEntityActivitiesQuery,
+  useGetProjectQuery,
+  useGetTasksQuery,
+} from '@/modules/ptm/api';
 
 export default function ProjectDetailPage({
   params,
@@ -51,8 +53,11 @@ export default function ProjectDetailPage({
   const tab = searchParams.get('tab');
 
   const { data: project, isLoading } = useGetProjectQuery(projectId);
-  const { data: projectTasks = [], isLoading: isLoadingTasks } =
-    useGetTasksQuery({ projectId }, { skip: !projectId });
+  const { data: paginatedTasks, isLoading: isLoadingTasks } = useGetTasksQuery(
+    { projectId },
+    { skip: !projectId }
+  );
+  const projectTasks = paginatedTasks?.data?.items || [];
   const { data: activities = [] } = useGetEntityActivitiesQuery(
     {
       entityType: 'project',

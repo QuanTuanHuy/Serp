@@ -27,8 +27,11 @@ type TaskResponse struct {
 	Category *string  `json:"category,omitempty"`
 	Tags     []string `json:"tags,omitempty"`
 
-	ParentTaskID     *int64  `json:"parentTaskId,omitempty"`
-	DependentTaskIDs []int64 `json:"dependentTaskIds,omitempty"`
+	ParentTaskID          *int64  `json:"parentTaskId,omitempty"`
+	HasSubtasks           bool    `json:"hasSubtasks"`
+	TotalSubtaskCount     int     `json:"totalSubtaskCount"`
+	CompletedSubtaskCount int     `json:"completedSubtaskCount"`
+	DependentTaskIDs      []int64 `json:"dependentTaskIds,omitempty"`
 
 	ProjectID *int64 `json:"projectId,omitempty"`
 
@@ -44,7 +47,6 @@ type TaskResponse struct {
 	Status       string `json:"status"`
 	ActiveStatus string `json:"activeStatus"`
 
-	Notes      *string `json:"notes,omitempty"`
 	ExternalID *string `json:"externalId,omitempty"`
 	Source     string  `json:"source"`
 
@@ -52,6 +54,8 @@ type TaskResponse struct {
 
 	CreatedAt int64 `json:"createdAt"`
 	UpdatedAt int64 `json:"updatedAt"`
+
+	SubTasks []*TaskResponse `json:"subTasks,omitempty"`
 
 	// Computed fields
 	IsOverdue           *bool  `json:"isOverdue,omitempty"`

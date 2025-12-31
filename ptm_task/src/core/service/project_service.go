@@ -14,6 +14,7 @@ import (
 	"github.com/serp/ptm-task/src/core/domain/entity"
 	"github.com/serp/ptm-task/src/core/domain/enum"
 	"github.com/serp/ptm-task/src/core/port/store"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -27,12 +28,12 @@ type IProjectService interface {
 	CheckIfCanBeCompleted(project *entity.ProjectEntity, taskStats *store.ProjectStats) bool
 
 	CreateProject(ctx context.Context, tx *gorm.DB, userID int64, project *entity.ProjectEntity) (*entity.ProjectEntity, error)
-	UpdateProject(ctx context.Context, tx *gorm.DB, userID int64, project *entity.ProjectEntity) error
-	UpdateProjectStatus(ctx context.Context, tx *gorm.DB, userID int64, projectID int64, status string) error
+	UpdateProject(ctx context.Context, tx *gorm.DB, userID int64, oldProject, newProject *entity.ProjectEntity) error
 	UpdateProjectProgress(ctx context.Context, tx *gorm.DB, projectID int64, totalTasks, completedTasks int) error
 	DeleteProject(ctx context.Context, tx *gorm.DB, userID int64, projectID int64) error
 
 	GetProjectByID(ctx context.Context, projectID int64) (*entity.ProjectEntity, error)
+	GetProjectByUserIDAndID(ctx context.Context, userID, projectID int64) (*entity.ProjectEntity, error)
 	GetProjectWithStats(ctx context.Context, projectID int64) (*entity.ProjectEntity, error)
 	GetProjectsByUserID(ctx context.Context, userID int64, filter *store.ProjectFilter) ([]*entity.ProjectEntity, error)
 	CountProjectsByUserID(ctx context.Context, userID int64, filter *store.ProjectFilter) (int64, error)
@@ -44,15 +45,19 @@ type IProjectService interface {
 type projectService struct {
 	projectPort store.IProjectPort
 	taskPort    store.ITaskPort
+
+	logger *zap.Logger
 }
 
 func NewProjectService(
 	projectPort store.IProjectPort,
 	taskPort store.ITaskPort,
+	logger *zap.Logger,
 ) IProjectService {
 	return &projectService{
 		projectPort: projectPort,
 		taskPort:    taskPort,
+		logger:      logger,
 	}
 }
 
@@ -149,46 +154,37 @@ func (s *projectService) CreateProject(ctx context.Context, tx *gorm.DB, userID 
 	return project, nil
 }
 
-func (s *projectService) UpdateProject(ctx context.Context, tx *gorm.DB, userID int64, project *entity.ProjectEntity) error {
-	if err := s.ValidateProjectOwnership(userID, project); err != nil {
+func (s *projectService) UpdateProject(ctx context.Context, tx *gorm.DB, userID int64, oldProject, newProject *entity.ProjectEntity) error {
+	if err := s.ValidateProjectOwnership(userID, newProject); err != nil {
 		return err
 	}
-	if err := s.ValidateProjectData(project); err != nil {
-		return err
-	}
-
-	project.UpdatedAt = time.Now().UnixMilli()
-	return s.projectPort.UpdateProject(ctx, tx, project)
-}
-
-func (s *projectService) UpdateProjectStatus(ctx context.Context, tx *gorm.DB, userID int64, projectID int64, status string) error {
-	project, err := s.GetProjectByID(ctx, projectID)
-	if err != nil {
-		return err
-	}
-	if err := s.ValidateProjectOwnership(userID, project); err != nil {
-		return err
-	}
-	if err := s.ValidateProjectStatus(project.Status, status); err != nil {
+	if err := s.ValidateProjectData(newProject); err != nil {
 		return err
 	}
 
-	if status == string(enum.ProjectCompleted) {
-		stats, err := s.projectPort.GetProjectStats(ctx, projectID)
-		if err != nil {
+	if oldProject.Status != newProject.Status {
+		if err := s.ValidateProjectStatus(oldProject.Status, newProject.Status); err != nil {
 			return err
 		}
-		if !s.CheckIfCanBeCompleted(project, stats) {
-			return errors.New(constant.ProjectCannotComplete)
+
+		if newProject.IsCompleted() {
+			stats, err := s.projectPort.GetProjectStats(ctx, newProject.ID)
+			if err != nil {
+				return err
+			}
+			if !s.CheckIfCanBeCompleted(newProject, stats) {
+				return errors.New(constant.ProjectCannotComplete)
+			}
 		}
 	}
 
-	return s.projectPort.UpdateProjectStatus(ctx, tx, projectID, status)
+	newProject.UpdatedAt = time.Now().UnixMilli()
+	return s.projectPort.UpdateProject(ctx, tx, newProject)
 }
 
 func (s *projectService) UpdateProjectProgress(ctx context.Context, tx *gorm.DB, projectID int64, totalTasks, completedTasks int) error {
 	progressPercentage := s.CalculateProgressPercentage(totalTasks, completedTasks)
-	return s.projectPort.UpdateProjectProgress(ctx, tx, projectID, progressPercentage)
+	return s.projectPort.UpdateProjectProgress(ctx, tx, projectID, totalTasks, completedTasks, progressPercentage)
 }
 
 func (s *projectService) DeleteProject(ctx context.Context, tx *gorm.DB, userID int64, projectID int64) error {
@@ -222,6 +218,17 @@ func (s *projectService) GetProjectByID(ctx context.Context, projectID int64) (*
 	return project, nil
 }
 
+func (s *projectService) GetProjectByUserIDAndID(ctx context.Context, userID, projectID int64) (*entity.ProjectEntity, error) {
+	project, err := s.projectPort.GetProjectByID(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+	if project == nil || project.UserID != userID {
+		return nil, errors.New(constant.ProjectNotFound)
+	}
+	return project, nil
+}
+
 func (s *projectService) GetProjectWithStats(ctx context.Context, projectID int64) (*entity.ProjectEntity, error) {
 	project, err := s.GetProjectByID(ctx, projectID)
 	if err != nil {
@@ -233,12 +240,18 @@ func (s *projectService) GetProjectWithStats(ctx context.Context, projectID int6
 		return nil, err
 	}
 
-	project.UpdateStats(
-		stats.TotalTasks,
-		stats.CompletedTasks,
-		stats.EstimatedDurationMin,
-		stats.ActualDurationMin,
-	)
+	if stats.TotalTasks != project.TotalTasks || stats.CompletedTasks != project.CompletedTasks {
+		project.UpdateStats(
+			stats.TotalTasks,
+			stats.CompletedTasks,
+			stats.EstimatedDurationMin,
+			stats.ActualDurationMin,
+		)
+		err = s.projectPort.UpdateProject(ctx, nil, project)
+		if err != nil {
+			s.logger.Error("failed to update project stats", zap.Error(err))
+		}
+	}
 
 	return project, nil
 }

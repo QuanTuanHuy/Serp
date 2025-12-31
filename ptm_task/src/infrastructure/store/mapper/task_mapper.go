@@ -48,8 +48,11 @@ func (m *TaskMapper) ToEntity(taskModel *model.TaskModel) *entity.TaskEntity {
 
 		Category: taskModel.Category,
 
-		ParentTaskID: taskModel.ParentTaskID,
-		ProjectID:    taskModel.ProjectID,
+		ParentTaskID:          taskModel.ParentTaskID,
+		HasSubtasks:           taskModel.HasSubtasks,
+		TotalSubtaskCount:     taskModel.TotalSubtaskCount,
+		CompletedSubtaskCount: taskModel.CompletedSubtaskCount,
+		ProjectID:             taskModel.ProjectID,
 
 		IsRecurring:           taskModel.IsRecurring,
 		RecurrencePattern:     taskModel.RecurrencePattern,
@@ -107,8 +110,11 @@ func (m *TaskMapper) ToModel(task *entity.TaskEntity) *model.TaskModel {
 
 		Category: task.Category,
 
-		ParentTaskID: task.ParentTaskID,
-		ProjectID:    task.ProjectID,
+		ParentTaskID:          task.ParentTaskID,
+		HasSubtasks:           task.HasSubtasks,
+		TotalSubtaskCount:     task.TotalSubtaskCount,
+		CompletedSubtaskCount: task.CompletedSubtaskCount,
+		ProjectID:             task.ProjectID,
 
 		IsRecurring:           task.IsRecurring,
 		RecurrencePattern:     task.RecurrencePattern,
