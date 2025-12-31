@@ -14,48 +14,64 @@ export interface Task {
   userId: number;
   tenantId: number;
   projectId?: number;
-  parentTaskId?: number;
 
   title: string;
   description?: string;
   priority: TaskPriority;
   status: TaskStatus;
 
-  estimatedDurationHours: number;
-  actualDurationHours?: number;
+  // Duration fields (in minutes, matching backend)
+  estimatedDurationMin?: number;
+  actualDurationMin?: number;
+  isDurationLearned: boolean;
 
+  // Priority scoring
+  priorityScore?: number;
+
+  // Date fields (timestamps in milliseconds)
   preferredStartDateMs?: number;
   deadlineMs?: number;
+  earliestStartMs?: number;
   completedAt?: string;
 
-  isDeepWork: boolean;
+  // Categorization
   category?: string;
   tags: string[];
 
-  dependentTaskIds: number[];
-  repeatConfig?: RepeatConfig;
+  // Subtask hierarchy (matches backend)
+  parentTaskId?: number;
+  hasSubtasks: boolean;
+  totalSubtaskCount: number;
+  completedSubtaskCount: number;
+
+  // Recurrence fields
+  isRecurring: boolean;
+  recurrencePattern?: string;
+  recurrenceConfig?: string;
+  parentRecurringTaskId?: number;
+
+  // Task attributes
+  isDeepWork: boolean;
+  isMeeting: boolean;
+  isFlexible: boolean;
+
+  // External integration
   source: TaskSource;
   externalId?: string;
 
-  progressPercentage: number;
+  // Status
   activeStatus: 'ACTIVE' | 'INACTIVE';
   createdAt: string;
   updatedAt: string;
 
-  // NEW: Computed fields for hierarchy and dependencies
+  // Recursive subtask tree (from backend SubTasks field)
+  subTasks?: Task[];
+
+  // Computed fields for hierarchy and dependencies
   depth?: number; // 0=root, 1=subtask, 2=sub-subtask
-  hasSubtasks?: boolean; // Quick check
   isBlocked?: boolean; // Has incomplete dependencies
   blockingTasksCount?: number; // Number of tasks waiting for this
-  completedSubtasksCount?: number;
-  totalSubtasksCount?: number;
-}
-
-export interface RepeatConfig {
-  frequency: 'daily' | 'weekly' | 'monthly';
-  interval: number;
-  endDate?: string;
-  daysOfWeek?: number[];
+  dependentTaskIds: number[]; // Computed from dependencies
 }
 
 // NEW: Dependency types
@@ -111,7 +127,7 @@ export interface TaskTemplate {
   titleTemplate: string;
   descriptionTemplate?: string;
 
-  estimatedDurationHours: number;
+  estimatedDurationMin?: number;
   priority: TaskPriority;
   category?: string;
   tags: string[];
@@ -130,26 +146,61 @@ export interface CreateTaskRequest {
   title: string;
   description?: string;
   priority?: TaskPriority;
-  estimatedDurationHours?: number;
+  estimatedDurationMin?: number;
+  preferredStartDateMs?: number;
   deadlineMs?: number;
+  earliestStartMs?: number;
+  category?: string;
+  tags?: string[];
+  parentTaskId?: number;
+  projectId?: number;
+  isRecurring?: boolean;
+  recurrencePattern?: string;
+  recurrenceConfig?: string;
+  isDeepWork?: boolean;
+  isMeeting?: boolean;
+  isFlexible?: boolean;
+  externalId?: string;
+  source?: TaskSource;
+}
+
+export interface UpdateTaskRequest {
+  title?: string;
+  description?: string;
+  priority?: TaskPriority;
+  priorityScore?: number;
+  estimatedDurationMin?: number;
+  actualDurationMin?: number;
+  preferredStartDateMs?: number;
+  deadlineMs?: number;
+  earliestStartMs?: number;
+  category?: string;
+  tags?: string[];
+  parentTaskId?: number;
+  projectId?: number;
+  isRecurring?: boolean;
+  recurrencePattern?: string;
+  recurrenceConfig?: string;
+  isDeepWork?: boolean;
+  isMeeting?: boolean;
+  isFlexible?: boolean;
+  status?: TaskStatus;
+}
+
+export interface TaskFilterParams {
+  status?: string;
+  priority?: string;
   projectId?: number;
   parentTaskId?: number;
   category?: string;
   tags?: string[];
   isDeepWork?: boolean;
-  repeatConfig?: RepeatConfig;
-}
-
-export interface UpdateTaskRequest {
-  id: number;
-  title?: string;
-  description?: string;
-  priority?: TaskPriority;
-  status?: TaskStatus;
-  estimatedDurationHours?: number;
-  deadlineMs?: number;
-  progressPercentage?: number;
-  isDeepWork?: boolean;
-  category?: string;
-  tags?: string[];
+  isMeeting?: boolean;
+  isRecurring?: boolean;
+  deadlineFrom?: number;
+  deadlineTo?: number;
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC';
 }

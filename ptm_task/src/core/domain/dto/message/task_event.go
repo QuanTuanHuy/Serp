@@ -16,6 +16,11 @@ type TaskCreatedEvent struct {
 	Category *string  `json:"category,omitempty"`
 	Tags     []string `json:"tags,omitempty"`
 
+	ParentTaskID          *int64 `json:"parentTaskId,omitempty"`
+	HasSubtasks           bool   `json:"hasSubtasks"`
+	TotalSubtaskCount     int    `json:"totalSubtaskCount"`
+	CompletedSubtaskCount int    `json:"completedSubtaskCount"`
+
 	IsDeepWork bool `json:"isDeepWork"`
 	IsMeeting  bool `json:"isMeeting"`
 	IsFlexible bool `json:"isFlexible"`
@@ -39,6 +44,11 @@ type TaskUpdatedEvent struct {
 	Category *string  `json:"category,omitempty"`
 	Tags     []string `json:"tags,omitempty"`
 
+	ParentTaskID          *int64 `json:"parentTaskId,omitempty"`
+	HasSubtasks           *bool  `json:"hasSubtasks,omitempty"`
+	TotalSubtaskCount     *int   `json:"totalSubtaskCount,omitempty"`
+	CompletedSubtaskCount *int   `json:"completedSubtaskCount,omitempty"`
+
 	IsDeepWork *bool `json:"isDeepWork,omitempty"`
 	IsMeeting  *bool `json:"isMeeting,omitempty"`
 	IsFlexible *bool `json:"isFlexible,omitempty"`
@@ -49,4 +59,9 @@ type TaskUpdatedEvent struct {
 type TaskDeletedEvent struct {
 	TaskID int64 `json:"taskId"`
 	UserID int64 `json:"userId"`
+}
+
+type BulkTaskDeletedEvent struct {
+	TaskIDs []int64 `json:"taskIds"`
+	UserID  int64   `json:"userId"`
 }

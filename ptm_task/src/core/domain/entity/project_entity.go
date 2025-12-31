@@ -86,3 +86,21 @@ func (p *ProjectEntity) UpdateStats(totalTasks, completedTasks int, estimatedMin
 	p.EstimatedHours = float64(estimatedMin) / 60.0
 	p.ActualHours = float64(actualMin) / 60.0
 }
+
+func (p *ProjectEntity) UpdateStatsForAddedTask(isCompleted bool) {
+	p.TotalTasks += 1
+	if isCompleted {
+		p.CompletedTasks += 1
+	}
+	p.ProgressPercentage = p.CalculateProgressPercentage(p.TotalTasks, p.CompletedTasks)
+}
+
+func (p *ProjectEntity) UpdateStatsForRemovedTask(isCompleted bool) {
+	if p.TotalTasks > 0 {
+		p.TotalTasks -= 1
+	}
+	if isCompleted && p.CompletedTasks > 0 {
+		p.CompletedTasks -= 1
+	}
+	p.ProgressPercentage = p.CalculateProgressPercentage(p.TotalTasks, p.CompletedTasks)
+}

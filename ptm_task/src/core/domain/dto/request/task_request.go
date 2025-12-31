@@ -60,6 +60,11 @@ type UpdateTaskRequest struct {
 	IsFlexible *bool `json:"isFlexible,omitempty"`
 
 	Status *string `json:"status,omitempty" validate:"omitempty,oneof=TODO IN_PROGRESS DONE CANCELLED ARCHIVED"`
+
+	// Use internal only
+	HasSubtasks           *bool `json:"hasSubtasks,omitempty"`
+	TotalSubtaskCount     *int  `json:"totalSubtaskCount,omitempty"`
+	CompletedSubtaskCount *int  `json:"completedSubtaskCount,omitempty"`
 }
 
 type UpdateTaskStatusRequest struct {
@@ -75,7 +80,7 @@ type TaskFilterRequest struct {
 	BaseFilterRequest
 
 	Status       *string  `form:"status,omitempty" validate:"omitempty,oneof=TODO IN_PROGRESS DONE CANCELLED ARCHIVED"`
-	Priority     *string  `form:"priority,omitempty" validate:"omitempty,oneof=LOW MEDIUM HIGH URGENT"`
+	Priority     *string  `form:"priority,omitempty" validate:"omitempty,oneof=LOW MEDIUM HIGH"`
 	ProjectID    *int64   `form:"projectId,omitempty"`
 	ParentTaskID *int64   `form:"parentTaskId,omitempty"`
 	Category     *string  `form:"category,omitempty"`
@@ -83,7 +88,6 @@ type TaskFilterRequest struct {
 
 	IsDeepWork  *bool `form:"isDeepWork,omitempty"`
 	IsMeeting   *bool `form:"isMeeting,omitempty"`
-	IsOverdue   *bool `form:"isOverdue,omitempty"`
 	IsRecurring *bool `form:"isRecurring,omitempty"`
 
 	DeadlineFrom *int64 `form:"deadlineFrom,omitempty"`

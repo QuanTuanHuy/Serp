@@ -8,4 +8,5 @@ const (
 	ScheduleTaskUnschedulable ScheduleTaskStatus = "UNSCHEDULABLE"
 	ScheduleTaskPartial       ScheduleTaskStatus = "PARTIAL"
 	ScheduleTaskCompleted     ScheduleTaskStatus = "COMPLETED"
+	ScheduleTaskExcluded      ScheduleTaskStatus = "EXCLUDED"
 )

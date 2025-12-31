@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Calendar,
   Clock,
@@ -33,9 +33,6 @@ import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Textarea } from '@/shared/components/ui/textarea';
 import { Label } from '@/shared/components/ui/label';
-import { Progress } from '@/shared/components/ui/progress';
-import { Slider } from '@/shared/components/ui/slider';
-import { Card, CardContent } from '@/shared/components/ui/card';
 import { Separator } from '@/shared/components/ui/separator';
 import {
   Tabs,
@@ -43,219 +40,175 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/shared/components/ui/tabs';
-import { cn } from '@/shared/utils';
+import { Card } from '@/shared/components/ui/card';
 import { StatusBadge } from '../shared/StatusBadge';
 import { PriorityBadge } from '../shared/PriorityBadge';
 import { SubtaskList } from './SubtaskList';
 import { DependencyList } from './DependencyList';
-import { Badge } from '@/shared/components/ui/badge';
-import {
-  useGetTaskQuery,
-  useUpdateTaskMutation,
-  useDeleteTaskMutation,
-} from '../../services/taskApi';
-import {
-  useGetNotesByTaskQuery,
-  useCreateNoteMutation,
-  useUpdateNoteMutation,
-  useDeleteNoteMutation,
-} from '../../services/noteApi';
 import { NoteCard } from '../notes/NoteCard';
 import { NoteEditorNovel } from '../notes/NoteEditorNovel';
-import type { Task, TaskPriority } from '../../types';
+import { EditTaskDialog } from './dialogs/EditTaskDialog';
+import { DeleteTaskDialog } from './dialogs/DeleteTaskDialog';
+import { isMac as checkIsMac } from '@/shared/utils';
+import {
+  useTaskDetail,
+  useNoteOperations,
+  useTaskEditForm,
+  useKeyboardShortcuts,
+  useTaskDialogs,
+} from '../../hooks';
+import { toNumericId } from '../../utils';
 import { toast } from 'sonner';
 
 interface TaskDetailProps {
   taskId: number | string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onOpenFullView?: (taskId: number) => void;
 }
 
-export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
-  const [isEditing, setIsEditing] = useState(false);
+export function TaskDetail({
+  taskId,
+  open,
+  onOpenChange,
+  onOpenFullView,
+}: TaskDetailProps) {
   const [activeTab, setActiveTab] = useState<
     'details' | 'dependencies' | 'notes'
   >('details');
   const [showNoteEditor, setShowNoteEditor] = useState(false);
+  const { editDialog: subtaskEditDialog, deleteDialog: subtaskDeleteDialog } =
+    useTaskDialogs();
+
+  const isMac = checkIsMac();
+  const modKey = isMac ? '⌘' : 'Ctrl';
 
   // Convert taskId to number for API calls
-  const numericTaskId =
-    typeof taskId === 'string' ? parseInt(taskId, 10) : taskId;
+  const numericTaskId = toNumericId(taskId);
 
-  const { data: task, isLoading } = useGetTaskQuery(numericTaskId!, {
-    skip: !numericTaskId,
+  // Custom hooks for task operations
+  const {
+    task,
+    isLoading,
+    deleteDialogOpen,
+    setDeleteDialogOpen,
+    handleUpdate,
+    openDeleteDialog,
+    handleCopyLink,
+  } = useTaskDetail({
+    taskId: numericTaskId,
+    onDeleteSuccess: () => onOpenChange(false),
   });
-  const { data: notes = [] } = useGetNotesByTaskQuery(numericTaskId!, {
-    skip: !numericTaskId,
-  });
 
-  const [updateTask] = useUpdateTaskMutation();
-  const [deleteTask] = useDeleteTaskMutation();
-  const [createNote] = useCreateNoteMutation();
-  const [updateNote] = useUpdateNoteMutation();
-  const [deleteNote] = useDeleteNoteMutation();
+  // Custom hooks for note operations
+  const {
+    notes,
+    handleCreate,
+    handleUpdate: handleUpdateNote,
+    handleDelete: handleDeleteNote,
+  } = useNoteOperations({ taskId: numericTaskId });
 
-  // Keyboard shortcuts for task detail
-  useEffect(() => {
-    if (!open || !task) return;
+  // Custom hook for edit form state
+  const {
+    isEditing,
+    editForm,
+    startEdit,
+    cancelEdit,
+    setEditForm,
+    setIsEditing,
+  } = useTaskEditForm(task);
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Escape to close
-      if (e.key === 'Escape' && !isEditing) {
-        onOpenChange(false);
-      }
-
-      // Cmd/Ctrl + E to toggle edit mode
-      if ((e.metaKey || e.ctrlKey) && e.key === 'e') {
-        e.preventDefault();
-        if (isEditing) {
-          handleSave();
-        } else {
-          handleEdit();
-        }
-      }
-
-      // Cmd/Ctrl + D to delete (with confirmation)
-      if ((e.metaKey || e.ctrlKey) && e.key === 'd') {
-        e.preventDefault();
-        handleDelete();
-      }
-
-      // Ctrl + Tab 1, 2 to switch tabs
-      if (e.key === '1' && (e.metaKey || e.ctrlKey) && !isEditing) {
-        e.preventDefault();
-        setActiveTab('details');
-      }
-      if (e.key === '2' && (e.metaKey || e.ctrlKey) && !isEditing) {
-        e.preventDefault();
-        setActiveTab('notes');
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [open, task, isEditing, activeTab]);
-
-  // Edit form state
-  const [editForm, setEditForm] = useState<Partial<Task>>({});
-
-  const handleEdit = () => {
-    if (task) {
-      setEditForm({
-        title: task.title,
-        description: task.description,
-        priority: task.priority,
-        estimatedDurationHours: task.estimatedDurationHours,
-      });
-      setIsEditing(true);
-    }
-  };
-
+  // Save handler
   const handleSave = async () => {
-    if (!task) return;
-
     try {
-      await updateTask({
-        id: task.id,
-        ...editForm,
-      }).unwrap();
-
-      toast.success('Task updated successfully!');
+      await handleUpdate(editForm);
       setIsEditing(false);
     } catch (error) {
-      toast.error('Failed to update task');
+      // Error already handled in hook
     }
   };
 
-  const handleCancel = () => {
-    setEditForm({});
-    setIsEditing(false);
-  };
-
-  const handleProgressChange = async (value: number[]) => {
-    if (!task) return;
-
-    try {
-      await updateTask({
-        id: task.id,
-        progressPercentage: value[0],
-      }).unwrap();
-    } catch (error) {
-      toast.error('Failed to update progress');
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!task) return;
-
-    if (!confirm('Are you sure you want to delete this task?')) return;
-
-    try {
-      await deleteTask(task.id).unwrap();
-      toast.success('Task deleted');
-      onOpenChange(false);
-    } catch (error) {
-      toast.error('Failed to delete task');
-    }
-  };
-
-  const handleCopyLink = () => {
-    if (!task) return;
-
-    const url = `${window.location.origin}/ptm/tasks/${task.id}`;
-    navigator.clipboard.writeText(url);
-    toast.success('Link copied to clipboard');
-  };
-
+  // Note creation handler
   const handleCreateNote = async (content: string, isPinned: boolean) => {
-    if (!task) return;
-
-    try {
-      await createNote({
-        taskId: numericTaskId!,
-        content,
-        isPinned,
-      }).unwrap();
-
-      toast.success('Note created');
+    const success = await handleCreate(content, isPinned);
+    if (success) {
       setShowNoteEditor(false);
-    } catch (error) {
-      toast.error('Failed to create note');
     }
   };
 
-  const handleUpdateNote = async (
+  // Note update handler - convert ID to number
+  const handleUpdateNoteWithId = async (
     noteId: number | string,
     content: string,
     isPinned: boolean
   ) => {
-    try {
-      const numericNoteId =
-        typeof noteId === 'string' ? parseInt(noteId, 10) : noteId;
-      await updateNote({
-        id: numericNoteId,
-        content,
-        isPinned,
-      }).unwrap();
-
-      toast.success('Note updated');
-    } catch (error) {
-      toast.error('Failed to update note');
+    const numericNoteId = toNumericId(noteId);
+    if (numericNoteId) {
+      await handleUpdateNote(numericNoteId, content, isPinned);
     }
   };
 
-  const handleDeleteNote = async (noteId: number | string) => {
-    if (!confirm('Are you sure you want to delete this note?')) return;
-
-    try {
-      const numericNoteId =
-        typeof noteId === 'string' ? parseInt(noteId, 10) : noteId;
-      await deleteNote(numericNoteId).unwrap();
-      toast.success('Note deleted');
-    } catch (error) {
-      toast.error('Failed to delete note');
+  // Note delete handler - convert ID to number
+  const handleDeleteNoteWithId = async (noteId: number | string) => {
+    const numericNoteId = toNumericId(noteId);
+    if (numericNoteId) {
+      await handleDeleteNote(numericNoteId);
     }
   };
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts(
+    [
+      {
+        key: 'Escape',
+        handler: () => onOpenChange(false),
+        description: 'Close panel',
+      },
+      {
+        key: 'Enter',
+        shift: true,
+        handler: () => onOpenFullView?.(numericTaskId!),
+        description: 'Open in full view',
+      },
+      {
+        key: 'e',
+        mod: true,
+        handler: () => (isEditing ? handleSave() : startEdit()),
+        description: 'Edit task / Save changes',
+      },
+      {
+        key: 'd',
+        mod: true,
+        handler: openDeleteDialog,
+        description: 'Delete task',
+      },
+      {
+        key: 'l',
+        mod: true,
+        handler: handleCopyLink,
+        description: 'Copy link to clipboard',
+      },
+      {
+        key: '1',
+        mod: true,
+        handler: () => setActiveTab('details'),
+        description: 'Switch to Details tab',
+      },
+      {
+        key: '2',
+        mod: true,
+        handler: () => setActiveTab('dependencies'),
+        description: 'Switch to Dependencies tab',
+      },
+      {
+        key: '3',
+        mod: true,
+        handler: () => setActiveTab('notes'),
+        description: 'Switch to Notes tab',
+      },
+    ],
+    { enabled: open && !isEditing }
+  );
 
   if (!task && !isLoading) {
     return null;
@@ -263,7 +216,7 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className='w-full sm:max-w-2xl overflow-y-auto'>
+      <SheetContent className='w-full sm:max-w-2xl overflow-y-auto p-6'>
         {isLoading ? (
           <>
             <SheetTitle className='sr-only'>Loading task...</SheetTitle>
@@ -289,15 +242,82 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
                   </>
                 ) : (
                   <>
-                    <div className='flex items-start justify-between'>
-                      <SheetTitle className='text-2xl'>{task.title}</SheetTitle>
-                      <div className='hidden md:flex items-center gap-2 text-xs text-muted-foreground'>
+                    <div className='flex items-start justify-between gap-2'>
+                      <SheetTitle className='text-2xl flex-1'>
+                        {task.title}
+                      </SheetTitle>
+                      <div className='flex items-center gap-1'>
+                        {/* Open in full view button */}
+                        {onOpenFullView && (
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            onClick={() => onOpenFullView(numericTaskId!)}
+                            title='Open in full view (Shift+Enter)'
+                            className='h-8 w-8'
+                          >
+                            <ExternalLink className='h-4 w-4' />
+                          </Button>
+                        )}
+
+                        {/* Copy link button */}
+                        <Button
+                          variant='ghost'
+                          size='icon'
+                          onClick={handleCopyLink}
+                          title={`Copy link (${modKey}+L)`}
+                          className='h-8 w-8'
+                        >
+                          <Copy className='h-4 w-4' />
+                        </Button>
+
+                        {/* Edit button */}
+                        <Button
+                          variant='ghost'
+                          size='icon'
+                          onClick={startEdit}
+                          title={`Edit (${modKey}+E)`}
+                          className='h-8 w-8'
+                        >
+                          <Edit className='h-4 w-4' />
+                        </Button>
+
+                        {/* Delete button */}
+                        <Button
+                          variant='ghost'
+                          size='icon'
+                          onClick={openDeleteDialog}
+                          title={`Delete (${modKey}+D)`}
+                          className='h-8 w-8 text-red-600 hover:text-red-700'
+                        >
+                          <Trash2 className='h-4 w-4' />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Keyboard shortcuts hint */}
+                    <div className='hidden md:flex items-center gap-3 text-xs text-muted-foreground flex-wrap'>
+                      {onOpenFullView && (
+                        <>
+                          <div className='flex items-center gap-1'>
+                            <kbd className='px-1.5 py-0.5 bg-muted rounded border'>
+                              Shift+↵
+                            </kbd>
+                            <span>Full view</span>
+                          </div>
+                          <span>•</span>
+                        </>
+                      )}
+                      <div className='flex items-center gap-1'>
                         <kbd className='px-1.5 py-0.5 bg-muted rounded border'>
-                          Ctrl+E
+                          {modKey}+L
                         </kbd>
-                        <span>Edit</span>
-                        <kbd className='px-1.5 py-0.5 bg-muted rounded border ml-2'>
-                          Ctrl+1/2
+                        <span>Copy link</span>
+                      </div>
+                      <span>•</span>
+                      <div className='flex items-center gap-1'>
+                        <kbd className='px-1.5 py-0.5 bg-muted rounded border'>
+                          {modKey}+1/2/3
                         </kbd>
                         <span>Tabs</span>
                       </div>
@@ -364,31 +384,14 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
                     )}
                   </div>
 
-                  {/* Progress */}
-                  <div className='space-y-3'>
-                    <div className='flex items-center justify-between'>
-                      <Label>Progress</Label>
-                      <span className='text-sm font-medium'>
-                        {task.progressPercentage}%
-                      </span>
-                    </div>
-                    <Slider
-                      value={[task.progressPercentage]}
-                      max={100}
-                      step={10}
-                      onValueChange={handleProgressChange}
-                      className='cursor-pointer'
-                      disabled={isEditing}
-                    />
-                    <Progress value={task.progressPercentage} className='h-2' />
-                  </div>
-
                   {/* Subtasks Section */}
                   <div className='p-4 bg-muted/30 rounded-lg'>
                     <SubtaskList
                       parentTaskId={task.id}
                       allowNesting={true}
                       showFullDetails={true}
+                      onEditOpen={subtaskEditDialog.openEdit}
+                      onDeleteOpen={subtaskDeleteDialog.openDelete}
                       onTaskClick={(subtaskId) => {
                         // Open subtask in new detail sheet (future: nested sheets)
                         toast.info(
@@ -408,21 +411,24 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
                       {isEditing ? (
                         <Input
                           type='number'
-                          step='0.5'
-                          value={editForm.estimatedDurationHours || ''}
+                          step='15'
+                          placeholder='Minutes'
+                          value={editForm.estimatedDurationMin || ''}
                           onChange={(e) =>
                             setEditForm({
                               ...editForm,
-                              estimatedDurationHours: parseFloat(
-                                e.target.value
-                              ),
+                              estimatedDurationMin: parseFloat(e.target.value),
                             })
                           }
                         />
                       ) : (
                         <div className='flex items-center gap-2 text-sm'>
                           <Clock className='h-4 w-4' />
-                          <span>{task.estimatedDurationHours}h estimated</span>
+                          <span>
+                            {task.estimatedDurationMin
+                              ? `${Math.floor(task.estimatedDurationMin / 60)}h ${task.estimatedDurationMin % 60}m estimated`
+                              : 'Not set'}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -529,20 +535,9 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
                     </Card>
                   ) : (
                     <div className='space-y-3'>
-                      {[...notes]
-                        .sort((a, b) => {
-                          // Pinned notes first
-                          if (a.isPinned && !b.isPinned) return -1;
-                          if (!a.isPinned && b.isPinned) return 1;
-                          // Then by date (newest first)
-                          return (
-                            new Date(b.createdAt).getTime() -
-                            new Date(a.createdAt).getTime()
-                          );
-                        })
-                        .map((note) => (
-                          <NoteCard key={note.id} note={note} />
-                        ))}
+                      {notes.map((note) => (
+                        <NoteCard key={note.id} note={note} />
+                      ))}
                     </div>
                   )}
                 </TabsContent>
@@ -556,7 +551,7 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
                   <div className='flex gap-2 w-full'>
                     <Button
                       variant='outline'
-                      onClick={handleCancel}
+                      onClick={cancelEdit}
                       className='flex-1'
                     >
                       <X className='mr-2 h-4 w-4' />
@@ -567,37 +562,34 @@ export function TaskDetail({ taskId, open, onOpenChange }: TaskDetailProps) {
                       Save Changes
                     </Button>
                   </div>
-                ) : (
-                  <>
-                    <div className='flex gap-2'>
-                      <Button variant='outline' size='sm' onClick={handleEdit}>
-                        <Edit className='mr-2 h-4 w-4' />
-                        Edit
-                      </Button>
-                      <Button
-                        variant='outline'
-                        size='sm'
-                        onClick={handleCopyLink}
-                      >
-                        <Copy className='mr-2 h-4 w-4' />
-                        Copy Link
-                      </Button>
-                    </div>
-                    <Button
-                      variant='destructive'
-                      size='sm'
-                      onClick={handleDelete}
-                    >
-                      <Trash2 className='mr-2 h-4 w-4' />
-                      Delete
-                    </Button>
-                  </>
-                )}
+                ) : null}
               </div>
             </div>
           </>
         ) : null}
       </SheetContent>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteTaskDialog
+        task={task || null}
+        taskId={null}
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onSuccess={() => onOpenChange(false)}
+      />
+
+      {/* Subtask Edit/Delete Dialogs */}
+      <EditTaskDialog
+        taskId={subtaskEditDialog.taskId}
+        open={subtaskEditDialog.open}
+        onOpenChange={subtaskEditDialog.onOpenChange}
+      />
+      <DeleteTaskDialog
+        taskId={subtaskDeleteDialog.taskId}
+        taskTitle={subtaskDeleteDialog.taskTitle}
+        open={subtaskDeleteDialog.open}
+        onOpenChange={subtaskDeleteDialog.onOpenChange}
+      />
     </Sheet>
   );
 }

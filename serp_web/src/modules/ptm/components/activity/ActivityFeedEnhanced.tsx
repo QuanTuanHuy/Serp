@@ -18,9 +18,9 @@ import {
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { cn } from '@/shared/utils';
-import { useGetActivityFeedQuery } from '../../services/activityApi';
 import type { ActivityEventType } from '../../types';
 import { ActivityItem } from './ActivityItem';
+import { useGetActivityFeedQuery } from '../../api';
 
 interface Props {
   maxItems?: number;

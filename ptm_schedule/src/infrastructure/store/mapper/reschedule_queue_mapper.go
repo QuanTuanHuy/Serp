@@ -52,6 +52,10 @@ func (m *rescheduleQueueMapper) ToModel(e *entity.RescheduleQueueItem) *model.Re
 	if e == nil {
 		return nil
 	}
+	payload := e.ChangePayload
+	if payload == "" {
+		payload = "{}"
+	}
 	mo := &model.RescheduleQueueModel{
 		BaseModel: model.BaseModel{
 			ID:        e.ID,
@@ -63,7 +67,7 @@ func (m *rescheduleQueueMapper) ToModel(e *entity.RescheduleQueueItem) *model.Re
 		TriggerType:          string(e.TriggerType),
 		EntityID:             e.EntityID,
 		EntityType:           e.EntityType,
-		ChangePayload:        e.ChangePayload,
+		ChangePayload:        payload,
 		Status:               string(e.Status),
 		Priority:             e.Priority,
 		DebounceUntil:        time.UnixMilli(e.DebounceUntil),

@@ -1,26 +1,84 @@
-// JetBrains
-.idea/
-
-// Env
-.env
-.env.local
-.env.prod
-
-copilot-instructions.md
-
-// Vscode
-.vscode/
-
 docs/
 
 deploy/
 
-DEPLOY*.md
-CLEANUP_GUIDE.md
+# .claude/
 
-# .github/prompts/
+# Go modules
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
 
-.shared/
-.claude/
-ui-ux*
-backend-expert.prompt.md
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# Environment variables
+.env.local
+.env.*.local
+.env
+.env.local
+.env.prod
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Build output
+bin/
+build/
+dist/
+
+# Java
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/

@@ -38,7 +38,7 @@ func (a *RescheduleQueueAdapter) Upsert(ctx context.Context, tx *gorm.DB, item *
 		},
 		Where: clause.Where{
 			Exprs: []clause.Expression{
-				clause.Eq{Column: "status", Value: string(enum.QueuePending)},
+				clause.Eq{Column: clause.Column{Table: "reschedule_queues", Name: "status"}, Value: string(enum.QueuePending)},
 			},
 		},
 		DoUpdates: clause.Assignments(map[string]any{

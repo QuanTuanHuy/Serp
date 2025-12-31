@@ -156,3 +156,4 @@ export function getInitials(
 }
 
 export { getIconComponent } from './getIconComponent';
+export { isMac } from './platform';

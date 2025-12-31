@@ -35,15 +35,18 @@ type ITaskService interface {
 	CheckIfHasIncompleteSubtasks(ctx context.Context, taskID int64) (bool, error)
 
 	CreateTask(ctx context.Context, tx *gorm.DB, userID int64, task *entity.TaskEntity) (*entity.TaskEntity, error)
-	UpdateTask(ctx context.Context, tx *gorm.DB, userID int64, task *entity.TaskEntity) (*entity.TaskEntity, error)
-	UpdateTaskStatus(ctx context.Context, tx *gorm.DB, userID int64, taskID int64, status string) error
-	CompleteTask(ctx context.Context, tx *gorm.DB, userID int64, taskID int64, actualDurationMin int, quality int) error
+	UpdateTask(ctx context.Context, tx *gorm.DB, userID int64, oldTask, newTask *entity.TaskEntity) (*entity.TaskEntity, error)
 	DeleteTask(ctx context.Context, tx *gorm.DB, userID int64, taskID int64) error
+	DeleteTaskRecursively(ctx context.Context, tx *gorm.DB, userID int64, taskID int64) ([]*entity.TaskEntity, error)
 
 	GetTaskByID(ctx context.Context, taskID int64) (*entity.TaskEntity, error)
+	GetTaskTreeByTaskID(ctx context.Context, taskID int64) (*entity.TaskEntity, error)
+	GetTaskByUserIDAndID(ctx context.Context, userID, taskID int64) (*entity.TaskEntity, error)
 	GetTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) ([]*entity.TaskEntity, error)
 	CountTasksByUserID(ctx context.Context, userID int64, filter *store.TaskFilter) (int64, error)
 	GetTaskByProjectID(ctx context.Context, projectID int64) ([]*entity.TaskEntity, error)
+	GetTaskByParentID(ctx context.Context, parentTaskID int64) ([]*entity.TaskEntity, error)
+	GetTaskByParentIDWithTx(ctx context.Context, tx *gorm.DB, parentTaskID int64) ([]*entity.TaskEntity, error)
 	GetOverdueTasks(ctx context.Context, userID int64, currentTimeMs int64) ([]*entity.TaskEntity, error)
 	GetDeepWorkTasks(ctx context.Context, userID int64) ([]*entity.TaskEntity, error)
 	GetDependentTasks(ctx context.Context, taskID int64) ([]*entity.TaskEntity, error)
@@ -51,6 +54,7 @@ type ITaskService interface {
 	PushTaskCreatedEvent(ctx context.Context, task *entity.TaskEntity) error
 	PushTaskUpdatedEvent(ctx context.Context, task *entity.TaskEntity, req *request.UpdateTaskRequest) error
 	PushTaskDeletedEvent(ctx context.Context, taskID, userID int64) error
+	PushBulkTaskDeletedEvent(ctx context.Context, taskIDs []int64, userID int64) error
 }
 
 type taskService struct {
@@ -95,6 +99,9 @@ func (s *taskService) ValidateTaskData(task *entity.TaskEntity) error {
 }
 
 func (s *taskService) ValidateTaskOwnership(userID int64, task *entity.TaskEntity) error {
+	if task == nil {
+		return errors.New(constant.TaskNotFound)
+	}
 	if task.UserID != userID {
 		return errors.New(constant.UpdateTaskForbidden)
 	}
@@ -143,7 +150,7 @@ func (s *taskService) CheckIfHasIncompleteSubtasks(ctx context.Context, taskID i
 		return false, err
 	}
 	for _, subtask := range subtasks {
-		if !enum.TaskStatus(subtask.Status).IsCompleted() {
+		if !subtask.IsCompleted() {
 			return true, nil
 		}
 	}
@@ -185,71 +192,47 @@ func (s *taskService) CreateTask(ctx context.Context, tx *gorm.DB, userID int64,
 	return task, nil
 }
 
-func (s *taskService) UpdateTask(ctx context.Context, tx *gorm.DB, userID int64, task *entity.TaskEntity) (*entity.TaskEntity, error) {
-	if err := s.ValidateTaskOwnership(userID, task); err != nil {
+func (s *taskService) UpdateTask(ctx context.Context, tx *gorm.DB, userID int64, oldTask, newTask *entity.TaskEntity) (*entity.TaskEntity, error) {
+	if err := s.ValidateTaskOwnership(userID, newTask); err != nil {
 		return nil, err
 	}
-	if err := s.ValidateTaskData(task); err != nil {
+	if err := s.ValidateTaskData(newTask); err != nil {
 		return nil, err
 	}
+
+	if oldTask.Status != newTask.Status {
+		if err := s.ValidateTaskStatus(oldTask.Status, newTask.Status); err != nil {
+			return nil, err
+		}
+
+		if newTask.IsCompleted() {
+			hasIncomplete, err := s.CheckIfHasIncompleteSubtasks(ctx, newTask.ID)
+			if err != nil {
+				return nil, err
+			}
+			if hasIncomplete {
+				return nil, errors.New(constant.CannotCompleteTaskWithSubtasks)
+			}
+		}
+	}
+
 	now := time.Now().UnixMilli()
-	task.UpdatedAt = now
-	score := s.CalculatePriorityScore(task, now)
-	task.PriorityScore = &score
-	return s.taskPort.UpdateTask(ctx, tx, task)
-}
+	newTask.UpdatedAt = now
+	score := s.CalculatePriorityScore(newTask, now)
+	newTask.PriorityScore = &score
 
-func (s *taskService) UpdateTaskStatus(ctx context.Context, tx *gorm.DB, userID int64, taskID int64, status string) error {
-	task, err := s.taskPort.GetTaskByID(ctx, taskID)
-	if err != nil {
-		return err
+	if !oldTask.IsCompleted() && newTask.IsCompleted() {
+		newTask.CompletedAt = &now
 	}
-	if task == nil {
-		return errors.New(constant.TaskNotFound)
-	}
-	if err := s.ValidateTaskOwnership(userID, task); err != nil {
-		return err
-	}
-	if err := s.ValidateTaskStatus(task.Status, status); err != nil {
-		return err
-	}
-	return s.taskPort.UpdateTaskStatus(ctx, tx, taskID, status)
-}
-
-func (s *taskService) CompleteTask(ctx context.Context, tx *gorm.DB, userID int64, taskID int64, actualDurationMin int, quality int) error {
-	task, err := s.taskPort.GetTaskByID(ctx, taskID)
-	if err != nil {
-		return err
-	}
-	if err := s.ValidateTaskOwnership(userID, task); err != nil {
-		return err
+	if oldTask.IsCompleted() && !newTask.IsCompleted() {
+		newTask.CompletedAt = nil
 	}
 
-	hasIncompleteSubtasks, err := s.CheckIfHasIncompleteSubtasks(ctx, taskID)
-	if err != nil {
-		return err
-	}
-	if hasIncompleteSubtasks {
-		return errors.New(constant.CannotCompleteTaskWithSubtasks)
-	}
-
-	if err := s.ValidateTaskStatus(task.Status, string(enum.StatusDone)); err != nil {
-		return err
-	}
-	if quality < 1 || quality > 5 {
-		return errors.New(constant.InvalidQuality)
-	}
-	if err := s.taskPort.UpdateTaskStatus(ctx, tx, taskID, string(enum.StatusDone)); err != nil {
-		return err
-	}
-	if err := s.taskPort.UpdateTaskDuration(ctx, tx, taskID, actualDurationMin); err != nil {
-		return err
-	}
-	return nil
+	return s.taskPort.UpdateTask(ctx, tx, newTask)
 }
 
 func (s *taskService) DeleteTask(ctx context.Context, tx *gorm.DB, userID int64, taskID int64) error {
-	task, err := s.taskPort.GetTaskByID(ctx, taskID)
+	task, err := s.GetTaskByID(ctx, taskID)
 	if err != nil {
 		return err
 	}
@@ -259,12 +242,72 @@ func (s *taskService) DeleteTask(ctx context.Context, tx *gorm.DB, userID int64,
 	return s.taskPort.SoftDeleteTask(ctx, tx, taskID)
 }
 
+func (s *taskService) DeleteTaskRecursively(ctx context.Context, tx *gorm.DB, userID int64, taskID int64) ([]*entity.TaskEntity, error) {
+	tasks, err := s.taskPort.GetTasksByRootID(ctx, taskID)
+	if err != nil {
+		return nil, err
+	}
+	var deleteTaskIDs []int64
+	for _, task := range tasks {
+		deleteTaskIDs = append(deleteTaskIDs, task.ID)
+	}
+	for _, task := range tasks {
+		if err := s.ValidateTaskOwnership(userID, task); err != nil {
+			return nil, err
+		}
+	}
+	err = s.taskPort.SoftDeleteTasks(ctx, tx, deleteTaskIDs)
+	if err != nil {
+		return nil, err
+	}
+	return tasks, nil
+}
+
 func (s *taskService) GetTaskByID(ctx context.Context, taskID int64) (*entity.TaskEntity, error) {
 	task, err := s.taskPort.GetTaskByID(ctx, taskID)
 	if err != nil {
 		return nil, err
 	}
 	if task == nil {
+		return nil, errors.New(constant.TaskNotFound)
+	}
+	return task, nil
+}
+
+func (s *taskService) GetTaskTreeByTaskID(ctx context.Context, rootID int64) (*entity.TaskEntity, error) {
+	tasks, err := s.taskPort.GetTasksByRootID(ctx, rootID)
+	if err != nil {
+		return nil, err
+	}
+	if len(tasks) == 0 {
+		return nil, errors.New(constant.TaskNotFound)
+	}
+	taskMap := make(map[int64]*entity.TaskEntity)
+	for _, task := range tasks {
+		task.SubTasks = []*entity.TaskEntity{}
+		taskMap[task.ID] = task
+	}
+	var rootTask *entity.TaskEntity
+	for _, task := range tasks {
+		if task.ParentTaskID != nil {
+			parentTask, exists := taskMap[*task.ParentTaskID]
+			if exists {
+				parentTask.SubTasks = append(parentTask.SubTasks, task)
+			}
+		}
+		if task.ID == rootID {
+			rootTask = task
+		}
+	}
+	return rootTask, nil
+}
+
+func (s *taskService) GetTaskByUserIDAndID(ctx context.Context, userID, taskID int64) (*entity.TaskEntity, error) {
+	task, err := s.taskPort.GetTaskByID(ctx, taskID)
+	if err != nil {
+		return nil, err
+	}
+	if task == nil || task.UserID != userID {
 		return nil, errors.New(constant.TaskNotFound)
 	}
 	return task, nil
@@ -282,6 +325,14 @@ func (s *taskService) GetTaskByProjectID(ctx context.Context, projectID int64) (
 	return s.taskPort.GetTasksByProjectID(ctx, projectID)
 }
 
+func (s *taskService) GetTaskByParentID(ctx context.Context, parentTaskID int64) ([]*entity.TaskEntity, error) {
+	return s.taskPort.GetTasksByParentID(ctx, parentTaskID)
+}
+
+func (s *taskService) GetTaskByParentIDWithTx(ctx context.Context, tx *gorm.DB, parentTaskID int64) ([]*entity.TaskEntity, error) {
+	return s.taskPort.GetTasksByParentIDWithTx(ctx, tx, parentTaskID)
+}
+
 func (s *taskService) GetOverdueTasks(ctx context.Context, userID int64, currentTimeMs int64) ([]*entity.TaskEntity, error) {
 	return s.taskPort.GetOverdueTasks(ctx, userID, currentTimeMs)
 }
@@ -297,6 +348,9 @@ func (s *taskService) PushTaskCreatedEvent(ctx context.Context, task *entity.Tas
 }
 
 func (s *taskService) PushTaskUpdatedEvent(ctx context.Context, task *entity.TaskEntity, req *request.UpdateTaskRequest) error {
+	if task == nil || req == nil {
+		return nil
+	}
 	event := s.mapper.CreateTaskUpdatedEvent(task, req)
 	message := utils.BuildUpdatedEvent(ctx, "task", event)
 	return s.kafkaProducer.SendMessage(ctx, string(constant.TASK_TOPIC), strconv.FormatInt(task.ID, 10), message)
@@ -309,4 +363,13 @@ func (s *taskService) PushTaskDeletedEvent(ctx context.Context, taskID, userID i
 	}
 	message := utils.BuildDeletedEvent(ctx, "task", event)
 	return s.kafkaProducer.SendMessage(ctx, string(constant.TASK_TOPIC), strconv.FormatInt(taskID, 10), message)
+}
+
+func (s *taskService) PushBulkTaskDeletedEvent(ctx context.Context, taskIDs []int64, userID int64) error {
+	event := &message.BulkTaskDeletedEvent{
+		TaskIDs: taskIDs,
+		UserID:  userID,
+	}
+	message := utils.BuildBulkDeletedEvent(ctx, "task", event)
+	return s.kafkaProducer.SendMessage(ctx, string(constant.TASK_TOPIC), "bulk-"+strconv.FormatInt(userID, 10), message)
 }
