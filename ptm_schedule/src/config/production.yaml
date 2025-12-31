@@ -19,7 +19,12 @@ app:
     client-secret: ${CLIENT_SECRET}
     jwk-set-uri: ${KEYCLOAK_JWK_SET_URI}
     expected-issuer: ${KEYCLOAK_EXPECTED_ISSUER}
-    expected-audience: 
+    expected-audience:
+  optimization:
+    baseUrl: ${OPTIMIZATION_SERVICE_URL}
+    timeoutMs: 60000
+    retryCount: 3
+    retryDelayMs: 1000
   kafka:
     producer:
       bootstrapServers:

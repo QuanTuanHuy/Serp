@@ -41,6 +41,7 @@ func All() fx.Option {
 		golib.ProvideProps(properties.NewKeycloakProperties),
 		golib.ProvideProps(properties.NewKafkaProducerProperties),
 		golib.ProvideProps(properties.NewKafkaConsumerProperties),
+		golib.ProvideProps(properties.NewOptimizationProperties),
 
 		fx.Invoke(InitializeDB),
 
@@ -59,6 +60,7 @@ func All() fx.Option {
 		// Provide client adapters
 		fx.Provide(clientadapter.NewKafkaProducerAdapter),
 		fx.Provide(clientadapter.NewKafkaConsumer),
+		fx.Provide(clientadapter.NewOptimizationClientAdapter),
 
 		// Provide service
 		fx.Provide(service.NewTransactionService),

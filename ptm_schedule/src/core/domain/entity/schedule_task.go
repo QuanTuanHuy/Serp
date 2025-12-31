@@ -255,8 +255,38 @@ func (e *ScheduleTaskEntity) IsCompleted() bool {
 	return e.ScheduleStatus == enum.ScheduleTaskCompleted
 }
 
+// IsSchedulable checks basic schedulability (not completed, no subtasks)
 func (e *ScheduleTaskEntity) IsSchedulable() bool {
 	return !e.IsCompleted() && !e.HasSubtasks
+}
+
+// IsSchedulableForPlan checks full schedulability criteria with date range:
+// - Not completed or cancelled
+// - Leaf task (no subtasks)
+// - Not excluded
+// - EarliestStartMs <= planEndMs (can start within plan range)
+// - DeadlineMs >= planStartMs (deadline is in future, optional)
+func (e *ScheduleTaskEntity) IsSchedulableForPlan(planStartMs, planEndMs int64) bool {
+	if e.ScheduleStatus == enum.ScheduleTaskCompleted ||
+		e.ScheduleStatus == enum.ScheduleTaskExcluded {
+		return false
+	}
+
+	if e.HasSubtasks {
+		return false
+	}
+
+	if e.EarliestStartMs != nil && *e.EarliestStartMs > planEndMs {
+		return false
+	}
+
+	// DeadlineMs check: deadline should be >= plan start (optional - don't exclude overdue tasks)
+	// We allow overdue tasks to still be scheduled, they just get high urgency boost
+	// if e.DeadlineMs != nil && *e.DeadlineMs < planStartMs {
+	//     return false
+	// }
+
+	return true
 }
 
 // Lifecycle Methods

@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	"github.com/serp/ptm-schedule/src/core/domain/entity"
+	"github.com/serp/ptm-schedule/src/core/domain/enum"
 	port "github.com/serp/ptm-schedule/src/core/port/store"
 	"github.com/serp/ptm-schedule/src/infrastructure/store/mapper"
 	"github.com/serp/ptm-schedule/src/infrastructure/store/model"
@@ -159,6 +160,26 @@ func (s *ScheduleTaskStoreAdapter) UpdateScheduleTask(ctx context.Context, tx *g
 		return nil, err
 	}
 	return mapper.ToScheduleTaskEntity(scheduleTaskModel), nil
+}
+
+func (s *ScheduleTaskStoreAdapter) UpdateScheduleStatusBatch(ctx context.Context, tx *gorm.DB, ids []int64, status enum.ScheduleTaskStatus, reason *string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	updates := map[string]any{
+		"schedule_status": status,
+	}
+	if reason != nil {
+		updates["unscheduled_reason"] = *reason
+	} else {
+		updates["unscheduled_reason"] = nil
+	}
+
+	return s.WithTx(tx).WithContext(ctx).
+		Model(&model.ScheduleTaskModel{}).
+		Where("id IN ?", ids).
+		Updates(updates).Error
 }
 
 func (s *ScheduleTaskStoreAdapter) DeleteByPlanID(ctx context.Context, tx *gorm.DB, planID int64) error {

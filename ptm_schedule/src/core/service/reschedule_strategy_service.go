@@ -13,6 +13,7 @@ import (
 	"github.com/serp/ptm-schedule/src/core/domain/algorithm"
 	"github.com/serp/ptm-schedule/src/core/domain/entity"
 	"github.com/serp/ptm-schedule/src/core/domain/enum"
+	clientPort "github.com/serp/ptm-schedule/src/core/port/client"
 	storePort "github.com/serp/ptm-schedule/src/core/port/store"
 	"gorm.io/gorm"
 )
@@ -34,27 +35,31 @@ type IRescheduleStrategyService interface {
 	RunRipple(ctx context.Context, planID int64, batch *entity.RescheduleBatch) (*RescheduleResult, error)
 	RunInsertion(ctx context.Context, planID int64, batch *entity.RescheduleBatch) (*RescheduleResult, error)
 	RunFullReplan(ctx context.Context, planID int64, batch *entity.RescheduleBatch) (*RescheduleResult, error)
+	RunOptimalReplan(ctx context.Context, planID int64, batch *entity.RescheduleBatch) (*RescheduleResult, error)
 }
 
 type RescheduleStrategyService struct {
-	taskPort      storePort.IScheduleTaskPort
-	eventPort     storePort.IScheduleEventPort
-	windowService IScheduleWindowService
-	scheduler     *algorithm.HybridScheduler
-	mapper        *algorithm.AlgorithmMapper
+	taskPort           storePort.IScheduleTaskPort
+	eventPort          storePort.IScheduleEventPort
+	windowService      IScheduleWindowService
+	optimizationClient clientPort.IOptimizationClient
+	scheduler          *algorithm.HybridScheduler
+	mapper             *algorithm.AlgorithmMapper
 }
 
 func NewRescheduleStrategyService(
 	taskPort storePort.IScheduleTaskPort,
 	eventPort storePort.IScheduleEventPort,
 	windowService IScheduleWindowService,
+	optimizationClient clientPort.IOptimizationClient,
 ) IRescheduleStrategyService {
 	return &RescheduleStrategyService{
-		taskPort:      taskPort,
-		eventPort:     eventPort,
-		windowService: windowService,
-		scheduler:     algorithm.NewHybridScheduler(),
-		mapper:        algorithm.NewAlgorithmMapper(),
+		taskPort:           taskPort,
+		eventPort:          eventPort,
+		windowService:      windowService,
+		optimizationClient: optimizationClient,
+		scheduler:          algorithm.NewHybridScheduler(),
+		mapper:             algorithm.NewAlgorithmMapper(),
 	}
 }
 
@@ -66,6 +71,8 @@ func (s *RescheduleStrategyService) Execute(ctx context.Context, planID int64, b
 		return s.RunInsertion(ctx, planID, batch)
 	case enum.StrategyFullReplan:
 		return s.RunFullReplan(ctx, planID, batch)
+	case enum.StrategyOptimalReplan:
+		return s.RunOptimalReplan(ctx, planID, batch)
 	default:
 		return s.RunRipple(ctx, planID, batch)
 	}
@@ -84,6 +91,11 @@ func (s *RescheduleStrategyService) RunInsertion(ctx context.Context, planID int
 // RunFullReplan re-schedules all tasks from scratch
 func (s *RescheduleStrategyService) RunFullReplan(ctx context.Context, planID int64, batch *entity.RescheduleBatch) (*RescheduleResult, error) {
 	return s.runFullReplan(ctx, planID, batch)
+}
+
+// RunOptimalReplan uses ptm_optimization service for deep optimization
+func (s *RescheduleStrategyService) RunOptimalReplan(ctx context.Context, planID int64, batch *entity.RescheduleBatch) (*RescheduleResult, error) {
+	return s.runOptimalReplan(ctx, planID, batch)
 }
 
 func (s *RescheduleStrategyService) runSchedule(
@@ -178,16 +190,17 @@ func (s *RescheduleStrategyService) loadScheduleData(
 		return nil, nil, err
 	}
 
-	activeTasks := make([]*entity.ScheduleTaskEntity, 0, len(tasks))
-	for _, t := range tasks {
-		if t.IsSchedulable() {
-			activeTasks = append(activeTasks, t)
-		}
-	}
-
 	now := time.Now()
 	fromMs := now.UnixMilli()
 	toMs := now.AddDate(0, 0, DefaultScheduleRangeDays).UnixMilli()
+
+	// Filter tasks using full schedulability criteria with date range
+	activeTasks := make([]*entity.ScheduleTaskEntity, 0, len(tasks))
+	for _, t := range tasks {
+		if t.IsSchedulableForPlan(fromMs, toMs) {
+			activeTasks = append(activeTasks, t)
+		}
+	}
 
 	windows, usingDefaults, err := s.windowService.GetOrCreateWindowsWithInfo(ctx, userID, fromMs, toMs)
 	if err != nil {
@@ -253,6 +266,7 @@ func (s *RescheduleStrategyService) applyChanges(
 	var updatedIDs []int64
 	var tx *gorm.DB
 
+	// Create new events
 	if len(changes.ToCreate) > 0 {
 		if err := s.eventPort.CreateBatch(ctx, tx, changes.ToCreate); err != nil {
 			return nil, err
@@ -262,6 +276,7 @@ func (s *RescheduleStrategyService) applyChanges(
 		}
 	}
 
+	// Update existing events
 	if len(changes.ToUpdate) > 0 {
 		if err := s.eventPort.UpdateBatch(ctx, tx, changes.ToUpdate); err != nil {
 			return nil, err
@@ -271,9 +286,27 @@ func (s *RescheduleStrategyService) applyChanges(
 		}
 	}
 
+	// Delete removed events
 	for _, id := range changes.ToDelete {
 		if err := s.eventPort.DeleteByID(ctx, tx, id); err != nil {
 			return nil, err
+		}
+	}
+
+	// Update task status: mark scheduled tasks as SCHEDULED
+	if len(changes.TasksToMarkScheduled) > 0 {
+		if err := s.taskPort.UpdateScheduleStatusBatch(ctx, tx, changes.TasksToMarkScheduled, enum.ScheduleTaskScheduled, nil); err != nil {
+			log.Warnf("Failed to update scheduled task status: %v", err)
+			// Don't fail the whole operation, just log warning
+		}
+	}
+
+	// Update task status: mark unscheduled tasks as UNSCHEDULABLE with reason
+	for scheduleTaskID, reason := range changes.TasksToMarkUnscheduled {
+		reasonPtr := &reason
+		if err := s.taskPort.UpdateScheduleStatusBatch(ctx, tx, []int64{scheduleTaskID}, enum.ScheduleTaskUnschedulable, reasonPtr); err != nil {
+			log.Warnf("Failed to update unscheduled task status for task %d: %v", scheduleTaskID, err)
+			// Don't fail the whole operation, just log warning
 		}
 	}
 
@@ -288,4 +321,146 @@ func filterPinnedOrCompleted(events []*algorithm.Assignment) []*algorithm.Assign
 		}
 	}
 	return result
+}
+
+// runOptimalReplan uses external ptm_optimization service for deep optimization
+func (s *RescheduleStrategyService) runOptimalReplan(
+	ctx context.Context,
+	planID int64,
+	batch *entity.RescheduleBatch,
+) (*RescheduleResult, error) {
+	startTime := time.Now()
+
+	// Check if optimization client is available
+	if s.optimizationClient == nil {
+		log.Warn(ctx, "Optimization client not configured, falling back to local scheduler")
+		return s.runFullReplan(ctx, planID, batch)
+	}
+
+	// Get schedule date range
+	now := time.Now()
+	fromMs := now.UnixMilli()
+	toMs := now.AddDate(0, 0, DefaultScheduleRangeDays).UnixMilli()
+
+	// Load and filter tasks
+	tasks, err := s.taskPort.GetBySchedulePlanID(ctx, planID)
+	if err != nil {
+		return nil, err
+	}
+
+	activeTasks := make([]*entity.ScheduleTaskEntity, 0, len(tasks))
+	for _, t := range tasks {
+		if t.IsSchedulableForPlan(fromMs, toMs) {
+			activeTasks = append(activeTasks, t)
+		}
+	}
+
+	if len(activeTasks) == 0 {
+		return &RescheduleResult{
+			Success:         true,
+			UpdatedEventIDs: []int64{},
+			Strategy:        enum.StrategyOptimalReplan,
+			DurationMs:      int(time.Since(startTime).Milliseconds()),
+		}, nil
+	}
+
+	windows, _, err := s.windowService.GetOrCreateWindowsWithInfo(ctx, batch.UserID, fromMs, toMs)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build optimization request
+	optRequest := s.mapper.BuildOptimizationRequest(activeTasks, windows)
+
+	// Call optimization service with fallback
+	log.Infof("Calling ptm_optimization for plan %d with %d tasks and %d windows",
+		planID, len(optRequest.Tasks), len(optRequest.Windows))
+
+	optResult, err := s.optimizationClient.OptimizeWithFallback(ctx, optRequest)
+	if err != nil {
+		log.Warnf("Optimization service failed, falling back to local scheduler: %v", err)
+		return s.runFullReplan(ctx, planID, batch)
+	}
+
+	// Build task map: ScheduleTaskID -> ScheduleTaskEntity
+	// We send ScheduleTaskID as taskId to ptm_optimization, so response uses same ID
+	taskMap := make(map[int64]*entity.ScheduleTaskEntity)
+	for _, t := range activeTasks {
+		taskMap[t.ID] = t
+	}
+
+	// Convert optimization result to local format
+	output := s.mapper.OptimizationResultToScheduleOutput(optResult, taskMap)
+
+	// Get existing events
+	events, err := s.eventPort.ListEventsByPlanAndDateRange(ctx, planID, fromMs, toMs)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert to entity slice for comparison
+	existingEntities := make([]*entity.ScheduleEventEntity, 0, len(events))
+	for _, e := range events {
+		existingEntities = append(existingEntities, e)
+	}
+
+	// Apply changes (taskMap uses ScheduleTaskID as key)
+	changes := s.mapper.DiffScheduleOutput(output, existingEntities, planID, taskMap)
+
+	var updatedIDs []int64
+	var tx *gorm.DB
+
+	// Create new events
+	if len(changes.ToCreate) > 0 {
+		if err := s.eventPort.CreateBatch(ctx, tx, changes.ToCreate); err != nil {
+			return nil, err
+		}
+		for _, e := range changes.ToCreate {
+			updatedIDs = append(updatedIDs, e.ID)
+		}
+	}
+
+	// Update existing events
+	if len(changes.ToUpdate) > 0 {
+		if err := s.eventPort.UpdateBatch(ctx, tx, changes.ToUpdate); err != nil {
+			return nil, err
+		}
+		for _, e := range changes.ToUpdate {
+			updatedIDs = append(updatedIDs, e.ID)
+		}
+	}
+
+	// Delete removed events
+	for _, id := range changes.ToDelete {
+		if err := s.eventPort.DeleteByID(ctx, tx, id); err != nil {
+			return nil, err
+		}
+	}
+
+	// Update task status: mark scheduled tasks as SCHEDULED
+	if len(changes.TasksToMarkScheduled) > 0 {
+		if err := s.taskPort.UpdateScheduleStatusBatch(ctx, tx, changes.TasksToMarkScheduled, enum.ScheduleTaskScheduled, nil); err != nil {
+			log.Warnf("Failed to update scheduled task status: %v", err)
+		}
+	}
+
+	// Update task status: mark unscheduled tasks as UNSCHEDULABLE with reason
+	for scheduleTaskID, reason := range changes.TasksToMarkUnscheduled {
+		reasonPtr := &reason
+		if err := s.taskPort.UpdateScheduleStatusBatch(ctx, tx, []int64{scheduleTaskID}, enum.ScheduleTaskUnschedulable, reasonPtr); err != nil {
+			log.Warnf("Failed to update unscheduled task status for task %d: %v", scheduleTaskID, err)
+		}
+	}
+
+	durationMs := int(time.Since(startTime).Milliseconds())
+
+	log.Infof("Optimal replan completed: plan=%d, tasks=%d, scheduled=%d, unscheduled=%d, duration=%dms",
+		planID, len(activeTasks), output.Metrics.ScheduledTasks, output.Metrics.UnscheduledTasks, durationMs)
+
+	return &RescheduleResult{
+		Success:         len(output.UnscheduledTasks) == 0,
+		UpdatedEventIDs: updatedIDs,
+		Strategy:        enum.StrategyOptimalReplan,
+		DurationMs:      durationMs,
+	}, nil
 }
