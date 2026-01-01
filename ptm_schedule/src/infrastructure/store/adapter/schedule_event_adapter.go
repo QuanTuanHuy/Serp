@@ -118,6 +118,14 @@ func (a *ScheduleEventAdapter) DeleteByPlanID(ctx context.Context, tx *gorm.DB, 
 		Delete(&m.ScheduleEventModel{}).Error
 }
 
+// DeletePlannedEventsFromDate deletes only PLANNED events from a specific date onwards
+func (a *ScheduleEventAdapter) DeletePlannedEventsFromDate(ctx context.Context, tx *gorm.DB, planID int64, fromDateMs int64) error {
+	return a.WithTx(tx).WithContext(ctx).
+		Where("schedule_plan_id = ? AND date >= ? AND status = ?",
+			planID, mp.DayStartUTC(fromDateMs), string(enum.ScheduleEventPlanned)).
+		Delete(&m.ScheduleEventModel{}).Error
+}
+
 func (a *ScheduleEventAdapter) DeleteFutureEventsByTaskID(ctx context.Context, tx *gorm.DB, scheduleTaskID int64, afterDateMs int64) error {
 	return a.WithTx(tx).WithContext(ctx).
 		Where("schedule_task_id = ? AND date > ? AND status = ?",

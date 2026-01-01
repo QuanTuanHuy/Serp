@@ -22,6 +22,9 @@ type IScheduleEventPort interface {
 	DeleteByScheduleTaskID(ctx context.Context, tx *gorm.DB, scheduleTaskID int64) error
 	DeleteFutureEventsByTaskID(ctx context.Context, tx *gorm.DB, scheduleTaskID int64, afterDateMs int64) error
 
+	// DeletePlannedEventsFromDate deletes only PLANNED events from a specific date onwards
+	DeletePlannedEventsFromDate(ctx context.Context, tx *gorm.DB, planID int64, fromDateMs int64) error
+
 	ListEventsByPlanAndDateRange(ctx context.Context, planID int64, fromDateMs, toDateMs int64) ([]*dom.ScheduleEventEntity, error)
 	GetPinnedEvents(ctx context.Context, planID int64) ([]*dom.ScheduleEventEntity, error)
 	GetByScheduleTaskID(ctx context.Context, scheduleTaskID int64) ([]*dom.ScheduleEventEntity, error)

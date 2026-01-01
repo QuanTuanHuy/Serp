@@ -89,7 +89,7 @@
         <dependency>
             <groupId>com.google.ortools</groupId>
             <artifactId>ortools-java</artifactId>
-            <version>9.10.4067</version>
+            <version>9.11.4210</version>
         </dependency>
     </dependencies>
 
@@ -128,17 +128,15 @@
                         --add-opens java.base/java.lang=ALL-UNNAMED
                         --add-opens java.base/java.util=ALL-UNNAMED
                         --add-opens java.base/sun.nio.ch=ALL-UNNAMED
+                        --add-opens java.base/java.nio=ALL-UNNAMED
                         -XX:+EnableDynamicAgentLoading
+                        -Djava.library.path=${project.basedir}/target/classes
                         -Xmx1g
                     </argLine>
                     <forkCount>1</forkCount>
                     <reuseForks>false</reuseForks>
-                    <useSystemClassLoader>false</useSystemClassLoader>
+                    <useSystemClassLoader>true</useSystemClassLoader>
                     <trimStackTrace>false</trimStackTrace>
-                    <excludes>
-                        <!-- Exclude CpSat tests to avoid JVM crash -->
-                        <exclude>**/CpSatSchedulerTest.java</exclude>
-                    </excludes>
                 </configuration>
             </plugin>
         </plugins>

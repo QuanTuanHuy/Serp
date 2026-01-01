@@ -67,4 +67,11 @@ const (
 	// - Provides optimal schedule but slower
 	// - Best for: Fundamental changes (AVAILABILITY_CHANGE)
 	StrategyFullReplan RescheduleStrategy = "FULL_REPLAN"
+
+	// StrategyOptimalReplan: Deep Optimization via ptm_optimization service
+	// - Calls external optimization service (Java/OR-Tools)
+	// - Uses CP-SAT/MILP for optimal scheduling
+	// - Best for: Weekly planning, complex constraint satisfaction
+	// - Slower but produces globally optimal schedules
+	StrategyOptimalReplan RescheduleStrategy = "OPTIMAL_REPLAN"
 )

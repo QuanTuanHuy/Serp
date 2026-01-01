@@ -32,6 +32,7 @@ type ISchedulePlanService interface {
 	GetActivePlanByUserID(ctx context.Context, userID int64) (*entity.SchedulePlanEntity, error)
 	GetPlansByUserID(ctx context.Context, userID int64, filter *port.PlanFilter) ([]*entity.SchedulePlanEntity, error)
 	GetLatestProposedPlanByUserID(ctx context.Context, userID int64) (*entity.SchedulePlanEntity, error)
+	GetProposedPlanByAlgorithm(ctx context.Context, userID int64, algorithm enum.Algorithm) (*entity.SchedulePlanEntity, error)
 	CountPlansByUserID(ctx context.Context, userID int64, filter *port.PlanFilter) (int64, error)
 
 	StartOptimization(ctx context.Context, tx *gorm.DB, plan *entity.SchedulePlanEntity, algo enum.Algorithm) error
@@ -160,6 +161,22 @@ func (s *SchedulePlanService) GetActivePlanByUserID(ctx context.Context, userID 
 func (s *SchedulePlanService) GetLatestProposedPlanByUserID(ctx context.Context, userID int64) (*entity.SchedulePlanEntity, error) {
 	filter := port.NewPlanFilter()
 	filter.Statuses = []string{string(enum.PlanProposed)}
+	filter.Limit = 1
+
+	plans, err := s.schedulePlanPort.ListPlansByUserID(ctx, userID, filter)
+	if err != nil {
+		return nil, err
+	}
+	if len(plans) == 0 {
+		return nil, nil
+	}
+	return plans[0], nil
+}
+
+func (s *SchedulePlanService) GetProposedPlanByAlgorithm(ctx context.Context, userID int64, algorithm enum.Algorithm) (*entity.SchedulePlanEntity, error) {
+	filter := port.NewPlanFilter()
+	filter.Statuses = []string{string(enum.PlanProposed)}
+	filter.Algorithms = []string{string(algorithm)}
 	filter.Limit = 1
 
 	plans, err := s.schedulePlanPort.ListPlansByUserID(ctx, userID, filter)

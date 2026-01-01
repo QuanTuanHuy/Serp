@@ -16,6 +16,7 @@ import serp.project.ptm_optimization.infrastructure.algorithm.dto.input.Window;
 import serp.project.ptm_optimization.infrastructure.algorithm.dto.output.Assignment;
 import serp.project.ptm_optimization.infrastructure.algorithm.dto.output.PlanResult;
 import serp.project.ptm_optimization.kernel.utils.GapManager;
+import serp.project.ptm_optimization.kernel.utils.SchedulingUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,12 +29,14 @@ class GapBasedSchedulerTest {
 
 
     private GapManager gapManager;
+    private SchedulingUtils schedulingUtils;
     private GapBasedScheduler scheduler;
 
     @BeforeEach
     void setUp() {
         gapManager = new GapManager();
-        scheduler = new GapBasedScheduler(gapManager);
+        schedulingUtils = new SchedulingUtils();
+        scheduler = new GapBasedScheduler(gapManager, schedulingUtils);
     }
 
     @Test
