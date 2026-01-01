@@ -55,7 +55,14 @@ func (s *ScheduleTaskStoreAdapter) CreateBatch(ctx context.Context, tx *gorm.DB,
 		return nil
 	}
 	models := mapper.ToScheduleTaskModels(tasks)
-	return s.WithTx(tx).WithContext(ctx).Create(&models).Error
+	if err := s.WithTx(tx).WithContext(ctx).Create(&models).Error; err != nil {
+		return err
+	}
+
+	for i, m := range models {
+		tasks[i].ID = m.ID
+	}
+	return nil
 }
 
 func (s *ScheduleTaskStoreAdapter) GetBySchedulePlanID(ctx context.Context, schedulePlanID int64) ([]*entity.ScheduleTaskEntity, error) {

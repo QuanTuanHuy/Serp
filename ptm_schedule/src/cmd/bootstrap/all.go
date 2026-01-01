@@ -79,6 +79,7 @@ func All() fx.Option {
 
 		// Provide usecase
 		fx.Provide(usecase.NewSchedulePlanUseCase),
+		fx.Provide(usecase.NewOptimizationUseCase),
 		fx.Provide(usecase.NewScheduleTaskUseCase),
 		fx.Provide(usecase.NewAvailabilityCalendarUseCase),
 		fx.Provide(usecase.NewCalendarExceptionUseCase),

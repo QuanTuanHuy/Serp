@@ -48,6 +48,8 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 			planV1.GET("/active/detail", p.SchedulePlanController.GetActivePlanDetail)
 			planV1.GET("/history", p.SchedulePlanController.GetPlanHistory)
 			planV1.POST("/reschedule", p.SchedulePlanController.TriggerReschedule)
+			planV1.POST("/deep-optimize", p.SchedulePlanController.DeepOptimize)
+			planV1.POST("/fallback-chain-optimize", p.SchedulePlanController.FallbackChainOptimize)
 			planV1.GET("/:id", p.SchedulePlanController.GetPlanByID)
 			planV1.GET("/:id/events", p.SchedulePlanController.GetPlanWithEvents)
 			planV1.POST("/:id/apply", p.SchedulePlanController.ApplyProposedPlan)

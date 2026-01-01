@@ -270,6 +270,11 @@ func (s *ScheduleTaskService) CloneTasksForPlan(ctx context.Context, tx *gorm.DB
 		return make(map[int64]int64), nil
 	}
 
+	taskIDToOldScheduleTaskID := make(map[int64]int64)
+	for _, t := range srcTasks {
+		taskIDToOldScheduleTaskID[t.TaskID] = t.ID
+	}
+
 	clonedTasks := make([]*entity.ScheduleTaskEntity, 0, len(srcTasks))
 	for _, t := range srcTasks {
 		clone := t.Clone()
@@ -281,24 +286,15 @@ func (s *ScheduleTaskService) CloneTasksForPlan(ctx context.Context, tx *gorm.DB
 		return nil, err
 	}
 
-	taskIDMapping := make(map[int64]int64) // old schedule_task_id -> new schedule_task_id
-	newTasks, err := s.scheduleTaskPort.GetBySchedulePlanID(ctx, destPlanID)
-	if err != nil {
-		return nil, err
-	}
-
-	taskIDToNewID := make(map[int64]int64)
-	for _, t := range newTasks {
-		taskIDToNewID[t.TaskID] = t.ID
-	}
-
-	for _, srcTask := range srcTasks {
-		if newID, ok := taskIDToNewID[srcTask.TaskID]; ok {
-			taskIDMapping[srcTask.ID] = newID
+	// After CreateBatch, clonedTasks[i].ID will be populated with new IDs
+	taskIDMapping := make(map[int64]int64)
+	for _, newTask := range clonedTasks {
+		if oldID, ok := taskIDToOldScheduleTaskID[newTask.TaskID]; ok {
+			taskIDMapping[oldID] = newTask.ID
 		}
 	}
 
-	log.Info(ctx, "Cloned ", len(clonedTasks), " tasks from plan ", srcPlanID, " to plan ", destPlanID)
+	log.Info(ctx, "Cloned ", len(clonedTasks), " tasks from plan ", srcPlanID, " to plan ", destPlanID, ", mapping: ", taskIDMapping)
 	return taskIDMapping, nil
 }
 

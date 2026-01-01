@@ -409,3 +409,38 @@ func (m *AlgorithmMapper) OptimizationResultToScheduleOutput(
 
 	return output
 }
+
+// ScheduleOutputToEvents converts ScheduleOutput assignments to ScheduleEventEntity slice
+// taskMap: ScheduleTaskID -> ScheduleTaskEntity
+func (m *AlgorithmMapper) ScheduleOutputToEvents(
+	output *ScheduleOutput,
+	planID int64,
+	taskMap map[int64]*entity.ScheduleTaskEntity,
+) []*entity.ScheduleEventEntity {
+	events := make([]*entity.ScheduleEventEntity, 0, len(output.Assignments))
+
+	for _, assignment := range output.Assignments {
+		task, ok := taskMap[assignment.ScheduleTaskID]
+		if !ok {
+			continue
+		}
+
+		utilityScore := assignment.UtilityScore
+		event := &entity.ScheduleEventEntity{
+			SchedulePlanID: planID,
+			ScheduleTaskID: assignment.ScheduleTaskID,
+			DateMs:         assignment.DateMs,
+			StartMin:       assignment.StartMin,
+			EndMin:         assignment.EndMin,
+			Title:          task.Title,
+			PartIndex:      1,
+			TotalParts:     1,
+			Status:         enum.ScheduleEventPlanned,
+			IsPinned:       false,
+			UtilityScore:   &utilityScore,
+		}
+		events = append(events, event)
+	}
+
+	return events
+}

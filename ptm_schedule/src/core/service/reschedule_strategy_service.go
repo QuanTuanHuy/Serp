@@ -11,6 +11,7 @@ import (
 
 	"github.com/golibs-starter/golib/log"
 	"github.com/serp/ptm-schedule/src/core/domain/algorithm"
+	"github.com/serp/ptm-schedule/src/core/domain/dto/optimization"
 	"github.com/serp/ptm-schedule/src/core/domain/entity"
 	"github.com/serp/ptm-schedule/src/core/domain/enum"
 	clientPort "github.com/serp/ptm-schedule/src/core/port/client"
@@ -36,6 +37,10 @@ type IRescheduleStrategyService interface {
 	RunInsertion(ctx context.Context, planID int64, batch *entity.RescheduleBatch) (*RescheduleResult, error)
 	RunFullReplan(ctx context.Context, planID int64, batch *entity.RescheduleBatch) (*RescheduleResult, error)
 	RunOptimalReplan(ctx context.Context, planID int64, batch *entity.RescheduleBatch) (*RescheduleResult, error)
+
+	RunDeepOptimize(ctx context.Context, planID int64, batch *entity.RescheduleBatch, strategy optimization.StrategyType, maxTimeSec *int) (*RescheduleResult, error)
+
+	RunFallbackChainOptimize(ctx context.Context, planID int64, batch *entity.RescheduleBatch, maxTimeSec *int) (*RescheduleResult, error)
 }
 
 type RescheduleStrategyService struct {
@@ -455,6 +460,203 @@ func (s *RescheduleStrategyService) runOptimalReplan(
 	durationMs := int(time.Since(startTime).Milliseconds())
 
 	log.Infof("Optimal replan completed: plan=%d, tasks=%d, scheduled=%d, unscheduled=%d, duration=%dms",
+		planID, len(activeTasks), output.Metrics.ScheduledTasks, output.Metrics.UnscheduledTasks, durationMs)
+
+	return &RescheduleResult{
+		Success:         len(output.UnscheduledTasks) == 0,
+		UpdatedEventIDs: updatedIDs,
+		Strategy:        enum.StrategyOptimalReplan,
+		DurationMs:      durationMs,
+	}, nil
+}
+
+// RunDeepOptimize uses ptm_optimization with a specific algorithm strategy (no fallback)
+func (s *RescheduleStrategyService) RunDeepOptimize(
+	ctx context.Context,
+	planID int64,
+	batch *entity.RescheduleBatch,
+	strategy optimization.StrategyType,
+	maxTimeSec *int,
+) (*RescheduleResult, error) {
+	startTime := time.Now()
+
+	if s.optimizationClient == nil {
+		log.Warn(ctx, "Optimization client not configured, falling back to local scheduler")
+		return s.runFullReplan(ctx, planID, batch)
+	}
+
+	now := time.Now()
+	fromMs := now.UnixMilli()
+	toMs := now.AddDate(0, 0, DefaultScheduleRangeDays).UnixMilli()
+
+	tasks, err := s.taskPort.GetBySchedulePlanID(ctx, planID)
+	if err != nil {
+		return nil, err
+	}
+
+	activeTasks := make([]*entity.ScheduleTaskEntity, 0, len(tasks))
+	for _, t := range tasks {
+		if t.IsSchedulableForPlan(fromMs, toMs) {
+			activeTasks = append(activeTasks, t)
+		}
+	}
+
+	if len(activeTasks) == 0 {
+		return &RescheduleResult{
+			Success:         true,
+			UpdatedEventIDs: []int64{},
+			Strategy:        enum.StrategyOptimalReplan,
+			DurationMs:      int(time.Since(startTime).Milliseconds()),
+		}, nil
+	}
+
+	windows, _, err := s.windowService.GetOrCreateWindowsWithInfo(ctx, batch.UserID, fromMs, toMs)
+	if err != nil {
+		return nil, err
+	}
+
+	optRequest := s.mapper.BuildOptimizationRequest(activeTasks, windows)
+
+	if maxTimeSec != nil {
+		optRequest.Params.MaxTimeSec = maxTimeSec
+	}
+
+	log.Infof("Calling ptm_optimization (strategy=%s) for plan %d with %d tasks and %d windows",
+		strategy, planID, len(optRequest.Tasks), len(optRequest.Windows))
+
+	optResult, err := s.optimizationClient.Optimize(ctx, optRequest, strategy)
+	if err != nil {
+		return &RescheduleResult{
+			Success:         false,
+			UpdatedEventIDs: []int64{},
+			Strategy:        enum.StrategyOptimalReplan,
+			DurationMs:      int(time.Since(startTime).Milliseconds()),
+			Error:           err,
+		}, err
+	}
+
+	return s.applyOptimizationResult(ctx, planID, activeTasks, optResult, startTime)
+}
+
+// RunFallbackChainOptimize uses ptm_optimization with fallback chain
+func (s *RescheduleStrategyService) RunFallbackChainOptimize(
+	ctx context.Context,
+	planID int64,
+	batch *entity.RescheduleBatch,
+	maxTimeSec *int,
+) (*RescheduleResult, error) {
+	startTime := time.Now()
+
+	if s.optimizationClient == nil {
+		log.Warn(ctx, "Optimization client not configured, falling back to local scheduler")
+		return s.runFullReplan(ctx, planID, batch)
+	}
+
+	now := time.Now()
+	fromMs := now.UnixMilli()
+	toMs := now.AddDate(0, 0, DefaultScheduleRangeDays).UnixMilli()
+
+	tasks, err := s.taskPort.GetBySchedulePlanID(ctx, planID)
+	if err != nil {
+		return nil, err
+	}
+
+	activeTasks := make([]*entity.ScheduleTaskEntity, 0, len(tasks))
+	for _, t := range tasks {
+		if t.IsSchedulableForPlan(fromMs, toMs) {
+			activeTasks = append(activeTasks, t)
+		}
+	}
+
+	if len(activeTasks) == 0 {
+		return &RescheduleResult{
+			Success:         true,
+			UpdatedEventIDs: []int64{},
+			Strategy:        enum.StrategyOptimalReplan,
+			DurationMs:      int(time.Since(startTime).Milliseconds()),
+		}, nil
+	}
+
+	windows, _, err := s.windowService.GetOrCreateWindowsWithInfo(ctx, batch.UserID, fromMs, toMs)
+	if err != nil {
+		return nil, err
+	}
+
+	optRequest := s.mapper.BuildOptimizationRequest(activeTasks, windows)
+
+	if maxTimeSec != nil {
+		optRequest.Params.MaxTimeSec = maxTimeSec
+	}
+
+	log.Infof("Calling ptm_optimization (fallback chain) for plan %d with %d tasks and %d windows",
+		planID, len(optRequest.Tasks), len(optRequest.Windows))
+
+	optResult, err := s.optimizationClient.OptimizeWithFallback(ctx, optRequest)
+	if err != nil {
+		log.Warnf("Fallback chain optimization failed, falling back to local scheduler: %v", err)
+		return s.runFullReplan(ctx, planID, batch)
+	}
+
+	return s.applyOptimizationResult(ctx, planID, activeTasks, optResult, startTime)
+}
+
+// applyOptimizationResult applies the optimization result to the schedule
+func (s *RescheduleStrategyService) applyOptimizationResult(
+	ctx context.Context,
+	planID int64,
+	activeTasks []*entity.ScheduleTaskEntity,
+	optResult *optimization.PlanResult,
+	startTime time.Time,
+) (*RescheduleResult, error) {
+	taskMap := make(map[int64]*entity.ScheduleTaskEntity)
+	for _, t := range activeTasks {
+		taskMap[t.ID] = t
+	}
+
+	output := s.mapper.OptimizationResultToScheduleOutput(optResult, taskMap)
+
+	// Delete only PLANNED events from today onwards
+	now := time.Now()
+	fromDateMs := now.UnixMilli()
+	var tx *gorm.DB
+	if err := s.eventPort.DeletePlannedEventsFromDate(ctx, tx, planID, fromDateMs); err != nil {
+		return nil, err
+	}
+
+	var updatedIDs []int64
+	newEvents := s.mapper.ScheduleOutputToEvents(output, planID, taskMap)
+
+	if len(newEvents) > 0 {
+		if err := s.eventPort.CreateBatch(ctx, tx, newEvents); err != nil {
+			return nil, err
+		}
+		for _, e := range newEvents {
+			updatedIDs = append(updatedIDs, e.ID)
+		}
+	}
+
+	// Update task status based on optimization result
+	scheduledTaskIDs := make([]int64, 0)
+	for _, assignment := range output.Assignments {
+		scheduledTaskIDs = append(scheduledTaskIDs, assignment.ScheduleTaskID)
+	}
+
+	if len(scheduledTaskIDs) > 0 {
+		if err := s.taskPort.UpdateScheduleStatusBatch(ctx, tx, scheduledTaskIDs, enum.ScheduleTaskScheduled, nil); err != nil {
+			log.Warnf("Failed to update scheduled task status: %v", err)
+		}
+	}
+
+	for _, unscheduled := range output.UnscheduledTasks {
+		reason := unscheduled.Reason
+		if err := s.taskPort.UpdateScheduleStatusBatch(ctx, tx, []int64{unscheduled.ScheduleTaskID}, enum.ScheduleTaskUnschedulable, &reason); err != nil {
+			log.Warnf("Failed to update unscheduled task status for task %d: %v", unscheduled.ScheduleTaskID, err)
+		}
+	}
+
+	durationMs := int(time.Since(startTime).Milliseconds())
+
+	log.Infof("Optimization completed: plan=%d, tasks=%d, scheduled=%d, unscheduled=%d, duration=%dms",
 		planID, len(activeTasks), output.Metrics.ScheduledTasks, output.Metrics.UnscheduledTasks, durationMs)
 
 	return &RescheduleResult{
