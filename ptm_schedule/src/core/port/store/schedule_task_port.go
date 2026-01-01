@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/serp/ptm-schedule/src/core/domain/entity"
+	"github.com/serp/ptm-schedule/src/core/domain/enum"
 	"gorm.io/gorm"
 )
 
@@ -11,6 +12,7 @@ type IScheduleTaskPort interface {
 	CreateScheduleTask(ctx context.Context, tx *gorm.DB, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error)
 	CreateBatch(ctx context.Context, tx *gorm.DB, tasks []*entity.ScheduleTaskEntity) error
 	UpdateScheduleTask(ctx context.Context, tx *gorm.DB, ID int64, scheduleTask *entity.ScheduleTaskEntity) (*entity.ScheduleTaskEntity, error)
+	UpdateScheduleStatusBatch(ctx context.Context, tx *gorm.DB, ids []int64, status enum.ScheduleTaskStatus, reason *string) error
 	DeleteScheduleTask(ctx context.Context, tx *gorm.DB, scheduleTaskID int64) error
 	DeleteByTaskID(ctx context.Context, tx *gorm.DB, taskID int64) error
 	DeleteByPlanID(ctx context.Context, tx *gorm.DB, planID int64) error

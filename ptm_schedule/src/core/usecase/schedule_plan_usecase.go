@@ -43,9 +43,6 @@ type ISchedulePlanUseCase interface {
 	DiscardProposedPlan(ctx context.Context, userID, planID int64) error
 	RevertToPlan(ctx context.Context, userID, targetPlanID int64) (*entity.SchedulePlanEntity, error)
 
-	// Optimization
-	TriggerReschedule(ctx context.Context, userID int64, req *request.TriggerRescheduleRequest) (*response.OptimizationResult, error)
-
 	// History & Cleanup
 	GetPlanHistory(ctx context.Context, userID int64, page, pageSize int) (*response.PlanHistoryResponse, error)
 	CleanupOldPlans(ctx context.Context, userID int64) (int, error)
@@ -55,7 +52,6 @@ type SchedulePlanUseCase struct {
 	schedulePlanService  service.ISchedulePlanService
 	scheduleEventService service.IScheduleEventService
 	scheduleTaskService  service.IScheduleTaskService
-	rescheduleService    service.IRescheduleStrategyService
 	txService            service.ITransactionService
 }
 
@@ -229,113 +225,6 @@ func (s *SchedulePlanUseCase) RevertToPlan(ctx context.Context, userID, targetPl
 	return result.(*entity.SchedulePlanEntity), nil
 }
 
-func (s *SchedulePlanUseCase) TriggerReschedule(ctx context.Context, userID int64, req *request.TriggerRescheduleRequest) (*response.OptimizationResult, error) {
-	activePlan, err := s.schedulePlanService.GetActivePlanByUserID(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-
-	existingProposed, _ := s.schedulePlanService.GetLatestProposedPlanByUserID(ctx, userID)
-	if existingProposed != nil {
-		return nil, fmt.Errorf(constant.ProposedPlanAlreadyExists)
-	}
-
-	startTime := time.Now()
-
-	var proposedPlan *entity.SchedulePlanEntity
-	var taskIDMapping map[int64]int64
-	_, err = s.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB) (any, error) {
-		newPlan := activePlan.CreateNextVersion()
-		newPlan.AlgorithmUsed = enum.HybridAlgorithm
-
-		created, err := s.schedulePlanService.CreatePlan(ctx, tx, newPlan)
-		if err != nil {
-			return nil, err
-		}
-		proposedPlan = created
-
-		taskIDMapping, err = s.scheduleTaskService.CloneTasksForPlan(ctx, tx, activePlan.ID, proposedPlan.ID)
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", constant.PlanTaskCloneFailed, err)
-		}
-
-		events, err := s.scheduleEventService.ListEventsByPlanAndDateRange(
-			ctx, activePlan.ID, activePlan.StartDateMs,
-			time.Now().AddDate(0, 6, 0).UnixMilli(),
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		if len(events) > 0 {
-			if _, err := s.scheduleEventService.CloneEventsForPlan(ctx, tx, proposedPlan.ID, events, taskIDMapping); err != nil {
-				return nil, fmt.Errorf("%s: %w", constant.PlanEventCloneFailed, err)
-			}
-		}
-
-		return nil, nil
-	})
-	if err != nil {
-		return &response.OptimizationResult{
-			Success:      false,
-			ErrorMessage: err.Error(),
-		}, nil
-	}
-
-	err = s.schedulePlanService.StartOptimization(ctx, nil, proposedPlan, enum.HybridAlgorithm)
-	if err != nil {
-		return &response.OptimizationResult{
-			Success:      false,
-			ErrorMessage: err.Error(),
-		}, nil
-	}
-
-	batch := &entity.RescheduleBatch{
-		UserID:   userID,
-		PlanID:   proposedPlan.ID,
-		Strategy: req.Strategy,
-	}
-	rescheduleResult, err := s.rescheduleService.Execute(ctx, proposedPlan.ID, batch)
-
-	durationMs := time.Since(startTime).Milliseconds()
-
-	if err != nil {
-		// Mark optimization as failed and cleanup
-		s.schedulePlanService.FailOptimization(ctx, nil, proposedPlan, err.Error())
-		return &response.OptimizationResult{
-			Success:      false,
-			DurationMs:   durationMs,
-			ErrorMessage: err.Error(),
-		}, nil
-	}
-
-	score := 0.0
-	if rescheduleResult.Success {
-		score = 1.0
-	}
-	err = s.schedulePlanService.CompleteOptimization(ctx, nil, proposedPlan, score, durationMs)
-	if err != nil {
-		log.Warn(ctx, "Failed to complete optimization: ", err)
-	}
-
-	proposedDetail, err := s.GetPlanWithEvents(
-		ctx, userID, proposedPlan.ID,
-		proposedPlan.StartDateMs,
-		time.Now().AddDate(0, 1, 0).UnixMilli(),
-	)
-	if err != nil {
-		log.Warn(ctx, "Failed to get proposed plan detail: ", err)
-	}
-
-	return &response.OptimizationResult{
-		Success:          rescheduleResult.Success,
-		DurationMs:       int64(rescheduleResult.DurationMs),
-		TasksScheduled:   len(rescheduleResult.UpdatedEventIDs),
-		TasksUnscheduled: 0,
-		ProposedPlan:     proposedDetail,
-	}, nil
-}
-
 func (s *SchedulePlanUseCase) GetPlanHistory(ctx context.Context, userID int64, page, pageSize int) (*response.PlanHistoryResponse, error) {
 	if page < 1 {
 		page = 1
@@ -468,14 +357,12 @@ func NewSchedulePlanUseCase(
 	schedulePlanService service.ISchedulePlanService,
 	scheduleEventService service.IScheduleEventService,
 	scheduleTaskService service.IScheduleTaskService,
-	rescheduleService service.IRescheduleStrategyService,
 	txService service.ITransactionService,
 ) ISchedulePlanUseCase {
 	return &SchedulePlanUseCase{
 		schedulePlanService:  schedulePlanService,
 		scheduleEventService: scheduleEventService,
 		scheduleTaskService:  scheduleTaskService,
-		rescheduleService:    rescheduleService,
 		txService:            txService,
 	}
 }

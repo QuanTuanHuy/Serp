@@ -15,5 +15,5 @@ public class Assignment {
     private Integer startMin;
     private Integer endMin;
     private Double utility;
-    private UtilityBreakdown rationale;
+    // private UtilityBreakdown rationale;
 }
