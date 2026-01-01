@@ -5,10 +5,11 @@ Description: Part of Serp Project - Order Detail Route Page
 
 import { OrderDetailPage } from '@/modules/sales/pages/orders';
 
-export default function OrderDetailRoute({
+export default async function OrderDetailRoute({
   params,
 }: {
-  params: { orderId: string };
+  params: Promise<{ orderId: string }>;
 }) {
-  return <OrderDetailPage orderId={params.orderId} />;
+  const { orderId } = await params;
+  return <OrderDetailPage orderId={orderId} />;
 }

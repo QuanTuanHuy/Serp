@@ -309,7 +309,7 @@ app:
             - SYSTEM_MODERATOR
             - ORG_OWNER
             - ORG_ADMIN
-          permissions: 
+          permissions:
 
 server:
   port: 8081

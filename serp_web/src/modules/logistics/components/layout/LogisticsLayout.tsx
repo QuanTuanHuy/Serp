@@ -1,7 +1,7 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics main layout with sidebar and header
-*/
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project - Logistics main layout with sidebar and header
+ */
 
 'use client';
 
@@ -26,7 +26,7 @@ interface LogisticsLayoutProps {
 const LogisticsLayoutContent: React.FC<LogisticsLayoutProps> = ({
   children,
 }) => {
-  const containerRef = React.useRef<HTMLDivElement>(null);
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
   const { isCollapsed } = useSidebarContext();
 
   return (

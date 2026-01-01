@@ -61,7 +61,6 @@ import {
   useGetCustomerQuery,
 } from '../../api/salesApi';
 import { useGetUsersQuery, UserProfile } from '@/modules/admin';
-import type { OrderItem } from '../../types';
 
 interface OrderDetailPageProps {
   orderId: string;
@@ -367,47 +366,49 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
           </div>
         </div>
 
-        <div className='flex items-center gap-2'>
-          {order.statusId === 'CREATED' && (
-            <Button
-              onClick={handleApprove}
-              disabled={isApproving}
-              className='gap-2'
-            >
-              <CheckCircle2 className='h-4 w-4' />
-              Phê duyệt đơn hàng
-            </Button>
-          )}
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant='outline' size='icon'>
-                <MoreHorizontal className='h-4 w-4' />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align='end'>
-              <DropdownMenuItem onClick={handleEdit}>
-                <Edit className='mr-2 h-4 w-4' />
-                Chỉnh sửa đơn hàng
-              </DropdownMenuItem>
-              {order.statusId === 'CREATED' && (
-                <DropdownMenuItem onClick={() => setShowCancelDialog(true)}>
-                  <XCircle className='mr-2 h-4 w-4' />
-                  Hủy đơn hàng
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className='text-destructive'
+        {(order.statusId === 'CREATED' || order.statusId === 'CANCELLED') && (
+          <div className='flex items-center gap-2'>
+            {order.statusId === 'CREATED' && (
+              <Button
+                onClick={handleApprove}
+                disabled={isApproving}
+                className='gap-2'
               >
-                <Trash2 className='mr-2 h-4 w-4' />
-                Xóa đơn hàng
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+                <CheckCircle2 className='h-4 w-4' />
+                Phê duyệt đơn hàng
+              </Button>
+            )}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant='outline' size='icon'>
+                  <MoreHorizontal className='h-4 w-4' />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end'>
+                <DropdownMenuItem onClick={handleEdit}>
+                  <Edit className='mr-2 h-4 w-4' />
+                  Chỉnh sửa đơn hàng
+                </DropdownMenuItem>
+                {order.statusId === 'CREATED' && (
+                  <DropdownMenuItem onClick={() => setShowCancelDialog(true)}>
+                    <XCircle className='mr-2 h-4 w-4' />
+                    Hủy đơn hàng
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className='text-destructive'
+                >
+                  <Trash2 className='mr-2 h-4 w-4' />
+                  Xóa đơn hàng
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
       </div>
 
       {/* Status Banner */}

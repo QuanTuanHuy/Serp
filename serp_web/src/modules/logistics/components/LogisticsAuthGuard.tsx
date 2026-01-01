@@ -1,61 +1,42 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics module auth guard
-*/
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project - Logistics Auth Guard
+ */
 
 'use client';
 
-import { ReactNode } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components';
-import { ShieldAlert } from 'lucide-react';
+import React from 'react';
+import { useRouter } from 'next/navigation';
+import { useAppSelector } from '@/lib/store';
 
 interface LogisticsAuthGuardProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
-// Simple permission check - replace with actual hook when available
-const usePermissions = () => {
-  return {
-    hasAnyRole: (roles: string[]) => true, // Allow access for now
-    isLoading: false,
-  };
-};
+/**
+ * LogisticsAuthGuard - Protects logistics routes with authentication
+ */
+export const LogisticsAuthGuard: React.FC<LogisticsAuthGuardProps> = ({
+  children,
+}) => {
+  const router = useRouter();
+  const isAuthenticated = useAppSelector((state) => !!state.account.auth.token);
 
-export const LogisticsAuthGuard = ({ children }: LogisticsAuthGuardProps) => {
-  const { hasAnyRole, isLoading } = usePermissions();
+  React.useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/auth/login?redirect=/logistics');
+    }
+  }, [isAuthenticated, router]);
 
-  // Check if user has any Logistics module role
-  const hasAccess = hasAnyRole([
-    'LOGISTICS_ADMIN',
-    'LOGISTICS_MANAGER',
-    'LOGISTICS_STAFF',
-  ]);
-
-  if (isLoading) {
+  if (!isAuthenticated) {
     return (
-      <div className='flex items-center justify-center min-h-screen'>
-        <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-primary'></div>
-      </div>
-    );
-  }
-
-  if (!hasAccess) {
-    return (
-      <div className='flex items-center justify-center min-h-screen p-6'>
-        <Card className='max-w-md w-full'>
-          <CardHeader>
-            <div className='flex items-center gap-2'>
-              <ShieldAlert className='h-5 w-5 text-destructive' />
-              <CardTitle>Không có quyền truy cập</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className='text-sm text-muted-foreground'>
-              Bạn không có quyền truy cập module Logistics. Vui lòng liên hệ
-              quản trị viên để được cấp quyền.
-            </p>
-          </CardContent>
-        </Card>
+      <div className='flex h-screen items-center justify-center'>
+        <div className='text-center'>
+          <div className='text-lg font-semibold'>Verifying access...</div>
+          <div className='mt-2 text-sm text-muted-foreground'>
+            Please wait while we check your permissions
+          </div>
+        </div>
       </div>
     );
   }

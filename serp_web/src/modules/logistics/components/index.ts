@@ -1,24 +1,12 @@
 /*
 Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics components barrel export
+Description: Part of Serp Project - Logistics Components Barrel Export
 */
 
-// Layout Components
-export { LogisticsLayout } from './layout/LogisticsLayout';
-export { LogisticsHeader } from './layout/LogisticsHeader';
+export * from './layout';
+export * from './LogisticsAuthGuard';
 
-// Auth Guard
-export { LogisticsAuthGuard } from './LogisticsAuthGuard';
-
-// Order Components
-export { OrderDetailDialog } from './orders/OrderDetailDialog';
-export { OrderOverviewTab } from './orders/OrderOverviewTab';
-export { OrderItemsTab } from './orders/OrderItemsTab';
-export { OrderShipmentsTab } from './orders/OrderShipmentsTab';
-
-// Shipment Components
-export { CreateShipmentDialog } from './shipments/CreateShipmentDialog';
-
-// Inventory Components
-export { InventoryItemDetailDialog } from './inventory/InventoryItemDetailDialog';
-export { InventoryItemEditDialog } from './inventory/InventoryItemEditDialog';
+// TODO: Add more component exports as they are created
+// export * from './cards';
+// export * from './shipments';
+// export * from './products';

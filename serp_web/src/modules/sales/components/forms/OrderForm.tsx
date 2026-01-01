@@ -26,7 +26,11 @@ import {
   Save,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
-import { useGetCustomersQuery, useGetProductsQuery } from '../../api/salesApi';
+import {
+  useGetCustomersQuery,
+  useGetProductsQuery,
+  useGetCustomerQuery,
+} from '../../api/salesApi';
 import type {
   Order,
   OrderCreationForm,
@@ -38,20 +42,23 @@ import { toast } from 'sonner';
 
 interface OrderFormProps {
   order?: Order;
+  customerId?: string;
   onSubmit: (data: OrderCreationForm | OrderUpdateForm) => Promise<void>;
   onCancel: () => void;
 }
 
 export const OrderForm: React.FC<OrderFormProps> = ({
   order,
+  customerId: initialCustomerId,
   onSubmit,
   onCancel,
 }) => {
-  const router = useRouter();
   const isEditMode = !!order;
 
   // Form state
-  const [customerId, setCustomerId] = useState(order?.toCustomerId || '');
+  const [customerId, setCustomerId] = useState(
+    initialCustomerId || order?.toCustomerId || ''
+  );
   const [orderName, setOrderName] = useState(order?.orderName || '');
   const [saleChannel, setSaleChannel] = useState<SaleChannel>(
     order?.saleChannelId || 'ONLINE'
@@ -89,6 +96,12 @@ export const OrderForm: React.FC<OrderFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Fetch pre-selected customer if customerId is provided
+  const { data: preSelectedCustomerResponse } = useGetCustomerQuery(
+    customerId,
+    { skip: !customerId || isEditMode || !!customerSearch }
+  );
+
   // Fetch customers and products
   const { data: customersResponse } = useGetCustomersQuery({
     filters: { query: customerSearch },
@@ -102,6 +115,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({
 
   const customers = customersResponse?.data?.items || [];
   const products = productsResponse?.data?.items || [];
+  const preSelectedCustomer = preSelectedCustomerResponse?.data;
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -203,7 +217,8 @@ export const OrderForm: React.FC<OrderFormProps> = ({
     setItems(items.filter((_, i) => i !== index));
   };
 
-  const selectedCustomer = customers.find((c) => c.id === customerId);
+  const selectedCustomer =
+    customers.find((c) => c.id === customerId) || preSelectedCustomer;
   const getProductById = (productId: string) =>
     products.find((p) => p.id === productId);
 

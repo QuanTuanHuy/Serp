@@ -73,6 +73,12 @@ target/
 *.iml
 *.ipr
 
+.shared/
+.claude/
+ui-ux*
+backend-expert.prompt.md
+
+plan-*.md
 ### NetBeans ###
 /nbproject/private/
 /nbbuild/

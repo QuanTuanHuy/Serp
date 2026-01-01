@@ -62,7 +62,9 @@ export const EditCustomerPage: React.FC<EditCustomerPageProps> = ({
         <div className='flex items-center justify-center min-h-[400px]'>
           <div className='text-center'>
             <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4'></div>
-            <p className='text-muted-foreground'>Loading customer data...</p>
+            <p className='text-muted-foreground'>
+              Đang tải dữ liệu khách hàng...
+            </p>
           </div>
         </div>
       </div>
@@ -76,14 +78,13 @@ export const EditCustomerPage: React.FC<EditCustomerPageProps> = ({
         <Card className='border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/50'>
           <CardContent className='p-6 text-center'>
             <h3 className='text-lg font-semibold text-red-900 dark:text-red-100 mb-2'>
-              Customer Not Found
+              Không tìm thấy khách hàng
             </h3>
             <p className='text-red-600 dark:text-red-400 mb-4'>
-              The customer you're trying to edit doesn't exist or has been
-              deleted.
+              Khách hàng với ID "{customerId}" không tồn tại hoặc đã bị xóa.
             </p>
             <Button variant='outline' onClick={handleCancel}>
-              Go Back
+              Quay lại danh sách khách hàng
             </Button>
           </CardContent>
         </Card>
@@ -97,14 +98,14 @@ export const EditCustomerPage: React.FC<EditCustomerPageProps> = ({
       <div className='flex items-center justify-between mb-6'>
         <div className='flex items-center space-x-4'>
           <Button variant='outline' onClick={handleCancel}>
-            ← Back
+            ← Quay lại
           </Button>
           <div>
             <h1 className='text-2xl font-bold text-foreground'>
-              Edit Customer
+              Chỉnh sửa khách hàng
             </h1>
             <p className='text-muted-foreground'>
-              Update {customer.name}'s information
+              Cập nhật thông tin của {customer.name}
             </p>
           </div>
         </div>
