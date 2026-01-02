@@ -19,7 +19,7 @@ import {
   useGetNotesByTaskQuery,
   useGetNotesByProjectQuery,
   useCreateNoteMutation,
-} from '../../services/noteApi';
+} from '../../api';
 import type { Note } from '../../types';
 import { toast } from 'sonner';
 

@@ -6,8 +6,7 @@
  */
 
 import { useMemo } from 'react';
-import { useGetTasksQuery } from '../services/taskApi';
-import { useGetScheduleEventsQuery } from '../services/scheduleApi';
+import { useGetScheduleEventsQuery, useGetTasksQuery } from '../api';
 
 export interface DashboardStats {
   totalTasks: number;
@@ -25,7 +24,10 @@ export interface DashboardStats {
 }
 
 export function useDashboardStats() {
-  const { data: tasks = [], isLoading: isLoadingTasks } = useGetTasksQuery({});
+  const { data: paginatedData, isLoading: isLoadingTasks } = useGetTasksQuery(
+    {}
+  );
+  const tasks = paginatedData?.data?.items || [];
 
   // Get today's schedule events
   const today = new Date();
@@ -52,11 +54,15 @@ export function useDashboardStats() {
     // Calculate focus time today (sum of deep work task durations)
     const focusTimeToday = todayEvents
       .filter((event) => event.isDeepWork)
-      .reduce((acc, event) => acc + event.durationMin / 60, 0);
+      .reduce(
+        (acc, event) =>
+          acc + (event.durationMin ?? event.endMin - event.startMin) / 60,
+        0
+      );
 
     // Tasks scheduled for today
     const tasksToday = todayEvents.filter(
-      (event) => event.status === 'scheduled'
+      (event) => event.status === 'PLANNED'
     ).length;
 
     // Overdue tasks (deadline passed but not completed)

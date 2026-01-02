@@ -37,21 +37,24 @@ import {
   useGetProjectQuery,
   useUpdateProjectMutation,
   useDeleteProjectMutation,
-} from '../../services/projectApi';
-import { useGetTasksQuery } from '../../services/taskApi';
+} from '../../api';
+import { useGetTasksQuery } from '../../api';
 import {
   useGetNotesByProjectQuery,
   useCreateNoteMutation,
   useUpdateNoteMutation,
   useDeleteNoteMutation,
-} from '../../services/noteApi';
+} from '../../api';
 import { EditProjectDialog } from './EditProjectDialog';
 import { TaskList } from '../tasks/TaskList';
+import { TaskDetail } from '../tasks/TaskDetail';
 import { NoteCard } from '../notes/NoteCard';
 import { NoteEditorNovel } from '../notes/NoteEditorNovel';
 import { cn } from '@/shared/utils';
 import { toast } from 'sonner';
 import { Skeleton } from '@/shared/components/ui/skeleton';
+import { CreateTaskDialog } from '../tasks/dialogs';
+import { useTaskDialogs } from '../../hooks';
 
 interface ProjectDetailViewProps {
   projectId: number | string;
@@ -65,6 +68,7 @@ export function ProjectDetailView({
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'tasks' | 'notes'>('tasks');
   const [showNoteEditor, setShowNoteEditor] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
   const numericProjectId =
     typeof projectId === 'string' ? parseInt(projectId, 10) : projectId;
@@ -76,7 +80,7 @@ export function ProjectDetailView({
   } = useGetProjectQuery(numericProjectId, {
     skip: !numericProjectId,
   });
-  const { data: tasks = [], isLoading: isLoadingTasks } = useGetTasksQuery(
+  const { data: paginatedTasks, isLoading: isLoadingTasks } = useGetTasksQuery(
     {
       projectId: numericProjectId,
     },
@@ -84,6 +88,7 @@ export function ProjectDetailView({
       skip: !numericProjectId,
     }
   );
+  const tasks = paginatedTasks?.data?.items || [];
   const { data: notes = [] } = useGetNotesByProjectQuery(numericProjectId, {
     skip: !numericProjectId,
   });
@@ -92,6 +97,8 @@ export function ProjectDetailView({
   const [createNote] = useCreateNoteMutation();
   const [updateNote] = useUpdateNoteMutation();
   const [deleteNote] = useDeleteNoteMutation();
+
+  const { createDialog } = useTaskDialogs();
 
   const handleToggleFavorite = async () => {
     if (!project) return;
@@ -200,8 +207,8 @@ export function ProjectDetailView({
   }
 
   const completionRate =
-    project.totalTasks > 0
-      ? Math.round((project.completedTasks / project.totalTasks) * 100)
+    project.totalTasks && project.totalTasks > 0
+      ? Math.round(((project.completedTasks || 0) / project.totalTasks) * 100)
       : 0;
 
   const isOverdue =
@@ -214,259 +221,280 @@ export function ProjectDetailView({
   );
 
   return (
-    <div className='space-y-6'>
-      {/* Header */}
-      <div className='flex items-center justify-between'>
-        <Button variant='ghost' onClick={onClose}>
-          <ArrowLeft className='mr-2 h-4 w-4' />
-          Back to Projects
-        </Button>
-        <div className='flex items-center gap-2'>
-          <Button variant='outline' size='sm' onClick={handleToggleFavorite}>
-            <Star
-              className={cn(
-                'h-4 w-4 mr-2',
-                project.isFavorite && 'fill-yellow-400 text-yellow-400'
-              )}
-            />
-            {project.isFavorite ? 'Favorited' : 'Favorite'}
+    <>
+      <div className='space-y-6'>
+        {/* Header */}
+        <div className='flex items-center justify-between'>
+          <Button variant='ghost' onClick={onClose}>
+            <ArrowLeft className='mr-2 h-4 w-4' />
+            Back to Projects
           </Button>
-          <Button
-            variant='outline'
-            size='sm'
-            onClick={() => setEditDialogOpen(true)}
-          >
-            <Edit className='h-4 w-4 mr-2' />
-            Edit
-          </Button>
-          <Button variant='destructive' size='sm' onClick={handleDelete}>
-            <Trash2 className='h-4 w-4 mr-2' />
-            Delete
-          </Button>
+          <div className='flex items-center gap-2'>
+            <Button variant='outline' size='sm' onClick={handleToggleFavorite}>
+              <Star
+                className={cn(
+                  'h-4 w-4 mr-2',
+                  project.isFavorite && 'fill-yellow-400 text-yellow-400'
+                )}
+              />
+              {project.isFavorite ? 'Favorited' : 'Favorite'}
+            </Button>
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={() => setEditDialogOpen(true)}
+            >
+              <Edit className='h-4 w-4 mr-2' />
+              Edit
+            </Button>
+            <Button variant='destructive' size='sm' onClick={handleDelete}>
+              <Trash2 className='h-4 w-4 mr-2' />
+              Delete
+            </Button>
+          </div>
         </div>
-      </div>
 
-      {/* Project Info Card */}
-      <Card>
-        <CardHeader>
-          <div className='flex items-start gap-4'>
-            <div
-              className='w-2 h-20 rounded-full flex-shrink-0'
-              style={{ backgroundColor: project.color }}
-            />
-            <div className='flex-1 min-w-0'>
-              <h1 className='text-3xl font-bold mb-2'>{project.title}</h1>
-              {project.description && (
-                <p className='text-muted-foreground'>{project.description}</p>
-              )}
-              <div className='flex flex-wrap items-center gap-3 mt-4'>
-                <Badge
+        {/* Project Info Card */}
+        <Card>
+          <CardHeader>
+            <div className='flex items-start gap-4'>
+              <div
+                className='w-2 h-20 rounded-full flex-shrink-0'
+                style={{ backgroundColor: project.color }}
+              />
+              <div className='flex-1 min-w-0'>
+                <h1 className='text-3xl font-bold mb-2'>{project.title}</h1>
+                {project.description && (
+                  <p className='text-muted-foreground'>{project.description}</p>
+                )}
+                <div className='flex flex-wrap items-center gap-3 mt-4'>
+                  <Badge
+                    className={cn(
+                      'text-xs',
+                      project.status === 'NEW' && 'bg-indigo-500',
+                      project.status === 'IN_PROGRESS' && 'bg-blue-500',
+                      project.status === 'COMPLETED' && 'bg-green-500',
+                      project.status === 'ON_HOLD' && 'bg-amber-500',
+                      project.status === 'ARCHIVED' && 'bg-gray-500'
+                    )}
+                  >
+                    {project.status === 'NEW' && 'New'}
+                    {project.status === 'IN_PROGRESS' && 'In Progress'}
+                    {project.status === 'COMPLETED' && 'Completed'}
+                    {project.status === 'ON_HOLD' && 'On Hold'}
+                    {project.status === 'ARCHIVED' && 'Archived'}
+                  </Badge>
+                  {isOverdue && (
+                    <Badge variant='destructive' className='text-xs'>
+                      ⚠️ Overdue
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className='space-y-6'>
+            {/* Stats */}
+            <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
+              <div className='space-y-1'>
+                <div className='flex items-center gap-2 text-muted-foreground text-sm'>
+                  <CheckCircle className='h-4 w-4' />
+                  <span>Tasks</span>
+                </div>
+                <p className='text-2xl font-bold'>
+                  {project.completedTasks}/{project.totalTasks}
+                </p>
+              </div>
+
+              <div className='space-y-1'>
+                <div className='flex items-center gap-2 text-muted-foreground text-sm'>
+                  <Clock className='h-4 w-4' />
+                  <span>Estimated</span>
+                </div>
+                <p className='text-2xl font-bold'>{project.estimatedHours}h</p>
+              </div>
+
+              <div className='space-y-1'>
+                <div className='flex items-center gap-2 text-muted-foreground text-sm'>
+                  <Target className='h-4 w-4' />
+                  <span>Progress</span>
+                </div>
+                <p className='text-2xl font-bold'>{completionRate}%</p>
+              </div>
+
+              <div className='space-y-1'>
+                <div className='flex items-center gap-2 text-muted-foreground text-sm'>
+                  <Calendar className='h-4 w-4' />
+                  <span>Deadline</span>
+                </div>
+                <p
                   className={cn(
-                    'text-xs',
-                    project.status === 'ACTIVE' && 'bg-blue-500',
-                    project.status === 'COMPLETED' && 'bg-green-500',
-                    project.status === 'ON_HOLD' && 'bg-amber-500',
-                    project.status === 'ARCHIVED' && 'bg-gray-500'
+                    'text-lg font-semibold',
+                    isOverdue && 'text-red-600 dark:text-red-400'
                   )}
                 >
-                  {project.status}
-                </Badge>
-                {isOverdue && (
-                  <Badge variant='destructive' className='text-xs'>
-                    ⚠️ Overdue
-                  </Badge>
-                )}
+                  {project.deadlineMs
+                    ? new Date(project.deadlineMs).toLocaleDateString()
+                    : 'No deadline'}
+                </p>
               </div>
             </div>
-          </div>
-        </CardHeader>
 
-        <CardContent className='space-y-6'>
-          {/* Stats */}
-          <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
-            <div className='space-y-1'>
-              <div className='flex items-center gap-2 text-muted-foreground text-sm'>
-                <CheckCircle className='h-4 w-4' />
-                <span>Tasks</span>
+            {/* Progress Bar */}
+            <div className='space-y-2'>
+              <div className='flex items-center justify-between text-sm'>
+                <span className='text-muted-foreground font-medium'>
+                  Overall Progress
+                </span>
+                <span className='font-semibold'>{completionRate}%</span>
               </div>
-              <p className='text-2xl font-bold'>
-                {project.completedTasks}/{project.totalTasks}
-              </p>
+              <Progress value={completionRate} className='h-3' />
             </div>
 
-            <div className='space-y-1'>
-              <div className='flex items-center gap-2 text-muted-foreground text-sm'>
-                <Clock className='h-4 w-4' />
-                <span>Estimated</span>
+            <Separator />
+
+            {/* Timestamps */}
+            <div className='grid grid-cols-2 gap-4 text-sm'>
+              <div>
+                <p className='text-muted-foreground'>Created</p>
+                <p className='font-medium'>
+                  {new Date(project.createdAt).toLocaleString()}
+                </p>
               </div>
-              <p className='text-2xl font-bold'>{project.estimatedHours}h</p>
+              <div>
+                <p className='text-muted-foreground'>Last Updated</p>
+                <p className='font-medium'>
+                  {new Date(project.updatedAt).toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Tabs: Tasks, Notes */}
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as 'tasks' | 'notes')}
+        >
+          <TabsList className='grid w-full grid-cols-2'>
+            <TabsTrigger value='tasks'>
+              Tasks {projectTasks.length > 0 && `(${projectTasks.length})`}
+            </TabsTrigger>
+            <TabsTrigger value='notes' className='flex items-center gap-2'>
+              <StickyNote className='h-4 w-4' />
+              Notes {notes.length > 0 && `(${notes.length})`}
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Tasks Tab */}
+          <TabsContent value='tasks' className='space-y-4 mt-6'>
+            <div className='flex items-center justify-between'>
+              <h3 className='text-lg font-semibold'>Project Tasks</h3>
+              <Button onClick={createDialog.openCreate}>
+                <Plus className='h-4 w-4 mr-2' />
+                Add Task
+              </Button>
             </div>
 
-            <div className='space-y-1'>
-              <div className='flex items-center gap-2 text-muted-foreground text-sm'>
-                <Target className='h-4 w-4' />
-                <span>Progress</span>
-              </div>
-              <p className='text-2xl font-bold'>{completionRate}%</p>
-            </div>
+            {projectTasks.length === 0 ? (
+              <Card className='p-12 text-center border-dashed'>
+                <div className='flex flex-col items-center gap-2 text-muted-foreground'>
+                  <CheckCircle className='h-12 w-12' />
+                  <p className='text-lg font-medium'>No tasks yet</p>
+                  <p className='text-sm'>
+                    Add your first task to this project to get started
+                  </p>
+                </div>
+              </Card>
+            ) : (
+              <TaskList
+                filterProjectId={numericProjectId}
+                selectedTaskId={selectedTaskId}
+                onTaskSelect={setSelectedTaskId}
+              />
+            )}
+          </TabsContent>
 
-            <div className='space-y-1'>
-              <div className='flex items-center gap-2 text-muted-foreground text-sm'>
-                <Calendar className='h-4 w-4' />
-                <span>Deadline</span>
-              </div>
-              <p
-                className={cn(
-                  'text-lg font-semibold',
-                  isOverdue && 'text-red-600 dark:text-red-400'
-                )}
+          {/* Notes Tab */}
+          <TabsContent value='notes' className='space-y-4 mt-6'>
+            <div className='flex items-center justify-between'>
+              <h3 className='text-lg font-semibold'>Project Notes</h3>
+              <Button
+                size='sm'
+                onClick={() => setShowNoteEditor(!showNoteEditor)}
+                variant={showNoteEditor ? 'outline' : 'default'}
               >
-                {project.deadlineMs
-                  ? new Date(project.deadlineMs).toLocaleDateString()
-                  : 'No deadline'}
-              </p>
+                {showNoteEditor ? (
+                  <>
+                    <X className='h-4 w-4 mr-2' />
+                    Cancel
+                  </>
+                ) : (
+                  <>
+                    <Plus className='h-4 w-4 mr-2' />
+                    Add Note
+                  </>
+                )}
+              </Button>
             </div>
-          </div>
 
-          {/* Progress Bar */}
-          <div className='space-y-2'>
-            <div className='flex items-center justify-between text-sm'>
-              <span className='text-muted-foreground font-medium'>
-                Overall Progress
-              </span>
-              <span className='font-semibold'>{completionRate}%</span>
-            </div>
-            <Progress value={completionRate} className='h-3' />
-          </div>
+            {showNoteEditor && (
+              <NoteEditorNovel
+                onSave={handleCreateNote}
+                onCancel={() => setShowNoteEditor(false)}
+                placeholder='Add notes, decisions, or important information about this project...'
+              />
+            )}
 
-          <Separator />
-
-          {/* Timestamps */}
-          <div className='grid grid-cols-2 gap-4 text-sm'>
-            <div>
-              <p className='text-muted-foreground'>Created</p>
-              <p className='font-medium'>
-                {new Date(project.createdAt).toLocaleString()}
-              </p>
-            </div>
-            <div>
-              <p className='text-muted-foreground'>Last Updated</p>
-              <p className='font-medium'>
-                {new Date(project.updatedAt).toLocaleString()}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Tabs: Tasks, Notes */}
-      <Tabs
-        value={activeTab}
-        onValueChange={(v) => setActiveTab(v as 'tasks' | 'notes')}
-      >
-        <TabsList className='grid w-full grid-cols-2'>
-          <TabsTrigger value='tasks'>
-            Tasks {projectTasks.length > 0 && `(${projectTasks.length})`}
-          </TabsTrigger>
-          <TabsTrigger value='notes' className='flex items-center gap-2'>
-            <StickyNote className='h-4 w-4' />
-            Notes {notes.length > 0 && `(${notes.length})`}
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Tasks Tab */}
-        <TabsContent value='tasks' className='space-y-4 mt-6'>
-          <div className='flex items-center justify-between'>
-            <h3 className='text-lg font-semibold'>Project Tasks</h3>
-            <Button>
-              <Plus className='h-4 w-4 mr-2' />
-              Add Task
-            </Button>
-          </div>
-
-          {projectTasks.length === 0 ? (
-            <Card className='p-12 text-center border-dashed'>
-              <div className='flex flex-col items-center gap-2 text-muted-foreground'>
-                <CheckCircle className='h-12 w-12' />
-                <p className='text-lg font-medium'>No tasks yet</p>
-                <p className='text-sm'>
-                  Add your first task to this project to get started
-                </p>
+            {notes.length === 0 ? (
+              <Card className='p-8 text-center border-dashed'>
+                <div className='flex flex-col items-center gap-2 text-muted-foreground'>
+                  <StickyNote className='h-12 w-12' />
+                  <p className='text-lg font-medium'>No notes yet</p>
+                  <p className='text-sm'>
+                    Add notes to document project decisions, ideas, and progress
+                  </p>
+                </div>
+              </Card>
+            ) : (
+              <div className='space-y-3'>
+                {[...notes]
+                  .sort((a, b) => {
+                    // Pinned notes first
+                    if (a.isPinned && !b.isPinned) return -1;
+                    if (!a.isPinned && b.isPinned) return 1;
+                    // Then by date (newest first)
+                    return (
+                      new Date(b.createdAt).getTime() -
+                      new Date(a.createdAt).getTime()
+                    );
+                  })
+                  .map((note) => (
+                    <NoteCard key={note.id} note={note} />
+                  ))}
               </div>
-            </Card>
-          ) : (
-            <TaskList filterProjectId={numericProjectId} />
-          )}
-        </TabsContent>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
 
-        {/* Notes Tab */}
-        <TabsContent value='notes' className='space-y-4 mt-6'>
-          <div className='flex items-center justify-between'>
-            <h3 className='text-lg font-semibold'>Project Notes</h3>
-            <Button
-              size='sm'
-              onClick={() => setShowNoteEditor(!showNoteEditor)}
-              variant={showNoteEditor ? 'outline' : 'default'}
-            >
-              {showNoteEditor ? (
-                <>
-                  <X className='h-4 w-4 mr-2' />
-                  Cancel
-                </>
-              ) : (
-                <>
-                  <Plus className='h-4 w-4 mr-2' />
-                  Add Note
-                </>
-              )}
-            </Button>
-          </div>
-
-          {showNoteEditor && (
-            <NoteEditorNovel
-              onSave={handleCreateNote}
-              onCancel={() => setShowNoteEditor(false)}
-              placeholder='Add notes, decisions, or important information about this project...'
-            />
-          )}
-
-          {notes.length === 0 ? (
-            <Card className='p-8 text-center border-dashed'>
-              <div className='flex flex-col items-center gap-2 text-muted-foreground'>
-                <StickyNote className='h-12 w-12' />
-                <p className='text-lg font-medium'>No notes yet</p>
-                <p className='text-sm'>
-                  Add notes to document project decisions, ideas, and progress
-                </p>
-              </div>
-            </Card>
-          ) : (
-            <div className='space-y-3'>
-              {[...notes]
-                .sort((a, b) => {
-                  // Pinned notes first
-                  if (a.isPinned && !b.isPinned) return -1;
-                  if (!a.isPinned && b.isPinned) return 1;
-                  // Then by date (newest first)
-                  return (
-                    new Date(b.createdAt).getTime() -
-                    new Date(a.createdAt).getTime()
-                  );
-                })
-                .map((note) => (
-                  <NoteCard key={note.id} note={note} />
-                ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
-
-      {/* Edit Dialog */}
+      {/* Edit Dialog - Rendered outside main container */}
       <EditProjectDialog
         project={project}
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
       />
-    </div>
+
+      {/* Task Dialogs */}
+      <CreateTaskDialog {...createDialog} />
+
+      {/* Task Detail Panel */}
+      <TaskDetail
+        taskId={selectedTaskId}
+        open={!!selectedTaskId}
+        onOpenChange={(open) => !open && setSelectedTaskId(null)}
+      />
+    </>
   );
 }

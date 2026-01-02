@@ -20,7 +20,7 @@ import { Skeleton } from '@/shared/components/ui/skeleton';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import { Badge } from '@/shared/components/ui/badge';
 import { cn } from '@/shared/utils';
-import { useGetScheduleEventsQuery } from '../../services/scheduleApi';
+import { useGetScheduleEventsQuery } from '../../api';
 import { StatusBadge, PriorityBadge } from '../shared';
 import type { ScheduleEvent } from '../../types';
 
@@ -211,9 +211,9 @@ function ScheduleEventCard({
             </Badge>
           )}
 
-          {event.taskPart && event.totalParts && event.totalParts > 1 && (
+          {event.totalParts > 1 && (
             <Badge variant='outline' className='text-xs'>
-              Part {event.taskPart}/{event.totalParts}
+              Part {event.partIndex + 1}/{event.totalParts}
             </Badge>
           )}
 

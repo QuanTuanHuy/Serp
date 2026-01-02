@@ -39,6 +39,16 @@ export { ThemeToggle } from './theme-toggle';
 // Form Components
 export { Switch } from './switch';
 export { Checkbox } from './checkbox';
+export {
+  useFormField,
+  Form,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormDescription,
+  FormMessage,
+  FormField,
+} from './form';
 
 // Select Components
 export {
@@ -130,3 +140,6 @@ export { Separator } from './separator';
 
 // Skeleton Component
 export { Skeleton } from './skeleton';
+
+// ScrollArea Component
+export { ScrollArea, ScrollBar } from './scroll-area';

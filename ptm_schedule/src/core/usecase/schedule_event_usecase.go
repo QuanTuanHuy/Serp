@@ -144,17 +144,14 @@ func (u *ScheduleEventUseCase) ManuallyMoveEvent(ctx context.Context, userID int
 			return err
 		}
 
-		if result.HasConflicts {
-			payload := map[string]any{
-				"newDateMs":      newDateMs,
-				"newStartMin":    newStartMin,
-				"newEndMin":      newEndMin,
-				"scheduleTaskID": result.Event.ScheduleTaskID,
-			}
-			return u.rescheduleQueue.EnqueueEventMove(ctx, tx, result.Event.SchedulePlanID, userID, eventID, payload)
+		payload := map[string]any{
+			"newDateMs":      newDateMs,
+			"newStartMin":    newStartMin,
+			"newEndMin":      newEndMin,
+			"scheduleTaskID": result.Event.ScheduleTaskID,
+			"hasConflicts":   result.HasConflicts,
 		}
-
-		return nil
+		return u.rescheduleQueue.EnqueueEventMove(ctx, tx, result.Event.SchedulePlanID, userID, eventID, payload)
 	})
 }
 
@@ -180,7 +177,13 @@ func (u *ScheduleEventUseCase) CompleteEvent(ctx context.Context, userID int64, 
 			}
 		}
 
-		return nil
+		payload := map[string]any{
+			"actualStartMin":    actualStartMin,
+			"actualEndMin":      actualEndMin,
+			"allPartsCompleted": result.AllPartsCompleted,
+			"scheduleTaskID":    result.ScheduleTaskID,
+		}
+		return u.rescheduleQueue.EnqueueEventComplete(ctx, tx, result.Event.SchedulePlanID, userID, eventID, payload)
 	})
 }
 
@@ -229,7 +232,7 @@ func (u *ScheduleEventUseCase) SkipEvent(ctx context.Context, userID int64, even
 	}
 
 	return u.txService.ExecuteInTransaction(ctx, func(tx *gorm.DB) error {
-		_, err := u.eventSvc.GetByID(ctx, eventID)
+		event, err := u.eventSvc.GetByID(ctx, eventID)
 		if err != nil {
 			return err
 		}
@@ -238,8 +241,7 @@ func (u *ScheduleEventUseCase) SkipEvent(ctx context.Context, userID int64, even
 			return err
 		}
 
-		// return u.rescheduleQueue.EnqueueEventSkip(ctx, tx, event.SchedulePlanID, userID, eventID)
-		return nil
+		return u.rescheduleQueue.EnqueueEventSkip(ctx, tx, event.SchedulePlanID, userID, eventID)
 	})
 }
 

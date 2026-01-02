@@ -43,7 +43,7 @@ const (
 	EventInvalidSplitPoint       = "invalid split point: would create parts smaller than minimum duration"
 	EventInvalidTimeRange        = "invalid time range for event"
 
-	// Schedule Plan/Group/Task errors
+	// Schedule Plan/Task errors
 	SchedulePlanNotFound = "schedule plan not found"
 	ScheduleTaskNotFound = "schedule task not found"
 

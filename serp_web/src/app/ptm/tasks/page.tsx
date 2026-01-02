@@ -7,31 +7,74 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
-import { QuickAddTask, TaskList } from '@/modules/ptm';
-import { Card } from '@/shared/components/ui/card';
+import { useMemo, useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { TaskList } from '@/modules/ptm';
+import { CreateTaskDialog } from '@/modules/ptm/components/tasks/dialogs';
+import { Card, Button } from '@/shared/components/ui';
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from '@/shared/components/ui/tabs';
-import { useGetTasksQuery } from '@/modules/ptm/services/taskApi';
+} from '@/shared/components/ui';
+import { useTasks, useTaskDialogs } from '@/modules/ptm/hooks';
 import { DependencyGraph } from '@/modules/ptm/components/tasks/DependencyGraph';
-import { CheckSquare, Circle, Clock, Network } from 'lucide-react';
+import { CheckSquare, Circle, Clock, Network, Plus } from 'lucide-react';
+import { TaskDetail } from '@/modules/ptm/components/tasks/TaskDetail';
+import { toNumericId } from '@/modules/ptm/utils';
 
 export default function TasksPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('list');
-  const { data: tasks = [], isLoading } = useGetTasksQuery({});
+  const { createDialog } = useTaskDialogs();
+
+  // Get selected task from URL query param
+  const selectedParam = searchParams.get('selected');
+  const selectedTaskId = toNumericId(selectedParam);
+
+  // Handle task selection - Update URL
+  const handleTaskSelect = (taskId: number | null) => {
+    if (taskId) {
+      router.push(`/ptm/tasks?selected=${taskId}`, { scroll: false });
+    } else {
+      router.push('/ptm/tasks', { scroll: false });
+    }
+  };
+
+  // Handle open full view
+  const handleOpenFullView = (taskId: number) => {
+    router.push(`/ptm/tasks/${taskId}`);
+  };
+
+  // Keyboard shortcut: Cmd+K to search/focus (global)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + K for quick search
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        const searchInput = document.querySelector(
+          'input[placeholder="Search tasks..."]'
+        ) as HTMLInputElement;
+        searchInput?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const { tasks, totalItems, isLoading } = useTasks();
 
   // Calculate real-time stats
   const stats = useMemo(() => {
-    const total = tasks.length;
+    const total = totalItems;
     const completed = tasks.filter((t) => t.status === 'DONE').length;
     const inProgress = tasks.filter((t) => t.status === 'IN_PROGRESS').length;
 
     return { total, completed, inProgress };
-  }, [tasks]);
+  }, [tasks, totalItems]);
 
   return (
     <div className='space-y-6'>
@@ -48,7 +91,10 @@ export default function TasksPage() {
             Stay organized and focused on what matters most
           </p>
         </div>
-        <QuickAddTask />
+        <Button onClick={createDialog.openCreate}>
+          <Plus className='mr-2 h-4 w-4' />
+          Add Task
+        </Button>
       </div>
 
       {/* Stats Overview */}
@@ -110,7 +156,10 @@ export default function TasksPage() {
         </TabsList>
 
         <TabsContent value='list' className='mt-6'>
-          <TaskList />
+          <TaskList
+            selectedTaskId={selectedTaskId}
+            onTaskSelect={handleTaskSelect}
+          />
         </TabsContent>
 
         <TabsContent value='dependencies' className='mt-6'>
@@ -132,6 +181,17 @@ export default function TasksPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Dialogs */}
+      <CreateTaskDialog {...createDialog} />
+
+      {/* Global Task Detail Panel - Controlled by URL */}
+      <TaskDetail
+        taskId={selectedTaskId}
+        open={!!selectedTaskId}
+        onOpenChange={(open) => !open && handleTaskSelect(null)}
+        onOpenFullView={handleOpenFullView}
+      />
     </div>
   );
 }

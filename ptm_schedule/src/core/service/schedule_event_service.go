@@ -179,6 +179,9 @@ func (s *ScheduleEventService) FindConflictingEvents(ctx context.Context, planID
 		if ev.ID == excludeEventID {
 			continue
 		}
+		// if ev.Status == enum.ScheduleEventDone || ev.Status == enum.ScheduleEventSkipped {
+		// 	continue
+		// }
 		if startMin < ev.EndMin && endMin > ev.StartMin {
 			conflicts = append(conflicts, ev)
 		}

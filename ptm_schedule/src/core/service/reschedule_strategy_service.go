@@ -151,7 +151,7 @@ func (s *RescheduleStrategyService) runFullReplan(
 		return nil, err
 	}
 
-	input.ExistingEvents = filterPinnedOnly(input.ExistingEvents)
+	input.ExistingEvents = filterPinnedOrCompleted(input.ExistingEvents)
 
 	output := s.scheduler.Schedule(input)
 
@@ -180,7 +180,7 @@ func (s *RescheduleStrategyService) loadScheduleData(
 
 	activeTasks := make([]*entity.ScheduleTaskEntity, 0, len(tasks))
 	for _, t := range tasks {
-		if !t.IsCompleted() {
+		if t.IsSchedulable() {
 			activeTasks = append(activeTasks, t)
 		}
 	}
@@ -280,10 +280,10 @@ func (s *RescheduleStrategyService) applyChanges(
 	return updatedIDs, nil
 }
 
-func filterPinnedOnly(events []*algorithm.Assignment) []*algorithm.Assignment {
+func filterPinnedOrCompleted(events []*algorithm.Assignment) []*algorithm.Assignment {
 	result := make([]*algorithm.Assignment, 0)
 	for _, e := range events {
-		if e.IsPinned {
+		if e.IsPinned || e.IsCompleted() {
 			result = append(result, e)
 		}
 	}

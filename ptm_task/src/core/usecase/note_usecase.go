@@ -18,8 +18,6 @@ import (
 
 type INoteUseCase interface {
 	CreateNote(ctx context.Context, userID int64, note *entity.NoteEntity) (*entity.NoteEntity, error)
-	CreateNoteForTask(ctx context.Context, userID int64, taskID int64, content string, attachments []entity.NoteAttachment) (*entity.NoteEntity, error)
-	CreateNoteForProject(ctx context.Context, userID int64, projectID int64, content string, attachments []entity.NoteAttachment) (*entity.NoteEntity, error)
 
 	UpdateNote(ctx context.Context, userID int64, note *entity.NoteEntity) error
 	TogglePin(ctx context.Context, userID int64, noteID int64) error
@@ -59,22 +57,16 @@ func NewNoteUseCase(
 
 func (u *noteUseCase) CreateNote(ctx context.Context, userID int64, note *entity.NoteEntity) (*entity.NoteEntity, error) {
 	if note.TaskID != nil {
-		task, err := u.taskService.GetTaskByID(ctx, *note.TaskID)
+		_, err := u.taskService.GetTaskByUserIDAndID(ctx, userID, *note.TaskID)
 		if err != nil {
 			return nil, err
-		}
-		if task.UserID != userID {
-			return nil, errors.New(constant.TaskNotFound)
 		}
 	}
 
 	if note.ProjectID != nil {
-		project, err := u.projectService.GetProjectByID(ctx, *note.ProjectID)
+		_, err := u.projectService.GetProjectByUserIDAndID(ctx, userID, *note.ProjectID)
 		if err != nil {
 			return nil, err
-		}
-		if project.UserID != userID {
-			return nil, errors.New(constant.ProjectNotFound)
 		}
 	}
 
@@ -91,42 +83,6 @@ func (u *noteUseCase) CreateNote(ctx context.Context, userID int64, note *entity
 		return nil, err
 	}
 	return createdNote, nil
-}
-
-func (u *noteUseCase) CreateNoteForTask(ctx context.Context, userID int64, taskID int64, content string, attachments []entity.NoteAttachment) (*entity.NoteEntity, error) {
-	task, err := u.taskService.GetTaskByID(ctx, taskID)
-	if err != nil {
-		return nil, err
-	}
-	if task.UserID != userID {
-		return nil, errors.New(constant.UpdateTaskForbidden)
-	}
-
-	note := entity.NewNoteEntity()
-	note.TaskID = &taskID
-	note.TenantID = task.TenantID
-	note.Content = content
-	note.Attachments = attachments
-
-	return u.CreateNote(ctx, userID, note)
-}
-
-func (u *noteUseCase) CreateNoteForProject(ctx context.Context, userID int64, projectID int64, content string, attachments []entity.NoteAttachment) (*entity.NoteEntity, error) {
-	project, err := u.projectService.GetProjectByID(ctx, projectID)
-	if err != nil {
-		return nil, err
-	}
-	if project.UserID != userID {
-		return nil, errors.New(constant.UpdateProjectForbidden)
-	}
-
-	note := entity.NewNoteEntity()
-	note.ProjectID = &projectID
-	note.TenantID = project.TenantID
-	note.Content = content
-	note.Attachments = attachments
-
-	return u.CreateNote(ctx, userID, note)
 }
 
 func (u *noteUseCase) UpdateNote(ctx context.Context, userID int64, note *entity.NoteEntity) error {

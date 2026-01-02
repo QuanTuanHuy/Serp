@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo, useState, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Filter, SortAsc, Search } from 'lucide-react';
 import {
@@ -19,104 +19,61 @@ import {
 } from '@/shared/components/ui/select';
 import { TaskCard } from './TaskCard';
 import { TaskDetail } from './TaskDetail';
-import { useGetTasksQuery } from '../../services/taskApi';
-import type { Task, TaskStatus, TaskPriority } from '../../types';
+import { useTasks, useTaskManagement, useTaskDialogs } from '../../hooks';
+import type { TaskStatus, TaskPriority } from '../../types';
 import { Skeleton } from '@/shared/components/ui/skeleton';
+import { useState } from 'react';
+import { EditTaskDialog } from './dialogs/EditTaskDialog';
+import { DeleteTaskDialog } from './dialogs/DeleteTaskDialog';
 
 interface TaskListProps {
   projectId?: number | string;
   filterProjectId?: number | string;
+  selectedTaskId?: number | null;
+  onTaskSelect?: (taskId: number | null) => void;
   className?: string;
 }
-
-type SortOption = 'deadline' | 'priority' | 'created' | 'title';
 
 export function TaskList({
   projectId,
   filterProjectId,
+  selectedTaskId: externalSelectedTaskId,
+  onTaskSelect,
   className,
 }: TaskListProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<TaskStatus | 'ALL'>('ALL');
-  const [priorityFilter, setPriorityFilter] = useState<TaskPriority | 'ALL'>(
-    'ALL'
-  );
-  const [sortBy, setSortBy] = useState<SortOption>('deadline');
-  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  // Use external state if provided, otherwise fallback to internal state
+  const [internalSelectedTaskId, setInternalSelectedTaskId] = useState<
+    number | null
+  >(null);
+  const selectedTaskId =
+    externalSelectedTaskId !== undefined
+      ? externalSelectedTaskId
+      : internalSelectedTaskId;
+  const setSelectedTaskId = onTaskSelect || setInternalSelectedTaskId;
 
-  const { data: tasks = [], isLoading } = useGetTasksQuery({
-    projectId,
+  const {
+    tasks: filteredTasks,
+    isLoading,
+    searchQuery,
+    setSearchQuery,
+    statusFilter,
+    setStatusFilter,
+    priorityFilter,
+    setPriorityFilter,
+    sortBy,
+    setSortBy,
+    clearFilters,
+  } = useTasks({
+    projectId: filterProjectId || projectId,
+    initialSortBy: 'deadline',
   });
 
-  // Filter and sort tasks
-  const filteredTasks = useMemo(() => {
-    let filtered = [...tasks];
+  // Task CRUD operations
+  const { handleToggleComplete, handleStart, handlePause } =
+    useTaskManagement();
 
-    // Filter by project if filterProjectId is provided
-    if (filterProjectId) {
-      filtered = filtered.filter((task) => task.projectId === filterProjectId);
-    }
-
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (task) =>
-          task.title.toLowerCase().includes(query) ||
-          task.description?.toLowerCase().includes(query) ||
-          task.tags?.some((tag: string) => tag.toLowerCase().includes(query))
-      );
-    }
-
-    // Status filter
-    if (statusFilter !== 'ALL') {
-      filtered = filtered.filter((task) => task.status === statusFilter);
-    }
-
-    // Priority filter
-    if (priorityFilter !== 'ALL') {
-      filtered = filtered.filter((task) => task.priority === priorityFilter);
-    }
-
-    // Sort
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'deadline':
-          if (!a.deadlineMs) return 1;
-          if (!b.deadlineMs) return -1;
-          return a.deadlineMs - b.deadlineMs;
-
-        case 'priority': {
-          const priorityOrder: Record<TaskPriority, number> = {
-            HIGH: 0,
-            MEDIUM: 1,
-            LOW: 2,
-          };
-          return priorityOrder[a.priority] - priorityOrder[b.priority];
-        }
-
-        case 'created':
-          return (
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-
-        case 'title':
-          return a.title.localeCompare(b.title);
-
-        default:
-          return 0;
-      }
-    });
-
-    return filtered;
-  }, [
-    tasks,
-    searchQuery,
-    statusFilter,
-    priorityFilter,
-    sortBy,
-    filterProjectId,
-  ]);
+  // Dialog state management
+  const { editDialog, deleteDialog } = useTaskDialogs();
 
   // Virtualization setup
   const parentRef = useRef<HTMLDivElement>(null);
@@ -145,9 +102,7 @@ export function TaskList({
 
       // Escape to clear filters
       if (e.key === 'Escape') {
-        setSearchQuery('');
-        setStatusFilter('ALL');
-        setPriorityFilter('ALL');
+        clearFilters();
       }
 
       // Arrow down/up for task navigation when no input is focused
@@ -259,7 +214,11 @@ export function TaskList({
 
             <Select
               value={sortBy}
-              onValueChange={(value) => setSortBy(value as SortOption)}
+              onValueChange={(value) =>
+                setSortBy(
+                  value as 'deadline' | 'priority' | 'created' | 'title' | 'id'
+                )
+              }
             >
               <SelectTrigger className='w-[140px]'>
                 <SortAsc className='mr-2 h-4 w-4' />
@@ -316,7 +275,17 @@ export function TaskList({
                     }}
                   >
                     <div className='px-1 pb-3'>
-                      <TaskCard task={task} onClick={setSelectedTaskId} />
+                      <TaskCard
+                        task={task}
+                        onClick={setSelectedTaskId}
+                        onToggleComplete={handleToggleComplete}
+                        onStart={handleStart}
+                        onPause={handlePause}
+                        onEdit={editDialog.openEdit}
+                        onDelete={(task) =>
+                          deleteDialog.openDelete(task.id, task.title)
+                        }
+                      />
                     </div>
                   </div>
                 );
@@ -325,11 +294,17 @@ export function TaskList({
           </div>
         )}
 
-        {/* Task Detail Sheet */}
-        <TaskDetail
-          taskId={selectedTaskId}
-          open={!!selectedTaskId}
-          onOpenChange={(open) => !open && setSelectedTaskId(null)}
+        {/* Edit & Delete Dialogs */}
+        <EditTaskDialog
+          taskId={editDialog.taskId}
+          open={editDialog.open}
+          onOpenChange={editDialog.onOpenChange}
+        />
+        <DeleteTaskDialog
+          taskId={deleteDialog.taskId}
+          taskTitle={deleteDialog.taskTitle}
+          open={deleteDialog.open}
+          onOpenChange={deleteDialog.onOpenChange}
         />
       </CardContent>
     </Card>

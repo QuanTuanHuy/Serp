@@ -53,6 +53,7 @@ type RegisterRoutersIn struct {
 	AvailabilityCalendarController *ptm.AvailabilityCalendarController
 	ScheduleWindowController       *ptm.ScheduleWindowController
 	ScheduleEventController        *ptm.ScheduleEventController
+	ScheduleTaskController         *ptm.ScheduleTaskController
 
 	JWTMiddleware  *middleware.JWTMiddleware
 	CorsMiddleware *middleware.CorsMiddleware
@@ -100,6 +101,7 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		p.AvailabilityCalendarController,
 		p.ScheduleWindowController,
 		p.ScheduleEventController,
+		p.ScheduleTaskController,
 	)
 
 	RegisterPurchaseRoutes(

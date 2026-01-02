@@ -63,6 +63,18 @@ func (c *PtmTaskHandler) handleTaskEvent(ctx context.Context, topic, key string,
 		}
 		log.Info(ctx, "Successfully updated task from source. TaskID: ", updatedEvent.TaskID)
 
+	case constant.TaskBulkDeletedEvent:
+		var bulkDeletedEvent message.TaskBulkDeletedEvent
+		if err := utils.BindData(&kafkaMessage, &bulkDeletedEvent); err != nil {
+			log.Error(ctx, "Failed to bind bulk delete task message data: ", err)
+			return err
+		}
+		err := c.scheduleTaskUseCase.HandleTaskBulkDeleted(ctx, &bulkDeletedEvent)
+		if err != nil {
+			log.Error(ctx, "Failed to bulk delete schedule tasks from source: ", err)
+			return err
+		}
+
 	case constant.TaskDeletedEvent:
 		var deletedEvent message.TaskDeletedEvent
 		if err := utils.BindData(&kafkaMessage, &deletedEvent); err != nil {
