@@ -1,11 +1,19 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Purchase Module Layout
-*/
+/**
+ * Purchase Layout - Purchase Management Layout
+ *
+ * @author QuanTuanHuy
+ * @description Part of Serp Project - Purchase layout with sidebar navigation
+ */
 
-import { ReactNode } from 'react';
-import { PurchaseLayout } from '@/modules/purchase/components';
+import React from 'react';
+import { PurchaseLayout } from '@/modules/purchase/components/layout';
 
-export default function Layout({ children }: { children: ReactNode }) {
+interface PurchaseLayoutPageProps {
+  children: React.ReactNode;
+}
+
+export default function PurchaseLayoutPage({
+  children,
+}: PurchaseLayoutPageProps) {
   return <PurchaseLayout>{children}</PurchaseLayout>;
 }
