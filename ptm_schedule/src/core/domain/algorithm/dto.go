@@ -114,8 +114,9 @@ type ScheduleInput struct {
 
 // UnscheduledTask represents a task that couldn't be scheduled
 type UnscheduledTask struct {
-	TaskID int64
-	Reason string
+	TaskID         int64
+	ScheduleTaskID int64
+	Reason         string
 }
 
 // ScheduleMetrics contains scheduling statistics

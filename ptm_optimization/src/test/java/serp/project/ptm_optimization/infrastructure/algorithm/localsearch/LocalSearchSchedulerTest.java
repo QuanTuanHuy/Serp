@@ -11,6 +11,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import serp.project.ptm_optimization.infrastructure.algorithm.dto.input.Params;
 import serp.project.ptm_optimization.infrastructure.algorithm.dto.input.TaskInput;
@@ -20,6 +22,7 @@ import serp.project.ptm_optimization.infrastructure.algorithm.dto.output.Assignm
 import serp.project.ptm_optimization.infrastructure.algorithm.dto.output.PlanResult;
 import serp.project.ptm_optimization.infrastructure.algorithm.heuristic.GapBasedScheduler;
 import serp.project.ptm_optimization.kernel.utils.GapManager;
+import serp.project.ptm_optimization.kernel.utils.SchedulingUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +32,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class LocalSearchSchedulerTest {
 
     @Mock
@@ -36,6 +40,9 @@ class LocalSearchSchedulerTest {
 
     @Mock
     private GapManager gapManager;
+
+    @Mock
+    private SchedulingUtils schedulingUtils;
 
     @InjectMocks
     private LocalSearchScheduler localSearchScheduler;

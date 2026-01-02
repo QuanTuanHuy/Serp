@@ -39,14 +39,14 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
-          issuer-uri: http://localhost:8180/realms/serp
+          jwk-set-uri: ${KEYCLOAK_URL}/realms/serp/protocol/openid-connect/certs
+          issuer-uri: ${KEYCLOAK_URL}/realms/serp
 
 app:
   keycloak:
-    url: http://localhost:8180
-    jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
-    expected-issuer: http://localhost:8180/realms/serp
+    url: ${KEYCLOAK_URL}
+    jwk-set-uri: ${KEYCLOAK_URL}/realms/serp/protocol/openid-connect/certs
+    expected-issuer: ${KEYCLOAK_URL}/realms/serp
     expected-audience: serp-ptm
     realm: serp
     client-id: serp-ptm
@@ -55,8 +55,14 @@ app:
   security:
     filter:
       publicUrls:
+        - first: /api/v1/optimization/schedule
+          second: POST
       protectedUrls:
         - url-pattern: /api/v1/task-registrations/**
+          roles:
+            - PTM_USER
+            - PTM_ADMIN
+        - url-pattern: /api/v1/optimization/**
           roles:
             - PTM_USER
             - PTM_ADMIN

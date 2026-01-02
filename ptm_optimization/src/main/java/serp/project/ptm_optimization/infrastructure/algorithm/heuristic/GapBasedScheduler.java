@@ -18,6 +18,7 @@ import serp.project.ptm_optimization.infrastructure.algorithm.dto.output.Assignm
 import serp.project.ptm_optimization.infrastructure.algorithm.dto.output.PlanResult;
 import serp.project.ptm_optimization.infrastructure.algorithm.dto.output.UnScheduleReason;
 import serp.project.ptm_optimization.kernel.utils.GapManager;
+import serp.project.ptm_optimization.kernel.utils.SchedulingUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -37,15 +38,17 @@ import java.util.stream.Collectors;
 public class GapBasedScheduler {
     
     private final GapManager gapManager;
+    private final SchedulingUtils schedulingUtils;
     
-    public GapBasedScheduler(GapManager gapManager) {
+    public GapBasedScheduler(GapManager gapManager, SchedulingUtils schedulingUtils) {
         this.gapManager = gapManager;
+        this.schedulingUtils = schedulingUtils;
     }
     
     public PlanResult schedule(List<TaskInput> tasks, List<Window> windows, Weights weights, Params params) {
-        // 1. Topological sort
-        List<TaskInput> ordered = topologicalSort(tasks);
-        if (ordered.isEmpty()) {
+        // 1. Topological sort using shared utility
+        List<TaskInput> ordered = schedulingUtils.topologicalSort(tasks);
+        if (ordered.isEmpty() && !tasks.isEmpty()) {
             return PlanResult.builder()
                 .assignments(new ArrayList<>())
                 .unScheduled(tasks.stream()
@@ -64,11 +67,8 @@ public class GapBasedScheduler {
         Map<Long, Assignment> taskToAssignment = new HashMap<>();
         
         for (TaskInput task : ordered) {
-            // Check dependency failures
-            boolean depFailed = Optional.ofNullable(task.getDependentTaskIds())
-                .orElse(List.of())
-                .stream()
-                .anyMatch(unscheduledIds::contains);
+            // Check dependency failures using shared utility
+            boolean depFailed = schedulingUtils.hasUnscheduledDependency(task, unscheduledIds);
                 
             if (depFailed) {
                 unscheduled.add(UnScheduleReason.builder()
@@ -139,8 +139,8 @@ public class GapBasedScheduler {
             Long dateMs = entry.getKey();
             List<Window> dateWindows = entry.getValue();
             
-            // Check dependency constraints for this date
-            if (!canScheduleOnDate(task, dateMs, taskToAssignment)) {
+            // Check dependency constraints for this date using shared utility
+            if (!schedulingUtils.canScheduleOnDate(task, dateMs, taskToAssignment)) {
                 continue;
             }
             
@@ -166,11 +166,12 @@ public class GapBasedScheduler {
                     for (int startMin : positions) {
                         int endMin = startMin + taskDuration;
                         
-                        // Calculate utility for this placement
-                        double utility = calculateUtility(task, window, dateMs, startMin, endMin, weights);
+                        // Calculate utility using shared utility
+                        double utility = schedulingUtils.calculateUtility(task, dateMs, startMin, endMin, weights, window);
                         
-                        // Penalize fragmentation
-                        double fragmentationPenalty = calculateFragmentationPenalty(gap, startMin, endMin);
+                        // Penalize fragmentation using shared utility
+                        double fragmentationPenalty = schedulingUtils.calculateFragmentationPenalty(
+                            gap.getStartMin(), gap.getEndMin(), startMin, endMin);
                         double adjustedUtility = utility - fragmentationPenalty;
                         
                         if (adjustedUtility > best.getUtility()) {
@@ -186,25 +187,6 @@ public class GapBasedScheduler {
         }
         
         return best;
-    }
-    
-    /**
-     * Check if task can be scheduled on given date (dependency constraints).
-     */
-    private boolean canScheduleOnDate(TaskInput task, Long dateMs, Map<Long, Assignment> taskToAssignment) {
-        List<Long> deps = Optional.ofNullable(task.getDependentTaskIds()).orElse(List.of());
-        
-        for (Long depId : deps) {
-            Assignment depAssignment = taskToAssignment.get(depId);
-            if (depAssignment == null) {
-                return false; // Dependency not scheduled yet
-            }
-            if (depAssignment.getDateMs() > dateMs) {
-                return false; // Dependency scheduled after this date
-            }
-        }
-        
-        return true;
     }
     
     /**
@@ -231,148 +213,6 @@ public class GapBasedScheduler {
         }
         
         return positions;
-    }
-    
-    /**
-     * Calculate utility for placing task at specific time.
-     */
-    private double calculateUtility(
-        TaskInput task,
-        Window window,
-        Long dateMs,
-        int startMin,
-        int endMin,
-        Weights weights
-    ) {
-        double utility = 0.0;
-        
-        // Priority score
-        Double priority = task.getPriorityScore();
-        if (priority != null) {
-            utility += priority * Optional.ofNullable(weights).map(Weights::getWPriority).orElse(1.0);
-        }
-        
-        // Deadline bonus/penalty
-        if (task.getDeadlineMs() != null) {
-            long endAbsMs = dateMs + endMin * 60_000L;
-            if (endAbsMs > task.getDeadlineMs()) {
-                // Late - penalize
-                long lateMs = endAbsMs - task.getDeadlineMs();
-                double lateHours = lateMs / (60.0 * 60.0 * 1000.0);
-                utility -= lateHours * 10.0 * Optional.ofNullable(weights).map(Weights::getWDeadline).orElse(1.0);
-            } else {
-                // Early - small bonus
-                utility += 5.0;
-            }
-        }
-        
-        // Deep work bonus
-        if (window.getIsDeepWork() != null && window.getIsDeepWork()) {
-            Double effort = task.getEffort();
-            if (effort != null && effort > 0.7) {
-                utility += 20.0; // Bonus for high-effort tasks in deep work windows
-            }
-        }
-        
-        return utility;
-    }
-    
-    /**
-     * Calculate fragmentation penalty for placing task at position.
-     * Penalize placements that create many small gaps.
-     */
-    private double calculateFragmentationPenalty(Window gap, int startMin, int endMin) {
-        int gapStart = gap.getStartMin();
-        int gapEnd = gap.getEndMin();
-        
-        // Calculate leftover gaps
-        int leftGap = startMin - gapStart;
-        int rightGap = gapEnd - endMin;
-        
-        double penalty = 0.0;
-        
-        // Penalize small gaps (< 15 min are unusable)
-        if (leftGap > 0 && leftGap < 15) {
-            penalty += 5.0;
-        }
-        if (rightGap > 0 && rightGap < 15) {
-            penalty += 5.0;
-        }
-        
-        // Prefer positions that minimize total fragmentation
-        int totalFragmentation = Math.min(leftGap, 15) + Math.min(rightGap, 15);
-        penalty += totalFragmentation * 0.1;
-        
-        return penalty;
-    }
-    
-    /**
-     * Topological sort with deadline/priority ordering.
-     */
-    private List<TaskInput> topologicalSort(List<TaskInput> tasks) {
-        Map<Long, TaskInput> taskMap = tasks.stream()
-            .collect(Collectors.toMap(TaskInput::getTaskId, t -> t));
-        
-        Map<Long, Integer> inDegree = new HashMap<>();
-        Map<Long, List<Long>> graph = new HashMap<>();
-        
-        // Initialize
-        for (TaskInput task : tasks) {
-            inDegree.put(task.getTaskId(), 0);
-        }
-        
-        // Build graph
-        for (TaskInput task : tasks) {
-            List<Long> deps = Optional.ofNullable(task.getDependentTaskIds()).orElse(List.of());
-            for (Long depId : deps) {
-                inDegree.put(task.getTaskId(), inDegree.get(task.getTaskId()) + 1);
-                graph.computeIfAbsent(depId, k -> new ArrayList<>()).add(task.getTaskId());
-            }
-        }
-        
-        // Kahn's algorithm
-        Queue<Long> queue = new ArrayDeque<>();
-        for (TaskInput task : tasks) {
-            if (inDegree.get(task.getTaskId()) == 0) {
-                queue.add(task.getTaskId());
-            }
-        }
-        
-        List<TaskInput> sorted = new ArrayList<>();
-        while (!queue.isEmpty()) {
-            Long taskId = queue.poll();
-            TaskInput task = taskMap.get(taskId);
-            if (task != null) {
-                sorted.add(task);
-            }
-            
-            for (Long childId : graph.getOrDefault(taskId, List.of())) {
-                inDegree.put(childId, inDegree.get(childId) - 1);
-                if (inDegree.get(childId) == 0) {
-                    queue.add(childId);
-                }
-            }
-        }
-        
-        // Check for cycles
-        if (sorted.size() != tasks.size()) {
-            log.warn("Dependency cycle detected: {} tasks, {} sorted", tasks.size(), sorted.size());
-            return new ArrayList<>();
-        }
-        
-        // Sort by deadline then priority
-        sorted.sort((a, b) -> {
-            long deadlineA = Optional.ofNullable(a.getDeadlineMs()).orElse(Long.MAX_VALUE);
-            long deadlineB = Optional.ofNullable(b.getDeadlineMs()).orElse(Long.MAX_VALUE);
-            if (deadlineA != deadlineB) {
-                return Long.compare(deadlineA, deadlineB);
-            }
-            double priorityA = Optional.ofNullable(a.getPriorityScore()).orElse(0.0);
-            double priorityB = Optional.ofNullable(b.getPriorityScore()).orElse(0.0);
-            return Double.compare(priorityB, priorityA);
-        });
-        
-        return sorted;
     }
     
     @Data

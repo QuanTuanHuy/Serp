@@ -15,11 +15,16 @@ import (
 
 type SchedulePlanController struct {
 	schedulePlanUseCase usecase.ISchedulePlanUseCase
+	optimizationUseCase usecase.IOptimizationUseCase
 }
 
-func NewSchedulePlanController(schedulePlanUseCase usecase.ISchedulePlanUseCase) *SchedulePlanController {
+func NewSchedulePlanController(
+	schedulePlanUseCase usecase.ISchedulePlanUseCase,
+	optimizationUseCase usecase.IOptimizationUseCase,
+) *SchedulePlanController {
 	return &SchedulePlanController{
 		schedulePlanUseCase: schedulePlanUseCase,
+		optimizationUseCase: optimizationUseCase,
 	}
 }
 
@@ -214,7 +219,7 @@ func (ctrl *SchedulePlanController) TriggerReschedule(c *gin.Context) {
 		return
 	}
 
-	result, err := ctrl.schedulePlanUseCase.TriggerReschedule(c, userID, &req)
+	result, err := ctrl.optimizationUseCase.TriggerReschedule(c, userID, &req)
 	if err != nil {
 		if !utils.HandleBusinessError(c, err) {
 			utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
@@ -245,4 +250,48 @@ func (ctrl *SchedulePlanController) GetPlanHistory(c *gin.Context) {
 	}
 
 	utils.SuccessfulHandle(c, response)
+}
+
+func (ctrl *SchedulePlanController) DeepOptimize(c *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		return
+	}
+
+	var req request.DeepOptimizeRequest
+	if !utils.ValidateAndBindJSON(c, &req) {
+		return
+	}
+
+	result, err := ctrl.optimizationUseCase.TriggerDeepOptimize(c, userID, &req)
+	if err != nil {
+		if !utils.HandleBusinessError(c, err) {
+			utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
+		}
+		return
+	}
+
+	utils.SuccessfulHandle(c, result)
+}
+
+func (ctrl *SchedulePlanController) FallbackChainOptimize(c *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		return
+	}
+
+	var req request.FallbackChainOptimizeRequest
+	if !utils.ValidateAndBindJSON(c, &req) {
+		return
+	}
+
+	result, err := ctrl.optimizationUseCase.TriggerFallbackChainOptimize(c, userID, &req)
+	if err != nil {
+		if !utils.HandleBusinessError(c, err) {
+			utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
+		}
+		return
+	}
+
+	utils.SuccessfulHandle(c, result)
 }
