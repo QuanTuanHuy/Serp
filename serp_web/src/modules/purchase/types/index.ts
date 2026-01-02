@@ -1,11 +1,14 @@
 // Purchase Types & Interfaces (authors: QuanTuanHuy, Description: Part of Serp Project)
 
 // Constants
+
 export type ResponseStatus = 'SUCCESS' | 'FAILED';
 export type EntityType = 'PRODUCT' | 'SUPPLIER' | 'CUSTOMER' | 'FACILITY';
-export type AddressType = 'FACILITY' | 'SHIPPING' | 'BUSINESS';
-export type SupplierStatus = 'ACTIVE' | 'INACTIVE';
+export type AddressType = 'FACILIY' | 'SHIPPING' | 'BUSSINESS';
+export type CustomerStatus = 'ACTIVE' | 'INACTIVE';
 export type FacilityStatus = 'ACTIVE' | 'INACTIVE';
+export type InventoryItemStatus = 'VALID' | 'EXPIRED' | 'DAMAGED';
+export type OrderItemStatus = 'CREATED' | 'DELIVERED';
 export type OrderStatus =
   | 'CREATED'
   | 'APPROVED'
@@ -13,12 +16,10 @@ export type OrderStatus =
   | 'FULLY_DELIVERED';
 export type OrderType = 'PURCHASE' | 'SALES';
 export type ProductStatus = 'ACTIVE' | 'INACTIVE';
-export type ShipmentStatus =
-  | 'CREATED'
-  | 'IN_TRANSIT'
-  | 'DELIVERED'
-  | 'CANCELLED';
+export type SaleChannel = 'ONLINE' | 'PARTNER' | 'RETAIL';
 export type ShipmentType = 'INBOUND' | 'OUTBOUND';
+export type ShipmentStatus = 'CREATED' | 'IMPORTED' | 'EXPORTED';
+export type SupplierStatus = 'ACTIVE' | 'INACTIVE';
 
 export interface PaginationParams {
   page?: number;
@@ -41,14 +42,14 @@ export interface APIResponse<T> {
   data?: T;
 }
 
-// Address related types
+// Address types
 export interface Address {
   id: string;
   entityId: string;
   entityType: EntityType;
   addressType: AddressType;
-  latitude?: number;
-  longitude?: number;
+  latitude: number;
+  longitude: number;
   fullAddress: string;
   createdStamp: string;
   lastUpdatedStamp: string;
@@ -60,8 +61,8 @@ export interface AddressCreationForm {
   entityId: string;
   entityType: EntityType;
   addressType: AddressType;
-  latitude?: number;
-  longitude?: number;
+  latitude: number;
+  longitude: number;
   fullAddress: string;
   default?: boolean;
 }
@@ -74,13 +75,13 @@ export interface AddressUpdateForm {
   default?: boolean;
 }
 
-// Category related types
+// Category types
 export interface Category {
   id: string;
   name: string;
-  tenantId: number;
   createdStamp: string;
   lastUpdatedStamp: string;
+  tenantId: number;
 }
 
 export interface CategoryForm {
@@ -99,9 +100,9 @@ export interface Supplier {
   email?: string;
   phone?: string;
   statusId: SupplierStatus;
-  tenantId: number;
   createdStamp: string;
   lastUpdatedStamp: string;
+  tenantId: number;
   address?: Address;
 }
 
@@ -128,7 +129,7 @@ export interface SupplierFilters {
   statusId?: SupplierStatus;
 }
 
-// Facility related types
+// Facility types
 export interface Facility {
   id: string;
   name: string;
@@ -138,9 +139,10 @@ export interface Facility {
   lastUpdatedStamp: string;
   phone?: string;
   postalCode: string;
-  length?: number;
-  width?: number;
-  height?: number;
+  length: number;
+  width: number;
+  height: number;
+  capacity: number;
   tenantId: number;
   address?: Address;
   default: boolean;
@@ -149,7 +151,7 @@ export interface Facility {
 export interface FacilityCreationForm {
   name: string;
   phone?: string;
-  statusId: FacilityStatus;
+  statusId: string;
   postalCode: string;
   length?: number;
   width?: number;
@@ -182,22 +184,39 @@ export interface Product {
   name: string;
   weight?: number;
   height?: number;
-  unit?: string;
-  costPrice?: number;
-  wholeSalePrice?: number;
-  retailPrice?: number;
-  categoryId?: string;
+  unit: string;
+  costPrice: number;
+  wholeSalePrice: number;
+  retailPrice: number;
+  categoryId: string;
   statusId: ProductStatus;
   imageId?: string;
   extraProps?: string;
   createdStamp: string;
   lastUpdatedStamp: string;
   vatRate?: number;
-  skuCode?: string;
+  skuCode: string;
   tenantId: number;
+  quantityAvailable: number;
 }
 
 export interface ProductCreationForm {
+  name: string;
+  weight?: number;
+  height?: number;
+  unit: string;
+  costPrice?: number;
+  wholeSalePrice?: number;
+  retailPrice?: number;
+  categoryId: string;
+  statusId: ProductStatus;
+  imageId?: string;
+  extraProps?: string;
+  vatRate?: number;
+  skuCode: string;
+}
+
+export interface ProductUpdateForm {
   name: string;
   weight?: number;
   height?: number;
@@ -205,23 +224,6 @@ export interface ProductCreationForm {
   costPrice?: number;
   wholeSalePrice?: number;
   retailPrice?: number;
-  categoryId?: string;
-  statusId: ProductStatus;
-  imageId?: string;
-  extraProps?: string;
-  vatRate?: number;
-  skuCode?: string;
-}
-
-export interface ProductUpdateForm {
-  name?: string;
-  weight?: number;
-  height?: number;
-  unit?: string;
-  costPrice?: number;
-  wholeSalePrice?: number;
-  retailPrice?: number;
-  categoryId?: string;
   statusId?: ProductStatus;
   imageId?: string;
   extraProps?: string;
@@ -236,31 +238,38 @@ export interface ProductFilters {
 }
 
 // Order related types
-export interface OrderItem {
+export interface OrderItemForm {
   productId: string;
+  orderItemSeqId: number;
   quantity: number;
-  unitPrice: number;
+  tax?: number;
+  discount?: number;
 }
 
-export interface OrderItemEntity {
+export interface OrderItem {
   id: string;
   orderId: string;
+  orderItemSeqId: number;
   productId: string;
   quantity: number;
-  unitPrice: number;
-  totalAmount: number;
-  statusId: string;
-  note?: string;
+  quantityRemaining: number;
+  amount: number;
+  statusId: OrderItemStatus;
   createdStamp: string;
   lastUpdatedStamp: string;
+  price: number;
+  tax?: number;
+  discount?: number;
+  unit: string;
   tenantId: number;
+  product?: Product;
 }
 
 export interface Order {
   id: string;
   orderTypeId: OrderType;
   fromSupplierId?: string;
-  toCustomerId?: string;
+  toCustomerId: string;
   createdByUserId: number;
   createdStamp: string;
   orderDate: string;
@@ -273,69 +282,63 @@ export interface Order {
   priority?: number;
   deliveryAddressId?: string;
   deliveryPhone?: string;
-  saleChannelId?: string;
+  saleChannelId: SaleChannel;
   deliveryFullAddress?: string;
   totalQuantity?: number;
-  totalAmount?: number;
+  totalAmount: number;
   costs?: string;
   userApprovedId?: number;
   userCancelledId?: number;
   cancellationNote?: string;
   tenantId: number;
-  items?: OrderItemEntity[];
+  items?: OrderItem[];
   shipments?: Shipment[];
 }
 
 export interface OrderCreationForm {
-  orderTypeId: OrderType;
   fromSupplierId?: string;
-  toCustomerId?: string;
-  orderDate: string;
   orderName?: string;
-  priority?: number;
+  note?: string;
   deliveryBeforeDate?: string;
   deliveryAfterDate?: string;
-  deliveryAddressId?: string;
-  deliveryPhone?: string;
-  deliveryFullAddress?: string;
-  saleChannelId?: string;
-  note?: string;
-  items: OrderItem[];
+  priority?: number;
+  saleChannelId?: SaleChannel;
+  items: OrderItemForm[];
 }
 
 export interface OrderUpdateForm {
   orderName?: string;
-  priority?: number;
+  note?: string;
   deliveryBeforeDate?: string;
   deliveryAfterDate?: string;
-  deliveryAddressId?: string;
-  deliveryPhone?: string;
-  deliveryFullAddress?: string;
-  note?: string;
+  priority?: number;
+  saleChannelId?: SaleChannel;
 }
 
 export interface OrderItemUpdateForm {
-  quantity?: number;
-  unitPrice?: number;
-  note?: string;
+  orderItemSeqId: number;
+  quantity: number;
+  tax?: number;
+  discount?: number;
 }
 
 export interface OrderCancellationForm {
-  cancellationNote: string;
+  note: string;
 }
 
 export interface OrderFilters {
   query?: string;
   statusId?: OrderStatus;
-  orderTypeId?: OrderType;
   fromSupplierId?: string;
-  toCustomerId?: string;
-  fromDate?: string;
-  toDate?: string;
+  saleChannelId?: SaleChannel;
+  orderDateAfter?: string;
+  orderDateBefore?: string;
+  deliveryAfter?: string;
+  deliveryBefore?: string;
 }
 
 // Shipment related types
-export interface InventoryItemDetailEntity {
+export interface InventoryItemDetail {
   id: string;
   productId: string;
   inventoryItemId: string;
@@ -348,6 +351,11 @@ export interface InventoryItemDetailEntity {
   lotId: string;
   expirationDate?: string;
   manufacturingDate?: string;
+  facilityId: string;
+  unit: string;
+  price: number;
+  tenantId: number;
+  statusId: InventoryItemStatus;
 }
 
 export interface Shipment {
@@ -356,10 +364,10 @@ export interface Shipment {
   fromSupplierId?: string;
   toCustomerId?: string;
   createdStamp: string;
-  createdByUserId: number;
-  orderId: string;
   lastUpdatedStamp: string;
-  shipmentName?: string;
+  orderId: string;
+  createdByUserId: number;
+  shipmentName: string;
   statusId: ShipmentStatus;
   handledByUserId?: number;
   note?: string;
@@ -368,13 +376,5 @@ export interface Shipment {
   totalWeight?: number;
   totalQuantity?: number;
   tenantId: number;
-  items?: InventoryItemDetailEntity[];
-}
-
-export interface ShipmentFilters {
-  query?: string;
-  statusId?: ShipmentStatus;
-  orderId?: string;
-  fromDate?: string;
-  toDate?: string;
+  items?: InventoryItemDetail[];
 }

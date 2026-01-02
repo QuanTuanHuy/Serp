@@ -28,7 +28,6 @@ import type {
   OrderItemUpdateForm,
   OrderFilters,
   Shipment,
-  ShipmentFilters,
   PaginationParams,
   APIResponse,
   PaginatedResponse,
