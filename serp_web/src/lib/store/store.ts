@@ -23,8 +23,8 @@ import { authSlice, userSlice } from '@/modules/account/store';
 import { crmReducer } from '@/modules/crm/store';
 import { adminReducer } from '@/modules/admin/store';
 import { ptmReducer } from '@/modules/ptm';
-import { purchaseReducer } from '@/modules/purchase/store';
 import { salesReducer } from '@/modules/sales/store';
+import { purchaseReducer } from '@/modules/purchase/store';
 import { logisticsReducer } from '@/modules/logistics/store';
 import { notificationReducer } from '@/modules/notifications';
 
@@ -48,8 +48,8 @@ const rootReducer = combineReducers({
   crm: crmReducer,
   admin: adminReducer,
   ptm: ptmReducer,
-  purchase: purchaseReducer,
   sales: salesReducer,
+  purchase: purchaseReducer,
   logistics: logisticsReducer,
   notifications: notificationReducer,
 });

@@ -1,7 +1,4 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Purchase Header Component
-*/
+// Purchase Header Component (authors: QuanTuanHuy, Description: Part of Serp Project)
 
 'use client';
 
@@ -16,18 +13,10 @@ import {
   ThemeToggle,
   Input,
 } from '@/shared/components';
-import {
-  Search,
-  Plus,
-  Settings,
-  User,
-  ChevronDown,
-  Home,
-  Package,
-} from 'lucide-react';
+import { Search, Plus, Settings, User, ChevronDown, Home } from 'lucide-react';
+import { NotificationButton } from '@/modules/notifications';
 import { cn } from '@/shared/utils';
 import { useUser } from '@/modules/account';
-import { NotificationButton } from '@/modules/notifications';
 
 interface PurchaseHeaderProps {
   className?: string;
@@ -50,22 +39,26 @@ export const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
   const getPageTitle = () => {
     const path = pathname.split('/').pop();
     switch (path) {
-      case 'products':
-        return 'Sản phẩm';
+      case 'dashboard':
+        return 'Dashboard';
       case 'suppliers':
-        return 'Nhà cung cấp';
-      case 'orders':
-        return 'Đơn hàng mua';
+        return 'Suppliers';
+      case 'products':
+        return 'Products';
+      case 'purchase-orders':
+        return 'Purchase Orders';
       case 'facilities':
-        return 'Cơ sở';
+        return 'Facilities';
+      case 'categories':
+        return 'Categories';
       case 'shipments':
-        return 'Phiếu nhập';
+        return 'Shipments';
       case 'reports':
-        return 'Báo cáo';
+        return 'Reports';
       case 'settings':
-        return 'Cài đặt';
+        return 'Settings';
       default:
-        return 'Mua hàng';
+        return 'Purchase';
     }
   };
 
@@ -74,8 +67,9 @@ export const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
     return segments.map((segment, index) => ({
       name:
         segment === 'purchase'
-          ? 'Mua hàng'
-          : segment.charAt(0).toUpperCase() + segment.slice(1),
+          ? 'Purchase'
+          : segment.charAt(0).toUpperCase() +
+            segment.slice(1).replace(/-/g, ' '),
       href: '/' + segments.slice(0, index + 1).join('/'),
       isLast: index === segments.length - 1,
     }));
@@ -84,8 +78,9 @@ export const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      // Navigate to search results or filter current page
-      console.log('Search:', searchQuery);
+      router.push(
+        `/purchase/dashboard?search=${encodeURIComponent(searchQuery)}`
+      );
     }
   };
 
@@ -93,16 +88,6 @@ export const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
     router.push('/auth');
   };
 
-  const quickActions = [
-    {
-      label: 'Sản phẩm mới',
-      icon: Package,
-      href: '/purchase/products?action=new',
-    },
-    { label: 'Đơn hàng mới', icon: Plus, href: '/purchase/orders?action=new' },
-  ];
-
-  // Auto-hide header on scroll down
   useEffect(() => {
     const container = scrollContainerRef?.current ?? null;
     let last = container
@@ -114,57 +99,71 @@ export const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
     const threshold = 8;
 
     const onScroll = () => {
-      const current = container ? container.scrollTop : window.scrollY;
+      const current = container
+        ? container.scrollTop
+        : typeof window !== 'undefined'
+          ? window.scrollY
+          : 0;
+      const delta = current - last;
+      last = current;
+
+      if (delta > threshold) {
+        setHidden(true);
+      } else if (delta < -threshold) {
+        setHidden(false);
+      }
+    };
+
+    const handleScroll = () => {
       if (!ticking) {
-        window.requestAnimationFrame(() => {
-          if (current <= 0) {
-            setHidden(false);
-          } else if (current > last + threshold) {
-            setHidden(true);
-          } else if (current < last - threshold) {
-            setHidden(false);
-          }
-          last = current;
+        requestAnimationFrame(() => {
+          onScroll();
           ticking = false;
         });
         ticking = true;
       }
     };
 
-    const el: HTMLElement | Window = container ?? window;
-    el.addEventListener('scroll', onScroll, {
-      passive: true,
-    } as EventListenerOptions);
-
-    return () => {
-      el.removeEventListener('scroll', onScroll as EventListener);
-    };
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
+    } else if (typeof window !== 'undefined') {
+      window.addEventListener('scroll', handleScroll);
+      return () => window.removeEventListener('scroll', handleScroll);
+    }
   }, [scrollContainerRef]);
 
   return (
     <header
       className={cn(
-        'sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-transform duration-200',
-        hidden ? '-translate-y-16' : 'translate-y-0',
+        'sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-transform duration-300',
+        hidden && '-translate-y-full',
         className
       )}
-      aria-hidden={hidden}
     >
-      <div className='flex h-16 items-center justify-between px-6'>
-        {/* Left Section - Breadcrumbs */}
-        <div className='flex items-center space-x-4'>
-          <nav className='hidden md:flex items-center space-x-2 text-sm'>
-            {getBreadcrumbs().map((breadcrumb, index) => (
-              <React.Fragment key={breadcrumb.href}>
-                {index > 0 && <span className='text-muted-foreground'>/</span>}
-                {breadcrumb.isLast ? (
-                  <span className='font-medium'>{breadcrumb.name}</span>
+      <div className='flex h-16 items-center px-4 gap-4'>
+        {/* Breadcrumbs */}
+        <div className='flex items-center gap-2 flex-1'>
+          <nav className='flex items-center space-x-1 text-sm text-muted-foreground'>
+            <Link
+              href='/home'
+              className='hover:text-foreground transition-colors'
+            >
+              <Home className='h-4 w-4' />
+            </Link>
+            {getBreadcrumbs().map((crumb, index) => (
+              <React.Fragment key={crumb.href}>
+                <span>/</span>
+                {crumb.isLast ? (
+                  <span className='font-medium text-foreground'>
+                    {crumb.name}
+                  </span>
                 ) : (
                   <Link
-                    href={breadcrumb.href}
-                    className='text-muted-foreground hover:text-foreground transition-colors'
+                    href={crumb.href}
+                    className='hover:text-foreground transition-colors'
                   >
-                    {breadcrumb.name}
+                    {crumb.name}
                   </Link>
                 )}
               </React.Fragment>
@@ -172,67 +171,37 @@ export const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
           </nav>
         </div>
 
-        {/* Center Section - Search Bar */}
-        <div className='flex-1 max-w-md mx-4'>
-          <form onSubmit={handleSearch} className='relative'>
-            <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground' />
+        {/* Search Bar */}
+        <form
+          onSubmit={handleSearch}
+          className='hidden md:flex flex-1 max-w-md'
+        >
+          <div className='relative w-full'>
+            <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
             <Input
               type='search'
-              placeholder='Tìm kiếm sản phẩm, đơn hàng, nhà cung cấp...'
+              placeholder='Search suppliers, products, orders...'
+              className='pl-10 w-full'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className='pl-9 pr-4'
             />
-          </form>
-        </div>
-
-        {/* Right Section - Actions & User */}
-        <div className='flex items-center space-x-2'>
-          {/* Quick Actions */}
-          <div className='hidden lg:flex items-center space-x-1 mr-2'>
-            {quickActions.map((action) => (
-              <Button
-                key={action.label}
-                variant='ghost'
-                size='sm'
-                onClick={() => router.push(action.href)}
-                className='text-sm'
-              >
-                <action.icon className='h-4 w-4 mr-2' />
-                {action.label}
-              </Button>
-            ))}
           </div>
+        </form>
 
-          {/* Notifications */}
-          <NotificationButton
-            settingsPath='/purchase/settings'
-            allNotificationsPath='/purchase/activity'
-          />
-
-          {/* Theme Toggle */}
+        {/* Right Section */}
+        <div className='flex items-center gap-2'>
           <ThemeToggle />
-
-          {/* Settings */}
-          <Button
-            variant='ghost'
-            size='icon'
-            onClick={() => router.push('/purchase/settings')}
-          >
-            <Settings className='h-5 w-5' />
-          </Button>
+          <NotificationButton />
 
           {/* User Menu */}
           <div className='relative'>
             <Button
               variant='ghost'
-              className='flex items-center space-x-2'
+              className='flex items-center gap-2'
               onClick={() => setShowUserMenu(!showUserMenu)}
             >
               <Avatar className='h-8 w-8'>
-                {user?.avatarUrl && (
-                  <AvatarImage src={user.avatarUrl} alt={getDisplayName()} />
-                )}
+                <AvatarImage src={user?.avatarUrl} alt={getDisplayName()} />
                 <AvatarFallback>{getInitials()}</AvatarFallback>
               </Avatar>
               <span className='hidden md:inline-block text-sm font-medium'>
@@ -242,65 +211,46 @@ export const PurchaseHeader: React.FC<PurchaseHeaderProps> = ({
             </Button>
 
             {showUserMenu && (
-              <>
-                <div
-                  className='fixed inset-0 z-40'
-                  onClick={() => setShowUserMenu(false)}
-                />
-                <div className='absolute right-0 mt-2 w-56 bg-background border rounded-lg shadow-lg z-50'>
-                  <div className='p-4 border-b'>
-                    <p className='text-sm font-medium'>{getDisplayName()}</p>
-                    <p className='text-xs text-muted-foreground'>
-                      {user?.email}
-                    </p>
-                  </div>
-
-                  <div className='py-2'>
-                    <button
-                      onClick={() => {
-                        router.push('/home');
-                        setShowUserMenu(false);
-                      }}
-                      className='w-full px-4 py-2 text-left text-sm hover:bg-accent flex items-center space-x-2'
-                    >
-                      <Home className='h-4 w-4' />
-                      <span>Trang chủ</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        router.push('/settings/profile');
-                        setShowUserMenu(false);
-                      }}
-                      className='w-full px-4 py-2 text-left text-sm hover:bg-accent flex items-center space-x-2'
-                    >
-                      <User className='h-4 w-4' />
-                      <span>Hồ sơ</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        router.push('/settings');
-                        setShowUserMenu(false);
-                      }}
-                      className='w-full px-4 py-2 text-left text-sm hover:bg-accent flex items-center space-x-2'
-                    >
-                      <Settings className='h-4 w-4' />
-                      <span>Cài đặt</span>
-                    </button>
-                  </div>
-
-                  <div className='border-t py-2'>
-                    <button
-                      onClick={handleLogout}
-                      className='w-full px-4 py-2 text-left text-sm text-destructive hover:bg-accent'
-                    >
-                      Đăng xuất
-                    </button>
-                  </div>
-                </div>
-              </>
+              <div className='absolute right-0 mt-2 w-48 rounded-md bg-popover p-1 shadow-lg border'>
+                <Link href='/profile'>
+                  <Button variant='ghost' className='w-full justify-start'>
+                    <User className='mr-2 h-4 w-4' />
+                    Profile
+                  </Button>
+                </Link>
+                <Link href='/purchase/settings'>
+                  <Button variant='ghost' className='w-full justify-start'>
+                    <Settings className='mr-2 h-4 w-4' />
+                    Settings
+                  </Button>
+                </Link>
+                <Button
+                  variant='ghost'
+                  className='w-full justify-start text-destructive'
+                  onClick={handleLogout}
+                >
+                  Logout
+                </Button>
+              </div>
             )}
           </div>
         </div>
+      </div>
+
+      {/* Mobile Search */}
+      <div className='md:hidden px-4 pb-3'>
+        <form onSubmit={handleSearch}>
+          <div className='relative'>
+            <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+            <Input
+              type='search'
+              placeholder='Search...'
+              className='pl-10 w-full'
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </form>
       </div>
     </header>
   );
