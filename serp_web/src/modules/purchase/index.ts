@@ -11,3 +11,6 @@ export * from './store';
 
 // Export components
 export * from './components';
+
+// Export pages
+export * from './pages';
