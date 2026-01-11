@@ -1,3 +1,8 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
 package serp.project.discuss_service;
 
 import org.springframework.boot.SpringApplication;
