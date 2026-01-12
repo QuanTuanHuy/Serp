@@ -17,6 +17,7 @@ import serp.project.discuss_service.core.domain.enums.MemberRole;
 import serp.project.discuss_service.core.domain.enums.MemberStatus;
 import serp.project.discuss_service.core.domain.enums.NotificationLevel;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @Entity
@@ -54,10 +55,10 @@ public class ChannelMemberModel extends BaseModel {
     private MemberStatus status;
 
     @Column(name = "joined_at")
-    private Long joinedAt;
+    private LocalDateTime joinedAt;
 
     @Column(name = "left_at")
-    private Long leftAt;
+    private LocalDateTime leftAt;
 
     @Column(name = "removed_by")
     private Long removedBy;

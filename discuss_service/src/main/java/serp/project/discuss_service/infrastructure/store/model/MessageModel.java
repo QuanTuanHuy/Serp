@@ -15,6 +15,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import serp.project.discuss_service.core.domain.enums.MessageType;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -61,13 +62,13 @@ public class MessageModel extends BaseModel {
     private Boolean isEdited = false;
 
     @Column(name = "edited_at")
-    private Long editedAt;
+    private LocalDateTime editedAt;
 
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted = false;
 
     @Column(name = "deleted_at")
-    private Long deletedAt;
+    private LocalDateTime deletedAt;
 
     @Column(name = "deleted_by")
     private Long deletedBy;

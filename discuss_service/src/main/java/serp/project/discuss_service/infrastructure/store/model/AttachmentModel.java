@@ -15,6 +15,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import serp.project.discuss_service.core.domain.enums.ScanStatus;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @Entity
@@ -73,7 +74,7 @@ public class AttachmentModel extends BaseModel {
     private ScanStatus scanStatus = ScanStatus.PENDING;
 
     @Column(name = "scanned_at")
-    private Long scannedAt;
+    private LocalDateTime scannedAt;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "metadata", columnDefinition = "jsonb")

@@ -15,6 +15,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import serp.project.discuss_service.core.domain.enums.ChannelType;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @Entity
@@ -64,7 +65,7 @@ public class ChannelModel extends BaseModel {
     private Integer messageCount = 0;
 
     @Column(name = "last_message_at")
-    private Long lastMessageAt;
+    private LocalDateTime lastMessageAt;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "metadata", columnDefinition = "jsonb")

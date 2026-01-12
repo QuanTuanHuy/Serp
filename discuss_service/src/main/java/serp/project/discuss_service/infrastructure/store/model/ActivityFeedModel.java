@@ -15,6 +15,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import serp.project.discuss_service.core.domain.enums.ActionType;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @Entity
@@ -64,10 +65,10 @@ public class ActivityFeedModel extends BaseModel {
     private Boolean isRead = false;
 
     @Column(name = "read_at")
-    private Long readAt;
+    private LocalDateTime readAt;
 
     @Column(name = "occurred_at", nullable = false)
-    private Long occurredAt;
+    private LocalDateTime occurredAt;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "metadata", columnDefinition = "jsonb")
