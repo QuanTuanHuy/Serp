@@ -13,6 +13,6 @@ echo ""
 echo "Starting Discuss Service..."
 echo ""
 
-export SPRING_PROFILES_ACTIVE=prod
+# export SPRING_PROFILES_ACTIVE=prod
 
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=prod
