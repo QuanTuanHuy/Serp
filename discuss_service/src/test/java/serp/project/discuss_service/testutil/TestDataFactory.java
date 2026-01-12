@@ -14,6 +14,7 @@ import serp.project.discuss_service.core.domain.enums.MemberRole;
 import serp.project.discuss_service.core.domain.enums.MemberStatus;
 import serp.project.discuss_service.core.domain.enums.MessageType;
 import serp.project.discuss_service.core.domain.enums.ScanStatus;
+import serp.project.discuss_service.core.domain.enums.StorageProvider;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -264,9 +265,10 @@ public class TestDataFactory {
                 .fileType(fileType)
                 .fileSize(fileSize)
                 .fileExtension(extension)
-                .s3Bucket("test-bucket")
-                .s3Key("attachments/" + fileName)
-                .s3Url("https://s3.example.com/test-bucket/attachments/" + fileName)
+                .storageProvider(StorageProvider.S3)
+                .storageBucket("test-bucket")
+                .storageKey("attachments/" + fileName)
+                .storageUrl("https://s3.example.com/test-bucket/attachments/" + fileName)
                 .scanStatus(ScanStatus.PENDING)
                 .createdAt(now)
                 .updatedAt(now)

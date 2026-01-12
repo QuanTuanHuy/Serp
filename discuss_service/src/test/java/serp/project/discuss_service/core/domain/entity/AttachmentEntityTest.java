@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import serp.project.discuss_service.core.domain.enums.ScanStatus;
+import serp.project.discuss_service.core.domain.enums.StorageProvider;
 import serp.project.discuss_service.testutil.TestDataFactory;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -99,7 +100,7 @@ class AttachmentEntityTest {
     class StorageInfoTests {
 
         @Test
-        @DisplayName("setStorageInfo - should set S3 bucket, key, and URL")
+        @DisplayName("setStorageInfo - should set storage provider, bucket, key, and URL")
         void testSetStorageInfo_ValidInput_SetsAllFields() {
             // Given
             AttachmentEntity attachment = TestDataFactory.createImageAttachment();
@@ -109,12 +110,13 @@ class AttachmentEntityTest {
             Long originalUpdatedAt = attachment.getUpdatedAt();
 
             // When
-            attachment.setStorageInfo(bucket, key, url);
+            attachment.setStorageInfo(StorageProvider.S3, bucket, key, url);
 
             // Then
-            assertEquals(bucket, attachment.getS3Bucket());
-            assertEquals(key, attachment.getS3Key());
-            assertEquals(url, attachment.getS3Url());
+            assertEquals(StorageProvider.S3, attachment.getStorageProvider());
+            assertEquals(bucket, attachment.getStorageBucket());
+            assertEquals(key, attachment.getStorageKey());
+            assertEquals(url, attachment.getStorageUrl());
             assertTrue(attachment.getUpdatedAt() >= originalUpdatedAt);
         }
     }

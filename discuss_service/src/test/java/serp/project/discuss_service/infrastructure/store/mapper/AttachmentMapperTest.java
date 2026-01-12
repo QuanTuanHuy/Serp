@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
 import serp.project.discuss_service.core.domain.enums.ScanStatus;
+import serp.project.discuss_service.core.domain.enums.StorageProvider;
 import serp.project.discuss_service.infrastructure.store.model.AttachmentModel;
 
 import java.time.Instant;
@@ -62,9 +63,10 @@ class AttachmentMapperTest {
                     .fileSize(1048576L) // 1 MB
                     .fileType("image/png")
                     .fileExtension("png")
-                    .s3Bucket("discuss-attachments")
-                    .s3Key("tenant-1/channel-1000/test_image.png")
-                    .s3Url("https://s3.amazonaws.com/discuss-attachments/tenant-1/channel-1000/test_image.png")
+                    .storageProvider(StorageProvider.S3)
+                    .storageBucket("discuss-attachments")
+                    .storageKey("tenant-1/channel-1000/test_image.png")
+                    .storageUrl("https://s3.amazonaws.com/discuss-attachments/tenant-1/channel-1000/test_image.png")
                     .thumbnailUrl("https://s3.amazonaws.com/discuss-attachments/thumbnails/test_image_thumb.png")
                     .width(1920)
                     .height(1080)
@@ -88,9 +90,10 @@ class AttachmentMapperTest {
             assertEquals(1048576L, entity.getFileSize());
             assertEquals("image/png", entity.getFileType());
             assertEquals("png", entity.getFileExtension());
-            assertEquals("discuss-attachments", entity.getS3Bucket());
-            assertEquals("tenant-1/channel-1000/test_image.png", entity.getS3Key());
-            assertNotNull(entity.getS3Url());
+            assertEquals(StorageProvider.S3, entity.getStorageProvider());
+            assertEquals("discuss-attachments", entity.getStorageBucket());
+            assertEquals("tenant-1/channel-1000/test_image.png", entity.getStorageKey());
+            assertNotNull(entity.getStorageUrl());
             assertNotNull(entity.getThumbnailUrl());
             assertEquals(1920, entity.getWidth());
             assertEquals(1080, entity.getHeight());
@@ -113,9 +116,10 @@ class AttachmentMapperTest {
                     .fileSize(2048L)
                     .fileType("application/pdf")
                     .fileExtension("pdf")
-                    .s3Bucket("discuss-attachments")
-                    .s3Key("documents/document.pdf")
-                    .s3Url("https://s3.amazonaws.com/document.pdf")
+                    .storageProvider(StorageProvider.S3)
+                    .storageBucket("discuss-attachments")
+                    .storageKey("documents/document.pdf")
+                    .storageUrl("https://s3.amazonaws.com/document.pdf")
                     .thumbnailUrl(null) // No thumbnail for PDF
                     .width(null)
                     .height(null)
@@ -154,9 +158,10 @@ class AttachmentMapperTest {
                     .fileSize(100L)
                     .fileType("text/plain")
                     .fileExtension("txt")
-                    .s3Bucket("bucket")
-                    .s3Key("key")
-                    .s3Url("url")
+                    .storageProvider(StorageProvider.S3)
+                    .storageBucket("bucket")
+                    .storageKey("key")
+                    .storageUrl("url")
                     .scanStatus(ScanStatus.CLEAN)
                     .scannedAt(dateTime)
                     .createdAt(dateTime)
@@ -186,9 +191,10 @@ class AttachmentMapperTest {
                     .fileSize(5000L)
                     .fileType("application/octet-stream")
                     .fileExtension("exe")
-                    .s3Bucket("bucket")
-                    .s3Key("key")
-                    .s3Url("url")
+                    .storageProvider(StorageProvider.S3)
+                    .storageBucket("bucket")
+                    .storageKey("key")
+                    .storageUrl("url")
                     .scanStatus(ScanStatus.INFECTED)
                     .scannedAt(now)
                     .createdAt(now.minusMinutes(5))
@@ -232,9 +238,10 @@ class AttachmentMapperTest {
                     .fileSize(52428800L) // 50 MB
                     .fileType("video/mp4")
                     .fileExtension("mp4")
-                    .s3Bucket("discuss-videos")
-                    .s3Key("videos/video.mp4")
-                    .s3Url("https://cdn.example.com/video.mp4")
+                    .storageProvider(StorageProvider.S3)
+                    .storageBucket("discuss-videos")
+                    .storageKey("videos/video.mp4")
+                    .storageUrl("https://cdn.example.com/video.mp4")
                     .thumbnailUrl("https://cdn.example.com/video_thumb.jpg")
                     .width(1280)
                     .height(720)
@@ -258,9 +265,9 @@ class AttachmentMapperTest {
             assertEquals(52428800L, model.getFileSize());
             assertEquals("video/mp4", model.getFileType());
             assertEquals("mp4", model.getFileExtension());
-            assertEquals("discuss-videos", model.getS3Bucket());
-            assertEquals("videos/video.mp4", model.getS3Key());
-            assertNotNull(model.getS3Url());
+            assertEquals("discuss-videos", model.getStorageBucket());
+            assertEquals("videos/video.mp4", model.getStorageKey());
+            assertNotNull(model.getStorageUrl());
             assertNotNull(model.getThumbnailUrl());
             assertEquals(1280, model.getWidth());
             assertEquals(720, model.getHeight());
@@ -282,9 +289,10 @@ class AttachmentMapperTest {
                     .fileSize(1024L)
                     .fileType("application/msword")
                     .fileExtension("doc")
-                    .s3Bucket("bucket")
-                    .s3Key("key")
-                    .s3Url("url")
+                    .storageProvider(StorageProvider.S3)
+                    .storageBucket("bucket")
+                    .storageKey("key")
+                    .storageUrl("url")
                     .scanStatus(ScanStatus.PENDING)
                     .scannedAt(null)
                     .createdAt(null)
@@ -318,9 +326,10 @@ class AttachmentMapperTest {
                     .fileSize(100L)
                     .fileType("text/plain")
                     .fileExtension("txt")
-                    .s3Bucket("bucket")
-                    .s3Key("key")
-                    .s3Url("url")
+                    .storageProvider(StorageProvider.S3)
+                    .storageBucket("bucket")
+                    .storageKey("key")
+                    .storageUrl("url")
                     .scanStatus(ScanStatus.CLEAN)
                     .scannedAt(timestamp)
                     .createdAt(timestamp)
@@ -370,9 +379,10 @@ class AttachmentMapperTest {
                     .fileSize(500000L)
                     .fileType("image/jpeg")
                     .fileExtension("jpg")
-                    .s3Bucket("bucket")
-                    .s3Key("key1")
-                    .s3Url("url1")
+                    .storageProvider(StorageProvider.S3)
+                    .storageBucket("bucket")
+                    .storageKey("key1")
+                    .storageUrl("url1")
                     .scanStatus(ScanStatus.CLEAN)
                     .createdAt(now)
                     .updatedAt(now)
@@ -387,9 +397,10 @@ class AttachmentMapperTest {
                     .fileSize(750000L)
                     .fileType("image/png")
                     .fileExtension("png")
-                    .s3Bucket("bucket")
-                    .s3Key("key2")
-                    .s3Url("url2")
+                    .storageProvider(StorageProvider.S3)
+                    .storageBucket("bucket")
+                    .storageKey("key2")
+                    .storageUrl("url2")
                     .scanStatus(ScanStatus.PENDING)
                     .createdAt(now)
                     .updatedAt(now)
@@ -445,9 +456,10 @@ class AttachmentMapperTest {
                     .fileSize(100000L)
                     .fileType("application/pdf")
                     .fileExtension("pdf")
-                    .s3Bucket("bucket")
-                    .s3Key("key1")
-                    .s3Url("url1")
+                    .storageProvider(StorageProvider.S3)
+                    .storageBucket("bucket")
+                    .storageKey("key1")
+                    .storageUrl("url1")
                     .scanStatus(ScanStatus.CLEAN)
                     .createdAt(now)
                     .updatedAt(now)
@@ -462,9 +474,10 @@ class AttachmentMapperTest {
                     .fileSize(200000L)
                     .fileType("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
                     .fileExtension("docx")
-                    .s3Bucket("bucket")
-                    .s3Key("key2")
-                    .s3Url("url2")
+                    .storageProvider(StorageProvider.S3)
+                    .storageBucket("bucket")
+                    .storageKey("key2")
+                    .storageUrl("url2")
                     .scanStatus(ScanStatus.INFECTED)
                     .scannedAt(now)
                     .createdAt(now)
@@ -509,9 +522,10 @@ class AttachmentMapperTest {
                     .fileSize(10485760L)
                     .fileType("application/zip")
                     .fileExtension("zip")
-                    .s3Bucket("discuss-files")
-                    .s3Key("archives/archive.zip")
-                    .s3Url("https://cdn.example.com/archive.zip")
+                    .storageProvider(StorageProvider.S3)
+                    .storageBucket("discuss-files")
+                    .storageKey("archives/archive.zip")
+                    .storageUrl("https://cdn.example.com/archive.zip")
                     .thumbnailUrl(null)
                     .width(null)
                     .height(null)
@@ -535,9 +549,9 @@ class AttachmentMapperTest {
             assertEquals(original.getFileSize(), converted.getFileSize());
             assertEquals(original.getFileType(), converted.getFileType());
             assertEquals(original.getFileExtension(), converted.getFileExtension());
-            assertEquals(original.getS3Bucket(), converted.getS3Bucket());
-            assertEquals(original.getS3Key(), converted.getS3Key());
-            assertEquals(original.getS3Url(), converted.getS3Url());
+            assertEquals(original.getStorageBucket(), converted.getStorageBucket());
+            assertEquals(original.getStorageKey(), converted.getStorageKey());
+            assertEquals(original.getStorageUrl(), converted.getStorageUrl());
             assertEquals(original.getThumbnailUrl(), converted.getThumbnailUrl());
             assertEquals(original.getWidth(), converted.getWidth());
             assertEquals(original.getHeight(), converted.getHeight());
@@ -562,9 +576,10 @@ class AttachmentMapperTest {
                     .fileSize(2097152L)
                     .fileType("image/jpeg")
                     .fileExtension("jpg")
-                    .s3Bucket("bucket")
-                    .s3Key("photos/photo.jpg")
-                    .s3Url("https://cdn.example.com/photo.jpg")
+                    .storageProvider(StorageProvider.S3)
+                    .storageBucket("bucket")
+                    .storageKey("photos/photo.jpg")
+                    .storageUrl("https://cdn.example.com/photo.jpg")
                     .thumbnailUrl("https://cdn.example.com/photo_thumb.jpg")
                     .width(4032)
                     .height(3024)

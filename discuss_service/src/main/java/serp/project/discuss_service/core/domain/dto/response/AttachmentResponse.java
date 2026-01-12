@@ -11,6 +11,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
 import serp.project.discuss_service.core.domain.enums.ScanStatus;
+import serp.project.discuss_service.core.domain.enums.StorageProvider;
 
 import java.util.Map;
 
@@ -31,9 +32,10 @@ public class AttachmentResponse {
     private Long fileSize;
     private String fileType;
     private String fileExtension;
-    private String s3Bucket;
-    private String s3Key;
-    private String s3Url;
+    private StorageProvider storageProvider;
+    private String storageBucket;
+    private String storageKey;
+    private String storageUrl;
     private String thumbnailUrl;
     private Integer width;
     private Integer height;
@@ -60,9 +62,10 @@ public class AttachmentResponse {
                 .fileSize(entity.getFileSize())
                 .fileType(entity.getFileType())
                 .fileExtension(entity.getFileExtension())
-                .s3Bucket(entity.getS3Bucket())
-                .s3Key(entity.getS3Key())
-                .s3Url(entity.getS3Url())
+                .storageProvider(entity.getStorageProvider())
+                .storageBucket(entity.getStorageBucket())
+                .storageKey(entity.getStorageKey())
+                .storageUrl(entity.getStorageUrl())
                 .thumbnailUrl(entity.getThumbnailUrl())
                 .width(entity.getWidth())
                 .height(entity.getHeight())

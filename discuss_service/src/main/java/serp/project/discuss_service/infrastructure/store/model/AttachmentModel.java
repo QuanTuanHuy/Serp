@@ -14,6 +14,7 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import serp.project.discuss_service.core.domain.enums.ScanStatus;
+import serp.project.discuss_service.core.domain.enums.StorageProvider;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -51,14 +52,18 @@ public class AttachmentModel extends BaseModel {
     @Column(name = "file_extension", length = 20)
     private String fileExtension;
 
-    @Column(name = "s3_bucket")
-    private String s3Bucket;
+    @Column(name = "storage_provider", nullable = false, length = 20)
+    @Enumerated(EnumType.STRING)
+    private StorageProvider storageProvider = StorageProvider.S3;
 
-    @Column(name = "s3_key")
-    private String s3Key;
+    @Column(name = "storage_bucket")
+    private String storageBucket;
 
-    @Column(name = "s3_url", length = 500)
-    private String s3Url;
+    @Column(name = "storage_key")
+    private String storageKey;
+
+    @Column(name = "storage_url", length = 500)
+    private String storageUrl;
 
     @Column(name = "thumbnail_url", length = 500)
     private String thumbnailUrl;

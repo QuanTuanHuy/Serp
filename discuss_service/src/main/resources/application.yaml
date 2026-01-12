@@ -65,3 +65,26 @@ server:
   port: ${SERVER_PORT:8092}
   servlet:
     context-path: /discuss
+
+# Storage configuration for file attachments
+discuss:
+  storage:
+    provider: S3
+    s3:
+      endpoint: ${STORAGE_ENDPOINT:http://localhost:9000}
+      access-key: ${STORAGE_ACCESS_KEY:minioadmin}
+      secret-key: ${STORAGE_SECRET_KEY:minioadmin123}
+      bucket: ${STORAGE_BUCKET:discuss-attachments}
+      region: ${STORAGE_REGION:us-east-1}
+    upload:
+      max-file-size: ${MAX_FILE_SIZE:52428800}  # 50 MB in bytes
+      max-files-per-message: ${MAX_FILES_PER_MESSAGE:10}
+      allowed-content-types:
+        - image/
+        - video/
+        - audio/
+        - application/pdf
+        - application/msword
+        - application/vnd.openxmlformats-officedocument
+        - text/plain
+        - text/csv

@@ -64,6 +64,15 @@ public enum ErrorCode {
     DATABASE_ERROR("Database error occurred", HttpStatus.INTERNAL_SERVER_ERROR),
     CACHE_ERROR("Cache error occurred", HttpStatus.INTERNAL_SERVER_ERROR),
     EVENT_PUBLISH_ERROR("Failed to publish event", HttpStatus.INTERNAL_SERVER_ERROR),
+
+    // File/Attachment errors (400, 404, 413)
+    ATTACHMENT_NOT_FOUND("Attachment not found", HttpStatus.NOT_FOUND),
+    ATTACHMENT_NOT_AVAILABLE("Attachment is not available for download", HttpStatus.BAD_REQUEST),
+    FILE_REQUIRED("File is required", HttpStatus.BAD_REQUEST),
+    FILE_TOO_LARGE("File size exceeds maximum allowed size", HttpStatus.PAYLOAD_TOO_LARGE),
+    FILE_TYPE_NOT_ALLOWED("File type is not allowed", HttpStatus.BAD_REQUEST),
+    FILE_UPLOAD_FAILED("Failed to upload file", HttpStatus.INTERNAL_SERVER_ERROR),
+    TOO_MANY_FILES("Too many files. Maximum allowed files per message exceeded", HttpStatus.BAD_REQUEST),
     ;
 
     private final String message;

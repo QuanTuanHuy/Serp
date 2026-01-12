@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import serp.project.discuss_service.core.domain.enums.ScanStatus;
+import serp.project.discuss_service.core.domain.enums.StorageProvider;
 
 import java.time.Instant;
 import java.util.Map;
@@ -37,10 +38,12 @@ public class AttachmentEntity extends BaseEntity {
     private String fileType; // MIME type
     private String fileExtension;
     
-    // Storage
-    private String s3Bucket;
-    private String s3Key;
-    private String s3Url;
+    // Storage - generic fields for any storage provider (S3/MinIO/GCS/Azure/Local)
+    @Builder.Default
+    private StorageProvider storageProvider = StorageProvider.S3;
+    private String storageBucket;
+    private String storageKey;
+    private String storageUrl;
     
     // Preview (for images/videos)
     private String thumbnailUrl;
@@ -83,13 +86,21 @@ public class AttachmentEntity extends BaseEntity {
     // ==================== BUSINESS LOGIC ====================
 
     /**
-     * Set S3 storage info after upload
+     * Set storage info after upload (works with any storage provider)
+     */
+    public void setStorageInfo(StorageProvider provider, String bucket, String key, String url) {
+        this.storageProvider = provider;
+        this.storageBucket = bucket;
+        this.storageKey = key;
+        this.storageUrl = url;
+        setUpdatedAt(Instant.now().toEpochMilli());
+    }
+
+    /**
+     * Set storage info after upload (defaults to S3 provider for backward compatibility)
      */
     public void setStorageInfo(String bucket, String key, String url) {
-        this.s3Bucket = bucket;
-        this.s3Key = key;
-        this.s3Url = url;
-        setUpdatedAt(Instant.now().toEpochMilli());
+        setStorageInfo(StorageProvider.S3, bucket, key, url);
     }
 
     /**
