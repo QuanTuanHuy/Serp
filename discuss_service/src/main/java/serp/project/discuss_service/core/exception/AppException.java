@@ -19,6 +19,11 @@ public class AppException extends RuntimeException {
         this.code = getCodeBaseOnMessage(message);
     }
 
+    public AppException(ErrorCode errorCode) {
+        super(errorCode.getMessage());
+        this.code = errorCode.getHttpStatus().value();
+    }
+
     public AppException(String message, Integer code) {
         super(message);
         this.code = code;

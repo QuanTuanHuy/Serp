@@ -60,6 +60,16 @@ public class SecurityConfiguration {
 
     @Bean
     @Order(2)
+    public SecurityFilterChain websocketFilterChain(HttpSecurity httpSecurity) throws Exception {
+        httpSecurity.securityMatcher("/ws/**")
+                .authorizeHttpRequests(request -> request
+                        .anyRequest().permitAll());
+        httpSecurity.csrf(AbstractHttpConfigurer::disable);
+        return httpSecurity.build();
+    }
+
+    @Bean
+    @Order(3)
     public SecurityFilterChain publicApiFilterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity.securityMatcher("/api/**")
                 .authorizeHttpRequests(request -> {
