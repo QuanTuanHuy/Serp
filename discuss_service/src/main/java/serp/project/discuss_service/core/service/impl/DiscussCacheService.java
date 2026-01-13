@@ -523,4 +523,36 @@ public class DiscussCacheService implements IDiscussCacheService {
         cachePort.removeFromSet(key, channelId.toString());
         log.debug("Removed channel {} from user {} cache", channelId, userId);
     }
+
+    // ==================== ATTACHMENT URL CACHE ====================
+
+    @Override
+    public void cacheAttachmentUrl(Long attachmentId, CachedAttachmentUrl urlInfo) {
+        if (attachmentId == null || urlInfo == null) {
+            return;
+        }
+        String key = ATTACHMENT_URL_PREFIX + attachmentId;
+        cachePort.setToCache(key, urlInfo, ATTACHMENT_URL_TTL);
+        log.debug("Cached attachment URL for: {}", attachmentId);
+    }
+
+    @Override
+    public Optional<CachedAttachmentUrl> getCachedAttachmentUrl(Long attachmentId) {
+        if (attachmentId == null) {
+            return Optional.empty();
+        }
+        String key = ATTACHMENT_URL_PREFIX + attachmentId;
+        CachedAttachmentUrl urlInfo = cachePort.getFromCache(key, CachedAttachmentUrl.class);
+        return Optional.ofNullable(urlInfo);
+    }
+
+    @Override
+    public void invalidateAttachmentUrl(Long attachmentId) {
+        if (attachmentId == null) {
+            return;
+        }
+        String key = ATTACHMENT_URL_PREFIX + attachmentId;
+        cachePort.deleteFromCache(key);
+        log.debug("Invalidated attachment URL cache: {}", attachmentId);
+    }
 }

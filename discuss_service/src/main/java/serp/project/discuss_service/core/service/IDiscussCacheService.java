@@ -31,14 +31,16 @@ public interface IDiscussCacheService {
     String UNREAD_PREFIX = "discuss:unread:";
     String SESSION_PREFIX = "discuss:session:";
     String USER_SESSIONS_PREFIX = "discuss:user_sessions:";
+    String ATTACHMENT_URL_PREFIX = "discuss:attachment_url:";
     
     // TTL Constants (in seconds)
-    long CHANNEL_TTL = 3600;        // 1 hour
-    long MESSAGE_TTL = 300;          // 5 minutes
-    long RECENT_MESSAGES_TTL = 600;  // 10 minutes
-    long PRESENCE_TTL = 120;         // 2 minutes
-    long TYPING_TTL = 5;             // 5 seconds
-    long SESSION_TTL = 86400;        // 24 hours
+    long CHANNEL_TTL = 3600;          // 1 hour
+    long MESSAGE_TTL = 300;            // 5 minutes
+    long RECENT_MESSAGES_TTL = 600;    // 10 minutes
+    long PRESENCE_TTL = 120;           // 2 minutes
+    long TYPING_TTL = 5;               // 5 seconds
+    long SESSION_TTL = 86400;          // 24 hours
+    long ATTACHMENT_URL_TTL = 561600;  // 6.5 days (buffer before 7-day URL expiry)
 
     // ==================== CHANNEL CACHE ====================
 
@@ -256,10 +258,40 @@ public interface IDiscussCacheService {
      */
     void removeChannelFromUserCache(Long userId, Long channelId);
 
-    // ==================== SESSION INFO VO ====================
+    // ==================== ATTACHMENT URL CACHE ====================
+
+    /**
+     * Cache presigned URL for an attachment
+     *
+     * @param attachmentId The attachment ID
+     * @param urlInfo      The cached URL information
+     */
+    void cacheAttachmentUrl(Long attachmentId, CachedAttachmentUrl urlInfo);
+
+    /**
+     * Get cached presigned URL for an attachment
+     *
+     * @param attachmentId The attachment ID
+     * @return Optional containing cached URL info if present and not expired
+     */
+    Optional<CachedAttachmentUrl> getCachedAttachmentUrl(Long attachmentId);
+
+    /**
+     * Invalidate cached URL for an attachment
+     *
+     * @param attachmentId The attachment ID to invalidate
+     */
+    void invalidateAttachmentUrl(Long attachmentId);
+
+    // ==================== VALUE OBJECTS ====================
 
     /**
      * Session info value object
      */
     record SessionInfo(String sessionId, Long userId, String instanceId, long createdAt) {}
+
+    /**
+     * Cached attachment URL value object
+     */
+    record CachedAttachmentUrl(String downloadUrl, String thumbnailUrl, long expiresAt) {}
 }

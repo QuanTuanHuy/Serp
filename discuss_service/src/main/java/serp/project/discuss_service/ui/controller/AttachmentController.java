@@ -11,10 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import serp.project.discuss_service.core.domain.dto.GeneralResponse;
 import serp.project.discuss_service.core.domain.dto.response.AttachmentResponse;
-import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
 import serp.project.discuss_service.core.exception.AppException;
-import serp.project.discuss_service.core.service.IAttachmentService;
-import serp.project.discuss_service.core.service.IAttachmentUrlService;
+import serp.project.discuss_service.core.usecase.AttachmentUseCase;
 import serp.project.discuss_service.kernel.utils.AuthUtils;
 import serp.project.discuss_service.kernel.utils.ResponseUtils;
 
@@ -31,8 +29,7 @@ import java.util.Map;
 @Slf4j
 public class AttachmentController {
 
-    private final IAttachmentService attachmentService;
-    private final IAttachmentUrlService attachmentUrlService;
+    private final AttachmentUseCase attachmentUseCase;
     private final AuthUtils authUtils;
     private final ResponseUtils responseUtils;
 
@@ -47,8 +44,7 @@ public class AttachmentController {
 
         log.debug("Getting attachment metadata: {}", attachmentId);
 
-        AttachmentEntity attachment = attachmentService.getAttachment(attachmentId, tenantId);
-        AttachmentResponse response = attachmentUrlService.enrichWithUrls(attachment);
+        AttachmentResponse response = attachmentUseCase.getAttachment(attachmentId, tenantId);
 
         return ResponseEntity.ok(responseUtils.success(response));
     }
@@ -64,8 +60,7 @@ public class AttachmentController {
 
         log.debug("Getting attachments for message: {}", messageId);
 
-        List<AttachmentEntity> attachments = attachmentService.getAttachmentsByMessage(messageId, tenantId);
-        List<AttachmentResponse> responses = attachmentUrlService.enrichWithUrls(attachments);
+        List<AttachmentResponse> responses = attachmentUseCase.getAttachmentsByMessage(messageId, tenantId);
 
         return ResponseEntity.ok(responseUtils.success(responses));
     }
@@ -82,7 +77,7 @@ public class AttachmentController {
 
         log.info("Generating download URL for attachment: {}", attachmentId);
 
-        String downloadUrl = attachmentService.generateDownloadUrl(attachmentId, tenantId, expirationMinutes);
+        String downloadUrl = attachmentUseCase.getDownloadUrl(attachmentId, tenantId, expirationMinutes);
 
         Map<String, String> response = Map.of(
                 "attachmentId", attachmentId.toString(),
@@ -106,7 +101,7 @@ public class AttachmentController {
 
         log.info("User {} deleting attachment: {}", userId, attachmentId);
 
-        attachmentService.deleteAttachment(attachmentId, tenantId, userId);
+        attachmentUseCase.deleteAttachment(attachmentId, tenantId, userId);
 
         return ResponseEntity.ok(responseUtils.status("Attachment deleted successfully"));
     }

@@ -19,8 +19,11 @@ import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
 import serp.project.discuss_service.core.domain.vo.StorageLocation;
 import serp.project.discuss_service.core.port.client.IStoragePort;
+import serp.project.discuss_service.core.service.IDiscussCacheService;
 import serp.project.discuss_service.kernel.property.StorageProperties;
 import serp.project.discuss_service.testutil.TestDataFactory;
+
+import java.util.Optional;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -47,6 +50,9 @@ class AttachmentUrlServiceTest {
     @Mock
     private StorageProperties.S3Properties s3Properties;
 
+    @Mock
+    private IDiscussCacheService cacheService;
+
     @InjectMocks
     private AttachmentUrlService attachmentUrlService;
 
@@ -57,6 +63,8 @@ class AttachmentUrlServiceTest {
     void setUp() {
         lenient().when(storageProperties.getS3()).thenReturn(s3Properties);
         lenient().when(s3Properties.getDownloadUrlExpiryDays()).thenReturn(URL_EXPIRY_DAYS);
+        // Default: cache miss - forces URL generation from S3
+        lenient().when(cacheService.getCachedAttachmentUrl(any())).thenReturn(Optional.empty());
     }
 
     // ==================== ENRICH SINGLE ATTACHMENT TESTS ====================

@@ -15,16 +15,19 @@ import serp.project.discuss_service.core.domain.entity.MessageEntity;
 import serp.project.discuss_service.core.domain.vo.StorageLocation;
 import serp.project.discuss_service.core.port.client.IStoragePort;
 import serp.project.discuss_service.core.service.IAttachmentUrlService;
+import serp.project.discuss_service.core.service.IDiscussCacheService;
+import serp.project.discuss_service.core.service.IDiscussCacheService.CachedAttachmentUrl;
 import serp.project.discuss_service.kernel.property.StorageProperties;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Service implementation for enriching attachments with presigned URLs.
- * Generates presigned download URLs for S3/MinIO stored files.
+ * Generates presigned download URLs for S3/MinIO stored files with Redis caching.
  */
 @Service
 @RequiredArgsConstructor
@@ -33,6 +36,7 @@ public class AttachmentUrlService implements IAttachmentUrlService {
 
     private final IStoragePort storagePort;
     private final StorageProperties storageProperties;
+    private final IDiscussCacheService cacheService;
 
     @Override
     public AttachmentResponse enrichWithUrls(AttachmentEntity attachment) {
@@ -44,34 +48,16 @@ public class AttachmentUrlService implements IAttachmentUrlService {
 
         // Only generate presigned URLs if attachment has storage info and can be downloaded
         if (attachment.getStorageKey() != null && attachment.canDownload()) {
-            try {
-                StorageLocation location = StorageLocation.ofS3(
-                        attachment.getStorageBucket(),
-                        attachment.getStorageKey()
-                );
+            // Try cache first
+            Optional<CachedAttachmentUrl> cached = cacheService.getCachedAttachmentUrl(attachment.getId());
 
-                Duration expiry = Duration.ofDays(getUrlExpiryDays());
-                String presignedUrl = storagePort.generatePresignedUrl(location, expiry);
-
-                // Set download URL
-                response.setDownloadUrl(presignedUrl);
-
-                // For images, thumbnailUrl is the same as downloadUrl
-                // Frontend will resize as needed
-                if (attachment.isImage() || attachment.isVideo()) {
-                    response.setThumbnailUrl(presignedUrl);
-                }
-
-                // Set expiry timestamp
-                response.setUrlExpiresAt(calculateExpiryTimestamp(expiry));
-
-                log.debug("Generated presigned URL for attachment {}: expires at {}",
-                        attachment.getId(), response.getUrlExpiresAt());
-
-            } catch (Exception e) {
-                log.error("Failed to generate presigned URL for attachment {}: {}",
-                        attachment.getId(), e.getMessage());
-                // Leave URLs as null if generation fails
+            if (cached.isPresent() && cached.get().expiresAt() > System.currentTimeMillis()) {
+                // Use cached URLs
+                applyCachedUrls(response, cached.get());
+                log.debug("Using cached URL for attachment {}", attachment.getId());
+            } else {
+                // Generate and cache new URLs
+                generateAndCacheUrl(attachment, response);
             }
         }
 
@@ -120,6 +106,56 @@ public class AttachmentUrlService implements IAttachmentUrlService {
     @Override
     public int getUrlExpiryDays() {
         return storageProperties.getS3().getDownloadUrlExpiryDays();
+    }
+
+    /**
+     * Apply cached URL information to the response
+     */
+    private void applyCachedUrls(AttachmentResponse response, CachedAttachmentUrl cached) {
+        response.setDownloadUrl(cached.downloadUrl());
+        response.setThumbnailUrl(cached.thumbnailUrl());
+        response.setUrlExpiresAt(cached.expiresAt());
+    }
+
+    /**
+     * Generate a new presigned URL and cache it
+     */
+    private void generateAndCacheUrl(AttachmentEntity attachment, AttachmentResponse response) {
+        try {
+            StorageLocation location = StorageLocation.ofS3(
+                    attachment.getStorageBucket(),
+                    attachment.getStorageKey()
+            );
+
+            Duration expiry = Duration.ofDays(getUrlExpiryDays());
+            String presignedUrl = storagePort.generatePresignedUrl(location, expiry);
+            long expiresAt = calculateExpiryTimestamp(expiry);
+
+            // Set download URL
+            response.setDownloadUrl(presignedUrl);
+
+            // For images/videos, thumbnailUrl is the same as downloadUrl
+            String thumbnailUrl = null;
+            if (attachment.isImage() || attachment.isVideo()) {
+                thumbnailUrl = presignedUrl;
+                response.setThumbnailUrl(thumbnailUrl);
+            }
+
+            // Set expiry timestamp
+            response.setUrlExpiresAt(expiresAt);
+
+            // Cache the URL
+            CachedAttachmentUrl urlInfo = new CachedAttachmentUrl(presignedUrl, thumbnailUrl, expiresAt);
+            cacheService.cacheAttachmentUrl(attachment.getId(), urlInfo);
+
+            log.debug("Generated and cached presigned URL for attachment {}: expires at {}",
+                    attachment.getId(), expiresAt);
+
+        } catch (Exception e) {
+            log.error("Failed to generate presigned URL for attachment {}: {}",
+                    attachment.getId(), e.getMessage());
+            // Leave URLs as null if generation fails
+        }
     }
 
     /**
