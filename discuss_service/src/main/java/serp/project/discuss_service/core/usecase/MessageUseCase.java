@@ -10,11 +10,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
+import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
 import serp.project.discuss_service.core.exception.AppException;
 import serp.project.discuss_service.core.exception.ErrorCode;
+import serp.project.discuss_service.core.service.IAttachmentService;
 import serp.project.discuss_service.core.service.IChannelMemberService;
 import serp.project.discuss_service.core.service.IChannelService;
 import serp.project.discuss_service.core.service.IDiscussCacheService;
@@ -23,6 +25,8 @@ import serp.project.discuss_service.core.service.IMessageService;
 
 import java.util.List;
 import java.util.Set;
+
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Use case for message operations.
@@ -38,6 +42,7 @@ public class MessageUseCase {
     private final IChannelMemberService memberService;
     private final IDiscussEventPublisher eventPublisher;
     private final IDiscussCacheService cacheService;
+    private final IAttachmentService attachmentService;
 
     /**
      * Send a new message to a channel
@@ -70,6 +75,49 @@ public class MessageUseCase {
         eventPublisher.publishMessageSent(saved);
 
         log.info("User {} sent message {} in channel {}", senderId, saved.getId(), channelId);
+        return saved;
+    }
+
+    /**
+     * Send a new message with file attachments to a channel
+     */
+    @Transactional
+    public MessageEntity sendMessageWithAttachments(Long channelId, Long senderId, Long tenantId,
+                                                     String content, List<Long> mentions,
+                                                     List<MultipartFile> files) {
+        if (!memberService.canSendMessages(channelId, senderId)) {
+            throw new AppException(ErrorCode.CANNOT_SEND_MESSAGES);
+        }
+
+        ChannelEntity channel = channelService.getChannelByIdOrThrow(channelId);
+        if (!channel.isActive()) {
+            throw new AppException(ErrorCode.CHANNEL_ARCHIVED);
+        }
+
+        boolean hasContent = content != null && !content.trim().isEmpty();
+        boolean hasFiles = files != null && !files.isEmpty();
+        if (!hasContent && !hasFiles) {
+            throw new AppException(ErrorCode.MESSAGE_CONTENT_REQUIRED);
+        }
+
+        MessageEntity message = MessageEntity.createText(channelId, senderId, tenantId, 
+                hasContent ? content : "[Attachment]", mentions);
+        MessageEntity saved = messageService.sendMessage(message);
+
+        if (hasFiles) {
+            List<AttachmentEntity> attachments = attachmentService.uploadAttachments(
+                    files, saved.getId(), channelId, tenantId);
+            saved.setAttachments(attachments);
+        }
+
+        channelService.recordMessage(channelId);
+
+        memberService.incrementUnreadForChannel(channelId, senderId);
+
+        eventPublisher.publishMessageSent(saved);
+
+        log.info("User {} sent message {} with {} attachments in channel {}", 
+                senderId, saved.getId(), hasFiles ? files.size() : 0, channelId);
         return saved;
     }
 

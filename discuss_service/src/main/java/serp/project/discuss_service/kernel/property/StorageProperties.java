@@ -3,7 +3,7 @@
  * Description: Part of Serp Project - Storage configuration properties
  */
 
-package serp.project.discuss_service.kernel.config;
+package serp.project.discuss_service.kernel.property;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -64,9 +64,15 @@ public class StorageProperties {
         private String region = "us-east-1";
 
         /**
-         * URL expiry duration for presigned URLs in minutes
+         * URL expiry duration for presigned URLs in minutes (for on-demand requests)
          */
         private int presignedUrlExpiryMinutes = 60;
+
+        /**
+         * URL expiry duration for download URLs in days (for attachment responses)
+         * Default: 7 days for long-lived URLs in chat messages
+         */
+        private int downloadUrlExpiryDays = 7;
     }
 
     @Getter

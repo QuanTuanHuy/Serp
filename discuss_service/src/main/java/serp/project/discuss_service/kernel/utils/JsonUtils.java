@@ -7,6 +7,9 @@ package serp.project.discuss_service.kernel.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
+
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 
@@ -36,6 +39,15 @@ public class JsonUtils {
             return objectMapper.readValue(json, objectMapper.getTypeFactory().constructType(typeReference.getType()));
         } catch (Exception e) {
             throw new RuntimeException("Failed to convert JSON to object", e);
+        }
+    }
+
+    public <T> List<T> fromJsonToList(String json, Class<T> elementClass) {
+        try {
+            return objectMapper.readValue(json,
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, elementClass));
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to convert JSON to List", e);
         }
     }
 }

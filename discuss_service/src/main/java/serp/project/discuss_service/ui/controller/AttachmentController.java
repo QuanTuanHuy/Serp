@@ -1,0 +1,113 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project - Attachment REST Controller
+ */
+
+package serp.project.discuss_service.ui.controller;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import serp.project.discuss_service.core.domain.dto.GeneralResponse;
+import serp.project.discuss_service.core.domain.dto.response.AttachmentResponse;
+import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
+import serp.project.discuss_service.core.exception.AppException;
+import serp.project.discuss_service.core.service.IAttachmentService;
+import serp.project.discuss_service.core.service.IAttachmentUrlService;
+import serp.project.discuss_service.kernel.utils.AuthUtils;
+import serp.project.discuss_service.kernel.utils.ResponseUtils;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * REST Controller for attachment operations.
+ * Provides endpoints for managing file attachments in messages.
+ */
+@RestController
+@RequestMapping("/api/v1/attachments")
+@RequiredArgsConstructor
+@Slf4j
+public class AttachmentController {
+
+    private final IAttachmentService attachmentService;
+    private final IAttachmentUrlService attachmentUrlService;
+    private final AuthUtils authUtils;
+    private final ResponseUtils responseUtils;
+
+    /**
+     * Get attachment metadata by ID
+     */
+    @GetMapping("/{attachmentId}")
+    public ResponseEntity<GeneralResponse<AttachmentResponse>> getAttachment(
+            @PathVariable Long attachmentId) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AppException("Tenant ID not found"));
+
+        log.debug("Getting attachment metadata: {}", attachmentId);
+
+        AttachmentEntity attachment = attachmentService.getAttachment(attachmentId, tenantId);
+        AttachmentResponse response = attachmentUrlService.enrichWithUrls(attachment);
+
+        return ResponseEntity.ok(responseUtils.success(response));
+    }
+
+    /**
+     * Get all attachments for a message
+     */
+    @GetMapping("/message/{messageId}")
+    public ResponseEntity<GeneralResponse<List<AttachmentResponse>>> getAttachmentsByMessage(
+            @PathVariable Long messageId) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AppException("Tenant ID not found"));
+
+        log.debug("Getting attachments for message: {}", messageId);
+
+        List<AttachmentEntity> attachments = attachmentService.getAttachmentsByMessage(messageId, tenantId);
+        List<AttachmentResponse> responses = attachmentUrlService.enrichWithUrls(attachments);
+
+        return ResponseEntity.ok(responseUtils.success(responses));
+    }
+
+    /**
+     * Generate a presigned download URL for an attachment
+     */
+    @GetMapping("/{attachmentId}/download-url")
+    public ResponseEntity<GeneralResponse<Map<String, String>>> getDownloadUrl(
+            @PathVariable Long attachmentId,
+            @RequestParam(defaultValue = "60") int expirationMinutes) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AppException("Tenant ID not found"));
+
+        log.info("Generating download URL for attachment: {}", attachmentId);
+
+        String downloadUrl = attachmentService.generateDownloadUrl(attachmentId, tenantId, expirationMinutes);
+
+        Map<String, String> response = Map.of(
+                "attachmentId", attachmentId.toString(),
+                "downloadUrl", downloadUrl,
+                "expiresInMinutes", String.valueOf(expirationMinutes)
+        );
+
+        return ResponseEntity.ok(responseUtils.success(response));
+    }
+
+    /**
+     * Delete an attachment
+     */
+    @DeleteMapping("/{attachmentId}")
+    public ResponseEntity<GeneralResponse<?>> deleteAttachment(
+            @PathVariable Long attachmentId) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AppException("Unauthorized"));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AppException("Tenant ID not found"));
+
+        log.info("User {} deleting attachment: {}", userId, attachmentId);
+
+        attachmentService.deleteAttachment(attachmentId, tenantId, userId);
+
+        return ResponseEntity.ok(responseUtils.status("Attachment deleted successfully"));
+    }
+}

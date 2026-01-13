@@ -55,13 +55,19 @@ public class MessageResponse {
             return null;
         }
         List<ReactionResponse> reactionResponses = null;
-        if (entity.getReactions() != null) {
+        if (entity.getReactions() != null && !entity.getReactions().isEmpty()) {
             reactionResponses = entity.getReactions().stream()
                     .map(r -> ReactionResponse.builder()
                             .emoji(r.getEmoji())
                             .userIds(r.getUserIds())
                             .count(r.getUserIds().size())
                             .build())
+                    .toList();
+        }
+        List<AttachmentResponse> attachmentResponses = null;
+        if (entity.getAttachments() != null && !entity.getAttachments().isEmpty()) {
+            attachmentResponses = entity.getAttachments().stream()
+                    .map(AttachmentResponse::fromEntity)
                     .toList();
         }
         
@@ -85,6 +91,7 @@ public class MessageResponse {
                 .metadata(entity.getMetadata())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
+                .attachments(attachmentResponses)
                 .build();
     }
 

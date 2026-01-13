@@ -9,8 +9,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.util.Pair;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import serp.project.discuss_service.core.domain.dto.GeneralResponse;
 import serp.project.discuss_service.core.domain.dto.request.*;
 import serp.project.discuss_service.core.domain.dto.response.MessageResponse;
@@ -18,8 +20,10 @@ import serp.project.discuss_service.core.domain.dto.response.PaginatedResponse;
 import serp.project.discuss_service.core.domain.dto.response.TypingStatusResponse;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
 import serp.project.discuss_service.core.exception.AppException;
+import serp.project.discuss_service.core.service.IAttachmentUrlService;
 import serp.project.discuss_service.core.usecase.MessageUseCase;
 import serp.project.discuss_service.kernel.utils.AuthUtils;
+import serp.project.discuss_service.kernel.utils.JsonUtils;
 import serp.project.discuss_service.kernel.utils.ResponseUtils;
 
 import java.util.List;
@@ -35,8 +39,10 @@ import java.util.Set;
 public class MessageController {
 
     private final MessageUseCase messageUseCase;
+    private final IAttachmentUrlService attachmentUrlService;
     private final AuthUtils authUtils;
     private final ResponseUtils responseUtils;
+    private final JsonUtils jsonUtils;
 
     /**
      * Send a new message to channel
@@ -60,8 +66,48 @@ public class MessageController {
                 request.getMentions()
         );
 
-        MessageResponse response = MessageResponse.fromEntity(message);
+        MessageResponse response = attachmentUrlService.enrichMessageWithUrls(message);
         response.setIsSentByMe(true);
+        return ResponseEntity.ok(responseUtils.success(response));
+    }
+
+    /**
+     * Send a message with file attachments (multipart upload)
+     */
+    @PostMapping(value = "/with-files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<GeneralResponse<MessageResponse>> sendMessageWithFiles(
+            @PathVariable Long channelId,
+            @RequestPart(value = "content", required = false) String content,
+            @RequestPart(value = "mentions", required = false) String mentionsJson,
+            @RequestPart(value = "files") List<MultipartFile> files) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AppException("Unauthorized"));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AppException("Tenant ID not found"));
+
+        log.info("User {} sending message with {} files to channel {}", userId, files.size(), channelId);
+
+        List<Long> mentions = null;
+        if (mentionsJson != null && !mentionsJson.isEmpty()) {
+            try {
+                mentions = jsonUtils.fromJsonToList(mentionsJson, Long.class);
+            } catch (Exception e) {
+                log.warn("Failed to parse mentions: {}", e.getMessage());
+            }
+        }
+
+        MessageEntity message = messageUseCase.sendMessageWithAttachments(
+                channelId,
+                userId,
+                tenantId,
+                content,
+                mentions,
+                files
+        );
+
+        MessageResponse response = attachmentUrlService.enrichMessageWithUrls(message);
+        response.setIsSentByMe(true);
+        
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
@@ -89,7 +135,7 @@ public class MessageController {
                 request.getMentions()
         );
 
-        MessageResponse response = MessageResponse.fromEntity(message);
+        MessageResponse response = attachmentUrlService.enrichMessageWithUrls(message);
         response.setIsSentByMe(true);
         return ResponseEntity.ok(responseUtils.success(response));
     }
@@ -112,7 +158,7 @@ public class MessageController {
 
         List<MessageResponse> messageResponses = result.getSecond().stream()
                 .map(msg -> {
-                    MessageResponse r = MessageResponse.fromEntity(msg);
+                    MessageResponse r = attachmentUrlService.enrichMessageWithUrls(msg);
                     r.setIsSentByMe(msg.getSenderId().equals(userId));
                     return r;
                 })
@@ -142,7 +188,7 @@ public class MessageController {
 
         List<MessageResponse> responses = messages.stream()
                 .map(msg -> {
-                    MessageResponse r = MessageResponse.fromEntity(msg);
+                    MessageResponse r = attachmentUrlService.enrichMessageWithUrls(msg);
                     r.setIsSentByMe(msg.getSenderId().equals(userId));
                     return r;
                 })
@@ -168,7 +214,7 @@ public class MessageController {
 
         List<MessageResponse> responses = messages.stream()
                 .map(msg -> {
-                    MessageResponse r = MessageResponse.fromEntity(msg);
+                    MessageResponse r = attachmentUrlService.enrichMessageWithUrls(msg);
                     r.setIsSentByMe(msg.getSenderId().equals(userId));
                     return r;
                 })
@@ -197,7 +243,7 @@ public class MessageController {
 
         List<MessageResponse> responses = messages.stream()
                 .map(msg -> {
-                    MessageResponse r = MessageResponse.fromEntity(msg);
+                    MessageResponse r = attachmentUrlService.enrichMessageWithUrls(msg);
                     r.setIsSentByMe(msg.getSenderId().equals(userId));
                     return r;
                 })
@@ -220,7 +266,7 @@ public class MessageController {
         log.info("User {} editing message {} in channel {}", userId, messageId, channelId);
 
         MessageEntity message = messageUseCase.editMessage(messageId, userId, request.getContent());
-        MessageResponse response = MessageResponse.fromEntity(message);
+        MessageResponse response = attachmentUrlService.enrichMessageWithUrls(message);
         response.setIsSentByMe(true);
         return ResponseEntity.ok(responseUtils.success(response));
     }
@@ -238,7 +284,7 @@ public class MessageController {
         log.info("User {} deleting message {} in channel {}", userId, messageId, channelId);
 
         MessageEntity message = messageUseCase.deleteMessage(messageId, userId);
-        MessageResponse response = MessageResponse.fromEntity(message);
+        MessageResponse response = attachmentUrlService.enrichMessageWithUrls(message);
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
@@ -257,7 +303,7 @@ public class MessageController {
                 userId, request.getEmoji(), messageId, channelId);
 
         MessageEntity message = messageUseCase.addReaction(messageId, userId, request.getEmoji());
-        MessageResponse response = MessageResponse.fromEntity(message);
+        MessageResponse response = attachmentUrlService.enrichMessageWithUrls(message);
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
@@ -276,7 +322,7 @@ public class MessageController {
                 userId, emoji, messageId, channelId);
 
         MessageEntity message = messageUseCase.removeReaction(messageId, userId, emoji);
-        MessageResponse response = MessageResponse.fromEntity(message);
+        MessageResponse response = attachmentUrlService.enrichMessageWithUrls(message);
         return ResponseEntity.ok(responseUtils.success(response));
     }
 

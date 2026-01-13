@@ -12,7 +12,7 @@ import serp.project.discuss_service.core.domain.enums.StorageProvider;
 import serp.project.discuss_service.core.domain.vo.FileUploadResult;
 import serp.project.discuss_service.core.domain.vo.StorageLocation;
 import serp.project.discuss_service.core.port.client.IStoragePort;
-import serp.project.discuss_service.kernel.config.StorageProperties;
+import serp.project.discuss_service.kernel.property.StorageProperties;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
@@ -62,7 +62,9 @@ public class S3StorageAdapter implements IStoragePort {
 
             s3Client.putObject(putRequest, RequestBody.fromInputStream(inputStream, fileSize));
 
-            StorageLocation location = StorageLocation.ofS3(bucket, key);
+            String url = String.format("%s/%s/%s",
+                    storageProperties.getS3().getEndpoint(), bucket, key);
+            StorageLocation location = StorageLocation.ofS3(bucket, key, url);
             log.info("Uploaded file to S3: bucket={}, key={}", bucket, key);
 
             return FileUploadResult.success(location, contentType, fileSize);

@@ -18,7 +18,7 @@ import serp.project.discuss_service.core.exception.ErrorCode;
 import serp.project.discuss_service.core.port.client.IStoragePort;
 import serp.project.discuss_service.core.port.store.IAttachmentPort;
 import serp.project.discuss_service.core.service.IAttachmentService;
-import serp.project.discuss_service.kernel.config.StorageProperties;
+import serp.project.discuss_service.kernel.property.StorageProperties;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -135,7 +135,6 @@ public class AttachmentService implements IAttachmentService {
     public String generateDownloadUrl(Long attachmentId, Long tenantId, int expirationMinutes) {
         AttachmentEntity attachment = getAttachment(attachmentId, tenantId);
 
-        // Check if file can be downloaded
         if (!attachment.canDownload()) {
             log.warn("Attachment {} cannot be downloaded - scan status: {}",
                     attachmentId, attachment.getScanStatus());

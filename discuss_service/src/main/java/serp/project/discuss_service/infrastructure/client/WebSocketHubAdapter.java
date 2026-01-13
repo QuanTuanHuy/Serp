@@ -18,6 +18,7 @@ import serp.project.discuss_service.core.domain.dto.websocket.WsReactionPayload;
 import serp.project.discuss_service.core.domain.dto.websocket.WsTypingPayload;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
 import serp.project.discuss_service.core.port.client.IWebSocketHubPort;
+import serp.project.discuss_service.core.service.IAttachmentUrlService;
 import serp.project.discuss_service.kernel.websocket.WebSocketSessionRegistry;
 
 import java.util.Set;
@@ -33,6 +34,7 @@ public class WebSocketHubAdapter implements IWebSocketHubPort {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final WebSocketSessionRegistry sessionRegistry;
+    private final IAttachmentUrlService attachmentUrlService;
 
     // Topic destinations
     private static final String CHANNEL_TOPIC = "/topic/channels/%d";
@@ -102,7 +104,14 @@ public class WebSocketHubAdapter implements IWebSocketHubPort {
 
     @Override
     public void notifyNewMessage(Long channelId, MessageEntity message) {
-        WsMessagePayload payload = WsMessagePayload.fromEntity(message);
+        // Enrich message with presigned URLs for attachments
+        MessageResponse enrichedMessage = attachmentUrlService.enrichMessageWithUrls(message);
+        WsMessagePayload payload = WsMessagePayload.builder()
+                .messageId(message.getId())
+                .channelId(message.getChannelId())
+                .senderId(message.getSenderId())
+                .message(enrichedMessage)
+                .build();
         WsEvent<WsMessagePayload> event = WsEvent.of(
                 WsEventType.MESSAGE_NEW,
                 payload,
@@ -116,7 +125,14 @@ public class WebSocketHubAdapter implements IWebSocketHubPort {
 
     @Override
     public void notifyMessageUpdated(Long channelId, MessageEntity message) {
-        WsMessagePayload payload = WsMessagePayload.fromEntity(message);
+        // Enrich message with presigned URLs for attachments
+        MessageResponse enrichedMessage = attachmentUrlService.enrichMessageWithUrls(message);
+        WsMessagePayload payload = WsMessagePayload.builder()
+                .messageId(message.getId())
+                .channelId(message.getChannelId())
+                .senderId(message.getSenderId())
+                .message(enrichedMessage)
+                .build();
         WsEvent<WsMessagePayload> event = WsEvent.of(
                 WsEventType.MESSAGE_UPDATED,
                 payload,

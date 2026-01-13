@@ -7,6 +7,8 @@ package serp.project.discuss_service.kernel.config;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import serp.project.discuss_service.kernel.property.StorageProperties;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.util.StringUtils;
@@ -63,6 +65,12 @@ public class S3Config {
         // For MinIO or custom S3-compatible endpoint
         if (StringUtils.hasText(s3Props.getEndpoint())) {
             builder.endpointOverride(URI.create(s3Props.getEndpoint()));
+            // Use path-style URLs for MinIO (bucket in path, not subdomain)
+            // e.g., http://localhost:9000/bucket/key instead of http://bucket.localhost:9000/key
+            builder.serviceConfiguration(software.amazon.awssdk.services.s3.S3Configuration.builder()
+                    .pathStyleAccessEnabled(true)
+                    .build());
+            log.info("Configured S3 presigner with path-style access for endpoint: {}", s3Props.getEndpoint());
         }
 
         return builder.build();

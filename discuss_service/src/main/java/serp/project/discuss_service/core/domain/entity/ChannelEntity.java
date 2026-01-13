@@ -13,7 +13,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import serp.project.discuss_service.core.domain.enums.ChannelType;
-import serp.project.discuss_service.core.domain.enums.MemberRole;
 
 import java.time.Instant;
 import java.util.ArrayList;
