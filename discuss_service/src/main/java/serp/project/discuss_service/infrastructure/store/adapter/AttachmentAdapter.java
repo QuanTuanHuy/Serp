@@ -8,7 +8,6 @@ package serp.project.discuss_service.infrastructure.store.adapter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
-import serp.project.discuss_service.core.domain.enums.ScanStatus;
 import serp.project.discuss_service.core.port.store.IAttachmentPort;
 import serp.project.discuss_service.infrastructure.store.mapper.AttachmentMapper;
 import serp.project.discuss_service.infrastructure.store.model.AttachmentModel;
@@ -16,7 +15,6 @@ import serp.project.discuss_service.infrastructure.store.repository.IAttachmentR
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -61,12 +59,6 @@ public class AttachmentAdapter implements IAttachmentPort {
     public List<AttachmentEntity> findByChannelId(Long channelId) {
         return attachmentMapper.toEntityList(
                 attachmentRepository.findByChannelId(channelId));
-    }
-
-    @Override
-    public List<AttachmentEntity> findByScanStatus(ScanStatus scanStatus) {
-        return attachmentMapper.toEntityList(
-                attachmentRepository.findByScanStatus(scanStatus));
     }
 
     @Override

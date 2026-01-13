@@ -13,7 +13,6 @@ import serp.project.discuss_service.core.domain.enums.ChannelType;
 import serp.project.discuss_service.core.domain.enums.MemberRole;
 import serp.project.discuss_service.core.domain.enums.MemberStatus;
 import serp.project.discuss_service.core.domain.enums.MessageType;
-import serp.project.discuss_service.core.domain.enums.ScanStatus;
 import serp.project.discuss_service.core.domain.enums.StorageProvider;
 
 import java.time.Instant;
@@ -269,21 +268,16 @@ public class TestDataFactory {
                 .storageBucket("test-bucket")
                 .storageKey("attachments/" + fileName)
                 .storageUrl("https://s3.example.com/test-bucket/attachments/" + fileName)
-                .scanStatus(ScanStatus.PENDING)
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
     }
 
     public static AttachmentEntity createCleanAttachment() {
-        AttachmentEntity attachment = createImageAttachment();
-        attachment.markClean();
-        return attachment;
+        return createImageAttachment();
     }
 
     public static AttachmentEntity createInfectedAttachment() {
-        AttachmentEntity attachment = createDocumentAttachment();
-        attachment.markInfected();
-        return attachment;
+        return createDocumentAttachment();
     }
 }

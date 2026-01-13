@@ -46,8 +46,8 @@ public class AttachmentUrlService implements IAttachmentUrlService {
 
         AttachmentResponse response = AttachmentResponse.fromEntity(attachment);
 
-        // Only generate presigned URLs if attachment has storage info and can be downloaded
-        if (attachment.getStorageKey() != null && attachment.canDownload()) {
+        // Only generate presigned URLs if attachment has storage info
+        if (attachment.getStorageKey() != null) {
             // Try cache first
             Optional<CachedAttachmentUrl> cached = cacheService.getCachedAttachmentUrl(attachment.getId());
 

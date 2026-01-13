@@ -8,7 +8,6 @@ package serp.project.discuss_service.core.domain.entity;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import serp.project.discuss_service.core.domain.enums.ScanStatus;
 import serp.project.discuss_service.core.domain.enums.StorageProvider;
 import serp.project.discuss_service.testutil.TestDataFactory;
 
@@ -16,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for AttachmentEntity domain logic.
- * Tests factory methods, scan status transitions, query methods, and file size formatting.
+ * Tests factory methods, storage info, thumbnails, query methods, and file size formatting.
  */
 class AttachmentEntityTest {
 
@@ -51,7 +50,6 @@ class AttachmentEntityTest {
             assertEquals(fileSize, attachment.getFileSize());
             assertEquals(fileType, attachment.getFileType());
             assertEquals("pdf", attachment.getFileExtension());
-            assertEquals(ScanStatus.PENDING, attachment.getScanStatus());
             assertNotNull(attachment.getCreatedAt());
             assertNotNull(attachment.getUpdatedAt());
         }
@@ -144,111 +142,11 @@ class AttachmentEntityTest {
         }
     }
 
-    @Nested
-    @DisplayName("Business Logic - Scan Status Transitions")
-    class ScanStatusTests {
-
-        @Test
-        @DisplayName("markClean - should transition to CLEAN status")
-        void testMarkClean_PendingAttachment_BecomesClean() {
-            // Given
-            AttachmentEntity attachment = TestDataFactory.createImageAttachment();
-            assertEquals(ScanStatus.PENDING, attachment.getScanStatus());
-
-            // When
-            attachment.markClean();
-
-            // Then
-            assertEquals(ScanStatus.CLEAN, attachment.getScanStatus());
-            assertNotNull(attachment.getScannedAt());
-        }
-
-        @Test
-        @DisplayName("markInfected - should transition to INFECTED status")
-        void testMarkInfected_PendingAttachment_BecomesInfected() {
-            // Given
-            AttachmentEntity attachment = TestDataFactory.createDocumentAttachment();
-            assertEquals(ScanStatus.PENDING, attachment.getScanStatus());
-
-            // When
-            attachment.markInfected();
-
-            // Then
-            assertEquals(ScanStatus.INFECTED, attachment.getScanStatus());
-            assertNotNull(attachment.getScannedAt());
-        }
-
-        @Test
-        @DisplayName("markScanError - should transition to ERROR status")
-        void testMarkScanError_PendingAttachment_BecomesError() {
-            // Given
-            AttachmentEntity attachment = TestDataFactory.createImageAttachment();
-
-            // When
-            attachment.markScanError();
-
-            // Then
-            assertEquals(ScanStatus.ERROR, attachment.getScanStatus());
-            assertNotNull(attachment.getScannedAt());
-        }
-    }
-
     // ==================== QUERY METHOD TESTS ====================
 
     @Nested
     @DisplayName("Query Methods")
     class QueryMethodTests {
-
-        @Test
-        @DisplayName("canDownload - should return true for CLEAN attachment")
-        void testCanDownload_CleanAttachment_ReturnsTrue() {
-            // Given
-            AttachmentEntity attachment = TestDataFactory.createCleanAttachment();
-
-            // When/Then
-            assertTrue(attachment.canDownload());
-        }
-
-        @Test
-        @DisplayName("canDownload - should return false for PENDING attachment")
-        void testCanDownload_PendingAttachment_ReturnsFalse() {
-            // Given
-            AttachmentEntity attachment = TestDataFactory.createImageAttachment();
-            assertEquals(ScanStatus.PENDING, attachment.getScanStatus());
-
-            // When/Then
-            assertFalse(attachment.canDownload());
-        }
-
-        @Test
-        @DisplayName("canDownload - should return false for INFECTED attachment")
-        void testCanDownload_InfectedAttachment_ReturnsFalse() {
-            // Given
-            AttachmentEntity attachment = TestDataFactory.createInfectedAttachment();
-
-            // When/Then
-            assertFalse(attachment.canDownload());
-        }
-
-        @Test
-        @DisplayName("isPendingScan - should return true for PENDING status")
-        void testIsPendingScan_PendingStatus_ReturnsTrue() {
-            // Given
-            AttachmentEntity attachment = TestDataFactory.createImageAttachment();
-
-            // When/Then
-            assertTrue(attachment.isPendingScan());
-        }
-
-        @Test
-        @DisplayName("isPendingScan - should return false for scanned attachment")
-        void testIsPendingScan_CleanStatus_ReturnsFalse() {
-            // Given
-            AttachmentEntity attachment = TestDataFactory.createCleanAttachment();
-
-            // When/Then
-            assertFalse(attachment.isPendingScan());
-        }
 
         @Test
         @DisplayName("isImage - should return true for image MIME type")

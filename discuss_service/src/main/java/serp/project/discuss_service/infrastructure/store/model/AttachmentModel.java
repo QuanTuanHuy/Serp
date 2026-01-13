@@ -13,7 +13,6 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-import serp.project.discuss_service.core.domain.enums.ScanStatus;
 import serp.project.discuss_service.core.domain.enums.StorageProvider;
 
 import java.time.LocalDateTime;
@@ -73,13 +72,6 @@ public class AttachmentModel extends BaseModel {
 
     @Column(name = "height")
     private Integer height;
-
-    @Column(name = "scan_status", nullable = false, length = 20)
-    @Enumerated(EnumType.STRING)
-    private ScanStatus scanStatus = ScanStatus.PENDING;
-
-    @Column(name = "scanned_at")
-    private LocalDateTime scannedAt;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "metadata", columnDefinition = "jsonb")

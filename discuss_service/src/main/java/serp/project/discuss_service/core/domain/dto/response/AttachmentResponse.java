@@ -10,7 +10,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
-import serp.project.discuss_service.core.domain.enums.ScanStatus;
 import serp.project.discuss_service.core.domain.enums.StorageProvider;
 
 import java.util.Map;
@@ -39,15 +38,12 @@ public class AttachmentResponse {
     private String thumbnailUrl;
     private Integer width;
     private Integer height;
-    private ScanStatus scanStatus;
-    private Long scannedAt;
     private Map<String, Object> metadata;
     private Long createdAt;
     private Long updatedAt;
     
     // Computed fields
     private String fileSizeFormatted;
-    private Boolean canDownload;
     
     // Presigned URL fields - populated by AttachmentUrlService
     private String downloadUrl;      // Presigned URL for downloading/viewing the file
@@ -73,13 +69,10 @@ public class AttachmentResponse {
                 .thumbnailUrl(entity.getThumbnailUrl())
                 .width(entity.getWidth())
                 .height(entity.getHeight())
-                .scanStatus(entity.getScanStatus())
-                .scannedAt(entity.getScannedAt())
                 .metadata(entity.getMetadata())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .fileSizeFormatted(entity.getFileSizeFormatted())
-                .canDownload(entity.canDownload())
                 .build();
     }
 }

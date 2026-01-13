@@ -15,7 +15,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.multipart.MultipartFile;
 import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
-import serp.project.discuss_service.core.domain.enums.ScanStatus;
 import serp.project.discuss_service.core.domain.enums.StorageProvider;
 import serp.project.discuss_service.core.domain.vo.FileUploadResult;
 import serp.project.discuss_service.core.domain.vo.StorageLocation;
@@ -358,10 +357,10 @@ class AttachmentServiceTest {
     class GenerateDownloadUrlTests {
 
         @Test
-        @DisplayName("should generate presigned URL for clean attachment")
-        void testGenerateDownloadUrl_CleanAttachment_ReturnsUrl() {
+        @DisplayName("should generate presigned URL for attachment with storage key")
+        void testGenerateDownloadUrl_AttachmentWithStorageKey_ReturnsUrl() {
             // Given
-            AttachmentEntity attachment = TestDataFactory.createCleanAttachment();
+            AttachmentEntity attachment = TestDataFactory.createImageAttachment();
             when(attachmentPort.findById(1L)).thenReturn(Optional.of(attachment));
             when(storagePort.generatePresignedUrl(any(StorageLocation.class), any(Duration.class)))
                     .thenReturn("https://s3.example.com/presigned-url");
@@ -372,36 +371,6 @@ class AttachmentServiceTest {
             // Then
             assertEquals("https://s3.example.com/presigned-url", url);
             verify(storagePort).generatePresignedUrl(any(StorageLocation.class), eq(Duration.ofMinutes(60)));
-        }
-
-        @Test
-        @DisplayName("should throw ATTACHMENT_NOT_AVAILABLE for pending scan")
-        void testGenerateDownloadUrl_PendingScan_ThrowsNotAvailable() {
-            // Given - default attachment has PENDING scan status
-            AttachmentEntity attachment = TestDataFactory.createImageAttachment();
-            attachment.setScanStatus(ScanStatus.PENDING);
-            when(attachmentPort.findById(1L)).thenReturn(Optional.of(attachment));
-
-            // When/Then
-            AppException exception = assertThrows(AppException.class,
-                    () -> attachmentService.generateDownloadUrl(1L, TestDataFactory.TENANT_ID, 60));
-
-            assertEquals(ErrorCode.ATTACHMENT_NOT_AVAILABLE.getMessage(), exception.getMessage());
-            verify(storagePort, never()).generatePresignedUrl(any(), any());
-        }
-
-        @Test
-        @DisplayName("should throw ATTACHMENT_NOT_AVAILABLE for infected attachment")
-        void testGenerateDownloadUrl_InfectedAttachment_ThrowsNotAvailable() {
-            // Given
-            AttachmentEntity attachment = TestDataFactory.createInfectedAttachment();
-            when(attachmentPort.findById(1L)).thenReturn(Optional.of(attachment));
-
-            // When/Then
-            AppException exception = assertThrows(AppException.class,
-                    () -> attachmentService.generateDownloadUrl(1L, TestDataFactory.TENANT_ID, 60));
-
-            assertEquals(ErrorCode.ATTACHMENT_NOT_AVAILABLE.getMessage(), exception.getMessage());
         }
     }
 

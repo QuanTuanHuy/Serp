@@ -6,7 +6,6 @@
 package serp.project.discuss_service.infrastructure.store.repository;
 
 import org.springframework.stereotype.Repository;
-import serp.project.discuss_service.core.domain.enums.ScanStatus;
 import serp.project.discuss_service.infrastructure.store.model.AttachmentModel;
 
 import java.util.List;
@@ -19,9 +18,6 @@ public interface IAttachmentRepository extends IBaseRepository<AttachmentModel> 
 
     // Find attachments by channel
     List<AttachmentModel> findByChannelId(Long channelId);
-
-    // Find attachments pending scan
-    List<AttachmentModel> findByScanStatus(ScanStatus scanStatus);
 
     // Find attachments by message IDs
     List<AttachmentModel> findByMessageIdIn(List<Long> messageIds);

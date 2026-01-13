@@ -135,12 +135,6 @@ public class AttachmentService implements IAttachmentService {
     public String generateDownloadUrl(Long attachmentId, Long tenantId, int expirationMinutes) {
         AttachmentEntity attachment = getAttachment(attachmentId, tenantId);
 
-        if (!attachment.canDownload()) {
-            log.warn("Attachment {} cannot be downloaded - scan status: {}",
-                    attachmentId, attachment.getScanStatus());
-            throw new AppException(ErrorCode.ATTACHMENT_NOT_AVAILABLE);
-        }
-
         StorageLocation location = StorageLocation.ofS3(
                 attachment.getStorageBucket(),
                 attachment.getStorageKey()

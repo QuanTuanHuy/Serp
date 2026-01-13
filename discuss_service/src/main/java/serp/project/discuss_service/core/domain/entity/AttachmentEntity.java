@@ -12,7 +12,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
-import serp.project.discuss_service.core.domain.enums.ScanStatus;
 import serp.project.discuss_service.core.domain.enums.StorageProvider;
 
 import java.time.Instant;
@@ -50,11 +49,6 @@ public class AttachmentEntity extends BaseEntity {
     private Integer width;
     private Integer height;
     
-    // Virus scan
-    @Builder.Default
-    private ScanStatus scanStatus = ScanStatus.PENDING;
-    private Long scannedAt;
-    
     // Metadata
     private Map<String, Object> metadata;
 
@@ -77,7 +71,6 @@ public class AttachmentEntity extends BaseEntity {
                 .fileSize(fileSize)
                 .fileType(fileType)
                 .fileExtension(extension)
-                .scanStatus(ScanStatus.PENDING)
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
@@ -113,44 +106,7 @@ public class AttachmentEntity extends BaseEntity {
         setUpdatedAt(Instant.now().toEpochMilli());
     }
 
-    /**
-     * Mark file as clean (virus scan passed)
-     */
-    public void markClean() {
-        this.scanStatus = ScanStatus.CLEAN;
-        this.scannedAt = Instant.now().toEpochMilli();
-        setUpdatedAt(Instant.now().toEpochMilli());
-    }
-
-    /**
-     * Mark file as infected
-     */
-    public void markInfected() {
-        this.scanStatus = ScanStatus.INFECTED;
-        this.scannedAt = Instant.now().toEpochMilli();
-        setUpdatedAt(Instant.now().toEpochMilli());
-    }
-
-    /**
-     * Mark scan as failed
-     */
-    public void markScanError() {
-        this.scanStatus = ScanStatus.ERROR;
-        this.scannedAt = Instant.now().toEpochMilli();
-        setUpdatedAt(Instant.now().toEpochMilli());
-    }
-
     // ==================== QUERY METHODS ====================
-
-    @JsonIgnore
-    public boolean canDownload() {
-        return this.scanStatus.canDownload();
-    }
-
-    @JsonIgnore
-    public boolean isPendingScan() {
-        return this.scanStatus == ScanStatus.PENDING;
-    }
 
     @JsonIgnore
     public boolean isImage() {

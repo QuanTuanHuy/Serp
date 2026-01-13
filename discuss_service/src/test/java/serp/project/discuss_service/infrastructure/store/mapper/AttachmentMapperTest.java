@@ -10,7 +10,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
-import serp.project.discuss_service.core.domain.enums.ScanStatus;
 import serp.project.discuss_service.core.domain.enums.StorageProvider;
 import serp.project.discuss_service.infrastructure.store.model.AttachmentModel;
 
@@ -70,8 +69,6 @@ class AttachmentMapperTest {
                     .thumbnailUrl("https://s3.amazonaws.com/discuss-attachments/thumbnails/test_image_thumb.png")
                     .width(1920)
                     .height(1080)
-                    .scanStatus(ScanStatus.CLEAN)
-                    .scannedAt(now)
                     .metadata(metadata)
                     .createdAt(now.minusHours(1))
                     .updatedAt(now)
@@ -97,8 +94,6 @@ class AttachmentMapperTest {
             assertNotNull(entity.getThumbnailUrl());
             assertEquals(1920, entity.getWidth());
             assertEquals(1080, entity.getHeight());
-            assertEquals(ScanStatus.CLEAN, entity.getScanStatus());
-            assertNotNull(entity.getScannedAt());
             assertEquals(metadata, entity.getMetadata());
         }
 
@@ -123,8 +118,6 @@ class AttachmentMapperTest {
                     .thumbnailUrl(null) // No thumbnail for PDF
                     .width(null)
                     .height(null)
-                    .scanStatus(ScanStatus.PENDING)
-                    .scannedAt(null)
                     .metadata(null)
                     .createdAt(now)
                     .updatedAt(now)
@@ -138,7 +131,6 @@ class AttachmentMapperTest {
             assertNull(entity.getThumbnailUrl());
             assertNull(entity.getWidth());
             assertNull(entity.getHeight());
-            assertNull(entity.getScannedAt());
             assertNull(entity.getMetadata());
         }
 
@@ -162,8 +154,6 @@ class AttachmentMapperTest {
                     .storageBucket("bucket")
                     .storageKey("key")
                     .storageUrl("url")
-                    .scanStatus(ScanStatus.CLEAN)
-                    .scannedAt(dateTime)
                     .createdAt(dateTime)
                     .updatedAt(dateTime)
                     .build();
@@ -172,42 +162,10 @@ class AttachmentMapperTest {
             AttachmentEntity entity = attachmentMapper.toEntity(model);
 
             // Then
-            assertEquals(expectedMillis, entity.getScannedAt());
             assertEquals(expectedMillis, entity.getCreatedAt());
             assertEquals(expectedMillis, entity.getUpdatedAt());
         }
 
-        @Test
-        @DisplayName("Should handle infected scan status")
-        void shouldHandleInfectedScanStatus() {
-            // Given
-            LocalDateTime now = LocalDateTime.now();
-            AttachmentModel model = AttachmentModel.builder()
-                    .id(ATTACHMENT_ID)
-                    .messageId(MESSAGE_ID)
-                    .channelId(CHANNEL_ID)
-                    .tenantId(TENANT_ID)
-                    .fileName("malware.exe")
-                    .fileSize(5000L)
-                    .fileType("application/octet-stream")
-                    .fileExtension("exe")
-                    .storageProvider(StorageProvider.S3)
-                    .storageBucket("bucket")
-                    .storageKey("key")
-                    .storageUrl("url")
-                    .scanStatus(ScanStatus.INFECTED)
-                    .scannedAt(now)
-                    .createdAt(now.minusMinutes(5))
-                    .updatedAt(now)
-                    .build();
-
-            // When
-            AttachmentEntity entity = attachmentMapper.toEntity(model);
-
-            // Then
-            assertNotNull(entity);
-            assertEquals(ScanStatus.INFECTED, entity.getScanStatus());
-        }
     }
 
     @Nested
@@ -245,8 +203,6 @@ class AttachmentMapperTest {
                     .thumbnailUrl("https://cdn.example.com/video_thumb.jpg")
                     .width(1280)
                     .height(720)
-                    .scanStatus(ScanStatus.CLEAN)
-                    .scannedAt(now)
                     .metadata(metadata)
                     .createdAt(now - 3600000)
                     .updatedAt(now)
@@ -271,8 +227,6 @@ class AttachmentMapperTest {
             assertNotNull(model.getThumbnailUrl());
             assertEquals(1280, model.getWidth());
             assertEquals(720, model.getHeight());
-            assertEquals(ScanStatus.CLEAN, model.getScanStatus());
-            assertNotNull(model.getScannedAt());
             assertEquals(metadata, model.getMetadata());
         }
 
@@ -293,8 +247,6 @@ class AttachmentMapperTest {
                     .storageBucket("bucket")
                     .storageKey("key")
                     .storageUrl("url")
-                    .scanStatus(ScanStatus.PENDING)
-                    .scannedAt(null)
                     .createdAt(null)
                     .updatedAt(null)
                     .build();
@@ -304,7 +256,6 @@ class AttachmentMapperTest {
 
             // Then
             assertNotNull(model);
-            assertNull(model.getScannedAt());
             assertNull(model.getCreatedAt());
             assertNull(model.getUpdatedAt());
         }
@@ -330,8 +281,6 @@ class AttachmentMapperTest {
                     .storageBucket("bucket")
                     .storageKey("key")
                     .storageUrl("url")
-                    .scanStatus(ScanStatus.CLEAN)
-                    .scannedAt(timestamp)
                     .createdAt(timestamp)
                     .updatedAt(timestamp)
                     .build();
@@ -340,7 +289,6 @@ class AttachmentMapperTest {
             AttachmentModel model = attachmentMapper.toModel(entity);
 
             // Then
-            assertEquals(expected, model.getScannedAt());
             assertEquals(expected, model.getCreatedAt());
             assertEquals(expected, model.getUpdatedAt());
         }
@@ -383,7 +331,6 @@ class AttachmentMapperTest {
                     .storageBucket("bucket")
                     .storageKey("key1")
                     .storageUrl("url1")
-                    .scanStatus(ScanStatus.CLEAN)
                     .createdAt(now)
                     .updatedAt(now)
                     .build();
@@ -401,7 +348,6 @@ class AttachmentMapperTest {
                     .storageBucket("bucket")
                     .storageKey("key2")
                     .storageUrl("url2")
-                    .scanStatus(ScanStatus.PENDING)
                     .createdAt(now)
                     .updatedAt(now)
                     .build();
@@ -416,10 +362,8 @@ class AttachmentMapperTest {
             assertEquals(2, entities.size());
             assertEquals(1L, entities.get(0).getId());
             assertEquals("image1.jpg", entities.get(0).getFileName());
-            assertEquals(ScanStatus.CLEAN, entities.get(0).getScanStatus());
             assertEquals(2L, entities.get(1).getId());
             assertEquals("image2.png", entities.get(1).getFileName());
-            assertEquals(ScanStatus.PENDING, entities.get(1).getScanStatus());
         }
     }
 
@@ -460,7 +404,6 @@ class AttachmentMapperTest {
                     .storageBucket("bucket")
                     .storageKey("key1")
                     .storageUrl("url1")
-                    .scanStatus(ScanStatus.CLEAN)
                     .createdAt(now)
                     .updatedAt(now)
                     .build();
@@ -478,8 +421,6 @@ class AttachmentMapperTest {
                     .storageBucket("bucket")
                     .storageKey("key2")
                     .storageUrl("url2")
-                    .scanStatus(ScanStatus.INFECTED)
-                    .scannedAt(now)
                     .createdAt(now)
                     .updatedAt(now)
                     .build();
@@ -494,10 +435,8 @@ class AttachmentMapperTest {
             assertEquals(2, models.size());
             assertEquals(1L, models.get(0).getId());
             assertEquals("doc1.pdf", models.get(0).getFileName());
-            assertEquals(ScanStatus.CLEAN, models.get(0).getScanStatus());
             assertEquals(2L, models.get(1).getId());
             assertEquals("doc2.docx", models.get(1).getFileName());
-            assertEquals(ScanStatus.INFECTED, models.get(1).getScanStatus());
         }
     }
 
@@ -529,8 +468,6 @@ class AttachmentMapperTest {
                     .thumbnailUrl(null)
                     .width(null)
                     .height(null)
-                    .scanStatus(ScanStatus.CLEAN)
-                    .scannedAt(now - 60000)
                     .metadata(metadata)
                     .createdAt(now - 120000)
                     .updatedAt(now)
@@ -555,8 +492,6 @@ class AttachmentMapperTest {
             assertEquals(original.getThumbnailUrl(), converted.getThumbnailUrl());
             assertEquals(original.getWidth(), converted.getWidth());
             assertEquals(original.getHeight(), converted.getHeight());
-            assertEquals(original.getScanStatus(), converted.getScanStatus());
-            assertEquals(original.getScannedAt(), converted.getScannedAt());
             assertEquals(original.getMetadata(), converted.getMetadata());
             assertEquals(original.getCreatedAt(), converted.getCreatedAt());
             assertEquals(original.getUpdatedAt(), converted.getUpdatedAt());
@@ -583,8 +518,6 @@ class AttachmentMapperTest {
                     .thumbnailUrl("https://cdn.example.com/photo_thumb.jpg")
                     .width(4032)
                     .height(3024)
-                    .scanStatus(ScanStatus.CLEAN)
-                    .scannedAt(now)
                     .createdAt(now)
                     .updatedAt(now)
                     .build();

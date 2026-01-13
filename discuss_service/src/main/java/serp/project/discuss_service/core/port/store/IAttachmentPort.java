@@ -6,7 +6,6 @@
 package serp.project.discuss_service.core.port.store;
 
 import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
-import serp.project.discuss_service.core.domain.enums.ScanStatus;
 
 import java.util.List;
 import java.util.Optional;
@@ -42,11 +41,6 @@ public interface IAttachmentPort {
      * Find attachments by channel ID
      */
     List<AttachmentEntity> findByChannelId(Long channelId);
-
-    /**
-     * Find attachments pending virus scan
-     */
-    List<AttachmentEntity> findByScanStatus(ScanStatus scanStatus);
 
     /**
      * Count attachments by channel
