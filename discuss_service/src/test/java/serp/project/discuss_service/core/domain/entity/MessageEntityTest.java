@@ -46,7 +46,7 @@ class MessageEntityTest {
 
             // Then
             assertNotNull(message);
-            assertEquals(MessageType.TEXT, message.getMessageType());
+            assertEquals(MessageType.STANDARD, message.getMessageType());
             assertEquals(content, message.getContent());
             assertEquals(TestDataFactory.CHANNEL_ID, message.getChannelId());
             assertEquals(TestDataFactory.USER_ID_1, message.getSenderId());
@@ -116,21 +116,39 @@ class MessageEntityTest {
         }
 
         @Test
-        @DisplayName("createFile - should create message with specified file type")
-        void testCreateFile_ValidInput_CreatesFileMessage() {
+        @DisplayName("createWithAttachments - should create message for file attachments")
+        void testCreateWithAttachments_ValidInput_CreatesMessageForAttachments() {
             // When
-            MessageEntity message = MessageEntity.createFile(
+            MessageEntity message = MessageEntity.createWithAttachments(
                     TestDataFactory.CHANNEL_ID,
                     TestDataFactory.USER_ID_1,
                     TestDataFactory.TENANT_ID,
                     "Check this image",
-                    MessageType.IMAGE
+                    null
             );
 
             // Then
             assertNotNull(message);
-            assertEquals(MessageType.IMAGE, message.getMessageType());
+            assertEquals(MessageType.STANDARD, message.getMessageType());
             assertEquals("Check this image", message.getContent());
+        }
+
+        @Test
+        @DisplayName("createWithAttachments - should allow null content for file-only messages")
+        void testCreateWithAttachments_NullContent_AllowsEmptyContent() {
+            // When
+            MessageEntity message = MessageEntity.createWithAttachments(
+                    TestDataFactory.CHANNEL_ID,
+                    TestDataFactory.USER_ID_1,
+                    TestDataFactory.TENANT_ID,
+                    null,
+                    null
+            );
+
+            // Then
+            assertNotNull(message);
+            assertEquals(MessageType.STANDARD, message.getMessageType());
+            assertEquals("", message.getContent());
         }
     }
 
@@ -551,7 +569,7 @@ class MessageEntityTest {
                     .senderId(1L)
                     .tenantId(1L)
                     .content("Test")
-                    .messageType(MessageType.TEXT)
+                    .messageType(MessageType.STANDARD)
                     .build();
 
             // When/Then
@@ -570,7 +588,7 @@ class MessageEntityTest {
                     .channelId(1L)
                     .tenantId(1L)
                     .content("Test")
-                    .messageType(MessageType.TEXT)
+                    .messageType(MessageType.STANDARD)
                     .build();
 
             // When/Then
@@ -582,15 +600,32 @@ class MessageEntityTest {
         }
 
         @Test
-        @DisplayName("validateForCreation - should throw for TEXT message with empty content")
-        void testValidateForCreation_TextMessageEmptyContent_ThrowsException() {
-            // Given
+        @DisplayName("validateForCreation - STANDARD message with empty content passes (attachments validated at service layer)")
+        void testValidateForCreation_StandardMessageEmptyContent_Passes() {
+            // Given - STANDARD messages can have empty content if they have attachments
+            // Content OR attachments validation is done at service layer
             MessageEntity message = MessageEntity.builder()
                     .channelId(1L)
                     .senderId(1L)
                     .tenantId(1L)
                     .content("   ")
-                    .messageType(MessageType.TEXT)
+                    .messageType(MessageType.STANDARD)
+                    .build();
+
+            // When/Then - validateForCreation passes, full validation happens at service layer
+            assertDoesNotThrow(message::validateForCreation);
+        }
+
+        @Test
+        @DisplayName("validateForCreation - SYSTEM message with empty content throws exception")
+        void testValidateForCreation_SystemMessageEmptyContent_ThrowsException() {
+            // Given - SYSTEM messages always require content
+            MessageEntity message = MessageEntity.builder()
+                    .channelId(1L)
+                    .senderId(0L)
+                    .tenantId(1L)
+                    .content("   ")
+                    .messageType(MessageType.SYSTEM)
                     .build();
 
             // When/Then
@@ -598,7 +633,7 @@ class MessageEntityTest {
                     IllegalArgumentException.class,
                     message::validateForCreation
             );
-            assertTrue(exception.getMessage().contains("Content"));
+            assertTrue(exception.getMessage().contains("system"));
         }
 
         @Test
@@ -610,7 +645,7 @@ class MessageEntityTest {
                     .senderId(1L)
                     .tenantId(1L)
                     .content("Valid content")
-                    .messageType(MessageType.TEXT)
+                    .messageType(MessageType.STANDARD)
                     .build();
 
             // When/Then
@@ -618,19 +653,24 @@ class MessageEntityTest {
         }
 
         @Test
-        @DisplayName("validateForCreation - IMAGE message can have empty content")
-        void testValidateForCreation_ImageMessageEmptyContent_Passes() {
+        @DisplayName("validateHasContentOrAttachments - should throw when both empty")
+        void testValidateHasContentOrAttachments_BothEmpty_ThrowsException() {
             // Given
             MessageEntity message = MessageEntity.builder()
                     .channelId(1L)
                     .senderId(1L)
                     .tenantId(1L)
                     .content("")
-                    .messageType(MessageType.IMAGE)
+                    .messageType(MessageType.STANDARD)
+                    .attachments(new ArrayList<>())
                     .build();
 
-            // When/Then - IMAGE doesn't require content
-            assertDoesNotThrow(message::validateForCreation);
+            // When/Then
+            IllegalArgumentException exception = assertThrows(
+                    IllegalArgumentException.class,
+                    message::validateHasContentOrAttachments
+            );
+            assertTrue(exception.getMessage().contains("content or attachments"));
         }
     }
 

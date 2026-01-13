@@ -1,6 +1,6 @@
 /**
  * Author: QuanTuanHuy
- * Description: Part of Serp Project - Message type enumeration
+ * Description: Part of Serp Project - Simplified message type enumeration
  */
 
 package serp.project.discuss_service.core.domain.enums;
@@ -9,15 +9,14 @@ import lombok.Getter;
 
 /**
  * Represents the type of a message in the discuss service.
+ * Simplified to two types for internal team chat:
+ * - STANDARD: Regular user messages (text and/or attachments)
+ * - SYSTEM: System-generated notifications
  */
 @Getter
 public enum MessageType {
-    TEXT("TEXT", "Text Message"),
-    IMAGE("IMAGE", "Image"),
-    FILE("FILE", "File"),
-    SYSTEM("SYSTEM", "System Message"),
-    CODE("CODE", "Code Snippet"),
-    POLL("POLL", "Poll");
+    STANDARD("STANDARD", "Standard Message"),
+    SYSTEM("SYSTEM", "System Message");
 
     private final String code;
     private final String displayName;
@@ -27,23 +26,43 @@ public enum MessageType {
         this.displayName = displayName;
     }
 
+    /**
+     * Parse message type from string code.
+     * Provides backward compatibility for old message types.
+     * 
+     * @param code The message type code
+     * @return The corresponding MessageType
+     */
     public static MessageType fromCode(String code) {
-        for (MessageType type : values()) {
-            if (type.code.equalsIgnoreCase(code)) {
-                return type;
-            }
+        if (code == null) {
+            return STANDARD;
         }
-        throw new IllegalArgumentException("Unknown message type: " + code);
+        
+        return switch (code.toUpperCase()) {
+            case "STANDARD" -> STANDARD;
+            case "SYSTEM" -> SYSTEM;
+            // Backward compatibility: map old types to STANDARD
+            case "TEXT", "IMAGE", "FILE", "CODE", "POLL" -> STANDARD;
+            default -> STANDARD;
+        };
     }
 
+    /**
+     * Check if this message type requires content.
+     * SYSTEM messages always require content.
+     * STANDARD messages can have content, attachments, or both.
+     * 
+     * @return true if content is required
+     */
     public boolean requiresContent() {
-        return this == TEXT || this == CODE;
+        return this == SYSTEM;
     }
 
-    public boolean canHaveAttachments() {
-        return this == IMAGE || this == FILE;
-    }
-
+    /**
+     * Check if this message type is user-generated.
+     * 
+     * @return true if the message is from a user
+     */
     public boolean isUserGenerated() {
         return this != SYSTEM;
     }

@@ -66,7 +66,7 @@ class MessageMapperTest {
                     .senderId(USER_ID)
                     .tenantId(TENANT_ID)
                     .content("Test message content")
-                    .messageType(MessageType.TEXT)
+                    .messageType(MessageType.STANDARD)
                     .mentions(mentions)
                     .parentId(1500L)
                     .threadCount(5)
@@ -91,7 +91,7 @@ class MessageMapperTest {
             assertEquals(USER_ID, entity.getSenderId());
             assertEquals(TENANT_ID, entity.getTenantId());
             assertEquals("Test message content", entity.getContent());
-            assertEquals(MessageType.TEXT, entity.getMessageType());
+            assertEquals(MessageType.STANDARD, entity.getMessageType());
             assertNotNull(entity.getMentions());
             assertEquals(2, entity.getMentions().size());
             assertTrue(entity.getMentions().containsAll(Arrays.asList(200L, 300L)));
@@ -116,7 +116,7 @@ class MessageMapperTest {
                     .senderId(USER_ID)
                     .tenantId(TENANT_ID)
                     .content("Test message")
-                    .messageType(MessageType.TEXT)
+                    .messageType(MessageType.STANDARD)
                     .mentions(null)
                     .threadCount(0)
                     .isEdited(false)
@@ -142,7 +142,7 @@ class MessageMapperTest {
                     .senderId(USER_ID)
                     .tenantId(TENANT_ID)
                     .content("Test message")
-                    .messageType(MessageType.TEXT)
+                    .messageType(MessageType.STANDARD)
                     .threadCount(0)
                     .isEdited(false)
                     .isDeleted(false)
@@ -180,7 +180,7 @@ class MessageMapperTest {
                     .senderId(USER_ID)
                     .tenantId(TENANT_ID)
                     .content("Test message")
-                    .messageType(MessageType.TEXT)
+                    .messageType(MessageType.STANDARD)
                     .threadCount(0)
                     .isEdited(false)
                     .isDeleted(false)
@@ -236,7 +236,7 @@ class MessageMapperTest {
                     .senderId(USER_ID)
                     .tenantId(TENANT_ID)
                     .content("Entity content")
-                    .messageType(MessageType.FILE)
+                    .messageType(MessageType.STANDARD)
                     .mentions(Arrays.asList(300L, 400L))
                     .parentId(1000L)
                     .threadCount(10)
@@ -261,7 +261,7 @@ class MessageMapperTest {
             assertEquals(USER_ID, model.getSenderId());
             assertEquals(TENANT_ID, model.getTenantId());
             assertEquals("Entity content", model.getContent());
-            assertEquals(MessageType.FILE, model.getMessageType());
+            assertEquals(MessageType.STANDARD, model.getMessageType());
             assertNotNull(model.getMentions());
             assertEquals(2, model.getMentions().length);
             assertEquals(1000L, model.getParentId());
@@ -285,7 +285,7 @@ class MessageMapperTest {
                     .senderId(USER_ID)
                     .tenantId(TENANT_ID)
                     .content("Test message")
-                    .messageType(MessageType.TEXT)
+                    .messageType(MessageType.STANDARD)
                     .mentions(null)
                     .threadCount(0)
                     .isEdited(false)
@@ -315,7 +315,7 @@ class MessageMapperTest {
                     .senderId(USER_ID)
                     .tenantId(TENANT_ID)
                     .content("Test message")
-                    .messageType(MessageType.TEXT)
+                    .messageType(MessageType.STANDARD)
                     .threadCount(0)
                     .isEdited(false)
                     .isDeleted(false)
@@ -352,7 +352,7 @@ class MessageMapperTest {
                     .senderId(USER_ID)
                     .tenantId(TENANT_ID)
                     .content("Test message")
-                    .messageType(MessageType.TEXT)
+                    .messageType(MessageType.STANDARD)
                     .threadCount(0)
                     .isEdited(false)
                     .isDeleted(false)
@@ -399,7 +399,7 @@ class MessageMapperTest {
                     .senderId(USER_ID)
                     .tenantId(TENANT_ID)
                     .content("Message 1")
-                    .messageType(MessageType.TEXT)
+                    .messageType(MessageType.STANDARD)
                     .threadCount(0)
                     .isEdited(false)
                     .isDeleted(false)
@@ -413,7 +413,7 @@ class MessageMapperTest {
                     .senderId(200L)
                     .tenantId(TENANT_ID)
                     .content("Message 2")
-                    .messageType(MessageType.IMAGE)
+                    .messageType(MessageType.STANDARD)
                     .threadCount(3)
                     .isEdited(true)
                     .isDeleted(false)
@@ -431,10 +431,10 @@ class MessageMapperTest {
             assertEquals(2, entities.size());
             assertEquals(1L, entities.get(0).getId());
             assertEquals("Message 1", entities.get(0).getContent());
-            assertEquals(MessageType.TEXT, entities.get(0).getMessageType());
+            assertEquals(MessageType.STANDARD, entities.get(0).getMessageType());
             assertEquals(2L, entities.get(1).getId());
             assertEquals("Message 2", entities.get(1).getContent());
-            assertEquals(MessageType.IMAGE, entities.get(1).getMessageType());
+            assertEquals(MessageType.STANDARD, entities.get(1).getMessageType());
         }
     }
 
@@ -483,7 +483,7 @@ class MessageMapperTest {
                     .senderId(200L)
                     .tenantId(TENANT_ID)
                     .content("Entity 2")
-                    .messageType(MessageType.FILE)
+                    .messageType(MessageType.STANDARD)
                     .mentions(Arrays.asList(300L, 400L))
                     .parentId(1L)
                     .threadCount(0)
@@ -533,7 +533,7 @@ class MessageMapperTest {
                     .senderId(USER_ID)
                     .tenantId(TENANT_ID)
                     .content("Round trip message")
-                    .messageType(MessageType.TEXT)
+                    .messageType(MessageType.STANDARD)
                     .mentions(Arrays.asList(300L, 400L))
                     .parentId(500L)
                     .threadCount(5)
@@ -582,7 +582,7 @@ class MessageMapperTest {
                     .senderId(USER_ID)
                     .tenantId(TENANT_ID)
                     .content("Deleted message")
-                    .messageType(MessageType.TEXT)
+                    .messageType(MessageType.STANDARD)
                     .mentions(new ArrayList<>())
                     .threadCount(0)
                     .isEdited(false)

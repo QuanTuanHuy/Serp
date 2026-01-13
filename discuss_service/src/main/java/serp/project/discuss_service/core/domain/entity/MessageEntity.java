@@ -23,6 +23,10 @@ import java.util.Optional;
 /**
  * Message entity represents a message in a channel.
  * Contains business logic for message operations following DDD principles.
+ * 
+ * Message types:
+ * - STANDARD: User messages with text, attachments, or both
+ * - SYSTEM: System-generated notifications (requires content)
  */
 @NoArgsConstructor
 @AllArgsConstructor
@@ -38,7 +42,7 @@ public class MessageEntity extends BaseEntity {
     private String content;
     
     @Builder.Default
-    private MessageType messageType = MessageType.TEXT;
+    private MessageType messageType = MessageType.STANDARD;
     
     // Mentions (@user)
     @Builder.Default
@@ -78,17 +82,17 @@ public class MessageEntity extends BaseEntity {
     // ==================== FACTORY METHODS ====================
 
     /**
-     * Create a new text message
+     * Create a new standard message (text with optional attachments)
      */
-    public static MessageEntity createText(Long channelId, Long senderId, Long tenantId, 
-                                           String content, List<Long> mentions) {
+    public static MessageEntity create(Long channelId, Long senderId, Long tenantId, 
+                                       String content, List<Long> mentions) {
         long now = Instant.now().toEpochMilli();
         return MessageEntity.builder()
                 .channelId(channelId)
                 .senderId(senderId)
                 .tenantId(tenantId)
                 .content(content)
-                .messageType(MessageType.TEXT)
+                .messageType(MessageType.STANDARD)
                 .mentions(mentions != null ? mentions : new ArrayList<>())
                 .createdAt(now)
                 .updatedAt(now)
@@ -96,9 +100,20 @@ public class MessageEntity extends BaseEntity {
     }
 
     /**
-     * Create a system message
+     * Create a new standard message (backward compatibility alias)
+     */
+    public static MessageEntity createText(Long channelId, Long senderId, Long tenantId, 
+                                           String content, List<Long> mentions) {
+        return create(channelId, senderId, tenantId, content, mentions);
+    }
+
+    /**
+     * Create a system message (requires content)
      */
     public static MessageEntity createSystem(Long channelId, Long tenantId, String content) {
+        if (content == null || content.trim().isEmpty()) {
+            throw new IllegalArgumentException("Content is required for system messages");
+        }
         long now = Instant.now().toEpochMilli();
         return MessageEntity.builder()
                 .channelId(channelId)
@@ -122,7 +137,7 @@ public class MessageEntity extends BaseEntity {
                 .senderId(senderId)
                 .tenantId(tenantId)
                 .content(content)
-                .messageType(MessageType.TEXT)
+                .messageType(MessageType.STANDARD)
                 .parentId(parentId)
                 .mentions(mentions != null ? mentions : new ArrayList<>())
                 .createdAt(now)
@@ -131,17 +146,18 @@ public class MessageEntity extends BaseEntity {
     }
 
     /**
-     * Create a file message
+     * Create a message with attachments (content is optional)
      */
-    public static MessageEntity createFile(Long channelId, Long senderId, Long tenantId,
-                                           String caption, MessageType type) {
+    public static MessageEntity createWithAttachments(Long channelId, Long senderId, Long tenantId,
+                                                      String content, List<Long> mentions) {
         long now = Instant.now().toEpochMilli();
         return MessageEntity.builder()
                 .channelId(channelId)
                 .senderId(senderId)
                 .tenantId(tenantId)
-                .content(caption != null ? caption : "")
-                .messageType(type)
+                .content(content != null ? content : "")
+                .messageType(MessageType.STANDARD)
+                .mentions(mentions != null ? mentions : new ArrayList<>())
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
@@ -296,6 +312,11 @@ public class MessageEntity extends BaseEntity {
     }
 
     @JsonIgnore
+    public boolean hasContent() {
+        return this.content != null && !this.content.trim().isEmpty();
+    }
+
+    @JsonIgnore
     public boolean isReadBy(Long userId) {
         return this.readBy != null && this.readBy.contains(userId);
     }
@@ -340,7 +361,12 @@ public class MessageEntity extends BaseEntity {
     }
 
     /**
-     * Validate message for creation
+     * Validate message for creation.
+     * 
+     * Rules:
+     * - channelId, senderId, tenantId are required
+     * - SYSTEM messages require content
+     * - STANDARD messages require content OR attachments (checked at service layer when attachments are known)
      */
     public void validateForCreation() {
         if (this.channelId == null) {
@@ -352,9 +378,21 @@ public class MessageEntity extends BaseEntity {
         if (this.tenantId == null) {
             throw new IllegalArgumentException("Tenant ID is required");
         }
-        if (this.messageType.requiresContent() && 
-            (this.content == null || this.content.trim().isEmpty())) {
-            throw new IllegalArgumentException("Content is required for text messages");
+        // SYSTEM messages require content
+        if (this.messageType == MessageType.SYSTEM && !hasContent()) {
+            throw new IllegalArgumentException("Content is required for system messages");
+        }
+        // For STANDARD messages: content OR attachments required
+        // Attachment check is done at service layer since attachments may be added after creation
+    }
+
+    /**
+     * Validate that message has content or attachments.
+     * Called after attachments are set.
+     */
+    public void validateHasContentOrAttachments() {
+        if (this.messageType == MessageType.STANDARD && !hasContent() && !hasAttachments()) {
+            throw new IllegalArgumentException("Message must have content or attachments");
         }
     }
 

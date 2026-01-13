@@ -45,7 +45,8 @@ public class MessageController {
     private final JsonUtils jsonUtils;
 
     /**
-     * Send a new message to channel
+     * Send a new message to channel (text only).
+     * For messages with files, use POST /with-files endpoint.
      */
     @PostMapping
     public ResponseEntity<GeneralResponse<MessageResponse>> sendMessage(
@@ -56,15 +57,34 @@ public class MessageController {
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new AppException("Tenant ID not found"));
 
+        // Validate content is required for text-only messages
+        if (!request.hasContent()) {
+            throw new AppException("Message content is required");
+        }
+
         log.info("User {} sending message to channel {}", userId, channelId);
 
-        MessageEntity message = messageUseCase.sendMessage(
-                channelId,
-                userId,
-                tenantId,
-                request.getContent(),
-                request.getMentions()
-        );
+        MessageEntity message;
+        if (request.getParentId() != null) {
+            // This is a reply
+            message = messageUseCase.sendReply(
+                    channelId,
+                    request.getParentId(),
+                    userId,
+                    tenantId,
+                    request.getContent(),
+                    request.getMentions()
+            );
+        } else {
+            // Regular message
+            message = messageUseCase.sendMessage(
+                    channelId,
+                    userId,
+                    tenantId,
+                    request.getContent(),
+                    request.getMentions()
+            );
+        }
 
         MessageResponse response = attachmentUrlService.enrichMessageWithUrls(message);
         response.setIsSentByMe(true);

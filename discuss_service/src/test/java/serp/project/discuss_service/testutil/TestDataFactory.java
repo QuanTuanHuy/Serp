@@ -121,7 +121,7 @@ public class TestDataFactory {
                 .senderId(USER_ID_1)
                 .tenantId(TENANT_ID)
                 .content(content)
-                .messageType(MessageType.TEXT)
+                .messageType(MessageType.STANDARD)
                 .mentions(new ArrayList<>())
                 .isEdited(false)
                 .isDeleted(false)
@@ -170,7 +170,10 @@ public class TestDataFactory {
         return message;
     }
 
-    public static MessageEntity createFileMessage(MessageType fileType) {
+    /**
+     * Create a message with attachments (uses STANDARD type)
+     */
+    public static MessageEntity createFileMessage() {
         long now = Instant.now().toEpochMilli();
         return MessageEntity.builder()
                 .id(MESSAGE_ID)
@@ -178,12 +181,20 @@ public class TestDataFactory {
                 .senderId(USER_ID_1)
                 .tenantId(TENANT_ID)
                 .content("File caption")
-                .messageType(fileType)
+                .messageType(MessageType.STANDARD)
                 .isEdited(false)
                 .isDeleted(false)
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
+    }
+
+    /**
+     * @deprecated Use createFileMessage() instead. MessageType parameter is ignored.
+     */
+    @Deprecated
+    public static MessageEntity createFileMessage(MessageType fileType) {
+        return createFileMessage();
     }
 
     // ==================== MEMBER FACTORIES ====================
