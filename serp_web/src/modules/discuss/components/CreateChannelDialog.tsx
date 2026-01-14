@@ -75,7 +75,9 @@ export const CreateChannelDialog: React.FC<CreateChannelDialogProps> = ({
       alert('Channel created successfully!');
     } catch (error: any) {
       console.error('Failed to create channel:', error);
-      alert(error?.data?.message || 'Failed to create channel. Please try again.');
+      alert(
+        error?.data?.message || 'Failed to create channel. Please try again.'
+      );
     }
   };
 

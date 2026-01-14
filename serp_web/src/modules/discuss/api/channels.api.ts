@@ -74,26 +74,25 @@ export const channelApi = api.injectEndpoints({
     /**
      * Create new GROUP channel
      */
-    createChannel: builder.mutation<
-      APIResponse<Channel>,
-      CreateChannelRequest
-    >({
-      query: (request) => ({
-        url: '/channels/group',
-        method: 'POST',
-        body: {
-          name: request.name,
-          description: request.description,
-          memberUserIds: request.memberIds.map((id) => parseInt(id)),
-        },
-      }),
-      extraOptions: { service: 'discuss' },
-      transformResponse: (response: any) => ({
-        ...response,
-        data: transformChannel(response.data),
-      }),
-      invalidatesTags: [{ type: 'Channel', id: 'LIST' }],
-    }),
+    createChannel: builder.mutation<APIResponse<Channel>, CreateChannelRequest>(
+      {
+        query: (request) => ({
+          url: '/channels/group',
+          method: 'POST',
+          body: {
+            name: request.name,
+            description: request.description,
+            memberUserIds: request.memberIds.map((id) => parseInt(id)),
+          },
+        }),
+        extraOptions: { service: 'discuss' },
+        transformResponse: (response: any) => ({
+          ...response,
+          data: transformChannel(response.data),
+        }),
+        invalidatesTags: [{ type: 'Channel', id: 'LIST' }],
+      }
+    ),
 
     /**
      * Create DIRECT channel (1-on-1 chat)

@@ -25,7 +25,7 @@ const rawBaseQuery = fetchBaseQuery({
     if (token) {
       headers.set('authorization', `Bearer ${token}`);
     }
-    
+
     // Don't manually set content-type here
     // fetchBaseQuery will automatically set the correct content-type:
     // - 'application/json' for plain object bodies

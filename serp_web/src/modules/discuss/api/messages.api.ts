@@ -113,17 +113,17 @@ export const messageApi = api.injectEndpoints({
     >({
       query: ({ channelId, content, files, parentId }) => {
         const formData = new FormData();
-        
+
         // Add content if provided
         if (content && content.trim()) {
           formData.append('content', content.trim());
         }
-        
+
         // Add parentId if provided
         if (parentId) {
           formData.append('parentId', parentId);
         }
-        
+
         // Add all files with the same key 'files' (backend expects List<MultipartFile>)
         files.forEach((file) => {
           formData.append('files', file);
@@ -301,10 +301,7 @@ export const messageApi = api.injectEndpoints({
     /**
      * Get unread message count for a channel
      */
-    getUnreadCount: builder.query<
-      APIResponse<{ count: number }>,
-      string
-    >({
+    getUnreadCount: builder.query<APIResponse<{ count: number }>, string>({
       query: (channelId) => ({
         url: `/channels/${channelId}/messages/unread/count`,
       }),

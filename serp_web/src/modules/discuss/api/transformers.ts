@@ -77,7 +77,9 @@ export const transformChannelMember = (backendMember: any): ChannelMember => {
     lastReadMsgId: backendMember.lastReadMsgId
       ? String(backendMember.lastReadMsgId)
       : undefined,
-    user: backendMember.user ? transformUserInfo(backendMember.user) : undefined,
+    user: backendMember.user
+      ? transformUserInfo(backendMember.user)
+      : undefined,
   };
 };
 

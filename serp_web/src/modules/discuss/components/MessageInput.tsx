@@ -103,9 +103,12 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // Only set dragging false if leaving the drop zone entirely
-    if (dropZoneRef.current && !dropZoneRef.current.contains(e.relatedTarget as Node)) {
+    if (
+      dropZoneRef.current &&
+      !dropZoneRef.current.contains(e.relatedTarget as Node)
+    ) {
       setIsDragging(false);
     }
   };
@@ -250,8 +253,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             isDragging
               ? 'ring-2 ring-violet-500 bg-violet-50 dark:bg-violet-900/20 scale-[1.02]'
               : isFocused
-              ? 'ring-2 ring-violet-500 bg-white dark:bg-slate-800/80'
-              : 'ring-1 ring-slate-200 dark:ring-slate-700'
+                ? 'ring-2 ring-violet-500 bg-white dark:bg-slate-800/80'
+                : 'ring-1 ring-slate-200 dark:ring-slate-700'
           )}
         >
           {/* Drag overlay */}
@@ -324,7 +327,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             <div className='space-y-2 pb-2 border-b border-slate-200 dark:border-slate-700'>
               <div className='flex items-center justify-between'>
                 <p className='text-xs font-semibold text-slate-600 dark:text-slate-400'>
-                  {files.length} {files.length === 1 ? 'file' : 'files'} attached
+                  {files.length} {files.length === 1 ? 'file' : 'files'}{' '}
+                  attached
                 </p>
                 {isUploading && (
                   <p className='text-xs text-violet-600 dark:text-violet-400'>
@@ -358,7 +362,10 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                         </div>
                       )}
                       <div className='flex-1 min-w-0'>
-                        <p className='text-xs font-medium text-slate-700 dark:text-slate-300 truncate max-w-[120px]' title={file.name}>
+                        <p
+                          className='text-xs font-medium text-slate-700 dark:text-slate-300 truncate max-w-[120px]'
+                          title={file.name}
+                        >
                           {file.name}
                         </p>
                         <p className='text-xs text-slate-500 dark:text-slate-400'>

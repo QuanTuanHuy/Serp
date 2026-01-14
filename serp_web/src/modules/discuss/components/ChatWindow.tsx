@@ -136,14 +136,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           messageId: editingMessage.id,
           content,
         }).unwrap();
-        
+
         setEditingMessage(null);
         return;
       }
 
       // Check if files are File objects (new) or Attachment objects (old)
-      const files = filesOrAttachments?.filter((item) => item instanceof File) as File[];
-      
+      const files = filesOrAttachments?.filter(
+        (item) => item instanceof File
+      ) as File[];
+
       if (files && files.length > 0) {
         // Send message with files
         await sendMessageWithFiles({

@@ -97,7 +97,9 @@ const groupMessagesByDate = (messages: Message[]): DateGroup[] => {
       date,
       messages: messages.sort((a, b) => {
         // Sort messages within each date group ascending (oldest first, newest at bottom)
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        return (
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
       }),
     }));
 };
@@ -311,7 +313,9 @@ export const MessageList = forwardRef<MessageListRef, MessageListProps>(
               {group.messages.map((message, index) => {
                 const previousMessage =
                   index > 0 ? group.messages[index - 1] : null;
-                const isOwn = message.isSentByMe === true || message.senderId === currentUserId;
+                const isOwn =
+                  message.isSentByMe === true ||
+                  message.senderId === currentUserId;
                 const isGrouped = shouldGroupMessage(
                   message,
                   previousMessage,

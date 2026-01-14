@@ -67,7 +67,7 @@ export interface ChannelMember extends BaseEntity {
   isPinned: boolean;
   notificationLevel: NotificationLevel;
   metadata?: Record<string, any>;
-  
+
   // Computed fields
   isOnline?: boolean;
   user?: UserInfo;
@@ -376,4 +376,3 @@ export const mapMessageTypeFromBackend = (
 
   return 'TEXT';
 };
-

@@ -44,17 +44,15 @@ import type {
 export const logisticsApi = api.injectEndpoints({
   endpoints: (builder) => ({
     // Address endpoints
-    createAddress: builder.mutation<APIResponse<Address>, AddressCreationForm>(
-      {
-        query: (data) => ({
-          url: '/address/create',
-          method: 'POST',
-          body: data,
-        }),
-        extraOptions: { service: 'logistics' },
-        invalidatesTags: [{ type: 'logistics/Address', id: 'LIST' }],
-      }
-    ),
+    createAddress: builder.mutation<APIResponse<Address>, AddressCreationForm>({
+      query: (data) => ({
+        url: '/address/create',
+        method: 'POST',
+        body: data,
+      }),
+      extraOptions: { service: 'logistics' },
+      invalidatesTags: [{ type: 'logistics/Address', id: 'LIST' }],
+    }),
 
     getAddressesByEntity: builder.query<
       APIResponse<Address[]>,
@@ -122,9 +120,7 @@ export const logisticsApi = api.injectEndpoints({
         method: 'GET',
       }),
       extraOptions: { service: 'logistics' },
-      providesTags: (result, error, id) => [
-        { type: 'logistics/Category', id },
-      ],
+      providesTags: (result, error, id) => [{ type: 'logistics/Category', id }],
     }),
 
     createCategory: builder.mutation<APIResponse<Category>, CategoryForm>({
@@ -153,20 +149,19 @@ export const logisticsApi = api.injectEndpoints({
       ],
     }),
 
-    deleteCategory: builder.mutation<
-      APIResponse<{ deleted: boolean }>,
-      string
-    >({
-      query: (categoryId) => ({
-        url: `/category/delete/${categoryId}`,
-        method: 'DELETE',
-      }),
-      extraOptions: { service: 'logistics' },
-      invalidatesTags: (result, error, categoryId) => [
-        { type: 'logistics/Category', id: categoryId },
-        { type: 'logistics/Category', id: 'LIST' },
-      ],
-    }),
+    deleteCategory: builder.mutation<APIResponse<{ deleted: boolean }>, string>(
+      {
+        query: (categoryId) => ({
+          url: `/category/delete/${categoryId}`,
+          method: 'DELETE',
+        }),
+        extraOptions: { service: 'logistics' },
+        invalidatesTags: (result, error, categoryId) => [
+          { type: 'logistics/Category', id: categoryId },
+          { type: 'logistics/Category', id: 'LIST' },
+        ],
+      }
+    ),
 
     // Customer endpoints (read-only from logistics perspective)
     getCustomers: builder.query<
@@ -197,9 +192,7 @@ export const logisticsApi = api.injectEndpoints({
         method: 'GET',
       }),
       extraOptions: { service: 'logistics' },
-      providesTags: (result, error, id) => [
-        { type: 'logistics/Customer', id },
-      ],
+      providesTags: (result, error, id) => [{ type: 'logistics/Customer', id }],
     }),
 
     // Facility endpoints
@@ -263,20 +256,19 @@ export const logisticsApi = api.injectEndpoints({
       ],
     }),
 
-    deleteFacility: builder.mutation<
-      APIResponse<{ deleted: boolean }>,
-      string
-    >({
-      query: (facilityId) => ({
-        url: `/facility/delete/${facilityId}`,
-        method: 'DELETE',
-      }),
-      extraOptions: { service: 'logistics' },
-      invalidatesTags: (result, error, facilityId) => [
-        { type: 'logistics/Facility', id: facilityId },
-        { type: 'logistics/Facility', id: 'LIST' },
-      ],
-    }),
+    deleteFacility: builder.mutation<APIResponse<{ deleted: boolean }>, string>(
+      {
+        query: (facilityId) => ({
+          url: `/facility/delete/${facilityId}`,
+          method: 'DELETE',
+        }),
+        extraOptions: { service: 'logistics' },
+        invalidatesTags: (result, error, facilityId) => [
+          { type: 'logistics/Facility', id: facilityId },
+          { type: 'logistics/Facility', id: 'LIST' },
+        ],
+      }
+    ),
 
     // Inventory Item endpoints
     getInventoryItems: builder.query<
@@ -307,7 +299,9 @@ export const logisticsApi = api.injectEndpoints({
         method: 'GET',
       }),
       extraOptions: { service: 'logistics' },
-      providesTags: (result, error, id) => [{ type: 'logistics/InventoryItem', id }],
+      providesTags: (result, error, id) => [
+        { type: 'logistics/InventoryItem', id },
+      ],
     }),
 
     createInventoryItem: builder.mutation<
@@ -418,17 +412,15 @@ export const logisticsApi = api.injectEndpoints({
       providesTags: (result, error, id) => [{ type: 'logistics/Product', id }],
     }),
 
-    createProduct: builder.mutation<APIResponse<Product>, ProductCreationForm>(
-      {
-        query: (data) => ({
-          url: '/product/create',
-          method: 'POST',
-          body: data,
-        }),
-        extraOptions: { service: 'logistics' },
-        invalidatesTags: [{ type: 'logistics/Product', id: 'LIST' }],
-      }
-    ),
+    createProduct: builder.mutation<APIResponse<Product>, ProductCreationForm>({
+      query: (data) => ({
+        url: '/product/create',
+        method: 'POST',
+        body: data,
+      }),
+      extraOptions: { service: 'logistics' },
+      invalidatesTags: [{ type: 'logistics/Product', id: 'LIST' }],
+    }),
 
     updateProduct: builder.mutation<
       APIResponse<Product>,
@@ -446,10 +438,7 @@ export const logisticsApi = api.injectEndpoints({
       ],
     }),
 
-    deleteProduct: builder.mutation<
-      APIResponse<{ deleted: boolean }>,
-      string
-    >({
+    deleteProduct: builder.mutation<APIResponse<{ deleted: boolean }>, string>({
       query: (productId) => ({
         url: `/product/delete/${productId}`,
         method: 'DELETE',
@@ -522,20 +511,19 @@ export const logisticsApi = api.injectEndpoints({
       ],
     }),
 
-    deleteShipment: builder.mutation<
-      APIResponse<{ deleted: boolean }>,
-      string
-    >({
-      query: (shipmentId) => ({
-        url: `/shipment/delete/${shipmentId}`,
-        method: 'DELETE',
-      }),
-      extraOptions: { service: 'logistics' },
-      invalidatesTags: (result, error, shipmentId) => [
-        { type: 'logistics/Shipment', id: shipmentId },
-        { type: 'logistics/Shipment', id: 'LIST' },
-      ],
-    }),
+    deleteShipment: builder.mutation<APIResponse<{ deleted: boolean }>, string>(
+      {
+        query: (shipmentId) => ({
+          url: `/shipment/delete/${shipmentId}`,
+          method: 'DELETE',
+        }),
+        extraOptions: { service: 'logistics' },
+        invalidatesTags: (result, error, shipmentId) => [
+          { type: 'logistics/Shipment', id: shipmentId },
+          { type: 'logistics/Shipment', id: 'LIST' },
+        ],
+      }
+    ),
 
     addItemToShipment: builder.mutation<
       APIResponse<Shipment>,

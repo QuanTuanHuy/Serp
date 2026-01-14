@@ -28,10 +28,7 @@ export const attachmentApi = api.injectEndpoints({
     /**
      * Get all attachments for a message
      */
-    getMessageAttachments: builder.query<
-      APIResponse<Attachment[]>,
-      string
-    >({
+    getMessageAttachments: builder.query<APIResponse<Attachment[]>, string>({
       query: (messageId) => ({
         url: `/attachments/message/${messageId}`,
       }),
