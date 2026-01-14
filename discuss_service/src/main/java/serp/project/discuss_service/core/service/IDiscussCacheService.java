@@ -32,11 +32,13 @@ public interface IDiscussCacheService {
     String SESSION_PREFIX = "discuss:session:";
     String USER_SESSIONS_PREFIX = "discuss:user_sessions:";
     String ATTACHMENT_URL_PREFIX = "discuss:attachment_url:";
+    String CHANNEL_MESSAGES_PREFIX = "discuss:channel_messages:";
     
     // TTL Constants (in seconds)
     long CHANNEL_TTL = 3600;          // 1 hour
     long MESSAGE_TTL = 300;            // 5 minutes
     long RECENT_MESSAGES_TTL = 600;    // 10 minutes
+    long CHANNEL_MESSAGES_TTL = 60;    // 1 minute for paginated channel messages (hot data)
     long PRESENCE_TTL = 120;           // 2 minutes
     long TYPING_TTL = 5;               // 5 seconds
     long SESSION_TTL = 86400;          // 24 hours
@@ -100,6 +102,38 @@ public interface IDiscussCacheService {
      * Invalidate all message caches for a channel
      */
     void invalidateChannelMessages(Long channelId);
+
+    // ==================== CHANNEL MESSAGES PAGE CACHE ====================
+
+    /**
+     * Cache a page of channel messages with total count.
+     * Only caches the first page (page=0) for hot data access.
+     *
+     * @param channelId The channel ID
+     * @param page      The page number (0-based)
+     * @param size      The page size
+     * @param messages  The messages to cache
+     * @param totalCount The total message count
+     */
+    void cacheChannelMessagesPage(Long channelId, int page, int size, 
+                                   List<MessageEntity> messages, long totalCount);
+
+    /**
+     * Get cached page of channel messages with total count.
+     *
+     * @param channelId The channel ID
+     * @param page      The page number (0-based)
+     * @param size      The page size
+     * @return Optional containing Pair of (totalCount, messages) if cached
+     */
+    Optional<CachedMessagesPage> getCachedChannelMessagesPage(Long channelId, int page, int size);
+
+    /**
+     * Invalidate cached channel messages page (call after new message sent)
+     *
+     * @param channelId The channel ID to invalidate
+     */
+    void invalidateChannelMessagesPage(Long channelId);
 
     // ==================== PRESENCE / ONLINE STATUS ====================
 
@@ -294,4 +328,9 @@ public interface IDiscussCacheService {
      * Cached attachment URL value object
      */
     record CachedAttachmentUrl(String downloadUrl, String thumbnailUrl, long expiresAt) {}
+
+    /**
+     * Cached messages page value object
+     */
+    record CachedMessagesPage(long totalCount, List<MessageEntity> messages) {}
 }

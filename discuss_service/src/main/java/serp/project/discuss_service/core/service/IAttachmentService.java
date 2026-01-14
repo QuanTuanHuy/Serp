@@ -7,9 +7,9 @@ package serp.project.discuss_service.core.service;
 
 import org.springframework.web.multipart.MultipartFile;
 import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
-import serp.project.discuss_service.core.domain.vo.FileUploadResult;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Service interface for attachment operations.
@@ -83,6 +83,14 @@ public interface IAttachmentService {
      * @param tenantId  The tenant ID
      */
     void deleteAttachmentsByMessage(Long messageId, Long tenantId);
+
+    /**
+     * Get attachments for multiple messages (batch load to avoid N+1)
+     *
+     * @param messageIds List of message IDs
+     * @return Map of messageId to list of attachments
+     */
+    Map<Long, List<AttachmentEntity>> getAttachmentsByMessageIds(List<Long> messageIds);
 
     /**
      * Check if file type is allowed for upload

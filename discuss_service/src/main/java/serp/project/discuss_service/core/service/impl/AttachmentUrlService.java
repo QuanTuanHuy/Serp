@@ -23,7 +23,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /**
  * Service implementation for enriching attachments with presigned URLs.
@@ -70,9 +74,23 @@ public class AttachmentUrlService implements IAttachmentUrlService {
             return new ArrayList<>();
         }
 
-        return attachments.stream()
-                .map(this::enrichWithUrls)
-                .toList();
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            List<Future<AttachmentResponse>> futures = attachments.stream()
+                    .map(attachment -> executor.submit(() -> enrichWithUrls(attachment)))
+                    .toList();
+
+            return futures.stream()
+                    .map(future -> {
+                        try {
+                            return future.get();
+                        } catch (Exception e) {
+                            log.warn("Failed to enrich attachment with URL: {}", e.getMessage());
+                            return null;
+                        }
+                    })
+                    .filter(Objects::nonNull)
+                    .toList();
+        }
     }
 
     @Override

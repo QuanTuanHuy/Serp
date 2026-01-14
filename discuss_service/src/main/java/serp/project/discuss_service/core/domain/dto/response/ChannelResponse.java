@@ -15,6 +15,8 @@ import serp.project.discuss_service.core.domain.enums.ChannelType;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 /**
  * Response DTO for channel data
  */
@@ -22,6 +24,7 @@ import java.util.Map;
 @AllArgsConstructor
 @Data
 @Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ChannelResponse {
     
     private Long id;

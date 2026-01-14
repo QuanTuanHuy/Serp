@@ -23,6 +23,7 @@ import serp.project.discuss_service.core.service.IChannelService;
 import serp.project.discuss_service.core.service.IDiscussCacheService;
 import serp.project.discuss_service.core.service.IDiscussEventPublisher;
 import serp.project.discuss_service.core.service.IMessageService;
+import serp.project.discuss_service.core.service.IAttachmentService;
 import serp.project.discuss_service.testutil.TestDataFactory;
 
 import java.util.List;
@@ -54,6 +55,9 @@ class MessageUseCaseTest {
 
     @Mock
     private IDiscussCacheService cacheService;
+
+    @Mock
+    private IAttachmentService attachmentService;
 
     @InjectMocks
     private MessageUseCase messageUseCase;

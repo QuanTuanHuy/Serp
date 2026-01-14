@@ -24,6 +24,8 @@ import serp.project.discuss_service.core.service.IDiscussEventPublisher;
 import serp.project.discuss_service.core.service.IMessageService;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.web.multipart.MultipartFile;
@@ -50,29 +52,25 @@ public class MessageUseCase {
     @Transactional
     public MessageEntity sendMessage(Long channelId, Long senderId, Long tenantId,
                                      String content, List<Long> mentions) {
-        // Validate sender is member and can send messages
         if (!memberService.canSendMessages(channelId, senderId)) {
             throw new AppException(ErrorCode.CANNOT_SEND_MESSAGES);
         }
 
-        // Validate channel is active
         ChannelEntity channel = channelService.getChannelByIdOrThrow(channelId);
         if (!channel.isActive()) {
             throw new AppException(ErrorCode.CHANNEL_ARCHIVED);
         }
 
-        // Create and send message
         MessageEntity message = MessageEntity.createText(channelId, senderId, tenantId, content, mentions);
         MessageEntity saved = messageService.sendMessage(message);
 
-        // Update channel stats
         channelService.recordMessage(channelId);
 
-        // Increment unread counts for other members
         memberService.incrementUnreadForChannel(channelId, senderId);
 
-        // Publish event for real-time delivery
         eventPublisher.publishMessageSent(saved);
+
+        cacheService.invalidateChannelMessagesPage(channelId);
 
         log.info("User {} sent message {} in channel {}", senderId, saved.getId(), channelId);
         return saved;
@@ -116,6 +114,8 @@ public class MessageUseCase {
 
         eventPublisher.publishMessageSent(saved);
 
+        cacheService.invalidateChannelMessagesPage(channelId);
+
         log.info("User {} sent message {} with {} attachments in channel {}", 
                 senderId, saved.getId(), hasFiles ? files.size() : 0, channelId);
         return saved;
@@ -131,41 +131,60 @@ public class MessageUseCase {
             throw new AppException(ErrorCode.CANNOT_SEND_MESSAGES);
         }
 
-        // Validate parent message exists and is in same channel
+        ChannelEntity channel = channelService.getChannelByIdOrThrow(channelId);
+        if (!channel.isActive()) {
+            throw new AppException(ErrorCode.CHANNEL_ARCHIVED);
+        }
+
         MessageEntity parent = messageService.getMessageByIdOrThrow(parentId);
         if (!parent.getChannelId().equals(channelId)) {
             throw new AppException(ErrorCode.PARENT_MESSAGE_NOT_IN_CHANNEL);
         }
 
-        // Create reply
         MessageEntity message = MessageEntity.createReply(channelId, senderId, tenantId, content, parentId, mentions);
         MessageEntity saved = messageService.sendReply(parentId, message);
 
-        // Update channel stats
         channelService.recordMessage(channelId);
 
-        // Increment unread for thread participants
         memberService.incrementUnreadForChannel(channelId, senderId);
 
         eventPublisher.publishMessageSent(saved);
+        
+        cacheService.invalidateChannelMessagesPage(channelId);
+        
         return saved;
     }
 
     /**
-     * Get messages in a channel with pagination
+     * Get messages in a channel with pagination.
      */
     public Pair<Long, List<MessageEntity>> getChannelMessages(Long channelId, Long userId, 
                                                                int page, int size) {
-        // Validate user is member
         if (!memberService.isMember(channelId, userId)) {
             throw new AppException(ErrorCode.NOT_CHANNEL_MEMBER);
         }
 
-        return messageService.getMessagesByChannel(channelId, page, size);
+        Optional<IDiscussCacheService.CachedMessagesPage> cached = 
+                cacheService.getCachedChannelMessagesPage(channelId, page, size);
+        
+        if (cached.isPresent()) {
+            List<MessageEntity> messages = cached.get().messages();
+            enrichMessagesWithAttachments(messages);
+            return Pair.of(cached.get().totalCount(), messages);
+        }
+
+        Pair<Long, List<MessageEntity>> result = messageService.getMessagesByChannel(channelId, page, size);
+        
+        enrichMessagesWithAttachments(result.getSecond());
+        
+        cacheService.cacheChannelMessagesPage(channelId, page, size, 
+                result.getSecond(), result.getFirst());
+        
+        return result;
     }
 
     /**
-     * Get messages before a specific message (for infinite scroll)
+     * Get messages before a specific message (for infinite scroll).
      */
     public List<MessageEntity> getMessagesBefore(Long channelId, Long userId, 
                                                   Long beforeId, int limit) {
@@ -173,22 +192,30 @@ public class MessageUseCase {
             throw new AppException(ErrorCode.NOT_CHANNEL_MEMBER);
         }
 
-        return messageService.getMessagesBefore(channelId, beforeId, limit);
+        List<MessageEntity> messages = messageService.getMessagesBefore(channelId, beforeId, limit);
+        
+        enrichMessagesWithAttachments(messages);
+        
+        return messages;
     }
 
     /**
-     * Get thread replies
+     * Get thread replies.
      */
     public List<MessageEntity> getThreadReplies(Long channelId, Long parentId, Long userId) {
         if (!memberService.isMember(channelId, userId)) {
             throw new AppException(ErrorCode.NOT_CHANNEL_MEMBER);
         }
 
-        return messageService.getThreadReplies(parentId);
+        List<MessageEntity> messages = messageService.getThreadReplies(parentId);
+        
+        enrichMessagesWithAttachments(messages);
+        
+        return messages;
     }
 
     /**
-     * Search messages in a channel
+     * Search messages in a channel.
      */
     public List<MessageEntity> searchMessages(Long channelId, Long userId, 
                                                String query, int page, int size) {
@@ -196,7 +223,11 @@ public class MessageUseCase {
             throw new AppException(ErrorCode.NOT_CHANNEL_MEMBER);
         }
 
-        return messageService.searchMessages(channelId, query, page, size);
+        List<MessageEntity> messages = messageService.searchMessages(channelId, query, page, size);
+        
+        enrichMessagesWithAttachments(messages);
+        
+        return messages;
     }
 
     /**
@@ -206,7 +237,6 @@ public class MessageUseCase {
     public MessageEntity editMessage(Long messageId, Long userId, String newContent) {
         MessageEntity message = messageService.getMessageByIdOrThrow(messageId);
         
-        // Validate channel membership
         if (!memberService.isMember(message.getChannelId(), userId)) {
             throw new AppException(ErrorCode.NOT_CHANNEL_MEMBER);
         }
@@ -223,7 +253,6 @@ public class MessageUseCase {
     public MessageEntity deleteMessage(Long messageId, Long userId) {
         MessageEntity message = messageService.getMessageByIdOrThrow(messageId);
         
-        // Check if user is admin or owner
         boolean isAdmin = memberService.canManageChannel(message.getChannelId(), userId);
         
         MessageEntity deleted = messageService.deleteMessage(messageId, userId, isAdmin);
@@ -317,5 +346,29 @@ public class MessageUseCase {
         }
         
         return messageService.countUnreadMessages(channelId, member.getLastReadMsgId());
+    }
+
+    // ==================== PRIVATE HELPER METHODS ====================
+
+    /**
+     * Batch load and attach attachments to messages
+     *
+     * @param messages List of messages to enrich with attachments
+     */
+    private void enrichMessagesWithAttachments(List<MessageEntity> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return;
+        }
+
+        List<Long> messageIds = messages.stream()
+                .map(MessageEntity::getId)
+                .toList();
+
+        Map<Long, List<AttachmentEntity>> attachmentMap = 
+                attachmentService.getAttachmentsByMessageIds(messageIds);
+
+        messages.forEach(msg -> 
+                msg.setAttachments(attachmentMap.getOrDefault(msg.getId(), List.of()))
+        );
     }
 }

@@ -24,7 +24,10 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of attachment service.
@@ -186,6 +189,18 @@ public class AttachmentService implements IAttachmentService {
 
         attachmentPort.deleteByMessageId(messageId);
         log.info("Deleted {} attachments for message {}", attachments.size(), messageId);
+    }
+
+    @Override
+    public Map<Long, List<AttachmentEntity>> getAttachmentsByMessageIds(List<Long> messageIds) {
+        if (messageIds == null || messageIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        
+        List<AttachmentEntity> allAttachments = attachmentPort.findByMessageIds(messageIds);
+        
+        return allAttachments.stream()
+                .collect(Collectors.groupingBy(AttachmentEntity::getMessageId));
     }
 
     @Override

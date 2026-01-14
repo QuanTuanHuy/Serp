@@ -159,6 +159,9 @@ public class DiscussCacheService implements IDiscussCacheService {
         }
         String recentKey = RECENT_MESSAGES_PREFIX + channelId;
         cachePort.deleteFromCache(recentKey);
+        
+        invalidateChannelMessagesPage(channelId);
+        
         log.debug("Invalidated channel messages cache: {}", channelId);
     }
 
@@ -554,5 +557,42 @@ public class DiscussCacheService implements IDiscussCacheService {
         String key = ATTACHMENT_URL_PREFIX + attachmentId;
         cachePort.deleteFromCache(key);
         log.debug("Invalidated attachment URL cache: {}", attachmentId);
+    }
+
+    // ==================== CHANNEL MESSAGES PAGE CACHE ====================
+
+    @Override
+    public void cacheChannelMessagesPage(Long channelId, int page, int size,
+                                          List<MessageEntity> messages, long totalCount) {
+        if (channelId == null || page != 0 || messages == null) {
+            return;
+        }
+        String key = CHANNEL_MESSAGES_PREFIX + channelId + ":p" + page + ":s" + size;
+        CachedMessagesPage cached = new CachedMessagesPage(totalCount, messages);
+        cachePort.setToCache(key, cached, CHANNEL_MESSAGES_TTL);
+        log.debug("Cached {} messages for channel {} page {} size {}", messages.size(), channelId, page, size);
+    }
+
+    @Override
+    public Optional<CachedMessagesPage> getCachedChannelMessagesPage(Long channelId, int page, int size) {
+        if (channelId == null || page != 0) {
+            return Optional.empty();
+        }
+        String key = CHANNEL_MESSAGES_PREFIX + channelId + ":p" + page + ":s" + size;
+        CachedMessagesPage cached = cachePort.getFromCache(key, CachedMessagesPage.class);
+        if (cached != null) {
+            log.debug("Cache hit for channel {} messages page {} size {}", channelId, page, size);
+        }
+        return Optional.ofNullable(cached);
+    }
+
+    @Override
+    public void invalidateChannelMessagesPage(Long channelId) {
+        if (channelId == null) {
+            return;
+        }
+        String pattern = CHANNEL_MESSAGES_PREFIX + channelId + ":*";
+        cachePort.deleteAllByPattern(pattern);
+        log.debug("Invalidated channel messages page cache: {}", channelId);
     }
 }
