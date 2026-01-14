@@ -5,10 +5,11 @@
 
 package serp.project.discuss_service.core.usecase;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
 import serp.project.discuss_service.core.domain.enums.MemberRole;
@@ -122,8 +123,20 @@ public class ChannelUseCase {
     }
 
     /**
+     * Get members of a channel
+     */
+    @Transactional(readOnly = true)
+    public List<ChannelMemberEntity> getChannelMembers(Long channelId, Long userId) {
+        if (!memberService.isMember(channelId, userId)) {
+            throw new AppException(ErrorCode.NOT_CHANNEL_MEMBER);
+        }
+        return memberService.getActiveMembers(channelId);
+    }
+
+    /**
      * Get user's channels
      */
+    @Transactional(readOnly = true)
     public List<ChannelEntity> getUserChannels(Long userId, Long tenantId) {
         List<ChannelMemberEntity> memberships = memberService.getUserChannels(userId);
         List<Long> channelIds = memberships.stream()

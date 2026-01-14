@@ -104,7 +104,6 @@ public class WebSocketHubAdapter implements IWebSocketHubPort {
 
     @Override
     public void notifyNewMessage(Long channelId, MessageEntity message) {
-        // Enrich message with presigned URLs for attachments
         MessageResponse enrichedMessage = attachmentUrlService.enrichMessageWithUrls(message);
         WsMessagePayload payload = WsMessagePayload.builder()
                 .messageId(message.getId())
@@ -125,7 +124,6 @@ public class WebSocketHubAdapter implements IWebSocketHubPort {
 
     @Override
     public void notifyMessageUpdated(Long channelId, MessageEntity message) {
-        // Enrich message with presigned URLs for attachments
         MessageResponse enrichedMessage = attachmentUrlService.enrichMessageWithUrls(message);
         WsMessagePayload payload = WsMessagePayload.builder()
                 .messageId(message.getId())

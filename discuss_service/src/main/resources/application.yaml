@@ -71,16 +71,16 @@ discuss:
   storage:
     provider: S3
     s3:
-      endpoint: ${STORAGE_ENDPOINT:http://localhost:9000}
-      access-key: ${STORAGE_ACCESS_KEY:minioadmin}
-      secret-key: ${STORAGE_SECRET_KEY:minioadmin123}
-      bucket: ${STORAGE_BUCKET:discuss-attachments}
-      region: ${STORAGE_REGION:us-east-1}
-      presigned-url-expiry-minutes: ${PRESIGNED_URL_EXPIRY_MINUTES:60}
-      download-url-expiry-days: ${DOWNLOAD_URL_EXPIRY_DAYS:7}
+      endpoint: ${STORAGE_ENDPOINT}
+      access-key: ${STORAGE_ACCESS_KEY}
+      secret-key: ${STORAGE_SECRET_KEY}
+      bucket: ${STORAGE_BUCKET}
+      region: ${STORAGE_REGION}
+      presigned-url-expiry-minutes: ${PRESIGNED_URL_EXPIRY_MINUTES}
+      download-url-expiry-days: ${DOWNLOAD_URL_EXPIRY_DAYS}
     upload:
-      max-file-size: ${MAX_FILE_SIZE:52428800}  # 50 MB in bytes
-      max-files-per-message: ${MAX_FILES_PER_MESSAGE:10}
+      max-file-size: ${MAX_FILE_SIZE}
+      max-files-per-message: ${MAX_FILES_PER_MESSAGE}
       allowed-content-types:
         - image/
         - video/

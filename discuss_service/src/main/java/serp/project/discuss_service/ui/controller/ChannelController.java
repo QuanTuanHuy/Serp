@@ -126,7 +126,6 @@ public class ChannelController {
         ChannelEntity channel = channelUseCase.getChannelWithMembers(channelId);
         ChannelResponse response = ChannelResponse.fromEntity(channel);
         
-        // Map members
         if (channel.getMembers() != null) {
             List<ChannelMemberResponse> memberResponses = channel.getMembers().stream()
                     .map(ChannelMemberResponse::fromEntity)
@@ -135,6 +134,23 @@ public class ChannelController {
         }
 
         return ResponseEntity.ok(responseUtils.success(response));
+    }
+
+    /**
+     * Get members of a channel
+     */
+    @GetMapping("/{channelId}/members")
+    public ResponseEntity<GeneralResponse<List<ChannelMemberResponse>>> getChannelMembers(
+            @PathVariable Long channelId) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AppException("Unauthorized"));
+        log.debug("User {} getting members of channel {}", userId, channelId);
+
+        List<ChannelMemberEntity> members = channelUseCase.getChannelMembers(channelId, userId);
+        List<ChannelMemberResponse> responses = members.stream()
+                .map(ChannelMemberResponse::fromEntity)
+                .toList();
+        return ResponseEntity.ok(responseUtils.success(responses));
     }
 
     /**

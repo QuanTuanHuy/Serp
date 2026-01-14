@@ -57,16 +57,10 @@ public class MessageController {
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new AppException("Tenant ID not found"));
 
-        // Validate content is required for text-only messages
-        if (!request.hasContent()) {
-            throw new AppException("Message content is required");
-        }
-
         log.info("User {} sending message to channel {}", userId, channelId);
 
         MessageEntity message;
         if (request.getParentId() != null) {
-            // This is a reply
             message = messageUseCase.sendReply(
                     channelId,
                     request.getParentId(),
@@ -76,7 +70,6 @@ public class MessageController {
                     request.getMentions()
             );
         } else {
-            // Regular message
             message = messageUseCase.sendMessage(
                     channelId,
                     userId,

@@ -208,7 +208,6 @@ public class MessageEntity extends BaseEntity {
             this.reactions = new ArrayList<>();
         }
         
-        // Find existing reaction
         Optional<ReactionVO> existing = this.reactions.stream()
                 .filter(r -> r.getEmoji().equals(emoji))
                 .findFirst();

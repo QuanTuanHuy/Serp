@@ -148,6 +148,9 @@ class MessageUseCaseTest {
 
             MessageEntity reply = TestDataFactory.createReplyMessage(100L);
 
+            ChannelEntity channel = TestDataFactory.createGroupChannel();
+            when(channelService.getChannelByIdOrThrow(TestDataFactory.CHANNEL_ID)).thenReturn(channel);
+
             when(memberService.canSendMessages(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1)).thenReturn(true);
             when(messageService.getMessageByIdOrThrow(100L)).thenReturn(parent);
             when(messageService.sendReply(eq(100L), any(MessageEntity.class))).thenReturn(reply);
@@ -175,6 +178,9 @@ class MessageUseCaseTest {
             MessageEntity parent = TestDataFactory.createTextMessage();
             parent.setId(100L);
             parent.setChannelId(999L); // Different channel
+
+            ChannelEntity channel = TestDataFactory.createGroupChannel();
+            when(channelService.getChannelByIdOrThrow(TestDataFactory.CHANNEL_ID)).thenReturn(channel);
 
             when(memberService.canSendMessages(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1)).thenReturn(true);
             when(messageService.getMessageByIdOrThrow(100L)).thenReturn(parent);
