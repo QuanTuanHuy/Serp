@@ -1,4 +1,9 @@
-package serp.project.account.kernel.utils;
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
+package serp.project.discuss_service.kernel.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
