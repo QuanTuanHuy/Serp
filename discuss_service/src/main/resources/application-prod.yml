@@ -90,3 +90,7 @@ discuss:
         - application/vnd.openxmlformats-officedocument
         - text/plain
         - text/csv
+
+services:
+  account:
+    url: ${ACCOUNT_SERVICE_URL}

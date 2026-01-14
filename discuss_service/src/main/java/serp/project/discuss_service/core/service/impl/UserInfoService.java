@@ -10,8 +10,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse;
+import serp.project.discuss_service.core.domain.dto.response.MessageResponse;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
 import serp.project.discuss_service.core.port.client.IAccountServiceClient;
+import serp.project.discuss_service.core.port.client.ICachePort;
 import serp.project.discuss_service.core.service.IUserInfoService;
 
 import java.util.List;
@@ -31,6 +33,7 @@ import java.util.concurrent.Future;
 public class UserInfoService implements IUserInfoService {
 
     private final IAccountServiceClient accountServiceClient;
+    private final ICachePort cachePort;
 
     @Override
     public List<ChannelMemberResponse> enrichMembersWithUserInfo(List<ChannelMemberEntity> members) {
@@ -70,12 +73,41 @@ public class UserInfoService implements IUserInfoService {
         return response;
     }
 
+    @Override
+    public MessageResponse enrichMessageWithUserInfo(MessageResponse message) {
+        if (message == null) {
+            return null;
+        }
+
+        Optional<ChannelMemberResponse.UserInfo> userInfo = fetchUserInfo(message.getSenderId());
+        userInfo.ifPresent(message::setSender);
+
+        return message;
+    }
+
+    @Override
+    public List<MessageResponse> enrichMessagesWithUserInfo(List<MessageResponse> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return List.of();
+        }
+
+        messages.forEach(this::enrichMessageWithUserInfo);
+        return messages;
+    }
+
     /**
      * Fetch user info from account service.
      */
     private Optional<ChannelMemberResponse.UserInfo> fetchUserInfo(Long userId) {
         try {
-            return accountServiceClient.getUserById(userId);
+            String cacheKey = USER_INFO_CACHE_PREFIX + userId;
+            ChannelMemberResponse.UserInfo cachedInfo = cachePort.getFromCache(cacheKey, ChannelMemberResponse.UserInfo.class);
+            if (cachedInfo != null) {
+                return Optional.of(cachedInfo);
+            }
+            Optional<ChannelMemberResponse.UserInfo> userInfo = accountServiceClient.getUserById(userId);
+            userInfo.ifPresent(info -> cachePort.setToCache(cacheKey, info, USER_INFO_CACHE_TTL));
+            return userInfo;
         } catch (Exception e) {
             log.error("Failed to fetch user info for userId {}: {}", userId, e.getMessage());
             return Optional.empty();
