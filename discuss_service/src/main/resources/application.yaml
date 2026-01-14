@@ -91,3 +91,6 @@ discuss:
         - text/plain
         - text/csv
         
+services:
+  account:
+    url: ${ACCOUNT_SERVICE_URL:http://localhost:8081/account-service}
