@@ -73,6 +73,10 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     }
   };
 
+  // Get sender info from message.sender (new structure)
+  const senderName = message.sender?.name || 'Unknown User';
+  const senderAvatar = message.sender?.avatarUrl;
+
   return (
     <div
       className={cn(
@@ -87,7 +91,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       <div className='flex-shrink-0'>
         {showAvatar && !isGrouped ? (
           <Avatar className='h-10 w-10 ring-2 ring-white dark:ring-slate-900 shadow-sm'>
-            <AvatarImage src={message.userAvatar} alt={message.userName} />
+            <AvatarImage src={senderAvatar} alt={senderName} />
             <AvatarFallback
               className={cn(
                 'text-xs font-semibold',
@@ -96,7 +100,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   : 'bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-600 text-slate-700 dark:text-slate-200'
               )}
             >
-              {getUserInitials(message.userName)}
+              {getUserInitials(senderName)}
             </AvatarFallback>
           </Avatar>
         ) : (
@@ -115,7 +119,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         {!isGrouped && !isOwn && (
           <div className='flex items-center gap-2 mb-1 px-1'>
             <span className='text-xs font-bold text-slate-700 dark:text-slate-300'>
-              {message.userName}
+              {senderName}
             </span>
             <span className='text-xs text-slate-400 dark:text-slate-500'>
               {formatMessageTime(message.createdAt)}

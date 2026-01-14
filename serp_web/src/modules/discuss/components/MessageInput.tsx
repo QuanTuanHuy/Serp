@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import type { Message, Attachment } from '../types';
 import { EmojiPicker } from './EmojiPicker';
-import { useUploadAttachmentMutation } from '../api/discussApi';
+import { useSendMessageWithFilesMutation } from '../api/discussApi';
 
 interface MessageInputProps {
   channelId: string;
@@ -45,11 +45,13 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 }) => {
   const [content, setContent] = useState(editingMessage?.content || '');
   const [isFocused, setIsFocused] = useState(false);
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [uploadAttachment, { isLoading: isUploading }] =
-    useUploadAttachmentMutation();
+  const [isDragging, setIsDragging] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const [sendMessageWithFiles, { isLoading: isUploading }] =
+    useSendMessageWithFilesMutation();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
 
   // Update content when editing message changes
   React.useEffect(() => {
@@ -61,12 +63,12 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
   const handleSend = () => {
     const trimmedContent = content.trim();
-    if (!trimmedContent && attachments.length === 0) return;
+    if (!trimmedContent && files.length === 0) return;
 
-    // Send message with attachments
-    onSendMessage(trimmedContent, attachments);
+    // Send message (will call sendMessage or sendMessageWithFiles depending on files)
+    onSendMessage(trimmedContent, files as any); // Pass files instead of attachments
     setContent('');
-    setAttachments([]);
+    setFiles([]);
 
     // Reset height
     if (textareaRef.current) {
@@ -75,20 +77,11 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+    const selectedFiles = e.target.files;
+    if (!selectedFiles || selectedFiles.length === 0) return;
 
-    for (const file of Array.from(files)) {
-      try {
-        const result = await uploadAttachment({ file, channelId }).unwrap();
-        if (result.success) {
-          setAttachments((prev) => [...prev, result.data]);
-        }
-      } catch (error) {
-        console.error('Upload failed:', error);
-        // TODO: Show error notification
-      }
-    }
+    // Just store files - they'll be uploaded when sending the message
+    setFiles((prev) => [...prev, ...Array.from(selectedFiles)]);
 
     // Reset file input
     if (fileInputRef.current) {
@@ -96,8 +89,41 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     }
   };
 
-  const handleRemoveAttachment = (attachmentId: string) => {
-    setAttachments((prev) => prev.filter((att) => att.id !== attachmentId));
+  const handleRemoveFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Drag and drop handlers
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Only set dragging false if leaving the drop zone entirely
+    if (dropZoneRef.current && !dropZoneRef.current.contains(e.relatedTarget as Node)) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    if (droppedFiles.length > 0) {
+      setFiles((prev) => [...prev, ...droppedFiles]);
+    }
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -175,7 +201,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     }, 0);
   };
 
-  const canSend = content.trim().length > 0 || attachments.length > 0;
+  const canSend = content.trim().length > 0 || files.length > 0;
 
   return (
     <div
@@ -192,7 +218,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
               <div className='text-xs font-semibold text-violet-600 dark:text-violet-400'>
                 {editingMessage
                   ? 'Editing message'
-                  : `Replying to ${replyingTo?.userName}`}
+                  : `Replying to ${replyingTo?.sender?.name || 'Unknown'}`}
               </div>
               {replyingTo && (
                 <div className='text-xs text-slate-500 dark:text-slate-400 truncate max-w-md'>
@@ -213,14 +239,32 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       {/* Input area */}
       <div className='px-6 py-4'>
         <div
+          ref={dropZoneRef}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
           className={cn(
             'relative flex flex-col gap-3 px-4 py-3 rounded-2xl transition-all duration-200',
             'bg-slate-50 dark:bg-slate-800',
-            isFocused
+            isDragging
+              ? 'ring-2 ring-violet-500 bg-violet-50 dark:bg-violet-900/20 scale-[1.02]'
+              : isFocused
               ? 'ring-2 ring-violet-500 bg-white dark:bg-slate-800/80'
               : 'ring-1 ring-slate-200 dark:ring-slate-700'
           )}
         >
+          {/* Drag overlay */}
+          {isDragging && (
+            <div className='absolute inset-0 z-10 flex items-center justify-center bg-violet-100/80 dark:bg-violet-900/40 rounded-2xl backdrop-blur-sm'>
+              <div className='text-center'>
+                <Paperclip className='h-12 w-12 text-violet-600 dark:text-violet-400 mx-auto mb-2 animate-bounce' />
+                <p className='text-sm font-semibold text-violet-700 dark:text-violet-300'>
+                  Drop files here
+                </p>
+              </div>
+            </div>
+          )}
           {/* Formatting toolbar */}
           <div className='flex items-center gap-1 pb-2 border-b border-slate-200 dark:border-slate-700'>
             <button
@@ -275,41 +319,63 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             />
           </div>
 
-          {/* Attachment previews */}
-          {attachments.length > 0 && (
-            <div className='flex flex-wrap gap-2 pb-2 border-b border-slate-200 dark:border-slate-700'>
-              {attachments.map((attachment) => (
-                <div
-                  key={attachment.id}
-                  className='group relative flex items-center gap-2 px-3 py-2 bg-violet-50 dark:bg-violet-950/30 rounded-lg border border-violet-200 dark:border-violet-800'
-                >
-                  {attachment.fileType.startsWith('image/') ? (
-                    <img
-                      src={attachment.thumbnailUrl || attachment.downloadUrl}
-                      alt={attachment.fileName}
-                      className='w-10 h-10 object-cover rounded'
-                    />
-                  ) : (
-                    <div className='w-10 h-10 bg-violet-100 dark:bg-violet-900/50 rounded flex items-center justify-center'>
-                      <FileIcon className='w-5 h-5 text-violet-600 dark:text-violet-400' />
+          {/* File previews */}
+          {files.length > 0 && (
+            <div className='space-y-2 pb-2 border-b border-slate-200 dark:border-slate-700'>
+              <div className='flex items-center justify-between'>
+                <p className='text-xs font-semibold text-slate-600 dark:text-slate-400'>
+                  {files.length} {files.length === 1 ? 'file' : 'files'} attached
+                </p>
+                {isUploading && (
+                  <p className='text-xs text-violet-600 dark:text-violet-400'>
+                    Uploading...
+                  </p>
+                )}
+              </div>
+              <div className='flex flex-wrap gap-2'>
+                {files.map((file, index) => {
+                  const isImage = file.type.startsWith('image/');
+                  return (
+                    <div
+                      key={index}
+                      className='group relative flex items-center gap-2 px-3 py-2 bg-violet-50 dark:bg-violet-950/30 rounded-lg border border-violet-200 dark:border-violet-800 hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors'
+                    >
+                      {isImage ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={file.name}
+                          className='w-10 h-10 object-cover rounded'
+                          onLoad={(e) => {
+                            // Clean up object URL after image loads
+                            const img = e.target as HTMLImageElement;
+                            setTimeout(() => URL.revokeObjectURL(img.src), 100);
+                          }}
+                        />
+                      ) : (
+                        <div className='w-10 h-10 bg-violet-100 dark:bg-violet-900/50 rounded flex items-center justify-center'>
+                          <FileIcon className='w-5 h-5 text-violet-600 dark:text-violet-400' />
+                        </div>
+                      )}
+                      <div className='flex-1 min-w-0'>
+                        <p className='text-xs font-medium text-slate-700 dark:text-slate-300 truncate max-w-[120px]' title={file.name}>
+                          {file.name}
+                        </p>
+                        <p className='text-xs text-slate-500 dark:text-slate-400'>
+                          {formatFileSize(file.size)}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveFile(index)}
+                        className='p-1 hover:bg-violet-200 dark:hover:bg-violet-900 rounded transition-colors opacity-0 group-hover:opacity-100'
+                        title='Remove file'
+                      >
+                        <X className='h-3.5 w-3.5 text-slate-500 dark:text-slate-400' />
+                      </button>
                     </div>
-                  )}
-                  <div className='flex-1 min-w-0'>
-                    <p className='text-xs font-medium text-slate-700 dark:text-slate-300 truncate max-w-[120px]'>
-                      {attachment.fileName}
-                    </p>
-                    <p className='text-xs text-slate-500 dark:text-slate-400'>
-                      {formatFileSize(attachment.fileSize)}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleRemoveAttachment(attachment.id)}
-                    className='p-1 hover:bg-violet-200 dark:hover:bg-violet-900 rounded transition-colors'
-                  >
-                    <X className='h-3.5 w-3.5 text-slate-500 dark:text-slate-400' />
-                  </button>
-                </div>
-              ))}
+                  );
+                })}
+              </div>
             </div>
           )}
 

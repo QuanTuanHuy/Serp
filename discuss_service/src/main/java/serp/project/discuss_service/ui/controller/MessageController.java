@@ -89,7 +89,7 @@ public class MessageController {
     /**
      * Send a message with file attachments (multipart upload)
      */
-    @PostMapping(value = "/with-files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/with-files")
     public ResponseEntity<GeneralResponse<MessageResponse>> sendMessageWithFiles(
             @PathVariable Long channelId,
             @RequestPart(value = "content", required = false) String content,

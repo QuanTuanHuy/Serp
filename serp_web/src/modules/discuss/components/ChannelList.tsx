@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { ChannelItem } from './ChannelItem';
 import { ChannelGroupHeader } from './ChannelGroupHeader';
+import { CreateChannelDialog } from './CreateChannelDialog';
 import { useGetChannelsQuery } from '../api/discussApi';
 import type { Channel, ChannelType } from '../types';
 
@@ -37,6 +38,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isHeaderHovered, setIsHeaderHovered] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<ExpandedState>({
     DIRECT: true,
     GROUP: true,
@@ -56,7 +58,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
 
   // Group and filter channels
   const groupedChannels = useMemo(() => {
-    const channels = channelsResponse?.data?.data || [];
+    const channels = channelsResponse?.data?.items || [];
 
     // Filter by search query
     const filtered = channels.filter((channel: Channel) =>
@@ -96,7 +98,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
   };
 
   const totalUnread = useMemo(() => {
-    const channels = channelsResponse?.data?.data || [];
+    const channels = channelsResponse?.data?.items || [];
     return channels.reduce(
       (sum: number, channel: Channel) => sum + channel.unreadCount,
       0
@@ -251,6 +253,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
         <Button
           variant='outline'
           size='sm'
+          onClick={() => setCreateDialogOpen(true)}
           className={cn(
             'w-full',
             'bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10',
@@ -265,6 +268,16 @@ export const ChannelList: React.FC<ChannelListProps> = ({
           New Channel
         </Button>
       </div>
+
+      {/* Create Channel Dialog */}
+      <CreateChannelDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onSuccess={() => {
+          // Channels will auto-refresh via RTK Query cache invalidation
+          console.log('Channel created successfully');
+        }}
+      />
     </div>
   );
 };
