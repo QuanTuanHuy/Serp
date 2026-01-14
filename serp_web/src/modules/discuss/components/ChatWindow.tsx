@@ -30,9 +30,14 @@ import { MessageList, type MessageListRef } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { OnlineStatusIndicator } from './OnlineStatusIndicator';
 import { SearchDialog } from './SearchDialog';
+import { ChannelMembersPanel } from './ChannelMembersPanel';
+import { useDiscussWebSocket } from '../hooks';
 import {
   useGetMessagesQuery,
   useSendMessageMutation,
+  useSendMessageWithFilesMutation,
+  useEditMessageMutation,
+  useDeleteMessageMutation,
   useAddReactionMutation,
   useRemoveReactionMutation,
 } from '../api/discussApi';
@@ -73,7 +78,30 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [page, setPage] = useState(1);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [membersPanelOpen, setMembersPanelOpen] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const messageListRef = useRef<MessageListRef>(null);
+
+  // WebSocket connection for real-time updates
+  const { isConnected, sendTypingIndicator } = useDiscussWebSocket({
+    channelId: channel.id,
+    onMessage: (message) => {
+      console.log('[ChatWindow] Received real-time message:', message);
+      // Messages will be auto-updated via RTK Query cache invalidation
+    },
+    onTypingUpdate: (userId, isTyping) => {
+      console.log('[ChatWindow] Typing update:', userId, isTyping);
+      setTypingUsers((prev) => {
+        const updated = new Set(prev);
+        if (isTyping) {
+          updated.add(userId);
+        } else {
+          updated.delete(userId);
+        }
+        return updated;
+      });
+    },
+  });
 
   // Fetch messages
   const {
@@ -85,36 +113,61 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     pagination: { page, limit: 50 },
   });
 
-  // Send message mutation
+  // Send message mutations
   const [sendMessage] = useSendMessageMutation();
+  const [sendMessageWithFiles] = useSendMessageWithFilesMutation();
+  const [editMessage] = useEditMessageMutation();
+  const [deleteMessage] = useDeleteMessageMutation();
   const [addReaction] = useAddReactionMutation();
   const [removeReaction] = useRemoveReactionMutation();
 
-  const messages = messagesResponse?.data?.data || [];
-  const pagination = messagesResponse?.data?.pagination;
-  const hasMore = pagination ? page < pagination.totalPages : false;
+  const messages = messagesResponse?.data?.items || [];
+  const hasMore = messagesResponse?.data?.hasNext ?? false;
 
   const handleSendMessage = async (
     content: string,
-    attachments?: Attachment[]
+    filesOrAttachments?: any[] // Can be File[] or Attachment[]
   ) => {
     try {
-      await sendMessage({
-        channelId: channel.id,
-        data: {
+      // Check if we're editing a message
+      if (editingMessage) {
+        await editMessage({
+          channelId: channel.id,
+          messageId: editingMessage.id,
           content,
-          type: 'TEXT',
-          attachmentIds: attachments?.map((att) => att.id),
+        }).unwrap();
+
+        setEditingMessage(null);
+        return;
+      }
+
+      // Check if files are File objects (new) or Attachment objects (old)
+      const files = filesOrAttachments?.filter(
+        (item) => item instanceof File
+      ) as File[];
+
+      if (files && files.length > 0) {
+        // Send message with files
+        await sendMessageWithFiles({
+          channelId: channel.id,
+          content,
+          files,
           parentId: replyingTo?.id,
-        },
-        attachments: attachments || [],
-      }).unwrap();
+        }).unwrap();
+      } else {
+        // Send text-only message
+        await sendMessage({
+          channelId: channel.id,
+          content,
+          parentId: replyingTo?.id,
+        }).unwrap();
+      }
 
       // Clear reply state
       setReplyingTo(null);
-      setEditingMessage(null);
     } catch (error) {
-      console.error('Failed to send message:', error);
+      console.error('Failed to send/edit message:', error);
+      alert('Failed to send message. Please try again.');
     }
   };
 
@@ -127,9 +180,20 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     setReplyingTo(null);
   };
 
-  const handleDeleteMessage = (message: Message) => {
-    // TODO: Implement delete message
-    console.log('Delete message:', message);
+  const handleDeleteMessage = async (message: Message) => {
+    if (!confirm('Are you sure you want to delete this message?')) {
+      return;
+    }
+
+    try {
+      await deleteMessage({
+        channelId: channel.id,
+        messageId: message.id,
+      }).unwrap();
+    } catch (error) {
+      console.error('Failed to delete message:', error);
+      alert('Failed to delete message. Please try again.');
+    }
   };
 
   const handleReplyMessage = (message: Message) => {
@@ -142,7 +206,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       await addReaction({
         messageId,
         channelId: channel.id,
-        data: { emoji },
+        emoji,
       }).unwrap();
     } catch (error) {
       console.error('Failed to add reaction:', error);
@@ -261,7 +325,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             <Button
               variant='ghost'
               size='sm'
+              onClick={() => setMembersPanelOpen(true)}
               className='text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+              title='View members'
             >
               <Info className='h-5 w-5' />
             </Button>
@@ -320,6 +386,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       <SearchDialog
         open={searchOpen}
         onOpenChange={setSearchOpen}
+        channelId={channel.id}
         onResultClick={(clickedChannelId, messageId) => {
           if (clickedChannelId === channel.id) {
             // Same channel - scroll to message
@@ -336,6 +403,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             );
           }
         }}
+      />
+
+      {/* Channel Members Panel */}
+      <ChannelMembersPanel
+        open={membersPanelOpen}
+        onOpenChange={setMembersPanelOpen}
+        channelId={channel.id}
+        channelName={channel.name}
+        currentUserId={currentUserId}
       />
     </div>
   );

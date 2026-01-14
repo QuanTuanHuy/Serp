@@ -21,6 +21,7 @@ import serp.project.discuss_service.core.domain.dto.response.TypingStatusRespons
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
 import serp.project.discuss_service.core.exception.AppException;
 import serp.project.discuss_service.core.service.IAttachmentUrlService;
+import serp.project.discuss_service.core.service.IUserInfoService;
 import serp.project.discuss_service.core.usecase.MessageUseCase;
 import serp.project.discuss_service.kernel.utils.AuthUtils;
 import serp.project.discuss_service.kernel.utils.JsonUtils;
@@ -40,6 +41,7 @@ public class MessageController {
 
     private final MessageUseCase messageUseCase;
     private final IAttachmentUrlService attachmentUrlService;
+    private final IUserInfoService userInfoService;
     private final AuthUtils authUtils;
     private final ResponseUtils responseUtils;
     private final JsonUtils jsonUtils;
@@ -87,7 +89,7 @@ public class MessageController {
     /**
      * Send a message with file attachments (multipart upload)
      */
-    @PostMapping(value = "/with-files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/with-files")
     public ResponseEntity<GeneralResponse<MessageResponse>> sendMessageWithFiles(
             @PathVariable Long channelId,
             @RequestPart(value = "content", required = false) String content,
@@ -173,6 +175,7 @@ public class MessageController {
                 .map(msg -> {
                     MessageResponse r = attachmentUrlService.enrichMessageWithUrls(msg);
                     r.setIsSentByMe(msg.getSenderId().equals(userId));
+                    r = userInfoService.enrichMessageWithUserInfo(r);
                     return r;
                 })
                 .toList();
@@ -203,6 +206,7 @@ public class MessageController {
                 .map(msg -> {
                     MessageResponse r = attachmentUrlService.enrichMessageWithUrls(msg);
                     r.setIsSentByMe(msg.getSenderId().equals(userId));
+                    r = userInfoService.enrichMessageWithUserInfo(r);
                     return r;
                 })
                 .toList();
@@ -229,6 +233,7 @@ public class MessageController {
                 .map(msg -> {
                     MessageResponse r = attachmentUrlService.enrichMessageWithUrls(msg);
                     r.setIsSentByMe(msg.getSenderId().equals(userId));
+                    r = userInfoService.enrichMessageWithUserInfo(r);
                     return r;
                 })
                 .toList();
@@ -258,6 +263,7 @@ public class MessageController {
                 .map(msg -> {
                     MessageResponse r = attachmentUrlService.enrichMessageWithUrls(msg);
                     r.setIsSentByMe(msg.getSenderId().equals(userId));
+                    r = userInfoService.enrichMessageWithUserInfo(r);
                     return r;
                 })
                 .toList();

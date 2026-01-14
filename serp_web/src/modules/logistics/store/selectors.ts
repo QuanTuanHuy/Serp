@@ -19,9 +19,11 @@ import type {
 // Base selectors
 export const selectLogistics = (state: RootState) => state.logistics;
 export const selectLogisticsUI = (state: RootState) => state.logistics.ui;
-export const selectCategories = (state: RootState) => state.logistics.categories;
+export const selectCategories = (state: RootState) =>
+  state.logistics.categories;
 export const selectCustomers = (state: RootState) => state.logistics.customers;
-export const selectFacilities = (state: RootState) => state.logistics.facilities;
+export const selectFacilities = (state: RootState) =>
+  state.logistics.facilities;
 export const selectInventoryItems = (state: RootState) =>
   state.logistics.inventoryItems;
 export const selectOrders = (state: RootState) => state.logistics.orders;
@@ -255,10 +257,7 @@ export const selectInventoryItemsByFacility = createSelector(
 );
 
 export const selectInventoryItemsByStatus = createSelector(
-  [
-    selectInventoryItemItems,
-    (state: RootState, statusId: string) => statusId,
-  ],
+  [selectInventoryItemItems, (state: RootState, statusId: string) => statusId],
   (inventoryItems: InventoryItem[], statusId: string) =>
     inventoryItems.filter((item: InventoryItem) => item.statusId === statusId)
 );
@@ -301,7 +300,8 @@ export const selectOrderTotal = createSelector(
 
 export const selectOrderById = createSelector(
   [selectOrderItems, (state: RootState, id: string) => id],
-  (orders: Order[], id: string) => orders.find((order: Order) => order.id === id)
+  (orders: Order[], id: string) =>
+    orders.find((order: Order) => order.id === id)
 );
 
 export const selectOrdersByStatus = createSelector(
@@ -508,7 +508,10 @@ export const selectTotalInventoryQuantity = createSelector(
 export const selectTotalShipmentWeight = createSelector(
   selectShipmentItems,
   (shipments: Shipment[]) =>
-    shipments.reduce((total, shipment) => total + (shipment.totalWeight || 0), 0)
+    shipments.reduce(
+      (total, shipment) => total + (shipment.totalWeight || 0),
+      0
+    )
 );
 
 export const selectTotalShipmentQuantity = createSelector(
@@ -547,7 +550,9 @@ export const selectExpiringSoonInventoryItems = createSelector(
   selectInventoryItemItems,
   (inventoryItems: InventoryItem[]) => {
     const now = new Date();
-    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const thirtyDaysFromNow = new Date(
+      now.getTime() + 30 * 24 * 60 * 60 * 1000
+    );
     return inventoryItems.filter((item) => {
       if (!item.expirationDate) return false;
       const expirationDate = new Date(item.expirationDate);

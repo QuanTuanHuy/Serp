@@ -1,6 +1,7 @@
 /*
 Author: QuanTuanHuy
 Description: Part of Serp Project - File attachment uploader with drag & drop
+NOTE: This component is currently not used. Files are now uploaded inline with messages via sendMessageWithFiles API.
 */
 
 'use client';
@@ -8,7 +9,7 @@ Description: Part of Serp Project - File attachment uploader with drag & drop
 import React, { useCallback, useState } from 'react';
 import { Upload, X, File, Image, FileText, Archive } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
-import { useUploadAttachmentMutation } from '../api/discussApi';
+// import { useUploadAttachmentMutation } from '../api/discussApi'; // Removed - use sendMessageWithFiles instead
 import type { Attachment } from '../types';
 
 interface AttachmentUploaderProps {
@@ -61,7 +62,7 @@ export function AttachmentUploader({
   ],
   className = '',
 }: AttachmentUploaderProps) {
-  const [uploadAttachment] = useUploadAttachmentMutation();
+  // const [uploadAttachment] = useUploadAttachmentMutation(); // Not available anymore
   const [isDragging, setIsDragging] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState<
     Map<string, UploadingFile>
@@ -119,6 +120,7 @@ export function AttachmentUploader({
     });
 
     try {
+      // TODO: Implement with sendMessageWithFiles mutation instead
       // Simulate upload progress (in real app, use XHR or fetch with progress)
       const progressInterval = setInterval(() => {
         setUploadingFiles((prev) => {
@@ -134,32 +136,46 @@ export function AttachmentUploader({
         });
       }, 200);
 
-      const result = await uploadAttachment({ file, channelId }).unwrap();
+      // const result = await uploadAttachment({ file, channelId }).unwrap();
+      // Placeholder: simulate success after 2 seconds
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       clearInterval(progressInterval);
 
-      if (result.success) {
+      // Mock success
+      const mockAttachment: Attachment = {
+        id: String(Date.now()),
+        messageId: '',
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        s3Key: '',
+        s3Bucket: '',
+        downloadUrl: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      setUploadingFiles((prev) => {
+        const updated = new Map(prev);
+        updated.set(fileId, {
+          file,
+          progress: 100,
+          status: 'success',
+          attachment: mockAttachment,
+        });
+        return updated;
+      });
+      onUploadComplete?.(mockAttachment);
+
+      // Remove from list after 2 seconds
+      setTimeout(() => {
         setUploadingFiles((prev) => {
           const updated = new Map(prev);
-          updated.set(fileId, {
-            file,
-            progress: 100,
-            status: 'success',
-            attachment: result.data,
-          });
+          updated.delete(fileId);
           return updated;
         });
-        onUploadComplete?.(result.data);
-
-        // Remove from list after 2 seconds
-        setTimeout(() => {
-          setUploadingFiles((prev) => {
-            const updated = new Map(prev);
-            updated.delete(fileId);
-            return updated;
-          });
-        }, 2000);
-      }
+      }, 2000);
     } catch (err: any) {
       const errorMsg = err.message || 'Upload failed';
       setUploadingFiles((prev) => {

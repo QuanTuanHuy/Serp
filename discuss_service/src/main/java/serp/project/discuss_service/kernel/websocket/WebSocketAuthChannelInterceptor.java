@@ -81,8 +81,7 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
     }
 
     private String extractUserId(Jwt jwt) {
-        // Try common claim names for user ID
-        Object userId = jwt.getClaim("user_id");
+        Object userId = jwt.getClaim("uid");
         if (userId == null) {
             userId = jwt.getClaim("sub");
         }
@@ -90,10 +89,7 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
     }
 
     private String extractTenantId(Jwt jwt) {
-        Object tenantId = jwt.getClaim("tenant_id");
-        if (tenantId == null) {
-            tenantId = jwt.getClaim("tenantId");
-        }
+        Object tenantId = jwt.getClaim("tid");
         return tenantId != null ? tenantId.toString() : null;
     }
 

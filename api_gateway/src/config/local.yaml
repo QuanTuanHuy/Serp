@@ -65,3 +65,7 @@ external:
       host: localhost
       port: "8090"
       timeout: 15s
+    discussService:
+      host: localhost
+      port: "8092"
+      timeout: 15s

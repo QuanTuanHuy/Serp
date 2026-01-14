@@ -14,9 +14,11 @@ import serp.project.discuss_service.core.domain.dto.GeneralResponse;
 import serp.project.discuss_service.core.domain.dto.request.*;
 import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse;
 import serp.project.discuss_service.core.domain.dto.response.ChannelResponse;
+import serp.project.discuss_service.core.domain.dto.response.PaginatedResponse;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
 import serp.project.discuss_service.core.exception.AppException;
+import serp.project.discuss_service.core.service.IUserInfoService;
 import serp.project.discuss_service.core.usecase.ChannelUseCase;
 import serp.project.discuss_service.kernel.utils.AuthUtils;
 import serp.project.discuss_service.kernel.utils.ResponseUtils;
@@ -35,6 +37,7 @@ public class ChannelController {
     private final ChannelUseCase channelUseCase;
     private final AuthUtils authUtils;
     private final ResponseUtils responseUtils;
+    private final IUserInfoService userInfoService;
 
     /**
      * Create a new GROUP channel
@@ -127,9 +130,7 @@ public class ChannelController {
         ChannelResponse response = ChannelResponse.fromEntity(channel);
         
         if (channel.getMembers() != null) {
-            List<ChannelMemberResponse> memberResponses = channel.getMembers().stream()
-                    .map(ChannelMemberResponse::fromEntity)
-                    .toList();
+            List<ChannelMemberResponse> memberResponses = userInfoService.enrichMembersWithUserInfo(channel.getMembers());
             response.setMembers(memberResponses);
         }
 
@@ -147,9 +148,9 @@ public class ChannelController {
         log.debug("User {} getting members of channel {}", userId, channelId);
 
         List<ChannelMemberEntity> members = channelUseCase.getChannelMembers(channelId, userId);
-        List<ChannelMemberResponse> responses = members.stream()
-                .map(ChannelMemberResponse::fromEntity)
-                .toList();
+                
+        List<ChannelMemberResponse> responses = userInfoService.enrichMembersWithUserInfo(members);
+        
         return ResponseEntity.ok(responseUtils.success(responses));
     }
 
@@ -157,7 +158,7 @@ public class ChannelController {
      * Get current user's channels
      */
     @GetMapping
-    public ResponseEntity<GeneralResponse<List<ChannelResponse>>> getMyChannels() {
+    public ResponseEntity<GeneralResponse<PaginatedResponse<ChannelResponse>>> getMyChannels() {
         Long userId = authUtils.getCurrentUserId()
                 .orElseThrow(() -> new AppException("Unauthorized"));
         Long tenantId = authUtils.getCurrentTenantId()
@@ -170,7 +171,14 @@ public class ChannelController {
                 .map(ChannelResponse::fromEntity)
                 .toList();
 
-        return ResponseEntity.ok(responseUtils.success(responses));
+        // TODO: Implement proper pagination
+        PaginatedResponse<ChannelResponse> paginatedResponse = PaginatedResponse.of(
+                responses,
+                1,
+                responses.size(),
+                responses.size()
+        );
+        return ResponseEntity.ok(responseUtils.success(paginatedResponse));
     }
 
     /**

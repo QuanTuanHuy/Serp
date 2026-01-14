@@ -12,6 +12,7 @@ import (
 	account "github.com/serp/api-gateway/src/ui/controller/account"
 	"github.com/serp/api-gateway/src/ui/controller/common"
 	crm "github.com/serp/api-gateway/src/ui/controller/crm"
+	discuss "github.com/serp/api-gateway/src/ui/controller/discuss"
 	notification "github.com/serp/api-gateway/src/ui/controller/notification"
 	ptm "github.com/serp/api-gateway/src/ui/controller/ptm"
 	"github.com/serp/api-gateway/src/ui/middleware"
@@ -25,6 +26,7 @@ type RegisterRoutersIn struct {
 	Actuator *actuator.Endpoint
 
 	NotificationProxyController *notification.NotificationProxyController
+	DiscussProxyController      *discuss.DiscussProxyController
 	GenericProxyController      *common.GenericProxyController
 
 	AuthController             *account.AuthController
@@ -119,6 +121,13 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 	RegisterNotificationRoutes(
 		group,
 		p.NotificationProxyController,
+		p.GenericProxyController,
+		p.JWTMiddleware,
+	)
+
+	RegisterDiscussRoutes(
+		group,
+		p.DiscussProxyController,
 		p.GenericProxyController,
 		p.JWTMiddleware,
 	)

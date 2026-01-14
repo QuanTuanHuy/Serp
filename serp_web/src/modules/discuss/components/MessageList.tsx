@@ -92,8 +92,16 @@ const groupMessagesByDate = (messages: Message[]): DateGroup[] => {
   });
 
   return Object.entries(groups)
-    .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
-    .map(([date, messages]) => ({ date, messages }));
+    .sort(([dateA], [dateB]) => dateA.localeCompare(dateB)) // Sort dates ascending (oldest first)
+    .map(([date, messages]) => ({
+      date,
+      messages: messages.sort((a, b) => {
+        // Sort messages within each date group ascending (oldest first, newest at bottom)
+        return (
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+      }),
+    }));
 };
 
 const shouldGroupMessage = (
@@ -104,10 +112,10 @@ const shouldGroupMessage = (
   if (!previous) return false;
 
   // Don't group if different senders
-  if (current.userId !== previous.userId) return false;
+  if (current.senderId !== previous.senderId) return false;
 
   // Don't group own messages
-  if (current.userId === currentUserId) return false;
+  if (current.senderId === currentUserId) return false;
 
   // Don't group if time gap > 2 minutes
   const timeDiff =
@@ -305,7 +313,9 @@ export const MessageList = forwardRef<MessageListRef, MessageListProps>(
               {group.messages.map((message, index) => {
                 const previousMessage =
                   index > 0 ? group.messages[index - 1] : null;
-                const isOwn = message.userId === currentUserId;
+                const isOwn =
+                  message.isSentByMe === true ||
+                  message.senderId === currentUserId;
                 const isGrouped = shouldGroupMessage(
                   message,
                   previousMessage,

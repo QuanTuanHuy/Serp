@@ -1,17 +1,21 @@
 // Sales Types & Interfaces (authors: QuanTuanHuy, Description: Part of Serp Project)
 
 // Constants
-export type ResponseStatus = "SUCCESS" | "FAILED";
-export type EntityType = "PRODUCT" | "SUPPLIER" | "CUSTOMER" | "FACILITY";
-export type AddressType = "FACILIY" | "SHIPPING" | "BUSSINESS";
-export type CustomerStatus = "ACTIVE" | "INACTIVE";
-export type FacilityStatus = "ACTIVE" | "INACTIVE";
-export type InventoryItemStatus = "VALID" | "EXPIRED" | "DAMAGED";
-export type OrderItemStatus = "CREATED" | "DELIVERED";
-export type OrderStatus = "CREATED" | "APPROVED" | "CANCELLED" | "FULLY_DELIVERED";
-export type OrderType = "PURCHASE" | "SALES";
-export type ProductStatus = "ACTIVE" | "INACTIVE";
-export type SaleChannel = "ONLINE" | "PARTNER" | "RETAIL";
+export type ResponseStatus = 'SUCCESS' | 'FAILED';
+export type EntityType = 'PRODUCT' | 'SUPPLIER' | 'CUSTOMER' | 'FACILITY';
+export type AddressType = 'FACILIY' | 'SHIPPING' | 'BUSSINESS';
+export type CustomerStatus = 'ACTIVE' | 'INACTIVE';
+export type FacilityStatus = 'ACTIVE' | 'INACTIVE';
+export type InventoryItemStatus = 'VALID' | 'EXPIRED' | 'DAMAGED';
+export type OrderItemStatus = 'CREATED' | 'DELIVERED';
+export type OrderStatus =
+  | 'CREATED'
+  | 'APPROVED'
+  | 'CANCELLED'
+  | 'FULLY_DELIVERED';
+export type OrderType = 'PURCHASE' | 'SALES';
+export type ProductStatus = 'ACTIVE' | 'INACTIVE';
+export type SaleChannel = 'ONLINE' | 'PARTNER' | 'RETAIL';
 
 export interface PaginationParams {
   page?: number;
