@@ -424,10 +424,7 @@ const logisticsSlice = createSlice({
       };
     },
 
-    setInventoryItemSelectedItems: (
-      state,
-      action: PayloadAction<string[]>
-    ) => {
+    setInventoryItemSelectedItems: (state, action: PayloadAction<string[]>) => {
       state.inventoryItems.selectedItems = action.payload;
     },
 

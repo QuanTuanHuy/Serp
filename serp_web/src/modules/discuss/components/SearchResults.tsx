@@ -178,18 +178,18 @@ export function SearchResults({
                       <div className='flex items-start gap-3'>
                         <Avatar className='h-8 w-8 flex-shrink-0'>
                           <AvatarImage
-                            src={message.userAvatar}
-                            alt={message.userName}
+                            src={message.sender?.avatarUrl}
+                            alt={message.sender?.name || 'Unknown'}
                           />
                           <AvatarFallback className='bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white text-xs'>
-                            {message.userName.charAt(0)}
+                            {message.sender?.name?.charAt(0) || '?'}
                           </AvatarFallback>
                         </Avatar>
 
                         <div className='flex-1 min-w-0'>
                           <div className='flex items-center gap-2 mb-1'>
                             <span className='font-semibold text-sm'>
-                              {message.userName}
+                              {message.sender?.name || 'Unknown User'}
                             </span>
                             <span className='text-xs text-slate-400'>
                               {formatDate(message.createdAt)}

@@ -9,6 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse.UserInfo;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
 import serp.project.discuss_service.core.domain.enums.MessageType;
 
@@ -50,7 +51,7 @@ public class MessageResponse {
     // Additional computed fields
     private Boolean isSentByMe;
     private Boolean isReadByMe;
-    private SenderInfo sender;
+    private UserInfo sender;
     private List<AttachmentResponse> attachments;
 
     public static MessageResponse fromEntity(MessageEntity entity) {

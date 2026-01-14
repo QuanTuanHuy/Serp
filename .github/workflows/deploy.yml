@@ -32,8 +32,10 @@ jobs:
       logistics: ${{ steps.changes.outputs.logistics }}
       sales: ${{ steps.changes.outputs.sales }}
       notification: ${{ steps.changes.outputs.notification }}
+      discuss-service: ${{ steps.changes.outputs.discuss-service }}
     steps:
       - name: Download changes artifact
+
         uses: actions/download-artifact@v4
         with:
           name: build-changes
@@ -54,8 +56,10 @@ jobs:
           echo "logistics=$(jq -r .logistics changes.json)" >> $GITHUB_OUTPUT
           echo "sales=$(jq -r .sales changes.json)" >> $GITHUB_OUTPUT
           echo "notification=$(jq -r .notification changes.json)" >> $GITHUB_OUTPUT
+          echo "discuss-service=$(jq -r '."discuss-service"' changes.json)" >> $GITHUB_OUTPUT
 
   deploy-account:
+
     needs: check-changes
     if: ${{ needs.check-changes.outputs.account == 'true' }}
     runs-on: ubuntu-latest
@@ -264,7 +268,27 @@ jobs:
             docker compose up -d --remove-orphans
             docker image prune -f
 
+  deploy-discuss-service:
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.discuss-service == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Discuss Service
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}/discuss_service
+            export IMAGE_TAG=${{ github.sha }}
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker image prune -f
+
   notify-deployment:
+
     needs: check-changes
     if: always()
     runs-on: ubuntu-latest
@@ -280,3 +304,5 @@ jobs:
           echo "- PTM Optimization: ${{ needs.check-changes.outputs.ptm-optimization }}" >> $GITHUB_STEP_SUMMARY
           echo "- CRM: ${{ needs.check-changes.outputs.crm }}" >> $GITHUB_STEP_SUMMARY
           echo "- Serp Web: ${{ needs.check-changes.outputs.serp-web }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Discuss Service: ${{ needs.check-changes.outputs.discuss-service }}" >> $GITHUB_STEP_SUMMARY
+
