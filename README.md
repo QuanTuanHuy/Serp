@@ -29,6 +29,7 @@ The system is composed of multiple microservices communicating via an API Gatewa
 | **serp_llm** | 8089 | Python | AI Assistant (RAG, Chat) |
 | **notification_service** | 8090 | Go | Push notifications |
 | **mailservice** | 8091 | Java | Email templates |
+| **discuss_service** | 8092 | Java | Discussions, attachments (S3), WebSockets |
 | **serp_web** | 3000 | TypeScript | Web Frontend (Next.js 15 + Redux + Shadcn) |
 
 > **Note:** `logistics` and `serp_llm` share port 8089. Configure `SERVER_PORT` or `PORT` environment variable to avoid conflicts when running both.
