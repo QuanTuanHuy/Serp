@@ -49,11 +49,11 @@ func TestGenericProxyController_CRM_RewritePathAndForwardHeaders(t *testing.T) {
 	})
 
 	r := gin.New()
-	r.Any("/crm/api/v1/proxy/*proxyPath", controller.ProxyToCRM)
+	r.Any("/crm/api/v1/*proxyPath", controller.ProxyToCRM)
 	gateway := httptest.NewServer(r)
 	defer gateway.Close()
 
-	req, err := http.NewRequest(http.MethodGet, gateway.URL+"/crm/api/v1/proxy/leads?x=1", nil)
+	req, err := http.NewRequest(http.MethodGet, gateway.URL+"/crm/api/v1/leads?x=1", nil)
 	if err != nil {
 		t.Fatalf("new request: %v", err)
 	}
@@ -103,12 +103,12 @@ func TestGenericProxyController_CRM_CircuitBreakerOpensAfter5xxWithRetries(t *te
 	})
 
 	r := gin.New()
-	r.Any("/crm/api/v1/proxy/*proxyPath", controller.ProxyToCRM)
+	r.Any("/crm/api/v1/*proxyPath", controller.ProxyToCRM)
 	gateway := httptest.NewServer(r)
 	defer gateway.Close()
 
 	// First request: upstream returns 500; due to retries, CB likely accumulates failures quickly.
-	resp1, err := http.Get(gateway.URL + "/crm/api/v1/proxy/leads")
+	resp1, err := http.Get(gateway.URL + "/crm/api/v1/leads")
 	if err != nil {
 		t.Fatalf("first request: %v", err)
 	}
@@ -125,7 +125,7 @@ func TestGenericProxyController_CRM_CircuitBreakerOpensAfter5xxWithRetries(t *te
 	// Circuit opens after 5 consecutive failures. With maxRetries=3, the first request
 	// typically causes 4 upstream hits (1 + 3 retries). The second request may still
 	// hit upstream once (the 5th failure) before the circuit opens.
-	resp2, err := http.Get(gateway.URL + "/crm/api/v1/proxy/leads")
+	resp2, err := http.Get(gateway.URL + "/crm/api/v1/leads")
 	if err != nil {
 		t.Fatalf("second request: %v", err)
 	}
@@ -138,7 +138,7 @@ func TestGenericProxyController_CRM_CircuitBreakerOpensAfter5xxWithRetries(t *te
 	}
 
 	// Third request must be blocked by open circuit breaker and return 503 from ErrorHandler.
-	resp3, err := http.Get(gateway.URL + "/crm/api/v1/proxy/leads")
+	resp3, err := http.Get(gateway.URL + "/crm/api/v1/leads")
 	if err != nil {
 		t.Fatalf("third request: %v", err)
 	}
@@ -178,11 +178,11 @@ func TestGenericProxyController_CRM_POSTDoesNotRetry(t *testing.T) {
 	})
 
 	r := gin.New()
-	r.Any("/crm/api/v1/proxy/*proxyPath", controller.ProxyToCRM)
+	r.Any("/crm/api/v1/*proxyPath", controller.ProxyToCRM)
 	gateway := httptest.NewServer(r)
 	defer gateway.Close()
 
-	req, err := http.NewRequest(http.MethodPost, gateway.URL+"/crm/api/v1/proxy/leads", strings.NewReader(`{"a":1}`))
+	req, err := http.NewRequest(http.MethodPost, gateway.URL+"/crm/api/v1/leads", strings.NewReader(`{"a":1}`))
 	if err != nil {
 		t.Fatalf("new request: %v", err)
 	}
@@ -220,7 +220,7 @@ func BenchmarkGenericProxyController_CRM_GET_200(b *testing.B) {
 	})
 
 	r := gin.New()
-	r.Any("/crm/api/v1/proxy/*proxyPath", controller.ProxyToCRM)
+	r.Any("/crm/api/v1/*proxyPath", controller.ProxyToCRM)
 	gateway := httptest.NewServer(r)
 	defer gateway.Close()
 
@@ -230,7 +230,7 @@ func BenchmarkGenericProxyController_CRM_GET_200(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		resp, err := client.Get(gateway.URL + "/crm/api/v1/proxy/leads")
+		resp, err := client.Get(gateway.URL + "/crm/api/v1/leads")
 		if err != nil {
 			b.Fatalf("request failed: %v", err)
 		}
