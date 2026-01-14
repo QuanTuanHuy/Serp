@@ -30,7 +30,7 @@ export const useDiscussWebSocket = (
 
   const token = useAppSelector((state) => state.account.auth?.token);
   const wsUrl =
-    process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/ws/discuss';
+    (process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/ws') + '/discuss';
 
   // Connect to WebSocket server
   useEffect(() => {
