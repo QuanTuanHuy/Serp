@@ -139,5 +139,9 @@ src/main/java/serp/project/discuss_service/
 └── ui/                # REST Controllers, WebSocket Controllers
 ```
 
+## License
+
+This project is part of the SERP ERP system and is licensed under the MIT License. See the [LICENSE](../LICENSE) file in the root directory for details.
+
 ## 🤝 Contribution
 
