@@ -248,46 +248,6 @@ Account Service publishes events to Kafka for cross-service communication:
 
 Events are sent to topic: `account-events`
 
-## Configuration
-
-### Environment Variables
-
-Create a `.env` file in the service root with the following variables:
-
-```bash
-# Database Configuration
-DB_USERNAME=postgres
-DB_PASSWORD=your_password
-DB_URL=jdbc:postgresql://localhost:5432/serp_account
-
-# Redis Configuration
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-# Kafka Configuration
-KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-
-# Keycloak Configuration
-KEYCLOAK_URL=http://localhost:8180
-CLIENT_SECRET=your_client_secret
-KEYCLOAK_ADMIN_USER=admin
-KEYCLOAK_ADMIN_PASSWORD=admin
-
-# Admin Account
-ADMIN_EMAIL=admin
-ADMIN_PASSWORD=admin
-```
-
-### Application Configuration
-
-Main configuration is in `src/main/resources/application.yml`. Key settings include:
-
-- **Database:** PostgreSQL with HikariCP connection pooling
-- **JPA:** Hibernate with PostgreSQL dialect
-- **Security:** OAuth2 Resource Server with JWT validation
-- **Cache:** Redis for session and data caching
-- **Flyway:** Database migration management
-
 ## API Documentation
 
 ### Authentication Flow
@@ -386,7 +346,7 @@ protectedUrls:
 
 ## License
 
-Part of SERP Project by QuanTuanHuy
+This project is part of the SERP ERP system and is licensed under the MIT License. See the [LICENSE](../LICENSE) file in the root directory for details.
 
 ---
 

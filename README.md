@@ -109,8 +109,5 @@ src/
 - **Security**: All requests are authenticated via JWT tokens issued by Keycloak.
 - **Database**: Separation of Domain Entities and Persistence Models.
 
-## 📚 Documentation
-
-Detailed documentation is available in the `docs/` directory:
-
-## 🤝 Contributing
+## License
+This project is part of the SERP ERP system and is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.

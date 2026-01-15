@@ -394,74 +394,6 @@ Maximize: Σ (priority[t] * utility[t][w] * x[t][w])
 
 ## Configuration
 
-### Environment Variables
-
-Create a `.env` file:
-
-```bash
-# Database
-DB_USERNAME=serp
-DB_PASSWORD=serp_password
-DB_URL=jdbc:postgresql://localhost:5432/serp_ptm_optimization
-
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-# Kafka
-KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-
-# Keycloak
-KEYCLOAK_URL=http://localhost:8180
-CLIENT_SECRET=your_client_secret
-```
-
-### Application Configuration
-
-**application.yml:**
-```yaml
-spring:
-  application:
-    name: ptm-optimization
-  threads:
-    virtual:
-      enabled: true
-  datasource:
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-    url: ${DB_URL}
-    driver-class-name: org.postgresql.Driver
-  jpa:
-    hibernate:
-      ddl-auto: update
-  data:
-    redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT}
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
-    consumer:
-      group-id: ptm-optimization
-      auto-offset-reset: earliest
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          jwk-set-uri: ${KEYCLOAK_URL}/realms/serp/protocol/openid-connect/certs
-
-app:
-  keycloak:
-    url: ${KEYCLOAK_URL}
-    realm: serp
-    client-id: serp-ptm
-    client-secret: ${CLIENT_SECRET}
-
-server:
-  port: 8085
-  servlet:
-    context-path: /ptm-optimization
-```
-
 ### OR-Tools Configuration
 
 **JVM Arguments Required:**
@@ -558,8 +490,7 @@ These are configured in `pom.xml` for Maven Surefire plugin.
    ```
 
 ## License
-
-Part of SERP Project by QuanTuanHuy
+This project is part of the SERP ERP system and is licensed under the MIT License. See the [LICENSE](../LICENSE) file in the root directory for details.
 
 ---
 

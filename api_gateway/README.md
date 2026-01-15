@@ -864,7 +864,7 @@ func TestServiceMethod(t *testing.T) {
 
 ## License
 
-Part of SERP Project by QuanTuanHuy
+This project is part of the SERP ERP system and is licensed under the MIT License. See the [LICENSE](../LICENSE) file in the root directory for details.
 
 ---
 

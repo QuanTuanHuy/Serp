@@ -374,85 +374,6 @@ GET    /ptm-schedule/api/v1/schedule-tasks                    # List schedule ta
 - `HEURISTIC` - Heuristic approach
 - `LOCAL_SEARCH` - Local search optimization
 
-## Configuration
-
-### Environment Variables
-
-Create a `.env` file:
-
-```bash
-# Database
-DB_HOST=localhost
-DB_NAME=serp_ptm_schedule
-DB_USERNAME=serp
-DB_PASSWORD=serp_password
-
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-# Kafka
-KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-
-# Keycloak
-KEYCLOAK_URL=http://localhost:8180
-KEYCLOAK_JWK_SET_URI=http://localhost:8180/realms/serp/protocol/openid-connect/certs
-KEYCLOAK_EXPECTED_ISSUER=http://localhost:8180/realms/serp
-CLIENT_SECRET=your_client_secret
-
-# Optimization Service
-OPTIMIZATION_SERVICE_URL=http://localhost:8085
-
-# Account Service
-ACCOUNT_SERVICE_HOST=localhost
-ACCOUNT_SERVICE_PORT=8081
-```
-
-### YAML Configuration
-
-**local.yaml:**
-```yaml
-app:
-  logging:
-    level: INFO
-  datasource:
-    driver: postgres
-    host: ${DB_HOST}
-    port: 5432
-    database: ${DB_NAME}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-    logLevel: INFO
-  redis:
-    host: ${REDIS_HOST}
-    port: ${REDIS_PORT}
-  keycloak:
-    url: ${KEYCLOAK_URL}
-    realm: serp
-    client-id: serp-ptm
-    client-secret: ${CLIENT_SECRET}
-    jwk-set-uri: ${KEYCLOAK_JWK_SET_URI}
-    expected-issuer: ${KEYCLOAK_EXPECTED_ISSUER}
-  optimization:
-    baseUrl: ${OPTIMIZATION_SERVICE_URL}
-    timeoutMs: 60000
-    retryCount: 3
-    retryDelayMs: 1000
-  kafka:
-    producer:
-      bootstrapServers:
-        - ${KAFKA_BOOTSTRAP_SERVERS}
-      requireAcks: 1
-      maxMessageBytes: 1048576
-      retryMax: 3
-    consumer:
-      bootstrapServers:
-        - ${KAFKA_BOOTSTRAP_SERVERS}
-      groupId: ptm-schedule-group
-      autoOffsetReset: earliest
-      enableAutoCommit: false
-      sessionTimeoutMs: 30000
-```
 
 ## Event-Driven Communication
 
@@ -648,7 +569,7 @@ Maintains event processing tables.
 
 ## License
 
-Part of SERP Project by QuanTuanHuy
+This project is part of the SERP ERP system and is licensed under the MIT License. See the [LICENSE](../LICENSE) file in the root directory for details.
 
 ---
 

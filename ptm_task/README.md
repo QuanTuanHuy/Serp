@@ -333,81 +333,6 @@ DELETE /ptm-task/api/v1/notes/:id             # Delete note
 - `ASSIGNED` - Task assigned
 - `DEPENDENCY_ADDED` - Dependency added
 
-## Configuration
-
-### Environment Variables
-
-Create a `.env` file:
-
-```bash
-# Database
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=serp_ptm_task
-DB_USERNAME=serp
-DB_PASSWORD=serp_password
-
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-# Kafka
-KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-
-# Keycloak
-KEYCLOAK_URL=http://localhost:8180
-KEYCLOAK_JWK_SET_URI=http://localhost:8180/realms/serp/protocol/openid-connect/certs
-KEYCLOAK_EXPECTED_ISSUER=http://localhost:8180/realms/serp
-KEYCLOAK_EXPECTED_AUDIENCE=serp-ptm
-CLIENT_SECRET=your_client_secret
-```
-
-### YAML Configuration
-
-**default.yaml:**
-```yaml
-app:
-  name: PTM Task Service
-  path: /ptm-task
-  port: 8083
-  logging:
-    level: info
-```
-
-**local.yaml:**
-```yaml
-app:
-  datasource:
-    driver: postgres
-    host: ${DB_HOST:-localhost}
-    port: ${DB_PORT:-5432}
-    database: ${DB_NAME:-serp_ptm_task}
-    username: ${DB_USERNAME:-serp}
-    password: ${DB_PASSWORD:-serp}
-    logLevel: info
-  redis:
-    host: ${REDIS_HOST:-localhost}
-    port: ${REDIS_PORT:-6379}
-  keycloak:
-    url: ${KEYCLOAK_URL}
-    realm: serp
-    client-id: serp-ptm
-    client-secret: ${CLIENT_SECRET}
-    jwk-set-uri: ${KEYCLOAK_JWK_SET_URI}
-    expected-issuer: ${KEYCLOAK_EXPECTED_ISSUER}
-    expected-audience: ${KEYCLOAK_EXPECTED_AUDIENCE}
-  kafka:
-    producer:
-      bootstrapServers:
-        - ${KAFKA_BOOTSTRAP_SERVERS:-localhost:9092}
-      requireAcks: 1
-      maxMessageBytes: 1048576
-      retryMax: 3
-      retryBackoffMs: 100
-      flushFrequencyMs: 500
-      flushMessages: 100
-```
-
 ## Event-Driven Communication
 
 ### Published Events
@@ -509,7 +434,7 @@ import (
 
 ## License
 
-Part of SERP Project by QuanTuanHuy
+This project is part of the SERP ERP system and is licensed under the MIT License. See the [LICENSE](../LICENSE) file in the root directory for details.
 
 ---
 
