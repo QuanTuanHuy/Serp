@@ -12,6 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.util.Pair;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
@@ -59,6 +60,9 @@ class MessageUseCaseTest {
     @Mock
     private IAttachmentService attachmentService;
 
+    @Mock
+    private ApplicationEventPublisher applicationEventPublisher;
+
     @InjectMocks
     private MessageUseCase messageUseCase;
 
@@ -74,8 +78,10 @@ class MessageUseCaseTest {
             // Given
             ChannelEntity channel = TestDataFactory.createGroupChannel();
             MessageEntity saved = TestDataFactory.createTextMessage();
+            ChannelMemberEntity member = TestDataFactory.createOwnerMember();
 
-            when(memberService.canSendMessages(channel.getId(), TestDataFactory.USER_ID_1)).thenReturn(true);
+            when(memberService.getMemberWithSendPermission(channel.getId(), TestDataFactory.USER_ID_1))
+                    .thenReturn(member);
             when(channelService.getChannelByIdOrThrow(channel.getId())).thenReturn(channel);
             when(messageService.sendMessage(any(MessageEntity.class))).thenReturn(saved);
 
@@ -90,16 +96,18 @@ class MessageUseCaseTest {
 
             // Then
             assertNotNull(result);
-            verify(channelService).recordMessage(channel.getId());
+            verify(channelService).recordMessage(channel);
             verify(memberService).incrementUnreadForChannel(channel.getId(), TestDataFactory.USER_ID_1);
-            verify(eventPublisher).publishMessageSent(saved);
+            verify(applicationEventPublisher).publishEvent(any());
+            verify(eventPublisher, never()).publishMessageSent(any()); // No longer called directly
         }
 
         @Test
         @DisplayName("should throw when user cannot send messages")
         void testSendMessage_UserCannotSend_ThrowsException() {
             // Given
-            when(memberService.canSendMessages(1L, TestDataFactory.USER_ID_3)).thenReturn(false);
+            when(memberService.getMemberWithSendPermission(1L, TestDataFactory.USER_ID_3))
+                    .thenThrow(new AppException(ErrorCode.CANNOT_SEND_MESSAGES));
 
             // When/Then
             AppException exception = assertThrows(AppException.class,
@@ -114,8 +122,10 @@ class MessageUseCaseTest {
         void testSendMessage_ChannelArchived_ThrowsException() {
             // Given
             ChannelEntity archivedChannel = TestDataFactory.createArchivedChannel();
+            ChannelMemberEntity member = TestDataFactory.createOwnerMember();
 
-            when(memberService.canSendMessages(archivedChannel.getId(), TestDataFactory.USER_ID_1)).thenReturn(true);
+            when(memberService.getMemberWithSendPermission(archivedChannel.getId(), TestDataFactory.USER_ID_1))
+                    .thenReturn(member);
             when(channelService.getChannelByIdOrThrow(archivedChannel.getId())).thenReturn(archivedChannel);
 
             // When/Then
@@ -142,23 +152,22 @@ class MessageUseCaseTest {
         @DisplayName("should send reply when parent is in same channel")
         void testSendReply_ValidParent_SendsReply() {
             // Given
+            Long parentMessageId = 100L;
             MessageEntity parent = TestDataFactory.createTextMessage();
-            parent.setId(100L);
-            parent.setChannelId(TestDataFactory.CHANNEL_ID);
-
-            MessageEntity reply = TestDataFactory.createReplyMessage(100L);
-
+            MessageEntity reply = TestDataFactory.createReplyMessage(parentMessageId);
             ChannelEntity channel = TestDataFactory.createGroupChannel();
-            when(channelService.getChannelByIdOrThrow(TestDataFactory.CHANNEL_ID)).thenReturn(channel);
+            ChannelMemberEntity member = TestDataFactory.createOwnerMember();
 
-            when(memberService.canSendMessages(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1)).thenReturn(true);
-            when(messageService.getMessageByIdOrThrow(100L)).thenReturn(parent);
-            when(messageService.sendReply(eq(100L), any(MessageEntity.class))).thenReturn(reply);
+            when(memberService.getMemberWithSendPermission(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1))
+                    .thenReturn(member);
+            when(channelService.getChannelByIdOrThrow(TestDataFactory.CHANNEL_ID)).thenReturn(channel);
+            when(messageService.getMessageByIdOrThrow(parentMessageId)).thenReturn(parent);
+            when(messageService.sendReply(eq(parentMessageId), any(MessageEntity.class))).thenReturn(reply);
 
             // When
             MessageEntity result = messageUseCase.sendReply(
                     TestDataFactory.CHANNEL_ID,
-                    100L,
+                    parentMessageId,
                     TestDataFactory.USER_ID_1,
                     TestDataFactory.TENANT_ID,
                     "Reply content",
@@ -167,29 +176,33 @@ class MessageUseCaseTest {
 
             // Then
             assertNotNull(result);
-            verify(channelService).recordMessage(TestDataFactory.CHANNEL_ID);
-            verify(eventPublisher).publishMessageSent(reply);
+            verify(channelService).recordMessage(channel);
+            verify(applicationEventPublisher).publishEvent(any());
+            verify(eventPublisher, never()).publishMessageSent(any());
         }
 
         @Test
         @DisplayName("should throw when parent message is in different channel")
         void testSendReply_ParentInDifferentChannel_ThrowsException() {
             // Given
-            MessageEntity parent = TestDataFactory.createTextMessage();
-            parent.setId(100L);
-            parent.setChannelId(999L); // Different channel
-
+            Long parentMessageId = 100L;
+            // Mock parent message with DIFFERENT channel ID (999 instead of 1000)
+            MessageEntity parent = mock(MessageEntity.class);
+            when(parent.getChannelId()).thenReturn(999L);  // Different from CHANNEL_ID (1000)
+            
             ChannelEntity channel = TestDataFactory.createGroupChannel();
-            when(channelService.getChannelByIdOrThrow(TestDataFactory.CHANNEL_ID)).thenReturn(channel);
+            ChannelMemberEntity member = TestDataFactory.createOwnerMember();
 
-            when(memberService.canSendMessages(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1)).thenReturn(true);
-            when(messageService.getMessageByIdOrThrow(100L)).thenReturn(parent);
+            when(memberService.getMemberWithSendPermission(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1))
+                    .thenReturn(member);
+            when(channelService.getChannelByIdOrThrow(TestDataFactory.CHANNEL_ID)).thenReturn(channel);
+            when(messageService.getMessageByIdOrThrow(parentMessageId)).thenReturn(parent);
 
             // When/Then
             AppException exception = assertThrows(AppException.class,
                     () -> messageUseCase.sendReply(
                             TestDataFactory.CHANNEL_ID,
-                            100L,
+                            parentMessageId,
                             TestDataFactory.USER_ID_1,
                             TestDataFactory.TENANT_ID,
                             "Reply",
@@ -375,11 +388,7 @@ class MessageUseCaseTest {
         void testEditMessage_UserIsMember_EditsSuccessfully() {
             // Given
             MessageEntity message = TestDataFactory.createTextMessage();
-            message.setId(1L);
-            message.setChannelId(TestDataFactory.CHANNEL_ID);
-
             MessageEntity edited = TestDataFactory.createTextMessage();
-            edited.setIsEdited(true);
 
             when(messageService.getMessageByIdOrThrow(1L)).thenReturn(message);
             when(memberService.isMember(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1)).thenReturn(true);
@@ -390,7 +399,9 @@ class MessageUseCaseTest {
 
             // Then
             assertNotNull(result);
-            verify(eventPublisher).publishMessageUpdated(edited);
+            // Changed: Now publishes internal event instead of Kafka directly
+            verify(applicationEventPublisher).publishEvent(any());
+            verify(eventPublisher, never()).publishMessageUpdated(any());
         }
 
         @Test
@@ -398,7 +409,6 @@ class MessageUseCaseTest {
         void testEditMessage_UserNotMember_ThrowsException() {
             // Given
             MessageEntity message = TestDataFactory.createTextMessage();
-            message.setChannelId(TestDataFactory.CHANNEL_ID);
 
             when(messageService.getMessageByIdOrThrow(1L)).thenReturn(message);
             when(memberService.isMember(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_3)).thenReturn(false);
@@ -420,9 +430,6 @@ class MessageUseCaseTest {
         void testDeleteMessage_ValidRequest_DeletesSuccessfully() {
             // Given
             MessageEntity message = TestDataFactory.createTextMessage();
-            message.setId(1L);
-            message.setChannelId(TestDataFactory.CHANNEL_ID);
-
             MessageEntity deleted = TestDataFactory.createDeletedMessage();
 
             when(messageService.getMessageByIdOrThrow(1L)).thenReturn(message);
@@ -434,7 +441,8 @@ class MessageUseCaseTest {
 
             // Then
             assertNotNull(result);
-            verify(eventPublisher).publishMessageDeleted(deleted);
+            verify(applicationEventPublisher).publishEvent(any());
+            verify(eventPublisher, never()).publishMessageDeleted(any());
         }
     }
 
@@ -449,8 +457,6 @@ class MessageUseCaseTest {
         void testAddReaction_UserIsMember_AddsReaction() {
             // Given
             MessageEntity message = TestDataFactory.createTextMessage();
-            message.setId(1L);
-            message.setChannelId(TestDataFactory.CHANNEL_ID);
 
             when(messageService.getMessageByIdOrThrow(1L)).thenReturn(message);
             when(memberService.isMember(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1)).thenReturn(true);
@@ -461,7 +467,8 @@ class MessageUseCaseTest {
 
             // Then
             assertNotNull(result);
-            verify(eventPublisher).publishReactionAdded(1L, TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1, "👍");
+            verify(applicationEventPublisher).publishEvent(any());
+            verify(eventPublisher, never()).publishReactionAdded(anyLong(), anyLong(), anyLong(), anyString());
         }
 
         @Test
@@ -469,7 +476,6 @@ class MessageUseCaseTest {
         void testAddReaction_UserNotMember_ThrowsException() {
             // Given
             MessageEntity message = TestDataFactory.createTextMessage();
-            message.setChannelId(TestDataFactory.CHANNEL_ID);
 
             when(messageService.getMessageByIdOrThrow(1L)).thenReturn(message);
             when(memberService.isMember(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_3)).thenReturn(false);
@@ -484,8 +490,6 @@ class MessageUseCaseTest {
         void testRemoveReaction_UserIsMember_RemovesReaction() {
             // Given
             MessageEntity message = TestDataFactory.createTextMessage();
-            message.setId(1L);
-            message.setChannelId(TestDataFactory.CHANNEL_ID);
 
             when(messageService.getMessageByIdOrThrow(1L)).thenReturn(message);
             when(memberService.isMember(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1)).thenReturn(true);
@@ -496,7 +500,8 @@ class MessageUseCaseTest {
 
             // Then
             assertNotNull(result);
-            verify(eventPublisher).publishReactionRemoved(1L, TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1, "👍");
+            verify(applicationEventPublisher).publishEvent(any());
+            verify(eventPublisher, never()).publishReactionRemoved(anyLong(), anyLong(), anyLong(), anyString());
         }
     }
 

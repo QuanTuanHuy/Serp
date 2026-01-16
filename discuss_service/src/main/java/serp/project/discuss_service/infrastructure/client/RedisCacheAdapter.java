@@ -270,14 +270,12 @@ public class RedisCacheAdapter implements ICachePort {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public Map<String, String> hashGetAll(String key) {
         try {
             Map<Object, Object> entries = redisTemplate.opsForHash().entries(key);
             if (entries.isEmpty()) {
                 return Collections.emptyMap();
             }
-            // Convert Map<Object, Object> to Map<String, String>
             return entries.entrySet().stream()
                     .collect(java.util.stream.Collectors.toMap(
                             e -> e.getKey().toString(),
@@ -362,6 +360,66 @@ public class RedisCacheAdapter implements ICachePort {
             redisTemplate.convertAndSend(channel, message);
         } catch (Exception e) {
             log.error("Failed to publish message, channel: {}", channel, e);
+        }
+    }
+
+    // ==================== BATCH/PIPELINE OPERATIONS ====================
+
+    @Override
+    public void batchHashIncrement(Map<String, Map<String, Long>> operations) {
+        if (operations == null || operations.isEmpty()) {
+            return;
+        }
+        try {
+            redisTemplate.executePipelined((org.springframework.data.redis.core.RedisCallback<Object>) connection -> {
+                for (Map.Entry<String, Map<String, Long>> entry : operations.entrySet()) {
+                    byte[] keyBytes = entry.getKey().getBytes();
+                    for (Map.Entry<String, Long> fieldEntry : entry.getValue().entrySet()) {
+                        byte[] fieldBytes = fieldEntry.getKey().getBytes();
+                        connection.hashCommands().hIncrBy(keyBytes, fieldBytes, fieldEntry.getValue());
+                    }
+                }
+                return null;
+            });
+            log.debug("Batch hash increment completed for {} keys", operations.size());
+        } catch (Exception e) {
+            log.error("Failed to batch hash increment", e);
+        }
+    }
+
+    @Override
+    public void scanAndDelete(String pattern, int batchSize) {
+        if (pattern == null || pattern.isEmpty()) {
+            return;
+        }
+        try {
+            long deletedCount = 0;
+            org.springframework.data.redis.core.ScanOptions scanOptions = 
+                    org.springframework.data.redis.core.ScanOptions.scanOptions()
+                            .match(pattern)
+                            .count(batchSize)
+                            .build();
+            
+            try (org.springframework.data.redis.core.Cursor<String> cursor = 
+                    redisTemplate.scan(scanOptions)) {
+                java.util.List<String> keysToDelete = new java.util.ArrayList<>();
+                while (cursor.hasNext()) {
+                    keysToDelete.add(cursor.next());
+                    if (keysToDelete.size() >= batchSize) {
+                        redisTemplate.delete(keysToDelete);
+                        deletedCount += keysToDelete.size();
+                        keysToDelete.clear();
+                    }
+                }
+                // Delete remaining keys
+                if (!keysToDelete.isEmpty()) {
+                    redisTemplate.delete(keysToDelete);
+                    deletedCount += keysToDelete.size();
+                }
+            }
+            log.debug("Scan and delete completed for pattern {}, deleted {} keys", pattern, deletedCount);
+        } catch (Exception e) {
+            log.error("Failed to scan and delete, pattern: {}", pattern, e);
         }
     }
 }

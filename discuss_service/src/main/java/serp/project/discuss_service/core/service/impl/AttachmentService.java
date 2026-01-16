@@ -7,6 +7,7 @@ package serp.project.discuss_service.core.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,6 +28,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 /**
@@ -34,21 +38,30 @@ import java.util.stream.Collectors;
  * Handles file uploads to storage (S3/MinIO) and attachment record management.
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class AttachmentService implements IAttachmentService {
 
     private final IStoragePort storagePort;
     private final IAttachmentPort attachmentPort;
     private final StorageProperties storageProperties;
+    private final ExecutorService attachmentUploadExecutor;
+
+    public AttachmentService(
+            IStoragePort storagePort,
+            IAttachmentPort attachmentPort,
+            StorageProperties storageProperties,
+            @Qualifier("attachmentUploadExecutor") ExecutorService attachmentUploadExecutor) {
+        this.storagePort = storagePort;
+        this.attachmentPort = attachmentPort;
+        this.storageProperties = storageProperties;
+        this.attachmentUploadExecutor = attachmentUploadExecutor;
+    }
 
     @Override
     @Transactional
     public AttachmentEntity uploadAttachment(MultipartFile file, Long messageId, Long channelId, Long tenantId) {
-        // Validate file
         validateFile(file);
 
-        // Create attachment entity
         AttachmentEntity attachment = AttachmentEntity.create(
                 messageId,
                 channelId,
@@ -59,7 +72,6 @@ public class AttachmentService implements IAttachmentService {
         );
 
         try {
-            // Upload to storage
             FileUploadResult uploadResult = storagePort.upload(
                     file.getInputStream(),
                     file.getOriginalFilename(),
@@ -75,7 +87,6 @@ public class AttachmentService implements IAttachmentService {
                 throw new AppException(ErrorCode.FILE_UPLOAD_FAILED);
             }
 
-            // Update attachment with storage info
             StorageLocation location = uploadResult.getStorageLocation();
             attachment.setStorageInfo(
                     location.getProvider(),
@@ -84,7 +95,6 @@ public class AttachmentService implements IAttachmentService {
                     location.getUrl()
             );
 
-            // Save to database
             AttachmentEntity savedAttachment = attachmentPort.save(attachment);
 
             log.info("Successfully uploaded attachment {} for message {} in channel {}",
@@ -101,17 +111,93 @@ public class AttachmentService implements IAttachmentService {
     @Override
     @Transactional
     public List<AttachmentEntity> uploadAttachments(List<MultipartFile> files, Long messageId, Long channelId, Long tenantId) {
-        // Validate number of files
         if (files.size() > storageProperties.getUpload().getMaxFilesPerMessage()) {
             throw new AppException(ErrorCode.TOO_MANY_FILES);
         }
 
-        List<AttachmentEntity> attachments = new ArrayList<>();
         for (MultipartFile file : files) {
-            AttachmentEntity attachment = uploadAttachment(file, messageId, channelId, tenantId);
-            attachments.add(attachment);
+            validateFile(file);
         }
-        return attachments;
+
+        List<CompletableFuture<AttachmentEntity>> uploadFutures = files.stream()
+                .map(file -> CompletableFuture.supplyAsync(
+                        () -> uploadFileToStorage(file, messageId, channelId, tenantId),
+                        attachmentUploadExecutor))
+                .toList();
+
+        List<AttachmentEntity> uploadedAttachments;
+        try {
+            uploadedAttachments = uploadFutures.stream()
+                    .map(CompletableFuture::join)
+                    .toList();
+        } catch (CompletionException e) {
+            log.error("Failed to upload files to storage in parallel", e.getCause());
+            if (e.getCause() instanceof AppException appException) {
+                throw appException;
+            }
+            throw new AppException(ErrorCode.FILE_UPLOAD_FAILED);
+        }
+
+        // This ensures they can see the committed message and share the same transaction
+        List<AttachmentEntity> savedAttachments = new ArrayList<>();
+        for (AttachmentEntity attachment : uploadedAttachments) {
+            AttachmentEntity saved = attachmentPort.save(attachment);
+            savedAttachments.add(saved);
+            log.info("Saved attachment {} for message {} in channel {}",
+                    saved.getId(), messageId, channelId);
+        }
+
+        log.info("Successfully uploaded and saved {} attachments for message {}", 
+                savedAttachments.size(), messageId);
+        return savedAttachments;
+    }
+
+    /**
+     * Upload a single file to storage (S3/MinIO) WITHOUT saving to database.
+     * @return AttachmentEntity with storage info populated
+     */
+    private AttachmentEntity uploadFileToStorage(MultipartFile file, Long messageId, Long channelId, Long tenantId) {
+        AttachmentEntity attachment = AttachmentEntity.create(
+                messageId,
+                channelId,
+                tenantId,
+                file.getOriginalFilename(),
+                file.getSize(),
+                file.getContentType()
+        );
+
+        try {
+            FileUploadResult uploadResult = storagePort.upload(
+                    file.getInputStream(),
+                    file.getOriginalFilename(),
+                    file.getContentType(),
+                    file.getSize(),
+                    tenantId,
+                    channelId
+            );
+
+            if (uploadResult.isFailed()) {
+                log.error("Failed to upload file {} to storage for message {}: {}",
+                        file.getOriginalFilename(), messageId, uploadResult.getErrorMessage());
+                throw new AppException(ErrorCode.FILE_UPLOAD_FAILED);
+            }
+
+            StorageLocation location = uploadResult.getStorageLocation();
+            attachment.setStorageInfo(
+                    location.getProvider(),
+                    location.getBucket(),
+                    location.getKey(),
+                    location.getUrl()
+            );
+
+            log.debug("Uploaded file {} to storage: {}", file.getOriginalFilename(), location.getKey());
+            return attachment;
+
+        } catch (IOException e) {
+            log.error("IO error while uploading file {} to storage: {}", 
+                    file.getOriginalFilename(), e.getMessage());
+            throw new AppException(ErrorCode.FILE_UPLOAD_FAILED);
+        }
     }
 
     @Override
@@ -119,7 +205,6 @@ public class AttachmentService implements IAttachmentService {
         AttachmentEntity attachment = attachmentPort.findById(attachmentId)
                 .orElseThrow(() -> new AppException(ErrorCode.ATTACHMENT_NOT_FOUND));
 
-        // Verify tenant access
         if (!attachment.getTenantId().equals(tenantId)) {
             log.warn("Tenant {} attempted to access attachment {} belonging to tenant {}",
                     tenantId, attachmentId, attachment.getTenantId());
@@ -131,7 +216,10 @@ public class AttachmentService implements IAttachmentService {
 
     @Override
     public List<AttachmentEntity> getAttachmentsByMessage(Long messageId, Long tenantId) {
-        return attachmentPort.findByMessageId(messageId);
+        List<AttachmentEntity> attachments = attachmentPort.findByMessageId(messageId);
+        return attachments.stream()
+                .filter(att -> att.getTenantId().equals(tenantId))
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -151,7 +239,6 @@ public class AttachmentService implements IAttachmentService {
     public void deleteAttachment(Long attachmentId, Long tenantId, Long userId) {
         AttachmentEntity attachment = getAttachment(attachmentId, tenantId);
 
-        // Delete from storage
         StorageLocation location = StorageLocation.ofS3(
                 attachment.getStorageBucket(),
                 attachment.getStorageKey()
@@ -161,10 +248,8 @@ public class AttachmentService implements IAttachmentService {
             storagePort.delete(location);
         } catch (Exception e) {
             log.error("Failed to delete file from storage: {} - {}", attachment.getStorageKey(), e.getMessage());
-            // Continue with database deletion even if storage deletion fails
         }
 
-        // Delete from database
         attachmentPort.deleteById(attachmentId);
 
         log.info("Attachment {} deleted by user {} from tenant {}", attachmentId, userId, tenantId);
@@ -210,7 +295,6 @@ public class AttachmentService implements IAttachmentService {
         }
         String[] allowedTypes = storageProperties.getUpload().getAllowedContentTypes();
         if (allowedTypes == null || allowedTypes.length == 0) {
-            // Allow all types if not configured
             return true;
         }
         return Arrays.stream(allowedTypes).anyMatch(contentType::startsWith);

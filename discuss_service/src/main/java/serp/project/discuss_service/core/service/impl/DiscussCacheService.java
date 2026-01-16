@@ -7,6 +7,8 @@ package serp.project.discuss_service.core.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
@@ -14,7 +16,9 @@ import serp.project.discuss_service.core.port.client.ICachePort;
 import serp.project.discuss_service.core.service.IDiscussCacheService;
 import serp.project.discuss_service.kernel.utils.JsonUtils;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -119,9 +123,8 @@ public class DiscussCacheService implements IDiscussCacheService {
             return Collections.emptyList();
         }
         try {
-            // Parse as list of messages
             return jsonUtils.fromJson(json, 
-                    new org.springframework.core.ParameterizedTypeReference<List<MessageEntity>>() {});
+                    new ParameterizedTypeReference<List<MessageEntity>>() {});
         } catch (Exception e) {
             log.error("Failed to parse recent messages from cache", e);
             return Collections.emptyList();
@@ -302,6 +305,24 @@ public class DiscussCacheService implements IDiscussCacheService {
         String key = UNREAD_PREFIX + userId;
         cachePort.hashIncrement(key, channelId.toString(), 1);
         log.debug("Incremented unread count for user {} in channel {}", userId, channelId);
+    }
+
+    @Override
+    public void incrementUnreadCountBatch(Set<Long> userIds, Long channelId) {
+        if (userIds == null || userIds.isEmpty() || channelId == null) {
+            return;
+        }
+        
+        Map<String, Map<String, Long>> operations = new HashMap<>();
+        String channelIdStr = channelId.toString();
+        
+        for (Long userId : userIds) {
+            String key = UNREAD_PREFIX + userId;
+            operations.put(key, Map.of(channelIdStr, 1L));
+        }
+        
+        cachePort.batchHashIncrement(operations);
+        log.debug("Batch incremented unread count for {} users in channel {}", userIds.size(), channelId);
     }
 
     @Override
@@ -594,5 +615,106 @@ public class DiscussCacheService implements IDiscussCacheService {
         String pattern = CHANNEL_MESSAGES_PREFIX + channelId + ":*";
         cachePort.deleteAllByPattern(pattern);
         log.debug("Invalidated channel messages page cache: {}", channelId);
+    }
+
+    @Override
+    public void invalidateChannelMessagesPageAsync(Long channelId) {
+        if (channelId == null) {
+            return;
+        }
+        String pattern = CHANNEL_MESSAGES_PREFIX + channelId + ":*";
+        cachePort.scanAndDelete(pattern, 100);
+        log.debug("Async invalidated channel messages page cache: {}", channelId);
+    }
+
+    @Override
+    public boolean prependMessageToFirstPage(Long channelId, MessageEntity message, int pageSize) {
+        if (channelId == null || message == null || pageSize <= 0) {
+            return false;
+        }
+
+        try {
+            String key = CHANNEL_MESSAGES_PREFIX + channelId + ":p0:s" + pageSize;
+            CachedMessagesPage cached = cachePort.getFromCache(key, CachedMessagesPage.class);
+
+            if (cached == null) {
+                log.debug("No cache to prepend for channel {}, skipping smart update", channelId);
+                return false;
+            }
+
+            List<MessageEntity> updatedMessages = new ArrayList<>();
+            updatedMessages.add(message);
+            
+            List<MessageEntity> existingMessages = cached.messages();
+            if (existingMessages != null) {
+                int limit = Math.min(existingMessages.size(), pageSize - 1);
+                for (int i = 0; i < limit; i++) {
+                    updatedMessages.add(existingMessages.get(i));
+                }
+            }
+
+            CachedMessagesPage updated = new CachedMessagesPage(
+                    cached.totalCount() + 1,
+                    updatedMessages
+            );
+
+            cachePort.setToCache(key, updated, CHANNEL_MESSAGES_TTL);
+            log.debug("Smart cache update: prepended message {} to channel {} first page", 
+                    message.getId(), channelId);
+            return true;
+
+        } catch (Exception e) {
+            log.warn("Failed to prepend message to cache for channel {}, falling back to invalidation: {}", 
+                    channelId, e.getMessage());
+            invalidateChannelMessagesPageAsync(channelId);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean removeMessageFromFirstPage(Long channelId, Long messageId) {
+        if (channelId == null || messageId == null) {
+            return false;
+        }
+
+        try {
+            int[] commonPageSizes = {20, 25, 50};
+            
+            for (int pageSize : commonPageSizes) {
+                String key = CHANNEL_MESSAGES_PREFIX + channelId + ":p0:s" + pageSize;
+                CachedMessagesPage cached = cachePort.getFromCache(key, CachedMessagesPage.class);
+
+                if (cached == null || cached.messages() == null || cached.messages().isEmpty()) {
+                    continue;
+                }
+
+                List<MessageEntity> existingMessages = cached.messages();
+                List<MessageEntity> updatedMessages = existingMessages.stream()
+                        .filter(m -> !messageId.equals(m.getId()))
+                        .toList();
+
+                if (updatedMessages.size() < existingMessages.size()) {
+                    CachedMessagesPage updated = new CachedMessagesPage(
+                            Math.max(0, cached.totalCount() - 1),
+                            updatedMessages
+                    );
+                    cachePort.setToCache(key, updated, CHANNEL_MESSAGES_TTL);
+                    log.debug("Smart cache update: removed message {} from channel {} first page (size {})", 
+                            messageId, channelId, pageSize);
+                    return true;
+                }
+            }
+
+            // Message not in any cached first page - just invalidate to be safe
+            log.debug("Message {} not in cached first pages for channel {}, invalidating", messageId, channelId);
+            invalidateChannelMessagesPageAsync(channelId);
+            return false;
+
+        } catch (Exception e) {
+            log.warn("Failed to remove message from cache for channel {}, falling back to invalidation: {}", 
+                    channelId, e.getMessage());
+            invalidateChannelMessagesPageAsync(channelId);
+            return false;
+        }
     }
 }
