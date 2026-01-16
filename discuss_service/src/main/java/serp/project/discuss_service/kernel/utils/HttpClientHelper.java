@@ -67,7 +67,7 @@ public class HttpClientHelper {
         log.info("Making POST request to: {}", uri);
 
         return webClient.post()
-                .uri(uri)
+                .uri(uriBuilder -> buildUri(uriBuilder, uri, null))
                 .headers(httpHeaders -> {
                     if (headers != null)
                         headers.forEach(httpHeaders::add);
@@ -91,7 +91,7 @@ public class HttpClientHelper {
         log.info("Making PUT request to: {}", uri);
 
         return webClient.put()
-                .uri(uri)
+                .uri(uriBuilder -> buildUri(uriBuilder, uri, null))
                 .headers(httpHeaders -> {
                     if (headers != null)
                         headers.forEach(httpHeaders::add);
@@ -115,7 +115,7 @@ public class HttpClientHelper {
         log.info("Making PATCH request to: {}", uri);
 
         return webClient.patch()
-                .uri(uri)
+                .uri(uriBuilder -> buildUri(uriBuilder, uri, null))
                 .headers(httpHeaders -> {
                     if (headers != null)
                         headers.forEach(httpHeaders::add);
@@ -139,7 +139,7 @@ public class HttpClientHelper {
         log.info("Making DELETE request to: {}", uri);
 
         return webClient.delete()
-                .uri(uri)
+                .uri(uriBuilder -> buildUri(uriBuilder, uri, null))
                 .headers(httpHeaders -> {
                     if (headers != null)
                         headers.forEach(httpHeaders::add);

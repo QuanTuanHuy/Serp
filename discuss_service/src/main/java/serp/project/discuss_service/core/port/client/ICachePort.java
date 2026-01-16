@@ -181,4 +181,23 @@ public interface ICachePort {
      * Publish message to a channel
      */
     void publish(String channel, String message);
+
+    // ==================== BATCH/PIPELINE OPERATIONS ====================
+
+    /**
+     * Batch increment multiple hash fields across different keys using Redis pipeline.
+     * This is much more efficient than calling hashIncrement multiple times.
+     *
+     * @param operations Map of key -> (field -> delta) to increment
+     */
+    void batchHashIncrement(Map<String, Map<String, Long>> operations);
+
+    /**
+     * Delete keys matching a pattern using SCAN (non-blocking) instead of KEYS.
+     * This is safer for production use as it doesn't block Redis.
+     *
+     * @param pattern Redis key pattern (e.g., "prefix:*")
+     * @param batchSize Number of keys to scan per iteration
+     */
+    void scanAndDelete(String pattern, int batchSize);
 }

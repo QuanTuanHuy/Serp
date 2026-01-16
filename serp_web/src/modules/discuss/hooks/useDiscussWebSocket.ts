@@ -1,16 +1,47 @@
 /*
 Author: QuanTuanHuy
 Description: Part of Serp Project - WebSocket hook for real-time discuss functionality
+Optimized: Direct cache updates instead of invalidation for better performance
 */
 
 'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
 import { Client, IMessage, StompSubscription } from '@stomp/stompjs';
-import { useAppSelector } from '@/lib/store/hooks';
+import { useAppSelector, useAppDispatch } from '@/lib/store/hooks';
+import { messageApi } from '../api/messages.api';
 import { discussApi } from '../api/discussApi';
-import type { Message } from '../types';
-import { useDispatch } from 'react-redux';
+import type { Message, MessageReaction } from '../types';
+import { transformMessage } from '../api/transformers';
+
+interface UseDiscussWebSocketOptions {
+  channelId?: string;
+  onMessage?: (message: Message) => void;
+  onTypingUpdate?: (userId: string, isTyping: boolean) => void;
+  onUserStatusUpdate?: (userId: string, isOnline: boolean) => void;
+}
+
+// Helper to find cache entries for a channel - matches the one in messages.api.ts
+const findMessagesCacheEntry = (
+  state: any,
+  channelId: string
+): { page: number; limit: number } | undefined => {
+  const queries = state.api?.queries;
+  if (!queries) return undefined;
+
+  for (const key of Object.keys(queries)) {
+    if (key.startsWith('getMessages(')) {
+      const entry = queries[key];
+      if (entry?.originalArgs?.channelId === channelId) {
+        return {
+          page: entry.originalArgs.pagination.page,
+          limit: entry.originalArgs.pagination.limit,
+        };
+      }
+    }
+  }
+  return undefined;
+};
 
 interface UseDiscussWebSocketOptions {
   channelId?: string;
@@ -24,7 +55,7 @@ export const useDiscussWebSocket = (
 ) => {
   const { channelId, onMessage, onTypingUpdate, onUserStatusUpdate } = options;
 
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const clientRef = useRef<Client | null>(null);
   const subscriptionRef = useRef<StompSubscription | null>(null);
 
@@ -117,52 +148,186 @@ export const useDiscussWebSocket = (
     };
   }, [channelId, dispatch, onMessage, onTypingUpdate]);
 
-  // Handle incoming channel messages
+  // Handle incoming channel messages - Direct cache updates for better performance
   const handleChannelMessage = useCallback(
     (payload: any) => {
       const { type, data } = payload;
 
+      // Get current state to find cache entries - use a custom thunk to access getState
+      let state: any;
+      dispatch((d, getState) => {
+        state = getState();
+        return { type: 'NOOP' };
+      });
+
       switch (type) {
-        case 'NEW_MESSAGE':
+        case 'NEW_MESSAGE': {
           console.log('[WebSocket] New message received:', data);
-          // Invalidate messages cache to refetch
+          const cacheInfo = findMessagesCacheEntry(state, data.channelId);
+
+          if (cacheInfo) {
+            // Transform and add message directly to cache
+            const transformedMessage = transformMessage(data);
+            dispatch(
+              messageApi.util.updateQueryData(
+                'getMessages',
+                { channelId: data.channelId, pagination: cacheInfo },
+                (draft) => {
+                  // Avoid duplicates - check if message already exists
+                  const exists = draft.data?.items?.some(
+                    (m) => m.id === transformedMessage.id
+                  );
+                  if (!exists) {
+                    draft.data?.items?.push(transformedMessage);
+                  }
+                }
+              )
+            );
+          }
+
+          // Still update channel list for last message preview
           dispatch(
             discussApi.util.invalidateTags([
-              { type: 'Message', id: `CHANNEL-${data.channelId}` },
+              { type: 'Channel', id: data.channelId },
+              { type: 'Channel', id: 'LIST' },
             ])
           );
+
           if (onMessage) {
-            onMessage(data);
+            onMessage(transformMessage(data));
           }
           break;
+        }
 
-        case 'MESSAGE_EDITED':
+        case 'MESSAGE_EDITED': {
           console.log('[WebSocket] Message edited:', data);
-          dispatch(
-            discussApi.util.invalidateTags([
-              { type: 'Message', id: `CHANNEL-${data.channelId}` },
-            ])
-          );
-          break;
+          const cacheInfo = findMessagesCacheEntry(state, data.channelId);
 
-        case 'MESSAGE_DELETED':
+          if (cacheInfo) {
+            dispatch(
+              messageApi.util.updateQueryData(
+                'getMessages',
+                { channelId: data.channelId, pagination: cacheInfo },
+                (draft) => {
+                  const message = draft.data?.items?.find(
+                    (m) => m.id === String(data.id)
+                  );
+                  if (message) {
+                    message.content = data.content;
+                    message.isEdited = true;
+                    message.editedAt = data.editedAt || new Date().toISOString();
+                  }
+                }
+              )
+            );
+          }
+          break;
+        }
+
+        case 'MESSAGE_DELETED': {
           console.log('[WebSocket] Message deleted:', data);
-          dispatch(
-            discussApi.util.invalidateTags([
-              { type: 'Message', id: `CHANNEL-${data.channelId}` },
-            ])
-          );
-          break;
+          const cacheInfo = findMessagesCacheEntry(state, data.channelId);
 
-        case 'REACTION_ADDED':
-        case 'REACTION_REMOVED':
-          console.log('[WebSocket] Reaction updated:', data);
+          if (cacheInfo) {
+            dispatch(
+              messageApi.util.updateQueryData(
+                'getMessages',
+                { channelId: data.channelId, pagination: cacheInfo },
+                (draft) => {
+                  const message = draft.data?.items?.find(
+                    (m) => m.id === String(data.id || data.messageId)
+                  );
+                  if (message) {
+                    message.isDeleted = true;
+                    message.content = 'This message was deleted';
+                    message.deletedAt = new Date().toISOString();
+                  }
+                }
+              )
+            );
+          }
+
+          // Update channel for last message preview
           dispatch(
             discussApi.util.invalidateTags([
-              { type: 'Message', id: `CHANNEL-${data.channelId}` },
+              { type: 'Channel', id: data.channelId },
             ])
           );
           break;
+        }
+
+        case 'REACTION_ADDED': {
+          console.log('[WebSocket] Reaction added:', data);
+          const cacheInfo = findMessagesCacheEntry(state, data.channelId);
+
+          if (cacheInfo) {
+            dispatch(
+              messageApi.util.updateQueryData(
+                'getMessages',
+                { channelId: data.channelId, pagination: cacheInfo },
+                (draft) => {
+                  const message = draft.data?.items?.find(
+                    (m) => m.id === String(data.messageId)
+                  );
+                  if (message) {
+                    const existingReaction = message.reactions.find(
+                      (r: MessageReaction) => r.emoji === data.emoji
+                    );
+                    if (existingReaction) {
+                      if (!existingReaction.userIds.includes(String(data.userId))) {
+                        existingReaction.userIds.push(String(data.userId));
+                        existingReaction.count += 1;
+                      }
+                    } else {
+                      message.reactions.push({
+                        emoji: data.emoji,
+                        userIds: [String(data.userId)],
+                        count: 1,
+                      });
+                    }
+                  }
+                }
+              )
+            );
+          }
+          break;
+        }
+
+        case 'REACTION_REMOVED': {
+          console.log('[WebSocket] Reaction removed:', data);
+          const cacheInfo = findMessagesCacheEntry(state, data.channelId);
+
+          if (cacheInfo) {
+            dispatch(
+              messageApi.util.updateQueryData(
+                'getMessages',
+                { channelId: data.channelId, pagination: cacheInfo },
+                (draft) => {
+                  const message = draft.data?.items?.find(
+                    (m) => m.id === String(data.messageId)
+                  );
+                  if (message) {
+                    const reactionIndex = message.reactions.findIndex(
+                      (r: MessageReaction) => r.emoji === data.emoji
+                    );
+                    if (reactionIndex !== -1) {
+                      const reaction = message.reactions[reactionIndex];
+                      const userIndex = reaction.userIds.indexOf(String(data.userId));
+                      if (userIndex !== -1) {
+                        reaction.userIds.splice(userIndex, 1);
+                        reaction.count -= 1;
+                        if (reaction.count <= 0) {
+                          message.reactions.splice(reactionIndex, 1);
+                        }
+                      }
+                    }
+                  }
+                }
+              )
+            );
+          }
+          break;
+        }
 
         case 'TYPING_INDICATOR':
           console.log('[WebSocket] Typing indicator:', data);

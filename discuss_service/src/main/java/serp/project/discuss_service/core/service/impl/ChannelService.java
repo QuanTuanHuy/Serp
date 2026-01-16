@@ -86,14 +86,12 @@ public class ChannelService implements IChannelService {
 
     @Override
     public Optional<ChannelEntity> getChannelById(Long id) {
-        // Try cache first
         Optional<ChannelEntity> cached = cacheService.getCachedChannel(id);
         if (cached.isPresent()) {
             log.debug("Cache hit for channel: {}", id);
             return cached;
         }
 
-        // Fallback to database
         Optional<ChannelEntity> channel = channelPort.findById(id);
         channel.ifPresent(cacheService::cacheChannel);
         return channel;
@@ -153,9 +151,14 @@ public class ChannelService implements IChannelService {
     @Override
     public void recordMessage(Long channelId) {
         ChannelEntity channel = getChannelByIdOrThrow(channelId);
+        recordMessage(channel);
+    }
+
+    @Override
+    public void recordMessage(ChannelEntity channel) {
         channel.recordMessage();
         channelPort.save(channel);
-        cacheService.invalidateChannel(channelId);
+        cacheService.invalidateChannel(channel.getId());
     }
 
     @Override

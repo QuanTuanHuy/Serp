@@ -135,6 +135,36 @@ public interface IDiscussCacheService {
      */
     void invalidateChannelMessagesPage(Long channelId);
 
+    /**
+     * Invalidate cached channel messages page using non-blocking SCAN.
+     * This is safer for production as it doesn't block Redis like KEYS command.
+     *
+     * @param channelId The channel ID to invalidate
+     */
+    void invalidateChannelMessagesPageAsync(Long channelId);
+
+    /**
+     * Smart cache update: Prepend a new message to the cached first page.
+     * This avoids a DB round-trip on the next read request.
+     * Falls back to invalidation if cache doesn't exist or on error.
+     *
+     * @param channelId The channel ID
+     * @param message   The new message to prepend
+     * @param pageSize  The expected page size (to trim excess)
+     * @return true if smart update succeeded, false if invalidation was used
+     */
+    boolean prependMessageToFirstPage(Long channelId, MessageEntity message, int pageSize);
+
+    /**
+     * Smart cache update for message deletion: Remove a message from cached first page.
+     * Falls back to invalidation if cache doesn't exist or message not in first page.
+     *
+     * @param channelId The channel ID
+     * @param messageId The message ID to remove
+     * @return true if smart update succeeded, false if invalidation was used
+     */
+    boolean removeMessageFromFirstPage(Long channelId, Long messageId);
+
     // ==================== PRESENCE / ONLINE STATUS ====================
 
     /**
@@ -200,6 +230,16 @@ public interface IDiscussCacheService {
      * Increment unread count
      */
     void incrementUnreadCount(Long userId, Long channelId);
+
+    /**
+     * Batch increment unread count for multiple users in a channel.
+     * This is much more efficient than calling incrementUnreadCount multiple times
+     * as it uses Redis pipeline to send all commands in a single round trip.
+     *
+     * @param userIds   Set of user IDs to increment unread count for
+     * @param channelId The channel ID
+     */
+    void incrementUnreadCountBatch(Set<Long> userIds, Long channelId);
 
     /**
      * Reset unread count (mark as read)
