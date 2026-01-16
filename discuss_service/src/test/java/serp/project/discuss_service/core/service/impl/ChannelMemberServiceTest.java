@@ -580,8 +580,8 @@ class ChannelMemberServiceTest {
 
             // Then
             verify(memberPort).incrementUnreadForChannel(TestDataFactory.CHANNEL_ID, 100L);
-            verify(cacheService).incrementUnreadCount(200L, TestDataFactory.CHANNEL_ID);
-            verify(cacheService).incrementUnreadCount(300L, TestDataFactory.CHANNEL_ID);
+            // Changed: Now uses batch increment instead of individual calls
+            verify(cacheService).incrementUnreadCountBatch(eq(Set.of(200L, 300L)), eq(TestDataFactory.CHANNEL_ID));
             verify(cacheService, never()).incrementUnreadCount(eq(100L), any()); // Sender excluded
         }
     }

@@ -8,12 +8,18 @@ package serp.project.discuss_service.core.usecase;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
+import serp.project.discuss_service.core.domain.event.MessageDeletedInternalEvent;
+import serp.project.discuss_service.core.domain.event.MessageSentInternalEvent;
+import serp.project.discuss_service.core.domain.event.MessageUpdatedInternalEvent;
+import serp.project.discuss_service.core.domain.event.ReactionAddedInternalEvent;
+import serp.project.discuss_service.core.domain.event.ReactionRemovedInternalEvent;
 import serp.project.discuss_service.core.exception.AppException;
 import serp.project.discuss_service.core.exception.ErrorCode;
 import serp.project.discuss_service.core.service.IAttachmentService;
@@ -33,6 +39,10 @@ import org.springframework.web.multipart.MultipartFile;
 /**
  * Use case for message operations.
  * Orchestrates message-related business logic across multiple services.
+ * 
+ * Post-commit operations (Kafka events, cache invalidation) are handled via
+ * Spring's @TransactionalEventListener to ensure they only execute after
+ * successful DB transaction commit.
  */
 @Component
 @RequiredArgsConstructor
@@ -45,6 +55,7 @@ public class MessageUseCase {
     private final IDiscussEventPublisher eventPublisher;
     private final IDiscussCacheService cacheService;
     private final IAttachmentService attachmentService;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     /**
      * Send a new message to a channel
@@ -52,9 +63,7 @@ public class MessageUseCase {
     @Transactional
     public MessageEntity sendMessage(Long channelId, Long senderId, Long tenantId,
                                      String content, List<Long> mentions) {
-        if (!memberService.canSendMessages(channelId, senderId)) {
-            throw new AppException(ErrorCode.CANNOT_SEND_MESSAGES);
-        }
+        memberService.getMemberWithSendPermission(channelId, senderId);
 
         ChannelEntity channel = channelService.getChannelByIdOrThrow(channelId);
         if (!channel.isActive()) {
@@ -64,13 +73,11 @@ public class MessageUseCase {
         MessageEntity message = MessageEntity.createText(channelId, senderId, tenantId, content, mentions);
         MessageEntity saved = messageService.sendMessage(message);
 
-        channelService.recordMessage(channelId);
+        channelService.recordMessage(channel);
 
         memberService.incrementUnreadForChannel(channelId, senderId);
 
-        eventPublisher.publishMessageSent(saved);
-
-        cacheService.invalidateChannelMessagesPage(channelId);
+        applicationEventPublisher.publishEvent(new MessageSentInternalEvent(this, saved));
 
         log.info("User {} sent message {} in channel {}", senderId, saved.getId(), channelId);
         return saved;
@@ -83,9 +90,7 @@ public class MessageUseCase {
     public MessageEntity sendMessageWithAttachments(Long channelId, Long senderId, Long tenantId,
                                                      String content, List<Long> mentions,
                                                      List<MultipartFile> files) {
-        if (!memberService.canSendMessages(channelId, senderId)) {
-            throw new AppException(ErrorCode.CANNOT_SEND_MESSAGES);
-        }
+        memberService.getMemberWithSendPermission(channelId, senderId);
 
         ChannelEntity channel = channelService.getChannelByIdOrThrow(channelId);
         if (!channel.isActive()) {
@@ -108,13 +113,11 @@ public class MessageUseCase {
             saved.setAttachments(attachments);
         }
 
-        channelService.recordMessage(channelId);
+        channelService.recordMessage(channel);
 
         memberService.incrementUnreadForChannel(channelId, senderId);
 
-        eventPublisher.publishMessageSent(saved);
-
-        cacheService.invalidateChannelMessagesPage(channelId);
+        applicationEventPublisher.publishEvent(new MessageSentInternalEvent(this, saved));
 
         log.info("User {} sent message {} with {} attachments in channel {}", 
                 senderId, saved.getId(), hasFiles ? files.size() : 0, channelId);
@@ -127,9 +130,7 @@ public class MessageUseCase {
     @Transactional
     public MessageEntity sendReply(Long channelId, Long parentId, Long senderId, Long tenantId,
                                    String content, List<Long> mentions) {
-        if (!memberService.canSendMessages(channelId, senderId)) {
-            throw new AppException(ErrorCode.CANNOT_SEND_MESSAGES);
-        }
+        memberService.getMemberWithSendPermission(channelId, senderId);
 
         ChannelEntity channel = channelService.getChannelByIdOrThrow(channelId);
         if (!channel.isActive()) {
@@ -144,13 +145,11 @@ public class MessageUseCase {
         MessageEntity message = MessageEntity.createReply(channelId, senderId, tenantId, content, parentId, mentions);
         MessageEntity saved = messageService.sendReply(parentId, message);
 
-        channelService.recordMessage(channelId);
+        channelService.recordMessage(channel);
 
         memberService.incrementUnreadForChannel(channelId, senderId);
 
-        eventPublisher.publishMessageSent(saved);
-        
-        cacheService.invalidateChannelMessagesPage(channelId);
+        applicationEventPublisher.publishEvent(new MessageSentInternalEvent(this, saved));
         
         return saved;
     }
@@ -242,7 +241,9 @@ public class MessageUseCase {
         }
 
         MessageEntity edited = messageService.editMessage(messageId, newContent, userId);
-        eventPublisher.publishMessageUpdated(edited);
+        
+        applicationEventPublisher.publishEvent(new MessageUpdatedInternalEvent(this, edited));
+        
         return edited;
     }
 
@@ -256,7 +257,9 @@ public class MessageUseCase {
         boolean isAdmin = memberService.canManageChannel(message.getChannelId(), userId);
         
         MessageEntity deleted = messageService.deleteMessage(messageId, userId, isAdmin);
-        eventPublisher.publishMessageDeleted(deleted);
+        
+        applicationEventPublisher.publishEvent(new MessageDeletedInternalEvent(this, deleted));
+        
         return deleted;
     }
 
@@ -272,7 +275,10 @@ public class MessageUseCase {
         }
 
         MessageEntity updated = messageService.addReaction(messageId, userId, emoji);
-        eventPublisher.publishReactionAdded(messageId, message.getChannelId(), userId, emoji);
+        
+        applicationEventPublisher.publishEvent(
+                new ReactionAddedInternalEvent(this, messageId, message.getChannelId(), userId, emoji));
+        
         return updated;
     }
 
@@ -288,7 +294,10 @@ public class MessageUseCase {
         }
 
         MessageEntity updated = messageService.removeReaction(messageId, userId, emoji);
-        eventPublisher.publishReactionRemoved(messageId, message.getChannelId(), userId, emoji);
+        
+        applicationEventPublisher.publishEvent(
+                new ReactionRemovedInternalEvent(this, messageId, message.getChannelId(), userId, emoji));
+        
         return updated;
     }
 
@@ -309,6 +318,7 @@ public class MessageUseCase {
 
     /**
      * Send typing indicator
+     * Note: This is not transactional, so we publish directly to Kafka
      */
     public void sendTypingIndicator(Long channelId, Long userId, boolean isTyping) {
         if (!memberService.isMember(channelId, userId)) {
@@ -321,6 +331,7 @@ public class MessageUseCase {
             cacheService.clearUserTyping(channelId, userId);
         }
 
+        // Direct publish since this is not within a transaction
         eventPublisher.publishTypingIndicator(channelId, userId, isTyping);
     }
 

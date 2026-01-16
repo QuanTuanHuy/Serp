@@ -44,7 +44,8 @@ public interface IAttachmentService {
      *
      * @param attachmentId The attachment ID
      * @param tenantId     The tenant ID for security check
-     * @return The attachment entity or null if not found
+     * @return The attachment entity
+     * @throws AppException if not found or access denied
      */
     AttachmentEntity getAttachment(Long attachmentId, Long tenantId);
 
@@ -54,6 +55,7 @@ public interface IAttachmentService {
      * @param messageId The message ID
      * @param tenantId  The tenant ID
      * @return List of attachments
+     * @throws AppException if not found or access denied
      */
     List<AttachmentEntity> getAttachmentsByMessage(Long messageId, Long tenantId);
 

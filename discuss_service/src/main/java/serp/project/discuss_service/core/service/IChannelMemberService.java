@@ -80,6 +80,16 @@ public interface IChannelMemberService {
     boolean canSendMessages(Long channelId, Long userId);
 
     /**
+     * Get member entity and verify can send messages
+     *
+     * @param channelId Channel ID
+     * @param userId    User ID
+     * @return Member entity if found and can send messages
+     * @throws AppException if user is not a member or cannot send messages
+     */
+    ChannelMemberEntity getMemberWithSendPermission(Long channelId, Long userId);
+
+    /**
      * Check if user can manage channel
      */
     boolean canManageChannel(Long channelId, Long userId);

@@ -10,12 +10,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.multipart.MultipartFile;
 import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
-import serp.project.discuss_service.core.domain.enums.StorageProvider;
 import serp.project.discuss_service.core.domain.vo.FileUploadResult;
 import serp.project.discuss_service.core.domain.vo.StorageLocation;
 import serp.project.discuss_service.core.exception.AppException;
@@ -31,6 +29,8 @@ import java.io.InputStream;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -55,7 +55,6 @@ class AttachmentServiceTest {
     @Mock
     private StorageProperties.UploadLimits uploadLimits;
 
-    @InjectMocks
     private AttachmentService attachmentService;
 
     @BeforeEach
@@ -69,6 +68,17 @@ class AttachmentServiceTest {
                 "application/pdf",
                 "video/mp4"
         });
+        
+        // Create a synchronous executor for tests (runs tasks immediately in the same thread)
+        ExecutorService syncExecutor = Executors.newSingleThreadExecutor();
+        
+        // Manually construct the service with all dependencies
+        attachmentService = new AttachmentService(
+                storagePort,
+                attachmentPort,
+                storageProperties,
+                syncExecutor
+        );
     }
 
     // ==================== UPLOAD ATTACHMENT TESTS ====================

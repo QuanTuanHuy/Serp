@@ -38,12 +38,10 @@ public class ChannelMemberService implements IChannelMemberService {
 
     @Override
     public ChannelMemberEntity addMember(Long channelId, Long userId, Long tenantId, MemberRole role) {
-        // Check if member already exists
         Optional<ChannelMemberEntity> existing = memberPort.findByChannelIdAndUserId(channelId, userId);
         if (existing.isPresent()) {
             ChannelMemberEntity member = existing.get();
             if (member.getStatus() == MemberStatus.LEFT) {
-                // Rejoin
                 member.rejoin();
                 ChannelMemberEntity saved = memberPort.save(member);
                 updateCaches(channelId, userId);
@@ -54,7 +52,6 @@ public class ChannelMemberService implements IChannelMemberService {
             return member;
         }
 
-        // Create new member
         ChannelMemberEntity member = role == MemberRole.OWNER
                 ? ChannelMemberEntity.createOwner(channelId, userId, tenantId)
                 : ChannelMemberEntity.createMember(channelId, userId, tenantId);
@@ -104,13 +101,11 @@ public class ChannelMemberService implements IChannelMemberService {
 
     @Override
     public Set<Long> getMemberIds(Long channelId) {
-        // Try cache first
         Set<Long> cached = cacheService.getCachedChannelMembers(channelId);
         if (!cached.isEmpty()) {
             return cached;
         }
 
-        // Fallback to database
         List<ChannelMemberEntity> members = getActiveMembers(channelId);
         Set<Long> memberIds = members.stream()
                 .map(ChannelMemberEntity::getUserId)
@@ -137,7 +132,6 @@ public class ChannelMemberService implements IChannelMemberService {
 
     @Override
     public boolean isMember(Long channelId, Long userId) {
-        // Check cache first
         if (cacheService.isMemberCached(channelId, userId)) {
             return true;
         }
@@ -149,6 +143,18 @@ public class ChannelMemberService implements IChannelMemberService {
         return getMember(channelId, userId)
                 .map(ChannelMemberEntity::canSendMessages)
                 .orElse(false);
+    }
+
+    @Override
+    public ChannelMemberEntity getMemberWithSendPermission(Long channelId, Long userId) {
+        ChannelMemberEntity member = getMember(channelId, userId)
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_CHANNEL_MEMBER));
+        
+        if (!member.canSendMessages()) {
+            throw new AppException(ErrorCode.CANNOT_SEND_MESSAGES);
+        }
+        
+        return member;
     }
 
     @Override
@@ -258,12 +264,13 @@ public class ChannelMemberService implements IChannelMemberService {
     public void incrementUnreadForChannel(Long channelId, Long senderId) {
         memberPort.incrementUnreadForChannel(channelId, senderId);
         
-        // Update cache for all members
         Set<Long> memberIds = getMemberIds(channelId);
-        for (Long memberId : memberIds) {
-            if (!memberId.equals(senderId)) {
-                cacheService.incrementUnreadCount(memberId, channelId);
-            }
+        Set<Long> otherMembers = memberIds.stream()
+                .filter(memberId -> !memberId.equals(senderId))
+                .collect(Collectors.toSet());
+        
+        if (!otherMembers.isEmpty()) {
+            cacheService.incrementUnreadCountBatch(otherMembers, channelId);
         }
     }
 

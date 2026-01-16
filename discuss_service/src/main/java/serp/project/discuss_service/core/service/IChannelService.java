@@ -85,6 +85,13 @@ public interface IChannelService {
     void recordMessage(Long channelId);
 
     /**
+     * Record new message in channel with an already-loaded ChannelEntity.
+     *
+     * @param channel The channel entity (already loaded)
+     */
+    void recordMessage(ChannelEntity channel);
+
+    /**
      * Delete channel
      */
     void deleteChannel(Long channelId);
