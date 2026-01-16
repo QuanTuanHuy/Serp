@@ -155,11 +155,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           parentId: replyingTo?.id,
         }).unwrap();
       } else {
-        // Send text-only message
+        // Send text-only message with optimistic update params
         await sendMessage({
           channelId: channel.id,
           content,
           parentId: replyingTo?.id,
+          currentUserId,
         }).unwrap();
       }
 
@@ -207,6 +208,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         messageId,
         channelId: channel.id,
         emoji,
+        currentUserId,
       }).unwrap();
     } catch (error) {
       console.error('Failed to add reaction:', error);
@@ -219,6 +221,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         messageId,
         channelId: channel.id,
         emoji,
+        currentUserId,
       }).unwrap();
     } catch (error) {
       console.error('Failed to remove reaction:', error);
