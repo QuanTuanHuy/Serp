@@ -38,10 +38,19 @@ public class StorageProperties {
     @Setter
     public static class S3Properties {
         /**
-         * S3 endpoint URL (e.g., http://localhost:9000 for MinIO)
+         * S3 endpoint URL for internal server-to-server communication
+         * (e.g., http://serp-minio:9000 for Docker, http://localhost:9000 for local)
          * Leave empty for AWS S3 (uses default endpoint)
          */
         private String endpoint;
+
+        /**
+         * Public endpoint URL accessible by clients (browser, mobile app)
+         * Used for generating download URLs and presigned URLs
+         * (e.g., http://localhost:9000 for local, https://s3.yourdomain.com for production)
+         * If not set, falls back to 'endpoint'
+         */
+        private String publicEndpoint;
 
         /**
          * Access key (MinIO root user or AWS access key)

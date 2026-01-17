@@ -62,10 +62,11 @@ public class S3StorageAdapter implements IStoragePort {
 
             s3Client.putObject(putRequest, RequestBody.fromInputStream(inputStream, fileSize));
 
-            String url = String.format("%s/%s/%s",
-                    storageProperties.getS3().getEndpoint(), bucket, key);
+            // Use publicEndpoint for client-accessible URLs, fallback to endpoint if not set
+            String endpoint = getPublicEndpoint();
+            String url = String.format("%s/%s/%s", endpoint, bucket, key);
             StorageLocation location = StorageLocation.ofS3(bucket, key, url);
-            log.info("Uploaded file to S3: bucket={}, key={}", bucket, key);
+            log.info("Uploaded file to S3: bucket={}, key={}, publicUrl={}", bucket, key, url);
 
             return FileUploadResult.success(location, contentType, fileSize);
 
@@ -215,5 +216,17 @@ public class S3StorageAdapter implements IStoragePort {
         }
         // Replace spaces and special characters
         return fileName.replaceAll("[^a-zA-Z0-9._-]", "_");
+    }
+
+    /**
+     * Get public endpoint for generating client-accessible URLs.
+     * Falls back to internal endpoint if publicEndpoint is not configured.
+     */
+    private String getPublicEndpoint() {
+        String publicEndpoint = storageProperties.getS3().getPublicEndpoint();
+        if (publicEndpoint != null && !publicEndpoint.isEmpty()) {
+            return publicEndpoint;
+        }
+        return storageProperties.getS3().getEndpoint();
     }
 }

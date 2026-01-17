@@ -71,13 +71,18 @@ discuss:
   storage:
     provider: S3
     s3:
+      # Internal endpoint for server-to-MinIO communication (Docker network hostname)
       endpoint: ${STORAGE_ENDPOINT}
+      # Public endpoint accessible by clients (browser, mobile app)
+      # For Docker: Use host machine IP or domain (e.g., http://192.168.1.100:9000)
+      # For production: Use load balancer/reverse proxy URL (e.g., https://s3.yourdomain.com)
+      public-endpoint: ${STORAGE_PUBLIC_ENDPOINT:${STORAGE_ENDPOINT}}
       access-key: ${STORAGE_ACCESS_KEY}
       secret-key: ${STORAGE_SECRET_KEY}
-      bucket: ${STORAGE_BUCKET}
-      region: ${STORAGE_REGION}
-      presigned-url-expiry-minutes: ${PRESIGNED_URL_EXPIRY_MINUTES}
-      download-url-expiry-days: ${DOWNLOAD_URL_EXPIRY_DAYS}
+      bucket: ${STORAGE_BUCKET:discuss-attachments}
+      region: ${STORAGE_REGION:us-east-1}
+      presigned-url-expiry-minutes: ${PRESIGNED_URL_EXPIRY_MINUTES:60}
+      download-url-expiry-days: ${DOWNLOAD_URL_EXPIRY_DAYS:7}
     upload:
       max-file-size: ${MAX_FILE_SIZE}
       max-files-per-message: ${MAX_FILES_PER_MESSAGE}
