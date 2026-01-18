@@ -6,7 +6,7 @@ Description: Part of Serp Project - Channel item component for discuss module
 'use client';
 
 import React from 'react';
-import { cn } from '@/shared/utils';
+import { cn, getAvatarColor } from '@/shared/utils';
 import {
   Avatar,
   AvatarFallback,
@@ -88,8 +88,11 @@ export const ChannelItem: React.FC<ChannelItemProps> = ({
       <div className='relative flex-shrink-0'>
         {showAvatar ? (
           <Avatar className='h-10 w-10 ring-2 ring-white dark:ring-slate-900'>
-            <AvatarImage src={channel.avatarUrl} alt={channel.name} />
-            <AvatarFallback className='bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-xs font-semibold'>
+            {channel.avatarUrl && <AvatarImage src={channel.avatarUrl} alt={channel.name} />}
+            <AvatarFallback className={cn(
+              'text-xs font-semibold text-white bg-gradient-to-br',
+              getAvatarColor(channel.name)
+            )}>
               {getChannelInitials(channel.name)}
             </AvatarFallback>
           </Avatar>

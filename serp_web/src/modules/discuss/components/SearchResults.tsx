@@ -25,6 +25,7 @@ import {
 } from '@/shared/components/ui/avatar';
 import { Badge } from '@/shared/components/ui/badge';
 import type { GroupedSearchResults, ChannelType, MessageType } from '../types';
+import { cn, getAvatarColor } from '@/shared/utils';
 
 interface SearchResultsProps {
   results: GroupedSearchResults[];
@@ -177,11 +178,16 @@ export function SearchResults({
                       {/* Message header */}
                       <div className='flex items-start gap-3'>
                         <Avatar className='h-8 w-8 flex-shrink-0'>
-                          <AvatarImage
-                            src={message.sender?.avatarUrl}
-                            alt={message.sender?.name || 'Unknown'}
-                          />
-                          <AvatarFallback className='bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white text-xs'>
+                          {message.sender?.avatarUrl && (
+                            <AvatarImage
+                              src={message.sender?.avatarUrl}
+                              alt={message.sender?.name || 'Unknown'}
+                            />
+                          )}
+                          <AvatarFallback className={cn(
+                            'text-xs text-white bg-gradient-to-br',
+                            getAvatarColor(message.sender?.name || '')
+                          )}>
                             {message.sender?.name?.charAt(0) || '?'}
                           </AvatarFallback>
                         </Avatar>
