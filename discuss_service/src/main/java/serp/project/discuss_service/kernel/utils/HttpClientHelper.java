@@ -150,6 +150,16 @@ public class HttpClientHelper {
                 .doOnError(error -> handleError(error, uri));
     }
 
+    public MultiValueMap<String, String> buildQueryParams(Map<String, Object> params) {
+        UriComponentsBuilder builder = UriComponentsBuilder.newInstance();
+        params.forEach((key, value) -> {
+            if (key != null && !key.isEmpty() && value != null && !value.toString().isEmpty()) {
+                builder.queryParam(key, value);
+            }
+        });
+        return builder.build().getQueryParams();
+    }
+
     private boolean isRetryableError(Throwable throwable) {
         if (throwable instanceof AppException appEx) {
             return appEx.getCode() >= 500;

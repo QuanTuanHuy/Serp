@@ -10,8 +10,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse;
+import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse.UserInfo;
 import serp.project.discuss_service.core.domain.dto.response.MessageResponse;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
+import serp.project.discuss_service.core.exception.AppException;
+import serp.project.discuss_service.core.exception.ErrorCode;
 import serp.project.discuss_service.core.port.client.IAccountServiceClient;
 import serp.project.discuss_service.core.port.client.ICachePort;
 import serp.project.discuss_service.core.service.IUserInfoService;
@@ -93,6 +96,31 @@ public class UserInfoService implements IUserInfoService {
 
         messages.forEach(this::enrichMessageWithUserInfo);
         return messages;
+    }
+
+    @Override
+    public List<UserInfo> getUsersForTenant(Long tenantId, String query) {
+        if (tenantId == null) {
+            throw new AppException(ErrorCode.TENANT_ID_REQUIRED);
+        }
+        try {
+            if (query != null && !query.isEmpty()) {
+                return accountServiceClient.getUsersForTenant(tenantId, query);
+            }
+            String cacheKey = String.format(USER_INFO_BY_TENANT_CACHE_PREFIX, tenantId);
+            List<UserInfo> cachedUsers = cachePort.getFromCache(cacheKey, List.class);
+            if (cachedUsers != null && !cachedUsers.isEmpty()) {
+                return cachedUsers;
+            }
+            List<UserInfo> users = accountServiceClient.getUsersForTenant(tenantId, null);
+            if (users != null && !users.isEmpty()) {
+                cachePort.setToCache(cacheKey, users, USER_INFO_CACHE_TTL);
+            }
+            return users;
+        } catch (Exception e) {
+            log.error("Error fetching users for tenant {}: {}", tenantId, e.getMessage());
+            return List.of();
+        }
     }
 
     /**
