@@ -12,6 +12,7 @@ import { api } from '@/lib/store/api';
 import './channels.api';
 import './messages.api';
 import './attachments.api';
+import './users.api';
 
 // Export the combined API
 export const discussApi = api;
@@ -20,3 +21,4 @@ export const discussApi = api;
 export * from './channels.api';
 export * from './messages.api';
 export * from './attachments.api';
+export * from './users.api';

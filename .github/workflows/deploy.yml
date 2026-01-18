@@ -281,7 +281,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
-            cd ${{ secrets.DEPLOY_PATH }}/discuss_service
+            cd ${{ secrets.DEPLOY_PATH }}/discuss
             export IMAGE_TAG=${{ github.sha }}
             docker compose pull
             docker compose up -d --remove-orphans

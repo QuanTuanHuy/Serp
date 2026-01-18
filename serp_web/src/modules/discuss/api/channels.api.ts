@@ -186,7 +186,9 @@ export const channelApi = api.injectEndpoints({
       query: ({ channelId, userId }) => ({
         url: `/channels/${channelId}/members`,
         method: 'POST',
-        body: { userId: parseInt(userId) },
+        params: {
+          userId: parseInt(userId),
+        }
       }),
       extraOptions: { service: 'discuss' },
       invalidatesTags: (result, error, { channelId }) => [
