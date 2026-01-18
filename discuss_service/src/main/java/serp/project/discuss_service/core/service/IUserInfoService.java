@@ -17,6 +17,7 @@ import java.util.List;
 public interface IUserInfoService {
 
     String USER_INFO_CACHE_PREFIX = "discuss:user_info:";
+    String USER_INFO_BY_TENANT_CACHE_PREFIX = "discuss:tenant:%d:user_info";
     long USER_INFO_CACHE_TTL = 3600; // 1 hour
 
     /**
@@ -50,4 +51,12 @@ public interface IUserInfoService {
      * @return list of enriched MessageResponse with sender user info
      */
     List<MessageResponse> enrichMessagesWithUserInfo(List<MessageResponse> messages);
+
+    /**
+     * Get user info for a tenant based on a search query.
+     * @param tenantId
+     * @param query
+     * @return list of UserInfo matching the query
+     */
+    List<ChannelMemberResponse.UserInfo> getUsersForTenant(Long tenantId, String query);
 }

@@ -6,7 +6,7 @@ Description: Part of Serp Project - Chat window component for discuss module
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { cn } from '@/shared/utils';
+import { cn, getAvatarColor } from '@/shared/utils';
 import {
   Avatar,
   AvatarFallback,
@@ -251,8 +251,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             {/* Avatar/Icon */}
             {channel.type === 'DIRECT' || channel.avatarUrl ? (
               <Avatar className='h-11 w-11 ring-2 ring-white dark:ring-slate-900 shadow-sm'>
-                <AvatarImage src={channel.avatarUrl} alt={channel.name} />
-                <AvatarFallback className='bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-sm font-semibold'>
+                {channel.avatarUrl && <AvatarImage src={channel.avatarUrl} alt={channel.name} />}
+                <AvatarFallback className={cn(
+                  'text-sm font-semibold text-white bg-gradient-to-br',
+                  getAvatarColor(channel.name)
+                )}>
                   {getUserInitials(channel.name)}
                 </AvatarFallback>
               </Avatar>

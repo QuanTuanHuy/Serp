@@ -9,11 +9,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.util.MultiValueMap;
+
 import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse;
+import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse.UserInfo;
 import serp.project.discuss_service.core.port.client.IAccountServiceClient;
 import serp.project.discuss_service.kernel.utils.HttpClientHelper;
 import serp.project.discuss_service.kernel.utils.TokenUtils;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -56,13 +61,68 @@ public class AccountServiceClientAdapter implements IAccountServiceClient {
         }
     }
 
+    @Override
+    @SuppressWarnings("unchecked")
+    public List<UserInfo> getUsersForTenant(Long tenantId, String query) {
+        if (tenantId == null) {
+            throw new IllegalArgumentException("Tenant ID must not be null");
+        }
+        try {
+            String token = tokenUtils.getServiceToken()
+                    .orElseThrow(() -> new RuntimeException("Failed to obtain service token"));
+
+            String url = accountServiceUrl + "/internal/api/v1/users";
+            log.info("Url: {}", url);
+
+            Map<String, String> headers = Map.of("Authorization", "Bearer " + token);
+            
+            Map<String, Object> params = new java.util.HashMap<>();
+            params.put("organizationId", tenantId);
+            params.put("search", query);
+            params.put("page", 0);
+            params.put("pageSize", 50);
+
+            MultiValueMap<String, String> queryParams = httpClientHelper.buildQueryParams(params);
+
+            Map<String, Object> response = httpClientHelper.get(
+                    url,
+                    queryParams,
+                    headers,
+                    Map.class
+            ).block();
+
+            if (response == null) {
+                log.warn("No response received for users of tenant ID: {}", tenantId);
+                return Collections.emptyList();
+            }
+
+            Object dataObj = response.get("data");
+            if (dataObj instanceof Map) {
+                Map<String, Object> dataMap = (Map<String, Object>) dataObj;
+                Object itemsObj = dataMap.get("items");
+                if (itemsObj instanceof List) {
+                    List<Map<String, Object>> items = (List<Map<String, Object>>) itemsObj;
+                    return items.stream()
+                            .map(this::mapToUserInfo)
+                            .toList();
+                }
+            }
+
+            log.warn("Invalid response structure for users of tenant ID: {}", tenantId);
+            return Collections.emptyList();
+
+        } catch (Exception e) {
+            log.error("Error fetching users for tenant {} from account service: {}", tenantId, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
     /**
      * Extract UserInfo from account service response.
      */
     @SuppressWarnings("unchecked")
     private Optional<ChannelMemberResponse.UserInfo> extractUserInfo(Map<String, Object> response, Long userId) {
         try {
-            // Response structure: { code: 200, data: { id, name, email, avatar } }
             Object dataObj = response.get("data");
             if (dataObj == null) {
                 log.warn("No data field in response for user ID: {}", userId);
@@ -70,22 +130,42 @@ public class AccountServiceClientAdapter implements IAccountServiceClient {
             }
 
             Map<String, Object> data = (Map<String, Object>) dataObj;
+            UserInfo userInfo = mapToUserInfo(data);
+            if (userInfo.getId() == null) {
+                userInfo.setId(userId);
+            }
 
-            String name = getStringValue(data, "name", "firstName", "lastName");
-            String email = getStringValue(data, "email");
-            String avatarUrl = getStringValue(data, "avatar", "avatarUrl", "profileImage");
-
-            return Optional.of(ChannelMemberResponse.UserInfo.builder()
-                    .id(userId)
-                    .name(name)
-                    .email(email)
-                    .avatarUrl(avatarUrl)
-                    .build());
+            return Optional.of(userInfo);
 
         } catch (Exception e) {
             log.error("Error parsing user info for user {}: {}", userId, e.getMessage());
             return Optional.empty();
         }
+    }
+
+    private ChannelMemberResponse.UserInfo mapToUserInfo(Map<String, Object> data) {
+        Long id = null;
+        Object idObj = data.get("id");
+        if (idObj instanceof Number) {
+            id = ((Number) idObj).longValue();
+        } else if (idObj != null) {
+            try {
+                id = Long.parseLong(idObj.toString());
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+
+        String name = getStringValue(data, "name", "firstName", "lastName");
+        String email = getStringValue(data, "email");
+        String avatarUrl = getStringValue(data, "avatar", "avatarUrl", "profileImage");
+
+        return ChannelMemberResponse.UserInfo.builder()
+                .id(id)
+                .name(name)
+                .email(email)
+                .avatarUrl(avatarUrl)
+                .build();
     }
 
     /**

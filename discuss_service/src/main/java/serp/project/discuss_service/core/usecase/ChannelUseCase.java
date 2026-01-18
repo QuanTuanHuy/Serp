@@ -42,25 +42,19 @@ public class ChannelUseCase {
     public ChannelEntity createGroupChannel(Long tenantId, Long createdBy, String name,
                                             String description, boolean isPrivate,
                                             List<Long> initialMemberIds) {
-        // Create channel
         ChannelEntity channel = channelService.createGroupChannel(tenantId, createdBy, name, description, isPrivate);
 
-        // Add creator as owner
         memberService.addOwner(channel.getId(), createdBy, tenantId);
 
-        // Add initial members
         if (initialMemberIds != null && !initialMemberIds.isEmpty()) {
-            // Remove creator from initial members to avoid duplicate
             List<Long> filteredMembers = initialMemberIds.stream()
                     .filter(id -> !id.equals(createdBy))
                     .toList();
             memberService.addMembers(channel.getId(), filteredMembers, tenantId);
             
-            // Update member count
             channel.setMemberCount(1 + filteredMembers.size());
         }
 
-        // Publish event
         eventPublisher.publishChannelCreated(channel);
         
         log.info("Created GROUP channel {} with {} members", channel.getId(), 
@@ -75,7 +69,6 @@ public class ChannelUseCase {
     public ChannelEntity getOrCreateDirectChannel(Long tenantId, Long userId1, Long userId2) {
         ChannelEntity channel = channelService.getOrCreateDirectChannel(tenantId, userId1, userId2);
         
-        // Check if we need to add members (new channel)
         if (!memberService.isMember(channel.getId(), userId1)) {
             memberService.addOwner(channel.getId(), userId1, tenantId);
         }
@@ -95,12 +88,10 @@ public class ChannelUseCase {
                                            List<Long> initialMemberIds) {
         ChannelEntity channel = channelService.createTopicChannel(tenantId, createdBy, name, entityType, entityId);
 
-        // Add creator as owner if not already a member
         if (!memberService.isMember(channel.getId(), createdBy)) {
             memberService.addOwner(channel.getId(), createdBy, tenantId);
         }
 
-        // Add initial members
         if (initialMemberIds != null && !initialMemberIds.isEmpty()) {
             List<Long> filteredMembers = initialMemberIds.stream()
                     .filter(id -> !id.equals(createdBy))

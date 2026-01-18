@@ -14,14 +14,6 @@ export const DEFAULT_ADMIN_MODULES: ModuleDisplayItem[] = [
     isActive: true,
     isAdmin: true,
   },
-  {
-    code: 'DISCUSSION',
-    name: 'Discussion',
-    description: 'Company-wide Discussions',
-    href: '/discuss',
-    isActive: true,
-    isAdmin: true,
-  },
 ];
 
 export const DEFAULT_ORG_ADMIN_MODULES: ModuleDisplayItem[] = [
@@ -33,4 +25,15 @@ export const DEFAULT_ORG_ADMIN_MODULES: ModuleDisplayItem[] = [
     isActive: true,
     isAdmin: true,
   },
+];
+
+export const DEFAULT_ORG_USER_MODULES: ModuleDisplayItem[] = [
+  {
+    code: 'DISCUSSION',
+    name: 'Discussion',
+    description: 'Company-wide Discussions',
+    href: '/discuss',
+    isActive: true,
+    isAdmin: false,
+  }
 ];

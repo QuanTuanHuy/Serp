@@ -6,7 +6,7 @@ Description: Part of Serp Project - Message item component for discuss module
 'use client';
 
 import React from 'react';
-import { cn } from '@/shared/utils';
+import { cn, getAvatarColor } from '@/shared/utils';
 import {
   Avatar,
   AvatarFallback,
@@ -91,13 +91,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       <div className='flex-shrink-0'>
         {showAvatar && !isGrouped ? (
           <Avatar className='h-10 w-10 ring-2 ring-white dark:ring-slate-900 shadow-sm'>
-            <AvatarImage src={senderAvatar} alt={senderName} />
+            {senderAvatar && <AvatarImage src={senderAvatar} alt={senderName} />}
             <AvatarFallback
               className={cn(
-                'text-xs font-semibold',
-                isOwn
-                  ? 'bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white'
-                  : 'bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-600 text-slate-700 dark:text-slate-200'
+                'text-xs font-semibold text-white bg-gradient-to-br',
+                getAvatarColor(senderName)
               )}
             >
               {getUserInitials(senderName)}
@@ -214,7 +212,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
           {/* Reactions */}
           {message.reactions && message.reactions.length > 0 && (
-            <div className='absolute -bottom-3 left-4 flex gap-1 flex-wrap'>
+            <div className='absolute -bottom-3 left-4 flex flex-row items-center gap-1 min-w-max'>
               {message.reactions.map((reaction, idx) => {
                 const currentUserId = '1'; // TODO: Get from auth context
                 const isUserReacted = reaction.userIds.includes(currentUserId);
