@@ -27,6 +27,7 @@ public enum WsEventType {
     USER_OFFLINE,
     
     // Channel events
+    CHANNEL_CREATED,
     CHANNEL_UPDATED,
     CHANNEL_ARCHIVED,
     

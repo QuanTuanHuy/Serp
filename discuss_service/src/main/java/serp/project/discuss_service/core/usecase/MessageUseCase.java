@@ -318,11 +318,10 @@ public class MessageUseCase {
 
     /**
      * Send typing indicator
-     * Note: This is not transactional, so we publish directly to Kafka
      */
     public void sendTypingIndicator(Long channelId, Long userId, boolean isTyping) {
         if (!memberService.isMember(channelId, userId)) {
-            return; // Silently ignore if not a member
+            return;
         }
 
         if (isTyping) {
@@ -331,7 +330,6 @@ public class MessageUseCase {
             cacheService.clearUserTyping(channelId, userId);
         }
 
-        // Direct publish since this is not within a transaction
         eventPublisher.publishTypingIndicator(channelId, userId, isTyping);
     }
 

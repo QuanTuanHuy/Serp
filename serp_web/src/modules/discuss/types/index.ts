@@ -341,8 +341,8 @@ export const transformReactionsFromBackend = (
 
   return Object.entries(reactions).map(([emoji, userIds]) => ({
     emoji,
-    userIds: userIds.map(String),
-    count: userIds.length,
+    userIds: Array.isArray(userIds) ? userIds.map(String) : [],
+    count: Array.isArray(userIds) ? userIds.length : 0,
   }));
 };
 

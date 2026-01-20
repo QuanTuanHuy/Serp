@@ -15,7 +15,6 @@ import org.springframework.stereotype.Controller;
 import serp.project.discuss_service.core.domain.dto.request.MarkAsReadRequest;
 import serp.project.discuss_service.core.domain.dto.request.SendMessageRequest;
 import serp.project.discuss_service.core.domain.dto.request.TypingIndicatorRequest;
-import serp.project.discuss_service.core.port.client.IWebSocketHubPort;
 import serp.project.discuss_service.core.usecase.MessageUseCase;
 import serp.project.discuss_service.kernel.websocket.WebSocketAuthChannelInterceptor;
 
@@ -35,7 +34,6 @@ import java.security.Principal;
 public class DiscussWebSocketController {
 
     private final MessageUseCase messageUseCase;
-    private final IWebSocketHubPort webSocketHub;
 
     /**
      * Handle sending a new message via WebSocket
@@ -90,7 +88,7 @@ public class DiscussWebSocketController {
             }
             
             boolean isTyping = Boolean.TRUE.equals(request.getIsTyping());
-            webSocketHub.notifyTyping(channelId, userId, isTyping);
+            messageUseCase.sendTypingIndicator(channelId, userId, isTyping);
             log.debug("Typing indicator {} for user {} in channel {}", 
                     isTyping ? "started" : "stopped", userId, channelId);
         }
