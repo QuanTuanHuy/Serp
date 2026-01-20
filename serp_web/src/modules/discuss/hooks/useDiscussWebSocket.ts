@@ -6,9 +6,10 @@ Optimized: Direct cache updates instead of invalidation for better performance
 
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useMemo } from 'react';
 import { Client, IMessage, StompSubscription } from '@stomp/stompjs';
 import { useAppSelector, useAppDispatch } from '@/lib/store/hooks';
+import { toast } from 'sonner';
 import { messageApi } from '../api/messages.api';
 import { discussApi } from '../api/discussApi';
 import type { Message, MessageReaction } from '../types';
@@ -19,20 +20,30 @@ interface UseDiscussWebSocketOptions {
   onMessage?: (message: Message) => void;
   onTypingUpdate?: (userId: string, isTyping: boolean) => void;
   onUserStatusUpdate?: (userId: string, isOnline: boolean) => void;
+  onError?: (error: any) => void;
 }
 
 // Helper to find cache entries for a channel - matches the one in messages.api.ts
 const findMessagesCacheEntry = (
   state: any,
-  channelId: string
+  channelId: string | number
 ): { page: number; limit: number } | undefined => {
   const queries = state.api?.queries;
-  if (!queries) return undefined;
+  if (!queries) {
+    console.warn('[WebSocket] No queries in state');
+    return undefined;
+  }
+
+  // Normalize channelId to string to match RTK Query cache format
+  const normalizedChannelId = String(channelId);
+  console.log('[WebSocket] Looking for cache entry with channelId:', normalizedChannelId);
 
   for (const key of Object.keys(queries)) {
     if (key.startsWith('getMessages(')) {
       const entry = queries[key];
-      if (entry?.originalArgs?.channelId === channelId) {
+      console.log('[WebSocket] Checking cache entry:', key, 'originalArgs:', entry?.originalArgs);
+      if (entry?.originalArgs?.channelId === normalizedChannelId) {
+        console.log('[WebSocket] ✅ Found matching cache entry!');
         return {
           page: entry.originalArgs.pagination.page,
           limit: entry.originalArgs.pagination.limit,
@@ -40,6 +51,7 @@ const findMessagesCacheEntry = (
       }
     }
   }
+  console.warn('[WebSocket] ❌ No matching cache entry found');
   return undefined;
 };
 
@@ -48,16 +60,31 @@ interface UseDiscussWebSocketOptions {
   onMessage?: (message: Message) => void;
   onTypingUpdate?: (userId: string, isTyping: boolean) => void;
   onUserStatusUpdate?: (userId: string, isOnline: boolean) => void;
+  onError?: (error: any) => void;
 }
 
 export const useDiscussWebSocket = (
   options: UseDiscussWebSocketOptions = {}
 ) => {
-  const { channelId, onMessage, onTypingUpdate, onUserStatusUpdate } = options;
+  const { channelId, onMessage, onTypingUpdate, onUserStatusUpdate, onError } = options;
 
   const dispatch = useAppDispatch();
   const clientRef = useRef<Client | null>(null);
   const subscriptionRef = useRef<StompSubscription | null>(null);
+  const errorSubscriptionRef = useRef<StompSubscription | null>(null);
+  
+  // Use refs for callbacks to avoid re-subscriptions
+  const onMessageRef = useRef(onMessage);
+  const onTypingUpdateRef = useRef(onTypingUpdate);
+  const onUserStatusUpdateRef = useRef(onUserStatusUpdate);
+  const onErrorRef = useRef(onError);
+  
+  useEffect(() => {
+    onMessageRef.current = onMessage;
+    onTypingUpdateRef.current = onTypingUpdate;
+    onUserStatusUpdateRef.current = onUserStatusUpdate;
+    onErrorRef.current = onError;
+  }, [onMessage, onTypingUpdate, onUserStatusUpdate, onError]);
 
   const token = useAppSelector((state) => state.account.auth?.token);
   const wsUrl =
@@ -90,6 +117,33 @@ export const useDiscussWebSocket = (
     client.onConnect = () => {
       console.log('[WebSocket] ✅ Connected successfully');
       clientRef.current = client;
+      
+      // Subscribe to personal error queue
+      try {
+        const errorSub = client.subscribe(
+          '/user/queue/errors',
+          (message: IMessage) => {
+            try {
+              const error = JSON.parse(message.body);
+              console.error('[WebSocket] Received error:', error);
+              
+              // Show error toast
+              toast.error(error.message || 'Failed to send message');
+              
+              // Trigger callback if provided
+              if (onErrorRef.current) {
+                onErrorRef.current(error);
+              }
+            } catch (e) {
+              console.error('[WebSocket] Failed to parse error:', e);
+            }
+          }
+        );
+        errorSubscriptionRef.current = errorSub;
+        console.log('[WebSocket] Subscribed to error queue');
+      } catch (e) {
+        console.error('[WebSocket] Failed to subscribe to errors:', e);
+      }
     };
 
     client.onStompError = (frame) => {
@@ -109,6 +163,10 @@ export const useDiscussWebSocket = (
 
     return () => {
       console.log('[WebSocket] Disconnecting...');
+      if (errorSubscriptionRef.current) {
+        errorSubscriptionRef.current.unsubscribe();
+        errorSubscriptionRef.current = null;
+      }
       client.deactivate();
       clientRef.current = null;
     };
@@ -162,27 +220,46 @@ export const useDiscussWebSocket = (
 
       switch (type) {
         case 'MESSAGE_NEW': {
-          console.log('[WebSocket] New message received:', data);
+          console.log('[WebSocket] MESSAGE_NEW received:', data);
+          console.log('[WebSocket] Message object:', data.message);
+          
+          if (!data.message) {
+            console.error('[WebSocket] MESSAGE_NEW missing message object');
+            break;
+          }
+          
           const cacheInfo = findMessagesCacheEntry(state, data.channelId);
 
           if (cacheInfo) {
             // Transform and add message directly to cache
-            const transformedMessage = transformMessage(data);
+            const transformedMessage = transformMessage(data.message);
+            console.log('[WebSocket] Transformed message:', transformedMessage);
+            
+            // Normalize channelId to string for RTK Query cache key
+            const normalizedChannelId = String(data.channelId);
+            console.log('[WebSocket] Updating cache with key:', { channelId: normalizedChannelId, pagination: cacheInfo });
+            
             dispatch(
               messageApi.util.updateQueryData(
                 'getMessages',
-                { channelId: data.channelId, pagination: cacheInfo },
+                { channelId: normalizedChannelId, pagination: cacheInfo },
                 (draft) => {
+                  console.log('[WebSocket] Inside updateQueryData callback, draft:', draft);
                   // Avoid duplicates - check if message already exists
                   const exists = draft.data?.items?.some(
                     (m) => m.id === transformedMessage.id
                   );
                   if (!exists) {
                     draft.data?.items?.push(transformedMessage);
+                    console.log('[WebSocket] Added message to cache');
+                  } else {
+                    console.log('[WebSocket] Message already exists in cache, skipping');
                   }
                 }
               )
             );
+          } else {
+            console.warn('[WebSocket] No cache entry found for channel:', data.channelId);
           }
 
           // Still update channel list for last message preview
@@ -193,29 +270,37 @@ export const useDiscussWebSocket = (
             ])
           );
 
-          if (onMessage) {
-            onMessage(transformMessage(data));
+          if (onMessageRef.current) {
+            onMessageRef.current(transformMessage(data.message));
           }
           break;
         }
 
         case 'MESSAGE_UPDATED': {
-          console.log('[WebSocket] Message edited:', data);
+          console.log('[WebSocket] MESSAGE_UPDATED received:', data);
+          
+          if (!data.message || !data.messageId) {
+            console.error('[WebSocket] MESSAGE_UPDATED missing required fields');
+            break;
+          }
+          
           const cacheInfo = findMessagesCacheEntry(state, data.channelId);
 
           if (cacheInfo) {
+            const normalizedChannelId = String(data.channelId);
             dispatch(
               messageApi.util.updateQueryData(
                 'getMessages',
-                { channelId: data.channelId, pagination: cacheInfo },
+                { channelId: normalizedChannelId, pagination: cacheInfo },
                 (draft) => {
                   const message = draft.data?.items?.find(
-                    (m) => m.id === String(data.id)
+                    (m) => m.id === String(data.messageId)
                   );
-                  if (message) {
-                    message.content = data.content;
+                  if (message && data.message) {
+                    message.content = data.message.content;
                     message.isEdited = true;
-                    message.editedAt = data.editedAt || new Date().toISOString();
+                    message.editedAt = data.message.editedAt || new Date().toISOString();
+                    console.log('[WebSocket] Updated message in cache');
                   }
                 }
               )
@@ -225,22 +310,30 @@ export const useDiscussWebSocket = (
         }
 
         case 'MESSAGE_DELETED': {
-          console.log('[WebSocket] Message deleted:', data);
+          console.log('[WebSocket] MESSAGE_DELETED received:', data);
+          
+          if (!data.messageId) {
+            console.error('[WebSocket] MESSAGE_DELETED missing messageId');
+            break;
+          }
+          
           const cacheInfo = findMessagesCacheEntry(state, data.channelId);
 
           if (cacheInfo) {
+            const normalizedChannelId = String(data.channelId);
             dispatch(
               messageApi.util.updateQueryData(
                 'getMessages',
-                { channelId: data.channelId, pagination: cacheInfo },
+                { channelId: normalizedChannelId, pagination: cacheInfo },
                 (draft) => {
                   const message = draft.data?.items?.find(
-                    (m) => m.id === String(data.id || data.messageId)
+                    (m) => m.id === String(data.messageId)
                   );
                   if (message) {
                     message.isDeleted = true;
                     message.content = 'This message was deleted';
                     message.deletedAt = new Date().toISOString();
+                    console.log('[WebSocket] Marked message as deleted in cache');
                   }
                 }
               )
@@ -261,10 +354,11 @@ export const useDiscussWebSocket = (
           const cacheInfo = findMessagesCacheEntry(state, data.channelId);
 
           if (cacheInfo) {
+            const normalizedChannelId = String(data.channelId);
             dispatch(
               messageApi.util.updateQueryData(
                 'getMessages',
-                { channelId: data.channelId, pagination: cacheInfo },
+                { channelId: normalizedChannelId, pagination: cacheInfo },
                 (draft) => {
                   const message = draft.data?.items?.find(
                     (m) => m.id === String(data.messageId)
@@ -298,10 +392,11 @@ export const useDiscussWebSocket = (
           const cacheInfo = findMessagesCacheEntry(state, data.channelId);
 
           if (cacheInfo) {
+            const normalizedChannelId = String(data.channelId);
             dispatch(
               messageApi.util.updateQueryData(
                 'getMessages',
-                { channelId: data.channelId, pagination: cacheInfo },
+                { channelId: normalizedChannelId, pagination: cacheInfo },
                 (draft) => {
                   const message = draft.data?.items?.find(
                     (m) => m.id === String(data.messageId)
@@ -331,16 +426,16 @@ export const useDiscussWebSocket = (
 
         case 'TYPING_INDICATOR':
           console.log('[WebSocket] Typing indicator:', data);
-          if (onTypingUpdate) {
-            onTypingUpdate(data.userId, data.isTyping);
+          if (onTypingUpdateRef.current) {
+            onTypingUpdateRef.current(data.userId, data.isTyping);
           }
           break;
 
         case 'USER_ONLINE':
         case 'USER_OFFLINE':
           console.log('[WebSocket] User status update:', data);
-          if (onUserStatusUpdate) {
-            onUserStatusUpdate(data.userId, type === 'USER_ONLINE');
+          if (onUserStatusUpdateRef.current) {
+            onUserStatusUpdateRef.current(data.userId, type === 'USER_ONLINE');
           }
           dispatch(discussApi.util.invalidateTags(['Presence']));
           break;
@@ -368,7 +463,7 @@ export const useDiscussWebSocket = (
           console.warn('[WebSocket] Unknown message type:', type);
       }
     },
-    [dispatch, onMessage, onTypingUpdate, onUserStatusUpdate]
+    [dispatch] // Remove callback dependencies
   );
 
   // Send typing indicator
@@ -447,10 +542,13 @@ export const useDiscussWebSocket = (
     [channelId]
   );
 
-  return {
+  // Return stable API object
+  const api = useMemo(() => ({
     isConnected: clientRef.current?.connected ?? false,
     sendTypingIndicator,
     markAsRead,
     sendMessage,
-  };
+  }), [sendTypingIndicator, markAsRead, sendMessage]);
+
+  return api;
 };

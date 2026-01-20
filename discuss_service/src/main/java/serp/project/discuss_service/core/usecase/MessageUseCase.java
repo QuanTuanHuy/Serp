@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
+
+import serp.project.discuss_service.core.domain.dto.response.MessageResponse;
 import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
@@ -23,11 +25,13 @@ import serp.project.discuss_service.core.domain.event.ReactionRemovedInternalEve
 import serp.project.discuss_service.core.exception.AppException;
 import serp.project.discuss_service.core.exception.ErrorCode;
 import serp.project.discuss_service.core.service.IAttachmentService;
+import serp.project.discuss_service.core.service.IAttachmentUrlService;
 import serp.project.discuss_service.core.service.IChannelMemberService;
 import serp.project.discuss_service.core.service.IChannelService;
 import serp.project.discuss_service.core.service.IDiscussCacheService;
 import serp.project.discuss_service.core.service.IDiscussEventPublisher;
 import serp.project.discuss_service.core.service.IMessageService;
+import serp.project.discuss_service.core.service.IUserInfoService;
 
 import java.util.List;
 import java.util.Map;
@@ -55,6 +59,8 @@ public class MessageUseCase {
     private final IDiscussEventPublisher eventPublisher;
     private final IDiscussCacheService cacheService;
     private final IAttachmentService attachmentService;
+    private final IAttachmentUrlService attachmentUrlService;
+    private final IUserInfoService userInfoService;
     private final ApplicationEventPublisher applicationEventPublisher;
 
     /**
@@ -227,6 +233,18 @@ public class MessageUseCase {
         enrichMessagesWithAttachments(messages);
         
         return messages;
+    }
+
+    /**
+     * Get detailed message by ID
+     */
+    public Optional<MessageResponse> getMessageDetail(Long messageId) {
+        Optional<MessageEntity> messageOpt = messageService.getMessageById(messageId);
+        return messageOpt.map(m -> {
+            MessageResponse response = attachmentUrlService.enrichMessageWithUrls(m);
+            response = userInfoService.enrichMessageWithUserInfo(response);
+            return response;
+        });
     }
 
     /**

@@ -9,11 +9,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+
+import serp.project.discuss_service.core.domain.dto.response.MessageResponse;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEventType;
-import serp.project.discuss_service.core.domain.entity.MessageEntity;
 import serp.project.discuss_service.core.port.client.IWebSocketHubPort;
 import serp.project.discuss_service.core.service.IDiscussEventPublisher;
-import serp.project.discuss_service.core.service.IMessageService;
+import serp.project.discuss_service.core.usecase.MessageUseCase;
 import serp.project.discuss_service.kernel.utils.JsonUtils;
 
 import java.util.Map;
@@ -29,7 +30,7 @@ import java.util.Optional;
 public class DiscussKafkaConsumer {
 
     private final IWebSocketHubPort webSocketHub;
-    private final IMessageService messageService;
+    private final MessageUseCase messageUseCase;
     private final JsonUtils jsonUtils;
 
     /**
@@ -163,18 +164,18 @@ public class DiscussKafkaConsumer {
     }
 
     private void handleMessageSent(Long channelId, Long messageId) {
-        Optional<MessageEntity> messageOpt = messageService.getMessageById(messageId);
+        Optional<MessageResponse> messageOpt = messageUseCase.getMessageDetail(messageId);
         if (messageOpt.isPresent()) {
-            webSocketHub.notifyNewMessage(channelId, messageOpt.get());
+            webSocketHub.broadcastToChannel(channelId, messageOpt.get());
         } else {
             log.warn("Message not found for notification: {}", messageId);
         }
     }
 
     private void handleMessageUpdated(Long channelId, Long messageId) {
-        Optional<MessageEntity> messageOpt = messageService.getMessageById(messageId);
+        Optional<MessageResponse> messageOpt = messageUseCase.getMessageDetail(messageId);
         if (messageOpt.isPresent()) {
-            webSocketHub.notifyMessageUpdated(channelId, messageOpt.get());
+            webSocketHub.broadcastToChannel(channelId, messageOpt.get());
         } else {
             log.warn("Message not found for update notification: {}", messageId);
         }
