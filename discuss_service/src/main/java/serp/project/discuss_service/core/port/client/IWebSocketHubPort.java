@@ -25,6 +25,11 @@ public interface IWebSocketHubPort {
     void sendToUser(Long userId, Object payload);
 
     /**
+     * Send error message to a specific user
+     */
+    void sendErrorToUser(Long userId, Object payload);
+
+    /**
      * Send message to multiple users
      */
     void sendToUsers(Set<Long> userIds, Object payload);

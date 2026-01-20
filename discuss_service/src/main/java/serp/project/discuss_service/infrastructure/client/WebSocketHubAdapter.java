@@ -40,6 +40,7 @@ public class WebSocketHubAdapter implements IWebSocketHubPort {
     private static final String CHANNEL_TOPIC = "/topic/channels/%d";
     private static final String CHANNEL_TYPING_TOPIC = "/topic/channels/%d/typing";
     private static final String USER_QUEUE = "/queue/notifications";
+    private static final String USER_ERROR_QUEUE = "/user/queue/errors";
 
     @Override
     public void broadcastToChannel(Long channelId, Object payload) {
@@ -56,6 +57,16 @@ public class WebSocketHubAdapter implements IWebSocketHubPort {
                 payload
         );
         log.debug("Sent message to user {} queue", userId);
+    }
+
+    @Override
+    public void sendErrorToUser(Long userId, Object payload) {
+        messagingTemplate.convertAndSendToUser(
+                String.valueOf(userId),
+                USER_ERROR_QUEUE,
+                payload
+        );
+        log.debug("Sent error message to user {} error queue", userId);
     }
 
     @Override

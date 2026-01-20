@@ -15,8 +15,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
-import serp.project.discuss_service.core.domain.constant.Constants;
 import serp.project.discuss_service.core.exception.AppException;
+import serp.project.discuss_service.core.exception.ErrorCode;
 
 import java.net.URI;
 import java.time.Duration;
@@ -186,8 +186,7 @@ public class HttpClientHelper {
 
     private Throwable handleRetryExhausted(String uri) {
         log.error("Retry exhausted for request to: {}", uri);
-        return new AppException("Service temporarily unavailable after retries",
-                Constants.HttpStatusCode.INTERNAL_SERVER_ERROR);
+        return new AppException(ErrorCode.SERVICE_UNAVAILABLE);
     }
 
     private void handleError(Throwable error, String uri) {
@@ -203,9 +202,7 @@ public class HttpClientHelper {
                 .timeout(Duration.ofSeconds(10))
                 .onErrorMap(throwable -> {
                     if (throwable instanceof TimeoutException) {
-                        return new AppException(
-                                "Request timeout",
-                                Constants.HttpStatusCode.INTERNAL_SERVER_ERROR);
+                        return new AppException(ErrorCode.REQUEST_TIMEOUT);
                     }
                     return throwable;
                 });

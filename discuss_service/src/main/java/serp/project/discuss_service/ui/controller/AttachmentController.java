@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import serp.project.discuss_service.core.domain.dto.GeneralResponse;
 import serp.project.discuss_service.core.domain.dto.response.AttachmentResponse;
 import serp.project.discuss_service.core.exception.AppException;
+import serp.project.discuss_service.core.exception.ErrorCode;
 import serp.project.discuss_service.core.usecase.AttachmentUseCase;
 import serp.project.discuss_service.kernel.utils.AuthUtils;
 import serp.project.discuss_service.kernel.utils.ResponseUtils;
@@ -40,7 +41,7 @@ public class AttachmentController {
     public ResponseEntity<GeneralResponse<AttachmentResponse>> getAttachment(
             @PathVariable Long attachmentId) {
         Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new AppException("Tenant ID not found"));
+                .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
 
         log.debug("Getting attachment metadata: {}", attachmentId);
 
@@ -56,7 +57,7 @@ public class AttachmentController {
     public ResponseEntity<GeneralResponse<List<AttachmentResponse>>> getAttachmentsByMessage(
             @PathVariable Long messageId) {
         Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new AppException("Tenant ID not found"));
+                .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
 
         log.debug("Getting attachments for message: {}", messageId);
 
@@ -73,7 +74,7 @@ public class AttachmentController {
             @PathVariable Long attachmentId,
             @RequestParam(defaultValue = "60") int expirationMinutes) {
         Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new AppException("Tenant ID not found"));
+                .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
 
         log.info("Generating download URL for attachment: {}", attachmentId);
 
@@ -95,9 +96,9 @@ public class AttachmentController {
     public ResponseEntity<GeneralResponse<?>> deleteAttachment(
             @PathVariable Long attachmentId) {
         Long userId = authUtils.getCurrentUserId()
-                .orElseThrow(() -> new AppException("Unauthorized"));
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
         Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new AppException("Tenant ID not found"));
+                .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
 
         log.info("User {} deleting attachment: {}", userId, attachmentId);
 

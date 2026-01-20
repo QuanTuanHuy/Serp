@@ -7,6 +7,7 @@ package serp.project.discuss_service.ui.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -15,10 +16,15 @@ import org.springframework.stereotype.Controller;
 import serp.project.discuss_service.core.domain.dto.request.MarkAsReadRequest;
 import serp.project.discuss_service.core.domain.dto.request.SendMessageRequest;
 import serp.project.discuss_service.core.domain.dto.request.TypingIndicatorRequest;
+import serp.project.discuss_service.core.exception.AppException;
+import serp.project.discuss_service.core.exception.ErrorCode;
+import serp.project.discuss_service.core.port.client.IWebSocketHubPort;
 import serp.project.discuss_service.core.usecase.MessageUseCase;
 import serp.project.discuss_service.kernel.websocket.WebSocketAuthChannelInterceptor;
 
 import java.security.Principal;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * WebSocket controller handling real-time messaging operations via STOMP.
@@ -34,10 +40,12 @@ import java.security.Principal;
 public class DiscussWebSocketController {
 
     private final MessageUseCase messageUseCase;
+    private final IWebSocketHubPort webSocketHubPort;
 
     /**
      * Handle sending a new message via WebSocket
      * Client sends to: /app/channels/{channelId}/message
+     * Errors are sent back to /user/queue/errors
      */
     @MessageMapping("/channels/{channelId}/message")
     public void handleMessage(
@@ -46,25 +54,31 @@ public class DiscussWebSocketController {
             SimpMessageHeaderAccessor headerAccessor) {
         
         Principal principal = headerAccessor.getUser();
-        if (principal instanceof WebSocketAuthChannelInterceptor.WebSocketPrincipal wsUser) {
-            Long userId = wsUser.getUserIdAsLong();
-            Long tenantId = wsUser.getTenantIdAsLong();
-            
-            if (userId == null || tenantId == null) {
-                log.warn("WebSocket message rejected: missing userId or tenantId");
-                return;
-            }
-            
-            try {
-                messageUseCase.sendMessage(channelId, userId, tenantId, 
-                        request.getContent(), request.getMentions());
-                log.debug("Message sent via WebSocket to channel {} by user {}", channelId, userId);
-            } catch (Exception e) {
-                log.error("Failed to send message via WebSocket: {}", e.getMessage());
-                // Could send error back to user's queue here
-            }
-        } else {
+        if (!(principal instanceof WebSocketAuthChannelInterceptor.WebSocketPrincipal wsUser)) {
             log.warn("WebSocket message rejected: user not authenticated");
+            sendErrorToUser(principal, ErrorCode.UNAUTHORIZED.toString(), "User not authenticated", null);
+            return;
+        }
+        
+        Long userId = wsUser.getUserIdAsLong();
+        Long tenantId = wsUser.getTenantIdAsLong();
+        
+        if (userId == null || tenantId == null) {
+            log.warn("WebSocket message rejected: missing userId or tenantId");
+            sendErrorToUser(principal, ErrorCode.UNAUTHORIZED.toString(), "Missing authentication credentials", null);
+            return;
+        }
+        
+        try {
+            messageUseCase.sendMessage(channelId, userId, tenantId, 
+                    request.getContent(), request.getMentions());
+            log.debug("Message sent via WebSocket to channel {} by user {}", channelId, userId);
+        } catch (AppException e) {
+            log.error("Failed to send message via WebSocket - Code: {}, Message: {}", e.getCode(), e.getMessage());
+            sendErrorToUser(principal, e.getErrorCode(), e.getMessage(), channelId);
+        } catch (Exception e) {
+            log.error("Failed to send message via WebSocket: {}", e.getMessage(), e);
+            sendErrorToUser(principal, ErrorCode.INTERNAL_SERVER_ERROR.toString(), "Failed to send message. Please try again.", channelId);
         }
     }
 
@@ -120,6 +134,36 @@ public class DiscussWebSocketController {
             } catch (Exception e) {
                 log.error("Failed to mark messages as read via WebSocket: {}", e.getMessage());
             }
+        }
+    }
+
+    /**
+     * Send error message to user's personal error queue
+     * Client subscribes to: /user/queue/errors
+     */
+    private void sendErrorToUser(Principal principal, String code, String message, Long channelId) {
+        if (principal == null) {
+            log.warn("Cannot send error to user: principal is null");
+            return;
+        }
+
+        Map<String, Object> error = new HashMap<>();
+        error.put("type", "MESSAGE_SEND_ERROR");
+        error.put("code", code);
+        error.put("message", message);
+        error.put("timestamp", System.currentTimeMillis());
+        if (channelId != null) {
+            error.put("channelId", channelId);
+        }
+
+        try {
+            webSocketHubPort.sendErrorToUser(
+                    Long.valueOf(principal.getName()), 
+                    error
+            );
+            log.debug("Sent error to user {}: {} - {}", principal.getName(), code, message);
+        } catch (Exception e) {
+            log.error("Failed to send error message to user: {}", e.getMessage(), e);
         }
     }
 }

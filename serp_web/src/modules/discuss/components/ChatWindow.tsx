@@ -32,6 +32,7 @@ import { OnlineStatusIndicator } from './OnlineStatusIndicator';
 import { SearchDialog } from './SearchDialog';
 import { ChannelMembersPanel } from './ChannelMembersPanel';
 import { useDiscussWebSocket } from '../hooks';
+import { useWebSocketOptional } from '../context/WebSocketContext';
 import {
   useGetMessagesQuery,
   useSendMessageMutation,
@@ -120,6 +121,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [deleteMessage] = useDeleteMessageMutation();
   const [addReaction] = useAddReactionMutation();
   const [removeReaction] = useRemoveReactionMutation();
+  
+  // Get WebSocket API (optional)
+  const wsApi = useWebSocketOptional();
 
   const messages = messagesResponse?.data?.items || [];
   const hasMore = messagesResponse?.data?.hasNext ?? false;
@@ -147,7 +151,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       ) as File[];
 
       if (files && files.length > 0) {
-        // Send message with files
+        // Send message with files - always use REST for file uploads
         await sendMessageWithFiles({
           channelId: channel.id,
           content,
@@ -155,13 +159,19 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           parentId: replyingTo?.id,
         }).unwrap();
       } else {
-        // Send text-only message with optimistic update params
-        await sendMessage({
-          channelId: channel.id,
-          content,
-          parentId: replyingTo?.id,
-          currentUserId,
-        }).unwrap();
+        // Text-only message - try WebSocket first, fallback to REST
+        if (wsApi?.isConnected) {
+          console.log('[ChatWindow] Using WebSocket to send message');
+          wsApi.sendMessage(content, replyingTo?.id);
+        } else {
+          console.log('[ChatWindow] WebSocket not connected, using REST');
+          await sendMessage({
+            channelId: channel.id,
+            content,
+            parentId: replyingTo?.id,
+            currentUserId,
+          }).unwrap();
+        }
       }
 
       // Clear reply state
