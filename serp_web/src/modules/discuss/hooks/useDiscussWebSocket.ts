@@ -151,7 +151,7 @@ export const useDiscussWebSocket = (
   // Handle incoming channel messages - Direct cache updates for better performance
   const handleChannelMessage = useCallback(
     (payload: any) => {
-      const { type, data } = payload;
+      const { type, payload: data } = payload;
 
       // Get current state to find cache entries - use a custom thunk to access getState
       let state: any;
@@ -161,7 +161,7 @@ export const useDiscussWebSocket = (
       });
 
       switch (type) {
-        case 'NEW_MESSAGE': {
+        case 'MESSAGE_NEW': {
           console.log('[WebSocket] New message received:', data);
           const cacheInfo = findMessagesCacheEntry(state, data.channelId);
 
@@ -199,7 +199,7 @@ export const useDiscussWebSocket = (
           break;
         }
 
-        case 'MESSAGE_EDITED': {
+        case 'MESSAGE_UPDATED': {
           console.log('[WebSocket] Message edited:', data);
           const cacheInfo = findMessagesCacheEntry(state, data.channelId);
 
