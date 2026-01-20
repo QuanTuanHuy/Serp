@@ -18,6 +18,7 @@ import serp.project.discuss_service.core.domain.dto.response.PaginatedResponse;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
 import serp.project.discuss_service.core.exception.AppException;
+import serp.project.discuss_service.core.exception.ErrorCode;
 import serp.project.discuss_service.core.service.IUserInfoService;
 import serp.project.discuss_service.core.usecase.ChannelUseCase;
 import serp.project.discuss_service.kernel.utils.AuthUtils;
@@ -46,9 +47,9 @@ public class ChannelController {
     public ResponseEntity<GeneralResponse<ChannelResponse>> createGroupChannel(
             @Valid @RequestBody CreateGroupChannelRequest request) {
         Long userId = authUtils.getCurrentUserId()
-                .orElseThrow(() -> new AppException("Unauthorized"));
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
         Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new AppException("Tenant ID not found"));
+                .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
 
         log.info("User {} creating group channel: {}", userId, request.getName());
 
@@ -72,9 +73,9 @@ public class ChannelController {
     public ResponseEntity<GeneralResponse<ChannelResponse>> createDirectChannel(
             @Valid @RequestBody CreateDirectChannelRequest request) {
         Long userId = authUtils.getCurrentUserId()
-                .orElseThrow(() -> new AppException("Unauthorized"));
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
         Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new AppException("Tenant ID not found"));
+                .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
 
         log.info("User {} creating/getting direct channel with user {}", userId, request.getOtherUserId());
 
@@ -95,9 +96,9 @@ public class ChannelController {
     public ResponseEntity<GeneralResponse<ChannelResponse>> createTopicChannel(
             @Valid @RequestBody CreateTopicChannelRequest request) {
         Long userId = authUtils.getCurrentUserId()
-                .orElseThrow(() -> new AppException("Unauthorized"));
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
         Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new AppException("Tenant ID not found"));
+                .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
 
         log.info("User {} creating topic channel: {} for {}/{}", 
                 userId, request.getName(), request.getEntityType(), request.getEntityId());
@@ -122,7 +123,7 @@ public class ChannelController {
     public ResponseEntity<GeneralResponse<ChannelResponse>> getChannel(
             @PathVariable Long channelId) {
         Long userId = authUtils.getCurrentUserId()
-                .orElseThrow(() -> new AppException("Unauthorized"));
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
         log.debug("User {} getting channel {}", userId, channelId);
 
@@ -144,7 +145,7 @@ public class ChannelController {
     public ResponseEntity<GeneralResponse<List<ChannelMemberResponse>>> getChannelMembers(
             @PathVariable Long channelId) {
         Long userId = authUtils.getCurrentUserId()
-                .orElseThrow(() -> new AppException("Unauthorized"));
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
         log.debug("User {} getting members of channel {}", userId, channelId);
 
         List<ChannelMemberEntity> members = channelUseCase.getChannelMembers(channelId, userId);
@@ -160,9 +161,9 @@ public class ChannelController {
     @GetMapping
     public ResponseEntity<GeneralResponse<PaginatedResponse<ChannelResponse>>> getMyChannels() {
         Long userId = authUtils.getCurrentUserId()
-                .orElseThrow(() -> new AppException("Unauthorized"));
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
         Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new AppException("Tenant ID not found"));
+                .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
 
         log.debug("User {} getting their channels", userId);
 
@@ -189,7 +190,7 @@ public class ChannelController {
             @PathVariable Long channelId,
             @Valid @RequestBody UpdateChannelRequest request) {
         Long userId = authUtils.getCurrentUserId()
-                .orElseThrow(() -> new AppException("Unauthorized"));
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
         log.info("User {} updating channel {}", userId, channelId);
 
@@ -211,7 +212,7 @@ public class ChannelController {
     public ResponseEntity<GeneralResponse<ChannelResponse>> archiveChannel(
             @PathVariable Long channelId) {
         Long userId = authUtils.getCurrentUserId()
-                .orElseThrow(() -> new AppException("Unauthorized"));
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
         log.info("User {} archiving channel {}", userId, channelId);
 
@@ -227,7 +228,7 @@ public class ChannelController {
     public ResponseEntity<GeneralResponse<?>> deleteChannel(
             @PathVariable Long channelId) {
         Long userId = authUtils.getCurrentUserId()
-                .orElseThrow(() -> new AppException("Unauthorized"));
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
         log.info("User {} deleting channel {}", userId, channelId);
 
@@ -243,9 +244,9 @@ public class ChannelController {
             @PathVariable Long channelId,
             @RequestParam Long userId) {
         Long currentUserId = authUtils.getCurrentUserId()
-                .orElseThrow(() -> new AppException("Unauthorized"));
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
         Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new AppException("Tenant ID not found"));
+                .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
 
         log.info("User {} adding user {} to channel {}", currentUserId, userId, channelId);
 
@@ -262,7 +263,7 @@ public class ChannelController {
             @PathVariable Long channelId,
             @PathVariable Long userId) {
         Long currentUserId = authUtils.getCurrentUserId()
-                .orElseThrow(() -> new AppException("Unauthorized"));
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
         log.info("User {} removing user {} from channel {}", currentUserId, userId, channelId);
 
@@ -278,7 +279,7 @@ public class ChannelController {
     public ResponseEntity<GeneralResponse<ChannelMemberResponse>> leaveChannel(
             @PathVariable Long channelId) {
         Long userId = authUtils.getCurrentUserId()
-                .orElseThrow(() -> new AppException("Unauthorized"));
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
         log.info("User {} leaving channel {}", userId, channelId);
 

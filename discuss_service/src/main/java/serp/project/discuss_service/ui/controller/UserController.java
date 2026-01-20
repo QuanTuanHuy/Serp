@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import serp.project.discuss_service.core.domain.dto.GeneralResponse;
 import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse.UserInfo;
 import serp.project.discuss_service.core.exception.AppException;
+import serp.project.discuss_service.core.exception.ErrorCode;
 import serp.project.discuss_service.core.service.IUserInfoService;
 import serp.project.discuss_service.kernel.utils.AuthUtils;
 import serp.project.discuss_service.kernel.utils.ResponseUtils;
@@ -35,7 +36,7 @@ public class UserController {
     public ResponseEntity<GeneralResponse<List<UserInfo>>> getUsersForTenant(
             @RequestParam(required = false) String query) {
         Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new AppException("Tenant ID not found"));
+                .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
         List<UserInfo> users = userInfoService.getUsersForTenant(tenantId, query);
         return ResponseEntity.ok(responseUtils.success(users));
     }

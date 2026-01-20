@@ -22,6 +22,7 @@ import reactor.netty.http.client.HttpClient;
 import reactor.netty.transport.ProxyProvider;
 import serp.project.discuss_service.core.domain.constant.Constants;
 import serp.project.discuss_service.core.exception.AppException;
+import serp.project.discuss_service.core.exception.ErrorCode;
 import serp.project.discuss_service.kernel.utils.DataUtils;
 
 import java.net.URI;
@@ -103,25 +104,21 @@ public class WebClientConfig {
         String message = parseErrorMessage(errorBody);
 
         return switch (statusCode.value()) {
-            case 400 -> new AppException(message.isEmpty() ? Constants.ErrorMessage.BAD_REQUEST : message,
-                    Constants.HttpStatusCode.BAD_REQUEST);
-            case 401 -> new AppException(message.isEmpty() ? Constants.ErrorMessage.UNAUTHORIZED : message,
-                    Constants.HttpStatusCode.UNAUTHORIZED);
-            case 403 -> new AppException(message.isEmpty() ? Constants.ErrorMessage.FORBIDDEN : message,
-                    Constants.HttpStatusCode.FORBIDDEN);
-            case 404 -> new AppException(message.isEmpty() ? Constants.ErrorMessage.NOT_FOUND : message,
-                    Constants.HttpStatusCode.NOT_FOUND);
-            case 409 -> new AppException(message.isEmpty() ? Constants.ErrorMessage.CONFLICT : message,
-                    Constants.HttpStatusCode.BAD_REQUEST);
-            case 429 -> new AppException(message.isEmpty() ? Constants.ErrorMessage.TOO_MANY_REQUESTS : message,
-                    Constants.HttpStatusCode.BAD_REQUEST);
+            case 400 -> new AppException(ErrorCode.BAD_REQUEST, message);
+            case 401 -> new AppException(ErrorCode.UNAUTHORIZED, message);
+            case 403 -> new AppException(ErrorCode.FORBIDDEN, message);
+            case 404 -> new AppException(ErrorCode.NOT_FOUND, message);
+            case 409 -> new AppException(ErrorCode.CONFLICT, message);
+            case 429 -> new AppException(ErrorCode.TOO_MANY_REQUESTS, message);
+            case 500 -> new AppException(ErrorCode.INTERNAL_SERVER_ERROR, message);
+            case 503 -> new AppException(ErrorCode.SERVICE_UNAVAILABLE, message);
             default -> {
                 if (statusCode.is5xxServerError()) {
-                    yield new AppException(message.isEmpty() ? Constants.ErrorMessage.INTERNAL_SERVER_ERROR : message,
-                            Constants.HttpStatusCode.INTERNAL_SERVER_ERROR);
+                    yield new AppException(ErrorCode.INTERNAL_SERVER_ERROR,
+                            message.isEmpty() ? "Server error occurred" : message);
                 } else {
-                    yield new AppException(message.isEmpty() ? Constants.ErrorMessage.UNKNOWN_ERROR : message,
-                            Constants.HttpStatusCode.INTERNAL_SERVER_ERROR);
+                    yield new AppException(ErrorCode.BAD_REQUEST,
+                            message.isEmpty() ? "Client error occurred" : message);
                 }
             }
         };

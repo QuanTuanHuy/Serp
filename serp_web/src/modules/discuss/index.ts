@@ -12,6 +12,9 @@ export * from './api/discussApi';
 // Hooks
 export * from './hooks';
 
+// Context
+export * from './context/WebSocketContext';
+
 // Components
 export * from './components';
 

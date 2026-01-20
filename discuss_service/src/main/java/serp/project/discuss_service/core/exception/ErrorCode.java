@@ -16,9 +16,16 @@ public enum ErrorCode {
     // Success
     SUCCESS("Success", HttpStatus.OK),
 
-    // Authentication & Authorization (401, 403)
+    // General errors
     UNAUTHORIZED("Unauthorized", HttpStatus.UNAUTHORIZED),
     FORBIDDEN("You do not have permission to perform this action", HttpStatus.FORBIDDEN),
+    REQUEST_TIMEOUT("Request timeout", HttpStatus.REQUEST_TIMEOUT),
+    BAD_REQUEST("Bad request", HttpStatus.BAD_REQUEST),
+    NOT_FOUND("Resource not found", HttpStatus.NOT_FOUND),
+    INTERNAL_SERVER_ERROR("Internal server error", HttpStatus.INTERNAL_SERVER_ERROR),
+    SERVICE_UNAVAILABLE("Service is currently unavailable", HttpStatus.SERVICE_UNAVAILABLE),
+    CONFLICT("Conflict occurred", HttpStatus.CONFLICT),
+    TOO_MANY_REQUESTS("Too many requests", HttpStatus.TOO_MANY_REQUESTS),
     INVALID_TOKEN("Invalid or expired token", HttpStatus.UNAUTHORIZED),
     
     // Channel errors (400, 403, 404)
@@ -60,7 +67,6 @@ public enum ErrorCode {
     USER_ID_REQUIRED("User ID is required", HttpStatus.BAD_REQUEST),
     
     // Server errors (500)
-    INTERNAL_SERVER_ERROR("Internal server error", HttpStatus.INTERNAL_SERVER_ERROR),
     DATABASE_ERROR("Database error occurred", HttpStatus.INTERNAL_SERVER_ERROR),
     CACHE_ERROR("Cache error occurred", HttpStatus.INTERNAL_SERVER_ERROR),
     EVENT_PUBLISH_ERROR("Failed to publish event", HttpStatus.INTERNAL_SERVER_ERROR),
