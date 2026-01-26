@@ -184,10 +184,12 @@ export function SearchResults({
                               alt={message.sender?.name || 'Unknown'}
                             />
                           )}
-                          <AvatarFallback className={cn(
-                            'text-xs text-white bg-gradient-to-br',
-                            getAvatarColor(message.sender?.name || '')
-                          )}>
+                          <AvatarFallback
+                            className={cn(
+                              'text-xs text-white bg-gradient-to-br',
+                              getAvatarColor(message.sender?.name || '')
+                            )}
+                          >
                             {message.sender?.name?.charAt(0) || '?'}
                           </AvatarFallback>
                         </Avatar>

@@ -65,7 +65,7 @@ export const store = configureStore({
     })
       // Add RTK Query middleware
       .concat(api.middleware),
-      // .concat(websocketMiddleware),
+  // .concat(websocketMiddleware),
 
   // Enable Redux DevTools in development
   devTools: process.env.NODE_ENV !== 'production',

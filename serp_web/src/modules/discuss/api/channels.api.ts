@@ -188,7 +188,7 @@ export const channelApi = api.injectEndpoints({
         method: 'POST',
         params: {
           userId: parseInt(userId),
-        }
+        },
       }),
       extraOptions: { service: 'discuss' },
       invalidatesTags: (result, error, { channelId }) => [
