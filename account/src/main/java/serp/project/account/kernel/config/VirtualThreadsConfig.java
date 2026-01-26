@@ -5,6 +5,9 @@
 
 package serp.project.account.kernel.config;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -20,5 +23,10 @@ public class VirtualThreadsConfig {
     @Primary
     public AsyncTaskExecutor virtualThreadAsyncTaskExecutor() {
         return new VirtualThreadTaskExecutor();
+    }
+
+    @Bean("virtualThreadExecutor")
+    public ExecutorService virtualThreadExecutor() {
+        return Executors.newVirtualThreadPerTaskExecutor();
     }
 }
