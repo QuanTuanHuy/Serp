@@ -50,8 +50,7 @@ public class MessageEventListener {
     }
 
     /**
-     * Handle message sent event AFTER transaction commits.
-     * Runs async: publishes Kafka event and updates cache (smart prepend).
+     * Publishes Kafka event and updates cache (smart prepend).
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleMessageSent(MessageSentInternalEvent event) {
@@ -81,8 +80,7 @@ public class MessageEventListener {
     }
 
     /**
-     * Handle message updated event AFTER transaction commits.
-     * Runs async: publishes Kafka event and invalidates cache.
+     * Publishes Kafka event and invalidates cache.
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleMessageUpdated(MessageUpdatedInternalEvent event) {
@@ -104,8 +102,7 @@ public class MessageEventListener {
     }
 
     /**
-     * Handle message deleted event AFTER transaction commits.
-     * Runs async: publishes Kafka event and removes from cache (smart removal).
+     * Publishes Kafka event and removes from cache (smart removal).
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleMessageDeleted(MessageDeletedInternalEvent event) {
@@ -127,8 +124,7 @@ public class MessageEventListener {
     }
 
     /**
-     * Handle reaction added event AFTER transaction commits.
-     * Runs async: publishes Kafka event only (reactions don't affect message list cache).
+     * Publishes Kafka event only (reactions don't affect message list cache).
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleReactionAdded(ReactionAddedInternalEvent event) {
@@ -152,8 +148,7 @@ public class MessageEventListener {
     }
 
     /**
-     * Handle reaction removed event AFTER transaction commits.
-     * Runs async: publishes Kafka event only.
+     * Publishes Kafka event only.
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleReactionRemoved(ReactionRemovedInternalEvent event) {

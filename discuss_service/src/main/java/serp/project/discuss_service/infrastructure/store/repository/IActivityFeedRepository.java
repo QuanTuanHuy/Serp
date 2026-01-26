@@ -19,32 +19,24 @@ import java.util.List;
 @Repository
 public interface IActivityFeedRepository extends IBaseRepository<ActivityFeedModel> {
 
-    // Find activities for user (paginated)
     Page<ActivityFeedModel> findByUserIdOrderByOccurredAtDesc(Long userId, Pageable pageable);
 
-    // Find unread activities for user
     List<ActivityFeedModel> findByUserIdAndIsReadFalseOrderByOccurredAtDesc(Long userId);
 
-    // Find activities by type
     List<ActivityFeedModel> findByUserIdAndActionType(Long userId, ActionType actionType, Pageable pageable);
 
-    // Find activities for entity
     List<ActivityFeedModel> findByEntityTypeAndEntityId(String entityType, Long entityId);
 
-    // Count unread activities
     long countByUserIdAndIsReadFalse(Long userId);
 
-    // Mark all as read for user
     @Modifying
     @Query("UPDATE ActivityFeedModel a SET a.isRead = true, a.readAt = :readAt WHERE a.userId = :userId AND a.isRead = false")
     int markAllAsRead(@Param("userId") Long userId, @Param("readAt") Long readAt);
 
-    // Mark specific activities as read
     @Modifying
     @Query("UPDATE ActivityFeedModel a SET a.isRead = true, a.readAt = :readAt WHERE a.id IN :ids")
     int markAsRead(@Param("ids") List<Long> ids, @Param("readAt") Long readAt);
 
-    // Delete old activities (for cleanup)
     @Modifying
     @Query("DELETE FROM ActivityFeedModel a WHERE a.occurredAt < :before")
     int deleteOldActivities(@Param("before") Long before);

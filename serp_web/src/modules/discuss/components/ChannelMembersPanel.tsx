@@ -33,7 +33,7 @@ import {
   AlertCircle,
   CircleDot,
   UserPlus,
-  X
+  X,
 } from 'lucide-react';
 import { cn, getAvatarColor } from '@/shared/utils';
 import { UserSearch } from './UserSearch';
@@ -60,7 +60,8 @@ const getRoleIcon = (role: string) => {
 
 const getRoleBadge = (role: string) => {
   const styles = {
-    OWNER: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    OWNER:
+      'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
     ADMIN: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
     MEMBER: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400',
   };
@@ -68,7 +69,10 @@ const getRoleBadge = (role: string) => {
   return (
     <Badge
       variant='outline'
-      className={cn('text-xs', styles[role as keyof typeof styles] || styles.MEMBER)}
+      className={cn(
+        'text-xs',
+        styles[role as keyof typeof styles] || styles.MEMBER
+      )}
     >
       {role.toLowerCase()}
     </Badge>
@@ -103,14 +107,18 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
     skip: !open,
   });
 
-  const [removeMember, { isLoading: isRemoving }] = useRemoveChannelMemberMutation();
-  const [addMember, { isLoading: isAddingMember }] = useAddChannelMemberMutation();
+  const [removeMember, { isLoading: isRemoving }] =
+    useRemoveChannelMemberMutation();
+  const [addMember, { isLoading: isAddingMember }] =
+    useAddChannelMemberMutation();
 
   const members = membersResponse?.data || [];
-  const memberIds = members.map(m => m.userId);
+  const memberIds = members.map((m) => m.userId);
 
   const handleRemoveMember = async (userId: string, userName: string) => {
-    if (!confirm(`Are you sure you want to remove ${userName} from this channel?`)) {
+    if (
+      !confirm(`Are you sure you want to remove ${userName} from this channel?`)
+    ) {
       return;
     }
 
@@ -128,11 +136,11 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
     try {
       // Add members sequentially or parallel
       await Promise.all(
-        selectedUsersToAdd.map(userId => 
+        selectedUsersToAdd.map((userId) =>
           addMember({ channelId, userId }).unwrap()
         )
       );
-      
+
       setIsAdding(false);
       setSelectedUsersToAdd([]);
       alert('Members added successfully');
@@ -145,25 +153,28 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='max-w-2xl max-h-[80vh] overflow-hidden flex flex-col'>
-        <DialogHeader className="flex-shrink-0">
-          <div className="flex items-center justify-between pr-8">
+        <DialogHeader className='flex-shrink-0'>
+          <div className='flex items-center justify-between pr-8'>
             <div>
               <DialogTitle className='text-xl font-bold'>
                 Channel Members
               </DialogTitle>
               <DialogDescription>
-                Members in <span className='font-semibold text-violet-600 dark:text-violet-400'>{channelName}</span>
+                Members in{' '}
+                <span className='font-semibold text-violet-600 dark:text-violet-400'>
+                  {channelName}
+                </span>
               </DialogDescription>
             </div>
-            
+
             {!isAdding && (
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant='outline'
+                size='sm'
                 onClick={() => setIsAdding(true)}
-                className="gap-2"
+                className='gap-2'
               >
-                <UserPlus className="h-4 w-4" />
+                <UserPlus className='h-4 w-4' />
                 Add People
               </Button>
             )}
@@ -171,32 +182,34 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
         </DialogHeader>
 
         {isAdding && (
-          <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-800 mt-4 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Add new members</span>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-6 w-6 p-0" 
+          <div className='p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-800 mt-4 flex flex-col gap-3'>
+            <div className='flex items-center justify-between'>
+              <span className='text-sm font-medium'>Add new members</span>
+              <Button
+                variant='ghost'
+                size='sm'
+                className='h-6 w-6 p-0'
                 onClick={() => setIsAdding(false)}
               >
-                <X className="h-4 w-4" />
+                <X className='h-4 w-4' />
               </Button>
             </div>
-            <UserSearch 
+            <UserSearch
               selectedUserIds={selectedUsersToAdd}
               onSelectionChange={setSelectedUsersToAdd}
               excludedUserIds={memberIds} // Exclude existing members
-              placeholder="Search users to add..."
+              placeholder='Search users to add...'
             />
-            <div className="flex justify-end">
-              <Button 
-                size="sm" 
+            <div className='flex justify-end'>
+              <Button
+                size='sm'
                 onClick={handleAddMembers}
                 disabled={selectedUsersToAdd.length === 0 || isAddingMember}
-                className="bg-violet-600 hover:bg-violet-700"
+                className='bg-violet-600 hover:bg-violet-700'
               >
-                {isAddingMember ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
+                {isAddingMember ? (
+                  <Loader2 className='h-3 w-3 animate-spin mr-2' />
+                ) : null}
                 Add Selected
               </Button>
             </div>
@@ -226,7 +239,8 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
               <div className='space-y-1 pr-4'>
                 <div className='px-3 py-2 mb-3'>
                   <p className='text-xs font-semibold text-slate-500 uppercase tracking-wide'>
-                    {members.length} {members.length === 1 ? 'Member' : 'Members'}
+                    {members.length}{' '}
+                    {members.length === 1 ? 'Member' : 'Members'}
                   </p>
                 </div>
 
@@ -247,11 +261,15 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
                     >
                       <div className='relative flex-shrink-0'>
                         <Avatar className='h-10 w-10'>
-                          {userAvatar && <AvatarImage src={userAvatar} alt={userName} />}
-                          <AvatarFallback className={cn(
-                            'text-sm font-semibold text-white bg-gradient-to-br',
-                            getAvatarColor(userName)
-                          )}>
+                          {userAvatar && (
+                            <AvatarImage src={userAvatar} alt={userName} />
+                          )}
+                          <AvatarFallback
+                            className={cn(
+                              'text-sm font-semibold text-white bg-gradient-to-br',
+                              getAvatarColor(userName)
+                            )}
+                          >
                             {getUserInitials(userName)}
                           </AvatarFallback>
                         </Avatar>
@@ -266,14 +284,20 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
                         <div className='flex items-center gap-2'>
                           <p className='text-sm font-semibold truncate'>
                             {userName}
-                            {isCurrentUser && <span className='ml-1.5 text-xs text-violet-600 font-normal'>(You)</span>}
+                            {isCurrentUser && (
+                              <span className='ml-1.5 text-xs text-violet-600 font-normal'>
+                                (You)
+                              </span>
+                            )}
                           </p>
                           {getRoleIcon(member.role)}
                         </div>
                         <div className='flex items-center gap-2 mt-0.5'>
                           {getRoleBadge(member.role)}
                           {member.user?.email && (
-                            <p className='text-xs text-slate-500 truncate'>{member.user.email}</p>
+                            <p className='text-xs text-slate-500 truncate'>
+                              {member.user.email}
+                            </p>
                           )}
                         </div>
                       </div>
@@ -282,7 +306,9 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
                         <Button
                           variant='ghost'
                           size='sm'
-                          onClick={() => handleRemoveMember(member.userId, userName)}
+                          onClick={() =>
+                            handleRemoveMember(member.userId, userName)
+                          }
                           disabled={isRemoving}
                           className='text-rose-600 hover:text-rose-700 hover:bg-rose-50'
                         >

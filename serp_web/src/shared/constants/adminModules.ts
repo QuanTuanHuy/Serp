@@ -35,5 +35,5 @@ export const DEFAULT_ORG_USER_MODULES: ModuleDisplayItem[] = [
     href: '/discuss',
     isActive: true,
     isAdmin: false,
-  }
+  },
 ];

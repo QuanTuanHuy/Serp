@@ -18,28 +18,22 @@ import java.util.List;
 @Repository
 public interface IMessageRepository extends IBaseRepository<MessageModel> {
 
-    // Find messages in a channel (paginated, ordered by created_at DESC)
     Page<MessageModel> findByChannelIdAndIsDeletedFalseOrderByCreatedAtDesc(Long channelId, Pageable pageable);
 
-    // Find messages before a specific ID (for infinite scroll)
     @Query("SELECT m FROM MessageModel m WHERE m.channelId = :channelId AND m.isDeleted = false " +
            "AND m.id < :beforeId ORDER BY m.createdAt DESC")
     List<MessageModel> findMessagesBeforeId(@Param("channelId") Long channelId,
                                             @Param("beforeId") Long beforeId,
                                             Pageable pageable);
 
-    // Find thread replies
     List<MessageModel> findByParentIdAndIsDeletedFalseOrderByCreatedAtAsc(Long parentId);
 
-    // Find messages by sender
     List<MessageModel> findBySenderIdAndIsDeletedFalse(Long senderId, Pageable pageable);
 
-    // Find messages mentioning a user
     @Query(value = "SELECT * FROM messages m WHERE :userId = ANY(m.mentions) " +
                    "AND m.is_deleted = false ORDER BY m.created_at DESC", nativeQuery = true)
     List<MessageModel> findByMentioningUser(@Param("userId") Long userId, Pageable pageable);
 
-    // Count unread messages in channel after a specific message ID
     @Query("SELECT COUNT(m) FROM MessageModel m WHERE m.channelId = :channelId " +
            "AND m.id > :afterMessageId AND m.isDeleted = false")
     long countUnreadMessages(@Param("channelId") Long channelId, @Param("afterMessageId") Long afterMessageId);
@@ -53,11 +47,9 @@ public interface IMessageRepository extends IBaseRepository<MessageModel> {
                                       @Param("query") String query,
                                       Pageable pageable);
 
-    // Soft delete by channel (for channel deletion)
     @Modifying
     @Query("UPDATE MessageModel m SET m.isDeleted = true, m.deletedAt = :deletedAt WHERE m.channelId = :channelId")
     int softDeleteByChannelId(@Param("channelId") Long channelId, @Param("deletedAt") Long deletedAt);
 
-    // Count messages in channel
     long countByChannelIdAndIsDeletedFalse(Long channelId);
 }

@@ -88,11 +88,15 @@ export const ChannelItem: React.FC<ChannelItemProps> = ({
       <div className='relative flex-shrink-0'>
         {showAvatar ? (
           <Avatar className='h-10 w-10 ring-2 ring-white dark:ring-slate-900'>
-            {channel.avatarUrl && <AvatarImage src={channel.avatarUrl} alt={channel.name} />}
-            <AvatarFallback className={cn(
-              'text-xs font-semibold text-white bg-gradient-to-br',
-              getAvatarColor(channel.name)
-            )}>
+            {channel.avatarUrl && (
+              <AvatarImage src={channel.avatarUrl} alt={channel.name} />
+            )}
+            <AvatarFallback
+              className={cn(
+                'text-xs font-semibold text-white bg-gradient-to-br',
+                getAvatarColor(channel.name)
+              )}
+            >
               {getChannelInitials(channel.name)}
             </AvatarFallback>
           </Avatar>
