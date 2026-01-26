@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - dev
+      # - dev
 
 env:
   DOCKER_REGISTRY: ${{ secrets.DOCKER_USERNAME }}
