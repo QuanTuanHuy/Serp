@@ -162,10 +162,10 @@ export function getInitials(
  */
 export function getAvatarColor(identifier: string): string {
   if (!identifier) return 'from-slate-400 to-slate-500';
-  
+
   const gradients = [
     'from-red-500 to-orange-500',
-    'from-orange-500 to-amber-500', 
+    'from-orange-500 to-amber-500',
     'from-amber-500 to-yellow-500',
     'from-yellow-500 to-lime-500',
     'from-lime-500 to-green-500',

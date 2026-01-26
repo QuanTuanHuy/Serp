@@ -18,6 +18,7 @@ export { AttachmentPreview } from './AttachmentPreview';
 export { SearchBar } from './SearchBar';
 export { SearchResults } from './SearchResults';
 export { SearchDialog } from './SearchDialog';
+export { ScrollToBottomButton } from './ScrollToBottomButton';
 export {
   OnlineStatusIndicator,
   OnlineStatusBadge,

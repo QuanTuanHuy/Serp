@@ -117,10 +117,8 @@ public class AttachmentUseCase {
      */
     @Transactional
     public void deleteAttachment(Long attachmentId, Long tenantId, Long userId) {
-        // Delete from storage and database
         attachmentService.deleteAttachment(attachmentId, tenantId, userId);
 
-        // Invalidate URL cache
         cacheService.invalidateAttachmentUrl(attachmentId);
 
         log.info("User {} deleted attachment {} from tenant {}", userId, attachmentId, tenantId);
@@ -134,13 +132,10 @@ public class AttachmentUseCase {
      */
     @Transactional
     public void deleteAttachmentsByMessage(Long messageId, Long tenantId) {
-        // Get attachments first to know which cache entries to invalidate
         List<AttachmentEntity> attachments = attachmentService.getAttachmentsByMessage(messageId, tenantId);
 
-        // Delete from storage and database
         attachmentService.deleteAttachmentsByMessage(messageId, tenantId);
-
-        // Invalidate cache for each attachment (one-by-one)
+        
         attachments.forEach(att -> cacheService.invalidateAttachmentUrl(att.getId()));
 
         log.info("Deleted {} attachments for message {}", attachments.size(), messageId);

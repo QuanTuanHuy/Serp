@@ -6,6 +6,7 @@ Description: Part of Serp Project - Message input component with rich text suppo
 'use client';
 
 import React, { useState, useRef, KeyboardEvent } from 'react';
+import dynamic from 'next/dynamic';
 import { cn } from '@/shared/utils';
 import { Button, Textarea } from '@/shared/components/ui';
 import {
@@ -17,10 +18,23 @@ import {
   Code,
   X,
   File as FileIcon,
+  Smile,
 } from 'lucide-react';
 import type { Message, Attachment } from '../types';
-import { EmojiPicker } from './EmojiPicker';
 import { useSendMessageWithFilesMutation } from '../api/discussApi';
+
+// Lazy load EmojiPicker to reduce initial bundle size
+const EmojiPicker = dynamic(
+  () => import('./EmojiPicker').then((mod) => ({ default: mod.EmojiPicker })),
+  {
+    loading: () => (
+      <button className='p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors'>
+        <Smile className='h-4 w-4 text-slate-600 dark:text-slate-400 animate-pulse' />
+      </button>
+    ),
+    ssr: false,
+  }
+);
 
 interface MessageInputProps {
   channelId: string;

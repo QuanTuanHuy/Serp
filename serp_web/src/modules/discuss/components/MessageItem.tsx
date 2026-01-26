@@ -91,7 +91,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       <div className='flex-shrink-0'>
         {showAvatar && !isGrouped ? (
           <Avatar className='h-10 w-10 ring-2 ring-white dark:ring-slate-900 shadow-sm'>
-            {senderAvatar && <AvatarImage src={senderAvatar} alt={senderName} />}
+            {senderAvatar && (
+              <AvatarImage src={senderAvatar} alt={senderName} />
+            )}
             <AvatarFallback
               className={cn(
                 'text-xs font-semibold text-white bg-gradient-to-br',

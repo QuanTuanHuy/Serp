@@ -6,9 +6,12 @@ Description: Part of Serp Project - Discuss demo page for testing ChannelList si
 'use client';
 
 import React, { useState } from 'react';
-import { ChannelList, ChatWindow, WebSocketProvider, useDiscussWebSocket } from '@/modules/discuss';
-import type { Channel } from '@/modules/discuss';
-import { useAuth, useUser } from '@/modules/account';
+import { ChannelList } from '@/modules/discuss/components/ChannelList';
+import { ChatWindow } from '@/modules/discuss/components/ChatWindow';
+import { WebSocketProvider } from '@/modules/discuss/context/WebSocketContext';
+import { useDiscussWebSocket } from '@/modules/discuss/hooks/useDiscussWebSocket';
+import type { Channel } from '@/modules/discuss/types';
+import { useAuth } from '@/modules/account';
 
 function DiscussContent() {
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
@@ -16,7 +19,6 @@ function DiscussContent() {
   const { user } = useAuth();
   const currentUserId = String(user?.id) || '';
 
-  
   // Initialize WebSocket with current channel
   const wsApi = useDiscussWebSocket({
     channelId: selectedChannel?.id,

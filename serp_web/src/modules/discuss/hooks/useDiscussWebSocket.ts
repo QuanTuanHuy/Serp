@@ -6,7 +6,7 @@ Optimized: Direct cache updates instead of invalidation for better performance
 
 'use client';
 
-import { useEffect, useRef, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useCallback, useMemo, useState } from 'react';
 import { Client, IMessage, StompSubscription } from '@stomp/stompjs';
 import { useAppSelector, useAppDispatch } from '@/lib/store/hooks';
 import { toast } from 'sonner';
@@ -29,21 +29,15 @@ const findMessagesCacheEntry = (
   channelId: string | number
 ): { page: number; limit: number } | undefined => {
   const queries = state.api?.queries;
-  if (!queries) {
-    console.warn('[WebSocket] No queries in state');
-    return undefined;
-  }
+  if (!queries) return undefined;
 
   // Normalize channelId to string to match RTK Query cache format
   const normalizedChannelId = String(channelId);
-  console.log('[WebSocket] Looking for cache entry with channelId:', normalizedChannelId);
 
   for (const key of Object.keys(queries)) {
     if (key.startsWith('getMessages(')) {
       const entry = queries[key];
-      console.log('[WebSocket] Checking cache entry:', key, 'originalArgs:', entry?.originalArgs);
       if (entry?.originalArgs?.channelId === normalizedChannelId) {
-        console.log('[WebSocket] ✅ Found matching cache entry!');
         return {
           page: entry.originalArgs.pagination.page,
           limit: entry.originalArgs.pagination.limit,
@@ -51,34 +45,29 @@ const findMessagesCacheEntry = (
       }
     }
   }
-  console.warn('[WebSocket] ❌ No matching cache entry found');
   return undefined;
 };
-
-interface UseDiscussWebSocketOptions {
-  channelId?: string;
-  onMessage?: (message: Message) => void;
-  onTypingUpdate?: (userId: string, isTyping: boolean) => void;
-  onUserStatusUpdate?: (userId: string, isOnline: boolean) => void;
-  onError?: (error: any) => void;
-}
 
 export const useDiscussWebSocket = (
   options: UseDiscussWebSocketOptions = {}
 ) => {
-  const { channelId, onMessage, onTypingUpdate, onUserStatusUpdate, onError } = options;
+  const { channelId, onMessage, onTypingUpdate, onUserStatusUpdate, onError } =
+    options;
 
   const dispatch = useAppDispatch();
   const clientRef = useRef<Client | null>(null);
   const subscriptionRef = useRef<StompSubscription | null>(null);
   const errorSubscriptionRef = useRef<StompSubscription | null>(null);
-  
+
+  // Use state for isConnected to make it reactive
+  const [isConnected, setIsConnected] = useState(false);
+
   // Use refs for callbacks to avoid re-subscriptions
   const onMessageRef = useRef(onMessage);
   const onTypingUpdateRef = useRef(onTypingUpdate);
   const onUserStatusUpdateRef = useRef(onUserStatusUpdate);
   const onErrorRef = useRef(onError);
-  
+
   useEffect(() => {
     onMessageRef.current = onMessage;
     onTypingUpdateRef.current = onTypingUpdate;
@@ -117,7 +106,8 @@ export const useDiscussWebSocket = (
     client.onConnect = () => {
       console.log('[WebSocket] ✅ Connected successfully');
       clientRef.current = client;
-      
+      setIsConnected(true); // Update reactive state
+
       // Subscribe to personal error queue
       try {
         const errorSub = client.subscribe(
@@ -126,10 +116,10 @@ export const useDiscussWebSocket = (
             try {
               const error = JSON.parse(message.body);
               console.error('[WebSocket] Received error:', error);
-              
+
               // Show error toast
               toast.error(error.message || 'Failed to send message');
-              
+
               // Trigger callback if provided
               if (onErrorRef.current) {
                 onErrorRef.current(error);
@@ -149,10 +139,12 @@ export const useDiscussWebSocket = (
     client.onStompError = (frame) => {
       console.error('[WebSocket] ❌ STOMP error:', frame.headers['message']);
       console.error('[WebSocket] Error details:', frame.body);
+      setIsConnected(false); // Update on error
     };
 
     client.onWebSocketClose = () => {
       console.log('[WebSocket] 🔌 Connection closed');
+      setIsConnected(false); // Update on close
     };
 
     client.onWebSocketError = (event) => {
@@ -204,7 +196,7 @@ export const useDiscussWebSocket = (
       subscription.unsubscribe();
       subscriptionRef.current = null;
     };
-  }, [channelId, dispatch, onMessage, onTypingUpdate]);
+  }, [channelId]); // Only depend on channelId - callbacks are in refs
 
   // Handle incoming channel messages - Direct cache updates for better performance
   const handleChannelMessage = useCallback(
@@ -222,44 +214,41 @@ export const useDiscussWebSocket = (
         case 'MESSAGE_NEW': {
           console.log('[WebSocket] MESSAGE_NEW received:', data);
           console.log('[WebSocket] Message object:', data.message);
-          
+
           if (!data.message) {
             console.error('[WebSocket] MESSAGE_NEW missing message object');
             break;
           }
-          
+
           const cacheInfo = findMessagesCacheEntry(state, data.channelId);
 
           if (cacheInfo) {
             // Transform and add message directly to cache
             const transformedMessage = transformMessage(data.message);
-            console.log('[WebSocket] Transformed message:', transformedMessage);
-            
+
             // Normalize channelId to string for RTK Query cache key
             const normalizedChannelId = String(data.channelId);
-            console.log('[WebSocket] Updating cache with key:', { channelId: normalizedChannelId, pagination: cacheInfo });
-            
+
             dispatch(
               messageApi.util.updateQueryData(
                 'getMessages',
                 { channelId: normalizedChannelId, pagination: cacheInfo },
                 (draft) => {
-                  console.log('[WebSocket] Inside updateQueryData callback, draft:', draft);
                   // Avoid duplicates - check if message already exists
                   const exists = draft.data?.items?.some(
                     (m) => m.id === transformedMessage.id
                   );
                   if (!exists) {
                     draft.data?.items?.push(transformedMessage);
-                    console.log('[WebSocket] Added message to cache');
-                  } else {
-                    console.log('[WebSocket] Message already exists in cache, skipping');
                   }
                 }
               )
             );
           } else {
-            console.warn('[WebSocket] No cache entry found for channel:', data.channelId);
+            console.warn(
+              '[WebSocket] No cache entry found for channel:',
+              data.channelId
+            );
           }
 
           // Still update channel list for last message preview
@@ -278,12 +267,14 @@ export const useDiscussWebSocket = (
 
         case 'MESSAGE_UPDATED': {
           console.log('[WebSocket] MESSAGE_UPDATED received:', data);
-          
+
           if (!data.message || !data.messageId) {
-            console.error('[WebSocket] MESSAGE_UPDATED missing required fields');
+            console.error(
+              '[WebSocket] MESSAGE_UPDATED missing required fields'
+            );
             break;
           }
-          
+
           const cacheInfo = findMessagesCacheEntry(state, data.channelId);
 
           if (cacheInfo) {
@@ -299,7 +290,8 @@ export const useDiscussWebSocket = (
                   if (message && data.message) {
                     message.content = data.message.content;
                     message.isEdited = true;
-                    message.editedAt = data.message.editedAt || new Date().toISOString();
+                    message.editedAt =
+                      data.message.editedAt || new Date().toISOString();
                     console.log('[WebSocket] Updated message in cache');
                   }
                 }
@@ -311,12 +303,12 @@ export const useDiscussWebSocket = (
 
         case 'MESSAGE_DELETED': {
           console.log('[WebSocket] MESSAGE_DELETED received:', data);
-          
+
           if (!data.messageId) {
             console.error('[WebSocket] MESSAGE_DELETED missing messageId');
             break;
           }
-          
+
           const cacheInfo = findMessagesCacheEntry(state, data.channelId);
 
           if (cacheInfo) {
@@ -333,7 +325,9 @@ export const useDiscussWebSocket = (
                     message.isDeleted = true;
                     message.content = 'This message was deleted';
                     message.deletedAt = new Date().toISOString();
-                    console.log('[WebSocket] Marked message as deleted in cache');
+                    console.log(
+                      '[WebSocket] Marked message as deleted in cache'
+                    );
                   }
                 }
               )
@@ -368,7 +362,9 @@ export const useDiscussWebSocket = (
                       (r: MessageReaction) => r.emoji === data.emoji
                     );
                     if (existingReaction) {
-                      if (!existingReaction.userIds.includes(String(data.userId))) {
+                      if (
+                        !existingReaction.userIds.includes(String(data.userId))
+                      ) {
                         existingReaction.userIds.push(String(data.userId));
                         existingReaction.count += 1;
                       }
@@ -407,7 +403,9 @@ export const useDiscussWebSocket = (
                     );
                     if (reactionIndex !== -1) {
                       const reaction = message.reactions[reactionIndex];
-                      const userIndex = reaction.userIds.indexOf(String(data.userId));
+                      const userIndex = reaction.userIds.indexOf(
+                        String(data.userId)
+                      );
                       if (userIndex !== -1) {
                         reaction.userIds.splice(userIndex, 1);
                         reaction.count -= 1;
@@ -542,13 +540,16 @@ export const useDiscussWebSocket = (
     [channelId]
   );
 
-  // Return stable API object
-  const api = useMemo(() => ({
-    isConnected: clientRef.current?.connected ?? false,
-    sendTypingIndicator,
-    markAsRead,
-    sendMessage,
-  }), [sendTypingIndicator, markAsRead, sendMessage]);
+  // Return stable API object with reactive isConnected
+  const api = useMemo(
+    () => ({
+      isConnected,
+      sendTypingIndicator,
+      markAsRead,
+      sendMessage,
+    }),
+    [isConnected, sendTypingIndicator, markAsRead, sendMessage]
+  );
 
   return api;
 };

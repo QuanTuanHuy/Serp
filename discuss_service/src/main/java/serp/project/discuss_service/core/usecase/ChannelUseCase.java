@@ -106,6 +106,7 @@ public class ChannelUseCase {
     /**
      * Get channel with members
      */
+    @Transactional(readOnly = true)
     public ChannelEntity getChannelWithMembers(Long channelId) {
         ChannelEntity channel = channelService.getChannelByIdOrThrow(channelId);
         List<ChannelMemberEntity> members = memberService.getActiveMembers(channelId);
@@ -144,7 +145,6 @@ public class ChannelUseCase {
      */
     @Transactional
     public ChannelEntity updateChannel(Long channelId, Long userId, String name, String description) {
-        // Verify user can manage channel
         if (!memberService.canManageChannel(channelId, userId)) {
             throw new AppException(ErrorCode.CHANNEL_UPDATE_FORBIDDEN);
         }
@@ -173,17 +173,12 @@ public class ChannelUseCase {
      */
     @Transactional
     public ChannelMemberEntity addMember(Long channelId, Long userId, Long addedBy, Long tenantId) {
-        // Verify adder has permission
         if (!memberService.canManageChannel(channelId, addedBy)) {
             throw new AppException(ErrorCode.CANNOT_ADD_MEMBERS);
         }
 
-        ChannelEntity channel = channelService.getChannelByIdOrThrow(channelId);
-        ChannelMemberEntity member = memberService.addMember(channelId, userId, tenantId, MemberRole.MEMBER);
-        
-        // Update channel member count
-        channel.incrementMemberCount();
-        channelService.updateChannel(channelId, channel.getName(), channel.getDescription());
+        ChannelMemberEntity member = memberService.addMember(channelId, userId, tenantId, MemberRole.MEMBER);        
+        channelService.incrementMemberCount(channelId);
 
         eventPublisher.publishMemberJoined(member);
         return member;
@@ -194,17 +189,12 @@ public class ChannelUseCase {
      */
     @Transactional
     public ChannelMemberEntity removeMember(Long channelId, Long userId, Long removerId) {
-        // Verify remover has permission
         if (!memberService.canManageChannel(channelId, removerId)) {
             throw new AppException(ErrorCode.CANNOT_REMOVE_MEMBERS);
         }
 
-        ChannelEntity channel = channelService.getChannelByIdOrThrow(channelId);
-        ChannelMemberEntity member = memberService.removeMember(channelId, userId, removerId);
-        
-        // Update channel member count
-        channel.decrementMemberCount();
-        channelService.updateChannel(channelId, channel.getName(), channel.getDescription());
+        ChannelMemberEntity member = memberService.removeMember(channelId, userId, removerId);        
+        channelService.decrementMemberCount(channelId);
 
         eventPublisher.publishMemberRemoved(member);
         return member;
@@ -215,11 +205,8 @@ public class ChannelUseCase {
      */
     @Transactional
     public ChannelMemberEntity leaveChannel(Long channelId, Long userId) {
-        ChannelEntity channel = channelService.getChannelByIdOrThrow(channelId);
         ChannelMemberEntity member = memberService.leaveChannel(channelId, userId);
-        
-        channel.decrementMemberCount();
-        channelService.updateChannel(channelId, channel.getName(), channel.getDescription());
+        channelService.decrementMemberCount(channelId);
 
         eventPublisher.publishMemberLeft(member);
         return member;

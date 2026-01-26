@@ -13,18 +13,13 @@ import java.util.List;
 @Repository
 public interface IAttachmentRepository extends IBaseRepository<AttachmentModel> {
 
-    // Find attachments by message
     List<AttachmentModel> findByMessageId(Long messageId);
 
-    // Find attachments by channel
     List<AttachmentModel> findByChannelId(Long channelId);
 
-    // Find attachments by message IDs
     List<AttachmentModel> findByMessageIdIn(List<Long> messageIds);
 
-    // Count attachments by channel
     long countByChannelId(Long channelId);
 
-    // Delete attachments by message
     void deleteByMessageId(Long messageId);
 }
