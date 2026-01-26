@@ -7,6 +7,8 @@ package serp.project.account.core.usecase;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.account.core.domain.constant.Constants;
@@ -23,6 +25,7 @@ import serp.project.account.core.domain.entity.UserEntity;
 import serp.project.account.core.domain.enums.RoleScope;
 import serp.project.account.core.domain.enums.UserStatus;
 import serp.project.account.core.domain.enums.UserType;
+import serp.project.account.core.domain.event.UserOnlineInternalEvent;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.*;
 import serp.project.account.infrastructure.store.mapper.UserMapper;
@@ -47,6 +50,8 @@ public class AuthUseCase {
     private final ResponseUtils responseUtils;
 
     private final UserMapper userMapper;
+
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> registerUser(CreateUserDto request) {
@@ -99,6 +104,7 @@ public class AuthUseCase {
         }
     }
 
+    @Transactional
     public GeneralResponse<?> login(LoginRequest request) {
         try {
             var user = userService.getUserByEmail(request.getEmail());
@@ -109,8 +115,7 @@ public class AuthUseCase {
                 return responseUtils.badRequest(Constants.ErrorMessage.USER_INACTIVE);
             }
             var loginResponse = tokenService.getUserToken(user.getEmail(), request.getPassword());
-            user.setLastLoginAt(Instant.now().toEpochMilli());
-            userService.updateUser(user.getId(), user);
+            eventPublisher.publishEvent(new UserOnlineInternalEvent(user.getId(), user.getEmail(), Instant.now()));
             return responseUtils.success(loginResponse);
         } catch (Exception e) {
             log.error("Login failed: {}", e.getMessage());
@@ -118,9 +123,11 @@ public class AuthUseCase {
         }
     }
 
+    @Transactional(readOnly = true)
     public GeneralResponse<?> getUserToken(String username, String password) {
         try {
             var tokenResponse = tokenService.getUserToken(username, password);
+            eventPublisher.publishEvent(new UserOnlineInternalEvent(null, username, Instant.now()));
             return responseUtils.success(tokenResponse);
         } catch (AppException e) {
             log.error("Error getting user token: {}", e.getMessage());

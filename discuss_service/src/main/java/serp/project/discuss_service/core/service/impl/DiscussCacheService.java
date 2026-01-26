@@ -19,7 +19,6 @@ import serp.project.discuss_service.kernel.utils.JsonUtils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -268,17 +267,15 @@ public class DiscussCacheService implements IDiscussCacheService {
         if (channelId == null) {
             return Collections.emptySet();
         }
-        // Get all typing keys for this channel
         String pattern = TYPING_PREFIX + channelId + ":*";
-        Set<String> keys = new HashSet<>();
-        // Note: This is simplified - in production, use SCAN instead of KEYS
         try {
-            // Extract user IDs from the keys
-            var redisKeys = cachePort.getSetMembers(pattern);
-            // This won't work directly - need a different approach
-            // For now, return empty set and implement properly later
-            log.warn("getTypingUsers not fully implemented - needs SCAN pattern");
-            return Collections.emptySet();
+            Set<String> typingKeys = cachePort.scanKeys(pattern);
+            return typingKeys.stream()
+                    .map(key -> {
+                        String[] parts = key.split(":");
+                        return Long.valueOf(parts[parts.length - 1]);
+                    })
+                    .collect(Collectors.toSet());
         } catch (Exception e) {
             log.error("Failed to get typing users for channel: {}", channelId, e);
             return Collections.emptySet();

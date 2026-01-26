@@ -200,4 +200,13 @@ public interface ICachePort {
      * @param batchSize Number of keys to scan per iteration
      */
     void scanAndDelete(String pattern, int batchSize);
+
+    /**
+     * Scan keys matching a pattern using SCAN (non-blocking) instead of KEYS.
+     * This is safer for production use as it doesn't block Redis.
+     *
+     * @param pattern Redis key pattern (e.g., "prefix:*")
+     * @return Set of matching keys
+     */
+    Set<String> scanKeys(String pattern);
 }

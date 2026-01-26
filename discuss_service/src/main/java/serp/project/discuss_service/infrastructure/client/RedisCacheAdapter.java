@@ -8,12 +8,16 @@ package serp.project.discuss_service.infrastructure.client;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Component;
 import serp.project.discuss_service.core.port.client.ICachePort;
 import serp.project.discuss_service.kernel.utils.JsonUtils;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -394,15 +398,15 @@ public class RedisCacheAdapter implements ICachePort {
         }
         try {
             long deletedCount = 0;
-            org.springframework.data.redis.core.ScanOptions scanOptions = 
-                    org.springframework.data.redis.core.ScanOptions.scanOptions()
+            ScanOptions scanOptions = 
+                    ScanOptions.scanOptions()
                             .match(pattern)
                             .count(batchSize)
                             .build();
             
-            try (org.springframework.data.redis.core.Cursor<String> cursor = 
+            try (Cursor<String> cursor = 
                     redisTemplate.scan(scanOptions)) {
-                java.util.List<String> keysToDelete = new java.util.ArrayList<>();
+                List<String> keysToDelete = new ArrayList<>();
                 while (cursor.hasNext()) {
                     keysToDelete.add(cursor.next());
                     if (keysToDelete.size() >= batchSize) {
@@ -421,5 +425,23 @@ public class RedisCacheAdapter implements ICachePort {
         } catch (Exception e) {
             log.error("Failed to scan and delete, pattern: {}", pattern, e);
         }
+    }
+
+    @Override
+    public Set<String> scanKeys(String pattern) {
+        if (pattern == null || pattern.isEmpty()) {
+            return Collections.emptySet();
+        }
+        ScanOptions scanOptions = ScanOptions.scanOptions()
+                .match(pattern)
+                .build();
+        
+        Set<String> keys = new HashSet<>();
+        try (Cursor<String> cursor = redisTemplate.scan(scanOptions)) {
+            while (cursor.hasNext()) {
+                keys.add(cursor.next());
+            }
+        }
+        return keys;
     }
 }
