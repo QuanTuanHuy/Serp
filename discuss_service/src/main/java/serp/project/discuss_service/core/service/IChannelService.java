@@ -70,6 +70,16 @@ public interface IChannelService {
     ChannelEntity updateChannel(Long channelId, String name, String description);
 
     /**
+     * Increment member count
+     */
+    ChannelEntity incrementMemberCount(Long channelId);
+
+    /**
+     * Decrement member count
+     */
+    ChannelEntity decrementMemberCount(Long channelId);
+
+    /**
      * Archive channel
      */
     ChannelEntity archiveChannel(Long channelId);

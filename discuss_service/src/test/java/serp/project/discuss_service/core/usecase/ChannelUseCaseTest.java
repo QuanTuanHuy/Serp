@@ -368,10 +368,8 @@ class ChannelUseCaseTest {
             ChannelMemberEntity newMember = TestDataFactory.createRegularMember();
 
             when(memberService.canManageChannel(channel.getId(), TestDataFactory.USER_ID_1)).thenReturn(true);
-            when(channelService.getChannelByIdOrThrow(channel.getId())).thenReturn(channel);
             when(memberService.addMember(channel.getId(), TestDataFactory.USER_ID_3, TestDataFactory.TENANT_ID, MemberRole.MEMBER))
                     .thenReturn(newMember);
-            when(channelService.updateChannel(any(), any(), any())).thenReturn(channel);
 
             // When
             ChannelMemberEntity result = channelUseCase.addMember(
@@ -383,6 +381,7 @@ class ChannelUseCaseTest {
 
             // Then
             assertNotNull(result);
+            verify(channelService).incrementMemberCount(channel.getId());
             verify(eventPublisher).publishMemberJoined(newMember);
         }
 
@@ -414,10 +413,8 @@ class ChannelUseCaseTest {
             ChannelMemberEntity removedMember = TestDataFactory.createLeftMember();
 
             when(memberService.canManageChannel(channel.getId(), TestDataFactory.USER_ID_1)).thenReturn(true);
-            when(channelService.getChannelByIdOrThrow(channel.getId())).thenReturn(channel);
             when(memberService.removeMember(channel.getId(), TestDataFactory.USER_ID_3, TestDataFactory.USER_ID_1))
                     .thenReturn(removedMember);
-            when(channelService.updateChannel(any(), any(), any())).thenReturn(channel);
 
             // When
             ChannelMemberEntity result = channelUseCase.removeMember(
@@ -428,6 +425,7 @@ class ChannelUseCaseTest {
 
             // Then
             assertNotNull(result);
+            verify(channelService).decrementMemberCount(channel.getId());
             verify(eventPublisher).publishMemberRemoved(removedMember);
         }
 
@@ -458,15 +456,14 @@ class ChannelUseCaseTest {
             ChannelEntity channel = TestDataFactory.createGroupChannel();
             ChannelMemberEntity leftMember = TestDataFactory.createLeftMember();
 
-            when(channelService.getChannelByIdOrThrow(channel.getId())).thenReturn(channel);
             when(memberService.leaveChannel(channel.getId(), TestDataFactory.USER_ID_3)).thenReturn(leftMember);
-            when(channelService.updateChannel(any(), any(), any())).thenReturn(channel);
 
             // When
             ChannelMemberEntity result = channelUseCase.leaveChannel(channel.getId(), TestDataFactory.USER_ID_3);
 
             // Then
             assertNotNull(result);
+            verify(channelService).decrementMemberCount(channel.getId());
             verify(eventPublisher).publishMemberLeft(leftMember);
         }
     }

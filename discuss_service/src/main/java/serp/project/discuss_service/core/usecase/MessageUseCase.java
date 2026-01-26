@@ -5,12 +5,12 @@
 
 package serp.project.discuss_service.core.usecase;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import serp.project.discuss_service.core.domain.dto.response.MessageResponse;
 import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
@@ -163,6 +163,7 @@ public class MessageUseCase {
     /**
      * Get messages in a channel with pagination.
      */
+    @Transactional(readOnly = true)
     public Pair<Long, List<MessageEntity>> getChannelMessages(Long channelId, Long userId, 
                                                                int page, int size) {
         if (!memberService.isMember(channelId, userId)) {
@@ -191,6 +192,7 @@ public class MessageUseCase {
     /**
      * Get messages before a specific message (for infinite scroll).
      */
+    @Transactional(readOnly = true)
     public List<MessageEntity> getMessagesBefore(Long channelId, Long userId, 
                                                   Long beforeId, int limit) {
         if (!memberService.isMember(channelId, userId)) {
@@ -207,6 +209,7 @@ public class MessageUseCase {
     /**
      * Get thread replies.
      */
+    @Transactional(readOnly = true)
     public List<MessageEntity> getThreadReplies(Long channelId, Long parentId, Long userId) {
         if (!memberService.isMember(channelId, userId)) {
             throw new AppException(ErrorCode.NOT_CHANNEL_MEMBER);
@@ -222,6 +225,7 @@ public class MessageUseCase {
     /**
      * Search messages in a channel.
      */
+    @Transactional(readOnly = true)
     public List<MessageEntity> searchMessages(Long channelId, Long userId, 
                                                String query, int page, int size) {
         if (!memberService.isMember(channelId, userId)) {
@@ -238,6 +242,7 @@ public class MessageUseCase {
     /**
      * Get detailed message by ID
      */
+    @Transactional(readOnly = true)
     public Optional<MessageResponse> getMessageDetail(Long messageId) {
         Optional<MessageEntity> messageOpt = messageService.getMessageById(messageId);
         return messageOpt.map(m -> {

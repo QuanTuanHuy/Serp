@@ -42,14 +42,12 @@ public class ChannelService implements IChannelService {
 
     @Override
     public ChannelEntity getOrCreateDirectChannel(Long tenantId, Long userId1, Long userId2) {
-        // Check if direct channel already exists
         Optional<ChannelEntity> existing = channelPort.findDirectChannel(tenantId, userId1, userId2);
         if (existing.isPresent()) {
             log.debug("Found existing DIRECT channel between {} and {}", userId1, userId2);
             return existing.get();
         }
 
-        // Create new direct channel
         ChannelEntity channel = ChannelEntity.createDirect(tenantId, userId1, userId2);
         ChannelEntity saved = channelPort.save(channel);
         cacheService.cacheChannel(saved);
@@ -70,7 +68,6 @@ public class ChannelService implements IChannelService {
     @Override
     public ChannelEntity createTopicChannel(Long tenantId, Long createdBy, String name,
                                             String entityType, Long entityId) {
-        // Check if topic channel for this entity already exists
         Optional<ChannelEntity> existing = channelPort.findByEntity(tenantId, entityType, entityId);
         if (existing.isPresent()) {
             log.debug("Found existing TOPIC channel for {}:{}", entityType, entityId);
@@ -125,6 +122,26 @@ public class ChannelService implements IChannelService {
         ChannelEntity saved = channelPort.save(channel);
         cacheService.cacheChannel(saved);
         log.info("Updated channel: {}", channelId);
+        return saved;
+    }
+
+    @Override
+    public ChannelEntity incrementMemberCount(Long channelId) {
+        ChannelEntity channel = getChannelByIdOrThrow(channelId);
+        channel.incrementMemberCount();
+        ChannelEntity saved = channelPort.save(channel);
+        cacheService.cacheChannel(saved);
+        log.info("Incremented member count for channel: {}", channelId);
+        return saved;
+    }
+
+    @Override
+    public ChannelEntity decrementMemberCount(Long channelId) {
+        ChannelEntity channel = getChannelByIdOrThrow(channelId);
+        channel.decrementMemberCount();
+        ChannelEntity saved = channelPort.save(channel);
+        cacheService.cacheChannel(saved);
+        log.info("Decremented member count for channel: {}", channelId);
         return saved;
     }
 

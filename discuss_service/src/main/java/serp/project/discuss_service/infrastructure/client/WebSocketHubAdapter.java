@@ -46,6 +46,10 @@ public class WebSocketHubAdapter implements IWebSocketHubPort {
 
     @Override
     public void broadcastToChannel(Long channelId, Object payload) {
+        if (channelId == null || payload == null) {
+            log.warn("Cannot broadcast to channel with null channelId or payload");
+            return;
+        }
         String destination = String.format(CHANNEL_TOPIC, channelId);
         messagingTemplate.convertAndSend(destination, payload);
         log.debug("Broadcast to channel {} at {}", channelId, destination);
@@ -53,6 +57,10 @@ public class WebSocketHubAdapter implements IWebSocketHubPort {
 
     @Override
     public void sendToUser(Long userId, Object payload) {
+        if (userId == null || payload == null) {
+            log.warn("Cannot send message to user with null userId or payload");
+            return;
+        }
         messagingTemplate.convertAndSendToUser(
                 String.valueOf(userId),
                 USER_QUEUE,
@@ -63,6 +71,10 @@ public class WebSocketHubAdapter implements IWebSocketHubPort {
 
     @Override
     public void sendErrorToUser(Long userId, Object payload) {
+        if (userId == null || payload == null) {
+            log.warn("Cannot send error message to user with null userId or payload");
+            return;
+        }
         messagingTemplate.convertAndSendToUser(
                 String.valueOf(userId),
                 USER_ERROR_QUEUE,
@@ -98,6 +110,10 @@ public class WebSocketHubAdapter implements IWebSocketHubPort {
 
     @Override
     public void notifyTyping(Long channelId, Long userId, boolean isTyping) {
+        if (channelId == null || userId == null) {
+            log.warn("Cannot notify typing with null channelId or userId");
+            return;
+        }
         String destination = String.format(CHANNEL_TYPING_TOPIC, channelId);
         
         WsTypingPayload payload = isTyping 
@@ -117,6 +133,10 @@ public class WebSocketHubAdapter implements IWebSocketHubPort {
 
     @Override
     public void notifyNewMessage(Long channelId, MessageEntity message) {
+        if (channelId == null || message == null) {
+            log.warn("Cannot notify new message with null channelId or message");
+            return;
+        }
         MessageResponse enrichedMessage = attachmentUrlService.enrichMessageWithUrls(message);
         enrichedMessage = userInfoService.enrichMessageWithUserInfo(enrichedMessage);
         WsMessagePayload payload = WsMessagePayload.builder()
@@ -138,6 +158,10 @@ public class WebSocketHubAdapter implements IWebSocketHubPort {
 
     @Override
     public void notifyMessageUpdated(Long channelId, MessageEntity message) {
+        if (channelId == null || message == null) {
+            log.warn("Cannot notify message updated with null channelId or message");
+            return;
+        }
         MessageResponse enrichedMessage = attachmentUrlService.enrichMessageWithUrls(message);
         enrichedMessage = userInfoService.enrichMessageWithUserInfo(enrichedMessage);
         WsMessagePayload payload = WsMessagePayload.builder()
@@ -159,6 +183,10 @@ public class WebSocketHubAdapter implements IWebSocketHubPort {
 
     @Override
     public void notifyMessageDeleted(Long channelId, Long messageId) {
+        if (channelId == null || messageId == null) {
+            log.warn("Cannot notify message deleted with null channelId or messageId");
+            return;
+        }
         WsMessagePayload payload = WsMessagePayload.forDeletion(messageId, channelId);
         WsEvent<WsMessagePayload> event = WsEvent.of(
                 WsEventType.MESSAGE_DELETED,
@@ -173,6 +201,10 @@ public class WebSocketHubAdapter implements IWebSocketHubPort {
 
     @Override
     public void notifyReaction(Long channelId, Long messageId, Long userId, String emoji, boolean added) {
+        if (channelId == null || messageId == null || userId == null || emoji == null) {
+            log.warn("Cannot notify reaction with null channelId, messageId, userId or emoji");
+            return;
+        }
         WsReactionPayload payload = added
                 ? WsReactionPayload.added(messageId, channelId, userId, emoji)
                 : WsReactionPayload.removed(messageId, channelId, userId, emoji);
@@ -190,6 +222,10 @@ public class WebSocketHubAdapter implements IWebSocketHubPort {
 
     @Override
     public void notifyPresenceChange(Long channelId, Long userId, boolean online) {
+        if (channelId == null || userId == null) {
+            log.warn("Cannot notify presence change with null channelId or userId");
+            return;
+        }
         WsPresencePayload payload = online
                 ? WsPresencePayload.online(userId, null, channelId)
                 : WsPresencePayload.offline(userId, channelId);
