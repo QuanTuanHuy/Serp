@@ -8,7 +8,6 @@ package serp.project.discuss_service.kernel.websocket;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
@@ -28,7 +27,6 @@ import java.security.Principal;
 public class WebSocketEventListener {
 
     private final WebSocketSessionRegistry sessionRegistry;
-    private final SimpMessagingTemplate messagingTemplate;
     private final IDiscussEventPublisher eventPublisher;
 
     private static final String CHANNEL_TOPIC_PREFIX = "/topic/channels/";

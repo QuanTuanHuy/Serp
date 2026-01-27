@@ -12,6 +12,8 @@ import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+
+import serp.project.discuss_service.kernel.property.WebsocketProperties;
 import serp.project.discuss_service.kernel.websocket.WebSocketAuthChannelInterceptor;
 
 /**
@@ -30,6 +32,8 @@ import serp.project.discuss_service.kernel.websocket.WebSocketAuthChannelInterce
 @EnableWebSocketMessageBroker
 @RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    private final WebsocketProperties websocketProperties;
 
     private final WebSocketAuthChannelInterceptor authChannelInterceptor;
 
@@ -50,13 +54,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // Main WebSocket endpoint
-        registry.addEndpoint("/ws/discuss")
-                .setAllowedOriginPatterns("*")
+        registry.addEndpoint(websocketProperties.getEndpoint())
+                .setAllowedOrigins(websocketProperties.getAllowedOrigins())
                 .withSockJS(); // Enable SockJS fallback for browsers without WebSocket support
         
         // Raw WebSocket endpoint (without SockJS)
-        registry.addEndpoint("/ws/discuss")
-                .setAllowedOriginPatterns("*");
+        registry.addEndpoint(websocketProperties.getEndpoint())
+                .setAllowedOrigins(websocketProperties.getAllowedOrigins());
     }
 
     @Override
