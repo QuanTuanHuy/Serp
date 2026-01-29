@@ -60,6 +60,12 @@ app:
     realm: serp
     client-id: serp-discuss
     client-secret: ${CLIENT_SECRET}
+  
+  websocket:
+    endpoint: /ws/discuss
+    allowed-origins:
+      - https://serp.texkis.com
+      - http://localhost:3000
 
   security:
     filter:
