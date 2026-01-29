@@ -3,7 +3,7 @@
  * Description: Part of Serp Project - WebSocket controller for real-time messaging
  */
 
-package serp.project.discuss_service.ui.controller;
+package serp.project.discuss_service.ui.websocket;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
