@@ -127,7 +127,6 @@ public class AuthUseCase {
     public GeneralResponse<?> getUserToken(String username, String password) {
         try {
             var tokenResponse = tokenService.getUserToken(username, password);
-            eventPublisher.publishEvent(new UserOnlineInternalEvent(null, username, Instant.now()));
             return responseUtils.success(tokenResponse);
         } catch (AppException e) {
             log.error("Error getting user token: {}", e.getMessage());
@@ -137,7 +136,7 @@ public class AuthUseCase {
             return responseUtils.internalServerError(e.getMessage());
         }
     }
-
+    
     public GeneralResponse<?> refreshToken(RefreshTokenRequest request) {
         try {
             var tokenResponse = tokenService.refreshToken(request.getRefreshToken());
