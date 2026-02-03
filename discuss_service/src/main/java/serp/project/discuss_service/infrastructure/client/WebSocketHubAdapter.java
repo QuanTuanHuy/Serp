@@ -227,11 +227,11 @@ public class WebSocketHubAdapter implements IWebSocketHubPort {
             return;
         }
         WsPresencePayload payload = online
-                ? WsPresencePayload.online(userId, null, channelId)
+                ? WsPresencePayload.online(userId, null, null, channelId) // TODO: add userName and avatarUrl
                 : WsPresencePayload.offline(userId, channelId);
         
         WsEvent<WsPresencePayload> event = WsEvent.of(
-                online ? WsEventType.USER_ONLINE : WsEventType.USER_OFFLINE,
+                WsEventType.USER_PRESENCE_CHANGED,
                 payload,
                 channelId
         );

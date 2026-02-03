@@ -25,6 +25,7 @@ public enum WsEventType {
     // Presence events
     USER_ONLINE,
     USER_OFFLINE,
+    USER_PRESENCE_CHANGED,
     
     // Channel events
     CHANNEL_CREATED,
