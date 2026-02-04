@@ -49,6 +49,10 @@ public class MessageEventListener {
 
                 eventPublisher.publishMessageSent(event.getMessage());
 
+                cacheService.cacheMessage(event.getMessage());
+                if (event.getMessage().getParentId() != null) {
+                    cacheService.invalidateMessage(event.getMessage().getParentId());
+                }
                 boolean smartUpdated = cacheService.prependMessageToFirstPage(
                         event.getChannelId(), 
                         event.getMessage(), 
@@ -75,7 +79,8 @@ public class MessageEventListener {
                         event.getMessage().getId());
 
                 eventPublisher.publishMessageUpdated(event.getMessage());
-                
+
+                cacheService.cacheMessage(event.getMessage());
                 cacheService.invalidateChannelMessagesPageAsync(event.getChannelId());
 
                 log.debug("Post-commit completed for message update {}", event.getMessage().getId());
@@ -94,6 +99,12 @@ public class MessageEventListener {
                         event.getMessage().getId());
 
                 eventPublisher.publishMessageDeleted(event.getMessage());
+                
+                cacheService.invalidateMessage(event.getMessage().getId());
+                
+                if (event.getParentId() != null) {
+                    cacheService.invalidateMessage(event.getParentId());
+                }
                 
                 cacheService.removeMessageFromFirstPage(event.getChannelId(), event.getMessage().getId());
 
@@ -118,6 +129,9 @@ public class MessageEventListener {
                         event.getUserId(), 
                         event.getEmoji());
 
+                cacheService.invalidateMessage(event.getMessageId());
+                cacheService.invalidateChannelMessagesPageAsync(event.getChannelId());
+
                 log.debug("Post-commit completed for reaction added on message {}", event.getMessageId());
             } catch (Exception e) {
                 log.error("Failed to process post-commit for reaction added on message {}: {}", 
@@ -138,6 +152,9 @@ public class MessageEventListener {
                         event.getChannelId(), 
                         event.getUserId(), 
                         event.getEmoji());
+
+                cacheService.invalidateMessage(event.getMessageId());
+                cacheService.invalidateChannelMessagesPageAsync(event.getChannelId());
 
                 log.debug("Post-commit completed for reaction removed on message {}", event.getMessageId());
             } catch (Exception e) {

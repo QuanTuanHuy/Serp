@@ -9,11 +9,6 @@ import lombok.Getter;
 import org.springframework.context.ApplicationEvent;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
 
-/**
- * Internal Spring event published when a message is sent.
- * This event is used to trigger post-commit operations like Kafka publishing
- * and cache invalidation AFTER the database transaction commits successfully.
- */
 @Getter
 public class MessageSentInternalEvent extends ApplicationEvent {
 

@@ -31,10 +31,6 @@ public class MessageService implements IMessageService {
     public MessageEntity sendMessage(MessageEntity message) {
         message.validateForCreation();
         MessageEntity saved = messagePort.save(message);
-        
-        cacheService.cacheMessage(saved);
-        cacheService.addToRecentMessages(saved.getChannelId(), saved);
-        
         log.info("Sent message: {} in channel: {}", saved.getId(), saved.getChannelId());
         return saved;
     }
@@ -48,9 +44,6 @@ public class MessageService implements IMessageService {
         message.setParentId(parentId);
         message.validateForCreation();
         MessageEntity saved = messagePort.save(message);
-        
-        cacheService.cacheMessage(saved);
-        cacheService.invalidateMessage(parentId);
         
         log.info("Sent reply: {} to message: {}", saved.getId(), parentId);
         return saved;
@@ -101,9 +94,6 @@ public class MessageService implements IMessageService {
         message.edit(newContent, editorId);
         MessageEntity saved = messagePort.save(message);
         
-        cacheService.cacheMessage(saved);
-        cacheService.invalidateChannelMessages(saved.getChannelId());
-        
         log.info("Edited message: {}", messageId);
         return saved;
     }
@@ -118,12 +108,8 @@ public class MessageService implements IMessageService {
             getMessageById(message.getParentId()).ifPresent(parent -> {
                 parent.decrementThreadCount();
                 messagePort.save(parent);
-                cacheService.invalidateMessage(parent.getId());
             });
         }
-        
-        cacheService.invalidateMessage(messageId);
-        cacheService.invalidateChannelMessages(saved.getChannelId());
         
         log.info("Deleted message: {}", messageId);
         return saved;
@@ -135,7 +121,6 @@ public class MessageService implements IMessageService {
         message.addReaction(emoji, userId);
         MessageEntity saved = messagePort.save(message);
         
-        cacheService.cacheMessage(saved);
         log.debug("Added reaction {} to message {} by user {}", emoji, messageId, userId);
         return saved;
     }
@@ -146,7 +131,6 @@ public class MessageService implements IMessageService {
         message.removeReaction(emoji, userId);
         MessageEntity saved = messagePort.save(message);
         
-        cacheService.cacheMessage(saved);
         log.debug("Removed reaction {} from message {} by user {}", emoji, messageId, userId);
         return saved;
     }

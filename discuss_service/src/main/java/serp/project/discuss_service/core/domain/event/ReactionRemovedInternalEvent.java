@@ -8,10 +8,6 @@ package serp.project.discuss_service.core.domain.event;
 import lombok.Getter;
 import org.springframework.context.ApplicationEvent;
 
-/**
- * Internal Spring event published when a reaction is removed from a message.
- * Triggers post-commit Kafka publishing after transaction success.
- */
 @Getter
 public class ReactionRemovedInternalEvent extends ApplicationEvent {
 

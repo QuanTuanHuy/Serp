@@ -664,7 +664,7 @@ public class DiscussCacheService implements IDiscussCacheService {
         }
 
         try {
-            int[] commonPageSizes = {20, 25, 50};
+            int[] commonPageSizes = {50};
             
             for (int pageSize : commonPageSizes) {
                 String key = CHANNEL_MESSAGES_PREFIX + channelId + ":p0:s" + pageSize;
