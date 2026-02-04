@@ -7,6 +7,7 @@ package serp.project.discuss_service.core.service;
 
 import org.springframework.web.multipart.MultipartFile;
 import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
+import serp.project.discuss_service.core.exception.AppException;
 
 import java.util.List;
 import java.util.Map;

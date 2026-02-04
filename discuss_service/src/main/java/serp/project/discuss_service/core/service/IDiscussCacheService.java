@@ -61,11 +61,6 @@ public interface IDiscussCacheService {
      */
     void invalidateChannel(Long channelId);
 
-    /**
-     * Invalidate all channel caches for a tenant
-     */
-    void invalidateAllChannels(Long tenantId);
-
     // ==================== MESSAGE CACHE ====================
 
     /**

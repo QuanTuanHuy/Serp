@@ -40,14 +40,6 @@ import java.util.Set;
 
 import org.springframework.web.multipart.MultipartFile;
 
-/**
- * Use case for message operations.
- * Orchestrates message-related business logic across multiple services.
- * 
- * Post-commit operations (Kafka events, cache invalidation) are handled via
- * Spring's @TransactionalEventListener to ensure they only execute after
- * successful DB transaction commit.
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j
