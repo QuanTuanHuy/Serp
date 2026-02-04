@@ -46,7 +46,8 @@ message UserExistsRequest {
 
 message GetUsersByTenantRequest {
   int64 tenant_id = 1;
-  serp.common.PaginationRequest pagination = 2;
+  string query = 2;
+  serp.common.PaginationRequest pagination = 3;
 }
 
 // ==================== Response Messages ====================

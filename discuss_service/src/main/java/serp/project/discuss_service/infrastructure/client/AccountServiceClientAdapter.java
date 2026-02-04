@@ -8,6 +8,7 @@ package serp.project.discuss_service.infrastructure.client;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.util.MultiValueMap;
 
@@ -23,6 +24,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @Component
+@ConditionalOnProperty(name = "app.grpc.enabled", havingValue = "false", matchIfMissing = true)
 @RequiredArgsConstructor
 @Slf4j
 public class AccountServiceClientAdapter implements IAccountServiceClient {

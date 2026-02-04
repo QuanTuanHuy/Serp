@@ -185,6 +185,7 @@ public class InternalAccountGrpcService extends InternalAccountServiceGrpc.Inter
             GetUserParams params = GetUserParams.builder()
                     .organizationId(request.getTenantId())
                     .status(UserStatus.ACTIVE.toString())
+                    .search(request.getQuery())
                     .page(page)
                     .pageSize(pageSize)
                     .build();
