@@ -9,19 +9,17 @@ import lombok.Getter;
 import org.springframework.context.ApplicationEvent;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
 
-/**
- * Internal Spring event published when a message is deleted.
- * Triggers post-commit Kafka publishing after transaction success.
- */
 @Getter
 public class MessageDeletedInternalEvent extends ApplicationEvent {
 
     private final MessageEntity message;
     private final Long channelId;
+    private final Long parentId;
 
     public MessageDeletedInternalEvent(Object source, MessageEntity message) {
         super(source);
         this.message = message;
         this.channelId = message.getChannelId();
+        this.parentId = message.getParentId();
     }
 }

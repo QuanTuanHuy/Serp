@@ -108,7 +108,6 @@ public class DiscussKafkaConsumer {
                     break;
                 default:
                     log.debug("Ignored reaction event type: {}", eventType);
-                    return;
             }
 
         } catch (Exception e) {

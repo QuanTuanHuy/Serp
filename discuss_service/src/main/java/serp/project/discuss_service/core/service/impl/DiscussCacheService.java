@@ -69,16 +69,6 @@ public class DiscussCacheService implements IDiscussCacheService {
         log.debug("Invalidated channel cache: {}", channelId);
     }
 
-    @Override
-    public void invalidateAllChannels(Long tenantId) {
-        if (tenantId == null) {
-            return;
-        }
-        String pattern = CHANNEL_PREFIX + "*";
-        cachePort.deleteAllByPattern(pattern);
-        log.debug("Invalidated all channel caches for tenant: {}", tenantId);
-    }
-
     // ==================== MESSAGE CACHE ====================
 
     @Override
@@ -138,7 +128,6 @@ public class DiscussCacheService implements IDiscussCacheService {
         String key = RECENT_MESSAGES_PREFIX + channelId;
         String messageJson = jsonUtils.toJson(message);
         cachePort.leftPush(key, messageJson);
-        // Keep only last 50 messages
         cachePort.trimList(key, 0, 49);
         cachePort.expire(key, RECENT_MESSAGES_TTL);
         log.debug("Added message to recent messages cache for channel: {}", channelId);
@@ -675,7 +664,7 @@ public class DiscussCacheService implements IDiscussCacheService {
         }
 
         try {
-            int[] commonPageSizes = {20, 25, 50};
+            int[] commonPageSizes = {50};
             
             for (int pageSize : commonPageSizes) {
                 String key = CHANNEL_MESSAGES_PREFIX + channelId + ":p0:s" + pageSize;
@@ -702,7 +691,6 @@ public class DiscussCacheService implements IDiscussCacheService {
                 }
             }
 
-            // Message not in any cached first page - just invalidate to be safe
             log.debug("Message {} not in cached first pages for channel {}, invalidating", messageId, channelId);
             invalidateChannelMessagesPageAsync(channelId);
             return false;

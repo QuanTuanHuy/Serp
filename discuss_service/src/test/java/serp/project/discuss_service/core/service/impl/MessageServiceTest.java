@@ -51,7 +51,7 @@ class MessageServiceTest {
     class SendMessageTests {
 
         @Test
-        @DisplayName("should send valid message and cache it")
+        @DisplayName("should send valid message")
         void testSendMessage_ValidMessage_SavesAndCaches() {
             // Given
             MessageEntity message = TestDataFactory.createTextMessage();
@@ -68,8 +68,6 @@ class MessageServiceTest {
             assertNotNull(result);
             assertEquals(1L, result.getId());
             verify(messagePort).save(message);
-            verify(cacheService).cacheMessage(saved);
-            verify(cacheService).addToRecentMessages(saved.getChannelId(), saved);
         }
 
         @Test
@@ -125,8 +123,6 @@ class MessageServiceTest {
             
             // Verify parent was saved with incremented thread count
             verify(messagePort, times(2)).save(any(MessageEntity.class));
-            verify(cacheService).cacheMessage(savedReply);
-            verify(cacheService).invalidateMessage(100L); // Invalidate parent cache
         }
 
         @Test
@@ -291,7 +287,7 @@ class MessageServiceTest {
     class EditMessageTests {
 
         @Test
-        @DisplayName("should edit message content and update cache")
+        @DisplayName("should edit message content")
         void testEditMessage_ValidEdit_EditsAndCaches() {
             // Given
             MessageEntity message = TestDataFactory.createTextMessage();
@@ -310,8 +306,6 @@ class MessageServiceTest {
             // Then
             assertNotNull(result);
             assertTrue(result.getIsEdited());
-            verify(cacheService).cacheMessage(edited);
-            verify(cacheService).invalidateChannelMessages(edited.getChannelId());
         }
 
         @Test
@@ -334,7 +328,7 @@ class MessageServiceTest {
     class DeleteMessageTests {
 
         @Test
-        @DisplayName("should soft delete message and invalidate cache")
+        @DisplayName("should soft delete message")
         void testDeleteMessage_ValidDelete_DeletesAndInvalidates() {
             // Given
             MessageEntity message = TestDataFactory.createTextMessage();
@@ -349,8 +343,6 @@ class MessageServiceTest {
 
             // Then
             assertTrue(result.getIsDeleted());
-            verify(cacheService).invalidateMessage(1L);
-            verify(cacheService).invalidateChannelMessages(deleted.getChannelId());
         }
 
         @Test
@@ -374,7 +366,8 @@ class MessageServiceTest {
             messageService.deleteMessage(101L, TestDataFactory.USER_ID_1, false);
 
             // Then
-            verify(cacheService).invalidateMessage(100L); // Parent cache invalidated
+            // Verify parent was saved with decremented thread count
+            verify(messagePort, times(2)).save(any(MessageEntity.class));
         }
     }
 
@@ -385,7 +378,7 @@ class MessageServiceTest {
     class ReactionTests {
 
         @Test
-        @DisplayName("addReaction should add emoji and cache")
+        @DisplayName("addReaction should add emoji")
         void testAddReaction_ValidEmoji_AddsAndCaches() {
             // Given
             MessageEntity message = TestDataFactory.createTextMessage();
@@ -401,11 +394,10 @@ class MessageServiceTest {
             // Then
             assertNotNull(result);
             verify(messagePort).save(any(MessageEntity.class));
-            verify(cacheService).cacheMessage(withReaction);
         }
 
         @Test
-        @DisplayName("removeReaction should remove emoji and cache")
+        @DisplayName("removeReaction should remove emoji")
         void testRemoveReaction_ExistingEmoji_RemovesAndCaches() {
             // Given
             MessageEntity message = TestDataFactory.createTextMessage();
@@ -421,7 +413,6 @@ class MessageServiceTest {
 
             // Then
             assertNotNull(result);
-            verify(cacheService).cacheMessage(withoutReaction);
         }
     }
 

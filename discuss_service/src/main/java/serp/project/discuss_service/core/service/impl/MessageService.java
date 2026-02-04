@@ -19,10 +19,6 @@ import serp.project.discuss_service.core.service.IMessageService;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Implementation of message service.
- * Handles message business operations with caching.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -35,29 +31,19 @@ public class MessageService implements IMessageService {
     public MessageEntity sendMessage(MessageEntity message) {
         message.validateForCreation();
         MessageEntity saved = messagePort.save(message);
-        
-        // Update caches
-        cacheService.cacheMessage(saved);
-        cacheService.addToRecentMessages(saved.getChannelId(), saved);
-        
         log.info("Sent message: {} in channel: {}", saved.getId(), saved.getChannelId());
         return saved;
     }
 
     @Override
     public MessageEntity sendReply(Long parentId, MessageEntity message) {
-        // Get parent message and increment thread count
         MessageEntity parent = getMessageByIdOrThrow(parentId);
         parent.incrementThreadCount();
         messagePort.save(parent);
         
-        // Set parent ID and save reply
         message.setParentId(parentId);
         message.validateForCreation();
         MessageEntity saved = messagePort.save(message);
-        
-        cacheService.cacheMessage(saved);
-        cacheService.invalidateMessage(parentId); // Invalidate parent cache due to thread count change
         
         log.info("Sent reply: {} to message: {}", saved.getId(), parentId);
         return saved;
@@ -65,14 +51,12 @@ public class MessageService implements IMessageService {
 
     @Override
     public Optional<MessageEntity> getMessageById(Long id) {
-        // Try cache first
         Optional<MessageEntity> cached = cacheService.getCachedMessage(id);
         if (cached.isPresent()) {
             log.debug("Cache hit for message: {}", id);
             return cached;
         }
 
-        // Fallback to database
         Optional<MessageEntity> message = messagePort.findById(id);
         message.ifPresent(cacheService::cacheMessage);
         return message;
@@ -110,9 +94,6 @@ public class MessageService implements IMessageService {
         message.edit(newContent, editorId);
         MessageEntity saved = messagePort.save(message);
         
-        cacheService.cacheMessage(saved);
-        cacheService.invalidateChannelMessages(saved.getChannelId());
-        
         log.info("Edited message: {}", messageId);
         return saved;
     }
@@ -123,17 +104,12 @@ public class MessageService implements IMessageService {
         message.delete(deleterId, isAdmin);
         MessageEntity saved = messagePort.save(message);
         
-        // Update parent thread count if this was a reply
         if (message.isReply()) {
             getMessageById(message.getParentId()).ifPresent(parent -> {
                 parent.decrementThreadCount();
                 messagePort.save(parent);
-                cacheService.invalidateMessage(parent.getId());
             });
         }
-        
-        cacheService.invalidateMessage(messageId);
-        cacheService.invalidateChannelMessages(saved.getChannelId());
         
         log.info("Deleted message: {}", messageId);
         return saved;
@@ -145,7 +121,6 @@ public class MessageService implements IMessageService {
         message.addReaction(emoji, userId);
         MessageEntity saved = messagePort.save(message);
         
-        cacheService.cacheMessage(saved);
         log.debug("Added reaction {} to message {} by user {}", emoji, messageId, userId);
         return saved;
     }
@@ -156,7 +131,6 @@ public class MessageService implements IMessageService {
         message.removeReaction(emoji, userId);
         MessageEntity saved = messagePort.save(message);
         
-        cacheService.cacheMessage(saved);
         log.debug("Removed reaction {} from message {} by user {}", emoji, messageId, userId);
         return saved;
     }
