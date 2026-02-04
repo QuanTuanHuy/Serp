@@ -1,0 +1,11 @@
+# Buf configuration for SERP proto definitions
+version: v1
+name: buf.build/serp/proto
+breaking:
+  use:
+    - FILE
+lint:
+  use:
+    - DEFAULT
+  except:
+    - PACKAGE_VERSION_SUFFIX

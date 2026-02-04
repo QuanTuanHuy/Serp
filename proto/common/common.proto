@@ -1,0 +1,56 @@
+/*
+ * Author: QuanTuanHuy
+ * Description: Common proto definitions for SERP internal gRPC services
+ */
+syntax = "proto3";
+
+package serp.common;
+
+option go_package = "github.com/serp/proto/gen/go/common";
+option java_package = "serp.proto.common";
+option java_multiple_files = true;
+
+// Service context for internal calls - passed via metadata
+message ServiceContext {
+  string source_service = 1;  // Name of calling service
+  string trace_id = 2;        // Distributed tracing ID
+  int64 tenant_id = 3;        // Multi-tenant context
+  int64 user_id = 4;          // User context (if available)
+}
+
+// Pagination request parameters
+message PaginationRequest {
+  int32 page = 1;             // Page number (0-based)
+  int32 page_size = 2;        // Items per page
+  string sort_by = 3;         // Field to sort by
+  string sort_order = 4;      // ASC or DESC
+}
+
+// Pagination response metadata
+message PaginationResponse {
+  int64 total_records = 1;
+  int32 current_page = 2;
+  int32 total_pages = 3;
+  int32 page_size = 4;
+}
+
+// Standard error detail
+message ErrorDetail {
+  string code = 1;
+  string message = 2;
+  repeated KeyValue metadata = 3;
+}
+
+// Key-value pair for metadata
+message KeyValue {
+  string key = 1;
+  string value = 2;
+}
+
+// Empty message for requests/responses with no data
+message Empty {}
+
+// Timestamp wrapper (Unix milliseconds)
+message Timestamp {
+  int64 value = 1;
+}

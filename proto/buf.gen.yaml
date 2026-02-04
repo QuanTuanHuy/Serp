@@ -1,0 +1,23 @@
+# Buf code generation configuration
+version: v1
+managed:
+  enabled: true
+  go_package_prefix:
+    default: github.com/serp/proto/gen/go
+  java_package_prefix:
+    default: serp.proto
+  java_multiple_files: true
+plugins:
+  # Go code generation
+  - plugin: buf.build/protocolbuffers/go
+    out: gen/go
+    opt: paths=source_relative
+  - plugin: buf.build/grpc/go
+    out: gen/go
+    opt: paths=source_relative
+    
+  # Java code generation
+  - plugin: buf.build/protocolbuffers/java
+    out: gen/java
+  - plugin: buf.build/grpc/java
+    out: gen/java

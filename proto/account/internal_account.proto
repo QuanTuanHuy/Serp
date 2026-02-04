@@ -1,0 +1,83 @@
+/*
+ * Author: QuanTuanHuy
+ * Description: Internal Account Service gRPC definitions for service-to-service calls
+ */
+syntax = "proto3";
+
+package serp.account;
+
+option go_package = "github.com/serp/proto/gen/go/account";
+option java_package = "serp.proto.account";
+option java_multiple_files = true;
+
+import "common/common.proto";
+
+
+service InternalAccountService {
+
+  rpc GetUserById(GetUserByIdRequest) returns (UserResponse);
+  
+  rpc GetUsersByIds(GetUsersByIdsRequest) returns (UsersResponse);
+  
+  rpc GetUserProfile(GetUserProfileRequest) returns (UserProfileResponse);
+  
+  rpc UserExists(UserExistsRequest) returns (UserExistsResponse);
+  
+  rpc GetUsersByTenant(GetUsersByTenantRequest) returns (UsersResponse);
+}
+
+// ==================== Request Messages ====================
+
+message GetUserByIdRequest {
+  int64 user_id = 1;
+}
+
+message GetUsersByIdsRequest {
+  repeated int64 user_ids = 1;
+}
+
+message GetUserProfileRequest {
+  int64 user_id = 1;
+}
+
+message UserExistsRequest {
+  int64 user_id = 1;
+}
+
+message GetUsersByTenantRequest {
+  int64 tenant_id = 1;
+  serp.common.PaginationRequest pagination = 2;
+}
+
+// ==================== Response Messages ====================
+
+message UserResponse {
+  int64 id = 1;
+  string email = 2;
+  string first_name = 3;
+  string last_name = 4;
+  string full_name = 5;
+  string avatar_url = 6;
+  string phone = 7;
+  bool is_active = 8;
+  int64 tenant_id = 9;
+  int64 created_at = 10;
+  int64 updated_at = 11;
+}
+
+message UsersResponse {
+  repeated UserResponse users = 1;
+  serp.common.PaginationResponse pagination = 2;
+}
+
+message UserProfileResponse {
+  UserResponse user = 1;
+  int64 organization_id = 2;
+  string organization_name = 3;
+  repeated string roles = 4;
+  repeated string permissions = 5;
+}
+
+message UserExistsResponse {
+  bool exists = 1;
+}
