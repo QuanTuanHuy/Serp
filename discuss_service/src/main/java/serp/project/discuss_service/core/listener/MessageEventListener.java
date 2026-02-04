@@ -21,15 +21,6 @@ import serp.project.discuss_service.core.service.IDiscussEventPublisher;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
-/**
- * Listens for internal Spring events and performs post-commit operations ASYNCHRONOUSLY.
- * 
- * Key benefits of using @TransactionalEventListener with AFTER_COMMIT:
- * 1. Kafka events are only published if the DB transaction succeeds
- * 2. Prevents orphan events from failed/rolled-back transactions
- * 3. Decouples transactional logic from external system notifications
- * 4. Cache operations happen after data is persisted
- */
 @Component
 @Slf4j
 public class MessageEventListener {
@@ -49,9 +40,6 @@ public class MessageEventListener {
         this.messageAsyncExecutor = messageAsyncExecutor;
     }
 
-    /**
-     * Publishes Kafka event and updates cache (smart prepend).
-     */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleMessageSent(MessageSentInternalEvent event) {
         CompletableFuture.runAsync(() -> {
@@ -61,6 +49,10 @@ public class MessageEventListener {
 
                 eventPublisher.publishMessageSent(event.getMessage());
 
+                cacheService.cacheMessage(event.getMessage());
+                if (event.getMessage().getParentId() != null) {
+                    cacheService.invalidateMessage(event.getMessage().getParentId());
+                }
                 boolean smartUpdated = cacheService.prependMessageToFirstPage(
                         event.getChannelId(), 
                         event.getMessage(), 
@@ -79,9 +71,6 @@ public class MessageEventListener {
         }, messageAsyncExecutor);
     }
 
-    /**
-     * Publishes Kafka event and invalidates cache.
-     */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleMessageUpdated(MessageUpdatedInternalEvent event) {
         CompletableFuture.runAsync(() -> {
@@ -90,7 +79,8 @@ public class MessageEventListener {
                         event.getMessage().getId());
 
                 eventPublisher.publishMessageUpdated(event.getMessage());
-                
+
+                cacheService.cacheMessage(event.getMessage());
                 cacheService.invalidateChannelMessagesPageAsync(event.getChannelId());
 
                 log.debug("Post-commit completed for message update {}", event.getMessage().getId());
@@ -101,9 +91,6 @@ public class MessageEventListener {
         }, messageAsyncExecutor);
     }
 
-    /**
-     * Publishes Kafka event and removes from cache (smart removal).
-     */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleMessageDeleted(MessageDeletedInternalEvent event) {
         CompletableFuture.runAsync(() -> {
@@ -112,6 +99,12 @@ public class MessageEventListener {
                         event.getMessage().getId());
 
                 eventPublisher.publishMessageDeleted(event.getMessage());
+                
+                cacheService.invalidateMessage(event.getMessage().getId());
+                
+                if (event.getParentId() != null) {
+                    cacheService.invalidateMessage(event.getParentId());
+                }
                 
                 cacheService.removeMessageFromFirstPage(event.getChannelId(), event.getMessage().getId());
 
@@ -123,9 +116,6 @@ public class MessageEventListener {
         }, messageAsyncExecutor);
     }
 
-    /**
-     * Publishes Kafka event only (reactions don't affect message list cache).
-     */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleReactionAdded(ReactionAddedInternalEvent event) {
         CompletableFuture.runAsync(() -> {
@@ -139,6 +129,9 @@ public class MessageEventListener {
                         event.getUserId(), 
                         event.getEmoji());
 
+                cacheService.invalidateMessage(event.getMessageId());
+                cacheService.invalidateChannelMessagesPageAsync(event.getChannelId());
+
                 log.debug("Post-commit completed for reaction added on message {}", event.getMessageId());
             } catch (Exception e) {
                 log.error("Failed to process post-commit for reaction added on message {}: {}", 
@@ -147,9 +140,6 @@ public class MessageEventListener {
         }, messageAsyncExecutor);
     }
 
-    /**
-     * Publishes Kafka event only.
-     */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleReactionRemoved(ReactionRemovedInternalEvent event) {
         CompletableFuture.runAsync(() -> {
@@ -162,6 +152,9 @@ public class MessageEventListener {
                         event.getChannelId(), 
                         event.getUserId(), 
                         event.getEmoji());
+
+                cacheService.invalidateMessage(event.getMessageId());
+                cacheService.invalidateChannelMessagesPageAsync(event.getChannelId());
 
                 log.debug("Post-commit completed for reaction removed on message {}", event.getMessageId());
             } catch (Exception e) {
