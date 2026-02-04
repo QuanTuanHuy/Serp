@@ -24,10 +24,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/**
- * Implementation of channel member service.
- * Handles member business operations with caching.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -203,7 +199,6 @@ public class ChannelMemberService implements IChannelMemberService {
         ChannelMemberEntity saved = memberPort.save(member);
         
         cacheService.removeMemberFromChannelCache(channelId, userId);
-        cacheService.removeChannelFromUserCache(userId, channelId);
         
         log.info("User {} left channel {}", userId, channelId);
         return saved;
@@ -216,7 +211,6 @@ public class ChannelMemberService implements IChannelMemberService {
         ChannelMemberEntity saved = memberPort.save(member);
         
         cacheService.removeMemberFromChannelCache(channelId, userId);
-        cacheService.removeChannelFromUserCache(userId, channelId);
         
         log.info("User {} was removed from channel {} by {}", userId, channelId, removerId);
         return saved;
@@ -281,6 +275,5 @@ public class ChannelMemberService implements IChannelMemberService {
 
     private void updateCaches(Long channelId, Long userId) {
         cacheService.addMemberToChannelCache(channelId, userId);
-        cacheService.addChannelToUserCache(userId, channelId);
     }
 }

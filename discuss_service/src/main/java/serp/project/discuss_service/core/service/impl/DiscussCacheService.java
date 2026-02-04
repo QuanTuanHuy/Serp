@@ -8,13 +8,11 @@ package serp.project.discuss_service.core.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
 import serp.project.discuss_service.core.port.client.ICachePort;
 import serp.project.discuss_service.core.service.IDiscussCacheService;
-import serp.project.discuss_service.kernel.utils.JsonUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,17 +23,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/**
- * Implementation of discuss-specific cache service.
- * Uses ICachePort for low-level Redis operations.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class DiscussCacheService implements IDiscussCacheService {
 
     private final ICachePort cachePort;
-    private final JsonUtils jsonUtils;
 
     // ==================== CHANNEL CACHE ====================
 
@@ -89,48 +82,6 @@ public class DiscussCacheService implements IDiscussCacheService {
         String key = MESSAGE_PREFIX + messageId;
         MessageEntity message = cachePort.getFromCache(key, MessageEntity.class);
         return Optional.ofNullable(message);
-    }
-
-    @Override
-    public void cacheRecentMessages(Long channelId, List<MessageEntity> messages) {
-        if (channelId == null || messages == null) {
-            return;
-        }
-        String key = RECENT_MESSAGES_PREFIX + channelId;
-        cachePort.setToCache(key, messages, RECENT_MESSAGES_TTL);
-        log.debug("Cached {} recent messages for channel: {}", messages.size(), channelId);
-    }
-
-    @Override
-    public List<MessageEntity> getCachedRecentMessages(Long channelId) {
-        if (channelId == null) {
-            return Collections.emptyList();
-        }
-        String key = RECENT_MESSAGES_PREFIX + channelId;
-        String json = cachePort.getFromCache(key);
-        if (json == null) {
-            return Collections.emptyList();
-        }
-        try {
-            return jsonUtils.fromJson(json, 
-                    new ParameterizedTypeReference<List<MessageEntity>>() {});
-        } catch (Exception e) {
-            log.error("Failed to parse recent messages from cache", e);
-            return Collections.emptyList();
-        }
-    }
-
-    @Override
-    public void addToRecentMessages(Long channelId, MessageEntity message) {
-        if (channelId == null || message == null) {
-            return;
-        }
-        String key = RECENT_MESSAGES_PREFIX + channelId;
-        String messageJson = jsonUtils.toJson(message);
-        cachePort.leftPush(key, messageJson);
-        cachePort.trimList(key, 0, 49);
-        cachePort.expire(key, RECENT_MESSAGES_TTL);
-        log.debug("Added message to recent messages cache for channel: {}", channelId);
     }
 
     @Override
@@ -480,58 +431,6 @@ public class DiscussCacheService implements IDiscussCacheService {
         }
         String key = CHANNEL_MEMBERS_PREFIX + channelId;
         return cachePort.isSetMember(key, userId.toString());
-    }
-
-    // ==================== USER CHANNELS CACHE ====================
-
-    @Override
-    public void cacheUserChannels(Long userId, Set<Long> channelIds) {
-        if (userId == null || channelIds == null) {
-            return;
-        }
-        String key = USER_CHANNELS_PREFIX + userId;
-        String[] channels = channelIds.stream()
-                .map(String::valueOf)
-                .toArray(String[]::new);
-        // Clear existing and add new
-        cachePort.deleteFromCache(key);
-        if (channels.length > 0) {
-            cachePort.addToSet(key, channels);
-        }
-        cachePort.expire(key, CHANNEL_TTL);
-        log.debug("Cached {} channels for user {}", channelIds.size(), userId);
-    }
-
-    @Override
-    public Set<Long> getCachedUserChannels(Long userId) {
-        if (userId == null) {
-            return Collections.emptySet();
-        }
-        String key = USER_CHANNELS_PREFIX + userId;
-        Set<String> channels = cachePort.getSetMembers(key);
-        return channels.stream()
-                .map(Long::parseLong)
-                .collect(Collectors.toSet());
-    }
-
-    @Override
-    public void addChannelToUserCache(Long userId, Long channelId) {
-        if (userId == null || channelId == null) {
-            return;
-        }
-        String key = USER_CHANNELS_PREFIX + userId;
-        cachePort.addToSet(key, channelId.toString());
-        log.debug("Added channel {} to user {} cache", channelId, userId);
-    }
-
-    @Override
-    public void removeChannelFromUserCache(Long userId, Long channelId) {
-        if (userId == null || channelId == null) {
-            return;
-        }
-        String key = USER_CHANNELS_PREFIX + userId;
-        cachePort.removeFromSet(key, channelId.toString());
-        log.debug("Removed channel {} from user {} cache", channelId, userId);
     }
 
     // ==================== ATTACHMENT URL CACHE ====================

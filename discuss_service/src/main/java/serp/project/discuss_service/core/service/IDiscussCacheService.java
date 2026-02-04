@@ -23,7 +23,6 @@ public interface IDiscussCacheService {
     String CHANNEL_PREFIX = "discuss:channel:";
     String MESSAGE_PREFIX = "discuss:msg:";
     String RECENT_MESSAGES_PREFIX = "discuss:recent:";
-    String USER_CHANNELS_PREFIX = "discuss:user_channels:";
     String CHANNEL_MEMBERS_PREFIX = "discuss:members:";
     String PRESENCE_PREFIX = "discuss:presence:";
     String CHANNEL_ONLINE_PREFIX = "discuss:online:";
@@ -72,21 +71,6 @@ public interface IDiscussCacheService {
      * Get cached message
      */
     Optional<MessageEntity> getCachedMessage(Long messageId);
-
-    /**
-     * Cache recent messages for a channel (hot messages)
-     */
-    void cacheRecentMessages(Long channelId, List<MessageEntity> messages);
-
-    /**
-     * Get cached recent messages
-     */
-    List<MessageEntity> getCachedRecentMessages(Long channelId);
-
-    /**
-     * Add message to recent messages cache (LIFO - newest first)
-     */
-    void addToRecentMessages(Long channelId, MessageEntity message);
 
     /**
      * Invalidate message cache
@@ -304,28 +288,6 @@ public interface IDiscussCacheService {
      * Check if user is member (from cache)
      */
     boolean isMemberCached(Long channelId, Long userId);
-
-    // ==================== USER CHANNELS CACHE ====================
-
-    /**
-     * Cache user's channel IDs
-     */
-    void cacheUserChannels(Long userId, Set<Long> channelIds);
-
-    /**
-     * Get cached user's channel IDs
-     */
-    Set<Long> getCachedUserChannels(Long userId);
-
-    /**
-     * Add channel to user's channels cache
-     */
-    void addChannelToUserCache(Long userId, Long channelId);
-
-    /**
-     * Remove channel from user's channels cache
-     */
-    void removeChannelFromUserCache(Long userId, Long channelId);
 
     // ==================== ATTACHMENT URL CACHE ====================
 

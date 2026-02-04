@@ -29,10 +29,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-/**
- * Service implementation for enriching attachments with presigned URLs.
- * Generates presigned download URLs for S3/MinIO stored files with Redis caching.
- */
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -50,17 +47,13 @@ public class AttachmentUrlService implements IAttachmentUrlService {
 
         AttachmentResponse response = AttachmentResponse.fromEntity(attachment);
 
-        // Only generate presigned URLs if attachment has storage info
         if (attachment.getStorageKey() != null) {
-            // Try cache first
             Optional<CachedAttachmentUrl> cached = cacheService.getCachedAttachmentUrl(attachment.getId());
 
             if (cached.isPresent() && cached.get().expiresAt() > System.currentTimeMillis()) {
-                // Use cached URLs
                 applyCachedUrls(response, cached.get());
                 log.debug("Using cached URL for attachment {}", attachment.getId());
             } else {
-                // Generate and cache new URLs
                 generateAndCacheUrl(attachment, response);
             }
         }
@@ -101,7 +94,6 @@ public class AttachmentUrlService implements IAttachmentUrlService {
 
         MessageResponse response = MessageResponse.fromEntity(message);
 
-        // Enrich attachments with presigned URLs
         if (message.getAttachments() != null && !message.getAttachments().isEmpty()) {
             List<AttachmentResponse> enrichedAttachments = enrichWithUrls(message.getAttachments());
             response.setAttachments(enrichedAttachments);
@@ -149,7 +141,6 @@ public class AttachmentUrlService implements IAttachmentUrlService {
             String presignedUrl = storagePort.generatePresignedUrl(location, expiry);
             long expiresAt = calculateExpiryTimestamp(expiry);
 
-            // Set download URL
             response.setDownloadUrl(presignedUrl);
 
             // For images/videos, thumbnailUrl is the same as downloadUrl
@@ -159,10 +150,8 @@ public class AttachmentUrlService implements IAttachmentUrlService {
                 response.setThumbnailUrl(thumbnailUrl);
             }
 
-            // Set expiry timestamp
             response.setUrlExpiresAt(expiresAt);
 
-            // Cache the URL
             CachedAttachmentUrl urlInfo = new CachedAttachmentUrl(presignedUrl, thumbnailUrl, expiresAt);
             cacheService.cacheAttachmentUrl(attachment.getId(), urlInfo);
 
