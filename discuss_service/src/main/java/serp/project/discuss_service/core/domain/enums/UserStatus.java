@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum UserStatus {
     ONLINE("Online", true),
-    AWAY("Away", true),
     BUSY("Do Not Disturb", true),
     OFFLINE("Offline", false);
     

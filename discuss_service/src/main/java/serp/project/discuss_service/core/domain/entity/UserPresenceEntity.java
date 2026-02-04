@@ -27,7 +27,6 @@ public class UserPresenceEntity {
     private String statusMessage;
     private Long lastSeenAt;
     private Long statusChangedAt;
-    private Long lastHeartbeatAt;
 
     public static UserPresenceEntity online(Long userId, Long tenantId) {
         long now = Instant.now().toEpochMilli();
@@ -37,7 +36,6 @@ public class UserPresenceEntity {
                 .status(UserStatus.ONLINE)
                 .lastSeenAt(now)
                 .statusChangedAt(now)
-                .lastHeartbeatAt(now)
                 .build();
     }
 
@@ -49,7 +47,6 @@ public class UserPresenceEntity {
                 .status(UserStatus.OFFLINE)
                 .lastSeenAt(now)
                 .statusChangedAt(now)
-                .lastHeartbeatAt(now)
                 .build();
     }
 
@@ -59,7 +56,6 @@ public class UserPresenceEntity {
         this.status = UserStatus.ONLINE;
         this.lastSeenAt = now;
         this.statusChangedAt = now;
-        this.lastHeartbeatAt = now;
     }
 
     public void goOffline() {
