@@ -19,8 +19,8 @@ import serp.project.discuss_service.core.domain.dto.websocket.WsTypingPayload;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
 import serp.project.discuss_service.core.port.client.IWebSocketHubPort;
 import serp.project.discuss_service.core.service.IAttachmentUrlService;
+import serp.project.discuss_service.core.service.IPresenceService;
 import serp.project.discuss_service.core.service.IUserInfoService;
-import serp.project.discuss_service.kernel.websocket.WebSocketSessionRegistry;
 
 import java.util.Set;
 
@@ -34,7 +34,7 @@ import java.util.Set;
 public class WebSocketHubAdapter implements IWebSocketHubPort {
 
     private final SimpMessagingTemplate messagingTemplate;
-    private final WebSocketSessionRegistry sessionRegistry;
+    private final IPresenceService presenceService;
     private final IAttachmentUrlService attachmentUrlService;
     private final IUserInfoService userInfoService;
 
@@ -93,19 +93,19 @@ public class WebSocketHubAdapter implements IWebSocketHubPort {
 
     @Override
     public void subscribeUserToChannel(Long userId, Long channelId) {
-        sessionRegistry.subscribeToChannel(userId, channelId);
+        presenceService.userJoinedChannel(userId, channelId);
         log.debug("User {} subscribed to channel {}", userId, channelId);
     }
 
     @Override
     public void unsubscribeUserFromChannel(Long userId, Long channelId) {
-        sessionRegistry.unsubscribeFromChannel(userId, channelId);
+        presenceService.userLeftChannel(userId, channelId);
         log.debug("User {} unsubscribed from channel {}", userId, channelId);
     }
 
     @Override
     public Set<Long> getChannelSubscribers(Long channelId) {
-        return sessionRegistry.getOnlineChannelSubscribers(channelId);
+        return presenceService.getOnlineChannelSubscribers(channelId);
     }
 
     @Override

@@ -1,14 +1,24 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
 package serp.project.discuss_service.core.service;
 
 import serp.project.discuss_service.core.domain.entity.UserPresenceEntity;
 import serp.project.discuss_service.core.domain.enums.UserStatus;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 public interface IPresenceService {
+
+    void registerSession(Long userId, Long tenantId, String sessionId, String instanceId);
+
+    void unregisterSession(Long userId, String sessionId);
+
+    void unregisterSessionBySessionId(String sessionId);
 
     void setUserOnline(Long userId, Long tenantId);
 
@@ -26,7 +36,5 @@ public interface IPresenceService {
 
     void userLeftChannel(Long userId, Long channelId);
 
-    Set<Long> getOnlineUsersInChannel(Long channelId);
-
-    List<UserPresenceEntity> getOnlineUsersWithPresence(Long channelId);
+    Set<Long> getOnlineChannelSubscribers(Long channelId);
 }

@@ -13,9 +13,10 @@ import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import org.springframework.web.socket.messaging.SessionSubscribeEvent;
 import org.springframework.web.socket.messaging.SessionUnsubscribeEvent;
-import serp.project.discuss_service.core.service.IDiscussEventPublisher;
+import serp.project.discuss_service.core.service.IPresenceService;
 
 import java.security.Principal;
+import java.util.UUID;
 
 /**
  * Event listener for WebSocket session lifecycle events.
@@ -26,47 +27,38 @@ import java.security.Principal;
 @Slf4j
 public class WebSocketEventListener {
 
-    private final WebSocketSessionRegistry sessionRegistry;
-    private final IDiscussEventPublisher eventPublisher;
+    private final IPresenceService presenceService;
 
     private static final String CHANNEL_TOPIC_PREFIX = "/topic/channels/";
+
+    private static final String INSTANCE_ID = UUID.randomUUID().toString().substring(0, 8);
 
     @EventListener
     public void handleSessionConnected(SessionConnectedEvent event) {
         Principal principal = event.getUser();
         if (principal instanceof WebSocketAuthChannelInterceptor.WebSocketPrincipal wsUser) {
             Long userId = wsUser.getUserIdAsLong();
+            Long tenantId = wsUser.getTenantIdAsLong();
             String sessionId = getSessionId(event);
-            
+
             if (userId != null && sessionId != null) {
-                boolean wasOffline = !sessionRegistry.isUserConnected(userId);
-                sessionRegistry.registerSession(userId, sessionId);
-                
-                if (wasOffline) {
-                    eventPublisher.publishUserOnline(userId);
-                    log.info("User {} connected (session: {})", userId, sessionId);
-                } else {
-                    log.debug("User {} connected with additional session: {}", userId, sessionId);
-                }
+                presenceService.registerSession(userId, tenantId, sessionId, INSTANCE_ID);
             }
         }
     }
 
     @EventListener
     public void handleSessionDisconnect(SessionDisconnectEvent event) {
+        Principal principal = event.getUser();
         String sessionId = event.getSessionId();
-        Long userId = sessionRegistry.getUserIdBySessionId(sessionId);
-        
-        if (userId != null) {
-            sessionRegistry.unregisterSession(sessionId);
-            
-            if (!sessionRegistry.isUserConnected(userId)) {
-                eventPublisher.publishUserOffline(userId);
-                log.info("User {} disconnected (last session closed)", userId);
-            } else {
-                log.debug("User {} disconnected session: {} (still has other sessions)", userId, sessionId);
+        if (principal instanceof WebSocketAuthChannelInterceptor.WebSocketPrincipal wsUser) {
+            Long userId = wsUser.getUserIdAsLong();
+            if (userId != null) {
+                presenceService.unregisterSession(userId, sessionId);
+                return;
             }
         }
+        presenceService.unregisterSessionBySessionId(sessionId);
     }
 
     @EventListener
@@ -77,11 +69,10 @@ public class WebSocketEventListener {
         if (principal instanceof WebSocketAuthChannelInterceptor.WebSocketPrincipal wsUser && destination != null) {
             Long userId = wsUser.getUserIdAsLong();
             
-            // Check if subscribing to a channel topic
             if (destination.startsWith(CHANNEL_TOPIC_PREFIX)) {
                 Long channelId = extractChannelId(destination);
                 if (userId != null && channelId != null) {
-                    sessionRegistry.subscribeToChannel(userId, channelId);
+                    presenceService.userJoinedChannel(userId, channelId);
                     log.debug("User {} subscribed to channel {}", userId, channelId);
                 }
             }
@@ -96,11 +87,10 @@ public class WebSocketEventListener {
         if (principal instanceof WebSocketAuthChannelInterceptor.WebSocketPrincipal wsUser && destination != null) {
             Long userId = wsUser.getUserIdAsLong();
             
-            // Check if unsubscribing from a channel topic
             if (destination.startsWith(CHANNEL_TOPIC_PREFIX)) {
                 Long channelId = extractChannelId(destination);
                 if (userId != null && channelId != null) {
-                    sessionRegistry.unsubscribeFromChannel(userId, channelId);
+                    presenceService.userLeftChannel(userId, channelId);
                     log.debug("User {} unsubscribed from channel {}", userId, channelId);
                 }
             }

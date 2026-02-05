@@ -9,19 +9,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Component;
 import serp.project.discuss_service.core.port.client.ICachePort;
 import serp.project.discuss_service.kernel.utils.JsonUtils;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Redis implementation of the ICachePort.
@@ -121,8 +120,7 @@ public class RedisCacheAdapter implements ICachePort {
     @Override
     public boolean exists(String key) {
         try {
-            Boolean exists = redisTemplate.hasKey(key);
-            return Boolean.TRUE.equals(exists);
+            return Boolean.TRUE.equals(redisTemplate.hasKey(key));
         } catch (Exception e) {
             log.error("Failed to check if key exists, key: {}", key, e);
             return false;
@@ -443,5 +441,44 @@ public class RedisCacheAdapter implements ICachePort {
             }
         }
         return keys;
+    }
+
+    @Override
+    public Map<String, Map<String, String>> batchHashGetAll(List<String> keys) {
+        if (keys == null || keys.isEmpty()) {
+            return new HashMap<>();
+        }
+
+        try {
+            List<Object> responses = redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+                for (String key : keys) {
+                    byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
+                    connection.hashCommands().hGetAll(keyBytes);
+                }
+                return null;
+            });
+
+            return IntStream.range(0, keys.size())
+                    .boxed()
+                    .collect(Collectors.toMap(
+                            keys::get,
+                            i -> {
+                                @SuppressWarnings("unchecked")
+                                Map<Object, Object> rawMap = (Map<Object, Object>) responses.get(i);
+                                if (rawMap == null || rawMap.isEmpty()) {
+                                    return Collections.emptyMap();
+                                }
+                                return rawMap.entrySet().stream()
+                                        .collect(Collectors.toMap(
+                                                e -> e.getKey().toString(),
+                                                e -> e.getValue().toString()
+                                        ));
+                            },
+                            (existing, replacement) -> existing
+                    ));
+        } catch (Exception e) {
+            log.error("Failed to batch hash get all", e);
+            return new HashMap<>();
+        }
     }
 }

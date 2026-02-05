@@ -11,9 +11,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
+import serp.project.discuss_service.core.domain.entity.UserPresenceEntity;
+import serp.project.discuss_service.core.domain.enums.UserStatus;
 import serp.project.discuss_service.core.port.client.ICachePort;
 import serp.project.discuss_service.core.service.IDiscussCacheService;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -94,90 +97,67 @@ public class DiscussCacheService implements IDiscussCacheService {
         log.debug("Invalidated message cache: {}", messageId);
     }
 
-    @Override
-    public void invalidateChannelMessages(Long channelId) {
-        if (channelId == null) {
-            return;
-        }
-        String recentKey = RECENT_MESSAGES_PREFIX + channelId;
-        cachePort.deleteFromCache(recentKey);
-        
-        invalidateChannelMessagesPage(channelId);
-        
-        log.debug("Invalidated channel messages cache: {}", channelId);
-    }
-
-    // ==================== PRESENCE / ONLINE STATUS ====================
+    // ==================== PRESENCE ====================
 
     @Override
-    public void setUserOnline(Long userId) {
-        if (userId == null) {
-            return;
+    public void setUserPresence(UserPresenceEntity presence) {
+        String key = USER_PRESENCE_HASH_PREFIX + presence.getUserId();
+
+        Map<String, String> fields = new HashMap<>();
+        fields.put("status", presence.getStatus().toString());
+        fields.put("tenantId", presence.getTenantId().toString());
+        fields.put("lastSeenAt", String.valueOf(presence.getLastSeenAt()));
+        if (presence.getStatusMessage() != null) {
+            fields.put("statusMessage", presence.getStatusMessage());
         }
-        String key = PRESENCE_PREFIX + userId;
-        cachePort.setToCache(key, System.currentTimeMillis(), PRESENCE_TTL);
-        log.debug("Set user online: {}", userId);
+
+        cachePort.hashSetAll(key, fields);
+        cachePort.expire(key, PRESENCE_HASH_TTL);
     }
 
     @Override
-    public void setUserOffline(Long userId) {
-        if (userId == null) {
-            return;
+    public Optional<UserPresenceEntity> getUserPresence(Long userId) {
+        String key = USER_PRESENCE_HASH_PREFIX + userId;
+        Map<String, String> fields = cachePort.hashGetAll(key);
+        if (fields.isEmpty()) {
+            return Optional.empty();
         }
-        String key = PRESENCE_PREFIX + userId;
-        cachePort.deleteFromCache(key);
-        log.debug("Set user offline: {}", userId);
+        return Optional.of(UserPresenceEntity.builder()
+                        .userId(userId)
+                        .status(UserStatus.fromString(fields.get("status")))
+                        .tenantId(Long.parseLong(fields.get("tenantId")))
+                        .lastSeenAt(Long.parseLong(fields.get("lastSeenAt")))
+                        .statusMessage(fields.get("statusMessage"))
+                .build());
     }
 
     @Override
-    public void addUserToChannel(Long channelId, Long userId) {
-        if (channelId == null || userId == null) {
-            return;
+    public Map<Long, UserPresenceEntity> getUserPresenceBatch(Set<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Collections.emptyMap();
         }
-        String key = CHANNEL_ONLINE_PREFIX + channelId;
-        cachePort.addToSet(key, userId.toString());
-        log.debug("Added user {} to channel {} online set", userId, channelId);
-    }
 
-    @Override
-    public void removeUserFromChannel(Long channelId, Long userId) {
-        if (channelId == null || userId == null) {
-            return;
+        Map<String, Map<String, String>> batchResults = cachePort.batchHashGetAll(
+                userIds.stream()
+                        .map(id -> USER_PRESENCE_HASH_PREFIX + id)
+                        .toList()
+        );
+        Map<Long, UserPresenceEntity> presenceMap = new HashMap<>();
+        for (Long userId : userIds) {
+            String key = USER_PRESENCE_HASH_PREFIX + userId;
+            Map<String, String> fields = batchResults.get(key);
+            if (fields != null && !fields.isEmpty()) {
+                UserPresenceEntity presence = UserPresenceEntity.builder()
+                        .userId(userId)
+                        .status(UserStatus.fromString(fields.get("status")))
+                        .tenantId(Long.parseLong(fields.get("tenantId")))
+                        .lastSeenAt(Long.parseLong(fields.get("lastSeenAt")))
+                        .statusMessage(fields.get("statusMessage"))
+                        .build();
+                presenceMap.put(userId, presence);
+            }
         }
-        String key = CHANNEL_ONLINE_PREFIX + channelId;
-        cachePort.removeFromSet(key, userId.toString());
-        log.debug("Removed user {} from channel {} online set", userId, channelId);
-    }
-
-    @Override
-    public Set<Long> getOnlineUsersInChannel(Long channelId) {
-        if (channelId == null) {
-            return Collections.emptySet();
-        }
-        String key = CHANNEL_ONLINE_PREFIX + channelId;
-        Set<String> members = cachePort.getSetMembers(key);
-        return members.stream()
-                .map(Long::parseLong)
-                .collect(Collectors.toSet());
-    }
-
-    @Override
-    public boolean isUserOnline(Long userId) {
-        if (userId == null) {
-            return false;
-        }
-        String key = PRESENCE_PREFIX + userId;
-        return cachePort.exists(key);
-    }
-
-    @Override
-    public void refreshPresence(Long userId) {
-        if (userId == null) {
-            return;
-        }
-        String key = PRESENCE_PREFIX + userId;
-        cachePort.expire(key, PRESENCE_TTL);
-        log.debug("Refreshed presence for user: {}", userId);
+        return presenceMap;
     }
 
     // ==================== TYPING INDICATORS ====================
@@ -315,10 +295,9 @@ public class DiscussCacheService implements IDiscussCacheService {
             return;
         }
         String sessionKey = SESSION_PREFIX + sessionId;
-        SessionInfo sessionInfo = new SessionInfo(sessionId, userId, instanceId, System.currentTimeMillis());
+        SessionInfo sessionInfo = new SessionInfo(sessionId, userId, instanceId, Instant.now().toEpochMilli());
         cachePort.setToCache(sessionKey, sessionInfo, SESSION_TTL);
 
-        // Add session to user's session set
         String userSessionsKey = USER_SESSIONS_PREFIX + userId;
         cachePort.addToSet(userSessionsKey, sessionId);
         cachePort.expire(userSessionsKey, SESSION_TTL);
@@ -350,11 +329,10 @@ public class DiscussCacheService implements IDiscussCacheService {
         if (sessionId == null) {
             return;
         }
-        // Remove session data
+
         String sessionKey = SESSION_PREFIX + sessionId;
         cachePort.deleteFromCache(sessionKey);
 
-        // Remove from user's session set
         if (userId != null) {
             String userSessionsKey = USER_SESSIONS_PREFIX + userId;
             cachePort.removeFromSet(userSessionsKey, sessionId);
@@ -372,6 +350,86 @@ public class DiscussCacheService implements IDiscussCacheService {
         return (int) cachePort.getSetSize(key);
     }
 
+    // ==================== CHANNEL SUBSCRIPTIONS ====================
+
+    @Override
+    public void addUserChannelSubscription(Long userId, Long channelId) {
+        if (userId == null || channelId == null) {
+            return;
+        }
+        String channelKey = CHANNEL_SUBSCRIBERS_PREFIX + channelId;
+        String userKey = USER_SUBSCRIPTIONS_PREFIX + userId;
+
+        cachePort.addToSet(channelKey, userId.toString());
+        cachePort.addToSet(userKey, channelId.toString());
+        cachePort.expire(channelKey, SESSION_TTL);
+        cachePort.expire(userKey, SESSION_TTL);
+
+        log.debug("Cached subscription: user {} -> channel {}", userId, channelId);
+    }
+
+    @Override
+    public void removeUserChannelSubscription(Long userId, Long channelId) {
+        if (userId == null || channelId == null) {
+            return;
+        }
+        String channelKey = CHANNEL_SUBSCRIBERS_PREFIX + channelId;
+        String userKey = USER_SUBSCRIPTIONS_PREFIX + userId;
+
+        cachePort.removeFromSet(channelKey, userId.toString());
+        cachePort.removeFromSet(userKey, channelId.toString());
+
+        cleanupSetIfEmpty(channelKey);
+        cleanupSetIfEmpty(userKey);
+
+        log.debug("Removed subscription: user {} -> channel {}", userId, channelId);
+    }
+
+    @Override
+    public Set<Long> getChannelSubscribers(Long channelId) {
+        if (channelId == null) {
+            return Collections.emptySet();
+        }
+        String key = CHANNEL_SUBSCRIBERS_PREFIX + channelId;
+        Set<String> subscribers = cachePort.getSetMembers(key);
+        return subscribers.stream()
+                .map(Long::parseLong)
+                .collect(Collectors.toSet());
+    }
+
+    @Override
+    public Set<Long> getUserSubscribedChannels(Long userId) {
+        if (userId == null) {
+            return Collections.emptySet();
+        }
+        String key = USER_SUBSCRIPTIONS_PREFIX + userId;
+        Set<String> subscriptions = cachePort.getSetMembers(key);
+        return subscriptions.stream()
+                .map(Long::parseLong)
+                .collect(Collectors.toSet());
+    }
+
+    @Override
+    public void removeAllUserSubscriptions(Long userId) {
+        if (userId == null) {
+            return;
+        }
+        Set<Long> channelIds = getUserSubscribedChannels(userId);
+        String userKey = USER_SUBSCRIPTIONS_PREFIX + userId;
+
+        if (!channelIds.isEmpty()) {
+            String userIdStr = userId.toString();
+            for (Long channelId : channelIds) {
+                String channelKey = CHANNEL_SUBSCRIBERS_PREFIX + channelId;
+                cachePort.removeFromSet(channelKey, userIdStr);
+                cleanupSetIfEmpty(channelKey);
+            }
+        }
+
+        cachePort.deleteFromCache(userKey);
+        log.debug("Removed all subscriptions for user {}", userId);
+    }
+
     // ==================== CHANNEL MEMBERS CACHE ====================
 
     @Override
@@ -383,7 +441,7 @@ public class DiscussCacheService implements IDiscussCacheService {
         String[] members = memberIds.stream()
                 .map(String::valueOf)
                 .toArray(String[]::new);
-        // Clear existing and add new
+
         cachePort.deleteFromCache(key);
         if (members.length > 0) {
             cachePort.addToSet(key, members);
@@ -463,6 +521,12 @@ public class DiscussCacheService implements IDiscussCacheService {
         String key = ATTACHMENT_URL_PREFIX + attachmentId;
         cachePort.deleteFromCache(key);
         log.debug("Invalidated attachment URL cache: {}", attachmentId);
+    }
+
+    private void cleanupSetIfEmpty(String key) {
+        if (cachePort.getSetSize(key) == 0) {
+            cachePort.deleteFromCache(key);
+        }
     }
 
     // ==================== CHANNEL MESSAGES PAGE CACHE ====================

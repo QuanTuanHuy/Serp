@@ -39,11 +39,10 @@ public class UserPresenceEntity {
                 .build();
     }
 
-    public static UserPresenceEntity offline(Long userId, Long tenantId) {
+    public static UserPresenceEntity offline(Long userId) {
         long now = Instant.now().toEpochMilli();
         return UserPresenceEntity.builder()
                 .userId(userId)
-                .tenantId(tenantId)
                 .status(UserStatus.OFFLINE)
                 .lastSeenAt(now)
                 .statusChangedAt(now)
