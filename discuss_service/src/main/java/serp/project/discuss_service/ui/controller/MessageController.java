@@ -24,15 +24,13 @@ import serp.project.discuss_service.core.service.IAttachmentUrlService;
 import serp.project.discuss_service.core.service.IUserInfoService;
 import serp.project.discuss_service.core.usecase.MessageUseCase;
 import serp.project.discuss_service.kernel.utils.AuthUtils;
-import serp.project.discuss_service.kernel.utils.JsonUtils;
 import serp.project.discuss_service.kernel.utils.ResponseUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
-/**
- * REST Controller for message operations
- */
 @RestController
 @RequestMapping("/api/v1/channels/{channelId}/messages")
 @RequiredArgsConstructor
@@ -44,12 +42,9 @@ public class MessageController {
     private final IUserInfoService userInfoService;
     private final AuthUtils authUtils;
     private final ResponseUtils responseUtils;
-    private final JsonUtils jsonUtils;
+    private static final Pattern MENTIONS_JSON_PATTERN =
+            Pattern.compile("^\\s*\\[\\s*(\\d+\\s*(,\\s*\\d+\\s*)*)?]\\s*$");
 
-    /**
-     * Send a new message to channel (text only).
-     * For messages with files, use POST /with-files endpoint.
-     */
     @PostMapping
     public ResponseEntity<GeneralResponse<MessageResponse>> sendMessage(
             @PathVariable Long channelId,
@@ -86,9 +81,6 @@ public class MessageController {
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
-    /**
-     * Send a message with file attachments (multipart upload)
-     */
     @PostMapping(value = "/with-files")
     public ResponseEntity<GeneralResponse<MessageResponse>> sendMessageWithFiles(
             @PathVariable Long channelId,
@@ -102,14 +94,7 @@ public class MessageController {
 
         log.info("User {} sending message with {} files to channel {}", userId, files.size(), channelId);
 
-        List<Long> mentions = null;
-        if (mentionsJson != null && !mentionsJson.isEmpty()) {
-            try {
-                mentions = jsonUtils.fromJsonToList(mentionsJson, Long.class);
-            } catch (Exception e) {
-                log.warn("Failed to parse mentions: {}", e.getMessage());
-            }
-        }
+        List<Long> mentions = parseMentions(mentionsJson);
 
         MessageEntity message = messageUseCase.sendMessageWithAttachments(
                 channelId,
@@ -126,9 +111,6 @@ public class MessageController {
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
-    /**
-     * Send a reply to a message (threading)
-     */
     @PostMapping("/replies")
     public ResponseEntity<GeneralResponse<MessageResponse>> sendReply(
             @PathVariable Long channelId,
@@ -155,9 +137,6 @@ public class MessageController {
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
-    /**
-     * Get messages in a channel with pagination
-     */
     @GetMapping
     public ResponseEntity<GeneralResponse<PaginatedResponse<MessageResponse>>> getMessages(
             @PathVariable Long channelId,
@@ -186,9 +165,6 @@ public class MessageController {
         return ResponseEntity.ok(responseUtils.success(paginatedResponse));
     }
 
-    /**
-     * Get messages before a specific message ID (for infinite scroll)
-     */
     @GetMapping("/before/{beforeId}")
     public ResponseEntity<GeneralResponse<List<MessageResponse>>> getMessagesBefore(
             @PathVariable Long channelId,
@@ -214,9 +190,6 @@ public class MessageController {
         return ResponseEntity.ok(responseUtils.success(responses));
     }
 
-    /**
-     * Get thread replies for a message
-     */
     @GetMapping("/{messageId}/replies")
     public ResponseEntity<GeneralResponse<List<MessageResponse>>> getThreadReplies(
             @PathVariable Long channelId,
@@ -241,9 +214,6 @@ public class MessageController {
         return ResponseEntity.ok(responseUtils.success(responses));
     }
 
-    /**
-     * Search messages in a channel
-     */
     @GetMapping("/search")
     public ResponseEntity<GeneralResponse<List<MessageResponse>>> searchMessages(
             @PathVariable Long channelId,
@@ -271,9 +241,6 @@ public class MessageController {
         return ResponseEntity.ok(responseUtils.success(responses));
     }
 
-    /**
-     * Edit a message
-     */
     @PutMapping("/{messageId}")
     public ResponseEntity<GeneralResponse<MessageResponse>> editMessage(
             @PathVariable Long channelId,
@@ -290,9 +257,6 @@ public class MessageController {
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
-    /**
-     * Delete a message
-     */
     @DeleteMapping("/{messageId}")
     public ResponseEntity<GeneralResponse<MessageResponse>> deleteMessage(
             @PathVariable Long channelId,
@@ -307,9 +271,6 @@ public class MessageController {
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
-    /**
-     * Add reaction to a message
-     */
     @PostMapping("/{messageId}/reactions")
     public ResponseEntity<GeneralResponse<MessageResponse>> addReaction(
             @PathVariable Long channelId,
@@ -326,9 +287,6 @@ public class MessageController {
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
-    /**
-     * Remove reaction from a message
-     */
     @DeleteMapping("/{messageId}/reactions")
     public ResponseEntity<GeneralResponse<MessageResponse>> removeReaction(
             @PathVariable Long channelId,
@@ -345,9 +303,6 @@ public class MessageController {
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
-    /**
-     * Mark messages as read up to a specific message
-     */
     @PostMapping("/{messageId}/read")
     public ResponseEntity<GeneralResponse<?>> markAsRead(
             @PathVariable Long channelId,
@@ -362,9 +317,6 @@ public class MessageController {
         return ResponseEntity.ok(responseUtils.status("Marked as read"));
     }
 
-    /**
-     * Get unread count for current user in this channel
-     */
     @GetMapping("/unread/count")
     public ResponseEntity<GeneralResponse<Long>> getUnreadCount(
             @PathVariable Long channelId) {
@@ -375,9 +327,6 @@ public class MessageController {
         return ResponseEntity.ok(responseUtils.success(count));
     }
 
-    /**
-     * Send typing indicator
-     */
     @PostMapping("/typing")
     public ResponseEntity<GeneralResponse<?>> sendTypingIndicator(
             @PathVariable Long channelId,
@@ -389,9 +338,6 @@ public class MessageController {
         return ResponseEntity.ok(responseUtils.status("OK"));
     }
 
-    /**
-     * Get users currently typing in this channel
-     */
     @GetMapping("/typing")
     public ResponseEntity<GeneralResponse<TypingStatusResponse>> getTypingUsers(
             @PathVariable Long channelId) {
@@ -407,5 +353,37 @@ public class MessageController {
                 .build();
 
         return ResponseEntity.ok(responseUtils.success(response));
+    }
+
+    private List<Long> parseMentions(String mentionsJson) {
+        if (mentionsJson == null || mentionsJson.isBlank()) {
+            return null;
+        }
+
+        if (!MENTIONS_JSON_PATTERN.matcher(mentionsJson).matches()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        String trimmed = mentionsJson.trim();
+        if (trimmed.length() <= 2) {
+            return List.of();
+        }
+
+        String body = trimmed.substring(1, trimmed.length() - 1).trim();
+        if (body.isEmpty()) {
+            return List.of();
+        }
+
+        String[] parts = body.split(",");
+        List<Long> mentions = new ArrayList<>(parts.length);
+        for (String part : parts) {
+            try {
+                mentions.add(Long.parseLong(part.trim()));
+            } catch (NumberFormatException e) {
+                throw new AppException(ErrorCode.INVALID_REQUEST);
+            }
+        }
+
+        return mentions;
     }
 }
