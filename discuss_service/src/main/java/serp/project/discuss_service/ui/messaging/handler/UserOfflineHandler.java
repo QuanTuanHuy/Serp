@@ -11,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEvent;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEventType;
-import serp.project.discuss_service.ui.messaging.WsEventPayloadUtils;
+import serp.project.discuss_service.kernel.utils.KafkaPayloadUtils;
 
 @Component
 @Slf4j
@@ -24,7 +24,7 @@ public class UserOfflineHandler implements IPresenceEventHandler {
 
     @Override
     public void handle(WsEvent<Map<String, Object>> event) {
-        Long userId = WsEventPayloadUtils.getLong(event.getPayload(), "userId");
+        Long userId = KafkaPayloadUtils.getLong(event.getPayload(), "userId");
         log.debug("Received presence event: {} for user {}", event.getType(), userId);
     }
 }

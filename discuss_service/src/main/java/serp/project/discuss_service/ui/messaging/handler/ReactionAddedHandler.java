@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEvent;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEventType;
 import serp.project.discuss_service.core.port.client.IWebSocketHubPort;
-import serp.project.discuss_service.ui.messaging.WsEventPayloadUtils;
+import serp.project.discuss_service.kernel.utils.KafkaPayloadUtils;
 
 @Component
 @RequiredArgsConstructor
@@ -31,9 +31,9 @@ public class ReactionAddedHandler implements IReactionEventHandler {
     public void handle(WsEvent<Map<String, Object>> event) {
         Long channelId = event.getChannelId();
         Map<String, Object> payload = event.getPayload();
-        Long messageId = WsEventPayloadUtils.getLong(payload, "messageId");
-        Long userId = WsEventPayloadUtils.getLong(payload, "userId");
-        String emoji = WsEventPayloadUtils.getString(payload, "emoji");
+        Long messageId = KafkaPayloadUtils.getLong(payload, "messageId");
+        Long userId = KafkaPayloadUtils.getLong(payload, "userId");
+        String emoji = KafkaPayloadUtils.getString(payload, "emoji");
 
         if (channelId == null || messageId == null || userId == null || emoji == null) {
             log.warn("Missing required fields for REACTION_ADDED event");

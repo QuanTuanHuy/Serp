@@ -1,15 +1,15 @@
 /**
  * Author: QuanTuanHuy
- * Description: Part of Serp Project - WebSocket event payload helpers
+ * Description: Part of Serp Project - Kafka payload utility functions
  */
 
-package serp.project.discuss_service.ui.messaging;
+package serp.project.discuss_service.kernel.utils;
 
 import java.util.Map;
 
-public final class WsEventPayloadUtils {
+public final class KafkaPayloadUtils {
 
-    private WsEventPayloadUtils() {
+    private KafkaPayloadUtils() {
     }
 
     public static Long getLong(Map<String, Object> map, String key) {

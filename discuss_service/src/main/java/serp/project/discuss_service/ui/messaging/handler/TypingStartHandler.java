@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEvent;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEventType;
 import serp.project.discuss_service.core.port.client.IWebSocketHubPort;
-import serp.project.discuss_service.ui.messaging.WsEventPayloadUtils;
+import serp.project.discuss_service.kernel.utils.KafkaPayloadUtils;
 
 @Component
 @RequiredArgsConstructor
@@ -30,7 +30,7 @@ public class TypingStartHandler implements IPresenceEventHandler {
     @Override
     public void handle(WsEvent<Map<String, Object>> event) {
         Long channelId = event.getChannelId();
-        Long userId = WsEventPayloadUtils.getLong(event.getPayload(), "userId");
+        Long userId = KafkaPayloadUtils.getLong(event.getPayload(), "userId");
         if (channelId == null || userId == null) {
             log.warn("Missing required fields for TYPING_START event");
             return;

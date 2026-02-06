@@ -17,6 +17,7 @@ import serp.project.discuss_service.core.domain.dto.websocket.WsEvent;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEventType;
 import serp.project.discuss_service.core.service.IDiscussEventPublisher;
 import serp.project.discuss_service.kernel.utils.JsonUtils;
+import serp.project.discuss_service.kernel.utils.KafkaPayloadUtils;
 import serp.project.discuss_service.ui.messaging.handler.HandlerRegistry;
 
 @Component
@@ -64,9 +65,9 @@ public class DiscussKafkaConsumer
             return null;
         }
 
-        String eventTypeStr = WsEventPayloadUtils.getString(raw, "type");
+        String eventTypeStr = KafkaPayloadUtils.getString(raw, "type");
         if (eventTypeStr == null) {
-            eventTypeStr = WsEventPayloadUtils.getString(raw, "eventType");
+            eventTypeStr = KafkaPayloadUtils.getString(raw, "eventType");
         }
         if (eventTypeStr == null) {
             return null;
@@ -77,8 +78,8 @@ public class DiscussKafkaConsumer
             return null;
         }
 
-        Long channelId = WsEventPayloadUtils.getLong(raw, "channelId");
-        Long timestamp = WsEventPayloadUtils.getLong(raw, "timestamp");
+        Long channelId = KafkaPayloadUtils.getLong(raw, "channelId");
+        Long timestamp = KafkaPayloadUtils.getLong(raw, "timestamp");
         Map<String, Object> payloadMap = extractPayload(raw);
 
         return WsEvent.<Map<String, Object>>builder()

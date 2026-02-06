@@ -16,7 +16,7 @@ import serp.project.discuss_service.core.domain.dto.websocket.WsEventType;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
 import serp.project.discuss_service.core.port.client.IWebSocketHubPort;
 import serp.project.discuss_service.core.service.IMessageService;
-import serp.project.discuss_service.ui.messaging.WsEventPayloadUtils;
+import serp.project.discuss_service.kernel.utils.KafkaPayloadUtils;
 
 @Component
 @RequiredArgsConstructor
@@ -34,7 +34,7 @@ public class MessageNewHandler implements IMessageEventHandler {
     @Override
     public void handle(WsEvent<Map<String, Object>> event) {
         Long channelId = event.getChannelId();
-        Long messageId = WsEventPayloadUtils.getLong(event.getPayload(), "messageId");
+        Long messageId = KafkaPayloadUtils.getLong(event.getPayload(), "messageId");
         if (channelId == null || messageId == null) {
             log.warn("Missing required fields for MESSAGE_NEW event");
             return;
