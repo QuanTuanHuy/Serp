@@ -73,16 +73,13 @@ app:
   security:
     filter:
       publicUrls:
-        # Add public endpoints here as needed
       protectedUrls:
-        # Add protected endpoints here as needed
 
 server:
   port: ${SERVER_PORT:8092}
   servlet:
     context-path: /discuss
 
-# Storage configuration for file attachments
 discuss:
   storage:
     provider: S3
