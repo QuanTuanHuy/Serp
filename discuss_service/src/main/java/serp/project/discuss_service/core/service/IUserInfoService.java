@@ -10,6 +10,7 @@ import serp.project.discuss_service.core.domain.dto.response.MessageResponse;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Service interface for enriching channel members with user information.
@@ -51,6 +52,8 @@ public interface IUserInfoService {
      * @return list of enriched MessageResponse with sender user info
      */
     List<MessageResponse> enrichMessagesWithUserInfo(List<MessageResponse> messages);
+
+    Optional<ChannelMemberResponse.UserInfo> getUserById(Long userId);
 
     /**
      * Get user info for a tenant based on a search query.

@@ -49,6 +49,17 @@ public class UserPresenceEntity {
                 .build();
     }
 
+    public static UserPresenceEntity offline(Long userId, Long tenantId) {
+        long now = Instant.now().toEpochMilli();
+        return UserPresenceEntity.builder()
+                .userId(userId)
+                .tenantId(tenantId)
+                .status(UserStatus.OFFLINE)
+                .lastSeenAt(now)
+                .statusChangedAt(now)
+                .build();
+    }
+
 
     public void goOnline() {
         long now = Instant.now().toEpochMilli();

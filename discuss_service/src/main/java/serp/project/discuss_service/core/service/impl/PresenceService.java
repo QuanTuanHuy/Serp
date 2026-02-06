@@ -1,6 +1,6 @@
 /**
  * Author: QuanTuanHuy
- * Description: Part of Serp Project
+ * Description: Part of Serp Project - Presence service implementation
  */
 
 package serp.project.discuss_service.core.service.impl;
@@ -14,9 +14,11 @@ import serp.project.discuss_service.core.service.IDiscussCacheService;
 import serp.project.discuss_service.core.service.IDiscussEventPublisher;
 import serp.project.discuss_service.core.service.IPresenceService;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -95,13 +97,9 @@ public class PresenceService implements IPresenceService {
     }
 
     @Override
-    public void updateUserStatus(Long userId, UserStatus status, String statusMessage) {
-        Optional<UserPresenceEntity> presenceOpt = getUserPresence(userId);
-        if (presenceOpt.isEmpty()) {
-            log.warn("Cannot update status for non-existing presence of userId {}", userId);
-            return;
-        }
-        UserPresenceEntity presence = presenceOpt.get();
+    public void updateUserStatus(Long userId, Long tenantId, UserStatus status, String statusMessage) {
+        UserPresenceEntity presence = getUserPresence(userId)
+                .orElseGet(() -> UserPresenceEntity.offline(userId, tenantId));
         presence.setCustomStatus(status, statusMessage);
         cacheService.setUserPresence(presence);
     }
@@ -113,7 +111,11 @@ public class PresenceService implements IPresenceService {
 
     @Override
     public Map<Long, UserPresenceEntity> getPresenceBatch(Set<Long> userIds) {
-        return cacheService.getUserPresenceBatch(userIds);
+        Map<Long, UserPresenceEntity> presenceMap = cacheService.getUserPresenceBatch(userIds);
+        Map<Long, UserPresenceEntity> result = new HashMap<>();
+        userIds.forEach(userId ->
+                result.put(userId, presenceMap.getOrDefault(userId, UserPresenceEntity.offline(userId))));
+        return result;
     }
 
     @Override
@@ -123,38 +125,16 @@ public class PresenceService implements IPresenceService {
     }
 
     @Override
-    public void userJoinedChannel(Long userId, Long channelId) {
-        if (userId == null || channelId == null) {
-            return;
-        }
-        cacheService.addUserChannelSubscription(userId, channelId);
-        log.debug("User {} joined channel {}", userId, channelId);
-    }
-
-    @Override
-    public void userLeftChannel(Long userId, Long channelId) {
-        if (userId == null || channelId == null) {
-            return;
-        }
-        cacheService.removeUserChannelSubscription(userId, channelId);
-        log.debug("User {} left channel {}", userId, channelId);
-    }
-
-    @Override
-    public Set<Long> getOnlineChannelSubscribers(Long channelId) {
-        if (channelId == null) {
+    public Set<Long> getOnlineUsers(Set<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
             return Set.of();
         }
-        Set<Long> subscribers = cacheService.getChannelSubscribers(channelId);
-        if (subscribers.isEmpty()) {
-            return Set.of();
-        }
-        Map<Long, UserPresenceEntity> presenceMap = cacheService.getUserPresenceBatch(subscribers);
-        return subscribers.stream()
+        Map<Long, UserPresenceEntity> presenceMap = cacheService.getUserPresenceBatch(userIds);
+        return userIds.stream()
                 .filter(userId -> {
                     UserPresenceEntity presence = presenceMap.get(userId);
                     return presence != null && presence.isOnline();
                 })
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
     }
 }

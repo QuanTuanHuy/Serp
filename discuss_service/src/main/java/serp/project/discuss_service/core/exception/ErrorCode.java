@@ -79,6 +79,9 @@ public enum ErrorCode {
     FILE_TYPE_NOT_ALLOWED("File type is not allowed", HttpStatus.BAD_REQUEST),
     FILE_UPLOAD_FAILED("Failed to upload file", HttpStatus.INTERNAL_SERVER_ERROR),
     TOO_MANY_FILES("Too many files. Maximum allowed files per message exceeded", HttpStatus.BAD_REQUEST),
+
+    // Presence errors
+    PRESENCE_NOT_FOUND("Presence not found", HttpStatus.NOT_FOUND),
     ;
 
     private final String message;
