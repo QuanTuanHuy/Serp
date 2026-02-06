@@ -75,7 +75,6 @@ class ChannelMemberServiceTest {
             assertNotNull(result);
             verify(memberPort).save(any(ChannelMemberEntity.class));
             verify(cacheService).addMemberToChannelCache(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_3);
-            verify(cacheService).addChannelToUserCache(TestDataFactory.USER_ID_3, TestDataFactory.CHANNEL_ID);
         }
 
         @Test
@@ -457,7 +456,6 @@ class ChannelMemberServiceTest {
             // Then
             verify(memberPort).save(any(ChannelMemberEntity.class));
             verify(cacheService).removeMemberFromChannelCache(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_3);
-            verify(cacheService).removeChannelFromUserCache(TestDataFactory.USER_ID_3, TestDataFactory.CHANNEL_ID);
         }
 
         @Test

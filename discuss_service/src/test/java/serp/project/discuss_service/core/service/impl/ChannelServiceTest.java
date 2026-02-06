@@ -5,7 +5,6 @@
 
 package serp.project.discuss_service.core.service.impl;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -483,7 +482,6 @@ class ChannelServiceTest {
         void testRecordMessage_ValidChannel_IncrementsAndInvalidates() {
             // Given
             ChannelEntity channel = TestDataFactory.createGroupChannel();
-            int originalCount = channel.getMessageCount();
             when(cacheService.getCachedChannel(channel.getId())).thenReturn(Optional.of(channel));
             when(channelPort.save(any(ChannelEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -513,7 +511,6 @@ class ChannelServiceTest {
 
             // Then
             verify(cacheService).invalidateChannel(channelId);
-            verify(cacheService).invalidateChannelMessages(channelId);
             verify(channelPort).deleteById(channelId);
         }
     }

@@ -16,6 +16,8 @@ import org.springframework.stereotype.Controller;
 import serp.project.discuss_service.core.domain.dto.request.MarkAsReadRequest;
 import serp.project.discuss_service.core.domain.dto.request.SendMessageRequest;
 import serp.project.discuss_service.core.domain.dto.request.TypingIndicatorRequest;
+import serp.project.discuss_service.core.domain.dto.websocket.WsEvent;
+import serp.project.discuss_service.core.domain.dto.websocket.WsEventType;
 import serp.project.discuss_service.core.exception.AppException;
 import serp.project.discuss_service.core.exception.ErrorCode;
 import serp.project.discuss_service.core.port.client.IWebSocketHubPort;
@@ -45,7 +47,7 @@ public class DiscussWebSocketController {
     /**
      * Handle sending a new message via WebSocket
      * Client sends to: /app/channels/{channelId}/message
-     * Errors are sent back to /user/queue/errors
+     * Errors are sent back to /user/queue/events with ERROR event type
      */
     @MessageMapping("/channels/{channelId}/message")
     public void handleMessage(
@@ -138,8 +140,8 @@ public class DiscussWebSocketController {
     }
 
     /**
-     * Send error message to user's personal error queue
-     * Client subscribes to: /user/queue/errors
+     * Send error event to user's personal events queue as a WsEvent with ERROR type.
+     * Client receives errors on the same /user/queue/events destination.
      */
     private void sendErrorToUser(Principal principal, String code, String message, Long channelId) {
         if (principal == null) {
@@ -147,19 +149,23 @@ public class DiscussWebSocketController {
             return;
         }
 
-        Map<String, Object> error = new HashMap<>();
-        error.put("type", "MESSAGE_SEND_ERROR");
-        error.put("code", code);
-        error.put("message", message);
-        error.put("timestamp", System.currentTimeMillis());
+        Map<String, Object> errorPayload = new HashMap<>();
+        errorPayload.put("code", code);
+        errorPayload.put("message", message);
         if (channelId != null) {
-            error.put("channelId", channelId);
+            errorPayload.put("channelId", channelId);
         }
+
+        WsEvent<Map<String, Object>> errorEvent = WsEvent.of(
+                WsEventType.ERROR,
+                errorPayload,
+                channelId
+        );
 
         try {
             webSocketHubPort.sendErrorToUser(
-                    Long.valueOf(principal.getName()), 
-                    error
+                    Long.valueOf(principal.getName()),
+                    errorEvent
             );
             log.debug("Sent error to user {}: {} - {}", principal.getName(), code, message);
         } catch (Exception e) {

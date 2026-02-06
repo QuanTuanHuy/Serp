@@ -209,4 +209,6 @@ public interface ICachePort {
      * @return Set of matching keys
      */
     Set<String> scanKeys(String pattern);
+
+    Map<String, Map<String, String>> batchHashGetAll(List<String> keys);
 }
