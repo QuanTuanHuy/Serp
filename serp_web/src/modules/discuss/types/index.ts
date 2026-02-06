@@ -282,25 +282,42 @@ export const isSuccessResponse = (response: APIResponse<any>): boolean => {
 
 // ==================== WebSocket Events ====================
 
-export interface WSMessage {
+/** Matches backend WsEvent<T> envelope */
+export interface WsEvent<T = any> {
   type: WSEventType;
-  payload: any;
+  payload: T;
+  channelId: number | null;
+  timestamp: number;
 }
 
+/** Matches backend WsEventType enum */
 export type WSEventType =
-  | 'CONNECTED'
-  | 'NEW_MESSAGE'
-  | 'MESSAGE_EDITED'
+  // Message events
+  | 'MESSAGE_NEW'
+  | 'MESSAGE_UPDATED'
   | 'MESSAGE_DELETED'
+  // Reaction events
   | 'REACTION_ADDED'
   | 'REACTION_REMOVED'
-  | 'TYPING_INDICATOR'
+  // Typing events
+  | 'TYPING_START'
+  | 'TYPING_STOP'
+  // Presence events
   | 'USER_ONLINE'
   | 'USER_OFFLINE'
+  | 'USER_PRESENCE_CHANGED'
+  // Channel events
+  | 'CHANNEL_CREATED'
   | 'CHANNEL_UPDATED'
-  | 'MEMBER_ADDED'
+  | 'CHANNEL_ARCHIVED'
+  // Member events
+  | 'MEMBER_JOINED'
+  | 'MEMBER_LEFT'
   | 'MEMBER_REMOVED'
-  | 'UNREAD_COUNT_UPDATED'
+  | 'MEMBER_ROLE_CHANGED'
+  // Read status
+  | 'MESSAGE_READ'
+  // Error
   | 'ERROR';
 
 // ==================== UI State ====================

@@ -23,6 +23,7 @@ import {
   useGetChannelMembersQuery,
   useRemoveChannelMemberMutation,
   useAddChannelMemberMutation,
+  useGetChannelPresenceQuery,
 } from '../api/discussApi';
 import {
   Crown,
@@ -111,6 +112,27 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
     useRemoveChannelMemberMutation();
   const [addMember, { isLoading: isAddingMember }] =
     useAddChannelMemberMutation();
+
+  // Query channel presence for online status
+  const { data: presenceResponse } = useGetChannelPresenceQuery(channelId, {
+    skip: !open,
+  });
+
+  // Build a set of online user IDs from presence data
+  const onlineUserIds = React.useMemo(() => {
+    const ids = new Set<string>();
+    const statusGroups = presenceResponse?.data?.statusGroups;
+    if (statusGroups) {
+      Object.values(statusGroups).forEach((users) => {
+        users.forEach((u) => {
+          if (u.isOnline) {
+            ids.add(String(u.userId));
+          }
+        });
+      });
+    }
+    return ids;
+  }, [presenceResponse]);
 
   const members = membersResponse?.data || [];
   const memberIds = members.map((m) => m.userId);
@@ -273,7 +295,7 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
                             {getUserInitials(userName)}
                           </AvatarFallback>
                         </Avatar>
-                        {member.isOnline && (
+                        {onlineUserIds.has(member.userId) && (
                           <div className='absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center'>
                             <CircleDot className='h-2.5 w-2.5 text-emerald-500 fill-emerald-500' />
                           </div>

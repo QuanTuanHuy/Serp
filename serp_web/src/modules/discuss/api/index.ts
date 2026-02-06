@@ -7,6 +7,7 @@ Description: Part of Serp Project - API barrel exports for Discuss module
 export * from './channels.api';
 export * from './messages.api';
 export * from './attachments.api';
+export * from './presence.api';
 
 // Export transformers
 export * from './transformers';

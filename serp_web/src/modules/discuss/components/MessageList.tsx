@@ -62,9 +62,21 @@ const formatDateHeader = (dateString: string): string => {
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
 
-  const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const yesterdayDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+  const messageDate = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate()
+  );
+  const todayDate = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+  const yesterdayDate = new Date(
+    yesterday.getFullYear(),
+    yesterday.getMonth(),
+    yesterday.getDate()
+  );
 
   if (messageDate.getTime() === todayDate.getTime()) {
     return 'Today';
@@ -96,15 +108,21 @@ const groupMessagesByDate = (messages: Message[]): DateGroup[] => {
     .map(([date, msgs]) => ({
       date,
       messages: msgs.toSorted(
-        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       ),
     }));
 };
 
-const shouldGroupMessage = (current: Message, previous: Message | null): boolean => {
+const shouldGroupMessage = (
+  current: Message,
+  previous: Message | null
+): boolean => {
   if (!previous) return false;
   if (current.senderId !== previous.senderId) return false;
-  const timeDiff = new Date(current.createdAt).getTime() - new Date(previous.createdAt).getTime();
+  const timeDiff =
+    new Date(current.createdAt).getTime() -
+    new Date(previous.createdAt).getTime();
   if (timeDiff > 2 * 60 * 1000) return false;
   if (previous.parentId) return false;
   return true;
@@ -308,7 +326,9 @@ export const MessageList = forwardRef<MessageListRef, MessageListProps>(
         // Mark first load complete after a small delay
         setTimeout(() => {
           isFirstLoadRef.current = false;
-          console.log('[MessageList] First load complete, infinite scroll enabled');
+          console.log(
+            '[MessageList] First load complete, infinite scroll enabled'
+          );
         }, 100);
       }
     }, [messages.length, isLoading]);
@@ -318,7 +338,8 @@ export const MessageList = forwardRef<MessageListRef, MessageListProps>(
     // =========================================================================
     useLayoutEffect(() => {
       const isNewMessage =
-        messages.length > prevMessagesLengthRef.current && !isFirstLoadRef.current;
+        messages.length > prevMessagesLengthRef.current &&
+        !isFirstLoadRef.current;
 
       if (isNewMessage && isNearBottom && bottomRef.current && !isLoading) {
         bottomRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -352,9 +373,16 @@ export const MessageList = forwardRef<MessageListRef, MessageListProps>(
     // =========================================================================
     if (isLoading && messages.length === 0) {
       return (
-        <div className={cn('flex flex-col items-center justify-center h-full gap-3', className)}>
-          <Loader2 className="h-8 w-8 text-violet-500 animate-spin" />
-          <p className="text-sm text-slate-500 dark:text-slate-400">Loading messages...</p>
+        <div
+          className={cn(
+            'flex flex-col items-center justify-center h-full gap-3',
+            className
+          )}
+        >
+          <Loader2 className='h-8 w-8 text-violet-500 animate-spin' />
+          <p className='text-sm text-slate-500 dark:text-slate-400'>
+            Loading messages...
+          </p>
         </div>
       );
     }
@@ -370,13 +398,13 @@ export const MessageList = forwardRef<MessageListRef, MessageListProps>(
             className
           )}
         >
-          <div className="h-12 w-12 rounded-full bg-rose-100 dark:bg-rose-900/20 flex items-center justify-center">
-            <AlertCircle className="h-6 w-6 text-rose-500" />
+          <div className='h-12 w-12 rounded-full bg-rose-100 dark:bg-rose-900/20 flex items-center justify-center'>
+            <AlertCircle className='h-6 w-6 text-rose-500' />
           </div>
-          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+          <p className='text-sm font-semibold text-slate-900 dark:text-slate-100'>
             Failed to load messages
           </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+          <p className='text-xs text-slate-500 dark:text-slate-400 text-center'>
             Please try again later
           </p>
         </div>
@@ -394,23 +422,25 @@ export const MessageList = forwardRef<MessageListRef, MessageListProps>(
             className
           )}
         >
-          <div className="h-16 w-16 rounded-full bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 flex items-center justify-center">
+          <div className='h-16 w-16 rounded-full bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 flex items-center justify-center'>
             <svg
-              className="w-8 h-8 text-violet-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+              className='w-8 h-8 text-violet-500'
+              fill='none'
+              stroke='currentColor'
+              viewBox='0 0 24 24'
             >
               <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
+                strokeLinecap='round'
+                strokeLinejoin='round'
                 strokeWidth={2}
-                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                d='M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z'
               />
             </svg>
           </div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">No messages yet</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 text-center max-w-xs">
+          <h3 className='text-lg font-bold text-slate-900 dark:text-slate-100'>
+            No messages yet
+          </h3>
+          <p className='text-sm text-slate-500 dark:text-slate-400 text-center max-w-xs'>
             Be the first to send a message in this channel
           </p>
         </div>
@@ -422,18 +452,18 @@ export const MessageList = forwardRef<MessageListRef, MessageListProps>(
     // =========================================================================
     return (
       <ScrollArea ref={scrollAreaRef} className={cn('h-full', className)}>
-        <div className="py-4">
+        <div className='py-4'>
           {/* Loading indicator at top */}
           {isLoading && hasMore && (
-            <div className="flex justify-center py-4">
-              <Loader2 className="h-5 w-5 text-violet-500 animate-spin" />
+            <div className='flex justify-center py-4'>
+              <Loader2 className='h-5 w-5 text-violet-500 animate-spin' />
             </div>
           )}
 
           {/* No more messages indicator */}
           {!hasMore && messages.length > 0 && (
-            <div className="flex justify-center py-4">
-              <span className="text-xs text-slate-400 dark:text-slate-500">
+            <div className='flex justify-center py-4'>
+              <span className='text-xs text-slate-400 dark:text-slate-500'>
                 Beginning of conversation
               </span>
             </div>
@@ -441,22 +471,25 @@ export const MessageList = forwardRef<MessageListRef, MessageListProps>(
 
           {/* Messages grouped by date */}
           {dateGroups.map((group) => (
-            <div key={group.date} className="mb-6">
+            <div key={group.date} className='mb-6'>
               {/* Date divider */}
-              <div className="flex items-center justify-center my-6">
-                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent" />
-                <div className="px-4">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700">
+              <div className='flex items-center justify-center my-6'>
+                <div className='flex-1 h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent' />
+                <div className='px-4'>
+                  <span className='text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700'>
                     {formatDateHeader(group.date)}
                   </span>
                 </div>
-                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent" />
+                <div className='flex-1 h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent' />
               </div>
 
               {/* Messages in this date group */}
               {group.messages.map((message, index) => {
-                const previousMessage = index > 0 ? group.messages[index - 1] : null;
-                const isOwn = message.isSentByMe === true || message.senderId === currentUserId;
+                const previousMessage =
+                  index > 0 ? group.messages[index - 1] : null;
+                const isOwn =
+                  message.isSentByMe === true ||
+                  message.senderId === currentUserId;
                 const isGrouped = shouldGroupMessage(message, previousMessage);
                 const showNewMessageSeparator =
                   lastReadMessageId && message.id === lastReadMessageId;
@@ -471,7 +504,7 @@ export const MessageList = forwardRef<MessageListRef, MessageListProps>(
                           messageRefs.current.delete(message.id);
                         }
                       }}
-                      className="transition-colors duration-500"
+                      className='transition-colors duration-500'
                     >
                       <MessageItem
                         message={message}
@@ -488,12 +521,12 @@ export const MessageList = forwardRef<MessageListRef, MessageListProps>(
 
                     {/* New messages separator */}
                     {showNewMessageSeparator && (
-                      <div className="flex items-center gap-3 my-4 px-4">
-                        <div className="flex-1 h-px bg-red-500/50" />
-                        <span className="text-xs font-semibold text-red-500 uppercase tracking-wide">
+                      <div className='flex items-center gap-3 my-4 px-4'>
+                        <div className='flex-1 h-px bg-red-500/50' />
+                        <span className='text-xs font-semibold text-red-500 uppercase tracking-wide'>
                           New Messages
                         </span>
-                        <div className="flex-1 h-px bg-red-500/50" />
+                        <div className='flex-1 h-px bg-red-500/50' />
                       </div>
                     )}
                   </React.Fragment>
