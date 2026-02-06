@@ -1,6 +1,6 @@
 /**
  * Author: QuanTuanHuy
- * Description: Part of Serp Project
+ * Description: Part of Serp Project - Presence service implementation
  */
 
 package serp.project.discuss_service.core.service.impl;
@@ -17,6 +17,7 @@ import serp.project.discuss_service.core.service.IPresenceService;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -123,38 +124,16 @@ public class PresenceService implements IPresenceService {
     }
 
     @Override
-    public void userJoinedChannel(Long userId, Long channelId) {
-        if (userId == null || channelId == null) {
-            return;
-        }
-        cacheService.addUserChannelSubscription(userId, channelId);
-        log.debug("User {} joined channel {}", userId, channelId);
-    }
-
-    @Override
-    public void userLeftChannel(Long userId, Long channelId) {
-        if (userId == null || channelId == null) {
-            return;
-        }
-        cacheService.removeUserChannelSubscription(userId, channelId);
-        log.debug("User {} left channel {}", userId, channelId);
-    }
-
-    @Override
-    public Set<Long> getOnlineChannelSubscribers(Long channelId) {
-        if (channelId == null) {
+    public Set<Long> getOnlineUsers(Set<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
             return Set.of();
         }
-        Set<Long> subscribers = cacheService.getChannelSubscribers(channelId);
-        if (subscribers.isEmpty()) {
-            return Set.of();
-        }
-        Map<Long, UserPresenceEntity> presenceMap = cacheService.getUserPresenceBatch(subscribers);
-        return subscribers.stream()
+        Map<Long, UserPresenceEntity> presenceMap = cacheService.getUserPresenceBatch(userIds);
+        return userIds.stream()
                 .filter(userId -> {
                     UserPresenceEntity presence = presenceMap.get(userId);
                     return presence != null && presence.isOnline();
                 })
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
     }
 }

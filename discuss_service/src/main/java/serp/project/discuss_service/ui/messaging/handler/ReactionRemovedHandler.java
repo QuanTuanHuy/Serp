@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEvent;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEventType;
-import serp.project.discuss_service.core.port.client.IWebSocketHubPort;
+import serp.project.discuss_service.core.service.IDeliveryService;
 import serp.project.discuss_service.kernel.utils.KafkaPayloadUtils;
 
 @Component
@@ -20,7 +20,7 @@ import serp.project.discuss_service.kernel.utils.KafkaPayloadUtils;
 @Slf4j
 public class ReactionRemovedHandler implements IReactionEventHandler {
 
-    private final IWebSocketHubPort webSocketHub;
+    private final IDeliveryService deliveryService;
 
     @Override
     public WsEventType getType() {
@@ -40,6 +40,6 @@ public class ReactionRemovedHandler implements IReactionEventHandler {
             return;
         }
 
-        webSocketHub.notifyReaction(channelId, messageId, userId, emoji, false);
+        deliveryService.notifyReaction(channelId, messageId, userId, emoji, false);
     }
 }

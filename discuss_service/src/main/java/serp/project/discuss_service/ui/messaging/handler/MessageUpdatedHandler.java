@@ -6,16 +6,13 @@
 package serp.project.discuss_service.ui.messaging.handler;
 
 import java.util.Map;
-import java.util.Optional;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEvent;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEventType;
-import serp.project.discuss_service.core.domain.entity.MessageEntity;
-import serp.project.discuss_service.core.port.client.IWebSocketHubPort;
-import serp.project.discuss_service.core.service.IMessageService;
+import serp.project.discuss_service.core.service.IDeliveryService;
 import serp.project.discuss_service.kernel.utils.KafkaPayloadUtils;
 
 @Component
@@ -23,8 +20,7 @@ import serp.project.discuss_service.kernel.utils.KafkaPayloadUtils;
 @Slf4j
 public class MessageUpdatedHandler implements IMessageEventHandler {
 
-    private final IWebSocketHubPort webSocketHub;
-    private final IMessageService messageService;
+    private final IDeliveryService deliveryService;
 
     @Override
     public WsEventType getType() {
@@ -39,12 +35,6 @@ public class MessageUpdatedHandler implements IMessageEventHandler {
             log.warn("Missing required fields for MESSAGE_UPDATED event");
             return;
         }
-
-        Optional<MessageEntity> messageOpt = messageService.getMessageById(messageId);
-        if (messageOpt.isPresent()) {
-            webSocketHub.notifyMessageUpdated(channelId, messageOpt.get());
-        } else {
-            log.warn("Message not found for update notification: {}", messageId);
-        }
+        deliveryService.notifyMessageUpdated(channelId, messageId);
     }
 }

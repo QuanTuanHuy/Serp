@@ -7,6 +7,7 @@ package serp.project.discuss_service.core.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 
 import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse;
@@ -52,7 +53,7 @@ public class UserInfoService implements IUserInfoService {
                     .distinct()
                     .forEach(userId -> {
                         Future<Optional<ChannelMemberResponse.UserInfo>> future = executor.submit(
-                                () -> fetchUserInfo(userId)
+                                () -> getUserById(userId)
                         );
                         userInfoFutures.put(userId, future);
                     });
@@ -70,7 +71,7 @@ public class UserInfoService implements IUserInfoService {
         }
 
         ChannelMemberResponse response = ChannelMemberResponse.fromEntity(member);
-        Optional<ChannelMemberResponse.UserInfo> userInfo = fetchUserInfo(member.getUserId());
+        Optional<ChannelMemberResponse.UserInfo> userInfo = getUserById(member.getUserId());
         userInfo.ifPresent(response::setUser);
 
         return response;
@@ -82,7 +83,7 @@ public class UserInfoService implements IUserInfoService {
             return null;
         }
 
-        Optional<ChannelMemberResponse.UserInfo> userInfo = fetchUserInfo(message.getSenderId());
+        Optional<ChannelMemberResponse.UserInfo> userInfo = getUserById(message.getSenderId());
         userInfo.ifPresent(message::setSender);
 
         return message;
@@ -108,7 +109,7 @@ public class UserInfoService implements IUserInfoService {
                 return accountServiceClient.getUsersForTenant(tenantId, query);
             }
             String cacheKey = String.format(USER_INFO_BY_TENANT_CACHE_PREFIX, tenantId);
-            List<UserInfo> cachedUsers = cachePort.getFromCache(cacheKey, List.class);
+            List<UserInfo> cachedUsers = cachePort.getFromCache(cacheKey, new ParameterizedTypeReference<>() {});
             if (cachedUsers != null && !cachedUsers.isEmpty()) {
                 return cachedUsers;
             }
@@ -123,10 +124,7 @@ public class UserInfoService implements IUserInfoService {
         }
     }
 
-    /**
-     * Fetch user info from account service.
-     */
-    private Optional<ChannelMemberResponse.UserInfo> fetchUserInfo(Long userId) {
+    public Optional<ChannelMemberResponse.UserInfo> getUserById(Long userId) {
         try {
             String cacheKey = USER_INFO_CACHE_PREFIX + userId;
             ChannelMemberResponse.UserInfo cachedInfo = cachePort.getFromCache(cacheKey, ChannelMemberResponse.UserInfo.class);
@@ -142,9 +140,6 @@ public class UserInfoService implements IUserInfoService {
         }
     }
 
-    /**
-     * Build ChannelMemberResponse with user info from futures.
-     */
     private ChannelMemberResponse buildMemberResponse(
             ChannelMemberEntity member,
             Map<Long, Future<Optional<ChannelMemberResponse.UserInfo>>> userInfoFutures) {

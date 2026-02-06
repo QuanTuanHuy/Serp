@@ -1,6 +1,6 @@
 /**
  * Author: QuanTuanHuy
- * Description: Part of Serp Project
+ * Description: Part of Serp Project - Presence service contract
  */
 
 package serp.project.discuss_service.core.service;
@@ -32,9 +32,5 @@ public interface IPresenceService {
 
     boolean isUserOnline(Long userId);
 
-    void userJoinedChannel(Long userId, Long channelId);
-
-    void userLeftChannel(Long userId, Long channelId);
-
-    Set<Long> getOnlineChannelSubscribers(Long channelId);
+    Set<Long> getOnlineUsers(Set<Long> userIds);
 }

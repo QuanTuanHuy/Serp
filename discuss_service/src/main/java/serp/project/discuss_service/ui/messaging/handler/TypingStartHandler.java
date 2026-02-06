@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEvent;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEventType;
-import serp.project.discuss_service.core.port.client.IWebSocketHubPort;
+import serp.project.discuss_service.core.service.IDeliveryService;
 import serp.project.discuss_service.kernel.utils.KafkaPayloadUtils;
 
 @Component
@@ -20,7 +20,7 @@ import serp.project.discuss_service.kernel.utils.KafkaPayloadUtils;
 @Slf4j
 public class TypingStartHandler implements IPresenceEventHandler {
 
-    private final IWebSocketHubPort webSocketHub;
+    private final IDeliveryService deliveryService;
 
     @Override
     public WsEventType getType() {
@@ -36,6 +36,6 @@ public class TypingStartHandler implements IPresenceEventHandler {
             return;
         }
 
-        webSocketHub.notifyTyping(channelId, userId, true);
+        deliveryService.notifyTyping(channelId, userId, true);
     }
 }
