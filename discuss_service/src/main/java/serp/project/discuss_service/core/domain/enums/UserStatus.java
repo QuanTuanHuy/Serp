@@ -23,6 +23,10 @@ public enum UserStatus {
         return this != BUSY && this != OFFLINE;
     }
 
+    public String getNormalizedName() {
+        return this.name().toLowerCase();
+    }
+
     public static UserStatus fromString(String status) {
         if (status == null) {
             return OFFLINE;

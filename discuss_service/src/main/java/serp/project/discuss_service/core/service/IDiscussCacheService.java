@@ -7,8 +7,10 @@ package serp.project.discuss_service.core.service;
 
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
+import serp.project.discuss_service.core.domain.entity.UserPresenceEntity;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -19,27 +21,26 @@ import java.util.Set;
 public interface IDiscussCacheService {
 
     // ==================== CACHE KEY PREFIXES ====================
-    
+
     String CHANNEL_PREFIX = "discuss:channel:";
     String MESSAGE_PREFIX = "discuss:msg:";
-    String RECENT_MESSAGES_PREFIX = "discuss:recent:";
-    String USER_CHANNELS_PREFIX = "discuss:user_channels:";
     String CHANNEL_MEMBERS_PREFIX = "discuss:members:";
-    String PRESENCE_PREFIX = "discuss:presence:";
-    String CHANNEL_ONLINE_PREFIX = "discuss:online:";
     String TYPING_PREFIX = "discuss:typing:";
     String UNREAD_PREFIX = "discuss:unread:";
     String SESSION_PREFIX = "discuss:session:";
     String USER_SESSIONS_PREFIX = "discuss:user_sessions:";
+    String CHANNEL_SUBSCRIBERS_PREFIX = "discuss:channel_subscribers:";
+    String USER_SUBSCRIPTIONS_PREFIX = "discuss:user_subscriptions:";
     String ATTACHMENT_URL_PREFIX = "discuss:attachment_url:";
     String CHANNEL_MESSAGES_PREFIX = "discuss:channel_messages:";
-    
+
+    String USER_PRESENCE_HASH_PREFIX = "discuss:presence:user:";
+
     // TTL Constants (in seconds)
-    long CHANNEL_TTL = 3600;          // 1 hour
+    long CHANNEL_TTL = 3600;           // 1 hour
     long MESSAGE_TTL = 300;            // 5 minutes
-    long RECENT_MESSAGES_TTL = 600;    // 10 minutes
     long CHANNEL_MESSAGES_TTL = 60;    // 1 minute for paginated channel messages (hot data)
-    long PRESENCE_TTL = 120;           // 2 minutes
+    long PRESENCE_HASH_TTL = 604800;   // 7 days
     long TYPING_TTL = 5;               // 5 seconds
     long SESSION_TTL = 86400;          // 24 hours
     long ATTACHMENT_URL_TTL = 561600;  // 6.5 days (buffer before 7-day URL expiry)
@@ -74,29 +75,9 @@ public interface IDiscussCacheService {
     Optional<MessageEntity> getCachedMessage(Long messageId);
 
     /**
-     * Cache recent messages for a channel (hot messages)
-     */
-    void cacheRecentMessages(Long channelId, List<MessageEntity> messages);
-
-    /**
-     * Get cached recent messages
-     */
-    List<MessageEntity> getCachedRecentMessages(Long channelId);
-
-    /**
-     * Add message to recent messages cache (LIFO - newest first)
-     */
-    void addToRecentMessages(Long channelId, MessageEntity message);
-
-    /**
      * Invalidate message cache
      */
     void invalidateMessage(Long messageId);
-
-    /**
-     * Invalidate all message caches for a channel
-     */
-    void invalidateChannelMessages(Long channelId);
 
     // ==================== CHANNEL MESSAGES PAGE CACHE ====================
 
@@ -104,14 +85,14 @@ public interface IDiscussCacheService {
      * Cache a page of channel messages with total count.
      * Only caches the first page (page=0) for hot data access.
      *
-     * @param channelId The channel ID
-     * @param page      The page number (0-based)
-     * @param size      The page size
-     * @param messages  The messages to cache
+     * @param channelId  The channel ID
+     * @param page       The page number (0-based)
+     * @param size       The page size
+     * @param messages   The messages to cache
      * @param totalCount The total message count
      */
-    void cacheChannelMessagesPage(Long channelId, int page, int size, 
-                                   List<MessageEntity> messages, long totalCount);
+    void cacheChannelMessagesPage(Long channelId, int page, int size,
+                                  List<MessageEntity> messages, long totalCount);
 
     /**
      * Get cached page of channel messages with total count.
@@ -160,42 +141,23 @@ public interface IDiscussCacheService {
      */
     boolean removeMessageFromFirstPage(Long channelId, Long messageId);
 
-    // ==================== PRESENCE / ONLINE STATUS ====================
+    // ==================== PRESENCE ====================
 
     /**
-     * Set user online status (with heartbeat)
+     * Set user presence
      */
-    void setUserOnline(Long userId);
+    void setUserPresence(UserPresenceEntity presence);
 
     /**
-     * Set user offline
+     * Get user presence
      */
-    void setUserOffline(Long userId);
+    Optional<UserPresenceEntity> getUserPresence(Long userId);
 
     /**
-     * Add user to channel's online set
+     * Get batch user presence
      */
-    void addUserToChannel(Long channelId, Long userId);
+    Map<Long, UserPresenceEntity> getUserPresenceBatch(Set<Long> userIds);
 
-    /**
-     * Remove user from channel's online set
-     */
-    void removeUserFromChannel(Long channelId, Long userId);
-
-    /**
-     * Get online users in a channel
-     */
-    Set<Long> getOnlineUsersInChannel(Long channelId);
-
-    /**
-     * Check if user is online
-     */
-    boolean isUserOnline(Long userId);
-
-    /**
-     * Refresh user's presence (heartbeat)
-     */
-    void refreshPresence(Long userId);
 
     // ==================== TYPING INDICATORS ====================
 
@@ -278,6 +240,33 @@ public interface IDiscussCacheService {
      */
     int getActiveSessionCount(Long userId);
 
+    // ==================== CHANNEL SUBSCRIPTIONS ====================
+
+    /**
+     * Add a user subscription to a channel
+     */
+    void addUserChannelSubscription(Long userId, Long channelId);
+
+    /**
+     * Remove a user subscription from a channel
+     */
+    void removeUserChannelSubscription(Long userId, Long channelId);
+
+    /**
+     * Get channel subscribers (user IDs)
+     */
+    Set<Long> getChannelSubscribers(Long channelId);
+
+    /**
+     * Get channels a user is subscribed to
+     */
+    Set<Long> getUserSubscribedChannels(Long userId);
+
+    /**
+     * Remove all channel subscriptions for a user
+     */
+    void removeAllUserSubscriptions(Long userId);
+
     // ==================== CHANNEL MEMBERS CACHE ====================
 
     /**
@@ -304,28 +293,6 @@ public interface IDiscussCacheService {
      * Check if user is member (from cache)
      */
     boolean isMemberCached(Long channelId, Long userId);
-
-    // ==================== USER CHANNELS CACHE ====================
-
-    /**
-     * Cache user's channel IDs
-     */
-    void cacheUserChannels(Long userId, Set<Long> channelIds);
-
-    /**
-     * Get cached user's channel IDs
-     */
-    Set<Long> getCachedUserChannels(Long userId);
-
-    /**
-     * Add channel to user's channels cache
-     */
-    void addChannelToUserCache(Long userId, Long channelId);
-
-    /**
-     * Remove channel from user's channels cache
-     */
-    void removeChannelFromUserCache(Long userId, Long channelId);
 
     // ==================== ATTACHMENT URL CACHE ====================
 
@@ -357,15 +324,18 @@ public interface IDiscussCacheService {
     /**
      * Session info value object
      */
-    record SessionInfo(String sessionId, Long userId, String instanceId, long createdAt) {}
+    record SessionInfo(String sessionId, Long userId, String instanceId, long createdAt) {
+    }
 
     /**
      * Cached attachment URL value object
      */
-    record CachedAttachmentUrl(String downloadUrl, String thumbnailUrl, long expiresAt) {}
+    record CachedAttachmentUrl(String downloadUrl, String thumbnailUrl, long expiresAt) {
+    }
 
     /**
      * Cached messages page value object
      */
-    record CachedMessagesPage(long totalCount, List<MessageEntity> messages) {}
+    record CachedMessagesPage(long totalCount, List<MessageEntity> messages) {
+    }
 }

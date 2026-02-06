@@ -42,12 +42,11 @@ public class AttachmentResponse {
     private Long createdAt;
     private Long updatedAt;
     
-    // Computed fields
     private String fileSizeFormatted;
     
     // Presigned URL fields - populated by AttachmentUrlService
-    private String downloadUrl;      // Presigned URL for downloading/viewing the file
-    private Long urlExpiresAt;       // Unix timestamp (ms) when URLs expire
+    private String downloadUrl;
+    private Long urlExpiresAt;
 
     public static AttachmentResponse fromEntity(AttachmentEntity entity) {
         if (entity == null) {

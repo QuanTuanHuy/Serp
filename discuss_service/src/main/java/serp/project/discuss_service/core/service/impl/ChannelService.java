@@ -19,10 +19,6 @@ import serp.project.discuss_service.core.service.IDiscussCacheService;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Implementation of channel service.
- * Handles channel business operations with caching.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -181,7 +177,6 @@ public class ChannelService implements IChannelService {
     @Override
     public void deleteChannel(Long channelId) {
         cacheService.invalidateChannel(channelId);
-        cacheService.invalidateChannelMessages(channelId);
         channelPort.deleteById(channelId);
         log.info("Deleted channel: {}", channelId);
     }

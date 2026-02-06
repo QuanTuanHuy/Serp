@@ -18,9 +18,6 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
-/**
- * Response DTO for channel member data
- */
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
@@ -75,9 +72,6 @@ public class ChannelMemberResponse {
                 .build();
     }
 
-    /**
-     * Basic user info for display
-     */
     @NoArgsConstructor
     @AllArgsConstructor
     @Data

@@ -39,10 +39,13 @@ spring:
     consumer:
       group-id: discuss-service-group
       auto-offset-reset: latest
+      enable-auto-commit: false
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       properties:
         spring.json.trusted.packages: "*"
+    listener:
+      ack-mode: manual
 
   security:
     oauth2:
@@ -70,16 +73,13 @@ app:
   security:
     filter:
       publicUrls:
-        # Add public endpoints here as needed
       protectedUrls:
-        # Add protected endpoints here as needed
 
 server:
   port: ${SERVER_PORT:8092}
   servlet:
     context-path: /discuss
 
-# Storage configuration for file attachments
 discuss:
   storage:
     provider: S3
@@ -107,3 +107,9 @@ discuss:
 services:
   account:
     url: ${ACCOUNT_SERVICE_URL:http://localhost:8081/account-service}
+
+logging:
+  level:
+    root: INFO
+    serp.project.discuss_service.ui: DEBUG
+    serp.project.discuss_service.core: DEBUG
