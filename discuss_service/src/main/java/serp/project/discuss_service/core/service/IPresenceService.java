@@ -24,7 +24,7 @@ public interface IPresenceService {
 
     void setUserOffline(Long userId);
 
-    void updateUserStatus(Long userId, UserStatus status, String statusMessage);
+    void updateUserStatus(Long userId, Long tenantId, UserStatus status, String statusMessage);
 
     Optional<UserPresenceEntity> getUserPresence(Long userId);
 

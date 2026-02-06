@@ -14,6 +14,7 @@ import serp.project.discuss_service.core.service.IDiscussCacheService;
 import serp.project.discuss_service.core.service.IDiscussEventPublisher;
 import serp.project.discuss_service.core.service.IPresenceService;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -96,13 +97,9 @@ public class PresenceService implements IPresenceService {
     }
 
     @Override
-    public void updateUserStatus(Long userId, UserStatus status, String statusMessage) {
-        Optional<UserPresenceEntity> presenceOpt = getUserPresence(userId);
-        if (presenceOpt.isEmpty()) {
-            log.warn("Cannot update status for non-existing presence of userId {}", userId);
-            return;
-        }
-        UserPresenceEntity presence = presenceOpt.get();
+    public void updateUserStatus(Long userId, Long tenantId, UserStatus status, String statusMessage) {
+        UserPresenceEntity presence = getUserPresence(userId)
+                .orElseGet(() -> UserPresenceEntity.offline(userId, tenantId));
         presence.setCustomStatus(status, statusMessage);
         cacheService.setUserPresence(presence);
     }
@@ -114,7 +111,11 @@ public class PresenceService implements IPresenceService {
 
     @Override
     public Map<Long, UserPresenceEntity> getPresenceBatch(Set<Long> userIds) {
-        return cacheService.getUserPresenceBatch(userIds);
+        Map<Long, UserPresenceEntity> presenceMap = cacheService.getUserPresenceBatch(userIds);
+        Map<Long, UserPresenceEntity> result = new HashMap<>();
+        userIds.forEach(userId ->
+                result.put(userId, presenceMap.getOrDefault(userId, UserPresenceEntity.offline(userId))));
+        return result;
     }
 
     @Override
