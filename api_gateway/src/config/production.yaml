@@ -14,6 +14,34 @@ app:
     expected-issuer: ${KEYCLOAK_URL}/realms/serp
     expected-audience:
 
+  rateLimit:
+    enabled: true
+    defaultIP:
+      limit: 60
+      windowSecs: 60
+    defaultUser:
+      limit: 120
+      windowSecs: 60
+    routeOverrides:
+      login:
+        path: "/api/v1/auth/login"
+        method: "POST"
+        ip:
+          limit: 5
+          windowSecs: 60
+      register:
+        path: "/api/v1/auth/register"
+        method: "POST"
+        ip:
+          limit: 3
+          windowSecs: 60
+      refreshToken:
+        path: "/api/v1/auth/refresh-token"
+        method: "POST"
+        ip:
+          limit: 10
+          windowSecs: 60
+
   cors:
     allowedOrigins:
       - https://serp-soict.vercel.app

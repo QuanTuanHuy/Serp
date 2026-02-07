@@ -17,6 +17,7 @@ func RegisterNotificationRoutes(
 	notificationProxyController *notification.NotificationProxyController,
 	genericProxyController *common.GenericProxyController,
 	jwtMiddleware *middleware.JWTMiddleware,
+	rateLimitMiddleware *middleware.RateLimitMiddleware,
 ) {
 	notificationWSGroup := group.Group("ws/notifications")
 	{
@@ -25,6 +26,9 @@ func RegisterNotificationRoutes(
 
 	notificationGroup := group.Group("/ns/api/v1")
 	{
-		notificationGroup.Use(jwtMiddleware.AuthenticateJWT()).Any("/*proxyPath", genericProxyController.ProxyToNotification)
+		notificationGroup.Use(
+			jwtMiddleware.AuthenticateJWT(),
+			rateLimitMiddleware.UserRateLimit(),
+		).Any("/*proxyPath", genericProxyController.ProxyToNotification)
 	}
 }

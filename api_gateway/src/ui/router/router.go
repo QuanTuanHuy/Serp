@@ -57,12 +57,14 @@ type RegisterRoutersIn struct {
 	ScheduleEventController        *ptm.ScheduleEventController
 	ScheduleTaskController         *ptm.ScheduleTaskController
 
-	JWTMiddleware  *middleware.JWTMiddleware
-	CorsMiddleware *middleware.CorsMiddleware
+	JWTMiddleware       *middleware.JWTMiddleware
+	CorsMiddleware      *middleware.CorsMiddleware
+	RateLimitMiddleware *middleware.RateLimitMiddleware
 }
 
 func RegisterGinRouters(p RegisterRoutersIn) {
 	p.Engine.Use(p.CorsMiddleware.Handler())
+	p.Engine.Use(p.RateLimitMiddleware.IPRateLimit())
 
 	group := p.Engine.Group(p.App.Path())
 
@@ -110,12 +112,14 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		group,
 		p.GenericProxyController,
 		p.JWTMiddleware,
+		p.RateLimitMiddleware,
 	)
 
 	RegisterLogisticsRoutes(
 		group,
 		p.GenericProxyController,
 		p.JWTMiddleware,
+		p.RateLimitMiddleware,
 	)
 
 	RegisterNotificationRoutes(
@@ -123,6 +127,7 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		p.NotificationProxyController,
 		p.GenericProxyController,
 		p.JWTMiddleware,
+		p.RateLimitMiddleware,
 	)
 
 	RegisterDiscussRoutes(
@@ -130,11 +135,13 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		p.DiscussProxyController,
 		p.GenericProxyController,
 		p.JWTMiddleware,
+		p.RateLimitMiddleware,
 	)
 
 	RegisterSalesRoutes(
 		group,
 		p.GenericProxyController,
 		p.JWTMiddleware,
+		p.RateLimitMiddleware,
 	)
 }
