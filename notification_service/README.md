@@ -1,340 +1,143 @@
 # Notification Service
 
-## Overview
+Real-time notification system with WebSocket delivery, Kafka event consumption, and user preference management.
 
-The **Notification Service** is a real-time notification system that delivers instant notifications to users through multiple channels. Built with Go and WebSocket technology, it provides in-app notifications with real-time delivery, user preference management, and event-driven architecture for seamless integration with other SERP services.
+**Port:** `8090` | **Go:** 1.25+ | **Framework:** Gin + Uber FX + Gorilla WebSocket
 
-**Technology Stack:**
-- **Language**: Go 1.25.0
-- **Framework**: Gin (HTTP/REST framework)
-- **Database**: PostgreSQL (persistence), Redis (caching)
-- **Messaging**: Apache Kafka (event consumption)
-- **Real-time**: WebSocket (Gorilla WebSocket)
-- **Dependency Injection**: Uber FX
-- **Logging**: Uber Zap
-- **Authentication**: JWT via Keycloak (through API Gateway)
-- **Architecture**: Clean Architecture / Hexagonal Architecture
+## Quick Start
 
-**Service Configuration:**
-- **Context Path**: `/notification-service`
-- **Access**: All requests via API Gateway at `http://localhost:8080/notification-service`
+```bash
+# 1. Set up environment
+cp .env.example .env  # Configure DB, Redis, Kafka, Keycloak
 
-## Architecture
+# 2. Run
+./run-dev.sh
 
-The service follows Clean Architecture principles with clear separation of concerns:
-
-```
-notification_service/
-├── ui/                          # Presentation Layer
-│   ├── controller/              # REST API & WebSocket controllers
-│   │   ├── NotificationController
-│   │   ├── PreferenceController
-│   │   └── WebSocketController
-│   ├── kafka/                   # Kafka event consumers
-│   │   ├── UserNotificationHandler
-│   │   └── MessageProcessingMiddleware
-│   ├── middleware/              # HTTP middleware (JWT, CORS)
-│   └── router/                  # Route registration
-│
-├── core/                        # Business Logic Layer
-│   ├── domain/                  # Domain models
-│   │   ├── entity/              # Business entities
-│   │   ├── dto/                 # Data transfer objects
-│   │   ├── enum/                # Enumerations (NotificationType, Priority, etc.)
-│   │   └── constant/            # Domain constants (event types, topics)
-│   ├── usecase/                 # Business use cases
-│   │   ├── NotificationUseCase
-│   │   └── PreferenceUseCase
-│   ├── service/                 # Domain services
-│   │   ├── NotificationService
-│   │   ├── PreferenceService
-│   │   ├── DeliveryService
-│   │   ├── IdempotencyService
-│   │   └── TransactionService
-│   ├── websocket/               # WebSocket hub & client management
-│   │   ├── Hub (connection management)
-│   │   ├── Client (WebSocket client lifecycle)
-│   │   └── Message (WebSocket message types)
-│   └── port/                    # Interface definitions
-│       ├── store/               # Repository interfaces
-│       └── client/              # External client interfaces
-│
-└── infrastructure/              # External Adapters Layer
-    ├── store/                   # PostgreSQL repositories
-    │   ├── model/               # GORM entities
-    │   ├── mapper/              # Entity ↔ Model mappers
-    │   └── adapter/             # Repository implementations
-    └── client/                  # External clients
-        ├── RedisAdapter
-        ├── KafkaProducerAdapter
-        └── KafkaConsumer
+# Or manually
+go run src/main.go
 ```
 
-**Data Flow:**
+**Prerequisites:** Go 1.25+, PostgreSQL, Redis, Kafka, Keycloak
 
-1. **REST API Flow**:
-   ```
-   API Gateway → Controller → UseCase → Service → Repository → PostgreSQL
-                                                → Redis (caching)
-   ```
+## Features
 
-2. **Kafka Event Consumption Flow**:
-   ```
-   Kafka Topic → Consumer Handler → UseCase → Service → Repository → PostgreSQL
-                                                                    → WebSocket Hub
-   ```
-
-3. **WebSocket Real-Time Delivery Flow**:
-   ```
-   Client connects → Hub registers client → Notification created → 
-   Hub broadcasts → All user's devices receive instantly
-   ```
-
-## Core Features
-
-### 1. Notification Management
-Comprehensive notification lifecycle management:
-- **CRUD Operations**: Create, read, update, and delete notifications
-- **Mark as Read**: Individual or bulk mark-all-as-read functionality
-- **Unread Count**: Real-time unread notification counter
-- **Filtering & Pagination**: Filter by type, category, priority, status, read state
-- **Archiving**: Archive old notifications for cleanup
-- **Expiration**: Automatic notification expiration support
-- **Entity Association**: Link notifications to business entities (leads, opportunities, tasks)
-
-### 2. Real-Time WebSocket Delivery
-Instant notification delivery with WebSocket technology:
-- **Instant Push**: Notifications delivered in real-time without polling
-- **Multi-Device Support**: Multiple WebSocket connections per user (desktop, mobile, tablet)
-- **Connection Management**: Automatic client registration/unregistration
-- **Broadcast Capabilities**:
-  - Send to specific user (all devices)
-  - Broadcast to all users in a tenant
-  - Broadcast to all connected users
-  - Category-based filtering for targeted delivery
-- **Initial Data Sync**: Unread count and metadata sent on connection establishment
-- **Keep-Alive**: Ping/Pong mechanism for connection health monitoring
-- **Graceful Disconnection**: Automatic cleanup on client disconnect
-
-### 3. User Preferences
-Per-user notification preferences and settings:
-- **Channel Preferences**: Enable/disable notifications per delivery channel:
-  - In-app notifications (active)
-  - Email notifications (planned)
-  - Push notifications (planned)
-  - SMS notifications (planned)
-- **Quiet Hours**: Configure do-not-disturb time windows
-  - Start/end time configuration (minutes from midnight)
-  - Automatic suppression during quiet hours
-- **Default Preferences**: Automatic preference creation for new users
-
-### 4. Multi-Channel Delivery Design
-Flexible delivery channel architecture:
-- **In-App Notifications**: Currently active, real-time WebSocket delivery
-- **Email Delivery**: Planned for future implementation
-- **Push Notifications**: Planned for mobile app integration
-- **SMS Delivery**: Planned for urgent notifications
-- **Channel Selection**: Specify delivery channels per notification
-- **Preference Enforcement**: Respect user channel preferences
-
-### 5. Event-Driven Architecture
-Kafka-based event consumption with reliability features:
-- **Kafka Consumer**: Consumes notification events from other services
-- **Event Types**:
-  - `notification.create.requested` - Single notification creation
-  - `notification.bulk_create.requested` - Bulk notification creation for multiple users
-- **Idempotency Handling**: Prevent duplicate notifications using event ID tracking
-- **Failed Event Retry**: Automatic retry mechanism for failed event processing
-- **Processed Event Tracking**: Track successfully processed events to ensure exactly-once delivery
-- **Transaction Safety**: Atomic event processing with database transactions
-
-### 6. Categorization & Prioritization
-Organize and prioritize notifications effectively:
-- **Categories**: SYSTEM, EMAIL, CRM, PTM (Project/Task Management)
-- **Priorities**: LOW, MEDIUM, HIGH, URGENT
-- **Types**: INFO, SUCCESS, WARNING, ERROR
-- **Status Tracking**: UNREAD, READ, ARCHIVED
-- **Filtering Support**: Filter notifications by any combination of attributes
-- **Visual Differentiation**: Frontend can style notifications based on type and priority
+- **Real-Time WebSocket** - Instant push to all user devices (desktop, mobile, tablet)
+- **Kafka Consumer** - Event-driven notifications from CRM, PTM, Account services
+- **User Preferences** - Per-user channel settings, quiet hours
+- **Multi-Tenancy** - Strict tenant isolation for all operations
+- **Idempotency** - Duplicate event prevention via event ID tracking
+- **Categorization** - Categories (SYSTEM, CRM, PTM), priorities (LOW→URGENT), types (INFO→ERROR)
 
 ## API Routes
 
-All routes are prefixed with `/notification-service/api/v1` when accessed through the API Gateway.
-
-### Notification Management
+Access via API Gateway: `http://localhost:8080/notification-service/api/v1`
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/notifications` | Create a new notification |
-| GET | `/notifications` | Get all notifications with filters (type, category, priority, status, isRead, page, size) |
-| GET | `/notifications/:id` | Get notification by ID |
-| PATCH | `/notifications/:id` | Update notification (mark as read, archive, etc.) |
-| DELETE | `/notifications/:id` | Delete notification |
-| PATCH | `/notifications/read-all` | Mark all notifications as read for current user |
-| GET | `/notifications/unread-count` | Get unread notification count |
+| GET | `/notifications` | List with filters (type, category, priority, status, isRead) |
+| POST | `/notifications` | Create notification |
+| GET | `/notifications/:id` | Get by ID |
+| PATCH | `/notifications/:id` | Update (mark read, archive) |
+| DELETE | `/notifications/:id` | Delete |
+| PATCH | `/notifications/read-all` | Mark all as read |
+| GET | `/notifications/unread-count` | Unread count |
+| GET | `/preferences` | Get user preferences |
+| PATCH | `/preferences` | Update preferences |
+| GET | `/ws?token={jwt}` | WebSocket connection |
+| GET | `/health` | Health check |
 
-**Query Parameters for GET `/notifications`:**
-- `type` - Filter by notification type (INFO, SUCCESS, WARNING, ERROR)
-- `category` - Filter by category (SYSTEM, EMAIL, CRM, PTM)
-- `priority` - Filter by priority (LOW, MEDIUM, HIGH, URGENT)
-- `status` - Filter by status (UNREAD, READ, ARCHIVED)
-- `isRead` - Filter by read status (true/false)
-- `page` - Page number (default: 1)
-- `size` - Items per page (default: 20)
+## Kafka Events
 
-### Preference Management
+**Topic:** `serp.notification.user.events`
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/preferences` | Get current user's notification preferences |
-| PATCH | `/preferences` | Update user's notification preferences |
+| Event Type | Description |
+|------------|-------------|
+| `notification.create.requested` | Create single notification |
+| `notification.bulk_create.requested` | Bulk create for multiple users |
 
-### WebSocket
+**Flow:** Kafka → Idempotency Check → Save to DB → WebSocket Broadcast
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/ws?token={jwt}` | Establish WebSocket connection (requires JWT token in query parameter) |
+## WebSocket
 
-### Health Check
+**Connect:** `GET /notification-service/ws?token={jwt}`
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/health` | Service health status |
-
-## Event-Driven Communication
-
-### Kafka Consumer
-
-The service consumes notification events from other SERP services via Kafka.
-
-**Consumed Topic:**
-- `serp.notification.user.events` - User notification events from all services
-
-**Consumed Event Types:**
-
-1. **notification.create.requested**
-   - Creates a single notification for a user
-   - Published by any service (CRM, PTM, Account, etc.)
-   - Example use case: "Lead converted to opportunity" notification from CRM service
-
-2. **notification.bulk_create.requested**
-   - Creates multiple notifications for different users in one batch
-   - Published for bulk operations (e.g., task assignments to team)
-   - Example use case: "New task assigned" notification to all team members
-
-**Event Processing Flow:**
-```
-Kafka Topic → Consumer Handler → Idempotency Check → Create Notification → 
-Save to PostgreSQL → Broadcast via WebSocket → Delivered to Connected Clients
-```
-
-**Reliability Features:**
-- **Idempotency**: Each event has unique `eventId` to prevent duplicate processing
-- **Processed Event Tracking**: Successfully processed events stored in `processed_event` table
-- **Failed Event Handling**: Failed events logged to `failed_event` table with retry mechanism
-- **Automatic Retry**: Failed events automatically retried with exponential backoff
-- **Transaction Safety**: Event processing wrapped in database transactions
-
-**Integration with Other Services:**
-- **CRM Service**: Lead qualification, opportunity close, customer updates
-- **PTM Services**: Task assignments, project updates, deadline reminders
-- **Account Service**: User invitations, role changes, subscription updates
-- **Discuss Service**: Mentions, channel invitations, message notifications
-
-## WebSocket Integration
-
-### Real-Time Notification Delivery
-
-The service uses WebSocket for instant, bidirectional communication with clients.
-
-**Connection Establishment:**
-1. Client requests WebSocket upgrade: `GET /notification-service/ws?token={jwt}`
-2. Server validates JWT token and extracts user/tenant context
-3. HTTP connection upgraded to WebSocket protocol
-4. Client registered in WebSocket Hub
-5. Initial data sent to client (unread count, metadata)
-6. Bidirectional message pump started
-
-**WebSocket Message Types:**
-- **NOTIFICATION_NEW**: New notification created and pushed to client
-- **INITIAL_DATA**: Initial sync data sent on connection (unread count, categories)
-- **PING/PONG**: Keep-alive messages for connection health monitoring
+**Message Types:**
+- `NOTIFICATION_NEW` - New notification pushed
+- `INITIAL_DATA` - Unread count on connect
+- `PING/PONG` - Keep-alive
 
 **Hub Capabilities:**
-- **SendToUser**: Send message to all devices of a specific user
-- **SendToUserWithCategory**: Send to user with category filtering
-- **BroadcastToTenant**: Broadcast message to all users in a tenant
-- **BroadcastToAll**: Broadcast to all connected clients (system announcements)
-- **Connection Tracking**: Check if user is online, get connection metrics
+- `SendToUser` - All devices of a user
+- `BroadcastToTenant` - All users in tenant
+- `BroadcastToAll` - System announcements
 
-**Multi-Device Support:**
-- Users can have multiple active WebSocket connections simultaneously
-- Notifications delivered to all connected devices (desktop, mobile, tablet)
-- Each device receives the same notification instantly
-- Automatic cleanup when device disconnects
+## Project Structure
 
-**Connection Management:**
-- Automatic client registration on connect
-- Automatic cleanup on disconnect
-- Buffered message queue per client (256 messages)
-- Write timeout for slow clients
-- Read timeout with pong handler for keep-alive
+```
+src/
+├── main.go
+├── cmd/bootstrap/all.go        # DI assembly
+├── ui/
+│   ├── controller/             # REST + WebSocket handlers
+│   ├── kafka/                  # Event consumers
+│   ├── middleware/             # JWT, CORS
+│   └── router/                 # Routes
+├── core/
+│   ├── domain/                 # Entities, DTOs, enums
+│   ├── usecase/                # Business logic
+│   ├── service/                # Domain services
+│   ├── websocket/              # Hub, Client management
+│   └── port/                   # Interfaces
+├── infrastructure/
+│   └── store/                  # PostgreSQL repos, mappers
+└── config/                     # YAML configs
+```
 
-## Multi-Tenancy
+## Configuration
 
-The notification service enforces strict multi-tenancy isolation:
+### Environment Variables
 
-- **Tenant Identification**: `tenantId` extracted from JWT token in every request
-- **Data Isolation**: All database queries filtered by `tenantId`
-- **WebSocket Isolation**: WebSocket Hub tracks clients per tenant for broadcast capabilities
-- **Security**: Users can only access notifications within their tenant
-- **Broadcast Control**: Tenant-wide broadcasts isolated to specific tenant
+```bash
+# Database
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=serp_notification
+DB_USER=
+DB_PASSWORD=
 
-## Integration Points
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
 
-### API Gateway
-- All external HTTP/REST requests route through API Gateway (port 8080)
-- JWT authentication enforced at gateway level
-- Context path: `/notification-service` prepended to all routes
-- WebSocket upgrade requests also proxied through gateway
+# Kafka
+KAFKA_BROKERS=localhost:9092
 
-### Keycloak
-- User authentication and authorization
-- JWT token generation and validation
-- JWKS endpoint for public key retrieval
-- Multi-tenant realm support
-- Realm: `serp`, Client: `serp-notification`
+# Keycloak
+KEYCLOAK_URL=http://localhost:8180
+```
 
-### PostgreSQL
-- Primary data store for notifications, preferences, and event tracking
-- Database: `serp_notification`
-- Tables: `notification`, `notification_preference`, `processed_event`, `failed_event`
-- Connection pooling via GORM
+### Database Tables
 
-### Redis
-- Caching layer for frequently accessed data
-- User preference caching
-- Potential session management for WebSocket connections
-- Performance optimization for read-heavy operations
+- `notification` - Notification records
+- `notification_preference` - User preferences
+- `processed_event` - Idempotency tracking
+- `failed_event` - Failed event retry queue
 
-### Kafka
-- Event consumption from topic: `serp.notification.user.events`
-- Consumer group for load balancing and fault tolerance
-- Idempotency tracking to prevent duplicate processing
-- Failed event logging for debugging and retry
+## Development
 
-### Other SERP Services (Event Publishers)
-- **CRM Service**: Lead/opportunity/customer notification events
-- **PTM Services**: Task/project/schedule notification events
-- **Account Service**: User/organization/subscription notification events
-- **Discuss Service**: Message/mention/channel notification events
-- **Any Service**: Can publish notification creation requests to Kafka topic
+```bash
+# Run
+./run-dev.sh
 
-## License
+# Test
+go test ./...
 
-This project is part of the SERP ERP system and is licensed under the MIT License. See the [LICENSE](../LICENSE) file in the root directory for details.
+# Format & lint
+go fmt ./...
+go vet ./...
+```
 
-## Author
+## Related Documentation
 
-**QuanTuanHuy**  
-Part of Serp Project
+- [AGENTS.md](../AGENTS.md) - Code style and development guidelines
+- [API Gateway](../api_gateway/README.md) - Request routing

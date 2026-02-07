@@ -15,9 +15,13 @@ func RegisterSalesRoutes(
 	group *gin.RouterGroup,
 	genericProxyController *common.GenericProxyController,
 	jwtMiddleware *middleware.JWTMiddleware,
+	rateLimitMiddleware *middleware.RateLimitMiddleware,
 ) {
 	salesGroup := group.Group("/sales/api/v1")
 	{
-		salesGroup.Use(jwtMiddleware.AuthenticateJWT()).Any("/*proxyPath", genericProxyController.ProxyToSales)
+		salesGroup.Use(
+			jwtMiddleware.AuthenticateJWT(),
+			rateLimitMiddleware.UserRateLimit(),
+		).Any("/*proxyPath", genericProxyController.ProxyToSales)
 	}
 }

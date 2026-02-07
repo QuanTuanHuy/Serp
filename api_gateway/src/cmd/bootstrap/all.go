@@ -10,6 +10,7 @@ import (
 	golibdata "github.com/golibs-starter/golib-data"
 	golibgin "github.com/golibs-starter/golib-gin"
 	"github.com/serp/api-gateway/src/cmd/modules"
+	"github.com/serp/api-gateway/src/infrastructure/adapter"
 	"github.com/serp/api-gateway/src/kernel/properties"
 	"github.com/serp/api-gateway/src/kernel/utils"
 	"github.com/serp/api-gateway/src/ui/controller/common"
@@ -54,6 +55,7 @@ func CoreInfrastructure() fx.Option {
 		golib.ProvideProps(properties.NewExternalServicePropeties),
 		golib.ProvideProps(properties.NewKeycloakProperties),
 		golib.ProvideProps(properties.NewCorsProperties),
+		golib.ProvideProps(properties.NewRateLimitProperties),
 
 		// Provide utilities
 		fx.Provide(utils.NewJWTUtils),
@@ -61,6 +63,10 @@ func CoreInfrastructure() fx.Option {
 		fx.Provide(middleware.NewJWTMiddleware),
 		fx.Provide(middleware.NewCorsMiddleware),
 		fx.Provide(common.NewGenericProxyController),
+
+		// Rate limiting
+		fx.Provide(adapter.NewRateLimiterAdapter),
+		fx.Provide(middleware.NewRateLimitMiddleware),
 	)
 }
 

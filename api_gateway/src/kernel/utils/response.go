@@ -38,6 +38,11 @@ var errorResponseMap = map[int]ErrorResponse{
 		ServiceCode: constant.GeneralNotFound,
 		Message:     "Not found",
 	},
+	constant.GeneralTooManyRequests: {
+		HTTPCode:    http.StatusTooManyRequests,
+		ServiceCode: constant.GeneralTooManyRequests,
+		Message:     "Too many requests",
+	},
 }
 
 // GetErrorResponse get error response from code

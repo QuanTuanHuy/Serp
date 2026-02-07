@@ -34,10 +34,10 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 		authV1.Use(middleware.AuthMiddleware()).POST("/change-password", authController.ChangePassword)
 	}
 
-	keycloakV1 := group.Group("/api/v1/keycloak")
-	{
-		keycloakV1.GET("/clients/:clientId/client-secret", keyCloakController.GetKeycloakClientSecret)
-	}
+	// keycloakV1 := group.Group("/api/v1/keycloak")
+	// {
+	// 	keycloakV1.GET("/clients/:clientId/client-secret", keyCloakController.GetKeycloakClientSecret)
+	// }
 
 	userV1 := group.Group("/api/v1/users")
 	{
