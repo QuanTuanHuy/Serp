@@ -81,8 +81,8 @@ Required environment variables (`.env`):
 ```bash
 SERVER_PORT=8085
 SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/serp_ptm_optimization
-SPRING_DATASOURCE_USERNAME=postgres
-SPRING_DATASOURCE_PASSWORD=postgres
+SPRING_DATASOURCE_USERNAME=
+SPRING_DATASOURCE_PASSWORD=
 SPRING_DATA_REDIS_HOST=localhost
 SPRING_KAFKA_BOOTSTRAP_SERVERS=localhost:9092
 ```

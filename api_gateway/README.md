@@ -40,7 +40,7 @@ go run src/main.go
 ```bash
 # Keycloak
 KEYCLOAK_URL=http://localhost:8180
-CLIENT_SECRET=your_client_secret
+CLIENT_SECRET=
 
 # Backend services (all follow same pattern)
 ACCOUNT_SERVICE_HOST=localhost

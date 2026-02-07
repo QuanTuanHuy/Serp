@@ -96,8 +96,8 @@ database:
   host: localhost
   port: 5432
   name: serp_ptm_task
-  user: postgres
-  password: postgres
+  user: 
+  password: 
 
 redis:
   host: localhost
