@@ -30,10 +30,13 @@ import java.util.Map;
 
 /**
  * WebSocket controller handling real-time messaging operations via STOMP.
- * 
+ * <p>
  * Message mappings:
+ * <br>
  * - /app/channels/{channelId}/message - Send a new message
+ * <br>
  * - /app/channels/{channelId}/typing - Send typing indicator
+ * <br>
  * - /app/channels/{channelId}/read - Mark messages as read
  */
 @Controller
@@ -44,11 +47,6 @@ public class DiscussWebSocketController {
     private final MessageUseCase messageUseCase;
     private final IWebSocketHubPort webSocketHubPort;
 
-    /**
-     * Handle sending a new message via WebSocket
-     * Client sends to: /app/channels/{channelId}/message
-     * Errors are sent back to /user/queue/events with ERROR event type
-     */
     @MessageMapping("/channels/{channelId}/message")
     public void handleMessage(
             @DestinationVariable Long channelId,
@@ -84,10 +82,6 @@ public class DiscussWebSocketController {
         }
     }
 
-    /**
-     * Handle typing indicator via WebSocket
-     * Client sends to: /app/channels/{channelId}/typing
-     */
     @MessageMapping("/channels/{channelId}/typing")
     public void handleTyping(
             @DestinationVariable Long channelId,
@@ -110,10 +104,6 @@ public class DiscussWebSocketController {
         }
     }
 
-    /**
-     * Handle mark as read via WebSocket
-     * Client sends to: /app/channels/{channelId}/read
-     */
     @MessageMapping("/channels/{channelId}/read")
     public void handleMarkAsRead(
             @DestinationVariable Long channelId,
@@ -139,10 +129,6 @@ public class DiscussWebSocketController {
         }
     }
 
-    /**
-     * Send error event to user's personal events queue as a WsEvent with ERROR type.
-     * Client receives errors on the same /user/queue/events destination.
-     */
     private void sendErrorToUser(Principal principal, String code, String message, Long channelId) {
         if (principal == null) {
             log.warn("Cannot send error to user: principal is null");

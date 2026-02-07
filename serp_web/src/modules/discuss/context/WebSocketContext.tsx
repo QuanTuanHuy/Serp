@@ -6,6 +6,7 @@ Description: Part of Serp Project - WebSocket Context for Discuss module
 'use client';
 
 import React, { createContext, useContext, ReactNode } from 'react';
+import type { Message } from '../types';
 
 // WebSocket API interface
 export interface WebSocketAPI {
@@ -13,6 +14,15 @@ export interface WebSocketAPI {
   sendMessage: (content: string, parentId?: string) => void;
   sendTypingIndicator: (isTyping: boolean) => void;
   markAsRead: (messageId: string) => void;
+  // Setter functions for ChatWindow to register channel-specific behavior
+  setActiveChannel: (channelId: string | undefined) => void;
+  setOnMessage: (cb: ((msg: Message) => void) | undefined) => void;
+  setOnTypingUpdate: (
+    cb:
+      | ((userId: string, userName: string, isTyping: boolean) => void)
+      | undefined
+  ) => void;
+  setOnError: (cb: ((error: any) => void) | undefined) => void;
 }
 
 const WebSocketContext = createContext<WebSocketAPI | null>(null);

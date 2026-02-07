@@ -39,8 +39,7 @@ import { OnlineStatusIndicator } from './OnlineStatusIndicator';
 import { SearchDialog } from './SearchDialog';
 import { ChannelMembersPanel } from './ChannelMembersPanel';
 import { ScrollToBottomButton } from './ScrollToBottomButton';
-import { useDiscussWebSocket } from '../hooks/useDiscussWebSocket';
-import { useWebSocketOptional } from '../context/WebSocketContext';
+import { useWebSocket } from '../context/WebSocketContext';
 import {
   useGetMessagesQuery,
   useLazyGetMessagesBeforeQuery,
@@ -50,12 +49,16 @@ import {
   useDeleteMessageMutation,
   useAddReactionMutation,
   useRemoveReactionMutation,
+  useGetChannelPresenceQuery,
 } from '../api/discussApi';
 import type { Channel, Message, Attachment } from '../types';
+import type { UserStatus } from '../api/presence.api';
 
 interface ChatWindowProps {
   channel: Channel;
   currentUserId: string;
+  currentUserName?: string;
+  currentUserAvatarUrl?: string;
   className?: string;
 }
 
@@ -82,13 +85,17 @@ const getUserInitials = (name: string) => {
 export const ChatWindow: React.FC<ChatWindowProps> = ({
   channel,
   currentUserId,
+  currentUserName,
+  currentUserAvatarUrl,
   className,
 }) => {
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [membersPanelOpen, setMembersPanelOpen] = useState(false);
-  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const [typingUsers, setTypingUsers] = useState<Map<string, string>>(
+    new Map()
+  );
   const messageListRef = useRef<MessageListRef>(null);
 
   // Cursor-based pagination state
@@ -103,6 +110,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   // Refs for stable references in callbacks
   const isNearBottomRef = useRef(true);
   const isInitialLoadRef = useRef(true);
+  const prevChannelIdRef = useRef(channel.id);
+  const typingTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Initial load - always page 1 for latest messages
   const {
@@ -120,6 +129,23 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   const isLoading = isInitialLoading || isLoadingMore;
 
+  // Presence query for channel
+  const { data: presenceData } = useGetChannelPresenceQuery(channel.id);
+
+  // Helper: map backend UserStatus to FE OnlineStatus
+  const mapUserStatus = (status: UserStatus): 'online' | 'busy' | 'offline' => {
+    switch (status) {
+      case 'ONLINE':
+        return 'online';
+      case 'BUSY':
+        return 'busy';
+      case 'OFFLINE':
+        return 'offline';
+      default:
+        return 'offline';
+    }
+  };
+
   // Send message mutations
   const [sendMessage] = useSendMessageMutation();
   const [sendMessageWithFiles] = useSendMessageWithFilesMutation();
@@ -128,33 +154,72 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [addReaction] = useAddReactionMutation();
   const [removeReaction] = useRemoveReactionMutation();
 
-  // Get WebSocket API (optional)
-  const wsApi = useWebSocketOptional();
+  // Get WebSocket API from context (single connection managed by page.tsx)
+  const wsApi = useWebSocket();
 
-  // Populate allMessages from initial load
+  // Unified effect: handles both channel changes and RTK cache updates
+  // Combines the old channel-change reset and messagesResponse sync to avoid
+  // the flash of "No messages yet" when switching channels.
   useEffect(() => {
+    const isChannelChange = prevChannelIdRef.current !== channel.id;
+    prevChannelIdRef.current = channel.id;
+
+    if (isChannelChange) {
+      // Reset pagination/UI state on channel change
+      setHasMoreMessages(true);
+      setUnreadCount(0);
+      setLastReadMessageId(null);
+      setIsNearBottom(true);
+      isInitialLoadRef.current = true;
+    }
+
     if (messagesResponse?.data?.items) {
-      console.log('[ChatWindow] Initial messages loaded:', {
-        count: messagesResponse.data.items.length,
-        hasNext: messagesResponse.data.hasNext,
-        totalPages: messagesResponse.data.totalPages,
-        page: messagesResponse.data.page,
-      });
-      setAllMessages(messagesResponse.data.items);
+      if (isChannelChange || isInitialLoadRef.current) {
+        // Channel change or initial load: replace all messages with cached/fetched data
+        setAllMessages(messagesResponse.data.items);
+      } else {
+        // RTK cache update (refetch from invalidation): merge strategy
+        // Keeps WS-added messages and load-more messages that aren't in the refetched page
+        setAllMessages((prev) => {
+          const responseItems = messagesResponse.data.items;
+          const responseIds = new Set(responseItems.map((m: Message) => m.id));
+
+          const latestResponseTime =
+            responseItems.length > 0
+              ? Math.max(
+                  ...responseItems.map((m: Message) =>
+                    new Date(m.createdAt).getTime()
+                  )
+                )
+              : 0;
+
+          // Keep messages not in the response
+          const keptMessages = prev.filter((m) => !responseIds.has(m.id));
+
+          // Older messages (loaded via load-more) stay before response items
+          const olderMessages = keptMessages.filter(
+            (m) =>
+              !m.id.startsWith('temp-') &&
+              new Date(m.createdAt).getTime() <= latestResponseTime
+          );
+
+          // Newer messages (WS-added or temp/optimistic) stay after response items
+          const newerMessages = keptMessages.filter(
+            (m) =>
+              m.id.startsWith('temp-') ||
+              new Date(m.createdAt).getTime() > latestResponseTime
+          );
+
+          return [...olderMessages, ...responseItems, ...newerMessages];
+        });
+      }
       setHasMoreMessages(messagesResponse.data.hasNext);
       isInitialLoadRef.current = false;
+    } else if (isChannelChange) {
+      // Channel changed but no cached data yet (loading state)
+      setAllMessages([]);
     }
-  }, [messagesResponse]);
-
-  // Reset state on channel change
-  useEffect(() => {
-    setAllMessages([]);
-    setHasMoreMessages(true);
-    setUnreadCount(0);
-    setLastReadMessageId(null);
-    setIsNearBottom(true);
-    isInitialLoadRef.current = true;
-  }, [channel.id]);
+  }, [channel.id, messagesResponse]);
 
   // Sync isNearBottom to ref
   useEffect(() => {
@@ -166,24 +231,41 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   }, [isNearBottom]);
 
-  // WebSocket connection for real-time updates
-  const { isConnected, sendTypingIndicator } = useDiscussWebSocket({
-    channelId: channel.id,
-    onMessage: (message) => {
+  // Register active channel with WebSocket context
+  useEffect(() => {
+    wsApi.setActiveChannel(channel.id);
+    return () => wsApi.setActiveChannel(undefined);
+  }, [channel.id, wsApi]);
+
+  // Register onMessage callback for real-time message handling
+  useEffect(() => {
+    wsApi.setOnMessage((message) => {
       console.log('[ChatWindow] Received real-time message:', message);
 
-      // Deduplicate and append new message
       setAllMessages((prev) => {
-        // Check if message already exists (prevents duplicates)
+        // Check if this message matches an optimistic temp message
+        const tempIndex = prev.findIndex(
+          (m) =>
+            m.id.startsWith('temp-') &&
+            m.senderId === message.senderId &&
+            m.content === message.content
+        );
+
+        if (tempIndex !== -1) {
+          // Replace temp with real message from server
+          const updated = [...prev];
+          updated[tempIndex] = message;
+          return updated;
+        }
+
+        // Normal duplicate check
         if (prev.some((m) => m.id === message.id)) {
           console.log('[ChatWindow] Duplicate message ignored:', message.id);
           return prev;
         }
 
-        // Track unread if user scrolled away from bottom
         if (!isNearBottomRef.current) {
           setUnreadCount((count) => count + 1);
-          // Mark position of last read message for separator
           if (prev.length > 0) {
             setLastReadMessageId(
               (current) => current || prev[prev.length - 1].id
@@ -191,23 +273,60 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           }
         }
 
-        // Append new message to end (newest at bottom)
         return [...prev, message];
       });
-    },
-    onTypingUpdate: (userId, isTyping) => {
-      console.log('[ChatWindow] Typing update:', userId, isTyping);
-      setTypingUsers((prev) => {
-        const updated = new Set(prev);
-        if (isTyping) {
-          updated.add(userId);
-        } else {
+    });
+    return () => wsApi.setOnMessage(undefined);
+  }, [wsApi]);
+
+  // Register onTypingUpdate callback for typing indicators
+  useEffect(() => {
+    wsApi.setOnTypingUpdate((userId, userName, isTyping) => {
+      // Don't show typing indicator for the current user
+      if (userId === currentUserId) return;
+
+      console.log('[ChatWindow] Typing update:', userId, userName, isTyping);
+
+      // Clear any existing timeout for this user
+      const existingTimeout = typingTimeoutsRef.current.get(userId);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+        typingTimeoutsRef.current.delete(userId);
+      }
+
+      if (isTyping) {
+        setTypingUsers((prev) => {
+          const updated = new Map(prev);
+          updated.set(userId, userName);
+          return updated;
+        });
+
+        // Auto-clear after 5 seconds if no new TYPING_START
+        const timeout = setTimeout(() => {
+          setTypingUsers((prev) => {
+            const updated = new Map(prev);
+            updated.delete(userId);
+            return updated;
+          });
+          typingTimeoutsRef.current.delete(userId);
+        }, 5000);
+        typingTimeoutsRef.current.set(userId, timeout);
+      } else {
+        setTypingUsers((prev) => {
+          const updated = new Map(prev);
           updated.delete(userId);
-        }
-        return updated;
-      });
-    },
-  });
+          return updated;
+        });
+      }
+    });
+
+    return () => {
+      wsApi.setOnTypingUpdate(undefined);
+      // Clear all timeouts on cleanup
+      typingTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
+      typingTimeoutsRef.current.clear();
+    };
+  }, [wsApi, currentUserId]);
 
   const messages = allMessages;
   const hasMore = hasMoreMessages;
@@ -248,6 +367,36 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           if (wsApi?.isConnected) {
             console.log('[ChatWindow] Using WebSocket to send message');
             wsApi.sendMessage(content, replyingTo?.id);
+
+            // Optimistic update: add temp message so sender sees it immediately
+            const now = new Date().toISOString();
+            const tempMessage: Message = {
+              id: `temp-${Date.now()}`,
+              channelId: channel.id,
+              senderId: currentUserId,
+              tenantId: '',
+              content,
+              messageType: 'STANDARD',
+              type: 'TEXT',
+              parentId: replyingTo?.id,
+              threadCount: 0,
+              mentions: [],
+              reactions: [],
+              attachments: [],
+              isEdited: false,
+              isDeleted: false,
+              readCount: 0,
+              isSentByMe: true,
+              sender: {
+                id: currentUserId,
+                name: currentUserName || '',
+                email: '',
+                avatarUrl: currentUserAvatarUrl,
+              },
+              createdAt: now,
+              updatedAt: now,
+            };
+            setAllMessages((prev) => [...prev, tempMessage]);
           } else {
             console.log('[ChatWindow] WebSocket not connected, using REST');
             await sendMessage({
@@ -272,6 +421,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       replyingTo,
       wsApi?.isConnected,
       currentUserId,
+      currentUserName,
+      currentUserAvatarUrl,
       editMessage,
       sendMessageWithFiles,
       sendMessage,
@@ -486,16 +637,51 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               </div>
               <div className='flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400'>
                 {channel.type === 'DIRECT' ? (
-                  <span className='flex items-center gap-1.5'>
-                    <OnlineStatusIndicator status='online' size='sm' />
-                    <span className='text-emerald-600 dark:text-emerald-400 font-medium'>
-                      Online
-                    </span>
-                  </span>
+                  (() => {
+                    // Find the other user's presence from channel presence data
+                    const presence = presenceData?.data;
+                    const allUsers = presence?.statusGroups
+                      ? Object.values(presence.statusGroups).flat()
+                      : [];
+                    const otherUser = allUsers.find(
+                      (u) => String(u.userId) !== currentUserId
+                    );
+                    const status = otherUser
+                      ? mapUserStatus(otherUser.status)
+                      : 'offline';
+                    const statusText = otherUser?.isOnline
+                      ? status === 'busy'
+                        ? 'Busy'
+                        : 'Online'
+                      : otherUser?.lastSeenText || 'Offline';
+
+                    return (
+                      <span className='flex items-center gap-1.5'>
+                        <OnlineStatusIndicator status={status} size='sm' />
+                        <span
+                          className={cn(
+                            'font-medium',
+                            status === 'online'
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : status === 'busy'
+                                ? 'text-amber-600 dark:text-amber-400'
+                                : 'text-slate-500 dark:text-slate-400'
+                          )}
+                        >
+                          {statusText}
+                        </span>
+                      </span>
+                    );
+                  })()
                 ) : (
                   <>
                     <Users className='h-3.5 w-3.5' />
-                    <span>{channel.memberCount} members</span>
+                    <span>
+                      {presenceData?.data?.onlineCount != null
+                        ? `${presenceData.data.onlineCount} online · `
+                        : ''}
+                      {channel.memberCount} members
+                    </span>
                   </>
                 )}
                 {channel.description && (
@@ -560,13 +746,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           </div>
         </div>
 
-        {/* Typing indicator */}
-        {/* TODO: Implement real-time typing indicator */}
-        {false && (
-          <div className='mt-2 text-xs text-slate-500 dark:text-slate-400 italic'>
-            <span className='font-semibold'>John Doe</span> is typing...
-          </div>
-        )}
+        {/* Typing indicator - removed from header, now above input */}
       </div>
 
       {/* Messages */}
@@ -595,6 +775,37 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         />
       </div>
 
+      {/* Typing indicator - positioned above input */}
+      {typingUsers.size > 0 && (
+        <div className='flex-shrink-0 px-6 py-1.5 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800'>
+          <div className='flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400'>
+            <span className='flex gap-0.5'>
+              <span
+                className='w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce'
+                style={{ animationDelay: '0ms' }}
+              />
+              <span
+                className='w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce'
+                style={{ animationDelay: '150ms' }}
+              />
+              <span
+                className='w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce'
+                style={{ animationDelay: '300ms' }}
+              />
+            </span>
+            <span className='italic'>
+              {(() => {
+                const names = Array.from(typingUsers.values());
+                if (names.length === 1) return `${names[0]} is typing...`;
+                if (names.length === 2)
+                  return `${names[0]} and ${names[1]} are typing...`;
+                return 'Several people are typing...';
+              })()}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Input */}
       <div className='flex-shrink-0'>
         <MessageInput
@@ -605,6 +816,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           editingMessage={editingMessage}
           onCancelEdit={handleCancelEdit}
           placeholder={`Message ${channel.type === 'DIRECT' ? channel.name : `#${channel.name}`}`}
+          onTypingStart={() => wsApi.sendTypingIndicator(true)}
+          onTypingStop={() => wsApi.sendTypingIndicator(false)}
         />
       </div>
 
