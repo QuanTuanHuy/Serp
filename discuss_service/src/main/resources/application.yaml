@@ -68,6 +68,7 @@ app:
     endpoint: /ws/discuss
     allowed-origins:
       - https://serp.texkis.com
+      - https://serp-soict.vercel.app
       - http://localhost:3000
 
   security:

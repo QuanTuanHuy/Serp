@@ -5,13 +5,14 @@ Description: Part of Serp Project - Discuss demo page for testing ChannelList si
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChannelList } from '@/modules/discuss/components/ChannelList';
 import { ChatWindow } from '@/modules/discuss/components/ChatWindow';
 import { WebSocketProvider } from '@/modules/discuss/context/WebSocketContext';
 import { useDiscussWebSocket } from '@/modules/discuss/hooks/useDiscussWebSocket';
 import type { Channel } from '@/modules/discuss/types';
 import { useAuth } from '@/modules/account';
+import { useUpdateMyPresenceMutation } from '@/modules/discuss/api/discussApi';
 
 function DiscussContent() {
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
@@ -19,10 +20,26 @@ function DiscussContent() {
   const { user } = useAuth();
   const currentUserId = String(user?.id) || '';
 
-  // Initialize WebSocket with current channel
-  const wsApi = useDiscussWebSocket({
-    channelId: selectedChannel?.id,
-  });
+  // Initialize WebSocket - single connection for all channels
+  const wsApi = useDiscussWebSocket();
+
+  // Presence: mark user as ONLINE on mount and when tab becomes visible
+  const [updateMyPresence] = useUpdateMyPresenceMutation();
+
+  useEffect(() => {
+    updateMyPresence({ status: 'ONLINE' });
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        updateMyPresence({ status: 'ONLINE' });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [updateMyPresence]);
 
   const handleChannelSelect = (channel: Channel) => {
     setSelectedChannel(channel);
@@ -46,6 +63,8 @@ function DiscussContent() {
             <ChatWindow
               channel={selectedChannel}
               currentUserId={currentUserId}
+              currentUserName={user?.fullName}
+              currentUserAvatarUrl={user?.avatarUrl}
               className='w-full h-full'
             />
           ) : (

@@ -43,6 +43,8 @@ interface MessageInputProps {
   onCancelReply?: () => void;
   editingMessage?: Message | null;
   onCancelEdit?: () => void;
+  onTypingStart?: () => void;
+  onTypingStop?: () => void;
   placeholder?: string;
   className?: string;
 }
@@ -54,6 +56,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   onCancelReply,
   editingMessage,
   onCancelEdit,
+  onTypingStart,
+  onTypingStop,
   placeholder = 'Type a message...',
   className,
 }) => {
@@ -66,6 +70,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
+  const isTypingRef = useRef(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Update content when editing message changes
   React.useEffect(() => {
@@ -75,9 +81,31 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     }
   }, [editingMessage]);
 
+  // Cleanup typing timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      if (isTypingRef.current) {
+        onTypingStop?.();
+      }
+    };
+  }, [onTypingStop]);
+
   const handleSend = () => {
     const trimmedContent = content.trim();
     if (!trimmedContent && files.length === 0) return;
+
+    // Stop typing indicator on send
+    if (isTypingRef.current) {
+      isTypingRef.current = false;
+      onTypingStop?.();
+    }
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
 
     // Send message (will call sendMessage or sendMessageWithFiles depending on files)
     onSendMessage(trimmedContent, files as any); // Pass files instead of attachments
@@ -175,6 +203,35 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     // Auto-resize textarea
     e.target.style.height = 'auto';
     e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
+
+    // Typing indicator logic
+    if (e.target.value.trim().length > 0) {
+      // Start typing if not already typing
+      if (!isTypingRef.current) {
+        isTypingRef.current = true;
+        onTypingStart?.();
+      }
+
+      // Reset the idle timeout (stop typing after 3s of inactivity)
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      typingTimeoutRef.current = setTimeout(() => {
+        isTypingRef.current = false;
+        onTypingStop?.();
+        typingTimeoutRef.current = null;
+      }, 3000);
+    } else {
+      // Content cleared - stop typing
+      if (isTypingRef.current) {
+        isTypingRef.current = false;
+        onTypingStop?.();
+      }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+    }
   };
 
   const insertFormatting = (prefix: string, suffix: string = '') => {

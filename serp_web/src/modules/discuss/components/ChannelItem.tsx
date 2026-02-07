@@ -15,6 +15,7 @@ import {
 } from '@/shared/components/ui';
 import { Hash, Users, Lock } from 'lucide-react';
 import type { Channel, ChannelType } from '../types';
+import { useGetChannelPresenceQuery } from '../api/discussApi';
 
 interface ChannelItemProps {
   channel: Channel;
@@ -71,6 +72,16 @@ export const ChannelItem: React.FC<ChannelItemProps> = ({
   const showAvatar = channel.type === 'DIRECT' || channel.avatarUrl;
   const icon = showAvatar ? null : getChannelIcon(channel.type);
 
+  // Query presence for DIRECT channels to show online indicator
+  const { data: presenceData } = useGetChannelPresenceQuery(channel.id, {
+    skip: channel.type !== 'DIRECT',
+  });
+
+  const isDmOnline =
+    channel.type === 'DIRECT' &&
+    presenceData?.data?.onlineCount != null &&
+    presenceData.data.onlineCount > 1; // >1 means the other user is also online
+
   return (
     <button
       onClick={() => onClick(channel)}
@@ -109,6 +120,13 @@ export const ChannelItem: React.FC<ChannelItemProps> = ({
         {/* Unread indicator dot */}
         {channel.unreadCount > 0 && (
           <div className='absolute -top-0.5 -right-0.5 h-3 w-3 bg-gradient-to-br from-rose-500 to-pink-500 rounded-full ring-2 ring-white dark:ring-slate-900 animate-pulse' />
+        )}
+
+        {/* Online indicator for DIRECT channels */}
+        {isDmOnline && channel.unreadCount === 0 && (
+          <div className='absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center'>
+            <div className='h-2.5 w-2.5 bg-emerald-500 rounded-full' />
+          </div>
         )}
       </div>
 
