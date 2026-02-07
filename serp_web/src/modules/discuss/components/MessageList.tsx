@@ -509,6 +509,7 @@ export const MessageList = forwardRef<MessageListRef, MessageListProps>(
                       <MessageItem
                         message={message}
                         isOwn={isOwn}
+                        currentUserId={currentUserId}
                         isGrouped={isGrouped}
                         showAvatar={!isGrouped || isOwn}
                         onEdit={onEditMessage}

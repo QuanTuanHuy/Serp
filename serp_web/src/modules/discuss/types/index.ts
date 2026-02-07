@@ -349,13 +349,29 @@ export const transformReactionsToBackend = (
 };
 
 /**
- * Transform backend Map<String, List<Long>> to frontend MessageReaction[]
+ * Transform backend reactions to frontend MessageReaction[]
+ * Backend now sends: Array<{emoji: string, userIds: number[], count: number}>
+ * Legacy format: Record<string, number[]> (map of emoji -> userIds)
  */
 export const transformReactionsFromBackend = (
-  reactions: Record<string, number[]> | null | undefined
+  reactions:
+    | Array<{ emoji: string; userIds: number[]; count: number }>
+    | Record<string, number[]>
+    | null
+    | undefined
 ): MessageReaction[] => {
   if (!reactions) return [];
 
+  // Backend now sends array format: [{emoji: "👍", userIds: [1,2], count: 2}]
+  if (Array.isArray(reactions)) {
+    return reactions.map((reaction) => ({
+      emoji: reaction.emoji,
+      userIds: reaction.userIds.map(String),
+      count: reaction.count,
+    }));
+  }
+
+  // Legacy: Old object format {emoji: [userId1, userId2]}
   return Object.entries(reactions).map(([emoji, userIds]) => ({
     emoji,
     userIds: Array.isArray(userIds) ? userIds.map(String) : [],

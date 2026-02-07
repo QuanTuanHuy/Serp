@@ -291,7 +291,7 @@ export const messageApi = api.injectEndpoints({
       query: ({ channelId, messageId, emoji }) => ({
         url: `/channels/${channelId}/messages/${messageId}/reactions`,
         method: 'DELETE',
-        params: { emoji },
+        params: { emoji: encodeURIComponent(emoji) },
       }),
       extraOptions: { service: 'discuss' },
       invalidatesTags: (result, error, { channelId }) => [

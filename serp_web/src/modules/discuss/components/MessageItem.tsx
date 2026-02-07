@@ -21,6 +21,7 @@ import { AttachmentPreview } from './AttachmentPreview';
 interface MessageItemProps {
   message: Message;
   isOwn: boolean;
+  currentUserId: string;
   showAvatar?: boolean;
   isGrouped?: boolean;
   onEdit?: (message: Message) => void;
@@ -51,6 +52,7 @@ const getUserInitials = (name: string) => {
 export const MessageItem: React.FC<MessageItemProps> = ({
   message,
   isOwn,
+  currentUserId,
   showAvatar = true,
   isGrouped = false,
   onEdit,
@@ -64,7 +66,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   const handleReactionClick = (emoji: string) => {
     // Check if user already reacted with this emoji
     const existingReaction = message.reactions.find((r) => r.emoji === emoji);
-    const currentUserId = '1'; // TODO: Get from auth context
 
     if (existingReaction?.userIds.includes(currentUserId)) {
       onRemoveReaction?.(message.id, emoji);
@@ -215,13 +216,12 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           {/* Reactions */}
           {message.reactions && message.reactions.length > 0 && (
             <div className='absolute -bottom-3 left-4 flex flex-row items-center gap-1 min-w-max'>
-              {message.reactions.map((reaction, idx) => {
-                const currentUserId = '1'; // TODO: Get from auth context
+              {message.reactions.map((reaction) => {
                 const isUserReacted = reaction.userIds.includes(currentUserId);
 
                 return (
                   <button
-                    key={idx}
+                    key={reaction.emoji}
                     onClick={() => handleReactionClick(reaction.emoji)}
                     className={cn(
                       'h-6 px-2 text-xs rounded-full transition-all duration-200',
