@@ -1,7 +1,7 @@
 /*
 Author: QuanTuanHuy
 Description: Part of Serp Project - WebSocket hook for real-time discuss functionality
-Optimized: Direct cache updates instead of invalidation for better performance
+Architecture: Single subscription to /user/queue/events with server-side fan-out
 */
 
 'use client';
@@ -12,16 +12,8 @@ import { useAppSelector, useAppDispatch } from '@/lib/store/hooks';
 import { toast } from 'sonner';
 import { messageApi } from '../api/messages.api';
 import { discussApi } from '../api/discussApi';
-import type { Message, MessageReaction } from '../types';
+import type { Message, MessageReaction, WsEvent } from '../types';
 import { transformMessage } from '../api/transformers';
-
-interface UseDiscussWebSocketOptions {
-  channelId?: string;
-  onMessage?: (message: Message) => void;
-  onTypingUpdate?: (userId: string, isTyping: boolean) => void;
-  onUserStatusUpdate?: (userId: string, isOnline: boolean) => void;
-  onError?: (error: any) => void;
-}
 
 // Helper to find cache entries for a channel - matches the one in messages.api.ts
 const findMessagesCacheEntry = (
@@ -31,7 +23,6 @@ const findMessagesCacheEntry = (
   const queries = state.api?.queries;
   if (!queries) return undefined;
 
-  // Normalize channelId to string to match RTK Query cache format
   const normalizedChannelId = String(channelId);
 
   for (const key of Object.keys(queries)) {
@@ -48,185 +39,86 @@ const findMessagesCacheEntry = (
   return undefined;
 };
 
-export const useDiscussWebSocket = (
-  options: UseDiscussWebSocketOptions = {}
-) => {
-  const { channelId, onMessage, onTypingUpdate, onUserStatusUpdate, onError } =
-    options;
-
+export const useDiscussWebSocket = () => {
   const dispatch = useAppDispatch();
   const clientRef = useRef<Client | null>(null);
   const subscriptionRef = useRef<StompSubscription | null>(null);
-  const errorSubscriptionRef = useRef<StompSubscription | null>(null);
 
-  // Use state for isConnected to make it reactive
   const [isConnected, setIsConnected] = useState(false);
 
-  // Use refs for callbacks to avoid re-subscriptions
-  const onMessageRef = useRef(onMessage);
-  const onTypingUpdateRef = useRef(onTypingUpdate);
-  const onUserStatusUpdateRef = useRef(onUserStatusUpdate);
-  const onErrorRef = useRef(onError);
+  // Channel and callback refs - updated via setter functions
+  const channelIdRef = useRef<string | undefined>(undefined);
+  const onMessageRef = useRef<((msg: Message) => void) | undefined>(undefined);
+  const onTypingUpdateRef = useRef<
+    ((userId: string, userName: string, isTyping: boolean) => void) | undefined
+  >(undefined);
+  const onUserStatusUpdateRef = useRef<
+    ((userId: string, isOnline: boolean) => void) | undefined
+  >(undefined);
+  const onErrorRef = useRef<((error: any) => void) | undefined>(undefined);
 
-  useEffect(() => {
-    onMessageRef.current = onMessage;
-    onTypingUpdateRef.current = onTypingUpdate;
-    onUserStatusUpdateRef.current = onUserStatusUpdate;
-    onErrorRef.current = onError;
-  }, [onMessage, onTypingUpdate, onUserStatusUpdate, onError]);
+  // Setter functions for ChatWindow to register channel-specific behavior
+  const setActiveChannel = useCallback((channelId: string | undefined) => {
+    channelIdRef.current = channelId;
+  }, []);
+
+  const setOnMessage = useCallback(
+    (cb: ((msg: Message) => void) | undefined) => {
+      onMessageRef.current = cb;
+    },
+    []
+  );
+
+  const setOnTypingUpdate = useCallback(
+    (
+      cb:
+        | ((userId: string, userName: string, isTyping: boolean) => void)
+        | undefined
+    ) => {
+      onTypingUpdateRef.current = cb;
+    },
+    []
+  );
+
+  const setOnError = useCallback((cb: ((error: any) => void) | undefined) => {
+    onErrorRef.current = cb;
+  }, []);
 
   const token = useAppSelector((state) => state.account.auth?.token);
   const wsUrl =
     (process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/ws') + '/discuss';
 
-  // Connect to WebSocket server
+  // Event handler - uses refs to avoid stale closures
+  const handleEventRef = useRef<(event: WsEvent) => void>(() => {});
+
+  // Keep handleEvent updated with latest dispatch
   useEffect(() => {
-    if (!token) {
-      console.warn('[WebSocket] No auth token available, skipping connection');
-      return;
-    }
+    handleEventRef.current = (event: WsEvent) => {
+      const { type, payload: data } = event;
 
-    console.log('[WebSocket] Connecting to', wsUrl);
-
-    const client = new Client({
-      brokerURL: wsUrl,
-      connectHeaders: {
-        Authorization: `Bearer ${token}`,
-      },
-      debug: (str) => {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[STOMP]', str);
-        }
-      },
-      reconnectDelay: 5000,
-      heartbeatIncoming: 10000,
-      heartbeatOutgoing: 10000,
-    });
-
-    client.onConnect = () => {
-      console.log('[WebSocket] ✅ Connected successfully');
-      clientRef.current = client;
-      setIsConnected(true); // Update reactive state
-
-      // Subscribe to personal error queue
-      try {
-        const errorSub = client.subscribe(
-          '/user/queue/errors',
-          (message: IMessage) => {
-            try {
-              const error = JSON.parse(message.body);
-              console.error('[WebSocket] Received error:', error);
-
-              // Show error toast
-              toast.error(error.message || 'Failed to send message');
-
-              // Trigger callback if provided
-              if (onErrorRef.current) {
-                onErrorRef.current(error);
-              }
-            } catch (e) {
-              console.error('[WebSocket] Failed to parse error:', e);
-            }
-          }
-        );
-        errorSubscriptionRef.current = errorSub;
-        console.log('[WebSocket] Subscribed to error queue');
-      } catch (e) {
-        console.error('[WebSocket] Failed to subscribe to errors:', e);
-      }
-    };
-
-    client.onStompError = (frame) => {
-      console.error('[WebSocket] ❌ STOMP error:', frame.headers['message']);
-      console.error('[WebSocket] Error details:', frame.body);
-      setIsConnected(false); // Update on error
-    };
-
-    client.onWebSocketClose = () => {
-      console.log('[WebSocket] 🔌 Connection closed');
-      setIsConnected(false); // Update on close
-    };
-
-    client.onWebSocketError = (event) => {
-      console.error('[WebSocket] ❌ WebSocket error:', event);
-    };
-
-    client.activate();
-
-    return () => {
-      console.log('[WebSocket] Disconnecting...');
-      if (errorSubscriptionRef.current) {
-        errorSubscriptionRef.current.unsubscribe();
-        errorSubscriptionRef.current = null;
-      }
-      client.deactivate();
-      clientRef.current = null;
-    };
-  }, [token, wsUrl]);
-
-  // Subscribe to channel when channelId changes
-  useEffect(() => {
-    const client = clientRef.current;
-    if (!client || !client.connected || !channelId) {
-      return;
-    }
-
-    console.log('[WebSocket] Subscribing to channel', channelId);
-
-    // Subscribe to channel messages
-    const subscription = client.subscribe(
-      `/topic/channels/${channelId}`,
-      (message: IMessage) => {
-        try {
-          const payload = JSON.parse(message.body);
-          console.log('[WebSocket] Received message:', payload);
-
-          // Handle different message types
-          handleChannelMessage(payload);
-        } catch (error) {
-          console.error('[WebSocket] Failed to parse message:', error);
-        }
-      }
-    );
-
-    subscriptionRef.current = subscription;
-
-    return () => {
-      console.log('[WebSocket] Unsubscribing from channel', channelId);
-      subscription.unsubscribe();
-      subscriptionRef.current = null;
-    };
-  }, [channelId]); // Only depend on channelId - callbacks are in refs
-
-  // Handle incoming channel messages - Direct cache updates for better performance
-  const handleChannelMessage = useCallback(
-    (payload: any) => {
-      const { type, payload: data } = payload;
-
-      // Get current state to find cache entries - use a custom thunk to access getState
+      // Get current state for cache lookups
       let state: any;
-      dispatch((d, getState) => {
+      dispatch((_, getState) => {
         state = getState();
         return { type: 'NOOP' };
       });
 
+      const activeChannelId = channelIdRef.current;
+
       switch (type) {
         case 'MESSAGE_NEW': {
           console.log('[WebSocket] MESSAGE_NEW received:', data);
-          console.log('[WebSocket] Message object:', data.message);
 
           if (!data.message) {
             console.error('[WebSocket] MESSAGE_NEW missing message object');
             break;
           }
 
+          // RTK Query cache update - applies to any channel
           const cacheInfo = findMessagesCacheEntry(state, data.channelId);
 
           if (cacheInfo) {
-            // Transform and add message directly to cache
             const transformedMessage = transformMessage(data.message);
-
-            // Normalize channelId to string for RTK Query cache key
             const normalizedChannelId = String(data.channelId);
 
             dispatch(
@@ -234,7 +126,6 @@ export const useDiscussWebSocket = (
                 'getMessages',
                 { channelId: normalizedChannelId, pagination: cacheInfo },
                 (draft) => {
-                  // Avoid duplicates - check if message already exists
                   const exists = draft.data?.items?.some(
                     (m) => m.id === transformedMessage.id
                   );
@@ -244,14 +135,9 @@ export const useDiscussWebSocket = (
                 }
               )
             );
-          } else {
-            console.warn(
-              '[WebSocket] No cache entry found for channel:',
-              data.channelId
-            );
           }
 
-          // Still update channel list for last message preview
+          // Invalidate channel list for last message preview
           dispatch(
             discussApi.util.invalidateTags([
               { type: 'Channel', id: data.channelId },
@@ -259,7 +145,12 @@ export const useDiscussWebSocket = (
             ])
           );
 
-          if (onMessageRef.current) {
+          // Callback only for the active channel
+          if (
+            activeChannelId &&
+            String(data.channelId) === activeChannelId &&
+            onMessageRef.current
+          ) {
             onMessageRef.current(transformMessage(data.message));
           }
           break;
@@ -292,7 +183,6 @@ export const useDiscussWebSocket = (
                     message.isEdited = true;
                     message.editedAt =
                       data.message.editedAt || new Date().toISOString();
-                    console.log('[WebSocket] Updated message in cache');
                   }
                 }
               )
@@ -325,16 +215,12 @@ export const useDiscussWebSocket = (
                     message.isDeleted = true;
                     message.content = 'This message was deleted';
                     message.deletedAt = new Date().toISOString();
-                    console.log(
-                      '[WebSocket] Marked message as deleted in cache'
-                    );
                   }
                 }
               )
             );
           }
 
-          // Update channel for last message preview
           dispatch(
             discussApi.util.invalidateTags([
               { type: 'Channel', id: data.channelId },
@@ -422,23 +308,56 @@ export const useDiscussWebSocket = (
           break;
         }
 
-        case 'TYPING_INDICATOR':
-          console.log('[WebSocket] Typing indicator:', data);
-          if (onTypingUpdateRef.current) {
-            onTypingUpdateRef.current(data.userId, data.isTyping);
+        case 'TYPING_START':
+        case 'TYPING_STOP': {
+          console.log('[WebSocket] Typing event:', type, data);
+          // Only notify for the active channel
+          if (
+            activeChannelId &&
+            String(data.channelId) === activeChannelId &&
+            onTypingUpdateRef.current
+          ) {
+            onTypingUpdateRef.current(
+              String(data.userId),
+              String(data.userName || ''),
+              type === 'TYPING_START'
+            );
           }
           break;
+        }
 
         case 'USER_ONLINE':
-        case 'USER_OFFLINE':
-          console.log('[WebSocket] User status update:', data);
+        case 'USER_OFFLINE': {
+          console.log('[WebSocket] User status update:', type, data);
           if (onUserStatusUpdateRef.current) {
-            onUserStatusUpdateRef.current(data.userId, type === 'USER_ONLINE');
+            onUserStatusUpdateRef.current(
+              String(data.userId),
+              type === 'USER_ONLINE'
+            );
           }
           dispatch(discussApi.util.invalidateTags(['Presence']));
           break;
+        }
 
-        case 'CHANNEL_UPDATED':
+        case 'USER_PRESENCE_CHANGED': {
+          console.log('[WebSocket] User presence changed:', data);
+          if (onUserStatusUpdateRef.current) {
+            onUserStatusUpdateRef.current(String(data.userId), data.online);
+          }
+          dispatch(discussApi.util.invalidateTags(['Presence']));
+          break;
+        }
+
+        case 'CHANNEL_CREATED':
+        case 'CHANNEL_ARCHIVED': {
+          console.log('[WebSocket] Channel event:', type, data);
+          dispatch(
+            discussApi.util.invalidateTags([{ type: 'Channel', id: 'LIST' }])
+          );
+          break;
+        }
+
+        case 'CHANNEL_UPDATED': {
           console.log('[WebSocket] Channel updated:', data);
           dispatch(
             discussApi.util.invalidateTags([
@@ -447,108 +366,207 @@ export const useDiscussWebSocket = (
             ])
           );
           break;
+        }
 
-        case 'UNREAD_COUNT_UPDATED':
-          console.log('[WebSocket] Unread count updated:', data);
+        case 'MEMBER_JOINED':
+        case 'MEMBER_LEFT':
+        case 'MEMBER_REMOVED':
+        case 'MEMBER_ROLE_CHANGED': {
+          console.log('[WebSocket] Member event:', type, data);
           dispatch(
             discussApi.util.invalidateTags([
-              { type: 'Channel', id: data.channelId },
+              { type: 'Channel', id: String(data.channelId) },
             ])
           );
           break;
+        }
+
+        case 'MESSAGE_READ': {
+          console.log('[WebSocket] Message read:', data);
+          dispatch(
+            discussApi.util.invalidateTags([
+              { type: 'Channel', id: String(data.channelId) },
+            ])
+          );
+          break;
+        }
+
+        case 'ERROR': {
+          console.error('[WebSocket] Received error event:', data);
+          toast.error(data.message || 'An error occurred');
+          if (onErrorRef.current) {
+            onErrorRef.current(data);
+          }
+          break;
+        }
 
         default:
-          console.warn('[WebSocket] Unknown message type:', type);
+          console.warn('[WebSocket] Unknown event type:', type);
       }
-    },
-    [dispatch] // Remove callback dependencies
-  );
+    };
+  }, [dispatch]);
 
-  // Send typing indicator
-  const sendTypingIndicator = useCallback(
-    (isTyping: boolean) => {
-      const client = clientRef.current;
-      if (!client || !client.connected || !channelId) {
-        console.warn(
-          '[WebSocket] Cannot send typing indicator: not connected or no channel'
-        );
-        return;
-      }
+  // Connect to WebSocket server and subscribe to single event queue
+  useEffect(() => {
+    if (!token) {
+      console.warn('[WebSocket] No auth token available, skipping connection');
+      return;
+    }
 
+    console.log('[WebSocket] Connecting to', wsUrl);
+
+    const client = new Client({
+      brokerURL: wsUrl,
+      connectHeaders: {
+        Authorization: `Bearer ${token}`,
+      },
+      debug: (str) => {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[STOMP]', str);
+        }
+      },
+      reconnectDelay: 5000,
+      heartbeatIncoming: 10000,
+      heartbeatOutgoing: 10000,
+    });
+
+    client.onConnect = () => {
+      console.log('[WebSocket] Connected successfully');
+      clientRef.current = client;
+      setIsConnected(true);
+
+      // Single subscription to personal event queue
       try {
-        client.publish({
-          destination: `/app/channels/${channelId}/typing`,
-          body: JSON.stringify({ isTyping }),
-        });
-        console.log('[WebSocket] Sent typing indicator:', isTyping);
-      } catch (error) {
-        console.error('[WebSocket] Failed to send typing indicator:', error);
-      }
-    },
-    [channelId]
-  );
-
-  // Mark messages as read
-  const markAsRead = useCallback(
-    (messageId: string) => {
-      const client = clientRef.current;
-      if (!client || !client.connected || !channelId) {
-        console.warn(
-          '[WebSocket] Cannot mark as read: not connected or no channel'
+        const sub = client.subscribe(
+          '/user/queue/events',
+          (message: IMessage) => {
+            try {
+              const event: WsEvent = JSON.parse(message.body);
+              handleEventRef.current(event);
+            } catch (e) {
+              console.error('[WebSocket] Failed to parse event:', e);
+            }
+          }
         );
-        return;
+        subscriptionRef.current = sub;
+        console.log('[WebSocket] Subscribed to /user/queue/events');
+      } catch (e) {
+        console.error('[WebSocket] Failed to subscribe:', e);
       }
+    };
 
-      try {
-        client.publish({
-          destination: `/app/channels/${channelId}/read`,
-          body: JSON.stringify({ messageId }),
-        });
-        console.log('[WebSocket] Marked message as read:', messageId);
-      } catch (error) {
-        console.error('[WebSocket] Failed to mark as read:', error);
+    client.onStompError = (frame) => {
+      console.error('[WebSocket] STOMP error:', frame.headers['message']);
+      console.error('[WebSocket] Error details:', frame.body);
+      setIsConnected(false);
+    };
+
+    client.onWebSocketClose = () => {
+      console.log('[WebSocket] Connection closed');
+      setIsConnected(false);
+    };
+
+    client.onWebSocketError = (event) => {
+      console.error('[WebSocket] WebSocket error:', event);
+    };
+
+    client.activate();
+
+    return () => {
+      console.log('[WebSocket] Disconnecting...');
+      if (subscriptionRef.current) {
+        subscriptionRef.current.unsubscribe();
+        subscriptionRef.current = null;
       }
-    },
-    [channelId]
-  );
+      client.deactivate();
+      clientRef.current = null;
+    };
+  }, [token, wsUrl]);
 
-  // Send message via WebSocket (alternative to REST API)
-  const sendMessage = useCallback(
-    (content: string, parentId?: string) => {
-      const client = clientRef.current;
-      if (!client || !client.connected || !channelId) {
-        console.warn(
-          '[WebSocket] Cannot send message: not connected or no channel'
-        );
-        return;
-      }
+  // Send typing indicator to active channel
+  const sendTypingIndicator = useCallback((isTyping: boolean) => {
+    const client = clientRef.current;
+    const channelId = channelIdRef.current;
+    if (!client || !client.connected || !channelId) {
+      return;
+    }
 
-      try {
-        client.publish({
-          destination: `/app/channels/${channelId}/message`,
-          body: JSON.stringify({
-            content,
-            parentId,
-            type: 'STANDARD',
-          }),
-        });
-        console.log('[WebSocket] Sent message via WebSocket');
-      } catch (error) {
-        console.error('[WebSocket] Failed to send message:', error);
-      }
-    },
-    [channelId]
-  );
+    try {
+      client.publish({
+        destination: `/app/channels/${channelId}/typing`,
+        body: JSON.stringify({ isTyping }),
+      });
+    } catch (error) {
+      console.error('[WebSocket] Failed to send typing indicator:', error);
+    }
+  }, []);
 
-  // Return stable API object with reactive isConnected
+  // Mark messages as read in active channel
+  const markAsRead = useCallback((messageId: string) => {
+    const client = clientRef.current;
+    const channelId = channelIdRef.current;
+    if (!client || !client.connected || !channelId) {
+      return;
+    }
+
+    try {
+      client.publish({
+        destination: `/app/channels/${channelId}/read`,
+        body: JSON.stringify({ messageId }),
+      });
+    } catch (error) {
+      console.error('[WebSocket] Failed to mark as read:', error);
+    }
+  }, []);
+
+  // Send message via WebSocket to active channel
+  const sendMessage = useCallback((content: string, parentId?: string) => {
+    const client = clientRef.current;
+    const channelId = channelIdRef.current;
+    if (!client || !client.connected || !channelId) {
+      console.warn(
+        '[WebSocket] Cannot send message: not connected or no channel'
+      );
+      return;
+    }
+
+    try {
+      client.publish({
+        destination: `/app/channels/${channelId}/message`,
+        body: JSON.stringify({
+          content,
+          parentId,
+          type: 'STANDARD',
+        }),
+      });
+      console.log('[WebSocket] Sent message via WebSocket');
+    } catch (error) {
+      console.error('[WebSocket] Failed to send message:', error);
+    }
+  }, []);
+
+  // Return stable API object
   const api = useMemo(
     () => ({
       isConnected,
+      sendMessage,
       sendTypingIndicator,
       markAsRead,
-      sendMessage,
+      setActiveChannel,
+      setOnMessage,
+      setOnTypingUpdate,
+      setOnError,
     }),
-    [isConnected, sendTypingIndicator, markAsRead, sendMessage]
+    [
+      isConnected,
+      sendMessage,
+      sendTypingIndicator,
+      markAsRead,
+      setActiveChannel,
+      setOnMessage,
+      setOnTypingUpdate,
+      setOnError,
+    ]
   );
 
   return api;
