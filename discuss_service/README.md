@@ -1,50 +1,40 @@
 # SERP Discuss Service
 
-The **Discuss Service** is the real-time communication backbone of the SERP ERP system. It provides a robust platform for team collaboration, supporting channels, direct messaging, file sharing, and real-time presence features.
+Real-time team communication service for the SERP ERP system. Supports channels, direct messaging, file attachments, and presence tracking.
 
-## 🚀 Overview
+## Overview
 
-Built with **Java 21** and **Spring Boot 3.5**, this service implements **Clean Architecture** to ensure maintainability and scalability. It leverages **WebSocket (STOMP)** for instant message delivery and **Kafka** for asynchronous event processing.
+Built with **Java 21** (virtual threads) and **Spring Boot 3.5**, following **Clean Architecture** principles. Uses **WebSocket (STOMP)** with server-side fan-out for instant message delivery and **Kafka** for event processing.
 
 ### Key Features
 
-- **💬 Messaging**: Rich text messages, threading, emoji reactions, and read receipts.
-- **📢 Channels**:
-  - **Direct**: 1-on-1 private conversations.
-  - **Group**: Private or public groups for teams.
-  - **Topic**: Context-aware channels linked to specific ERP entities (e.g., "Task #123", "Project Alpha").
-- **⚡ Real-time**:
-  - Instant message delivery via WebSocket.
-  - User presence (Online/Offline) tracking.
-  - Live typing indicators.
-  - Unread message counters.
-- **📎 Attachments**:
-  - Secure file upload to S3-compatible storage (MinIO).
-  - Automatic presigned URL generation for secure, temporary access.
-  - Image thumbnail handling.
-- **🔍 Search**: Full-text search capabilities for messages and files.
+- **Messaging**: Rich text, threading, emoji reactions, read receipts, mentions
+- **Channels**: Direct (1-on-1), Group (teams), Topic (linked to ERP entities like Tasks/Projects)
+- **Real-time**: WebSocket delivery, typing indicators, presence (online/offline), unread counters
+- **Attachments**: S3/MinIO storage with presigned URLs, image thumbnails
+- **Search**: Full-text search for messages
 
-## 🛠️ Tech Stack
+## Tech Stack
 
-- **Language**: Java 21
-- **Framework**: Spring Boot 3.5
-- **Database**: PostgreSQL (with Flyway migrations)
-- **Caching**: Redis (Session storage, Presence, Pub/Sub)
-- **Messaging**: Kafka (Event sourcing, Notifications)
-- **Storage**: MinIO / S3 (File attachments)
-- **WebSocket**: Spring WebSocket (STOMP)
-- **Security**: OAuth2 / JWT (Keycloak integration)
+| Component | Technology |
+|-----------|------------|
+| Language | Java 21 (Virtual Threads) |
+| Framework | Spring Boot 3.5 |
+| Database | PostgreSQL + Flyway |
+| Cache | Redis |
+| Messaging | Kafka |
+| Storage | MinIO / S3 |
+| WebSocket | STOMP (server-side fan-out) |
+| Auth | Keycloak (OAuth2/JWT) |
 
-## 🏗️ Architecture
-
-The service follows strict **Clean Architecture** principles:
+## Architecture
 
 ```mermaid
 graph TD
-    UI[UI Layer<br>(Controllers, WebSocket)] --> UseCase[UseCase Layer<br>(Application Logic)]
-    UseCase --> Service[Service Layer<br>(Domain Logic)]
-    Service --> Port[Port Layer<br>(Interfaces)]
-    Port --> Infra[Infrastructure Layer<br>(Adapters)]
+    UI[UI Layer<br>Controllers, WebSocket] --> UseCase[UseCase Layer<br>Application Logic]
+    UseCase --> Service[Service Layer<br>Domain Logic]
+    Service --> Port[Port Layer<br>Interfaces]
+    Port --> Infra[Infrastructure Layer<br>Adapters]
     
     Infra --> DB[(PostgreSQL)]
     Infra --> Cache[(Redis)]
@@ -52,96 +42,140 @@ graph TD
     Infra --> S3((MinIO))
 ```
 
-- **Domain**: Pure business entities and rules.
-- **UseCase**: Orchestrates application flows (e.g., `MessageUseCase`, `ChannelUseCase`).
-- **Infrastructure**: Implementations for database, storage, and external services.
+### Message Flow (Server-side Fan-out)
 
-## ⚙️ Configuration
+```
+Client sends message -> REST/WebSocket -> MessageUseCase -> MessageService (DB persist)
+  -> Spring Event (AFTER_COMMIT) -> Kafka publish -> Kafka Consumer -> MessageNewHandler
+    -> WebSocketHubAdapter.fanOutToChannelMembers()
+      -> channelMemberService.getMemberIds() (from DB/cache)
+      -> presenceService.getOnlineUsers() (from Redis)
+      -> sendToUser(userId, event) for each online member
+```
 
-The service uses `application.yaml` for configuration. Key environment variables include:
+Clients subscribe to a **single personal queue**. Server handles all routing.
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SERVER_PORT` | Service port | `8085` |
-| `DB_HOST` | PostgreSQL host | `localhost` |
-| `DB_PORT` | PostgreSQL port | `5432` |
-| `REDIS_HOST` | Redis host | `localhost` |
-| `KAFKA_BOOTSTRAP_SERVERS` | Kafka brokers | `localhost:9092` |
-| `STORAGE_ENDPOINT` | MinIO/S3 API URL | `http://localhost:9000` |
-| `STORAGE_BUCKET` | Bucket name | `discuss-attachments` |
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- JDK 21
-- Docker & Docker Compose (for infrastructure)
-- Maven
-
-### Running Locally
-
-1. **Start Infrastructure**:
-   Ensure PostgreSQL, Redis, Kafka, and MinIO are running (usually via the root `docker-compose.dev.yml`).
-
-2. **Run the Service**:
-   Use the helper script to load environment variables and start the app:
-   ```bash
-   ./run-dev.sh
-   ```
-   Or using Maven directly:
-   ```bash
-   ./mvnw spring-boot:run
-   ```
-
-3. **Verify**:
-   - Health check: `http://localhost:8085/actuator/health`
-
-## 🧪 Testing
-
-The project maintains a high standard of test coverage using **JUnit 5** and **Mockito**.
-
-- **Run all tests**:
-  ```bash
-  ./mvnw test
-  ```
-
-- **Run specific test class**:
-  ```bash
-  ./mvnw test -Dtest=MessageUseCaseTest
-  ```
-
-## 🔌 WebSocket API
-
-The service exposes a STOMP endpoint at `/ws`.
-
-**Subscribe Destinations:**
-- `/topic/channel.{channelId}`: New messages in a channel.
-- `/topic/user.{userId}`: Notifications, unread counts, direct messages.
-- `/topic/presence`: Global or channel-specific online status updates.
-
-**Send Destinations:**
-- `/app/chat.sendMessage`: Send a message.
-- `/app/chat.typing`: Send typing indicator.
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 src/main/java/serp/project/discuss_service/
 ├── core/
-│   ├── domain/        # Entities, Enums, Value Objects
-│   ├── port/          # Interfaces (Repository, Client, Storage)
-│   ├── service/       # Domain Services
-│   └── usecase/       # Application Use Cases
+│   ├── domain/          # Entities, DTOs, Enums, Events, Value Objects
+│   ├── port/            # Interfaces (store, client)
+│   ├── service/         # Domain services + implementations
+│   ├── usecase/         # Application use cases
+│   └── listener/        # Spring event listeners
 ├── infrastructure/
-│   ├── client/        # Redis, Kafka, S3 Adapters
-│   └── store/         # JPA Repositories, Entities, Mappers
-├── kernel/            # Shared config, utils, exceptions
-└── ui/                # REST Controllers, WebSocket Controllers
+│   ├── client/          # WebSocket, Kafka, Redis, S3 adapters
+│   └── store/           # JPA repositories, models, mappers
+├── kernel/
+│   ├── config/          # WebSocket, Kafka, Redis, Security configs
+│   ├── websocket/       # Auth interceptor, event listener
+│   ├── property/        # Configuration properties
+│   └── utils/           # Shared utilities
+└── ui/
+    ├── controller/      # REST controllers
+    ├── websocket/       # STOMP message handlers
+    └── messaging/       # Kafka consumers, event handlers
+```
+
+## Configuration
+
+Key environment variables (see `.env` for defaults):
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SERVER_PORT` | Service port | `8092` |
+| `DB_URL` | PostgreSQL JDBC URL | - |
+| `DB_USERNAME` | Database username | - |
+| `DB_PASSWORD` | Database password | - |
+| `REDIS_HOST` | Redis host | `localhost` |
+| `REDIS_PORT` | Redis port | `6379` |
+| `KAFKA_BOOTSTRAP_SERVERS` | Kafka brokers | `localhost:9092` |
+| `KEYCLOAK_URL` | Keycloak base URL | - |
+| `CLIENT_SECRET` | Keycloak client secret | - |
+| `STORAGE_ENDPOINT` | MinIO/S3 endpoint | `http://localhost:9000` |
+| `STORAGE_BUCKET` | S3 bucket name | `discuss-attachments` |
+| `ACCOUNT_SERVICE_URL` | Account service URL | `http://localhost:8081/account-service` |
+
+## Getting Started
+
+### Prerequisites
+
+- JDK 21
+- Docker & Docker Compose
+- Maven
+
+### Running Locally
+
+1. **Start infrastructure** (from repo root):
+   ```bash
+   docker-compose -f docker-compose.dev.yml up -d
+   ```
+
+2. **Run the service**:
+   ```bash
+   ./run-dev.sh
+   ```
+
+3. **Verify**:
+   - Health: `http://localhost:8092/discuss/actuator/health`
+
+## WebSocket API
+
+**Endpoint**: `/ws/discuss` (STOMP over WebSocket + SockJS fallback)
+
+### Client Subscribe (single destination)
+
+```javascript
+stompClient.subscribe('/user/queue/events', (message) => {
+  const event = JSON.parse(message.body);
+  // event.type: MESSAGE_NEW, TYPING_START, REACTION_ADDED, ERROR, etc.
+  // event.channelId: route to correct UI
+  // event.payload: event-specific data
+});
+```
+
+### Client Send
+
+| Destination | Purpose | Payload |
+|-------------|---------|---------|
+| `/app/channels/{channelId}/message` | Send message | `{ content, mentions }` |
+| `/app/channels/{channelId}/typing` | Typing indicator | `{ isTyping: true/false }` |
+| `/app/channels/{channelId}/read` | Mark as read | `{ messageId }` |
+
+### Event Types
+
+| Type | Description |
+|------|-------------|
+| `MESSAGE_NEW` | New message in channel |
+| `MESSAGE_UPDATED` | Message edited |
+| `MESSAGE_DELETED` | Message deleted |
+| `REACTION_ADDED` | Reaction added |
+| `REACTION_REMOVED` | Reaction removed |
+| `TYPING_START` | User started typing |
+| `TYPING_STOP` | User stopped typing |
+| `USER_ONLINE` | User came online |
+| `USER_OFFLINE` | User went offline |
+| `ERROR` | Error response |
+
+## Kafka Topics
+
+| Topic | Events |
+|-------|--------|
+| `discuss.message.events` | MESSAGE_NEW, MESSAGE_UPDATED, MESSAGE_DELETED |
+| `discuss.reaction.events` | REACTION_ADDED, REACTION_REMOVED |
+| `discuss.presence.events` | TYPING_START, TYPING_STOP, USER_ONLINE, USER_OFFLINE |
+| `discuss.channel.events` | CHANNEL_CREATED, CHANNEL_UPDATED, CHANNEL_ARCHIVED |
+| `discuss.member.events` | MEMBER_JOINED, MEMBER_LEFT, MEMBER_REMOVED |
+
+## Testing
+
+```bash
+./mvnw test                           # Run all tests
+./mvnw test -Dtest=MessageUseCaseTest # Run specific test class
 ```
 
 ## License
 
-This project is part of the SERP ERP system and is licensed under the MIT License. See the [LICENSE](../LICENSE) file in the root directory for details.
-
-## 🤝 Contribution
-
+MIT License. See [LICENSE](../LICENSE) in the repository root.
