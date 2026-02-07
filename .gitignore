@@ -4,6 +4,71 @@ deploy/
 
 # .claude/
 
+# ===========================================
+# SECURITY - Secrets & Credentials
+# ===========================================
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.crt
+*.cer
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+
+# Credentials files
+credentials.json
+service-account*.json
+*-credentials.json
+*.credentials
+secrets.json
+secrets.yaml
+secrets.yml
+
+# API keys and tokens
+.api_key
+.api_keys
+*.apikey
+token.json
+
+# Cloud provider credentials
+.aws/
+.azure/
+.gcloud/
+.config/gcloud/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform/
+
+# Ansible vault
+*.vault
+vault.yml
+vault.yaml
+
+# ===========================================
+# Environment Files (extended)
+# ===========================================
+.env
+.env.*
+!.env.example
+.envrc
+*.env
+.secrets
+
+# Docker secrets
+docker-compose.override.yml
+docker-compose.local.yml
+docker-compose.secrets.yml
+
+# ===========================================
 # Go modules
 # Binaries for programs and plugins
 *.exe
@@ -30,7 +95,48 @@ go.work
 .env
 .env.local
 .env.prod
+.env.docker
 
+# ===========================================
+# Python
+# ===========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+.eggs/
+*.egg-info/
+*.egg
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+poetry.lock.bak
+
+# ===========================================
+# Node.js / Frontend
+# ===========================================
+node_modules/
+.next/
+.nuxt/
+.output/
+.cache/
+.parcel-cache/
+.npm/
+.yarn/
+*.tsbuildinfo
+.turbo/
+coverage/
+
+# ===========================================
 # IDE
 .idea/
 .vscode/
@@ -93,3 +199,44 @@ build/
 
 /backup
 /certs
+
+# ===========================================
+# Misc
+# ===========================================
+# Local development files
+*.local
+*.local.*
+local.yaml
+local.yml
+local.json
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# Debug files
+*.debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Test outputs
+test-results/
+playwright-report/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Heap dumps
+*.hprof
+hs_err_pid*

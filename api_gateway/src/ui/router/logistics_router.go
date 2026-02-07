@@ -15,9 +15,13 @@ func RegisterLogisticsRoutes(
 	group *gin.RouterGroup,
 	genericProxyController *common.GenericProxyController,
 	jwtMiddleware *middleware.JWTMiddleware,
+	rateLimitMiddleware *middleware.RateLimitMiddleware,
 ) {
 	logisticsGroup := group.Group("/logistics/api/v1")
 	{
-		logisticsGroup.Use(jwtMiddleware.AuthenticateJWT()).Any("/*proxyPath", genericProxyController.ProxyToLogistics)
+		logisticsGroup.Use(
+			jwtMiddleware.AuthenticateJWT(),
+			rateLimitMiddleware.UserRateLimit(),
+		).Any("/*proxyPath", genericProxyController.ProxyToLogistics)
 	}
 }

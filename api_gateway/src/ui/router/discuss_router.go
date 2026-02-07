@@ -17,6 +17,7 @@ func RegisterDiscussRoutes(
 	discussProxyController *discuss.DiscussProxyController,
 	genericProxyController *common.GenericProxyController,
 	jwtMiddleware *middleware.JWTMiddleware,
+	rateLimitMiddleware *middleware.RateLimitMiddleware,
 ) {
 	discussWSGroup := group.Group("ws/discuss")
 	{
@@ -25,6 +26,9 @@ func RegisterDiscussRoutes(
 
 	discussGroup := group.Group("/discuss/api/v1")
 	{
-		discussGroup.Use(jwtMiddleware.AuthenticateJWT()).Any("/*proxyPath", genericProxyController.ProxyToDiscuss)
+		discussGroup.Use(
+			jwtMiddleware.AuthenticateJWT(),
+			rateLimitMiddleware.UserRateLimit(),
+		).Any("/*proxyPath", genericProxyController.ProxyToDiscuss)
 	}
 }

@@ -6,9 +6,9 @@ spring:
       enabled: true
 
   datasource:
-    username: serp
-    password: serp
-    url: jdbc:postgresql://localhost:5432/serp_logging_tracker
+    username: ${DB_USER:serp}
+    password: ${DB_PASSWORD}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:serp_logging_tracker}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
