@@ -17,7 +17,6 @@ SERP is a modern, event-driven microservices ERP system designed with **Clean Ar
 - [Getting Started](#-getting-started)
 - [Testing](#-testing)
 - [Project Structure & Patterns](#-project-structure--patterns)
-- [Additional Resources](#-additional-resources)
 - [License](#license)
 
 ---
@@ -25,18 +24,14 @@ SERP is a modern, event-driven microservices ERP system designed with **Clean Ar
 ## ⚡ Quick Start
 
 ```bash
-# 1. Start infrastructure (PostgreSQL, Kafka, Redis, Keycloak)
+# 1. Start infrastructure (PostgreSQL, Kafka, Redis, Keycloak, Minio)
 docker-compose -f docker-compose.dev.yml up -d
 
 # 2. Run services (in separate terminals)
-cd account && ./run-dev.sh        # Java - port 8081
-cd ptm_task && ./run-dev.sh       # Go - port 8083
-cd serp_web && npm install && npm run dev  # Frontend - port 3000
+cd account && ./run-dev.sh
+cd ptm_task && ./run-dev.sh
+cd serp_web && npm install && npm run dev
 
-# 3. Access services
-# - Frontend: http://localhost:3000
-# - API Gateway: http://localhost:8080
-# - Keycloak Admin: http://localhost:8180
 ```
 
 ---
@@ -256,23 +251,6 @@ src/
 
 ---
 
-## 📚 Additional Resources
-
-- **[AGENTS.md](./AGENTS.md)** - Comprehensive guide for AI coding agents (includes build commands, code style, patterns, gotchas)
-- **[.github/copilot-instructions.md](./.github/copilot-instructions.md)** - Architecture details and development patterns
-- **API Documentation** - Each service has OpenAPI/Swagger docs (check `api-documents/` folders)
-- **Database Schemas** - See `db/migration/` (Java) or `alembic/versions/` (Python)
-
-### Troubleshooting
-
-**Common Issues:**
-1. **Port already in use**: Check for conflicting services (`lsof -i :8080` on macOS/Linux, `netstat -ano | findstr :8080` on Windows)
-2. **Keycloak JWT validation fails**: Ensure Keycloak is running and JWKS URL is accessible
-3. **Service won't start**: Verify `.env` file exists and infrastructure is running (`docker-compose ps`)
-4. **Database connection errors**: Check PostgreSQL container is healthy and credentials match `.env`
-
----
-
 ## License
 
-This project is part of the SERP ERP system and is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.
+This project is part of the SERP ERP system and is licensed under the Apache License 2.0. See the [LICENSE](./LICENSE) file for details.
