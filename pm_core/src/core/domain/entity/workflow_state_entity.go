@@ -25,3 +25,15 @@ func NewWorkflowStateEntity() *WorkflowStateEntity {
 		ActiveStatus: string(enum.Active),
 	}
 }
+
+func (s *WorkflowStateEntity) IsTodo() bool {
+	return enum.WorkflowStateCategory(s.Category) == enum.StateCategoryTodo
+}
+
+func (s *WorkflowStateEntity) IsInProgress() bool {
+	return enum.WorkflowStateCategory(s.Category) == enum.StateCategoryInProgress
+}
+
+func (s *WorkflowStateEntity) IsDone() bool {
+	return enum.WorkflowStateCategory(s.Category) == enum.StateCategoryDone
+}

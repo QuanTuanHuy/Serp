@@ -23,3 +23,7 @@ func NewWorkflowTransitionEntity() *WorkflowTransitionEntity {
 		ActiveStatus: string(enum.Active),
 	}
 }
+
+func (t *WorkflowTransitionEntity) MatchesTransition(fromStateID, toStateID int64) bool {
+	return t.FromStateID == fromStateID && t.ToStateID == toStateID
+}

@@ -20,3 +20,15 @@ func (d DependencyType) IsValid() bool {
 	}
 	return false
 }
+
+func (d DependencyType) GetInverseType() DependencyType {
+	switch d {
+	case DependencyBlocks:
+		return DependencyIsBlockedBy
+	case DependencyIsBlockedBy:
+		return DependencyBlocks
+	case DependencyRelatesTo:
+		return DependencyRelatesTo
+	}
+	return d
+}

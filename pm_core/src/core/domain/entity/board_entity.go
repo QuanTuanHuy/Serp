@@ -16,6 +16,8 @@ type BoardEntity struct {
 	IsDefault bool   `json:"isDefault"`
 
 	ActiveStatus string `json:"activeStatus"`
+
+	Columns []*BoardColumnEntity `json:"columns,omitempty"`
 }
 
 func NewBoardEntity() *BoardEntity {
@@ -24,4 +26,16 @@ func NewBoardEntity() *BoardEntity {
 		IsDefault:    false,
 		ActiveStatus: string(enum.Active),
 	}
+}
+
+func (b *BoardEntity) IsKanban() bool {
+	return enum.BoardType(b.Type) == enum.BoardKanban
+}
+
+func (b *BoardEntity) IsScrum() bool {
+	return enum.BoardType(b.Type) == enum.BoardScrum
+}
+
+func (b *BoardEntity) GetColumnCount() int {
+	return len(b.Columns)
 }

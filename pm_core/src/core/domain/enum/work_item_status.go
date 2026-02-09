@@ -22,3 +22,15 @@ func (s WorkItemStatus) IsValid() bool {
 	}
 	return false
 }
+
+func (s WorkItemStatus) IsCompleted() bool {
+	return s == WorkItemDone
+}
+
+func (s WorkItemStatus) IsCancelled() bool {
+	return s == WorkItemCancelled
+}
+
+func (s WorkItemStatus) IsTerminal() bool {
+	return s == WorkItemDone || s == WorkItemCancelled
+}

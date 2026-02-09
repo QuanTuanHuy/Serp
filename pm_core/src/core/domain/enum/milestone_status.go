@@ -5,6 +5,8 @@ Description: Part of Serp Project
 
 package enum
 
+import "slices"
+
 type MilestoneStatus string
 
 const (
@@ -20,4 +22,23 @@ func (m MilestoneStatus) IsValid() bool {
 		return true
 	}
 	return false
+}
+
+var validMilestoneTransitions = map[MilestoneStatus][]MilestoneStatus{
+	MilestonePending:    {MilestoneInProgress},
+	MilestoneInProgress: {MilestoneCompleted, MilestoneMissed},
+	MilestoneCompleted:  {},
+	MilestoneMissed:     {},
+}
+
+func (m MilestoneStatus) CanTransitionTo(target MilestoneStatus) bool {
+	allowed, ok := validMilestoneTransitions[m]
+	if !ok {
+		return false
+	}
+	return slices.Contains(allowed, target)
+}
+
+func (m MilestoneStatus) IsTerminal() bool {
+	return m == MilestoneCompleted || m == MilestoneMissed
 }

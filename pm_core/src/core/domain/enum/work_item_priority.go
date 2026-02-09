@@ -22,3 +22,19 @@ func (p WorkItemPriority) IsValid() bool {
 	}
 	return false
 }
+
+func (p WorkItemPriority) GetScore() int {
+	switch p {
+	case PriorityLowest:
+		return 1
+	case PriorityLow:
+		return 2
+	case PriorityMedium:
+		return 3
+	case PriorityHigh:
+		return 4
+	case PriorityHighest:
+		return 5
+	}
+	return 0
+}
