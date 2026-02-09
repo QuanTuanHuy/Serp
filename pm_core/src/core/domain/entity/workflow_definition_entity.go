@@ -7,20 +7,18 @@ package entity
 
 import "github.com/serp/pm-core/src/core/domain/enum"
 
-type BoardEntity struct {
+type WorkflowDefinitionEntity struct {
 	BaseEntity
 
 	ProjectID int64  `json:"projectId"`
 	Name      string `json:"name"`
-	Type      string `json:"type"`
 	IsDefault bool   `json:"isDefault"`
 
 	ActiveStatus string `json:"activeStatus"`
 }
 
-func NewBoardEntity() *BoardEntity {
-	return &BoardEntity{
-		Type:         string(enum.BoardKanban),
+func NewWorkflowDefinitionEntity() *WorkflowDefinitionEntity {
+	return &WorkflowDefinitionEntity{
 		IsDefault:    false,
 		ActiveStatus: string(enum.Active),
 	}

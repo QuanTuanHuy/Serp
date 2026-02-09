@@ -12,6 +12,7 @@ type BoardColumnModel struct {
 	Name          string  `gorm:"type:varchar(200);not null"`
 	Position      int     `gorm:"not null;default:0"`
 	StatusMapping *string `gorm:"type:varchar(20)"`
+	WipLimit      int     `gorm:"not null;default:0"`
 
 	ActiveStatus string `gorm:"type:varchar(20);not null;default:'ACTIVE'"`
 }

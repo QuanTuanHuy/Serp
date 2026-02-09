@@ -27,11 +27,15 @@ func (m *MilestoneMapper) ToEntity(mdl *model.MilestoneModel) *entity.MilestoneE
 			CreatedAt: mdl.CreatedAt.UnixMilli(),
 			UpdatedAt: mdl.UpdatedAt.UnixMilli(),
 		},
-		ProjectID:    mdl.ProjectID,
-		Name:         mdl.Name,
-		Description:  mdl.Description,
-		DueDateMs:    mdl.DueDateMs,
-		ActiveStatus: mdl.ActiveStatus,
+		ProjectID:          mdl.ProjectID,
+		Name:               mdl.Name,
+		Description:        mdl.Description,
+		Status:             mdl.Status,
+		TargetDateMs:       mdl.TargetDateMs,
+		TotalWorkItems:     mdl.TotalWorkItems,
+		CompletedWorkItems: mdl.CompletedWorkItems,
+		ProgressPercentage: mdl.ProgressPercentage,
+		ActiveStatus:       mdl.ActiveStatus,
 	}
 }
 
@@ -44,11 +48,15 @@ func (m *MilestoneMapper) ToModel(e *entity.MilestoneEntity) *model.MilestoneMod
 		BaseModel: model.BaseModel{
 			ID: e.ID,
 		},
-		ProjectID:    e.ProjectID,
-		Name:         e.Name,
-		Description:  e.Description,
-		DueDateMs:    e.DueDateMs,
-		ActiveStatus: e.ActiveStatus,
+		ProjectID:          e.ProjectID,
+		Name:               e.Name,
+		Description:        e.Description,
+		Status:             e.Status,
+		TargetDateMs:       e.TargetDateMs,
+		TotalWorkItems:     e.TotalWorkItems,
+		CompletedWorkItems: e.CompletedWorkItems,
+		ProgressPercentage: e.ProgressPercentage,
+		ActiveStatus:       e.ActiveStatus,
 	}
 }
 

@@ -12,6 +12,9 @@ type ActivityLogEntity struct {
 	WorkItemID *int64 `json:"workItemId,omitempty"`
 	UserID     int64  `json:"userId"`
 
+	EntityType string `json:"entityType"`
+	EntityID   int64  `json:"entityId"`
+
 	Action   string  `json:"action"`
 	Field    *string `json:"field,omitempty"`
 	OldValue *string `json:"oldValue,omitempty"`

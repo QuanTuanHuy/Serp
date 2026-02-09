@@ -31,6 +31,7 @@ func (m *BoardColumnMapper) ToEntity(mdl *model.BoardColumnModel) *entity.BoardC
 		Name:          mdl.Name,
 		Position:      mdl.Position,
 		StatusMapping: mdl.StatusMapping,
+		WipLimit:      mdl.WipLimit,
 		ActiveStatus:  mdl.ActiveStatus,
 	}
 }
@@ -48,6 +49,7 @@ func (m *BoardColumnMapper) ToModel(e *entity.BoardColumnEntity) *model.BoardCol
 		Name:          e.Name,
 		Position:      e.Position,
 		StatusMapping: e.StatusMapping,
+		WipLimit:      e.WipLimit,
 		ActiveStatus:  e.ActiveStatus,
 	}
 }

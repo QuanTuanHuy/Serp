@@ -32,8 +32,8 @@ func (m *ProjectMapper) CreateRequestToEntity(req *request.CreateProjectRequest,
 	if req.StartDateMs != nil {
 		project.StartDateMs = req.StartDateMs
 	}
-	if req.DeadlineMs != nil {
-		project.DeadlineMs = req.DeadlineMs
+	if req.TargetEndDateMs != nil {
+		project.TargetEndDateMs = req.TargetEndDateMs
 	}
 
 	return project
@@ -55,8 +55,8 @@ func (m *ProjectMapper) UpdateRequestToEntity(req *request.UpdateProjectRequest,
 	if req.StartDateMs != nil {
 		existing.StartDateMs = req.StartDateMs
 	}
-	if req.DeadlineMs != nil {
-		existing.DeadlineMs = req.DeadlineMs
+	if req.TargetEndDateMs != nil {
+		existing.TargetEndDateMs = req.TargetEndDateMs
 	}
 	return existing
 }
@@ -90,7 +90,7 @@ func (m *ProjectMapper) EntityToResponse(e *entity.ProjectEntity) *response.Proj
 		Status:             e.Status,
 		Visibility:         e.Visibility,
 		StartDateMs:        e.StartDateMs,
-		DeadlineMs:         e.DeadlineMs,
+		TargetEndDateMs:    e.TargetEndDateMs,
 		NextItemNumber:     e.NextItemNumber,
 		TotalWorkItems:     e.TotalWorkItems,
 		CompletedWorkItems: e.CompletedWorkItems,

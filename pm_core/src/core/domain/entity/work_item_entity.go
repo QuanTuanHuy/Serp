@@ -5,6 +5,12 @@ Description: Part of Serp Project
 
 package entity
 
+import (
+	"slices"
+
+	"github.com/serp/pm-core/src/core/domain/enum"
+)
+
 type WorkItemEntity struct {
 	BaseEntity
 
@@ -32,4 +38,28 @@ type WorkItemEntity struct {
 
 	ActiveStatus string `json:"activeStatus"`
 	Position     int    `json:"position"`
+
+	// Denormalized
+	HasChildren         bool `json:"hasChildren"`
+	ChildCount          int  `json:"childCount,omitempty"`
+	CompletedChildCount int  `json:"completedChildCount,omitempty"`
+	CommentCount        int  `json:"commentCount,omitempty"`
+}
+
+func AllowedChildTypes(parentType string) []string {
+	switch parentType {
+	case string(enum.WorkItemEpic):
+		return []string{string(enum.WorkItemStory)}
+	case string(enum.WorkItemStory):
+		return []string{string(enum.WorkItemTask), string(enum.WorkItemBug)}
+	case string(enum.WorkItemTask), string(enum.WorkItemBug):
+		return []string{string(enum.WorkItemSubtask)}
+	default:
+		return nil
+	}
+}
+
+func ValidateParentChildType(parentType, childType string) bool {
+	allowed := AllowedChildTypes(parentType)
+	return slices.Contains(allowed, childType)
 }

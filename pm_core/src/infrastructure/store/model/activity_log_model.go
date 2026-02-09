@@ -12,6 +12,9 @@ type ActivityLogModel struct {
 	WorkItemID *int64 `gorm:"index:idx_actlog_workitem"`
 	UserID     int64  `gorm:"not null"`
 
+	EntityType string `gorm:"type:varchar(50);not null"`
+	EntityID   int64  `gorm:"not null"`
+
 	Action   string  `gorm:"type:varchar(50);not null"`
 	Field    *string `gorm:"type:varchar(100)"`
 	OldValue *string `gorm:"type:text"`

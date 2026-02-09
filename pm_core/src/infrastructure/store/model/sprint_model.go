@@ -17,6 +17,14 @@ type SprintModel struct {
 	StartDateMs *int64
 	EndDateMs   *int64
 
+	SprintOrder int `gorm:"not null;default:0"`
+
+	// Denormalized stats
+	TotalWorkItems     int `gorm:"not null;default:0"`
+	TotalPoints        int `gorm:"not null;default:0"`
+	CompletedWorkItems int `gorm:"not null;default:0"`
+	CompletedPoints    int `gorm:"not null;default:0"`
+
 	ActiveStatus string `gorm:"type:varchar(20);not null;default:'ACTIVE'"`
 }
 

@@ -34,11 +34,20 @@ func (m *ProjectMapper) ToEntity(mdl *model.ProjectModel) *entity.ProjectEntity 
 		Status:             mdl.Status,
 		ActiveStatus:       mdl.ActiveStatus,
 		Visibility:         mdl.Visibility,
+		MethodologyType:    mdl.MethodologyType,
+		Priority:           mdl.Priority,
 		StartDateMs:        mdl.StartDateMs,
-		DeadlineMs:         mdl.DeadlineMs,
+		TargetEndDateMs:    mdl.TargetEndDateMs,
+		Color:              mdl.Color,
+		Icon:               mdl.Icon,
+		DefaultBoardID:     mdl.DefaultBoardID,
+		DefaultWorkflowID:  mdl.DefaultWorkflowID,
 		NextItemNumber:     mdl.NextItemNumber,
 		TotalWorkItems:     mdl.TotalWorkItems,
 		CompletedWorkItems: mdl.CompletedWorkItems,
+		ProgressPercentage: mdl.ProgressPercentage,
+		TotalMembers:       mdl.TotalMembers,
+		CreatedBy:          mdl.CreatedBy,
 	}
 }
 
@@ -58,11 +67,20 @@ func (m *ProjectMapper) ToModel(e *entity.ProjectEntity) *model.ProjectModel {
 		Status:             e.Status,
 		ActiveStatus:       e.ActiveStatus,
 		Visibility:         e.Visibility,
+		MethodologyType:    e.MethodologyType,
+		Priority:           e.Priority,
 		StartDateMs:        e.StartDateMs,
-		DeadlineMs:         e.DeadlineMs,
+		TargetEndDateMs:    e.TargetEndDateMs,
+		Color:              e.Color,
+		Icon:               e.Icon,
+		DefaultBoardID:     e.DefaultBoardID,
+		DefaultWorkflowID:  e.DefaultWorkflowID,
 		NextItemNumber:     e.NextItemNumber,
 		TotalWorkItems:     e.TotalWorkItems,
 		CompletedWorkItems: e.CompletedWorkItems,
+		ProgressPercentage: e.ProgressPercentage,
+		TotalMembers:       e.TotalMembers,
+		CreatedBy:          e.CreatedBy,
 	}
 }
 

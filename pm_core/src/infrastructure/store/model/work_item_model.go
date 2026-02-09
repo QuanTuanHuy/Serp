@@ -32,6 +32,12 @@ type WorkItemModel struct {
 
 	ActiveStatus string `gorm:"type:varchar(20);not null;default:'ACTIVE'"`
 	Position     int    `gorm:"not null;default:0"`
+
+	// Denormalized
+	HasChildren         bool `gorm:"not null;default:false"`
+	ChildCount          int  `gorm:"not null;default:0"`
+	CompletedChildCount int  `gorm:"not null;default:0"`
+	CommentCount        int  `gorm:"not null;default:0"`
 }
 
 func (WorkItemModel) TableName() string {

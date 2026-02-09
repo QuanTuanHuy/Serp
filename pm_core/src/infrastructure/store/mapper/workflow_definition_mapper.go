@@ -10,18 +10,18 @@ import (
 	"github.com/serp/pm-core/src/infrastructure/store/model"
 )
 
-type BoardMapper struct{}
+type WorkflowDefinitionMapper struct{}
 
-func NewBoardMapper() *BoardMapper {
-	return &BoardMapper{}
+func NewWorkflowDefinitionMapper() *WorkflowDefinitionMapper {
+	return &WorkflowDefinitionMapper{}
 }
 
-func (m *BoardMapper) ToEntity(mdl *model.BoardModel) *entity.BoardEntity {
+func (m *WorkflowDefinitionMapper) ToEntity(mdl *model.WorkflowDefinitionModel) *entity.WorkflowDefinitionEntity {
 	if mdl == nil {
 		return nil
 	}
 
-	return &entity.BoardEntity{
+	return &entity.WorkflowDefinitionEntity{
 		BaseEntity: entity.BaseEntity{
 			ID:        mdl.ID,
 			CreatedAt: mdl.CreatedAt.UnixMilli(),
@@ -29,35 +29,33 @@ func (m *BoardMapper) ToEntity(mdl *model.BoardModel) *entity.BoardEntity {
 		},
 		ProjectID:    mdl.ProjectID,
 		Name:         mdl.Name,
-		Type:         mdl.Type,
 		IsDefault:    mdl.IsDefault,
 		ActiveStatus: mdl.ActiveStatus,
 	}
 }
 
-func (m *BoardMapper) ToModel(e *entity.BoardEntity) *model.BoardModel {
+func (m *WorkflowDefinitionMapper) ToModel(e *entity.WorkflowDefinitionEntity) *model.WorkflowDefinitionModel {
 	if e == nil {
 		return nil
 	}
 
-	return &model.BoardModel{
+	return &model.WorkflowDefinitionModel{
 		BaseModel: model.BaseModel{
 			ID: e.ID,
 		},
 		ProjectID:    e.ProjectID,
 		Name:         e.Name,
-		Type:         e.Type,
 		IsDefault:    e.IsDefault,
 		ActiveStatus: e.ActiveStatus,
 	}
 }
 
-func (m *BoardMapper) ToEntities(models []*model.BoardModel) []*entity.BoardEntity {
+func (m *WorkflowDefinitionMapper) ToEntities(models []*model.WorkflowDefinitionModel) []*entity.WorkflowDefinitionEntity {
 	if models == nil {
 		return nil
 	}
 
-	entities := make([]*entity.BoardEntity, 0, len(models))
+	entities := make([]*entity.WorkflowDefinitionEntity, 0, len(models))
 	for _, mdl := range models {
 		if e := m.ToEntity(mdl); e != nil {
 			entities = append(entities, e)

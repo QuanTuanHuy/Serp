@@ -12,7 +12,13 @@ type MilestoneModel struct {
 	Name        string  `gorm:"type:varchar(200);not null"`
 	Description *string `gorm:"type:text"`
 
-	DueDateMs *int64
+	Status       string `gorm:"type:varchar(20);not null;default:'PENDING'"`
+	TargetDateMs *int64
+
+	// Denormalized stats
+	TotalWorkItems     int `gorm:"not null;default:0"`
+	CompletedWorkItems int `gorm:"not null;default:0"`
+	ProgressPercentage int `gorm:"not null;default:0"`
 
 	ActiveStatus string `gorm:"type:varchar(20);not null;default:'ACTIVE'"`
 }

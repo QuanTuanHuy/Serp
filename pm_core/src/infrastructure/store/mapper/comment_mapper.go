@@ -27,10 +27,13 @@ func (m *CommentMapper) ToEntity(mdl *model.CommentModel) *entity.CommentEntity 
 			CreatedAt: mdl.CreatedAt.UnixMilli(),
 			UpdatedAt: mdl.UpdatedAt.UnixMilli(),
 		},
-		WorkItemID:   mdl.WorkItemID,
-		AuthorID:     mdl.AuthorID,
-		Content:      mdl.Content,
-		ActiveStatus: mdl.ActiveStatus,
+		WorkItemID:      mdl.WorkItemID,
+		AuthorID:        mdl.AuthorID,
+		Content:         mdl.Content,
+		ParentCommentID: mdl.ParentCommentID,
+		IsEdited:        mdl.IsEdited,
+		EditedAtMs:      mdl.EditedAtMs,
+		ActiveStatus:    mdl.ActiveStatus,
 	}
 }
 
@@ -43,10 +46,13 @@ func (m *CommentMapper) ToModel(e *entity.CommentEntity) *model.CommentModel {
 		BaseModel: model.BaseModel{
 			ID: e.ID,
 		},
-		WorkItemID:   e.WorkItemID,
-		AuthorID:     e.AuthorID,
-		Content:      e.Content,
-		ActiveStatus: e.ActiveStatus,
+		WorkItemID:      e.WorkItemID,
+		AuthorID:        e.AuthorID,
+		Content:         e.Content,
+		ParentCommentID: e.ParentCommentID,
+		IsEdited:        e.IsEdited,
+		EditedAtMs:      e.EditedAtMs,
+		ActiveStatus:    e.ActiveStatus,
 	}
 }
 

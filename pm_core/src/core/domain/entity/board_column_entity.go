@@ -12,6 +12,7 @@ type BoardColumnEntity struct {
 	Name          string  `json:"name"`
 	Position      int     `json:"position"`
 	StatusMapping *string `json:"statusMapping,omitempty"`
+	WipLimit      int     `json:"wipLimit"`
 
 	ActiveStatus string `json:"activeStatus"`
 }

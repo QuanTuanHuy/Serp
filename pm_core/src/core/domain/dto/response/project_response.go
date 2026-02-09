@@ -14,7 +14,7 @@ type ProjectResponse struct {
 	Status             string  `json:"status"`
 	Visibility         string  `json:"visibility"`
 	StartDateMs        *int64  `json:"startDateMs,omitempty"`
-	DeadlineMs         *int64  `json:"deadlineMs,omitempty"`
+	TargetEndDateMs    *int64  `json:"targetEndDateMs,omitempty"`
 	NextItemNumber     int     `json:"nextItemNumber"`
 	TotalWorkItems     int     `json:"totalWorkItems"`
 	CompletedWorkItems int     `json:"completedWorkItems"`
