@@ -206,7 +206,7 @@ build/
 # Local development files
 *.local
 *.local.*
-local.yaml
+# local.yaml
 local.yml
 local.json
 
