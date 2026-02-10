@@ -13,9 +13,6 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-/**
- * Request DTO for adding members to a channel
- */
 @NoArgsConstructor
 @AllArgsConstructor
 @Data

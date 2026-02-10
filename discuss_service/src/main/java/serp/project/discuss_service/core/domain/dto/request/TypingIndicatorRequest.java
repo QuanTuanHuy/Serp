@@ -11,9 +11,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * Request DTO for typing indicator
- */
 @NoArgsConstructor
 @AllArgsConstructor
 @Data

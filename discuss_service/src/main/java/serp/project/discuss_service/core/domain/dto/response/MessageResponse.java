@@ -18,9 +18,6 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
-/**
- * Response DTO for message data
- */
 @NoArgsConstructor
 @AllArgsConstructor
 @Data

@@ -7,7 +7,6 @@ package serp.project.discuss_service.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 import serp.project.discuss_service.core.domain.entity.ActivityFeedEntity;

@@ -120,8 +120,9 @@ public class PresenceService implements IPresenceService {
 
     @Override
     public boolean isUserOnline(Long userId) {
-        Optional<UserPresenceEntity> presenceOpt = getUserPresence(userId);
-        return presenceOpt.map(UserPresenceEntity::isOnline).orElse(false);
+        return getUserPresence(userId)
+                .map(UserPresenceEntity::isOnline)
+                .orElse(false);
     }
 
     @Override
