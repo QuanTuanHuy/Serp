@@ -14,6 +14,8 @@ import serp.project.mailservice.core.domain.dto.request.BulkEmailRequest;
 import serp.project.mailservice.core.domain.dto.request.SendEmailRequest;
 import serp.project.mailservice.core.domain.dto.response.EmailStatusResponse;
 import serp.project.mailservice.core.domain.dto.response.SendEmailResponse;
+import serp.project.mailservice.core.exception.AppException;
+import serp.project.mailservice.core.exception.ErrorCode;
 import serp.project.mailservice.core.usecase.EmailSendingUseCases;
 import serp.project.mailservice.kernel.utils.AuthUtils;
 import serp.project.mailservice.kernel.utils.ResponseUtils;
@@ -33,11 +35,11 @@ public class EmailController {
     @PostMapping
     public ResponseEntity<?> sendEmail(@Valid @RequestBody SendEmailRequest request) {
         Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new IllegalArgumentException("Tenant ID is required"));
+                .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
         Long userId = authUtils.getCurrentUserId()
-                .orElseThrow(() -> new IllegalArgumentException("User ID is required"));
+                .orElseThrow(() -> new AppException(ErrorCode.USER_ID_REQUIRED));
         String userEmail = authUtils.getCurrentUserEmail()
-                .orElseThrow(() -> new IllegalArgumentException("User email is required"));
+                .orElseThrow(() -> new AppException(ErrorCode.USER_EMAIL_REQUIRED));
 
         log.info("Sending email for tenant: {}, user: {}", tenantId, userId);
 
@@ -49,9 +51,9 @@ public class EmailController {
     @PostMapping("/bulk")
     public ResponseEntity<?> sendBulkEmail(@Valid @RequestBody BulkEmailRequest request) {
         Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new IllegalArgumentException("Tenant ID is required"));
+                .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
         Long userId = authUtils.getCurrentUserId()
-                .orElseThrow(() -> new IllegalArgumentException("User ID is required"));
+                .orElseThrow(() -> new AppException(ErrorCode.USER_ID_REQUIRED));
 
         log.info("Sending bulk email for tenant: {}, user: {}", tenantId, userId);
 

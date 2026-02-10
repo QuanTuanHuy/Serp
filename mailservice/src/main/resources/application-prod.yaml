@@ -128,3 +128,8 @@ app:
     filter:
       publicUrls:
       protectedUrls:
+        - url-pattern: /api/v1/**
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+          permissions:

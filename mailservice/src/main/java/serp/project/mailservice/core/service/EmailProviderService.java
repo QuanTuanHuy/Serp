@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import serp.project.mailservice.core.domain.constant.RedisKey;
+import serp.project.mailservice.core.exception.AppException;
+import serp.project.mailservice.core.exception.ErrorCode;
 import serp.project.mailservice.core.domain.dto.response.ProviderHealthResponse;
 import serp.project.mailservice.core.domain.entity.EmailEntity;
 import serp.project.mailservice.core.domain.enums.EmailProvider;
@@ -52,7 +54,7 @@ public class EmailProviderService implements IEmailProviderService {
 
         if (provider == null) {
             log.error("No healthy email provider available for email: {}", email.getMessageId());
-            throw new IllegalStateException("No healthy email provider available");
+            throw new AppException(ErrorCode.NO_HEALTHY_PROVIDER);
         }
 
         log.info("Selected provider: {} for email: {}", provider.getProviderName(), email.getMessageId());
@@ -93,8 +95,8 @@ public class EmailProviderService implements IEmailProviderService {
 
         String healthKey = RedisKey.PROVIDER_HEALTH_PREFIX + provider.name();
 
-        String healthStatus = redisCachePort.getFromCache(healthKey, String.class);
-        boolean isHealthy = !"DOWN".equals(healthStatus);
+        String healthStatus = redisCachePort.getFromCache(healthKey);
+        boolean isHealthy = healthStatus == null || !"DOWN".equals(healthStatus);
 
         log.debug("Provider {} health status: {}", provider, isHealthy ? "UP" : "DOWN");
 

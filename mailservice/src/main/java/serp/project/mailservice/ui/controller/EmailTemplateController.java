@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import serp.project.mailservice.core.domain.dto.request.EmailTemplateRequest;
 import serp.project.mailservice.core.domain.dto.response.EmailTemplateResponse;
+import serp.project.mailservice.core.exception.AppException;
+import serp.project.mailservice.core.exception.ErrorCode;
 import serp.project.mailservice.core.usecase.EmailTemplateUseCases;
 import serp.project.mailservice.kernel.utils.AuthUtils;
 import serp.project.mailservice.kernel.utils.ResponseUtils;
@@ -29,9 +31,9 @@ public class EmailTemplateController {
     @PostMapping
     public ResponseEntity<?> createTemplate(@Valid @RequestBody EmailTemplateRequest request) {
         Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new IllegalArgumentException("Tenant ID is required"));
+                .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
         Long userId = authUtils.getCurrentUserId()
-                .orElseThrow(() -> new IllegalArgumentException("User ID is required"));
+                .orElseThrow(() -> new AppException(ErrorCode.USER_ID_REQUIRED));
 
         log.info("Creating email template for tenant: {}", tenantId);
 
@@ -52,9 +54,9 @@ public class EmailTemplateController {
             @PathVariable Long templateId,
             @Valid @RequestBody EmailTemplateRequest request) {
         Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new IllegalArgumentException("Tenant ID is required"));
+                .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
         Long userId = authUtils.getCurrentUserId()
-                .orElseThrow(() -> new IllegalArgumentException("User ID is required"));
+                .orElseThrow(() -> new AppException(ErrorCode.USER_ID_REQUIRED));
 
         log.info("Updating email template: {} for tenant: {}", templateId, tenantId);
 
@@ -65,7 +67,7 @@ public class EmailTemplateController {
     @DeleteMapping("/{templateId}")
     public ResponseEntity<?> deleteTemplate(@PathVariable Long templateId) {
         Long tenantId = authUtils.getCurrentTenantId()
-                .orElseThrow(() -> new IllegalArgumentException("Tenant ID is required"));
+                .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
 
         log.info("Deleting email template: {} for tenant: {}", templateId, tenantId);
 

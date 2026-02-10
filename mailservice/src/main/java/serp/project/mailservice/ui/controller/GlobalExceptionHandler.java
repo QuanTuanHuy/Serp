@@ -8,6 +8,7 @@ package serp.project.mailservice.ui.controller;
 import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -27,22 +28,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AppException.class)
     public ResponseEntity<?> handleAppException(AppException ex) {
         log.warn("Application error: Code={}, Message={}", ex.getCode(), ex.getMessage());
+
         var response = responseUtils.error(ex.getCode(), ex.getMessage());
         return ResponseEntity.status(ex.getCode()).body(response);
-    }
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<?> handleIllegalArgumentException(IllegalArgumentException ex) {
-        log.warn("Bad request: {}", ex.getMessage());
-        var response = responseUtils.badRequest(ex.getMessage());
-        return ResponseEntity.status(response.getCode()).body(response);
-    }
-
-    @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<?> handleIllegalStateException(IllegalStateException ex) {
-        log.warn("Illegal state: {}", ex.getMessage());
-        var response = responseUtils.badRequest(ex.getMessage());
-        return ResponseEntity.status(response.getCode()).body(response);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -55,7 +43,7 @@ public class GlobalExceptionHandler {
 
         log.warn("Validation error: {}", errorMessage);
         var response = responseUtils.badRequest(errorMessage);
-        return ResponseEntity.status(response.getCode()).body(response);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
@@ -67,13 +55,13 @@ public class GlobalExceptionHandler {
 
         log.warn("Constraint violation: {}", errorMessage);
         var response = responseUtils.badRequest(errorMessage);
-        return ResponseEntity.status(response.getCode()).body(response);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleGenericException(Exception ex) {
         log.error("Unexpected error: ", ex);
         var response = responseUtils.internalServerError(ex.getMessage());
-        return ResponseEntity.status(response.getCode()).body(response);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 }

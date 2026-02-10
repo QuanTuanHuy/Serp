@@ -13,6 +13,8 @@ import serp.project.mailservice.core.domain.dto.request.EmailTemplateRequest;
 import serp.project.mailservice.core.domain.dto.response.EmailTemplateResponse;
 import serp.project.mailservice.core.domain.entity.EmailTemplateEntity;
 import serp.project.mailservice.core.domain.mapper.EmailTemplateMapper;
+import serp.project.mailservice.core.exception.AppException;
+import serp.project.mailservice.core.exception.ErrorCode;
 import serp.project.mailservice.core.service.IEmailTemplateService;
 
 @Service
@@ -27,11 +29,12 @@ public class EmailTemplateUseCases {
         log.info("Creating email template: {} for tenant: {}", request.getCode(), tenantId);
 
         if (emailTemplateService.existsByCode(request.getCode())) {
-            throw new IllegalArgumentException("Template code already exists: " + request.getCode());
+            throw new AppException(ErrorCode.TEMPLATE_CODE_ALREADY_EXISTS,
+                    "Template code already exists: " + request.getCode());
         }
 
         if (!emailTemplateService.validateTemplate(request.getBodyTemplate())) {
-            throw new IllegalArgumentException("Invalid template syntax");
+            throw new AppException(ErrorCode.INVALID_TEMPLATE_SYNTAX);
         }
 
         EmailTemplateEntity template = EmailTemplateMapper.toEntity(request, tenantId, userId);
@@ -48,7 +51,8 @@ public class EmailTemplateUseCases {
         log.debug("Getting email template: {}", templateId);
 
         EmailTemplateEntity template = emailTemplateService.getTemplateById(templateId)
-                .orElseThrow(() -> new IllegalArgumentException("Template not found: " + templateId));
+                .orElseThrow(() -> new AppException(ErrorCode.TEMPLATE_NOT_FOUND,
+                        "Template not found: " + templateId));
 
         return EmailTemplateMapper.toResponse(template);
     }
@@ -58,18 +62,20 @@ public class EmailTemplateUseCases {
         log.info("Updating email template: {}", templateId);
 
         EmailTemplateEntity template = emailTemplateService.getTemplateById(templateId)
-                .orElseThrow(() -> new IllegalArgumentException("Template not found with id: " + templateId));
+                .orElseThrow(() -> new AppException(ErrorCode.TEMPLATE_NOT_FOUND,
+                        "Template not found with id: " + templateId));
 
         if (!template.belongsToTenant(tenantId)) {
-            throw new IllegalArgumentException("Template does not belong to tenant");
+            throw new AppException(ErrorCode.TEMPLATE_NOT_BELONG_TO_TENANT);
         }
 
         if (!template.getCode().equals(request.getCode()) && emailTemplateService.existsByCode(request.getCode())) {
-            throw new IllegalArgumentException("Template code already exists: " + request.getCode());
+            throw new AppException(ErrorCode.TEMPLATE_CODE_ALREADY_EXISTS,
+                    "Template code already exists: " + request.getCode());
         }
 
         if (!emailTemplateService.validateTemplate(request.getBodyTemplate())) {
-            throw new IllegalArgumentException("Invalid template syntax");
+            throw new AppException(ErrorCode.INVALID_TEMPLATE_SYNTAX);
         }
 
         template.setCode(request.getCode());
@@ -92,10 +98,11 @@ public class EmailTemplateUseCases {
         log.info("Deleting email template: {}", templateId);
 
         EmailTemplateEntity template = emailTemplateService.getTemplateById(templateId)
-                .orElseThrow(() -> new IllegalArgumentException("Template not found with id: " + templateId));
+                .orElseThrow(() -> new AppException(ErrorCode.TEMPLATE_NOT_FOUND,
+                        "Template not found with id: " + templateId));
 
         if (!template.belongsToTenant(tenantId)) {
-            throw new IllegalArgumentException("Template does not belong to tenant");
+            throw new AppException(ErrorCode.TEMPLATE_NOT_BELONG_TO_TENANT);
         }
 
         template.markAsDeleted();

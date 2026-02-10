@@ -16,6 +16,8 @@ import serp.project.mailservice.core.domain.dto.response.SendEmailResponse;
 import serp.project.mailservice.core.domain.entity.EmailEntity;
 import serp.project.mailservice.core.domain.entity.EmailTemplateEntity;
 import serp.project.mailservice.core.domain.mapper.EmailMapper;
+import serp.project.mailservice.core.exception.AppException;
+import serp.project.mailservice.core.exception.ErrorCode;
 import serp.project.mailservice.core.port.client.IEmailProviderPort;
 import serp.project.mailservice.core.port.store.IEmailPort;
 import serp.project.mailservice.core.service.IEmailProviderService;
@@ -44,7 +46,8 @@ public class EmailSendingUseCases {
         log.info("Sending email for tenant: {}, user: {}, to: {}", tenantId, userId, request.getToEmails());
 
         if (!rateLimitService.allowRequest(tenantId)) {
-            throw new IllegalStateException("Rate limit exceeded for tenant: " + tenantId);
+            throw new AppException(ErrorCode.RATE_LIMIT_EXCEEDED,
+                    "Rate limit exceeded for tenant: " + tenantId);
         }
 
         EmailEntity email = EmailMapper.toEntity(request, tenantId, userId);
@@ -53,7 +56,8 @@ public class EmailSendingUseCases {
 
         if (email.getTemplateId() != null) {
             EmailTemplateEntity template = emailTemplateService.getTemplateById(email.getTemplateId())
-                    .orElseThrow(() -> new IllegalArgumentException("Template not found: " + email.getTemplateId()));
+                    .orElseThrow(() -> new AppException(ErrorCode.TEMPLATE_NOT_FOUND,
+                            "Template not found: " + email.getTemplateId()));
             String body = emailTemplateService.renderTemplate(
                     template.getBodyTemplate(), template.getDefaultValues(), email.getTemplateVariables());
             email.setBody(body);
@@ -100,7 +104,8 @@ public class EmailSendingUseCases {
         log.info("Sending bulk email for tenant: {}, recipients: {}", tenantId, request.getRecipients().size());
 
         if (!rateLimitService.allowRequest(tenantId)) {
-            throw new IllegalStateException("Rate limit exceeded for tenant: " + tenantId);
+            throw new AppException(ErrorCode.RATE_LIMIT_EXCEEDED,
+                    "Rate limit exceeded for tenant: " + tenantId);
         }
 
         List<SendEmailResponse> responses = new ArrayList<>();
@@ -124,7 +129,8 @@ public class EmailSendingUseCases {
 
                 if (email.getTemplateId() != null && variables != null) {
                     EmailTemplateEntity template = emailTemplateService.getTemplateById(email.getTemplateId())
-                            .orElseThrow(() -> new IllegalArgumentException("Template not found: " + email.getTemplateId()));
+                            .orElseThrow(() -> new AppException(ErrorCode.TEMPLATE_NOT_FOUND,
+                                    "Template not found: " + email.getTemplateId()));
                     String body = emailTemplateService.renderTemplate(
                             template.getBodyTemplate(), template.getDefaultValues(), variables);
                     email.setBody(body);
@@ -171,11 +177,13 @@ public class EmailSendingUseCases {
         log.info("Resending failed email with messageId: {}", messageId);
 
         EmailEntity email = emailPort.findByMessageId(messageId)
-                .orElseThrow(() -> new IllegalArgumentException("Email not found with messageId: " + messageId));
+                .orElseThrow(() -> new AppException(ErrorCode.EMAIL_NOT_FOUND,
+                        "Email not found with messageId: " + messageId));
 
         if (!email.isRetryable()) {
-            throw new IllegalStateException("Email is not retryable (status: " + email.getStatus()
-                    + ", retryCount: " + email.getRetryCount() + "/" + email.getMaxRetries() + ")");
+            throw new AppException(ErrorCode.EMAIL_NOT_RETRYABLE,
+                    "Email is not retryable (status: " + email.getStatus()
+                            + ", retryCount: " + email.getRetryCount() + "/" + email.getMaxRetries() + ")");
         }
 
         try {
@@ -208,7 +216,8 @@ public class EmailSendingUseCases {
 
             emailStatsService.recordEmailFailed(updatedEmail);
 
-            throw new RuntimeException("Failed to resend email: " + e.getMessage(), e);
+            throw new AppException(ErrorCode.EMAIL_RESEND_FAILED,
+                    "Failed to resend email: " + e.getMessage());
         }
     }
 
@@ -217,7 +226,8 @@ public class EmailSendingUseCases {
         log.debug("Getting email status for messageId: {}", messageId);
 
         EmailEntity email = emailPort.findByMessageId(messageId)
-                .orElseThrow(() -> new IllegalArgumentException("Email not found: " + messageId));
+                .orElseThrow(() -> new AppException(ErrorCode.EMAIL_NOT_FOUND,
+                        "Email not found: " + messageId));
 
         return EmailMapper.toEmailStatusResponse(email);
     }
