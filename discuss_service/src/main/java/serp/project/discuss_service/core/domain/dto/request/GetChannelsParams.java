@@ -11,9 +11,6 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import serp.project.discuss_service.core.domain.enums.ChannelType;
 
-/**
- * Request DTO for getting channels with filters
- */
 @NoArgsConstructor
 @AllArgsConstructor
 @Setter

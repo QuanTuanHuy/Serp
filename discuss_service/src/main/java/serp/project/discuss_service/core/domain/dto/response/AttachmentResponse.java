@@ -14,9 +14,6 @@ import serp.project.discuss_service.core.domain.enums.StorageProvider;
 
 import java.util.Map;
 
-/**
- * Response DTO for attachment data
- */
 @NoArgsConstructor
 @AllArgsConstructor
 @Data

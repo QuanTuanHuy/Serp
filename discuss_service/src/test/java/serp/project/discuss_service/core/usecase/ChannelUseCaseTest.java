@@ -20,6 +20,7 @@ import serp.project.discuss_service.core.exception.ErrorCode;
 import serp.project.discuss_service.core.service.IChannelMemberService;
 import serp.project.discuss_service.core.service.IChannelService;
 import serp.project.discuss_service.core.service.IDiscussEventPublisher;
+import serp.project.discuss_service.core.service.IPresenceService;
 import serp.project.discuss_service.testutil.TestDataFactory;
 
 import java.util.List;
@@ -42,6 +43,9 @@ class ChannelUseCaseTest {
 
     @Mock
     private IChannelMemberService memberService;
+
+    @Mock
+    private IPresenceService presenceService;
 
     @Mock
     private IDiscussEventPublisher eventPublisher;
@@ -514,6 +518,7 @@ class ChannelUseCaseTest {
             // Given
             Set<Long> memberIds = Set.of(100L, 200L, 300L);
             when(memberService.getMemberIds(1L)).thenReturn(memberIds);
+            when(presenceService.getOnlineUsers(memberIds)).thenReturn(memberIds);
 
             // When
             Set<Long> result = channelUseCase.getOnlineMembers(1L);

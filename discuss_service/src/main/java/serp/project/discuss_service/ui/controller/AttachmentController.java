@@ -20,10 +20,6 @@ import serp.project.discuss_service.kernel.utils.ResponseUtils;
 import java.util.List;
 import java.util.Map;
 
-/**
- * REST Controller for attachment operations.
- * Provides endpoints for managing file attachments in messages.
- */
 @RestController
 @RequestMapping("/api/v1/attachments")
 @RequiredArgsConstructor
@@ -34,9 +30,6 @@ public class AttachmentController {
     private final AuthUtils authUtils;
     private final ResponseUtils responseUtils;
 
-    /**
-     * Get attachment metadata by ID
-     */
     @GetMapping("/{attachmentId}")
     public ResponseEntity<GeneralResponse<AttachmentResponse>> getAttachment(
             @PathVariable Long attachmentId) {
@@ -50,9 +43,6 @@ public class AttachmentController {
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
-    /**
-     * Get all attachments for a message
-     */
     @GetMapping("/message/{messageId}")
     public ResponseEntity<GeneralResponse<List<AttachmentResponse>>> getAttachmentsByMessage(
             @PathVariable Long messageId) {
@@ -66,9 +56,6 @@ public class AttachmentController {
         return ResponseEntity.ok(responseUtils.success(responses));
     }
 
-    /**
-     * Generate a presigned download URL for an attachment
-     */
     @GetMapping("/{attachmentId}/download-url")
     public ResponseEntity<GeneralResponse<Map<String, String>>> getDownloadUrl(
             @PathVariable Long attachmentId,
@@ -89,9 +76,6 @@ public class AttachmentController {
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
-    /**
-     * Delete an attachment
-     */
     @DeleteMapping("/{attachmentId}")
     public ResponseEntity<GeneralResponse<?>> deleteAttachment(
             @PathVariable Long attachmentId) {

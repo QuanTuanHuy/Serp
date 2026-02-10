@@ -14,9 +14,6 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-/**
- * Request DTO for creating a GROUP channel
- */
 @NoArgsConstructor
 @AllArgsConstructor
 @Data

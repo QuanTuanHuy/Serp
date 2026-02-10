@@ -15,9 +15,6 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-/**
- * Request DTO for sending a reply to a message (threading)
- */
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
@@ -30,9 +27,6 @@ public class SendReplyRequest {
     @NotBlank(message = "Reply content is required")
     @Size(max = 10000, message = "Reply content must not exceed 10000 characters")
     private String content;
-    
-    /**
-     * List of user IDs mentioned in this reply
-     */
+
     private List<Long> mentions;
 }

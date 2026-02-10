@@ -17,9 +17,6 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
-/**
- * Response DTO for channel data
- */
 @NoArgsConstructor
 @AllArgsConstructor
 @Data

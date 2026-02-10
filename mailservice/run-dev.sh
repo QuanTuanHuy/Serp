@@ -4,14 +4,9 @@
 echo "Loading environment variables from .env file..."
 
 if [ -f .env ]; then
-    while IFS='=' read -r key value || [ -n "$key" ]; do
-        if [[ -n "$key" && ! "$key" =~ ^[[:space:]]*# ]]; then
-            export "$key"="$(echo "$value" | sed 's/[[:space:]]*$//')"
-            echo "Set $key=$value"
-        fi
-    done < .env
-else
-    echo "Warning: .env file not found!"
+  set -a
+  source <(sed -e 's/^\s*export\s\+//g' -e 's/\r$//g' .env)
+  set +a
 fi
 
 echo ""

@@ -12,9 +12,6 @@ import lombok.NoArgsConstructor;
 
 import java.util.Set;
 
-/**
- * Response DTO for typing indicator status
- */
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
