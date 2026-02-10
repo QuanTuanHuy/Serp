@@ -24,6 +24,9 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SendEmailRequest {
+    @Email(message = "Invalid email address")
+    private String fromEmail;
+
     @NotEmpty(message = "At least one recipient is required")
     private List<@Email(message = "Invalid email address") String> toEmails;
 

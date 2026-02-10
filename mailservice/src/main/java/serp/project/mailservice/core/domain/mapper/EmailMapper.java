@@ -19,6 +19,7 @@ public class EmailMapper {
                 .provider(request.getProvider())
                 .priority(request.getPriority())
                 .type(request.getType())
+                .fromEmail(request.getFromEmail())
                 .toEmails(request.getToEmails())
                 .ccEmails(request.getCcEmails())
                 .bccEmails(request.getBccEmails())

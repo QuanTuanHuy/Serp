@@ -86,7 +86,8 @@ public class DeliveryService implements IDeliveryService {
             log.warn("Cannot notify typing with null channelId or userId");
             return;
         }
-        String userName = userInfoService.getUserById(userId).map(ChannelMemberResponse.UserInfo::getName).orElse("");
+        String userName = userInfoService.getUserById(userId)
+                .map(ChannelMemberResponse.UserInfo::getName).orElse("");
         if (userName.isBlank()) {
             log.warn("Cannot notify typing for user {}: no name found", userId);
         }

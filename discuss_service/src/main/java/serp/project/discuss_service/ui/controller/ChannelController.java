@@ -26,9 +26,6 @@ import serp.project.discuss_service.kernel.utils.ResponseUtils;
 
 import java.util.List;
 
-/**
- * REST Controller for channel operations
- */
 @RestController
 @RequestMapping("/api/v1/channels")
 @RequiredArgsConstructor
@@ -40,9 +37,6 @@ public class ChannelController {
     private final ResponseUtils responseUtils;
     private final IUserInfoService userInfoService;
 
-    /**
-     * Create a new GROUP channel
-     */
     @PostMapping("/group")
     public ResponseEntity<GeneralResponse<ChannelResponse>> createGroupChannel(
             @Valid @RequestBody CreateGroupChannelRequest request) {
@@ -66,9 +60,6 @@ public class ChannelController {
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
-    /**
-     * Create or get a DIRECT channel between current user and another user
-     */
     @PostMapping("/direct")
     public ResponseEntity<GeneralResponse<ChannelResponse>> createDirectChannel(
             @Valid @RequestBody CreateDirectChannelRequest request) {
@@ -89,9 +80,6 @@ public class ChannelController {
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
-    /**
-     * Create a TOPIC channel linked to an entity
-     */
     @PostMapping("/topic")
     public ResponseEntity<GeneralResponse<ChannelResponse>> createTopicChannel(
             @Valid @RequestBody CreateTopicChannelRequest request) {
@@ -116,9 +104,6 @@ public class ChannelController {
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
-    /**
-     * Get a channel by ID with members
-     */
     @GetMapping("/{channelId}")
     public ResponseEntity<GeneralResponse<ChannelResponse>> getChannel(
             @PathVariable Long channelId) {
@@ -138,9 +123,6 @@ public class ChannelController {
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
-    /**
-     * Get members of a channel
-     */
     @GetMapping("/{channelId}/members")
     public ResponseEntity<GeneralResponse<List<ChannelMemberResponse>>> getChannelMembers(
             @PathVariable Long channelId) {
@@ -155,9 +137,6 @@ public class ChannelController {
         return ResponseEntity.ok(responseUtils.success(responses));
     }
 
-    /**
-     * Get current user's channels
-     */
     @GetMapping
     public ResponseEntity<GeneralResponse<PaginatedResponse<ChannelResponse>>> getMyChannels() {
         Long userId = authUtils.getCurrentUserId()
@@ -182,9 +161,6 @@ public class ChannelController {
         return ResponseEntity.ok(responseUtils.success(paginatedResponse));
     }
 
-    /**
-     * Update channel info
-     */
     @PutMapping("/{channelId}")
     public ResponseEntity<GeneralResponse<ChannelResponse>> updateChannel(
             @PathVariable Long channelId,
@@ -205,9 +181,6 @@ public class ChannelController {
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
-    /**
-     * Archive channel
-     */
     @PostMapping("/{channelId}/archive")
     public ResponseEntity<GeneralResponse<ChannelResponse>> archiveChannel(
             @PathVariable Long channelId) {
@@ -221,9 +194,6 @@ public class ChannelController {
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
-    /**
-     * Delete channel
-     */
     @DeleteMapping("/{channelId}")
     public ResponseEntity<GeneralResponse<?>> deleteChannel(
             @PathVariable Long channelId) {
@@ -236,9 +206,6 @@ public class ChannelController {
         return ResponseEntity.ok(responseUtils.status("Channel deleted successfully"));
     }
 
-    /**
-     * Add member to channel
-     */
     @PostMapping("/{channelId}/members")
     public ResponseEntity<GeneralResponse<ChannelMemberResponse>> addMember(
             @PathVariable Long channelId,
@@ -255,9 +222,6 @@ public class ChannelController {
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
-    /**
-     * Remove member from channel
-     */
     @DeleteMapping("/{channelId}/members/{userId}")
     public ResponseEntity<GeneralResponse<ChannelMemberResponse>> removeMember(
             @PathVariable Long channelId,
@@ -272,9 +236,6 @@ public class ChannelController {
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
-    /**
-     * Leave channel
-     */
     @PostMapping("/{channelId}/leave")
     public ResponseEntity<GeneralResponse<ChannelMemberResponse>> leaveChannel(
             @PathVariable Long channelId) {

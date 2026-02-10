@@ -12,9 +12,6 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-/**
- * Response DTO for reaction data
- */
 @NoArgsConstructor
 @AllArgsConstructor
 @Data

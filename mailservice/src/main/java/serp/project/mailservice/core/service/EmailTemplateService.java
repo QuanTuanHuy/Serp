@@ -15,60 +15,62 @@ import serp.project.mailservice.core.port.client.ITemplateEnginePort;
 import serp.project.mailservice.core.port.store.IEmailTemplatePort;
 
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class EmailTemplateService implements IEmailTemplateService {
 
-    private final IEmailTemplatePort emailTemplatePort;
     private final ITemplateEnginePort templateEnginePort;
     private final IRedisCachePort redisCachePort;
+    private final IEmailTemplatePort emailTemplatePort;
 
     private static final Duration TEMPLATE_CACHE_TTL = Duration.ofHours(1);
 
     @Override
-    public String renderTemplate(Long templateId, Map<String, Object> variables) {
-        log.debug("Rendering template ID: {} with {} variables", templateId, 
-                variables != null ? variables.size() : 0);
-
-        EmailTemplateEntity template = getTemplate(templateId);
-        
-        if (template == null) {
-            throw new IllegalArgumentException("Template not found with ID: " + templateId);
-        }
-
-        Map<String, Object> mergedVariables = mergeVariables(template, variables);
-
-        String renderedHtml = templateEnginePort.processTemplate(
-                template.getBodyTemplate(), 
-                mergedVariables
-        );
-
-        log.debug("Template rendered successfully: {}", templateId);
-        return renderedHtml;
+    public EmailTemplateEntity save(EmailTemplateEntity template) {
+        return emailTemplatePort.save(template);
     }
 
     @Override
-    public String renderTemplateByCode(Long tenantId, String templateCode, Map<String, Object> variables) {
-        log.debug("Rendering template code: {} for tenant: {}", templateCode, tenantId);
+    public Optional<EmailTemplateEntity> getTemplateById(Long templateId) {
+        if (templateId == null) {
+            return Optional.empty();
+        }
 
-        EmailTemplateEntity template = emailTemplatePort.findByTenantIdAndCode(tenantId, templateCode)
-                .or(() -> emailTemplatePort.findByCode(templateCode))
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Template not found with code: " + templateCode + " for tenant: " + tenantId)
-                );
+        String cacheKey = RedisKey.TEMPLATE_CACHE_PREFIX + templateId;
+        try {
+            EmailTemplateEntity cachedTemplate = redisCachePort.getFromCache(cacheKey, EmailTemplateEntity.class);
+            if (cachedTemplate != null) {
+                log.debug("Template ID: {} found in cache", templateId);
+                return Optional.of(cachedTemplate);
+            }
+        } catch (Exception e) {
+            log.error("Failed to retrieve template ID: {} from cache", templateId, e);
+        }
 
-        cacheTemplate(template);
+        Optional<EmailTemplateEntity> dbTemplateOpt = emailTemplatePort.findById(templateId);
+        if (dbTemplateOpt.isPresent()) {
+            EmailTemplateEntity dbTemplate = dbTemplateOpt.get();
+            log.debug("Template ID: {} retrieved from database", templateId);
+            cacheTemplate(dbTemplate);
+            return Optional.of(dbTemplate);
+        }
 
-        Map<String, Object> mergedVariables = mergeVariables(template, variables);
-        String renderedHtml = templateEnginePort.processTemplate(
-                template.getBodyTemplate(),
-                mergedVariables
-        );
+        log.warn("Template ID: {} not found", templateId);
+        return Optional.empty();
+    }
 
-        log.debug("Template code rendered successfully: {}", templateCode);
+    @Override
+    public String renderTemplate(String bodyTemplate, Map<String, Object> defaultValues, Map<String, Object> variables) {
+        Map<String, Object> mergedVariables = mergeVariables(defaultValues, variables);
+
+        String renderedHtml = templateEnginePort.processTemplate(bodyTemplate, mergedVariables);
+
+        log.debug("Template rendered successfully");
         return renderedHtml;
     }
 
@@ -79,7 +81,7 @@ public class EmailTemplateService implements IEmailTemplateService {
         }
 
         String cacheKey = RedisKey.TEMPLATE_CACHE_PREFIX + template.getId();
-        
+
         try {
             redisCachePort.setToCache(cacheKey, template, TEMPLATE_CACHE_TTL.toSeconds());
             log.debug("Cached template ID: {} for {} seconds", template.getId(), TEMPLATE_CACHE_TTL.toSeconds());
@@ -95,7 +97,7 @@ public class EmailTemplateService implements IEmailTemplateService {
         }
 
         String cacheKey = RedisKey.TEMPLATE_CACHE_PREFIX + templateId;
-        
+
         try {
             redisCachePort.deleteFromCache(cacheKey);
             log.debug("Invalidated cache for template ID: {}", templateId);
@@ -114,47 +116,22 @@ public class EmailTemplateService implements IEmailTemplateService {
         }
     }
 
-    private EmailTemplateEntity getTemplate(Long templateId) {
-        String cacheKey = RedisKey.TEMPLATE_CACHE_PREFIX + templateId;
-        
-        try {
-            EmailTemplateEntity cachedTemplate = redisCachePort.getFromCache(
-                    cacheKey, 
-                    EmailTemplateEntity.class
-            );
-            
-            if (cachedTemplate != null) {
-                log.debug("Template ID: {} retrieved from cache", templateId);
-                return cachedTemplate;
-            }
-        } catch (Exception e) {
-            log.warn("Failed to retrieve template from cache: {}", templateId, e);
-        }
-
-        EmailTemplateEntity template = emailTemplatePort.findById(templateId).orElse(null);
-        
-        if (template != null) {
-            cacheTemplate(template);
-            log.debug("Template ID: {} retrieved from database", templateId);
-        }
-        
-        return template;
+    @Override
+    public boolean existsByCode(String code) {
+        return emailTemplatePort.existsByCode(code);
     }
 
-    private Map<String, Object> mergeVariables(EmailTemplateEntity template, Map<String, Object> variables) {
-        Map<String, Object> merged = template.getDefaultValues() != null 
-                ? Map.copyOf(template.getDefaultValues()) 
-                : Map.of();
-        
-        if (variables != null && !variables.isEmpty()) {
-            merged = new java.util.HashMap<>(merged);
+    private Map<String, Object> mergeVariables(Map<String, Object> defaultValues, Map<String, Object> variables) {
+        Map<String, Object> merged = new HashMap<>();
+
+        if (defaultValues != null) {
+            merged.putAll(defaultValues);
+        }
+
+        if (variables != null) {
             merged.putAll(variables);
         }
 
-        log.debug("Merged {} default values with {} provided variables", 
-                template.getDefaultValues() != null ? template.getDefaultValues().size() : 0,
-                variables != null ? variables.size() : 0);
-        
         return merged;
     }
 }

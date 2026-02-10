@@ -10,9 +10,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
-/**
- * Request DTO for getting messages with filters
- */
 @NoArgsConstructor
 @AllArgsConstructor
 @Setter

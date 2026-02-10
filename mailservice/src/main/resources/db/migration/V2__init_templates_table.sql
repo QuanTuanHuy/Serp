@@ -11,40 +11,32 @@ CREATE TABLE IF NOT EXISTS email_templates (
     id BIGSERIAL PRIMARY KEY,
     tenant_id BIGINT,
     
-    -- Template identification
     name VARCHAR(255) NOT NULL,
     code VARCHAR(100) NOT NULL,
     description TEXT,
     
-    -- Template content
     subject VARCHAR(500) NOT NULL,
     body_template TEXT NOT NULL,
     is_html BOOLEAN DEFAULT true,
     
-    -- Template configuration
     variables_schema JSONB,
     default_values JSONB,
     
-    -- Template metadata
     type VARCHAR(50) NOT NULL,
     language VARCHAR(10) DEFAULT 'en',
     category VARCHAR(100),
     
-    -- Global vs Tenant-specific templates
     is_global BOOLEAN DEFAULT false,
     
-    -- Version control
     version INTEGER DEFAULT 1,
     is_active BOOLEAN DEFAULT true,
     
-    -- Audit fields
     created_by BIGINT,
     updated_by BIGINT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     active_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
     
-    -- CONSTRAINT chk_template_type CHECK (type IN ('VERIFICATION', 'NOTIFICATION', 'MARKETING', 'TRANSACTIONAL', 'PASSWORD_RESET', 'ALERT', 'REMINDER', 'WELCOME')),
     CONSTRAINT chk_template_active_status CHECK (active_status IN ('ACTIVE', 'DELETED')),
     CONSTRAINT chk_template_global_tenant CHECK (
         (is_global = true AND tenant_id IS NULL) OR 

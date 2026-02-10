@@ -12,9 +12,6 @@ import lombok.NoArgsConstructor;
 
 import java.util.Map;
 
-/**
- * Response DTO for unread counts
- */
 @NoArgsConstructor
 @AllArgsConstructor
 @Data

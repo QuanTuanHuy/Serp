@@ -18,14 +18,11 @@ import serp.project.discuss_service.core.exception.ErrorCode;
 import serp.project.discuss_service.core.service.IChannelMemberService;
 import serp.project.discuss_service.core.service.IChannelService;
 import serp.project.discuss_service.core.service.IDiscussEventPublisher;
+import serp.project.discuss_service.core.service.IPresenceService;
 
 import java.util.List;
 import java.util.Set;
 
-/**
- * Use case for channel operations.
- * Orchestrates channel-related business logic across multiple services.
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -34,10 +31,8 @@ public class ChannelUseCase {
     private final IChannelService channelService;
     private final IChannelMemberService memberService;
     private final IDiscussEventPublisher eventPublisher;
+    private final IPresenceService presenceService;
 
-    /**
-     * Create a new GROUP channel with the creator as owner
-     */
     @Transactional
     public ChannelEntity createGroupChannel(Long tenantId, Long createdBy, String name,
                                             String description, boolean isPrivate,
@@ -62,9 +57,6 @@ public class ChannelUseCase {
         return channel;
     }
 
-    /**
-     * Create or get a DIRECT channel between two users
-     */
     @Transactional
     public ChannelEntity getOrCreateDirectChannel(Long tenantId, Long userId1, Long userId2) {
         ChannelEntity channel = channelService.getOrCreateDirectChannel(tenantId, userId1, userId2);
@@ -79,9 +71,6 @@ public class ChannelUseCase {
         return channel;
     }
 
-    /**
-     * Create a TOPIC channel linked to an entity
-     */
     @Transactional
     public ChannelEntity createTopicChannel(Long tenantId, Long createdBy, String name,
                                            String entityType, Long entityId,
@@ -103,9 +92,6 @@ public class ChannelUseCase {
         return channel;
     }
 
-    /**
-     * Get channel with members
-     */
     @Transactional(readOnly = true)
     public ChannelEntity getChannelWithMembers(Long channelId) {
         ChannelEntity channel = channelService.getChannelByIdOrThrow(channelId);
@@ -114,9 +100,6 @@ public class ChannelUseCase {
         return channel;
     }
 
-    /**
-     * Get members of a channel
-     */
     @Transactional(readOnly = true)
     public List<ChannelMemberEntity> getChannelMembers(Long channelId, Long userId) {
         if (!memberService.isMember(channelId, userId)) {
@@ -125,9 +108,6 @@ public class ChannelUseCase {
         return memberService.getActiveMembers(channelId);
     }
 
-    /**
-     * Get user's channels
-     */
     @Transactional(readOnly = true)
     public List<ChannelEntity> getUserChannels(Long userId, Long tenantId) {
         List<ChannelMemberEntity> memberships = memberService.getUserChannels(userId);
@@ -140,9 +120,6 @@ public class ChannelUseCase {
                 .toList();
     }
 
-    /**
-     * Update channel info
-     */
     @Transactional
     public ChannelEntity updateChannel(Long channelId, Long userId, String name, String description) {
         if (!memberService.canManageChannel(channelId, userId)) {
@@ -154,9 +131,6 @@ public class ChannelUseCase {
         return channel;
     }
 
-    /**
-     * Archive channel
-     */
     @Transactional
     public ChannelEntity archiveChannel(Long channelId, Long userId) {
         if (!memberService.canManageChannel(channelId, userId)) {
@@ -168,9 +142,6 @@ public class ChannelUseCase {
         return channel;
     }
 
-    /**
-     * Add member to channel
-     */
     @Transactional
     public ChannelMemberEntity addMember(Long channelId, Long userId, Long addedBy, Long tenantId) {
         if (!memberService.canManageChannel(channelId, addedBy)) {
@@ -184,9 +155,6 @@ public class ChannelUseCase {
         return member;
     }
 
-    /**
-     * Remove member from channel
-     */
     @Transactional
     public ChannelMemberEntity removeMember(Long channelId, Long userId, Long removerId) {
         if (!memberService.canManageChannel(channelId, removerId)) {
@@ -200,9 +168,6 @@ public class ChannelUseCase {
         return member;
     }
 
-    /**
-     * Leave channel
-     */
     @Transactional
     public ChannelMemberEntity leaveChannel(Long channelId, Long userId) {
         ChannelMemberEntity member = memberService.leaveChannel(channelId, userId);
@@ -212,9 +177,6 @@ public class ChannelUseCase {
         return member;
     }
 
-    /**
-     * Delete channel
-     */
     @Transactional
     public void deleteChannel(Long channelId, Long userId) {
         if (!memberService.canManageChannel(channelId, userId)) {
@@ -225,11 +187,9 @@ public class ChannelUseCase {
         log.info("Deleted channel {} by user {}", channelId, userId);
     }
 
-    /**
-     * Get online members in channel
-     */
+    @Transactional(readOnly = true)
     public Set<Long> getOnlineMembers(Long channelId) {
-        // This would integrate with presence service
-        return memberService.getMemberIds(channelId);
+        Set<Long> memberIds = memberService.getMemberIds(channelId);
+        return presenceService.getOnlineUsers(memberIds);
     }
 }

@@ -7,5 +7,6 @@ package serp.project.mailservice.core.domain.enums;
 
 public enum EmailProvider {
     JAVA_MAIL,
-    BREVO
+    BREVO,
+    SEND_GRID
 }

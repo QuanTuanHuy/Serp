@@ -77,4 +77,9 @@ public class EmailTemplateAdapter implements IEmailTemplatePort {
     public boolean existsByCode(String code) {
         return emailTemplateRepository.existsByCode(code);
     }
+
+    @Override
+    public boolean existsByCodeAndTenantId(String code, Long tenantId) {
+        return emailTemplateRepository.existsByCodeAndTenantId(code, tenantId);
+    }
 }

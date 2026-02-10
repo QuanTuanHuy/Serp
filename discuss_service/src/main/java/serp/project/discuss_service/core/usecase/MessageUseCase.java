@@ -55,9 +55,6 @@ public class MessageUseCase {
     private final IUserInfoService userInfoService;
     private final ApplicationEventPublisher applicationEventPublisher;
 
-    /**
-     * Send a new message to a channel
-     */
     @Transactional
     public MessageEntity sendMessage(Long channelId, Long senderId, Long tenantId,
                                      String content, List<Long> mentions) {
@@ -81,9 +78,6 @@ public class MessageUseCase {
         return saved;
     }
 
-    /**
-     * Send a new message with file attachments to a channel
-     */
     @Transactional
     public MessageEntity sendMessageWithAttachments(Long channelId, Long senderId, Long tenantId,
                                                      String content, List<Long> mentions,
@@ -122,9 +116,6 @@ public class MessageUseCase {
         return saved;
     }
 
-    /**
-     * Send a reply to a message (thread)
-     */
     @Transactional
     public MessageEntity sendReply(Long channelId, Long parentId, Long senderId, Long tenantId,
                                    String content, List<Long> mentions) {
@@ -152,9 +143,6 @@ public class MessageUseCase {
         return saved;
     }
 
-    /**
-     * Get messages in a channel with pagination.
-     */
     @Transactional(readOnly = true)
     public Pair<Long, List<MessageEntity>> getChannelMessages(Long channelId, Long userId, 
                                                                int page, int size) {
@@ -181,9 +169,6 @@ public class MessageUseCase {
         return result;
     }
 
-    /**
-     * Get messages before a specific message (for infinite scroll).
-     */
     @Transactional(readOnly = true)
     public List<MessageEntity> getMessagesBefore(Long channelId, Long userId, 
                                                   Long beforeId, int limit) {
@@ -198,9 +183,6 @@ public class MessageUseCase {
         return messages;
     }
 
-    /**
-     * Get thread replies.
-     */
     @Transactional(readOnly = true)
     public List<MessageEntity> getThreadReplies(Long channelId, Long parentId, Long userId) {
         if (!memberService.isMember(channelId, userId)) {
@@ -214,9 +196,6 @@ public class MessageUseCase {
         return messages;
     }
 
-    /**
-     * Search messages in a channel.
-     */
     @Transactional(readOnly = true)
     public List<MessageEntity> searchMessages(Long channelId, Long userId, 
                                                String query, int page, int size) {
@@ -231,9 +210,6 @@ public class MessageUseCase {
         return messages;
     }
 
-    /**
-     * Get detailed message by ID
-     */
     @Transactional(readOnly = true)
     public Optional<MessageResponse> getMessageDetail(Long messageId) {
         Optional<MessageEntity> messageOpt = messageService.getMessageById(messageId);
@@ -244,9 +220,6 @@ public class MessageUseCase {
         });
     }
 
-    /**
-     * Edit a message
-     */
     @Transactional
     public MessageEntity editMessage(Long messageId, Long userId, String newContent) {
         MessageEntity message = messageService.getMessageByIdOrThrow(messageId);
@@ -262,9 +235,6 @@ public class MessageUseCase {
         return edited;
     }
 
-    /**
-     * Delete a message
-     */
     @Transactional
     public MessageEntity deleteMessage(Long messageId, Long userId) {
         MessageEntity message = messageService.getMessageByIdOrThrow(messageId);
@@ -278,9 +248,6 @@ public class MessageUseCase {
         return deleted;
     }
 
-    /**
-     * Add reaction to a message
-     */
     @Transactional
     public MessageEntity addReaction(Long messageId, Long userId, String emoji) {
         MessageEntity message = messageService.getMessageByIdOrThrow(messageId);
@@ -297,9 +264,6 @@ public class MessageUseCase {
         return updated;
     }
 
-    /**
-     * Remove reaction from a message
-     */
     @Transactional
     public MessageEntity removeReaction(Long messageId, Long userId, String emoji) {
         MessageEntity message = messageService.getMessageByIdOrThrow(messageId);
@@ -316,9 +280,6 @@ public class MessageUseCase {
         return updated;
     }
 
-    /**
-     * Mark messages as read in a channel
-     */
     @Transactional
     public void markAsRead(Long channelId, Long userId, Long messageId) {
         if (!memberService.isMember(channelId, userId)) {
@@ -331,9 +292,6 @@ public class MessageUseCase {
         log.debug("User {} marked messages as read in channel {} up to {}", userId, channelId, messageId);
     }
 
-    /**
-     * Send typing indicator
-     */
     public void sendTypingIndicator(Long channelId, Long userId, boolean isTyping) {
         if (!memberService.isMember(channelId, userId)) {
             return;
@@ -348,9 +306,6 @@ public class MessageUseCase {
         eventPublisher.publishTypingIndicator(channelId, userId, isTyping);
     }
 
-    /**
-     * Get users currently typing in a channel
-     */
     public Set<Long> getTypingUsers(Long channelId, Long userId) {
         if (!memberService.isMember(channelId, userId)) {
             throw new AppException(ErrorCode.NOT_CHANNEL_MEMBER);
@@ -359,9 +314,6 @@ public class MessageUseCase {
         return cacheService.getTypingUsers(channelId);
     }
 
-    /**
-     * Get unread message count for user in channel
-     */
     public long getUnreadCount(Long channelId, Long userId) {
         ChannelMemberEntity member = memberService.getMemberOrThrow(channelId, userId);
         
@@ -374,11 +326,6 @@ public class MessageUseCase {
 
     // ==================== PRIVATE HELPER METHODS ====================
 
-    /**
-     * Batch load and attach attachments to messages
-     *
-     * @param messages List of messages to enrich with attachments
-     */
     private void enrichMessagesWithAttachments(List<MessageEntity> messages) {
         if (messages == null || messages.isEmpty()) {
             return;

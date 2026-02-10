@@ -69,7 +69,6 @@ public class ChannelAdapter implements IChannelPort {
 
     @Override
     public Optional<ChannelEntity> findDirectChannel(Long tenantId, Long userId1, Long userId2) {
-        // Ensure consistent ordering
         Long smallerId = Math.min(userId1, userId2);
         Long largerId = Math.max(userId1, userId2);
         

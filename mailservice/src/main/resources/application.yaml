@@ -72,14 +72,14 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
-          issuer-uri: http://localhost:8180/realms/serp
+          jwk-set-uri: ${KEYCLOAK_URL}/realms/serp/protocol/openid-connect/certs
+          issuer-uri: ${KEYCLOAK_URL}/realms/serp
 
 app:
   keycloak:
-    url: http://localhost:8180
-    jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
-    expected-issuer: http://localhost:8180/realms/serp
+    url: ${KEYCLOAK_URL}
+    jwk-set-uri: ${KEYCLOAK_URL}/realms/serp/protocol/openid-connect/certs
+    expected-issuer: ${KEYCLOAK_URL}/realms/serp
     expected-audience: serp-mail
     realm: serp
     client-id: serp-mail
@@ -87,22 +87,33 @@ app:
 
   email:
     java-mail:
-      enabled: true
-      from: ${MAIL_FROM:noreply@serp.com}
+      enabled: false
+      from: ${MAIL_FROM}
       from-name: ${MAIL_FROM_NAME:SERP System}
-      reply-to: ${MAIL_REPLY_TO:support@serp.com}
+      reply-to: ${MAIL_REPLY_TO}
       rate-limit-per-minute: 60
       timeout-seconds: 10
       max-retry-attempts: 3
       retry-delay-minutes: 5
     
     brevo:
-      enabled: true
+      enabled: false
       api-key: ${BREVO_API_KEY}
-      api-url: https://api.brevo.com/v3
-      from: ${BREVO_FROM:noreply@serp.com}
+      api-url: https://api.brevo.com
+      from: ${BREVO_FROM}
       from-name: ${BREVO_FROM_NAME:SERP System}
       rate-limit-per-minute: 300
+      timeout-seconds: 10
+      max-retry-attempts: 3
+      retry-delay-minutes: 5
+
+    send-grid:
+      enabled: true
+      api-key: ${SENDGRID_API_KEY}
+      api-url: https://api.sendgrid.com
+      from: ${SENDGRID_FROM}
+      from-name: ${SENDGRID_FROM_NAME:SERP System}
+      rate-limit-per-minute: 100
       timeout-seconds: 10
       max-retry-attempts: 3
       retry-delay-minutes: 5
@@ -117,6 +128,7 @@ app:
       enabled: true
       default-per-tenant-per-minute: 100
       default-per-provider-per-minute: 500
+      default-per-user-per-minute: 20
       use-redis: true
     
     retry:
@@ -136,3 +148,13 @@ app:
     filter:
       publicUrls:
       protectedUrls:
+        - url-pattern: /api/v1/**
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+          permissions:
+
+logging:
+  level:
+    root: info
+    serp.project.mailservice.infrastructure: debug

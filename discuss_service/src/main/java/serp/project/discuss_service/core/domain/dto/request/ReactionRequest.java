@@ -12,9 +12,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * Request DTO for adding/removing a reaction to/from a message
- */
 @NoArgsConstructor
 @AllArgsConstructor
 @Data

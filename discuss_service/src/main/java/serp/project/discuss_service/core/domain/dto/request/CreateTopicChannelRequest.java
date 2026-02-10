@@ -15,9 +15,6 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-/**
- * Request DTO for creating a TOPIC channel linked to an entity
- */
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
