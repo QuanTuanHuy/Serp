@@ -53,18 +53,66 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://localhost:8180/realms/serp/protocol/openid-connect/certs
-          issuer-uri: http://localhost:8180/realms/serp
+          jwk-set-uri: ${KEYCLOAK_URL}/realms/serp/protocol/openid-connect/certs
+          issuer-uri: ${KEYCLOAK_URL}/realms/serp
 
 app:
   keycloak:
-    url: ${KEYCLOAK_URL:https://auth.serp.texkis.com/realms/serp}
-    jwk-set-uri: ${JWK_SET_URI:https://auth.serp.texkis.com/realms/serp/protocol/openid-connect/certs}
-    expected-issuer: https://auth.serp.texkis.com/realms/serp
+    url: ${KEYCLOAK_URL}
+    jwk-set-uri: ${KEYCLOAK_URL}/realms/serp/protocol/openid-connect/certs
+    expected-issuer: ${KEYCLOAK_URL}/realms/serp
     expected-audience: serp-mail
     realm: serp
     client-id: serp-mail
     client-secret: ${CLIENT_SECRET}
+
+  email:
+    java-mail:
+      enabled: true
+      from: ${MAIL_FROM:noreply@serp.com}
+      from-name: ${MAIL_FROM_NAME:SERP System}
+      reply-to: ${MAIL_REPLY_TO:support@serp.com}
+      rate-limit-per-minute: 60
+      timeout-seconds: 10
+      max-retry-attempts: 3
+      retry-delay-minutes: 5
+    
+    brevo:
+      enabled: true
+      api-key: ${BREVO_API_KEY}
+      api-url: https://api.brevo.com/v3
+      from: ${BREVO_FROM:noreply@serp.com}
+      from-name: ${BREVO_FROM_NAME:SERP System}
+      rate-limit-per-minute: 300
+      timeout-seconds: 10
+      max-retry-attempts: 3
+      retry-delay-minutes: 5
+    
+    attachments:
+      storage-path: ${ATTACHMENT_STORAGE_PATH:./data/email-attachments}
+      max-size-mb: 25
+      allowed-extensions: pdf,doc,docx,xls,xlsx,txt,jpg,jpeg,png,gif,zip
+      retention-days: 7
+    
+    rate-limit:
+      enabled: true
+      default-per-tenant-per-minute: 100
+      default-per-provider-per-minute: 500
+      default-per-user-per-minute: 20
+      use-redis: true
+    
+    retry:
+      enabled: true
+      max-attempts: 3
+      initial-delay-minutes: 1
+      max-delay-minutes: 60
+      backoff-multiplier: 2.0
+    
+    scheduler:
+      retry-failed-emails-cron: "0 */5 * * * *"
+      aggregate-stats-cron: "0 0 * * * *"
+      cleanup-attachments-cron: "0 0 2 * * *"
+      provider-health-check-fixed-delay: 60000
 
   security:
     filter:

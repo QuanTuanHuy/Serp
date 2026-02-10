@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import serp.project.mailservice.core.domain.enums.EmailProvider;
+import serp.project.mailservice.core.port.client.IEmailProviderFactoryPort;
 import serp.project.mailservice.core.port.client.IEmailProviderPort;
 
 import java.util.HashMap;
@@ -18,7 +19,7 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class EmailProviderFactory {
+public class EmailProviderFactory implements IEmailProviderFactoryPort {
 
     @Qualifier("javaMailProvider")
     private final IEmailProviderPort javaMailProvider;
@@ -26,11 +27,11 @@ public class EmailProviderFactory {
     @Qualifier("brevoProvider")
     private final IEmailProviderPort brevoProvider;
 
-    // Cache provider health status (in-memory, could be moved to Redis)
     private final Map<EmailProvider, Boolean> providerHealthCache = new HashMap<>();
     private long lastHealthCheckTime = 0;
-    private static final long HEALTH_CHECK_INTERVAL_MS = 60_000; // 1 minute
+    private static final long HEALTH_CHECK_INTERVAL_MS = 60_000;
 
+    @Override
     public IEmailProviderPort getProvider(EmailProvider provider) {
         if (provider == null) {
             log.warn("Provider is null, using default JAVA_MAIL provider");
@@ -47,6 +48,7 @@ public class EmailProviderFactory {
         };
     }
 
+    @Override
     public IEmailProviderPort getHealthyProvider(EmailProvider preferredProvider) {
         refreshHealthCacheIfNeeded();
 

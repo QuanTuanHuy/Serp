@@ -13,9 +13,9 @@ import serp.project.mailservice.core.domain.dto.response.ProviderHealthResponse;
 import serp.project.mailservice.core.domain.entity.EmailEntity;
 import serp.project.mailservice.core.domain.enums.EmailProvider;
 import serp.project.mailservice.core.domain.enums.ProviderStatus;
+import serp.project.mailservice.core.port.client.IEmailProviderFactoryPort;
 import serp.project.mailservice.core.port.client.IEmailProviderPort;
 import serp.project.mailservice.core.port.client.IRedisCachePort;
-import serp.project.mailservice.infrastructure.client.provider.EmailProviderFactory;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class EmailProviderService implements IEmailProviderService {
 
-    private final EmailProviderFactory emailProviderFactory;
+    private final IEmailProviderFactoryPort emailProviderFactory;
     private final IRedisCachePort redisCachePort;
 
     private static final Duration DEFAULT_DOWNTIME = Duration.ofMinutes(5);

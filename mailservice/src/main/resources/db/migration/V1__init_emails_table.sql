@@ -13,13 +13,11 @@ CREATE TABLE IF NOT EXISTS emails (
     tenant_id BIGINT NOT NULL,
     user_id BIGINT,
     
-    -- Email provider and status
     provider VARCHAR(50) NOT NULL,
     status VARCHAR(50) NOT NULL,
     priority VARCHAR(50) NOT NULL DEFAULT 'NORMAL',
     type VARCHAR(50) NOT NULL,
     
-    -- Email addresses
     from_email VARCHAR(255) NOT NULL,
     from_name VARCHAR(255),
     reply_to VARCHAR(255),
@@ -27,21 +25,17 @@ CREATE TABLE IF NOT EXISTS emails (
     cc_emails TEXT[],
     bcc_emails TEXT[],
     
-    -- Email content
     subject VARCHAR(500) NOT NULL,
     body TEXT,
     is_html BOOLEAN DEFAULT true,
     
-    -- Template
     template_id BIGINT,
     template_variables JSONB,
     
-    -- Metadata and tracking
     metadata JSONB,
     provider_message_id VARCHAR(255),
     provider_response JSONB,
     
-    -- Retry logic
     sent_at TIMESTAMP,
     failed_at TIMESTAMP,
     next_retry_at TIMESTAMP,
@@ -49,7 +43,6 @@ CREATE TABLE IF NOT EXISTS emails (
     max_retries INTEGER DEFAULT 3,
     error_message TEXT,
     
-    -- Audit fields
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     active_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',

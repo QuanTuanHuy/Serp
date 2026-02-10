@@ -4,7 +4,7 @@ Description: Part of Serp Project
 */
 
 -- ======================================
--- V6: Seed global email templates
+-- V5: Seed global email templates
 -- ======================================
 
 -- ==================== Verification Email Template ====================

@@ -67,6 +67,12 @@ public class EmailModel {
     @Column(name = "from_email", nullable = false, length = 255)
     private String fromEmail;
 
+    @Column(name = "from_name", length = 255)
+    private String fromName;
+
+    @Column(name = "reply_to", length = 255)
+    private String replyTo;
+
     @Type(JsonType.class)
     @Column(name = "to_emails", columnDefinition = "TEXT[]")
     private List<String> toEmails;

@@ -10,32 +10,26 @@ Description: Part of Serp Project
 CREATE TABLE IF NOT EXISTS email_stats (
     id BIGSERIAL PRIMARY KEY,
     
-    -- Aggregation dimensions
     tenant_id BIGINT,
     provider VARCHAR(50) NOT NULL,
     email_type VARCHAR(50) NOT NULL,
     status VARCHAR(50) NOT NULL,
     
-    -- Time dimension
     stat_date DATE NOT NULL,
     stat_hour INTEGER,
     
-    -- Metrics
-    total_count INTEGER DEFAULT 0,
-    success_count INTEGER DEFAULT 0,
-    failed_count INTEGER DEFAULT 0,
-    retry_count INTEGER DEFAULT 0,
-    
-    -- Performance metrics
-    avg_response_time_ms INTEGER,
-    min_response_time_ms INTEGER,
-    max_response_time_ms INTEGER,
-    
-    -- Additional aggregations
+    total_count BIGINT DEFAULT 0,
+    success_count BIGINT DEFAULT 0,
+    failed_count BIGINT DEFAULT 0,
+    retry_count BIGINT DEFAULT 0,
+
+    avg_response_time_ms BIGINT,
+    min_response_time_ms BIGINT,
+    max_response_time_ms BIGINT,
+
     total_size_bytes BIGINT DEFAULT 0,
-    attachment_count INTEGER DEFAULT 0,
+    attachment_count BIGINT DEFAULT 0,
     
-    -- Audit fields
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     

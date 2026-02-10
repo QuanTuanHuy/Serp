@@ -32,4 +32,6 @@ public interface IEmailStatsPort {
     void incrementStats(Long tenantId, EmailProvider provider, EmailType emailType,
             EmailStatus status, LocalDate statDate, Integer statHour,
             Long responseTimeMs, Long sizeBytes, Integer attachmentCount);
+
+    long deleteByStatDateBefore(LocalDate cutoffDate);
 }

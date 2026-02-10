@@ -15,19 +15,17 @@ import serp.project.mailservice.core.domain.dto.request.SendEmailRequest;
 import serp.project.mailservice.core.domain.dto.response.EmailStatusResponse;
 import serp.project.mailservice.core.domain.dto.response.SendEmailResponse;
 import serp.project.mailservice.core.domain.entity.EmailEntity;
-import serp.project.mailservice.core.domain.enums.EmailStatus;
+import serp.project.mailservice.core.domain.entity.EmailTemplateEntity;
 import serp.project.mailservice.core.domain.mapper.EmailMapper;
 import serp.project.mailservice.core.port.client.IEmailProviderPort;
 import serp.project.mailservice.core.port.client.IKafkaProducerPort;
 import serp.project.mailservice.core.port.store.IEmailPort;
 import serp.project.mailservice.core.service.IEmailProviderService;
-import serp.project.mailservice.core.service.IEmailService;
 import serp.project.mailservice.core.service.IEmailStatsService;
 import serp.project.mailservice.core.service.IEmailTemplateService;
 import serp.project.mailservice.core.service.IRateLimitService;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +35,6 @@ import java.util.Map;
 @Slf4j
 public class EmailSendingUseCases {
 
-    private final IEmailService emailService;
     private final IEmailProviderService emailProviderService;
     private final IEmailTemplateService emailTemplateService;
     private final IRateLimitService rateLimitService;
@@ -54,48 +51,44 @@ public class EmailSendingUseCases {
         }
 
         EmailEntity email = EmailMapper.toEntity(request, tenantId, userId);
-        
-        emailService.validateEmail(email);
-        emailService.enrichEmail(email);
+        email.enrichDefaults();
+        email.validate();
 
         if (email.getTemplateId() != null) {
-            Map<String, Object> variables = email.getTemplateVariables();
-            String body = emailTemplateService.renderTemplate(email.getTemplateId(), variables);
+            EmailTemplateEntity template = emailTemplateService.getTemplateById(email.getTemplateId())
+                    .orElseThrow(() -> new IllegalArgumentException("Template not found: " + email.getTemplateId()));
+            String body = emailTemplateService.renderTemplate(
+                    template.getBodyTemplate(), template.getDefaultValues(), email.getTemplateVariables());
             email.setBody(body);
         }
 
-        email.setStatus(EmailStatus.PENDING);
         EmailEntity savedEmail = emailPort.save(email);
 
         IEmailProviderPort provider = emailProviderService.selectProvider(savedEmail);
-        
+
         long startTime = System.currentTimeMillis();
         try {
-            Map<String, Object> providerResponse = savedEmail.getIsHtml() 
-                    ? provider.sendHtmlEmail(savedEmail) 
+            Map<String, Object> providerResponse = savedEmail.getIsHtml()
+                    ? provider.sendHtmlEmail(savedEmail)
                     : provider.sendEmail(savedEmail);
-            
+
             long responseTime = System.currentTimeMillis() - startTime;
-            
-            savedEmail.setStatus(EmailStatus.SENT);
-            savedEmail.setSentAt(LocalDateTime.now());
-            savedEmail.setProviderMessageId((String) providerResponse.get("messageId"));
-            savedEmail.setProviderResponse(providerResponse);
-            
+
+            savedEmail.markAsSent(
+                    (String) providerResponse.get("messageId"),
+                    providerResponse
+            );
+
             emailStatsService.recordEmailSent(savedEmail, responseTime);
-            
-            log.info("Email sent successfully: {}, provider: {}, time: {}ms", 
+
+            log.info("Email sent successfully: {}, provider: {}, time: {}ms",
                     savedEmail.getMessageId(), provider.getProviderName(), responseTime);
-            
+
         } catch (Exception e) {
             log.error("Failed to send email: {}", savedEmail.getMessageId(), e);
-            
-            savedEmail.setStatus(EmailStatus.RETRY);
-            savedEmail.setRetryCount(0);
-            savedEmail.setNextRetryAt(LocalDateTime.now().plusMinutes(1));
-            savedEmail.setErrorMessage(e.getMessage());
-            savedEmail.setFailedAt(LocalDateTime.now());
-            
+
+            savedEmail.scheduleRetry(e.getMessage());
+
             emailProviderService.markProviderDown(savedEmail.getProvider(), Duration.ofMinutes(5));
             emailStatsService.recordEmailFailed(savedEmail);
         }
@@ -124,9 +117,7 @@ public class EmailSendingUseCases {
 
         for (var recipient : request.getRecipients()) {
             try {
-                EmailEntity email = new EmailEntity();
-                email.setTenantId(tenantId);
-                email.setUserId(userId);
+                EmailEntity email = EmailEntity.createNew(tenantId, userId);
                 email.setToEmails(List.of(recipient.getEmail()));
                 email.setSubject(request.getSubject());
                 email.setBody(request.getBody());
@@ -135,29 +126,53 @@ public class EmailSendingUseCases {
                 email.setPriority(request.getPriority());
                 email.setType(request.getType());
                 email.setMetadata(request.getMetadata());
-                
+
                 Map<String, Object> variables = recipient.getVariables();
                 email.setTemplateVariables(variables);
 
-                emailService.validateEmail(email);
-                emailService.enrichEmail(email);
+                email.validate();
 
                 if (email.getTemplateId() != null && variables != null) {
-                    String body = emailTemplateService.renderTemplate(email.getTemplateId(), variables);
+                    EmailTemplateEntity template = emailTemplateService.getTemplateById(email.getTemplateId())
+                            .orElseThrow(() -> new IllegalArgumentException("Template not found: " + email.getTemplateId()));
+                    String body = emailTemplateService.renderTemplate(
+                            template.getBodyTemplate(), template.getDefaultValues(), variables);
                     email.setBody(body);
                 }
 
-                email.setStatus(EmailStatus.PENDING);
                 EmailEntity savedEmail = emailPort.save(email);
 
+                IEmailProviderPort provider = emailProviderService.selectProvider(savedEmail);
+
+                long startTime = System.currentTimeMillis();
+                try {
+                    Map<String, Object> providerResponse = savedEmail.getIsHtml()
+                            ? provider.sendHtmlEmail(savedEmail)
+                            : provider.sendEmail(savedEmail);
+                    long responseTime = System.currentTimeMillis() - startTime;
+
+                    savedEmail.markAsSent(
+                            (String) providerResponse.get("messageId"),
+                            providerResponse
+                    );
+                    emailPort.save(savedEmail);
+                    emailStatsService.recordEmailSent(savedEmail, responseTime);
+
+                } catch (Exception sendEx) {
+                    log.error("Failed to send bulk email for recipient: {}", recipient.getEmail(), sendEx);
+                    savedEmail.scheduleRetry(sendEx.getMessage());
+                    emailPort.save(savedEmail);
+                    emailStatsService.recordEmailFailed(savedEmail);
+                }
+
                 responses.add(EmailMapper.toSendEmailResponse(savedEmail));
-                
+
             } catch (Exception e) {
                 log.error("Failed to create bulk email for recipient: {}", recipient.getEmail(), e);
             }
         }
 
-        log.info("Bulk email created: {} out of {} emails", responses.size(), request.getRecipients().size());
+        log.info("Bulk email processed: {} out of {} emails", responses.size(), request.getRecipients().size());
         return responses;
     }
 
@@ -168,24 +183,24 @@ public class EmailSendingUseCases {
         EmailEntity email = emailPort.findByMessageId(messageId)
                 .orElseThrow(() -> new IllegalArgumentException("Email not found with messageId: " + messageId));
 
-        if (email.getStatus() != EmailStatus.FAILED && email.getStatus() != EmailStatus.RETRY) {
-            throw new IllegalStateException("Email status is not FAILED or RETRY, cannot resend");
-        }
-
-        if (email.getRetryCount() >= email.getMaxRetries()) {
-            throw new IllegalStateException("Max retry attempts exceeded");
+        if (!email.isRetryable()) {
+            throw new IllegalStateException("Email is not retryable (status: " + email.getStatus()
+                    + ", retryCount: " + email.getRetryCount() + "/" + email.getMaxRetries() + ")");
         }
 
         try {
             IEmailProviderPort provider = emailProviderService.getHealthyProvider();
 
             long startTime = System.currentTimeMillis();
-            provider.sendEmail(email);
+            Map<String, Object> providerResponse = email.getIsHtml() != null && email.getIsHtml()
+                    ? provider.sendHtmlEmail(email)
+                    : provider.sendEmail(email);
             long responseTime = System.currentTimeMillis() - startTime;
 
-            email.setStatus(EmailStatus.SENT);
-            email.setSentAt(LocalDateTime.now());
-            email.setRetryCount(email.getRetryCount() + 1);
+            email.markAsSent(
+                    (String) providerResponse.get("messageId"),
+                    providerResponse
+            );
 
             EmailEntity updatedEmail = emailPort.save(email);
 
@@ -199,12 +214,7 @@ public class EmailSendingUseCases {
         } catch (Exception e) {
             log.error("Failed to resend email: {}", messageId, e);
 
-            email.setRetryCount(email.getRetryCount() + 1);
-            email.setStatus(email.getRetryCount() >= email.getMaxRetries() ? EmailStatus.FAILED : EmailStatus.RETRY);
-            email.setErrorMessage(e.getMessage());
-
-            long nextRetryDelayMinutes = (long) Math.pow(2, email.getRetryCount());
-            email.setNextRetryAt(LocalDateTime.now().plusMinutes(nextRetryDelayMinutes));
+            email.scheduleRetry(e.getMessage());
 
             EmailEntity updatedEmail = emailPort.save(email);
 

@@ -12,10 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import serp.project.mailservice.core.domain.dto.request.EmailTemplateRequest;
 import serp.project.mailservice.core.domain.dto.response.EmailTemplateResponse;
 import serp.project.mailservice.core.domain.entity.EmailTemplateEntity;
-import serp.project.mailservice.core.domain.enums.ActiveStatus;
 import serp.project.mailservice.core.domain.mapper.EmailTemplateMapper;
-import serp.project.mailservice.core.port.client.IRedisCachePort;
-import serp.project.mailservice.core.port.store.IEmailTemplatePort;
 import serp.project.mailservice.core.service.IEmailTemplateService;
 
 @Service
@@ -23,15 +20,13 @@ import serp.project.mailservice.core.service.IEmailTemplateService;
 @Slf4j
 public class EmailTemplateUseCases {
 
-    private final IEmailTemplatePort emailTemplatePort;
     private final IEmailTemplateService emailTemplateService;
-    private final IRedisCachePort redisCachePort;
 
     @Transactional
     public EmailTemplateResponse createTemplate(EmailTemplateRequest request, Long tenantId, Long userId) {
         log.info("Creating email template: {} for tenant: {}", request.getCode(), tenantId);
 
-        if (emailTemplatePort.existsByCode(request.getCode())) {
+        if (emailTemplateService.existsByCode(request.getCode())) {
             throw new IllegalArgumentException("Template code already exists: " + request.getCode());
         }
 
@@ -40,7 +35,7 @@ public class EmailTemplateUseCases {
         }
 
         EmailTemplateEntity template = EmailTemplateMapper.toEntity(request, tenantId, userId);
-        EmailTemplateEntity savedTemplate = emailTemplatePort.save(template);
+        EmailTemplateEntity savedTemplate = emailTemplateService.save(template);
 
         emailTemplateService.cacheTemplate(savedTemplate);
 
@@ -52,7 +47,7 @@ public class EmailTemplateUseCases {
     public EmailTemplateResponse getTemplate(Long templateId) {
         log.debug("Getting email template: {}", templateId);
 
-        EmailTemplateEntity template = emailTemplatePort.findById(templateId)
+        EmailTemplateEntity template = emailTemplateService.getTemplateById(templateId)
                 .orElseThrow(() -> new IllegalArgumentException("Template not found: " + templateId));
 
         return EmailTemplateMapper.toResponse(template);
@@ -62,14 +57,14 @@ public class EmailTemplateUseCases {
     public EmailTemplateResponse updateTemplate(Long templateId, EmailTemplateRequest request, Long tenantId, Long userId) {
         log.info("Updating email template: {}", templateId);
 
-        EmailTemplateEntity template = emailTemplatePort.findById(templateId)
+        EmailTemplateEntity template = emailTemplateService.getTemplateById(templateId)
                 .orElseThrow(() -> new IllegalArgumentException("Template not found with id: " + templateId));
 
-        if (!template.getTenantId().equals(tenantId)) {
+        if (!template.belongsToTenant(tenantId)) {
             throw new IllegalArgumentException("Template does not belong to tenant");
         }
 
-        if (!template.getCode().equals(request.getCode()) && emailTemplatePort.existsByCode(request.getCode())) {
+        if (!template.getCode().equals(request.getCode()) && emailTemplateService.existsByCode(request.getCode())) {
             throw new IllegalArgumentException("Template code already exists: " + request.getCode());
         }
 
@@ -82,9 +77,9 @@ public class EmailTemplateUseCases {
         template.setDescription(request.getDescription());
         template.setSubject(request.getSubject());
         template.setBodyTemplate(request.getBodyTemplate());
-        template.setVersion(template.getVersion() + 1);
+        template.incrementVersion();
 
-        EmailTemplateEntity updatedTemplate = emailTemplatePort.save(template);
+        EmailTemplateEntity updatedTemplate = emailTemplateService.save(template);
 
         emailTemplateService.cacheTemplate(updatedTemplate);
 
@@ -96,18 +91,17 @@ public class EmailTemplateUseCases {
     public void deleteTemplate(Long templateId, Long tenantId) {
         log.info("Deleting email template: {}", templateId);
 
-        EmailTemplateEntity template = emailTemplatePort.findById(templateId)
+        EmailTemplateEntity template = emailTemplateService.getTemplateById(templateId)
                 .orElseThrow(() -> new IllegalArgumentException("Template not found with id: " + templateId));
 
-        if (!template.getTenantId().equals(tenantId)) {
+        if (!template.belongsToTenant(tenantId)) {
             throw new IllegalArgumentException("Template does not belong to tenant");
         }
 
-        template.setActiveStatus(ActiveStatus.DELETED);
-        emailTemplatePort.save(template);
+        template.markAsDeleted();
+        emailTemplateService.save(template);
 
-        String cacheKey = "email_template:" + templateId;
-        redisCachePort.deleteFromCache(cacheKey);
+        emailTemplateService.invalidateCache(templateId);
 
         log.info("Email template deleted (soft delete): {}", templateId);
     }

@@ -11,33 +11,26 @@ CREATE TABLE IF NOT EXISTS email_templates (
     id BIGSERIAL PRIMARY KEY,
     tenant_id BIGINT,
     
-    -- Template identification
     name VARCHAR(255) NOT NULL,
     code VARCHAR(100) NOT NULL,
     description TEXT,
     
-    -- Template content
     subject VARCHAR(500) NOT NULL,
     body_template TEXT NOT NULL,
     is_html BOOLEAN DEFAULT true,
     
-    -- Template configuration
     variables_schema JSONB,
     default_values JSONB,
     
-    -- Template metadata
     type VARCHAR(50) NOT NULL,
     language VARCHAR(10) DEFAULT 'en',
     category VARCHAR(100),
     
-    -- Global vs Tenant-specific templates
     is_global BOOLEAN DEFAULT false,
     
-    -- Version control
     version INTEGER DEFAULT 1,
     is_active BOOLEAN DEFAULT true,
     
-    -- Audit fields
     created_by BIGINT,
     updated_by BIGINT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
