@@ -33,8 +33,6 @@ CREATE TABLE IF NOT EXISTS email_stats (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     
-    CONSTRAINT chk_stats_provider CHECK (provider IN ('JAVA_MAIL', 'BREVO', 'ALL')),
-    -- CONSTRAINT chk_stats_email_type CHECK (email_type IN ('VERIFICATION', 'NOTIFICATION', 'MARKETING', 'TRANSACTIONAL', 'PASSWORD_RESET', 'ALERT', 'REMINDER', 'WELCOME', 'ALL')),
     CONSTRAINT chk_stats_status CHECK (status IN ('PENDING', 'SENT', 'FAILED', 'RETRY', 'CANCELLED', 'ALL')),
     CONSTRAINT chk_stats_hour CHECK (stat_hour IS NULL OR (stat_hour >= 0 AND stat_hour <= 23)),
     CONSTRAINT uq_email_stats_dimensions UNIQUE (tenant_id, provider, email_type, status, stat_date, stat_hour)

@@ -13,9 +13,9 @@ import serp.project.mailservice.core.domain.dto.response.ProviderHealthResponse;
 import serp.project.mailservice.core.domain.entity.EmailEntity;
 import serp.project.mailservice.core.domain.enums.EmailProvider;
 import serp.project.mailservice.core.domain.enums.ProviderStatus;
-import serp.project.mailservice.core.port.client.IEmailProviderFactoryPort;
 import serp.project.mailservice.core.port.client.IEmailProviderPort;
 import serp.project.mailservice.core.port.client.IRedisCachePort;
+import serp.project.mailservice.infrastructure.client.provider.EmailProviderRegistry;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class EmailProviderService implements IEmailProviderService {
 
-    private final IEmailProviderFactoryPort emailProviderFactory;
+    private final EmailProviderRegistry emailProviderRegistry;
     private final IRedisCachePort redisCachePort;
 
     private static final Duration DEFAULT_DOWNTIME = Duration.ofMinutes(5);
@@ -42,14 +42,14 @@ public class EmailProviderService implements IEmailProviderService {
 
             if (isProviderHealthy(requestedProvider)) {
                 log.info("Using requested provider: {} for email: {}", requestedProvider, email.getMessageId());
-                return emailProviderFactory.getProvider(requestedProvider);
+                return emailProviderRegistry.getProvider(requestedProvider);
             } else {
                 log.warn("Requested provider {} is down, falling back to healthy provider", requestedProvider);
             }
         }
 
-        IEmailProviderPort provider = emailProviderFactory.getHealthyProvider(email.getProvider());
-        
+        IEmailProviderPort provider = getHealthyProvider();
+
         if (provider == null) {
             log.error("No healthy email provider available for email: {}", email.getMessageId());
             throw new IllegalStateException("No healthy email provider available");
@@ -67,9 +67,9 @@ public class EmailProviderService implements IEmailProviderService {
 
         Duration effectiveDowntime = downtime != null ? downtime : DEFAULT_DOWNTIME;
         String healthKey = RedisKey.PROVIDER_HEALTH_PREFIX + provider.name();
-        
+
         redisCachePort.setToCache(healthKey, "DOWN", effectiveDowntime.toSeconds());
-        
+
         log.warn("Marked provider {} as DOWN for {} seconds", provider, effectiveDowntime.toSeconds());
     }
 
@@ -81,7 +81,7 @@ public class EmailProviderService implements IEmailProviderService {
 
         String healthKey = RedisKey.PROVIDER_HEALTH_PREFIX + provider.name();
         redisCachePort.deleteFromCache(healthKey);
-        
+
         log.info("Marked provider {} as UP", provider);
     }
 
@@ -92,12 +92,12 @@ public class EmailProviderService implements IEmailProviderService {
         }
 
         String healthKey = RedisKey.PROVIDER_HEALTH_PREFIX + provider.name();
-        
+
         String healthStatus = redisCachePort.getFromCache(healthKey, String.class);
         boolean isHealthy = !"DOWN".equals(healthStatus);
-        
+
         log.debug("Provider {} health status: {}", provider, isHealthy ? "UP" : "DOWN");
-        
+
         return isHealthy;
     }
 
@@ -112,12 +112,19 @@ public class EmailProviderService implements IEmailProviderService {
             return null;
         }
 
-        return emailProviderFactory.getProvider(providerType);
+        return emailProviderRegistry.getProvider(providerType);
     }
 
     @Override
     public IEmailProviderPort getHealthyProvider() {
-        return emailProviderFactory.getHealthyProvider(null);
+        for (IEmailProviderPort provider : emailProviderRegistry.getAllProviders()) {
+            if (isProviderHealthy(provider.getProviderType())) {
+                return provider;
+            }
+        }
+
+        log.error("No healthy email provider found, returning first available provider");
+        return emailProviderRegistry.getAllProviders().stream().findFirst().orElse(null);
     }
 
     @Override
@@ -132,31 +139,32 @@ public class EmailProviderService implements IEmailProviderService {
     @Override
     public void checkAllProviderHealth() {
         log.info("Performing health check on all email providers");
-        
-        for (EmailProvider provider : EmailProvider.values()) {
+
+        for (IEmailProviderPort provider : emailProviderRegistry.getAllProviders()) {
+            EmailProvider providerType = provider.getProviderType();
             try {
-                IEmailProviderPort providerPort = emailProviderFactory.getProvider(provider);
-                boolean isHealthy = providerPort.isHealthy();
-                
+                boolean isHealthy = provider.isHealthy();
+
                 if (isHealthy) {
-                    markProviderUp(provider);
-                    log.info("Health check passed for provider: {}", provider);
+                    markProviderUp(providerType);
+                    log.info("Health check passed for provider: {}", providerType);
                 } else {
-                    markProviderDown(provider, DEFAULT_DOWNTIME);
-                    log.warn("Health check failed for provider: {}", provider);
+                    markProviderDown(providerType, DEFAULT_DOWNTIME);
+                    log.warn("Health check failed for provider: {}", providerType);
                 }
             } catch (Exception e) {
-                log.error("Error checking health for provider: {}", provider, e);
-                markProviderDown(provider, DEFAULT_DOWNTIME);
+                log.error("Error checking health for provider: {}", providerType, e);
+                markProviderDown(providerType, DEFAULT_DOWNTIME);
             }
         }
-        
+
         log.info("Health check completed for all providers");
     }
 
     @Override
     public List<ProviderHealthResponse> getAllProviderHealth() {
         return Arrays.stream(EmailProvider.values())
+                .filter(emailProviderRegistry::hasProvider)
                 .map(provider -> {
                     boolean healthy = isProviderHealthy(provider);
                     return ProviderHealthResponse.builder()

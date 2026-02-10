@@ -8,6 +8,7 @@ package serp.project.mailservice.infrastructure.client.provider;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
@@ -23,9 +24,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Component("javaMailProvider")
+@Component
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(name = "app.email.java-mail.enable", havingValue = "true")
 public class JavaMailProviderAdapter implements IEmailProviderPort {
     
     private final JavaMailSender javaMailSender;
@@ -44,6 +46,11 @@ public class JavaMailProviderAdapter implements IEmailProviderPort {
     @Override
     public String getProviderName() {
         return EmailProvider.JAVA_MAIL.name();
+    }
+
+    @Override
+    public EmailProvider getProviderType() {
+        return EmailProvider.JAVA_MAIL;
     }
     
     @Override

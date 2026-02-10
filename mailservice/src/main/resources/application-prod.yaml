@@ -1,5 +1,5 @@
 server:
-  port: 8090
+  port: 8091
   servlet:
     context-path: /mail-service
 
@@ -69,9 +69,9 @@ app:
   email:
     java-mail:
       enabled: true
-      from: ${MAIL_FROM:noreply@serp.com}
+      from: ${MAIL_FROM}
       from-name: ${MAIL_FROM_NAME:SERP System}
-      reply-to: ${MAIL_REPLY_TO:support@serp.com}
+      reply-to: ${MAIL_REPLY_TO}
       rate-limit-per-minute: 60
       timeout-seconds: 10
       max-retry-attempts: 3
@@ -81,9 +81,19 @@ app:
       enabled: true
       api-key: ${BREVO_API_KEY}
       api-url: https://api.brevo.com/v3
-      from: ${BREVO_FROM:noreply@serp.com}
+      from: ${BREVO_FROM}
       from-name: ${BREVO_FROM_NAME:SERP System}
       rate-limit-per-minute: 300
+      timeout-seconds: 10
+      max-retry-attempts: 3
+      retry-delay-minutes: 5
+
+    send-grid:
+      enabled: true
+      api-key: ${SENDGRID_API_KEY}
+      from: ${SENDGRID_FROM}
+      from-name: ${SENDGRID_FROM_NAME:SERP System}
+      rate-limit-per-minute: 100
       timeout-seconds: 10
       max-retry-attempts: 3
       retry-delay-minutes: 5

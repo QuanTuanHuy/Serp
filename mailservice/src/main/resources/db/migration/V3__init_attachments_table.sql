@@ -29,7 +29,6 @@ CREATE TABLE IF NOT EXISTS email_attachments (
     
     CONSTRAINT fk_email_attachments_email FOREIGN KEY (email_id) 
         REFERENCES emails(id) ON DELETE CASCADE,
-    CONSTRAINT chk_attachment_storage CHECK (storage_location IN ('LOCAL', 'S3', 'AZURE_BLOB')),
     CONSTRAINT chk_attachment_active_status CHECK (active_status IN ('ACTIVE', 'DELETED'))
 );
 

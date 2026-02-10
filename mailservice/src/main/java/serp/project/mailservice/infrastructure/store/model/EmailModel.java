@@ -5,6 +5,7 @@ Description: Part of Serp Project
 
 package serp.project.mailservice.infrastructure.store.model;
 
+import io.hypersistence.utils.hibernate.type.array.ListArrayType;
 import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -73,15 +74,15 @@ public class EmailModel {
     @Column(name = "reply_to", length = 255)
     private String replyTo;
 
-    @Type(JsonType.class)
+    @Type(ListArrayType.class)
     @Column(name = "to_emails", columnDefinition = "TEXT[]")
     private List<String> toEmails;
 
-    @Type(JsonType.class)
+    @Type(ListArrayType.class)
     @Column(name = "cc_emails", columnDefinition = "TEXT[]")
     private List<String> ccEmails;
 
-    @Type(JsonType.class)
+    @Type(ListArrayType.class)
     @Column(name = "bcc_emails", columnDefinition = "TEXT[]")
     private List<String> bccEmails;
 

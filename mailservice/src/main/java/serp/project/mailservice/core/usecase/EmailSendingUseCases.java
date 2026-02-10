@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import serp.project.mailservice.core.domain.constant.KafkaTopic;
 import serp.project.mailservice.core.domain.dto.request.BulkEmailRequest;
 import serp.project.mailservice.core.domain.dto.request.SendEmailRequest;
 import serp.project.mailservice.core.domain.dto.response.EmailStatusResponse;
@@ -18,7 +17,6 @@ import serp.project.mailservice.core.domain.entity.EmailEntity;
 import serp.project.mailservice.core.domain.entity.EmailTemplateEntity;
 import serp.project.mailservice.core.domain.mapper.EmailMapper;
 import serp.project.mailservice.core.port.client.IEmailProviderPort;
-import serp.project.mailservice.core.port.client.IKafkaProducerPort;
 import serp.project.mailservice.core.port.store.IEmailPort;
 import serp.project.mailservice.core.service.IEmailProviderService;
 import serp.project.mailservice.core.service.IEmailStatsService;
@@ -40,7 +38,6 @@ public class EmailSendingUseCases {
     private final IRateLimitService rateLimitService;
     private final IEmailStatsService emailStatsService;
     private final IEmailPort emailPort;
-    private final IKafkaProducerPort kafkaPublisher;
 
     @Transactional
     public SendEmailResponse sendEmail(SendEmailRequest request, Long tenantId, Long userId) {
@@ -94,13 +91,6 @@ public class EmailSendingUseCases {
         }
 
         emailPort.save(savedEmail);
-
-        kafkaPublisher.sendMessageAsync(
-                savedEmail.getMessageId(),
-                EmailMapper.toEmailStatusResponse(savedEmail),
-                KafkaTopic.EMAIL_STATUS_TOPIC,
-                null
-        );
 
         return EmailMapper.toSendEmailResponse(savedEmail);
     }
@@ -205,8 +195,6 @@ public class EmailSendingUseCases {
             EmailEntity updatedEmail = emailPort.save(email);
 
             emailStatsService.recordEmailSent(updatedEmail, responseTime);
-
-            kafkaPublisher.sendMessageAsync(updatedEmail.getMessageId(), updatedEmail, KafkaTopic.EMAIL_STATUS_TOPIC);
 
             log.info("Email resent successfully: {}", messageId);
             return EmailMapper.toSendEmailResponse(updatedEmail);

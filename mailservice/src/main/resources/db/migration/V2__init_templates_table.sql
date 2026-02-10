@@ -37,7 +37,6 @@ CREATE TABLE IF NOT EXISTS email_templates (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     active_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
     
-    -- CONSTRAINT chk_template_type CHECK (type IN ('VERIFICATION', 'NOTIFICATION', 'MARKETING', 'TRANSACTIONAL', 'PASSWORD_RESET', 'ALERT', 'REMINDER', 'WELCOME')),
     CONSTRAINT chk_template_active_status CHECK (active_status IN ('ACTIVE', 'DELETED')),
     CONSTRAINT chk_template_global_tenant CHECK (
         (is_global = true AND tenant_id IS NULL) OR 

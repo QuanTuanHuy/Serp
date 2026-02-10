@@ -48,9 +48,7 @@ CREATE TABLE IF NOT EXISTS emails (
     active_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
     
     CONSTRAINT chk_email_status CHECK (status IN ('PENDING', 'SENT', 'FAILED', 'RETRY', 'CANCELLED')),
-    CONSTRAINT chk_email_provider CHECK (provider IN ('JAVA_MAIL', 'BREVO')),
     CONSTRAINT chk_email_priority CHECK (priority IN ('HIGH', 'NORMAL', 'LOW')),
-    -- CONSTRAINT chk_email_type CHECK (type IN ('VERIFICATION', 'NOTIFICATION', 'MARKETING', 'TRANSACTIONAL', 'PASSWORD_RESET', 'ALERT', 'REMINDER', 'WELCOME')),
     CONSTRAINT chk_active_status CHECK (active_status IN ('ACTIVE', 'DELETED'))
 );
 
