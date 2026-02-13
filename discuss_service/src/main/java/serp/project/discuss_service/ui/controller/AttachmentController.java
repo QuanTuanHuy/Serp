@@ -9,12 +9,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import io.github.serp.platform.security.context.SerpAuthContext;
 import serp.project.discuss_service.core.domain.dto.GeneralResponse;
 import serp.project.discuss_service.core.domain.dto.response.AttachmentResponse;
 import serp.project.discuss_service.core.exception.AppException;
 import serp.project.discuss_service.core.exception.ErrorCode;
 import serp.project.discuss_service.core.usecase.AttachmentUseCase;
-import serp.project.discuss_service.kernel.utils.AuthUtils;
 import serp.project.discuss_service.kernel.utils.ResponseUtils;
 
 import java.util.List;
@@ -27,13 +27,13 @@ import java.util.Map;
 public class AttachmentController {
 
     private final AttachmentUseCase attachmentUseCase;
-    private final AuthUtils authUtils;
+    private final SerpAuthContext authContext;
     private final ResponseUtils responseUtils;
 
     @GetMapping("/{attachmentId}")
     public ResponseEntity<GeneralResponse<AttachmentResponse>> getAttachment(
             @PathVariable Long attachmentId) {
-        Long tenantId = authUtils.getCurrentTenantId()
+        Long tenantId = authContext.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
 
         log.debug("Getting attachment metadata: {}", attachmentId);
@@ -46,7 +46,7 @@ public class AttachmentController {
     @GetMapping("/message/{messageId}")
     public ResponseEntity<GeneralResponse<List<AttachmentResponse>>> getAttachmentsByMessage(
             @PathVariable Long messageId) {
-        Long tenantId = authUtils.getCurrentTenantId()
+        Long tenantId = authContext.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
 
         log.debug("Getting attachments for message: {}", messageId);
@@ -60,7 +60,7 @@ public class AttachmentController {
     public ResponseEntity<GeneralResponse<Map<String, String>>> getDownloadUrl(
             @PathVariable Long attachmentId,
             @RequestParam(defaultValue = "60") int expirationMinutes) {
-        Long tenantId = authUtils.getCurrentTenantId()
+        Long tenantId = authContext.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
 
         log.info("Generating download URL for attachment: {}", attachmentId);
@@ -79,9 +79,9 @@ public class AttachmentController {
     @DeleteMapping("/{attachmentId}")
     public ResponseEntity<GeneralResponse<?>> deleteAttachment(
             @PathVariable Long attachmentId) {
-        Long userId = authUtils.getCurrentUserId()
+        Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
-        Long tenantId = authUtils.getCurrentTenantId()
+        Long tenantId = authContext.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
 
         log.info("User {} deleting attachment: {}", userId, attachmentId);

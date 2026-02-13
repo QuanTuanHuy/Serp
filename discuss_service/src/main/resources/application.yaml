@@ -44,8 +44,6 @@ spring:
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       properties:
         spring.json.trusted.packages: "*"
-    listener:
-      ack-mode: manual
 
   security:
     oauth2:
@@ -75,6 +73,54 @@ app:
     filter:
       publicUrls:
       protectedUrls:
+
+serp:
+  security:
+    jwt:
+      jwk-set-uri: ${app.keycloak.jwk-set-uri}
+      user-id-claim: uid
+      tenant-id-claim: tid
+    service:
+      required-role: SERP_SERVICES
+      allowed-client-ids:
+        - serp-ptm
+        - serp-crm
+        - serp-account
+        - serp-discuss
+    public-urls: []
+    protected-urls: []
+  kafka:
+    consumer:
+      listener:
+        ack-mode: RECORD
+        concurrency: 2
+        sync-commits: true
+      retry:
+        max-attempts: 3
+        initial-interval-ms: 1000
+        multiplier: 2.0
+        max-interval-ms: 10000
+        non-retryable-exceptions:
+          - org.springframework.kafka.support.serializer.DeserializationException
+          - com.fasterxml.jackson.core.JsonProcessingException
+          - java.lang.IllegalArgumentException
+      dlt:
+        enabled: true
+        suffix: .dlt
+        same-partition: true
+      headers:
+        correlation-id-header: X-Correlation-Id
+      observation-enabled: true
+  redis:
+    enabled: true
+    cache:
+      prefix: serp:cache
+      default-ttl-seconds: 300
+      separator: ":"
+    lock:
+      prefix: serp:lock
+      default-ttl-seconds: 30
+      separator: ":"
 
 server:
   port: ${SERVER_PORT:8092}
