@@ -16,6 +16,8 @@
         <module>serp-java-bom</module>
         <module>serp-starter-core</module>
         <module>serp-starter-security-keycloak</module>
+        <module>serp-starter-kafka</module>
+        <module>serp-starter-redis</module>
     </modules>
 
     <properties>

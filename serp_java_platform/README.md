@@ -7,6 +7,8 @@ Shared Java platform modules for SERP microservices.
 - `serp-java-bom`: shared dependency alignment.
 - `serp-starter-core`: core cross-cutting auto configuration.
 - `serp-starter-security-keycloak`: standard JWT + auth context integration.
+- `serp-starter-kafka`: producer helper + retry/DLT consumer baseline.
+- `serp-starter-redis`: cache + lock helper with key strategy.
 
 ## Build
 
@@ -40,6 +42,14 @@ mvn -f serp_java_platform/pom.xml -DskipTests deploy
     <groupId>io.github.serp-project</groupId>
     <artifactId>serp-starter-security-keycloak</artifactId>
   </dependency>
+  <dependency>
+    <groupId>io.github.serp-project</groupId>
+    <artifactId>serp-starter-kafka</artifactId>
+  </dependency>
+  <dependency>
+    <groupId>io.github.serp-project</groupId>
+    <artifactId>serp-starter-redis</artifactId>
+  </dependency>
 </dependencies>
 ```
 
@@ -58,4 +68,20 @@ serp:
         pattern: /api/v1/auth/login
       - method: POST
         pattern: /api/v1/auth/refresh-token
+  kafka:
+    producer:
+      default-topic: serp.events
+      correlation-id-header: X-Correlation-Id
+    consumer:
+      max-attempts: 3
+      retry-interval-ms: 1000
+      dead-letter-enabled: true
+      dlt-suffix: .dlt
+  redis:
+    cache:
+      prefix: serp:cache
+      default-ttl-seconds: 300
+    lock:
+      prefix: serp:lock
+      default-ttl-seconds: 30
 ```

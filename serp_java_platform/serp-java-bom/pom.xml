@@ -36,6 +36,18 @@
                 <artifactId>serp-starter-security-keycloak</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>io.github.serp-project</groupId>
+                <artifactId>serp-starter-kafka</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.github.serp-project</groupId>
+                <artifactId>serp-starter-redis</artifactId>
+                <version>${project.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 </project>
