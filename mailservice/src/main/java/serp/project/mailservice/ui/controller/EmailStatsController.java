@@ -10,12 +10,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import io.github.serp.platform.security.context.SerpAuthContext;
 import serp.project.mailservice.core.domain.dto.request.EmailStatsFilterRequest;
 import serp.project.mailservice.core.domain.dto.response.EmailStatsResponse;
 import serp.project.mailservice.core.exception.AppException;
 import serp.project.mailservice.core.exception.ErrorCode;
 import serp.project.mailservice.core.usecase.EmailStatsUseCases;
-import serp.project.mailservice.kernel.utils.AuthUtils;
 import serp.project.mailservice.kernel.utils.ResponseUtils;
 
 import java.time.LocalDate;
@@ -28,7 +28,7 @@ import java.util.List;
 public class EmailStatsController {
 
     private final EmailStatsUseCases emailStatsUseCases;
-    private final AuthUtils authUtils;
+    private final SerpAuthContext authContext;
     private final ResponseUtils responseUtils;
 
     @GetMapping
@@ -43,7 +43,7 @@ public class EmailStatsController {
     public ResponseEntity<?> getAggregatedStats(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        Long tenantId = authUtils.getCurrentTenantId()
+        Long tenantId = authContext.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
 
         log.debug("Getting aggregated stats for tenant: {}, from: {} to: {}", tenantId, startDate, endDate);

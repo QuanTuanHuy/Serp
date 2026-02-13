@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import io.github.serp.platform.security.context.SerpAuthContext;
 import serp.project.mailservice.core.domain.dto.request.BulkEmailRequest;
 import serp.project.mailservice.core.domain.dto.request.SendEmailRequest;
 import serp.project.mailservice.core.domain.dto.response.EmailStatusResponse;
@@ -17,7 +18,6 @@ import serp.project.mailservice.core.domain.dto.response.SendEmailResponse;
 import serp.project.mailservice.core.exception.AppException;
 import serp.project.mailservice.core.exception.ErrorCode;
 import serp.project.mailservice.core.usecase.EmailSendingUseCases;
-import serp.project.mailservice.kernel.utils.AuthUtils;
 import serp.project.mailservice.kernel.utils.ResponseUtils;
 
 import java.util.List;
@@ -29,16 +29,16 @@ import java.util.List;
 public class EmailController {
 
     private final EmailSendingUseCases emailSendingUseCases;
-    private final AuthUtils authUtils;
+    private final SerpAuthContext authContext;
     private final ResponseUtils responseUtils;
 
     @PostMapping
     public ResponseEntity<?> sendEmail(@Valid @RequestBody SendEmailRequest request) {
-        Long tenantId = authUtils.getCurrentTenantId()
+        Long tenantId = authContext.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
-        Long userId = authUtils.getCurrentUserId()
+        Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.USER_ID_REQUIRED));
-        String userEmail = authUtils.getCurrentUserEmail()
+        String userEmail = authContext.getCurrentEmail()
                 .orElseThrow(() -> new AppException(ErrorCode.USER_EMAIL_REQUIRED));
 
         log.info("Sending email for tenant: {}, user: {}", tenantId, userId);
@@ -50,9 +50,9 @@ public class EmailController {
 
     @PostMapping("/bulk")
     public ResponseEntity<?> sendBulkEmail(@Valid @RequestBody BulkEmailRequest request) {
-        Long tenantId = authUtils.getCurrentTenantId()
+        Long tenantId = authContext.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
-        Long userId = authUtils.getCurrentUserId()
+        Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.USER_ID_REQUIRED));
 
         log.info("Sending bulk email for tenant: {}, user: {}", tenantId, userId);

@@ -1,0 +1,36 @@
+name: Publish SERP Java Platform
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'serp_java_platform/**'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+          server-id: github
+          server-username: GITHUB_ACTOR
+          server-password: GITHUB_TOKEN
+
+      - name: Deploy to GitHub Packages
+        run: mvn -B -ntp -f serp_java_platform/pom.xml -DskipTests deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
