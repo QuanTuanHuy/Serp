@@ -1,1 +1,2 @@
-io.github.serp.platform.kafka.autoconfigure.SerpKafkaAutoConfiguration
+io.github.serp.platform.kafka.autoconfigure.SerpKafkaProducerAutoConfiguration
+io.github.serp.platform.kafka.autoconfigure.SerpKafkaConsumerAutoConfiguration

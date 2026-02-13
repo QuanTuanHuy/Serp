@@ -7,7 +7,7 @@ Shared Java platform modules for SERP microservices.
 - `serp-java-bom`: shared dependency alignment.
 - `serp-starter-core`: core cross-cutting auto configuration.
 - `serp-starter-security-keycloak`: standard JWT + auth context integration.
-- `serp-starter-kafka`: producer helper + retry/DLT consumer baseline.
+- `serp-starter-kafka`: producer helper + consumer framework (retry/DLT/parser/interceptor).
 - `serp-starter-redis`: cache + lock helper with key strategy.
 
 ## Build
@@ -73,10 +73,29 @@ serp:
       default-topic: serp.events
       correlation-id-header: X-Correlation-Id
     consumer:
-      max-attempts: 3
-      retry-interval-ms: 1000
-      dead-letter-enabled: true
-      dlt-suffix: .dlt
+      listener:
+        ack-mode: RECORD
+        concurrency: 1
+        sync-commits: true
+      retry:
+        max-attempts: 3
+        initial-interval-ms: 1000
+        multiplier: 2.0
+        max-interval-ms: 10000
+        non-retryable-exceptions:
+          - org.springframework.kafka.support.serializer.DeserializationException
+          - com.fasterxml.jackson.core.JsonProcessingException
+          - java.lang.IllegalArgumentException
+      dlt:
+        enabled: true
+        suffix: .dlt
+        same-partition: true
+        topic-mappings:
+          critical.events: critical.events.dlt
+      headers:
+        correlation-id-header: X-Correlation-Id
+        exception-stack-summary-header: x-serp-exception-stack
+      observation-enabled: true
   redis:
     cache:
       prefix: serp:cache
@@ -85,3 +104,54 @@ serp:
       prefix: serp:lock
       default-ttl-seconds: 30
 ```
+
+## Kafka Consumer Quick Start
+
+`serp-starter-kafka` now ships default `kafkaListenerContainerFactory` with:
+- `DefaultErrorHandler` + exponential backoff
+- DLT recoverer (same partition by default)
+- non-retryable exception classification
+- record interceptor for correlation-id to MDC
+- observation toggle
+
+Sample listener with typed parser:
+
+```java
+/*
+Author: QuanTuanHuy
+Description: Part of Serp Project
+*/
+
+package serp.project.sample.ui.messaging;
+
+import io.github.serp.platform.kafka.consumer.SerpKafkaConsumerMetadata;
+import io.github.serp.platform.kafka.consumer.SerpKafkaRecordParser;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.stereotype.Component;
+
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class SampleKafkaConsumer {
+    private final SerpKafkaRecordParser recordParser;
+
+    @KafkaListener(topics = "sample.events", groupId = "${spring.kafka.consumer.group-id}")
+    public void handle(ConsumerRecord<String, String> record) {
+        SampleEvent event = recordParser.parse(record, SampleEvent.class);
+        SerpKafkaConsumerMetadata metadata =
+                SerpKafkaConsumerMetadata.fromRecord(record, "X-Correlation-Id", null);
+
+        log.info("Consume event topic={}, partition={}, offset={}, key={}",
+                metadata.getTopic(), metadata.getPartition(), metadata.getOffset(), metadata.getKey());
+
+        // Business logic; throw exception to trigger retry/DLT policy.
+    }
+}
+```
+
+For migration details and templates:
+- `docs/serp-kafka-consumer-migration.md`
+- `docs/serp-kafka-consumer-template.md`
