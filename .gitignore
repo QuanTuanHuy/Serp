@@ -1,4 +1,8 @@
 docs/
+!/docs/
+/docs/*
+!/docs/serp-kafka-consumer-migration.md
+!/docs/serp-kafka-consumer-template.md
 
 deploy/
 
