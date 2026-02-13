@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - dev
       - main
     paths:
       - 'serp_java_platform/**'
