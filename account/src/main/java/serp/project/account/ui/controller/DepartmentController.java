@@ -52,7 +52,7 @@ public class DepartmentController {
             var resp = responseUtil.forbidden(Constants.ErrorMessage.NO_PERMISSION_TO_ACCESS_ORGANIZATION);
             return ResponseEntity.status(resp.getCode()).body(resp);
         }
-        var response = departmentUseCase.updateDepartment(departmentId, request);
+        var response = departmentUseCase.updateDepartment(organizationId, departmentId, request);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
@@ -64,7 +64,7 @@ public class DepartmentController {
             var resp = responseUtil.forbidden(Constants.ErrorMessage.NO_PERMISSION_TO_ACCESS_ORGANIZATION);
             return ResponseEntity.status(resp.getCode()).body(resp);
         }
-        var response = departmentUseCase.deleteDepartment(departmentId);
+        var response = departmentUseCase.deleteDepartment(organizationId, departmentId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
@@ -78,7 +78,7 @@ public class DepartmentController {
             return ResponseEntity.status(resp.getCode()).body(resp);
         }
 
-        var response = departmentUseCase.getDepartmentById(departmentId);
+        var response = departmentUseCase.getDepartmentById(organizationId, departmentId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
@@ -128,7 +128,7 @@ public class DepartmentController {
 
         request.setDepartmentId(departmentId);
 
-        var response = departmentUseCase.assignUserToDepartment(request);
+        var response = departmentUseCase.assignUserToDepartment(organizationId, request);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
@@ -142,7 +142,7 @@ public class DepartmentController {
             return ResponseEntity.status(resp.getCode()).body(resp);
         }
 
-        var response = departmentUseCase.getMembersByDepartmentId(departmentId);
+        var response = departmentUseCase.getMembersByDepartmentId(organizationId, departmentId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 

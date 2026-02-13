@@ -142,4 +142,9 @@ public class Constants {
         public static final String SERP_SERVICES_ROLE = "SERP_SERVICES";
     }
 
+    @UtilityClass
+    public static class Department {
+        public static final String MANAGER_JOB_TITLE = "Manager";
+    }
+
 }
