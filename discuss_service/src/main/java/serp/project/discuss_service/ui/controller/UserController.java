@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.github.serp.platform.security.context.SerpAuthContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import serp.project.discuss_service.core.domain.dto.GeneralResponse;
@@ -20,7 +21,6 @@ import serp.project.discuss_service.core.domain.dto.response.ChannelMemberRespon
 import serp.project.discuss_service.core.exception.AppException;
 import serp.project.discuss_service.core.exception.ErrorCode;
 import serp.project.discuss_service.core.service.IUserInfoService;
-import serp.project.discuss_service.kernel.utils.AuthUtils;
 import serp.project.discuss_service.kernel.utils.ResponseUtils;
 
 @RestController
@@ -29,13 +29,13 @@ import serp.project.discuss_service.kernel.utils.ResponseUtils;
 @Slf4j
 public class UserController {
     private final IUserInfoService userInfoService;
-    private final AuthUtils authUtils;
+    private final SerpAuthContext authContext;
     private final ResponseUtils responseUtils;
 
     @GetMapping
     public ResponseEntity<GeneralResponse<List<UserInfo>>> getUsersForTenant(
             @RequestParam(required = false) String query) {
-        Long tenantId = authUtils.getCurrentTenantId()
+        Long tenantId = authContext.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
         List<UserInfo> users = userInfoService.getUsersForTenant(tenantId, query);
         return ResponseEntity.ok(responseUtils.success(users));

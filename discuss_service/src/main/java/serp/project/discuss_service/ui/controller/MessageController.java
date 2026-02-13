@@ -23,7 +23,7 @@ import serp.project.discuss_service.core.exception.ErrorCode;
 import serp.project.discuss_service.core.service.IAttachmentUrlService;
 import serp.project.discuss_service.core.service.IUserInfoService;
 import serp.project.discuss_service.core.usecase.MessageUseCase;
-import serp.project.discuss_service.kernel.utils.AuthUtils;
+import io.github.serp.platform.security.context.SerpAuthContext;
 import serp.project.discuss_service.kernel.utils.ResponseUtils;
 
 import java.util.ArrayList;
@@ -40,7 +40,7 @@ public class MessageController {
     private final MessageUseCase messageUseCase;
     private final IAttachmentUrlService attachmentUrlService;
     private final IUserInfoService userInfoService;
-    private final AuthUtils authUtils;
+    private final SerpAuthContext authContext;
     private final ResponseUtils responseUtils;
     private static final Pattern MENTIONS_JSON_PATTERN =
             Pattern.compile("^\\s*\\[\\s*(\\d+\\s*(,\\s*\\d+\\s*)*)?]\\s*$");
@@ -49,9 +49,9 @@ public class MessageController {
     public ResponseEntity<GeneralResponse<MessageResponse>> sendMessage(
             @PathVariable Long channelId,
             @Valid @RequestBody SendMessageRequest request) {
-        Long userId = authUtils.getCurrentUserId()
+        Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
-        Long tenantId = authUtils.getCurrentTenantId()
+        Long tenantId = authContext.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
 
         log.info("User {} sending message to channel {}", userId, channelId);
@@ -87,9 +87,9 @@ public class MessageController {
             @RequestPart(value = "content", required = false) String content,
             @RequestPart(value = "mentions", required = false) String mentionsJson,
             @RequestPart(value = "files") List<MultipartFile> files) {
-        Long userId = authUtils.getCurrentUserId()
+        Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
-        Long tenantId = authUtils.getCurrentTenantId()
+        Long tenantId = authContext.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
 
         log.info("User {} sending message with {} files to channel {}", userId, files.size(), channelId);
@@ -115,9 +115,9 @@ public class MessageController {
     public ResponseEntity<GeneralResponse<MessageResponse>> sendReply(
             @PathVariable Long channelId,
             @Valid @RequestBody SendReplyRequest request) {
-        Long userId = authUtils.getCurrentUserId()
+        Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
-        Long tenantId = authUtils.getCurrentTenantId()
+        Long tenantId = authContext.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
 
         log.info("User {} sending reply to message {} in channel {}", 
@@ -142,7 +142,7 @@ public class MessageController {
             @PathVariable Long channelId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
-        Long userId = authUtils.getCurrentUserId()
+        Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
         log.debug("User {} getting messages from channel {}, page {}", userId, channelId, page);
@@ -170,7 +170,7 @@ public class MessageController {
             @PathVariable Long channelId,
             @PathVariable Long beforeId,
             @RequestParam(defaultValue = "50") int limit) {
-        Long userId = authUtils.getCurrentUserId()
+        Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
         log.debug("User {} getting messages before {} in channel {}", userId, beforeId, channelId);
@@ -194,7 +194,7 @@ public class MessageController {
     public ResponseEntity<GeneralResponse<List<MessageResponse>>> getThreadReplies(
             @PathVariable Long channelId,
             @PathVariable Long messageId) {
-        Long userId = authUtils.getCurrentUserId()
+        Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
         log.debug("User {} getting thread replies for message {} in channel {}", 
@@ -220,7 +220,7 @@ public class MessageController {
             @RequestParam String query,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Long userId = authUtils.getCurrentUserId()
+        Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
         log.debug("User {} searching messages in channel {} with query: {}", 
@@ -246,7 +246,7 @@ public class MessageController {
             @PathVariable Long channelId,
             @PathVariable Long messageId,
             @Valid @RequestBody EditMessageRequest request) {
-        Long userId = authUtils.getCurrentUserId()
+        Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
         log.info("User {} editing message {} in channel {}", userId, messageId, channelId);
@@ -261,7 +261,7 @@ public class MessageController {
     public ResponseEntity<GeneralResponse<MessageResponse>> deleteMessage(
             @PathVariable Long channelId,
             @PathVariable Long messageId) {
-        Long userId = authUtils.getCurrentUserId()
+        Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
         log.info("User {} deleting message {} in channel {}", userId, messageId, channelId);
@@ -276,7 +276,7 @@ public class MessageController {
             @PathVariable Long channelId,
             @PathVariable Long messageId,
             @Valid @RequestBody ReactionRequest request) {
-        Long userId = authUtils.getCurrentUserId()
+        Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
         log.debug("User {} adding reaction {} to message {} in channel {}", 
@@ -292,7 +292,7 @@ public class MessageController {
             @PathVariable Long channelId,
             @PathVariable Long messageId,
             @RequestParam String emoji) {
-        Long userId = authUtils.getCurrentUserId()
+        Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
         log.debug("User {} removing reaction {} from message {} in channel {}", 
@@ -307,7 +307,7 @@ public class MessageController {
     public ResponseEntity<GeneralResponse<?>> markAsRead(
             @PathVariable Long channelId,
             @PathVariable Long messageId) {
-        Long userId = authUtils.getCurrentUserId()
+        Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
         log.debug("User {} marking messages as read in channel {} up to message {}", 
@@ -320,7 +320,7 @@ public class MessageController {
     @GetMapping("/unread/count")
     public ResponseEntity<GeneralResponse<Long>> getUnreadCount(
             @PathVariable Long channelId) {
-        Long userId = authUtils.getCurrentUserId()
+        Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
         long count = messageUseCase.getUnreadCount(channelId, userId);
@@ -331,7 +331,7 @@ public class MessageController {
     public ResponseEntity<GeneralResponse<?>> sendTypingIndicator(
             @PathVariable Long channelId,
             @Valid @RequestBody TypingIndicatorRequest request) {
-        Long userId = authUtils.getCurrentUserId()
+        Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
         messageUseCase.sendTypingIndicator(channelId, userId, request.getIsTyping());
@@ -341,7 +341,7 @@ public class MessageController {
     @GetMapping("/typing")
     public ResponseEntity<GeneralResponse<TypingStatusResponse>> getTypingUsers(
             @PathVariable Long channelId) {
-        Long userId = authUtils.getCurrentUserId()
+        Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
         Set<Long> typingUsers = messageUseCase.getTypingUsers(channelId, userId);
