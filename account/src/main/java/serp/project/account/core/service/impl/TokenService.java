@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.response.TokenResponse;
 import serp.project.account.core.exception.AppException;
@@ -60,8 +61,17 @@ public class TokenService implements ITokenService {
 
         } catch (AppException e) {
             throw e;
+        } catch (WebClientResponseException.Unauthorized | WebClientResponseException.BadRequest e) {
+            throw new AppException(
+                    Constants.ErrorMessage.WRONG_EMAIL_OR_PASSWORD,
+                    Constants.HttpStatusCode.BAD_REQUEST);
+        } catch (WebClientResponseException e) {
+            log.error("Keycloak token request failed with status {}", e.getStatusCode(), e);
+            throw new AppException(
+                    Constants.ErrorMessage.INTERNAL_SERVER_ERROR,
+                    Constants.HttpStatusCode.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
-            log.error("Unexpected error while getting token for user: {}", username);
+            log.error("Unexpected error while getting token for user: {}", username, e);
             throw new AppException(Constants.ErrorMessage.INTERNAL_SERVER_ERROR,
                     Constants.HttpStatusCode.INTERNAL_SERVER_ERROR);
         }
@@ -98,11 +108,21 @@ public class TokenService implements ITokenService {
                     .build();
 
         } catch (AppException e) {
-            throw new AppException(e.getMessage(), Constants.HttpStatusCode.UNAUTHORIZED);
-        } catch (Exception e) {
-            log.error("Unexpected error while refreshing token");
-            throw new AppException(Constants.ErrorMessage.INVALID_REFRESH_TOKEN,
+            throw e;
+        } catch (WebClientResponseException.Unauthorized | WebClientResponseException.BadRequest e) {
+            throw new AppException(
+                    Constants.ErrorMessage.INVALID_REFRESH_TOKEN,
                     Constants.HttpStatusCode.UNAUTHORIZED);
+        } catch (WebClientResponseException e) {
+            log.error("Refresh token request failed with status {}", e.getStatusCode(), e);
+            throw new AppException(
+                    Constants.ErrorMessage.INTERNAL_SERVER_ERROR,
+                    Constants.HttpStatusCode.INTERNAL_SERVER_ERROR);
+        } catch (Exception e) {
+            log.error("Unexpected error while refreshing token", e);
+            throw new AppException(
+                    Constants.ErrorMessage.INTERNAL_SERVER_ERROR,
+                    Constants.HttpStatusCode.INTERNAL_SERVER_ERROR);
         }
     }
 

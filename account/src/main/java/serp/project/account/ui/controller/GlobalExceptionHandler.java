@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.kernel.utils.ResponseUtils;
 
@@ -62,7 +63,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleGenericException(Exception ex) {
         log.error("Unexpected error: ", ex);
 
-        var response = responseUtils.internalServerError(ex.getMessage());
+        var response = responseUtils.internalServerError(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 }
