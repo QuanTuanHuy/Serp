@@ -8,15 +8,16 @@ package serp.project.discuss_service.ui.messaging;
 import java.util.HashMap;
 import java.util.Map;
 
+import io.github.serp.platform.kafka.consumer.SerpKafkaConsumerMetadata;
+import io.github.serp.platform.kafka.consumer.SerpKafkaRecordParser;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEvent;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEventType;
 import serp.project.discuss_service.core.service.IDiscussEventPublisher;
-import serp.project.discuss_service.kernel.utils.JsonUtils;
 import serp.project.discuss_service.kernel.utils.KafkaPayloadUtils;
 import serp.project.discuss_service.ui.messaging.handler.HandlerRegistry;
 
@@ -24,34 +25,39 @@ import serp.project.discuss_service.ui.messaging.handler.HandlerRegistry;
 @Slf4j
 public class DiscussKafkaConsumer
         extends AbstractKafkaConsumer<WsEvent<Map<String, Object>>, WsEventType> {
+    private static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
 
     private final HandlerRegistry handlerRegistry;
+    private final SerpKafkaRecordParser recordParser;
 
     public DiscussKafkaConsumer(
             HandlerRegistry handlerRegistry,
-            JsonUtils jsonUtils) {
-        super(jsonUtils);
+            SerpKafkaRecordParser recordParser) {
         this.handlerRegistry = handlerRegistry;
+        this.recordParser = recordParser;
     }
 
     @KafkaListener(topics = IDiscussEventPublisher.TOPIC_MESSAGE_EVENTS, groupId = "${spring.kafka.consumer.group-id}")
-    public void handleMessageEvent(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
-        processRecord(record, acknowledgment, handlerRegistry.getMessageHandlers(), "message");
+    public void handleMessageEvent(ConsumerRecord<String, String> record) {
+        logRecordMetadata(record, "message");
+        processRecord(record, handlerRegistry.getMessageHandlers(), "message");
     }
 
     @KafkaListener(topics = IDiscussEventPublisher.TOPIC_REACTION_EVENTS, groupId = "${spring.kafka.consumer.group-id}")
-    public void handleReactionEvent(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
-        processRecord(record, acknowledgment, handlerRegistry.getReactionHandlers(), "reaction");
+    public void handleReactionEvent(ConsumerRecord<String, String> record) {
+        logRecordMetadata(record, "reaction");
+        processRecord(record, handlerRegistry.getReactionHandlers(), "reaction");
     }
 
     @KafkaListener(topics = IDiscussEventPublisher.TOPIC_PRESENCE_EVENTS, groupId = "${spring.kafka.consumer.group-id}")
-    public void handlePresenceEvent(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
-        processRecord(record, acknowledgment, handlerRegistry.getPresenceHandlers(), "presence");
+    public void handlePresenceEvent(ConsumerRecord<String, String> record) {
+        logRecordMetadata(record, "presence");
+        processRecord(record, handlerRegistry.getPresenceHandlers(), "presence");
     }
 
     @Override
-    protected WsEvent<Map<String, Object>> parsePayload(String payload) {
-        return parseWsEvent(payload);
+    protected WsEvent<Map<String, Object>> parsePayload(ConsumerRecord<String, String> record) {
+        return parseWsEvent(record);
     }
 
     @Override
@@ -59,8 +65,8 @@ public class DiscussKafkaConsumer
         return event.getType();
     }
 
-    private WsEvent<Map<String, Object>> parseWsEvent(String payload) {
-        Map<String, Object> raw = parseRawEvent(payload);
+    private WsEvent<Map<String, Object>> parseWsEvent(ConsumerRecord<String, String> record) {
+        Map<String, Object> raw = parseRawEvent(record);
         if (raw == null) {
             return null;
         }
@@ -90,14 +96,13 @@ public class DiscussKafkaConsumer
                 .build();
     }
 
-    private Map<String, Object> parseRawEvent(String payload) {
+    private Map<String, Object> parseRawEvent(ConsumerRecord<String, String> record) {
         try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> raw = jsonUtils.fromJson(payload, Map.class);
-            return raw;
+            return recordParser.parse(record, new ParameterizedTypeReference<Map<String, Object>>() {
+            });
         } catch (Exception e) {
             log.warn("Failed to parse event payload as JSON", e);
-            return null;
+            throw new IllegalArgumentException("Failed to parse websocket event payload", e);
         }
     }
 
@@ -127,4 +132,14 @@ public class DiscussKafkaConsumer
         return payloadMap;
     }
 
+    private void logRecordMetadata(ConsumerRecord<String, String> record, String handlerName) {
+        SerpKafkaConsumerMetadata metadata = SerpKafkaConsumerMetadata.fromRecord(record, CORRELATION_ID_HEADER);
+        log.debug("Kafka {} event topic={}, partition={}, offset={}, key={}, correlationId={}",
+                handlerName,
+                metadata.getTopic(),
+                metadata.getPartition(),
+                metadata.getOffset(),
+                metadata.getKey(),
+                metadata.getCorrelationId());
+    }
 }
