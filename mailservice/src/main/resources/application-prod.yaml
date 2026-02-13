@@ -124,12 +124,20 @@ app:
       cleanup-attachments-cron: "0 0 2 * * *"
       provider-health-check-fixed-delay: 60000
 
+serp:
   security:
-    filter:
-      publicUrls:
-      protectedUrls:
-        - url-pattern: /api/v1/**
-          roles:
-            - SUPER_ADMIN
-            - SYSTEM_MODERATOR
-          permissions:
+    jwt:
+      jwk-set-uri: ${app.keycloak.jwk-set-uri}
+    service:
+      required-role: SERP_SERVICES
+      allowed-client-ids:
+        - serp-ptm
+        - serp-crm
+        - serp-account
+    public-urls: []
+    protected-urls:
+      - url-pattern: /api/v1/**
+        roles:
+          - SUPER_ADMIN
+          - SYSTEM_MODERATOR
+        permissions: []
