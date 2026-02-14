@@ -98,7 +98,7 @@ public class DiscussKafkaConsumer
 
     private Map<String, Object> parseRawEvent(ConsumerRecord<String, String> record) {
         try {
-            return recordParser.parse(record, new ParameterizedTypeReference<Map<String, Object>>() {
+            return recordParser.parse(record, new ParameterizedTypeReference<>() {
             });
         } catch (Exception e) {
             log.warn("Failed to parse event payload as JSON", e);

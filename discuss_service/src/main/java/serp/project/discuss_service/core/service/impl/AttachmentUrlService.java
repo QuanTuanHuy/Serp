@@ -118,18 +118,12 @@ public class AttachmentUrlService implements IAttachmentUrlService {
         return storageProperties.getS3().getDownloadUrlExpiryDays();
     }
 
-    /**
-     * Apply cached URL information to the response
-     */
     private void applyCachedUrls(AttachmentResponse response, CachedAttachmentUrl cached) {
         response.setDownloadUrl(cached.downloadUrl());
         response.setThumbnailUrl(cached.thumbnailUrl());
         response.setUrlExpiresAt(cached.expiresAt());
     }
 
-    /**
-     * Generate a new presigned URL and cache it
-     */
     private void generateAndCacheUrl(AttachmentEntity attachment, AttachmentResponse response) {
         try {
             StorageLocation location = StorageLocation.ofS3(
@@ -165,12 +159,6 @@ public class AttachmentUrlService implements IAttachmentUrlService {
         }
     }
 
-    /**
-     * Calculate the expiry timestamp based on the duration
-     *
-     * @param expiry Duration until expiry
-     * @return Unix timestamp in milliseconds when the URL expires
-     */
     private long calculateExpiryTimestamp(Duration expiry) {
         return Instant.now().plus(expiry).toEpochMilli();
     }
