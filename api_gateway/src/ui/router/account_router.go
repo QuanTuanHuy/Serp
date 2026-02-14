@@ -14,7 +14,6 @@ import (
 func RegisterAccountRoutes(group *gin.RouterGroup,
 	authController *account.AuthController,
 	userController *account.UserController,
-	keyCloakController *account.KeycloakController,
 	roleController *account.RoleController,
 	permissionController *account.PermissionController,
 	moduleController *account.ModuleController,
@@ -68,7 +67,6 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 		moduleV1.Use(middleware.AuthMiddleware()).GET("/:moduleId/roles", moduleController.GetRolesInModule)
 		moduleV1.Use(middleware.AuthMiddleware()).PUT("/:moduleId", moduleController.UpdateModule)
 		moduleV1.Use(middleware.AuthMiddleware()).GET("", moduleController.GetAllModules)
-		moduleV1.Use(middleware.AuthMiddleware()).POST("/:moduleId/registration", moduleController.UserRegisterModule)
 		moduleV1.Use(middleware.AuthMiddleware()).GET("/my-modules", moduleController.GetMyModules)
 	}
 

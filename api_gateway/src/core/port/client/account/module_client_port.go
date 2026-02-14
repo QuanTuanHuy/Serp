@@ -18,6 +18,5 @@ type IModuleClientPort interface {
 	GetRolesInModule(ctx context.Context, moduleId int64) (*response.BaseResponse, error)
 	UpdateModule(ctx context.Context, moduleId int64, req *request.UpdateModuleDto) (*response.BaseResponse, error)
 	GetAllModules(ctx context.Context) (*response.BaseResponse, error)
-	UserRegisterModule(ctx context.Context, moduleId int64) (*response.BaseResponse, error)
 	GetMyModules(ctx context.Context) (*response.BaseResponse, error)
 }

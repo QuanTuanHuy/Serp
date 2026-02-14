@@ -89,20 +89,6 @@ func (m *ModuleController) GetAllModules(c *gin.Context) {
 	c.JSON(res.Code, res)
 }
 
-func (m *ModuleController) UserRegisterModule(c *gin.Context) {
-	moduleId, ok := utils.ValidateAndParseID(c, "moduleId")
-	if !ok {
-		return
-	}
-
-	res, err := m.moduleService.UserRegisterModule(c.Request.Context(), moduleId)
-	if err != nil {
-		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
-		return
-	}
-	c.JSON(res.Code, res)
-}
-
 func (m *ModuleController) GetMyModules(c *gin.Context) {
 	res, err := m.moduleService.GetMyModules(c.Request.Context())
 	if err != nil {
