@@ -38,23 +38,10 @@ func All() fx.Option {
 
 		// Store Adapters
 		fx.Provide(store.NewDBTransactionAdapter),
-		fx.Provide(store.NewProjectAdapter),
-		fx.Provide(store.NewProjectMemberAdapter),
-		fx.Provide(store.NewWorkItemAdapter),
-		fx.Provide(store.NewWorkItemAssignmentAdapter),
-		fx.Provide(store.NewWorkItemDependencyAdapter),
-		fx.Provide(store.NewSprintAdapter),
-		fx.Provide(store.NewMilestoneAdapter),
-		fx.Provide(store.NewBoardAdapter),
-		fx.Provide(store.NewBoardColumnAdapter),
-		fx.Provide(store.NewCommentAdapter),
-		fx.Provide(store.NewActivityLogAdapter),
 		fx.Provide(store.NewLabelAdapter),
-		fx.Provide(store.NewWorkItemLabelAdapter),
 
 		// Services
 		fx.Provide(service.NewTransactionService),
-		fx.Provide(service.NewProjectMemberService),
 
 		// Use Cases
 
