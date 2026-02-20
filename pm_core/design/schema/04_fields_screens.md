@@ -2,6 +2,8 @@
 
 **Design Philosophy:** Separate field metadata, behavioral rules, and UI presentation. Keep configurations relational where runtime filtering/querying is frequent.
 
+Provisioning note: field/screen scheme trees are provisioned as project-owned clones from template sources (see Module 00).
+
 ## Shared Base Columns (applies to all tables in this module)
 
 - `tenant_id BIGINT NOT NULL`

@@ -1,7 +1,7 @@
 # PM Core - Use Case Specification
 
 > **Version**: 1.0
-> **Date**: 2026-02-18
+> **Date**: 2026-02-20
 > **Module Code**: PM
 > **Tech Stack**: Go (Gin + FX) + PostgreSQL + Kafka
 > **Soft Delete**: `deleted_at TIMESTAMP NULL`
@@ -17,6 +17,7 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 ### Scope
 
 **In Scope (Phase 1+2)**:
+- **Module 00**: Project Provisioning & Scheme Cloning (template resolution, deep clone, clone-and-swap rebinding)
 - **Module 01**: Projects & Configuration (projects, categories, blueprints, components, versions, roles)
 - **Module 02**: Issues & Work Items (work items, issue types, priorities, resolutions, links, worklogs, custom field values)
 - **Module 03**: Workflow Engine (statuses, workflows, transitions, rules, workflow schemes)
@@ -376,13 +377,13 @@ Only one active version per workflow. Publishing increments `version_no` and swa
 | **Use Case Name** | Create Project |
 | **Module** | PM Core |
 | **Version** | 1.0 |
-| **Last Updated** | 2026-02-18 |
+| **Last Updated** | 2026-02-20 |
 | **Priority** | High |
 | **Complexity** | Complex |
 
 ##### Description
 
-Allow a Project Lead to create a new project, optionally based on a blueprint template. The project is the central container that binds multiple configuration schemes (issue types, workflows, fields, screens, permissions, notifications, priorities). Creating a project initializes it with default or blueprint-defined scheme bindings.
+Allow a Project Lead to create a new project, optionally based on a blueprint template. The project is the central container that binds multiple configuration schemes (issue types, workflows, fields, screens, permissions, notifications, priorities). Creating a project provisions project-owned scheme bindings by deep-cloning template schemes resolved from explicit overrides, blueprint defaults, or system defaults.
 
 ##### Actors
 
@@ -390,7 +391,7 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 |-------|------|-------------|
 | Project Lead | Primary | Initiates project creation |
 | PM Admin | Secondary | May also create projects |
-| System | System | Applies blueprint defaults, publishes event |
+| System | System | Resolves template defaults, deep-clones project schemes, publishes event |
 
 ##### Preconditions
 
@@ -402,7 +403,7 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 
 ###### Success Postconditions
 1. Project record persisted in `projects` table with `deleted_at=NULL`
-2. Scheme bindings assigned (from blueprint defaults or system defaults)
+2. Project-owned scheme bindings provisioned via deep clone from resolved templates
 3. Kafka event `PROJECT_CREATED` published to topic `serp.pm.project.events`
 4. Audit fields set: `created_at`, `updated_at`, `created_by`, `updated_by`
 
@@ -424,7 +425,7 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 | 8 | System | If `project_category_id` provided, validates it exists in tenant |
 | 9 | System | Begins database transaction |
 | 10 | System | Creates Project entity with `archived=false`, sets audit fields |
-| 11 | System | If blueprint_id provided, copies scheme bindings from `blueprint_scheme_defaults`; otherwise assigns system default schemes |
+| 11 | System | Resolves template schemes (explicit override > blueprint default > system default), deep-clones scheme graphs, and binds cloned scheme IDs to the project |
 | 12 | System | Commits transaction |
 | 13 | System | Publishes `PROJECT_CREATED` event to Kafka topic `serp.pm.project.events` |
 | 14 | System | Returns HTTP 201 with created project data including resolved scheme names |
@@ -440,7 +441,8 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 |------|-------------|--------|
 | 11.1 | System | Validates blueprint exists and belongs to tenant |
 | 11.2 | System | Loads all `blueprint_scheme_defaults` for the blueprint |
-| 11.3 | System | Assigns each scheme binding to the new project (issue_type_scheme_id, workflow_scheme_id, etc.) |
+| 11.3 | System | Deep-clones each resolved scheme graph in FK-safe order and records cloned IDs |
+| 11.4 | System | Assigns cloned scheme IDs to the new project (issue_type_scheme_id, workflow_scheme_id, etc.) |
 
 **Rejoins**: Main Flow Step 12
 
@@ -452,7 +454,7 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 | Step | Actor/System | Action |
 |------|-------------|--------|
 | 11.1 | System | Validates each provided scheme ID exists and belongs to tenant |
-| 11.2 | System | Overrides default/blueprint schemes with explicitly provided values |
+| 11.2 | System | Uses provided scheme IDs as template sources before deep-clone provisioning |
 
 **Rejoins**: Main Flow Step 12
 
@@ -502,9 +504,10 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 | BR-PM-001-01 | Project key must be unique within tenant (case-insensitive, uppercase) | Service layer + DB unique constraint `(tenant_id, key)` |
 | BR-PM-001-02 | Project key format: 2-10 uppercase alphanumeric characters | DTO validation |
 | BR-PM-001-03 | Project name is required, 1-255 characters | DTO validation |
-| BR-PM-001-04 | If no blueprint and no explicit schemes, assign system default schemes | Service layer |
+| BR-PM-001-04 | If no blueprint and no explicit schemes, use system default template schemes as deep-clone sources | Service layer |
 | BR-PM-001-05 | `project_type_key` must be one of: `software`, `business`, `service_desk` | DTO validation |
 | BR-PM-001-06 | New projects are always created with `archived=false` | Service layer |
+| BR-PM-001-07 | Project creation must provision project-owned scheme clones; mutable schemes are not shared across projects by default | Service layer |
 
 ##### Data Requirements
 
@@ -542,14 +545,14 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 | lead_user_id | int64 | Project lead |
 | project_category_id | int64 | Category (nullable) |
 | archived | bool | Archive state (false) |
-| issue_type_scheme_id | int64 | Bound issue type scheme |
-| workflow_scheme_id | int64 | Bound workflow scheme |
-| field_config_scheme_id | int64 | Bound field config scheme |
-| issue_type_screen_scheme_id | int64 | Bound screen scheme |
-| permission_scheme_id | int64 | Bound permission scheme |
-| notification_scheme_id | int64 | Bound notification scheme |
-| priority_scheme_id | int64 | Bound priority scheme |
-| issue_security_scheme_id | int64 | Bound security scheme |
+| issue_type_scheme_id | int64 | Bound project-owned issue type scheme |
+| workflow_scheme_id | int64 | Bound project-owned workflow scheme |
+| field_config_scheme_id | int64 | Bound project-owned field config scheme |
+| issue_type_screen_scheme_id | int64 | Bound project-owned screen scheme |
+| permission_scheme_id | int64 | Bound project-owned permission scheme |
+| notification_scheme_id | int64 | Bound project-owned notification scheme |
+| priority_scheme_id | int64 | Bound project-owned priority scheme |
+| issue_security_scheme_id | int64 | Bound project-owned security scheme |
 | created_at | timestamp | Creation time |
 | created_by | int64 | Creator user ID |
 
@@ -920,13 +923,13 @@ Toggle the archive state of a project. Archived projects are visible but read-on
 | **Use Case Name** | Update Project Scheme Bindings |
 | **Module** | PM Core |
 | **Version** | 1.0 |
-| **Last Updated** | 2026-02-18 |
+| **Last Updated** | 2026-02-20 |
 | **Priority** | Medium |
 | **Complexity** | Complex |
 
 ##### Description
 
-Update the scheme associations for a project (issue type scheme, workflow scheme, field config scheme, screen scheme, permission scheme, notification scheme, priority scheme, issue security scheme). Changing schemes may affect the behavior of all work items in the project.
+Update the scheme associations for a project (issue type scheme, workflow scheme, field config scheme, screen scheme, permission scheme, notification scheme, priority scheme, issue security scheme). To preserve isolation, the system performs clone-and-swap: selected template schemes are deep-cloned and then rebound to the target project atomically.
 
 ##### Actors
 
@@ -947,30 +950,33 @@ Update the scheme associations for a project (issue type scheme, workflow scheme
 | 1 | PM Admin | Sends PUT `/api/v1/projects/{projectId}/schemes` with scheme binding updates |
 | 2 | System | Validates JWT and permissions |
 | 3 | System | Fetches project, validates it exists and is not archived |
-| 4 | System | For each provided scheme ID, validates the scheme exists and belongs to tenant |
-| 5 | System | Validates compatibility: new workflow scheme must cover all issue types in current issue type scheme |
-| 6 | System | Updates scheme binding fields on project within transaction |
-| 7 | System | Publishes `PROJECT_SCHEMES_UPDATED` event to Kafka |
-| 8 | System | Returns HTTP 200 with updated project |
+| 4 | System | For each provided scheme ID, validates the template scheme exists and belongs to tenant |
+| 5 | System | Begins transaction and deep-clones provided template scheme graphs in FK-safe order |
+| 6 | System | Validates compatibility: cloned workflow scheme covers all issue types in the resulting cloned issue type scheme |
+| 7 | System | Updates project scheme binding fields to cloned scheme IDs within transaction |
+| 8 | System | Commits transaction |
+| 9 | System | Publishes `PROJECT_SCHEMES_UPDATED` event to Kafka |
+| 10 | System | Returns HTTP 200 with updated project |
 
 ##### Exception Flows
 
 ###### EF-1: Scheme Compatibility Error
 
-**Triggered at**: Main Flow Step 5
+**Triggered at**: Main Flow Step 6
 **Condition**: New workflow scheme does not cover all issue types
 
 | Step | Actor/System | Action |
 |------|-------------|--------|
-| 5.E1 | System | Returns HTTP 422 with error: `SCHEME_INCOMPATIBLE` and list of uncovered issue types |
+| 6.E1 | System | Returns HTTP 422 with error: `SCHEME_INCOMPATIBLE` and list of uncovered issue types |
 
 ##### Business Rules
 
 | Rule ID | Description | Enforcement |
 |---------|-------------|-------------|
 | BR-PM-007-01 | Cannot change schemes on archived projects | Service layer |
-| BR-PM-007-02 | New workflow scheme must provide workflow mappings for all issue types in the project's issue type scheme | UseCase layer |
+| BR-PM-007-02 | New workflow scheme must provide workflow mappings for all issue types in the project's resulting issue type scheme | UseCase layer |
 | BR-PM-007-03 | Existing work items retain their current status; statuses not present in new workflow are flagged for migration | Service layer |
+| BR-PM-007-04 | Scheme rebinding uses clone-and-swap; mutable schemes are not directly shared across projects by default | Service layer |
 
 ##### Data Requirements
 
@@ -1139,7 +1145,7 @@ Standard CRUD pattern. Permission: `PM.BLUEPRINT.MANAGE`.
 - **UC-PM-017**: Update blueprint metadata (name, description, avatar_url). Cannot modify `is_system` blueprints.
 - **UC-PM-018**: Get by ID with scheme defaults expanded.
 - **UC-PM-019**: List blueprints with filters (project_type_key, is_system).
-- **UC-PM-020**: Soft-delete. Cannot delete system blueprints. Cannot delete if projects reference it (warning only, not blocking since projects snapshot schemes on creation).
+- **UC-PM-020**: Soft-delete. Cannot delete system blueprints. Existing projects are not affected because blueprint schemes are only used as provisioning templates.
 
 ##### UC-PM-021: Manage Blueprint Scheme Defaults
 
@@ -1150,7 +1156,7 @@ Standard CRUD pattern. Permission: `PM.BLUEPRINT.MANAGE`.
 | **Priority** | Medium |
 | **Complexity** | Medium |
 
-**Description**: Set or update the default scheme bindings for a blueprint. When a project is created from this blueprint, these schemes are applied.
+**Description**: Set or update the default scheme bindings for a blueprint. When a project is created from this blueprint, these scheme IDs are resolved as template sources and then deep-cloned into project-owned schemes.
 
 **Permission**: `PM.BLUEPRINT.MANAGE`
 
@@ -3415,7 +3421,7 @@ Rules that apply across multiple use cases:
 | **Custom Field Context** | Scoping rule for a custom field, defining which projects and issue types it applies to. |
 | **Permission Scheme** | Maps permissions to grantees (roles, groups, users) with ALLOW/DENY effects. |
 | **Issue Security Level** | Restricts visibility of individual work items to specific roles/groups/users. |
-| **Project Blueprint** | A template that pre-configures default scheme bindings for new projects. |
+| **Project Blueprint** | A template that pre-configures source scheme bindings for new projects; runtime project schemes are provisioned as clones. |
 | **Project Component** | A sub-section of a project (e.g., "Backend", "Frontend") used to categorize work items. |
 | **Project Version** | A release marker (e.g., "v1.0", "v2.0") used to track fix targets and release planning. |
 | **Project Role** | A named role within PM Core (e.g., "Developer", "QA Lead") that actors can be assigned to per project. |
@@ -3423,5 +3429,5 @@ Rules that apply across multiple use cases:
 | **Worklog** | A time tracking entry recording work performed on a work item. |
 | **Issue Link** | A typed relationship between two work items (e.g., "blocks", "is blocked by", "clones"). |
 | **Resolution** | The outcome of a work item when it reaches a "done" status (e.g., "Done", "Won't Fix", "Duplicate"). |
-| **Scheme Indirection** | The architectural pattern where projects reference schemes (not individual configs) to allow bulk configuration changes. |
+| **Scheme Indirection** | The architectural pattern where projects reference scheme roots (not individual configs), with project-owned cloning to preserve isolation by default. |
 | **Soft Delete** | Marking a record as deleted by setting `deleted_at` timestamp instead of physically removing it from the database. |

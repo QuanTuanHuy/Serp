@@ -2,6 +2,8 @@
 
 **Design Philosophy:** Security is layered and explicit: project role assignment -> permission scheme -> issue-level security restrictions.
 
+Provisioning note: permission and issue security schemes should be cloned per project from template sources during provisioning/rebinding (see Module 00).
+
 ## Shared Base Columns (applies to all tables in this module)
 
 - `tenant_id BIGINT NOT NULL`

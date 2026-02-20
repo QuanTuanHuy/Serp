@@ -2,6 +2,8 @@
 
 **Design Philosophy:** Workflow behavior is modeled relationally for validation, queryability, and future extension (plugins, automation, conditional routing).
 
+Provisioning note: workflow scheme graphs are expected to be deep-cloned per project from template sources (see Module 00) to avoid cross-project side effects.
+
 ## Shared Base Columns (applies to all tables in this module)
 
 - `tenant_id BIGINT NOT NULL`

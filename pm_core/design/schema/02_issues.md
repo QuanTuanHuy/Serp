@@ -2,6 +2,8 @@
 
 **Design Philosophy:** Work items remain the central entity, but extensibility is achieved through typed relational sub-structures instead of large opaque JSON blobs.
 
+Provisioning note: scheme roots in this module are template sources that are deep-cloned into project-owned configurations during project provisioning (see Module 00).
+
 ## Shared Base Columns (applies to all tables in this module)
 
 - `tenant_id BIGINT NOT NULL`
