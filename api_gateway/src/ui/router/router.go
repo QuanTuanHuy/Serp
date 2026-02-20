@@ -75,7 +75,6 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		group,
 		p.AuthController,
 		p.UserController,
-		p.KeycloakController,
 		p.RoleController,
 		p.PermissionController,
 		p.ModuleController,
