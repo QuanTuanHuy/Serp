@@ -39,6 +39,8 @@ func All() fx.Option {
 		// Store Adapters
 		fx.Provide(store.NewDBTransactionAdapter),
 		fx.Provide(store.NewLabelAdapter),
+		fx.Provide(store.NewIssueTypeAdapter),
+		fx.Provide(store.NewPriorityAdapter),
 
 		// Services
 		fx.Provide(service.NewTransactionService),

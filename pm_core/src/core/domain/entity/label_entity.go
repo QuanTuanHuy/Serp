@@ -19,8 +19,6 @@ type LabelEntity struct {
 	ProjectID int64  `json:"projectId"`
 	Name      string `json:"name"`
 	Color     string `json:"color"`
-
-	ActiveStatus string `json:"activeStatus"`
 }
 
 func (l *LabelEntity) Validate() error {
