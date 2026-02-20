@@ -27,10 +27,9 @@ func (m *LabelMapper) ToEntity(mdl *model.LabelModel) *entity.LabelEntity {
 			CreatedAt: mdl.CreatedAt.UnixMilli(),
 			UpdatedAt: mdl.UpdatedAt.UnixMilli(),
 		},
-		ProjectID:    mdl.ProjectID,
-		Name:         mdl.Name,
-		Color:        mdl.Color,
-		ActiveStatus: mdl.ActiveStatus,
+		ProjectID: mdl.ProjectID,
+		Name:      mdl.Name,
+		Color:     mdl.Color,
 	}
 }
 
@@ -43,10 +42,9 @@ func (m *LabelMapper) ToModel(e *entity.LabelEntity) *model.LabelModel {
 		BaseModel: model.BaseModel{
 			ID: e.ID,
 		},
-		ProjectID:    e.ProjectID,
-		Name:         e.Name,
-		Color:        e.Color,
-		ActiveStatus: e.ActiveStatus,
+		ProjectID: e.ProjectID,
+		Name:      e.Name,
+		Color:     e.Color,
 	}
 }
 

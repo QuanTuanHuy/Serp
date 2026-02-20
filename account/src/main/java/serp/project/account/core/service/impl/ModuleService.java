@@ -26,6 +26,7 @@ import serp.project.account.kernel.utils.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -39,7 +40,6 @@ public class ModuleService implements IModuleService {
     private final AsyncTaskExecutor asyncTaskExecutor;
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public ModuleEntity createModule(CreateModuleDto request) {
         try {
             boolean existedModule = modulePort.existsByName(request.getName());
@@ -62,7 +62,6 @@ public class ModuleService implements IModuleService {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public ModuleEntity updateModule(Long moduleId, UpdateModuleDto request) {
         try {
             var module = modulePort.getModuleById(moduleId);
@@ -124,8 +123,9 @@ public class ModuleService implements IModuleService {
         if (moduleIds == null || moduleIds.isEmpty()) {
             return new ArrayList<>();
         }
+        Set<Long> moduleIdSet = Set.copyOf(moduleIds);
         return getAllModules().stream()
-                .filter(m -> moduleIds.contains(m.getId()))
+                .filter(m -> moduleIdSet.contains(m.getId()))
                 .toList();
     }
 

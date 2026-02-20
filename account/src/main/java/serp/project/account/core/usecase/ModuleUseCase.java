@@ -8,11 +8,11 @@ package serp.project.account.core.usecase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.CreateModuleDto;
 import serp.project.account.core.domain.dto.request.UpdateModuleDto;
-import serp.project.account.core.domain.entity.UserModuleAccessEntity;
 import serp.project.account.core.service.IModuleService;
 import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.IUserModuleAccessService;
@@ -31,6 +31,7 @@ public class ModuleUseCase {
 
     private final UserModuleAccessMapper userModuleAccessMapper;
 
+    @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> createModule(CreateModuleDto request) {
         try {
             var module = moduleService.createModule(request);
@@ -54,6 +55,7 @@ public class ModuleUseCase {
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> updateModule(Long moduleId, UpdateModuleDto request) {
         try {
             var module = moduleService.updateModule(moduleId, request);
@@ -70,19 +72,6 @@ public class ModuleUseCase {
             return responseUtils.success(modules);
         } catch (Exception e) {
             log.error("Error retrieving modules: {}", e.getMessage());
-            throw e;
-        }
-    }
-
-    public GeneralResponse<?> userRegisterModule(Long userId, Long moduleId, Long organizationId) {
-        try {
-            // User tự đăng ký, grantedBy chính là userId
-            UserModuleAccessEntity access = userModuleAccessService
-                    .registerUserToModule(userId, moduleId, organizationId, userId);
-
-            return responseUtils.success(access);
-        } catch (Exception e) {
-            log.error("Error registering user to module: {}", e.getMessage());
             throw e;
         }
     }
