@@ -14,19 +14,7 @@ import (
 
 func InitializeDB(db *gorm.DB) {
 	err := db.AutoMigrate(
-		&model.ProjectModel{},
-		&model.ProjectMemberModel{},
-		&model.WorkItemModel{},
-		&model.WorkItemAssignmentModel{},
-		&model.WorkItemDependencyModel{},
-		&model.SprintModel{},
-		&model.MilestoneModel{},
-		&model.BoardModel{},
-		&model.BoardColumnModel{},
-		&model.CommentModel{},
-		&model.ActivityLogModel{},
 		&model.LabelModel{},
-		&model.WorkItemLabelModel{},
 	)
 	if err != nil {
 		log.Fatal("Failed to run migrations: ", err)
