@@ -9,8 +9,6 @@ import (
 	"errors"
 	"regexp"
 	"strings"
-
-	"github.com/serp/pm-core/src/core/domain/enum"
 )
 
 var hexColorRegex = regexp.MustCompile(`^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$`)
@@ -21,14 +19,6 @@ type LabelEntity struct {
 	ProjectID int64  `json:"projectId"`
 	Name      string `json:"name"`
 	Color     string `json:"color"`
-
-	ActiveStatus string `json:"activeStatus"`
-}
-
-func NewLabelEntity() *LabelEntity {
-	return &LabelEntity{
-		ActiveStatus: string(enum.Active),
-	}
 }
 
 func (l *LabelEntity) Validate() error {

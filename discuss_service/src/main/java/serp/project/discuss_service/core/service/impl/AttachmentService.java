@@ -32,10 +32,6 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
-/**
- * Implementation of attachment service.
- * Handles file uploads to storage (S3/MinIO) and attachment record management.
- */
 @Service
 @Slf4j
 public class AttachmentService implements IAttachmentService {
@@ -153,7 +149,6 @@ public class AttachmentService implements IAttachmentService {
 
     /**
      * Upload a single file to storage (S3/MinIO) WITHOUT saving to database.
-     * @return AttachmentEntity with storage info populated
      */
     private AttachmentEntity uploadFileToStorage(MultipartFile file, Long messageId, Long channelId, Long tenantId) {
         AttachmentEntity attachment = AttachmentEntity.create(

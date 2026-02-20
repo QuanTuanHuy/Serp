@@ -170,36 +170,6 @@ func (m *ModuleClientAdapter) GetAllModules(ctx context.Context) (*response.Base
 	return &result, nil
 }
 
-func (m *ModuleClientAdapter) UserRegisterModule(ctx context.Context, moduleId int64) (*response.BaseResponse, error) {
-	headers := utils.BuildHeadersFromContext(ctx)
-
-	path := fmt.Sprintf("/api/v1/modules/%d/registration", moduleId)
-	var httpResponse *utils.HTTPResponse
-	err := m.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
-		var err error
-		httpResponse, err = m.apiClient.POST(ctx, path, nil, headers)
-		if err != nil {
-			return fmt.Errorf("failed to call user register module API: %w", err)
-		}
-		return nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	if !m.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
-		log.Error(ctx, fmt.Sprintf("UserRegisterModule API returned error status: %d", httpResponse.StatusCode))
-	}
-
-	var result response.BaseResponse
-	if err := m.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal user register module response: %w", err)
-	}
-
-	return &result, nil
-}
-
 func (m *ModuleClientAdapter) GetMyModules(ctx context.Context) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 

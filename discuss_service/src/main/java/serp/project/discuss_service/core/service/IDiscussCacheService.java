@@ -14,10 +14,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-/**
- * Discuss-specific cache service that provides high-level caching operations.
- * Uses ICachePort for low-level Redis operations.
- */
 public interface IDiscussCacheService {
 
     // ==================== CACHE KEY PREFIXES ====================
@@ -39,303 +35,135 @@ public interface IDiscussCacheService {
     // TTL Constants (in seconds)
     long CHANNEL_TTL = 3600;           // 1 hour
     long MESSAGE_TTL = 300;            // 5 minutes
-    long CHANNEL_MESSAGES_TTL = 60;    // 1 minute for paginated channel messages (hot data)
+    long CHANNEL_MESSAGES_TTL = 60;    // 1 minute
     long PRESENCE_HASH_TTL = 604800;   // 7 days
     long TYPING_TTL = 5;               // 5 seconds
     long SESSION_TTL = 86400;          // 24 hours
-    long ATTACHMENT_URL_TTL = 561600;  // 6.5 days (buffer before 7-day URL expiry)
+    long ATTACHMENT_URL_TTL = 561600;  // 6.5 days
 
     // ==================== CHANNEL CACHE ====================
 
-    /**
-     * Cache a channel
-     */
     void cacheChannel(ChannelEntity channel);
 
-    /**
-     * Get cached channel
-     */
     Optional<ChannelEntity> getCachedChannel(Long channelId);
 
-    /**
-     * Invalidate channel cache
-     */
     void invalidateChannel(Long channelId);
 
     // ==================== MESSAGE CACHE ====================
 
-    /**
-     * Cache a single message
-     */
     void cacheMessage(MessageEntity message);
 
-    /**
-     * Get cached message
-     */
     Optional<MessageEntity> getCachedMessage(Long messageId);
 
-    /**
-     * Invalidate message cache
-     */
     void invalidateMessage(Long messageId);
 
     // ==================== CHANNEL MESSAGES PAGE CACHE ====================
 
     /**
-     * Cache a page of channel messages with total count.
      * Only caches the first page (page=0) for hot data access.
-     *
-     * @param channelId  The channel ID
-     * @param page       The page number (0-based)
-     * @param size       The page size
-     * @param messages   The messages to cache
-     * @param totalCount The total message count
      */
     void cacheChannelMessagesPage(Long channelId, int page, int size,
                                   List<MessageEntity> messages, long totalCount);
 
-    /**
-     * Get cached page of channel messages with total count.
-     *
-     * @param channelId The channel ID
-     * @param page      The page number (0-based)
-     * @param size      The page size
-     * @return Optional containing Pair of (totalCount, messages) if cached
-     */
     Optional<CachedMessagesPage> getCachedChannelMessagesPage(Long channelId, int page, int size);
 
-    /**
-     * Invalidate cached channel messages page (call after new message sent)
-     *
-     * @param channelId The channel ID to invalidate
-     */
     void invalidateChannelMessagesPage(Long channelId);
 
     /**
      * Invalidate cached channel messages page using non-blocking SCAN.
      * This is safer for production as it doesn't block Redis like KEYS command.
-     *
-     * @param channelId The channel ID to invalidate
      */
     void invalidateChannelMessagesPageAsync(Long channelId);
 
     /**
-     * Smart cache update: Prepend a new message to the cached first page.
      * This avoids a DB round-trip on the next read request.
-     * Falls back to invalidation if cache doesn't exist or on error.
-     *
-     * @param channelId The channel ID
-     * @param message   The new message to prepend
-     * @param pageSize  The expected page size (to trim excess)
-     * @return true if smart update succeeded, false if invalidation was used
      */
     boolean prependMessageToFirstPage(Long channelId, MessageEntity message, int pageSize);
 
-    /**
-     * Smart cache update for message deletion: Remove a message from cached first page.
-     * Falls back to invalidation if cache doesn't exist or message not in first page.
-     *
-     * @param channelId The channel ID
-     * @param messageId The message ID to remove
-     * @return true if smart update succeeded, false if invalidation was used
-     */
     boolean removeMessageFromFirstPage(Long channelId, Long messageId);
 
     // ==================== PRESENCE ====================
 
-    /**
-     * Set user presence
-     */
     void setUserPresence(UserPresenceEntity presence);
 
-    /**
-     * Get user presence
-     */
     Optional<UserPresenceEntity> getUserPresence(Long userId);
 
-    /**
-     * Get batch user presence
-     */
     Map<Long, UserPresenceEntity> getUserPresenceBatch(Set<Long> userIds);
 
 
     // ==================== TYPING INDICATORS ====================
 
-    /**
-     * Set user typing in a channel (expires automatically after TYPING_TTL)
-     */
     void setUserTyping(Long channelId, Long userId);
 
-    /**
-     * Clear user typing status
-     */
     void clearUserTyping(Long channelId, Long userId);
 
-    /**
-     * Get users currently typing in a channel
-     */
     Set<Long> getTypingUsers(Long channelId);
 
     // ==================== UNREAD COUNTS ====================
 
-    /**
-     * Cache unread count for user in channel
-     */
     void cacheUnreadCount(Long userId, Long channelId, int count);
 
-    /**
-     * Increment unread count
-     */
     void incrementUnreadCount(Long userId, Long channelId);
 
-    /**
-     * Batch increment unread count for multiple users in a channel.
-     * This is much more efficient than calling incrementUnreadCount multiple times
-     * as it uses Redis pipeline to send all commands in a single round trip.
-     *
-     * @param userIds   Set of user IDs to increment unread count for
-     * @param channelId The channel ID
-     */
     void incrementUnreadCountBatch(Set<Long> userIds, Long channelId);
 
-    /**
-     * Reset unread count (mark as read)
-     */
     void resetUnreadCount(Long userId, Long channelId);
 
-    /**
-     * Get cached unread count
-     */
     Optional<Integer> getCachedUnreadCount(Long userId, Long channelId);
 
-    /**
-     * Get total unread count for user across all channels
-     */
     long getTotalUnreadCount(Long userId);
 
     // ==================== SESSION MANAGEMENT ====================
 
-    /**
-     * Store WebSocket session info
-     */
     void storeSession(String sessionId, Long userId, String instanceId);
 
-    /**
-     * Get session info
-     */
     Optional<SessionInfo> getSession(String sessionId);
 
-    /**
-     * Get user's active session IDs
-     */
     Set<String> getUserSessions(Long userId);
 
-    /**
-     * Remove session
-     */
     void removeSession(String sessionId, Long userId);
 
-    /**
-     * Get count of active sessions for user
-     */
     int getActiveSessionCount(Long userId);
 
     // ==================== CHANNEL SUBSCRIPTIONS ====================
-
-    /**
-     * Add a user subscription to a channel
-     */
     void addUserChannelSubscription(Long userId, Long channelId);
 
-    /**
-     * Remove a user subscription from a channel
-     */
     void removeUserChannelSubscription(Long userId, Long channelId);
 
-    /**
-     * Get channel subscribers (user IDs)
-     */
     Set<Long> getChannelSubscribers(Long channelId);
 
-    /**
-     * Get channels a user is subscribed to
-     */
     Set<Long> getUserSubscribedChannels(Long userId);
 
-    /**
-     * Remove all channel subscriptions for a user
-     */
     void removeAllUserSubscriptions(Long userId);
 
     // ==================== CHANNEL MEMBERS CACHE ====================
 
-    /**
-     * Cache channel member IDs
-     */
     void cacheChannelMembers(Long channelId, Set<Long> memberIds);
 
-    /**
-     * Get cached channel member IDs
-     */
     Set<Long> getCachedChannelMembers(Long channelId);
 
-    /**
-     * Add member to channel members cache
-     */
     void addMemberToChannelCache(Long channelId, Long userId);
 
-    /**
-     * Remove member from channel members cache
-     */
     void removeMemberFromChannelCache(Long channelId, Long userId);
 
-    /**
-     * Check if user is member (from cache)
-     */
     boolean isMemberCached(Long channelId, Long userId);
 
     // ==================== ATTACHMENT URL CACHE ====================
 
-    /**
-     * Cache presigned URL for an attachment
-     *
-     * @param attachmentId The attachment ID
-     * @param urlInfo      The cached URL information
-     */
     void cacheAttachmentUrl(Long attachmentId, CachedAttachmentUrl urlInfo);
 
-    /**
-     * Get cached presigned URL for an attachment
-     *
-     * @param attachmentId The attachment ID
-     * @return Optional containing cached URL info if present and not expired
-     */
     Optional<CachedAttachmentUrl> getCachedAttachmentUrl(Long attachmentId);
 
-    /**
-     * Invalidate cached URL for an attachment
-     *
-     * @param attachmentId The attachment ID to invalidate
-     */
     void invalidateAttachmentUrl(Long attachmentId);
 
     // ==================== VALUE OBJECTS ====================
 
-    /**
-     * Session info value object
-     */
     record SessionInfo(String sessionId, Long userId, String instanceId, long createdAt) {
     }
 
-    /**
-     * Cached attachment URL value object
-     */
     record CachedAttachmentUrl(String downloadUrl, String thumbnailUrl, long expiresAt) {
     }
 
-    /**
-     * Cached messages page value object
-     */
     record CachedMessagesPage(long totalCount, List<MessageEntity> messages) {
     }
 }

@@ -1,6 +1,6 @@
 # SERP - Smart ERP System
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 ![Java](https://img.shields.io/badge/Java-21-orange)
 ![Go](https://img.shields.io/badge/Go-1.22+-00ADD8)
 ![Python](https://img.shields.io/badge/Python-3.12+-3776AB)
@@ -44,13 +44,13 @@ The system is composed of multiple microservices communicating via an API Gatewa
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         Client (Browser)                         │
+│                         Client (Browser)                        │
 └────────────────────────────┬────────────────────────────────────┘
                              │ HTTP Requests
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                  API Gateway (Go - Port 8080)                    │
-│              JWT Validation │ Routing │ Rate Limiting            │
+│                  API Gateway (Go - Port 8080)                   │
+│              JWT Validation │ Routing │ Rate Limiting           │
 └──────┬──────────┬─────────┬─────────┬──────────┬────────────────┘
        │          │         │         │          │
        ▼          ▼         ▼         ▼          ▼
@@ -109,8 +109,6 @@ HTTP Request → Controller → UseCase → Service → Port → Adapter → Dat
 | **mailservice** | 8091 | Java | Email templates |
 | **discuss_service** | 8092 | Java | Discussions, attachments (S3), WebSockets |
 | **serp_web** | 3000 | TypeScript | Web Frontend (Next.js 15 + Redux + Shadcn) |
-
-> **⚠️ Port Conflict:** `logistics` (Java) and `serp_llm` (Python) both default to port 8089. Set `SERVER_PORT` (Java) or `PORT` (Python) in `.env` to avoid conflicts.
 
 ### Infrastructure URLs
 - **PostgreSQL**: `localhost:5432`

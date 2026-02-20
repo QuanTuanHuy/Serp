@@ -39,7 +39,9 @@ func (a *LabelAdapter) CreateLabel(ctx context.Context, tx *gorm.DB, label *enti
 
 func (a *LabelAdapter) GetLabelByID(ctx context.Context, id int64) (*entity.LabelEntity, error) {
 	var labelModel model.LabelModel
-	if err := a.db.WithContext(ctx).First(&labelModel, id).Error; err != nil {
+	if err := a.db.WithContext(ctx).
+		Where("id = ? AND deleted_at IS NULL", id).
+		First(&labelModel).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
@@ -50,7 +52,7 @@ func (a *LabelAdapter) GetLabelByID(ctx context.Context, id int64) (*entity.Labe
 
 func (a *LabelAdapter) GetLabelsByProjectID(ctx context.Context, projectID int64) ([]*entity.LabelEntity, error) {
 	var models []*model.LabelModel
-	if err := a.db.WithContext(ctx).Where("project_id = ? AND active_status = ?", projectID, "ACTIVE").Find(&models).Error; err != nil {
+	if err := a.db.WithContext(ctx).Where("project_id = ? AND deleted_at IS NULL", projectID).Find(&models).Error; err != nil {
 		return nil, fmt.Errorf("failed to get labels: %w", err)
 	}
 	return a.mapper.ToEntities(models), nil
@@ -69,7 +71,7 @@ func (a *LabelAdapter) SoftDeleteLabel(ctx context.Context, tx *gorm.DB, labelID
 	db := a.getDB(tx)
 	if err := db.WithContext(ctx).Model(&model.LabelModel{}).
 		Where("id = ?", labelID).
-		Update("active_status", "DELETED").Error; err != nil {
+		Update("deleted_at", gorm.Expr("CURRENT_TIMESTAMP")).Error; err != nil {
 		return fmt.Errorf("failed to soft delete label: %w", err)
 	}
 	return nil

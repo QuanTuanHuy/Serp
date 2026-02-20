@@ -52,19 +52,6 @@ public class ModuleController {
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
-    @PostMapping("/{moduleId}/registration")
-    public ResponseEntity<?> userRegisterModule(@PathVariable Long moduleId) {
-        Long userId = authUtils.getCurrentUserId().orElse(null);
-        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
-
-        if (userId == null || tenantId == null) {
-            return ResponseEntity.status(401).body("Unauthorized: Missing user or tenant information");
-        }
-
-        var response = moduleUseCase.userRegisterModule(userId, moduleId, tenantId);
-        return ResponseEntity.status(response.getCode()).body(response);
-    }
-
     @GetMapping("/my-modules")
     public ResponseEntity<?> getMyModules() {
         Long userId = authUtils.getCurrentUserId().orElse(null);
