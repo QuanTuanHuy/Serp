@@ -12,7 +12,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type ILabelPort interface {
+type ILabelStore interface {
 	CreateLabel(ctx context.Context, tx *gorm.DB, label *entity.LabelEntity) (*entity.LabelEntity, error)
 	GetLabelByID(ctx context.Context, id int64) (*entity.LabelEntity, error)
 	GetLabelsByProjectID(ctx context.Context, projectID int64) ([]*entity.LabelEntity, error)

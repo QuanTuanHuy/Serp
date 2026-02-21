@@ -21,7 +21,7 @@ type LabelAdapter struct {
 	mapper *mapper.LabelMapper
 }
 
-func NewLabelAdapter(db *gorm.DB) store.ILabelPort {
+func NewLabelAdapter(db *gorm.DB) store.ILabelStore {
 	return &LabelAdapter{
 		db:     db,
 		mapper: mapper.NewLabelMapper(),

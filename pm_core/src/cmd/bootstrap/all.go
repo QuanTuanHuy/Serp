@@ -41,6 +41,10 @@ func All() fx.Option {
 		fx.Provide(store.NewLabelAdapter),
 		fx.Provide(store.NewIssueTypeAdapter),
 		fx.Provide(store.NewPriorityAdapter),
+		fx.Provide(store.NewIssueTypeSchemeAdapter),
+		fx.Provide(store.NewIssueTypeSchemeItemAdapter),
+		fx.Provide(store.NewPrioritySchemeAdapter),
+		fx.Provide(store.NewPrioritySchemeItemAdapter),
 
 		// Services
 		fx.Provide(service.NewTransactionService),
