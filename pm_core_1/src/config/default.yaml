@@ -1,6 +1,0 @@
-app:
-  name: PM Core Service
-  path: /pm-core
-  port: 8093
-  logging:
-    level: info
