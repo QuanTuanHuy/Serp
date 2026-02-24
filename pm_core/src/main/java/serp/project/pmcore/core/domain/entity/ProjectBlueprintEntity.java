@@ -16,10 +16,11 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-public class ResolutionEntity extends BaseEntity {
+public class ProjectBlueprintEntity extends BaseEntity {
     private Long tenantId;
     private String name;
     private String description;
-    private Integer sequence;
+    private String typeKey;
+    private String avatarUrl;
     private Boolean isSystem;
 }
