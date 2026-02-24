@@ -28,6 +28,7 @@ public class WorkItemEntity extends BaseEntity {
 
     private Long statusId;
     private Long priorityId;
+    private Long resolutionId;
     private Long assigneeId;
     private Long reporterId;
     private Long parentId;
