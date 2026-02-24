@@ -1,4 +1,7 @@
 #!/bin/bash
+# Author: QuanTuanHuy, Description: Part of Serp Project
+
+echo "Loading environment variables from .env file..."
 
 if [ -f .env ]; then
   set -a
@@ -6,4 +9,8 @@ if [ -f .env ]; then
   set +a
 fi
 
-go run src/main.go
+echo ""
+echo "Starting Discuss Service in development mode..."
+echo ""
+
+./mvnw spring-boot:run
