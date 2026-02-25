@@ -30,9 +30,9 @@ public class ProjectAdapter implements IProjectPort {
 
     @Override
     public ProjectEntity saveProject(ProjectEntity project) {
-        ProjectModel model = projectMapper.toModel(project);
-        ProjectModel saved = projectRepository.save(model);
-        return projectMapper.toEntity(saved);
+        return projectMapper.toEntity(
+            projectRepository.save(projectMapper.toModel(project))
+        );
     }
 
     @Override
