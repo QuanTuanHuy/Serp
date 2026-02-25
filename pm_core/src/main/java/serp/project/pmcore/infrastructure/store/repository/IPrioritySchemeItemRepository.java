@@ -19,6 +19,9 @@ public interface IPrioritySchemeItemRepository extends JpaRepository<PrioritySch
 
     List<PrioritySchemeItemModel> findAllByTenantIdAndSchemeIdOrderBySequenceAsc(Long tenantId, Long schemeId);
 
+    @Query("SELECT i FROM PrioritySchemeItemModel i WHERE i.schemeId = :schemeId AND (i.tenantId = :tenantId OR i.tenantId = 0) ORDER BY i.sequence ASC")
+    List<PrioritySchemeItemModel> findAllBySchemeIdAndTenantIdOrSystemTenant(@Param("schemeId") Long schemeId, @Param("tenantId") Long tenantId);
+
     boolean existsByTenantIdAndSchemeIdAndPriorityId(Long tenantId, Long schemeId, Long priorityId);
 
     @Modifying

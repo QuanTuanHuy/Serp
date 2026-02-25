@@ -16,6 +16,8 @@ public interface IPrioritySchemeItemPort {
 
     List<PrioritySchemeItemEntity> getPrioritySchemeItemsBySchemeId(Long schemeId, Long tenantId);
 
+    List<PrioritySchemeItemEntity> getPrioritySchemeItemsBySchemeIdIncludingSystem(Long schemeId, Long tenantId);
+
     void deletePrioritySchemeItemsBySchemeId(Long schemeId, Long tenantId);
 
     boolean existsPriorityInScheme(Long schemeId, Long priorityId, Long tenantId);

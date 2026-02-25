@@ -19,6 +19,9 @@ public interface IIssueTypeSchemeItemRepository extends JpaRepository<IssueTypeS
 
     List<IssueTypeSchemeItemModel> findAllByTenantIdAndSchemeIdOrderBySequenceAsc(Long tenantId, Long schemeId);
 
+    @Query("SELECT i FROM IssueTypeSchemeItemModel i WHERE i.schemeId = :schemeId AND (i.tenantId = :tenantId OR i.tenantId = 0) ORDER BY i.sequence ASC")
+    List<IssueTypeSchemeItemModel> findAllBySchemeIdAndTenantIdOrSystemTenant(@Param("schemeId") Long schemeId, @Param("tenantId") Long tenantId);
+
     boolean existsByTenantIdAndSchemeIdAndIssueTypeId(Long tenantId, Long schemeId, Long issueTypeId);
 
     @Modifying

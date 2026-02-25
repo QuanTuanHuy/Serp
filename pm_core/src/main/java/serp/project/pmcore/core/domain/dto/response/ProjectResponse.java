@@ -3,21 +3,19 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.core.domain.entity;
+package serp.project.pmcore.core.domain.dto.response;
 
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Builder;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.experimental.SuperBuilder;
 
-@Getter
-@Setter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@SuperBuilder
-public class ProjectEntity extends BaseEntity {
-    private Long tenantId;
+public class ProjectResponse {
+    private Long id;
     private String key;
     private String name;
     private String description;
@@ -29,7 +27,7 @@ public class ProjectEntity extends BaseEntity {
     private Boolean isArchived;
     private Long archivedAt;
 
-    // Scheme bindings (project-owned clones)
+    // Scheme bindings
     private Long issueTypeSchemeId;
     private Long workflowSchemeId;
     private Long fieldConfigSchemeId;
@@ -38,4 +36,9 @@ public class ProjectEntity extends BaseEntity {
     private Long notificationSchemeId;
     private Long prioritySchemeId;
     private Long issueSecuritySchemeId;
+
+    private Long createdAt;
+    private Long createdBy;
+    private Long updatedAt;
+    private Long updatedBy;
 }

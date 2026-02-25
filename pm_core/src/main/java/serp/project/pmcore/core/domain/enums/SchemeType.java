@@ -9,4 +9,9 @@ public enum SchemeType {
     ISSUE_TYPE,
     PRIORITY,
     WORKFLOW,
+    FIELD_CONFIG,
+    SCREEN,
+    PERMISSION,
+    ISSUE_SECURITY,
+    NOTIFICATION,
 }

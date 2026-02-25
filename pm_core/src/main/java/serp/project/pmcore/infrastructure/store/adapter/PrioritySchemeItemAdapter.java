@@ -45,6 +45,13 @@ public class PrioritySchemeItemAdapter implements IPrioritySchemeItemPort {
     }
 
     @Override
+    public List<PrioritySchemeItemEntity> getPrioritySchemeItemsBySchemeIdIncludingSystem(Long schemeId, Long tenantId) {
+        return prioritySchemeItemMapper.toEntities(
+                prioritySchemeItemRepository.findAllBySchemeIdAndTenantIdOrSystemTenant(schemeId, tenantId)
+        );
+    }
+
+    @Override
     public void deletePrioritySchemeItemsBySchemeId(Long schemeId, Long tenantId) {
         prioritySchemeItemRepository.deleteBySchemeIdAndTenantId(schemeId, tenantId);
     }
