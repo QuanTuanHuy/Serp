@@ -24,8 +24,9 @@ import java.util.stream.Collectors;
  * Currently implements real deep clone for:
  * - ISSUE_TYPE scheme (issue_type_schemes + issue_type_scheme_items)
  * - PRIORITY scheme (priority_schemes + priority_scheme_items)
+ * - WORKFLOW scheme (workflow_schemes + workflow_scheme_items)
  *
- * All other scheme types (WORKFLOW, FIELD_CONFIG, SCREEN, PERMISSION,
+ * All other scheme types (FIELD_CONFIG, SCREEN, PERMISSION,
  * ISSUE_SECURITY, NOTIFICATION) are stubbed with log warnings until
  * their infrastructure is built.
  */
@@ -39,6 +40,8 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
     private final IIssueTypeSchemeItemPort issueTypeSchemeItemPort;
     private final IPrioritySchemePort prioritySchemePort;
     private final IPrioritySchemeItemPort prioritySchemeItemPort;
+    private final IWorkflowSchemePort workflowSchemePort;
+    private final IWorkflowSchemeItemPort workflowSchemeItemPort;
 
     @Override
     public void provisionSchemes(ProjectEntity project, Long tenantId, Long userId,
@@ -49,9 +52,9 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
 
         cloneIssueTypeScheme(project, tenantId, userId, resolvedSources.get(SchemeType.ISSUE_TYPE));
         clonePriorityScheme(project, tenantId, userId, resolvedSources.get(SchemeType.PRIORITY));
+        cloneWorkflowScheme(project, tenantId, userId, resolvedSources.get(SchemeType.WORKFLOW));
 
         // Stub provisioning for scheme types without infrastructure
-        stubProvision("WORKFLOW", SchemeType.WORKFLOW, resolvedSources, project);
         stubProvision("FIELD_CONFIG", SchemeType.FIELD_CONFIG, resolvedSources, project);
         stubProvision("SCREEN", SchemeType.SCREEN, resolvedSources, project);
         stubProvision("PERMISSION", SchemeType.PERMISSION, resolvedSources, project);
@@ -203,6 +206,62 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
             throw e;
         } catch (Exception e) {
             log.error("Failed to clone Priority scheme {} for project {}: {}",
+                    sourceSchemeId, project.getKey(), e.getMessage(), e);
+            throw new AppException(ErrorCode.SCHEME_PROVISIONING_FAILED);
+        }
+    }
+
+    /**
+     * Deep-clone a Workflow scheme:
+     * 1. Load source scheme + items
+     * 2. Create new scheme with cloned name
+     * 3. Clone all items with new schemeId (workflowId and issueTypeId stay the same — shared)
+     * 4. Set cloned scheme ID on project
+     */
+    private void cloneWorkflowScheme(ProjectEntity project, Long tenantId, Long userId, Long sourceSchemeId) {
+        if (sourceSchemeId == null) {
+            log.info("No Workflow scheme source to clone for project key={}", project.getKey());
+            return;
+        }
+
+        try {
+            WorkflowSchemeEntity source = workflowSchemePort.getWorkflowSchemeByIdIncludingSystem(sourceSchemeId, tenantId)
+                    .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
+
+            List<WorkflowSchemeItemEntity> sourceItems =
+                    workflowSchemeItemPort.getWorkflowSchemeItemsBySchemeIdIncludingSystem(sourceSchemeId, tenantId);
+
+            WorkflowSchemeEntity clonedScheme = WorkflowSchemeEntity.builder()
+                    .tenantId(tenantId)
+                    .name(project.getKey() + " - " + source.getName())
+                    .description("Cloned for project " + project.getKey())
+                    .defaultWorkflowId(source.getDefaultWorkflowId())
+                    .build();
+            clonedScheme.setCreatedBy(userId);
+            clonedScheme.setUpdatedBy(userId);
+
+            WorkflowSchemeEntity saved = workflowSchemePort.createWorkflowScheme(clonedScheme);
+
+            if (!sourceItems.isEmpty()) {
+                List<WorkflowSchemeItemEntity> clonedItems = sourceItems.stream()
+                        .map(item -> WorkflowSchemeItemEntity.builder()
+                                .tenantId(tenantId)
+                                .schemeId(saved.getId())
+                                .issueTypeId(item.getIssueTypeId())
+                                .workflowId(item.getWorkflowId())
+                                .build())
+                        .collect(Collectors.toList());
+                workflowSchemeItemPort.createWorkflowSchemeItems(clonedItems);
+            }
+
+            project.setWorkflowSchemeId(saved.getId());
+            log.info("Cloned Workflow scheme: source={} -> cloned={} for project={}",
+                    sourceSchemeId, saved.getId(), project.getKey());
+
+        } catch (AppException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Failed to clone Workflow scheme {} for project {}: {}",
                     sourceSchemeId, project.getKey(), e.getMessage(), e);
             throw new AppException(ErrorCode.SCHEME_PROVISIONING_FAILED);
         }
