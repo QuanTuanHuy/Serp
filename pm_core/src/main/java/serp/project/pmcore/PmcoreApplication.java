@@ -7,8 +7,10 @@ package serp.project.pmcore;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
+@EnableScheduling
 public class PmcoreApplication {
 
 	public static void main(String[] args) {

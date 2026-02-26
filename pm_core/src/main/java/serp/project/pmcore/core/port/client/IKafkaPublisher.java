@@ -12,4 +12,6 @@ public interface IKafkaPublisher {
     <T> void sendMessageAsync(String key, T message, String topic, KafkaSendCallback callback);
 
     <T> void sendMessageAsync(String key, T message, String topic);
+
+    <T> void sendMessageSync(String key, T message, String topic) throws Exception;
 }

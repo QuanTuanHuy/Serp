@@ -14,13 +14,15 @@ import serp.project.pmcore.core.domain.dto.request.CreateProjectRequest;
 import serp.project.pmcore.core.domain.dto.request.GetProjectParams;
 import serp.project.pmcore.core.domain.dto.request.UpdateProjectRequest;
 import serp.project.pmcore.core.domain.dto.response.ProjectResponse;
+import serp.project.pmcore.core.domain.entity.OutboxEventEntity;
 import serp.project.pmcore.core.domain.entity.ProjectEntity;
 import serp.project.pmcore.core.exception.AppException;
 import serp.project.pmcore.core.exception.ErrorCode;
-import serp.project.pmcore.core.port.client.IKafkaPublisher;
+import serp.project.pmcore.core.service.IOutboxEventService;
 import serp.project.pmcore.core.service.IProjectBlueprintService;
 import serp.project.pmcore.core.service.IProjectService;
 import serp.project.pmcore.core.service.ISchemeProvisioningService;
+import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.util.HashMap;
 import java.util.List;
@@ -37,7 +39,9 @@ public class ProjectUseCase {
     private final IProjectService projectService;
     private final IProjectBlueprintService projectBlueprintService;
     private final ISchemeProvisioningService schemeProvisioningService;
-    private final IKafkaPublisher kafkaPublisher;
+    private final IOutboxEventService outboxEventService;
+
+    private final JsonUtils jsonUtils;
 
     @Transactional(rollbackFor = Exception.class)
     public ProjectResponse createProject(CreateProjectRequest request, Long tenantId, Long userId) {
@@ -93,13 +97,12 @@ public class ProjectUseCase {
 
         return Map.of(
                 "totalItems", result.getSecond(),
-                "items", responses
-        );
+                "items", responses);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public ProjectResponse updateProject(Long id, UpdateProjectRequest request,
-                                          Long tenantId, Long userId) {
+            Long tenantId, Long userId) {
         ProjectEntity updateData = ProjectEntity.builder()
                 .name(request.getName())
                 .description(request.getDescription())
@@ -172,23 +175,26 @@ public class ProjectUseCase {
     }
 
     private void publishProjectEvent(String eventType, ProjectEntity project) {
-        try {
-            Map<String, Object> event = Map.of(
-                    "eventType", eventType,
-                    "projectId", project.getId(),
-                    "projectKey", project.getKey(),
-                    "tenantId", project.getTenantId(),
-                    "timestamp", System.currentTimeMillis()
-            );
-            kafkaPublisher.sendMessageAsync(
-                    project.getId().toString(), event, PROJECT_EVENTS_TOPIC);
-            log.info("Published {} event for project id={}, key={}",
-                    eventType, project.getId(), project.getKey());
-        } catch (Exception e) {
-            log.error("Failed to publish {} event for project id={}: {}",
-                    eventType, project.getId(), e.getMessage(), e);
-            // Don't fail the transaction for Kafka publish failure
-        }
+        Map<String, Object> eventPayload = Map.of(
+                "eventType", eventType,
+                "projectId", project.getId(),
+                "projectKey", project.getKey(),
+                "tenantId", project.getTenantId(),
+                "timestamp", System.currentTimeMillis());
+
+        outboxEventService.saveEvent(
+                OutboxEventEntity.builder()
+                        .tenantId(project.getTenantId())
+                        .aggregateType("PROJECT")
+                        .aggregateId(project.getId())
+                        .eventType(eventType)
+                        .topic(PROJECT_EVENTS_TOPIC)
+                        .partitionKey(project.getId().toString())
+                        .payload(jsonUtils.toJson(eventPayload))
+                        .build());
+
+        log.info("Outbox event saved: {} for project id={}, key={}",
+                eventType, project.getId(), project.getKey());
     }
 
     private ProjectResponse toResponse(ProjectEntity entity) {

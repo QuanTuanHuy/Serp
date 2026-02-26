@@ -74,3 +74,9 @@ app:
     filter:
       publicUrls:
       protectedUrls:
+
+  outbox:
+    batch-size: 50
+    poll-interval-ms: 1000
+    retention-days: 7
+    cleanup-cron: "0 0 3 * * *"
