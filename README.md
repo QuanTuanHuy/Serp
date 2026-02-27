@@ -96,7 +96,6 @@ HTTP Request → Controller → UseCase → Service → Port → Adapter → Dat
 |---------|------|----------|-------------|
 | **api_gateway** | 8080 | Go | Routes requests, validates JWT, rate limiting |
 | **account** | 8081 | Java | User, Auth, Organization, RBAC (Keycloak integration) |
-| **logging_tracker** | 8082 | Java | Centralized audit trails & monitoring |
 | **ptm_task** | 8083 | Go | Personal Task Management |
 | **ptm_schedule** | 8084 | Go | Scheduling and Calendar |
 | **ptm_optimization** | 8085 | Java | Task optimization algorithms |
