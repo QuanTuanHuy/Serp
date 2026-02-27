@@ -53,6 +53,16 @@ public enum ErrorCode {
     // User errors
     USER_NOT_FOUND("User not found", HttpStatus.NOT_FOUND),
 
+    // Work item errors
+    WORK_ITEM_NOT_FOUND("Work item not found", HttpStatus.NOT_FOUND),
+    ISSUE_TYPE_NOT_IN_SCHEME("Issue type is not allowed in this project's scheme", HttpStatus.BAD_REQUEST),
+    INVALID_PARENT_HIERARCHY("Invalid parent-child hierarchy: subtask(0) < standard(1) < epic(2)", HttpStatus.BAD_REQUEST),
+    WORKFLOW_NOT_FOUND("Workflow not found", HttpStatus.NOT_FOUND),
+    WORKFLOW_STEP_NOT_FOUND("Workflow initial step not found", HttpStatus.NOT_FOUND),
+    STATUS_NOT_FOUND("Status not found", HttpStatus.NOT_FOUND),
+    PRIORITY_NOT_IN_SCHEME("Priority is not valid for this project's scheme", HttpStatus.BAD_REQUEST),
+    ISSUE_COUNTER_NOT_FOUND("Issue counter not found for this project", HttpStatus.NOT_FOUND),
+
     ;
 
     private final String message;
