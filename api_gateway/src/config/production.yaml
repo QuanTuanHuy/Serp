@@ -58,6 +58,17 @@ app:
     allowCredentials: true
     maxAge: 3600
     allowFiles: true
+  
+  resilience:
+    maxRequests: 3
+    interval: 60s
+    timeout: 30s
+    consecutiveFailures: 5
+    failureRatio: 0.6
+    minRequests: 10
+    maxRetries: 3
+    initialDelay: 100ms
+    maxDelay: 2s
 
 external:
   services:

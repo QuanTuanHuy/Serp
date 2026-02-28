@@ -29,6 +29,6 @@ func RegisterNotificationRoutes(
 		notificationGroup.Use(
 			jwtMiddleware.AuthenticateJWT(),
 			rateLimitMiddleware.UserRateLimit(),
-		).Any("/*proxyPath", genericProxyController.ProxyToNotification)
+		).Any("/*proxyPath", genericProxyController.ProxyHandler("notification"))
 	}
 }

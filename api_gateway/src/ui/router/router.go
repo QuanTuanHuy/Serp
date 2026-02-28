@@ -93,6 +93,8 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		p.CustomerController,
 		p.ContactController,
 		p.GenericProxyController,
+		p.JWTMiddleware,
+		p.RateLimitMiddleware,
 	)
 
 	RegisterPtmRoutes(

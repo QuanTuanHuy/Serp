@@ -29,6 +29,6 @@ func RegisterDiscussRoutes(
 		discussGroup.Use(
 			jwtMiddleware.AuthenticateJWT(),
 			rateLimitMiddleware.UserRateLimit(),
-		).Any("/*proxyPath", genericProxyController.ProxyToDiscuss)
+		).Any("/*proxyPath", genericProxyController.ProxyHandler("discuss"))
 	}
 }
