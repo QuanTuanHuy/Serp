@@ -38,6 +38,12 @@ public class IssueTypeSchemeAdapter implements IIssueTypeSchemePort {
     }
 
     @Override
+    public Optional<IssueTypeSchemeEntity> getIssueTypeSchemeByIdIncludingSystem(Long schemeId, Long tenantId) {
+        return issueTypeSchemeRepository.findByIdAndTenantIdOrSystemTenant(schemeId, tenantId)
+                .map(issueTypeSchemeMapper::toEntity);
+    }
+
+    @Override
     public Optional<IssueTypeSchemeEntity> getIssueTypeSchemeWithItems(Long schemeId, Long tenantId) {
         return issueTypeSchemeRepository.findByIdAndTenantId(schemeId, tenantId)
                 .map(model -> {

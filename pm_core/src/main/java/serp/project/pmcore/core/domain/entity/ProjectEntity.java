@@ -23,11 +23,19 @@ public class ProjectEntity extends BaseEntity {
     private String description;
     private String url;
     private Long leadUserId;
+    private Long avatarId;
     private Long categoryId;
     private String projectTypeKey;
     private Boolean isArchived;
     private Long archivedAt;
+
+    // Scheme bindings (project-owned clones)
     private Long issueTypeSchemeId;
     private Long workflowSchemeId;
+    private Long fieldConfigSchemeId;
+    private Long issueTypeScreenSchemeId;
+    private Long permissionSchemeId;
+    private Long notificationSchemeId;
     private Long prioritySchemeId;
+    private Long issueSecuritySchemeId;
 }

@@ -59,6 +59,9 @@ public class WorkItemModel extends BaseModel {
     @Column(name = "rank")
     private String rank;
 
+    @Column(name = "resolution_id")
+    private Long resolutionId;
+
     @Column(name = "time_original_estimate")
     private Long timeOriginalEstimate;
     @Column(name = "time_remaining_estimate")

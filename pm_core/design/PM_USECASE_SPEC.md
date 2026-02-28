@@ -46,7 +46,7 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 
 | Actor | Type | Description | Key Permissions |
 |-------|------|-------------|-----------------|
-| PM Admin | Primary | Configures global schemes, workflows, fields, permissions, issue types, priorities, resolutions | `PM.PROJECT.ADMIN`, `PM.WORKFLOW.MANAGE`, `PM.FIELD.MANAGE`, `PM.PERMISSION.MANAGE` |
+| PM Admin | Primary | Configures global schemes, workflows, fields, permissions, issue types, priorities, resolutions | `PM.PROJECT.ADMIN`, `PM.WORKFLOW.MANAGE`, `PM.FIELD.MANAGE`, `PM.PERMISSION.READ`, `PM.PERMISSION_SCHEME.MANAGE` |
 | Project Lead | Primary | Creates/manages projects, assigns roles, manages components and versions | `PM.PROJECT.CREATE`, `PM.PROJECT.UPDATE`, `PM.COMPONENT.MANAGE`, `PM.VERSION.MANAGE` |
 | Team Member | Primary | Creates/updates work items, logs work, transitions statuses, manages links | `PM.WORK_ITEM.CREATE`, `PM.WORK_ITEM.UPDATE`, `PM.WORK_ITEM.TRANSITION`, `PM.WORKLOG.MANAGE` |
 | Viewer | Secondary | Read-only access to projects, work items, and configurations | `PM.PROJECT.READ`, `PM.WORK_ITEM.READ` |
@@ -244,11 +244,8 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 
 | UC ID | Name | Actor | Priority | Complexity | Entity |
 |-------|------|-------|----------|------------|--------|
-| UC-PM-401 | Create Permission Definition | PM Admin | Medium | Simple | Permission Definition |
-| UC-PM-402 | Update Permission Definition | PM Admin | Medium | Simple | Permission Definition |
-| UC-PM-403 | Get Permission Definition by ID | PM Admin | Low | Simple | Permission Definition |
-| UC-PM-404 | List Permission Definitions | PM Admin | Medium | Simple | Permission Definition |
-| UC-PM-405 | Delete Permission Definition | PM Admin | Low | Simple | Permission Definition |
+| UC-PM-401 | Get Permission Definition by Key | PM Admin | Low | Simple | Permission Definition |
+| UC-PM-402 | List Permission Definitions | PM Admin | Medium | Simple | Permission Definition |
 | UC-PM-411 | Create Permission Scheme | PM Admin | High | Simple | Permission Scheme |
 | UC-PM-412 | Update Permission Scheme | PM Admin | Medium | Simple | Permission Scheme |
 | UC-PM-413 | Get Permission Scheme by ID | PM Admin | Low | Simple | Permission Scheme |
@@ -3161,40 +3158,50 @@ Maps issue types to screen schemes. Issue types not explicitly mapped use the de
 
 ---
 
-#### UC-PM-401 to UC-PM-405: Permission Definition CRUD
+#### UC-PM-401 to UC-PM-402: Permission Definition Catalog (Read-only)
 
-##### UC-PM-401: Create Permission Definition
+##### UC-PM-401: Get Permission Definition by Key
 
 | Field | Value |
 |-------|-------|
 | **Use Case ID** | UC-PM-401 |
-| **Use Case Name** | Create Permission Definition |
-| **Priority** | Medium |
+| **Use Case Name** | Get Permission Definition by Key |
+| **Priority** | Low |
 | **Complexity** | Simple |
 
-**Description**: Create a custom permission definition for fine-grained access control within PM Core.
+**Description**: Retrieve one permission definition from the system-seeded permission catalog by `permission_key`.
 
-**Permission**: `PM.PERMISSION.CREATE`
+**Permission**: `PM.PERMISSION.READ`
 
-**Input Data**:
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| permission_key | string | Yes | unique per tenant, uppercase | Stable key (e.g., BROWSE_PROJECTS) |
-| name | string | Yes | min:1, max:255 | Display name |
-| description | string | No | max:2000 | Description |
-| category | string | Yes | PROJECT, ISSUE, COMMENT, ADMIN, AGILE | Permission category |
+**Main Flow**: GET `/api/v1/permission-definitions/{permissionKey}` -> validate JWT + permission -> fetch by `tenant_id` + `permission_key` + `deleted_at IS NULL` -> return 200.
 
 **Business Rules**:
 
 | Rule ID | Description | Enforcement |
 |---------|-------------|-------------|
-| BR-PM-401-01 | `permission_key` unique per tenant, immutable | DB `UNIQUE(tenant_id, permission_key)` |
-| BR-PM-401-02 | System permissions cannot be created via API | Service layer |
+| BR-PM-401-01 | Permission catalog keys are immutable | Service layer + migration seed |
+| BR-PM-401-02 | Permission definitions are read-only via PM API in v1 | Service layer |
 
-##### UC-PM-402 to UC-PM-405: Update, Get, List, Delete
+##### UC-PM-402: List Permission Definitions
 
-Standard CRUD. System permissions cannot be deleted.
+| Field | Value |
+|-------|-------|
+| **Use Case ID** | UC-PM-402 |
+| **Use Case Name** | List Permission Definitions |
+| **Priority** | Medium |
+| **Complexity** | Simple |
+
+**Permission**: `PM.PERMISSION.READ`
+
+**Main Flow**: GET `/api/v1/permission-definitions` with pagination + optional `category` filter -> validate JWT + permission -> query by `tenant_id` -> return paginated result.
+
+**Input Data**:
+
+| Field | Type | Required | Validation | Description |
+|-------|------|----------|------------|-------------|
+| category | string | No | PROJECT, ISSUE, COMMENT, ADMIN, AGILE | Category filter |
+
+**Note**: Create/update/delete permission definition APIs are intentionally not exposed in v1. Catalog seeding/sync is handled by system bootstrap/migrations.
 
 ---
 
@@ -3236,7 +3243,7 @@ Standard CRUD.
 
 ##### Description
 
-Add a permission grant to a permission scheme, mapping a permission to a grantee (role, group, user, or contextual actor).
+Add a permission grant to a permission scheme, mapping a permission to a grantee (project role, group, user, or contextual actor).
 
 **Permission**: `PM.PERMISSION_SCHEME.MANAGE`
 
@@ -3248,7 +3255,7 @@ Add a permission grant to a permission scheme, mapping a permission to a grantee
 | 2 | System | Validates JWT, permissions |
 | 3 | System | Validates scheme exists |
 | 4 | System | Validates `permission_key` exists in permission definitions |
-| 5 | System | Validates `grantee_type` and `grantee_id` (for ROLE: role exists; for GROUP/USER: subject exists) |
+| 5 | System | Validates `grantee_type` and `grantee_id` (for PROJECT_ROLE: role exists; for GROUP/USER: subject exists) |
 | 6 | System | Checks for duplicate entry |
 | 7 | System | Persists entry |
 | 8 | System | Returns HTTP 201 |
@@ -3258,22 +3265,21 @@ Add a permission grant to a permission scheme, mapping a permission to a grantee
 | Field | Type | Required | Validation | Description |
 |-------|------|----------|------------|-------------|
 | permission_key | string | Yes | must exist | Permission identifier |
-| grantee_type | string | Yes | ROLE, GROUP, USER, PROJECT_LEAD, REPORTER, ASSIGNEE | Grantee type |
-| grantee_id | string | No | required for ROLE/GROUP/USER; null for contextual types | Grantee identifier |
-| effect | string | No | ALLOW, DENY; default: ALLOW | Grant effect |
-| conditions_json | json | No | valid JSON | Advanced conditions |
+| grantee_type | string | Yes | PROJECT_ROLE, GROUP, USER, PROJECT_LEAD, REPORTER, ASSIGNEE | Grantee type |
+| grantee_id | string | No | required for PROJECT_ROLE/GROUP/USER; null for contextual types | Grantee identifier |
 
 ##### Business Rules
 
 | Rule ID | Description | Enforcement |
 |---------|-------------|-------------|
 | BR-PM-416-01 | Contextual grantee types (PROJECT_LEAD, REPORTER, ASSIGNEE) don't require grantee_id | Service layer |
-| BR-PM-416-02 | DENY overrides ALLOW for the same permission | Service layer (evaluation) |
-| BR-PM-416-03 | Duplicate entries (same scheme + permission + grantee) are rejected | DB unique constraint |
+| BR-PM-416-02 | Permission evaluation is grant-only (implicit deny when no grant matches) | Service layer (evaluation) |
+| BR-PM-416-03 | Duplicate entries (same scheme + permission + grantee) are rejected | DB unique expression index with `COALESCE(grantee_id, '__CTX__')` |
+| BR-PM-416-04 | `PROJECT_ROLE` grantee must reference an existing tenant role | Service layer |
 
 ##### UC-PM-417: Update Permission Scheme Entry
 
-Update `effect`, `conditions_json`.
+Update `permission_key`, `grantee_type`, `grantee_id`.
 
 ##### UC-PM-418: Remove Permission Scheme Entry
 
@@ -3362,14 +3368,15 @@ Soft-delete. Cannot remove if work items reference this level (must reassign fir
 
 | Field | Type | Required | Validation | Description |
 |-------|------|----------|------------|-------------|
-| subject_type | string | Yes | ROLE, GROUP, USER | Member type |
-| subject_id | string | Yes | must exist for type | Member identifier |
+| subject_type | string | Yes | PROJECT_ROLE, GROUP, USER, PROJECT_LEAD, REPORTER, ASSIGNEE | Member type |
+| subject_id | string | No | required for PROJECT_ROLE/GROUP/USER; null for contextual types | Member identifier |
 
 **Business Rules**:
 
 | Rule ID | Description | Enforcement |
 |---------|-------------|-------------|
-| BR-PM-431-01 | Duplicate members (same level + subject) rejected | DB `UNIQUE(tenant_id, level_id, subject_type, subject_id)` |
+| BR-PM-431-01 | Duplicate members (same level + subject) rejected | DB unique expression index with `COALESCE(subject_id, '__CTX__')` |
+| BR-PM-431-02 | Contextual subject types (PROJECT_LEAD, REPORTER, ASSIGNEE) must not carry subject_id | Service layer |
 
 ##### UC-PM-432: Remove Issue Security Level Member
 
@@ -3419,8 +3426,8 @@ Rules that apply across multiple use cases:
 | **Field Config Scheme** | Maps issue types to field configurations. |
 | **Custom Field** | A user-defined field that extends the work item data model with typed values. |
 | **Custom Field Context** | Scoping rule for a custom field, defining which projects and issue types it applies to. |
-| **Permission Scheme** | Maps permissions to grantees (roles, groups, users) with ALLOW/DENY effects. |
-| **Issue Security Level** | Restricts visibility of individual work items to specific roles/groups/users. |
+| **Permission Scheme** | Maps permissions to grantees (project roles, groups, users, contextual actors) using grant-only rules; missing grant means deny. |
+| **Issue Security Level** | Restricts visibility of individual work items to specific project roles, groups, users, or contextual actors. |
 | **Project Blueprint** | A template that pre-configures source scheme bindings for new projects; runtime project schemes are provisioned as clones. |
 | **Project Component** | A sub-section of a project (e.g., "Backend", "Frontend") used to categorize work items. |
 | **Project Version** | A release marker (e.g., "v1.0", "v2.0") used to track fix targets and release planning. |

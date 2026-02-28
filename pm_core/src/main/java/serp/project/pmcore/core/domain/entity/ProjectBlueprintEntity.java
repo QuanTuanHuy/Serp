@@ -10,6 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import serp.project.pmcore.core.domain.constant.TenantConstants;
 
 @Getter
 @Setter
@@ -23,4 +24,8 @@ public class ProjectBlueprintEntity extends BaseEntity {
     private String typeKey;
     private String avatarUrl;
     private Boolean isSystem;
+
+    public boolean isSystem() {
+        return tenantId == TenantConstants.SYSTEM_TENANT_ID && Boolean.TRUE.equals(isSystem);
+    }
 }

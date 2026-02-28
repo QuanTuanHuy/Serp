@@ -20,6 +20,9 @@ public interface IIssueTypeSchemeRepository extends JpaRepository<IssueTypeSchem
 
     Optional<IssueTypeSchemeModel> findByIdAndTenantId(Long id, Long tenantId);
 
+    @Query("SELECT s FROM IssueTypeSchemeModel s WHERE s.id = :id AND (s.tenantId = :tenantId OR s.tenantId = 0)")
+    Optional<IssueTypeSchemeModel> findByIdAndTenantIdOrSystemTenant(@Param("id") Long id, @Param("tenantId") Long tenantId);
+
     List<IssueTypeSchemeModel> findAllByTenantIdOrderByCreatedAtDesc(Long tenantId);
 
     boolean existsByTenantIdAndName(Long tenantId, String name);

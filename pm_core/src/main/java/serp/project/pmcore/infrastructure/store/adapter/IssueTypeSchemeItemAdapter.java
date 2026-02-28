@@ -45,6 +45,13 @@ public class IssueTypeSchemeItemAdapter implements IIssueTypeSchemeItemPort {
     }
 
     @Override
+    public List<IssueTypeSchemeItemEntity> getIssueTypeSchemeItemsBySchemeIdIncludingSystem(Long schemeId, Long tenantId) {
+        return issueTypeSchemeItemMapper.toEntities(
+                issueTypeSchemeItemRepository.findAllBySchemeIdAndTenantIdOrSystemTenant(schemeId, tenantId)
+        );
+    }
+
+    @Override
     public void deleteIssueTypeSchemeItemsBySchemeId(Long schemeId, Long tenantId) {
         issueTypeSchemeItemRepository.deleteBySchemeIdAndTenantId(schemeId, tenantId);
     }

@@ -29,9 +29,7 @@ func All() fx.Option {
 		modules.PtmModule(),
 		modules.PurchaseModule(),
 		modules.LogisticsModule(),
-		modules.NotificationModule(),
 		modules.SalesModule(),
-		modules.DiscussModule(),
 
 		// HTTP server and routing
 		HttpServerModule(),
@@ -56,6 +54,7 @@ func CoreInfrastructure() fx.Option {
 		golib.ProvideProps(properties.NewKeycloakProperties),
 		golib.ProvideProps(properties.NewCorsProperties),
 		golib.ProvideProps(properties.NewRateLimitProperties),
+		golib.ProvideProps(properties.NewResilienceProperties),
 
 		// Provide utilities
 		fx.Provide(utils.NewJWTUtils),
@@ -63,6 +62,7 @@ func CoreInfrastructure() fx.Option {
 		fx.Provide(middleware.NewJWTMiddleware),
 		fx.Provide(middleware.NewCorsMiddleware),
 		fx.Provide(common.NewGenericProxyController),
+		fx.Provide(common.NewWebSocketProxyController),
 
 		// Rate limiting
 		fx.Provide(adapter.NewRateLimiterAdapter),

@@ -20,6 +20,9 @@ public interface IPrioritySchemeRepository extends JpaRepository<PrioritySchemeM
 
     Optional<PrioritySchemeModel> findByIdAndTenantId(Long id, Long tenantId);
 
+    @Query("SELECT s FROM PrioritySchemeModel s WHERE s.id = :id AND (s.tenantId = :tenantId OR s.tenantId = 0)")
+    Optional<PrioritySchemeModel> findByIdAndTenantIdOrSystemTenant(@Param("id") Long id, @Param("tenantId") Long tenantId);
+
     List<PrioritySchemeModel> findAllByTenantIdOrderByCreatedAtDesc(Long tenantId);
 
     boolean existsByTenantIdAndName(Long tenantId, String name);
