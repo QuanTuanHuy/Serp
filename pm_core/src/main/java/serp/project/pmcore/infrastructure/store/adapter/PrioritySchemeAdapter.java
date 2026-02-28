@@ -38,6 +38,12 @@ public class PrioritySchemeAdapter implements IPrioritySchemePort {
     }
 
     @Override
+    public Optional<PrioritySchemeEntity> getPrioritySchemeByIdIncludingSystem(Long schemeId, Long tenantId) {
+        return prioritySchemeRepository.findByIdAndTenantIdOrSystemTenant(schemeId, tenantId)
+                .map(prioritySchemeMapper::toEntity);
+    }
+
+    @Override
     public Optional<PrioritySchemeEntity> getPrioritySchemeWithItems(Long schemeId, Long tenantId) {
         return prioritySchemeRepository.findByIdAndTenantId(schemeId, tenantId)
                 .map(model -> {

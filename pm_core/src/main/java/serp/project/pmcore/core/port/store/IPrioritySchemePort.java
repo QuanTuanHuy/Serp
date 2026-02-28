@@ -15,6 +15,8 @@ public interface IPrioritySchemePort {
 
     Optional<PrioritySchemeEntity> getPrioritySchemeById(Long schemeId, Long tenantId);
 
+    Optional<PrioritySchemeEntity> getPrioritySchemeByIdIncludingSystem(Long schemeId, Long tenantId);
+
     Optional<PrioritySchemeEntity> getPrioritySchemeWithItems(Long schemeId, Long tenantId);
 
     List<PrioritySchemeEntity> listPrioritySchemes(Long tenantId);

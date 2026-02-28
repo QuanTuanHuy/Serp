@@ -22,6 +22,6 @@ func RegisterLogisticsRoutes(
 		logisticsGroup.Use(
 			jwtMiddleware.AuthenticateJWT(),
 			rateLimitMiddleware.UserRateLimit(),
-		).Any("/*proxyPath", genericProxyController.ProxyToLogistics)
+		).Any("/*proxyPath", genericProxyController.ProxyHandler("logistics"))
 	}
 }

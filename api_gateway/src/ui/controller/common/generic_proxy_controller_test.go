@@ -18,6 +18,11 @@ import (
 	"github.com/serp/api-gateway/src/kernel/properties"
 )
 
+func defaultResilienceProps() *properties.ResilienceProperties {
+	p := properties.NewDefaultResilienceProperties()
+	return &p
+}
+
 func TestGenericProxyController_CRM_RewritePathAndForwardHeaders(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -44,12 +49,15 @@ func TestGenericProxyController_CRM_RewritePathAndForwardHeaders(t *testing.T) {
 		t.Fatalf("expected upstream port")
 	}
 
-	controller := NewGenericProxyController(&properties.ExternalServiceProperties{
-		CrmService: properties.ServiceProperty{Host: host, Port: port},
-	})
+	controller := NewGenericProxyController(
+		&properties.ExternalServiceProperties{
+			CrmService: properties.ServiceProperty{Host: host, Port: port},
+		},
+		defaultResilienceProps(),
+	)
 
 	r := gin.New()
-	r.Any("/crm/api/v1/*proxyPath", controller.ProxyToCRM)
+	r.Any("/crm/api/v1/*proxyPath", controller.ProxyHandler("crm"))
 	gateway := httptest.NewServer(r)
 	defer gateway.Close()
 
@@ -98,12 +106,15 @@ func TestGenericProxyController_CRM_CircuitBreakerOpensAfter5xxWithRetries(t *te
 	host := u.Hostname()
 	port := u.Port()
 
-	controller := NewGenericProxyController(&properties.ExternalServiceProperties{
-		CrmService: properties.ServiceProperty{Host: host, Port: port},
-	})
+	controller := NewGenericProxyController(
+		&properties.ExternalServiceProperties{
+			CrmService: properties.ServiceProperty{Host: host, Port: port},
+		},
+		defaultResilienceProps(),
+	)
 
 	r := gin.New()
-	r.Any("/crm/api/v1/*proxyPath", controller.ProxyToCRM)
+	r.Any("/crm/api/v1/*proxyPath", controller.ProxyHandler("crm"))
 	gateway := httptest.NewServer(r)
 	defer gateway.Close()
 
@@ -173,12 +184,15 @@ func TestGenericProxyController_CRM_POSTDoesNotRetry(t *testing.T) {
 	host := u.Hostname()
 	port := u.Port()
 
-	controller := NewGenericProxyController(&properties.ExternalServiceProperties{
-		CrmService: properties.ServiceProperty{Host: host, Port: port},
-	})
+	controller := NewGenericProxyController(
+		&properties.ExternalServiceProperties{
+			CrmService: properties.ServiceProperty{Host: host, Port: port},
+		},
+		defaultResilienceProps(),
+	)
 
 	r := gin.New()
-	r.Any("/crm/api/v1/*proxyPath", controller.ProxyToCRM)
+	r.Any("/crm/api/v1/*proxyPath", controller.ProxyHandler("crm"))
 	gateway := httptest.NewServer(r)
 	defer gateway.Close()
 
@@ -215,12 +229,15 @@ func BenchmarkGenericProxyController_CRM_GET_200(b *testing.B) {
 	host := u.Hostname()
 	port := u.Port()
 
-	controller := NewGenericProxyController(&properties.ExternalServiceProperties{
-		CrmService: properties.ServiceProperty{Host: host, Port: port},
-	})
+	controller := NewGenericProxyController(
+		&properties.ExternalServiceProperties{
+			CrmService: properties.ServiceProperty{Host: host, Port: port},
+		},
+		defaultResilienceProps(),
+	)
 
 	r := gin.New()
-	r.Any("/crm/api/v1/*proxyPath", controller.ProxyToCRM)
+	r.Any("/crm/api/v1/*proxyPath", controller.ProxyHandler("crm"))
 	gateway := httptest.NewServer(r)
 	defer gateway.Close()
 

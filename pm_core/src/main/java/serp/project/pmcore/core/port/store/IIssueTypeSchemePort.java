@@ -15,6 +15,8 @@ public interface IIssueTypeSchemePort {
 
     Optional<IssueTypeSchemeEntity> getIssueTypeSchemeById(Long schemeId, Long tenantId);
 
+    Optional<IssueTypeSchemeEntity> getIssueTypeSchemeByIdIncludingSystem(Long schemeId, Long tenantId);
+
     Optional<IssueTypeSchemeEntity> getIssueTypeSchemeWithItems(Long schemeId, Long tenantId);
 
     List<IssueTypeSchemeEntity> listIssueTypeSchemes(Long tenantId);

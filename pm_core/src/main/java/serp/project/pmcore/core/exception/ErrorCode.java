@@ -27,7 +27,42 @@ public enum ErrorCode {
     CONFLICT("Conflict occurred", HttpStatus.CONFLICT),
     TOO_MANY_REQUESTS("Too many requests", HttpStatus.TOO_MANY_REQUESTS),
     INVALID_TOKEN("Invalid or expired token", HttpStatus.UNAUTHORIZED),
-    
+
+    // Project errors
+    PROJECT_NOT_FOUND("Project not found", HttpStatus.NOT_FOUND),
+    PROJECT_KEY_ALREADY_EXISTS("Project with this key already exists", HttpStatus.CONFLICT),
+    PROJECT_KEY_INVALID_FORMAT("Project key must be 2-10 uppercase alphanumeric characters starting with a letter", HttpStatus.BAD_REQUEST),
+    PROJECT_ARCHIVED("Cannot modify an archived project", HttpStatus.BAD_REQUEST),
+    PROJECT_ALREADY_ARCHIVED("Project is already archived", HttpStatus.BAD_REQUEST),
+    PROJECT_NOT_ARCHIVED("Project is not archived", HttpStatus.BAD_REQUEST),
+
+    // Category errors
+    CATEGORY_NOT_FOUND("Project category not found", HttpStatus.NOT_FOUND),
+    CATEGORY_NAME_ALREADY_EXISTS("Project category with this name already exists", HttpStatus.CONFLICT),
+    CATEGORY_IN_USE("Cannot delete category that has projects assigned", HttpStatus.BAD_REQUEST),
+
+    // Blueprint errors
+    BLUEPRINT_NOT_FOUND("Project blueprint not found", HttpStatus.NOT_FOUND),
+    BLUEPRINT_IS_SYSTEM("Cannot modify system blueprint", HttpStatus.BAD_REQUEST),
+
+    // Scheme errors
+    SCHEME_NOT_FOUND("Scheme not found", HttpStatus.NOT_FOUND),
+    SCHEME_INCOMPATIBLE("Scheme is not compatible", HttpStatus.UNPROCESSABLE_ENTITY),
+    SCHEME_PROVISIONING_FAILED("Failed to provision project schemes", HttpStatus.INTERNAL_SERVER_ERROR),
+
+    // User errors
+    USER_NOT_FOUND("User not found", HttpStatus.NOT_FOUND),
+
+    // Work item errors
+    WORK_ITEM_NOT_FOUND("Work item not found", HttpStatus.NOT_FOUND),
+    ISSUE_TYPE_NOT_IN_SCHEME("Issue type is not allowed in this project's scheme", HttpStatus.BAD_REQUEST),
+    INVALID_PARENT_HIERARCHY("Invalid parent-child hierarchy: subtask(0) < standard(1) < epic(2)", HttpStatus.BAD_REQUEST),
+    WORKFLOW_NOT_FOUND("Workflow not found", HttpStatus.NOT_FOUND),
+    WORKFLOW_STEP_NOT_FOUND("Workflow initial step not found", HttpStatus.NOT_FOUND),
+    STATUS_NOT_FOUND("Status not found", HttpStatus.NOT_FOUND),
+    PRIORITY_NOT_IN_SCHEME("Priority is not valid for this project's scheme", HttpStatus.BAD_REQUEST),
+    ISSUE_COUNTER_NOT_FOUND("Issue counter not found for this project", HttpStatus.NOT_FOUND),
+
     ;
 
     private final String message;

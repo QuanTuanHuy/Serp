@@ -16,6 +16,8 @@ public interface IIssueTypeSchemeItemPort {
 
     List<IssueTypeSchemeItemEntity> getIssueTypeSchemeItemsBySchemeId(Long schemeId, Long tenantId);
 
+    List<IssueTypeSchemeItemEntity> getIssueTypeSchemeItemsBySchemeIdIncludingSystem(Long schemeId, Long tenantId);
+
     void deleteIssueTypeSchemeItemsBySchemeId(Long schemeId, Long tenantId);
 
     boolean existsIssueTypeInScheme(Long schemeId, Long issueTypeId, Long tenantId);

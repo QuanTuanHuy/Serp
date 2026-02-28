@@ -140,4 +140,5 @@ Polymorphic assignment model for future actor types.
 - `UNIQUE (tenant_id, name)` on `project_categories`, `project_roles`
 - `UNIQUE (tenant_id, project_id, name)` on `project_components`, `project_versions`
 - `UNIQUE (tenant_id, blueprint_id, scheme_type)` on `blueprint_scheme_defaults`
+- Composite tenant-safe FKs are recommended for all scheme bindings on `projects` (e.g., `(tenant_id, permission_scheme_id)` -> `permission_schemes(tenant_id, id)`, `(tenant_id, issue_security_scheme_id)` -> `issue_security_schemes(tenant_id, id)`)
 - `INDEX (tenant_id, project_id)` on all project-scoped child tables

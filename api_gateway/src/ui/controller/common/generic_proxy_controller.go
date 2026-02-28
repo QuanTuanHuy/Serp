@@ -7,12 +7,11 @@ package common
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golibs-starter/golib/log"
@@ -22,159 +21,201 @@ import (
 	"github.com/sony/gobreaker/v2"
 )
 
-const (
-	ServiceCRM          = "crm"
-	ServiceNotification = "notification"
-	ServiceAccount      = "account"
-	ServicePTM          = "ptm"
-	ServicePurchase     = "purchase"
-	ServiceLogistics    = "logistics"
-	ServiceSales        = "sales"
-	ServiceDiscuss      = "discuss"
-)
-
-type GenericProxyController struct {
-	props    *properties.ExternalServiceProperties
-	breakers map[string]*gobreaker.CircuitBreaker[*http.Response]
-	mu       sync.RWMutex
+// ServiceRoute defines the proxy configuration for a single backend service.
+type ServiceRoute struct {
+	Name         string
+	SourcePrefix string
+	TargetPrefix string
+	Target       string
 }
 
-func NewGenericProxyController(props *properties.ExternalServiceProperties) *GenericProxyController {
+// hopByHopHeaders are headers that must not be forwarded by proxies.
+var hopByHopHeaders = []string{
+	"Connection",
+	"Keep-Alive",
+	"Proxy-Authenticate",
+	"Proxy-Authorization",
+	"TE",
+	"Trailer",
+	"Transfer-Encoding",
+	"Upgrade",
+}
+
+type GenericProxyController struct {
+	proxies map[string]*httputil.ReverseProxy
+}
+
+func NewGenericProxyController(
+	svcProps *properties.ExternalServiceProperties,
+	resProps *properties.ResilienceProperties,
+) *GenericProxyController {
+	routes := buildServiceRoutes(svcProps)
+
 	controller := &GenericProxyController{
-		props:    props,
-		breakers: make(map[string]*gobreaker.CircuitBreaker[*http.Response]),
+		proxies: make(map[string]*httputil.ReverseProxy, len(routes)),
 	}
 
-	services := []string{ServiceCRM, ServiceNotification, ServiceAccount, ServicePTM, ServicePurchase, ServiceLogistics, ServiceSales, ServiceDiscuss}
-	for _, svc := range services {
-		controller.breakers[svc] = controller.createCircuitBreaker(svc)
+	for _, route := range routes {
+		proxy, err := controller.buildProxy(route, resProps)
+		if err != nil {
+			log.Warn("Failed to build proxy for service %s: %v", route.Name, err)
+			continue
+		}
+		controller.proxies[route.Name] = proxy
 	}
 
 	return controller
 }
 
-func (c *GenericProxyController) ProxyToCRM(ctx *gin.Context) {
-	target := fmt.Sprintf("http://%s:%s", c.props.CrmService.Host, c.props.CrmService.Port)
-	c.proxyWithResilience(ctx, target, "/crm/api/v1", "/crm/api/v1", ServiceCRM)
-}
-
-func (c *GenericProxyController) ProxyToNotification(ctx *gin.Context) {
-	target := fmt.Sprintf("http://%s:%s", c.props.NotificationService.Host, c.props.NotificationService.Port)
-	c.proxyWithResilience(ctx, target, "/ns/api/v1", "/notification/api/v1", ServiceNotification)
-}
-
-func (c *GenericProxyController) ProxyToSales(ctx *gin.Context) {
-	target := fmt.Sprintf("http://%s:%s", c.props.SalesService.Host, c.props.SalesService.Port)
-	c.proxyWithResilience(ctx, target, "/sales/api/v1", "/sales/api/v1", ServiceSales)
-}
-
-func (c *GenericProxyController) ProxyToPurchase(ctx *gin.Context) {
-	target := fmt.Sprintf("http://%s:%s", c.props.PurchaseService.Host, c.props.PurchaseService.Port)
-	c.proxyWithResilience(ctx, target, "/purchase/api/v1", "/purchase/api/v1", ServicePurchase)
-}
-
-func (c *GenericProxyController) ProxyToLogistics(ctx *gin.Context) {
-	target := fmt.Sprintf("http://%s:%s", c.props.LogisticsService.Host, c.props.LogisticsService.Port)
-	c.proxyWithResilience(ctx, target, "/logistics/api/v1", "/logistics/api/v1", ServiceLogistics)
-}
-
-func (c *GenericProxyController) ProxyToDiscuss(ctx *gin.Context) {
-	target := fmt.Sprintf("http://%s:%s", c.props.DiscussService.Host, c.props.DiscussService.Port)
-	c.proxyWithResilience(ctx, target, "/discuss/api/v1", "/discuss/api/v1", ServiceDiscuss)
-}
-
-func (c *GenericProxyController) createCircuitBreaker(name string) *gobreaker.CircuitBreaker[*http.Response] {
-	settings := gobreaker.Settings{
-		Name:        fmt.Sprintf("proxy-%s", name),
-		MaxRequests: 3,
-		Interval:    60 * time.Second,
-		Timeout:     30 * time.Second,
-		ReadyToTrip: func(counts gobreaker.Counts) bool {
-			if counts.ConsecutiveFailures >= 5 {
-				return true
-			}
-			if counts.Requests >= 10 {
-				failureRatio := float64(counts.TotalFailures) / float64(counts.Requests)
-				return failureRatio >= 0.6
-			}
-			return false
+// buildServiceRoutes creates the full list of service routes from properties.
+func buildServiceRoutes(props *properties.ExternalServiceProperties) []ServiceRoute {
+	return []ServiceRoute{
+		{
+			Name:         "crm",
+			SourcePrefix: "/crm/api/v1",
+			TargetPrefix: "/crm/api/v1",
+			Target:       props.CrmService.BaseURL(),
 		},
-		OnStateChange: func(name string, from gobreaker.State, to gobreaker.State) {
-			// TODO: Add observability logging/metrics here
-			log.Info("[CircuitBreaker] %s: %s -> %s", name, from, to)
+		{
+			Name:         "notification",
+			SourcePrefix: "/ns/api/v1",
+			TargetPrefix: "/notification/api/v1",
+			Target:       props.NotificationService.BaseURL(),
+		},
+		{
+			Name:         "sales",
+			SourcePrefix: "/sales/api/v1",
+			TargetPrefix: "/sales/api/v1",
+			Target:       props.SalesService.BaseURL(),
+		},
+		{
+			Name:         "purchase",
+			SourcePrefix: "/purchase-service/api/v1",
+			TargetPrefix: "/purchase/api/v1",
+			Target:       props.PurchaseService.BaseURL(),
+		},
+		{
+			Name:         "logistics",
+			SourcePrefix: "/logistics/api/v1",
+			TargetPrefix: "/logistics/api/v1",
+			Target:       props.LogisticsService.BaseURL(),
+		},
+		{
+			Name:         "discuss",
+			SourcePrefix: "/discuss/api/v1",
+			TargetPrefix: "/discuss/api/v1",
+			Target:       props.DiscussService.BaseURL(),
 		},
 	}
-
-	return gobreaker.NewCircuitBreaker[*http.Response](settings)
 }
 
-func (c *GenericProxyController) getCircuitBreaker(serviceName string) *gobreaker.CircuitBreaker[*http.Response] {
-	c.mu.RLock()
-	cb, exists := c.breakers[serviceName]
-	c.mu.RUnlock()
-
-	if exists {
-		return cb
+// ProxyHandler returns a gin.HandlerFunc that proxies requests to the named service.
+func (c *GenericProxyController) ProxyHandler(serviceName string) gin.HandlerFunc {
+	proxy, exists := c.proxies[serviceName]
+	if !exists {
+		return func(ctx *gin.Context) {
+			utils.AbortErrorHandleCustomMessage(ctx, constant.GeneralInternalServerError,
+				fmt.Sprintf("Proxy not configured for service: %s", serviceName))
+		}
 	}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if cb, exists = c.breakers[serviceName]; exists {
-		return cb
+	return func(ctx *gin.Context) {
+		proxy.ServeHTTP(ctx.Writer, ctx.Request)
 	}
-
-	cb = c.createCircuitBreaker(serviceName)
-	c.breakers[serviceName] = cb
-	return cb
 }
 
-// proxyWithResilience proxies request with circuit breaker and retry support
-func (c *GenericProxyController) proxyWithResilience(ctx *gin.Context, target, sourcePrefix, targetPrefix, serviceName string) {
-	remote, err := url.Parse(target)
+// buildProxy creates a pre-configured reverse proxy with circuit breaker and retry support.
+func (c *GenericProxyController) buildProxy(route ServiceRoute, resProps *properties.ResilienceProperties) (*httputil.ReverseProxy, error) {
+	remote, err := url.Parse(route.Target)
 	if err != nil {
-		utils.AbortErrorHandleCustomMessage(ctx, constant.GeneralInternalServerError, "Invalid target URL")
-		return
+		return nil, fmt.Errorf("invalid target URL for %s: %w", route.Name, err)
 	}
 
-	cb := c.getCircuitBreaker(serviceName)
+	cb := createCircuitBreaker(route.Name, resProps)
 
 	proxy := httputil.NewSingleHostReverseProxy(remote)
 
-	// Chain: Retry -> CircuitBreaker -> DefaultTransport
 	proxy.Transport = utils.NewResilientTransport(
 		cb,
-		3,
-		100*time.Millisecond,
-		2*time.Second,
+		resProps.MaxRetries,
+		resProps.InitialDelay,
+		resProps.MaxDelay,
 	)
 
+	sourcePrefix := route.SourcePrefix
+	targetPrefix := route.TargetPrefix
+
 	proxy.Director = func(req *http.Request) {
-		req.Header = ctx.Request.Header.Clone()
+		// Clone headers, then sanitize
+		req.Header = req.Header.Clone()
+		stripHopByHopHeaders(req.Header)
+
+		// Set standard proxy headers
+		if clientIP, _, err := net.SplitHostPort(req.RemoteAddr); err == nil {
+			if prior := req.Header.Get("X-Forwarded-For"); prior != "" {
+				req.Header.Set("X-Forwarded-For", prior+", "+clientIP)
+			} else {
+				req.Header.Set("X-Forwarded-For", clientIP)
+			}
+		}
+		req.Header.Set("X-Forwarded-Host", req.Host)
+		req.Header.Set("X-Forwarded-Proto", "http")
+
 		req.Host = remote.Host
 		req.URL.Scheme = remote.Scheme
 		req.URL.Host = remote.Host
 
 		if sourcePrefix != "" && targetPrefix != "" {
-			req.URL.Path = strings.Replace(ctx.Request.URL.Path, sourcePrefix, targetPrefix, 1)
-		} else {
-			req.URL.Path = ctx.Request.URL.Path
+			if strings.HasPrefix(req.URL.Path, sourcePrefix) {
+				req.URL.Path = targetPrefix + strings.TrimPrefix(req.URL.Path, sourcePrefix)
+			}
 		}
-		req.URL.RawQuery = ctx.Request.URL.RawQuery
+		// RawQuery is preserved automatically since req is the incoming request
 	}
 
 	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 		if err == gobreaker.ErrOpenState || err == gobreaker.ErrTooManyRequests {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte(`{"code":503,"message":"Service temporarily unavailable. Please try again later."}`))
+			_, _ = w.Write([]byte(`{"code":503,"message":"Service temporarily unavailable. Please try again later."}`))
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadGateway)
-		w.Write([]byte(`{"code":502,"message":"Bad Gateway"}`))
+		_, _ = w.Write([]byte(`{"code":502,"message":"Bad Gateway"}`))
 	}
 
-	proxy.ServeHTTP(ctx.Writer, ctx.Request)
+	return proxy, nil
+}
+
+func createCircuitBreaker(name string, props *properties.ResilienceProperties) *gobreaker.CircuitBreaker[*http.Response] {
+	settings := gobreaker.Settings{
+		Name:        fmt.Sprintf("proxy-%s", name),
+		MaxRequests: props.MaxRequests,
+		Interval:    props.Interval,
+		Timeout:     props.Timeout,
+		ReadyToTrip: func(counts gobreaker.Counts) bool {
+			if counts.ConsecutiveFailures >= props.ConsecutiveFailures {
+				return true
+			}
+			if counts.Requests >= props.MinRequests {
+				failureRatio := float64(counts.TotalFailures) / float64(counts.Requests)
+				return failureRatio >= props.FailureRatio
+			}
+			return false
+		},
+		OnStateChange: func(name string, from gobreaker.State, to gobreaker.State) {
+			log.Infof("[CircuitBreaker] %s: %s -> %s", name, from, to)
+		},
+	}
+
+	return gobreaker.NewCircuitBreaker[*http.Response](settings)
+}
+
+// stripHopByHopHeaders removes hop-by-hop headers that must not be forwarded.
+func stripHopByHopHeaders(h http.Header) {
+	for _, header := range hopByHopHeaders {
+		h.Del(header)
+	}
 }

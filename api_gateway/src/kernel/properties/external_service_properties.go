@@ -6,15 +6,28 @@ Description: Part of Serp Project
 package properties
 
 import (
+	"strings"
 	"time"
 
 	"github.com/golibs-starter/golib/config"
 )
 
 type ServiceProperty struct {
-	Host    string
-	Port    string
-	Timeout time.Duration
+	Host          string
+	Port          string
+	Timeout       time.Duration
+	WebSocketPath string
+}
+
+func (s ServiceProperty) BaseURL() string {
+	host := s.Host
+	if host != "" && !strings.HasPrefix(host, "http://") && !strings.HasPrefix(host, "https://") {
+		host = "http://" + host
+	}
+	if s.Port != "" {
+		return host + ":" + s.Port
+	}
+	return host
 }
 
 type ExternalServiceProperties struct {

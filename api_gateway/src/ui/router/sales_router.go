@@ -22,6 +22,6 @@ func RegisterSalesRoutes(
 		salesGroup.Use(
 			jwtMiddleware.AuthenticateJWT(),
 			rateLimitMiddleware.UserRateLimit(),
-		).Any("/*proxyPath", genericProxyController.ProxyToSales)
+		).Any("/*proxyPath", genericProxyController.ProxyHandler("sales"))
 	}
 }

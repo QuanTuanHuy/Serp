@@ -15,6 +15,7 @@ import serp.project.pmcore.core.port.client.IKafkaPublisher;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 @Component
 @RequiredArgsConstructor
@@ -61,5 +62,22 @@ public class KafkaPublisherAdapter implements IKafkaPublisher {
     @Override
     public <T> void sendMessageAsync(String key, T message, String topic) {
         sendMessageAsync(key, message, topic, null);
+    }
+
+    @Override
+    public <T> void sendMessageSync(String key, T message, String topic) throws Exception {
+        String jsonMessage = jsonUtils.toJson(message);
+        log.debug("Sending sync message to Kafka topic {} with key {}", topic, key);
+        try {
+            SendResult<String, String> result = kafkaTemplate.send(topic, key, jsonMessage)
+                    .get(10, TimeUnit.SECONDS);
+            var metadata = result.getRecordMetadata();
+            log.info("Sync message sent to Kafka topic {} partition {} offset {} with key {}",
+                    metadata.topic(), metadata.partition(), metadata.offset(), key);
+        } catch (Exception e) {
+            log.error("Failed to send sync message to Kafka topic {} with key {}: {}",
+                    topic, key, e.getMessage(), e);
+            throw e;
+        }
     }
 }
