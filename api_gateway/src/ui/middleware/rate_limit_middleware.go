@@ -7,6 +7,7 @@ package middleware
 
 import (
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -24,6 +25,16 @@ type RateLimitMiddleware struct {
 	routeOverrideIndex map[string]*properties.RouteOverride
 }
 
+var wildcardRateLimitMethods = []string{
+	http.MethodGet,
+	http.MethodPost,
+	http.MethodPut,
+	http.MethodPatch,
+	http.MethodDelete,
+	http.MethodHead,
+	http.MethodOptions,
+}
+
 func NewRateLimitMiddleware(
 	rateLimiter port.IRateLimiterPort,
 	props *properties.RateLimitProperties,
@@ -36,13 +47,14 @@ func NewRateLimitMiddleware(
 
 	for _, override := range props.RouteOverrides {
 		o := override
+		normalizedPath := normalizeRateLimitPath(o.Path)
 		if o.Method == "" || o.Method == "*" {
-			for _, method := range []string{"GET", "POST", "PUT", "PATCH", "DELETE"} {
-				key := method + ":" + o.Path
+			for _, method := range wildcardRateLimitMethods {
+				key := buildRouteOverrideIndexKey(method, normalizedPath)
 				m.routeOverrideIndex[key] = &o
 			}
 		} else {
-			key := strings.ToUpper(o.Method) + ":" + o.Path
+			key := buildRouteOverrideIndexKey(o.Method, normalizedPath)
 			m.routeOverrideIndex[key] = &o
 		}
 	}
@@ -60,14 +72,34 @@ func (m *RateLimitMiddleware) IPRateLimit() gin.HandlerFunc {
 		}
 
 		clientIP := c.ClientIP()
-		rule := m.props.DefaultIP
+		if clientIP == "" {
+			clientIP = "unknown"
+		}
 
-		routeKey := c.Request.Method + ":" + c.FullPath()
-		if override, ok := m.routeOverrideIndex[routeKey]; ok && override.IP != nil {
+		rule := m.props.DefaultIP
+		override, routeKey := m.resolveRouteOverride(c)
+		isRouteOverride := false
+		if override != nil && override.IP != nil {
 			rule = *override.IP
+			isRouteOverride = true
+		}
+
+		if !isValidRateLimitRule(rule) {
+			log.Warn(c,
+				"Invalid IP rate limit rule, allowing request. limit=",
+				rule.Limit,
+				", windowSecs=",
+				rule.WindowSecs,
+			)
+			c.Next()
+			return
 		}
 
 		key := fmt.Sprintf("ip:%s", clientIP)
+		if isRouteOverride {
+			key = fmt.Sprintf("ip:%s:%s", clientIP, routeKey)
+		}
+
 		result, err := m.rateLimiter.CheckRateLimit(c.Request.Context(), key, rule.Limit, rule.WindowSecs)
 		if err != nil {
 			log.Warn(c, "Rate limiter unavailable, allowing request: ", err)
@@ -107,13 +139,29 @@ func (m *RateLimitMiddleware) UserRateLimit() gin.HandlerFunc {
 		}
 
 		rule := m.props.DefaultUser
-
-		routeKey := c.Request.Method + ":" + c.FullPath()
-		if override, ok := m.routeOverrideIndex[routeKey]; ok && override.User != nil {
+		override, routeKey := m.resolveRouteOverride(c)
+		isRouteOverride := false
+		if override != nil && override.User != nil {
 			rule = *override.User
+			isRouteOverride = true
+		}
+
+		if !isValidRateLimitRule(rule) {
+			log.Warn(c,
+				"Invalid user rate limit rule, allowing request. limit=",
+				rule.Limit,
+				", windowSecs=",
+				rule.WindowSecs,
+			)
+			c.Next()
+			return
 		}
 
 		key := fmt.Sprintf("user:%v", userID)
+		if isRouteOverride {
+			key = fmt.Sprintf("user:%v:%s", userID, routeKey)
+		}
+
 		result, err := m.rateLimiter.CheckRateLimit(c.Request.Context(), key, rule.Limit, rule.WindowSecs)
 		if err != nil {
 			log.Warn(c, "Rate limiter unavailable for user, allowing request: ", err)
@@ -141,4 +189,57 @@ func setRateLimitHeaders(c *gin.Context, result *port.RateLimitResult) {
 	c.Header("X-RateLimit-Limit", strconv.Itoa(result.Limit))
 	c.Header("X-RateLimit-Remaining", strconv.Itoa(result.Remaining))
 	c.Header("X-RateLimit-Reset", strconv.FormatInt(result.ResetAt, 10))
+}
+
+func (m *RateLimitMiddleware) resolveRouteOverride(c *gin.Context) (*properties.RouteOverride, string) {
+	method := c.Request.Method
+
+	requestPath := normalizeRateLimitPath(c.Request.URL.Path)
+	if requestPath != "" {
+		requestKey := buildRouteOverrideIndexKey(method, requestPath)
+		if override, ok := m.routeOverrideIndex[requestKey]; ok {
+			return override, requestKey
+		}
+	}
+
+	fullPath := normalizeRateLimitPath(c.FullPath())
+	if fullPath != "" {
+		fullPathKey := buildRouteOverrideIndexKey(method, fullPath)
+		if override, ok := m.routeOverrideIndex[fullPathKey]; ok {
+			return override, fullPathKey
+		}
+
+		return nil, fullPathKey
+	}
+
+	if requestPath != "" {
+		return nil, buildRouteOverrideIndexKey(method, requestPath)
+	}
+
+	return nil, buildRouteOverrideIndexKey(method, "/")
+}
+
+func buildRouteOverrideIndexKey(method string, path string) string {
+	return strings.ToUpper(method) + ":" + normalizeRateLimitPath(path)
+}
+
+func normalizeRateLimitPath(path string) string {
+	if path == "" {
+		return ""
+	}
+
+	if path == "/" {
+		return path
+	}
+
+	trimmedPath := strings.TrimRight(path, "/")
+	if trimmedPath == "" {
+		return "/"
+	}
+
+	return trimmedPath
+}
+
+func isValidRateLimitRule(rule properties.RateLimitRule) bool {
+	return rule.Limit > 0 && rule.WindowSecs > 0
 }

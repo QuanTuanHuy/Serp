@@ -34,6 +34,6 @@ public class CreateNotificationEvent {
     private Long entityId;
 
     @Builder.Default
-    private List<String> deliveryChanels = List.of("IN_APP");
+    private List<String> deliveryChannels = List.of("IN_APP");
     private Map<String, Object> metadata;
 }
