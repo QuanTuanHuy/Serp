@@ -12,8 +12,6 @@ import (
 	account "github.com/serp/api-gateway/src/ui/controller/account"
 	"github.com/serp/api-gateway/src/ui/controller/common"
 	crm "github.com/serp/api-gateway/src/ui/controller/crm"
-	discuss "github.com/serp/api-gateway/src/ui/controller/discuss"
-	notification "github.com/serp/api-gateway/src/ui/controller/notification"
 	ptm "github.com/serp/api-gateway/src/ui/controller/ptm"
 	"github.com/serp/api-gateway/src/ui/middleware"
 	"go.uber.org/fx"
@@ -25,9 +23,8 @@ type RegisterRoutersIn struct {
 	Engine   *gin.Engine
 	Actuator *actuator.Endpoint
 
-	NotificationProxyController *notification.NotificationProxyController
-	DiscussProxyController      *discuss.DiscussProxyController
-	GenericProxyController      *common.GenericProxyController
+	WebSocketProxyController *common.WebSocketProxyController
+	GenericProxyController   *common.GenericProxyController
 
 	AuthController             *account.AuthController
 	UserController             *account.UserController
@@ -125,7 +122,7 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 
 	RegisterNotificationRoutes(
 		group,
-		p.NotificationProxyController,
+		p.WebSocketProxyController,
 		p.GenericProxyController,
 		p.JWTMiddleware,
 		p.RateLimitMiddleware,
@@ -133,7 +130,7 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 
 	RegisterDiscussRoutes(
 		group,
-		p.DiscussProxyController,
+		p.WebSocketProxyController,
 		p.GenericProxyController,
 		p.JWTMiddleware,
 		p.RateLimitMiddleware,

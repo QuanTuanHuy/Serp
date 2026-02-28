@@ -8,20 +8,19 @@ package router
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/serp/api-gateway/src/ui/controller/common"
-	"github.com/serp/api-gateway/src/ui/controller/discuss"
 	"github.com/serp/api-gateway/src/ui/middleware"
 )
 
 func RegisterDiscussRoutes(
 	group *gin.RouterGroup,
-	discussProxyController *discuss.DiscussProxyController,
+	wsProxyController *common.WebSocketProxyController,
 	genericProxyController *common.GenericProxyController,
 	jwtMiddleware *middleware.JWTMiddleware,
 	rateLimitMiddleware *middleware.RateLimitMiddleware,
 ) {
 	discussWSGroup := group.Group("ws/discuss")
 	{
-		discussWSGroup.GET("", discussProxyController.ProxyWebSocket)
+		discussWSGroup.GET("", wsProxyController.ProxyHandler("discuss"))
 	}
 
 	discussGroup := group.Group("/discuss/api/v1")

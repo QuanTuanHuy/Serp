@@ -74,37 +74,37 @@ func buildServiceRoutes(props *properties.ExternalServiceProperties) []ServiceRo
 			Name:         "crm",
 			SourcePrefix: "/crm/api/v1",
 			TargetPrefix: "/crm/api/v1",
-			Target:       fmt.Sprintf("http://%s:%s", props.CrmService.Host, props.CrmService.Port),
+			Target:       props.CrmService.BaseURL(),
 		},
 		{
 			Name:         "notification",
 			SourcePrefix: "/ns/api/v1",
 			TargetPrefix: "/notification/api/v1",
-			Target:       fmt.Sprintf("http://%s:%s", props.NotificationService.Host, props.NotificationService.Port),
+			Target:       props.NotificationService.BaseURL(),
 		},
 		{
 			Name:         "sales",
 			SourcePrefix: "/sales/api/v1",
 			TargetPrefix: "/sales/api/v1",
-			Target:       fmt.Sprintf("http://%s:%s", props.SalesService.Host, props.SalesService.Port),
+			Target:       props.SalesService.BaseURL(),
 		},
 		{
 			Name:         "purchase",
 			SourcePrefix: "/purchase-service/api/v1",
 			TargetPrefix: "/purchase/api/v1",
-			Target:       fmt.Sprintf("http://%s:%s", props.PurchaseService.Host, props.PurchaseService.Port),
+			Target:       props.PurchaseService.BaseURL(),
 		},
 		{
 			Name:         "logistics",
 			SourcePrefix: "/logistics/api/v1",
 			TargetPrefix: "/logistics/api/v1",
-			Target:       fmt.Sprintf("http://%s:%s", props.LogisticsService.Host, props.LogisticsService.Port),
+			Target:       props.LogisticsService.BaseURL(),
 		},
 		{
 			Name:         "discuss",
 			SourcePrefix: "/discuss/api/v1",
 			TargetPrefix: "/discuss/api/v1",
-			Target:       fmt.Sprintf("http://%s:%s", props.DiscussService.Host, props.DiscussService.Port),
+			Target:       props.DiscussService.BaseURL(),
 		},
 	}
 }

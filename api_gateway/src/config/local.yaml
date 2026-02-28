@@ -100,6 +100,7 @@ external:
       host: localhost
       port: "8090"
       timeout: 15s
+      webSocketPath: /notification/ws
     salesService:
       host: localhost
       port: "8090"
@@ -108,3 +109,4 @@ external:
       host: localhost
       port: "8092"
       timeout: 15s
+      webSocketPath: /discuss/ws/discuss

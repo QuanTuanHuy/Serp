@@ -104,7 +104,9 @@ external:
       host: ${NOTIFICATION_SERVICE_HOST}
       port: ${NOTIFICATION_SERVICE_PORT}
       timeout: 15s
+      webSocketPath: /notification/ws
     discussService:
       host: ${DISCUSS_SERVICE_HOST}
       port: ${DISCUSS_SERVICE_PORT}
       timeout: 15s
+      webSocketPath: /discuss/ws/discuss
