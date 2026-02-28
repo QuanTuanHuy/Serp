@@ -39,14 +39,14 @@ type DeliveryService struct {
 }
 
 func (d *DeliveryService) Deliver(ctx context.Context, notification *entity.NotificationEntity) error {
-	channels, err := d.preferenceService.GetEnabledChannels(ctx, notification.UserID)
+	pref, err := d.preferenceService.GetByUserID(ctx, notification.UserID)
 	if err != nil {
-		return fmt.Errorf("failed to get user channels: %w", err)
+		return fmt.Errorf("failed to get user preferences: %w", err)
 	}
 
 	var deliveryErrors []error
-	for _, channel := range channels {
-		shouldDeliver, _ := d.preferenceService.ShouldDeliver(ctx, notification.UserID, notification, channel)
+	for _, channel := range notification.DeliveryChannels {
+		shouldDeliver, _ := d.preferenceService.ShouldDeliver(ctx, pref, notification, channel)
 		if !shouldDeliver {
 			continue
 		}
@@ -93,7 +93,11 @@ func (d *DeliveryService) DeliverInApp(ctx context.Context, notification *entity
 		return fmt.Errorf("failed to marshal WS message: %w", err)
 	}
 
-	return d.hub.SendToUser(notification.UserID, message)
+	err = d.hub.SendToUser(notification.UserID, message)
+	if err != nil {
+		return fmt.Errorf("failed to send WebSocket message: %w", err)
+	}
+	return nil
 }
 
 func (d *DeliveryService) DeliverPush(ctx context.Context, notification *entity.NotificationEntity) error {
