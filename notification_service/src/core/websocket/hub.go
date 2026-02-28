@@ -6,12 +6,25 @@ Description: Part of Serp Project
 package websocket
 
 import (
+	"context"
 	"sync"
+	"sync/atomic"
 
 	"go.uber.org/zap"
 )
 
+// Target type constants for BroadcastMessage
+const (
+	TargetTypeUser   = "user"
+	TargetTypeTenant = "tenant"
+	TargetTypeAll    = "all"
+)
+
 type IWebSocketHub interface {
+	// Lifecycle
+	Start()
+	Stop()
+
 	// Client management
 	RegisterClient(client *Client)
 	UnregisterClient(client *Client)
@@ -38,8 +51,8 @@ type IWebSocketHub interface {
 }
 
 type BroadcastMessage struct {
-	TargetType string // "user", "tenant", "all"
-	TargetID   int64  // userID or tenantID
+	TargetType string
+	TargetID   int64 // userID or tenantID
 	Message    []byte
 	Category   string // Optional: filter by category subscription
 }
@@ -60,45 +73,71 @@ type Hub struct {
 	// Tenant grouping for broadcast
 	tenants map[int64]map[*Client]bool
 
-	// Channels operations
-	register   chan *Client
-	unregister chan *Client
-	broadcast  chan *BroadcastMessage
+	// Broadcast channel for async message dispatch
+	broadcast chan *BroadcastMessage
+
+	// Shutdown control
+	ctx    context.Context
+	cancel context.CancelFunc
 
 	mutex sync.RWMutex
 
 	logger *zap.Logger
 
 	// Metrics
-	totalConnections  int64
-	peakConnections   int64
-	messagesDelivered int64
+	totalConnections  atomic.Int64
+	peakConnections   atomic.Int64
+	messagesDelivered atomic.Int64
 }
 
 func NewHub(logger *zap.Logger) IWebSocketHub {
-	hub := &Hub{
-		clients:    make(map[int64]map[*Client]bool),
-		tenants:    make(map[int64]map[*Client]bool),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-		broadcast:  make(chan *BroadcastMessage),
-		logger:     logger,
+	ctx, cancel := context.WithCancel(context.Background())
+	return &Hub{
+		clients:   make(map[int64]map[*Client]bool),
+		tenants:   make(map[int64]map[*Client]bool),
+		broadcast: make(chan *BroadcastMessage, 256),
+		ctx:       ctx,
+		cancel:    cancel,
+		logger:    logger,
 	}
-	go hub.Run()
-	return hub
 }
 
-func (h *Hub) Run() {
+// Start begins the broadcast processing loop.
+func (h *Hub) Start() {
+	go h.run()
 	h.logger.Info("WebSocket Hub started")
+}
 
+// Stop gracefully shuts down the hub, closing all client connections.
+func (h *Hub) Stop() {
+	h.cancel()
+	h.logger.Info("WebSocket Hub stopping")
+
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+
+	for userID, clients := range h.clients {
+		for client := range clients {
+			client.Close()
+		}
+		delete(h.clients, userID)
+	}
+
+	for tenantID := range h.tenants {
+		delete(h.tenants, tenantID)
+	}
+}
+
+// run is the internal broadcast processing loop.
+// It only handles message dispatch — registration uses direct mutex calls.
+func (h *Hub) run() {
 	for {
 		select {
-		case client := <-h.register:
-			h.RegisterClient(client)
-		case client := <-h.unregister:
-			h.UnregisterClient(client)
+		case <-h.ctx.Done():
+			h.logger.Info("WebSocket Hub broadcast loop exiting")
+			return
 		case message := <-h.broadcast:
-			h.broadcastMessage(message)
+			h.dispatchBroadcast(message)
 		}
 	}
 }
@@ -117,16 +156,19 @@ func (h *Hub) RegisterClient(client *Client) {
 	}
 	h.tenants[client.tenantID][client] = true
 
-	h.totalConnections++
-	if h.totalConnections > h.peakConnections {
-		h.peakConnections = h.totalConnections
+	total := h.totalConnections.Add(1)
+	for {
+		peak := h.peakConnections.Load()
+		if total <= peak || h.peakConnections.CompareAndSwap(peak, total) {
+			break
+		}
 	}
 
 	h.logger.Info("Client registered",
 		zap.Int64("userID", client.userID),
 		zap.Int64("tenantID", client.tenantID),
 		zap.String("clientID", client.id),
-		zap.Int64("totalConnections", h.totalConnections),
+		zap.Int64("totalConnections", total),
 	)
 }
 
@@ -137,7 +179,7 @@ func (h *Hub) UnregisterClient(client *Client) {
 	if clients, ok := h.clients[client.userID]; ok {
 		if _, exists := clients[client]; exists {
 			delete(clients, client)
-			close(client.send)
+			client.Close()
 
 			if len(clients) == 0 {
 				delete(h.clients, client.userID)
@@ -154,7 +196,7 @@ func (h *Hub) UnregisterClient(client *Client) {
 		}
 	}
 
-	h.totalConnections--
+	h.totalConnections.Add(-1)
 
 	h.logger.Info("Client unregistered",
 		zap.Int64("userID", client.userID),
@@ -162,13 +204,13 @@ func (h *Hub) UnregisterClient(client *Client) {
 	)
 }
 
-func (h *Hub) broadcastMessage(msg *BroadcastMessage) {
+func (h *Hub) dispatchBroadcast(msg *BroadcastMessage) {
 	switch msg.TargetType {
-	case "user":
+	case TargetTypeUser:
 		h.sendToUser(msg.TargetID, msg.Message, msg.Category)
-	case "tenant":
+	case TargetTypeTenant:
 		h.sendToTenant(msg.TargetID, msg.Message, msg.Category)
-	case "all":
+	case TargetTypeAll:
 		h.sendToAll(msg.Message)
 	}
 }
@@ -187,14 +229,13 @@ func (h *Hub) sendToUser(userID int64, message []byte, category string) {
 			continue
 		}
 
-		select {
-		case client.send <- message:
-			h.messagesDelivered++
-		default:
+		if err := client.Send(message); err != nil {
 			h.logger.Warn("Client buffer full",
 				zap.Int64("userID", client.userID),
 				zap.String("clientID", client.id),
 			)
+		} else {
+			h.messagesDelivered.Add(1)
 		}
 	}
 }
@@ -211,14 +252,13 @@ func (h *Hub) sendToTenant(tenantID int64, message []byte, category string) {
 		if category != "" && !client.IsSubscribed(category) {
 			continue
 		}
-		select {
-		case client.send <- message:
-			h.messagesDelivered++
-		default:
+		if err := client.Send(message); err != nil {
 			h.logger.Warn("Client buffer full",
 				zap.Int64("userID", client.userID),
 				zap.String("clientID", client.id),
 			)
+		} else {
+			h.messagesDelivered.Add(1)
 		}
 	}
 }
@@ -229,34 +269,38 @@ func (h *Hub) sendToAll(message []byte) {
 
 	for _, clients := range h.clients {
 		for client := range clients {
-
-			select {
-			case client.send <- message:
-				h.messagesDelivered++
-			default:
-				// Skip slow clients
+			if err := client.Send(message); err == nil {
+				h.messagesDelivered.Add(1)
 			}
 		}
 	}
 }
 
-// Implements IWebSocketHub.
+// Interface method implementations that route through the broadcast channel.
 
 func (h *Hub) BroadcastToAll(message []byte) error {
-	h.broadcast <- &BroadcastMessage{
-		TargetType: "all",
+	select {
+	case h.broadcast <- &BroadcastMessage{
+		TargetType: TargetTypeAll,
 		Message:    message,
+	}:
+		return nil
+	case <-h.ctx.Done():
+		return h.ctx.Err()
 	}
-	return nil
 }
 
 func (h *Hub) BroadcastToTenant(tenantID int64, message []byte) error {
-	h.broadcast <- &BroadcastMessage{
-		TargetType: "tenant",
+	select {
+	case h.broadcast <- &BroadcastMessage{
+		TargetType: TargetTypeTenant,
 		TargetID:   tenantID,
 		Message:    message,
+	}:
+		return nil
+	case <-h.ctx.Done():
+		return h.ctx.Err()
 	}
-	return nil
 }
 
 func (h *Hub) GetConnectedUserCount() int {
@@ -271,19 +315,16 @@ func (h *Hub) GetMetrics() HubMetrics {
 	defer h.mutex.RUnlock()
 
 	return HubMetrics{
-		TotalConnections:  h.totalConnections,
-		PeakConnections:   h.peakConnections,
+		TotalConnections:  h.totalConnections.Load(),
+		PeakConnections:   h.peakConnections.Load(),
 		UniqueUsers:       int64(len(h.clients)),
 		UniqueTenants:     int64(len(h.tenants)),
-		MessagesDelivered: h.messagesDelivered,
+		MessagesDelivered: h.messagesDelivered.Load(),
 	}
 }
 
 func (h *Hub) GetTotalConnections() int64 {
-	h.mutex.RLock()
-	defer h.mutex.RUnlock()
-
-	return h.totalConnections
+	return h.totalConnections.Load()
 }
 
 func (h *Hub) IsUserConnected(userID int64) bool {
@@ -295,20 +336,28 @@ func (h *Hub) IsUserConnected(userID int64) bool {
 }
 
 func (h *Hub) SendToUser(userID int64, message []byte) error {
-	h.broadcast <- &BroadcastMessage{
-		TargetType: "user",
+	select {
+	case h.broadcast <- &BroadcastMessage{
+		TargetType: TargetTypeUser,
 		TargetID:   userID,
 		Message:    message,
+	}:
+		return nil
+	case <-h.ctx.Done():
+		return h.ctx.Err()
 	}
-	return nil
 }
 
 func (h *Hub) SendToUserWithCategory(userID int64, message []byte, category string) error {
-	h.broadcast <- &BroadcastMessage{
-		TargetType: "user",
+	select {
+	case h.broadcast <- &BroadcastMessage{
+		TargetType: TargetTypeUser,
 		TargetID:   userID,
 		Message:    message,
 		Category:   category,
+	}:
+		return nil
+	case <-h.ctx.Done():
+		return h.ctx.Err()
 	}
-	return nil
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/serp/notification-service/src/core/domain/enum"
 	client "github.com/serp/notification-service/src/core/port/client"
 	"github.com/serp/notification-service/src/core/websocket"
+	"go.uber.org/zap"
 )
 
 type IDeliveryService interface {
@@ -36,17 +37,18 @@ type DeliveryService struct {
 	hub               websocket.IWebSocketHub
 	redisPort         client.IRedisPort
 	kafkaProducer     client.IKafkaProducerPort
+	logger            *zap.Logger
 }
 
 func (d *DeliveryService) Deliver(ctx context.Context, notification *entity.NotificationEntity) error {
-	channels, err := d.preferenceService.GetEnabledChannels(ctx, notification.UserID)
+	pref, err := d.preferenceService.GetByUserID(ctx, notification.UserID)
 	if err != nil {
-		return fmt.Errorf("failed to get user channels: %w", err)
+		return fmt.Errorf("failed to get user preferences: %w", err)
 	}
 
 	var deliveryErrors []error
-	for _, channel := range channels {
-		shouldDeliver, _ := d.preferenceService.ShouldDeliver(ctx, notification.UserID, notification, channel)
+	for _, channel := range notification.DeliveryChannels {
+		shouldDeliver, _ := d.preferenceService.ShouldDeliver(ctx, pref, notification, channel)
 		if !shouldDeliver {
 			continue
 		}
@@ -72,7 +74,7 @@ func (d *DeliveryService) DeliverBulk(ctx context.Context, notifications []*enti
 
 func (d *DeliveryService) DeliverEmail(ctx context.Context, notification *entity.NotificationEntity) error {
 	// TODO: Integrate with mailservice
-	fmt.Printf("Delivering email to user %d: %s\n", notification.UserID, notification.Message)
+	d.logger.Info("Delivering email notification", zap.Int64("userID", notification.UserID), zap.String("message", notification.Message))
 	return nil
 }
 
@@ -93,12 +95,17 @@ func (d *DeliveryService) DeliverInApp(ctx context.Context, notification *entity
 		return fmt.Errorf("failed to marshal WS message: %w", err)
 	}
 
-	return d.hub.SendToUser(notification.UserID, message)
+	err = d.hub.SendToUser(notification.UserID, message)
+	if err != nil {
+		return fmt.Errorf("failed to send WebSocket message: %w", err)
+	}
+	d.logger.Info("In-app notification delivered via WebSocket", zap.Int64("userID", notification.UserID), zap.String("message_id", wsMessage.MessageID))
+	return nil
 }
 
 func (d *DeliveryService) DeliverPush(ctx context.Context, notification *entity.NotificationEntity) error {
 	// TODO: Integrate with push notification service
-	fmt.Printf("Delivering push notification to user %d: %s\n", notification.UserID, notification.Message)
+	d.logger.Info("Delivering push notification", zap.Int64("userID", notification.UserID), zap.String("message", notification.Message))
 	return nil
 }
 
@@ -125,11 +132,13 @@ func NewDeliveryService(
 	hub websocket.IWebSocketHub,
 	redisPort client.IRedisPort,
 	kafkaProducer client.IKafkaProducerPort,
+	logger *zap.Logger,
 ) IDeliveryService {
 	return &DeliveryService{
 		preferenceService: preferenceService,
 		hub:               hub,
 		redisPort:         redisPort,
 		kafkaProducer:     kafkaProducer,
+		logger:            logger,
 	}
 }
