@@ -40,12 +40,22 @@ func (m *MessageProcessingMiddleware) WrapHandler(handler MessageHandlerFunc) Me
 		var baseMessage message.BaseKafkaMessage
 		if err := json.Unmarshal(value, &baseMessage); err != nil {
 			m.logger.Error("Failed to unmarshal Kafka message", zap.Error(err))
-			m.sendToDLQ(ctx, topic, key, value, "unmarshal_error", err.Error(), "")
+			if dlqErr := m.sendToDLQ(ctx, topic, key, value, "unmarshal_error", err.Error(), ""); dlqErr != nil {
+				return dlqErr
+			}
 			return nil
 		}
 
 		eventID := baseMessage.GetEventID()
 		eventType := baseMessage.GetEventType()
+
+		if eventID == "" {
+			m.logger.Error("Kafka message missing event ID", zap.String("topic", topic), zap.String("key", key))
+			if dlqErr := m.sendToDLQ(ctx, topic, key, value, "missing_event_id", "event ID is empty", ""); dlqErr != nil {
+				return dlqErr
+			}
+			return nil
+		}
 
 		processed, err := m.idempotencyService.IsEventProcessed(ctx, eventID)
 		if err != nil {
@@ -72,9 +82,14 @@ func (m *MessageProcessingMiddleware) WrapHandler(handler MessageHandlerFunc) Me
 
 			if retryResult.ShouldSendToDLQ {
 				m.logger.Warn("Max retries reached for event", zap.String("event_id", eventID))
-				m.sendToDLQ(ctx, topic, key, value, "max_retries_exceeded", handlerErr.Error(), eventID)
+				if dlqErr := m.sendToDLQ(ctx, topic, key, value, "max_retries_exceeded", handlerErr.Error(), eventID); dlqErr != nil {
+					return dlqErr
+				}
 
-				_ = m.idempotencyService.MarkEventSentToDLQ(ctx, eventID)
+				if dlqErr := m.idempotencyService.MarkEventSentToDLQ(ctx, eventID); dlqErr != nil {
+					m.logger.Error("Failed to mark event as sent to DLQ",
+						zap.String("event_id", eventID), zap.Error(dlqErr))
+				}
 
 				return nil
 			}
@@ -86,7 +101,10 @@ func (m *MessageProcessingMiddleware) WrapHandler(handler MessageHandlerFunc) Me
 		}
 
 		if err := m.idempotencyService.MarkEventProcessed(ctx, eventID, eventType, topic); err != nil {
-			m.logger.Error("Failed to mark event as processed, but handler succeeded", zap.String("event_id", eventID))
+			m.logger.Error("Failed to mark event as processed, but handler succeeded",
+				zap.String("event_id", eventID),
+				zap.String("topic", topic),
+				zap.Error(err))
 			// Worst case: event might be reprocessed, but handler should be idempotent
 		}
 
@@ -95,33 +113,35 @@ func (m *MessageProcessingMiddleware) WrapHandler(handler MessageHandlerFunc) Me
 	}
 }
 
-func (m *MessageProcessingMiddleware) sendToDLQ(ctx context.Context, originalTopic, key string, value []byte, errorType, errorMessage, eventID string) {
+func (m *MessageProcessingMiddleware) sendToDLQ(ctx context.Context, originalTopic, key string, value []byte, errorType, errorMessage, eventID string) error {
 	dlqTopic := originalTopic + DLQTopicSuffix
 
 	dlqMessage := map[string]any{
 		"originalTopic": originalTopic,
 		"originalKey":   key,
-		"originalValue": string(value),
+		"originalValue": json.RawMessage(value),
 		"errorType":     errorType,
 		"errorMessage":  errorMessage,
 		"eventId":       eventID,
 	}
 
-	err := m.kafkaProducer.SendMessageAsync(ctx, dlqTopic, key, dlqMessage)
+	err := m.kafkaProducer.SendMessage(ctx, dlqTopic, key, dlqMessage)
 	if err != nil {
 		m.logger.Error("Failed to send message to DLQ",
 			zap.String("original_topic", originalTopic),
 			zap.String("key", key),
 			zap.String("error_type", errorType),
 			zap.Error(err))
-	} else {
-		m.logger.Warn("Message sent to DLQ",
-			zap.String("topic", dlqTopic),
-			zap.String("key", key),
-			zap.String("event_id", eventID),
-			zap.String("error_type", errorType),
-			zap.String("error_message", errorMessage))
+		return fmt.Errorf("failed to send message to DLQ topic %s: %w", dlqTopic, err)
 	}
+
+	m.logger.Warn("Message sent to DLQ",
+		zap.String("topic", dlqTopic),
+		zap.String("key", key),
+		zap.String("event_id", eventID),
+		zap.String("error_type", errorType),
+		zap.String("error_message", errorMessage))
+	return nil
 }
 
 func NewMessageProcessingMiddleware(
