@@ -7,11 +7,9 @@ package common
 
 import (
 	"fmt"
-	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golibs-starter/golib/log"
@@ -102,12 +100,12 @@ func buildWebSocketProxy(
 
 	proxy.Director = func(req *http.Request) {
 		// Preserve original WebSocket headers before any modification.
-		upgradeHeader := req.Header.Get("Upgrade")
-		connectionHeader := req.Header.Get("Connection")
-		secWSKey := req.Header.Get("Sec-WebSocket-Key")
-		secWSVersion := req.Header.Get("Sec-WebSocket-Version")
-		secWSProtocol := req.Header.Get("Sec-WebSocket-Protocol")
-		secWSExtensions := req.Header.Get("Sec-WebSocket-Extensions")
+		// upgradeHeader := req.Header.Get("Upgrade")
+		// connectionHeader := req.Header.Get("Connection")
+		// secWSKey := req.Header.Get("Sec-WebSocket-Key")
+		// secWSVersion := req.Header.Get("Sec-WebSocket-Version")
+		// secWSProtocol := req.Header.Get("Sec-WebSocket-Protocol")
+		// secWSExtensions := req.Header.Get("Sec-WebSocket-Extensions")
 
 		// Clone headers to avoid mutating the original request.
 		req.Header = req.Header.Clone()
@@ -119,35 +117,35 @@ func buildWebSocketProxy(
 		req.Host = target.Host
 
 		// Restore WebSocket hop-by-hop headers that would otherwise be stripped.
-		if upgradeHeader != "" {
-			req.Header.Set("Upgrade", upgradeHeader)
-		}
-		if connectionHeader != "" {
-			req.Header.Set("Connection", connectionHeader)
-		}
-		if secWSKey != "" {
-			req.Header.Set("Sec-WebSocket-Key", secWSKey)
-		}
-		if secWSVersion != "" {
-			req.Header.Set("Sec-WebSocket-Version", secWSVersion)
-		}
-		if secWSProtocol != "" {
-			req.Header.Set("Sec-WebSocket-Protocol", secWSProtocol)
-		}
-		if secWSExtensions != "" {
-			req.Header.Set("Sec-WebSocket-Extensions", secWSExtensions)
-		}
+		// if upgradeHeader != "" {
+		// 	req.Header.Set("Upgrade", upgradeHeader)
+		// }
+		// if connectionHeader != "" {
+		// 	req.Header.Set("Connection", connectionHeader)
+		// }
+		// if secWSKey != "" {
+		// 	req.Header.Set("Sec-WebSocket-Key", secWSKey)
+		// }
+		// if secWSVersion != "" {
+		// 	req.Header.Set("Sec-WebSocket-Version", secWSVersion)
+		// }
+		// if secWSProtocol != "" {
+		// 	req.Header.Set("Sec-WebSocket-Protocol", secWSProtocol)
+		// }
+		// if secWSExtensions != "" {
+		// 	req.Header.Set("Sec-WebSocket-Extensions", secWSExtensions)
+		// }
 
 		// Standard proxy headers.
-		if clientIP, _, err := net.SplitHostPort(req.RemoteAddr); err == nil {
-			if prior := req.Header.Get("X-Forwarded-For"); prior != "" {
-				req.Header.Set("X-Forwarded-For", prior+", "+clientIP)
-			} else {
-				req.Header.Set("X-Forwarded-For", clientIP)
-			}
-		}
-		req.Header.Set("X-Forwarded-Host", req.Host)
-		req.Header.Set("X-Forwarded-Proto", schemeFromRequest(req))
+		// if clientIP, _, err := net.SplitHostPort(req.RemoteAddr); err == nil {
+		// 	if prior := req.Header.Get("X-Forwarded-For"); prior != "" {
+		// 		req.Header.Set("X-Forwarded-For", prior+", "+clientIP)
+		// 	} else {
+		// 		req.Header.Set("X-Forwarded-For", clientIP)
+		// 	}
+		// }
+		// req.Header.Set("X-Forwarded-Host", req.Host)
+		// req.Header.Set("X-Forwarded-Proto", schemeFromRequest(req))
 	}
 
 	// FlushInterval -1 enables streaming (required for WebSocket / SSE).
@@ -197,9 +195,9 @@ func createWSCircuitBreaker(name string, props *properties.ResilienceProperties)
 }
 
 // schemeFromRequest returns "wss"/"https" or "ws"/"http" depending on TLS.
-func schemeFromRequest(req *http.Request) string {
-	if strings.EqualFold(req.Header.Get("X-Forwarded-Proto"), "https") || req.TLS != nil {
-		return "https"
-	}
-	return "http"
-}
+// func schemeFromRequest(req *http.Request) string {
+// 	if strings.EqualFold(req.Header.Get("X-Forwarded-Proto"), "https") || req.TLS != nil {
+// 		return "https"
+// 	}
+// 	return "http"
+// }

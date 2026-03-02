@@ -50,18 +50,15 @@ func NewWebSocketController(
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
 			CheckOrigin: func(r *http.Request) bool {
-				logger.Info("[WebSocketController] Allowing WebSocket connection from origin: ", zap.Any("origins", allowedOrigins))
-				logger.Info("[WebSocketProxy] Checking origin for WebSocket connection", zap.String("origin", r.Header.Get("Origin")))
 				if len(allowedOrigins) == 0 {
 					return false
 				}
-				return true
-				// origin := r.Header.Get("Origin")
-				// if origin == "" {
-				// 	// No Origin header means same-origin or non-browser client
-				// 	return true
-				// }
-				// return allowedOrigins[origin]
+				origin := r.Header.Get("Origin")
+				if origin == "" {
+					// No Origin header means same-origin or non-browser client
+					return true
+				}
+				return allowedOrigins[origin]
 			},
 		},
 	}
