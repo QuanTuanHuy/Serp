@@ -97,14 +97,6 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
         return resolved;
     }
 
-    /**
-     * Deep-clone an IssueType scheme:
-     * 1. Load source scheme + items
-     * 2. Create new scheme with cloned name
-     * 3. Clone all items with new schemeId
-     * 4. Patch default_issue_type_id (same as source — issue types are shared, not cloned)
-     * 5. Set cloned scheme ID on project
-     */
     private void cloneIssueTypeScheme(ProjectEntity project, Long tenantId, Long userId, Long sourceSchemeId) {
         if (sourceSchemeId == null) {
             log.info("No IssueType scheme source to clone for project key={}", project.getKey());
@@ -154,14 +146,6 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
         }
     }
 
-    /**
-     * Deep-clone a Priority scheme:
-     * 1. Load source scheme + items
-     * 2. Create new scheme with cloned name
-     * 3. Clone all items with new schemeId
-     * 4. Patch default_priority_id (same as source — priorities are shared, not cloned)
-     * 5. Set cloned scheme ID on project
-     */
     private void clonePriorityScheme(ProjectEntity project, Long tenantId, Long userId, Long sourceSchemeId) {
         if (sourceSchemeId == null) {
             log.info("No Priority scheme source to clone for project key={}", project.getKey());
@@ -211,13 +195,6 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
         }
     }
 
-    /**
-     * Deep-clone a Workflow scheme:
-     * 1. Load source scheme + items
-     * 2. Create new scheme with cloned name
-     * 3. Clone all items with new schemeId (workflowId and issueTypeId stay the same — shared)
-     * 4. Set cloned scheme ID on project
-     */
     private void cloneWorkflowScheme(ProjectEntity project, Long tenantId, Long userId, Long sourceSchemeId) {
         if (sourceSchemeId == null) {
             log.info("No Workflow scheme source to clone for project key={}", project.getKey());
@@ -267,10 +244,6 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
         }
     }
 
-    /**
-     * Stub provisioning for scheme types without infrastructure.
-     * Logs a warning and skips — the project's scheme column remains null.
-     */
     private void stubProvision(String typeName, SchemeType type,
                                 Map<SchemeType, Long> resolvedSources, ProjectEntity project) {
         Long sourceId = resolvedSources.get(type);

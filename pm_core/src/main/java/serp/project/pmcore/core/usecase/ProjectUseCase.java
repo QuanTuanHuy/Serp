@@ -18,11 +18,20 @@ import serp.project.pmcore.core.domain.dto.message.ProjectEventPayload;
 import serp.project.pmcore.core.domain.dto.request.CreateProjectRequest;
 import serp.project.pmcore.core.domain.dto.request.GetProjectParams;
 import serp.project.pmcore.core.domain.dto.request.UpdateProjectRequest;
+import serp.project.pmcore.core.domain.dto.request.UpdateProjectSchemesRequest;
 import serp.project.pmcore.core.domain.dto.response.ProjectResponse;
+import serp.project.pmcore.core.domain.entity.IssueTypeSchemeItemEntity;
 import serp.project.pmcore.core.domain.entity.OutboxEventEntity;
 import serp.project.pmcore.core.domain.entity.ProjectEntity;
+import serp.project.pmcore.core.domain.entity.WorkflowSchemeEntity;
+import serp.project.pmcore.core.domain.entity.WorkflowSchemeItemEntity;
 import serp.project.pmcore.core.exception.AppException;
 import serp.project.pmcore.core.exception.ErrorCode;
+import serp.project.pmcore.core.port.store.IIssueTypeSchemeItemPort;
+import serp.project.pmcore.core.port.store.IIssueTypeSchemePort;
+import serp.project.pmcore.core.port.store.IPrioritySchemePort;
+import serp.project.pmcore.core.port.store.IWorkflowSchemeItemPort;
+import serp.project.pmcore.core.port.store.IWorkflowSchemePort;
 import serp.project.pmcore.core.service.IOutboxEventService;
 import serp.project.pmcore.core.service.IProjectBlueprintService;
 import serp.project.pmcore.core.service.IProjectService;
@@ -32,6 +41,7 @@ import serp.project.pmcore.kernel.utils.JsonUtils;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -43,6 +53,11 @@ public class ProjectUseCase {
     private final IProjectBlueprintService projectBlueprintService;
     private final ISchemeProvisioningService schemeProvisioningService;
     private final IOutboxEventService outboxEventService;
+    private final IIssueTypeSchemePort issueTypeSchemePort;
+    private final IIssueTypeSchemeItemPort issueTypeSchemeItemPort;
+    private final IWorkflowSchemePort workflowSchemePort;
+    private final IWorkflowSchemeItemPort workflowSchemeItemPort;
+    private final IPrioritySchemePort prioritySchemePort;
 
     private final JsonUtils jsonUtils;
 
@@ -146,6 +161,112 @@ public class ProjectUseCase {
         publishProjectEvent(EventConstants.Project.EventType.PROJECT_UNARCHIVED, unarchived, tenantId, userId);
 
         return toResponse(unarchived);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public ProjectResponse updateProjectSchemes(Long id, UpdateProjectSchemesRequest request,
+            Long tenantId, Long userId) {
+        if (!hasAnySchemeUpdate(request)) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "At least one scheme id must be provided");
+        }
+
+        if (request.getAssociationMode() != null
+                && !"SHARED_ASSOCIATION".equalsIgnoreCase(request.getAssociationMode())) {
+            throw new AppException(ErrorCode.BAD_REQUEST,
+                    "Only SHARED_ASSOCIATION is currently supported");
+        }
+
+        if (request.getFieldConfigSchemeId() != null
+                || request.getIssueTypeScreenSchemeId() != null
+                || request.getPermissionSchemeId() != null
+                || request.getNotificationSchemeId() != null
+                || request.getIssueSecuritySchemeId() != null) {
+            throw new AppException(ErrorCode.BAD_REQUEST,
+                    "FIELD_CONFIG, SCREEN, PERMISSION, NOTIFICATION, ISSUE_SECURITY scheme rebinding is not implemented yet");
+        }
+
+        ProjectEntity project = projectService.getProjectById(id, tenantId);
+        if (Boolean.TRUE.equals(project.getIsArchived())) {
+            throw new AppException(ErrorCode.PROJECT_ARCHIVED);
+        }
+
+        Long issueTypeSchemeId = project.getIssueTypeSchemeId();
+        if (request.getIssueTypeSchemeId() != null) {
+            issueTypeSchemePort.getIssueTypeSchemeByIdIncludingSystem(request.getIssueTypeSchemeId(), tenantId)
+                    .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
+            issueTypeSchemeId = request.getIssueTypeSchemeId();
+        }
+
+        Long workflowSchemeId = project.getWorkflowSchemeId();
+        if (request.getWorkflowSchemeId() != null) {
+            workflowSchemePort.getWorkflowSchemeByIdIncludingSystem(request.getWorkflowSchemeId(), tenantId)
+                    .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
+            workflowSchemeId = request.getWorkflowSchemeId();
+        }
+
+        if (request.getPrioritySchemeId() != null) {
+            prioritySchemePort.getPrioritySchemeByIdIncludingSystem(request.getPrioritySchemeId(), tenantId)
+                    .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
+            project.setPrioritySchemeId(request.getPrioritySchemeId());
+        }
+
+        validateWorkflowCoverage(issueTypeSchemeId, workflowSchemeId, tenantId);
+
+        if (request.getIssueTypeSchemeId() != null) {
+            project.setIssueTypeSchemeId(request.getIssueTypeSchemeId());
+        }
+        if (request.getWorkflowSchemeId() != null) {
+            project.setWorkflowSchemeId(request.getWorkflowSchemeId());
+        }
+
+        ProjectEntity updated = projectService.saveProject(project, userId);
+
+        publishProjectEvent(EventConstants.Project.EventType.PROJECT_SCHEMES_UPDATED, updated, tenantId, userId);
+
+        return toResponse(updated);
+    }
+
+    private boolean hasAnySchemeUpdate(UpdateProjectSchemesRequest request) {
+        return request.getIssueTypeSchemeId() != null
+                || request.getWorkflowSchemeId() != null
+                || request.getFieldConfigSchemeId() != null
+                || request.getIssueTypeScreenSchemeId() != null
+                || request.getPermissionSchemeId() != null
+                || request.getNotificationSchemeId() != null
+                || request.getPrioritySchemeId() != null
+                || request.getIssueSecuritySchemeId() != null;
+    }
+
+    private void validateWorkflowCoverage(Long issueTypeSchemeId, Long workflowSchemeId, Long tenantId) {
+        if (issueTypeSchemeId == null || workflowSchemeId == null) {
+            throw new AppException(ErrorCode.SCHEME_INCOMPATIBLE,
+                    "Issue type scheme and workflow scheme must both be present");
+        }
+
+        List<IssueTypeSchemeItemEntity> issueTypeItems = issueTypeSchemeItemPort
+                .getIssueTypeSchemeItemsBySchemeIdIncludingSystem(issueTypeSchemeId, tenantId);
+
+        WorkflowSchemeEntity workflowScheme = workflowSchemePort
+                .getWorkflowSchemeByIdIncludingSystem(workflowSchemeId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
+
+        List<WorkflowSchemeItemEntity> workflowItems = workflowSchemeItemPort
+                .getWorkflowSchemeItemsBySchemeIdIncludingSystem(workflowSchemeId, tenantId);
+
+        Set<Long> mappedIssueTypeIds = workflowItems.stream()
+                .map(WorkflowSchemeItemEntity::getIssueTypeId)
+                .collect(Collectors.toSet());
+
+        List<Long> missingIssueTypes = issueTypeItems.stream()
+                .map(IssueTypeSchemeItemEntity::getIssueTypeId)
+                .filter(issueTypeId -> !mappedIssueTypeIds.contains(issueTypeId))
+                .distinct()
+                .toList();
+
+        if (workflowScheme.getDefaultWorkflowId() == null && !missingIssueTypes.isEmpty()) {
+            throw new AppException(ErrorCode.SCHEME_INCOMPATIBLE,
+                    "Workflow scheme does not cover issue types: " + missingIssueTypes);
+        }
     }
 
     private Map<String, Long> buildSchemeOverrides(CreateProjectRequest request) {

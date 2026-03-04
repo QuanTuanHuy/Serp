@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import serp.project.pmcore.core.domain.dto.request.CreateProjectRequest;
 import serp.project.pmcore.core.domain.dto.request.GetProjectParams;
 import serp.project.pmcore.core.domain.dto.request.UpdateProjectRequest;
+import serp.project.pmcore.core.domain.dto.request.UpdateProjectSchemesRequest;
 import serp.project.pmcore.core.domain.dto.response.GeneralResponse;
 import serp.project.pmcore.core.domain.dto.response.ProjectResponse;
 import serp.project.pmcore.core.exception.AppException;
@@ -102,6 +103,19 @@ public class ProjectController {
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
         ProjectResponse response = projectUseCase.updateProject(id, request, tenantId, userId);
+        return ResponseEntity.ok(responseUtils.success(response));
+    }
+
+    @PutMapping("/{id}/schemes")
+    public ResponseEntity<GeneralResponse<?>> updateProjectSchemes(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateProjectSchemesRequest request) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
+
+        ProjectResponse response = projectUseCase.updateProjectSchemes(id, request, tenantId, userId);
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
