@@ -70,6 +70,16 @@ app:
     client-id: serp-pm
     client-secret: ${CLIENT_SECRET}
 
+  http-client:
+    connect-timeout-ms: ${HTTP_CLIENT_CONNECT_TIMEOUT_MS:5000}
+    read-timeout-ms: ${HTTP_CLIENT_READ_TIMEOUT_MS:30000}
+    idempotent-max-attempts: ${HTTP_CLIENT_IDEMPOTENT_MAX_ATTEMPTS:3}
+    non-idempotent-retry-max-attempts: ${HTTP_CLIENT_NON_IDEMPOTENT_MAX_ATTEMPTS:2}
+    initial-backoff-ms: ${HTTP_CLIENT_INITIAL_BACKOFF_MS:300}
+    max-backoff-ms: ${HTTP_CLIENT_MAX_BACKOFF_MS:3000}
+    backoff-multiplier: ${HTTP_CLIENT_BACKOFF_MULTIPLIER:2.0}
+    jitter-factor: ${HTTP_CLIENT_JITTER_FACTOR:0.2}
+
   security:
     filter:
       publicUrls:
