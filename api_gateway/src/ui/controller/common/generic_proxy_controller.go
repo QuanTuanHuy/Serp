@@ -91,7 +91,7 @@ func buildServiceRoutes(props *properties.ExternalServiceProperties) []ServiceRo
 		{
 			Name:         "purchase",
 			SourcePrefix: "/purchase-service/api/v1",
-			TargetPrefix: "/purchase/api/v1",
+			TargetPrefix: "/purchase-service/api/v1",
 			Target:       props.PurchaseService.BaseURL(),
 		},
 		{
