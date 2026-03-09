@@ -21,6 +21,7 @@ import serp.project.account.core.domain.dto.request.AssignUserToModuleRequest;
 import serp.project.account.core.domain.dto.request.BulkAssignUsersRequest;
 import serp.project.account.core.domain.dto.response.OrgModuleAccessResponse;
 import serp.project.account.core.domain.entity.RoleEntity;
+import serp.project.account.core.domain.entity.SubscriptionPlanModuleEntity;
 import serp.project.account.core.domain.entity.UserModuleAccessEntity;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.ICombineRoleService;
@@ -88,8 +89,8 @@ public class ModuleAccessUseCase {
             var plan = subscriptionPlanService.getPlanById(subscription.getSubscriptionPlanId());
             var planModules = subscriptionPlanService.getPlanModules(plan.getId());
             var moduleIds = planModules.stream()
-                    .filter(pm -> pm.getIsIncluded())
-                    .map(pm -> pm.getModuleId())
+                    .filter(SubscriptionPlanModuleEntity::getIsIncluded)
+                    .map(SubscriptionPlanModuleEntity::getModuleId)
                     .toList();
             var allRoles = roleService.getAllRoles();
             var allModules = moduleService.getAllModules();

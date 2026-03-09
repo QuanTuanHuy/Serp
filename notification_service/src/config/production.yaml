@@ -1,6 +1,11 @@
 app:
   logging:
     level: info
+  websocket:
+    allowedOrigins:
+      - http://localhost:3000
+      - https://serp.texkis.com
+      - https://serp-soict.vercel.app
   datasource:
     driver: postgres
     host: ${DB_HOST}

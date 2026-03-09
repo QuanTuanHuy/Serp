@@ -100,33 +100,30 @@ export const salesApi = api.injectEndpoints({
       ],
     }),
 
-    deleteCustomer: builder.mutation<
-      APIResponse<{ deleted: boolean }>,
-      string
-    >({
-      query: (customerId) => ({
-        url: `/customer/delete/${customerId}`,
-        method: 'DELETE',
-      }),
-      extraOptions: { service: 'sales' },
-      invalidatesTags: (result, error, customerId) => [
-        { type: 'SalesCustomer', id: customerId },
-        { type: 'SalesCustomer', id: 'LIST' },
-      ],
-    }),
-
-    // Address endpoints
-    createAddress: builder.mutation<APIResponse<Address>, AddressCreationForm>(
+    deleteCustomer: builder.mutation<APIResponse<{ deleted: boolean }>, string>(
       {
-        query: (data) => ({
-          url: '/address/create',
-          method: 'POST',
-          body: data,
+        query: (customerId) => ({
+          url: `/customer/delete/${customerId}`,
+          method: 'DELETE',
         }),
         extraOptions: { service: 'sales' },
-        invalidatesTags: [{ type: 'Address', id: 'LIST' }],
+        invalidatesTags: (result, error, customerId) => [
+          { type: 'SalesCustomer', id: customerId },
+          { type: 'SalesCustomer', id: 'LIST' },
+        ],
       }
     ),
+
+    // Address endpoints
+    createAddress: builder.mutation<APIResponse<Address>, AddressCreationForm>({
+      query: (data) => ({
+        url: '/address/create',
+        method: 'POST',
+        body: data,
+      }),
+      extraOptions: { service: 'sales' },
+      invalidatesTags: [{ type: 'Address', id: 'LIST' }],
+    }),
 
     updateAddress: builder.mutation<
       APIResponse<Address>,
@@ -144,19 +141,17 @@ export const salesApi = api.injectEndpoints({
       ],
     }),
 
-    deleteAddress: builder.mutation<APIResponse<{ deleted: boolean }>, string>(
-      {
-        query: (addressId) => ({
-          url: `/address/delete/${addressId}`,
-          method: 'DELETE',
-        }),
-        extraOptions: { service: 'sales' },
-        invalidatesTags: (result, error, addressId) => [
-          { type: 'Address', id: addressId },
-          { type: 'Address', id: 'LIST' },
-        ],
-      }
-    ),
+    deleteAddress: builder.mutation<APIResponse<{ deleted: boolean }>, string>({
+      query: (addressId) => ({
+        url: `/address/delete/${addressId}`,
+        method: 'DELETE',
+      }),
+      extraOptions: { service: 'sales' },
+      invalidatesTags: (result, error, addressId) => [
+        { type: 'Address', id: addressId },
+        { type: 'Address', id: 'LIST' },
+      ],
+    }),
 
     getAddresses: builder.query<
       APIResponse<Address[]>,
@@ -238,20 +233,19 @@ export const salesApi = api.injectEndpoints({
       ],
     }),
 
-    deleteCategory: builder.mutation<
-      APIResponse<{ deleted: boolean }>,
-      string
-    >({
-      query: (categoryId) => ({
-        url: `/category/delete/${categoryId}`,
-        method: 'DELETE',
-      }),
-      extraOptions: { service: 'sales' },
-      invalidatesTags: (result, error, categoryId) => [
-        { type: 'Category', id: categoryId },
-        { type: 'Category', id: 'LIST' },
-      ],
-    }),
+    deleteCategory: builder.mutation<APIResponse<{ deleted: boolean }>, string>(
+      {
+        query: (categoryId) => ({
+          url: `/category/delete/${categoryId}`,
+          method: 'DELETE',
+        }),
+        extraOptions: { service: 'sales' },
+        invalidatesTags: (result, error, categoryId) => [
+          { type: 'Category', id: categoryId },
+          { type: 'Category', id: 'LIST' },
+        ],
+      }
+    ),
 
     // Facility endpoints
     getFacilities: builder.query<
@@ -314,20 +308,19 @@ export const salesApi = api.injectEndpoints({
       ],
     }),
 
-    deleteFacility: builder.mutation<
-      APIResponse<{ deleted: boolean }>,
-      string
-    >({
-      query: (facilityId) => ({
-        url: `/facility/delete/${facilityId}`,
-        method: 'DELETE',
-      }),
-      extraOptions: { service: 'sales' },
-      invalidatesTags: (result, error, facilityId) => [
-        { type: 'Facility', id: facilityId },
-        { type: 'Facility', id: 'LIST' },
-      ],
-    }),
+    deleteFacility: builder.mutation<APIResponse<{ deleted: boolean }>, string>(
+      {
+        query: (facilityId) => ({
+          url: `/facility/delete/${facilityId}`,
+          method: 'DELETE',
+        }),
+        extraOptions: { service: 'sales' },
+        invalidatesTags: (result, error, facilityId) => [
+          { type: 'Facility', id: facilityId },
+          { type: 'Facility', id: 'LIST' },
+        ],
+      }
+    ),
 
     // Inventory Item endpoints
     getInventoryItems: builder.query<
@@ -437,17 +430,15 @@ export const salesApi = api.injectEndpoints({
       providesTags: (result, error, id) => [{ type: 'Product', id }],
     }),
 
-    createProduct: builder.mutation<APIResponse<Product>, ProductCreationForm>(
-      {
-        query: (data) => ({
-          url: '/product/create',
-          method: 'POST',
-          body: data,
-        }),
-        extraOptions: { service: 'sales' },
-        invalidatesTags: [{ type: 'Product', id: 'LIST' }],
-      }
-    ),
+    createProduct: builder.mutation<APIResponse<Product>, ProductCreationForm>({
+      query: (data) => ({
+        url: '/product/create',
+        method: 'POST',
+        body: data,
+      }),
+      extraOptions: { service: 'sales' },
+      invalidatesTags: [{ type: 'Product', id: 'LIST' }],
+    }),
 
     updateProduct: builder.mutation<
       APIResponse<Product>,
@@ -465,19 +456,17 @@ export const salesApi = api.injectEndpoints({
       ],
     }),
 
-    deleteProduct: builder.mutation<APIResponse<{ deleted: boolean }>, string>(
-      {
-        query: (productId) => ({
-          url: `/product/delete/${productId}`,
-          method: 'DELETE',
-        }),
-        extraOptions: { service: 'sales' },
-        invalidatesTags: (result, error, productId) => [
-          { type: 'Product', id: productId },
-          { type: 'Product', id: 'LIST' },
-        ],
-      }
-    ),
+    deleteProduct: builder.mutation<APIResponse<{ deleted: boolean }>, string>({
+      query: (productId) => ({
+        url: `/product/delete/${productId}`,
+        method: 'DELETE',
+      }),
+      extraOptions: { service: 'sales' },
+      invalidatesTags: (result, error, productId) => [
+        { type: 'Product', id: productId },
+        { type: 'Product', id: 'LIST' },
+      ],
+    }),
 
     // Order endpoints
     getOrders: builder.query<

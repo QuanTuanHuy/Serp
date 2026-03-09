@@ -10,6 +10,7 @@ import serp.project.account.core.domain.dto.request.BulkAssignUsersToDepartmentR
 import serp.project.account.core.domain.entity.UserDepartmentEntity;
 
 import java.util.List;
+import java.util.Map;
 
 public interface IUserDepartmentService {
     UserDepartmentEntity assignUserToDepartment(AssignUserToDepartmentRequest request);
@@ -25,4 +26,6 @@ public interface IUserDepartmentService {
     List<UserDepartmentEntity> getActiveDepartmentMembers(Long departmentId);
 
     Long countMembersByDepartmentId(Long departmentId);
+
+    Map<Long, Long> countMembersByDepartmentIds(List<Long> departmentIds);
 }

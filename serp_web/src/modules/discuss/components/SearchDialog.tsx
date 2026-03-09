@@ -21,6 +21,7 @@ import type { SearchFilters, GroupedSearchResults } from '../types';
 interface SearchDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  channelId: string; // Required for backend API
   onResultClick?: (channelId: string, messageId: string) => void;
 }
 
@@ -30,13 +31,14 @@ const RECENT_SEARCHES_KEY = 'discuss_recent_searches';
 export function SearchDialog({
   open,
   onOpenChange,
+  channelId,
   onResultClick,
 }: SearchDialogProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<SearchFilters>({});
   const [page, setPage] = useState(1);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  const [allResults, setAllResults] = useState<GroupedSearchResults[]>([]);
+  const [allResults, setAllResults] = useState<any[]>([]); // Messages instead of GroupedSearchResults
 
   // Load recent searches from localStorage
   useEffect(() => {
@@ -75,11 +77,11 @@ export function SearchDialog({
     }
   }, []);
 
-  // RTK Query for search
+  // RTK Query for search (channel-specific)
   const { data, isLoading, isFetching } = useSearchMessagesQuery(
     {
+      channelId,
       query: searchQuery,
-      filters,
       pagination: { page, limit: 10 },
     },
     {
@@ -89,11 +91,11 @@ export function SearchDialog({
 
   // Accumulate results for infinite scroll
   useEffect(() => {
-    if (data?.data?.data) {
+    if (data?.data?.items) {
       if (page === 1) {
-        setAllResults(data.data.data);
+        setAllResults(data.data.items);
       } else {
-        setAllResults((prev) => [...prev, ...data.data.data]);
+        setAllResults((prev) => [...prev, ...data.data.items]);
       }
     }
   }, [data, page]);
@@ -114,7 +116,7 @@ export function SearchDialog({
   );
 
   const handleLoadMore = useCallback(() => {
-    if (data?.data?.pagination && page < data.data.pagination.totalPages) {
+    if (data?.data?.hasNext) {
       setPage((p) => p + 1);
     }
   }, [data, page]);
@@ -155,12 +157,9 @@ export function SearchDialog({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [open, onOpenChange, handleClose]);
 
-  const hasMore =
-    data?.data?.pagination &&
-    page < data.data.pagination.totalPages &&
-    !isFetching;
+  const hasMore = data?.data?.hasNext && !isFetching;
 
-  const totalResults = data?.data?.pagination?.total || 0;
+  const totalResults = data?.data?.totalItems || 0;
   const searchTime = isLoading ? 0 : 0.3; // Mock search time
 
   return (

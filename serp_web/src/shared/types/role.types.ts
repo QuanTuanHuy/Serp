@@ -7,6 +7,8 @@ export const SYSTEM_ADMIN_ROLES: string[] = ['SUPER_ADMIN', 'SYSTEM_MODERATOR'];
 
 export const ORGANIZATION_ADMIN_ROLES: string[] = ['ORG_OWNER', 'ORG_ADMIN'];
 
+export const ORGANIZATION_USER_ROLES: string[] = ['ORG_USER'];
+
 export const CRM_ROLES: string[] = ['CRM_SALES_PERSON'];
 
 export const PTM_ROLES: string[] = ['PTM_USER', 'PTM_ADMIN'];

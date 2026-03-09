@@ -27,4 +27,6 @@ public interface EmailTemplateRepository extends JpaRepository<EmailTemplateMode
     List<EmailTemplateModel> findByType(EmailType type);
 
     boolean existsByCode(String code);
+
+    boolean existsByCodeAndTenantId(String code, Long tenantId);
 }

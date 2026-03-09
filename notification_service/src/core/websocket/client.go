@@ -34,6 +34,17 @@ const (
 	sendBufferSize = 256
 )
 
+// Message type constants for client-server communication
+const (
+	MsgTypePing         = "PING"
+	MsgTypePong         = "PONG"
+	MsgTypeAck          = "ACK"
+	MsgTypeSubscribe    = "SUBSCRIBE"
+	MsgTypeUnsubscribe  = "UNSUBSCRIBE"
+	MsgTypeSubscribed   = "SUBSCRIBED"
+	MsgTypeUnsubscribed = "UNSUBSCRIBED"
+)
+
 type Client struct {
 	// Unique client ID
 	id string
@@ -50,14 +61,19 @@ type Client struct {
 	// Outbound message buffer
 	send chan []byte
 
+	// Ensures send channel is closed only once
+	closeOnce sync.Once
+
 	// Category subscriptions
 	subscriptions map[string]bool
 	subMutex      sync.RWMutex
 
+	// Connection metadata
 	connectedAt time.Time
 	lastPingAt  time.Time
 	userAgent   string
 	remoteAddr  string
+	metaMutex   sync.RWMutex
 
 	logger *zap.Logger
 }
@@ -84,8 +100,15 @@ func NewClient(
 	}
 }
 
-// ReadPump handles incoming messages from client
-// Runs in its own goroutine per client
+// Close safely closes the send channel exactly once.
+func (c *Client) Close() {
+	c.closeOnce.Do(func() {
+		close(c.send)
+	})
+}
+
+// ReadPump handles incoming messages from client.
+// Runs in its own goroutine per client.
 func (c *Client) ReadPump() {
 	defer func() {
 		c.hub.UnregisterClient(c)
@@ -97,11 +120,25 @@ func (c *Client) ReadPump() {
 	}()
 
 	c.conn.SetReadLimit(maxMessageSize)
-	c.conn.SetReadDeadline(time.Now().Add(pongWait))
+	if err := c.conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+		c.logger.Error("Failed to set initial read deadline",
+			zap.Error(err),
+			zap.String("clientID", c.id),
+		)
+		return
+	}
 
 	c.conn.SetPongHandler(func(appData string) error {
-		c.conn.SetReadDeadline(time.Now().Add(pongWait))
+		if err := c.conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+			c.logger.Error("Failed to set read deadline on pong",
+				zap.Error(err),
+				zap.String("clientID", c.id),
+			)
+			return err
+		}
+		c.metaMutex.Lock()
 		c.lastPingAt = time.Now()
+		c.metaMutex.Unlock()
 		return nil
 	})
 
@@ -127,8 +164,8 @@ func (c *Client) ReadPump() {
 	}
 }
 
-// WritePump handles outgoing messages to client
-// Runs in its own goroutine per client
+// WritePump handles outgoing messages to client.
+// Runs in its own goroutine per client.
 func (c *Client) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
 
@@ -144,7 +181,13 @@ func (c *Client) WritePump() {
 	for {
 		select {
 		case message, ok := <-c.send:
-			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				c.logger.Error("Failed to set write deadline",
+					zap.Error(err),
+					zap.String("clientID", c.id),
+				)
+				return
+			}
 
 			if !ok {
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
@@ -159,6 +202,7 @@ func (c *Client) WritePump() {
 				return
 			}
 
+			// Drain remaining buffered messages
 			n := len(c.send)
 			for i := 0; i < n; i++ {
 				if err := c.conn.WriteMessage(websocket.TextMessage, <-c.send); err != nil {
@@ -167,7 +211,13 @@ func (c *Client) WritePump() {
 			}
 
 		case <-ticker.C:
-			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				c.logger.Error("Failed to set write deadline for ping",
+					zap.Error(err),
+					zap.String("clientID", c.id),
+				)
+				return
+			}
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
@@ -186,16 +236,16 @@ func (c *Client) handleMessage(message []byte) {
 	}
 
 	switch msg.Type {
-	case "PING":
+	case MsgTypePing:
 		c.handlePing()
 
-	case "ACK":
+	case MsgTypeAck:
 		c.handleAck(&msg)
 
-	case "SUBSCRIBE":
+	case MsgTypeSubscribe:
 		c.handleSubscribe(&msg)
 
-	case "UNSUBSCRIBE":
+	case MsgTypeUnsubscribe:
 		c.handleUnsubscribe(&msg)
 
 	default:
@@ -208,12 +258,19 @@ func (c *Client) handleMessage(message []byte) {
 
 func (c *Client) handlePing() {
 	response := WSMessage{
-		Type:      "PONG",
+		Type:      MsgTypePong,
 		Timestamp: time.Now().UnixMilli(),
 		MessageID: uuid.NewString(),
 	}
 
-	data, _ := json.Marshal(response)
+	data, err := json.Marshal(response)
+	if err != nil {
+		c.logger.Error("Failed to marshal PONG response",
+			zap.Error(err),
+			zap.String("clientID", c.id),
+		)
+		return
+	}
 
 	select {
 	case c.send <- data:
@@ -277,20 +334,44 @@ func (c *Client) handleUnsubscribe(msg *WSMessage) {
 }
 
 func (c *Client) sendSubscriptionConfirmation(categories []string, subscribed bool) {
-	action := "SUBSCRIBED"
+	action := MsgTypeSubscribed
 	if !subscribed {
-		action = "UNSUBSCRIBED"
+		action = MsgTypeUnsubscribed
+	}
+
+	payloadData, err := json.Marshal(SubscribePayload{Categories: categories})
+	if err != nil {
+		c.logger.Error("Failed to marshal subscription payload",
+			zap.Error(err),
+			zap.String("clientID", c.id),
+		)
+		return
 	}
 
 	response := WSMessage{
 		Type:      action,
 		Timestamp: time.Now().UnixMilli(),
 		MessageID: uuid.NewString(),
-		Payload:   MustMarshal(SubscribePayload{Categories: categories}),
+		Payload:   payloadData,
 	}
 
-	data, _ := json.Marshal(response)
-	c.send <- data
+	data, err := json.Marshal(response)
+	if err != nil {
+		c.logger.Error("Failed to marshal subscription confirmation",
+			zap.Error(err),
+			zap.String("clientID", c.id),
+		)
+		return
+	}
+
+	// Use non-blocking send to avoid deadlock if buffer is full
+	select {
+	case c.send <- data:
+	default:
+		c.logger.Warn("Send buffer full on subscription confirmation",
+			zap.String("clientID", c.id),
+		)
+	}
 }
 
 func (c *Client) IsSubscribed(category string) bool {
@@ -317,12 +398,16 @@ func (c *Client) GetSubscriptions() []string {
 }
 
 func (c *Client) GetInfo() ClientInfo {
+	c.metaMutex.RLock()
+	lastPing := c.lastPingAt
+	c.metaMutex.RUnlock()
+
 	return ClientInfo{
 		ID:            c.id,
 		UserID:        c.userID,
 		TenantID:      c.tenantID,
 		ConnectedAt:   c.connectedAt,
-		LastPingAt:    c.lastPingAt,
+		LastPingAt:    lastPing,
 		UserAgent:     c.userAgent,
 		RemoteAddr:    c.remoteAddr,
 		Subscriptions: c.GetSubscriptions(),

@@ -19,37 +19,41 @@ import (
 )
 
 func TestConcurrentConnections(t *testing.T) {
-	// Setup Hub
-	logger := zap.NewNop()
-	hub := NewHub(logger)
-
-	// Setup HTTP Server
-	upgrader := websocket.Upgrader{
-		CheckOrigin: func(r *http.Request) bool { return true },
-	}
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		conn, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			return
-		}
-		client := NewClient(hub, conn, 1, 1, "test-agent", "127.0.0.1", logger)
-		hub.RegisterClient(client)
-		go client.WritePump()
-		go client.ReadPump()
-	}))
-	defer server.Close()
-
-	// Convert http URL to ws URL
-	url := "ws" + server.URL[4:]
-
 	concurrencyLevels := []int{100, 1000, 2000, 5000}
 
 	for _, connections := range concurrencyLevels {
 		t.Run(fmt.Sprintf("%d_connections", connections), func(t *testing.T) {
+			// Fresh hub and server per sub-test to avoid connection accumulation
+			logger := zap.NewNop()
+			hub := NewHub(logger)
+			hub.Start()
+			defer hub.Stop()
+
+			upgrader := websocket.Upgrader{
+				CheckOrigin: func(r *http.Request) bool { return true },
+			}
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				conn, err := upgrader.Upgrade(w, r, nil)
+				if err != nil {
+					return
+				}
+				client := NewClient(hub, conn, 1, 1, "test-agent", "127.0.0.1", logger)
+				hub.RegisterClient(client)
+				go client.WritePump()
+				go client.ReadPump()
+			}))
+			defer server.Close()
+
+			url := "ws" + server.URL[4:]
+
 			var wg sync.WaitGroup
 			var connectedCount int32
 			var errorCount int32
+
+			// Track client connections for cleanup
+			clientConns := make([]*websocket.Conn, 0, connections)
+			var connMu sync.Mutex
 
 			start := time.Now()
 
@@ -70,13 +74,12 @@ func TestConcurrentConnections(t *testing.T) {
 					}
 					atomic.AddInt32(&connectedCount, 1)
 
-					// Keep connection open for a bit
-					// In a real load test, we might want to hold these longer
-					// For this test, we just want to see if we can establish them
+					connMu.Lock()
+					clientConns = append(clientConns, c)
+					connMu.Unlock()
 
 					// Read loop to handle ping/pong and close
 					go func() {
-						defer c.Close()
 						for {
 							_, _, err := c.ReadMessage()
 							if err != nil {
@@ -104,25 +107,25 @@ func TestConcurrentConnections(t *testing.T) {
 				t.Logf("Warning: Client connected count (%d) differs from Hub count (%d)", connectedCount, hubCount)
 			}
 
-			// Cleanup for next run (though we are reusing the same hub, so connections accumulate)
-			// Ideally we should close connections, but for this test we just want to see if it handles the load.
-			// If we want to test "concurrent" as in "active at the same time", we should keep them open.
-			// If we want to test "requests per second", that's different.
-			// The user asked "how many concurrent websocket requests".
+			// Cleanup: close all client connections
+			connMu.Lock()
+			for _, c := range clientConns {
+				c.Close()
+			}
+			connMu.Unlock()
 
-			// To properly clean up, we would need to close the clients we created.
-			// But since we are inside a loop, the previous connections are still active in the background (in the read loop).
-			// So the hub count will increase.
+			// Give the hub time to process unregistrations
+			time.Sleep(200 * time.Millisecond)
 		})
 	}
 }
 
 func BenchmarkWebsocketBroadcast(b *testing.B) {
-	// Setup Hub
 	logger := zap.NewNop()
 	hub := NewHub(logger)
+	hub.Start()
+	defer hub.Stop()
 
-	// Setup HTTP Server
 	upgrader := websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true },
 	}

@@ -17,9 +17,13 @@ Event-driven microservices ERP using **Clean Architecture**, **Kafka**, and **Ke
 | `notification_service` | 8090 | Go | Push notifications |
 | `mailservice` | 8091 | Java | Email templates |
 | `serp_llm` | 8089 | Python | AI/RAG (Gemini) |
+| `discuss_service` | 8092 | Java | Discussions, attachments (S3), WebSockets |
+| `sales` | 8087 | Go | Order management, quotations |
 | `serp_web` | 3000 | TS | Next.js 15 + Redux + Shadcn |
 
 **Infra:** PostgreSQL:5432, Redis:6379, Kafka:9092, Keycloak:8180
+
+> ⚠️ **Port Conflict:** `logistics` and `serp_llm` both use 8089. Set `SERVER_PORT` in `.env` to resolve.
 
 ## Clean Architecture Layers
 
@@ -61,10 +65,10 @@ src/
 - **Models** (`infrastructure/store/model/`): DB persistence only
   - Go: `time.Time`, GORM tags (`gorm:"not null;index"`)
   - Java: `@Entity @Table @Column`, JPA annotations
-- **Example:** `TaskEntity` (business) ↔ `TaskModel` (DB) via `TaskModelMapper`
+- **Mappers** required for conversions (e.g., `TaskEntity` ↔ `TaskModel` via `TaskModelMapper`)
 
 ### Go: Uber FX Dependency Injection
-All components registered in `src/cmd/bootstrap/all.go`:
+All components MUST be registered in `src/cmd/bootstrap/all.go`:
 ```go
 fx.Options(
     fx.Provide(store.NewTaskAdapter),       // Adapter
@@ -74,20 +78,13 @@ fx.Options(
     fx.Invoke(router.RegisterRoutes),       // Routes
 )
 ```
-**⚠️ New components must be registered here or you get runtime panics!**
+**⚠️ Missing registration = runtime panic (build succeeds)!** See [ptm_task/src/cmd/bootstrap/all.go](../ptm_task/src/cmd/bootstrap/all.go) for example.
 
 ### Java: Spring Boot Conventions
 - `@RestController @RequestMapping("/api/v1/...")` for endpoints
 - `@RequiredArgsConstructor` for constructor injection
-- Environment: `.env` → `application.yml` (e.g., `${DB_URL}`)
-- Run: `./run-dev.sh` (loads .env) or `./mvnw spring-boot:run`
-- Migrations: Flyway in `src/main/resources/db/migration/`
-
-### Python: FastAPI (serp_llm)
-- Async SQLAlchemy 2.0 + pgvector
-- Google Gemini via `openai` package (OpenAI-compatible)
-- Alembic migrations: `poetry run alembic upgrade head`
-- Run: `./run-dev.sh` or `poetry run uvicorn src.main:app --reload`
+- Migrations: Flyway in `src/main/resources/db/migration/V{N}__description.sql`
+- Run: `./run-dev.sh` (loads .env) — NOT direct `./mvnw spring-boot:run`
 
 ### Transactions & Kafka Events
 Use `TransactionService.ExecuteInTransaction` in use cases:
@@ -101,32 +98,24 @@ result, err := t.txService.ExecuteInTransactionWithResult(ctx, func(tx *gorm.DB)
 ```
 **Produce Kafka events after successful DB commit.**
 
-### JWT Authentication Flow
-1. Client → API Gateway (validates JWT via Keycloak JWKS)
-2. Gateway extracts `userID`, `tenantID` → forwards to backend
-3. Backend extracts from context:
-   - Go: `utils.GetUserIDFromContext(c)`, `utils.GetTenantIDFromContext(c)`
-   - Java: `authUtils.getCurrentUserId()`, `authUtils.getCurrentTenantId()`
+### JWT Authentication Context
+All authenticated requests flow through API Gateway. Extract user context:
+- **Go:** `utils.GetUserIDFromContext(c)`, `utils.GetTenantIDFromContext(c)`
+- **Java:** `authUtils.getCurrentUserId()`, `authUtils.getCurrentTenantId()`
 
 ## Development Workflows
 
 ### Running Locally
 ```bash
-# Start infrastructure
+# 1. Start infrastructure
 docker-compose -f docker-compose.dev.yml up -d
 
-# Run services (each in separate terminal)
-cd account && ./run-dev.sh       # Java: mvnw spring-boot:run
-cd ptm_task && ./run-dev.sh      # Go: go run src/main.go
-cd serp_llm && ./run-dev.sh      # Python: poetry run uvicorn
-cd serp_web && npm run dev       # Next.js: localhost:3000
+# 2. Run services (each in separate terminal)
+cd account && ./run-dev.sh       # Java: port 8081
+cd ptm_task && ./run-dev.sh      # Go: port 8083
+cd serp_llm && ./run-dev.sh      # Python: port 8089
+cd serp_web && npm run dev       # Next.js: port 3000
 ```
-
-**Infrastructure URLs:**
-- PostgreSQL: `localhost:5432` (serp/serp)
-- Redis: `localhost:6379`
-- Kafka: `localhost:9092`
-- Keycloak: `localhost:8180` (serp-admin/serp-admin)
 
 ### Adding New Features
 
@@ -138,7 +127,7 @@ cd serp_web && npm run dev       # Next.js: localhost:3000
 6. Adapter in `infrastructure/store/adapter/`
 7. Service in `core/service/` → 8. UseCase in `core/usecase/`
 9. Controller in `ui/controller/` + route in `ui/router/`
-10. **Register in `cmd/bootstrap/all.go`** ← common miss!
+10. **Register ALL new components in `cmd/bootstrap/all.go`** ← critical!
 
 **Java Services (9 steps):**
 1. Entity (`@SuperBuilder extends BaseEntity`)

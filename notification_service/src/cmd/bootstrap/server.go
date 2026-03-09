@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/serp/notification-service/src/core/websocket"
 	"github.com/serp/notification-service/src/kernel/properties"
 	"github.com/serp/notification-service/src/ui/controller.go"
 	"github.com/serp/notification-service/src/ui/middleware"
@@ -59,6 +60,21 @@ func StartServer(lc fx.Lifecycle, engine *gin.Engine, appProps *properties.AppPr
 		},
 		OnStop: func(ctx context.Context) error {
 			zapLogger.Info("Shutting down HTTP server")
+			return nil
+		},
+	})
+}
+
+func StartWebSocketHub(lc fx.Lifecycle, hub websocket.IWebSocketHub, logger *zap.Logger) {
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			hub.Start()
+			logger.Info("WebSocket Hub started via FX lifecycle")
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			hub.Stop()
+			logger.Info("WebSocket Hub stopped via FX lifecycle")
 			return nil
 		},
 	})

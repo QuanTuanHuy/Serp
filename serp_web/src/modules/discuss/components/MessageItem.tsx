@@ -6,7 +6,7 @@ Description: Part of Serp Project - Message item component for discuss module
 'use client';
 
 import React from 'react';
-import { cn } from '@/shared/utils';
+import { cn, getAvatarColor } from '@/shared/utils';
 import {
   Avatar,
   AvatarFallback,
@@ -21,6 +21,7 @@ import { AttachmentPreview } from './AttachmentPreview';
 interface MessageItemProps {
   message: Message;
   isOwn: boolean;
+  currentUserId: string;
   showAvatar?: boolean;
   isGrouped?: boolean;
   onEdit?: (message: Message) => void;
@@ -51,6 +52,7 @@ const getUserInitials = (name: string) => {
 export const MessageItem: React.FC<MessageItemProps> = ({
   message,
   isOwn,
+  currentUserId,
   showAvatar = true,
   isGrouped = false,
   onEdit,
@@ -64,7 +66,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   const handleReactionClick = (emoji: string) => {
     // Check if user already reacted with this emoji
     const existingReaction = message.reactions.find((r) => r.emoji === emoji);
-    const currentUserId = '1'; // TODO: Get from auth context
 
     if (existingReaction?.userIds.includes(currentUserId)) {
       onRemoveReaction?.(message.id, emoji);
@@ -72,6 +73,10 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       onReaction?.(message.id, emoji);
     }
   };
+
+  // Get sender info from message.sender (new structure)
+  const senderName = message.sender?.name || 'Unknown User';
+  const senderAvatar = message.sender?.avatarUrl;
 
   return (
     <div
@@ -87,16 +92,16 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       <div className='flex-shrink-0'>
         {showAvatar && !isGrouped ? (
           <Avatar className='h-10 w-10 ring-2 ring-white dark:ring-slate-900 shadow-sm'>
-            <AvatarImage src={message.userAvatar} alt={message.userName} />
+            {senderAvatar && (
+              <AvatarImage src={senderAvatar} alt={senderName} />
+            )}
             <AvatarFallback
               className={cn(
-                'text-xs font-semibold',
-                isOwn
-                  ? 'bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white'
-                  : 'bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-600 text-slate-700 dark:text-slate-200'
+                'text-xs font-semibold text-white bg-gradient-to-br',
+                getAvatarColor(senderName)
               )}
             >
-              {getUserInitials(message.userName)}
+              {getUserInitials(senderName)}
             </AvatarFallback>
           </Avatar>
         ) : (
@@ -115,7 +120,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         {!isGrouped && !isOwn && (
           <div className='flex items-center gap-2 mb-1 px-1'>
             <span className='text-xs font-bold text-slate-700 dark:text-slate-300'>
-              {message.userName}
+              {senderName}
             </span>
             <span className='text-xs text-slate-400 dark:text-slate-500'>
               {formatMessageTime(message.createdAt)}
@@ -210,14 +215,13 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
           {/* Reactions */}
           {message.reactions && message.reactions.length > 0 && (
-            <div className='absolute -bottom-3 left-4 flex gap-1 flex-wrap'>
-              {message.reactions.map((reaction, idx) => {
-                const currentUserId = '1'; // TODO: Get from auth context
+            <div className='absolute -bottom-3 left-4 flex flex-row items-center gap-1 min-w-max'>
+              {message.reactions.map((reaction) => {
                 const isUserReacted = reaction.userIds.includes(currentUserId);
 
                 return (
                   <button
-                    key={idx}
+                    key={reaction.emoji}
                     onClick={() => handleReactionClick(reaction.emoji)}
                     className={cn(
                       'h-6 px-2 text-xs rounded-full transition-all duration-200',

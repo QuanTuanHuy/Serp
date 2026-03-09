@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -26,9 +27,10 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 
-@Component("brevoProvider")
+@Component
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(name = "app.email.brevo.enable", havingValue = "true")
 public class BrevoProviderAdapter implements IEmailProviderPort {
     
     private final WebClient brevoWebClient;
@@ -53,6 +55,11 @@ public class BrevoProviderAdapter implements IEmailProviderPort {
     @Override
     public String getProviderName() {
         return EmailProvider.BREVO.name();
+    }
+
+    @Override
+    public EmailProvider getProviderType() {
+        return EmailProvider.BREVO;
     }
     
     @Override

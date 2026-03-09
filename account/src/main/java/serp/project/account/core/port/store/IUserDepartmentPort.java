@@ -8,6 +8,7 @@ package serp.project.account.core.port.store;
 import serp.project.account.core.domain.entity.UserDepartmentEntity;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface IUserDepartmentPort {
@@ -32,6 +33,8 @@ public interface IUserDepartmentPort {
     Long countByOrganizationId(Long organizationId);
 
     Long countActiveByOrganizationId(Long organizationId);
+
+    Map<Long, Long> countByDepartmentIds(List<Long> departmentIds);
 
     Boolean existsByUserIdAndDepartmentId(Long userId, Long departmentId);
 

@@ -29,4 +29,6 @@ public interface IEmailTemplatePort {
     void delete(Long id);
 
     boolean existsByCode(String code);
+
+    boolean existsByCodeAndTenantId(String code, Long tenantId);
 }

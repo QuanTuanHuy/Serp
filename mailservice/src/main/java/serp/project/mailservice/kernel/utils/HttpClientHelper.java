@@ -11,8 +11,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
-import serp.project.mailservice.core.domain.constant.Constants;
 import serp.project.mailservice.core.exception.AppException;
+import serp.project.mailservice.core.exception.ErrorCode;
 
 import java.time.Duration;
 
@@ -38,9 +38,8 @@ public class HttpClientHelper {
                         .filter(this::isRetryableError)
                         .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
                             log.error("Retry exhausted for GET request to: {}", uri);
-                            return new AppException(
-                                    "Service temporarily unavailable after retries",
-                                    Constants.HttpStatusCode.INTERNAL_SERVER_ERROR);
+                            return new AppException(ErrorCode.INTERNAL_SERVER_ERROR,
+                                    "Service temporarily unavailable after retries");
                         }))
                 .doOnSuccess(response -> log.info("GET request successful to: {}", uri))
                 .doOnError(error -> log.error("GET request failed to: {}", uri));
@@ -62,9 +61,8 @@ public class HttpClientHelper {
                         .filter(this::isRetryableError)
                         .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
                             log.error("Retry exhausted for POST request to: {}", uri);
-                            return new AppException(
-                                    "Service temporarily unavailable after retries",
-                                    Constants.HttpStatusCode.INTERNAL_SERVER_ERROR);
+                            return new AppException(ErrorCode.INTERNAL_SERVER_ERROR,
+                                    "Service temporarily unavailable after retries");
                         }))
                 .doOnSuccess(response -> log.info("POST request successful to: {}", uri))
                 .doOnError(error -> log.error("POST request failed to: {}", uri));
@@ -109,9 +107,7 @@ public class HttpClientHelper {
                 .timeout(Duration.ofSeconds(10))
                 .onErrorMap(throwable -> {
                     if (throwable instanceof java.util.concurrent.TimeoutException) {
-                        return new AppException(
-                                "Request timeout",
-                                Constants.HttpStatusCode.INTERNAL_SERVER_ERROR);
+                        return new AppException(ErrorCode.INTERNAL_SERVER_ERROR, "Request timeout");
                     }
                     return throwable;
                 });

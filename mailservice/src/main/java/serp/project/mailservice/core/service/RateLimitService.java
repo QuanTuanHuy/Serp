@@ -18,7 +18,7 @@ import java.time.Duration;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class RateLimitService implements serp.project.mailservice.core.service.IRateLimitService {
+public class RateLimitService implements IRateLimitService {
 
     private final IRedisCachePort redisCachePort;
     private final RateLimitProperties rateLimitProperties;
@@ -61,7 +61,7 @@ public class RateLimitService implements serp.project.mailservice.core.service.I
         
         return checkRateLimit(
                 rateLimitKey,
-                rateLimitProperties.getDefaultPerTenantPerMinute(),
+                rateLimitProperties.getDefaultPerUserPerMinute(),
                 Duration.ofMinutes(1)
         );
     }

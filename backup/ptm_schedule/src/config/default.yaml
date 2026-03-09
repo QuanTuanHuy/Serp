@@ -1,4 +1,0 @@
-app:
-  name: Personal Task Manager - Schedule
-  path: /ptm/schedule
-  port: 8084

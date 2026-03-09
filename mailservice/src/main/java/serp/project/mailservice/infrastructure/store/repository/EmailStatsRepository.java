@@ -40,4 +40,6 @@ public interface EmailStatsRepository extends JpaRepository<EmailStatsModel, Lon
                                         @Param("status") EmailStatus status,
                                         @Param("fromDate") LocalDate fromDate,
                                         @Param("toDate") LocalDate toDate);
+
+    long deleteByStatDateBefore(LocalDate cutoffDate);
 }

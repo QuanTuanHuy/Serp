@@ -11,6 +11,8 @@ const (
 
 	GeneralNotFound = 404
 
+	GeneralTooManyRequests = 429
+
 	GeneralSuccess = 200
 )
 

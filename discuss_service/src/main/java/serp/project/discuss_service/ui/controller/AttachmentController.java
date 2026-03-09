@@ -1,0 +1,93 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project - Attachment REST Controller
+ */
+
+package serp.project.discuss_service.ui.controller;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import io.github.serp.platform.security.context.SerpAuthContext;
+import serp.project.discuss_service.core.domain.dto.GeneralResponse;
+import serp.project.discuss_service.core.domain.dto.response.AttachmentResponse;
+import serp.project.discuss_service.core.exception.AppException;
+import serp.project.discuss_service.core.exception.ErrorCode;
+import serp.project.discuss_service.core.usecase.AttachmentUseCase;
+import serp.project.discuss_service.kernel.utils.ResponseUtils;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/v1/attachments")
+@RequiredArgsConstructor
+@Slf4j
+public class AttachmentController {
+
+    private final AttachmentUseCase attachmentUseCase;
+    private final SerpAuthContext authContext;
+    private final ResponseUtils responseUtils;
+
+    @GetMapping("/{attachmentId}")
+    public ResponseEntity<GeneralResponse<AttachmentResponse>> getAttachment(
+            @PathVariable Long attachmentId) {
+        Long tenantId = authContext.getCurrentTenantId()
+                .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
+
+        log.debug("Getting attachment metadata: {}", attachmentId);
+
+        AttachmentResponse response = attachmentUseCase.getAttachment(attachmentId, tenantId);
+
+        return ResponseEntity.ok(responseUtils.success(response));
+    }
+
+    @GetMapping("/message/{messageId}")
+    public ResponseEntity<GeneralResponse<List<AttachmentResponse>>> getAttachmentsByMessage(
+            @PathVariable Long messageId) {
+        Long tenantId = authContext.getCurrentTenantId()
+                .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
+
+        log.debug("Getting attachments for message: {}", messageId);
+
+        List<AttachmentResponse> responses = attachmentUseCase.getAttachmentsByMessage(messageId, tenantId);
+
+        return ResponseEntity.ok(responseUtils.success(responses));
+    }
+
+    @GetMapping("/{attachmentId}/download-url")
+    public ResponseEntity<GeneralResponse<Map<String, String>>> getDownloadUrl(
+            @PathVariable Long attachmentId,
+            @RequestParam(defaultValue = "60") int expirationMinutes) {
+        Long tenantId = authContext.getCurrentTenantId()
+                .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
+
+        log.info("Generating download URL for attachment: {}", attachmentId);
+
+        String downloadUrl = attachmentUseCase.getDownloadUrl(attachmentId, tenantId, expirationMinutes);
+
+        Map<String, String> response = Map.of(
+                "attachmentId", attachmentId.toString(),
+                "downloadUrl", downloadUrl,
+                "expiresInMinutes", String.valueOf(expirationMinutes)
+        );
+
+        return ResponseEntity.ok(responseUtils.success(response));
+    }
+
+    @DeleteMapping("/{attachmentId}")
+    public ResponseEntity<GeneralResponse<?>> deleteAttachment(
+            @PathVariable Long attachmentId) {
+        Long userId = authContext.getCurrentUserId()
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
+        Long tenantId = authContext.getCurrentTenantId()
+                .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
+
+        log.info("User {} deleting attachment: {}", userId, attachmentId);
+
+        attachmentUseCase.deleteAttachment(attachmentId, tenantId, userId);
+
+        return ResponseEntity.ok(responseUtils.status("Attachment deleted successfully"));
+    }
+}

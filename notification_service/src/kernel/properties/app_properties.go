@@ -24,13 +24,18 @@ type LoggingProperties struct {
 	Level string `mapstructure:"level"`
 }
 
+type WebSocketProperties struct {
+	AllowedOrigins []string `mapstructure:"allowedOrigins"`
+}
+
 type AppProperties struct {
-	Name       string             `mapstructure:"name"`
-	Path       string             `mapstructure:"path"`
-	Port       int                `mapstructure:"port"`
-	Logging    LoggingProperties  `mapstructure:"logging"`
-	Datasource DatabaseProperties `mapstructure:"datasource"`
-	Redis      RedisProperties    `mapstructure:"redis"`
-	Keycloak   KeycloakProperties `mapstructure:"keycloak"`
-	Kafka      KafkaProperties    `mapstructure:"kafka"`
+	Name       string              `mapstructure:"name"`
+	Path       string              `mapstructure:"path"`
+	Port       int                 `mapstructure:"port"`
+	Logging    LoggingProperties   `mapstructure:"logging"`
+	Datasource DatabaseProperties  `mapstructure:"datasource"`
+	Redis      RedisProperties     `mapstructure:"redis"`
+	Keycloak   KeycloakProperties  `mapstructure:"keycloak"`
+	Kafka      KafkaProperties     `mapstructure:"kafka"`
+	WebSocket  WebSocketProperties `mapstructure:"websocket"`
 }

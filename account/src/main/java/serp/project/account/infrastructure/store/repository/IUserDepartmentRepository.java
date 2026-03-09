@@ -41,5 +41,9 @@ public interface IUserDepartmentRepository extends IBaseRepository<UserDepartmen
             + "WHERE d.organizationId = :organizationId AND ud.isActive = true")
     Long countByOrganizationIdAndIsActive(Long organizationId, Boolean isActive);
 
+    @Query("SELECT ud.departmentId, COUNT(ud) FROM UserDepartmentModel ud "
+            + "WHERE ud.departmentId IN :departmentIds AND ud.isActive = true GROUP BY ud.departmentId")
+    List<Object[]> countByDepartmentIds(List<Long> departmentIds);
+
     Boolean existsByUserIdAndDepartmentId(Long userId, Long departmentId);
 }

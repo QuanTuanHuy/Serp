@@ -40,7 +40,7 @@ public class EmailTemplateModel {
     @Column(name = "name", nullable = false, length = 255)
     private String name;
 
-    @Column(name = "code", nullable = false, unique = true, length = 100)
+    @Column(name = "code", nullable = false, length = 100)
     private String code;
 
     @Column(name = "description", columnDefinition = "TEXT")

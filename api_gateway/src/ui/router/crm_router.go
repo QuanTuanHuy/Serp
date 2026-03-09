@@ -19,9 +19,16 @@ func RegisterCrmRoutes(
 	customerController *crm.CustomerController,
 	contactController *crm.ContactController,
 	genericProxyController *common.GenericProxyController,
+	jwtMiddleware *middleware.JWTMiddleware,
+	rateLimitMiddleware *middleware.RateLimitMiddleware,
 ) {
-	// Proxy experiment
-	group.Any("/crm/api/v1/proxy/*proxyPath", genericProxyController.ProxyToCRM)
+	crmProxyGroup := group.Group("/crm/api/v1/proxy")
+	{
+		crmProxyGroup.Use(
+			jwtMiddleware.AuthenticateJWT(),
+			rateLimitMiddleware.UserRateLimit(),
+		).Any("/*proxyPath", genericProxyController.ProxyHandler("crm"))
+	}
 
 	leadsV1 := group.Group("/crm/api/v1/leads")
 	{

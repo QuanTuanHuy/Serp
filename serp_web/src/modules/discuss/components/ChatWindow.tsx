@@ -5,8 +5,15 @@ Description: Part of Serp Project - Chat window component for discuss module
 
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { cn } from '@/shared/utils';
+import React, {
+  useState,
+  useRef,
+  useCallback,
+  useMemo,
+  useEffect,
+} from 'react';
+import { toast } from 'sonner';
+import { cn, getAvatarColor } from '@/shared/utils';
 import {
   Avatar,
   AvatarFallback,
@@ -30,17 +37,28 @@ import { MessageList, type MessageListRef } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { OnlineStatusIndicator } from './OnlineStatusIndicator';
 import { SearchDialog } from './SearchDialog';
+import { ChannelMembersPanel } from './ChannelMembersPanel';
+import { ScrollToBottomButton } from './ScrollToBottomButton';
+import { useWebSocket } from '../context/WebSocketContext';
 import {
   useGetMessagesQuery,
+  useLazyGetMessagesBeforeQuery,
   useSendMessageMutation,
+  useSendMessageWithFilesMutation,
+  useEditMessageMutation,
+  useDeleteMessageMutation,
   useAddReactionMutation,
   useRemoveReactionMutation,
+  useGetChannelPresenceQuery,
 } from '../api/discussApi';
 import type { Channel, Message, Attachment } from '../types';
+import type { UserStatus } from '../api/presence.api';
 
 interface ChatWindowProps {
   channel: Channel;
   currentUserId: string;
+  currentUserName?: string;
+  currentUserAvatarUrl?: string;
   className?: string;
 }
 
@@ -67,107 +85,515 @@ const getUserInitials = (name: string) => {
 export const ChatWindow: React.FC<ChatWindowProps> = ({
   channel,
   currentUserId,
+  currentUserName,
+  currentUserAvatarUrl,
   className,
 }) => {
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
-  const [page, setPage] = useState(1);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [membersPanelOpen, setMembersPanelOpen] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<Map<string, string>>(
+    new Map()
+  );
   const messageListRef = useRef<MessageListRef>(null);
 
-  // Fetch messages
+  // Cursor-based pagination state
+  const [allMessages, setAllMessages] = useState<Message[]>([]);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [isNearBottom, setIsNearBottom] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [lastReadMessageId, setLastReadMessageId] = useState<string | null>(
+    null
+  );
+
+  // Refs for stable references in callbacks
+  const isNearBottomRef = useRef(true);
+  const isInitialLoadRef = useRef(true);
+  const prevChannelIdRef = useRef(channel.id);
+  const typingTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+
+  // Initial load - always page 1 for latest messages
   const {
     data: messagesResponse,
-    isLoading,
+    isLoading: isInitialLoading,
     isError,
   } = useGetMessagesQuery({
     channelId: channel.id,
-    pagination: { page, limit: 50 },
+    pagination: { page: 1, limit: 50 },
   });
 
-  // Send message mutation
+  // Lazy query for loading more (cursor-based)
+  const [fetchMoreMessages, { isLoading: isLoadingMore }] =
+    useLazyGetMessagesBeforeQuery();
+
+  const isLoading = isInitialLoading || isLoadingMore;
+
+  // Presence query for channel
+  const { data: presenceData } = useGetChannelPresenceQuery(channel.id);
+
+  // Helper: map backend UserStatus to FE OnlineStatus
+  const mapUserStatus = (status: UserStatus): 'online' | 'busy' | 'offline' => {
+    switch (status) {
+      case 'ONLINE':
+        return 'online';
+      case 'BUSY':
+        return 'busy';
+      case 'OFFLINE':
+        return 'offline';
+      default:
+        return 'offline';
+    }
+  };
+
+  // Send message mutations
   const [sendMessage] = useSendMessageMutation();
+  const [sendMessageWithFiles] = useSendMessageWithFilesMutation();
+  const [editMessage] = useEditMessageMutation();
+  const [deleteMessage] = useDeleteMessageMutation();
   const [addReaction] = useAddReactionMutation();
   const [removeReaction] = useRemoveReactionMutation();
 
-  const messages = messagesResponse?.data?.data || [];
-  const pagination = messagesResponse?.data?.pagination;
-  const hasMore = pagination ? page < pagination.totalPages : false;
+  // Get WebSocket API from context (single connection managed by page.tsx)
+  const wsApi = useWebSocket();
 
-  const handleSendMessage = async (
-    content: string,
-    attachments?: Attachment[]
-  ) => {
-    try {
-      await sendMessage({
-        channelId: channel.id,
-        data: {
-          content,
-          type: 'TEXT',
-          attachmentIds: attachments?.map((att) => att.id),
-          parentId: replyingTo?.id,
-        },
-        attachments: attachments || [],
-      }).unwrap();
+  // Unified effect: handles both channel changes and RTK cache updates
+  // Combines the old channel-change reset and messagesResponse sync to avoid
+  // the flash of "No messages yet" when switching channels.
+  useEffect(() => {
+    const isChannelChange = prevChannelIdRef.current !== channel.id;
+    prevChannelIdRef.current = channel.id;
 
-      // Clear reply state
-      setReplyingTo(null);
-      setEditingMessage(null);
-    } catch (error) {
-      console.error('Failed to send message:', error);
+    if (isChannelChange) {
+      // Reset pagination/UI state on channel change
+      setHasMoreMessages(true);
+      setUnreadCount(0);
+      setLastReadMessageId(null);
+      setIsNearBottom(true);
+      isInitialLoadRef.current = true;
     }
-  };
 
-  const handleLoadMore = () => {
-    setPage((prev) => prev + 1);
-  };
+    if (messagesResponse?.data?.items) {
+      if (isChannelChange || isInitialLoadRef.current) {
+        // Channel change or initial load: replace all messages with cached/fetched data
+        setAllMessages(messagesResponse.data.items);
+      } else {
+        // RTK cache update (refetch from invalidation): merge strategy
+        // Keeps WS-added messages and load-more messages that aren't in the refetched page
+        setAllMessages((prev) => {
+          const responseItems = messagesResponse.data.items;
+          const responseIds = new Set(responseItems.map((m: Message) => m.id));
 
-  const handleEditMessage = (message: Message) => {
+          const latestResponseTime =
+            responseItems.length > 0
+              ? Math.max(
+                  ...responseItems.map((m: Message) =>
+                    new Date(m.createdAt).getTime()
+                  )
+                )
+              : 0;
+
+          // Keep messages not in the response
+          const keptMessages = prev.filter((m) => !responseIds.has(m.id));
+
+          // Older messages (loaded via load-more) stay before response items
+          const olderMessages = keptMessages.filter(
+            (m) =>
+              !m.id.startsWith('temp-') &&
+              new Date(m.createdAt).getTime() <= latestResponseTime
+          );
+
+          // Newer messages (WS-added or temp/optimistic) stay after response items
+          const newerMessages = keptMessages.filter(
+            (m) =>
+              m.id.startsWith('temp-') ||
+              new Date(m.createdAt).getTime() > latestResponseTime
+          );
+
+          return [...olderMessages, ...responseItems, ...newerMessages];
+        });
+      }
+      setHasMoreMessages(messagesResponse.data.hasNext);
+      isInitialLoadRef.current = false;
+    } else if (isChannelChange) {
+      // Channel changed but no cached data yet (loading state)
+      setAllMessages([]);
+    }
+  }, [channel.id, messagesResponse]);
+
+  // Sync isNearBottom to ref
+  useEffect(() => {
+    isNearBottomRef.current = isNearBottom;
+    // Clear unread when user scrolls to bottom
+    if (isNearBottom) {
+      setUnreadCount(0);
+      setLastReadMessageId(null);
+    }
+  }, [isNearBottom]);
+
+  // Register active channel with WebSocket context
+  useEffect(() => {
+    wsApi.setActiveChannel(channel.id);
+    return () => wsApi.setActiveChannel(undefined);
+  }, [channel.id, wsApi]);
+
+  // Register onMessage callback for real-time message handling
+  useEffect(() => {
+    wsApi.setOnMessage((message) => {
+      console.log('[ChatWindow] Received real-time message:', message);
+
+      setAllMessages((prev) => {
+        // Check if this message matches an optimistic temp message
+        const tempIndex = prev.findIndex(
+          (m) =>
+            m.id.startsWith('temp-') &&
+            m.senderId === message.senderId &&
+            m.content === message.content
+        );
+
+        if (tempIndex !== -1) {
+          // Replace temp with real message from server
+          const updated = [...prev];
+          updated[tempIndex] = message;
+          return updated;
+        }
+
+        // Normal duplicate check
+        if (prev.some((m) => m.id === message.id)) {
+          console.log('[ChatWindow] Duplicate message ignored:', message.id);
+          return prev;
+        }
+
+        if (!isNearBottomRef.current) {
+          setUnreadCount((count) => count + 1);
+          if (prev.length > 0) {
+            setLastReadMessageId(
+              (current) => current || prev[prev.length - 1].id
+            );
+          }
+        }
+
+        return [...prev, message];
+      });
+    });
+    return () => wsApi.setOnMessage(undefined);
+  }, [wsApi]);
+
+  // Register onTypingUpdate callback for typing indicators
+  useEffect(() => {
+    wsApi.setOnTypingUpdate((userId, userName, isTyping) => {
+      // Don't show typing indicator for the current user
+      if (userId === currentUserId) return;
+
+      console.log('[ChatWindow] Typing update:', userId, userName, isTyping);
+
+      // Clear any existing timeout for this user
+      const existingTimeout = typingTimeoutsRef.current.get(userId);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+        typingTimeoutsRef.current.delete(userId);
+      }
+
+      if (isTyping) {
+        setTypingUsers((prev) => {
+          const updated = new Map(prev);
+          updated.set(userId, userName);
+          return updated;
+        });
+
+        // Auto-clear after 5 seconds if no new TYPING_START
+        const timeout = setTimeout(() => {
+          setTypingUsers((prev) => {
+            const updated = new Map(prev);
+            updated.delete(userId);
+            return updated;
+          });
+          typingTimeoutsRef.current.delete(userId);
+        }, 5000);
+        typingTimeoutsRef.current.set(userId, timeout);
+      } else {
+        setTypingUsers((prev) => {
+          const updated = new Map(prev);
+          updated.delete(userId);
+          return updated;
+        });
+      }
+    });
+
+    return () => {
+      wsApi.setOnTypingUpdate(undefined);
+      // Clear all timeouts on cleanup
+      typingTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
+      typingTimeoutsRef.current.clear();
+    };
+  }, [wsApi, currentUserId]);
+
+  const messages = allMessages;
+  const hasMore = hasMoreMessages;
+
+  const handleSendMessage = useCallback(
+    async (
+      content: string,
+      filesOrAttachments?: any[] // Can be File[] or Attachment[]
+    ) => {
+      try {
+        // Check if we're editing a message
+        if (editingMessage) {
+          await editMessage({
+            channelId: channel.id,
+            messageId: editingMessage.id,
+            content,
+          }).unwrap();
+
+          setEditingMessage(null);
+          return;
+        }
+
+        // Check if files are File objects (new) or Attachment objects (old)
+        const files = filesOrAttachments?.filter(
+          (item) => item instanceof File
+        ) as File[];
+
+        if (files && files.length > 0) {
+          // Send message with files - always use REST for file uploads
+          await sendMessageWithFiles({
+            channelId: channel.id,
+            content,
+            files,
+            parentId: replyingTo?.id,
+          }).unwrap();
+        } else {
+          // Text-only message - try WebSocket first, fallback to REST
+          if (wsApi?.isConnected) {
+            console.log('[ChatWindow] Using WebSocket to send message');
+            wsApi.sendMessage(content, replyingTo?.id);
+
+            // Optimistic update: add temp message so sender sees it immediately
+            const now = new Date().toISOString();
+            const tempMessage: Message = {
+              id: `temp-${Date.now()}`,
+              channelId: channel.id,
+              senderId: currentUserId,
+              tenantId: '',
+              content,
+              messageType: 'STANDARD',
+              type: 'TEXT',
+              parentId: replyingTo?.id,
+              threadCount: 0,
+              mentions: [],
+              reactions: [],
+              attachments: [],
+              isEdited: false,
+              isDeleted: false,
+              readCount: 0,
+              isSentByMe: true,
+              sender: {
+                id: currentUserId,
+                name: currentUserName || '',
+                email: '',
+                avatarUrl: currentUserAvatarUrl,
+              },
+              createdAt: now,
+              updatedAt: now,
+            };
+            setAllMessages((prev) => [...prev, tempMessage]);
+          } else {
+            console.log('[ChatWindow] WebSocket not connected, using REST');
+            await sendMessage({
+              channelId: channel.id,
+              content,
+              parentId: replyingTo?.id,
+              currentUserId,
+            }).unwrap();
+          }
+        }
+
+        // Clear reply state
+        setReplyingTo(null);
+      } catch (error) {
+        console.error('Failed to send/edit message:', error);
+        alert('Failed to send message. Please try again.');
+      }
+    },
+    [
+      channel.id,
+      editingMessage,
+      replyingTo,
+      wsApi?.isConnected,
+      currentUserId,
+      currentUserName,
+      currentUserAvatarUrl,
+      editMessage,
+      sendMessageWithFiles,
+      sendMessage,
+      wsApi,
+    ]
+  );
+
+  const handleLoadMore = useCallback(async () => {
+    if (!hasMoreMessages || isLoadingMore) {
+      console.log('[ChatWindow] Skip load more:', {
+        hasMoreMessages,
+        isLoadingMore,
+      });
+      return;
+    }
+
+    // Find the oldest message by createdAt timestamp
+    // API returns messages DESC (newest first), so we need the one with smallest timestamp
+    const oldestMessage = allMessages.reduce((oldest, current) => {
+      if (!oldest) return current;
+      return new Date(current.createdAt).getTime() <
+        new Date(oldest.createdAt).getTime()
+        ? current
+        : oldest;
+    }, allMessages[0]);
+
+    if (!oldestMessage) {
+      console.warn('[ChatWindow] No messages to load from');
+      return;
+    }
+
+    console.log('[ChatWindow] Loading more messages before:', oldestMessage.id);
+
+    // Retry logic with exponential backoff
+    const maxRetries = 3;
+    let attempt = 0;
+
+    while (attempt < maxRetries) {
+      try {
+        const result = await fetchMoreMessages({
+          channelId: channel.id,
+          beforeId: oldestMessage.id,
+          limit: 50,
+        }).unwrap();
+
+        console.log(
+          '[ChatWindow] Loaded',
+          result.data.length,
+          'older messages'
+        );
+
+        if (result.data && result.data.length > 0) {
+          // Append older messages to array (MessageList will sort by createdAt)
+          setAllMessages((prev) => [...result.data, ...prev]);
+
+          // If we got fewer than requested, no more messages exist
+          setHasMoreMessages(result.data.length === 50);
+        } else {
+          setHasMoreMessages(false);
+        }
+        return; // Success - exit retry loop
+      } catch (error) {
+        attempt++;
+        console.error(
+          `[ChatWindow] Load more attempt ${attempt}/${maxRetries} failed:`,
+          error
+        );
+
+        if (attempt >= maxRetries) {
+          // Final failure - show error toast
+          toast.error('Failed to load messages', {
+            description: 'Please check your connection and try again',
+            action: {
+              label: 'Retry',
+              onClick: () => handleLoadMore(),
+            },
+          });
+          return;
+        }
+
+        // Wait before retry (exponential backoff: 1s, 2s, 4s)
+        const delayMs = 1000 * Math.pow(2, attempt - 1);
+        console.log(`[ChatWindow] Retrying in ${delayMs}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }, [
+    allMessages,
+    hasMoreMessages,
+    isLoadingMore,
+    channel.id,
+    fetchMoreMessages,
+  ]);
+
+  const scrollToBottom = useCallback(() => {
+    if (messageListRef.current) {
+      messageListRef.current.scrollToBottom();
+    }
+    // Clear unread tracking
+    setUnreadCount(0);
+    setLastReadMessageId(null);
+  }, []);
+
+  const handleEditMessage = useCallback((message: Message) => {
     setEditingMessage(message);
     setReplyingTo(null);
-  };
+  }, []);
 
-  const handleDeleteMessage = (message: Message) => {
-    // TODO: Implement delete message
-    console.log('Delete message:', message);
-  };
+  const handleDeleteMessage = useCallback(
+    async (message: Message) => {
+      if (!confirm('Are you sure you want to delete this message?')) {
+        return;
+      }
 
-  const handleReplyMessage = (message: Message) => {
+      try {
+        await deleteMessage({
+          channelId: channel.id,
+          messageId: message.id,
+        }).unwrap();
+      } catch (error) {
+        console.error('Failed to delete message:', error);
+        alert('Failed to delete message. Please try again.');
+      }
+    },
+    [channel.id, deleteMessage]
+  );
+
+  const handleReplyMessage = useCallback((message: Message) => {
     setReplyingTo(message);
     setEditingMessage(null);
-  };
+  }, []);
 
-  const handleReaction = async (messageId: string, emoji: string) => {
-    try {
-      await addReaction({
-        messageId,
-        channelId: channel.id,
-        data: { emoji },
-      }).unwrap();
-    } catch (error) {
-      console.error('Failed to add reaction:', error);
-    }
-  };
+  const handleReaction = useCallback(
+    async (messageId: string, emoji: string) => {
+      try {
+        await addReaction({
+          messageId,
+          channelId: channel.id,
+          emoji,
+          currentUserId,
+        }).unwrap();
+      } catch (error) {
+        console.error('Failed to add reaction:', error);
+      }
+    },
+    [channel.id, currentUserId, addReaction]
+  );
 
-  const handleRemoveReaction = async (messageId: string, emoji: string) => {
-    try {
-      await removeReaction({
-        messageId,
-        channelId: channel.id,
-        emoji,
-      }).unwrap();
-    } catch (error) {
-      console.error('Failed to remove reaction:', error);
-    }
-  };
+  const handleRemoveReaction = useCallback(
+    async (messageId: string, emoji: string) => {
+      try {
+        await removeReaction({
+          messageId,
+          channelId: channel.id,
+          emoji,
+          currentUserId,
+        }).unwrap();
+      } catch (error) {
+        console.error('Failed to remove reaction:', error);
+      }
+    },
+    [channel.id, currentUserId, removeReaction]
+  );
 
-  const handleCancelReply = () => {
+  const handleCancelReply = useCallback(() => {
     setReplyingTo(null);
-  };
+  }, []);
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     setEditingMessage(null);
-  };
+  }, []);
 
   return (
     <div
@@ -184,8 +610,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             {/* Avatar/Icon */}
             {channel.type === 'DIRECT' || channel.avatarUrl ? (
               <Avatar className='h-11 w-11 ring-2 ring-white dark:ring-slate-900 shadow-sm'>
-                <AvatarImage src={channel.avatarUrl} alt={channel.name} />
-                <AvatarFallback className='bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-sm font-semibold'>
+                {channel.avatarUrl && (
+                  <AvatarImage src={channel.avatarUrl} alt={channel.name} />
+                )}
+                <AvatarFallback
+                  className={cn(
+                    'text-sm font-semibold text-white bg-gradient-to-br',
+                    getAvatarColor(channel.name)
+                  )}
+                >
                   {getUserInitials(channel.name)}
                 </AvatarFallback>
               </Avatar>
@@ -204,16 +637,51 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               </div>
               <div className='flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400'>
                 {channel.type === 'DIRECT' ? (
-                  <span className='flex items-center gap-1.5'>
-                    <OnlineStatusIndicator status='online' size='sm' />
-                    <span className='text-emerald-600 dark:text-emerald-400 font-medium'>
-                      Online
-                    </span>
-                  </span>
+                  (() => {
+                    // Find the other user's presence from channel presence data
+                    const presence = presenceData?.data;
+                    const allUsers = presence?.statusGroups
+                      ? Object.values(presence.statusGroups).flat()
+                      : [];
+                    const otherUser = allUsers.find(
+                      (u) => String(u.userId) !== currentUserId
+                    );
+                    const status = otherUser
+                      ? mapUserStatus(otherUser.status)
+                      : 'offline';
+                    const statusText = otherUser?.isOnline
+                      ? status === 'busy'
+                        ? 'Busy'
+                        : 'Online'
+                      : otherUser?.lastSeenText || 'Offline';
+
+                    return (
+                      <span className='flex items-center gap-1.5'>
+                        <OnlineStatusIndicator status={status} size='sm' />
+                        <span
+                          className={cn(
+                            'font-medium',
+                            status === 'online'
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : status === 'busy'
+                                ? 'text-amber-600 dark:text-amber-400'
+                                : 'text-slate-500 dark:text-slate-400'
+                          )}
+                        >
+                          {statusText}
+                        </span>
+                      </span>
+                    );
+                  })()
                 ) : (
                   <>
                     <Users className='h-3.5 w-3.5' />
-                    <span>{channel.memberCount} members</span>
+                    <span>
+                      {presenceData?.data?.onlineCount != null
+                        ? `${presenceData.data.onlineCount} online · `
+                        : ''}
+                      {channel.memberCount} members
+                    </span>
                   </>
                 )}
                 {channel.description && (
@@ -261,7 +729,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             <Button
               variant='ghost'
               size='sm'
+              onClick={() => setMembersPanelOpen(true)}
               className='text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+              title='View members'
             >
               <Info className='h-5 w-5' />
             </Button>
@@ -276,17 +746,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           </div>
         </div>
 
-        {/* Typing indicator */}
-        {/* TODO: Implement real-time typing indicator */}
-        {false && (
-          <div className='mt-2 text-xs text-slate-500 dark:text-slate-400 italic'>
-            <span className='font-semibold'>John Doe</span> is typing...
-          </div>
-        )}
+        {/* Typing indicator - removed from header, now above input */}
       </div>
 
       {/* Messages */}
-      <div className='flex-1 overflow-hidden'>
+      <div className='flex-1 overflow-hidden relative'>
         <MessageList
           ref={messageListRef}
           messages={messages}
@@ -295,13 +759,52 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           isError={isError}
           hasMore={hasMore}
           onLoadMore={handleLoadMore}
+          lastReadMessageId={lastReadMessageId}
+          onScrollPositionChange={setIsNearBottom}
           onEditMessage={handleEditMessage}
           onDeleteMessage={handleDeleteMessage}
           onReplyMessage={handleReplyMessage}
           onReaction={handleReaction}
           onRemoveReaction={handleRemoveReaction}
         />
+
+        <ScrollToBottomButton
+          visible={!isNearBottom}
+          unreadCount={unreadCount}
+          onClick={scrollToBottom}
+        />
       </div>
+
+      {/* Typing indicator - positioned above input */}
+      {typingUsers.size > 0 && (
+        <div className='flex-shrink-0 px-6 py-1.5 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800'>
+          <div className='flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400'>
+            <span className='flex gap-0.5'>
+              <span
+                className='w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce'
+                style={{ animationDelay: '0ms' }}
+              />
+              <span
+                className='w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce'
+                style={{ animationDelay: '150ms' }}
+              />
+              <span
+                className='w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce'
+                style={{ animationDelay: '300ms' }}
+              />
+            </span>
+            <span className='italic'>
+              {(() => {
+                const names = Array.from(typingUsers.values());
+                if (names.length === 1) return `${names[0]} is typing...`;
+                if (names.length === 2)
+                  return `${names[0]} and ${names[1]} are typing...`;
+                return 'Several people are typing...';
+              })()}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Input */}
       <div className='flex-shrink-0'>
@@ -313,6 +816,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           editingMessage={editingMessage}
           onCancelEdit={handleCancelEdit}
           placeholder={`Message ${channel.type === 'DIRECT' ? channel.name : `#${channel.name}`}`}
+          onTypingStart={() => wsApi.sendTypingIndicator(true)}
+          onTypingStop={() => wsApi.sendTypingIndicator(false)}
         />
       </div>
 
@@ -320,6 +825,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       <SearchDialog
         open={searchOpen}
         onOpenChange={setSearchOpen}
+        channelId={channel.id}
         onResultClick={(clickedChannelId, messageId) => {
           if (clickedChannelId === channel.id) {
             // Same channel - scroll to message
@@ -336,6 +842,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             );
           }
         }}
+      />
+
+      {/* Channel Members Panel */}
+      <ChannelMembersPanel
+        open={membersPanelOpen}
+        onOpenChange={setMembersPanelOpen}
+        channelId={channel.id}
+        channelName={channel.name}
+        currentUserId={currentUserId}
       />
     </div>
   );

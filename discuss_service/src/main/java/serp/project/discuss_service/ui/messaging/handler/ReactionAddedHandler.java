@@ -1,0 +1,45 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project - Handler for REACTION_ADDED events
+ */
+
+package serp.project.discuss_service.ui.messaging.handler;
+
+import java.util.Map;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import serp.project.discuss_service.core.domain.dto.websocket.WsEvent;
+import serp.project.discuss_service.core.domain.dto.websocket.WsEventType;
+import serp.project.discuss_service.core.service.IDeliveryService;
+import serp.project.discuss_service.kernel.utils.KafkaPayloadUtils;
+
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class ReactionAddedHandler implements IReactionEventHandler {
+
+    private final IDeliveryService deliveryService;
+
+    @Override
+    public WsEventType getType() {
+        return WsEventType.REACTION_ADDED;
+    }
+
+    @Override
+    public void handle(WsEvent<Map<String, Object>> event) {
+        Long channelId = event.getChannelId();
+        Map<String, Object> payload = event.getPayload();
+        Long messageId = KafkaPayloadUtils.getLong(payload, "messageId");
+        Long userId = KafkaPayloadUtils.getLong(payload, "userId");
+        String emoji = KafkaPayloadUtils.getString(payload, "emoji");
+
+        if (channelId == null || messageId == null || userId == null || emoji == null) {
+            log.warn("Missing required fields for REACTION_ADDED event");
+            return;
+        }
+
+        deliveryService.notifyReaction(channelId, messageId, userId, emoji, true);
+    }
+}

@@ -12,7 +12,6 @@ import (
 	account "github.com/serp/api-gateway/src/ui/controller/account"
 	"github.com/serp/api-gateway/src/ui/controller/common"
 	crm "github.com/serp/api-gateway/src/ui/controller/crm"
-	notification "github.com/serp/api-gateway/src/ui/controller/notification"
 	ptm "github.com/serp/api-gateway/src/ui/controller/ptm"
 	"github.com/serp/api-gateway/src/ui/middleware"
 	"go.uber.org/fx"
@@ -24,8 +23,8 @@ type RegisterRoutersIn struct {
 	Engine   *gin.Engine
 	Actuator *actuator.Endpoint
 
-	NotificationProxyController *notification.NotificationProxyController
-	GenericProxyController      *common.GenericProxyController
+	WebSocketProxyController *common.WebSocketProxyController
+	GenericProxyController   *common.GenericProxyController
 
 	AuthController             *account.AuthController
 	UserController             *account.UserController
@@ -55,12 +54,14 @@ type RegisterRoutersIn struct {
 	ScheduleEventController        *ptm.ScheduleEventController
 	ScheduleTaskController         *ptm.ScheduleTaskController
 
-	JWTMiddleware  *middleware.JWTMiddleware
-	CorsMiddleware *middleware.CorsMiddleware
+	JWTMiddleware       *middleware.JWTMiddleware
+	CorsMiddleware      *middleware.CorsMiddleware
+	RateLimitMiddleware *middleware.RateLimitMiddleware
 }
 
 func RegisterGinRouters(p RegisterRoutersIn) {
 	p.Engine.Use(p.CorsMiddleware.Handler())
+	p.Engine.Use(p.RateLimitMiddleware.IPRateLimit())
 
 	group := p.Engine.Group(p.App.Path())
 
@@ -71,7 +72,6 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		group,
 		p.AuthController,
 		p.UserController,
-		p.KeycloakController,
 		p.RoleController,
 		p.PermissionController,
 		p.ModuleController,
@@ -90,6 +90,8 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		p.CustomerController,
 		p.ContactController,
 		p.GenericProxyController,
+		p.JWTMiddleware,
+		p.RateLimitMiddleware,
 	)
 
 	RegisterPtmRoutes(
@@ -108,24 +110,36 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		group,
 		p.GenericProxyController,
 		p.JWTMiddleware,
+		p.RateLimitMiddleware,
 	)
 
 	RegisterLogisticsRoutes(
 		group,
 		p.GenericProxyController,
 		p.JWTMiddleware,
+		p.RateLimitMiddleware,
 	)
 
 	RegisterNotificationRoutes(
 		group,
-		p.NotificationProxyController,
+		p.WebSocketProxyController,
 		p.GenericProxyController,
 		p.JWTMiddleware,
+		p.RateLimitMiddleware,
+	)
+
+	RegisterDiscussRoutes(
+		group,
+		p.WebSocketProxyController,
+		p.GenericProxyController,
+		p.JWTMiddleware,
+		p.RateLimitMiddleware,
 	)
 
 	RegisterSalesRoutes(
 		group,
 		p.GenericProxyController,
 		p.JWTMiddleware,
+		p.RateLimitMiddleware,
 	)
 }

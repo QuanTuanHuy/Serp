@@ -11,29 +11,24 @@ CREATE TABLE IF NOT EXISTS email_attachments (
     id BIGSERIAL PRIMARY KEY,
     email_id BIGINT NOT NULL,
     
-    -- File information
     original_filename VARCHAR(255) NOT NULL,
     stored_filename VARCHAR(255) NOT NULL,
     file_path VARCHAR(500) NOT NULL,
     file_size BIGINT NOT NULL,
     content_type VARCHAR(100) NOT NULL,
     
-    -- Storage metadata
     storage_location VARCHAR(50) DEFAULT 'LOCAL',
     checksum VARCHAR(64),
     
-    -- Lifecycle
     uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP,
     
-    -- Audit
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     active_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
     
     CONSTRAINT fk_email_attachments_email FOREIGN KEY (email_id) 
         REFERENCES emails(id) ON DELETE CASCADE,
-    CONSTRAINT chk_attachment_storage CHECK (storage_location IN ('LOCAL', 'S3', 'AZURE_BLOB')),
     CONSTRAINT chk_attachment_active_status CHECK (active_status IN ('ACTIVE', 'DELETED'))
 );
 

@@ -98,6 +98,7 @@ export function AttachmentPreview({
           className={`group relative rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02] ${className}`}
           onClick={() => setIsLightboxOpen(true)}
         >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={attachment.thumbnailUrl || attachment.downloadUrl}
             alt={attachment.fileName}
@@ -191,6 +192,7 @@ export function AttachmentPreview({
               )}
 
               {/* Image */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={displayAttachment.downloadUrl}
                 alt={displayAttachment.fileName}

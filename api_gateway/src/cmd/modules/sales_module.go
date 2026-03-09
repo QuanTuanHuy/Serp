@@ -10,7 +10,6 @@ import (
 )
 
 func SalesModule() fx.Option {
-	return fx.Module("sales",
-		// Sales module uses generic proxy, no specific controllers needed
-	)
+	return fx.Module("sales")// Sales module uses generic proxy, no specific controllers needed
+
 }

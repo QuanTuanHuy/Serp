@@ -14,6 +14,34 @@ app:
     expected-issuer: ${KEYCLOAK_URL}/realms/serp
     expected-audience:
 
+  rateLimit:
+    enabled: true
+    defaultIP:
+      limit: 100
+      windowSecs: 60
+    defaultUser:
+      limit: 200
+      windowSecs: 60
+    routeOverrides:
+      login:
+        path: "/api/v1/auth/login"
+        method: "POST"
+        ip:
+          limit: 10
+          windowSecs: 60
+      register:
+        path: "/api/v1/auth/register"
+        method: "POST"
+        ip:
+          limit: 5
+          windowSecs: 60
+      refreshToken:
+        path: "/api/v1/auth/refresh-token"
+        method: "POST"
+        ip:
+          limit: 20
+          windowSecs: 60
+
   cors:
     allowedOrigins:
       - http://localhost:3000
@@ -30,6 +58,17 @@ app:
     allowCredentials: true
     maxAge: 3600
     allowFiles: false
+
+  resilience:
+    maxRequests: 3
+    interval: 60s
+    timeout: 30s
+    consecutiveFailures: 5
+    failureRatio: 0.6
+    minRequests: 10
+    maxRetries: 3
+    initialDelay: 100ms
+    maxDelay: 2s
 
 external:
   services:
@@ -61,7 +100,13 @@ external:
       host: localhost
       port: "8090"
       timeout: 15s
+      webSocketPath: /notification/ws
     salesService:
       host: localhost
       port: "8090"
       timeout: 15s
+    discussService:
+      host: localhost
+      port: "8092"
+      timeout: 15s
+      webSocketPath: /discuss/ws/discuss

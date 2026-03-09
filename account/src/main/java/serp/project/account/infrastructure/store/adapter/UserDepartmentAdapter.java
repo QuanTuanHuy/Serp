@@ -14,7 +14,9 @@ import serp.project.account.infrastructure.store.mapper.UserDepartmentMapper;
 import serp.project.account.infrastructure.store.repository.IUserDepartmentRepository;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -71,6 +73,18 @@ public class UserDepartmentAdapter implements IUserDepartmentPort {
     @Override
     public Long countActiveByDepartmentId(Long departmentId) {
         return userDepartmentRepository.countByDepartmentIdAndIsActive(departmentId, true);
+    }
+
+    @Override
+    public Map<Long, Long> countByDepartmentIds(List<Long> departmentIds) {
+        if (departmentIds == null || departmentIds.isEmpty()) {
+            return Map.of();
+        }
+        return userDepartmentRepository.countByDepartmentIds(departmentIds).stream()
+                .collect(Collectors.toMap(
+                        row -> ((Number) row[0]).longValue(),
+                        row -> ((Number) row[1]).longValue()
+                ));
     }
 
     @Override

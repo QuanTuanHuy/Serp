@@ -17,9 +17,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import reactor.core.publisher.Mono;
-import serp.project.mailservice.core.domain.constant.Constants;
-import serp.project.mailservice.core.domain.constant.ErrorMessages;
 import serp.project.mailservice.core.exception.AppException;
+import serp.project.mailservice.core.exception.ErrorCode;
 
 @Configuration
 @Slf4j
@@ -71,25 +70,25 @@ public class WebClientConfig {
         String message = parseErrorMessage(errorBody);
 
         return switch (statusCode.value()) {
-            case 400 -> new AppException(message.isEmpty() ? ErrorMessages.BAD_REQUEST : message,
-                    Constants.HttpStatusCode.BAD_REQUEST);
-            case 401 -> new AppException(message.isEmpty() ? ErrorMessages.UNAUTHORIZED : message,
-                    Constants.HttpStatusCode.UNAUTHORIZED);
-            case 403 -> new AppException(message.isEmpty() ? ErrorMessages.FORBIDDEN : message,
-                    Constants.HttpStatusCode.FORBIDDEN);
-            case 404 -> new AppException(message.isEmpty() ? ErrorMessages.NOT_FOUND : message,
-                    Constants.HttpStatusCode.NOT_FOUND);
-            case 409 -> new AppException(message.isEmpty() ? ErrorMessages.CONFLICT : message,
-                    Constants.HttpStatusCode.BAD_REQUEST);
-            case 429 -> new AppException(message.isEmpty() ? ErrorMessages.TOO_MANY_REQUESTS : message,
-                    Constants.HttpStatusCode.BAD_REQUEST);
+            case 400 -> new AppException(ErrorCode.BAD_REQUEST,
+                    message.isEmpty() ? ErrorCode.BAD_REQUEST.getMessage() : message);
+            case 401 -> new AppException(ErrorCode.UNAUTHORIZED,
+                    message.isEmpty() ? ErrorCode.UNAUTHORIZED.getMessage() : message);
+            case 403 -> new AppException(ErrorCode.FORBIDDEN,
+                    message.isEmpty() ? ErrorCode.FORBIDDEN.getMessage() : message);
+            case 404 -> new AppException(ErrorCode.NOT_FOUND,
+                    message.isEmpty() ? ErrorCode.NOT_FOUND.getMessage() : message);
+            case 409 -> new AppException(ErrorCode.CONFLICT,
+                    message.isEmpty() ? ErrorCode.CONFLICT.getMessage() : message);
+            case 429 -> new AppException(ErrorCode.TOO_MANY_REQUESTS,
+                    message.isEmpty() ? ErrorCode.TOO_MANY_REQUESTS.getMessage() : message);
             default -> {
                 if (statusCode.is5xxServerError()) {
-                    yield new AppException(message.isEmpty() ? ErrorMessages.INTERNAL_SERVER_ERROR : message,
-                            Constants.HttpStatusCode.INTERNAL_SERVER_ERROR);
+                    yield new AppException(ErrorCode.INTERNAL_SERVER_ERROR,
+                            message.isEmpty() ? ErrorCode.INTERNAL_SERVER_ERROR.getMessage() : message);
                 } else {
-                    yield new AppException(message.isEmpty() ? ErrorMessages.UNKNOWN_ERROR : message,
-                            Constants.HttpStatusCode.INTERNAL_SERVER_ERROR);
+                    yield new AppException(ErrorCode.INTERNAL_SERVER_ERROR,
+                            message.isEmpty() ? "Unknown error" : message);
                 }
             }
         };
@@ -120,7 +119,7 @@ public class WebClientConfig {
             }
             if (rootNode.has("errors") && rootNode.get("errors").isArray()) {
                 JsonNode errorsNode = rootNode.get("errors");
-                if (errorsNode.size() > 0) {
+                if (!errorsNode.isEmpty()) {
                     String extracted = errorsNode.get(0).asText();
                     if (!extracted.isEmpty())
                         return extracted;

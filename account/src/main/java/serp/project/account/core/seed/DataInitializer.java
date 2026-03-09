@@ -130,8 +130,8 @@ public class DataInitializer implements CommandLineRunner {
 
     private void createSuperAdminUser() {
         var response = authUseCase.createSuperAdmin(adminProperties.getEmail(), adminProperties.getPassword());
-        if (response == null) {
-            log.error("Super Admin creation response is null");
+        if (!response.isSuccess()) {
+            log.error("Super Admin creation failed: {}", response.getMessage());
             return;
         }
         log.info("Super Admin create successfully");

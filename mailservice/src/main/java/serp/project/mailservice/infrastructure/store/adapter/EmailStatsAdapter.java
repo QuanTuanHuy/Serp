@@ -74,59 +74,20 @@ public class EmailStatsAdapter implements IEmailStatsPort {
                                Long responseTimeMs, Long sizeBytes, Integer attachmentCount) {
         var statsOpt = findByKey(tenantId, provider, emailType, status, statDate, statHour);
 
+        EmailStatsEntity stats;
         if (statsOpt.isPresent()) {
-            var stats = statsOpt.get();
-            stats.setTotalCount(stats.getTotalCount() + 1);
-
-            if (status == EmailStatus.SENT) {
-                stats.setSuccessCount(stats.getSuccessCount() + 1);
-            } else if (status == EmailStatus.FAILED) {
-                stats.setFailedCount(stats.getFailedCount() + 1);
-            } else if (status == EmailStatus.RETRY) {
-                stats.setRetryCount(stats.getRetryCount() + 1);
-            }
-
-            if (responseTimeMs != null) {
-                long totalTime = (stats.getAvgResponseTimeMs() != null ? stats.getAvgResponseTimeMs() : 0)
-                        * (stats.getTotalCount() - 1) + responseTimeMs;
-                stats.setAvgResponseTimeMs(totalTime / stats.getTotalCount());
-
-                if (stats.getMinResponseTimeMs() == null || responseTimeMs < stats.getMinResponseTimeMs()) {
-                    stats.setMinResponseTimeMs(responseTimeMs);
-                }
-                if (stats.getMaxResponseTimeMs() == null || responseTimeMs > stats.getMaxResponseTimeMs()) {
-                    stats.setMaxResponseTimeMs(responseTimeMs);
-                }
-            }
-
-            if (sizeBytes != null) {
-                stats.setTotalSizeBytes((stats.getTotalSizeBytes() != null ? stats.getTotalSizeBytes() : 0) + sizeBytes);
-            }
-
-            if (attachmentCount != null && attachmentCount > 0) {
-                stats.setAttachmentCount((stats.getAttachmentCount() != null ? stats.getAttachmentCount() : 0) + attachmentCount);
-            }
-
-            save(stats);
+            stats = statsOpt.get();
         } else {
-            var newStats = EmailStatsEntity.builder()
-                    .tenantId(tenantId)
-                    .provider(provider)
-                    .emailType(emailType)
-                    .status(status)
-                    .statDate(statDate)
-                    .statHour(statHour)
-                    .totalCount(1L)
-                    .successCount(status == EmailStatus.SENT ? 1L : 0L)
-                    .failedCount(status == EmailStatus.FAILED ? 1L : 0L)
-                    .retryCount(status == EmailStatus.RETRY ? 1L : 0L)
-                    .avgResponseTimeMs(responseTimeMs)
-                    .minResponseTimeMs(responseTimeMs)
-                    .maxResponseTimeMs(responseTimeMs)
-                    .totalSizeBytes(sizeBytes != null ? sizeBytes : 0L)
-                    .attachmentCount(attachmentCount != null ? (long) attachmentCount : 0L)
-                    .build();
-            save(newStats);
+            stats = EmailStatsEntity.createNew(tenantId, provider, emailType, status, statDate, statHour);
         }
+
+        stats.incrementForStatus(status, responseTimeMs, sizeBytes, attachmentCount);
+        save(stats);
+    }
+
+    @Override
+    @Transactional
+    public long deleteByStatDateBefore(LocalDate cutoffDate) {
+        return emailStatsRepository.deleteByStatDateBefore(cutoffDate);
     }
 }

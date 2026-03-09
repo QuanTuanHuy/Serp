@@ -6,6 +6,8 @@ Description: Part of Serp Project
 package controller
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -14,9 +16,13 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/serp/notification-service/src/core/domain/constant"
 	ws "github.com/serp/notification-service/src/core/websocket"
+	"github.com/serp/notification-service/src/kernel/properties"
 	"github.com/serp/notification-service/src/kernel/utils"
 	"go.uber.org/zap"
 )
+
+// Timeout for sending initial data to a newly connected client
+const initialDataTimeout = 5 * time.Second
 
 type WebSocketController struct {
 	hub      ws.IWebSocketHub
@@ -25,7 +31,17 @@ type WebSocketController struct {
 	logger   *zap.Logger
 }
 
-func NewWebSocketController(hub ws.IWebSocketHub, jwtUtils *utils.JWTUtils, logger *zap.Logger) *WebSocketController {
+func NewWebSocketController(
+	hub ws.IWebSocketHub,
+	jwtUtils *utils.JWTUtils,
+	appProps *properties.AppProperties,
+	logger *zap.Logger,
+) *WebSocketController {
+	allowedOrigins := make(map[string]bool, len(appProps.WebSocket.AllowedOrigins))
+	for _, origin := range appProps.WebSocket.AllowedOrigins {
+		allowedOrigins[origin] = true
+	}
+
 	return &WebSocketController{
 		hub:      hub,
 		jwtUtils: jwtUtils,
@@ -34,7 +50,15 @@ func NewWebSocketController(hub ws.IWebSocketHub, jwtUtils *utils.JWTUtils, logg
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
 			CheckOrigin: func(r *http.Request) bool {
-				return true
+				if len(allowedOrigins) == 0 {
+					return false
+				}
+				origin := r.Header.Get("Origin")
+				if origin == "" {
+					// No Origin header means same-origin or non-browser client
+					return true
+				}
+				return allowedOrigins[origin]
 			},
 		},
 	}
@@ -88,11 +112,15 @@ func (w *WebSocketController) HandleWebSocket(c *gin.Context) {
 	go client.ReadPump()
 
 	w.sendInitialData(client)
-
 }
 
 func (w *WebSocketController) sendInitialData(client *ws.Client) {
 	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), initialDataTimeout)
+		defer cancel()
+
+		_ = ctx
+
 		unreadCount, err := w.getUnreadCount(client.UserID())
 		if err != nil {
 			w.logger.Error("Failed to get unread count", zap.Error(err))
@@ -106,13 +134,23 @@ func (w *WebSocketController) sendInitialData(client *ws.Client) {
 			MessageID: fmt.Sprintf("init-%d", time.Now().UnixNano()),
 		}
 
-		// Send to client
-		client.Send(ws.MustMarshal(msg))
+		data, err := json.Marshal(msg)
+		if err != nil {
+			w.logger.Error("Failed to marshal initial data", zap.Error(err))
+			return
+		}
+
+		if err := client.Send(data); err != nil {
+			w.logger.Warn("Failed to send initial data, client may have disconnected",
+				zap.Error(err),
+				zap.String("clientID", client.ID()),
+			)
+		}
 	}()
 }
 
 func (w *WebSocketController) getUnreadCount(userID int64) (*ws.UnreadCountPayload, error) {
-	// Simplified for illustration
+	// TODO: Wire to actual notification service query
 	return &ws.UnreadCountPayload{
 		TotalUnread: 0,
 		ByCategory:  make(map[string]int64),

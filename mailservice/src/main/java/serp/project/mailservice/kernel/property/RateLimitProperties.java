@@ -16,5 +16,6 @@ public class RateLimitProperties {
     private Boolean enabled = true;
     private Integer defaultPerTenantPerMinute = 100;
     private Integer defaultPerProviderPerMinute = 500;
+    private Integer defaultPerUserPerMinute = 20;
     private Boolean useRedis = true;
 }

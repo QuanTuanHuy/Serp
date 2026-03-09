@@ -57,6 +57,7 @@ func All() fx.Option {
 
 		// WebSocket Hub
 		fx.Provide(websocket.NewHub),
+		fx.Invoke(StartWebSocketHub),
 
 		// Use cases
 		fx.Provide(usecase.NewPreferenceUseCase),

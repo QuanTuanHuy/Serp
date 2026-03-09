@@ -125,7 +125,7 @@ func (h *ConsumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 				return nil
 			}
 
-			ctx := context.Background()
+			ctx := session.Context()
 			h.kafkaConsumer.handlersMutex.RLock()
 			handler, exists := h.kafkaConsumer.handlers[message.Topic]
 			h.kafkaConsumer.handlersMutex.RUnlock()
@@ -140,8 +140,10 @@ func (h *ConsumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 			err := handler(ctx, message.Topic, key, message.Value)
 			if err != nil {
 				h.kafkaConsumer.logger.Error("Error processing message from topic ", zap.String("topic", message.Topic), zap.String("key", key), zap.Error(err))
+				return err
 			} else {
 				session.MarkMessage(message, "")
+				session.Commit()
 				h.kafkaConsumer.logger.Info("Successfully processed message from topic ", zap.String("topic", message.Topic), zap.String("key", key))
 			}
 

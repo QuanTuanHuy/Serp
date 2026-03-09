@@ -1,3 +1,8 @@
+/*
+Author: QuanTuanHuy
+Description: Part of Serp Project
+*/
+
 package properties
 
 import "github.com/golibs-starter/golib/config"

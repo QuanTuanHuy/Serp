@@ -12,6 +12,8 @@ import {
   ORGANIZATION_ADMIN_ROLES,
   DEFAULT_ADMIN_MODULES,
   DEFAULT_ORG_ADMIN_MODULES,
+  ORGANIZATION_USER_ROLES,
+  DEFAULT_ORG_USER_MODULES,
 } from '@/shared';
 import { getModuleRoute } from '@/shared';
 import type { ModuleDisplayItem, UserModuleAccess } from '../types';
@@ -33,12 +35,20 @@ export const useModules = () => {
       ORGANIZATION_ADMIN_ROLES.includes(role)
     );
 
+    const isOrgUser = user.roles?.some((role) =>
+      ORGANIZATION_USER_ROLES.includes(role)
+    );
+
     if (isSystemAdmin) {
       moduleList.push(...DEFAULT_ADMIN_MODULES);
     }
 
     if (isOrgAdmin) {
       moduleList.push(...DEFAULT_ORG_ADMIN_MODULES);
+    }
+
+    if (isOrgUser) {
+      moduleList.push(...DEFAULT_ORG_USER_MODULES);
     }
 
     if (modulesData && modulesData.length > 0) {

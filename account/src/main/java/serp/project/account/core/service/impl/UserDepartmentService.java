@@ -20,6 +20,7 @@ import serp.project.account.infrastructure.store.mapper.UserDepartmentMapper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -91,7 +92,15 @@ public class UserDepartmentService implements IUserDepartmentService {
 
     @Override
     public Long countMembersByDepartmentId(Long departmentId) {
-        return userDepartmentPort.countByDepartmentId(departmentId);
+        return userDepartmentPort.countActiveByDepartmentId(departmentId);
+    }
+
+    @Override
+    public Map<Long, Long> countMembersByDepartmentIds(List<Long> departmentIds) {
+        if (departmentIds == null || departmentIds.isEmpty()) {
+            return Map.of();
+        }
+        return userDepartmentPort.countByDepartmentIds(departmentIds);
     }
 
 }

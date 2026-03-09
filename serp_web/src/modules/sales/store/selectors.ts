@@ -181,7 +181,8 @@ export const selectOrderTotal = createSelector(
 
 export const selectOrderById = createSelector(
   [selectOrderItems, (state: RootState, id: string) => id],
-  (orders: Order[], id: string) => orders.find((order: Order) => order.id === id)
+  (orders: Order[], id: string) =>
+    orders.find((order: Order) => order.id === id)
 );
 
 export const selectOrdersByCustomer = createSelector(
@@ -308,7 +309,10 @@ export const selectInventoryItemById = createSelector(
 );
 
 export const selectInventoryItemsByProduct = createSelector(
-  [selectInventoryItemItems, (state: RootState, productId: string) => productId],
+  [
+    selectInventoryItemItems,
+    (state: RootState, productId: string) => productId,
+  ],
   (inventoryItems: InventoryItem[], productId: string) =>
     inventoryItems.filter((item: InventoryItem) => item.productId === productId)
 );
