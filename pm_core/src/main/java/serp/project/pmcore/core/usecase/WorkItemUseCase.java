@@ -9,6 +9,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import serp.project.pmcore.core.domain.constant.EventConstants;
+import serp.project.pmcore.core.domain.dto.message.BaseKafkaMessage;
+import serp.project.pmcore.core.domain.dto.message.WorkItemEventPayload;
 import serp.project.pmcore.core.domain.dto.request.CreateWorkItemRequest;
 import serp.project.pmcore.core.domain.dto.response.WorkItemResponse;
 import serp.project.pmcore.core.domain.entity.OutboxEventEntity;
@@ -27,14 +31,10 @@ import serp.project.pmcore.core.service.IWorkflowService;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 import serp.project.pmcore.kernel.utils.LexorankUtils;
 
-import java.util.Map;
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class WorkItemUseCase {
-
-    private static final String WORK_ITEM_EVENTS_TOPIC = "serp.pm.workitem.events";
 
     private final IProjectService projectService;
     private final IWorkItemService workItemService;
@@ -102,7 +102,7 @@ public class WorkItemUseCase {
 
         WorkItemEntity saved = workItemService.createWorkItem(workItem, tenantId, userId);
 
-        publishWorkItemEvent("WORK_ITEM_CREATED", saved, tenantId);
+        publishWorkItemEvent(EventConstants.WorkItem.EventType.WORK_ITEM_CREATED, saved, tenantId, userId);
 
         log.info("Work item created: id={}, key={}, projectId={}, tenantId={}",
                 saved.getId(), saved.getKey(), saved.getProjectId(), tenantId);
@@ -110,24 +110,35 @@ public class WorkItemUseCase {
         return toResponse(saved);
     }
 
-    private void publishWorkItemEvent(String eventType, WorkItemEntity workItem, Long tenantId) {
-        Map<String, Object> eventPayload = Map.of(
-                "eventType", eventType,
-                "workItemId", workItem.getId(),
-                "workItemKey", workItem.getKey(),
-                "projectId", workItem.getProjectId(),
-                "tenantId", tenantId,
-                "timestamp", System.currentTimeMillis());
+    private void publishWorkItemEvent(String eventType, WorkItemEntity workItem,
+            Long tenantId, Long userId) {
+        WorkItemEventPayload payload = WorkItemEventPayload.builder()
+                .workItemId(workItem.getId())
+                .workItemKey(workItem.getKey())
+                .projectId(workItem.getProjectId())
+                .issueTypeId(workItem.getIssueTypeId())
+                .statusId(workItem.getStatusId())
+                .assigneeId(workItem.getAssigneeId())
+                .build();
+
+        BaseKafkaMessage<WorkItemEventPayload> message = BaseKafkaMessage.of(
+                EventConstants.SOURCE,
+                eventType,
+                tenantId,
+                userId,
+                EventConstants.WorkItem.AGGREGATE,
+                workItem.getId().toString(),
+                payload);
 
         outboxEventService.saveEvent(
                 OutboxEventEntity.builder()
                         .tenantId(tenantId)
-                        .aggregateType("WORK_ITEM")
+                        .aggregateType(EventConstants.WorkItem.AGGREGATE)
                         .aggregateId(workItem.getId())
                         .eventType(eventType)
-                        .topic(WORK_ITEM_EVENTS_TOPIC)
+                        .topic(EventConstants.WorkItem.TOPIC)
                         .partitionKey(workItem.getProjectId().toString())
-                        .payload(jsonUtils.toJson(eventPayload))
+                        .payload(jsonUtils.toJson(message))
                         .build());
 
         log.info("Outbox event saved: {} for work item id={}, key={}",

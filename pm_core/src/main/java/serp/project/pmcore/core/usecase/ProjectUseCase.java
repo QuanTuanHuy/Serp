@@ -7,9 +7,14 @@ package serp.project.pmcore.core.usecase;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import serp.project.pmcore.core.domain.constant.EventConstants;
+import serp.project.pmcore.core.domain.dto.message.BaseKafkaMessage;
+import serp.project.pmcore.core.domain.dto.message.ProjectEventPayload;
 import serp.project.pmcore.core.domain.dto.request.CreateProjectRequest;
 import serp.project.pmcore.core.domain.dto.request.GetProjectParams;
 import serp.project.pmcore.core.domain.dto.request.UpdateProjectRequest;
@@ -33,8 +38,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class ProjectUseCase {
-
-    private static final String PROJECT_EVENTS_TOPIC = "serp.pm.project.events";
 
     private final IProjectService projectService;
     private final IProjectBlueprintService projectBlueprintService;
@@ -74,7 +77,7 @@ public class ProjectUseCase {
 
         ProjectEntity finalProject = projectService.saveProject(saved, userId);
 
-        publishProjectEvent("PROJECT_CREATED", finalProject);
+        publishProjectEvent(EventConstants.Project.EventType.PROJECT_CREATED, finalProject, tenantId, userId);
 
         return toResponse(finalProject);
     }
@@ -114,24 +117,24 @@ public class ProjectUseCase {
 
         ProjectEntity updated = projectService.updateProject(id, updateData, tenantId, userId);
 
-        publishProjectEvent("PROJECT_UPDATED", updated);
+        publishProjectEvent(EventConstants.Project.EventType.PROJECT_UPDATED, updated, tenantId, userId);
 
         return toResponse(updated);
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void deleteProject(Long id, Long tenantId) {
+    public void deleteProject(Long id, Long tenantId, Long userId) {
         ProjectEntity project = projectService.getProjectById(id, tenantId);
         projectService.deleteProject(id, tenantId);
 
-        publishProjectEvent("PROJECT_DELETED", project);
+        publishProjectEvent(EventConstants.Project.EventType.PROJECT_DELETED, project, tenantId, userId);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public ProjectResponse archiveProject(Long id, Long tenantId, Long userId) {
         ProjectEntity archived = projectService.archiveProject(id, tenantId, userId);
 
-        publishProjectEvent("PROJECT_ARCHIVED", archived);
+        publishProjectEvent(EventConstants.Project.EventType.PROJECT_ARCHIVED, archived, tenantId, userId);
 
         return toResponse(archived);
     }
@@ -140,7 +143,7 @@ public class ProjectUseCase {
     public ProjectResponse unarchiveProject(Long id, Long tenantId, Long userId) {
         ProjectEntity unarchived = projectService.unarchiveProject(id, tenantId, userId);
 
-        publishProjectEvent("PROJECT_UNARCHIVED", unarchived);
+        publishProjectEvent(EventConstants.Project.EventType.PROJECT_UNARCHIVED, unarchived, tenantId, userId);
 
         return toResponse(unarchived);
     }
@@ -174,23 +177,34 @@ public class ProjectUseCase {
         return overrides;
     }
 
-    private void publishProjectEvent(String eventType, ProjectEntity project) {
-        Map<String, Object> eventPayload = Map.of(
-                "eventType", eventType,
-                "projectId", project.getId(),
-                "projectKey", project.getKey(),
-                "tenantId", project.getTenantId(),
-                "timestamp", System.currentTimeMillis());
+    private void publishProjectEvent(String eventType, ProjectEntity project,
+            Long tenantId, Long userId) {
+        ProjectEventPayload payload = ProjectEventPayload.builder()
+                .projectId(project.getId())
+                .projectKey(project.getKey())
+                .projectName(project.getName())
+                .projectTypeKey(project.getProjectTypeKey())
+                .isArchived(project.getIsArchived())
+                .build();
+
+        BaseKafkaMessage<ProjectEventPayload> message = BaseKafkaMessage.of(
+                EventConstants.SOURCE,
+                eventType,
+                tenantId,
+                userId,
+                EventConstants.Project.AGGREGATE,
+                project.getId().toString(),
+                payload);
 
         outboxEventService.saveEvent(
                 OutboxEventEntity.builder()
-                        .tenantId(project.getTenantId())
-                        .aggregateType("PROJECT")
+                        .tenantId(tenantId)
+                        .aggregateType(EventConstants.Project.AGGREGATE)
                         .aggregateId(project.getId())
                         .eventType(eventType)
-                        .topic(PROJECT_EVENTS_TOPIC)
+                        .topic(EventConstants.Project.TOPIC)
                         .partitionKey(project.getId().toString())
-                        .payload(jsonUtils.toJson(eventPayload))
+                        .payload(jsonUtils.toJson(message))
                         .build());
 
         log.info("Outbox event saved: {} for project id={}, key={}",

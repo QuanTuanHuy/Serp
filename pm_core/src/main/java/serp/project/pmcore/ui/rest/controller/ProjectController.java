@@ -107,10 +107,12 @@ public class ProjectController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<GeneralResponse<?>> deleteProject(@PathVariable Long id) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
-        projectUseCase.deleteProject(id, tenantId);
+        projectUseCase.deleteProject(id, tenantId, userId);
         return ResponseEntity.ok(responseUtils.status("Project deleted successfully"));
     }
 
