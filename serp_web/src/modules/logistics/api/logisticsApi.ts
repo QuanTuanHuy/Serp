@@ -492,7 +492,10 @@ export const logisticsApi = api.injectEndpoints({
         body: data,
       }),
       extraOptions: { service: 'logistics' },
-      invalidatesTags: [{ type: 'logistics/Shipment', id: 'LIST' }],
+      invalidatesTags: (result, error, arg) => [
+        { type: 'logistics/Shipment', id: 'LIST' },
+        { type: 'logistics/Order', id: arg.orderId || 'LIST' },
+      ],
     }),
 
     updateShipment: builder.mutation<
@@ -538,6 +541,7 @@ export const logisticsApi = api.injectEndpoints({
       invalidatesTags: (result, error, { shipmentId }) => [
         { type: 'logistics/Shipment', id: shipmentId },
         { type: 'logistics/Shipment', id: 'LIST' },
+        { type: 'logistics/Order', id: result?.data?.orderId || 'LIST' },
       ],
     }),
 
@@ -554,6 +558,7 @@ export const logisticsApi = api.injectEndpoints({
       invalidatesTags: (result, error, { shipmentId }) => [
         { type: 'logistics/Shipment', id: shipmentId },
         { type: 'logistics/Shipment', id: 'LIST' },
+        { type: 'logistics/Order', id: result?.data?.orderId || 'LIST' },
       ],
     }),
 
@@ -569,6 +574,7 @@ export const logisticsApi = api.injectEndpoints({
       invalidatesTags: (result, error, { shipmentId }) => [
         { type: 'logistics/Shipment', id: shipmentId },
         { type: 'logistics/Shipment', id: 'LIST' },
+        { type: 'logistics/Order', id: result?.data?.orderId || 'LIST' },
       ],
     }),
 
@@ -585,6 +591,7 @@ export const logisticsApi = api.injectEndpoints({
         { type: 'logistics/Shipment', id: shipmentId },
         { type: 'logistics/Shipment', id: 'LIST' },
         { type: 'logistics/InventoryItem', id: 'LIST' },
+        { type: 'logistics/Order', id: result?.data?.orderId || 'LIST' },
       ],
     }),
 
