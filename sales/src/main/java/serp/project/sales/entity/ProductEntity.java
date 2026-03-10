@@ -77,10 +77,10 @@ public class ProductEntity {
     @Column(name = "tenant_id")
     private Long tenantId;
 
-    @Formula("(SELECT SUM(COALESCE(i.quantity_on_hand, 0) - COALESCE(i.quantity_reserved, 0) - COALESCE(i.quantity_committed, 0)) "
+    @Formula("(SELECT COALESCE(SUM(COALESCE(i.quantity_on_hand, 0) - COALESCE(i.quantity_reserved, 0) - COALESCE(i.quantity_committed, 0)), 0) "
             +
             "FROM wms2_inventory_item i " +
-            "WHERE i.product_id = id)")
+            "WHERE i.product_id = id AND i.expiration_date > CURRENT_DATE)")
     private int quantityAvailable;
 
     public ProductEntity(ProductCreationForm form, Long tenantId) {

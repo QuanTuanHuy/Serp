@@ -405,7 +405,6 @@ export const ShipmentDetailPage: React.FC<ShipmentDetailPageProps> = ({
         data: itemFormData,
       }).unwrap();
       toast.success('Thêm sản phẩm thành công');
-      await Promise.all([refetchShipment(), refetchOrder()]);
       setShowAddItemDialog(false);
       resetItemForm();
     } catch (error: any) {
@@ -427,7 +426,6 @@ export const ShipmentDetailPage: React.FC<ShipmentDetailPageProps> = ({
         data: itemFormData,
       }).unwrap();
       toast.success('Cập nhật sản phẩm thành công');
-      await Promise.all([refetchShipment(), refetchOrder()]);
       setShowEditItemDialog(false);
       resetItemForm();
     } catch (error: any) {
@@ -445,7 +443,6 @@ export const ShipmentDetailPage: React.FC<ShipmentDetailPageProps> = ({
         itemId: selectedItem.id,
       }).unwrap();
       toast.success('Xóa sản phẩm thành công');
-      await Promise.all([refetchShipment(), refetchOrder()]);
       setShowDeleteItemDialog(false);
       resetItemForm();
     } catch (error: any) {
