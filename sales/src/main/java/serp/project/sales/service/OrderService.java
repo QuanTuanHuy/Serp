@@ -59,6 +59,7 @@ public class OrderService {
                                         .findAvailableInventoryItemByProductIdAndExpireAfter(
                                                         itemForm.getProductId(),
                                                         itemForm.getExpireAfter());
+                        log.info(availableItems.toString());
 
                         order.addItems(itemForm, product, availableItems);
                 }
