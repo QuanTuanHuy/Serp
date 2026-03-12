@@ -26,6 +26,9 @@ public class PriorityModel extends BaseModel {
     @Column(name = "tenant_id", nullable = false)
     private Long tenantId;
 
+    @Column(name = "priority_key")
+    private String priorityKey;
+
     @Column(name = "name", nullable = false)
     private String name;
 

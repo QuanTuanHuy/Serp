@@ -34,6 +34,18 @@ public class IssueTypeAdapter implements IIssueTypePort {
     }
 
     @Override
+    public Optional<IssueTypeEntity> getIssueTypeByIdIncludingSystem(Long issueTypeId, Long tenantId) {
+        return issueTypeRepository.findByIdAndTenantIdOrSystemTenant(issueTypeId, tenantId)
+                .map(issueTypeMapper::toEntity);
+    }
+
+    @Override
+    public Optional<IssueTypeEntity> getIssueTypeByTypeKey(Long tenantId, String typeKey) {
+        return issueTypeRepository.findFirstByTenantIdAndTypeKeyOrderByIdAsc(tenantId, typeKey)
+                .map(issueTypeMapper::toEntity);
+    }
+
+    @Override
     public List<IssueTypeEntity> listIssueTypes(Long tenantId) {
         return issueTypeMapper.toEntities(issueTypeRepository.findAllByTenantIdOrderByHierarchyLevelAsc(tenantId));
     }

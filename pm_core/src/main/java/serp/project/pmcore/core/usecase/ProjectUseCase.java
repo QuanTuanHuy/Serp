@@ -25,11 +25,10 @@ import serp.project.pmcore.core.domain.entity.OutboxEventEntity;
 import serp.project.pmcore.core.domain.entity.ProjectEntity;
 import serp.project.pmcore.core.domain.entity.WorkflowSchemeEntity;
 import serp.project.pmcore.core.domain.entity.WorkflowSchemeItemEntity;
+import serp.project.pmcore.core.domain.enums.SchemeType;
 import serp.project.pmcore.core.exception.AppException;
 import serp.project.pmcore.core.exception.ErrorCode;
 import serp.project.pmcore.core.port.store.IIssueTypeSchemeItemPort;
-import serp.project.pmcore.core.port.store.IIssueTypeSchemePort;
-import serp.project.pmcore.core.port.store.IPrioritySchemePort;
 import serp.project.pmcore.core.port.store.IWorkflowSchemeItemPort;
 import serp.project.pmcore.core.port.store.IWorkflowSchemePort;
 import serp.project.pmcore.core.service.IOutboxEventService;
@@ -53,11 +52,9 @@ public class ProjectUseCase {
     private final IProjectBlueprintService projectBlueprintService;
     private final ISchemeProvisioningService schemeProvisioningService;
     private final IOutboxEventService outboxEventService;
-    private final IIssueTypeSchemePort issueTypeSchemePort;
     private final IIssueTypeSchemeItemPort issueTypeSchemeItemPort;
     private final IWorkflowSchemePort workflowSchemePort;
     private final IWorkflowSchemeItemPort workflowSchemeItemPort;
-    private final IPrioritySchemePort prioritySchemePort;
 
     private final JsonUtils jsonUtils;
 
@@ -88,7 +85,7 @@ public class ProjectUseCase {
 
         Map<String, Long> schemeOverrides = buildSchemeOverrides(request);
         schemeProvisioningService.provisionSchemes(saved, tenantId, userId,
-                request.getBlueprintId(), schemeOverrides);
+                request.getBlueprintId(), schemeOverrides, request.getAssociationMode());
 
         ProjectEntity finalProject = projectService.saveProject(saved, userId);
 
@@ -170,11 +167,15 @@ public class ProjectUseCase {
             throw new AppException(ErrorCode.BAD_REQUEST, "At least one scheme id must be provided");
         }
 
-        if (request.getAssociationMode() != null
-                && !"SHARED_ASSOCIATION".equalsIgnoreCase(request.getAssociationMode())) {
+        String associationMode = request.getAssociationMode() == null
+                ? "SHARED_ASSOCIATION"
+                : request.getAssociationMode().toUpperCase();
+        if (!"SHARED_ASSOCIATION".equals(associationMode)
+                && !"CLONE_ON_ASSOCIATE".equals(associationMode)) {
             throw new AppException(ErrorCode.BAD_REQUEST,
-                    "Only SHARED_ASSOCIATION is currently supported");
+                    "associationMode must be SHARED_ASSOCIATION or CLONE_ON_ASSOCIATE");
         }
+        boolean cloneOnAssociate = "CLONE_ON_ASSOCIATE".equals(associationMode);
 
         if (request.getFieldConfigSchemeId() != null
                 || request.getIssueTypeScreenSchemeId() != null
@@ -192,31 +193,47 @@ public class ProjectUseCase {
 
         Long issueTypeSchemeId = project.getIssueTypeSchemeId();
         if (request.getIssueTypeSchemeId() != null) {
-            issueTypeSchemePort.getIssueTypeSchemeByIdIncludingSystem(request.getIssueTypeSchemeId(), tenantId)
-                    .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
-            issueTypeSchemeId = request.getIssueTypeSchemeId();
+            issueTypeSchemeId = resolveSchemeBindingByMode(
+                    SchemeType.ISSUE_TYPE,
+                    request.getIssueTypeSchemeId(),
+                    tenantId,
+                    userId,
+                    cloneOnAssociate
+            );
         }
 
         Long workflowSchemeId = project.getWorkflowSchemeId();
         if (request.getWorkflowSchemeId() != null) {
-            workflowSchemePort.getWorkflowSchemeByIdIncludingSystem(request.getWorkflowSchemeId(), tenantId)
-                    .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
-            workflowSchemeId = request.getWorkflowSchemeId();
+            workflowSchemeId = resolveSchemeBindingByMode(
+                    SchemeType.WORKFLOW,
+                    request.getWorkflowSchemeId(),
+                    tenantId,
+                    userId,
+                    cloneOnAssociate
+            );
         }
 
+        Long prioritySchemeId = project.getPrioritySchemeId();
         if (request.getPrioritySchemeId() != null) {
-            prioritySchemePort.getPrioritySchemeByIdIncludingSystem(request.getPrioritySchemeId(), tenantId)
-                    .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
-            project.setPrioritySchemeId(request.getPrioritySchemeId());
+            prioritySchemeId = resolveSchemeBindingByMode(
+                    SchemeType.PRIORITY,
+                    request.getPrioritySchemeId(),
+                    tenantId,
+                    userId,
+                    cloneOnAssociate
+            );
         }
 
         validateWorkflowCoverage(issueTypeSchemeId, workflowSchemeId, tenantId);
 
         if (request.getIssueTypeSchemeId() != null) {
-            project.setIssueTypeSchemeId(request.getIssueTypeSchemeId());
+            project.setIssueTypeSchemeId(issueTypeSchemeId);
         }
         if (request.getWorkflowSchemeId() != null) {
-            project.setWorkflowSchemeId(request.getWorkflowSchemeId());
+            project.setWorkflowSchemeId(workflowSchemeId);
+        }
+        if (request.getPrioritySchemeId() != null) {
+            project.setPrioritySchemeId(prioritySchemeId);
         }
 
         ProjectEntity updated = projectService.saveProject(project, userId);
@@ -224,6 +241,28 @@ public class ProjectUseCase {
         publishProjectEvent(EventConstants.Project.EventType.PROJECT_SCHEMES_UPDATED, updated, tenantId, userId);
 
         return toResponse(updated);
+    }
+
+    private Long resolveSchemeBindingByMode(SchemeType schemeType,
+                                            Long sourceSchemeId,
+                                            Long tenantId,
+                                            Long userId,
+                                            boolean cloneOnAssociate) {
+        if (cloneOnAssociate) {
+            return schemeProvisioningService.resolveClonedSchemeBinding(
+                    schemeType,
+                    sourceSchemeId,
+                    tenantId,
+                    userId
+            );
+        }
+
+        return schemeProvisioningService.resolveSharedSchemeBinding(
+                schemeType,
+                sourceSchemeId,
+                tenantId,
+                userId
+        );
     }
 
     private boolean hasAnySchemeUpdate(UpdateProjectSchemesRequest request) {

@@ -15,6 +15,10 @@ public interface IIssueTypePort {
 
     Optional<IssueTypeEntity> getIssueTypeById(Long issueTypeId, Long tenantId);
 
+    Optional<IssueTypeEntity> getIssueTypeByIdIncludingSystem(Long issueTypeId, Long tenantId);
+
+    Optional<IssueTypeEntity> getIssueTypeByTypeKey(Long tenantId, String typeKey);
+
     List<IssueTypeEntity> listIssueTypes(Long tenantId);
 
     void updateIssueType(IssueTypeEntity issueType);

@@ -290,3 +290,26 @@ CREATE TABLE IF NOT EXISTS worklogs (
 
 CREATE INDEX IF NOT EXISTS idx_worklogs_tenant_work_item
     ON worklogs (tenant_id, work_item_id);
+
+-- ---------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS tenant_scheme_mappings (
+    id               BIGSERIAL PRIMARY KEY,
+    tenant_id        BIGINT      NOT NULL,
+    scheme_type      VARCHAR(50) NOT NULL,
+    source_scheme_id BIGINT      NOT NULL,
+    tenant_scheme_id BIGINT      NOT NULL,
+    created_at       TIMESTAMP,
+    updated_at       TIMESTAMP,
+    created_by       BIGINT,
+    updated_by       BIGINT,
+    deleted_at       TIMESTAMP   NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uidx_tenant_scheme_mappings_source
+    ON tenant_scheme_mappings (tenant_id, scheme_type, source_scheme_id)
+    WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uidx_tenant_scheme_mappings_target
+    ON tenant_scheme_mappings (tenant_id, scheme_type, tenant_scheme_id)
+    WHERE deleted_at IS NULL;

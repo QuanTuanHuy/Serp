@@ -13,4 +13,8 @@ public interface IStatusPort {
     Optional<StatusEntity> getStatusById(Long id, Long tenantId);
 
     Optional<StatusEntity> getStatusByIdIncludingSystem(Long id, Long tenantId);
+
+    Optional<StatusEntity> getStatusByStatusKey(Long tenantId, String statusKey);
+
+    StatusEntity createStatus(StatusEntity status);
 }

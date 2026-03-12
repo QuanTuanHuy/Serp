@@ -20,4 +20,6 @@ public interface IStatusRepository extends JpaRepository<StatusModel, Long> {
 
     @Query("SELECT s FROM StatusModel s WHERE s.id = :id AND (s.tenantId = :tenantId OR s.tenantId = 0)")
     Optional<StatusModel> findByIdAndTenantIdOrSystemTenant(@Param("id") Long id, @Param("tenantId") Long tenantId);
+
+    Optional<StatusModel> findFirstByTenantIdAndStatusKeyOrderByIdAsc(Long tenantId, String statusKey);
 }

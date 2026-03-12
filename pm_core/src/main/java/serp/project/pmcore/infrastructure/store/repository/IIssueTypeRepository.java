@@ -20,6 +20,11 @@ public interface IIssueTypeRepository extends JpaRepository<IssueTypeModel, Long
 
     Optional<IssueTypeModel> findByIdAndTenantId(Long id, Long tenantId);
 
+    @Query("SELECT i FROM IssueTypeModel i WHERE i.id = :id AND (i.tenantId = :tenantId OR i.tenantId = 0)")
+    Optional<IssueTypeModel> findByIdAndTenantIdOrSystemTenant(@Param("id") Long id, @Param("tenantId") Long tenantId);
+
+    Optional<IssueTypeModel> findFirstByTenantIdAndTypeKeyOrderByIdAsc(Long tenantId, String typeKey);
+
     List<IssueTypeModel> findAllByTenantIdOrderByHierarchyLevelAsc(Long tenantId);
 
     boolean existsByTenantIdAndTypeKey(Long tenantId, String typeKey);

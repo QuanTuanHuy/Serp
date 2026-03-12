@@ -21,6 +21,8 @@ public interface IWorkflowStepRepository extends JpaRepository<WorkflowStepModel
            "AND (s.tenantId = :tenantId OR s.tenantId = 0)")
     List<WorkflowStepModel> findByWorkflowIdAndTenantIdOrSystemTenant(
             @Param("workflowId") Long workflowId, @Param("tenantId") Long tenantId);
+    
+    List<WorkflowStepModel> findByWorkflowIdAndTenantId(Long workflowId, Long tenantId);
 
     @Query("SELECT s FROM WorkflowStepModel s WHERE s.workflowId = :workflowId " +
            "AND s.isInitial = true AND (s.tenantId = :tenantId OR s.tenantId = 0)")

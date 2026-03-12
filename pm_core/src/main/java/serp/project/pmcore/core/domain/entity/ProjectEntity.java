@@ -29,7 +29,7 @@ public class ProjectEntity extends BaseEntity {
     private Boolean isArchived;
     private Long archivedAt;
 
-    // Scheme bindings (project-owned clones)
+    // Effective scheme bindings (tenant-shared by default)
     private Long issueTypeSchemeId;
     private Long workflowSchemeId;
     private Long fieldConfigSchemeId;

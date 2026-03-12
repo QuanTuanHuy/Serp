@@ -32,4 +32,15 @@ public class StatusAdapter implements IStatusPort {
         return statusRepository.findByIdAndTenantIdOrSystemTenant(id, tenantId)
                 .map(statusMapper::toEntity);
     }
+
+    @Override
+    public Optional<StatusEntity> getStatusByStatusKey(Long tenantId, String statusKey) {
+        return statusRepository.findFirstByTenantIdAndStatusKeyOrderByIdAsc(tenantId, statusKey)
+                .map(statusMapper::toEntity);
+    }
+
+    @Override
+    public StatusEntity createStatus(StatusEntity status) {
+        return statusMapper.toEntity(statusRepository.save(statusMapper.toModel(status)));
+    }
 }
