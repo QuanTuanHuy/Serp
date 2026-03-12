@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import serp.project.pmcore.core.domain.constant.RestControllerConstants;
 import serp.project.pmcore.core.domain.dto.filter.SortField;
 import serp.project.pmcore.core.domain.dto.filter.WorkItemFilterRequest;
 import serp.project.pmcore.core.domain.dto.request.CreateWorkItemRequest;
@@ -32,7 +34,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/projects/{projectId}/work-items")
+@RequestMapping(RestControllerConstants.WORKITEMS)
 @RequiredArgsConstructor
 @Slf4j
 public class WorkItemController {
