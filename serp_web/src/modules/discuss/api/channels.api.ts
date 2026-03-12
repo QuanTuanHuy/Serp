@@ -34,6 +34,7 @@ export const channelApi = api.injectEndpoints({
           type: filters.type,
           isArchived: filters.isArchived,
           entityType: filters.entityType,
+          search: filters.search || undefined,
         },
       }),
       extraOptions: { service: 'discuss' },
