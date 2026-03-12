@@ -7,9 +7,12 @@ package serp.project.discuss_service.core.usecase;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import serp.project.discuss_service.core.domain.dto.request.GetChannelsParams;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
 import serp.project.discuss_service.core.domain.enums.MemberRole;
@@ -35,8 +38,8 @@ public class ChannelUseCase {
 
     @Transactional
     public ChannelEntity createGroupChannel(Long tenantId, Long createdBy, String name,
-                                            String description, boolean isPrivate,
-                                            List<Long> initialMemberIds) {
+            String description, boolean isPrivate,
+            List<Long> initialMemberIds) {
         ChannelEntity channel = channelService.createGroupChannel(tenantId, createdBy, name, description, isPrivate);
 
         memberService.addOwner(channel.getId(), createdBy, tenantId);
@@ -46,13 +49,13 @@ public class ChannelUseCase {
                     .filter(id -> !id.equals(createdBy))
                     .toList();
             memberService.addMembers(channel.getId(), filteredMembers, tenantId);
-            
+
             channel.setMemberCount(1 + filteredMembers.size());
         }
 
         eventPublisher.publishChannelCreated(channel);
-        
-        log.info("Created GROUP channel {} with {} members", channel.getId(), 
+
+        log.info("Created GROUP channel {} with {} members", channel.getId(),
                 initialMemberIds != null ? initialMemberIds.size() + 1 : 1);
         return channel;
     }
@@ -60,7 +63,7 @@ public class ChannelUseCase {
     @Transactional
     public ChannelEntity getOrCreateDirectChannel(Long tenantId, Long userId1, Long userId2) {
         ChannelEntity channel = channelService.getOrCreateDirectChannel(tenantId, userId1, userId2);
-        
+
         if (!memberService.isMember(channel.getId(), userId1)) {
             memberService.addOwner(channel.getId(), userId1, tenantId);
         }
@@ -73,8 +76,8 @@ public class ChannelUseCase {
 
     @Transactional
     public ChannelEntity createTopicChannel(Long tenantId, Long createdBy, String name,
-                                           String entityType, Long entityId,
-                                           List<Long> initialMemberIds) {
+            String entityType, Long entityId,
+            List<Long> initialMemberIds) {
         ChannelEntity channel = channelService.createTopicChannel(tenantId, createdBy, name, entityType, entityId);
 
         if (!memberService.isMember(channel.getId(), createdBy)) {
@@ -109,15 +112,8 @@ public class ChannelUseCase {
     }
 
     @Transactional(readOnly = true)
-    public List<ChannelEntity> getUserChannels(Long userId, Long tenantId) {
-        List<ChannelMemberEntity> memberships = memberService.getUserChannels(userId);
-        List<Long> channelIds = memberships.stream()
-                .map(ChannelMemberEntity::getChannelId)
-                .toList();
-        
-        return channelService.getChannelsByTenantId(tenantId).stream()
-                .filter(c -> channelIds.contains(c.getId()))
-                .toList();
+    public Pair<Long, List<ChannelEntity>> getUserChannels(Long userId, Long tenantId, GetChannelsParams params) {
+        return channelService.getUserChannels(userId, tenantId, params);
     }
 
     @Transactional
@@ -148,7 +144,7 @@ public class ChannelUseCase {
             throw new AppException(ErrorCode.CANNOT_ADD_MEMBERS);
         }
 
-        ChannelMemberEntity member = memberService.addMember(channelId, userId, tenantId, MemberRole.MEMBER);        
+        ChannelMemberEntity member = memberService.addMember(channelId, userId, tenantId, MemberRole.MEMBER);
         channelService.incrementMemberCount(channelId);
 
         eventPublisher.publishMemberJoined(member);
@@ -161,7 +157,7 @@ public class ChannelUseCase {
             throw new AppException(ErrorCode.CANNOT_REMOVE_MEMBERS);
         }
 
-        ChannelMemberEntity member = memberService.removeMember(channelId, userId, removerId);        
+        ChannelMemberEntity member = memberService.removeMember(channelId, userId, removerId);
         channelService.decrementMemberCount(channelId);
 
         eventPublisher.publishMemberRemoved(member);

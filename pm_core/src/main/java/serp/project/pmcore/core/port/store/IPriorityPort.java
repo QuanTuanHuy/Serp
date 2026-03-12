@@ -15,6 +15,10 @@ public interface IPriorityPort {
 
     Optional<PriorityEntity> getPriorityById(Long id, Long tenantId);
 
+    Optional<PriorityEntity> getPriorityByIdIncludingSystem(Long id, Long tenantId);
+
+    Optional<PriorityEntity> getPriorityByPriorityKey(Long tenantId, String priorityKey);
+
     List<PriorityEntity> listPriorities(Long tenantId);
 
     void updatePriority(PriorityEntity priority);

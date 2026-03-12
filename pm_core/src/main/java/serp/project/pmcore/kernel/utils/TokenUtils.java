@@ -8,6 +8,7 @@ package serp.project.pmcore.kernel.utils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import serp.project.pmcore.core.exception.AppException;
 import serp.project.pmcore.kernel.property.KeycloakProperties;
 
 import java.util.Map;
@@ -31,13 +32,16 @@ public class TokenUtils {
 
         try {
             var response = httpClientHelper
-                    .post(tokenUrl, formData, Map.class)
-                    .block();
+                    .postWithRetry(tokenUrl, formData, Map.class);
 
             if (response == null || !response.containsKey("access_token")) {
                 return Optional.empty();
             }
             return Optional.of(response.get("access_token").toString());
+
+        } catch (AppException e) {
+            log.warn("Failed to obtain service token. Code={}, Message={}", e.getCode(), e.getMessage());
+            return Optional.empty();
 
         } catch (Exception e) {
             log.error("Error obtaining service token: {}", e.getMessage());

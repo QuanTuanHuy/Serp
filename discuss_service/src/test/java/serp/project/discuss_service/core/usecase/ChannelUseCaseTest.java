@@ -9,9 +9,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.data.util.Pair;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import serp.project.discuss_service.core.domain.dto.request.GetChannelsParams;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
 import serp.project.discuss_service.core.domain.enums.MemberRole;
@@ -255,26 +257,36 @@ class ChannelUseCaseTest {
     class GetUserChannelsTests {
 
         @Test
-        @DisplayName("should return channels where user is a member")
-        void testGetUserChannels_UserWithMemberships_ReturnsChannels() {
+        @DisplayName("should delegate filters to channelService")
+        void testGetUserChannels_WithParams_DelegatesToChannelService() {
             // Given
-            ChannelMemberEntity membership = TestDataFactory.createRegularMember();
-            List<ChannelEntity> allChannels = List.of(
+            GetChannelsParams params = GetChannelsParams.builder()
+                    .page(0)
+                    .pageSize(20)
+                    .searchQuery("team")
+                    .build();
+
+            List<ChannelEntity> channels = List.of(
                     TestDataFactory.createGroupChannel(),
                     TestDataFactory.createDirectChannel()
             );
+            Pair<Long, List<ChannelEntity>> expected = Pair.of(2L, channels);
 
-            when(memberService.getUserChannels(TestDataFactory.USER_ID_3)).thenReturn(List.of(membership));
-            when(channelService.getChannelsByTenantId(TestDataFactory.TENANT_ID)).thenReturn(allChannels);
+            when(channelService.getUserChannels(TestDataFactory.USER_ID_3, TestDataFactory.TENANT_ID, params))
+                    .thenReturn(expected);
 
             // When
-            List<ChannelEntity> result = channelUseCase.getUserChannels(
-                    TestDataFactory.USER_ID_3, TestDataFactory.TENANT_ID);
+            Pair<Long, List<ChannelEntity>> result = channelUseCase.getUserChannels(
+                    TestDataFactory.USER_ID_3,
+                    TestDataFactory.TENANT_ID,
+                    params);
 
             // Then
-            // Filter by membership channelId
-            verify(memberService).getUserChannels(TestDataFactory.USER_ID_3);
-            verify(channelService).getChannelsByTenantId(TestDataFactory.TENANT_ID);
+            assertNotNull(result);
+            assertEquals(2L, result.getFirst());
+            assertEquals(2, result.getSecond().size());
+            verify(channelService).getUserChannels(TestDataFactory.USER_ID_3, TestDataFactory.TENANT_ID, params);
+            verifyNoInteractions(memberService);
         }
     }
 

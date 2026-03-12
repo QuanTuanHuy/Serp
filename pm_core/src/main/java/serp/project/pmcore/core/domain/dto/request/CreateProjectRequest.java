@@ -54,4 +54,10 @@ public class CreateProjectRequest {
     private Long notificationSchemeId;
     private Long prioritySchemeId;
     private Long issueSecuritySchemeId;
+
+    @Pattern(
+            regexp = "^(SHARED_ASSOCIATION|CLONE_ON_ASSOCIATE)?$",
+            message = "associationMode must be SHARED_ASSOCIATION or CLONE_ON_ASSOCIATE"
+    )
+    private String associationMode;
 }

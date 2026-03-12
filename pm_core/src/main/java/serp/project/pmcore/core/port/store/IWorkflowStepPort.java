@@ -12,7 +12,11 @@ import java.util.Optional;
 
 public interface IWorkflowStepPort {
 
+    List<WorkflowStepEntity> createWorkflowSteps(List<WorkflowStepEntity> steps);
+
     List<WorkflowStepEntity> getWorkflowStepsByWorkflowId(Long workflowId, Long tenantId);
+
+    List<WorkflowStepEntity> getWorkflowStepsByWorkflowIdIncludingSystem(Long workflowId, Long tenantId);
 
     Optional<WorkflowStepEntity> getInitialStep(Long workflowId, Long tenantId);
 }

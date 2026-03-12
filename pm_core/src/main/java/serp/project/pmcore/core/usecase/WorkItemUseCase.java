@@ -7,10 +7,12 @@ package serp.project.pmcore.core.usecase;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import serp.project.pmcore.core.domain.constant.EventConstants;
+import serp.project.pmcore.core.domain.dto.filter.WorkItemFilterRequest;
 import serp.project.pmcore.core.domain.dto.message.BaseKafkaMessage;
 import serp.project.pmcore.core.domain.dto.message.WorkItemEventPayload;
 import serp.project.pmcore.core.domain.dto.request.CreateWorkItemRequest;
@@ -30,6 +32,10 @@ import serp.project.pmcore.core.service.IWorkflowSchemeService;
 import serp.project.pmcore.core.service.IWorkflowService;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 import serp.project.pmcore.kernel.utils.LexorankUtils;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -108,6 +114,22 @@ public class WorkItemUseCase {
                 saved.getId(), saved.getKey(), saved.getProjectId(), tenantId);
 
         return toResponse(saved);
+    }
+
+    public WorkItemResponse getWorkItemById(Long id, Long tenantId) {
+        WorkItemEntity workItem = workItemService.getWorkItemById(id, tenantId);
+        return toResponse(workItem);
+    }
+
+    public Map<String, Object> getWorkItems(Long tenantId, WorkItemFilterRequest filter) {
+        Pair<List<WorkItemEntity>, Long> result = workItemService.searchWorkItems(tenantId, filter);
+        List<WorkItemResponse> items = result.getFirst().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+
+        return Map.of(
+                "totalItems", result.getSecond(),
+                "items", items);
     }
 
     private void publishWorkItemEvent(String eventType, WorkItemEntity workItem,

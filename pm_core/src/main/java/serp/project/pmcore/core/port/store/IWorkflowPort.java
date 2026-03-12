@@ -10,6 +10,8 @@ import serp.project.pmcore.core.domain.entity.WorkflowEntity;
 import java.util.Optional;
 
 public interface IWorkflowPort {
+    WorkflowEntity createWorkflow(WorkflowEntity workflow);
+
     Optional<WorkflowEntity> getWorkflowById(Long id, Long tenantId);
 
     Optional<WorkflowEntity> getWorkflowByIdIncludingSystem(Long id, Long tenantId);

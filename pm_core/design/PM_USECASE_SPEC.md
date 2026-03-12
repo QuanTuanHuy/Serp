@@ -3,7 +3,7 @@
 > **Version**: 1.0
 > **Date**: 2026-02-20
 > **Module Code**: PM
-> **Tech Stack**: Go (Gin + FX) + PostgreSQL + Kafka
+> **Tech Stack**: Java 21 (Spring Boot) + PostgreSQL + Kafka
 > **Soft Delete**: `deleted_at TIMESTAMP NULL`
 
 ---
@@ -17,7 +17,7 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 ### Scope
 
 **In Scope (Phase 1+2)**:
-- **Module 00**: Project Provisioning & Scheme Cloning (template resolution, deep clone, clone-and-swap rebinding)
+- **Module 00**: Project Provisioning & Scheme Association (shared association by default, optional clone-on-associate, compatibility-safe rebinding)
 - **Module 01**: Projects & Configuration (projects, categories, blueprints, components, versions, roles)
 - **Module 02**: Issues & Work Items (work items, issue types, priorities, resolutions, links, worklogs, custom field values)
 - **Module 03**: Workflow Engine (statuses, workflows, transitions, rules, workflow schemes)
@@ -29,6 +29,13 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 - Module 07: Agile & Planning (boards, sprints, ranking)
 - Module 08: Search & Reporting (saved filters, dashboards)
 - Module 09: Collaboration & Audit (comments, attachments, watchers, change logs)
+
+### Terminology & Parity Profile
+
+- Canonical runtime term in PM Core is `Work Item`; this is equivalent to Jira `Issue`.
+- Jira parity target for company-managed projects is `shared scheme association` by default.
+- `Clone-on-associate` remains optional for tenant-specific isolation requirements.
+- Any shared scheme update must be treated as multi-project impact and validated before apply.
 
 ### Integration Points
 
@@ -380,7 +387,7 @@ Only one active version per workflow. Publishing increments `version_no` and swa
 
 ##### Description
 
-Allow a Project Lead to create a new project, optionally based on a blueprint template. The project is the central container that binds multiple configuration schemes (issue types, workflows, fields, screens, permissions, notifications, priorities). Creating a project provisions project-owned scheme bindings by deep-cloning template schemes resolved from explicit overrides, blueprint defaults, or system defaults.
+Allow a Project Lead to create a new project, optionally based on a blueprint template. The project is the central container that binds multiple configuration schemes (issue types, workflows, fields, screens, permissions, notifications, priorities). Creating a project resolves scheme bindings from explicit overrides, blueprint defaults, or system defaults, then associates them directly by default (with optional clone-on-associate mode when isolation is required).
 
 ##### Actors
 
@@ -388,7 +395,7 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 |-------|------|-------------|
 | Project Lead | Primary | Initiates project creation |
 | PM Admin | Secondary | May also create projects |
-| System | System | Resolves template defaults, deep-clones project schemes, publishes event |
+| System | System | Resolves scheme defaults, validates compatibility, optionally clones on demand, publishes event |
 
 ##### Preconditions
 
@@ -400,7 +407,7 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 
 ###### Success Postconditions
 1. Project record persisted in `projects` table with `deleted_at=NULL`
-2. Project-owned scheme bindings provisioned via deep clone from resolved templates
+2. Scheme bindings resolved and associated to the project; optional clone-on-associate applied if requested
 3. Kafka event `PROJECT_CREATED` published to topic `serp.pm.project.events`
 4. Audit fields set: `created_at`, `updated_at`, `created_by`, `updated_by`
 
@@ -422,7 +429,7 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 | 8 | System | If `project_category_id` provided, validates it exists in tenant |
 | 9 | System | Begins database transaction |
 | 10 | System | Creates Project entity with `archived=false`, sets audit fields |
-| 11 | System | Resolves template schemes (explicit override > blueprint default > system default), deep-clones scheme graphs, and binds cloned scheme IDs to the project |
+| 11 | System | Resolves schemes (explicit override > blueprint default > system default), validates compatibility, and binds scheme IDs to the project (or cloned IDs if clone-on-associate is requested) |
 | 12 | System | Commits transaction |
 | 13 | System | Publishes `PROJECT_CREATED` event to Kafka topic `serp.pm.project.events` |
 | 14 | System | Returns HTTP 201 with created project data including resolved scheme names |
@@ -438,8 +445,8 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 |------|-------------|--------|
 | 11.1 | System | Validates blueprint exists and belongs to tenant |
 | 11.2 | System | Loads all `blueprint_scheme_defaults` for the blueprint |
-| 11.3 | System | Deep-clones each resolved scheme graph in FK-safe order and records cloned IDs |
-| 11.4 | System | Assigns cloned scheme IDs to the new project (issue_type_scheme_id, workflow_scheme_id, etc.) |
+| 11.3 | System | Resolves blueprint default scheme IDs and validates cross-scheme compatibility |
+| 11.4 | System | Associates scheme IDs to the new project (or cloned IDs if clone mode is enabled) |
 
 **Rejoins**: Main Flow Step 12
 
@@ -451,7 +458,7 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 | Step | Actor/System | Action |
 |------|-------------|--------|
 | 11.1 | System | Validates each provided scheme ID exists and belongs to tenant |
-| 11.2 | System | Uses provided scheme IDs as template sources before deep-clone provisioning |
+| 11.2 | System | Uses provided scheme IDs as direct association targets by default (or clone sources if clone mode is enabled) |
 
 **Rejoins**: Main Flow Step 12
 
@@ -501,10 +508,11 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 | BR-PM-001-01 | Project key must be unique within tenant (case-insensitive, uppercase) | Service layer + DB unique constraint `(tenant_id, key)` |
 | BR-PM-001-02 | Project key format: 2-10 uppercase alphanumeric characters | DTO validation |
 | BR-PM-001-03 | Project name is required, 1-255 characters | DTO validation |
-| BR-PM-001-04 | If no blueprint and no explicit schemes, use system default template schemes as deep-clone sources | Service layer |
+| BR-PM-001-04 | If no blueprint and no explicit schemes, use tenant system default schemes for association | Service layer |
 | BR-PM-001-05 | `project_type_key` must be one of: `software`, `business`, `service_desk` | DTO validation |
 | BR-PM-001-06 | New projects are always created with `archived=false` | Service layer |
-| BR-PM-001-07 | Project creation must provision project-owned scheme clones; mutable schemes are not shared across projects by default | Service layer |
+| BR-PM-001-07 | Project creation uses shared scheme association by default; clone-on-associate is optional for isolated configuration | Service layer |
+| BR-PM-001-08 | If resolved source scheme is system-owned (`tenant_id=0`), system must materialize/reuse tenant-shared copy before binding project | Service layer |
 
 ##### Data Requirements
 
@@ -542,14 +550,14 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 | lead_user_id | int64 | Project lead |
 | project_category_id | int64 | Category (nullable) |
 | archived | bool | Archive state (false) |
-| issue_type_scheme_id | int64 | Bound project-owned issue type scheme |
-| workflow_scheme_id | int64 | Bound project-owned workflow scheme |
-| field_config_scheme_id | int64 | Bound project-owned field config scheme |
-| issue_type_screen_scheme_id | int64 | Bound project-owned screen scheme |
-| permission_scheme_id | int64 | Bound project-owned permission scheme |
-| notification_scheme_id | int64 | Bound project-owned notification scheme |
-| priority_scheme_id | int64 | Bound project-owned priority scheme |
-| issue_security_scheme_id | int64 | Bound project-owned security scheme |
+| issue_type_scheme_id | int64 | Bound issue type scheme ID (shared by default, cloned if requested) |
+| workflow_scheme_id | int64 | Bound workflow scheme ID (shared by default, cloned if requested) |
+| field_config_scheme_id | int64 | Bound field config scheme ID (shared by default, cloned if requested) |
+| issue_type_screen_scheme_id | int64 | Bound issue type screen scheme ID (shared by default, cloned if requested) |
+| permission_scheme_id | int64 | Bound permission scheme ID (shared by default, cloned if requested) |
+| notification_scheme_id | int64 | Bound notification scheme ID (shared by default, cloned if requested) |
+| priority_scheme_id | int64 | Bound priority scheme ID (shared by default, cloned if requested) |
+| issue_security_scheme_id | int64 | Bound issue security scheme ID (shared by default, cloned if requested) |
 | created_at | timestamp | Creation time |
 | created_by | int64 | Creator user ID |
 
@@ -926,7 +934,7 @@ Toggle the archive state of a project. Archived projects are visible but read-on
 
 ##### Description
 
-Update the scheme associations for a project (issue type scheme, workflow scheme, field config scheme, screen scheme, permission scheme, notification scheme, priority scheme, issue security scheme). To preserve isolation, the system performs clone-and-swap: selected template schemes are deep-cloned and then rebound to the target project atomically.
+Update the scheme associations for a project (issue type scheme, workflow scheme, field config scheme, screen scheme, permission scheme, notification scheme, priority scheme, issue security scheme). By default, the system re-associates the project directly to the selected shared schemes. Clone-on-associate remains optional for tenants that require isolated scheme copies.
 
 ##### Actors
 
@@ -947,10 +955,10 @@ Update the scheme associations for a project (issue type scheme, workflow scheme
 | 1 | PM Admin | Sends PUT `/api/v1/projects/{projectId}/schemes` with scheme binding updates |
 | 2 | System | Validates JWT and permissions |
 | 3 | System | Fetches project, validates it exists and is not archived |
-| 4 | System | For each provided scheme ID, validates the template scheme exists and belongs to tenant |
-| 5 | System | Begins transaction and deep-clones provided template scheme graphs in FK-safe order |
-| 6 | System | Validates compatibility: cloned workflow scheme covers all issue types in the resulting cloned issue type scheme |
-| 7 | System | Updates project scheme binding fields to cloned scheme IDs within transaction |
+| 4 | System | For each provided scheme ID, validates the target scheme exists and belongs to tenant |
+| 5 | System | Begins transaction and resolves effective scheme IDs (direct association by default; optional clone-on-associate) |
+| 6 | System | Validates compatibility: workflow scheme covers all issue types in the resulting issue type scheme |
+| 7 | System | Updates project scheme binding fields to effective scheme IDs within transaction |
 | 8 | System | Commits transaction |
 | 9 | System | Publishes `PROJECT_SCHEMES_UPDATED` event to Kafka |
 | 10 | System | Returns HTTP 200 with updated project |
@@ -973,7 +981,7 @@ Update the scheme associations for a project (issue type scheme, workflow scheme
 | BR-PM-007-01 | Cannot change schemes on archived projects | Service layer |
 | BR-PM-007-02 | New workflow scheme must provide workflow mappings for all issue types in the project's resulting issue type scheme | UseCase layer |
 | BR-PM-007-03 | Existing work items retain their current status; statuses not present in new workflow are flagged for migration | Service layer |
-| BR-PM-007-04 | Scheme rebinding uses clone-and-swap; mutable schemes are not directly shared across projects by default | Service layer |
+| BR-PM-007-04 | Scheme rebinding uses shared association by default; clone-on-associate is optional for project isolation | Service layer |
 
 ##### Data Requirements
 
@@ -1153,7 +1161,7 @@ Standard CRUD pattern. Permission: `PM.BLUEPRINT.MANAGE`.
 | **Priority** | Medium |
 | **Complexity** | Medium |
 
-**Description**: Set or update the default scheme bindings for a blueprint. When a project is created from this blueprint, these scheme IDs are resolved as template sources and then deep-cloned into project-owned schemes.
+**Description**: Set or update the default scheme bindings for a blueprint. When a project is created from this blueprint, these scheme IDs are resolved as association targets by default (or clone sources when clone-on-associate mode is requested).
 
 **Permission**: `PM.BLUEPRINT.MANAGE`
 
@@ -3428,7 +3436,7 @@ Rules that apply across multiple use cases:
 | **Custom Field Context** | Scoping rule for a custom field, defining which projects and issue types it applies to. |
 | **Permission Scheme** | Maps permissions to grantees (project roles, groups, users, contextual actors) using grant-only rules; missing grant means deny. |
 | **Issue Security Level** | Restricts visibility of individual work items to specific project roles, groups, users, or contextual actors. |
-| **Project Blueprint** | A template that pre-configures source scheme bindings for new projects; runtime project schemes are provisioned as clones. |
+| **Project Blueprint** | A template that pre-configures default scheme bindings for new projects; association is shared by default with optional clone-on-associate isolation. |
 | **Project Component** | A sub-section of a project (e.g., "Backend", "Frontend") used to categorize work items. |
 | **Project Version** | A release marker (e.g., "v1.0", "v2.0") used to track fix targets and release planning. |
 | **Project Role** | A named role within PM Core (e.g., "Developer", "QA Lead") that actors can be assigned to per project. |
@@ -3436,5 +3444,5 @@ Rules that apply across multiple use cases:
 | **Worklog** | A time tracking entry recording work performed on a work item. |
 | **Issue Link** | A typed relationship between two work items (e.g., "blocks", "is blocked by", "clones"). |
 | **Resolution** | The outcome of a work item when it reaches a "done" status (e.g., "Done", "Won't Fix", "Duplicate"). |
-| **Scheme Indirection** | The architectural pattern where projects reference scheme roots (not individual configs), with project-owned cloning to preserve isolation by default. |
+| **Scheme Indirection** | The architectural pattern where projects reference scheme roots (not individual configs), typically via shared association with optional clone-on-associate when isolation is needed. |
 | **Soft Delete** | Marking a record as deleted by setting `deleted_at` timestamp instead of physically removing it from the database. |

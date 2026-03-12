@@ -11,9 +11,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import serp.project.pmcore.core.domain.constant.RestControllerConstants;
 import serp.project.pmcore.core.domain.dto.request.CreateProjectRequest;
 import serp.project.pmcore.core.domain.dto.request.GetProjectParams;
 import serp.project.pmcore.core.domain.dto.request.UpdateProjectRequest;
+import serp.project.pmcore.core.domain.dto.request.UpdateProjectSchemesRequest;
 import serp.project.pmcore.core.domain.dto.response.GeneralResponse;
 import serp.project.pmcore.core.domain.dto.response.ProjectResponse;
 import serp.project.pmcore.core.exception.AppException;
@@ -25,7 +28,7 @@ import serp.project.pmcore.kernel.utils.ResponseUtils;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/projects")
+@RequestMapping(RestControllerConstants.PROJECTS)
 @RequiredArgsConstructor
 @Slf4j
 public class ProjectController {
@@ -102,6 +105,19 @@ public class ProjectController {
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
         ProjectResponse response = projectUseCase.updateProject(id, request, tenantId, userId);
+        return ResponseEntity.ok(responseUtils.success(response));
+    }
+
+    @PutMapping("/{id}/schemes")
+    public ResponseEntity<GeneralResponse<?>> updateProjectSchemes(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateProjectSchemesRequest request) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
+
+        ProjectResponse response = projectUseCase.updateProjectSchemes(id, request, tenantId, userId);
         return ResponseEntity.ok(responseUtils.success(response));
     }
 

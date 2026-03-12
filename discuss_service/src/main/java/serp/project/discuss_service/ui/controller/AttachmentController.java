@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import io.github.serp.platform.security.context.SerpAuthContext;
+import serp.project.discuss_service.core.domain.constant.RestConstants;
 import serp.project.discuss_service.core.domain.dto.GeneralResponse;
 import serp.project.discuss_service.core.domain.dto.response.AttachmentResponse;
 import serp.project.discuss_service.core.exception.AppException;
@@ -21,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/attachments")
+@RequestMapping(RestConstants.ATTACHMENTS)
 @RequiredArgsConstructor
 @Slf4j
 public class AttachmentController {
@@ -70,8 +71,7 @@ public class AttachmentController {
         Map<String, String> response = Map.of(
                 "attachmentId", attachmentId.toString(),
                 "downloadUrl", downloadUrl,
-                "expiresInMinutes", String.valueOf(expirationMinutes)
-        );
+                "expiresInMinutes", String.valueOf(expirationMinutes));
 
         return ResponseEntity.ok(responseUtils.success(response));
     }

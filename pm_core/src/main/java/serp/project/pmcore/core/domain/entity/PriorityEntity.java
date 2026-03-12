@@ -18,6 +18,7 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 public class PriorityEntity extends BaseEntity {
     private Long tenantId;
+    private String priorityKey;
     private String name;
     private String description;
     private String iconUrl;

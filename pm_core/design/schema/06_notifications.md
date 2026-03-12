@@ -2,7 +2,7 @@
 
 **Design Philosophy:** Decouple event detection from delivery. PM core stores notification policies and emits delivery jobs via outbox for downstream channel services.
 
-Provisioning note: notification schemes are provisioned as project-owned clones from template sources; event dictionary can remain tenant-shared (see Module 00).
+Provisioning note: notification schemes are shared across associated projects by default. Clone-on-associate remains optional for isolated project behavior; event dictionary can remain tenant-shared (see Module 00).
 
 ## Shared Base Columns (applies to all tables in this module)
 

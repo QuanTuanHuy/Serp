@@ -2,7 +2,7 @@
 
 **Design Philosophy:** Work items remain the central entity, but extensibility is achieved through typed relational sub-structures instead of large opaque JSON blobs.
 
-Provisioning note: scheme roots in this module are template sources that are deep-cloned into project-owned configurations during project provisioning (see Module 00).
+Provisioning note: scheme roots in this module are reusable scheme entities. Projects associate to them by default (shared mode), with optional clone-on-associate for isolation (see Module 00).
 
 ## Shared Base Columns (applies to all tables in this module)
 

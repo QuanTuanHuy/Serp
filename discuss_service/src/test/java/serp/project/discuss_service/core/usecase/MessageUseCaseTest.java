@@ -344,10 +344,10 @@ class MessageUseCaseTest {
 
             when(memberService.isMember(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1)).thenReturn(true);
             when(messageService.searchMessages(TestDataFactory.CHANNEL_ID, "search", 0, 20))
-                    .thenReturn(results);
+                    .thenReturn(Pair.of(1L, results));
 
             // When
-            List<MessageEntity> result = messageUseCase.searchMessages(
+            Pair<Long, List<MessageEntity>> result = messageUseCase.searchMessages(
                     TestDataFactory.CHANNEL_ID,
                     TestDataFactory.USER_ID_1,
                     "search",
@@ -356,7 +356,8 @@ class MessageUseCaseTest {
             );
 
             // Then
-            assertEquals(1, result.size());
+            assertEquals(1L, result.getFirst());
+            assertEquals(1, result.getSecond().size());
         }
 
         @Test

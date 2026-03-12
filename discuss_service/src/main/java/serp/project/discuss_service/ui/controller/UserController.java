@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import io.github.serp.platform.security.context.SerpAuthContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import serp.project.discuss_service.core.domain.constant.RestConstants;
 import serp.project.discuss_service.core.domain.dto.GeneralResponse;
 import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse.UserInfo;
 import serp.project.discuss_service.core.exception.AppException;
@@ -24,7 +25,7 @@ import serp.project.discuss_service.core.service.IUserInfoService;
 import serp.project.discuss_service.kernel.utils.ResponseUtils;
 
 @RestController
-@RequestMapping("/api/v1/users")
+@RequestMapping(RestConstants.USERS)
 @RequiredArgsConstructor
 @Slf4j
 public class UserController {

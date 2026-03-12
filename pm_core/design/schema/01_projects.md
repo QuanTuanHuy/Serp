@@ -1,6 +1,6 @@
 # Module 01: Projects & Configuration (JIRA-like Core)
 
-**Design Philosophy:** `projects` acts as a stable container that binds project-owned scheme clones provisioned from blueprint/system templates. This preserves template reuse while preventing cross-project configuration side effects.
+**Design Philosophy:** `projects` acts as a stable container that binds reusable schemes by default (Jira company-managed parity), with optional clone-on-associate isolation where tenants require project-specific copies.
 
 ## Shared Base Columns (applies to all tables in this module)
 
@@ -42,7 +42,7 @@ Replace opaque JSON defaults with relational mapping.
 | tenant_id | BIGINT | Tenant scope |
 | blueprint_id | BIGINT | FK -> project_blueprints |
 | scheme_type | VARCHAR(50) | ISSUE_TYPE, WORKFLOW, FIELD_CONFIG, SCREEN, PERMISSION, ISSUE_SECURITY, NOTIFICATION, PRIORITY |
-| scheme_id | BIGINT | FK target depends on `scheme_type` (template source scheme, not directly shared runtime config) |
+| scheme_id | BIGINT | FK target depends on `scheme_type` (default scheme candidate used for project association during provisioning) |
 | created_at, updated_at, created_by, updated_by, deleted_at | TIMESTAMP/BIGINT | Base audit columns |
 
 ## 1.4. `projects` (Core entity)
@@ -61,14 +61,14 @@ Replace opaque JSON defaults with relational mapping.
 | project_type_key | VARCHAR(50) | software, business, service_desk, etc. |
 | archived | BOOLEAN | Default false |
 | archived_at | TIMESTAMP | Archived timestamp |
-| issue_type_scheme_id | BIGINT | FK -> issue_type_schemes (Module 02, project-owned clone) |
-| workflow_scheme_id | BIGINT | FK -> workflow_schemes (Module 03, project-owned clone) |
-| field_config_scheme_id | BIGINT | FK -> field_config_schemes (Module 04, project-owned clone) |
-| issue_type_screen_scheme_id | BIGINT | FK -> issue_type_screen_schemes (Module 04, project-owned clone) |
-| issue_security_scheme_id | BIGINT | FK -> issue_security_schemes (Module 05, project-owned clone) |
-| permission_scheme_id | BIGINT | FK -> permission_schemes (Module 05, project-owned clone) |
-| notification_scheme_id | BIGINT | FK -> notification_schemes (Module 06, project-owned clone) |
-| priority_scheme_id | BIGINT | FK -> priority_schemes (Module 02, project-owned clone) |
+| issue_type_scheme_id | BIGINT | FK -> issue_type_schemes (Module 02, shared association by default) |
+| workflow_scheme_id | BIGINT | FK -> workflow_schemes (Module 03, shared association by default) |
+| field_config_scheme_id | BIGINT | FK -> field_config_schemes (Module 04, shared association by default) |
+| issue_type_screen_scheme_id | BIGINT | FK -> issue_type_screen_schemes (Module 04, shared association by default) |
+| issue_security_scheme_id | BIGINT | FK -> issue_security_schemes (Module 05, shared association by default) |
+| permission_scheme_id | BIGINT | FK -> permission_schemes (Module 05, shared association by default) |
+| notification_scheme_id | BIGINT | FK -> notification_schemes (Module 06, shared association by default) |
+| priority_scheme_id | BIGINT | FK -> priority_schemes (Module 02, shared association by default) |
 | created_at, updated_at, created_by, updated_by, deleted_at | TIMESTAMP/BIGINT | Base audit columns |
 
 ## 1.5. `project_components` (Components)
@@ -129,10 +129,10 @@ Polymorphic assignment model for future actor types.
 
 ## Project Provisioning Invariants
 
-1. On project creation, all scheme bindings should point to project-owned cloned schemes provisioned from blueprint/system template defaults.
+1. On project creation, scheme bindings should default to shared scheme association resolved from explicit override, blueprint default, or tenant system default.
 2. Updating blueprint defaults does not mutate scheme bindings of existing projects.
-3. Project scheme rebinding should use clone-and-swap in one transaction (clone candidate template, validate compatibility, update project binding columns).
-4. Directly binding multiple projects to the same mutable scheme is discouraged unless explicitly opting into shared behavior.
+3. Project scheme rebinding must validate compatibility and apply atomically in one transaction.
+4. Clone-on-associate is optional and should be used only when project-level isolation is explicitly required.
 
 ## Suggested Constraints & Indexes
 
