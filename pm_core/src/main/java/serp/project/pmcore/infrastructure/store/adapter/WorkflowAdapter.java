@@ -22,6 +22,11 @@ public class WorkflowAdapter implements IWorkflowPort {
     private final WorkflowMapper workflowMapper;
 
     @Override
+    public WorkflowEntity createWorkflow(WorkflowEntity workflow) {
+        return workflowMapper.toEntity(workflowRepository.save(workflowMapper.toModel(workflow)));
+    }
+
+    @Override
     public Optional<WorkflowEntity> getWorkflowById(Long id, Long tenantId) {
         return workflowRepository.findByIdAndTenantId(id, tenantId)
                 .map(workflowMapper::toEntity);

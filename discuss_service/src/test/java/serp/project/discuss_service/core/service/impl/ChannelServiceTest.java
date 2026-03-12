@@ -9,9 +9,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.data.util.Pair;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import serp.project.discuss_service.core.domain.dto.request.GetChannelsParams;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.enums.ChannelType;
 import serp.project.discuss_service.core.exception.AppException;
@@ -385,6 +387,115 @@ class ChannelServiceTest {
             // Then
             assertTrue(result.isPresent());
             assertEquals(topic, result.get());
+        }
+    }
+
+    @Nested
+    @DisplayName("getUserChannels")
+    class GetUserChannelsTests {
+
+        @Test
+        @DisplayName("should normalize params and delegate to port")
+        void testGetUserChannels_NormalizesAndDelegates() {
+            // Given
+            GetChannelsParams params = GetChannelsParams.builder()
+                    .page(-2)
+                    .pageSize(1000)
+                    .type(ChannelType.DIRECT)
+                    .entityType("TASK")
+                    .entityId(10L)
+                    .searchQuery("  team  ")
+                    .build();
+
+            Pair<Long, List<ChannelEntity>> expected = Pair.of(1L, List.of(TestDataFactory.createDirectChannel()));
+            when(channelPort.findUserChannelsPaginated(
+                    TestDataFactory.USER_ID_1,
+                    TestDataFactory.TENANT_ID,
+                    0,
+                    100,
+                    ChannelType.DIRECT,
+                    false,
+                    null,
+                    null,
+                    "team"
+            )).thenReturn(expected);
+
+            // When
+            Pair<Long, List<ChannelEntity>> result = channelService.getUserChannels(
+                    TestDataFactory.USER_ID_1,
+                    TestDataFactory.TENANT_ID,
+                    params);
+
+            // Then
+            assertNotNull(result);
+            assertEquals(1L, result.getFirst());
+            assertEquals(1, result.getSecond().size());
+            verify(channelPort).findUserChannelsPaginated(
+                    TestDataFactory.USER_ID_1,
+                    TestDataFactory.TENANT_ID,
+                    0,
+                    100,
+                    ChannelType.DIRECT,
+                    false,
+                    null,
+                    null,
+                    "team"
+            );
+        }
+
+        @Test
+        @DisplayName("should apply defaults for null params")
+        void testGetUserChannels_NullParams_UsesDefaults() {
+            // Given
+            Pair<Long, List<ChannelEntity>> expected = Pair.of(0L, List.of());
+            when(channelPort.findUserChannelsPaginated(
+                    TestDataFactory.USER_ID_1,
+                    TestDataFactory.TENANT_ID,
+                    0,
+                    20,
+                    null,
+                    false,
+                    null,
+                    null,
+                    null
+            )).thenReturn(expected);
+
+            // When
+            Pair<Long, List<ChannelEntity>> result = channelService.getUserChannels(
+                    TestDataFactory.USER_ID_1,
+                    TestDataFactory.TENANT_ID,
+                    null);
+
+            // Then
+            assertNotNull(result);
+            assertEquals(0L, result.getFirst());
+            verify(channelPort).findUserChannelsPaginated(
+                    TestDataFactory.USER_ID_1,
+                    TestDataFactory.TENANT_ID,
+                    0,
+                    20,
+                    null,
+                    false,
+                    null,
+                    null,
+                    null
+            );
+        }
+
+        @Test
+        @DisplayName("should throw when entityId and entityType not both provided")
+        void testGetUserChannels_InvalidEntityFilter_ThrowsException() {
+            // Given
+            GetChannelsParams params = GetChannelsParams.builder()
+                    .entityType("   ")
+                    .entityId(10L)
+                    .build();
+
+            // When/Then
+            assertThrows(AppException.class,
+                    () -> channelService.getUserChannels(TestDataFactory.USER_ID_1, TestDataFactory.TENANT_ID, params));
+
+            verify(channelPort, never()).findUserChannelsPaginated(any(), any(), anyInt(), anyInt(), any(), any(), any(), any(), any());
         }
     }
 

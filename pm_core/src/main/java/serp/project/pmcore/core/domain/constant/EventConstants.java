@@ -18,6 +18,7 @@ public class EventConstants {
             public static final String PROJECT_DELETED = "PROJECT_DELETED";
             public static final String PROJECT_ARCHIVED = "PROJECT_ARCHIVED";
             public static final String PROJECT_UNARCHIVED = "PROJECT_UNARCHIVED";
+            public static final String PROJECT_SCHEMES_UPDATED = "PROJECT_SCHEMES_UPDATED";
         }
     }
 

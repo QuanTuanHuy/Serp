@@ -84,8 +84,21 @@ public class MessageService implements IMessageService {
     }
 
     @Override
-    public List<MessageEntity> searchMessages(Long channelId, String query, int page, int size) {
-        return messagePort.searchMessages(channelId, query, page, size);
+    public Pair<Long, List<MessageEntity>> searchMessages(Long channelId, String query, int page, int size) {
+        if (page < 0 || size <= 0) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Page must be >= 0 and size must be > 0");
+        }
+
+        String sanitizedQuery = query == null ? "" : query.trim();
+        if (sanitizedQuery.isEmpty()) {
+            return Pair.of(0L, List.of());
+        }
+
+        if (size > 100) {
+            size = 100;
+        }
+
+        return messagePort.searchMessages(channelId, sanitizedQuery, page, size);
     }
 
     @Override

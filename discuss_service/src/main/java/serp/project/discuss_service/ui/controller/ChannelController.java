@@ -9,8 +9,12 @@ import jakarta.validation.Valid;
 import io.github.serp.platform.security.context.SerpAuthContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.data.util.Pair;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import serp.project.discuss_service.core.domain.constant.RestConstants;
 import serp.project.discuss_service.core.domain.dto.GeneralResponse;
 import serp.project.discuss_service.core.domain.dto.request.*;
 import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse;
@@ -18,6 +22,7 @@ import serp.project.discuss_service.core.domain.dto.response.ChannelResponse;
 import serp.project.discuss_service.core.domain.dto.response.PaginatedResponse;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
+import serp.project.discuss_service.core.domain.enums.ChannelType;
 import serp.project.discuss_service.core.exception.AppException;
 import serp.project.discuss_service.core.exception.ErrorCode;
 import serp.project.discuss_service.core.service.IUserInfoService;
@@ -27,7 +32,7 @@ import serp.project.discuss_service.kernel.utils.ResponseUtils;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/channels")
+@RequestMapping(RestConstants.CHANNELS)
 @RequiredArgsConstructor
 @Slf4j
 public class ChannelController {
@@ -53,8 +58,7 @@ public class ChannelController {
                 request.getName(),
                 request.getDescription(),
                 Boolean.TRUE.equals(request.getIsPrivate()),
-                request.getMemberIds()
-        );
+                request.getMemberIds());
 
         ChannelResponse response = ChannelResponse.fromEntity(channel);
         return ResponseEntity.ok(responseUtils.success(response));
@@ -73,8 +77,7 @@ public class ChannelController {
         ChannelEntity channel = channelUseCase.getOrCreateDirectChannel(
                 tenantId,
                 userId,
-                request.getOtherUserId()
-        );
+                request.getOtherUserId());
 
         ChannelResponse response = ChannelResponse.fromEntity(channel);
         return ResponseEntity.ok(responseUtils.success(response));
@@ -88,7 +91,7 @@ public class ChannelController {
         Long tenantId = authContext.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
 
-        log.info("User {} creating topic channel: {} for {}/{}", 
+        log.info("User {} creating topic channel: {} for {}/{}",
                 userId, request.getName(), request.getEntityType(), request.getEntityId());
 
         ChannelEntity channel = channelUseCase.createTopicChannel(
@@ -97,8 +100,7 @@ public class ChannelController {
                 request.getName(),
                 request.getEntityType(),
                 request.getEntityId(),
-                request.getMemberIds()
-        );
+                request.getMemberIds());
 
         ChannelResponse response = ChannelResponse.fromEntity(channel);
         return ResponseEntity.ok(responseUtils.success(response));
@@ -114,9 +116,10 @@ public class ChannelController {
 
         ChannelEntity channel = channelUseCase.getChannelWithMembers(channelId);
         ChannelResponse response = ChannelResponse.fromEntity(channel);
-        
+
         if (channel.getMembers() != null) {
-            List<ChannelMemberResponse> memberResponses = userInfoService.enrichMembersWithUserInfo(channel.getMembers());
+            List<ChannelMemberResponse> memberResponses = userInfoService
+                    .enrichMembersWithUserInfo(channel.getMembers());
             response.setMembers(memberResponses);
         }
 
@@ -131,34 +134,54 @@ public class ChannelController {
         log.debug("User {} getting members of channel {}", userId, channelId);
 
         List<ChannelMemberEntity> members = channelUseCase.getChannelMembers(channelId, userId);
-                
+
         List<ChannelMemberResponse> responses = userInfoService.enrichMembersWithUserInfo(members);
-        
+
         return ResponseEntity.ok(responseUtils.success(responses));
     }
 
     @GetMapping
-    public ResponseEntity<GeneralResponse<PaginatedResponse<ChannelResponse>>> getMyChannels() {
+    public ResponseEntity<GeneralResponse<PaginatedResponse<ChannelResponse>>> getMyChannels(
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "20") Integer pageSize,
+            @RequestParam(required = false) ChannelType type,
+            @RequestParam(required = false) Boolean isArchived,
+            @RequestParam(required = false) String entityType,
+            @RequestParam(required = false) Long entityId,
+            @RequestParam(name = "search", required = false) String search,
+            @RequestParam(name = "query", required = false) String query) {
         Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
         Long tenantId = authContext.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
 
-        log.debug("User {} getting their channels", userId);
-
-        List<ChannelEntity> channels = channelUseCase.getUserChannels(userId, tenantId);
-        List<ChannelResponse> responses = channels.stream()
+        GetChannelsParams params = GetChannelsParams.builder()
+                .page(page)
+                .pageSize(pageSize)
+                .type(type)
+                .isArchived(isArchived)
+                .entityType(entityType)
+                .entityId(entityId)
+                .searchQuery(resolveSearchQuery(search, query))
+                .build();
+        Pair<Long, List<ChannelEntity>> result = channelUseCase.getUserChannels(userId, tenantId, params);
+        List<ChannelResponse> channelResponses = result.getSecond().stream()
                 .map(ChannelResponse::fromEntity)
                 .toList();
-
-        // TODO: Implement proper pagination
         PaginatedResponse<ChannelResponse> paginatedResponse = PaginatedResponse.of(
-                responses,
-                1,
-                responses.size(),
-                responses.size()
-        );
+                channelResponses,
+                params.getPage(),
+                params.getPageSize(),
+                result.getFirst());
         return ResponseEntity.ok(responseUtils.success(paginatedResponse));
+
+    }
+
+    private String resolveSearchQuery(String search, String query) {
+        if (search != null && !search.isBlank()) {
+            return search;
+        }
+        return query;
     }
 
     @PutMapping("/{channelId}")
@@ -174,8 +197,7 @@ public class ChannelController {
                 channelId,
                 userId,
                 request.getName(),
-                request.getDescription()
-        );
+                request.getDescription());
 
         ChannelResponse response = ChannelResponse.fromEntity(channel);
         return ResponseEntity.ok(responseUtils.success(response));

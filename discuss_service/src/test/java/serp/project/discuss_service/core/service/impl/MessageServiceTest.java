@@ -269,14 +269,27 @@ class MessageServiceTest {
         void testSearchMessages_DelegatesToPort() {
             // Given
             List<MessageEntity> results = List.of(TestDataFactory.createTextMessage("search term"));
-            when(messagePort.searchMessages(1L, "search", 0, 20)).thenReturn(results);
+            when(messagePort.searchMessages(1L, "search", 0, 20)).thenReturn(Pair.of(1L, results));
 
             // When
-            List<MessageEntity> result = messageService.searchMessages(1L, "search", 0, 20);
+            Pair<Long, List<MessageEntity>> result = messageService.searchMessages(1L, "search", 0, 20);
 
             // Then
-            assertEquals(1, result.size());
+            assertEquals(1L, result.getFirst());
+            assertEquals(1, result.getSecond().size());
             verify(messagePort).searchMessages(1L, "search", 0, 20);
+        }
+
+        @Test
+        @DisplayName("searchMessages should return empty for blank query")
+        void testSearchMessages_BlankQuery_ReturnsEmpty() {
+            // When
+            Pair<Long, List<MessageEntity>> result = messageService.searchMessages(1L, "   ", 0, 20);
+
+            // Then
+            assertEquals(0L, result.getFirst());
+            assertTrue(result.getSecond().isEmpty());
+            verify(messagePort, never()).searchMessages(anyLong(), anyString(), anyInt(), anyInt());
         }
     }
 

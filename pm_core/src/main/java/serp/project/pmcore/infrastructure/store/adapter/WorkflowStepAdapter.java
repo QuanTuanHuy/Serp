@@ -12,6 +12,7 @@ import serp.project.pmcore.core.port.store.IWorkflowStepPort;
 import serp.project.pmcore.infrastructure.store.mapper.WorkflowStepMapper;
 import serp.project.pmcore.infrastructure.store.repository.IWorkflowStepRepository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,7 +24,24 @@ public class WorkflowStepAdapter implements IWorkflowStepPort {
     private final WorkflowStepMapper workflowStepMapper;
 
     @Override
+    public List<WorkflowStepEntity> createWorkflowSteps(List<WorkflowStepEntity> steps) {
+        if (steps == null || steps.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return workflowStepMapper.toEntities(
+                workflowStepRepository.saveAll(workflowStepMapper.toModels(steps))
+        );
+    }
+
+    @Override
     public List<WorkflowStepEntity> getWorkflowStepsByWorkflowId(Long workflowId, Long tenantId) {
+        return workflowStepMapper.toEntities(
+                workflowStepRepository.findByWorkflowIdAndTenantId(workflowId, tenantId)
+        );
+    }
+
+    @Override
+    public List<WorkflowStepEntity> getWorkflowStepsByWorkflowIdIncludingSystem(Long workflowId, Long tenantId) {
         return workflowStepMapper.toEntities(
                 workflowStepRepository.findByWorkflowIdAndTenantIdOrSystemTenant(workflowId, tenantId)
         );

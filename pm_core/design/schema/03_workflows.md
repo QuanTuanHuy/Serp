@@ -2,7 +2,7 @@
 
 **Design Philosophy:** Workflow behavior is modeled relationally for validation, queryability, and future extension (plugins, automation, conditional routing).
 
-Provisioning note: workflow scheme graphs are expected to be deep-cloned per project from template sources (see Module 00) to avoid cross-project side effects.
+Provisioning note: workflow schemes are shared across projects by default (Jira company-managed parity). Clone-on-associate remains optional for isolated project copies (see Module 00).
 
 ## Shared Base Columns (applies to all tables in this module)
 

@@ -20,6 +20,11 @@ public interface IPriorityRepository extends JpaRepository<PriorityModel, Long> 
 
     Optional<PriorityModel> findByIdAndTenantId(Long id, Long tenantId);
 
+    @Query("SELECT p FROM PriorityModel p WHERE p.id = :id AND (p.tenantId = :tenantId OR p.tenantId = 0)")
+    Optional<PriorityModel> findByIdAndTenantIdOrSystemTenant(@Param("id") Long id, @Param("tenantId") Long tenantId);
+
+    Optional<PriorityModel> findFirstByTenantIdAndPriorityKeyOrderByIdAsc(Long tenantId, String priorityKey);
+
     List<PriorityModel> findAllByTenantIdOrderBySequenceAsc(Long tenantId);
 
     boolean existsByTenantIdAndName(Long tenantId, String name);

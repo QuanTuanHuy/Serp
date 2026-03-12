@@ -34,6 +34,18 @@ public class PriorityAdapter implements IPriorityPort {
     }
 
     @Override
+    public Optional<PriorityEntity> getPriorityByIdIncludingSystem(Long id, Long tenantId) {
+        return priorityRepository.findByIdAndTenantIdOrSystemTenant(id, tenantId)
+                .map(priorityMapper::toEntity);
+    }
+
+    @Override
+    public Optional<PriorityEntity> getPriorityByPriorityKey(Long tenantId, String priorityKey) {
+        return priorityRepository.findFirstByTenantIdAndPriorityKeyOrderByIdAsc(tenantId, priorityKey)
+                .map(priorityMapper::toEntity);
+    }
+
+    @Override
     public List<PriorityEntity> listPriorities(Long tenantId) {
         return priorityMapper.toEntities(priorityRepository.findAllByTenantIdOrderBySequenceAsc(tenantId));
     }

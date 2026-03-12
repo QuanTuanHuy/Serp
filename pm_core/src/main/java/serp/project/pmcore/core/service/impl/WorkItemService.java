@@ -7,8 +7,10 @@ package serp.project.pmcore.core.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 
+import serp.project.pmcore.core.domain.dto.filter.WorkItemFilterRequest;
 import serp.project.pmcore.core.domain.entity.IssueTypeEntity;
 import serp.project.pmcore.core.domain.entity.WorkItemEntity;
 import serp.project.pmcore.core.exception.AppException;
@@ -17,6 +19,8 @@ import serp.project.pmcore.core.port.store.IIssueTypePort;
 import serp.project.pmcore.core.port.store.IProjectIssueCounterPort;
 import serp.project.pmcore.core.port.store.IWorkItemPort;
 import serp.project.pmcore.core.service.IWorkItemService;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -45,6 +49,11 @@ public class WorkItemService implements IWorkItemService {
     public WorkItemEntity getWorkItemById(Long id, Long tenantId) {
         return workItemPort.getWorkItemById(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorCode.WORK_ITEM_NOT_FOUND));
+    }
+
+    @Override
+    public Pair<List<WorkItemEntity>, Long> searchWorkItems(Long tenantId, WorkItemFilterRequest filter) {
+        return workItemPort.searchWorkItems(tenantId, filter);
     }
 
     @Override

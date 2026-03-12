@@ -7,7 +7,11 @@ package serp.project.discuss_service.core.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
+
+import serp.project.discuss_service.core.domain.dto.request.GetChannelsParams;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.enums.ChannelType;
 import serp.project.discuss_service.core.exception.AppException;
@@ -53,7 +57,7 @@ public class ChannelService implements IChannelService {
 
     @Override
     public ChannelEntity createGroupChannel(Long tenantId, Long createdBy, String name,
-                                            String description, boolean isPrivate) {
+            String description, boolean isPrivate) {
         ChannelEntity channel = ChannelEntity.createGroup(tenantId, createdBy, name, description, isPrivate);
         ChannelEntity saved = channelPort.save(channel);
         cacheService.cacheChannel(saved);
@@ -63,7 +67,7 @@ public class ChannelService implements IChannelService {
 
     @Override
     public ChannelEntity createTopicChannel(Long tenantId, Long createdBy, String name,
-                                            String entityType, Long entityId) {
+            String entityType, Long entityId) {
         Optional<ChannelEntity> existing = channelPort.findByEntity(tenantId, entityType, entityId);
         if (existing.isPresent()) {
             log.debug("Found existing TOPIC channel for {}:{}", entityType, entityId);
@@ -99,6 +103,67 @@ public class ChannelService implements IChannelService {
     @Override
     public List<ChannelEntity> getChannelsByTenantId(Long tenantId) {
         return channelPort.findByTenantId(tenantId);
+    }
+
+    @Override
+    public Pair<Long, List<ChannelEntity>> getUserChannels(Long userId, Long tenantId, GetChannelsParams params) {
+        GetChannelsParams normalizedParams = normalizeGetChannelsParams(params);
+
+        return channelPort.findUserChannelsPaginated(
+                userId,
+                tenantId,
+                normalizedParams.getPage(),
+                normalizedParams.getPageSize(),
+                normalizedParams.getType(),
+                normalizedParams.getIsArchived(),
+                normalizedParams.getEntityType(),
+                normalizedParams.getEntityId(),
+                normalizedParams.getSearchQuery());
+    }
+
+    private GetChannelsParams normalizeGetChannelsParams(GetChannelsParams params) {
+        GetChannelsParams normalized = params == null ? new GetChannelsParams() : params;
+
+        if (params == null) {
+            normalized.setPage(0);
+            normalized.setPageSize(20);
+        }
+
+        if (normalized.getPage() < 0) {
+            normalized.setPage(0);
+        }
+        if (normalized.getPageSize() <= 0) {
+            normalized.setPageSize(20);
+        }
+        if (normalized.getPageSize() > 100) {
+            normalized.setPageSize(100);
+        }
+
+        if (normalized.getIsArchived() == null) {
+            normalized.setIsArchived(false);
+        }
+
+        if (normalized.getType() == ChannelType.DIRECT || normalized.getType() == ChannelType.GROUP) {
+            normalized.setEntityId(null);
+            normalized.setEntityType(null);
+        }
+
+        if (normalized.getEntityType() != null) {
+            String entityType = normalized.getEntityType().trim();
+            normalized.setEntityType(entityType.isEmpty() ? null : entityType);
+        }
+
+        if ((normalized.getEntityId() == null) != (normalized.getEntityType() == null)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST,
+                    "entityId and entityType must be provided together");
+        }
+
+        if (normalized.getSearchQuery() != null) {
+            String searchQuery = normalized.getSearchQuery().trim();
+            normalized.setSearchQuery(searchQuery.isEmpty() ? null : searchQuery);
+        }
+
+        return normalized;
     }
 
     @Override
