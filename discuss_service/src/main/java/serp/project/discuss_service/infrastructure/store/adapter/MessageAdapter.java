@@ -32,7 +32,10 @@ public class MessageAdapter implements IMessagePort {
             FROM messages m
             WHERE m.channel_id = :channelId
               AND m.is_deleted = false
-              AND m.search_vector @@ websearch_to_tsquery('english', :query)
+              AND (
+                    m.search_vector @@ websearch_to_tsquery('simple', :query)
+                    OR (m.content IS NOT NULL AND LOWER(m.content) LIKE :likeQuery ESCAPE '\\')
+                  )
             """;
 
     private static final String SEARCH_COUNT_QUERY = "SELECT COUNT(*) " + SEARCH_FROM_AND_WHERE;
@@ -40,7 +43,11 @@ public class MessageAdapter implements IMessagePort {
     private static final String SEARCH_DATA_QUERY = """
             SELECT m.id
             """ + SEARCH_FROM_AND_WHERE + """
-            ORDER BY ts_rank_cd(m.search_vector, websearch_to_tsquery('english', :query)) DESC,
+            ORDER BY CASE
+                        WHEN m.search_vector @@ websearch_to_tsquery('simple', :query)
+                        THEN ts_rank_cd(m.search_vector, websearch_to_tsquery('simple', :query))
+                        ELSE 0
+                     END DESC,
                      m.created_at DESC,
                      m.id DESC
             LIMIT :limit OFFSET :offset
@@ -104,9 +111,11 @@ public class MessageAdapter implements IMessagePort {
     @Override
     public Pair<Long, List<MessageEntity>> searchMessages(Long channelId, String query, int page, int size) {
         long offset = (long) page * size;
+        String likeQuery = "%" + escapeLikePattern(query.toLowerCase()) + "%";
         var params = new MapSqlParameterSource()
                 .addValue("channelId", channelId)
                 .addValue("query", query)
+                .addValue("likeQuery", likeQuery)
                 .addValue("limit", size)
                 .addValue("offset", offset);
 
@@ -134,6 +143,13 @@ public class MessageAdapter implements IMessagePort {
                 .toList();
 
         return Pair.of(total, orderedMessages);
+    }
+
+    private String escapeLikePattern(String value) {
+        return value
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
     }
 
     @Override
