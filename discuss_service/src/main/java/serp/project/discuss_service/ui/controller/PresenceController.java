@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import io.github.serp.platform.security.context.SerpAuthContext;
+import serp.project.discuss_service.core.domain.constant.RestConstants;
 import serp.project.discuss_service.core.domain.dto.GeneralResponse;
 import serp.project.discuss_service.core.domain.dto.request.UpdatePresenceStatusRequest;
 import serp.project.discuss_service.core.domain.dto.response.ChannelPresenceResponse;
@@ -22,7 +23,7 @@ import serp.project.discuss_service.core.usecase.PresenceUseCase;
 import serp.project.discuss_service.kernel.utils.ResponseUtils;
 
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping(RestConstants.API_BASE)
 @RequiredArgsConstructor
 @Slf4j
 public class PresenceController {

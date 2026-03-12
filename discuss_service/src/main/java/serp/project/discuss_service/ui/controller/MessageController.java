@@ -12,6 +12,8 @@ import org.springframework.data.util.Pair;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import serp.project.discuss_service.core.domain.constant.RestConstants;
 import serp.project.discuss_service.core.domain.dto.GeneralResponse;
 import serp.project.discuss_service.core.domain.dto.request.*;
 import serp.project.discuss_service.core.domain.dto.response.MessageResponse;
@@ -32,7 +34,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 @RestController
-@RequestMapping("/api/v1/channels/{channelId}/messages")
+@RequestMapping(RestConstants.MESSAGES)
 @RequiredArgsConstructor
 @Slf4j
 public class MessageController {
@@ -42,8 +44,8 @@ public class MessageController {
     private final IUserInfoService userInfoService;
     private final SerpAuthContext authContext;
     private final ResponseUtils responseUtils;
-    private static final Pattern MENTIONS_JSON_PATTERN =
-            Pattern.compile("^\\s*\\[\\s*(\\d+\\s*(,\\s*\\d+\\s*)*)?]\\s*$");
+    private static final Pattern MENTIONS_JSON_PATTERN = Pattern
+            .compile("^\\s*\\[\\s*(\\d+\\s*(,\\s*\\d+\\s*)*)?]\\s*$");
 
     @PostMapping
     public ResponseEntity<GeneralResponse<MessageResponse>> sendMessage(
@@ -64,16 +66,14 @@ public class MessageController {
                     userId,
                     tenantId,
                     request.getContent(),
-                    request.getMentions()
-            );
+                    request.getMentions());
         } else {
             message = messageUseCase.sendMessage(
                     channelId,
                     userId,
                     tenantId,
                     request.getContent(),
-                    request.getMentions()
-            );
+                    request.getMentions());
         }
 
         MessageResponse response = attachmentUrlService.enrichMessageWithUrls(message);
@@ -102,12 +102,11 @@ public class MessageController {
                 tenantId,
                 content,
                 mentions,
-                files
-        );
+                files);
 
         MessageResponse response = attachmentUrlService.enrichMessageWithUrls(message);
         response.setIsSentByMe(true);
-        
+
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
@@ -120,7 +119,7 @@ public class MessageController {
         Long tenantId = authContext.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
 
-        log.info("User {} sending reply to message {} in channel {}", 
+        log.info("User {} sending reply to message {} in channel {}",
                 userId, request.getParentId(), channelId);
 
         MessageEntity message = messageUseCase.sendReply(
@@ -129,8 +128,7 @@ public class MessageController {
                 userId,
                 tenantId,
                 request.getContent(),
-                request.getMentions()
-        );
+                request.getMentions());
 
         MessageResponse response = attachmentUrlService.enrichMessageWithUrls(message);
         response.setIsSentByMe(true);
@@ -197,7 +195,7 @@ public class MessageController {
         Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
-        log.debug("User {} getting thread replies for message {} in channel {}", 
+        log.debug("User {} getting thread replies for message {} in channel {}",
                 userId, messageId, channelId);
 
         List<MessageEntity> messages = messageUseCase.getThreadReplies(channelId, messageId, userId);
@@ -223,7 +221,7 @@ public class MessageController {
         Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
-        log.debug("User {} searching messages in channel {} with query: {}", 
+        log.debug("User {} searching messages in channel {} with query: {}",
                 userId, channelId, query);
 
         List<MessageEntity> messages = messageUseCase.searchMessages(
@@ -279,7 +277,7 @@ public class MessageController {
         Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
-        log.debug("User {} adding reaction {} to message {} in channel {}", 
+        log.debug("User {} adding reaction {} to message {} in channel {}",
                 userId, request.getEmoji(), messageId, channelId);
 
         MessageEntity message = messageUseCase.addReaction(messageId, userId, request.getEmoji());
@@ -295,7 +293,7 @@ public class MessageController {
         Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
-        log.debug("User {} removing reaction {} from message {} in channel {}", 
+        log.debug("User {} removing reaction {} from message {} in channel {}",
                 userId, emoji, messageId, channelId);
 
         MessageEntity message = messageUseCase.removeReaction(messageId, userId, emoji);
@@ -310,7 +308,7 @@ public class MessageController {
         Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
-        log.debug("User {} marking messages as read in channel {} up to message {}", 
+        log.debug("User {} marking messages as read in channel {} up to message {}",
                 userId, channelId, messageId);
 
         messageUseCase.markAsRead(channelId, userId, messageId);
@@ -345,7 +343,7 @@ public class MessageController {
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
         Set<Long> typingUsers = messageUseCase.getTypingUsers(channelId, userId);
-        
+
         TypingStatusResponse response = TypingStatusResponse.builder()
                 .channelId(channelId)
                 .typingUserIds(typingUsers)

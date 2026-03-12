@@ -13,6 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.util.Pair;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import serp.project.discuss_service.core.domain.constant.RestConstants;
 import serp.project.discuss_service.core.domain.dto.GeneralResponse;
 import serp.project.discuss_service.core.domain.dto.request.*;
 import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse;
@@ -30,7 +32,7 @@ import serp.project.discuss_service.kernel.utils.ResponseUtils;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/channels")
+@RequestMapping(RestConstants.CHANNELS)
 @RequiredArgsConstructor
 @Slf4j
 public class ChannelController {
