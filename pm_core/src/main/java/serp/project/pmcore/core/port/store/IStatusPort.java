@@ -7,6 +7,7 @@ package serp.project.pmcore.core.port.store;
 
 import serp.project.pmcore.core.domain.entity.StatusEntity;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface IStatusPort {
@@ -14,7 +15,11 @@ public interface IStatusPort {
 
     Optional<StatusEntity> getStatusByIdIncludingSystem(Long id, Long tenantId);
 
+    List<StatusEntity> getStatusesByTenantId(Long tenantId);
+
     Optional<StatusEntity> getStatusByStatusKey(Long tenantId, String statusKey);
 
     StatusEntity createStatus(StatusEntity status);
+
+    List<StatusEntity> createStatuses(List<StatusEntity> statuses);
 }

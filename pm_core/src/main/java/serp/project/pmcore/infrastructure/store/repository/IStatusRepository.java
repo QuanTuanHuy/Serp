@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import serp.project.pmcore.infrastructure.store.model.StatusModel;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -22,4 +23,6 @@ public interface IStatusRepository extends JpaRepository<StatusModel, Long> {
     Optional<StatusModel> findByIdAndTenantIdOrSystemTenant(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
     Optional<StatusModel> findFirstByTenantIdAndStatusKeyOrderByIdAsc(Long tenantId, String statusKey);
+
+    List<StatusModel> findAllByTenantId(Long tenantId);
 }

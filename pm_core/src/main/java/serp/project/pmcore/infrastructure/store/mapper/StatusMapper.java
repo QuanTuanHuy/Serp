@@ -61,4 +61,11 @@ public class StatusMapper extends BaseMapper {
         }
         return models.stream().map(this::toEntity).toList();
     }
+
+    public List<StatusModel> toModels(List<StatusEntity> entities) {
+        if (entities == null || entities.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return entities.stream().map(this::toModel).toList();
+    }
 }

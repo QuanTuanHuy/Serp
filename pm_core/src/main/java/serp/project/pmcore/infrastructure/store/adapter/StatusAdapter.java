@@ -10,8 +10,10 @@ import org.springframework.stereotype.Component;
 import serp.project.pmcore.core.domain.entity.StatusEntity;
 import serp.project.pmcore.core.port.store.IStatusPort;
 import serp.project.pmcore.infrastructure.store.mapper.StatusMapper;
+import serp.project.pmcore.infrastructure.store.model.StatusModel;
 import serp.project.pmcore.infrastructure.store.repository.IStatusRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -42,5 +44,17 @@ public class StatusAdapter implements IStatusPort {
     @Override
     public StatusEntity createStatus(StatusEntity status) {
         return statusMapper.toEntity(statusRepository.save(statusMapper.toModel(status)));
+    }
+
+    @Override
+    public List<StatusEntity> getStatusesByTenantId(Long tenantId) {
+        return statusMapper.toEntities(
+                statusRepository.findAllByTenantId(tenantId));
+    }
+
+    @Override
+    public List<StatusEntity> createStatuses(List<StatusEntity> statuses) {
+        List<StatusModel> models = statusMapper.toModels(statuses);
+        return statusMapper.toEntities(statusRepository.saveAll(models));
     }
 }
