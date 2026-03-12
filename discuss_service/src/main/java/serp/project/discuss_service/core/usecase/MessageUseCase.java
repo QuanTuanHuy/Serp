@@ -57,7 +57,7 @@ public class MessageUseCase {
 
     @Transactional
     public MessageEntity sendMessage(Long channelId, Long senderId, Long tenantId,
-                                     String content, List<Long> mentions) {
+            String content, List<Long> mentions) {
         memberService.getMemberWithSendPermission(channelId, senderId);
 
         ChannelEntity channel = channelService.getChannelByIdOrThrow(channelId);
@@ -80,8 +80,8 @@ public class MessageUseCase {
 
     @Transactional
     public MessageEntity sendMessageWithAttachments(Long channelId, Long senderId, Long tenantId,
-                                                     String content, List<Long> mentions,
-                                                     List<MultipartFile> files) {
+            String content, List<Long> mentions,
+            List<MultipartFile> files) {
         memberService.getMemberWithSendPermission(channelId, senderId);
 
         ChannelEntity channel = channelService.getChannelByIdOrThrow(channelId);
@@ -95,7 +95,7 @@ public class MessageUseCase {
             throw new AppException(ErrorCode.MESSAGE_CONTENT_REQUIRED);
         }
 
-        MessageEntity message = MessageEntity.createText(channelId, senderId, tenantId, 
+        MessageEntity message = MessageEntity.createText(channelId, senderId, tenantId,
                 hasContent ? content : "[Attachment]", mentions);
         MessageEntity saved = messageService.sendMessage(message);
 
@@ -111,14 +111,14 @@ public class MessageUseCase {
 
         applicationEventPublisher.publishEvent(new MessageSentInternalEvent(this, saved));
 
-        log.info("User {} sent message {} with {} attachments in channel {}", 
+        log.info("User {} sent message {} with {} attachments in channel {}",
                 senderId, saved.getId(), hasFiles ? files.size() : 0, channelId);
         return saved;
     }
 
     @Transactional
     public MessageEntity sendReply(Long channelId, Long parentId, Long senderId, Long tenantId,
-                                   String content, List<Long> mentions) {
+            String content, List<Long> mentions) {
         memberService.getMemberWithSendPermission(channelId, senderId);
 
         ChannelEntity channel = channelService.getChannelByIdOrThrow(channelId);
@@ -139,20 +139,20 @@ public class MessageUseCase {
         memberService.incrementUnreadForChannel(channelId, senderId);
 
         applicationEventPublisher.publishEvent(new MessageSentInternalEvent(this, saved));
-        
+
         return saved;
     }
 
     @Transactional(readOnly = true)
-    public Pair<Long, List<MessageEntity>> getChannelMessages(Long channelId, Long userId, 
-                                                               int page, int size) {
+    public Pair<Long, List<MessageEntity>> getChannelMessages(Long channelId, Long userId,
+            int page, int size) {
         if (!memberService.isMember(channelId, userId)) {
             throw new AppException(ErrorCode.NOT_CHANNEL_MEMBER);
         }
 
-        Optional<IDiscussCacheService.CachedMessagesPage> cached = 
-                cacheService.getCachedChannelMessagesPage(channelId, page, size);
-        
+        Optional<IDiscussCacheService.CachedMessagesPage> cached = cacheService.getCachedChannelMessagesPage(channelId,
+                page, size);
+
         if (cached.isPresent()) {
             List<MessageEntity> messages = cached.get().messages();
             enrichMessagesWithAttachments(messages);
@@ -160,26 +160,26 @@ public class MessageUseCase {
         }
 
         Pair<Long, List<MessageEntity>> result = messageService.getMessagesByChannel(channelId, page, size);
-        
+
         enrichMessagesWithAttachments(result.getSecond());
-        
-        cacheService.cacheChannelMessagesPage(channelId, page, size, 
+
+        cacheService.cacheChannelMessagesPage(channelId, page, size,
                 result.getSecond(), result.getFirst());
-        
+
         return result;
     }
 
     @Transactional(readOnly = true)
-    public List<MessageEntity> getMessagesBefore(Long channelId, Long userId, 
-                                                  Long beforeId, int limit) {
+    public List<MessageEntity> getMessagesBefore(Long channelId, Long userId,
+            Long beforeId, int limit) {
         if (!memberService.isMember(channelId, userId)) {
             throw new AppException(ErrorCode.NOT_CHANNEL_MEMBER);
         }
 
         List<MessageEntity> messages = messageService.getMessagesBefore(channelId, beforeId, limit);
-        
+
         enrichMessagesWithAttachments(messages);
-        
+
         return messages;
     }
 
@@ -190,24 +190,25 @@ public class MessageUseCase {
         }
 
         List<MessageEntity> messages = messageService.getThreadReplies(parentId);
-        
+
         enrichMessagesWithAttachments(messages);
-        
+
         return messages;
     }
 
     @Transactional(readOnly = true)
-    public List<MessageEntity> searchMessages(Long channelId, Long userId, 
-                                               String query, int page, int size) {
+    public Pair<Long, List<MessageEntity>> searchMessages(Long channelId, Long userId,
+            String query, int page, int size) {
         if (!memberService.isMember(channelId, userId)) {
             throw new AppException(ErrorCode.NOT_CHANNEL_MEMBER);
         }
 
-        List<MessageEntity> messages = messageService.searchMessages(channelId, query, page, size);
-        
-        enrichMessagesWithAttachments(messages);
-        
-        return messages;
+        Pair<Long, List<MessageEntity>> result = messageService.searchMessages(
+                channelId, query, page, size);
+
+        enrichMessagesWithAttachments(result.getSecond());
+
+        return result;
     }
 
     @Transactional(readOnly = true)
@@ -223,60 +224,60 @@ public class MessageUseCase {
     @Transactional
     public MessageEntity editMessage(Long messageId, Long userId, String newContent) {
         MessageEntity message = messageService.getMessageByIdOrThrow(messageId);
-        
+
         if (!memberService.isMember(message.getChannelId(), userId)) {
             throw new AppException(ErrorCode.NOT_CHANNEL_MEMBER);
         }
 
         MessageEntity edited = messageService.editMessage(messageId, newContent, userId);
-        
+
         applicationEventPublisher.publishEvent(new MessageUpdatedInternalEvent(this, edited));
-        
+
         return edited;
     }
 
     @Transactional
     public MessageEntity deleteMessage(Long messageId, Long userId) {
         MessageEntity message = messageService.getMessageByIdOrThrow(messageId);
-        
+
         boolean isAdmin = memberService.canManageChannel(message.getChannelId(), userId);
-        
+
         MessageEntity deleted = messageService.deleteMessage(messageId, userId, isAdmin);
-        
+
         applicationEventPublisher.publishEvent(new MessageDeletedInternalEvent(this, deleted));
-        
+
         return deleted;
     }
 
     @Transactional
     public MessageEntity addReaction(Long messageId, Long userId, String emoji) {
         MessageEntity message = messageService.getMessageByIdOrThrow(messageId);
-        
+
         if (!memberService.isMember(message.getChannelId(), userId)) {
             throw new AppException(ErrorCode.NOT_CHANNEL_MEMBER);
         }
 
         MessageEntity updated = messageService.addReaction(messageId, userId, emoji);
-        
+
         applicationEventPublisher.publishEvent(
                 new ReactionAddedInternalEvent(this, messageId, message.getChannelId(), userId, emoji));
-        
+
         return updated;
     }
 
     @Transactional
     public MessageEntity removeReaction(Long messageId, Long userId, String emoji) {
         MessageEntity message = messageService.getMessageByIdOrThrow(messageId);
-        
+
         if (!memberService.isMember(message.getChannelId(), userId)) {
             throw new AppException(ErrorCode.NOT_CHANNEL_MEMBER);
         }
 
         MessageEntity updated = messageService.removeReaction(messageId, userId, emoji);
-        
+
         applicationEventPublisher.publishEvent(
                 new ReactionRemovedInternalEvent(this, messageId, message.getChannelId(), userId, emoji));
-        
+
         return updated;
     }
 
@@ -288,7 +289,7 @@ public class MessageUseCase {
 
         memberService.markAsRead(channelId, userId, messageId);
         messageService.markAsRead(messageId, userId);
-        
+
         log.debug("User {} marked messages as read in channel {} up to {}", userId, channelId, messageId);
     }
 
@@ -316,11 +317,11 @@ public class MessageUseCase {
 
     public long getUnreadCount(Long channelId, Long userId) {
         ChannelMemberEntity member = memberService.getMemberOrThrow(channelId, userId);
-        
+
         if (member.getLastReadMsgId() == null) {
             return messageService.countUnreadMessages(channelId, 0L);
         }
-        
+
         return messageService.countUnreadMessages(channelId, member.getLastReadMsgId());
     }
 
@@ -335,11 +336,8 @@ public class MessageUseCase {
                 .map(MessageEntity::getId)
                 .toList();
 
-        Map<Long, List<AttachmentEntity>> attachmentMap = 
-                attachmentService.getAttachmentsByMessageIds(messageIds);
+        Map<Long, List<AttachmentEntity>> attachmentMap = attachmentService.getAttachmentsByMessageIds(messageIds);
 
-        messages.forEach(msg -> 
-                msg.setAttachments(attachmentMap.getOrDefault(msg.getId(), List.of()))
-        );
+        messages.forEach(msg -> msg.setAttachments(attachmentMap.getOrDefault(msg.getId(), List.of())));
     }
 }

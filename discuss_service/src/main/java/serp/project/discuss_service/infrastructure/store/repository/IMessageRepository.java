@@ -38,14 +38,7 @@ public interface IMessageRepository extends IBaseRepository<MessageModel> {
            "AND m.id > :afterMessageId AND m.isDeleted = false")
     long countUnreadMessages(@Param("channelId") Long channelId, @Param("afterMessageId") Long afterMessageId);
 
-    // Full-text search
-    @Query(value = "SELECT * FROM messages m WHERE m.channel_id = :channelId " +
-                   "AND m.search_vector @@ plainto_tsquery('english', :query) " +
-                   "AND m.is_deleted = false ORDER BY ts_rank(m.search_vector, plainto_tsquery('english', :query)) DESC",
-           nativeQuery = true)
-    List<MessageModel> searchMessages(@Param("channelId") Long channelId,
-                                      @Param("query") String query,
-                                      Pageable pageable);
+    List<MessageModel> findByIdIn(List<Long> ids);
 
     @Modifying
     @Query("UPDATE MessageModel m SET m.isDeleted = true, m.deletedAt = :deletedAt WHERE m.channelId = :channelId")

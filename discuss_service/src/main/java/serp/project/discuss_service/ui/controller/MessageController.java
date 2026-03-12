@@ -213,7 +213,7 @@ public class MessageController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<GeneralResponse<List<MessageResponse>>> searchMessages(
+    public ResponseEntity<GeneralResponse<PaginatedResponse<MessageResponse>>> searchMessages(
             @PathVariable Long channelId,
             @RequestParam String query,
             @RequestParam(defaultValue = "0") int page,
@@ -224,10 +224,9 @@ public class MessageController {
         log.debug("User {} searching messages in channel {} with query: {}",
                 userId, channelId, query);
 
-        List<MessageEntity> messages = messageUseCase.searchMessages(
-                channelId, userId, query, page, size);
+        Pair<Long, List<MessageEntity>> result = messageUseCase.searchMessages(channelId, userId, query, page, size);
 
-        List<MessageResponse> responses = messages.stream()
+        List<MessageResponse> responses = result.getSecond().stream()
                 .map(msg -> {
                     MessageResponse r = attachmentUrlService.enrichMessageWithUrls(msg);
                     r.setIsSentByMe(msg.getSenderId().equals(userId));
@@ -236,7 +235,10 @@ public class MessageController {
                 })
                 .toList();
 
-        return ResponseEntity.ok(responseUtils.success(responses));
+        PaginatedResponse<MessageResponse> paginatedResponse = PaginatedResponse.of(
+                responses, page, size, result.getFirst());
+
+        return ResponseEntity.ok(responseUtils.success(paginatedResponse));
     }
 
     @PutMapping("/{messageId}")
