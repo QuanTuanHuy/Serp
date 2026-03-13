@@ -18,9 +18,12 @@ import serp.project.discuss_service.kernel.utils.HttpClientHelper;
 import serp.project.discuss_service.kernel.utils.TokenUtils;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import org.springframework.util.LinkedMultiValueMap;
 
 @Component
 @RequiredArgsConstructor
@@ -44,16 +47,16 @@ public class AccountServiceClientAdapter implements IAccountServiceClient {
 
             Map<String, String> headers = Map.of("Authorization", "Bearer " + token);
 
-            @SuppressWarnings("unchecked")
-            Map<String, Object> response = httpClientHelper.get(url, null, headers, Map.class)
-                    .block();
-
-            if (response == null) {
+            UserProfileEnvelope response = httpClientHelper.get(
+                    url,
+                    null,
+                    headers,
+                    UserProfileEnvelope.class);
+            if (response == null || response.data() == null) {
                 log.warn("No response received for user ID: {}", userId);
                 return Optional.empty();
             }
-
-            return extractUserInfo(response, userId);
+            return Optional.ofNullable(response.data().toUserInfo());
 
         } catch (Exception e) {
             log.error("Error fetching user {} from account service: {}", userId, e.getMessage());
@@ -62,7 +65,43 @@ public class AccountServiceClientAdapter implements IAccountServiceClient {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
+    public List<UserInfo> getUsersByIds(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        try {
+            String token = tokenUtils.getServiceToken()
+                    .orElseThrow(() -> new RuntimeException("Failed to obtain service token"));
+
+            String url = accountServiceUrl + "/internal/api/v1/users/batch";
+            log.info("Url: {}", url);
+
+            Map<String, String> headers = Map.of("Authorization", "Bearer " + token);
+
+            LinkedMultiValueMap<String, String> queryParams = new LinkedMultiValueMap<>();
+            userIds.forEach(id -> queryParams.add("ids", id.toString()));
+
+            BatchedUserProfilesEnvelope response = httpClientHelper.get(
+                    url,
+                    queryParams,
+                    headers,
+                    BatchedUserProfilesEnvelope.class);
+
+            if (response == null || response.data() == null) {
+                log.warn("No response received for user IDs: {}", userIds);
+                return Collections.emptyList();
+            }
+            return response.data().stream()
+                    .map(UserProfileResponse::toUserInfo)
+                    .toList();
+
+        } catch (Exception e) {
+            log.error("Error fetching users {} from account service: {}", userIds, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    @Override
     public List<UserInfo> getUsersForTenant(Long tenantId, String query) {
         if (tenantId == null) {
             throw new IllegalArgumentException("Tenant ID must not be null");
@@ -75,41 +114,27 @@ public class AccountServiceClientAdapter implements IAccountServiceClient {
             log.info("Url: {}", url);
 
             Map<String, String> headers = Map.of("Authorization", "Bearer " + token);
-            
-            Map<String, Object> params = new java.util.HashMap<>();
+
+            Map<String, Object> params = new HashMap<>();
             params.put("organizationId", tenantId);
             params.put("search", query);
             params.put("page", 0);
             params.put("pageSize", 50);
-
             MultiValueMap<String, String> queryParams = httpClientHelper.buildQueryParams(params);
 
-            Map<String, Object> response = httpClientHelper.get(
+            UsersPageEnvelope response = httpClientHelper.get(
                     url,
                     queryParams,
                     headers,
-                    Map.class
-            ).block();
+                    UsersPageEnvelope.class);
 
-            if (response == null) {
-                log.warn("No response received for users of tenant ID: {}", tenantId);
+            if (response == null || response.data() == null || response.data().items() == null) {
+                log.warn("No response or empty items received for tenant ID: {}", tenantId);
                 return Collections.emptyList();
             }
-
-            Object dataObj = response.get("data");
-            if (dataObj instanceof Map) {
-                Map<String, Object> dataMap = (Map<String, Object>) dataObj;
-                Object itemsObj = dataMap.get("items");
-                if (itemsObj instanceof List) {
-                    List<Map<String, Object>> items = (List<Map<String, Object>>) itemsObj;
-                    return items.stream()
-                            .map(this::mapToUserInfo)
-                            .toList();
-                }
-            }
-
-            log.warn("Invalid response structure for users of tenant ID: {}", tenantId);
-            return Collections.emptyList();
+            return response.data().items().stream()
+                    .map(UserProfileResponse::toUserInfo)
+                    .toList();
 
         } catch (Exception e) {
             log.error("Error fetching users for tenant {} from account service: {}", tenantId, e.getMessage());
@@ -117,67 +142,49 @@ public class AccountServiceClientAdapter implements IAccountServiceClient {
         }
     }
 
-    /**
-     * Extract UserInfo from account service response.
-     */
-    @SuppressWarnings("unchecked")
-    private Optional<ChannelMemberResponse.UserInfo> extractUserInfo(Map<String, Object> response, Long userId) {
-        try {
-            Object dataObj = response.get("data");
-            if (dataObj == null) {
-                log.warn("No data field in response for user ID: {}", userId);
-                return Optional.empty();
-            }
+    private record UserProfileResponse(
+            Long id,
+            String email,
+            String firstName,
+            String lastName,
+            String avatarUrl) {
 
-            Map<String, Object> data = (Map<String, Object>) dataObj;
-            UserInfo userInfo = mapToUserInfo(data);
-            if (userInfo.getId() == null) {
-                userInfo.setId(userId);
-            }
-
-            return Optional.of(userInfo);
-
-        } catch (Exception e) {
-            log.error("Error parsing user info for user {}: {}", userId, e.getMessage());
-            return Optional.empty();
+        public UserInfo toUserInfo() {
+            String name = (firstName != null ? firstName : "") + (lastName != null ? " " + lastName : "");
+            return UserInfo.builder()
+                    .id(id)
+                    .name(name.trim().isEmpty() ? null : name.trim())
+                    .email(email)
+                    .avatarUrl(avatarUrl)
+                    .build();
         }
     }
 
-    private ChannelMemberResponse.UserInfo mapToUserInfo(Map<String, Object> data) {
-        Long id = null;
-        Object idObj = data.get("id");
-        if (idObj instanceof Number) {
-            id = ((Number) idObj).longValue();
-        } else if (idObj != null) {
-            try {
-                id = Long.parseLong(idObj.toString());
-            } catch (Exception e) {
-                // ignore
-            }
-        }
-
-        String name = getStringValue(data, "name", "firstName", "lastName");
-        String email = getStringValue(data, "email");
-        String avatarUrl = getStringValue(data, "avatar", "avatarUrl", "profileImage");
-
-        return ChannelMemberResponse.UserInfo.builder()
-                .id(id)
-                .name(name)
-                .email(email)
-                .avatarUrl(avatarUrl)
-                .build();
+    private record UserProfileEnvelope(
+            String status,
+            Integer code,
+            String message,
+            UserProfileResponse data) {
     }
 
-    /**
-     * Get string value from map, trying multiple possible keys.
-     */
-    private String getStringValue(Map<String, Object> data, String... keys) {
-        for (String key : keys) {
-            Object value = data.get(key);
-            if (value != null) {
-                return value.toString();
-            }
-        }
-        return null;
+    private record UsersPageEnvelope(
+            String status,
+            Integer code,
+            String message,
+            PagedResponse data) {
+    }
+
+    private record BatchedUserProfilesEnvelope(
+            String status,
+            Integer code,
+            String message,
+            List<UserProfileResponse> data) {
+    }
+
+    private record PagedResponse(
+            List<UserProfileResponse> items,
+            int currentPage,
+            long totalItems,
+            int totalPages) {
     }
 }

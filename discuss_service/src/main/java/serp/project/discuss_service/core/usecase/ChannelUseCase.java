@@ -13,6 +13,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import serp.project.discuss_service.core.domain.dto.request.GetChannelsParams;
+import serp.project.discuss_service.core.domain.dto.response.ChannelResponse;
+import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse.UserInfo;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
 import serp.project.discuss_service.core.domain.enums.MemberRole;
@@ -22,9 +24,14 @@ import serp.project.discuss_service.core.service.IChannelMemberService;
 import serp.project.discuss_service.core.service.IChannelService;
 import serp.project.discuss_service.core.service.IDiscussEventPublisher;
 import serp.project.discuss_service.core.service.IPresenceService;
+import serp.project.discuss_service.core.service.IUserInfoService;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -35,6 +42,7 @@ public class ChannelUseCase {
     private final IChannelMemberService memberService;
     private final IDiscussEventPublisher eventPublisher;
     private final IPresenceService presenceService;
+    private final IUserInfoService userInfoService;
 
     @Transactional
     public ChannelEntity createGroupChannel(Long tenantId, Long createdBy, String name,
@@ -62,14 +70,17 @@ public class ChannelUseCase {
 
     @Transactional
     public ChannelEntity getOrCreateDirectChannel(Long tenantId, Long userId1, Long userId2) {
-        ChannelEntity channel = channelService.getOrCreateDirectChannel(tenantId, userId1, userId2);
+        if (userId1.equals(userId2)) {
+            throw new AppException(ErrorCode.INVALID_DIRECT_CHANNEL_USERS);
+        }
+        Optional<ChannelEntity> existingChannel = channelService.getDirectChannel(tenantId, userId1, userId2);
+        if (existingChannel.isPresent()) {
+            return existingChannel.get();
+        }
 
-        if (!memberService.isMember(channel.getId(), userId1)) {
-            memberService.addOwner(channel.getId(), userId1, tenantId);
-        }
-        if (!memberService.isMember(channel.getId(), userId2)) {
-            memberService.addMember(channel.getId(), userId2, tenantId, MemberRole.MEMBER);
-        }
+        ChannelEntity channel = channelService.createDirectChannel(tenantId, userId1, userId2);
+        memberService.addOwner(channel.getId(), userId1, tenantId);
+        memberService.addMember(channel.getId(), userId2, tenantId, MemberRole.MEMBER);
 
         return channel;
     }
@@ -96,7 +107,10 @@ public class ChannelUseCase {
     }
 
     @Transactional(readOnly = true)
-    public ChannelEntity getChannelWithMembers(Long channelId) {
+    public ChannelEntity getChannelWithMembers(Long channelId, Long userId) {
+        if (!memberService.isMember(channelId, userId)) {
+            throw new AppException(ErrorCode.NOT_CHANNEL_MEMBER);
+        }
         ChannelEntity channel = channelService.getChannelByIdOrThrow(channelId);
         List<ChannelMemberEntity> members = memberService.getActiveMembers(channelId);
         channel.setMembers(members);
@@ -187,5 +201,47 @@ public class ChannelUseCase {
     public Set<Long> getOnlineMembers(Long channelId) {
         Set<Long> memberIds = memberService.getMemberIds(channelId);
         return presenceService.getOnlineUsers(memberIds);
+    }
+
+    public ChannelResponse toChannelResponse(ChannelEntity channel, Long currentUserId) {
+        ChannelResponse response = ChannelResponse.fromEntity(channel);
+        if (channel != null && channel.isDirect()) {
+            channel.getOtherUserId(currentUserId)
+                    .flatMap(userInfoService::getUserById)
+                    .ifPresent(user -> {
+                        if (user.getName() != null && !user.getName().isBlank()) {
+                            response.setName(user.getName());
+                        }
+                    });
+        }
+        return response;
+    }
+
+    public List<ChannelResponse> toChannelResponseList(List<ChannelEntity> channels, Long currentUserId) {
+        List<Long> otherUserIds = channels.stream()
+                .filter(ChannelEntity::isDirect)
+                .map(channel -> channel.getOtherUserId(currentUserId))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .distinct()
+                .toList();
+        List<UserInfo> otherUsers = userInfoService.getUsersByIds(otherUserIds);
+        Map<Long, UserInfo> userInfoMap = otherUsers.stream()
+                .collect(Collectors.toMap(UserInfo::getId, Function.identity()));
+        return channels.stream()
+                .map(channel -> {
+                    ChannelResponse response = ChannelResponse.fromEntity(channel);
+                    if (channel.isDirect()) {
+                        channel.getOtherUserId(currentUserId)
+                                .flatMap(id -> Optional.ofNullable(userInfoMap.get(id)))
+                                .ifPresent(user -> {
+                                    if (user.getName() != null && !user.getName().isBlank()) {
+                                        response.setName(user.getName());
+                                    }
+                                });
+                    }
+                    return response;
+                })
+                .toList();
     }
 }

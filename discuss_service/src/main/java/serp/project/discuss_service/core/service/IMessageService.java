@@ -24,6 +24,8 @@ public interface IMessageService {
 
     List<MessageEntity> getMessagesBefore(Long channelId, Long beforeId, int limit);
 
+    List<MessageEntity> getMessagesAfter(Long channelId, Long afterId, int limit);
+
     List<MessageEntity> getThreadReplies(Long parentId);
 
     Pair<Long, List<MessageEntity>> searchMessages(Long channelId, String query, int page, int size);

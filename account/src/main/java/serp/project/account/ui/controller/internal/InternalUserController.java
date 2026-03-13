@@ -1,5 +1,7 @@
 package serp.project.account.ui.controller.internal;
 
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -42,6 +44,12 @@ public class InternalUserController {
                 .organizationId(organizationId)
                 .build();
         var response = userUseCase.getUsers(params);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @GetMapping("/batch")
+    public ResponseEntity<?> getUsersByIds(@RequestParam List<Long> ids) {
+        var response = userUseCase.getUsersByIds(ids);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 }

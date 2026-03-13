@@ -79,6 +79,11 @@ public class MessageService implements IMessageService {
     }
 
     @Override
+    public List<MessageEntity> getMessagesAfter(Long channelId, Long afterId, int limit) {
+        return messagePort.findAfterId(channelId, afterId, limit);
+    }
+
+    @Override
     public List<MessageEntity> getThreadReplies(Long parentId) {
         return messagePort.findReplies(parentId);
     }

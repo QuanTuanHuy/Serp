@@ -17,13 +17,13 @@ import serp.project.discuss_service.core.domain.constant.RestConstants;
 import serp.project.discuss_service.core.domain.dto.GeneralResponse;
 import serp.project.discuss_service.core.domain.dto.request.*;
 import serp.project.discuss_service.core.domain.dto.response.MessageResponse;
+import serp.project.discuss_service.core.domain.dto.response.MessagesAroundResponse;
 import serp.project.discuss_service.core.domain.dto.response.PaginatedResponse;
 import serp.project.discuss_service.core.domain.dto.response.TypingStatusResponse;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
 import serp.project.discuss_service.core.exception.AppException;
 import serp.project.discuss_service.core.exception.ErrorCode;
 import serp.project.discuss_service.core.service.IAttachmentUrlService;
-import serp.project.discuss_service.core.service.IUserInfoService;
 import serp.project.discuss_service.core.usecase.MessageUseCase;
 import io.github.serp.platform.security.context.SerpAuthContext;
 import serp.project.discuss_service.kernel.utils.ResponseUtils;
@@ -41,7 +41,6 @@ public class MessageController {
 
     private final MessageUseCase messageUseCase;
     private final IAttachmentUrlService attachmentUrlService;
-    private final IUserInfoService userInfoService;
     private final SerpAuthContext authContext;
     private final ResponseUtils responseUtils;
     private static final Pattern MENTIONS_JSON_PATTERN = Pattern
@@ -147,15 +146,7 @@ public class MessageController {
 
         Pair<Long, List<MessageEntity>> result = messageUseCase.getChannelMessages(
                 channelId, userId, page, size);
-
-        List<MessageResponse> messageResponses = result.getSecond().stream()
-                .map(msg -> {
-                    MessageResponse r = attachmentUrlService.enrichMessageWithUrls(msg);
-                    r.setIsSentByMe(msg.getSenderId().equals(userId));
-                    r = userInfoService.enrichMessageWithUserInfo(r);
-                    return r;
-                })
-                .toList();
+        List<MessageResponse> messageResponses = messageUseCase.enrichMessageResponseList(result.getSecond(), userId);
 
         PaginatedResponse<MessageResponse> paginatedResponse = PaginatedResponse.of(
                 messageResponses, page, size, result.getFirst());
@@ -176,16 +167,28 @@ public class MessageController {
         List<MessageEntity> messages = messageUseCase.getMessagesBefore(
                 channelId, userId, beforeId, limit);
 
-        List<MessageResponse> responses = messages.stream()
-                .map(msg -> {
-                    MessageResponse r = attachmentUrlService.enrichMessageWithUrls(msg);
-                    r.setIsSentByMe(msg.getSenderId().equals(userId));
-                    r = userInfoService.enrichMessageWithUserInfo(r);
-                    return r;
-                })
-                .toList();
+        return ResponseEntity.ok(responseUtils.success(messageUseCase.enrichMessageResponseList(messages, userId)));
+    }
 
-        return ResponseEntity.ok(responseUtils.success(responses));
+    @GetMapping("/around/{messageId}")
+    public ResponseEntity<GeneralResponse<MessagesAroundResponse>> getMessagesAround(
+            @PathVariable Long channelId,
+            @PathVariable Long messageId,
+            @RequestParam(defaultValue = "25") int limit) {
+        Long userId = authContext.getCurrentUserId()
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
+
+        log.debug("User {} getting messages around {} in channel {}", userId, messageId, channelId);
+
+        MessageUseCase.MessagesAroundResult result = messageUseCase.getMessagesAround(
+                channelId, userId, messageId, limit);
+
+        List<MessageResponse> responses = messageUseCase.enrichMessageResponseList(result.messages(), userId);
+
+        MessagesAroundResponse response = new MessagesAroundResponse(
+                responses, result.hasBefore(), result.hasAfter());
+
+        return ResponseEntity.ok(responseUtils.success(response));
     }
 
     @GetMapping("/{messageId}/replies")
@@ -200,14 +203,7 @@ public class MessageController {
 
         List<MessageEntity> messages = messageUseCase.getThreadReplies(channelId, messageId, userId);
 
-        List<MessageResponse> responses = messages.stream()
-                .map(msg -> {
-                    MessageResponse r = attachmentUrlService.enrichMessageWithUrls(msg);
-                    r.setIsSentByMe(msg.getSenderId().equals(userId));
-                    r = userInfoService.enrichMessageWithUserInfo(r);
-                    return r;
-                })
-                .toList();
+        List<MessageResponse> responses = messageUseCase.enrichMessageResponseList(messages, userId);
 
         return ResponseEntity.ok(responseUtils.success(responses));
     }
@@ -226,14 +222,7 @@ public class MessageController {
 
         Pair<Long, List<MessageEntity>> result = messageUseCase.searchMessages(channelId, userId, query, page, size);
 
-        List<MessageResponse> responses = result.getSecond().stream()
-                .map(msg -> {
-                    MessageResponse r = attachmentUrlService.enrichMessageWithUrls(msg);
-                    r.setIsSentByMe(msg.getSenderId().equals(userId));
-                    r = userInfoService.enrichMessageWithUserInfo(r);
-                    return r;
-                })
-                .toList();
+        List<MessageResponse> responses = messageUseCase.enrichMessageResponseList(result.getSecond(), userId);
 
         PaginatedResponse<MessageResponse> paginatedResponse = PaginatedResponse.of(
                 responses, page, size, result.getFirst());
