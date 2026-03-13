@@ -24,6 +24,7 @@ import serp.project.discuss_service.core.service.IDiscussEventPublisher;
 import serp.project.discuss_service.core.service.IPresenceService;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Component
@@ -62,14 +63,14 @@ public class ChannelUseCase {
 
     @Transactional
     public ChannelEntity getOrCreateDirectChannel(Long tenantId, Long userId1, Long userId2) {
-        ChannelEntity channel = channelService.getOrCreateDirectChannel(tenantId, userId1, userId2);
+        Optional<ChannelEntity> existingChannel = channelService.getDirectChannel(tenantId, userId1, userId2);
+        if (existingChannel.isPresent()) {
+            return existingChannel.get();
+        }
 
-        if (!memberService.isMember(channel.getId(), userId1)) {
-            memberService.addOwner(channel.getId(), userId1, tenantId);
-        }
-        if (!memberService.isMember(channel.getId(), userId2)) {
-            memberService.addMember(channel.getId(), userId2, tenantId, MemberRole.MEMBER);
-        }
+        ChannelEntity channel = channelService.createDirectChannel(tenantId, userId1, userId2);
+        memberService.addOwner(channel.getId(), userId1, tenantId);
+        memberService.addMember(channel.getId(), userId2, tenantId, MemberRole.MEMBER);
 
         return channel;
     }

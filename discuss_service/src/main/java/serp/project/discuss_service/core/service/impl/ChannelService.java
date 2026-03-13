@@ -16,7 +16,6 @@ import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.enums.ChannelType;
 import serp.project.discuss_service.core.exception.AppException;
 import serp.project.discuss_service.core.exception.ErrorCode;
-import serp.project.discuss_service.core.port.client.IAccountServiceClient;
 import serp.project.discuss_service.core.port.store.IChannelPort;
 import serp.project.discuss_service.core.service.IChannelService;
 import serp.project.discuss_service.core.service.IDiscussCacheService;
@@ -30,7 +29,6 @@ import java.util.Optional;
 public class ChannelService implements IChannelService {
 
     private final IChannelPort channelPort;
-    private final IAccountServiceClient accountServiceClient;
     private final IDiscussCacheService cacheService;
 
     @Override
@@ -43,13 +41,12 @@ public class ChannelService implements IChannelService {
     }
 
     @Override
-    public ChannelEntity getOrCreateDirectChannel(Long tenantId, Long userId1, Long userId2) {
-        Optional<ChannelEntity> existing = channelPort.findDirectChannel(tenantId, userId1, userId2);
-        if (existing.isPresent()) {
-            log.debug("Found existing DIRECT channel between {} and {}", userId1, userId2);
-            return existing.get();
-        }
+    public Optional<ChannelEntity> getDirectChannel(Long tenantId, Long userId1, Long userId2) {
+        return channelPort.findDirectChannel(tenantId, userId1, userId2);
+    }
 
+    @Override
+    public ChannelEntity createDirectChannel(Long tenantId, Long userId1, Long userId2) {
         ChannelEntity channel = ChannelEntity.createDirect(tenantId, userId1, userId2);
         ChannelEntity saved = channelPort.save(channel);
         cacheService.cacheChannel(saved);

@@ -90,15 +90,15 @@ class ChannelServiceTest {
         }
     }
 
-    // ==================== GET OR CREATE DIRECT CHANNEL TESTS ====================
+    // ==================== DIRECT CHANNEL TESTS ====================
 
     @Nested
-    @DisplayName("getOrCreateDirectChannel")
-    class GetOrCreateDirectChannelTests {
+    @DisplayName("getDirectChannel / createDirectChannel")
+    class DirectChannelTests {
 
         @Test
-        @DisplayName("should return existing direct channel")
-        void testGetOrCreateDirectChannel_ExistingChannel_ReturnsExisting() {
+        @DisplayName("getDirectChannel should delegate to port")
+        void testGetDirectChannel_DelegatesToPort() {
             // Given
             ChannelEntity existing = TestDataFactory.createDirectChannel();
             when(channelPort.findDirectChannel(
@@ -108,29 +108,28 @@ class ChannelServiceTest {
             )).thenReturn(Optional.of(existing));
 
             // When
-            ChannelEntity result = channelService.getOrCreateDirectChannel(
+            Optional<ChannelEntity> result = channelService.getDirectChannel(
                     TestDataFactory.TENANT_ID,
                     TestDataFactory.USER_ID_1,
                     TestDataFactory.USER_ID_2
             );
 
             // Then
-            assertNotNull(result);
-            assertEquals(existing.getId(), result.getId());
+            assertTrue(result.isPresent());
+            assertEquals(existing.getId(), result.get().getId());
             verify(channelPort, never()).save(any());
+            verify(cacheService, never()).cacheChannel(any());
         }
 
         @Test
-        @DisplayName("should create new direct channel if not exists")
-        void testGetOrCreateDirectChannel_NewChannel_CreatesNew() {
+        @DisplayName("createDirectChannel should create and cache direct channel")
+        void testCreateDirectChannel_CreatesAndCaches() {
             // Given
-            when(channelPort.findDirectChannel(any(), any(), any())).thenReturn(Optional.empty());
-
             ChannelEntity saved = TestDataFactory.createDirectChannel();
             when(channelPort.save(any(ChannelEntity.class))).thenReturn(saved);
 
             // When
-            ChannelEntity result = channelService.getOrCreateDirectChannel(
+            ChannelEntity result = channelService.createDirectChannel(
                     TestDataFactory.TENANT_ID,
                     TestDataFactory.USER_ID_1,
                     TestDataFactory.USER_ID_2

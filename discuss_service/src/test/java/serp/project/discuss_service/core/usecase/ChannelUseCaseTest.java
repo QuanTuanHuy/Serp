@@ -26,6 +26,7 @@ import serp.project.discuss_service.core.service.IPresenceService;
 import serp.project.discuss_service.testutil.TestDataFactory;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -133,19 +134,16 @@ class ChannelUseCaseTest {
     class GetOrCreateDirectChannelTests {
 
         @Test
-        @DisplayName("should get existing channel and ensure both users are members")
-        void testGetOrCreateDirectChannel_ExistingChannel_EnsuresMembers() {
+        @DisplayName("should return existing direct channel when present")
+        void testGetOrCreateDirectChannel_ExistingChannel_ReturnsExisting() {
             // Given
             ChannelEntity channel = TestDataFactory.createDirectChannel();
 
-            when(channelService.getOrCreateDirectChannel(
+            when(channelService.getDirectChannel(
                     TestDataFactory.TENANT_ID,
                     TestDataFactory.USER_ID_1,
                     TestDataFactory.USER_ID_2
-            )).thenReturn(channel);
-
-            when(memberService.isMember(channel.getId(), TestDataFactory.USER_ID_1)).thenReturn(true);
-            when(memberService.isMember(channel.getId(), TestDataFactory.USER_ID_2)).thenReturn(true);
+            )).thenReturn(Optional.of(channel));
 
             // When
             ChannelEntity result = channelUseCase.getOrCreateDirectChannel(
@@ -156,19 +154,25 @@ class ChannelUseCaseTest {
 
             // Then
             assertNotNull(result);
+            assertEquals(channel.getId(), result.getId());
+            verify(channelService).getDirectChannel(
+                    TestDataFactory.TENANT_ID,
+                    TestDataFactory.USER_ID_1,
+                    TestDataFactory.USER_ID_2
+            );
+            verify(channelService, never()).createDirectChannel(any(), any(), any());
             verify(memberService, never()).addOwner(any(), any(), any());
             verify(memberService, never()).addMember(any(), any(), any(), any());
         }
 
         @Test
-        @DisplayName("should add users as members if not already members")
-        void testGetOrCreateDirectChannel_NewChannel_AddsBothUsers() {
+        @DisplayName("should create direct channel and add both users when absent")
+        void testGetOrCreateDirectChannel_NewChannel_CreatesAndAddsMembers() {
             // Given
             ChannelEntity channel = TestDataFactory.createDirectChannel();
 
-            when(channelService.getOrCreateDirectChannel(any(), any(), any())).thenReturn(channel);
-            when(memberService.isMember(channel.getId(), TestDataFactory.USER_ID_1)).thenReturn(false);
-            when(memberService.isMember(channel.getId(), TestDataFactory.USER_ID_2)).thenReturn(false);
+            when(channelService.getDirectChannel(any(), any(), any())).thenReturn(Optional.empty());
+            when(channelService.createDirectChannel(any(), any(), any())).thenReturn(channel);
 
             // When
             channelUseCase.getOrCreateDirectChannel(
@@ -178,6 +182,16 @@ class ChannelUseCaseTest {
             );
 
             // Then
+            verify(channelService).getDirectChannel(
+                    TestDataFactory.TENANT_ID,
+                    TestDataFactory.USER_ID_1,
+                    TestDataFactory.USER_ID_2
+            );
+            verify(channelService).createDirectChannel(
+                    TestDataFactory.TENANT_ID,
+                    TestDataFactory.USER_ID_1,
+                    TestDataFactory.USER_ID_2
+            );
             verify(memberService).addOwner(channel.getId(), TestDataFactory.USER_ID_1, TestDataFactory.TENANT_ID);
             verify(memberService).addMember(channel.getId(), TestDataFactory.USER_ID_2, TestDataFactory.TENANT_ID, MemberRole.MEMBER);
         }
