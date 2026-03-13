@@ -69,6 +69,9 @@ public class ChannelEntity extends BaseEntity {
     // ==================== FACTORY METHODS ====================
 
     public static ChannelEntity createDirect(Long tenantId, Long userId1, Long userId2) {
+        if (userId1.equals(userId2)) {
+            throw new IllegalArgumentException("Cannot create DIRECT channel with the same user");
+        }
         Long smallerId = Math.min(userId1, userId2);
         Long largerId = Math.max(userId1, userId2);
 

@@ -114,7 +114,7 @@ public class ChannelController {
 
         log.debug("User {} getting channel {}", userId, channelId);
 
-        ChannelEntity channel = channelUseCase.getChannelWithMembers(channelId);
+        ChannelEntity channel = channelUseCase.getChannelWithMembers(channelId, userId);
         ChannelResponse response = channelUseCase.toResponse(channel, userId);
 
         if (channel.getMembers() != null) {

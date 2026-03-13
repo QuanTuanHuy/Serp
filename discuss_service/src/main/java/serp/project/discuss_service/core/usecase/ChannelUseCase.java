@@ -66,6 +66,9 @@ public class ChannelUseCase {
 
     @Transactional
     public ChannelEntity getOrCreateDirectChannel(Long tenantId, Long userId1, Long userId2) {
+        if (userId1.equals(userId2)) {
+            throw new AppException(ErrorCode.INVALID_DIRECT_CHANNEL_USERS);
+        }
         Optional<ChannelEntity> existingChannel = channelService.getDirectChannel(tenantId, userId1, userId2);
         if (existingChannel.isPresent()) {
             return existingChannel.get();
@@ -100,7 +103,10 @@ public class ChannelUseCase {
     }
 
     @Transactional(readOnly = true)
-    public ChannelEntity getChannelWithMembers(Long channelId) {
+    public ChannelEntity getChannelWithMembers(Long channelId, Long userId) {
+        if (!memberService.isMember(channelId, userId)) {
+            throw new AppException(ErrorCode.NOT_CHANNEL_MEMBER);
+        }
         ChannelEntity channel = channelService.getChannelByIdOrThrow(channelId);
         List<ChannelMemberEntity> members = memberService.getActiveMembers(channelId);
         channel.setMembers(members);
