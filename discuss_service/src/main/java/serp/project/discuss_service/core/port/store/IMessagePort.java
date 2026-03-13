@@ -21,6 +21,8 @@ public interface IMessagePort {
 
     List<MessageEntity> findBeforeId(Long channelId, Long beforeId, int limit);
 
+    List<MessageEntity> findAfterId(Long channelId, Long afterId, int limit);
+
     List<MessageEntity> findReplies(Long parentId);
 
     List<MessageEntity> findBySenderId(Long senderId, int page, int size);

@@ -89,6 +89,13 @@ public class MessageAdapter implements IMessagePort {
     }
 
     @Override
+    public List<MessageEntity> findAfterId(Long channelId, Long afterId, int limit) {
+        var pageable = PageRequest.of(0, limit);
+        return messageMapper.toEntityList(
+                messageRepository.findMessagesAfterId(channelId, afterId, pageable));
+    }
+
+    @Override
     public List<MessageEntity> findReplies(Long parentId) {
         return messageMapper.toEntityList(
                 messageRepository.findByParentIdAndIsDeletedFalseOrderByCreatedAtAsc(parentId));

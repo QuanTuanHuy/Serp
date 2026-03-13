@@ -26,6 +26,12 @@ public interface IMessageRepository extends IBaseRepository<MessageModel> {
                                             @Param("beforeId") Long beforeId,
                                             Pageable pageable);
 
+    @Query("SELECT m FROM MessageModel m WHERE m.channelId = :channelId AND m.id > :afterId " +
+           "AND m.isDeleted = false ORDER BY m.createdAt ASC")
+    List<MessageModel> findMessagesAfterId(@Param("channelId") Long channelId,
+                                           @Param("afterId") Long afterId,
+                                           Pageable pageable);
+
     List<MessageModel> findByParentIdAndIsDeletedFalseOrderByCreatedAtAsc(Long parentId);
 
     List<MessageModel> findBySenderIdAndIsDeletedFalse(Long senderId, Pageable pageable);

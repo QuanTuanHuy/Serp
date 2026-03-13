@@ -16,6 +16,7 @@ import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.enums.ChannelType;
 import serp.project.discuss_service.core.exception.AppException;
 import serp.project.discuss_service.core.exception.ErrorCode;
+import serp.project.discuss_service.core.port.client.IAccountServiceClient;
 import serp.project.discuss_service.core.port.store.IChannelPort;
 import serp.project.discuss_service.core.service.IChannelService;
 import serp.project.discuss_service.core.service.IDiscussCacheService;
@@ -29,6 +30,7 @@ import java.util.Optional;
 public class ChannelService implements IChannelService {
 
     private final IChannelPort channelPort;
+    private final IAccountServiceClient accountServiceClient;
     private final IDiscussCacheService cacheService;
 
     @Override

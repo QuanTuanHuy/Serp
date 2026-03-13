@@ -33,6 +33,7 @@ import serp.project.discuss_service.core.service.IDiscussEventPublisher;
 import serp.project.discuss_service.core.service.IMessageService;
 import serp.project.discuss_service.core.service.IUserInfoService;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -181,6 +182,41 @@ public class MessageUseCase {
         enrichMessagesWithAttachments(messages);
 
         return messages;
+    }
+
+    @Transactional(readOnly = true)
+    public MessagesAroundResult getMessagesAround(Long channelId, Long userId,
+            Long messageId, int limit) {
+        if (!memberService.isMember(channelId, userId)) {
+            throw new AppException(ErrorCode.NOT_CHANNEL_MEMBER);
+        }
+
+        MessageEntity target = messageService.getMessageByIdOrThrow(messageId);
+        if (!target.getChannelId().equals(channelId)) {
+            throw new AppException(ErrorCode.MESSAGE_NOT_FOUND);
+        }
+
+        List<MessageEntity> before = messageService.getMessagesBefore(channelId, messageId, limit);
+        List<MessageEntity> after = messageService.getMessagesAfter(channelId, messageId, limit);
+
+        List<MessageEntity> combined = new ArrayList<>(before.size() + 1 + after.size());
+        combined.addAll(before.reversed());
+        combined.add(target);
+        combined.addAll(after);
+
+        enrichMessagesWithAttachments(combined);
+
+        boolean hasBefore = before.size() == limit;
+        boolean hasAfter = after.size() == limit;
+
+        return new MessagesAroundResult(combined, hasBefore, hasAfter);
+    }
+
+    public record MessagesAroundResult(
+            List<MessageEntity> messages,
+            boolean hasBefore,
+            boolean hasAfter
+    ) {
     }
 
     @Transactional(readOnly = true)

@@ -17,6 +17,7 @@ import serp.project.discuss_service.core.domain.constant.RestConstants;
 import serp.project.discuss_service.core.domain.dto.GeneralResponse;
 import serp.project.discuss_service.core.domain.dto.request.*;
 import serp.project.discuss_service.core.domain.dto.response.MessageResponse;
+import serp.project.discuss_service.core.domain.dto.response.MessagesAroundResponse;
 import serp.project.discuss_service.core.domain.dto.response.PaginatedResponse;
 import serp.project.discuss_service.core.domain.dto.response.TypingStatusResponse;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
@@ -186,6 +187,34 @@ public class MessageController {
                 .toList();
 
         return ResponseEntity.ok(responseUtils.success(responses));
+    }
+
+    @GetMapping("/around/{messageId}")
+    public ResponseEntity<GeneralResponse<MessagesAroundResponse>> getMessagesAround(
+            @PathVariable Long channelId,
+            @PathVariable Long messageId,
+            @RequestParam(defaultValue = "25") int limit) {
+        Long userId = authContext.getCurrentUserId()
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
+
+        log.debug("User {} getting messages around {} in channel {}", userId, messageId, channelId);
+
+        MessageUseCase.MessagesAroundResult result = messageUseCase.getMessagesAround(
+                channelId, userId, messageId, limit);
+
+        List<MessageResponse> responses = result.messages().stream()
+                .map(msg -> {
+                    MessageResponse r = attachmentUrlService.enrichMessageWithUrls(msg);
+                    r.setIsSentByMe(msg.getSenderId().equals(userId));
+                    r = userInfoService.enrichMessageWithUserInfo(r);
+                    return r;
+                })
+                .toList();
+
+        MessagesAroundResponse response = new MessagesAroundResponse(
+                responses, result.hasBefore(), result.hasAfter());
+
+        return ResponseEntity.ok(responseUtils.success(response));
     }
 
     @GetMapping("/{messageId}/replies")
