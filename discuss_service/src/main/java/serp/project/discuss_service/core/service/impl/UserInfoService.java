@@ -53,8 +53,7 @@ public class UserInfoService implements IUserInfoService {
                     .distinct()
                     .forEach(userId -> {
                         Future<Optional<ChannelMemberResponse.UserInfo>> future = executor.submit(
-                                () -> getUserById(userId)
-                        );
+                                () -> getUserById(userId));
                         userInfoFutures.put(userId, future);
                     });
 
@@ -109,7 +108,8 @@ public class UserInfoService implements IUserInfoService {
                 return accountServiceClient.getUsersForTenant(tenantId, query);
             }
             String cacheKey = String.format(USER_INFO_BY_TENANT_CACHE_PREFIX, tenantId);
-            List<UserInfo> cachedUsers = cachePort.getFromCache(cacheKey, new ParameterizedTypeReference<>() {});
+            List<UserInfo> cachedUsers = cachePort.getFromCache(cacheKey, new ParameterizedTypeReference<>() {
+            });
             if (cachedUsers != null && !cachedUsers.isEmpty()) {
                 return cachedUsers;
             }
@@ -126,18 +126,24 @@ public class UserInfoService implements IUserInfoService {
 
     public Optional<ChannelMemberResponse.UserInfo> getUserById(Long userId) {
         try {
-            String cacheKey = USER_INFO_CACHE_PREFIX + userId;
-            ChannelMemberResponse.UserInfo cachedInfo = cachePort.getFromCache(cacheKey, ChannelMemberResponse.UserInfo.class);
-            if (cachedInfo != null) {
-                return Optional.of(cachedInfo);
-            }
+            // String cacheKey = USER_INFO_CACHE_PREFIX + userId;
+            // ChannelMemberResponse.UserInfo cachedInfo = cachePort.getFromCache(cacheKey,
+            //         ChannelMemberResponse.UserInfo.class);
+            // if (cachedInfo != null) {
+            //     return Optional.of(cachedInfo);
+            // }
             Optional<ChannelMemberResponse.UserInfo> userInfo = accountServiceClient.getUserById(userId);
-            userInfo.ifPresent(info -> cachePort.setToCache(cacheKey, info, USER_INFO_CACHE_TTL));
+            // userInfo.ifPresent(info -> cachePort.setToCache(cacheKey, info, USER_INFO_CACHE_TTL));
             return userInfo;
         } catch (Exception e) {
             log.error("Failed to fetch user info for userId {}: {}", userId, e.getMessage());
             return Optional.empty();
         }
+    }
+
+    @Override
+    public List<UserInfo> getUsersByIds(List<Long> userIds) {
+        throw new UnsupportedOperationException("Unimplemented method 'getUsersByIds'");
     }
 
     private ChannelMemberResponse buildMemberResponse(
