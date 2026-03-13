@@ -13,6 +13,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import serp.project.discuss_service.core.domain.dto.response.MessageResponse;
+import serp.project.discuss_service.core.domain.dto.response.AttachmentResponse;
+import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse.UserInfo;
 import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
@@ -33,10 +35,13 @@ import serp.project.discuss_service.core.service.IDiscussEventPublisher;
 import serp.project.discuss_service.core.service.IMessageService;
 import serp.project.discuss_service.core.service.IUserInfoService;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.web.multipart.MultipartFile;
 
@@ -53,6 +58,7 @@ public class MessageUseCase {
     private final IAttachmentService attachmentService;
     private final IAttachmentUrlService attachmentUrlService;
     private final IUserInfoService userInfoService;
+
     private final ApplicationEventPublisher applicationEventPublisher;
 
     @Transactional
@@ -155,13 +161,10 @@ public class MessageUseCase {
 
         if (cached.isPresent()) {
             List<MessageEntity> messages = cached.get().messages();
-            enrichMessagesWithAttachments(messages);
             return Pair.of(cached.get().totalCount(), messages);
         }
 
         Pair<Long, List<MessageEntity>> result = messageService.getMessagesByChannel(channelId, page, size);
-
-        enrichMessagesWithAttachments(result.getSecond());
 
         cacheService.cacheChannelMessagesPage(channelId, page, size,
                 result.getSecond(), result.getFirst());
@@ -178,9 +181,40 @@ public class MessageUseCase {
 
         List<MessageEntity> messages = messageService.getMessagesBefore(channelId, beforeId, limit);
 
-        enrichMessagesWithAttachments(messages);
-
         return messages;
+    }
+
+    @Transactional(readOnly = true)
+    public MessagesAroundResult getMessagesAround(Long channelId, Long userId,
+            Long messageId, int limit) {
+        if (!memberService.isMember(channelId, userId)) {
+            throw new AppException(ErrorCode.NOT_CHANNEL_MEMBER);
+        }
+
+        MessageEntity target = messageService.getMessageByIdOrThrow(messageId);
+        if (!target.getChannelId().equals(channelId)) {
+            throw new AppException(ErrorCode.MESSAGE_NOT_FOUND);
+        }
+
+        List<MessageEntity> before = messageService.getMessagesBefore(channelId, messageId, limit);
+        List<MessageEntity> after = messageService.getMessagesAfter(channelId, messageId, limit);
+
+        List<MessageEntity> combined = new ArrayList<>(before.size() + 1 + after.size());
+        combined.addAll(before.reversed());
+        combined.add(target);
+        combined.addAll(after);
+
+        boolean hasBefore = before.size() == limit;
+        boolean hasAfter = after.size() == limit;
+
+        return new MessagesAroundResult(combined, hasBefore, hasAfter);
+    }
+
+    public record MessagesAroundResult(
+            List<MessageEntity> messages,
+            boolean hasBefore,
+            boolean hasAfter
+    ) {
     }
 
     @Transactional(readOnly = true)
@@ -190,8 +224,6 @@ public class MessageUseCase {
         }
 
         List<MessageEntity> messages = messageService.getThreadReplies(parentId);
-
-        enrichMessagesWithAttachments(messages);
 
         return messages;
     }
@@ -205,8 +237,6 @@ public class MessageUseCase {
 
         Pair<Long, List<MessageEntity>> result = messageService.searchMessages(
                 channelId, query, page, size);
-
-        enrichMessagesWithAttachments(result.getSecond());
 
         return result;
     }
@@ -325,19 +355,46 @@ public class MessageUseCase {
         return messageService.countUnreadMessages(channelId, member.getLastReadMsgId());
     }
 
-    // ==================== PRIVATE HELPER METHODS ====================
-
-    private void enrichMessagesWithAttachments(List<MessageEntity> messages) {
+    public List<MessageResponse> enrichMessageResponseList(List<MessageEntity> messages, Long currentUserId) {
         if (messages == null || messages.isEmpty()) {
-            return;
+            return List.of();
         }
 
+        List<Long> senderIds = messages.stream()
+                .map(MessageEntity::getSenderId)
+                .distinct()
+                .toList();
+        Map<Long, UserInfo> userInfoMap = userInfoService.getUsersByIds(senderIds).stream()
+                .collect(Collectors.toMap(UserInfo::getId, Function.identity()));
+        
         List<Long> messageIds = messages.stream()
                 .map(MessageEntity::getId)
                 .toList();
-
         Map<Long, List<AttachmentEntity>> attachmentMap = attachmentService.getAttachmentsByMessageIds(messageIds);
+        List<AttachmentEntity> allAttachments = attachmentMap.values().stream()
+                .flatMap(List::stream)
+                .toList();
+        List<AttachmentResponse> attachmentResponses = attachmentUrlService.enrichWithUrls(allAttachments);
+        Map<Long, AttachmentResponse> attachmentResponseMap = attachmentResponses.stream()
+                .collect(Collectors.toMap(AttachmentResponse::getId, Function.identity()));
 
-        messages.forEach(msg -> msg.setAttachments(attachmentMap.getOrDefault(msg.getId(), List.of())));
+        return messages.stream()
+                .map(msg -> {
+                    MessageResponse response = MessageResponse.fromEntity(msg);
+                    
+                    response.setSender(userInfoMap.get(msg.getSenderId()));
+                    response.setIsSentByMe(msg.getSenderId().equals(currentUserId));
+                    
+                    List<AttachmentEntity> attachments = attachmentMap.getOrDefault(msg.getId(), List.of());
+                    List<AttachmentResponse> enrichedAttachments = attachments.stream()
+                            .map(att -> attachmentResponseMap.get(att.getId()))
+                            .filter(attachment -> attachment != null)
+                            .toList();
+                    response.setAttachments(enrichedAttachments);
+
+                    return response;
+                })
+                .toList();
+
     }
 }

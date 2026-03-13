@@ -43,7 +43,7 @@ interface MessageListProps {
 }
 
 export interface MessageListRef {
-  scrollToMessage: (messageId: string) => void;
+  scrollToMessage: (messageId: string) => boolean;
   scrollToBottom: () => void;
 }
 
@@ -257,15 +257,26 @@ export const MessageList = forwardRef<MessageListRef, MessageListProps>(
     useImperativeHandle(
       ref,
       () => ({
-        scrollToMessage: (messageId: string) => {
+        scrollToMessage: (messageId: string): boolean => {
           const el = messageRefs.current.get(messageId);
-          if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            el.style.backgroundColor = 'rgba(139, 92, 246, 0.2)';
-            setTimeout(() => {
-              el.style.backgroundColor = '';
-            }, 2000);
-          }
+          if (!el) return false;
+
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add(
+            'ring-2',
+            'ring-primary/40',
+            'bg-primary/10',
+            'rounded-lg'
+          );
+          setTimeout(() => {
+            el.classList.remove(
+              'ring-2',
+              'ring-primary/40',
+              'bg-primary/10',
+              'rounded-lg'
+            );
+          }, 2500);
+          return true;
         },
         scrollToBottom: () => {
           bottomRef.current?.scrollIntoView({ behavior: 'smooth' });

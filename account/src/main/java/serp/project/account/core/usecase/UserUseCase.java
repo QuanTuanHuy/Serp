@@ -123,6 +123,31 @@ public class UserUseCase {
         }
     }
 
+    public GeneralResponse<?> getUsersByIds(List<Long> ids) {
+        try {
+            var users = userService.getUsersByIds(ids);
+            var userProfiles = users.stream().map(userMapper::toProfileResponse).toList();
+            if (!CollectionUtils.isEmpty(userProfiles)) {
+                var organizationIds = userProfiles.stream()
+                        .map(UserProfileResponse::getOrganizationId)
+                        .distinct()
+                        .toList();
+                var organizationMap = organizationService.getOrganizationsByIds(organizationIds).stream()
+                        .collect(Collectors.toMap(OrganizationEntity::getId, Function.identity()));
+                userProfiles.forEach(profile -> {
+                    var organization = organizationMap.get(profile.getOrganizationId());
+                    if (organization != null) {
+                        profile.setOrganizationName(organization.getName());
+                    }
+                });
+            }
+            return responseUtils.success(userProfiles);
+        } catch (Exception e) {
+            log.error("Get users by ids failed: {}", e.getMessage());
+            return responseUtils.internalServerError(e.getMessage());
+        }
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> updateUserInfo(Long userId, UpdateUserInfoRequest request) {
         try {

@@ -18,7 +18,9 @@ public interface IChannelService {
 
     ChannelEntity createChannel(ChannelEntity channel);
 
-    ChannelEntity getOrCreateDirectChannel(Long tenantId, Long userId1, Long userId2);
+    Optional<ChannelEntity> getDirectChannel(Long tenantId, Long userId1, Long userId2);
+
+    ChannelEntity createDirectChannel(Long tenantId, Long userId1, Long userId2);
 
     ChannelEntity createGroupChannel(Long tenantId, Long createdBy, String name,
             String description, boolean isPrivate);

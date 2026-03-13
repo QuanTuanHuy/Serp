@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,15 +21,14 @@ public class TokenUtils {
         String tokenUrl = keycloakProperties.getUrl() + "/realms/" + keycloakProperties.getRealm()
                 + "/protocol/openid-connect/token";
 
-        var formData = new org.springframework.util.LinkedMultiValueMap<String, String>();
+        var formData = new LinkedMultiValueMap<String, String>();
         formData.add("grant_type", "client_credentials");
         formData.add("client_id", keycloakProperties.getClientId());
         formData.add("client_secret", keycloakProperties.getClientSecret());
 
         try {
-            var response = httpClientHelper
-                    .post(tokenUrl, formData, Map.class)
-                    .block();
+            Map<String, Object> response = httpClientHelper
+                    .post(tokenUrl, formData, Map.class);
 
             if (response == null || !response.containsKey("access_token")) {
                 return Optional.empty();

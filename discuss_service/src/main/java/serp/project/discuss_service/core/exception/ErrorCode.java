@@ -38,6 +38,7 @@ public enum ErrorCode {
     CANNOT_UPDATE_DIRECT_CHANNEL("Cannot update name of direct message channel", HttpStatus.BAD_REQUEST),
     CANNOT_ARCHIVE_DIRECT_CHANNEL("Cannot archive direct message channel", HttpStatus.BAD_REQUEST),
     CHANNEL_ALREADY_ARCHIVED("Channel is already archived", HttpStatus.BAD_REQUEST),
+    INVALID_DIRECT_CHANNEL_USERS("Cannot create direct channel with the same user", HttpStatus.BAD_REQUEST),
     
     // Member errors (400, 403, 404)
     NOT_CHANNEL_MEMBER("You are not a member of this channel", HttpStatus.FORBIDDEN),

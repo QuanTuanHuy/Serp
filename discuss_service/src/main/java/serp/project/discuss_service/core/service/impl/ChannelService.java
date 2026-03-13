@@ -41,13 +41,12 @@ public class ChannelService implements IChannelService {
     }
 
     @Override
-    public ChannelEntity getOrCreateDirectChannel(Long tenantId, Long userId1, Long userId2) {
-        Optional<ChannelEntity> existing = channelPort.findDirectChannel(tenantId, userId1, userId2);
-        if (existing.isPresent()) {
-            log.debug("Found existing DIRECT channel between {} and {}", userId1, userId2);
-            return existing.get();
-        }
+    public Optional<ChannelEntity> getDirectChannel(Long tenantId, Long userId1, Long userId2) {
+        return channelPort.findDirectChannel(tenantId, userId1, userId2);
+    }
 
+    @Override
+    public ChannelEntity createDirectChannel(Long tenantId, Long userId1, Long userId2) {
         ChannelEntity channel = ChannelEntity.createDirect(tenantId, userId1, userId2);
         ChannelEntity saved = channelPort.save(channel);
         cacheService.cacheChannel(saved);
