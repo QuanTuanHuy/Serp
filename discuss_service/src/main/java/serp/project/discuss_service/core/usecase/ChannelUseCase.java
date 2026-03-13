@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import serp.project.discuss_service.core.domain.dto.request.GetChannelsParams;
+import serp.project.discuss_service.core.domain.dto.response.ChannelResponse;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
 import serp.project.discuss_service.core.domain.enums.MemberRole;
@@ -22,6 +23,7 @@ import serp.project.discuss_service.core.service.IChannelMemberService;
 import serp.project.discuss_service.core.service.IChannelService;
 import serp.project.discuss_service.core.service.IDiscussEventPublisher;
 import serp.project.discuss_service.core.service.IPresenceService;
+import serp.project.discuss_service.core.service.IUserInfoService;
 
 import java.util.List;
 import java.util.Optional;
@@ -36,6 +38,7 @@ public class ChannelUseCase {
     private final IChannelMemberService memberService;
     private final IDiscussEventPublisher eventPublisher;
     private final IPresenceService presenceService;
+    private final IUserInfoService userInfoService;
 
     @Transactional
     public ChannelEntity createGroupChannel(Long tenantId, Long createdBy, String name,
@@ -188,5 +191,19 @@ public class ChannelUseCase {
     public Set<Long> getOnlineMembers(Long channelId) {
         Set<Long> memberIds = memberService.getMemberIds(channelId);
         return presenceService.getOnlineUsers(memberIds);
+    }
+
+    public ChannelResponse toResponse(ChannelEntity channel, Long currentUserId) {
+        ChannelResponse response = ChannelResponse.fromEntity(channel);
+        if (channel != null && channel.isDirect()) {
+            channel.getOtherUserId(currentUserId)
+                    .flatMap(userInfoService::getUserById)
+                    .ifPresent(user -> {
+                        if (user.getName() != null && !user.getName().isBlank()) {
+                            response.setName(user.getName());
+                        }
+                    });
+        }
+        return response;
     }
 }

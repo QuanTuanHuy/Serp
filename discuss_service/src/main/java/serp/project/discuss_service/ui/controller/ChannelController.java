@@ -79,7 +79,7 @@ public class ChannelController {
                 userId,
                 request.getOtherUserId());
 
-        ChannelResponse response = ChannelResponse.fromEntity(channel);
+        ChannelResponse response = channelUseCase.toResponse(channel, userId);
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
@@ -115,7 +115,7 @@ public class ChannelController {
         log.debug("User {} getting channel {}", userId, channelId);
 
         ChannelEntity channel = channelUseCase.getChannelWithMembers(channelId);
-        ChannelResponse response = ChannelResponse.fromEntity(channel);
+        ChannelResponse response = channelUseCase.toResponse(channel, userId);
 
         if (channel.getMembers() != null) {
             List<ChannelMemberResponse> memberResponses = userInfoService
@@ -166,7 +166,7 @@ public class ChannelController {
                 .build();
         Pair<Long, List<ChannelEntity>> result = channelUseCase.getUserChannels(userId, tenantId, params);
         List<ChannelResponse> channelResponses = result.getSecond().stream()
-                .map(ChannelResponse::fromEntity)
+                .map(channel -> channelUseCase.toResponse(channel, userId))
                 .toList();
         PaginatedResponse<ChannelResponse> paginatedResponse = PaginatedResponse.of(
                 channelResponses,
@@ -199,7 +199,7 @@ public class ChannelController {
                 request.getName(),
                 request.getDescription());
 
-        ChannelResponse response = ChannelResponse.fromEntity(channel);
+        ChannelResponse response = channelUseCase.toResponse(channel, userId);
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
@@ -212,7 +212,7 @@ public class ChannelController {
         log.info("User {} archiving channel {}", userId, channelId);
 
         ChannelEntity channel = channelUseCase.archiveChannel(channelId, userId);
-        ChannelResponse response = ChannelResponse.fromEntity(channel);
+        ChannelResponse response = channelUseCase.toResponse(channel, userId);
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
