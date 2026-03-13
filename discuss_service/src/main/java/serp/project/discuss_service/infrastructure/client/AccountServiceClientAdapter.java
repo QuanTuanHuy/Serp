@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.util.LinkedMultiValueMap;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -64,7 +66,39 @@ public class AccountServiceClientAdapter implements IAccountServiceClient {
 
     @Override
     public List<UserInfo> getUsersByIds(List<Long> userIds) {
-        throw new UnsupportedOperationException("Unimplemented method 'getUsersByIds'");
+        if (userIds == null || userIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        try {
+            String token = tokenUtils.getServiceToken()
+                    .orElseThrow(() -> new RuntimeException("Failed to obtain service token"));
+
+            String url = accountServiceUrl + "/internal/api/v1/users/batch";
+            log.info("Url: {}", url);
+
+            Map<String, String> headers = Map.of("Authorization", "Bearer " + token);
+
+            LinkedMultiValueMap<String, String> queryParams = new LinkedMultiValueMap<>();
+            userIds.forEach(id -> queryParams.add("ids", id.toString()));
+
+            BatchedUserProfilesEnvelope response = httpClientHelper.get(
+                    url,
+                    queryParams,
+                    headers,
+                    BatchedUserProfilesEnvelope.class);
+
+            if (response == null || response.data() == null) {
+                log.warn("No response received for user IDs: {}", userIds);
+                return Collections.emptyList();
+            }
+            return response.data().stream()
+                    .map(UserProfileResponse::toUserInfo)
+                    .toList();
+
+        } catch (Exception e) {
+            log.error("Error fetching users {} from account service: {}", userIds, e.getMessage());
+            return Collections.emptyList();
+        }
     }
 
     @Override
@@ -138,6 +172,13 @@ public class AccountServiceClientAdapter implements IAccountServiceClient {
             Integer code,
             String message,
             PagedResponse data) {
+    }
+
+    private record BatchedUserProfilesEnvelope(
+            String status,
+            Integer code,
+            String message,
+            List<UserProfileResponse> data) {
     }
 
     private record PagedResponse(

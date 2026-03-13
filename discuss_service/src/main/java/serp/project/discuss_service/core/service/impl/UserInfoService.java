@@ -23,10 +23,8 @@ import serp.project.discuss_service.core.service.IUserInfoService;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Service to enrich channel member responses with user information.
@@ -44,23 +42,42 @@ public class UserInfoService implements IUserInfoService {
         if (members == null || members.isEmpty()) {
             return List.of();
         }
+        List<Long> userIds = members.stream()
+                .map(ChannelMemberEntity::getUserId)
+                .distinct()
+                .toList();
+        List<UserInfo> userInfos = getUsersByIds(userIds);
+        Map<Long, UserInfo> userInfoMap = userInfos.stream()
+                .collect(Collectors.toMap(UserInfo::getId, Function.identity()));
+        return members.stream()
+                .map(member -> {
+                    ChannelMemberResponse response = ChannelMemberResponse.fromEntity(member);
+                    UserInfo userInfo = userInfoMap.get(member.getUserId());
+                    if (userInfo != null) {
+                        response.setUser(userInfo);
+                    }
+                    return response;
+                })
+                .toList();
 
-        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            Map<Long, Future<Optional<ChannelMemberResponse.UserInfo>>> userInfoFutures = new ConcurrentHashMap<>();
+        // try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor())
+        // {
+        // Map<Long, Future<Optional<ChannelMemberResponse.UserInfo>>> userInfoFutures =
+        // new ConcurrentHashMap<>();
 
-            members.stream()
-                    .map(ChannelMemberEntity::getUserId)
-                    .distinct()
-                    .forEach(userId -> {
-                        Future<Optional<ChannelMemberResponse.UserInfo>> future = executor.submit(
-                                () -> getUserById(userId));
-                        userInfoFutures.put(userId, future);
-                    });
+        // members.stream()
+        // .map(ChannelMemberEntity::getUserId)
+        // .distinct()
+        // .forEach(userId -> {
+        // Future<Optional<ChannelMemberResponse.UserInfo>> future = executor.submit(
+        // () -> getUserById(userId));
+        // userInfoFutures.put(userId, future);
+        // });
 
-            return members.stream()
-                    .map(member -> buildMemberResponse(member, userInfoFutures))
-                    .toList();
-        }
+        // return members.stream()
+        // .map(member -> buildMemberResponse(member, userInfoFutures))
+        // .toList();
+        // }
     }
 
     @Override
@@ -94,7 +111,20 @@ public class UserInfoService implements IUserInfoService {
             return List.of();
         }
 
-        messages.forEach(this::enrichMessageWithUserInfo);
+        List<Long> senderIds = messages.stream()
+                .map(MessageResponse::getSenderId)
+                .distinct()
+                .toList();
+        List<UserInfo> senderInfos = getUsersByIds(senderIds);
+        Map<Long, UserInfo> senderInfoMap = senderInfos.stream()
+                .collect(Collectors.toMap(UserInfo::getId, Function.identity()));
+
+        messages.forEach(message -> {
+            UserInfo senderInfo = senderInfoMap.get(message.getSenderId());
+            if (senderInfo != null) {
+                message.setSender(senderInfo);
+            }
+        });
         return messages;
     }
 
@@ -128,12 +158,13 @@ public class UserInfoService implements IUserInfoService {
         try {
             // String cacheKey = USER_INFO_CACHE_PREFIX + userId;
             // ChannelMemberResponse.UserInfo cachedInfo = cachePort.getFromCache(cacheKey,
-            //         ChannelMemberResponse.UserInfo.class);
+            // ChannelMemberResponse.UserInfo.class);
             // if (cachedInfo != null) {
-            //     return Optional.of(cachedInfo);
+            // return Optional.of(cachedInfo);
             // }
             Optional<ChannelMemberResponse.UserInfo> userInfo = accountServiceClient.getUserById(userId);
-            // userInfo.ifPresent(info -> cachePort.setToCache(cacheKey, info, USER_INFO_CACHE_TTL));
+            // userInfo.ifPresent(info -> cachePort.setToCache(cacheKey, info,
+            // USER_INFO_CACHE_TTL));
             return userInfo;
         } catch (Exception e) {
             log.error("Failed to fetch user info for userId {}: {}", userId, e.getMessage());
@@ -143,25 +174,36 @@ public class UserInfoService implements IUserInfoService {
 
     @Override
     public List<UserInfo> getUsersByIds(List<Long> userIds) {
-        throw new UnsupportedOperationException("Unimplemented method 'getUsersByIds'");
-    }
-
-    private ChannelMemberResponse buildMemberResponse(
-            ChannelMemberEntity member,
-            Map<Long, Future<Optional<ChannelMemberResponse.UserInfo>>> userInfoFutures) {
-
-        ChannelMemberResponse response = ChannelMemberResponse.fromEntity(member);
-
-        try {
-            Future<Optional<ChannelMemberResponse.UserInfo>> future = userInfoFutures.get(member.getUserId());
-            if (future != null) {
-                Optional<ChannelMemberResponse.UserInfo> userInfo = future.get();
-                userInfo.ifPresent(response::setUser);
-            }
-        } catch (Exception e) {
-            log.warn("Failed to get user info for member {}: {}", member.getUserId(), e.getMessage());
+        if (userIds == null || userIds.isEmpty()) {
+            return List.of();
         }
-
-        return response;
+        try {
+            return accountServiceClient.getUsersByIds(userIds);
+        } catch (Exception e) {
+            log.error("Failed to fetch user infos for userIds {}: {}", userIds, e.getMessage());
+            return List.of();
+        }
     }
+
+    // private ChannelMemberResponse buildMemberResponse(
+    // ChannelMemberEntity member,
+    // Map<Long, Future<Optional<ChannelMemberResponse.UserInfo>>> userInfoFutures)
+    // {
+
+    // ChannelMemberResponse response = ChannelMemberResponse.fromEntity(member);
+
+    // try {
+    // Future<Optional<ChannelMemberResponse.UserInfo>> future =
+    // userInfoFutures.get(member.getUserId());
+    // if (future != null) {
+    // Optional<ChannelMemberResponse.UserInfo> userInfo = future.get();
+    // userInfo.ifPresent(response::setUser);
+    // }
+    // } catch (Exception e) {
+    // log.warn("Failed to get user info for member {}: {}", member.getUserId(),
+    // e.getMessage());
+    // }
+
+    // return response;
+    // }
 }

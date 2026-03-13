@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import serp.project.discuss_service.core.domain.dto.request.GetChannelsParams;
 import serp.project.discuss_service.core.domain.dto.response.ChannelResponse;
+import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse.UserInfo;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
 import serp.project.discuss_service.core.domain.enums.MemberRole;
@@ -26,8 +27,11 @@ import serp.project.discuss_service.core.service.IPresenceService;
 import serp.project.discuss_service.core.service.IUserInfoService;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -199,7 +203,7 @@ public class ChannelUseCase {
         return presenceService.getOnlineUsers(memberIds);
     }
 
-    public ChannelResponse toResponse(ChannelEntity channel, Long currentUserId) {
+    public ChannelResponse toChannelResponse(ChannelEntity channel, Long currentUserId) {
         ChannelResponse response = ChannelResponse.fromEntity(channel);
         if (channel != null && channel.isDirect()) {
             channel.getOtherUserId(currentUserId)
@@ -211,5 +215,33 @@ public class ChannelUseCase {
                     });
         }
         return response;
+    }
+
+    public List<ChannelResponse> toChannelResponseList(List<ChannelEntity> channels, Long currentUserId) {
+        List<Long> otherUserIds = channels.stream()
+                .filter(ChannelEntity::isDirect)
+                .map(channel -> channel.getOtherUserId(currentUserId))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .distinct()
+                .toList();
+        List<UserInfo> otherUsers = userInfoService.getUsersByIds(otherUserIds);
+        Map<Long, UserInfo> userInfoMap = otherUsers.stream()
+                .collect(Collectors.toMap(UserInfo::getId, Function.identity()));
+        return channels.stream()
+                .map(channel -> {
+                    ChannelResponse response = ChannelResponse.fromEntity(channel);
+                    if (channel.isDirect()) {
+                        channel.getOtherUserId(currentUserId)
+                                .flatMap(id -> Optional.ofNullable(userInfoMap.get(id)))
+                                .ifPresent(user -> {
+                                    if (user.getName() != null && !user.getName().isBlank()) {
+                                        response.setName(user.getName());
+                                    }
+                                });
+                    }
+                    return response;
+                })
+                .toList();
     }
 }
