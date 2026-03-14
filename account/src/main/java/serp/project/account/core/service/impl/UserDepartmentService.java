@@ -36,10 +36,21 @@ public class UserDepartmentService implements IUserDepartmentService {
     public UserDepartmentEntity assignUserToDepartment(AssignUserToDepartmentRequest request) {
         long userId = request.getUserId();
         long departmentId = request.getDepartmentId();
-        userDepartmentPort.getByUserIdAndDepartmentId(userId, departmentId).ifPresent(ud -> {
-            log.error("User {} is already assigned to Department {}", userId, departmentId);
-            throw new AppException(Constants.ErrorMessage.USER_ALREADY_IN_DEPARTMENT);
-        });
+        var existing = userDepartmentPort.getByUserIdAndDepartmentId(userId, departmentId);
+        UserDepartmentEntity userDepartment = null;
+        if (existing.isPresent()) {
+            if (existing.get().getIsActive()) {
+                log.error("User {} is already assigned to department {}", userId, departmentId);
+                throw new AppException(Constants.ErrorMessage.USER_ALREADY_IN_DEPARTMENT);
+            } else {
+                log.info("Reactivating user {} in department {}", userId, departmentId);
+                userDepartment = existing.get();
+                userDepartment.setIsActive(true);
+                userDepartment.setJobTitle(request.getJobTitle());
+                userDepartment.setIsPrimary(request.getIsPrimary());
+                userDepartment = userDepartmentPort.save(userDepartment);
+            }
+        }
 
         if (request.getIsPrimary()) {
             userDepartmentPort.getPrimaryByUserId(userId).ifPresent(primaryUd -> {
@@ -57,8 +68,11 @@ public class UserDepartmentService implements IUserDepartmentService {
                 userPort.save(user);
             }
         }
+        if (userDepartment != null) {
+            return userDepartment;
+        }
 
-        var userDepartment = userDepartmentMapper.createMapper(request);
+        userDepartment = userDepartmentMapper.createMapper(request);
         return userDepartmentPort.save(userDepartment);
     }
 
@@ -94,7 +108,7 @@ public class UserDepartmentService implements IUserDepartmentService {
 
     @Override
     public List<UserDepartmentEntity> getDepartmentMembers(Long departmentId) {
-        return userDepartmentPort.getByDepartmentId(departmentId);
+        return userDepartmentPort.getActiveByDepartmentId(departmentId);
     }
 
     @Override
