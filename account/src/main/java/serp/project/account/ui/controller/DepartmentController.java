@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.AssignUserToDepartmentRequest;
+import serp.project.account.core.domain.dto.request.BulkAssignUsersToDepartmentRequest;
 import serp.project.account.core.domain.dto.request.CreateDepartmentRequest;
 import serp.project.account.core.domain.dto.request.GetDepartmentParams;
 import serp.project.account.core.domain.dto.request.UpdateDepartmentRequest;
@@ -154,6 +155,44 @@ public class DepartmentController {
             return ResponseEntity.status(resp.getCode()).body(resp);
         }
         var response = departmentUseCase.getDepartmentStats(organizationId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @GetMapping("/tree")
+    public ResponseEntity<?> getDepartmentTree(
+            @PathVariable Long organizationId) {
+        if (!authUtils.canAccessOrganization(organizationId)) {
+            var resp = responseUtil.forbidden(Constants.ErrorMessage.NO_PERMISSION_TO_ACCESS_ORGANIZATION);
+            return ResponseEntity.status(resp.getCode()).body(resp);
+        }
+        var response = departmentUseCase.getDepartmentTree(organizationId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PostMapping("/{departmentId}/users/bulk")
+    public ResponseEntity<?> bulkAssignUsersToDepartment(
+            @PathVariable Long organizationId,
+            @PathVariable Long departmentId,
+            @Valid @RequestBody BulkAssignUsersToDepartmentRequest request) {
+        if (!authUtils.canAccessOrganization(organizationId)) {
+            var resp = responseUtil.forbidden(Constants.ErrorMessage.NO_PERMISSION_TO_ACCESS_ORGANIZATION);
+            return ResponseEntity.status(resp.getCode()).body(resp);
+        }
+        request.setDepartmentId(departmentId);
+        var response = departmentUseCase.bulkAssignUsersToDepartment(organizationId, request);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @DeleteMapping("/{departmentId}/users/{userId}")
+    public ResponseEntity<?> removeUserFromDepartment(
+            @PathVariable Long organizationId,
+            @PathVariable Long departmentId,
+            @PathVariable Long userId) {
+        if (!authUtils.canAccessOrganization(organizationId)) {
+            var resp = responseUtil.forbidden(Constants.ErrorMessage.NO_PERMISSION_TO_ACCESS_ORGANIZATION);
+            return ResponseEntity.status(resp.getCode()).body(resp);
+        }
+        var response = departmentUseCase.removeUserFromDepartment(organizationId, departmentId, userId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 

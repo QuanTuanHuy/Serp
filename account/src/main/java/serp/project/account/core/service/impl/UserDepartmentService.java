@@ -15,6 +15,7 @@ import serp.project.account.core.domain.dto.request.BulkAssignUsersToDepartmentR
 import serp.project.account.core.domain.entity.UserDepartmentEntity;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.port.store.IUserDepartmentPort;
+import serp.project.account.core.port.store.IUserPort;
 import serp.project.account.core.service.IUserDepartmentService;
 import serp.project.account.infrastructure.store.mapper.UserDepartmentMapper;
 
@@ -26,6 +27,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 public class UserDepartmentService implements IUserDepartmentService {
+    private final IUserPort userPort;
     private final IUserDepartmentPort userDepartmentPort;
     private final UserDepartmentMapper userDepartmentMapper;
 
@@ -34,19 +36,43 @@ public class UserDepartmentService implements IUserDepartmentService {
     public UserDepartmentEntity assignUserToDepartment(AssignUserToDepartmentRequest request) {
         long userId = request.getUserId();
         long departmentId = request.getDepartmentId();
-        userDepartmentPort.getByUserIdAndDepartmentId(userId, departmentId).ifPresent(ud -> {
-            log.error("User {} is already assigned to Department {}", userId, departmentId);
-            throw new AppException(Constants.ErrorMessage.USER_ALREADY_IN_DEPARTMENT);
-        });
+        var existing = userDepartmentPort.getByUserIdAndDepartmentId(userId, departmentId);
+        UserDepartmentEntity userDepartment = null;
+        if (existing.isPresent()) {
+            if (existing.get().getIsActive()) {
+                log.error("User {} is already assigned to department {}", userId, departmentId);
+                throw new AppException(Constants.ErrorMessage.USER_ALREADY_IN_DEPARTMENT);
+            } else {
+                log.info("Reactivating user {} in department {}", userId, departmentId);
+                userDepartment = existing.get();
+                userDepartment.setIsActive(true);
+                userDepartment.setJobTitle(request.getJobTitle());
+                userDepartment.setIsPrimary(request.getIsPrimary());
+                userDepartment = userDepartmentPort.save(userDepartment);
+            }
+        }
 
         if (request.getIsPrimary()) {
             userDepartmentPort.getPrimaryByUserId(userId).ifPresent(primaryUd -> {
                 primaryUd.setIsPrimary(false);
                 userDepartmentPort.save(primaryUd);
             });
+            var user = userPort.getUserById(userId);
+            if (user == null) {
+                log.error("User {} not found when assigning to department {}", userId, departmentId);
+                throw new AppException(Constants.ErrorMessage.USER_NOT_FOUND);
+            }
+            if (user.getPrimaryDepartmentId() == null ||
+                    user.getPrimaryDepartmentId().equals(departmentId)) {
+                user.setPrimaryDepartmentId(departmentId);
+                userPort.save(user);
+            }
+        }
+        if (userDepartment != null) {
+            return userDepartment;
         }
 
-        var userDepartment = userDepartmentMapper.createMapper(request);
+        userDepartment = userDepartmentMapper.createMapper(request);
         return userDepartmentPort.save(userDepartment);
     }
 
@@ -82,7 +108,7 @@ public class UserDepartmentService implements IUserDepartmentService {
 
     @Override
     public List<UserDepartmentEntity> getDepartmentMembers(Long departmentId) {
-        return userDepartmentPort.getByDepartmentId(departmentId);
+        return userDepartmentPort.getActiveByDepartmentId(departmentId);
     }
 
     @Override

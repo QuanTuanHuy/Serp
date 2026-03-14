@@ -5,7 +5,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Users,
   Mail,
@@ -13,6 +13,7 @@ import {
   Briefcase,
   X,
   UserPlus,
+  UserX,
   Loader2,
 } from 'lucide-react';
 import {
@@ -27,6 +28,7 @@ import { Badge } from '@/shared/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/shared/components/ui/avatar';
 import { Separator } from '@/shared/components/ui/separator';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
+import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { isSuccessResponse } from '@/lib/store/api/utils';
 import type { Department } from '../../types';
 
@@ -36,6 +38,7 @@ interface DepartmentDetailDialogProps {
   department: Department | null;
   useDepartmentMembers: (departmentId?: number) => any;
   onAddMembers?: (department: Department) => void;
+  onRemoveMember?: (departmentId: number, userId: number) => void;
 }
 
 export const DepartmentDetailDialog: React.FC<DepartmentDetailDialogProps> = ({
@@ -44,6 +47,7 @@ export const DepartmentDetailDialog: React.FC<DepartmentDetailDialogProps> = ({
   department,
   useDepartmentMembers,
   onAddMembers,
+  onRemoveMember,
 }) => {
   const { data: membersData, isLoading: membersLoading } = useDepartmentMembers(
     department?.id
@@ -51,6 +55,25 @@ export const DepartmentDetailDialog: React.FC<DepartmentDetailDialogProps> = ({
 
   const members =
     membersData && isSuccessResponse(membersData) ? membersData.data : [];
+
+  const [memberToRemove, setMemberToRemove] = useState<{
+    userId: number;
+    userName: string;
+  } | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
+
+  const handleRemoveConfirm = useCallback(async () => {
+    if (!memberToRemove || !onRemoveMember || !department) return;
+    setIsRemoving(true);
+    try {
+      await onRemoveMember(department.id, memberToRemove.userId);
+      setMemberToRemove(null);
+    } catch {
+      // Error handled in hook
+    } finally {
+      setIsRemoving(false);
+    }
+  }, [memberToRemove, onRemoveMember, department]);
 
   if (!department) return null;
 
@@ -211,6 +234,22 @@ export const DepartmentDetailDialog: React.FC<DepartmentDetailDialogProps> = ({
                           )}
                         </div>
                       </div>
+                      {onRemoveMember && (
+                        <Button
+                          variant='ghost'
+                          size='icon'
+                          className='h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-destructive'
+                          onClick={() =>
+                            setMemberToRemove({
+                              userId: member.userId,
+                              userName: member.userName,
+                            })
+                          }
+                          title='Remove from department'
+                        >
+                          <UserX className='h-4 w-4' />
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -218,6 +257,21 @@ export const DepartmentDetailDialog: React.FC<DepartmentDetailDialogProps> = ({
             )}
           </div>
         </div>
+
+        <ConfirmDialog
+          open={!!memberToRemove}
+          onOpenChange={(o) => !o && setMemberToRemove(null)}
+          title='Remove Member'
+          description={
+            memberToRemove
+              ? `Are you sure you want to remove ${memberToRemove.userName} from ${department.name}?`
+              : ''
+          }
+          confirmText='Remove'
+          variant='destructive'
+          isLoading={isRemoving}
+          onConfirm={handleRemoveConfirm}
+        />
       </DialogContent>
     </Dialog>
   );

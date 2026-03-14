@@ -135,11 +135,7 @@ func (d *DepartmentController) GetDepartmentTree(c *gin.Context) {
 	if !ok {
 		return
 	}
-	departmentId, ok := utils.ValidateAndParseID(c, "departmentId")
-	if !ok {
-		return
-	}
-	res, err := d.deptService.GetDepartmentTree(c.Request.Context(), orgId, departmentId)
+	res, err := d.deptService.GetDepartmentTree(c.Request.Context(), orgId)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return
