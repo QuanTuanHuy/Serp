@@ -36,4 +36,8 @@ public interface IUserModuleAccessRepository extends IBaseRepository<UserModuleA
         int countActiveUsersByModuleAndOrganization(
                         @Param("moduleId") Long moduleId,
                         @Param("organizationId") Long organizationId);
+
+        @Query("SELECT u.userId, COUNT(u) FROM UserModuleAccessModel u " +
+                        "WHERE u.userId IN :userIds AND u.isActive = true GROUP BY u.userId")
+        List<Object[]> countActiveModulesByUserIds(@Param("userIds") List<Long> userIds);
 }

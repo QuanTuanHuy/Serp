@@ -37,4 +37,7 @@ public class UserProfileResponse {
     private Long updatedAt;
 
     private List<String> roles;
+    private Long primaryDepartmentId;
+    private String primaryDepartmentName;
+    private Integer moduleAccessCount;
 }
