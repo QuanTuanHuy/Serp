@@ -53,7 +53,7 @@ public class OrganizationController {
     }
 
     @GetMapping("/admin/organizations/{organizationId}")
-    public ResponseEntity<?> getOrganizationById(@RequestParam Long organizationId) {
+    public ResponseEntity<?> getOrganizationById(@PathVariable Long organizationId) {
         var response = organizationUseCase.getOrganizationById(organizationId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
