@@ -32,6 +32,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -223,10 +224,12 @@ public class UserService implements IUserService {
     @Override
     public UserStatsResponse getUserStats(Long organizationId) {
         int total = userPort.countUsersByOrganizationId(organizationId);
-        int active = userPort.countUsersByOrganizationIdAndStatus(organizationId, UserStatus.ACTIVE);
-        int inactive = userPort.countUsersByOrganizationIdAndStatus(organizationId, UserStatus.INACTIVE);
-        int suspended = userPort.countUsersByOrganizationIdAndStatus(organizationId, UserStatus.SUSPENDED);
-        int invited = userPort.countUsersByOrganizationIdAndStatus(organizationId, UserStatus.INVITED);
+        
+        Map<String, Integer> statusCounts = userPort.countUsersByStatusForOrganization(organizationId);
+        int active = statusCounts.getOrDefault(UserStatus.ACTIVE.name(), 0);
+        int inactive = statusCounts.getOrDefault(UserStatus.INACTIVE.name(), 0);
+        int suspended = statusCounts.getOrDefault(UserStatus.SUSPENDED.name(), 0);
+        int invited = statusCounts.getOrDefault(UserStatus.INVITED.name(), 0);
 
         int adminUsers = userPort.countAdminUsersByOrganizationId(organizationId);
 

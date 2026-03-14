@@ -7,6 +7,8 @@ package serp.project.account.infrastructure.store.adapter;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
@@ -97,5 +99,14 @@ public class UserAdapter implements IUserPort {
     @Override
     public List<UserEntity> getUsersByOrganizationIdAndIds(Long organizationId, List<Long> userIds) {
         return userMapper.toEntityList(userRepository.findByPrimaryOrganizationIdAndIdIn(organizationId, userIds));
+    }
+
+    @Override
+    public Map<String, Integer> countUsersByStatusForOrganization(Long organizationId) {
+        var counts = userRepository.countUsersByStatusForOrganization(organizationId);
+        return counts.stream().collect(Collectors.toMap(
+                c -> c[0].toString(),
+                c -> Integer.parseInt(c[1].toString())
+        ));
     }
 }

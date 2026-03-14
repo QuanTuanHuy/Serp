@@ -42,5 +42,11 @@ public interface IUserRepository extends IBaseRepository<UserModel> {
             "AND (r.roleType = 'ADMIN' OR r.roleType = 'OWNER')")
     Integer countAdminUsersByOrganizationId(@Param("orgId") Long organizationId);
 
+    @Query("SELECT u.status AS status, COUNT(u) AS count " +
+            "FROM UserModel u " +
+            "WHERE u.primaryOrganizationId = :orgId " +
+            "GROUP BY u.status")
+    List<Object[]> countUsersByStatusForOrganization(@Param("orgId") Long organizationId);
+
     List<UserModel> findByPrimaryOrganizationIdAndIdIn(Long organizationId, List<Long> ids);
 }
