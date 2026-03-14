@@ -40,6 +40,7 @@ export {
   useRemoveUserFromDepartmentMutation,
   useGetDepartmentStatisticsQuery,
   useLazyGetDepartmentStatisticsQuery,
+  useGetDepartmentTreeQuery,
 } from './departments/departmentsApi';
 
 // // Departments API

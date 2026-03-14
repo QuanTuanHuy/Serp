@@ -90,3 +90,15 @@ export interface GetDepartmentParams {
 }
 
 export type DepartmentStatus = 'ACTIVE' | 'INACTIVE';
+
+export interface DepartmentTreeNode {
+  id: number;
+  name: string;
+  code: string;
+  description?: string;
+  managerId?: number;
+  managerName?: string;
+  memberCount: number;
+  isActive: boolean;
+  children: DepartmentTreeNode[];
+}

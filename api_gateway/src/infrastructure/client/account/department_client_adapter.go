@@ -151,9 +151,9 @@ func (d *DepartmentClientAdapter) DeleteDepartment(ctx context.Context, organiza
 	return &result, nil
 }
 
-func (d *DepartmentClientAdapter) GetDepartmentTree(ctx context.Context, organizationId int64, departmentId int64) (*response.BaseResponse, error) {
+func (d *DepartmentClientAdapter) GetDepartmentTree(ctx context.Context, organizationId int64) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
-	path := fmt.Sprintf("/api/v1/organizations/%d/departments/%d/tree", organizationId, departmentId)
+	path := fmt.Sprintf("/api/v1/organizations/%d/departments/tree", organizationId)
 
 	var httpResponse *utils.HTTPResponse
 	err := d.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {

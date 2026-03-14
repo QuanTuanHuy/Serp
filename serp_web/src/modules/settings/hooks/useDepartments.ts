@@ -18,6 +18,7 @@ import {
   useBulkAssignUsersToDepartmentMutation,
   useRemoveUserFromDepartmentMutation,
   useGetDepartmentStatisticsQuery,
+  useGetDepartmentTreeQuery,
 } from '../services/departments/departmentsApi';
 import { useGetAccessibleModulesForOrganizationQuery } from '../services/modules/modulesApi';
 import { useGetOrganizationUsersQuery } from '../services/users/usersApi';
@@ -148,6 +149,51 @@ export function useSettingsDepartments() {
     () => departments.filter((d) => d.isActive),
     [departments]
   );
+
+  // Tree query for org chart
+  const {
+    data: treeData,
+    isLoading: isLoadingTree,
+    isFetching: isFetchingTree,
+  } = useGetDepartmentTreeQuery(
+    { organizationId: organizationId! },
+    { skip: !organizationId }
+  );
+
+  const departmentTree = useMemo(
+    () => (treeData && isSuccessResponse(treeData) ? treeData.data : []),
+    [treeData]
+  );
+
+  // Filter badge helpers
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (debouncedSearch) count += 1;
+    if (filters.isActive !== undefined) count += 1;
+    if (filters.parentDepartmentId !== undefined) count += 1;
+    if (filters.managerId !== undefined) count += 1;
+    return count;
+  }, [debouncedSearch, filters]);
+
+  const activeFilterBadges = useMemo(() => {
+    const badges: string[] = [];
+    if (debouncedSearch) badges.push(`Keyword: "${debouncedSearch}"`);
+    if (filters.isActive !== undefined)
+      badges.push(`Status: ${filters.isActive ? 'Active' : 'Inactive'}`);
+    if (filters.parentDepartmentId !== undefined) {
+      const parent = departments.find(
+        (d) => d.id === filters.parentDepartmentId
+      );
+      badges.push(
+        `Parent: ${parent?.name || `#${filters.parentDepartmentId}`}`
+      );
+    }
+    if (filters.managerId !== undefined) {
+      const mgr = managers.find((m) => m.id === filters.managerId);
+      badges.push(`Manager: ${mgr?.name || `#${filters.managerId}`}`);
+    }
+    return badges;
+  }, [debouncedSearch, filters, departments, managers]);
 
   // Mutations
   const [createDepartment, createStatus] = useCreateDepartmentMutation();
@@ -284,12 +330,20 @@ export function useSettingsDepartments() {
         }).unwrap();
         success('User assigned to department');
         refetchDepartments();
+        refetchStats();
       } catch (e: any) {
         showError(getErrorMessage(e));
         throw e;
       }
     },
-    [assignUser, organizationId, showError, success, refetchDepartments]
+    [
+      assignUser,
+      organizationId,
+      showError,
+      success,
+      refetchDepartments,
+      refetchStats,
+    ]
   );
 
   const bulkAssignUsersToDept = useCallback(
@@ -310,12 +364,20 @@ export function useSettingsDepartments() {
         }).unwrap();
         success('Users assigned to department');
         refetchDepartments();
+        refetchStats();
       } catch (e: any) {
         showError(getErrorMessage(e));
         throw e;
       }
     },
-    [bulkAssignUsers, organizationId, showError, success, refetchDepartments]
+    [
+      bulkAssignUsers,
+      organizationId,
+      showError,
+      success,
+      refetchDepartments,
+      refetchStats,
+    ]
   );
 
   const removeUserFromDept = useCallback(
@@ -333,12 +395,20 @@ export function useSettingsDepartments() {
         }).unwrap();
         success('User removed from department');
         refetchDepartments();
+        refetchStats();
       } catch (e: any) {
         showError(getErrorMessage(e));
         throw e;
       }
     },
-    [removeUser, organizationId, showError, success, refetchDepartments]
+    [
+      removeUser,
+      organizationId,
+      showError,
+      success,
+      refetchDepartments,
+      refetchStats,
+    ]
   );
 
   const setActiveFilter = useCallback((isActive?: boolean) => {
@@ -400,6 +470,13 @@ export function useSettingsDepartments() {
     managers,
     search,
     filters,
+    // Tree data
+    departmentTree,
+    isLoadingTree,
+    isFetchingTree,
+    // Filter helpers
+    activeFilterCount,
+    activeFilterBadges,
     setSearch,
     setPage,
     setPageSize,
