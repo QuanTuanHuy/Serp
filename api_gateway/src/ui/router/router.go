@@ -70,6 +70,7 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 
 	RegisterAccountRoutes(
 		group,
+		p.GenericProxyController,
 		p.AuthController,
 		p.UserController,
 		p.RoleController,
