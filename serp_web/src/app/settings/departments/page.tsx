@@ -5,31 +5,26 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   Layers,
   Plus,
   Search,
   Users,
-  Edit,
-  Trash2,
-  MoreVertical,
   UserPlus,
   Building2,
   Filter,
   Eye,
-  ChevronLeft,
-  ChevronRight,
+  Edit,
+  Trash2,
+  X,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/shared/components/ui/card';
+import { Card, CardContent } from '@/shared/components/ui/card';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
+import { Label } from '@/shared/components/ui/label';
 import { Avatar, AvatarFallback } from '@/shared/components/ui/avatar';
 import { Badge } from '@/shared/components/ui/badge';
 import {
@@ -40,6 +35,12 @@ import {
   SelectValue,
 } from '@/shared/components/ui/select';
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/shared/components/ui/tabs';
+import {
   SettingsStatsCard,
   SettingsActionMenu,
   SettingsStatusBadge,
@@ -49,13 +50,67 @@ import {
   DepartmentDetailDialog,
   useSettingsDepartments,
 } from '@/modules/settings';
-import { Separator } from '@/shared/components/ui/separator';
-import type { Department } from '@/modules/settings';
+import { DepartmentOrgChart } from '@/modules/settings/components/departments/DepartmentOrgChart';
+import { AddMemberDialog } from '@/modules/settings/components/departments/AddMemberDialog';
+import { DataTable } from '@/shared/components';
+import type { ColumnDef } from '@/shared/types';
+import type { Department, DepartmentTreeNode } from '@/modules/settings';
+import { useDebounce } from '@/shared/hooks';
+
+// ==================== Sub-components ====================
+
+const DepartmentNameCell = ({ row }: { row: Department }) => (
+  <div className='flex items-center gap-3'>
+    <div className='h-9 w-9 rounded-lg bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center flex-shrink-0'>
+      <Layers className='h-4 w-4 text-purple-600 dark:text-purple-400' />
+    </div>
+    <div className='min-w-0'>
+      <p className='font-medium text-sm truncate'>{row.name}</p>
+      {row.code && (
+        <p className='text-xs text-muted-foreground font-mono'>{row.code}</p>
+      )}
+    </div>
+  </div>
+);
+
+const ManagerCell = ({ row }: { row: Department }) => {
+  if (!row.managerName) {
+    return <span className='text-sm text-muted-foreground'>Unassigned</span>;
+  }
+  return (
+    <div className='flex items-center gap-2'>
+      <Avatar className='h-6 w-6'>
+        <AvatarFallback className='text-[10px] bg-purple-100 text-purple-700'>
+          {row.managerName
+            .split(' ')
+            .map((n) => n[0])
+            .join('')}
+        </AvatarFallback>
+      </Avatar>
+      <span className='text-sm truncate'>{row.managerName}</span>
+    </div>
+  );
+};
+
+const formatDate = (timestamp?: number) => {
+  if (!timestamp) return '-';
+  return new Date(timestamp).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
+// ==================== Main Page ====================
 
 export default function SettingsDepartmentsPage() {
+  const [activeTab, setActiveTab] = useState('departments');
+
   const {
     organizationId,
     isLoading,
+    isFetching,
+    error,
     departments,
     activeDepartments,
     totalPages,
@@ -70,6 +125,7 @@ export default function SettingsDepartmentsPage() {
     setPage,
     setActiveFilter,
     setParentFilter,
+    setManagerFilter,
     clearFilters,
     create,
     update,
@@ -77,7 +133,18 @@ export default function SettingsDepartmentsPage() {
     createStatus,
     updateStatus,
     deleteStatus,
+    removeUserFromDept,
+    assignUserToDept,
+    bulkAssignUsersToDept,
+    assignStatus,
+    bulkAssignStatus,
     useDepartmentMembers,
+    // Tree
+    departmentTree,
+    isLoadingTree,
+    // Filter helpers
+    activeFilterCount,
+    activeFilterBadges,
   } = useSettingsDepartments();
 
   // Dialog states
@@ -88,27 +155,213 @@ export default function SettingsDepartmentsPage() {
   const [selectedDepartment, setSelectedDepartment] =
     useState<Department | null>(null);
 
+  // Pre-selected parent for "Add Sub-department" from org chart
+  const [presetParentId, setPresetParentId] = useState<number | undefined>();
+
+  // Add member dialog state
+  const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false);
+  const [memberTargetDepartment, setMemberTargetDepartment] =
+    useState<Department | null>(null);
+
+  // Advanced filters UI
   const [showFilters, setShowFilters] = useState(false);
+  const hasAdvancedFilters = filters.managerId !== undefined;
 
-  const handleEdit = (dept: Department) => {
-    setSelectedDepartment(dept);
-    setUpdateDialogOpen(true);
-  };
+  // Search debounce
+  const [searchInput, setSearchInput] = useState(search || '');
+  const debouncedSearch = useDebounce(searchInput, 400);
+  useEffect(() => {
+    setSearch(debouncedSearch || '');
+  }, [debouncedSearch, setSearch]);
 
-  const handleDelete = (dept: Department) => {
-    setSelectedDepartment(dept);
-    setDeleteDialogOpen(true);
-  };
+  const clearAllFilters = useCallback(() => {
+    setSearchInput('');
+    clearFilters();
+  }, [clearFilters]);
 
-  const handleViewDetails = (dept: Department) => {
+  const clearAdvancedFilters = useCallback(() => {
+    setManagerFilter(undefined);
+  }, [setManagerFilter]);
+
+  // Handlers
+  const handleView = useCallback((dept: Department) => {
     setSelectedDepartment(dept);
     setDetailDialogOpen(true);
-  };
+  }, []);
 
-  const handleAssignManager = (dept: Department) => {
+  const handleEdit = useCallback((dept: Department) => {
     setSelectedDepartment(dept);
     setUpdateDialogOpen(true);
-  };
+  }, []);
+
+  const handleDelete = useCallback((dept: Department) => {
+    setSelectedDepartment(dept);
+    setDeleteDialogOpen(true);
+  }, []);
+
+  const handlePageChange = useCallback(
+    (newPage: number) => setPage(newPage),
+    [setPage]
+  );
+
+  // Member management handlers
+  const handleAddMembers = useCallback((dept: Department) => {
+    setMemberTargetDepartment(dept);
+    setAddMemberDialogOpen(true);
+  }, []);
+
+  const handleRemoveMember = useCallback(
+    async (departmentId: number, userId: number) => {
+      await removeUserFromDept(departmentId, userId);
+    },
+    [removeUserFromDept]
+  );
+
+  // Org chart handlers (convert tree node to Department for dialogs)
+  const handleTreeView = useCallback(
+    (node: DepartmentTreeNode) => {
+      const dept = departments.find((d) => d.id === node.id);
+      if (dept) handleView(dept);
+    },
+    [departments, handleView]
+  );
+
+  const handleTreeEdit = useCallback(
+    (node: DepartmentTreeNode) => {
+      const dept = departments.find((d) => d.id === node.id);
+      if (dept) handleEdit(dept);
+    },
+    [departments, handleEdit]
+  );
+
+  const handleTreeAddChild = useCallback((parentNode: DepartmentTreeNode) => {
+    setPresetParentId(parentNode.id);
+    setCreateDialogOpen(true);
+  }, []);
+
+  const handleTreeDelete = useCallback(
+    (node: DepartmentTreeNode) => {
+      const dept = departments.find((d) => d.id === node.id);
+      if (dept) handleDelete(dept);
+    },
+    [departments, handleDelete]
+  );
+
+  // ==================== Table Column Definitions ====================
+
+  const departmentColumns = useMemo<ColumnDef<Department>[]>(
+    () => [
+      {
+        id: 'department',
+        header: 'Department',
+        accessor: 'name',
+        defaultVisible: true,
+        cell: ({ row }) => <DepartmentNameCell row={row} />,
+      },
+      {
+        id: 'parent',
+        header: 'Parent',
+        accessor: 'parentDepartmentName',
+        defaultVisible: true,
+        cell: ({ value }) => (
+          <span className='text-sm text-muted-foreground'>{value || '-'}</span>
+        ),
+      },
+      {
+        id: 'manager',
+        header: 'Manager',
+        accessor: 'managerName',
+        defaultVisible: true,
+        cell: ({ row }) => <ManagerCell row={row} />,
+      },
+      {
+        id: 'members',
+        header: 'Members',
+        accessor: 'memberCount',
+        defaultVisible: true,
+        align: 'center',
+        cell: ({ value }) => (
+          <div className='flex items-center justify-center gap-1'>
+            <Users className='h-3.5 w-3.5 text-muted-foreground' />
+            <span className='text-sm'>{value ?? 0}</span>
+          </div>
+        ),
+      },
+      {
+        id: 'status',
+        header: 'Status',
+        accessor: 'isActive',
+        defaultVisible: true,
+        cell: ({ value }) => (
+          <SettingsStatusBadge status={value ? 'ACTIVE' : 'INACTIVE'} />
+        ),
+      },
+      {
+        id: 'created',
+        header: 'Created',
+        accessor: 'createdAt',
+        defaultVisible: false,
+        cell: ({ value }) => (
+          <span className='text-sm text-muted-foreground'>
+            {formatDate(value)}
+          </span>
+        ),
+      },
+      {
+        id: 'updated',
+        header: 'Updated',
+        accessor: 'updatedAt',
+        defaultVisible: false,
+        cell: ({ value }) => (
+          <span className='text-sm text-muted-foreground'>
+            {formatDate(value)}
+          </span>
+        ),
+      },
+      {
+        id: 'actions',
+        header: '',
+        accessor: 'id',
+        align: 'right',
+        defaultVisible: true,
+        cell: ({ row }) => (
+          <SettingsActionMenu
+            items={[
+              {
+                label: 'View Details',
+                onClick: () => handleView(row),
+                icon: <Eye className='h-4 w-4' />,
+              },
+              {
+                label: 'Edit Department',
+                onClick: () => handleEdit(row),
+                icon: <Edit className='h-4 w-4' />,
+              },
+              {
+                label: row.managerId ? 'Change Manager' : 'Assign Manager',
+                onClick: () => handleEdit(row),
+                icon: <UserPlus className='h-4 w-4' />,
+              },
+              {
+                label: 'Manage Members',
+                onClick: () => handleView(row),
+                icon: <Users className='h-4 w-4' />,
+                separator: true,
+              },
+              {
+                label: 'Delete',
+                onClick: () => handleDelete(row),
+                icon: <Trash2 className='h-4 w-4' />,
+                variant: 'destructive',
+                separator: true,
+              },
+            ]}
+          />
+        ),
+      },
+    ],
+    [handleView, handleEdit, handleDelete]
+  );
 
   if (!organizationId) {
     return (
@@ -120,341 +373,340 @@ export default function SettingsDepartmentsPage() {
     );
   }
 
-  const hasFilters =
-    filters.isActive !== undefined || filters.parentDepartmentId;
-
   return (
     <div className='space-y-6'>
       {/* Page Header */}
       <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
         <div>
-          <h1 className='text-3xl font-bold tracking-tight'>Departments</h1>
-          <p className='text-muted-foreground mt-2'>
+          <h1 className='text-3xl font-bold tracking-tight'>
+            Department Management
+          </h1>
+          <p className='text-muted-foreground mt-1'>
             Organize your team into departments and manage hierarchy
           </p>
         </div>
-        <Button
-          className='bg-purple-600 hover:bg-purple-700 cursor-pointer'
-          onClick={() => setCreateDialogOpen(true)}
-        >
-          <Plus className='h-4 w-4' />
-          New
-        </Button>
+        <div className='flex items-center gap-2'>
+          <Button
+            onClick={() => {
+              setPresetParentId(undefined);
+              setCreateDialogOpen(true);
+            }}
+          >
+            <Plus className='h-4 w-4 mr-2' />
+            Create Department
+          </Button>
+        </div>
       </div>
 
       {/* Stats Grid */}
       <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
         <SettingsStatsCard
           title='Total Departments'
-          value={statistics?.totalDepartments || 0}
-          description='Active departments'
+          value={statistics?.totalDepartments ?? '-'}
+          description='All departments'
           icon={<Layers className='h-4 w-4' />}
         />
-
         <SettingsStatsCard
           title='Total Members'
-          value={statistics?.totalMembers || 0}
+          value={statistics?.totalMembers ?? '-'}
           description='Across all departments'
           icon={<Users className='h-4 w-4' />}
         />
-
         <SettingsStatsCard
           title='Avg Team Size'
-          value={statistics?.averageTeamSize || 0}
+          value={statistics?.averageTeamSize ?? '-'}
           description='Members per department'
           icon={<Users className='h-4 w-4' />}
         />
-
         <SettingsStatsCard
           title='With Managers'
-          value={statistics?.departmentsWithManagers || 0}
+          value={statistics?.departmentsWithManagers ?? '-'}
           description='Departments assigned'
           icon={<UserPlus className='h-4 w-4' />}
         />
       </div>
 
-      {/* Department List */}
-      <Card>
-        <CardHeader>
-          <div className='flex flex-col gap-4'>
-            <div className='flex items-center justify-between'>
-              <div>
-                <CardTitle>All Departments</CardTitle>
-                <CardDescription>
-                  {totalItems} department{totalItems !== 1 ? 's' : ''} found
-                </CardDescription>
-              </div>
-              <Button
-                variant='outline'
-                size='sm'
-                onClick={() => setShowFilters(!showFilters)}
-              >
-                <Filter className='h-4 w-4 mr-2' />
-                Filters
-                {hasFilters && (
-                  <Badge variant='secondary' className='ml-2'>
-                    Active
-                  </Badge>
-                )}
-              </Button>
-            </div>
+      {/* Tabs: Departments / Organization Chart */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value='departments'>
+            Departments
+            {totalItems > 0 && (
+              <span className='ml-1.5 text-xs bg-muted px-1.5 py-0.5 rounded-full'>
+                {totalItems}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value='orgchart'>Organization Chart</TabsTrigger>
+        </TabsList>
 
-            {/* Search & Filters */}
-            <div className='space-y-3'>
-              <div className='relative'>
-                <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                <Input
-                  placeholder='Search departments...'
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className='pl-10'
-                />
-              </div>
+        {/* ==================== Departments Tab ==================== */}
+        <TabsContent value='departments' className='space-y-4'>
+          {/* Filters */}
+          <Card className='border-border/70 shadow-sm'>
+            <CardContent className='p-4 md:p-5'>
+              <div className='space-y-4'>
+                <div className='flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>
+                  <div>
+                    <h2 className='text-sm font-semibold'>Search & Filters</h2>
+                    <p className='text-xs text-muted-foreground mt-1'>
+                      Find departments by name, status, hierarchy, or manager.
+                    </p>
+                  </div>
 
-              {showFilters && (
-                <div className='flex flex-wrap gap-3 p-4 bg-muted/50 rounded-lg'>
-                  <Select
-                    value={
-                      filters.isActive === undefined
-                        ? 'all'
-                        : filters.isActive
-                          ? 'active'
-                          : 'inactive'
-                    }
-                    onValueChange={(value) =>
-                      setActiveFilter(
-                        value === 'all'
-                          ? undefined
-                          : value === 'active'
-                            ? true
-                            : false
-                      )
-                    }
-                  >
-                    <SelectTrigger className='w-[180px]'>
-                      <SelectValue placeholder='Status' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='all'>All Status</SelectItem>
-                      <SelectItem value='active'>Active Only</SelectItem>
-                      <SelectItem value='inactive'>Inactive Only</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Select
-                    value={filters.parentDepartmentId?.toString() || 'all'}
-                    onValueChange={(value) =>
-                      setParentFilter(
-                        value === 'all' ? undefined : Number(value)
-                      )
-                    }
-                  >
-                    <SelectTrigger className='w-[220px]'>
-                      <SelectValue placeholder='Parent Department' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='all'>All Departments</SelectItem>
-                      <SelectItem value='0'>Top Level Only</SelectItem>
-                      {activeDepartments.map((dept) => (
-                        <SelectItem key={dept.id} value={dept.id.toString()}>
-                          Under {dept.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  {hasFilters && (
-                    <Button variant='ghost' size='sm' onClick={clearFilters}>
-                      Clear Filters
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className='space-y-4'>
-          {/* Loading State */}
-          {isLoading && (
-            <div className='text-center py-12'>
-              <p className='text-muted-foreground'>Loading departments...</p>
-            </div>
-          )}
-
-          {/* Department Cards */}
-          {!isLoading && departments.length > 0 && (
-            <>
-              <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
-                {departments.map((dept) => (
-                  <Card
-                    key={dept.id}
-                    className='hover:shadow-md transition-shadow'
-                  >
-                    <CardHeader className='pb-3'>
-                      <div className='flex items-start justify-between'>
-                        <div
-                          className='flex items-center gap-3 flex-1 cursor-pointer'
-                          onClick={() => handleViewDetails(dept)}
+                  <div className='flex flex-wrap items-center gap-2'>
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() => setShowFilters((prev) => !prev)}
+                      className='gap-2'
+                    >
+                      <Filter className='h-4 w-4' />
+                      {showFilters ? 'Hide advanced' : 'Show advanced'}
+                      {hasAdvancedFilters && (
+                        <Badge
+                          variant='secondary'
+                          className='px-1.5 py-0 text-xs'
                         >
-                          <div className='h-10 w-10 rounded-lg bg-purple-100 dark:bg-purple-900 flex items-center justify-center flex-shrink-0'>
-                            <Layers className='h-5 w-5 text-purple-600 dark:text-purple-400' />
-                          </div>
-                          <div className='min-w-0 flex-1'>
-                            <CardTitle className='text-base truncate'>
-                              {dept.name}
-                            </CardTitle>
-                            {dept.parentDepartmentName && (
-                              <p className='text-xs text-muted-foreground truncate'>
-                                {dept.parentDepartmentName} → {dept.name}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <SettingsActionMenu
-                          items={[
-                            {
-                              label: 'View Details',
-                              onClick: () => handleViewDetails(dept),
-                              icon: <Eye className='h-4 w-4' />,
-                            },
-                            {
-                              label: 'Edit Department',
-                              onClick: () => handleEdit(dept),
-                              icon: <Edit className='h-4 w-4' />,
-                            },
-                            {
-                              label: dept.managerId
-                                ? 'Change Manager'
-                                : 'Assign Manager',
-                              onClick: () => handleAssignManager(dept),
-                              icon: <UserPlus className='h-4 w-4' />,
-                            },
-                            {
-                              label: 'Delete',
-                              onClick: () => handleDelete(dept),
-                              icon: <Trash2 className='h-4 w-4' />,
-                              variant: 'destructive',
-                              separator: true,
-                            },
-                          ]}
-                          triggerIcon={<MoreVertical className='h-4 w-4' />}
-                        />
-                      </div>
-                    </CardHeader>
-                    <CardContent
-                      className='space-y-3'
-                      onClick={() => handleViewDetails(dept)}
-                    >
-                      {dept.description && (
-                        <p className='text-sm text-muted-foreground line-clamp-2'>
-                          {dept.description}
-                        </p>
+                          {filters.managerId !== undefined ? 1 : 0}
+                        </Badge>
                       )}
-
-                      <Separator />
-
-                      <div className='flex items-center justify-between text-sm'>
-                        <div className='flex items-center gap-2 text-muted-foreground'>
-                          <Users className='h-4 w-4' />
-                          <span>
-                            {dept.memberCount || 0}{' '}
-                            {dept.memberCount === 1 ? 'member' : 'members'}
-                          </span>
-                        </div>
-                        <SettingsStatusBadge
-                          status={dept.isActive ? 'ACTIVE' : 'INACTIVE'}
-                        />
-                      </div>
-
-                      {dept.managerName && (
-                        <>
-                          <Separator />
-                          <div className='flex items-center gap-2'>
-                            <Avatar className='h-6 w-6'>
-                              <AvatarFallback className='text-xs bg-purple-100 text-purple-700'>
-                                {dept.managerName
-                                  .split(' ')
-                                  .map((n) => n[0])
-                                  .join('')}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className='min-w-0 flex-1'>
-                              <p className='text-xs text-muted-foreground'>
-                                Manager
-                              </p>
-                              <p className='text-sm font-medium truncate'>
-                                {dept.managerName}
-                              </p>
-                            </div>
-                          </div>
-                        </>
+                      {showFilters ? (
+                        <ChevronUp className='h-4 w-4 text-muted-foreground' />
+                      ) : (
+                        <ChevronDown className='h-4 w-4 text-muted-foreground' />
                       )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                    </Button>
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className='flex items-center justify-between pt-4'>
-                  <p className='text-sm text-muted-foreground'>
-                    Page {currentPage + 1} of {totalPages}
-                  </p>
-                  <div className='flex gap-2'>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => setPage(currentPage - 1)}
-                      disabled={currentPage === 0}
-                    >
-                      <ChevronLeft className='h-4 w-4 mr-1' />
-                      Previous
-                    </Button>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => setPage(currentPage + 1)}
-                      disabled={currentPage >= totalPages - 1}
-                    >
-                      Next
-                      <ChevronRight className='h-4 w-4 ml-1' />
-                    </Button>
+                    {activeFilterCount > 0 && (
+                      <Button
+                        variant='ghost'
+                        size='sm'
+                        onClick={clearAllFilters}
+                        className='gap-1.5 text-muted-foreground hover:text-foreground'
+                      >
+                        <X className='h-3.5 w-3.5' />
+                        Reset all
+                      </Button>
+                    )}
                   </div>
                 </div>
-              )}
-            </>
-          )}
 
-          {/* Empty State */}
-          {!isLoading && departments.length === 0 && (
-            <div className='text-center py-12'>
-              <Building2 className='h-12 w-12 mx-auto text-muted-foreground mb-4' />
-              <h3 className='text-lg font-semibold mb-2'>
-                No departments found
-              </h3>
-              <p className='text-muted-foreground mb-4'>
-                {search || hasFilters
-                  ? 'Try adjusting your search or filters'
-                  : 'Get started by creating your first department'}
-              </p>
-              {!search && !hasFilters && (
-                <Button
-                  className='bg-purple-600 hover:bg-purple-700'
-                  onClick={() => setCreateDialogOpen(true)}
-                >
-                  <Plus className='h-4 w-4 mr-2' />
-                  Create Department
-                </Button>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                {/* Main filters row */}
+                <div className='grid gap-3 md:grid-cols-12'>
+                  <div className='md:col-span-5 lg:col-span-6'>
+                    <Label
+                      htmlFor='dept-search'
+                      className='mb-2 text-xs font-medium text-muted-foreground'
+                    >
+                      Search departments
+                    </Label>
+                    <div className='relative'>
+                      <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+                      <Input
+                        id='dept-search'
+                        placeholder='Name, code, or description...'
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        className='h-10 pl-10 pr-10'
+                      />
+                      {searchInput && (
+                        <Button
+                          type='button'
+                          variant='ghost'
+                          size='icon'
+                          onClick={() => {
+                            setSearchInput('');
+                            setSearch('');
+                          }}
+                          className='absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground hover:text-foreground'
+                          aria-label='Clear search'
+                        >
+                          <X className='h-4 w-4' />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
 
-      {/* Dialogs */}
+                  <div className='md:col-span-3 lg:col-span-3'>
+                    <Label className='mb-2 text-xs font-medium text-muted-foreground'>
+                      Status
+                    </Label>
+                    <Select
+                      value={
+                        filters.isActive === undefined
+                          ? 'all'
+                          : filters.isActive
+                            ? 'active'
+                            : 'inactive'
+                      }
+                      onValueChange={(value) =>
+                        setActiveFilter(
+                          value === 'all' ? undefined : value === 'active'
+                        )
+                      }
+                    >
+                      <SelectTrigger className='h-10'>
+                        <SelectValue placeholder='All statuses' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='all'>All Statuses</SelectItem>
+                        <SelectItem value='active'>Active</SelectItem>
+                        <SelectItem value='inactive'>Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className='md:col-span-4 lg:col-span-3'>
+                    <Label className='mb-2 text-xs font-medium text-muted-foreground'>
+                      Parent department
+                    </Label>
+                    <Select
+                      value={
+                        filters.parentDepartmentId !== undefined
+                          ? String(filters.parentDepartmentId)
+                          : 'all'
+                      }
+                      onValueChange={(value) =>
+                        setParentFilter(
+                          value === 'all' ? undefined : Number(value)
+                        )
+                      }
+                    >
+                      <SelectTrigger className='h-10'>
+                        <SelectValue placeholder='All departments' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='all'>All Departments</SelectItem>
+                        <SelectItem value='0'>Top Level Only</SelectItem>
+                        {activeDepartments.map((dept) => (
+                          <SelectItem key={dept.id} value={String(dept.id)}>
+                            Under {dept.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Active filter badges */}
+                {activeFilterBadges.length > 0 && (
+                  <div className='flex flex-wrap items-center gap-2 rounded-md border border-dashed bg-muted/30 p-2.5'>
+                    {activeFilterBadges.map((badge) => (
+                      <Badge
+                        key={badge}
+                        variant='secondary'
+                        className='font-normal'
+                      >
+                        {badge}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+
+                {/* Advanced filters */}
+                {showFilters && (
+                  <div className='rounded-lg border bg-muted/40 p-3 md:p-4'>
+                    <div className='grid gap-3 md:grid-cols-2'>
+                      <div className='space-y-2'>
+                        <Label
+                          htmlFor='dept-manager-filter'
+                          className='text-xs font-medium text-muted-foreground'
+                        >
+                          Manager
+                        </Label>
+                        <Select
+                          value={
+                            filters.managerId !== undefined
+                              ? String(filters.managerId)
+                              : 'all'
+                          }
+                          onValueChange={(v) =>
+                            setManagerFilter(
+                              v === 'all' ? undefined : Number(v)
+                            )
+                          }
+                        >
+                          <SelectTrigger
+                            id='dept-manager-filter'
+                            className='h-10'
+                          >
+                            <SelectValue placeholder='All managers' />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value='all'>All Managers</SelectItem>
+                            {managers.map((mgr) => (
+                              <SelectItem key={mgr.id} value={String(mgr.id)}>
+                                {mgr.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {hasAdvancedFilters && (
+                      <div className='mt-3 flex justify-end'>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          onClick={clearAdvancedFilters}
+                          className='gap-1 text-muted-foreground hover:text-foreground'
+                        >
+                          <X className='h-3.5 w-3.5' />
+                          Clear advanced
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Departments Table */}
+          <DataTable
+            columns={departmentColumns}
+            data={departments}
+            keyExtractor={(d) => String(d.id)}
+            isLoading={isLoading}
+            error={error}
+            storageKey='settings-departments-columns'
+            pagination={{
+              currentPage,
+              totalPages,
+              totalItems,
+              onPageChange: handlePageChange,
+              isFetching,
+            }}
+          />
+        </TabsContent>
+
+        {/* ==================== Organization Chart Tab ==================== */}
+        <TabsContent value='orgchart' className='space-y-4'>
+          <Card>
+            <CardContent className='p-4 md:p-6'>
+              <DepartmentOrgChart
+                tree={departmentTree}
+                isLoading={isLoadingTree}
+                onView={handleTreeView}
+                onEdit={handleTreeEdit}
+                onAddChild={handleTreeAddChild}
+                onDelete={handleTreeDelete}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* ==================== Dialogs ==================== */}
+
       <CreateDepartmentDialog
         open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
+        onOpenChange={(open) => {
+          setCreateDialogOpen(open);
+          if (!open) setPresetParentId(undefined);
+        }}
         onSubmit={create}
         isLoading={createStatus.isLoading}
         departments={activeDepartments}
@@ -484,6 +736,20 @@ export default function SettingsDepartmentsPage() {
         onOpenChange={setDetailDialogOpen}
         department={selectedDepartment}
         useDepartmentMembers={useDepartmentMembers}
+        onAddMembers={handleAddMembers}
+        onRemoveMember={handleRemoveMember}
+      />
+
+      <AddMemberDialog
+        open={addMemberDialogOpen}
+        onOpenChange={setAddMemberDialogOpen}
+        department={memberTargetDepartment}
+        useDepartmentMembers={useDepartmentMembers}
+        managers={managers}
+        onAssignUser={assignUserToDept}
+        onBulkAssignUsers={bulkAssignUsersToDept}
+        isAssigning={assignStatus.isLoading}
+        isBulkAssigning={bulkAssignStatus.isLoading}
       />
     </div>
   );

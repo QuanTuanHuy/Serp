@@ -12,6 +12,7 @@ import type {
   Department,
   DepartmentMember,
   DepartmentStatistics,
+  DepartmentTreeNode,
   CreateDepartmentRequest,
   UpdateDepartmentRequest,
   AssignUserToDepartmentRequest,
@@ -209,6 +210,18 @@ export const settingsDepartmentsApi = api.injectEndpoints({
       transformResponse: createRtkTransformResponse(),
       providesTags: [{ type: 'settings/Department', id: 'STATISTICS' }],
     }),
+
+    getDepartmentTree: builder.query<
+      ApiResponse<DepartmentTreeNode[]>,
+      { organizationId: number }
+    >({
+      query: ({ organizationId }) => ({
+        url: `/organizations/${organizationId}/departments/tree`,
+        method: 'GET',
+      }),
+      transformResponse: createRtkTransformResponse(),
+      providesTags: [{ type: 'settings/Department', id: 'TREE' }],
+    }),
   }),
   overrideExisting: false,
 });
@@ -228,4 +241,5 @@ export const {
   useRemoveUserFromDepartmentMutation,
   useGetDepartmentStatisticsQuery,
   useLazyGetDepartmentStatisticsQuery,
+  useGetDepartmentTreeQuery,
 } = settingsDepartmentsApi;

@@ -1,6 +1,7 @@
 package serp.project.account.core.usecase;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
@@ -16,10 +17,12 @@ import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.message.CreateNotificationEvent;
 import serp.project.account.core.domain.dto.request.AssignUserToDepartmentRequest;
 import serp.project.account.core.domain.dto.request.AssignUserToModuleRequest;
+import serp.project.account.core.domain.dto.request.BulkAssignUsersToDepartmentRequest;
 import serp.project.account.core.domain.dto.request.CreateDepartmentRequest;
 import serp.project.account.core.domain.dto.request.GetDepartmentParams;
 import serp.project.account.core.domain.dto.request.UpdateDepartmentRequest;
 import serp.project.account.core.domain.dto.response.DepartmentResponse;
+import serp.project.account.core.domain.dto.response.DepartmentTreeResponse;
 import serp.project.account.core.domain.dto.response.UserDepartmentResponse;
 import serp.project.account.core.domain.entity.DepartmentEntity;
 import serp.project.account.core.domain.entity.OrganizationEntity;
@@ -285,6 +288,103 @@ public class DepartmentUseCase {
             log.error("Unexpected error getting department stats: {}", e.getMessage(), e);
             return responseUtils.internalServerError(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    public GeneralResponse<?> getDepartmentTree(Long organizationId) {
+        try {
+            organizationService.getOrganizationById(organizationId);
+
+            var departments = departmentService.getDepartmentsByOrganizationId(organizationId);
+            if (departments.isEmpty()) {
+                return responseUtils.success(new ArrayList<DepartmentTreeResponse>());
+            }
+
+            List<Long> managerIds = departments.stream()
+                    .map(DepartmentEntity::getManagerId)
+                    .filter(Objects::nonNull)
+                    .distinct().toList();
+            var idToUser = managerIds.isEmpty() ? new HashMap<Long, UserEntity>()
+                    : userService.getUsersByIds(managerIds).stream()
+                            .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+            var memberCountByDeptId = userDepartmentService.countMembersByDepartmentIds(
+                    departments.stream().map(DepartmentEntity::getId).toList());
+
+            var idToDepartment = departments.stream()
+                    .collect(Collectors.toMap(DepartmentEntity::getId, Function.identity()));
+
+            List<DepartmentTreeResponse> tree = new ArrayList<>();
+            for (var dept : departments) {
+                if (dept.getParentDepartmentId() == null || !idToDepartment.containsKey(dept.getParentDepartmentId())) {
+                    tree.add(buildTreeNode(dept, departments, idToUser, memberCountByDeptId));
+                }
+            }
+
+            return responseUtils.success(tree);
+        } catch (AppException e) {
+            log.error("Error getting department tree: {}", e.getMessage());
+            return responseUtils.error(e.getCode(), e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error getting department tree: {}", e.getMessage(), e);
+            return responseUtils.internalServerError(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> bulkAssignUsersToDepartment(Long organizationId, BulkAssignUsersToDepartmentRequest request) {
+        try {
+            var department = getDepartmentInOrganization(organizationId, request.getDepartmentId());
+            if (!department.isActiveDepartment()) {
+                throw new AppException(Constants.ErrorMessage.DEPARTMENT_INACTIVE);
+            }
+
+            userDepartmentService.bulkAssignUsersToDepartment(request);
+            return responseUtils.success("Users assigned to department successfully");
+        } catch (AppException e) {
+            log.error("Error bulk assigning users to department: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error bulk assigning users to department: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> removeUserFromDepartment(Long organizationId, Long departmentId, Long userId) {
+        try {
+            getDepartmentInOrganization(organizationId, departmentId);
+            userDepartmentService.removeUserFromDepartment(userId, departmentId);
+            return responseUtils.success("User removed from department successfully");
+        } catch (AppException e) {
+            log.error("Error removing user from department: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error removing user from department: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    private DepartmentTreeResponse buildTreeNode(
+            DepartmentEntity dept,
+            List<DepartmentEntity> allDepartments,
+            java.util.Map<Long, UserEntity> idToUser,
+            java.util.Map<Long, Long> memberCountByDeptId) {
+        var manager = dept.getManagerId() != null ? idToUser.get(dept.getManagerId()) : null;
+        var children = allDepartments.stream()
+                .filter(d -> dept.getId().equals(d.getParentDepartmentId()))
+                .map(child -> buildTreeNode(child, allDepartments, idToUser, memberCountByDeptId))
+                .toList();
+
+        return DepartmentTreeResponse.builder()
+                .id(dept.getId())
+                .name(dept.getName())
+                .code(dept.getCode())
+                .description(dept.getDescription())
+                .managerId(dept.getManagerId())
+                .managerName(manager != null ? manager.getFullName() : null)
+                .memberCount(memberCountByDeptId.getOrDefault(dept.getId(), 0L).intValue())
+                .isActive(dept.getIsActive())
+                .children(children)
+                .build();
     }
 
     private void validateModuleAccessForOrganization(Long organizationId, List<Long> moduleIds) {

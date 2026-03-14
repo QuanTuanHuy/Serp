@@ -25,6 +25,10 @@ import {
   Download,
   UserX,
   Plus,
+  Filter,
+  X,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import {
   Card,
@@ -35,6 +39,7 @@ import {
 } from '@/shared/components/ui/card';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
+import { Label } from '@/shared/components/ui/label';
 import {
   Tabs,
   TabsContent,
@@ -74,6 +79,8 @@ import {
   useLazyExportUsersQuery,
   useGetOrganizationRolesQuery,
 } from '@/modules/settings/services/users/usersApi';
+import { useGetDepartmentsQuery } from '@/modules/settings/services/departments/departmentsApi';
+import { Badge } from '@/shared/components/ui/badge';
 
 // ==================== Sub-components ====================
 
@@ -115,6 +122,22 @@ const formatDate = (isoDate?: string) => {
   });
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  ACTIVE: 'Active',
+  INACTIVE: 'Inactive',
+  INVITED: 'Invited',
+  SUSPENDED: 'Suspended',
+};
+
+const USER_TYPE_LABELS: Record<string, string> = {
+  OWNER: 'Owner',
+  ADMIN: 'Admin',
+  EMPLOYEE: 'Employee',
+  CONTRACTOR: 'Contractor',
+  EXTERNAL: 'External',
+  GUEST: 'Guest',
+};
+
 // ==================== Main Page ====================
 
 export default function SettingsUsersPage() {
@@ -145,6 +168,8 @@ export default function SettingsUsersPage() {
     setSearch,
     setStatus,
     setUserType,
+    setRoleId,
+    setDepartmentId,
     handlePageChange,
     // Actions
     create,
@@ -172,12 +197,103 @@ export default function SettingsUsersPage() {
   );
   const availableRoles = rolesResponse?.data ?? [];
 
+  const { data: departmentsResponse } = useGetDepartmentsQuery(
+    { organizationId: organizationId as number, pageSize: 100 },
+    { skip: !organizationId }
+  );
+  const availableDepartments = departmentsResponse?.data.items ?? [];
+
   // Search debounce
   const [searchInput, setSearchInput] = useState<string>(filters.search || '');
   const debouncedSearch = useDebounce(searchInput, 400);
   useEffect(() => {
     setSearch(debouncedSearch || undefined);
   }, [debouncedSearch, setSearch]);
+
+  // Collapsible advanced filters
+  const [showFilters, setShowFilters] = useState(false);
+  const hasAdvancedFilters =
+    filters.roleId !== undefined || filters.departmentId !== undefined;
+  const clearAllFilters = useCallback(() => {
+    setSearchInput('');
+    setSearch(undefined);
+    setStatus('all' as any);
+    setUserType(undefined);
+    setRoleId(undefined);
+    setDepartmentId(undefined);
+  }, [setSearch, setStatus, setUserType, setRoleId, setDepartmentId]);
+
+  const clearAdvancedFilters = useCallback(() => {
+    setRoleId(undefined);
+    setDepartmentId(undefined);
+  }, [setRoleId, setDepartmentId]);
+
+  const selectedRoleName = useMemo(() => {
+    if (filters.roleId === undefined) return undefined;
+    return (
+      availableRoles.find((role) => role.id === filters.roleId)?.name ||
+      `Role #${filters.roleId}`
+    );
+  }, [availableRoles, filters.roleId]);
+
+  const selectedDepartmentName = useMemo(() => {
+    if (filters.departmentId === undefined) return undefined;
+    return (
+      availableDepartments.find(
+        (department) => department.id === filters.departmentId
+      )?.name || `Department #${filters.departmentId}`
+    );
+  }, [availableDepartments, filters.departmentId]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.search) count += 1;
+    if (filters.status && filters.status !== 'all') count += 1;
+    if (filters.userType) count += 1;
+    if (filters.roleId !== undefined) count += 1;
+    if (filters.departmentId !== undefined) count += 1;
+    return count;
+  }, [
+    filters.search,
+    filters.status,
+    filters.userType,
+    filters.roleId,
+    filters.departmentId,
+  ]);
+
+  const activeFilterBadges = useMemo(() => {
+    const badges: string[] = [];
+
+    if (filters.search) {
+      badges.push(`Keyword: \"${filters.search}\"`);
+    }
+
+    if (filters.status && filters.status !== 'all') {
+      const status = String(filters.status);
+      badges.push(`Status: ${STATUS_LABELS[status] || status}`);
+    }
+
+    if (filters.userType) {
+      const userType = String(filters.userType);
+      badges.push(`Type: ${USER_TYPE_LABELS[userType] || userType}`);
+    }
+
+    if (selectedRoleName) {
+      badges.push(`Role: ${selectedRoleName}`);
+    }
+
+    if (selectedDepartmentName) {
+      badges.push(`Department: ${selectedDepartmentName}`);
+    }
+
+    return badges;
+  }, [
+    filters.search,
+    filters.status,
+    filters.userType,
+    selectedRoleName,
+    selectedDepartmentName,
+  ]);
 
   // Status change handlers
   const handleStatusChange = useCallback(
@@ -542,65 +658,249 @@ export default function SettingsUsersPage() {
         {/* ==================== Users Tab ==================== */}
         <TabsContent value='users' className='space-y-4'>
           {/* Filters */}
-          <Card>
-            <CardContent className='pt-6'>
-              <div className='grid gap-4 md:grid-cols-4'>
-                {/* Search */}
-                <div className='md:col-span-2'>
-                  <div className='relative'>
-                    <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                    <Input
-                      placeholder='Search by name, email...'
-                      value={searchInput}
-                      onChange={(e) => setSearchInput(e.target.value)}
-                      className='pl-10'
-                    />
+          <Card className='border-border/70 shadow-sm'>
+            <CardContent className='p-4 md:p-5'>
+              <div className='space-y-4'>
+                <div className='flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>
+                  <div>
+                    <h2 className='text-sm font-semibold'>Search & Filters</h2>
+                    <p className='text-xs text-muted-foreground mt-1'>
+                      Find users faster by keyword, status, type, role, and
+                      department.
+                    </p>
+                  </div>
+
+                  <div className='flex flex-wrap items-center gap-2'>
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() => setShowFilters((prev) => !prev)}
+                      className='gap-2'
+                    >
+                      <Filter className='h-4 w-4' />
+                      {showFilters ? 'Hide advanced' : 'Show advanced'}
+                      {hasAdvancedFilters && (
+                        <Badge
+                          variant='secondary'
+                          className='px-1.5 py-0 text-xs'
+                        >
+                          {(filters.roleId !== undefined ? 1 : 0) +
+                            (filters.departmentId !== undefined ? 1 : 0)}
+                        </Badge>
+                      )}
+                      {showFilters ? (
+                        <ChevronUp className='h-4 w-4 text-muted-foreground' />
+                      ) : (
+                        <ChevronDown className='h-4 w-4 text-muted-foreground' />
+                      )}
+                    </Button>
+
+                    {activeFilterCount > 0 && (
+                      <Button
+                        variant='ghost'
+                        size='sm'
+                        onClick={clearAllFilters}
+                        className='gap-1.5 text-muted-foreground hover:text-foreground'
+                      >
+                        <X className='h-3.5 w-3.5' />
+                        Reset all
+                      </Button>
+                    )}
                   </div>
                 </div>
 
-                {/* Status Filter */}
-                <Select
-                  value={
-                    filters.status === 'all'
-                      ? 'all'
-                      : (filters.status as string) || 'all'
-                  }
-                  onValueChange={(v) =>
-                    setStatus(v === 'all' ? 'all' : (v as UserStatus))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder='All Statuses' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='all'>All Statuses</SelectItem>
-                    <SelectItem value='ACTIVE'>Active</SelectItem>
-                    <SelectItem value='INACTIVE'>Inactive</SelectItem>
-                    <SelectItem value='INVITED'>Invited</SelectItem>
-                    <SelectItem value='SUSPENDED'>Suspended</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className='grid gap-3 md:grid-cols-12'>
+                  <div className='md:col-span-6 lg:col-span-7'>
+                    <Label
+                      htmlFor='users-search'
+                      className='mb-2 text-xs font-medium text-muted-foreground'
+                    >
+                      Search users
+                    </Label>
+                    <div className='relative'>
+                      <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+                      <Input
+                        id='users-search'
+                        placeholder='Name or email...'
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        className='h-10 pl-10 pr-10'
+                      />
+                      {searchInput && (
+                        <Button
+                          type='button'
+                          variant='ghost'
+                          size='icon'
+                          onClick={() => {
+                            setSearchInput('');
+                            setSearch(undefined);
+                          }}
+                          className='absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground hover:text-foreground'
+                          aria-label='Clear search'
+                        >
+                          <X className='h-4 w-4' />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
 
-                {/* User Type Filter */}
-                <Select
-                  value={filters.userType || 'all'}
-                  onValueChange={(v) =>
-                    setUserType(v === 'all' ? undefined : v)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder='All Types' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='all'>All Types</SelectItem>
-                    <SelectItem value='OWNER'>Owner</SelectItem>
-                    <SelectItem value='ADMIN'>Admin</SelectItem>
-                    <SelectItem value='EMPLOYEE'>Employee</SelectItem>
-                    <SelectItem value='CONTRACTOR'>Contractor</SelectItem>
-                    <SelectItem value='EXTERNAL'>External</SelectItem>
-                    <SelectItem value='GUEST'>Guest</SelectItem>
-                  </SelectContent>
-                </Select>
+                  <div className='md:col-span-3 lg:col-span-2'>
+                    <Label className='mb-2 text-xs font-medium text-muted-foreground'>
+                      Status
+                    </Label>
+                    <Select
+                      value={
+                        filters.status === 'all'
+                          ? 'all'
+                          : (filters.status as string) || 'all'
+                      }
+                      onValueChange={(v) =>
+                        setStatus(v === 'all' ? 'all' : (v as UserStatus))
+                      }
+                    >
+                      <SelectTrigger className='h-10'>
+                        <SelectValue placeholder='All statuses' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='all'>All Statuses</SelectItem>
+                        <SelectItem value='ACTIVE'>Active</SelectItem>
+                        <SelectItem value='INACTIVE'>Inactive</SelectItem>
+                        <SelectItem value='INVITED'>Invited</SelectItem>
+                        <SelectItem value='SUSPENDED'>Suspended</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className='md:col-span-3 lg:col-span-3'>
+                    <Label className='mb-2 text-xs font-medium text-muted-foreground'>
+                      User type
+                    </Label>
+                    <Select
+                      value={filters.userType || 'all'}
+                      onValueChange={(v) =>
+                        setUserType(v === 'all' ? undefined : v)
+                      }
+                    >
+                      <SelectTrigger className='h-10'>
+                        <SelectValue placeholder='All types' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='all'>All Types</SelectItem>
+                        <SelectItem value='OWNER'>Owner</SelectItem>
+                        <SelectItem value='ADMIN'>Admin</SelectItem>
+                        <SelectItem value='EMPLOYEE'>Employee</SelectItem>
+                        <SelectItem value='CONTRACTOR'>Contractor</SelectItem>
+                        <SelectItem value='EXTERNAL'>External</SelectItem>
+                        <SelectItem value='GUEST'>Guest</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {activeFilterBadges.length > 0 && (
+                  <div className='flex flex-wrap items-center gap-2 rounded-md border border-dashed bg-muted/30 p-2.5'>
+                    {activeFilterBadges.map((badge) => (
+                      <Badge
+                        key={badge}
+                        variant='secondary'
+                        className='font-normal'
+                      >
+                        {badge}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+
+                {showFilters && (
+                  <div className='rounded-lg border bg-muted/40 p-3 md:p-4'>
+                    <div className='grid gap-3 md:grid-cols-2'>
+                      <div className='space-y-2'>
+                        <Label
+                          htmlFor='users-role-filter'
+                          className='text-xs font-medium text-muted-foreground'
+                        >
+                          Role
+                        </Label>
+                        <Select
+                          value={
+                            filters.roleId !== undefined
+                              ? String(filters.roleId)
+                              : 'all'
+                          }
+                          onValueChange={(v) =>
+                            setRoleId(v === 'all' ? undefined : Number(v))
+                          }
+                        >
+                          <SelectTrigger
+                            id='users-role-filter'
+                            className='h-10'
+                          >
+                            <SelectValue placeholder='All roles' />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value='all'>All Roles</SelectItem>
+                            {availableRoles.map((role) => (
+                              <SelectItem key={role.id} value={String(role.id)}>
+                                {role.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className='space-y-2'>
+                        <Label
+                          htmlFor='users-department-filter'
+                          className='text-xs font-medium text-muted-foreground'
+                        >
+                          Department
+                        </Label>
+                        <Select
+                          value={
+                            filters.departmentId !== undefined
+                              ? String(filters.departmentId)
+                              : 'all'
+                          }
+                          onValueChange={(v) =>
+                            setDepartmentId(v === 'all' ? undefined : Number(v))
+                          }
+                        >
+                          <SelectTrigger
+                            id='users-department-filter'
+                            className='h-10'
+                          >
+                            <SelectValue placeholder='All departments' />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value='all'>All Departments</SelectItem>
+                            {availableDepartments.map((department) => (
+                              <SelectItem
+                                key={department.id}
+                                value={String(department.id)}
+                              >
+                                {department.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {hasAdvancedFilters && (
+                      <div className='mt-3 flex justify-end'>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          onClick={clearAdvancedFilters}
+                          className='gap-1 text-muted-foreground hover:text-foreground'
+                        >
+                          <X className='h-3.5 w-3.5' />
+                          Clear advanced
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

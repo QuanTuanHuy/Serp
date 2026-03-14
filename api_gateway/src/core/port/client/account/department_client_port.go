@@ -17,7 +17,7 @@ type IDepartmentClientPort interface {
 	GetDepartmentById(ctx context.Context, organizationId int64, departmentId int64) (*response.BaseResponse, error)
 	UpdateDepartment(ctx context.Context, organizationId int64, departmentId int64, req interface{}) (*response.BaseResponse, error)
 	DeleteDepartment(ctx context.Context, organizationId int64, departmentId int64) (*response.BaseResponse, error)
-	GetDepartmentTree(ctx context.Context, organizationId int64, departmentId int64) (*response.BaseResponse, error)
+	GetDepartmentTree(ctx context.Context, organizationId int64) (*response.BaseResponse, error)
 
 	AssignUserToDepartment(ctx context.Context, organizationId int64, departmentId int64, req interface{}) (*response.BaseResponse, error)
 	BulkAssignUsersToDepartment(ctx context.Context, organizationId int64, departmentId int64, req interface{}) (*response.BaseResponse, error)
