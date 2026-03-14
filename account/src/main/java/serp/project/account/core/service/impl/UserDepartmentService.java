@@ -15,6 +15,7 @@ import serp.project.account.core.domain.dto.request.BulkAssignUsersToDepartmentR
 import serp.project.account.core.domain.entity.UserDepartmentEntity;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.port.store.IUserDepartmentPort;
+import serp.project.account.core.port.store.IUserPort;
 import serp.project.account.core.service.IUserDepartmentService;
 import serp.project.account.infrastructure.store.mapper.UserDepartmentMapper;
 
@@ -26,6 +27,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 public class UserDepartmentService implements IUserDepartmentService {
+    private final IUserPort userPort;
     private final IUserDepartmentPort userDepartmentPort;
     private final UserDepartmentMapper userDepartmentMapper;
 
@@ -44,6 +46,16 @@ public class UserDepartmentService implements IUserDepartmentService {
                 primaryUd.setIsPrimary(false);
                 userDepartmentPort.save(primaryUd);
             });
+            var user = userPort.getUserById(userId);
+            if (user == null) {
+                log.error("User {} not found when assigning to department {}", userId, departmentId);
+                throw new AppException(Constants.ErrorMessage.USER_NOT_FOUND);
+            }
+            if (user.getPrimaryDepartmentId() == null ||
+                    user.getPrimaryDepartmentId().equals(departmentId)) {
+                user.setPrimaryDepartmentId(departmentId);
+                userPort.save(user);
+            }
         }
 
         var userDepartment = userDepartmentMapper.createMapper(request);
