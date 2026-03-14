@@ -6,7 +6,9 @@
 package serp.project.account.infrastructure.store.specification;
 
 import org.springframework.data.jpa.domain.Specification;
+import serp.project.account.infrastructure.store.model.UserDepartmentModel;
 import serp.project.account.infrastructure.store.model.UserModel;
+import serp.project.account.infrastructure.store.model.UserRoleModel;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -39,7 +41,35 @@ public class UserSpecification extends BaseSpecification<UserModel> {
     public static Specification<UserModel> hasOrganizationId(Long organizationId) {
         return equal("primaryOrganizationId", organizationId);
     }
-    
+
+    public static Specification<UserModel> hasUserType(String userType) {
+        return equal("userType", userType);
+    }
+
+    public static Specification<UserModel> hasRoleId(Long roleId) {
+        return (root, query, criteriaBuilder) -> {
+            if (roleId == null) return criteriaBuilder.conjunction();
+            var subquery = query.subquery(Long.class);
+            var urRoot = subquery.from(UserRoleModel.class);
+            subquery.select(urRoot.get("userId"))
+                    .where(criteriaBuilder.equal(urRoot.get("roleId"), roleId));
+            return root.get("id").in(subquery);
+        };
+    }
+
+    public static Specification<UserModel> hasDepartmentId(Long departmentId) {
+        return (root, query, criteriaBuilder) -> {
+            if (departmentId == null) return criteriaBuilder.conjunction();
+            var subquery = query.subquery(Long.class);
+            var udRoot = subquery.from(UserDepartmentModel.class);
+            subquery.select(udRoot.get("userId"))
+                    .where(criteriaBuilder.and(
+                            criteriaBuilder.equal(udRoot.get("departmentId"), departmentId),
+                            criteriaBuilder.equal(udRoot.get("isActive"), true)));
+            return root.get("id").in(subquery);
+        };
+    }
+
     public static Specification<UserModel> hasIds(List<Long> ids) {
         return in("id", ids);
     }

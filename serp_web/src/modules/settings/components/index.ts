@@ -11,6 +11,11 @@ export { SettingsAuthGuard } from './SettingsAuthGuard';
 // Users
 export { SettingsUserDialog } from './users/UserDialog';
 export { SettingsUserForm } from './users/UserForm';
+export { EditUserDialog } from './users/EditUserDialog';
+export { CreateUserDialog } from './users/CreateUserDialog';
+export { InviteUserDialog } from './users/InviteUserDialog';
+export { UserDetailDialog } from './users/UserDetailDialog';
+export { ConfirmStatusDialog } from './users/ConfirmStatusDialog';
 
 // Modules
 export { ModuleUsersDialog } from './modules/ModuleUsersDialog';

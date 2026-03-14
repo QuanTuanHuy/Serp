@@ -13,9 +13,6 @@ import {
   Users,
   Puzzle,
   Layers,
-  CreditCard,
-  Shield,
-  Webhook,
   ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
@@ -45,12 +42,12 @@ const navigationItems: NavigationItem[] = [
     icon: Users,
     description: 'Manage organization users',
   },
-  {
-    name: 'Roles',
-    href: '/settings/roles',
-    icon: Shield,
-    description: 'Configure roles and permissions',
-  },
+  // {
+  //   name: 'Roles',
+  //   href: '/settings/roles',
+  //   icon: Shield,
+  //   description: 'Configure roles and permissions',
+  // },
   {
     name: 'Departments',
     href: '/settings/departments',
@@ -63,24 +60,24 @@ const navigationItems: NavigationItem[] = [
     icon: Puzzle,
     description: 'Manage module access',
   },
-  {
-    name: 'Subscription',
-    href: '/settings/subscription',
-    icon: CreditCard,
-    description: 'Subscription and billing',
-  },
-  {
-    name: 'Security',
-    href: '/settings/security',
-    icon: Shield,
-    description: 'Security settings and audit logs',
-  },
-  {
-    name: 'Integrations',
-    href: '/settings/integrations',
-    icon: Webhook,
-    description: 'Third-party integrations',
-  },
+  // {
+  //   name: 'Subscription',
+  //   href: '/settings/subscription',
+  //   icon: CreditCard,
+  //   description: 'Subscription and billing',
+  // },
+  // {
+  //   name: 'Security',
+  //   href: '/settings/security',
+  //   icon: Shield,
+  //   description: 'Security settings and audit logs',
+  // },
+  // {
+  //   name: 'Integrations',
+  //   href: '/settings/integrations',
+  //   icon: Webhook,
+  //   description: 'Third-party integrations',
+  // },
 ];
 
 export const SettingsSidebar: React.FC = () => {

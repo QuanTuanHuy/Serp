@@ -8,6 +8,7 @@ package serp.project.account.core.service;
 import serp.project.account.core.domain.entity.UserModuleAccessEntity;
 
 import java.util.List;
+import java.util.Map;
 
 public interface IUserModuleAccessService {
     /**
@@ -51,4 +52,6 @@ public interface IUserModuleAccessService {
      * Count active users for module in organization
      */
     int countActiveUsers(Long moduleId, Long organizationId);
+
+    Map<Long, Integer> countActiveModulesByUserIds(List<Long> userIds);
 }

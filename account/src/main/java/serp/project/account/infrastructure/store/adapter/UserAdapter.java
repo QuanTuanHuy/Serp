@@ -5,7 +5,10 @@
 
 package serp.project.account.infrastructure.store.adapter;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
@@ -13,6 +16,7 @@ import org.springframework.stereotype.Component;
 import lombok.RequiredArgsConstructor;
 import serp.project.account.core.domain.dto.request.GetUserParams;
 import serp.project.account.core.domain.entity.UserEntity;
+import serp.project.account.core.domain.enums.UserStatus;
 import serp.project.account.core.port.store.IUserPort;
 import serp.project.account.infrastructure.store.mapper.UserMapper;
 import serp.project.account.infrastructure.store.model.UserModel;
@@ -51,8 +55,11 @@ public class UserAdapter implements IUserPort {
     public Pair<Long, List<UserEntity>> getUsers(GetUserParams params) {
         var pageable = paginationUtils.getPageable(params);
         var specification = UserSpecification.searchUsersWithEmailOrName(params.getSearch())
-                .and(UserSpecification.hasOrganizationId(params.getOrganizationId())
-                        .and(UserSpecification.hasStatus(params.getStatus())));
+                .and(UserSpecification.hasOrganizationId(params.getOrganizationId()))
+                .and(UserSpecification.hasStatus(params.getStatus()))
+                .and(UserSpecification.hasUserType(params.getUserType()))
+                .and(UserSpecification.hasRoleId(params.getRoleId()))
+                .and(UserSpecification.hasDepartmentId(params.getDepartmentId()));
         var page = userRepository.findAll(specification, pageable);
 
         var users = userMapper.toEntityList(page.getContent());
@@ -72,5 +79,34 @@ public class UserAdapter implements IUserPort {
     @Override
     public Integer countUsersByOrganizationId(Long organizationId) {
         return userRepository.countByPrimaryOrganizationId(organizationId);
+    }
+
+    @Override
+    public Integer countUsersByOrganizationIdAndStatus(Long organizationId, UserStatus status) {
+        return userRepository.countByPrimaryOrganizationIdAndStatus(organizationId, status);
+    }
+
+    @Override
+    public Integer countUsersByOrganizationIdAndCreatedBetween(Long organizationId, LocalDateTime from, LocalDateTime to) {
+        return userRepository.countByOrganizationIdAndCreatedAtBetween(organizationId, from, to);
+    }
+
+    @Override
+    public Integer countAdminUsersByOrganizationId(Long organizationId) {
+        return userRepository.countAdminUsersByOrganizationId(organizationId);
+    }
+
+    @Override
+    public List<UserEntity> getUsersByOrganizationIdAndIds(Long organizationId, List<Long> userIds) {
+        return userMapper.toEntityList(userRepository.findByPrimaryOrganizationIdAndIdIn(organizationId, userIds));
+    }
+
+    @Override
+    public Map<String, Integer> countUsersByStatusForOrganization(Long organizationId) {
+        var counts = userRepository.countUsersByStatusForOrganization(organizationId);
+        return counts.stream().collect(Collectors.toMap(
+                c -> c[0].toString(),
+                c -> Integer.parseInt(c[1].toString())
+        ));
     }
 }

@@ -8,10 +8,12 @@ package router
 import (
 	"github.com/gin-gonic/gin"
 	account "github.com/serp/api-gateway/src/ui/controller/account"
+	"github.com/serp/api-gateway/src/ui/controller/common"
 	"github.com/serp/api-gateway/src/ui/middleware"
 )
 
 func RegisterAccountRoutes(group *gin.RouterGroup,
+	genericProxyController *common.GenericProxyController,
 	authController *account.AuthController,
 	userController *account.UserController,
 	roleController *account.RoleController,
@@ -115,9 +117,22 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 
 	organizationsV1 := group.Group("/api/v1/organizations")
 	{
+		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/roles", genericProxyController.ProxyHandler("account"))
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/me", organizationController.GetMyOrganization)
 		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/users", organizationController.CreateUserForOrganization)
 		organizationsV1.Use(middleware.AuthMiddleware()).PATCH("/:organizationId/users/:userId/status", organizationController.UpdateUserStatusInOrganization)
+		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/users/stats", genericProxyController.ProxyHandler("account"))
+		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/users/export", genericProxyController.ProxyHandler("account"))
+		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/users/:userId/detail", genericProxyController.ProxyHandler("account"))
+		organizationsV1.Use(middleware.AuthMiddleware()).PUT("/:organizationId/users/:userId/roles", genericProxyController.ProxyHandler("account"))
+		organizationsV1.Use(middleware.AuthMiddleware()).PATCH("/:organizationId/users/:userId/type", genericProxyController.ProxyHandler("account"))
+		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/users/:userId/reset-password", genericProxyController.ProxyHandler("account"))
+
+		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/invitations", genericProxyController.ProxyHandler("account"))
+		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/invitations", genericProxyController.ProxyHandler("account"))
+		organizationsV1.Use(middleware.AuthMiddleware()).DELETE("/:organizationId/invitations/:invitationId", genericProxyController.ProxyHandler("account"))
+		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/invitations/:invitationId/resend", genericProxyController.ProxyHandler("account"))
+
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/modules/:moduleId/access", moduleAccessController.CanOrganizationAccessModule)
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/modules", moduleAccessController.GetAccessibleModulesForOrganization)
 		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/modules/:moduleId/users", moduleAccessController.AssignUserToModule)
@@ -151,5 +166,10 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 		menuDisplayV1.Use(middleware.AuthMiddleware()).POST("/assign-to-role", menuDisplayController.AssignMenuDisplaysToRole)
 		menuDisplayV1.Use(middleware.AuthMiddleware()).POST("/unassign-from-role", menuDisplayController.UnassignMenuDisplaysFromRole)
 		menuDisplayV1.Use(middleware.AuthMiddleware()).GET("/get-by-role-ids", menuDisplayController.GetMenuDisplaysByRoleIds)
+	}
+
+	invitationV1 := group.Group("/api/v1/invitations")
+	{
+		invitationV1.POST("/:token/accept", genericProxyController.ProxyHandler("account"))
 	}
 }

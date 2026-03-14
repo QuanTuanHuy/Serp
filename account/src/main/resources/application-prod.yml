@@ -90,8 +90,16 @@ app:
           second: GET
         - first: /api/v1/organizations/*/departments
           second: GET
+        - first: /api/v1/organizations/*/departments/*
+          second: GET
+        - first: /api/v1/organizations/*/departments/*/tree
+          second: GET
+        - first: /api/v1/organizations/*/departments/*/members
+          second: GET
+        - first: /api/v1/invitations/*/accept
+          second: POST
       protectedUrls:
-        # ==================== SERP_ADMIN ====================
+        # ==================== SERP ADMIN ====================
         - url-pattern: /api/v1/admin/**
           roles:
             - SUPER_ADMIN
@@ -105,20 +113,11 @@ app:
             - SYSTEM_MODERATOR
             - ORG_USER
           permissions:
-          
-        - url-pattern: /api/v1/organizations/*/users
+        - url-pattern: /api/v1/organizations/*/roles
           roles:
             - SUPER_ADMIN
             - SYSTEM_MODERATOR
-            - ORG_OWNER
-            - ORG_ADMIN
-          permissions:
-        - url-pattern: /api/v1/organizations/*/users/*/status
-          roles:
-            - SUPER_ADMIN
-            - SYSTEM_MODERATOR
-            - ORG_OWNER
-            - ORG_ADMIN
+            - ORG_USER
           permissions:
 
         # ==================== USER CONTROLLER ====================
@@ -133,6 +132,7 @@ app:
             - SUPER_ADMIN
             - SYSTEM_MODERATOR
             - ORG_USER
+          permissions:
         - url-pattern: /api/v1/users/assign-roles
           roles:
             - SUPER_ADMIN
@@ -213,6 +213,7 @@ app:
             - SUPER_ADMIN
             - SYSTEM_MODERATOR
             - ORG_OWNER
+          permissions:
         - url-pattern: /api/v1/subscriptions/trial
           roles:
             - SUPER_ADMIN
@@ -261,7 +262,7 @@ app:
             - SYSTEM_MODERATOR
           permissions:
 
-       # ==================== MODULE ACCESS CONTROLLER ====================
+        # ==================== MODULE ACCESS CONTROLLER ====================
         - url-pattern: /api/v1/organizations/*/modules/*/access
           roles:
             - SUPER_ADMIN
@@ -304,6 +305,71 @@ app:
             - ORG_ADMIN
           permissions:
 
+        # ==================== ORGANIZATION USER CONTROLLER ====================
+        - url-pattern: /api/v1/organizations/*/users
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+          permissions:
+        - url-pattern: /api/v1/organizations/*/users/*/status
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+          permissions:
+        - url-pattern: /api/v1/organizations/*/users/stats
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+          permissions:
+        - url-pattern: /api/v1/organizations/*/users/export
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+          permissions:
+        - url-pattern: /api/v1/organizations/*/users/*/detail
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+          permissions:
+        - url-pattern: /api/v1/organizations/*/users/*/roles
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+          permissions:
+        - url-pattern: /api/v1/organizations/*/users/*/type
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+          permissions:
+        - url-pattern: /api/v1/organizations/*/users/*/reset-password
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+          permissions:
+
+        # ==================== INVITATION CONTROLLER ====================
+        - url-pattern: /api/v1/organizations/*/invitations/**
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+          permissions:
 
 server:
   port: 8081

@@ -8,6 +8,7 @@ package serp.project.account.core.port.store;
 import serp.project.account.core.domain.entity.UserModuleAccessEntity;
 
 import java.util.List;
+import java.util.Map;
 
 public interface IUserModuleAccessPort {
     UserModuleAccessEntity save(UserModuleAccessEntity userModuleAccess);
@@ -23,6 +24,8 @@ public interface IUserModuleAccessPort {
     boolean hasAccess(Long userId, Long moduleId, Long organizationId);
 
     int countActiveUsers(Long moduleId, Long organizationId);
+
+    Map<Long, Integer> countActiveModulesByUserIds(List<Long> userIds);
 
     void deleteUserModuleAccess(Long id);
 }
