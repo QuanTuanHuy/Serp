@@ -270,9 +270,6 @@ export const messageApi = api.injectEndpoints({
         body: { emoji },
       }),
       extraOptions: { service: 'discuss' },
-      invalidatesTags: (result, error, { channelId }) => [
-        { type: 'Message', id: `CHANNEL-${channelId}` },
-      ],
     }),
 
     /**
@@ -294,9 +291,6 @@ export const messageApi = api.injectEndpoints({
         params: { emoji: encodeURIComponent(emoji) },
       }),
       extraOptions: { service: 'discuss' },
-      invalidatesTags: (result, error, { channelId }) => [
-        { type: 'Message', id: `CHANNEL-${channelId}` },
-      ],
     }),
 
     /**

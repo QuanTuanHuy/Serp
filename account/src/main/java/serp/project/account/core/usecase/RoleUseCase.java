@@ -10,11 +10,16 @@ import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.CreateRoleDto;
 import serp.project.account.core.domain.dto.request.UpdateRoleDto;
 import serp.project.account.core.domain.entity.PermissionEntity;
+import serp.project.account.core.domain.entity.RoleEntity;
+import serp.project.account.core.domain.entity.SubscriptionPlanModuleEntity;
 import serp.project.account.core.domain.enums.RoleScope;
 import serp.project.account.core.domain.enums.RoleType;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.IKeycloakRoleService;
+import serp.project.account.core.service.IOrganizationService;
 import serp.project.account.core.service.IRoleService;
+import serp.project.account.core.service.ISubscriptionPlanService;
+import serp.project.account.core.service.ISubscriptionService;
 import serp.project.account.core.service.impl.PermissionService;
 import serp.project.account.infrastructure.store.mapper.RoleMapper;
 import serp.project.account.kernel.utils.DataUtils;
@@ -30,6 +35,9 @@ public class RoleUseCase {
     private final IRoleService roleService;
     private final IKeycloakRoleService keycloakRoleService;
     private final PermissionService permissionService;
+    private final IOrganizationService organizationService;
+    private final ISubscriptionPlanService subscriptionPlanService;
+    private final ISubscriptionService subscriptionService;
 
     private final ResponseUtils responseUtils;
 
@@ -90,6 +98,33 @@ public class RoleUseCase {
             return responseUtils.success(roles);
         } catch (Exception e) {
             log.error("Error getting all roles: {}", e.getMessage());
+            return responseUtils.internalServerError(e.getMessage());
+        }
+    }
+
+    public GeneralResponse<?> getValidRolesForOrganization(Long organizationId) {
+        try {
+            var allRoles = new ArrayList<RoleEntity>();
+            allRoles.addAll(roleService.getRolesByScope(RoleScope.ORGANIZATION));
+            allRoles.addAll(roleService.getRolesByScope(RoleScope.DEPARTMENT));
+
+            var org = organizationService.getOrganizationById(organizationId);
+            var subscription = subscriptionService.getSubscriptionById(org.getSubscriptionId());
+            var planModules = subscriptionPlanService.getPlanModules(subscription.getSubscriptionPlanId());
+            var moduleIds = planModules.stream()
+                    .filter(SubscriptionPlanModuleEntity::getIsIncluded)
+                    .map(SubscriptionPlanModuleEntity::getModuleId)
+                    .toList();
+            log.info("Module ids for organization {}: {}", organizationId, moduleIds);
+            var moduleRoles = roleService.getRolesByScope(RoleScope.MODULE).stream()
+                    .filter(r -> moduleIds.contains(r.getModuleId()))
+                    .toList();
+            log.info("Module roles for organization {}: {}", organizationId, moduleRoles);
+            allRoles.addAll(moduleRoles);
+
+            return responseUtils.success(allRoles);
+        } catch (Exception e) {
+            log.error("Error getting valid roles for organization: {}", e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
     }

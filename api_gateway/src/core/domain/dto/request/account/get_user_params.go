@@ -13,4 +13,7 @@ type GetUserParams struct {
 	Search         *string `json:"search,omitempty"`
 	OrganizationID *int64  `json:"organizationId,omitempty"`
 	Status         *string `json:"status,omitempty"`
+	UserType       *string `json:"userType,omitempty"`
+	RoleId         *int64  `json:"roleId,omitempty"`
+	DepartmentId   *int64  `json:"departmentId,omitempty"`
 }

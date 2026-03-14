@@ -92,12 +92,8 @@ export const ChannelList: React.FC<ChannelListProps> = ({
     // Sort each group by last message time (most recent first)
     for (const type of CHANNEL_TYPES) {
       groups[type].sort((a, b) => {
-        const timeA = a.lastMessageAt
-          ? new Date(a.lastMessageAt).getTime()
-          : 0;
-        const timeB = b.lastMessageAt
-          ? new Date(b.lastMessageAt).getTime()
-          : 0;
+        const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+        const timeB = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
         return timeB - timeA;
       });
     }
@@ -304,9 +300,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
           {/* No results feedback for search */}
           {isSearching &&
           !isFetching &&
-          CHANNEL_TYPES.every(
-            (type) => groupedChannels[type].length === 0
-          ) ? (
+          CHANNEL_TYPES.every((type) => groupedChannels[type].length === 0) ? (
             <div className='flex flex-col items-center justify-center py-8 gap-2'>
               <Search className='h-8 w-8 text-slate-300 dark:text-slate-600' />
               <p className='text-sm text-slate-500 dark:text-slate-400'>

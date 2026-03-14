@@ -15,6 +15,7 @@ import serp.project.account.infrastructure.store.mapper.UserModuleAccessMapper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -210,6 +211,11 @@ public class UserModuleAccessService implements IUserModuleAccessService {
             log.error("Error counting active users for module: {}", e.getMessage(), e);
             return 0;
         }
+    }
+
+    @Override
+    public Map<Long, Integer> countActiveModulesByUserIds(List<Long> userIds) {
+        return userModuleAccessPort.countActiveModulesByUserIds(userIds);
     }
 
     private ModuleEntity validateModuleAvailable(Long moduleId) {

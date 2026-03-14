@@ -40,6 +40,9 @@ public class UserController {
             @RequestParam(required = false) String sortDir,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String userType,
+            @RequestParam(required = false) Long roleId,
+            @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) Long organizationId) {
         if (!authUtils.canAccessOrganization(organizationId)) {
             organizationId = authUtils.getCurrentTenantId().orElse(null);
@@ -49,6 +52,9 @@ public class UserController {
                 .page(page).pageSize(pageSize).sortBy(sortBy).sortDirection(sortDir)
                 .search(search)
                 .status(status)
+                .userType(userType)
+                .roleId(roleId)
+                .departmentId(departmentId)
                 .organizationId(organizationId)
                 .build();
         var response = userUseCase.getUsers(params);

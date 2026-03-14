@@ -71,6 +71,12 @@ func NewGenericProxyController(
 func buildServiceRoutes(props *properties.ExternalServiceProperties) []ServiceRoute {
 	return []ServiceRoute{
 		{
+			Name:         "account",
+			SourcePrefix: "/api/v1",
+			TargetPrefix: "/account-service/api/v1",
+			Target:       props.AccountService.BaseURL(),
+		},
+		{
 			Name:         "crm",
 			SourcePrefix: "/crm/api/v1",
 			TargetPrefix: "/crm/api/v1",

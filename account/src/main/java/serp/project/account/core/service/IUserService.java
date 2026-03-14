@@ -10,6 +10,7 @@ import serp.project.account.core.domain.dto.request.CreateUserDto;
 import serp.project.account.core.domain.dto.request.CreateUserForOrgRequest;
 import serp.project.account.core.domain.dto.request.GetUserParams;
 import serp.project.account.core.domain.dto.response.UserProfileResponse;
+import serp.project.account.core.domain.dto.response.UserStatsResponse;
 import serp.project.account.core.domain.entity.UserEntity;
 
 import java.util.List;
@@ -31,6 +32,8 @@ public interface IUserService {
 
     List<UserEntity> getUsersByIds(List<Long> userIds);
 
+    List<UserEntity> getUsersByOrganizationIdAndIds(Long organizationId, List<Long> userIds);
+
     List<UserProfileResponse> getUserProfilesByIds(List<Long> userIds);
 
     void addRolesToUser(Long userId, List<Long> roleIds);
@@ -42,4 +45,6 @@ public interface IUserService {
     Pair<Long, List<UserEntity>> getUsers(GetUserParams params);
 
     Integer countUsersByOrganizationId(Long organizationId);
+
+    UserStatsResponse getUserStats(Long organizationId);
 }
