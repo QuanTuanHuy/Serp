@@ -573,7 +573,7 @@ For issues or questions:
 
 ---
 
-**Version**: 0.1.1  
+**Version**: 0.1.2
 **Last Updated**: January 2026  
 **Service Port**: 8090  
 **Base Path**: `/sales/api/v1`
