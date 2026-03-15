@@ -47,6 +47,7 @@ interface RouteGuardResult {
  */
 export const useModuleRouteGuard = (moduleCode: string): RouteGuardResult => {
   const pathname = usePathname();
+  const moduleRootPath = `/${moduleCode.toLowerCase()}`;
 
   const { data: userModules, isLoading: modulesLoading } =
     useGetMyModulesQuery();
@@ -87,8 +88,22 @@ export const useModuleRouteGuard = (moduleCode: string): RouteGuardResult => {
       return false;
     });
 
-    return hasMatch;
-  }, [menuDisplays, pathname]);
+    if (hasMatch) {
+      return true;
+    }
+
+    // Allow module root path (e.g., /sales) if user has any accessible child path
+    // (e.g., /sales/dashboard). This prevents root redirects from being blocked.
+    if (currentPath === normalizePath(moduleRootPath)) {
+      return menuDisplays.some((menu) => {
+        if (!menu.path) return false;
+        const menuPath = normalizePath(menu.path);
+        return menuPath.startsWith(normalizePath(moduleRootPath) + '/');
+      });
+    }
+
+    return false;
+  }, [menuDisplays, pathname, moduleRootPath]);
 
   const isLoading = modulesLoading || menusLoading;
 

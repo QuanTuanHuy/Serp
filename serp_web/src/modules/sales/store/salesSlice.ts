@@ -175,7 +175,7 @@ const initialInventoryItemState: InventoryItemState = {
   loading: false,
   error: null,
   filters: {},
-  pagination: initialPagination,
+  pagination: { ...initialPagination, sortBy: 'expirationDate' },
   total: 0,
 };
 
