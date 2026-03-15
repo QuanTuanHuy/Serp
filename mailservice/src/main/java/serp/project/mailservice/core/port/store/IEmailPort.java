@@ -19,6 +19,8 @@ public interface IEmailPort {
 
     Optional<EmailEntity> findByMessageId(String messageId);
 
+    Optional<EmailEntity> findByMessageIdAndTenantId(String messageId, Long tenantId);
+
     List<EmailEntity> findByTenantIdAndStatus(Long tenantId, EmailStatus status, int page, int size);
 
     List<EmailEntity> findEmailsForRetry(EmailStatus status, LocalDateTime beforeTime, int maxRetries, int limit);

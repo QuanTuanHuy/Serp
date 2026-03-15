@@ -54,26 +54,34 @@ public class EmailController {
                 .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
         Long userId = authUtils.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.USER_ID_REQUIRED));
+        String userEmail = authUtils.getCurrentUserEmail()
+                .orElseThrow(() -> new AppException(ErrorCode.USER_EMAIL_REQUIRED));
 
         log.info("Sending bulk email for tenant: {}, user: {}", tenantId, userId);
 
-        List<SendEmailResponse> responses = emailSendingUseCases.sendBulkEmail(request, tenantId, userId);
+        List<SendEmailResponse> responses = emailSendingUseCases.sendBulkEmail(request, tenantId, userId, userEmail);
         return ResponseEntity.status(200).body(responseUtils.success(responses));
     }
 
     @GetMapping("/{messageId}/status")
     public ResponseEntity<?> getEmailStatus(@PathVariable String messageId) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
+
         log.debug("Getting email status for messageId: {}", messageId);
 
-        EmailStatusResponse response = emailSendingUseCases.getEmailStatus(messageId);
+        EmailStatusResponse response = emailSendingUseCases.getEmailStatus(messageId, tenantId);
         return ResponseEntity.status(200).body(responseUtils.success(response));
     }
 
     @PostMapping("/{messageId}/resend")
     public ResponseEntity<?> resendFailedEmail(@PathVariable String messageId) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
+
         log.info("Resending failed email: {}", messageId);
 
-        SendEmailResponse response = emailSendingUseCases.resendFailedEmail(messageId);
+        SendEmailResponse response = emailSendingUseCases.resendFailedEmail(messageId, tenantId);
         return ResponseEntity.status(200).body(responseUtils.success(response));
     }
 }
