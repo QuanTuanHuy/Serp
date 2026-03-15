@@ -108,6 +108,10 @@ export interface CustomerCreationForm {
   email?: string;
   statusId: CustomerStatus;
   addressType: AddressType;
+
+  latitude?: number;
+  longitude?: number;
+  fullAddress: string;
 }
 
 export interface CustomerUpdateForm {

@@ -36,6 +36,9 @@ const customerSchema = z.object({
   phone: z.string().optional(),
   statusId: z.enum(['ACTIVE', 'INACTIVE']),
   addressType: z.enum(['FACILIY', 'SHIPPING', 'BUSSINESS']).optional(),
+  fullAddress: z.string().optional(),
+  latitude: z.string().optional(),
+  longitude: z.string().optional(),
 });
 
 type CustomerFormData = z.infer<typeof customerSchema>;
@@ -72,6 +75,9 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
           phone: customer.phone || '',
           statusId: customer.statusId,
           addressType: 'SHIPPING' as AddressType,
+          fullAddress: customer.address?.fullAddress || '',
+          latitude: customer.address?.latitude?.toString() || '',
+          longitude: customer.address?.longitude?.toString() || '',
         }
       : {
           name: '',
@@ -79,6 +85,9 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
           phone: '',
           statusId: 'ACTIVE' as CustomerStatus,
           addressType: 'SHIPPING' as AddressType,
+          fullAddress: '',
+          latitude: '',
+          longitude: '',
         },
   });
 
@@ -104,6 +113,9 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
           phone: data.phone || undefined,
           statusId: data.statusId,
           addressType: data.addressType || 'SHIPPING',
+          fullAddress: data.fullAddress || '',
+          latitude: data.latitude ? parseFloat(data.latitude) : undefined,
+          longitude: data.longitude ? parseFloat(data.longitude) : undefined,
         };
         await onSubmit(createData);
       }
@@ -210,6 +222,46 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
                       <SelectItem value='BUSSINESS'>Kinh doanh</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              )}
+
+              {!isEditing && (
+                <div className='space-y-2 md:col-span-2'>
+                  <Label htmlFor='fullAddress'>Địa chỉ đầy đủ</Label>
+                  <Input
+                    id='fullAddress'
+                    {...register('fullAddress')}
+                    disabled={isLoading || isSubmitting}
+                    placeholder='Nhập địa chỉ đầy đủ'
+                  />
+                </div>
+              )}
+
+              {!isEditing && (
+                <div className='space-y-2'>
+                  <Label htmlFor='latitude'>Vĩ độ (Latitude)</Label>
+                  <Input
+                    id='latitude'
+                    type='number'
+                    step='any'
+                    {...register('latitude')}
+                    disabled={isLoading || isSubmitting}
+                    placeholder='Nhập vĩ độ'
+                  />
+                </div>
+              )}
+
+              {!isEditing && (
+                <div className='space-y-2'>
+                  <Label htmlFor='longitude'>Kinh độ (Longitude)</Label>
+                  <Input
+                    id='longitude'
+                    type='number'
+                    step='any'
+                    {...register('longitude')}
+                    disabled={isLoading || isSubmitting}
+                    placeholder='Nhập kinh độ'
+                  />
                 </div>
               )}
             </div>
