@@ -3,7 +3,7 @@ Author: QuanTuanHuy
 Description: Part of Serp Project
 */
 
-package serp.project.mailservice.core.service;
+package serp.project.mailservice.core.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +13,7 @@ import serp.project.mailservice.core.domain.entity.EmailStatsEntity;
 import serp.project.mailservice.core.domain.enums.EmailStatus;
 import serp.project.mailservice.core.domain.enums.EmailType;
 import serp.project.mailservice.core.port.store.IEmailStatsPort;
+import serp.project.mailservice.core.service.IEmailStatsService;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;

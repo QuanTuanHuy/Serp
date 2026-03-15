@@ -3,7 +3,7 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.mailservice.core.service;
+package serp.project.mailservice.core.service.impl;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import serp.project.mailservice.core.domain.enums.ConsumerInboxAcquireResult;
 import serp.project.mailservice.core.port.store.IConsumerInboxPort;
+import serp.project.mailservice.core.service.IConsumerInboxService;
 
 @Service
 @RequiredArgsConstructor

@@ -3,7 +3,7 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.mailservice.core.service;
+package serp.project.mailservice.core.service.impl;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import serp.project.mailservice.core.service.IConsumerInboxService;
 import serp.project.mailservice.kernel.property.KafkaConsumerProperties;
 
 @Component
