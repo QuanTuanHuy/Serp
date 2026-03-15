@@ -94,6 +94,15 @@ services:
     depends_on:
       - serp-postgre-db
 
+  serp-mailhog:
+    image: mailhog/mailhog:latest
+    container_name: serp-mailhog
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
+    networks:
+      - serp-network
+
 volumes:
   postgres-data:
     driver: local

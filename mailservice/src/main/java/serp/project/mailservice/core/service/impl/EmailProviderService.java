@@ -3,7 +3,7 @@ Author: QuanTuanHuy
 Description: Part of Serp Project
 */
 
-package serp.project.mailservice.core.service;
+package serp.project.mailservice.core.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +17,7 @@ import serp.project.mailservice.core.domain.enums.EmailProvider;
 import serp.project.mailservice.core.domain.enums.ProviderStatus;
 import serp.project.mailservice.core.port.client.IEmailProviderPort;
 import serp.project.mailservice.core.port.client.IRedisCachePort;
+import serp.project.mailservice.core.service.IEmailProviderService;
 import serp.project.mailservice.infrastructure.client.provider.EmailProviderRegistry;
 
 import java.time.Duration;
@@ -36,29 +37,21 @@ public class EmailProviderService implements IEmailProviderService {
     private static final Duration DEFAULT_DOWNTIME = Duration.ofMinutes(5);
 
     @Override
-    public IEmailProviderPort selectProvider(EmailEntity email) {
-        log.debug("Selecting provider for email: {}", email.getMessageId());
-
-        if (email.getProvider() != null) {
-            EmailProvider requestedProvider = email.getProvider();
-
-            if (isProviderHealthy(requestedProvider)) {
-                log.info("Using requested provider: {} for email: {}", requestedProvider, email.getMessageId());
-                return emailProviderRegistry.getProvider(requestedProvider);
-            } else {
-                log.warn("Requested provider {} is down, falling back to healthy provider", requestedProvider);
-            }
-        }
-
-        IEmailProviderPort provider = getHealthyProvider();
+    public IEmailProviderPort selectProvider(EmailProvider provider) {
+        log.debug("Selecting provider: {}", provider);
 
         if (provider == null) {
-            log.error("No healthy email provider available for email: {}", email.getMessageId());
-            throw new AppException(ErrorCode.NO_HEALTHY_PROVIDER);
+            log.warn("Requested provider is null, selecting healthy provider");
+            return getHealthyProvider();
         }
 
-        log.info("Selected provider: {} for email: {}", provider.getProviderName(), email.getMessageId());
-        return provider;
+        if (isProviderHealthy(provider)) {
+            log.info("Selected requested provider: {}", provider);
+            return emailProviderRegistry.getProvider(provider);
+        } else {
+            log.warn("Requested provider {} is down, selecting healthy provider", provider);
+            return getHealthyProvider();
+        }
     }
 
     @Override
@@ -125,8 +118,8 @@ public class EmailProviderService implements IEmailProviderService {
             }
         }
 
-        log.error("No healthy email provider found, returning first available provider");
-        return emailProviderRegistry.getAllProviders().stream().findFirst().orElse(null);
+        log.error("No healthy email provider found");
+        return null;
     }
 
     @Override

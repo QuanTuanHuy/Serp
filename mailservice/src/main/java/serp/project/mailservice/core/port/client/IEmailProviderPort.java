@@ -7,14 +7,11 @@ package serp.project.mailservice.core.port.client;
 
 import serp.project.mailservice.core.domain.enums.EmailProvider;
 import serp.project.mailservice.core.domain.entity.EmailEntity;
-
-import java.util.Map;
+import serp.project.mailservice.core.domain.dto.provider.ProviderSendResult;
 
 public interface IEmailProviderPort {
 
-    Map<String, Object> sendEmail(EmailEntity email);
-
-    Map<String, Object> sendHtmlEmail(EmailEntity email);
+    ProviderSendResult sendEmail(EmailEntity email);
 
     String getProviderName();
 
