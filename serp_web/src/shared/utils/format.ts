@@ -48,6 +48,22 @@ export function formatCurrency(
 }
 
 /**
+ * Format a string of numbers into Vietnamese currency format (VND)
+ * @param value - String value to format
+ * @returns Formatted currency string (e.g., 1.000.000 ₫)
+ */
+export function formatStringCurrencyVN(value: string): string {
+  const numericString = value.replace(/\D/g, '');
+
+  const amount = numericString ? parseInt(numericString, 10) : 0;
+
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+  }).format(amount);
+}
+
+/**
  * Format phone number to xxxx.xxx.xxx format
  * @param phone - Phone number string or number
  * @returns Formatted phone number string
