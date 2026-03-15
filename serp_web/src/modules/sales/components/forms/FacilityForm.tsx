@@ -1,4 +1,4 @@
-// CustomerForm Component (authors: QuanTuanHuy, Description: Part of Serp Project)
+// FacilityForm Component (authors: QuanTuanHuy, Description: Part of Serp Project)
 
 'use client';
 
@@ -21,44 +21,47 @@ import {
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import type {
-  Customer,
-  CustomerCreationForm,
-  CustomerUpdateForm,
-  CustomerStatus,
+  Facility,
+  FacilityCreationForm,
+  FacilityUpdateForm,
+  FacilityStatus,
   AddressType,
 } from '../../types';
 import { toast } from 'sonner';
 
-// Validation schema
-const customerSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(255, 'Name is too long'),
-  email: z.string().email('Invalid email address').optional().or(z.literal('')),
+const facilitySchema = z.object({
+  name: z.string().min(1, 'Tên là bắt buộc').max(255, 'Tên quá dài'),
   phone: z.string().optional(),
   statusId: z.enum(['ACTIVE', 'INACTIVE']),
+  postalCode: z.string().optional(),
+  length: z.string().optional(),
+  width: z.string().optional(),
+  height: z.string().optional(),
+  // Creation only
   addressType: z.enum(['FACILITY', 'SHIPPING', 'BUSINESS']).optional(),
   fullAddress: z.string().optional(),
   latitude: z.string().optional(),
   longitude: z.string().optional(),
 });
 
-type CustomerFormData = z.infer<typeof customerSchema>;
+type FacilityFormData = z.infer<typeof facilitySchema>;
 
-interface CustomerFormProps {
-  customer?: Customer;
-  onSubmit: (data: CustomerCreationForm | CustomerUpdateForm) => Promise<void>;
+interface FacilityFormProps {
+  facility?: Facility;
+  onSubmit: (data: FacilityCreationForm | FacilityUpdateForm) => Promise<void>;
   onCancel?: () => void;
   isLoading?: boolean;
   className?: string;
 }
 
-export const CustomerForm: React.FC<CustomerFormProps> = ({
-  customer,
+export const FacilityForm: React.FC<FacilityFormProps> = ({
+  facility,
   onSubmit,
   onCancel,
   isLoading = false,
   className,
 }) => {
-  const isEditing = !!customer;
+  const isEditing = !!facility;
 
   const {
     register,
@@ -66,25 +69,27 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
     formState: { errors, isSubmitting },
     setValue,
     watch,
-  } = useForm<CustomerFormData>({
-    resolver: zodResolver(customerSchema),
-    defaultValues: customer
+  } = useForm<FacilityFormData>({
+    resolver: zodResolver(facilitySchema),
+    defaultValues: facility
       ? {
-          name: customer.name,
-          email: customer.email || '',
-          phone: customer.phone || '',
-          statusId: customer.statusId,
-          addressType: 'SHIPPING' as AddressType,
-          fullAddress: customer.address?.fullAddress || '',
-          latitude: customer.address?.latitude?.toString() || '',
-          longitude: customer.address?.longitude?.toString() || '',
+          name: facility.name,
+          phone: facility.phone || '',
+          statusId: facility.statusId,
+          postalCode: facility.postalCode || '',
+          length: facility.length?.toString() || '',
+          width: facility.width?.toString() || '',
+          height: facility.height?.toString() || '',
         }
       : {
           name: '',
-          email: '',
           phone: '',
-          statusId: 'ACTIVE' as CustomerStatus,
-          addressType: 'SHIPPING' as AddressType,
+          statusId: 'ACTIVE' as FacilityStatus,
+          postalCode: '',
+          length: '',
+          width: '',
+          height: '',
+          addressType: 'FACILITY' as AddressType,
           fullAddress: '',
           latitude: '',
           longitude: '',
@@ -93,26 +98,29 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
 
   const statusId = watch('statusId');
 
-  // Handle form submission
-  const onFormSubmit = handleSubmit(async (data: CustomerFormData) => {
+  const onFormSubmit = handleSubmit(async (data: FacilityFormData) => {
     try {
       if (isEditing) {
-        // For update, only send changed fields
-        const updateData: CustomerUpdateForm = {
+        const updateData: FacilityUpdateForm = {
           name: data.name,
-          email: data.email || undefined,
           phone: data.phone || undefined,
-          statusId: data.statusId,
+          statusId: data.statusId as FacilityStatus,
+          postalCode: data.postalCode || undefined,
+          length: data.length ? parseFloat(data.length) : undefined,
+          width: data.width ? parseFloat(data.width) : undefined,
+          height: data.height ? parseFloat(data.height) : undefined,
         };
         await onSubmit(updateData);
       } else {
-        // For creation, send all required fields
-        const createData: CustomerCreationForm = {
+        const createData: FacilityCreationForm = {
           name: data.name,
-          email: data.email || undefined,
           phone: data.phone || undefined,
           statusId: data.statusId,
-          addressType: data.addressType || 'SHIPPING',
+          postalCode: data.postalCode || '',
+          length: data.length ? parseFloat(data.length) : undefined,
+          width: data.width ? parseFloat(data.width) : undefined,
+          height: data.height ? parseFloat(data.height) : undefined,
+          addressType: data.addressType || 'FACILITY',
           fullAddress: data.fullAddress || '',
           latitude: data.latitude ? parseFloat(data.latitude) : undefined,
           longitude: data.longitude ? parseFloat(data.longitude) : undefined,
@@ -129,7 +137,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
     <Card className={cn('w-full', className)}>
       <CardHeader className='pb-4'>
         <CardTitle className='text-xl'>
-          {isEditing ? 'Chỉnh sửa khách hàng' : 'Tạo khách hàng mới'}
+          {isEditing ? 'Chỉnh sửa kho hàng' : 'Tạo kho hàng mới'}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -148,28 +156,11 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
                   {...register('name')}
                   className={cn(errors.name && 'border-destructive')}
                   disabled={isLoading || isSubmitting}
-                  placeholder='Nhập tên khách hàng'
+                  placeholder='Nhập tên kho hàng'
                 />
                 {errors.name && (
                   <p className='text-sm text-destructive'>
                     {errors.name.message}
-                  </p>
-                )}
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='email'>Email</Label>
-                <Input
-                  id='email'
-                  type='email'
-                  {...register('email')}
-                  className={cn(errors.email && 'border-destructive')}
-                  disabled={isLoading || isSubmitting}
-                  placeholder='email@example.com'
-                />
-                {errors.email && (
-                  <p className='text-sm text-destructive'>
-                    {errors.email.message}
                   </p>
                 )}
               </div>
@@ -189,7 +180,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
                 <Select
                   value={statusId}
                   onValueChange={(value) =>
-                    setValue('statusId', value as CustomerStatus)
+                    setValue('statusId', value as FacilityStatus)
                   }
                   disabled={isLoading || isSubmitting}
                 >
@@ -203,11 +194,69 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
                 </Select>
               </div>
 
-              {!isEditing && (
+              <div className='space-y-2'>
+                <Label htmlFor='postalCode'>Mã bưu chính</Label>
+                <Input
+                  id='postalCode'
+                  {...register('postalCode')}
+                  disabled={isLoading || isSubmitting}
+                  placeholder='Nhập mã bưu chính'
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Dimensions */}
+          <div className='space-y-4'>
+            <h3 className='text-base font-medium text-foreground'>
+              Kích thước
+            </h3>
+            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+              <div className='space-y-2'>
+                <Label htmlFor='length'>Chiều dài (m)</Label>
+                <Input
+                  id='length'
+                  type='number'
+                  step='any'
+                  {...register('length')}
+                  disabled={isLoading || isSubmitting}
+                  placeholder='VD: 20'
+                />
+              </div>
+              <div className='space-y-2'>
+                <Label htmlFor='width'>Chiều rộng (m)</Label>
+                <Input
+                  id='width'
+                  type='number'
+                  step='any'
+                  {...register('width')}
+                  disabled={isLoading || isSubmitting}
+                  placeholder='VD: 10'
+                />
+              </div>
+              <div className='space-y-2'>
+                <Label htmlFor='height'>Chiều cao (m)</Label>
+                <Input
+                  id='height'
+                  type='number'
+                  step='any'
+                  {...register('height')}
+                  disabled={isLoading || isSubmitting}
+                  placeholder='VD: 5'
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Address (creation only) */}
+          {!isEditing && (
+            <div className='space-y-4'>
+              <h3 className='text-base font-medium text-foreground'>Địa chỉ</h3>
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                 <div className='space-y-2'>
                   <Label htmlFor='addressType'>Loại địa chỉ</Label>
                   <Select
-                    defaultValue='SHIPPING'
+                    defaultValue='FACILIY'
                     onValueChange={(value) =>
                       setValue('addressType', value as AddressType)
                     }
@@ -223,9 +272,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
                     </SelectContent>
                   </Select>
                 </div>
-              )}
 
-              {!isEditing && (
                 <div className='space-y-2 md:col-span-2'>
                   <Label htmlFor='fullAddress'>Địa chỉ đầy đủ</Label>
                   <Input
@@ -235,37 +282,33 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
                     placeholder='Nhập địa chỉ đầy đủ'
                   />
                 </div>
-              )}
 
-              {!isEditing && (
                 <div className='space-y-2'>
-                  <Label htmlFor='latitude'>Vĩ độ (Latitude)</Label>
+                  <Label htmlFor='latitude'>Vĩ độ</Label>
                   <Input
                     id='latitude'
                     type='number'
                     step='any'
                     {...register('latitude')}
                     disabled={isLoading || isSubmitting}
-                    placeholder='Nhập vĩ độ'
+                    placeholder='VD: 10.7769'
                   />
                 </div>
-              )}
 
-              {!isEditing && (
                 <div className='space-y-2'>
-                  <Label htmlFor='longitude'>Kinh độ (Longitude)</Label>
+                  <Label htmlFor='longitude'>Kinh độ</Label>
                   <Input
                     id='longitude'
                     type='number'
                     step='any'
                     {...register('longitude')}
                     disabled={isLoading || isSubmitting}
-                    placeholder='Nhập kinh độ'
+                    placeholder='VD: 106.7009'
                   />
                 </div>
-              )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Form Actions */}
           <div className='flex items-center justify-end gap-3 pt-4 border-t'>
@@ -281,8 +324,8 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
               {isLoading || isSubmitting
                 ? 'Đang lưu...'
                 : isEditing
-                  ? 'Cập nhật khách hàng'
-                  : 'Tạo khách hàng'}
+                  ? 'Cập nhật kho hàng'
+                  : 'Tạo kho hàng'}
             </Button>
           </div>
         </form>
@@ -291,4 +334,4 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
   );
 };
 
-export default CustomerForm;
+export default FacilityForm;

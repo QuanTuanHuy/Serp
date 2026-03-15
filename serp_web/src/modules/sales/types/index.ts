@@ -3,10 +3,10 @@
 // Constants
 export type ResponseStatus = 'SUCCESS' | 'FAILED';
 export type EntityType = 'PRODUCT' | 'SUPPLIER' | 'CUSTOMER' | 'FACILITY';
-export type AddressType = 'FACILIY' | 'SHIPPING' | 'BUSSINESS';
+export type AddressType = 'FACILITY' | 'SHIPPING' | 'BUSINESS';
 export type CustomerStatus = 'ACTIVE' | 'INACTIVE';
 export type FacilityStatus = 'ACTIVE' | 'INACTIVE';
-export type InventoryItemStatus = 'VALID' | 'EXPIRED' | 'DAMAGED';
+export type InventoryItemStatus = 'VALID' | 'INVALID';
 export type OrderItemStatus = 'CREATED' | 'DELIVERED';
 export type OrderStatus =
   | 'CREATED'
@@ -139,7 +139,7 @@ export interface Facility {
   length: number;
   width: number;
   height: number;
-  capacity: number;
+  capacity?: number;
   tenantId: number;
   address?: Address;
   default: boolean;
@@ -148,7 +148,7 @@ export interface Facility {
 export interface FacilityCreationForm {
   name: string;
   phone?: string;
-  statusId: string;
+  statusId: FacilityStatus;
   postalCode: string;
   length?: number;
   width?: number;

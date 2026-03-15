@@ -66,7 +66,7 @@ interface InventoryListPageProps {
 
 const statusStyles = {
   VALID: {
-    label: 'Hợp lệ',
+    label: 'Còn hạn',
     bg: 'bg-emerald-100 dark:bg-emerald-900/30',
     text: 'text-emerald-700 dark:text-emerald-400',
     dot: 'bg-emerald-500',
@@ -79,8 +79,8 @@ const statusStyles = {
     dot: 'bg-rose-500',
     icon: XCircle,
   },
-  DAMAGED: {
-    label: 'Hư hỏng',
+  ABOUT_TO_EXPIRE: {
+    label: 'Sắp hết hạn',
     bg: 'bg-amber-100 dark:bg-amber-900/30',
     text: 'text-amber-700 dark:text-amber-400',
     dot: 'bg-amber-500',
@@ -236,14 +236,18 @@ const InventoryCard = ({
             </div>
 
             <div className='flex items-center gap-2 flex-wrap'>
-              <Badge
-                variant='secondary'
-                className={cn('gap-1', status.bg, status.text)}
-              >
-                <StatusIcon className='h-3 w-3' />
-                <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
-                {status.label}
-              </Badge>
+              {!isExpired && !isExpiringSoon && (
+                <Badge
+                  variant='secondary'
+                  className={cn('gap-1', status.bg, status.text)}
+                >
+                  <StatusIcon className='h-3 w-3' />
+                  <span
+                    className={cn('h-1.5 w-1.5 rounded-full', status.dot)}
+                  />
+                  {status.label}
+                </Badge>
+              )}
               {isExpiringSoon && (
                 <Badge
                   variant='secondary'
@@ -604,8 +608,7 @@ export const InventoryListPage: React.FC<InventoryListPageProps> = ({
                 >
                   <option value=''>Tất cả trạng thái</option>
                   <option value='VALID'>Hợp lệ</option>
-                  <option value='EXPIRED'>Đã hết hạn</option>
-                  <option value='DAMAGED'>Hư hỏng</option>
+                  <option value='INVALID'>Không hợp lệ</option>
                 </select>
               </div>
             </div>
