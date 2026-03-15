@@ -13,8 +13,6 @@ public interface IEmailProviderPort {
 
     ProviderSendResult sendEmail(EmailEntity email);
 
-    ProviderSendResult sendHtmlEmail(EmailEntity email);
-
     String getProviderName();
 
     EmailProvider getProviderType();

@@ -23,7 +23,6 @@ import serp.project.mailservice.core.domain.entity.EmailAttachmentEntity;
 import serp.project.mailservice.core.domain.entity.EmailEntity;
 import serp.project.mailservice.core.domain.enums.EmailProvider;
 import serp.project.mailservice.core.port.client.IEmailProviderPort;
-import serp.project.mailservice.core.port.store.IEmailAttachmentPort;
 import serp.project.mailservice.kernel.property.SendGridProperties;
 
 import java.io.File;
@@ -43,7 +42,6 @@ import java.util.Map;
 public class SendGridProviderAdapter implements IEmailProviderPort {
 
     private final WebClient sendGridWebClient;
-    private final IEmailAttachmentPort emailAttachmentPort;
     private final SendGridProperties sendGridProperties;
     private final ObjectMapper objectMapper;
 
@@ -57,11 +55,6 @@ public class SendGridProviderAdapter implements IEmailProviderPort {
 
     @Override
     public ProviderSendResult sendEmail(EmailEntity email) {
-        return sendEmailInternal(email);
-    }
-
-    @Override
-    public ProviderSendResult sendHtmlEmail(EmailEntity email) {
         return sendEmailInternal(email);
     }
 
@@ -106,10 +99,7 @@ public class SendGridProviderAdapter implements IEmailProviderPort {
         long startTime = System.currentTimeMillis();
 
         try {
-            List<EmailAttachmentEntity> attachments = null;
-            if (email.getId() != null) {
-                attachments = emailAttachmentPort.findByEmailId(email.getId());
-            }
+            List<EmailAttachmentEntity> attachments = email.getAttachments();
 
             SendGridMailSendRequest requestBody = buildSendGridRequest(email, attachments);
 

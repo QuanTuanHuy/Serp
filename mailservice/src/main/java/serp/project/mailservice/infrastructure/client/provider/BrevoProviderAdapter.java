@@ -20,7 +20,6 @@ import serp.project.mailservice.core.domain.entity.EmailAttachmentEntity;
 import serp.project.mailservice.core.domain.entity.EmailEntity;
 import serp.project.mailservice.core.domain.enums.EmailProvider;
 import serp.project.mailservice.core.port.client.IEmailProviderPort;
-import serp.project.mailservice.core.port.store.IEmailAttachmentPort;
 import serp.project.mailservice.kernel.property.BrevoProperties;
 
 import java.io.File;
@@ -38,7 +37,6 @@ public class BrevoProviderAdapter implements IEmailProviderPort {
     private final WebClient brevoWebClient;
     private final BrevoProperties brevoProperties;
     private final ObjectMapper objectMapper;
-    private final IEmailAttachmentPort emailAttachmentPort;
     
     private static final String SEND_EMAIL_ENDPOINT = "/v3/smtp/email";
     private static final String ACCOUNT_ENDPOINT = "/v3/account";
@@ -49,11 +47,6 @@ public class BrevoProviderAdapter implements IEmailProviderPort {
         return sendEmailInternal(email);
     }
 
-    @Override
-    public ProviderSendResult sendHtmlEmail(EmailEntity email) {
-        return sendEmailInternal(email);
-    }
-    
     @Override
     public String getProviderName() {
         return EmailProvider.BREVO.name();
@@ -96,10 +89,7 @@ public class BrevoProviderAdapter implements IEmailProviderPort {
         long startTime = System.currentTimeMillis();
 
         try {
-            List<EmailAttachmentEntity> attachments = null;
-            if (email.getId() != null) {
-                attachments = emailAttachmentPort.findByEmailId(email.getId());
-            }
+            List<EmailAttachmentEntity> attachments = email.getAttachments();
 
             Map<String, Object> requestBody = buildBrevoRequest(email, attachments);
 

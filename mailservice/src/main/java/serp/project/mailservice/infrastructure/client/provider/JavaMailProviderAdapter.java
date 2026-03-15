@@ -21,7 +21,6 @@ import serp.project.mailservice.core.domain.entity.EmailAttachmentEntity;
 import serp.project.mailservice.core.domain.entity.EmailEntity;
 import serp.project.mailservice.core.domain.enums.EmailProvider;
 import serp.project.mailservice.core.port.client.IEmailProviderPort;
-import serp.project.mailservice.core.port.store.IEmailAttachmentPort;
 import serp.project.mailservice.kernel.property.JavaMailProperties;
 
 import java.io.File;
@@ -34,17 +33,11 @@ import java.util.List;
 public class JavaMailProviderAdapter implements IEmailProviderPort {
 
     private final JavaMailSender javaMailSender;
-    private final IEmailAttachmentPort emailAttachmentPort;
     private final JavaMailProperties javaMailProperties;
     
     @Override
     public ProviderSendResult sendEmail(EmailEntity email) {
-        return sendEmailInternal(email, false);
-    }
-    
-    @Override
-    public ProviderSendResult sendHtmlEmail(EmailEntity email) {
-        return sendEmailInternal(email, true);
+        return sendEmailInternal(email, Boolean.TRUE.equals(email.getIsHtml()));
     }
     
     @Override
@@ -112,8 +105,8 @@ public class JavaMailProviderAdapter implements IEmailProviderPort {
                 helper.setReplyTo(replyTo);
             }
 
-            if (email.getId() != null) {
-                List<EmailAttachmentEntity> attachments = emailAttachmentPort.findByEmailId(email.getId());
+            if (email.getAttachments() != null && !email.getAttachments().isEmpty()) {
+                List<EmailAttachmentEntity> attachments = email.getAttachments();
                 if (attachments != null && !attachments.isEmpty()) {
                     for (EmailAttachmentEntity attachment : attachments) {
                         File file = new File(attachment.getFilePath());

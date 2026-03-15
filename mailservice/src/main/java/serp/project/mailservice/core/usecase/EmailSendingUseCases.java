@@ -68,9 +68,7 @@ public class EmailSendingUseCases {
 
         long startTime = System.currentTimeMillis();
         try {
-            ProviderSendResult providerResponse = Boolean.TRUE.equals(savedEmail.getIsHtml())
-                    ? provider.sendHtmlEmail(savedEmail)
-                    : provider.sendEmail(savedEmail);
+            ProviderSendResult providerResponse = provider.sendEmail(savedEmail);
             ensureProviderSendSucceeded(providerResponse, provider, savedEmail.getMessageId());
 
             long responseTime = System.currentTimeMillis() - startTime;
@@ -144,9 +142,7 @@ public class EmailSendingUseCases {
                 savedEmail = emailPort.save(email);
 
                 long startTime = System.currentTimeMillis();
-                ProviderSendResult providerResponse = Boolean.TRUE.equals(savedEmail.getIsHtml())
-                        ? provider.sendHtmlEmail(savedEmail)
-                        : provider.sendEmail(savedEmail);
+                ProviderSendResult providerResponse = provider.sendEmail(savedEmail);
                 ensureProviderSendSucceeded(providerResponse, provider, savedEmail.getMessageId());
                 long responseTime = System.currentTimeMillis() - startTime;
 
@@ -191,9 +187,7 @@ public class EmailSendingUseCases {
             email.setProvider(provider.getProviderType());
 
             long startTime = System.currentTimeMillis();
-            ProviderSendResult providerResponse = Boolean.TRUE.equals(email.getIsHtml())
-                    ? provider.sendHtmlEmail(email)
-                    : provider.sendEmail(email);
+            ProviderSendResult providerResponse = provider.sendEmail(email);
             ensureProviderSendSucceeded(providerResponse, provider, email.getMessageId());
             long responseTime = System.currentTimeMillis() - startTime;
 
