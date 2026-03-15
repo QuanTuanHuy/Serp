@@ -134,3 +134,16 @@ app:
       cleanup-attachments-cron: "0 0 2 * * *"
       provider-health-check-fixed-delay: 60000
 
+  kafka:
+    consumer:
+      enabled: true
+      topics:
+        - serp.mail.events
+      concurrency: 1
+      max-retry-attempts: 5
+      initial-backoff-ms: 1000
+      max-backoff-ms: 30000
+      backoff-multiplier: 2.0
+      dlq-suffix: ".dlq"
+      inbox-retention-days: 14
+      inbox-cleanup-cron: "0 30 3 * * *"
