@@ -3,7 +3,7 @@ Author: QuanTuanHuy
 Description: Part of Serp Project
 */
 
-package serp.project.mailservice.ui.controller;
+package serp.project.mailservice.ui.rest.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
