@@ -21,6 +21,8 @@ import java.util.Optional;
 public interface EmailRepository extends JpaRepository<EmailModel, Long> {
     Optional<EmailModel> findByMessageId(String messageId);
 
+    Optional<EmailModel> findByMessageIdAndTenantId(String messageId, Long tenantId);
+
     List<EmailModel> findByTenantIdAndStatus(Long tenantId, EmailStatus status, Pageable pageable);
 
     @Query("SELECT e FROM EmailModel e WHERE e.status = :status AND e.nextRetryAt <= :beforeTime " +

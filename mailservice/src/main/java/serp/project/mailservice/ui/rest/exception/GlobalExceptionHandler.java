@@ -3,7 +3,7 @@ Author: QuanTuanHuy
 Description: Part of Serp Project
 */
 
-package serp.project.mailservice.ui.controller;
+package serp.project.mailservice.ui.rest.exception;
 
 import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
@@ -55,6 +55,13 @@ public class GlobalExceptionHandler {
 
         log.warn("Constraint violation: {}", errorMessage);
         var response = responseUtils.badRequest(errorMessage);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<?> handleIllegalArgumentException(IllegalArgumentException ex) {
+        log.warn("Validation failed: {}", ex.getMessage());
+        var response = responseUtils.badRequest(ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 

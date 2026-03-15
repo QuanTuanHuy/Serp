@@ -11,10 +11,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.mailservice.core.domain.dto.request.BulkEmailRequest;
 import serp.project.mailservice.core.domain.dto.request.SendEmailRequest;
+import serp.project.mailservice.core.domain.dto.provider.ProviderSendResult;
 import serp.project.mailservice.core.domain.dto.response.EmailStatusResponse;
 import serp.project.mailservice.core.domain.dto.response.SendEmailResponse;
 import serp.project.mailservice.core.domain.entity.EmailEntity;
 import serp.project.mailservice.core.domain.entity.EmailTemplateEntity;
+import serp.project.mailservice.core.domain.enums.EmailProvider;
+import serp.project.mailservice.core.domain.enums.EmailType;
 import serp.project.mailservice.core.domain.mapper.EmailMapper;
 import serp.project.mailservice.core.exception.AppException;
 import serp.project.mailservice.core.exception.ErrorCode;
@@ -52,33 +55,27 @@ public class EmailSendingUseCases {
 
         EmailEntity email = EmailMapper.toEntity(request, tenantId, userId);
         email.enrichDefaults();
+        if (email.getType() == null) {
+            email.setType(EmailType.TRANSACTIONAL);
+        }
+        applyTemplateIfNeeded(email);
         email.validate();
 
-        if (email.getTemplateId() != null) {
-            EmailTemplateEntity template = emailTemplateService.getTemplateById(email.getTemplateId())
-                    .orElseThrow(() -> new AppException(ErrorCode.TEMPLATE_NOT_FOUND,
-                            "Template not found: " + email.getTemplateId()));
-            String body = emailTemplateService.renderTemplate(
-                    template.getBodyTemplate(), template.getDefaultValues(), email.getTemplateVariables());
-            email.setBody(body);
-        }
+        IEmailProviderPort provider = emailProviderService.selectProvider(email.getProvider());
+        email.setProvider(provider.getProviderType());
 
         EmailEntity savedEmail = emailPort.save(email);
 
-        IEmailProviderPort provider = emailProviderService.selectProvider(savedEmail);
-
         long startTime = System.currentTimeMillis();
         try {
-            Map<String, Object> providerResponse = savedEmail.getIsHtml()
-                    ? provider.sendHtmlEmail(savedEmail)
-                    : provider.sendEmail(savedEmail);
+            ProviderSendResult providerResponse = provider.sendEmail(savedEmail);
+            ensureProviderSendSucceeded(providerResponse, provider, savedEmail.getMessageId());
 
             long responseTime = System.currentTimeMillis() - startTime;
 
             savedEmail.markAsSent(
-                    (String) providerResponse.get("messageId"),
-                    providerResponse
-            );
+                    providerResponse.resolveProviderMessageId(savedEmail.getMessageId()),
+                    providerResponse.toPersistenceResponse());
 
             emailStatsService.recordEmailSent(savedEmail, responseTime);
 
@@ -87,20 +84,17 @@ public class EmailSendingUseCases {
 
         } catch (Exception e) {
             log.error("Failed to send email: {}", savedEmail.getMessageId(), e);
-
-            savedEmail.scheduleRetry(e.getMessage());
-
-            emailProviderService.markProviderDown(savedEmail.getProvider(), Duration.ofMinutes(5));
-            emailStatsService.recordEmailFailed(savedEmail);
+            handleSendFailure(savedEmail, provider.getProviderType(), e);
         }
 
-        emailPort.save(savedEmail);
+        EmailEntity updatedEmail = emailPort.save(savedEmail);
 
-        return EmailMapper.toSendEmailResponse(savedEmail);
+        return EmailMapper.toSendEmailResponse(updatedEmail);
     }
 
     @Transactional
-    public List<SendEmailResponse> sendBulkEmail(BulkEmailRequest request, Long tenantId, Long userId) {
+    public List<SendEmailResponse> sendBulkEmail(BulkEmailRequest request, Long tenantId, Long userId,
+            String userEmail) {
         log.info("Sending bulk email for tenant: {}, recipients: {}", tenantId, request.getRecipients().size());
 
         if (!rateLimitService.allowRequest(tenantId)) {
@@ -109,62 +103,64 @@ public class EmailSendingUseCases {
         }
 
         List<SendEmailResponse> responses = new ArrayList<>();
+        EmailTemplateEntity template = getTemplateIfAny(request.getTemplateId());
 
         for (var recipient : request.getRecipients()) {
+            EmailEntity savedEmail = null;
+            EmailProvider selectedProvider = null;
             try {
                 EmailEntity email = EmailEntity.createNew(tenantId, userId);
+                email.setFromEmail(userEmail);
                 email.setToEmails(List.of(recipient.getEmail()));
                 email.setSubject(request.getSubject());
                 email.setBody(request.getBody());
                 email.setIsHtml(request.getIsHtml());
                 email.setTemplateId(request.getTemplateId());
                 email.setPriority(request.getPriority());
-                email.setType(request.getType());
+                email.setType(request.getType() != null ? request.getType() : EmailType.TRANSACTIONAL);
                 email.setMetadata(request.getMetadata());
 
                 Map<String, Object> variables = recipient.getVariables();
                 email.setTemplateVariables(variables);
 
-                email.validate();
-
-                if (email.getTemplateId() != null && variables != null) {
-                    EmailTemplateEntity template = emailTemplateService.getTemplateById(email.getTemplateId())
-                            .orElseThrow(() -> new AppException(ErrorCode.TEMPLATE_NOT_FOUND,
-                                    "Template not found: " + email.getTemplateId()));
+                if (template != null) {
+                    if (email.getSubject() == null || email.getSubject().isBlank()) {
+                        email.setSubject(template.getSubject());
+                    }
                     String body = emailTemplateService.renderTemplate(
-                            template.getBodyTemplate(), template.getDefaultValues(), variables);
+                            template.getBodyTemplate(),
+                            template.getDefaultValues(),
+                            variables);
                     email.setBody(body);
                 }
 
-                EmailEntity savedEmail = emailPort.save(email);
+                email.validate();
 
-                IEmailProviderPort provider = emailProviderService.selectProvider(savedEmail);
+                IEmailProviderPort provider = emailProviderService.selectProvider(email.getProvider());
+                selectedProvider = provider.getProviderType();
+                email.setProvider(selectedProvider);
+                savedEmail = emailPort.save(email);
 
                 long startTime = System.currentTimeMillis();
-                try {
-                    Map<String, Object> providerResponse = savedEmail.getIsHtml()
-                            ? provider.sendHtmlEmail(savedEmail)
-                            : provider.sendEmail(savedEmail);
-                    long responseTime = System.currentTimeMillis() - startTime;
+                ProviderSendResult providerResponse = provider.sendEmail(savedEmail);
+                ensureProviderSendSucceeded(providerResponse, provider, savedEmail.getMessageId());
+                long responseTime = System.currentTimeMillis() - startTime;
 
-                    savedEmail.markAsSent(
-                            (String) providerResponse.get("messageId"),
-                            providerResponse
-                    );
-                    emailPort.save(savedEmail);
-                    emailStatsService.recordEmailSent(savedEmail, responseTime);
-
-                } catch (Exception sendEx) {
-                    log.error("Failed to send bulk email for recipient: {}", recipient.getEmail(), sendEx);
-                    savedEmail.scheduleRetry(sendEx.getMessage());
-                    emailPort.save(savedEmail);
-                    emailStatsService.recordEmailFailed(savedEmail);
-                }
-
-                responses.add(EmailMapper.toSendEmailResponse(savedEmail));
+                savedEmail.markAsSent(
+                        providerResponse.resolveProviderMessageId(savedEmail.getMessageId()),
+                        providerResponse.toPersistenceResponse());
+                emailStatsService.recordEmailSent(savedEmail, responseTime);
 
             } catch (Exception e) {
                 log.error("Failed to create bulk email for recipient: {}", recipient.getEmail(), e);
+                if (savedEmail != null) {
+                    handleSendFailure(savedEmail, selectedProvider, e);
+                }
+            } finally {
+                if (savedEmail != null) {
+                    EmailEntity updatedEmail = emailPort.save(savedEmail);
+                    responses.add(EmailMapper.toSendEmailResponse(updatedEmail));
+                }
             }
         }
 
@@ -173,12 +169,12 @@ public class EmailSendingUseCases {
     }
 
     @Transactional
-    public SendEmailResponse resendFailedEmail(String messageId) {
-        log.info("Resending failed email with messageId: {}", messageId);
+    public SendEmailResponse resendFailedEmail(String messageId, Long tenantId) {
+        log.info("Resending failed email with messageId: {}, tenant: {}", messageId, tenantId);
 
-        EmailEntity email = emailPort.findByMessageId(messageId)
+        EmailEntity email = emailPort.findByMessageIdAndTenantId(messageId, tenantId)
                 .orElseThrow(() -> new AppException(ErrorCode.EMAIL_NOT_FOUND,
-                        "Email not found with messageId: " + messageId));
+                        "Email not found with messageId: " + messageId + " for tenant: " + tenantId));
 
         if (!email.isRetryable()) {
             throw new AppException(ErrorCode.EMAIL_NOT_RETRYABLE,
@@ -187,18 +183,17 @@ public class EmailSendingUseCases {
         }
 
         try {
-            IEmailProviderPort provider = emailProviderService.getHealthyProvider();
+            IEmailProviderPort provider = emailProviderService.selectProvider(email.getProvider());
+            email.setProvider(provider.getProviderType());
 
             long startTime = System.currentTimeMillis();
-            Map<String, Object> providerResponse = email.getIsHtml() != null && email.getIsHtml()
-                    ? provider.sendHtmlEmail(email)
-                    : provider.sendEmail(email);
+            ProviderSendResult providerResponse = provider.sendEmail(email);
+            ensureProviderSendSucceeded(providerResponse, provider, email.getMessageId());
             long responseTime = System.currentTimeMillis() - startTime;
 
             email.markAsSent(
-                    (String) providerResponse.get("messageId"),
-                    providerResponse
-            );
+                    providerResponse.resolveProviderMessageId(email.getMessageId()),
+                    providerResponse.toPersistenceResponse());
 
             EmailEntity updatedEmail = emailPort.save(email);
 
@@ -210,25 +205,89 @@ public class EmailSendingUseCases {
         } catch (Exception e) {
             log.error("Failed to resend email: {}", messageId, e);
 
-            email.scheduleRetry(e.getMessage());
+            handleSendFailure(email, email.getProvider(), e);
 
-            EmailEntity updatedEmail = emailPort.save(email);
-
-            emailStatsService.recordEmailFailed(updatedEmail);
+            emailPort.save(email);
 
             throw new AppException(ErrorCode.EMAIL_RESEND_FAILED,
-                    "Failed to resend email: " + e.getMessage());
+                    "Failed to resend email: " + toErrorMessage(e));
         }
     }
 
     @Transactional(readOnly = true)
-    public EmailStatusResponse getEmailStatus(String messageId) {
-        log.debug("Getting email status for messageId: {}", messageId);
+    public EmailStatusResponse getEmailStatus(String messageId, Long tenantId) {
+        log.debug("Getting email status for messageId: {}, tenant: {}", messageId, tenantId);
 
-        EmailEntity email = emailPort.findByMessageId(messageId)
+        EmailEntity email = emailPort.findByMessageIdAndTenantId(messageId, tenantId)
                 .orElseThrow(() -> new AppException(ErrorCode.EMAIL_NOT_FOUND,
-                        "Email not found: " + messageId));
+                        "Email not found: " + messageId + " for tenant: " + tenantId));
 
         return EmailMapper.toEmailStatusResponse(email);
+    }
+
+    private void applyTemplateIfNeeded(EmailEntity email) {
+        if (email.getTemplateId() == null) {
+            return;
+        }
+
+        EmailTemplateEntity template = emailTemplateService.getTemplateById(email.getTemplateId())
+                .orElseThrow(() -> new AppException(ErrorCode.TEMPLATE_NOT_FOUND,
+                        "Template not found: " + email.getTemplateId()));
+
+        if (email.getSubject() == null || email.getSubject().isBlank()) {
+            email.setSubject(template.getSubject());
+        }
+
+        String body = emailTemplateService.renderTemplate(
+                template.getBodyTemplate(),
+                template.getDefaultValues(),
+                email.getTemplateVariables());
+        email.setBody(body);
+    }
+
+    private EmailTemplateEntity getTemplateIfAny(Long templateId) {
+        if (templateId == null) {
+            return null;
+        }
+        return emailTemplateService.getTemplateById(templateId)
+                .orElseThrow(() -> new AppException(ErrorCode.TEMPLATE_NOT_FOUND,
+                        "Template not found: " + templateId));
+    }
+
+    private void ensureProviderSendSucceeded(ProviderSendResult providerResponse,
+            IEmailProviderPort provider,
+            String messageId) {
+        boolean success = providerResponse != null && providerResponse.success();
+        if (success) {
+            return;
+        }
+
+        String providerError = providerResponse != null
+                ? providerResponse.resolveErrorMessage()
+                : "Unknown provider error";
+
+        throw new IllegalStateException(
+                "Provider " + provider.getProviderName() + " failed to send messageId=" + messageId + ": "
+                        + providerError);
+    }
+
+    private void handleSendFailure(EmailEntity email, EmailProvider provider, Exception exception) {
+        email.scheduleRetry(toErrorMessage(exception));
+
+        if (provider != null) {
+            emailProviderService.markProviderDown(provider, Duration.ofMinutes(5));
+        }
+
+        emailStatsService.recordEmailFailed(email);
+    }
+
+    private String toErrorMessage(Exception exception) {
+        if (exception == null) {
+            return "Unknown error";
+        }
+        if (exception.getMessage() == null || exception.getMessage().isBlank()) {
+            return exception.getClass().getSimpleName();
+        }
+        return exception.getMessage();
     }
 }

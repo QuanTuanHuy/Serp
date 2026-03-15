@@ -34,23 +34,26 @@ spring:
     placeholder-replacement: false
 
   mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
-    port: ${MAIL_PORT:587}
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
     username: ${MAIL_USERNAME:}
     password: ${MAIL_PASSWORD:}
+    protocol: ${MAIL_PROTOCOL:smtp}
     properties:
       mail:
         smtp:
-          auth: true
+          auth: ${MAIL_AUTH:false}
           starttls:
-            enable: true
-            required: true
-          timeout: 5000
-          connectiontimeout: 5000
-          writetimeout: 5000
+            enable: ${MAIL_STARTTLS_ENABLE:false}
+            required: ${MAIL_STARTTLS_REQUIRED:false}
+          ssl:
+            enable: ${MAIL_SSL_ENABLE:false}
+          timeout: ${MAIL_TIMEOUT_MS:10000}
+          connectiontimeout: ${MAIL_CONNECTION_TIMEOUT_MS:10000}
+          writetimeout: ${MAIL_WRITE_TIMEOUT_MS:10000}
         transport:
-          protocol: smtp
-    test-connection: false
+          protocol: ${MAIL_PROTOCOL:smtp}
+    test-connection: ${MAIL_TEST_CONNECTION:false}
 
   data:
     redis:
@@ -85,12 +88,33 @@ app:
     client-id: serp-mail
     client-secret: ${CLIENT_SECRET}
 
+  security:
+    filter:
+      publicUrls: []
+      protectedUrls:
+        - url-pattern: /api/v1/**
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+          permissions:
+
   email:
     java-mail:
-      enabled: false
+      enabled: true
+      host: ${MAIL_HOST:localhost}
+      port: ${MAIL_PORT:1025}
+      username: ${MAIL_USERNAME:}
+      password: ${MAIL_PASSWORD:}
+      protocol: ${MAIL_PROTOCOL:smtp}
+      auth: ${MAIL_AUTH:false}
+      starttls-enable: ${MAIL_STARTTLS_ENABLE:false}
+      starttls-required: ${MAIL_STARTTLS_REQUIRED:false}
+      ssl-enable: ${MAIL_SSL_ENABLE:false}
       from: ${MAIL_FROM}
       from-name: ${MAIL_FROM_NAME:SERP System}
       reply-to: ${MAIL_REPLY_TO}
+      default-encoding: ${MAIL_DEFAULT_ENCODING:UTF-8}
+      test-connection-on-startup: ${MAIL_TEST_CONNECTION:false}
       rate-limit-per-minute: 60
       timeout-seconds: 10
       max-retry-attempts: 3
@@ -144,23 +168,19 @@ app:
       cleanup-attachments-cron: "0 0 2 * * *"
       provider-health-check-fixed-delay: 60000
 
-serp:
-  security:
-    jwt:
-      jwk-set-uri: ${app.keycloak.jwk-set-uri}
-    service:
-      required-role: SERP_SERVICES
-      allowed-client-ids:
-        - serp-ptm
-        - serp-crm
-        - serp-account
-    public-urls: []
-    protected-urls:
-      - url-pattern: /api/v1/**
-        roles:
-          - SUPER_ADMIN
-          - SYSTEM_MODERATOR
-        permissions: []
+  kafka:
+    consumer:
+      enabled: true
+      topics:
+        - serp.mail.events
+      concurrency: 1
+      max-retry-attempts: 5
+      initial-backoff-ms: 1000
+      max-backoff-ms: 30000
+      backoff-multiplier: 2.0
+      dlq-suffix: ".dlq"
+      inbox-retention-days: 14
+      inbox-cleanup-cron: "0 30 3 * * *"
 
 logging:
   level:

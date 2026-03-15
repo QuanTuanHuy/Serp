@@ -138,6 +138,22 @@ const USER_TYPE_LABELS: Record<string, string> = {
   GUEST: 'Guest',
 };
 
+const USER_SORT_OPTIONS = [
+  { value: 'id', label: 'ID' },
+  { value: 'firstName', label: 'First name' },
+  { value: 'email', label: 'Email' },
+  { value: 'userType', label: 'User type' },
+  { value: 'status', label: 'Status' },
+  { value: 'lastLoginAt', label: 'Last login' },
+  { value: 'createdAt', label: 'Created at' },
+  { value: 'updatedAt', label: 'Updated at' },
+] as const;
+
+const SORT_DIRECTION_LABELS: Record<string, string> = {
+  ASC: 'Ascending',
+  DESC: 'Descending',
+};
+
 // ==================== Main Page ====================
 
 export default function SettingsUsersPage() {
@@ -170,6 +186,8 @@ export default function SettingsUsersPage() {
     setUserType,
     setRoleId,
     setDepartmentId,
+    setSortBy,
+    setSortDir,
     handlePageChange,
     // Actions
     create,
@@ -221,7 +239,17 @@ export default function SettingsUsersPage() {
     setUserType(undefined);
     setRoleId(undefined);
     setDepartmentId(undefined);
-  }, [setSearch, setStatus, setUserType, setRoleId, setDepartmentId]);
+    setSortBy(undefined);
+    setSortDir(undefined);
+  }, [
+    setSearch,
+    setStatus,
+    setUserType,
+    setRoleId,
+    setDepartmentId,
+    setSortBy,
+    setSortDir,
+  ]);
 
   const clearAdvancedFilters = useCallback(() => {
     setRoleId(undefined);
@@ -252,6 +280,7 @@ export default function SettingsUsersPage() {
     if (filters.userType) count += 1;
     if (filters.roleId !== undefined) count += 1;
     if (filters.departmentId !== undefined) count += 1;
+    if (filters.sortBy || filters.sortDir) count += 1;
     return count;
   }, [
     filters.search,
@@ -259,6 +288,8 @@ export default function SettingsUsersPage() {
     filters.userType,
     filters.roleId,
     filters.departmentId,
+    filters.sortBy,
+    filters.sortDir,
   ]);
 
   const activeFilterBadges = useMemo(() => {
@@ -286,11 +317,24 @@ export default function SettingsUsersPage() {
       badges.push(`Department: ${selectedDepartmentName}`);
     }
 
+    if (filters.sortBy || filters.sortDir) {
+      const currentSortBy = filters.sortBy || 'id';
+      const currentSortDir = filters.sortDir || 'DESC';
+      const sortByLabel =
+        USER_SORT_OPTIONS.find((option) => option.value === currentSortBy)
+          ?.label || currentSortBy;
+      const sortDirLabel =
+        SORT_DIRECTION_LABELS[currentSortDir] || currentSortDir;
+      badges.push(`Sort: ${sortByLabel} (${sortDirLabel})`);
+    }
+
     return badges;
   }, [
     filters.search,
     filters.status,
     filters.userType,
+    filters.sortBy,
+    filters.sortDir,
     selectedRoleName,
     selectedDepartmentName,
   ]);
@@ -710,7 +754,7 @@ export default function SettingsUsersPage() {
                 </div>
 
                 <div className='grid gap-3 md:grid-cols-12'>
-                  <div className='md:col-span-6 lg:col-span-7'>
+                  <div className='md:col-span-6 lg:col-span-4'>
                     <Label
                       htmlFor='users-search'
                       className='mb-2 text-xs font-medium text-muted-foreground'
@@ -771,7 +815,7 @@ export default function SettingsUsersPage() {
                     </Select>
                   </div>
 
-                  <div className='md:col-span-3 lg:col-span-3'>
+                  <div className='md:col-span-3 lg:col-span-2'>
                     <Label className='mb-2 text-xs font-medium text-muted-foreground'>
                       User type
                     </Label>
@@ -792,6 +836,53 @@ export default function SettingsUsersPage() {
                         <SelectItem value='CONTRACTOR'>Contractor</SelectItem>
                         <SelectItem value='EXTERNAL'>External</SelectItem>
                         <SelectItem value='GUEST'>Guest</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className='md:col-span-6 lg:col-span-2'>
+                    <Label className='mb-2 text-xs font-medium text-muted-foreground'>
+                      Sort by
+                    </Label>
+                    <Select
+                      value={filters.sortBy || 'default'}
+                      onValueChange={(v) =>
+                        setSortBy(v === 'default' ? undefined : v)
+                      }
+                    >
+                      <SelectTrigger className='h-10'>
+                        <SelectValue placeholder='Default sort' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='default'>Default</SelectItem>
+                        {USER_SORT_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className='md:col-span-6 lg:col-span-2'>
+                    <Label className='mb-2 text-xs font-medium text-muted-foreground'>
+                      Direction
+                    </Label>
+                    <Select
+                      value={filters.sortDir || 'default'}
+                      onValueChange={(v) =>
+                        setSortDir(
+                          v === 'default' ? undefined : (v as 'ASC' | 'DESC')
+                        )
+                      }
+                    >
+                      <SelectTrigger className='h-10'>
+                        <SelectValue placeholder='Default direction' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='default'>Default</SelectItem>
+                        <SelectItem value='ASC'>Ascending</SelectItem>
+                        <SelectItem value='DESC'>Descending</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

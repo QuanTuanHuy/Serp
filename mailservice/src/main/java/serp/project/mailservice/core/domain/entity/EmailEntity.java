@@ -58,6 +58,8 @@ public class EmailEntity extends BaseEntity {
     private Integer maxRetries;
     private String errorMessage;
 
+    private List<EmailAttachmentEntity> attachments;
+
     // ==================== Constants ====================
 
     private static final Pattern EMAIL_PATTERN = Pattern.compile(

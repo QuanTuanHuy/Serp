@@ -45,6 +45,12 @@ public class EmailAdapter implements IEmailPort {
     }
 
     @Override
+    public Optional<EmailEntity> findByMessageIdAndTenantId(String messageId, Long tenantId) {
+        return emailRepository.findByMessageIdAndTenantId(messageId, tenantId)
+                .map(EmailModelMapper::toEntity);
+    }
+
+    @Override
     public List<EmailEntity> findByTenantIdAndStatus(Long tenantId, EmailStatus status, int page, int size) {
         var pageable = PageRequest.of(page, size);
         var models = emailRepository.findByTenantIdAndStatus(tenantId, status, pageable);

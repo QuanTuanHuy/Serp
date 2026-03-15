@@ -3,7 +3,7 @@ Author: QuanTuanHuy
 Description: Part of Serp Project
 */
 
-package serp.project.mailservice.ui.controller;
+package serp.project.mailservice.ui.rest.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
