@@ -33,6 +33,28 @@ spring:
     locations: classpath:db/migration
     placeholder-replacement: false
 
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    protocol: ${MAIL_PROTOCOL:smtp}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_AUTH:true}
+          starttls:
+            enable: ${MAIL_STARTTLS_ENABLE:true}
+            required: ${MAIL_STARTTLS_REQUIRED:true}
+          ssl:
+            enable: ${MAIL_SSL_ENABLE:false}
+          timeout: ${MAIL_TIMEOUT_MS:10000}
+          connectiontimeout: ${MAIL_CONNECTION_TIMEOUT_MS:10000}
+          writetimeout: ${MAIL_WRITE_TIMEOUT_MS:10000}
+        transport:
+          protocol: ${MAIL_PROTOCOL:smtp}
+    test-connection: ${MAIL_TEST_CONNECTION:false}
+
   data:
     redis:
       host: ${REDIS_HOST}
@@ -79,9 +101,20 @@ app:
   email:
     java-mail:
       enabled: true
+      host: ${MAIL_HOST}
+      port: ${MAIL_PORT:587}
+      username: ${MAIL_USERNAME}
+      password: ${MAIL_PASSWORD}
+      protocol: ${MAIL_PROTOCOL:smtp}
+      auth: ${MAIL_AUTH:true}
+      starttls-enable: ${MAIL_STARTTLS_ENABLE:true}
+      starttls-required: ${MAIL_STARTTLS_REQUIRED:true}
+      ssl-enable: ${MAIL_SSL_ENABLE:false}
       from: ${MAIL_FROM}
       from-name: ${MAIL_FROM_NAME:SERP System}
       reply-to: ${MAIL_REPLY_TO}
+      default-encoding: ${MAIL_DEFAULT_ENCODING:UTF-8}
+      test-connection-on-startup: ${MAIL_TEST_CONNECTION:false}
       rate-limit-per-minute: 60
       timeout-seconds: 10
       max-retry-attempts: 3

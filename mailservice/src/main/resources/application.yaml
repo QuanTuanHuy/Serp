@@ -34,23 +34,26 @@ spring:
     placeholder-replacement: false
 
   mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
-    port: ${MAIL_PORT:587}
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
     username: ${MAIL_USERNAME:}
     password: ${MAIL_PASSWORD:}
+    protocol: ${MAIL_PROTOCOL:smtp}
     properties:
       mail:
         smtp:
-          auth: true
+          auth: ${MAIL_AUTH:false}
           starttls:
-            enable: true
-            required: true
-          timeout: 5000
-          connectiontimeout: 5000
-          writetimeout: 5000
+            enable: ${MAIL_STARTTLS_ENABLE:false}
+            required: ${MAIL_STARTTLS_REQUIRED:false}
+          ssl:
+            enable: ${MAIL_SSL_ENABLE:false}
+          timeout: ${MAIL_TIMEOUT_MS:10000}
+          connectiontimeout: ${MAIL_CONNECTION_TIMEOUT_MS:10000}
+          writetimeout: ${MAIL_WRITE_TIMEOUT_MS:10000}
         transport:
-          protocol: smtp
-    test-connection: false
+          protocol: ${MAIL_PROTOCOL:smtp}
+    test-connection: ${MAIL_TEST_CONNECTION:false}
 
   data:
     redis:
@@ -97,10 +100,21 @@ app:
 
   email:
     java-mail:
-      enabled: false
+      enabled: true
+      host: ${MAIL_HOST:localhost}
+      port: ${MAIL_PORT:1025}
+      username: ${MAIL_USERNAME:}
+      password: ${MAIL_PASSWORD:}
+      protocol: ${MAIL_PROTOCOL:smtp}
+      auth: ${MAIL_AUTH:false}
+      starttls-enable: ${MAIL_STARTTLS_ENABLE:false}
+      starttls-required: ${MAIL_STARTTLS_REQUIRED:false}
+      ssl-enable: ${MAIL_SSL_ENABLE:false}
       from: ${MAIL_FROM}
       from-name: ${MAIL_FROM_NAME:SERP System}
       reply-to: ${MAIL_REPLY_TO}
+      default-encoding: ${MAIL_DEFAULT_ENCODING:UTF-8}
+      test-connection-on-startup: ${MAIL_TEST_CONNECTION:false}
       rate-limit-per-minute: 60
       timeout-seconds: 10
       max-retry-attempts: 3

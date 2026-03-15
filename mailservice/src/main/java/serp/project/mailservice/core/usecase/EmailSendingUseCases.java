@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.mailservice.core.domain.dto.request.BulkEmailRequest;
 import serp.project.mailservice.core.domain.dto.request.SendEmailRequest;
+import serp.project.mailservice.core.domain.dto.provider.ProviderSendResult;
 import serp.project.mailservice.core.domain.dto.response.EmailStatusResponse;
 import serp.project.mailservice.core.domain.dto.response.SendEmailResponse;
 import serp.project.mailservice.core.domain.entity.EmailEntity;
@@ -67,7 +68,7 @@ public class EmailSendingUseCases {
 
         long startTime = System.currentTimeMillis();
         try {
-            Map<String, Object> providerResponse = Boolean.TRUE.equals(savedEmail.getIsHtml())
+            ProviderSendResult providerResponse = Boolean.TRUE.equals(savedEmail.getIsHtml())
                     ? provider.sendHtmlEmail(savedEmail)
                     : provider.sendEmail(savedEmail);
             ensureProviderSendSucceeded(providerResponse, provider, savedEmail.getMessageId());
@@ -75,8 +76,8 @@ public class EmailSendingUseCases {
             long responseTime = System.currentTimeMillis() - startTime;
 
             savedEmail.markAsSent(
-                    extractProviderMessageId(providerResponse, savedEmail.getMessageId()),
-                    providerResponse);
+                    providerResponse.resolveProviderMessageId(savedEmail.getMessageId()),
+                    providerResponse.toPersistenceResponse());
 
             emailStatsService.recordEmailSent(savedEmail, responseTime);
 
@@ -143,15 +144,15 @@ public class EmailSendingUseCases {
                 savedEmail = emailPort.save(email);
 
                 long startTime = System.currentTimeMillis();
-                Map<String, Object> providerResponse = Boolean.TRUE.equals(savedEmail.getIsHtml())
+                ProviderSendResult providerResponse = Boolean.TRUE.equals(savedEmail.getIsHtml())
                         ? provider.sendHtmlEmail(savedEmail)
                         : provider.sendEmail(savedEmail);
                 ensureProviderSendSucceeded(providerResponse, provider, savedEmail.getMessageId());
                 long responseTime = System.currentTimeMillis() - startTime;
 
                 savedEmail.markAsSent(
-                        extractProviderMessageId(providerResponse, savedEmail.getMessageId()),
-                        providerResponse);
+                        providerResponse.resolveProviderMessageId(savedEmail.getMessageId()),
+                        providerResponse.toPersistenceResponse());
                 emailStatsService.recordEmailSent(savedEmail, responseTime);
 
             } catch (Exception e) {
@@ -190,15 +191,15 @@ public class EmailSendingUseCases {
             email.setProvider(provider.getProviderType());
 
             long startTime = System.currentTimeMillis();
-            Map<String, Object> providerResponse = Boolean.TRUE.equals(email.getIsHtml())
+            ProviderSendResult providerResponse = Boolean.TRUE.equals(email.getIsHtml())
                     ? provider.sendHtmlEmail(email)
                     : provider.sendEmail(email);
             ensureProviderSendSucceeded(providerResponse, provider, email.getMessageId());
             long responseTime = System.currentTimeMillis() - startTime;
 
             email.markAsSent(
-                    extractProviderMessageId(providerResponse, email.getMessageId()),
-                    providerResponse);
+                    providerResponse.resolveProviderMessageId(email.getMessageId()),
+                    providerResponse.toPersistenceResponse());
 
             EmailEntity updatedEmail = emailPort.save(email);
 
@@ -259,44 +260,21 @@ public class EmailSendingUseCases {
                         "Template not found: " + templateId));
     }
 
-    private void ensureProviderSendSucceeded(Map<String, Object> providerResponse,
+    private void ensureProviderSendSucceeded(ProviderSendResult providerResponse,
             IEmailProviderPort provider,
             String messageId) {
-        boolean success = providerResponse != null && Boolean.TRUE.equals(providerResponse.get("success"));
+        boolean success = providerResponse != null && providerResponse.success();
         if (success) {
             return;
         }
 
-        String providerError = providerResponse != null && providerResponse.get("error") != null
-                ? String.valueOf(providerResponse.get("error"))
+        String providerError = providerResponse != null
+                ? providerResponse.resolveErrorMessage()
                 : "Unknown provider error";
 
         throw new IllegalStateException(
                 "Provider " + provider.getProviderName() + " failed to send messageId=" + messageId + ": "
                         + providerError);
-    }
-
-    private String extractProviderMessageId(Map<String, Object> providerResponse, String fallbackMessageId) {
-        if (providerResponse == null) {
-            return fallbackMessageId;
-        }
-
-        Object providerMessageId = providerResponse.get("providerMessageId");
-        if (providerMessageId != null) {
-            return String.valueOf(providerMessageId);
-        }
-
-        Object brevoMessageId = providerResponse.get("brevoMessageId");
-        if (brevoMessageId != null) {
-            return String.valueOf(brevoMessageId);
-        }
-
-        Object messageId = providerResponse.get("messageId");
-        if (messageId != null) {
-            return String.valueOf(messageId);
-        }
-
-        return fallbackMessageId;
     }
 
     private void handleSendFailure(EmailEntity email, EmailProvider provider, Exception exception) {
