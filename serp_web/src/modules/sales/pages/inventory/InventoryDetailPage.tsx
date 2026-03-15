@@ -54,6 +54,7 @@ import {
   useGetFacilityQuery,
 } from '../../api/salesApi';
 import type { InventoryItemStatus, InventoryItemUpdateForm } from '../../types';
+import { formatDateStringVN } from '@/shared/utils/format';
 
 interface InventoryDetailPageProps {
   itemId: string;
@@ -80,31 +81,10 @@ const STATUS_CONFIG = {
   },
 };
 
-const formatDate = (dateString?: string) => {
-  if (!dateString) return 'N/A';
-  return new Date(dateString).toLocaleDateString('vi-VN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-};
-
-const formatDateTime = (dateString?: string) => {
-  if (!dateString) return 'N/A';
-  return new Date(dateString).toLocaleString('vi-VN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
 export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
   itemId,
 }) => {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('overview');
   const [isEditing, setIsEditing] = useState(false);
 
   // Fetch inventory item data
@@ -500,7 +480,7 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
             <div className='flex justify-between pt-2 border-t'>
               <span className='text-muted-foreground'>Ngày nhận</span>
               <span className='font-medium'>
-                {formatDate(item.receivedDate)}
+                {formatDateStringVN(item.receivedDate)}
               </span>
             </div>
             <div className='flex justify-between'>
@@ -519,7 +499,7 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
                 />
               ) : (
                 <span className='font-medium'>
-                  {formatDate(item.manufacturingDate)}
+                  {formatDateStringVN(item.manufacturingDate)}
                 </span>
               )}
             </div>
@@ -539,7 +519,7 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
                 />
               ) : (
                 <span className='font-medium'>
-                  {formatDate(item.expirationDate)}
+                  {formatDateStringVN(item.expirationDate)}
                 </span>
               )}
             </div>

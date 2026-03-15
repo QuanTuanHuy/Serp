@@ -452,15 +452,12 @@ export const CreateInventoryItemPage: React.FC = () => {
                     className={cn(
                       formData.statusId === 'VALID' &&
                         'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30',
-                      formData.statusId === 'EXPIRED' &&
-                        'bg-rose-100 text-rose-700 dark:bg-rose-900/30',
-                      formData.statusId === 'DAMAGED' &&
-                        'bg-amber-100 text-amber-700 dark:bg-amber-900/30'
+                      formData.statusId === 'INVALID' &&
+                        'bg-rose-100 text-rose-700 dark:bg-rose-900/30'
                     )}
                   >
                     {formData.statusId === 'VALID' && 'Hợp lệ'}
-                    {formData.statusId === 'EXPIRED' && 'Đã hết hạn'}
-                    {formData.statusId === 'DAMAGED' && 'Hư hỏng'}
+                    {formData.statusId === 'INVALID' && 'Không hợp lệ'}
                   </Badge>
                 </div>
               </CardContent>

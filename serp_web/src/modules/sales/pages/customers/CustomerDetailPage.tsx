@@ -36,11 +36,7 @@ import {
   Calendar,
   User,
   ShoppingCart,
-  Package,
-  Receipt,
   DollarSign,
-  TrendingUp,
-  History,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import {
@@ -51,6 +47,7 @@ import {
 import { formatDate, formatCurrency } from '@/shared/utils/format';
 import { toast } from 'sonner';
 import { OrderCard } from '../../components/cards/OrderCard';
+import { UpdateAddressDialog } from '../../components/dialogs/UpdateAddressDialog';
 import type { Order } from '../../types';
 
 interface CustomerDetailPageProps {
@@ -76,6 +73,7 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
 }) => {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
+  const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
 
   // Fetch customer data
   const {
@@ -208,6 +206,10 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
             <DropdownMenuItem onClick={handleEdit}>
               <Edit className='mr-2 h-4 w-4' />
               Chỉnh sửa khách hàng
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setIsAddressDialogOpen(true)}>
+              <MapPin className='mr-2 h-4 w-4' />
+              Thay đổi địa chỉ
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -413,6 +415,13 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
           )}
         </TabsContent>
       </Tabs>
+
+      <UpdateAddressDialog
+        open={isAddressDialogOpen}
+        onOpenChange={setIsAddressDialogOpen}
+        entityId={customerId}
+        currentAddress={customer.address}
+      />
     </div>
   );
 };

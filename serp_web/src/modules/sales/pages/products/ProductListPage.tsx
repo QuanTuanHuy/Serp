@@ -8,7 +8,10 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { useGetProductsQuery } from '../../api/salesApi';
+import type { Product } from '../../types';
+import { EditProductDialog } from './EditProductDialog';
 import { useAppDispatch, useAppSelector } from '@/lib/store';
 import { setProductPagination, setProductFilters } from '../../store';
 import {
@@ -33,8 +36,10 @@ import {
   TableRow,
 } from '@/shared/components/ui/table';
 import { Badge } from '@/shared/components/ui/badge';
+import { formatStringCurrencyVN } from '@/shared/utils/format';
 
 export const ProductListPage: React.FC = () => {
+  const router = useRouter();
   const dispatch = useAppDispatch();
   const pagination = useAppSelector(selectProductPagination);
   const filters = useAppSelector(selectProductFilters);
@@ -45,6 +50,9 @@ export const ProductListPage: React.FC = () => {
   });
 
   const [searchTerm, setSearchTerm] = React.useState(filters.query || '');
+  const [selectedProduct, setSelectedProduct] =
+    React.useState<Product | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = React.useState(false);
 
   const handleSearch = () => {
     dispatch(setProductFilters({ ...filters, query: searchTerm }));
@@ -58,19 +66,19 @@ export const ProductListPage: React.FC = () => {
     <div className='space-y-6'>
       <div className='flex items-center justify-between'>
         <div>
-          <h1 className='text-3xl font-bold tracking-tight'>Products</h1>
-          <p className='text-muted-foreground'>Manage your product catalog</p>
+          <h1 className='text-3xl font-bold tracking-tight'>Sản phẩm</h1>
+          <p className='text-muted-foreground'>Quản lý danh mục sản phẩm</p>
         </div>
-        <Button>
+        <Button onClick={() => router.push('/sales/products/new')}>
           <Plus className='mr-2 h-4 w-4' />
-          Add Product
+          Thêm Sản Phẩm
         </Button>
       </div>
 
       <Card>
         <CardHeader>
           <div className='flex items-center justify-between'>
-            <CardTitle>Product Catalog</CardTitle>
+            <CardTitle>Danh mục sản phẩm</CardTitle>
             <div className='flex items-center gap-2'>
               <div className='relative'>
                 <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
@@ -93,23 +101,29 @@ export const ProductListPage: React.FC = () => {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className='text-center py-8'>Loading...</div>
+            <div className='text-center py-8'>Đang tải...</div>
           ) : (
             <>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Product</TableHead>
+                    <TableHead>Sản phẩm</TableHead>
                     <TableHead>SKU</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Stock</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className='text-right'>Actions</TableHead>
+                    <TableHead>Giá</TableHead>
+                    <TableHead>Khả dụng</TableHead>
+                    <TableHead className='text-right'>Trạng thái</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data?.data?.items?.map((product) => (
-                    <TableRow key={product.id}>
+                    <TableRow
+                      key={product.id}
+                      onClick={() => {
+                        setSelectedProduct(product);
+                        setEditDialogOpen(true);
+                      }}
+                      className='cursor-pointer hover:bg-muted/50'
+                    >
                       <TableCell>
                         <div className='flex items-center gap-3'>
                           <div className='flex h-10 w-10 items-center justify-center rounded bg-muted'>
@@ -125,20 +139,16 @@ export const ProductListPage: React.FC = () => {
                       </TableCell>
                       <TableCell>{product.skuCode || '-'}</TableCell>
                       <TableCell>
-                        ${product.retailPrice?.toLocaleString() || '0'}
+                        {formatStringCurrencyVN(
+                          product.retailPrice?.toString() || '0'
+                        )}
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant={
-                            (product.quantityAvailable || 0) > 10
-                              ? 'default'
-                              : 'destructive'
-                          }
-                        >
+                        <p className='font-medium'>
                           {product.quantityAvailable || 0}
-                        </Badge>
+                        </p>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className='text-right'>
                         <Badge
                           variant={
                             product.statusId === 'ACTIVE'
@@ -148,11 +158,6 @@ export const ProductListPage: React.FC = () => {
                         >
                           {product.statusId || 'Unknown'}
                         </Badge>
-                      </TableCell>
-                      <TableCell className='text-right'>
-                        <Button variant='ghost' size='sm'>
-                          Edit
-                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -207,6 +212,12 @@ export const ProductListPage: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      <EditProductDialog
+        product={selectedProduct}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
     </div>
   );
 };
