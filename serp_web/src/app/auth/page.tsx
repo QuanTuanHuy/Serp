@@ -3,12 +3,18 @@
  * Description: Part of Serp Project - Standalone authentication page
  */
 
-'use client';
-
 import { AuthLayout } from '@/modules/account';
 
-export default function AuthPage() {
-  const handleAuthSuccess = () => {};
+interface AuthPageProps {
+  searchParams: Promise<{
+    mode?: string | string[];
+  }>;
+}
 
-  return <AuthLayout onAuthSuccess={handleAuthSuccess} />;
+export default async function AuthPage({ searchParams }: AuthPageProps) {
+  const { mode } = await searchParams;
+  const normalizedMode = Array.isArray(mode) ? mode[0] : mode;
+  const defaultMode = normalizedMode === 'register' ? 'register' : 'login';
+
+  return <AuthLayout defaultMode={defaultMode} />;
 }

@@ -106,7 +106,8 @@ public class OrganizationUserController {
         if (!authUtils.canAccessOrganization(organizationId)) {
             return ResponseEntity.status(403).body(Constants.ErrorMessage.NO_PERMISSION_TO_ACCESS_ORGANIZATION);
         }
-        var response = userUseCase.resetUserPassword(organizationId, userId);
+        Long requestedBy = authUtils.getCurrentUserId().orElse(null);
+        var response = userUseCase.resetUserPassword(organizationId, userId, requestedBy);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 

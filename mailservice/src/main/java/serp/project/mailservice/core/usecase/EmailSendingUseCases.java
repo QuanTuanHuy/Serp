@@ -53,12 +53,17 @@ public class EmailSendingUseCases {
                     "Rate limit exceeded for tenant: " + tenantId);
         }
 
+        EmailTemplateEntity template = resolveTemplate(
+                request.getTemplateId(), request.getTemplateCode(), tenantId);
+
         EmailEntity email = EmailMapper.toEntity(request, tenantId, userId);
         email.enrichDefaults();
         if (email.getType() == null) {
-            email.setType(EmailType.TRANSACTIONAL);
+            email.setType(template != null && template.getType() != null
+                    ? template.getType()
+                    : EmailType.TRANSACTIONAL);
         }
-        applyTemplateIfNeeded(email);
+        applyTemplateIfNeeded(email, template);
         email.validate();
 
         IEmailProviderPort provider = emailProviderService.selectProvider(email.getProvider());
@@ -103,7 +108,8 @@ public class EmailSendingUseCases {
         }
 
         List<SendEmailResponse> responses = new ArrayList<>();
-        EmailTemplateEntity template = getTemplateIfAny(request.getTemplateId());
+        EmailTemplateEntity template = resolveTemplate(
+                request.getTemplateId(), request.getTemplateCode(), tenantId);
 
         for (var recipient : request.getRecipients()) {
             EmailEntity savedEmail = null;
@@ -225,14 +231,12 @@ public class EmailSendingUseCases {
         return EmailMapper.toEmailStatusResponse(email);
     }
 
-    private void applyTemplateIfNeeded(EmailEntity email) {
-        if (email.getTemplateId() == null) {
+    private void applyTemplateIfNeeded(EmailEntity email, EmailTemplateEntity template) {
+        if (template == null) {
             return;
         }
 
-        EmailTemplateEntity template = emailTemplateService.getTemplateById(email.getTemplateId())
-                .orElseThrow(() -> new AppException(ErrorCode.TEMPLATE_NOT_FOUND,
-                        "Template not found: " + email.getTemplateId()));
+        email.setTemplateId(template.getId());
 
         if (email.getSubject() == null || email.getSubject().isBlank()) {
             email.setSubject(template.getSubject());
@@ -243,6 +247,19 @@ public class EmailSendingUseCases {
                 template.getDefaultValues(),
                 email.getTemplateVariables());
         email.setBody(body);
+    }
+
+    private EmailTemplateEntity resolveTemplate(Long templateId, String templateCode, Long tenantId) {
+        if (templateId != null) {
+            return getTemplateIfAny(templateId);
+        }
+        if (templateCode == null || templateCode.isBlank()) {
+            return null;
+        }
+
+        return emailTemplateService.getTemplateByCode(tenantId, templateCode)
+                .orElseThrow(() -> new AppException(ErrorCode.TEMPLATE_NOT_FOUND,
+                        "Template not found: " + templateCode + " for tenant: " + tenantId));
     }
 
     private EmailTemplateEntity getTemplateIfAny(Long templateId) {

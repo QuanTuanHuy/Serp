@@ -29,6 +29,7 @@ public class BulkEmailRequest {
     private Boolean isHtml;
 
     private Long templateId;
+    private String templateCode;
 
     private EmailType type;
     private EmailPriority priority;

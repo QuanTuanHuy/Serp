@@ -33,6 +33,8 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 		authV1.POST("/refresh-token", authController.RefreshToken)
 		authV1.POST("/revoke-token", authController.RevokeToken)
 		authV1.Use(middleware.AuthMiddleware()).POST("/change-password", authController.ChangePassword)
+		authV1.GET("/reset-password/validate", genericProxyController.ProxyHandler("account"))
+		authV1.POST("/reset-password/confirm", genericProxyController.ProxyHandler("account"))
 	}
 
 	// keycloakV1 := group.Group("/api/v1/keycloak")

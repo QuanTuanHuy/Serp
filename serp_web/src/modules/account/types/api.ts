@@ -3,6 +3,16 @@
  * Description: Part of Serp Project - API request and response DTOs
  */
 
+import type { ApiResponse } from '@/lib';
+
+import type { User } from './auth';
+import type {
+  FeatureAccess,
+  MenuAccess,
+  ModuleAccess,
+  OrganizationPermission,
+} from './permissions';
+
 // Request DTOs
 export interface RegisterRequest {
   email: string;
@@ -27,6 +37,11 @@ export interface RevokeTokenRequest {
   refreshToken: string;
 }
 
+export interface ConfirmPasswordResetRequest {
+  token: string;
+  newPassword: string;
+}
+
 // Response Data DTOs
 export interface TokenData {
   accessToken: string;
@@ -48,17 +63,17 @@ export interface MenusData {
   modules: ModuleAccess[];
 }
 
+export interface PasswordResetValidationData {
+  valid: boolean;
+  expiresAt: number | string;
+  userId: number;
+}
+
 export type AuthResponse = ApiResponse<TokenData>;
 export type TokenResponse = ApiResponse<TokenData>;
 export type UserProfileResponse = ApiResponse<User>;
 export type PermissionsResponse = ApiResponse<PermissionsData>;
 export type MenusResponse = ApiResponse<MenusData>;
-
-import { ApiResponse } from '@/lib';
-import type { User } from './auth';
-import type {
-  FeatureAccess,
-  OrganizationPermission,
-  MenuAccess,
-  ModuleAccess,
-} from './permissions';
+export type ValidatePasswordResetTokenResponse =
+  ApiResponse<PasswordResetValidationData>;
+export type ConfirmPasswordResetResponse = ApiResponse<string>;

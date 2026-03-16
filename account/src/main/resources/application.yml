@@ -63,7 +63,6 @@ app:
     admin:
       email: ${ADMIN_EMAIL}
       password: ${ADMIN_PASSWORD}
-
     filter:
       publicUrls:
         - first: /api/v1/auth/login
@@ -75,6 +74,10 @@ app:
         - first: /api/v1/auth/refresh-token
           second: POST
         - first: /api/v1/auth/revoke-token
+          second: POST
+        - first: /api/v1/auth/reset-password/validate
+          second: GET
+        - first: /api/v1/auth/reset-password/confirm
           second: POST
         - first: /api/v1/permissions/**
           second: GET
@@ -370,6 +373,10 @@ app:
             - ORG_OWNER
             - ORG_ADMIN
           permissions:
+
+  password-reset:
+    frontend-reset-url: ${PASSWORD_RESET_FRONTEND_URL:http://localhost:3000/auth/reset-password}
+    expiration-minutes: ${PASSWORD_RESET_EXPIRATION_MINUTES:60}
 
 server:
   port: 8081

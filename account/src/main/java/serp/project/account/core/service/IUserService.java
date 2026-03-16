@@ -11,9 +11,11 @@ import serp.project.account.core.domain.dto.request.CreateUserForOrgRequest;
 import serp.project.account.core.domain.dto.request.GetUserParams;
 import serp.project.account.core.domain.dto.response.UserProfileResponse;
 import serp.project.account.core.domain.dto.response.UserStatsResponse;
+import serp.project.account.core.domain.entity.PasswordResetRequestEntity;
 import serp.project.account.core.domain.entity.UserEntity;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface IUserService {
     UserEntity createUser(CreateUserDto request);
@@ -47,4 +49,18 @@ public interface IUserService {
     Integer countUsersByOrganizationId(Long organizationId);
 
     UserStatsResponse getUserStats(Long organizationId);
+
+    Optional<PasswordResetRequestEntity> getPasswordResetRequestByTokenHash(String tokenHash);
+
+    void invalidatePendingPasswordResetByUserId(Long userId);
+
+    PasswordResetRequestEntity createPasswordResetRequest(
+            Long userId,
+            Long organizationId,
+            String email,
+            Long requestedBy,
+            String tokenHash,
+            Long expiresAt);
+
+    PasswordResetRequestEntity updatePasswordResetRequest(PasswordResetRequestEntity entity);
 }

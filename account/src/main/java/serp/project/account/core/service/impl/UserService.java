@@ -16,11 +16,14 @@ import serp.project.account.core.domain.dto.request.CreateUserForOrgRequest;
 import serp.project.account.core.domain.dto.request.GetUserParams;
 import serp.project.account.core.domain.dto.response.UserProfileResponse;
 import serp.project.account.core.domain.dto.response.UserStatsResponse;
+import serp.project.account.core.domain.entity.PasswordResetRequestEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.UserEntity;
 import serp.project.account.core.domain.entity.UserRoleEntity;
+import serp.project.account.core.domain.enums.ResetPassStatus;
 import serp.project.account.core.domain.enums.UserStatus;
 import serp.project.account.core.exception.AppException;
+import serp.project.account.core.port.store.IPasswordResetRequestPort;
 import serp.project.account.core.port.store.IUserPort;
 import serp.project.account.core.port.store.IUserRolePort;
 import serp.project.account.core.service.IRoleService;
@@ -33,6 +36,7 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -41,6 +45,7 @@ import java.util.stream.Collectors;
 public class UserService implements IUserService {
     private final IUserPort userPort;
     private final IUserRolePort userRolePort;
+    private final IPasswordResetRequestPort passwordResetRequestPort;
 
     private final IRoleService roleService;
 
@@ -224,7 +229,7 @@ public class UserService implements IUserService {
     @Override
     public UserStatsResponse getUserStats(Long organizationId) {
         int total = userPort.countUsersByOrganizationId(organizationId);
-        
+
         Map<String, Integer> statusCounts = userPort.countUsersByStatusForOrganization(organizationId);
         int active = statusCounts.getOrDefault(UserStatus.ACTIVE.name(), 0);
         int inactive = statusCounts.getOrDefault(UserStatus.INACTIVE.name(), 0);
@@ -253,5 +258,40 @@ public class UserService implements IUserService {
                 .newUsersThisMonth(newThisMonth)
                 .newUsersLastMonth(newLastMonth)
                 .build();
+    }
+
+    @Override
+    public Optional<PasswordResetRequestEntity> getPasswordResetRequestByTokenHash(String tokenHash) {
+        return passwordResetRequestPort.getByTokenHash(tokenHash);
+    }
+
+    @Override
+    public void invalidatePendingPasswordResetByUserId(Long userId) {
+        passwordResetRequestPort.invalidatePendingByUserId(userId);
+    }
+
+    @Override
+    public PasswordResetRequestEntity createPasswordResetRequest(
+            Long userId,
+            Long organizationId,
+            String email,
+            Long requestedBy,
+            String tokenHash,
+            Long expiresAt) {
+        PasswordResetRequestEntity entity = PasswordResetRequestEntity.builder()
+                .userId(userId)
+                .organizationId(organizationId)
+                .email(email)
+                .tokenHash(tokenHash)
+                .status(ResetPassStatus.PENDING)
+                .requestedBy(requestedBy)
+                .expiresAt(expiresAt)
+                .build();
+        return passwordResetRequestPort.save(entity);
+    }
+
+    @Override
+    public PasswordResetRequestEntity updatePasswordResetRequest(PasswordResetRequestEntity entity) {
+        return passwordResetRequestPort.save(entity);
     }
 }

@@ -48,16 +48,6 @@ CREATE TABLE IF NOT EXISTS email_templates (
 -- Indexes
 CREATE INDEX idx_email_templates_tenant_id ON email_templates(tenant_id);
 CREATE INDEX idx_email_templates_code ON email_templates(code);
-CREATE INDEX idx_email_templates_type ON email_templates(type);
-CREATE INDEX idx_email_templates_is_global ON email_templates(is_global);
-CREATE INDEX idx_email_templates_is_active ON email_templates(is_active);
-
--- Composite indexes
-CREATE INDEX idx_email_templates_tenant_active ON email_templates(tenant_id, is_active);
-CREATE INDEX idx_email_templates_global_active ON email_templates(is_global, is_active) WHERE is_global = true;
-
--- JSONB indexes
-CREATE INDEX idx_email_templates_variables_schema ON email_templates USING GIN(variables_schema);
 
 -- Comments
 COMMENT ON TABLE email_templates IS 'Email templates using Thymeleaf syntax';
