@@ -10,6 +10,7 @@ export { ProtectedRoute, withAuth } from './ProtectedRoute';
 export { UserProfile, UserProfileCompact } from './UserProfile';
 export { EditProfileForm } from './EditProfileForm';
 export { ChangePasswordForm } from './ChangePasswordForm';
+export { ResetPasswordForm } from './ResetPasswordForm';
 export { ProfileSidebar } from './layout/ProfileSidebar';
 export { ProfileLayout } from './layout/ProfileLayout';
 export { RoleGuard, withRoleGuard, type RoleGuardProps } from './RoleGuard';

@@ -66,6 +66,22 @@ public class EmailTemplateService implements IEmailTemplateService {
     }
 
     @Override
+    public Optional<EmailTemplateEntity> getTemplateByCode(Long tenantId, String code) {
+        if (code == null || code.isBlank()) {
+            return Optional.empty();
+        }
+
+        if (tenantId != null) {
+            Optional<EmailTemplateEntity> tenantTemplate = emailTemplatePort.findByTenantIdAndCode(tenantId, code);
+            if (tenantTemplate.isPresent()) {
+                return tenantTemplate;
+            }
+        }
+
+        return emailTemplatePort.findByCodeAndIsGlobalTrue(code);
+    }
+
+    @Override
     public String renderTemplate(String bodyTemplate, Map<String, Object> defaultValues, Map<String, Object> variables) {
         Map<String, Object> mergedVariables = mergeVariables(defaultValues, variables);
 

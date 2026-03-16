@@ -50,6 +50,12 @@ public class EmailTemplateAdapter implements IEmailTemplatePort {
     }
 
     @Override
+    public Optional<EmailTemplateEntity> findByCodeAndIsGlobalTrue(String code) {
+        return emailTemplateRepository.findByCodeAndIsGlobalTrue(code)
+                .map(EmailTemplateModelMapper::toEntity);
+    }
+
+    @Override
     public List<EmailTemplateEntity> findByTenantId(Long tenantId, int page, int size) {
         var pageable = PageRequest.of(page, size);
         var models = emailTemplateRepository.findByTenantId(tenantId, pageable);

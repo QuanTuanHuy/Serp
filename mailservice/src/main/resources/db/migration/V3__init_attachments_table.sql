@@ -34,9 +34,6 @@ CREATE TABLE IF NOT EXISTS email_attachments (
 
 -- Indexes
 CREATE INDEX idx_email_attachments_email_id ON email_attachments(email_id);
-CREATE INDEX idx_email_attachments_stored_filename ON email_attachments(stored_filename);
-CREATE INDEX idx_email_attachments_expires_at ON email_attachments(expires_at) WHERE expires_at IS NOT NULL;
-CREATE INDEX idx_email_attachments_uploaded_at ON email_attachments(uploaded_at DESC);
 
 -- Comments
 COMMENT ON TABLE email_attachments IS 'Email attachment metadata (files stored on filesystem)';

@@ -64,6 +64,7 @@ import { CreateUserDialog } from '@/modules/settings/components/users/CreateUser
 import { InviteUserDialog } from '@/modules/settings/components/users/InviteUserDialog';
 import { UserDetailDialog } from '@/modules/settings/components/users/UserDetailDialog';
 import { ConfirmStatusDialog } from '@/modules/settings/components/users/ConfirmStatusDialog';
+import { ConfirmResetPasswordDialog } from '@/modules/settings/components/users/ConfirmResetPasswordDialog';
 import { DataTable } from '@/shared/components';
 import type { ColumnDef } from '@/shared/types';
 import type { UserProfile, UserStatus } from '@/modules/admin/types';
@@ -163,12 +164,18 @@ export default function SettingsUsersPage() {
   const [openInviteDialog, setOpenInviteDialog] = useState(false);
   const [openDetailDialog, setOpenDetailDialog] = useState(false);
   const [openStatusDialog, setOpenStatusDialog] = useState(false);
+  const [openResetPasswordDialog, setOpenResetPasswordDialog] = useState(false);
   const [editUserId, setEditUserId] = useState<number | null>(null);
   const [detailUserId, setDetailUserId] = useState<number | null>(null);
   const [statusTarget, setStatusTarget] = useState<{
     userId: number;
     name: string;
     status: string;
+  } | null>(null);
+  const [resetPasswordTarget, setResetPasswordTarget] = useState<{
+    userId: number;
+    name: string;
+    email: string;
   } | null>(null);
 
   const {
@@ -194,6 +201,7 @@ export default function SettingsUsersPage() {
     createStatus,
     updateStatus,
     resetPassword,
+    resetPasswordStatus,
     inviteUser,
     // Invitations
     invitations,
@@ -364,6 +372,27 @@ export default function SettingsUsersPage() {
     }
   }, [statusTarget, updateStatus]);
 
+  const handleResetPassword = useCallback((user: UserProfile) => {
+    setResetPasswordTarget({
+      userId: user.id,
+      name:
+        `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
+      email: user.email,
+    });
+    setOpenResetPasswordDialog(true);
+  }, []);
+
+  const confirmResetPassword = useCallback(async () => {
+    if (!resetPasswordTarget) return;
+    try {
+      await resetPassword(resetPasswordTarget.userId);
+      setOpenResetPasswordDialog(false);
+      setResetPasswordTarget(null);
+    } catch {
+      // Error handled by hook
+    }
+  }, [resetPassword, resetPasswordTarget]);
+
   const handleExport = useCallback(async () => {
     if (!organizationId) return;
     try {
@@ -474,8 +503,9 @@ export default function SettingsUsersPage() {
               },
               {
                 label: 'Reset Password',
-                onClick: () => resetPassword(row.id),
+                onClick: () => handleResetPassword(row),
                 icon: <KeyRound className='h-4 w-4' />,
+                className: 'text-amber-600 focus:text-amber-700',
                 separator: true,
               },
               ...(row.status !== 'ACTIVE'
@@ -509,7 +539,7 @@ export default function SettingsUsersPage() {
         ),
       },
     ],
-    [handleStatusChange, resetPassword]
+    [handleResetPassword, handleStatusChange]
   );
 
   // ==================== Invitation Table Columns ====================
@@ -1121,6 +1151,18 @@ export default function SettingsUsersPage() {
         userName={statusTarget?.name || ''}
         targetStatus={statusTarget?.status || 'ACTIVE'}
         onConfirm={confirmStatusChange}
+      />
+
+      <ConfirmResetPasswordDialog
+        open={openResetPasswordDialog}
+        onOpenChange={(open) => {
+          setOpenResetPasswordDialog(open);
+          if (!open) setResetPasswordTarget(null);
+        }}
+        userName={resetPasswordTarget?.name || ''}
+        userEmail={resetPasswordTarget?.email || ''}
+        onConfirm={confirmResetPassword}
+        isSubmitting={resetPasswordStatus.isLoading}
       />
     </div>
   );

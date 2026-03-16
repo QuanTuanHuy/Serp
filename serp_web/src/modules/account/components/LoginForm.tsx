@@ -1,172 +1,153 @@
 /**
  * Authors: QuanTuanHuy
- * Description: Part of Serp Project - User login form
+ * Description: Part of Serp Project - Refined login form for workspace access
  */
 
 'use client';
 
-import React, { useState } from 'react';
+import Link from 'next/link';
+import { useCallback } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Loader2, Mail, Sparkles } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+
+import { Button } from '@/shared/components/ui/button';
+
 import { useAuth } from '../hooks/useAuth';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Button,
-  Input,
-  Label,
-} from '@/shared/components';
-import type { LoginFormData } from '../types';
+  AuthErrorAlert,
+  AuthInputField,
+  AuthPasswordField,
+} from './auth/auth-ui';
 
 interface LoginFormProps {
   onSuccess?: () => void;
   onSwitchToRegister?: () => void;
 }
 
-export const LoginForm: React.FC<LoginFormProps> = ({
+const loginSchema = z.object({
+  email: z.string().email('Please enter a valid email address.'),
+  password: z.string().min(6, 'Password must be at least 6 characters long.'),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
+
+const LOGIN_DEFAULT_VALUES: LoginFormValues = {
+  email: '',
+  password: '',
+};
+
+export const LoginForm = ({
   onSuccess,
   onSwitchToRegister,
-}) => {
+}: LoginFormProps) => {
   const { login, isLoading, error, clearError } = useAuth();
 
-  const [formData, setFormData] = useState<LoginFormData>({
-    email: '',
-    password: '',
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: LOGIN_DEFAULT_VALUES,
   });
 
-  const [validationErrors, setValidationErrors] = useState<
-    Partial<LoginFormData>
-  >({});
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = form;
 
-  // Form validation
-  const validateForm = (): boolean => {
-    const errors: Partial<LoginFormData> = {};
+  const isBusy = isLoading || isSubmitting;
 
-    if (!formData.email) {
-      errors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      errors.email = 'Please enter a valid email';
-    }
-
-    if (!formData.password) {
-      errors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters';
-    }
-
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  // Handle input change
-  const handleInputChange = (field: keyof LoginFormData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-
-    // Clear validation error for this field
-    if (validationErrors[field]) {
-      setValidationErrors((prev) => ({ ...prev, [field]: undefined }));
-    }
-
-    // Clear auth error
+  const handleFieldInteraction = useCallback(() => {
     if (error) {
       clearError();
     }
-  };
+  }, [clearError, error]);
 
-  // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
-    const result = await login(formData);
+  const onSubmit = handleSubmit(async (values) => {
+    const result = await login(values);
 
     if (result.success) {
       onSuccess?.();
     }
-  };
+  });
 
   return (
-    <Card className='w-full max-w-md mx-auto'>
-      <CardHeader className='text-center'>
-        <CardTitle className='text-2xl font-bold'>Welcome Back</CardTitle>
-        <CardDescription>
-          Sign in to your SERP account to continue
-        </CardDescription>
-      </CardHeader>
+    <form onSubmit={onSubmit} className='space-y-5'>
+      <div className='space-y-1'>
+        <h3 className='text-xl font-semibold tracking-[-0.03em] text-slate-950 dark:text-slate-50'>
+          Continue to your workspace
+        </h3>
+        <p className='text-sm leading-6 text-muted-foreground'>
+          Review approvals, tasks, and customer activity without losing your
+          flow.
+        </p>
+      </div>
 
-      <CardContent>
-        <form onSubmit={handleSubmit} className='space-y-4'>
-          {/* Email Field */}
-          <div className='space-y-2'>
-            <Label htmlFor='email'>Email</Label>
-            <Input
-              id='email'
-              type='email'
-              placeholder='Enter your email'
-              value={formData.email}
-              onChange={(e) => handleInputChange('email', e.target.value)}
-              className={validationErrors.email ? 'border-red-500' : ''}
-              disabled={isLoading}
-            />
-            {validationErrors.email && (
-              <p className='text-sm text-red-600'>{validationErrors.email}</p>
-            )}
-          </div>
+      <div className='grid gap-4'>
+        <AuthInputField
+          id='login-email'
+          type='email'
+          label='Work email'
+          placeholder='name@company.com'
+          autoComplete='email'
+          leadingIcon={Mail}
+          error={errors.email?.message}
+          disabled={isBusy}
+          {...register('email', { onChange: handleFieldInteraction })}
+        />
 
-          {/* Password Field */}
-          <div className='space-y-2'>
-            <Label htmlFor='password'>Password</Label>
-            <Input
-              id='password'
-              type='password'
-              placeholder='Enter your password'
-              value={formData.password}
-              onChange={(e) => handleInputChange('password', e.target.value)}
-              className={validationErrors.password ? 'border-red-500' : ''}
-              disabled={isLoading}
-            />
-            {validationErrors.password && (
-              <p className='text-sm text-red-600'>
-                {validationErrors.password}
-              </p>
-            )}
-          </div>
+        <AuthPasswordField
+          id='login-password'
+          label='Password'
+          placeholder='Enter your password'
+          autoComplete='current-password'
+          hint='Min. 6 characters'
+          error={errors.password?.message}
+          disabled={isBusy}
+          toggleLabel='Toggle password visibility'
+          {...register('password', { onChange: handleFieldInteraction })}
+        />
+      </div>
 
-          {/* Auth Error */}
-          {error && (
-            <div className='p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded'>
-              {error}
-            </div>
-          )}
+      {error ? (
+        <AuthErrorAlert title='Could not sign you in' message={error} />
+      ) : null}
 
-          {/* Submit Button */}
-          <Button type='submit' className='w-full' disabled={isLoading}>
-            {isLoading ? 'Signing in...' : 'Sign In'}
+      <Button
+        type='submit'
+        className='h-12 w-full rounded-2xl bg-slate-950 text-white shadow-[0_24px_40px_-24px_rgba(15,23,42,0.8)] hover:bg-slate-800 dark:bg-slate-50 dark:text-slate-950 dark:hover:bg-slate-200'
+        disabled={isBusy}
+      >
+        {isBusy ? (
+          <>
+            <Loader2 className='h-4 w-4 animate-spin' />
+            Signing in...
+          </>
+        ) : (
+          <>
+            Sign in to SERP
+            <Sparkles className='h-4 w-4' />
+          </>
+        )}
+      </Button>
+
+      <div className='space-y-3 text-center'>
+        <p className='text-sm text-muted-foreground'>
+          Need a brand new workspace? Create one in a guided setup.
+        </p>
+
+        {onSwitchToRegister ? (
+          <Button
+            type='button'
+            variant='ghost'
+            className='h-auto rounded-full px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/8'
+            onClick={onSwitchToRegister}
+            disabled={isBusy}
+          >
+            Create account
           </Button>
-
-          {/* Switch to Register */}
-          {onSwitchToRegister && (
-            <div className='text-center text-sm'>
-              <span className='text-muted-foreground'>
-                Don&apos;t have an account?{' '}
-              </span>
-              <Button
-                type='button'
-                variant='link'
-                className='p-0 h-auto font-normal'
-                onClick={onSwitchToRegister}
-                disabled={isLoading}
-              >
-                Sign up here
-              </Button>
-            </div>
-          )}
-        </form>
-      </CardContent>
-    </Card>
+        ) : null}
+      </div>
+    </form>
   );
 };

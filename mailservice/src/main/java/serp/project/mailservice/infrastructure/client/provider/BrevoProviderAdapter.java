@@ -174,9 +174,10 @@ public class BrevoProviderAdapter implements IEmailProviderPort {
         Map<String, Object> request = new HashMap<>();
         
         Map<String, String> sender = new HashMap<>();
-        sender.put("email", email.getFromEmail());
-        if (email.getFromName() != null && !email.getFromName().isEmpty()) {
-            sender.put("name", email.getFromName());
+        sender.put("email", resolveFromEmail(email));
+        String fromName = resolveFromName(email);
+        if (fromName != null && !fromName.isEmpty()) {
+            sender.put("name", fromName);
         }
         request.put("sender", sender);
         
@@ -251,5 +252,22 @@ public class BrevoProviderAdapter implements IEmailProviderPort {
         }
         
         return request;
+    }
+
+    private String resolveFromEmail(EmailEntity email) {
+        if (brevoProperties.getFrom() != null && !brevoProperties.getFrom().isBlank()) {
+            return brevoProperties.getFrom();
+        }
+        if (email.getFromEmail() != null && !email.getFromEmail().isBlank()) {
+            return email.getFromEmail();
+        }
+        throw new IllegalArgumentException("Brevo sender address is required");
+    }
+
+    private String resolveFromName(EmailEntity email) {
+        if (brevoProperties.getFromName() != null && !brevoProperties.getFromName().isBlank()) {
+            return brevoProperties.getFromName();
+        }
+        return email.getFromName();
     }
 }

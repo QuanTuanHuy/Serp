@@ -7,6 +7,7 @@ package serp.project.account.core.usecase;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.account.core.domain.constant.Constants;
@@ -21,8 +22,10 @@ import serp.project.account.core.domain.dto.response.UserDetailResponse;
 import serp.project.account.core.domain.dto.response.UserProfileResponse;
 import serp.project.account.core.domain.entity.DepartmentEntity;
 import serp.project.account.core.domain.entity.OrganizationEntity;
+import serp.project.account.core.domain.entity.PasswordResetRequestEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.UserEntity;
+import serp.project.account.core.domain.event.PasswordResetRequestedInternalEvent;
 import serp.project.account.core.domain.enums.RoleScope;
 import serp.project.account.core.domain.enums.UserStatus;
 import serp.project.account.core.domain.enums.UserType;
@@ -36,10 +39,15 @@ import serp.project.account.core.service.IUserDepartmentService;
 import serp.project.account.core.service.IUserModuleAccessService;
 import serp.project.account.core.service.IUserService;
 import serp.project.account.infrastructure.store.mapper.UserMapper;
+import serp.project.account.kernel.property.PasswordResetProperties;
 import serp.project.account.kernel.utils.CollectionUtils;
+import serp.project.account.kernel.utils.PasswordResetTokenUtils;
 import serp.project.account.kernel.utils.PaginationUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -62,9 +70,11 @@ public class UserUseCase {
     private final RoleUseCase roleUseCase;
 
     private final UserMapper userMapper;
+    private final PasswordResetProperties passwordResetProperties;
 
     private final ResponseUtils responseUtils;
     private final PaginationUtils paginationUtils;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> createUserForOrganization(Long tenantId, CreateUserForOrgRequest request) {
@@ -545,26 +555,78 @@ public class UserUseCase {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public GeneralResponse<?> resetUserPassword(Long organizationId, Long userId) {
+    public GeneralResponse<?> resetUserPassword(Long organizationId, Long userId, Long requestedBy) {
         try {
             UserEntity user = userService.getUserById(userId);
             if (user == null) {
-                return responseUtils.badRequest(Constants.ErrorMessage.USER_NOT_FOUND);
+                throw new AppException(Constants.ErrorMessage.USER_NOT_FOUND,
+                        Constants.HttpStatusCode.BAD_REQUEST);
             }
             if (!user.getPrimaryOrganizationId().equals(organizationId)) {
-                return responseUtils.forbidden(Constants.ErrorMessage.USER_NOT_IN_ORGANIZATION);
+                throw new AppException(Constants.ErrorMessage.USER_NOT_IN_ORGANIZATION,
+                        Constants.HttpStatusCode.FORBIDDEN);
+            }
+            if (!user.isActive()) {
+                throw new AppException("Cannot reset password for inactive or suspended user",
+                        Constants.HttpStatusCode.BAD_REQUEST);
             }
             if (user.getKeycloakId() == null) {
-                return responseUtils.badRequest("User does not have a Keycloak account");
+                throw new AppException("User does not have a Keycloak account",
+                        Constants.HttpStatusCode.BAD_REQUEST);
+            }
+            if (user.getEmail() == null || user.getEmail().isEmpty()) {
+                throw new AppException("User does not have an email address",
+                        Constants.HttpStatusCode.BAD_REQUEST);
             }
 
-            // TODO: Implement password reset flow
+            userService.invalidatePendingPasswordResetByUserId(userId);
+
+            long expirationMinutes = getPasswordResetExpirationMinutes();
+            String rawToken = PasswordResetTokenUtils.generateToken();
+            long expiresAt = Instant.now().plusSeconds(expirationMinutes * 60L).toEpochMilli();
+            PasswordResetRequestEntity resetRequest = userService.createPasswordResetRequest(
+                    userId,
+                    organizationId,
+                    user.getEmail(),
+                    requestedBy,
+                    PasswordResetTokenUtils.hashToken(rawToken),
+                    expiresAt);
+
+            eventPublisher.publishEvent(new PasswordResetRequestedInternalEvent(
+                    resetRequest.getId(),
+                    requestedBy,
+                    organizationId,
+                    user.getEmail(),
+                    user.getFullName(),
+                    buildPasswordResetLink(rawToken),
+                    expirationMinutes));
 
             return responseUtils.success("Password reset initiated successfully");
-        } catch (Exception e) {
+        } catch (AppException e) {
             log.error("Reset user password failed: {}", e.getMessage());
+            return responseUtils.error(e.getCode(), e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error occurred when resetting user password: {}", e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
+    }
+
+    private String buildPasswordResetLink(String token) {
+        String frontendResetUrl = passwordResetProperties.getFrontendResetUrl();
+        if (frontendResetUrl == null || frontendResetUrl.isBlank()) {
+            frontendResetUrl = "http://localhost:3000/auth/reset-password";
+        }
+
+        String separator = frontendResetUrl.contains("?") ? "&" : "?";
+        return frontendResetUrl + separator + "token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
+    }
+
+    private long getPasswordResetExpirationMinutes() {
+        Long expirationMinutes = passwordResetProperties.getExpirationMinutes();
+        if (expirationMinutes == null || expirationMinutes <= 0) {
+            return 60L;
+        }
+        return expirationMinutes;
     }
 
     public GeneralResponse<?> exportUsers(Long organizationId, String format) {

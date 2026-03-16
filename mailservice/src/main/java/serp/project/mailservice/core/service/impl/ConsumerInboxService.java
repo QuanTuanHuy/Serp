@@ -9,19 +9,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import lombok.RequiredArgsConstructor;
 import serp.project.mailservice.core.domain.enums.ConsumerInboxAcquireResult;
 import serp.project.mailservice.core.port.store.IConsumerInboxPort;
 import serp.project.mailservice.core.service.IConsumerInboxService;
 
 @Service
-@RequiredArgsConstructor
 public class ConsumerInboxService implements IConsumerInboxService {
 
     private final IConsumerInboxPort consumerInboxPort;
 
+    public ConsumerInboxService(IConsumerInboxPort consumerInboxPort) {
+        this.consumerInboxPort = consumerInboxPort;
+    }
+
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ConsumerInboxAcquireResult acquireForProcessing(
             String consumerGroup,
             String eventId,
