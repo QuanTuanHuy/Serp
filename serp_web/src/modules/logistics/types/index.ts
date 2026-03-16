@@ -126,10 +126,9 @@ export interface Facility {
   length: number;
   width: number;
   height: number;
-  capacity: number;
   tenantId: number;
   address?: Address;
-  default: boolean;
+  isDefault: boolean;
 }
 
 export interface FacilityCreationForm {
