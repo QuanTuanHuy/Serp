@@ -46,7 +46,7 @@ public class SendEmailRequest {
     private EmailType type;
     private EmailPriority priority;
     @Builder.Default
-    private EmailProvider provider = EmailProvider.SEND_GRID;
+    private EmailProvider provider = EmailProvider.JAVA_MAIL;
     private Map<String, Object> metadata;
 
     private List<AttachmentRequest> attachments;
