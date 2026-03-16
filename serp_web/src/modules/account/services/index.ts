@@ -10,6 +10,8 @@ export {
   useGetTokenMutation,
   useRefreshTokenMutation,
   useRevokeTokenMutation,
+  useValidatePasswordResetTokenQuery,
+  useConfirmPasswordResetMutation,
 } from './authApi';
 
 export {

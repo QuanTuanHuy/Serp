@@ -6,6 +6,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '../hooks/useAuth';
 import {
   Card,
@@ -134,6 +135,21 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                 {validationErrors.password}
               </p>
             )}
+            <div className='space-y-1 text-right'>
+              <Button
+                type='button'
+                variant='link'
+                className='h-auto p-0 text-xs text-muted-foreground'
+                asChild
+              >
+                <Link href='/auth/reset-password'>
+                  Already have a reset link?
+                </Link>
+              </Button>
+              <p className='text-xs text-muted-foreground'>
+                Need a new one? Contact your administrator.
+              </p>
+            </div>
           </div>
 
           {/* Auth Error */}

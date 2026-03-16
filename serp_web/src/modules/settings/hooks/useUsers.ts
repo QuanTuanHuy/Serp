@@ -120,7 +120,7 @@ export function useSettingsUsers() {
   const [changeStatus] = useUpdateUserStatusMutation();
   const [changeRoles] = useUpdateUserRolesMutation();
   const [changeType] = useUpdateUserTypeMutation();
-  const [resetPwd] = useResetUserPasswordMutation();
+  const [resetPwd, resetPasswordStatus] = useResetUserPasswordMutation();
   const [invite] = useInviteUserMutation();
   const [cancelInvite] = useCancelInvitationMutation();
   const [resendInvite] = useResendInvitationMutation();
@@ -325,6 +325,7 @@ export function useSettingsUsers() {
     updateRoles,
     updateUserType,
     resetPassword,
+    resetPasswordStatus,
     createStatus,
     // Invitation data & actions
     invitations,

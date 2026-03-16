@@ -33,6 +33,11 @@ export interface ChangePasswordRequest {
   newPassword: string;
 }
 
+export interface ResetPasswordFormData {
+  newPassword: string;
+  confirmPassword: string;
+}
+
 // Validation error types
 export interface FormFieldError {
   field: string;
