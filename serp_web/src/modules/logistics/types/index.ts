@@ -56,7 +56,7 @@ export interface Address {
   createdStamp: string;
   lastUpdatedStamp: string;
   tenantId: number;
-  default: boolean;
+  isDefault: boolean;
 }
 
 export interface AddressCreationForm {
@@ -66,7 +66,7 @@ export interface AddressCreationForm {
   latitude: number;
   longitude: number;
   fullAddress: string;
-  default?: boolean;
+  isDefault?: boolean;
 }
 
 export interface AddressUpdateForm {
@@ -74,7 +74,7 @@ export interface AddressUpdateForm {
   latitude?: number;
   longitude?: number;
   fullAddress?: string;
-  default?: boolean;
+  isDefault?: boolean;
 }
 
 // Category types
