@@ -7,3 +7,4 @@
 
 export * from './purchase-orders';
 export * from './purchase-orders/shipments';
+export * from './products';
