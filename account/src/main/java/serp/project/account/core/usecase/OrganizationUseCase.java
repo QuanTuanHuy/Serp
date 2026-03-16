@@ -5,27 +5,14 @@
 
 package serp.project.account.core.usecase;
 
-import java.util.List;
-
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
-import serp.project.account.core.domain.dto.request.CreateUserForOrgRequest;
 import serp.project.account.core.domain.dto.request.GetOrganizationParams;
-import serp.project.account.core.domain.entity.RoleEntity;
-import serp.project.account.core.domain.enums.RoleScope;
-import serp.project.account.core.domain.enums.UserStatus;
-import serp.project.account.core.exception.AppException;
-import serp.project.account.core.service.IKeycloakUserService;
 import serp.project.account.core.service.IOrganizationService;
-import serp.project.account.core.service.IRoleService;
-import serp.project.account.core.service.IUserService;
-import serp.project.account.infrastructure.store.mapper.UserMapper;
-import serp.project.account.kernel.utils.CollectionUtils;
 import serp.project.account.kernel.utils.PaginationUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
 
@@ -34,14 +21,8 @@ import serp.project.account.kernel.utils.ResponseUtils;
 @Slf4j
 public class OrganizationUseCase {
     private final IOrganizationService organizationService;
-    private final IUserService userService;
-    private final IRoleService roleService;
-    private final IKeycloakUserService keycloakUserService;
-
     private final ResponseUtils responseUtils;
     private final PaginationUtils paginationUtils;
-
-    private final UserMapper userMapper;
 
     public GeneralResponse<?> getOrganizations(GetOrganizationParams params) {
         try {

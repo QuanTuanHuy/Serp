@@ -20,7 +20,7 @@ import serp.project.mailservice.kernel.utils.JsonUtils;
 @Component
 public class EmailSendRequestedHandler implements IKafkaEventHandlerStrategy {
 
-    private static final String EVENT_TYPE = "EMAIL_SEND_REQUESTED";
+    private static final String EVENT_TYPE = "email.send.requested";
 
     private final EmailSendingUseCases emailSendingUseCases;
     private final JsonUtils jsonUtils;

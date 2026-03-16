@@ -20,6 +20,8 @@ public interface IEmailTemplatePort {
 
     Optional<EmailTemplateEntity> findByTenantIdAndCode(Long tenantId, String code);
 
+    Optional<EmailTemplateEntity> findByCodeAndIsGlobalTrue(String code);
+
     List<EmailTemplateEntity> findByTenantId(Long tenantId, int page, int size);
 
     List<EmailTemplateEntity> findGlobalTemplates();
