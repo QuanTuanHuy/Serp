@@ -1,35 +1,27 @@
 /**
  * Authors: QuanTuanHuy
- * Description: Part of Serp Project - Password reset confirmation form
+ * Description: Part of Serp Project - Password reset confirmation form with improved feedback
  */
 
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import {
-  AlertCircle,
-  CheckCircle2,
-  Eye,
-  EyeOff,
-  Loader2,
-  ShieldCheck,
-} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, Loader2, ShieldCheck } from 'lucide-react';
 
 import { getErrorMessage, isSuccessResponse } from '@/lib/store/api';
 import {
   Alert,
   AlertDescription,
   AlertTitle,
+  Badge,
   Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-  Input,
-  Label,
-} from '@/shared/components';
+} from '@/shared/components/ui';
 import { useNotification } from '@/shared/hooks';
 
 import {
@@ -37,16 +29,15 @@ import {
   useValidatePasswordResetTokenQuery,
 } from '../services';
 import type { ResetPasswordFormData } from '../types';
+import { evaluatePassword } from '../utils/password-rules';
+import {
+  AuthErrorAlert,
+  AuthPasswordField,
+  PasswordStrengthPanel,
+} from './auth/auth-ui';
 
 interface ResetPasswordFormProps {
   token: string | null;
-}
-
-interface PasswordRules {
-  minLength: boolean;
-  hasUppercase: boolean;
-  hasLowercase: boolean;
-  hasNumber: boolean;
 }
 
 const EMPTY_FORM: ResetPasswordFormData = {
@@ -54,21 +45,10 @@ const EMPTY_FORM: ResetPasswordFormData = {
   confirmPassword: '',
 };
 
-function evaluatePassword(value: string): PasswordRules {
-  return {
-    minLength: value.length >= 8,
-    hasUppercase: /[A-Z]/.test(value),
-    hasLowercase: /[a-z]/.test(value),
-    hasNumber: /\d/.test(value),
-  };
-}
-
 export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
   const notification = useNotification();
 
   const [formData, setFormData] = useState<ResetPasswordFormData>(EMPTY_FORM);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
 
@@ -89,11 +69,12 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
     [formData.newPassword]
   );
 
+  const hasStrongPassword = Object.values(rules).every(Boolean);
+  const passwordMatches =
+    formData.confirmPassword.length > 0 &&
+    formData.newPassword === formData.confirmPassword;
   const canSubmit =
-    Boolean(token) &&
-    Object.values(rules).every(Boolean) &&
-    formData.newPassword === formData.confirmPassword &&
-    !completed;
+    Boolean(token) && hasStrongPassword && passwordMatches && !completed;
 
   const isTokenValid = Boolean(
     token && data && isSuccessResponse(data) && data.data?.valid
@@ -101,7 +82,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
 
   const validationMessage = useMemo(() => {
     if (!token) {
-      return 'This password reset link is missing a token. Please open the link from your email again.';
+      return 'This password reset link is missing a token. Please reopen the email from your administrator.';
     }
 
     if (validationError) {
@@ -120,8 +101,8 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
   }, [formData.newPassword, formData.confirmPassword]);
 
   const handleChange = (field: keyof ResetPasswordFormData, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
+    setFormData((current) => ({
+      ...current,
       [field]: value,
     }));
   };
@@ -134,14 +115,14 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
       return;
     }
 
-    if (!Object.values(rules).every(Boolean)) {
+    if (!hasStrongPassword) {
       setFormError(
-        'Please choose a stronger password that satisfies all rules.'
+        'Please choose a stronger password that satisfies every security rule.'
       );
       return;
     }
 
-    if (formData.newPassword !== formData.confirmPassword) {
+    if (!passwordMatches) {
       setFormError('Password confirmation does not match.');
       return;
     }
@@ -167,156 +148,124 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
   };
 
   return (
-    <Card className='mx-auto w-full max-w-md border-border/70 shadow-lg'>
-      <CardHeader className='space-y-3 text-center'>
-        <div className='mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary'>
-          <ShieldCheck className='h-6 w-6' />
+    <Card className='mx-auto w-full max-w-[34rem] rounded-[2rem] border-white/70 bg-white/88 py-0 shadow-[0_40px_120px_-48px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/78'>
+      <CardHeader className='space-y-4 border-b border-border/60 px-6 py-6 text-left sm:px-8'>
+        <div className='flex items-center gap-3'>
+          <div className='flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary'>
+            <ShieldCheck className='h-6 w-6' />
+          </div>
+          <div>
+            <Badge className='rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary'>
+              Secure recovery
+            </Badge>
+          </div>
         </div>
-        <div className='space-y-1'>
-          <CardTitle className='text-2xl'>Reset your password</CardTitle>
-          <CardDescription>
-            Create a new password to secure your SERP workspace.
+
+        <div className='space-y-2'>
+          <CardTitle className='text-2xl tracking-[-0.03em]'>
+            Reset your password
+          </CardTitle>
+          <CardDescription className='max-w-lg text-sm leading-6'>
+            Create a strong password, invalidate previous sessions, and return
+            to your SERP workspace safely.
           </CardDescription>
         </div>
       </CardHeader>
 
-      <CardContent className='space-y-4'>
+      <CardContent className='space-y-5 px-6 py-6 sm:px-8 sm:py-8'>
         {isValidating ? (
-          <div className='flex min-h-56 flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground'>
+          <div className='flex min-h-72 flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground'>
             <Loader2 className='h-5 w-5 animate-spin text-primary' />
             <p>Verifying your reset link...</p>
           </div>
         ) : completed ? (
           <div className='space-y-4'>
-            <Alert>
-              <CheckCircle2 className='h-4 w-4' />
+            <Alert className='rounded-2xl border-emerald-500/20 bg-emerald-500/8'>
+              <CheckCircle2 className='h-4 w-4 text-emerald-600 dark:text-emerald-400' />
               <AlertTitle>Password updated</AlertTitle>
               <AlertDescription>
                 Your password has been reset successfully. Return to sign in and
                 continue using SERP.
               </AlertDescription>
             </Alert>
-            <Button className='w-full' asChild>
+
+            <Button className='h-12 w-full rounded-2xl' asChild>
               <Link href='/auth'>Back to sign in</Link>
             </Button>
           </div>
         ) : !isTokenValid ? (
           <div className='space-y-4'>
-            <Alert variant='destructive'>
-              <AlertCircle className='h-4 w-4' />
-              <AlertTitle>Link unavailable</AlertTitle>
-              <AlertDescription>
-                {validationMessage ||
-                  'This password reset link is invalid or has expired. Request a new email from your administrator.'}
-              </AlertDescription>
-            </Alert>
-            <div className='flex flex-col gap-2 sm:flex-row'>
-              <Button variant='outline' className='flex-1' asChild>
+            <AuthErrorAlert
+              title='Link unavailable'
+              message={
+                validationMessage ||
+                'This password reset link is invalid or has expired. Ask your administrator for a new email.'
+              }
+            />
+
+            <div className='flex flex-col gap-3 sm:flex-row'>
+              <Button
+                variant='outline'
+                className='h-11 flex-1 rounded-2xl border-border/70 bg-background/70'
+                asChild
+              >
                 <Link href='/auth'>Go to sign in</Link>
               </Button>
-              <Button className='flex-1' asChild>
+              <Button className='h-11 flex-1 rounded-2xl' asChild>
                 <Link href='/auth/reset-password'>Try another link</Link>
               </Button>
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className='space-y-4'>
-            <div className='space-y-2'>
-              <Label htmlFor='newPassword'>New password</Label>
-              <div className='relative'>
-                <Input
-                  id='newPassword'
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.newPassword}
-                  onChange={(event) =>
-                    handleChange('newPassword', event.target.value)
-                  }
-                  placeholder='Create a strong password'
-                  disabled={isSubmitting}
-                  autoComplete='new-password'
-                />
-                <Button
-                  type='button'
-                  variant='ghost'
-                  size='icon'
-                  className='absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground'
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? (
-                    <EyeOff className='h-4 w-4' />
-                  ) : (
-                    <Eye className='h-4 w-4' />
-                  )}
-                </Button>
-              </div>
-            </div>
+          <form onSubmit={handleSubmit} className='space-y-5'>
+            <AuthPasswordField
+              id='reset-new-password'
+              label='New password'
+              placeholder='Create a strong password'
+              autoComplete='new-password'
+              hint='8+ chars, upper/lowercase, number'
+              error={undefined}
+              disabled={isSubmitting}
+              toggleLabel='Toggle new password visibility'
+              value={formData.newPassword}
+              onChange={(event) =>
+                handleChange('newPassword', event.target.value)
+              }
+            />
 
-            <div className='space-y-2'>
-              <Label htmlFor='confirmPassword'>Confirm password</Label>
-              <div className='relative'>
-                <Input
-                  id='confirmPassword'
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={formData.confirmPassword}
-                  onChange={(event) =>
-                    handleChange('confirmPassword', event.target.value)
-                  }
-                  placeholder='Repeat your new password'
-                  disabled={isSubmitting}
-                  autoComplete='new-password'
-                />
-                <Button
-                  type='button'
-                  variant='ghost'
-                  size='icon'
-                  className='absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground'
-                  onClick={() => setShowConfirmPassword((prev) => !prev)}
-                  aria-label={
-                    showConfirmPassword
-                      ? 'Hide confirmation'
-                      : 'Show confirmation'
-                  }
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className='h-4 w-4' />
-                  ) : (
-                    <Eye className='h-4 w-4' />
-                  )}
-                </Button>
-              </div>
-            </div>
+            <AuthPasswordField
+              id='reset-confirm-password'
+              label='Confirm password'
+              placeholder='Repeat your new password'
+              autoComplete='new-password'
+              error={
+                formData.confirmPassword.length > 0 && !passwordMatches
+                  ? 'Password confirmation does not match.'
+                  : undefined
+              }
+              disabled={isSubmitting}
+              toggleLabel='Toggle confirm password visibility'
+              value={formData.confirmPassword}
+              onChange={(event) =>
+                handleChange('confirmPassword', event.target.value)
+              }
+            />
 
-            <div className='rounded-xl border border-border/70 bg-muted/40 p-4'>
-              <p className='mb-3 text-sm font-medium'>Password requirements</p>
-              <div className='grid gap-2 text-sm text-muted-foreground'>
-                <PasswordRule
-                  label='At least 8 characters'
-                  valid={rules.minLength}
-                />
-                <PasswordRule
-                  label='One uppercase letter'
-                  valid={rules.hasUppercase}
-                />
-                <PasswordRule
-                  label='One lowercase letter'
-                  valid={rules.hasLowercase}
-                />
-                <PasswordRule label='One number' valid={rules.hasNumber} />
-              </div>
-            </div>
+            <PasswordStrengthPanel
+              password={formData.newPassword}
+              rules={rules}
+            />
 
-            {formError && (
-              <Alert variant='destructive'>
-                <AlertCircle className='h-4 w-4' />
-                <AlertTitle>Could not update password</AlertTitle>
-                <AlertDescription>{formError}</AlertDescription>
-              </Alert>
-            )}
+            {formError ? (
+              <AuthErrorAlert
+                title='Could not update password'
+                message={formError}
+              />
+            ) : null}
 
             <Button
               type='submit'
-              className='w-full'
+              className='h-12 w-full rounded-2xl'
               disabled={!canSubmit || isSubmitting}
             >
               {isSubmitting ? (
@@ -329,28 +278,13 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
               )}
             </Button>
 
-            <p className='text-center text-xs text-muted-foreground'>
-              Need help? Contact your organization administrator for a new reset
-              email.
+            <p className='text-center text-xs leading-6 text-muted-foreground'>
+              Need a new link? Contact your organization administrator for a new
+              reset email.
             </p>
           </form>
         )}
       </CardContent>
     </Card>
-  );
-}
-
-function PasswordRule({ label, valid }: { label: string; valid: boolean }) {
-  return (
-    <div className='flex items-center gap-2'>
-      <CheckCircle2
-        className={
-          valid
-            ? 'h-4 w-4 text-emerald-600'
-            : 'h-4 w-4 text-muted-foreground/50'
-        }
-      />
-      <span className={valid ? 'text-foreground' : undefined}>{label}</span>
-    </div>
   );
 }

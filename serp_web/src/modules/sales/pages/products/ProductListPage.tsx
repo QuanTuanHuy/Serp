@@ -50,8 +50,9 @@ export const ProductListPage: React.FC = () => {
   });
 
   const [searchTerm, setSearchTerm] = React.useState(filters.query || '');
-  const [selectedProduct, setSelectedProduct] =
-    React.useState<Product | null>(null);
+  const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(
+    null
+  );
   const [editDialogOpen, setEditDialogOpen] = React.useState(false);
 
   const handleSearch = () => {

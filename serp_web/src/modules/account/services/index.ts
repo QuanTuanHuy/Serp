@@ -16,6 +16,7 @@ export {
 
 export {
   useGetCurrentUserQuery,
+  useLazyGetCurrentUserQuery,
   useGetUserPermissionsQuery,
   useGetUserMenusQuery,
 } from './userApi';

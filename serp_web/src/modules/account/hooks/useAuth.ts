@@ -16,6 +16,7 @@ import {
   useRefreshTokenMutation,
   useRevokeTokenMutation,
   useGetCurrentUserQuery,
+  useLazyGetCurrentUserQuery,
 } from '../services';
 import {
   setTokens,
@@ -30,6 +31,34 @@ import {
   clearProfile,
 } from '../store';
 import type { LoginRequest, RegisterRequest, User } from '../types';
+
+function createFallbackUser({
+  email,
+  firstName = '',
+  lastName = '',
+  organizationName,
+}: {
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  organizationName?: string;
+}): User {
+  const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
+  const timestamp = new Date().toISOString();
+
+  return {
+    id: 1,
+    email,
+    firstName,
+    lastName,
+    fullName: fullName || 'User',
+    roles: ['USER'],
+    organizationName,
+    isActive: true,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+}
 
 export const useAuth = () => {
   const dispatch = useAppDispatch();
@@ -49,6 +78,7 @@ export const useAuth = () => {
   const [registerMutation] = useRegisterMutation();
   const [refreshTokenMutation] = useRefreshTokenMutation();
   const [revokeTokenMutation] = useRevokeTokenMutation();
+  const [fetchCurrentUser] = useLazyGetCurrentUserQuery();
 
   const {
     data: currentUserData,
@@ -68,6 +98,32 @@ export const useAuth = () => {
     }
   }, [currentUserData, isAuthenticated, dispatch]);
 
+  const hydrateCurrentUser = useCallback(
+    async (fallbackUser: User, actionLabel: 'login' | 'registration') => {
+      try {
+        const profileResponse = await fetchCurrentUser(undefined).unwrap();
+
+        if (isSuccessResponse(profileResponse) && profileResponse.data) {
+          dispatch(setProfile(profileResponse.data));
+          return profileResponse.data;
+        }
+
+        throw new Error(
+          profileResponse.message ||
+            `Failed to load the user profile after ${actionLabel}.`
+        );
+      } catch (userError) {
+        console.warn(
+          `Failed to fetch user profile after ${actionLabel}:`,
+          userError
+        );
+        dispatch(setProfile(fallbackUser));
+        return fallbackUser;
+      }
+    },
+    [dispatch, fetchCurrentUser]
+  );
+
   // === AUTHENTICATION ACTIONS ===
 
   const login = useCallback(
@@ -84,34 +140,16 @@ export const useAuth = () => {
             })
           );
 
-          // Try to fetch user profile after login
-          try {
-            await refetchUser();
-          } catch (userError) {
-            console.warn(
-              'Failed to fetch user profile after login:',
-              userError
-            );
-            // Create a basic user object from token if profile fetch fails
-            const mockUser: User = {
-              id: 1,
-              email: credentials.email,
-              firstName: '',
-              lastName: '',
-              fullName: 'User',
-              roles: ['USER'],
-              isActive: true,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            };
-            dispatch(setProfile(mockUser));
-          }
+          await hydrateCurrentUser(
+            createFallbackUser({ email: credentials.email }),
+            'login'
+          );
 
           notification.success('Login successful!', {
-            description: `Welcome back!`,
+            description: 'Welcome back.',
           });
 
-          router.push('/home');
+          router.replace('/home');
 
           return { success: true, data: result.data };
         } else {
@@ -128,7 +166,7 @@ export const useAuth = () => {
         dispatch(setLoading(false));
       }
     },
-    [loginMutation, dispatch, notification, refetchUser, router]
+    [dispatch, hydrateCurrentUser, loginMutation, notification, router]
   );
 
   const register = useCallback(
@@ -145,32 +183,21 @@ export const useAuth = () => {
             })
           );
 
-          // Try to fetch user profile after registration
-          try {
-            await refetchUser();
-          } catch (userError) {
-            console.warn(
-              'Failed to fetch user profile after registration:',
-              userError
-            );
-            // Create a basic user object if profile fetch fails
-            const mockUser: User = {
-              id: 1,
+          await hydrateCurrentUser(
+            createFallbackUser({
               email: userData.email,
               firstName: userData.firstName,
               lastName: userData.lastName,
-              fullName: `${userData.firstName} ${userData.lastName}`,
-              roles: ['USER'],
-              isActive: true,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            };
-            dispatch(setProfile(mockUser));
-          }
+              organizationName: userData.organization.name,
+            }),
+            'registration'
+          );
 
           notification.success('Registration successful!', {
-            description: `Welcome to SERP, ${userData.firstName} ${userData.lastName}!`,
+            description: `Welcome to SERP, ${userData.firstName} ${userData.lastName}.`,
           });
+
+          router.replace('/home');
 
           return { success: true, data: result.data };
         } else {
@@ -187,7 +214,7 @@ export const useAuth = () => {
         dispatch(setLoading(false));
       }
     },
-    [registerMutation, dispatch, notification, refetchUser, router]
+    [dispatch, hydrateCurrentUser, notification, registerMutation, router]
   );
 
   const logout = useCallback(
@@ -209,7 +236,7 @@ export const useAuth = () => {
           notification.success('Logged out successfully');
         }
 
-        router.push('/auth');
+        router.replace('/auth');
       }
     },
     [auth.refreshToken, revokeTokenMutation, dispatch, notification, router]
@@ -244,7 +271,11 @@ export const useAuth = () => {
       dispatch(clearProfile());
       return false;
     }
-  }, [auth.refreshToken, refreshTokenMutation, dispatch, router]);
+  }, [auth.refreshToken, refreshTokenMutation, dispatch]);
+
+  const clearErrorState = useCallback(() => {
+    dispatch(setError(null));
+  }, [dispatch]);
 
   return {
     // State
@@ -262,6 +293,6 @@ export const useAuth = () => {
     refetchUser,
 
     // Utilities
-    clearError: () => dispatch(setError(null)),
+    clearError: clearErrorState,
   };
 };

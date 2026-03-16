@@ -1,287 +1,268 @@
 /**
  * Authors: QuanTuanHuy
- * Description: Part of Serp Project - User registration form
+ * Description: Part of Serp Project - Guided registration form for new organizations
  */
 
 'use client';
 
-import React, { useState } from 'react';
+import { useCallback, useMemo } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Building2, Loader2, Mail, User2, Wand2 } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+
+import { Button } from '@/shared/components/ui/button';
+
 import { useAuth } from '../hooks/useAuth';
+import { evaluatePassword } from '../utils/password-rules';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Button,
-  Input,
-  Label,
-} from '@/shared/components';
-import type { RegisterFormData } from '../types';
+  AuthErrorAlert,
+  AuthInputField,
+  AuthPasswordField,
+  PasswordStrengthPanel,
+} from './auth/auth-ui';
 
 interface RegisterFormProps {
   onSuccess?: () => void;
   onSwitchToLogin?: () => void;
 }
 
-export const RegisterForm: React.FC<RegisterFormProps> = ({
-  onSuccess,
-  onSwitchToLogin,
-}) => {
-  const { register, isLoading, error, clearError } = useAuth();
-
-  const [formData, setFormData] = useState<RegisterFormData>({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    firstName: '',
-    lastName: '',
-    organizationName: '',
+const registerSchema = z
+  .object({
+    firstName: z
+      .string()
+      .trim()
+      .min(2, 'First name must be at least 2 characters long.'),
+    lastName: z
+      .string()
+      .trim()
+      .min(2, 'Last name must be at least 2 characters long.'),
+    email: z.string().email('Please enter a valid email address.'),
+    password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters long.')
+      .regex(/[A-Z]/, 'Password must include at least one uppercase letter.')
+      .regex(/[a-z]/, 'Password must include at least one lowercase letter.')
+      .regex(/\d/, 'Password must include at least one number.'),
+    confirmPassword: z.string().min(1, 'Please confirm your password.'),
+    organizationName: z
+      .string()
+      .trim()
+      .min(2, 'Organization name must be at least 2 characters long.'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    path: ['confirmPassword'],
+    message: 'Passwords do not match.',
   });
 
-  const [validationErrors, setValidationErrors] = useState<
-    Partial<RegisterFormData>
-  >({});
+type RegisterFormValues = z.infer<typeof registerSchema>;
 
-  // Form validation
-  const validateForm = (): boolean => {
-    const errors: Partial<RegisterFormData> = {};
+const REGISTER_DEFAULT_VALUES: RegisterFormValues = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+  organizationName: '',
+};
 
-    if (!formData.firstName) {
-      errors.firstName = 'First name is required';
-    } else if (formData.firstName.length < 2) {
-      errors.firstName = 'First name must be at least 2 characters';
-    }
+const REGISTRATION_BENEFITS = [
+  'Create your organization and owner account together',
+  'Use a secure password with live strength feedback',
+  'Land directly in your workspace after setup',
+] as const;
 
-    if (!formData.lastName) {
-      errors.lastName = 'Last name is required';
-    } else if (formData.lastName.length < 2) {
-      errors.lastName = 'Last name must be at least 2 characters';
-    }
+export const RegisterForm = ({
+  onSuccess,
+  onSwitchToLogin,
+}: RegisterFormProps) => {
+  const { register: registerAccount, isLoading, error, clearError } = useAuth();
 
-    if (!formData.email) {
-      errors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      errors.email = 'Please enter a valid email';
-    }
+  const form = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: REGISTER_DEFAULT_VALUES,
+    mode: 'onChange',
+  });
 
-    if (!formData.password) {
-      errors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters';
-    }
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitting },
+  } = form;
 
-    if (!formData.confirmPassword) {
-      errors.confirmPassword = 'Please confirm your password';
-    } else if (formData.password !== formData.confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match';
-    }
+  const passwordValue = watch('password');
+  const passwordRules = useMemo(
+    () => evaluatePassword(passwordValue),
+    [passwordValue]
+  );
+  const isBusy = isLoading || isSubmitting;
 
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  // Handle input change
-  const handleInputChange = (
-    field: keyof RegisterFormData,
-    value: string | number | undefined
-  ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-
-    if (validationErrors[field]) {
-      setValidationErrors((prev) => ({ ...prev, [field]: undefined }));
-    }
-
+  const handleFieldInteraction = useCallback(() => {
     if (error) {
       clearError();
     }
-  };
+  }, [clearError, error]);
 
-  // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
-    const result = await register({
-      email: formData.email,
-      password: formData.password,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
+  const onSubmit = handleSubmit(async (values) => {
+    const result = await registerAccount({
+      email: values.email,
+      password: values.password,
+      firstName: values.firstName,
+      lastName: values.lastName,
       organization: {
-        name: formData.organizationName,
+        name: values.organizationName,
       },
     });
 
     if (result.success) {
       onSuccess?.();
     }
-  };
+  });
 
   return (
-    <Card className='w-full max-w-md mx-auto'>
-      <CardHeader className='text-center'>
-        <CardTitle className='text-2xl font-bold'>Create Account</CardTitle>
-        <CardDescription>
-          Join SERP to manage your business efficiently
-        </CardDescription>
-      </CardHeader>
+    <form onSubmit={onSubmit} className='space-y-5'>
+      <div className='space-y-1'>
+        <h3 className='text-xl font-semibold tracking-[-0.03em] text-slate-950 dark:text-slate-50'>
+          Start a new operational workspace
+        </h3>
+        <p className='text-sm leading-6 text-muted-foreground'>
+          Set up your owner account, create your organization, and move straight
+          into SERP with a secure onboarding flow.
+        </p>
+      </div>
 
-      <CardContent>
-        <form onSubmit={handleSubmit} className='space-y-4'>
-          {/* First Name Field */}
-          <div className='space-y-2'>
-            <Label htmlFor='firstName'>First Name</Label>
-            <Input
-              id='firstName'
-              type='text'
-              placeholder='Enter your first name'
-              value={formData.firstName}
-              onChange={(e) => handleInputChange('firstName', e.target.value)}
-              className={validationErrors.firstName ? 'border-red-500' : ''}
-              disabled={isLoading}
-            />
-            {validationErrors.firstName && (
-              <p className='text-sm text-red-600'>
-                {validationErrors.firstName}
-              </p>
-            )}
-          </div>
+      <div className='grid gap-4 sm:grid-cols-2'>
+        <AuthInputField
+          id='register-first-name'
+          label='First name'
+          placeholder='Linh'
+          autoComplete='given-name'
+          leadingIcon={User2}
+          error={errors.firstName?.message}
+          disabled={isBusy}
+          {...register('firstName', { onChange: handleFieldInteraction })}
+        />
 
-          {/* Last Name Field */}
-          <div className='space-y-2'>
-            <Label htmlFor='lastName'>Last Name</Label>
-            <Input
-              id='lastName'
-              type='text'
-              placeholder='Enter your last name'
-              value={formData.lastName}
-              onChange={(e) => handleInputChange('lastName', e.target.value)}
-              className={validationErrors.lastName ? 'border-red-500' : ''}
-              disabled={isLoading}
-            />
-            {validationErrors.lastName && (
-              <p className='text-sm text-red-600'>
-                {validationErrors.lastName}
-              </p>
-            )}
-          </div>
+        <AuthInputField
+          id='register-last-name'
+          label='Last name'
+          placeholder='Nguyen'
+          autoComplete='family-name'
+          leadingIcon={User2}
+          error={errors.lastName?.message}
+          disabled={isBusy}
+          {...register('lastName', { onChange: handleFieldInteraction })}
+        />
+      </div>
 
-          {/* Email Field */}
-          <div className='space-y-2'>
-            <Label htmlFor='email'>Email</Label>
-            <Input
-              id='email'
-              type='email'
-              placeholder='Enter your email'
-              value={formData.email}
-              onChange={(e) => handleInputChange('email', e.target.value)}
-              className={validationErrors.email ? 'border-red-500' : ''}
-              disabled={isLoading}
-            />
-            {validationErrors.email && (
-              <p className='text-sm text-red-600'>{validationErrors.email}</p>
-            )}
-          </div>
+      <div className='grid gap-4'>
+        <AuthInputField
+          id='register-email'
+          type='email'
+          label='Work email'
+          placeholder='founder@company.com'
+          autoComplete='email'
+          leadingIcon={Mail}
+          error={errors.email?.message}
+          disabled={isBusy}
+          {...register('email', { onChange: handleFieldInteraction })}
+        />
 
-          {/* Password Field */}
-          <div className='space-y-2'>
-            <Label htmlFor='password'>Password</Label>
-            <Input
-              id='password'
-              type='password'
-              placeholder='Create a password'
-              value={formData.password}
-              onChange={(e) => handleInputChange('password', e.target.value)}
-              className={validationErrors.password ? 'border-red-500' : ''}
-              disabled={isLoading}
-            />
-            {validationErrors.password && (
-              <p className='text-sm text-red-600'>
-                {validationErrors.password}
-              </p>
-            )}
-          </div>
+        <AuthInputField
+          id='register-organization'
+          label='Organization name'
+          placeholder='Northwind Operations'
+          autoComplete='organization'
+          leadingIcon={Building2}
+          error={errors.organizationName?.message}
+          disabled={isBusy}
+          {...register('organizationName', {
+            onChange: handleFieldInteraction,
+          })}
+        />
 
-          {/* Confirm Password Field */}
-          <div className='space-y-2'>
-            <Label htmlFor='confirmPassword'>Confirm Password</Label>
-            <Input
-              id='confirmPassword'
-              type='password'
-              placeholder='Confirm your password'
-              value={formData.confirmPassword}
-              onChange={(e) =>
-                handleInputChange('confirmPassword', e.target.value)
-              }
-              className={
-                validationErrors.confirmPassword ? 'border-red-500' : ''
-              }
-              disabled={isLoading}
-            />
-            {validationErrors.confirmPassword && (
-              <p className='text-sm text-red-600'>
-                {validationErrors.confirmPassword}
-              </p>
-            )}
-          </div>
+        <AuthPasswordField
+          id='register-password'
+          label='Create password'
+          placeholder='Create a strong password'
+          autoComplete='new-password'
+          hint='8+ chars, upper/lowercase, number'
+          error={errors.password?.message}
+          disabled={isBusy}
+          toggleLabel='Toggle password visibility'
+          {...register('password', { onChange: handleFieldInteraction })}
+        />
 
-          {/* Organization Name Field */}
-          <div className='space-y-2'>
-            <Label htmlFor='organizationName'>Organization Name</Label>
-            <Input
-              id='organizationName'
-              type='text'
-              placeholder='Enter your organization name'
-              value={formData.organizationName}
-              onChange={(e) =>
-                handleInputChange('organizationName', e.target.value)
-              }
-              className={
-                validationErrors.organizationName ? 'border-red-500' : ''
-              }
-              disabled={isLoading}
-            />
-            {validationErrors.organizationName && (
-              <p className='text-sm text-red-600'>
-                {validationErrors.organizationName}
-              </p>
-            )}
-          </div>
+        <AuthPasswordField
+          id='register-confirm-password'
+          label='Confirm password'
+          placeholder='Repeat your password'
+          autoComplete='new-password'
+          error={errors.confirmPassword?.message}
+          disabled={isBusy}
+          toggleLabel='Toggle confirm password visibility'
+          {...register('confirmPassword', { onChange: handleFieldInteraction })}
+        />
+      </div>
 
-          {/* Auth Error */}
-          {error && (
-            <div className='p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded'>
-              {error}
+      <PasswordStrengthPanel password={passwordValue} rules={passwordRules} />
+
+      <div className='rounded-2xl border border-border/60 bg-muted/30 p-4'>
+        <p className='text-sm font-semibold text-foreground'>
+          What happens next
+        </p>
+        <div className='mt-3 grid gap-2'>
+          {REGISTRATION_BENEFITS.map((benefit) => (
+            <div
+              key={benefit}
+              className='rounded-xl bg-background/70 px-3 py-2 text-sm text-muted-foreground'
+            >
+              {benefit}
             </div>
-          )}
+          ))}
+        </div>
+      </div>
 
-          {/* Submit Button */}
-          <Button type='submit' className='w-full' disabled={isLoading}>
-            {isLoading ? 'Creating account...' : 'Create Account'}
+      {error ? (
+        <AuthErrorAlert title='Could not create your account' message={error} />
+      ) : null}
+
+      <Button
+        type='submit'
+        className='h-12 w-full rounded-2xl bg-[linear-gradient(135deg,_rgb(8,145,178)_0%,_rgb(14,165,233)_55%,_rgb(245,158,11)_100%)] text-slate-950 shadow-[0_24px_40px_-24px_rgba(14,165,233,0.9)] hover:opacity-95'
+        disabled={isBusy}
+      >
+        {isBusy ? (
+          <>
+            <Loader2 className='h-4 w-4 animate-spin' />
+            Creating workspace...
+          </>
+        ) : (
+          <>
+            Create account
+            <Wand2 className='h-4 w-4' />
+          </>
+        )}
+      </Button>
+
+      <div className='space-y-3 text-center'>
+        <p className='text-sm text-muted-foreground'>
+          Already have access to a workspace? Use your existing credentials.
+        </p>
+
+        {onSwitchToLogin ? (
+          <Button
+            type='button'
+            variant='ghost'
+            className='h-auto rounded-full px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/8'
+            onClick={onSwitchToLogin}
+            disabled={isBusy}
+          >
+            Back to sign in
           </Button>
-
-          {/* Switch to Login */}
-          {onSwitchToLogin && (
-            <div className='text-center text-sm'>
-              <span className='text-muted-foreground'>
-                Already have an account?{' '}
-              </span>
-              <Button
-                type='button'
-                variant='link'
-                className='p-0 h-auto font-normal'
-                onClick={onSwitchToLogin}
-                disabled={isLoading}
-              >
-                Sign in here
-              </Button>
-            </div>
-          )}
-        </form>
-      </CardContent>
-    </Card>
+        ) : null}
+      </div>
+    </form>
   );
 };
