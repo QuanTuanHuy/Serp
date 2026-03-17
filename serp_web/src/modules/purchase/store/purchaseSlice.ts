@@ -1,7 +1,16 @@
 // Purchase Store Slice (authors: QuanTuanHuy, Description: Part of Serp Project)
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type { Supplier, Product, Order, Category, Facility } from '../types';
+import type {
+  Supplier,
+  Product,
+  Order,
+  Category,
+  Facility,
+  ProductStatus,
+  FacilityStatus,
+  SupplierStatus,
+} from '../types';
 
 interface PurchaseState {
   selectedSupplier: Supplier | null;
@@ -12,12 +21,12 @@ interface PurchaseState {
   filters: {
     suppliers: {
       query?: string;
-      statusId?: string;
+      statusId?: SupplierStatus;
     };
     products: {
       query?: string;
       categoryId?: string;
-      statusId?: string;
+      statusId?: ProductStatus;
     };
     orders: {
       query?: string;
@@ -32,7 +41,7 @@ interface PurchaseState {
     };
     facilities: {
       query?: string;
-      statusId?: string;
+      statusId?: FacilityStatus;
     };
   };
 }
