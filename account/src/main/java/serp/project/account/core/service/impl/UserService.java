@@ -8,6 +8,7 @@ package serp.project.account.core.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import serp.project.account.core.domain.constant.Constants;
@@ -291,6 +292,7 @@ public class UserService implements IUserService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public PasswordResetRequestEntity updatePasswordResetRequest(PasswordResetRequestEntity entity) {
         return passwordResetRequestPort.save(entity);
     }

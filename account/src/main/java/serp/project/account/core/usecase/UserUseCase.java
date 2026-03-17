@@ -7,11 +7,11 @@ package serp.project.account.core.usecase;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
+import serp.project.account.core.domain.dto.message.SendEmailRequest;
 import serp.project.account.core.domain.dto.request.AssignRoleToUserDto;
 import serp.project.account.core.domain.dto.request.CreateUserForOrgRequest;
 import serp.project.account.core.domain.dto.request.UpdateUserInfoRequest;
@@ -25,19 +25,11 @@ import serp.project.account.core.domain.entity.OrganizationEntity;
 import serp.project.account.core.domain.entity.PasswordResetRequestEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.UserEntity;
-import serp.project.account.core.domain.event.PasswordResetRequestedInternalEvent;
 import serp.project.account.core.domain.enums.RoleScope;
 import serp.project.account.core.domain.enums.UserStatus;
 import serp.project.account.core.domain.enums.UserType;
 import serp.project.account.core.exception.AppException;
-import serp.project.account.core.service.IDepartmentService;
-import serp.project.account.core.service.IKeycloakUserService;
-import serp.project.account.core.service.IModuleService;
-import serp.project.account.core.service.IOrganizationService;
-import serp.project.account.core.service.IRoleService;
-import serp.project.account.core.service.IUserDepartmentService;
-import serp.project.account.core.service.IUserModuleAccessService;
-import serp.project.account.core.service.IUserService;
+import serp.project.account.core.service.*;
 import serp.project.account.infrastructure.store.mapper.UserMapper;
 import serp.project.account.kernel.property.PasswordResetProperties;
 import serp.project.account.kernel.utils.CollectionUtils;
@@ -66,6 +58,7 @@ public class UserUseCase {
     private final IUserDepartmentService userDepartmentService;
     private final IUserModuleAccessService userModuleAccessService;
     private final IModuleService moduleService;
+    private final INotificationService notificationService;
 
     private final RoleUseCase roleUseCase;
 
@@ -74,7 +67,6 @@ public class UserUseCase {
 
     private final ResponseUtils responseUtils;
     private final PaginationUtils paginationUtils;
-    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> createUserForOrganization(Long tenantId, CreateUserForOrgRequest request) {
@@ -581,7 +573,7 @@ public class UserUseCase {
 
             userService.invalidatePendingPasswordResetByUserId(userId);
 
-            long expirationMinutes = getPasswordResetExpirationMinutes();
+            long expirationMinutes = passwordResetProperties.getExpirationMinutes();
             String rawToken = PasswordResetTokenUtils.generateToken();
             long expiresAt = Instant.now().plusSeconds(expirationMinutes * 60L).toEpochMilli();
             PasswordResetRequestEntity resetRequest = userService.createPasswordResetRequest(
@@ -592,22 +584,24 @@ public class UserUseCase {
                     PasswordResetTokenUtils.hashToken(rawToken),
                     expiresAt);
 
-            eventPublisher.publishEvent(new PasswordResetRequestedInternalEvent(
-                    resetRequest.getId(),
+            SendEmailRequest emailRequest = SendEmailRequest.resetPasswordEmail(
+                    user.getEmail(),
+                    user.getFirstName(),
+                    buildPasswordResetLink(rawToken),
+                    expirationMinutes
+            );
+            notificationService.sendEmail(
                     requestedBy,
                     organizationId,
-                    user.getEmail(),
-                    user.getFullName(),
-                    buildPasswordResetLink(rawToken),
-                    expirationMinutes));
+                    "PASSWORD_RESET_REQUEST",
+                    resetRequest.getId(),
+                    emailRequest
+            );
 
             return responseUtils.success("Password reset initiated successfully");
-        } catch (AppException e) {
-            log.error("Reset user password failed: {}", e.getMessage());
-            return responseUtils.error(e.getCode(), e.getMessage());
         } catch (Exception e) {
-            log.error("Unexpected error occurred when resetting user password: {}", e.getMessage());
-            return responseUtils.internalServerError(e.getMessage());
+            log.error("Reset user password failed: {}", e.getMessage());
+            throw e;
         }
     }
 
@@ -619,14 +613,6 @@ public class UserUseCase {
 
         String separator = frontendResetUrl.contains("?") ? "&" : "?";
         return frontendResetUrl + separator + "token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
-    }
-
-    private long getPasswordResetExpirationMinutes() {
-        Long expirationMinutes = passwordResetProperties.getExpirationMinutes();
-        if (expirationMinutes == null || expirationMinutes <= 0) {
-            return 60L;
-        }
-        return expirationMinutes;
     }
 
     public GeneralResponse<?> exportUsers(Long organizationId, String format) {
