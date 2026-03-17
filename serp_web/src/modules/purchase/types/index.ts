@@ -4,7 +4,7 @@
 
 export type ResponseStatus = 'SUCCESS' | 'FAILED';
 export type EntityType = 'PRODUCT' | 'SUPPLIER' | 'CUSTOMER' | 'FACILITY';
-export type AddressType = 'FACILIY' | 'SHIPPING' | 'BUSSINESS';
+export type AddressType = 'FACILITY' | 'SHIPPING' | 'BUSINESS';
 export type CustomerStatus = 'ACTIVE' | 'INACTIVE';
 export type FacilityStatus = 'ACTIVE' | 'INACTIVE';
 export type InventoryItemStatus = 'VALID' | 'INVALID';

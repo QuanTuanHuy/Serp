@@ -33,8 +33,8 @@ import type {
 
 const ADDRESS_TYPE_OPTIONS: { value: AddressType; label: string }[] = [
   { value: 'SHIPPING', label: 'Giao hàng' },
-  { value: 'FACILIY', label: 'Kho' },
-  { value: 'BUSSINESS', label: 'Cơ sở' },
+  { value: 'FACILITY', label: 'Kho' },
+  { value: 'BUSINESS', label: 'Cơ sở' },
 ];
 
 interface UpdateAddressDialogProps {

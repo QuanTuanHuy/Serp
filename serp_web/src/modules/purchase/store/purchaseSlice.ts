@@ -9,6 +9,7 @@ import type {
   Facility,
   ProductStatus,
   FacilityStatus,
+  SupplierStatus,
 } from '../types';
 
 interface PurchaseState {
@@ -20,7 +21,7 @@ interface PurchaseState {
   filters: {
     suppliers: {
       query?: string;
-      statusId?: string;
+      statusId?: SupplierStatus;
     };
     products: {
       query?: string;

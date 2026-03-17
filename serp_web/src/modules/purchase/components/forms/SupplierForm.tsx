@@ -1,4 +1,4 @@
-// Purchase FacilityForm Component (authors: QuanTuanHuy, Description: Part of Serp Project)
+// Purchase SupplierForm Component (authors: QuanTuanHuy, Description: Part of Serp Project)
 
 'use client';
 
@@ -21,22 +21,19 @@ import {
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import type {
-  Facility,
-  FacilityCreationForm,
-  FacilityUpdateForm,
-  FacilityStatus,
+  Supplier,
+  SupplierCreationForm,
+  SupplierUpdateForm,
+  SupplierStatus,
   AddressType,
 } from '../../types';
 import { toast } from 'sonner';
 
-const facilitySchema = z.object({
+const supplierSchema = z.object({
   name: z.string().min(1, 'Tên là bắt buộc').max(255, 'Tên quá dài'),
+  email: z.string().email('Email không hợp lệ').optional().or(z.literal('')),
   phone: z.string().optional(),
   statusId: z.enum(['ACTIVE', 'INACTIVE']),
-  postalCode: z.string().optional(),
-  length: z.string().optional(),
-  width: z.string().optional(),
-  height: z.string().optional(),
   // Creation only
   addressType: z.enum(['FACILITY', 'SHIPPING', 'BUSINESS']).optional(),
   fullAddress: z.string().optional(),
@@ -44,24 +41,24 @@ const facilitySchema = z.object({
   longitude: z.string().optional(),
 });
 
-type FacilityFormData = z.infer<typeof facilitySchema>;
+type SupplierFormData = z.infer<typeof supplierSchema>;
 
-interface FacilityFormProps {
-  facility?: Facility;
-  onSubmit: (data: FacilityCreationForm | FacilityUpdateForm) => Promise<void>;
+interface SupplierFormProps {
+  supplier?: Supplier;
+  onSubmit: (data: SupplierCreationForm | SupplierUpdateForm) => Promise<void>;
   onCancel?: () => void;
   isLoading?: boolean;
   className?: string;
 }
 
-export const FacilityForm: React.FC<FacilityFormProps> = ({
-  facility,
+export const SupplierForm: React.FC<SupplierFormProps> = ({
+  supplier,
   onSubmit,
   onCancel,
   isLoading = false,
   className,
 }) => {
-  const isEditing = !!facility;
+  const isEditing = !!supplier;
 
   const {
     register,
@@ -69,27 +66,21 @@ export const FacilityForm: React.FC<FacilityFormProps> = ({
     formState: { errors, isSubmitting },
     setValue,
     watch,
-  } = useForm<FacilityFormData>({
-    resolver: zodResolver(facilitySchema),
-    defaultValues: facility
+  } = useForm<SupplierFormData>({
+    resolver: zodResolver(supplierSchema),
+    defaultValues: supplier
       ? {
-          name: facility.name,
-          phone: facility.phone || '',
-          statusId: facility.statusId,
-          postalCode: facility.postalCode || '',
-          length: facility.length?.toString() || '',
-          width: facility.width?.toString() || '',
-          height: facility.height?.toString() || '',
+          name: supplier.name,
+          email: supplier.email || '',
+          phone: supplier.phone || '',
+          statusId: supplier.statusId,
         }
       : {
           name: '',
+          email: '',
           phone: '',
-          statusId: 'ACTIVE' as FacilityStatus,
-          postalCode: '',
-          length: '',
-          width: '',
-          height: '',
-          addressType: 'FACILITY' as AddressType,
+          statusId: 'ACTIVE' as SupplierStatus,
+          addressType: 'BUSINESS' as AddressType,
           fullAddress: '',
           latitude: '',
           longitude: '',
@@ -98,29 +89,23 @@ export const FacilityForm: React.FC<FacilityFormProps> = ({
 
   const statusId = watch('statusId');
 
-  const onFormSubmit = handleSubmit(async (data: FacilityFormData) => {
+  const onFormSubmit = handleSubmit(async (data: SupplierFormData) => {
     try {
       if (isEditing) {
-        const updateData: FacilityUpdateForm = {
+        const updateData: SupplierUpdateForm = {
           name: data.name,
+          email: data.email || undefined,
           phone: data.phone || undefined,
-          statusId: data.statusId as FacilityStatus,
-          postalCode: data.postalCode || undefined,
-          length: data.length ? parseFloat(data.length) : undefined,
-          width: data.width ? parseFloat(data.width) : undefined,
-          height: data.height ? parseFloat(data.height) : undefined,
+          statusId: data.statusId,
         };
         await onSubmit(updateData);
       } else {
-        const createData: FacilityCreationForm = {
+        const createData: SupplierCreationForm = {
           name: data.name,
+          email: data.email || undefined,
           phone: data.phone || undefined,
           statusId: data.statusId,
-          postalCode: data.postalCode || '',
-          length: data.length ? parseFloat(data.length) : undefined,
-          width: data.width ? parseFloat(data.width) : undefined,
-          height: data.height ? parseFloat(data.height) : undefined,
-          addressType: data.addressType || 'FACILITY',
+          addressType: data.addressType || 'BUSINESS',
           fullAddress: data.fullAddress || '',
           latitude: data.latitude ? parseFloat(data.latitude) : undefined,
           longitude: data.longitude ? parseFloat(data.longitude) : undefined,
@@ -137,7 +122,7 @@ export const FacilityForm: React.FC<FacilityFormProps> = ({
     <Card className={cn('w-full', className)}>
       <CardHeader className='pb-4'>
         <CardTitle className='text-xl'>
-          {isEditing ? 'Chỉnh sửa kho hàng' : 'Tạo kho hàng mới'}
+          {isEditing ? 'Chỉnh sửa nhà cung cấp' : 'Tạo nhà cung cấp mới'}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -156,11 +141,28 @@ export const FacilityForm: React.FC<FacilityFormProps> = ({
                   {...register('name')}
                   className={cn(errors.name && 'border-destructive')}
                   disabled={isLoading || isSubmitting}
-                  placeholder='Nhập tên kho hàng'
+                  placeholder='Nhập tên nhà cung cấp'
                 />
                 {errors.name && (
                   <p className='text-sm text-destructive'>
                     {errors.name.message}
+                  </p>
+                )}
+              </div>
+
+              <div className='space-y-2'>
+                <Label htmlFor='email'>Email</Label>
+                <Input
+                  id='email'
+                  type='email'
+                  {...register('email')}
+                  className={cn(errors.email && 'border-destructive')}
+                  disabled={isLoading || isSubmitting}
+                  placeholder='email@example.com'
+                />
+                {errors.email && (
+                  <p className='text-sm text-destructive'>
+                    {errors.email.message}
                   </p>
                 )}
               </div>
@@ -180,7 +182,7 @@ export const FacilityForm: React.FC<FacilityFormProps> = ({
                 <Select
                   value={statusId}
                   onValueChange={(value) =>
-                    setValue('statusId', value as FacilityStatus)
+                    setValue('statusId', value as SupplierStatus)
                   }
                   disabled={isLoading || isSubmitting}
                 >
@@ -193,58 +195,6 @@ export const FacilityForm: React.FC<FacilityFormProps> = ({
                   </SelectContent>
                 </Select>
               </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='postalCode'>Mã bưu chính</Label>
-                <Input
-                  id='postalCode'
-                  {...register('postalCode')}
-                  disabled={isLoading || isSubmitting}
-                  placeholder='Nhập mã bưu chính'
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Dimensions */}
-          <div className='space-y-4'>
-            <h3 className='text-base font-medium text-foreground'>
-              Kích thước
-            </h3>
-            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-              <div className='space-y-2'>
-                <Label htmlFor='length'>Chiều dài (m)</Label>
-                <Input
-                  id='length'
-                  type='number'
-                  step='any'
-                  {...register('length')}
-                  disabled={isLoading || isSubmitting}
-                  placeholder='VD: 20'
-                />
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='width'>Chiều rộng (m)</Label>
-                <Input
-                  id='width'
-                  type='number'
-                  step='any'
-                  {...register('width')}
-                  disabled={isLoading || isSubmitting}
-                  placeholder='VD: 10'
-                />
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='height'>Chiều cao (m)</Label>
-                <Input
-                  id='height'
-                  type='number'
-                  step='any'
-                  {...register('height')}
-                  disabled={isLoading || isSubmitting}
-                  placeholder='VD: 5'
-                />
-              </div>
             </div>
           </div>
 
@@ -256,7 +206,7 @@ export const FacilityForm: React.FC<FacilityFormProps> = ({
                 <div className='space-y-2'>
                   <Label htmlFor='addressType'>Loại địa chỉ</Label>
                   <Select
-                    defaultValue='FACILIY'
+                    defaultValue='BUSSINESS'
                     onValueChange={(value) =>
                       setValue('addressType', value as AddressType)
                     }
@@ -324,8 +274,8 @@ export const FacilityForm: React.FC<FacilityFormProps> = ({
               {isLoading || isSubmitting
                 ? 'Đang lưu...'
                 : isEditing
-                  ? 'Cập nhật kho hàng'
-                  : 'Tạo kho hàng'}
+                  ? 'Cập nhật nhà cung cấp'
+                  : 'Tạo nhà cung cấp'}
             </Button>
           </div>
         </form>
@@ -334,4 +284,4 @@ export const FacilityForm: React.FC<FacilityFormProps> = ({
   );
 };
 
-export default FacilityForm;
+export default SupplierForm;
