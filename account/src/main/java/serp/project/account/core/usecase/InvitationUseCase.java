@@ -9,15 +9,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
-import serp.project.account.core.domain.dto.message.CreateNotificationEvent;
+import serp.project.account.core.domain.dto.message.SendEmailRequest;
 import serp.project.account.core.domain.dto.request.AcceptInvitationRequest;
 import serp.project.account.core.domain.dto.request.CreateUserForOrgRequest;
 import serp.project.account.core.domain.dto.request.InviteUserRequest;
 import serp.project.account.core.domain.entity.UserInvitationEntity;
 import serp.project.account.core.domain.enums.UserType;
 import serp.project.account.core.exception.AppException;
+import serp.project.account.kernel.property.PasswordResetProperties;
 import serp.project.account.core.port.store.IUserInvitationPort;
 import serp.project.account.core.port.store.IUserPort;
 import serp.project.account.core.service.INotificationService;
@@ -25,6 +28,7 @@ import serp.project.account.core.service.IOrganizationService;
 import serp.project.account.kernel.utils.PaginationUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
 
+import java.net.URI;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -41,6 +45,7 @@ public class InvitationUseCase {
 
     private final ResponseUtils responseUtils;
     private final PaginationUtils paginationUtils;
+    private final PasswordResetProperties passwordResetProperties;
 
     private static final int INVITATION_EXPIRY_DAYS = 7;
 
@@ -88,20 +93,26 @@ public class InvitationUseCase {
             var saved = invitationPort.save(invitation);
 
             var org = organizationService.getOrganizationById(organizationId);
-            var notificationEvent = CreateNotificationEvent.builder()
-                    .tenantId(organizationId)
-                    .title("You've been invited to " + (org != null ? org.getName() : "an organization"))
-                    .message(request.getMessage() != null ? request.getMessage()
-                            : "You've been invited to join. Click the link to accept.")
-                    .actionUrl("/invitations/" + token + "/accept")
-                    .build();
-            notificationService.sendNotification(notificationEvent);
+            notificationService.sendEmail(
+                    invitedBy,
+                    organizationId,
+                    "INVITATION",
+                    saved.getId(),
+                    SendEmailRequest.notificationEmail(
+                            request.getEmail(),
+                            buildRecipientName(request.getFirstName(), request.getLastName()),
+                            "You've been invited to " + (org != null ? org.getName() : "an organization"),
+                            request.getMessage() != null ? request.getMessage()
+                                    : "You've been invited to join. Click the link to accept.",
+                            buildInvitationLink(token)));
 
             return responseUtils.success(saved);
         } catch (AppException e) {
+            markTransactionForRollback();
             log.error("Invite user failed: {}", e.getMessage());
             return responseUtils.error(e.getCode(), e.getMessage());
         } catch (Exception e) {
+            markTransactionForRollback();
             log.error("Invite user failed: {}", e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
@@ -210,18 +221,59 @@ public class InvitationUseCase {
             var saved = invitationPort.save(invitation);
 
             var org = organizationService.getOrganizationById(organizationId);
-            var notificationEvent = CreateNotificationEvent.builder()
-                    .tenantId(organizationId)
-                    .title("Reminder: You've been invited to " + (org != null ? org.getName() : "an organization"))
-                    .message("This is a reminder to accept your invitation.")
-                    .actionUrl("/invitations/" + invitation.getToken() + "/accept")
-                    .build();
-            notificationService.sendNotification(notificationEvent);
+            notificationService.sendEmail(
+                    invitation.getInvitedBy(),
+                    organizationId,
+                    "INVITATION",
+                    saved.getId(),
+                    SendEmailRequest.notificationEmail(
+                            invitation.getEmail(),
+                            buildRecipientName(invitation.getFirstName(), invitation.getLastName()),
+                            "Reminder: You've been invited to " + (org != null ? org.getName() : "an organization"),
+                            "This is a reminder to accept your invitation.",
+                            buildInvitationLink(invitation.getToken())));
 
             return responseUtils.success(saved);
         } catch (Exception e) {
+            markTransactionForRollback();
             log.error("Resend invitation failed: {}", e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
+        }
+    }
+
+    private String buildInvitationLink(String token) {
+        String frontendResetUrl = passwordResetProperties.getFrontendResetUrl();
+        if (frontendResetUrl == null || frontendResetUrl.isBlank()) {
+            return "http://localhost:3000/invitations/" + token + "/accept";
+        }
+
+        try {
+            URI uri = URI.create(frontendResetUrl);
+            if (uri.getScheme() != null && uri.getAuthority() != null) {
+                return uri.getScheme() + "://" + uri.getAuthority() + "/invitations/" + token + "/accept";
+            }
+        } catch (Exception ignored) {
+        }
+
+        String normalizedUrl = frontendResetUrl.endsWith("/")
+                ? frontendResetUrl.substring(0, frontendResetUrl.length() - 1)
+                : frontendResetUrl;
+        int authIndex = normalizedUrl.indexOf("/auth/reset-password");
+        if (authIndex >= 0) {
+            normalizedUrl = normalizedUrl.substring(0, authIndex);
+        }
+        return normalizedUrl + "/invitations/" + token + "/accept";
+    }
+
+    private String buildRecipientName(String firstName, String lastName) {
+        String fullName = ((firstName == null ? "" : firstName.trim()) + " " + (lastName == null ? "" : lastName.trim()))
+                .trim();
+        return fullName.isBlank() ? "User" : fullName;
+    }
+
+    private void markTransactionForRollback() {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
         }
     }
 }

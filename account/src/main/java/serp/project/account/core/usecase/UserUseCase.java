@@ -123,7 +123,7 @@ public class UserUseCase {
                     .toList());
 
             roles.stream()
-                    .filter(r -> r.isOrganizationRole())
+                    .filter(RoleEntity::isOrganizationRole)
                     .forEach(
                             role -> organizationService.assignOrganizationToUser(tenantId, userId, role.getId(), true));
 
