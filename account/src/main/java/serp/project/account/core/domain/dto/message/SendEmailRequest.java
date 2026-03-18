@@ -64,4 +64,29 @@ public class SendEmailRequest {
                 .provider("JAVA_MAIL")
                 .build();
     }
+
+    public static SendEmailRequest notificationEmail(
+            String toEmail,
+            String userName,
+            String notificationTitle,
+            String notificationMessage,
+            String actionLink) {
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("userName", userName == null || userName.isBlank() ? "User" : userName);
+        variables.put("notificationTitle",
+                notificationTitle == null || notificationTitle.isBlank() ? "Notification" : notificationTitle);
+        variables.put("notificationMessage",
+                notificationMessage == null || notificationMessage.isBlank() ? "You have a new notification."
+                        : notificationMessage);
+        variables.put("actionLink", actionLink);
+
+        return SendEmailRequest.builder()
+                .toEmails(List.of(toEmail))
+                .templateCode("NOTIFICATION_EMAIL")
+                .templateVariables(variables)
+                .type("NOTIFICATION")
+                .priority("MEDIUM")
+                .provider("JAVA_MAIL")
+                .build();
+    }
 }
