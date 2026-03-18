@@ -14,12 +14,10 @@ import serp.project.pmcore.domain.entity.project.ProjectEntity;
 import serp.project.pmcore.domain.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.exception.DomainErrorCode;
 import serp.project.pmcore.domain.exception.ResourceNotFoundException;
-import serp.project.pmcore.domain.port.store.IProjectCategoryPort;
 import serp.project.pmcore.domain.port.store.IProjectPort;
 import serp.project.pmcore.domain.service.IProjectService;
 
 import java.util.List;
-import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -27,9 +25,6 @@ import java.util.regex.Pattern;
 public class ProjectService implements IProjectService {
 
     private final IProjectPort projectPort;
-    private final IProjectCategoryPort projectCategoryPort;
-
-    private static final Pattern PROJECT_KEY_PATTERN = Pattern.compile("^[A-Z][A-Z0-9]{1,9}$");
 
     @Override
     public ProjectEntity createProject(ProjectEntity project, Long tenantId, Long userId) {
@@ -68,7 +63,6 @@ public class ProjectService implements IProjectService {
             existing.setLeadUserId(updateData.getLeadUserId());
         }
         if (updateData.getCategoryId() != null) {
-            validateCategoryExists(updateData.getCategoryId(), tenantId);
             existing.setCategoryId(updateData.getCategoryId());
         }
         if (updateData.getUrl() != null) {
@@ -150,25 +144,4 @@ public class ProjectService implements IProjectService {
         return projectPort.saveProject(project);
     }
 
-    @Override
-    public void validateKeyFormat(String key) {
-        if (key == null || !PROJECT_KEY_PATTERN.matcher(key).matches()) {
-            throw new BusinessRuleViolationException(DomainErrorCode.PROJECT_KEY_INVALID_FORMAT);
-        }
-    }
-
-    @Override
-    public void validateKeyUniqueness(String key, Long tenantId) {
-        if (projectPort.existsByKeyAndTenantId(key, tenantId)) {
-            throw new BusinessRuleViolationException(DomainErrorCode.PROJECT_KEY_ALREADY_EXISTS);
-        }
-    }
-
-    @Override
-    public void validateCategoryExists(Long categoryId, Long tenantId) {
-        if (categoryId != null) {
-            projectCategoryPort.getCategoryByIdIncludingSystem(categoryId, tenantId)
-                    .orElseThrow(() -> new ResourceNotFoundException(DomainErrorCode.CATEGORY_NOT_FOUND));
-        }
-    }
 }

@@ -33,8 +33,8 @@ public class CreateProjectRequest {
     private String description;
 
     @NotBlank(message = "Project type key is required")
-    @Pattern(regexp = "^(software|business|service_desk)$",
-            message = "Project type must be one of: software, business, service_desk")
+    @Pattern(regexp = "^(software|business)$",
+            message = "Project type must be one of: software, business")
     private String projectTypeKey;
 
     @NotNull(message = "Lead user ID is required")

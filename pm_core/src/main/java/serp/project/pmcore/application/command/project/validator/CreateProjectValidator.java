@@ -33,7 +33,7 @@ public class CreateProjectValidator {
             Pattern.compile("^[A-Z][A-Z0-9]{1,9}$");
 
     private static final Set<String> VALID_PROJECT_TYPES =
-            Set.of("software", "business", "service_desk");
+            Set.of("software", "business");
 
     private static final Set<String> VALID_ASSOCIATION_MODES =
             Set.of("SHARED_ASSOCIATION", "CLONE_ON_ASSOCIATE");
@@ -185,7 +185,7 @@ public class CreateProjectValidator {
         blueprintPort.getBlueprintByIdIncludingSystem(blueprintId, tenantId)
                 .filter(bp -> bp.getTypeKey() != null)
                 .ifPresent(bp -> {
-                    if (!bp.getTypeKey().equals(projectTypeKey)) {
+                    if (!bp.getTypeKey().equalsIgnoreCase(projectTypeKey)) {
                         throw new DomainValidationException(
                                 DomainErrorCode.BLUEPRINT_PROJECT_TYPE_MISMATCH,
                                 "Blueprint '" + bp.getName() + "' is for project type '"
