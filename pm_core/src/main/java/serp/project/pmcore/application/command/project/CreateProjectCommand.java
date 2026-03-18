@@ -1,29 +1,28 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
 package serp.project.pmcore.application.command.project;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.command.project.validator.CreateProjectValidator;
 import serp.project.pmcore.domain.dto.request.project.CreateProjectRequest;
 import serp.project.pmcore.domain.dto.response.project.ProjectResponse;
 import serp.project.pmcore.domain.entity.project.ProjectEntity;
 import serp.project.pmcore.domain.service.IProjectService;
-import serp.project.pmcore.domain.service.ISchemeProvisioningService;
-import serp.project.pmcore.domain.validator.WorkflowSchemeCompatibilityValidator;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class CreateProjectCommand {
     private final CreateProjectValidator projectValidator;
-    private final WorkflowSchemeCompatibilityValidator workflowSchemeCompatibilityValidator;
-
     private final IProjectService projectService;
-    private final ISchemeProvisioningService schemeProvisioningService;
 
+    @Transactional(rollbackFor = Exception.class)
     public ProjectResponse execute(CreateProjectRequest request, Long userId, Long tenantId) {
         projectValidator.validate(request, tenantId);
 
@@ -36,49 +35,18 @@ public class CreateProjectCommand {
                 .avatarId(request.getAvatarId())
                 .categoryId(request.getCategoryId())
                 .projectTypeKey(request.getProjectTypeKey())
+                .issueTypeSchemeId(request.getIssueTypeSchemeId())
+                .workflowSchemeId(request.getWorkflowSchemeId())
+                .fieldConfigSchemeId(request.getFieldConfigSchemeId())
+                .issueTypeScreenSchemeId(request.getIssueTypeScreenSchemeId())
+                .permissionSchemeId(request.getPermissionSchemeId())
+                .notificationSchemeId(request.getNotificationSchemeId())
+                .prioritySchemeId(request.getPrioritySchemeId())
+                .issueSecuritySchemeId(request.getIssueSecuritySchemeId())
                 .build();
+
         ProjectEntity saved = projectService.createProject(project, tenantId, userId);
-
-        Map<String, Long> schemeOverrides = buildSchemeOverrides(request);
-        schemeProvisioningService.provisionSchemes(
-                project,
-                tenantId,
-                userId,
-                request.getBlueprintId(),
-                schemeOverrides,
-                request.getAssociationMode());
-        ProjectEntity finalProject = projectService.saveProject(saved, userId);
-
-        return toResponse(finalProject);
-    }
-
-    private Map<String, Long> buildSchemeOverrides(CreateProjectRequest request) {
-        Map<String, Long> overrides = new HashMap<>();
-        if (request.getIssueTypeSchemeId() != null) {
-            overrides.put("ISSUE_TYPE", request.getIssueTypeSchemeId());
-        }
-        if (request.getPrioritySchemeId() != null) {
-            overrides.put("PRIORITY", request.getPrioritySchemeId());
-        }
-        if (request.getWorkflowSchemeId() != null) {
-            overrides.put("WORKFLOW", request.getWorkflowSchemeId());
-        }
-        if (request.getFieldConfigSchemeId() != null) {
-            overrides.put("FIELD_CONFIG", request.getFieldConfigSchemeId());
-        }
-        if (request.getIssueTypeScreenSchemeId() != null) {
-            overrides.put("SCREEN", request.getIssueTypeScreenSchemeId());
-        }
-        if (request.getPermissionSchemeId() != null) {
-            overrides.put("PERMISSION", request.getPermissionSchemeId());
-        }
-        if (request.getNotificationSchemeId() != null) {
-            overrides.put("NOTIFICATION", request.getNotificationSchemeId());
-        }
-        if (request.getIssueSecuritySchemeId() != null) {
-            overrides.put("ISSUE_SECURITY", request.getIssueSecuritySchemeId());
-        }
-        return overrides;
+        return toResponse(saved);
     }
 
     private ProjectResponse toResponse(ProjectEntity entity) {

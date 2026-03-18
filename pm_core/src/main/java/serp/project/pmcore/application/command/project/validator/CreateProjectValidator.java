@@ -1,3 +1,8 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
 package serp.project.pmcore.application.command.project.validator;
 
 import lombok.RequiredArgsConstructor;
@@ -10,12 +15,9 @@ import serp.project.pmcore.domain.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.port.store.*;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Component
 @RequiredArgsConstructor
@@ -24,7 +26,6 @@ public class CreateProjectValidator {
     private final IProjectPort projectPort;
     private final IProjectCategoryPort categoryPort;
     private final IProjectBlueprintPort blueprintPort;
-    private final IBlueprintSchemeDefaultPort blueprintSchemeDefaultPort;
     private final IIssueTypeSchemePort issueTypeSchemePort;
     private final IWorkflowSchemePort workflowSchemePort;
     private final IPrioritySchemePort prioritySchemePort;
@@ -42,6 +43,7 @@ public class CreateProjectValidator {
     public void validate(CreateProjectRequest request, Long tenantId) {
         validateProjectMetadata(request, tenantId);
         validateSchemeOverrides(request, tenantId);
+        validateExplicitSchemeBindings(request);
         validateBlueprintConsistency(request, tenantId);
     }
 
@@ -148,29 +150,31 @@ public class CreateProjectValidator {
 
     private void validateBlueprintConsistency(CreateProjectRequest request, Long tenantId) {
         if (request.getBlueprintId() == null) {
-            validateMandatorySchemesWhenNoBlueprint(request, tenantId);
             return;
         }
 
         validateBlueprintExists(request.getBlueprintId(), tenantId);
         validateBlueprintProjectTypeMatch(request.getBlueprintId(),
                 request.getProjectTypeKey(), tenantId);
-        validateBlueprintProvidesRequiredSchemes(request, tenantId);
     }
 
-    private void validateMandatorySchemesWhenNoBlueprint(CreateProjectRequest request,
-                                                         Long tenantId) {
+    private void validateExplicitSchemeBindings(CreateProjectRequest request) {
         List<String> missing = new ArrayList<>();
 
         if (request.getIssueTypeSchemeId() == null) missing.add("issueTypeSchemeId");
         if (request.getWorkflowSchemeId() == null) missing.add("workflowSchemeId");
+        if (request.getFieldConfigSchemeId() == null) missing.add("fieldConfigSchemeId");
+        if (request.getIssueTypeScreenSchemeId() == null) missing.add("issueTypeScreenSchemeId");
+        if (request.getPermissionSchemeId() == null) missing.add("permissionSchemeId");
+        if (request.getNotificationSchemeId() == null) missing.add("notificationSchemeId");
         if (request.getPrioritySchemeId() == null) missing.add("prioritySchemeId");
+        if (request.getIssueSecuritySchemeId() == null) missing.add("issueSecuritySchemeId");
 
         if (!missing.isEmpty()) {
             throw new DomainValidationException(
                     DomainErrorCode.SCHEME_PROVISIONING_FAILED,
-                    "Missing required scheme overrides when no blueprint is provided: "
-                            + missing + ". Provide explicit scheme IDs or specify a blueprintId.");
+                    "Missing required explicit scheme IDs for project creation: "
+                            + missing + ". In round one, all effective scheme bindings must be provided explicitly.");
         }
     }
 
@@ -195,40 +199,4 @@ public class CreateProjectValidator {
                 });
     }
 
-    private void validateBlueprintProvidesRequiredSchemes(CreateProjectRequest request,
-                                                          Long tenantId) {
-        Set<String> coveredByOverride = resolveOverriddenSchemeTypes(request);
-
-        Set<String> coveredByBlueprint = blueprintSchemeDefaultPort
-                .getDefaultsByBlueprintIdIncludingSystem(request.getBlueprintId(), tenantId)
-                .stream()
-                .map(d -> d.getSchemeType().toString())
-                .collect(Collectors.toSet());
-
-        List<String> missing = Stream.of("ISSUE_TYPE", "WORKFLOW", "PRIORITY")
-                .filter(type -> !coveredByOverride.contains(type)
-                        && !coveredByBlueprint.contains(type))
-                .toList();
-
-        if (!missing.isEmpty()) {
-            throw new DomainValidationException(
-                    DomainErrorCode.SCHEME_PROVISIONING_FAILED,
-                    "Blueprint does not provide defaults for required scheme types: "
-                            + missing + ". Either add blueprint defaults or provide explicit "
-                            + "scheme IDs in the request.");
-        }
-    }
-
-    private Set<String> resolveOverriddenSchemeTypes(CreateProjectRequest request) {
-        Set<String> covered = new HashSet<>();
-        if (request.getIssueTypeSchemeId() != null) covered.add("ISSUE_TYPE");
-        if (request.getWorkflowSchemeId() != null) covered.add("WORKFLOW");
-        if (request.getPrioritySchemeId() != null) covered.add("PRIORITY");
-        if (request.getFieldConfigSchemeId() != null) covered.add("FIELD_CONFIG");
-        if (request.getIssueTypeScreenSchemeId() != null) covered.add("SCREEN");
-        if (request.getPermissionSchemeId() != null) covered.add("PERMISSION");
-        if (request.getNotificationSchemeId() != null) covered.add("NOTIFICATION");
-        if (request.getIssueSecuritySchemeId() != null) covered.add("ISSUE_SECURITY");
-        return covered;
-    }
 }

@@ -45,7 +45,7 @@ public class CreateProjectRequest {
     private String url;
     private Long avatarId;
 
-    // Explicit scheme overrides (optional — if not provided, resolved from blueprint/system defaults)
+    // Explicit effective scheme bindings are required in round one project creation.
     private Long issueTypeSchemeId;
     private Long workflowSchemeId;
     private Long fieldConfigSchemeId;

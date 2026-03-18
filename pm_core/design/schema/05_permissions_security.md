@@ -2,7 +2,7 @@
 
 **Design Philosophy:** Jira-like security is layered and explicit: project role assignment -> permission scheme grants -> issue-level security restrictions. Access is default-deny unless a grant matches, and the schema must support Jira-style contextual actors such as project lead, assignee, logged-in users, and custom-field-based user/group resolution.
 
-Provisioning note: permission and issue security schemes are shared by default across associated projects. Clone-on-associate is optional when project-level isolation is required (see Module 00).
+Provisioning note: permission and issue security schemes are reusable across projects. Depending on template/blueprint policy, a project may bind a tenant shared scheme or a dedicated project-scoped copy; shared reuse is supported, but it should not be modeled as the only default for every provisioning path (see Module 00).
 
 ## Shared Base Columns (applies to all tables in this module)
 

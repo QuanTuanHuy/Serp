@@ -2,7 +2,7 @@
 
 **Design Philosophy:** Decouple event detection from delivery. PM core stores notification policies and emits delivery jobs via outbox for downstream channel services. Recipient modeling must cover Jira-like assignee/reporter/watcher/lead/role/custom-field rules, and final delivery must still respect browse permission and issue security visibility.
 
-Provisioning note: notification schemes are shared across associated projects by default. Clone-on-associate remains optional for isolated project behavior; event dictionary can remain tenant-shared (see Module 00).
+Provisioning note: notification schemes are reusable across projects, and Jira ships a default notification scheme that is associated with new spaces until changed. Dedicated project-local copies remain optional; the event dictionary can stay tenant-shared (see Module 00).
 
 ## Shared Base Columns
 

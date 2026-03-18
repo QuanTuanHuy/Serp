@@ -1,6 +1,6 @@
-# Module 00: Project Provisioning & Scheme Association
+# Module 00: Project Provisioning & Scheme Materialization
 
-**Design Philosophy:** Jira company-managed parity means projects bind reusable shared schemes by default, workflow drafts never become project-effective until published, and any rebinding that changes active behavior must be validated and applied transactionally.
+**Design Philosophy:** Jira company-managed parity is not a single "shared-by-default" rule. Template-based project creation usually materializes project-scoped scheme rows for core work configuration, while explicit shared configuration reuses schemes from an existing project. Across both paths, reusable dictionaries such as issue types, statuses, priorities, and custom fields stay shared references rather than cloned copies. Workflow drafts never become project-effective until published, and any rebinding that changes active behavior must be validated and applied transactionally.
 
 ## Shared Base Columns (applies to optional helper tables in this module)
 
@@ -11,44 +11,64 @@
 
 ## Provisioning Goals
 
-1. Match Jira company-managed behavior where schemes are reusable across multiple projects.
+1. Match Jira company-managed behavior where template-based creation and shared-configuration creation are distinct provisioning paths.
 2. Keep blueprint and system defaults reusable as source templates for new project setup.
-3. Enforce compatibility validation when associating or re-associating schemes.
-4. Keep project creation and scheme binding updates atomic with full rollback on failure.
-5. Support optional isolation via cloning without making it the default behavior.
-6. Treat workflow publication and workflow-scheme migration as explicit lifecycle events, not implicit config edits.
+3. Keep reusable dictionaries shared across schemes/projects instead of cloning them per project.
+4. Materialize project-scoped scheme rows only for the families that need isolated project behavior.
+5. Enforce compatibility validation when associating, materializing, cloning, or re-associating schemes.
+6. Keep project creation and scheme binding updates atomic with full rollback on failure.
+7. Treat workflow publication and workflow-scheme migration as explicit lifecycle events, not implicit config edits.
 
 ## Provisioning Inputs
 
 - `project` creation payload (name/key/type/lead/etc.)
 - optional `blueprint_id`
 - optional explicit scheme overrides by type
-- optional `association_mode` (`SHARED_ASSOCIATION`, `CLONE_ON_ASSOCIATE`)
+- optional `provisioning_mode` (`TEMPLATE_DEFAULT`, `SHARED_FROM_EXISTING`)
+- optional per-scheme strategy overrides when a blueprint needs behavior different from the family default
 
 Resolution precedence for each `scheme_type`:
 
 1. Explicit override from request
 2. Blueprint default from `blueprint_scheme_defaults`
-3. Tenant system default scheme
+3. Tenant system default template or tenant shared default, depending on scheme family
 
-## Association Modes (Jira Parity)
+## Reusable Global Entities (never project-cloned by default)
 
-1. `SHARED_ASSOCIATION` (default)
-   - Project scheme columns point directly to existing scheme rows.
+These entities remain reusable tenant/site dictionaries even when scheme rows are project-scoped:
+
+- `issue_types`
+- `statuses`
+- `status_categories`
+- `priorities`
+- `custom_fields`
+
+Project isolation in Jira-like company-managed setup is achieved at the scheme/context layer, not by copying these dictionaries per project. Renaming or changing one of these reusable entities can affect every workflow, scheme, or project that references it.
+
+## Provisioning Paths (Jira Parity)
+
+1. `TEMPLATE_DEFAULT` (default)
+   - Create a company-managed project from a template/blueprint without shared configuration from an existing project.
+   - Materialize project-scoped scheme rows for the families that Jira typically isolates per project.
+   - Reuse tenant shared/default schemes for families that are commonly shared across spaces.
+2. `SHARED_FROM_EXISTING` (opt-in)
+   - Create a project with shared configuration from an existing project or reusable tenant scheme.
+   - Project scheme columns point directly to existing reusable scheme rows.
    - Updating a shared scheme can affect all projects associated with it.
-2. `CLONE_ON_ASSOCIATE` (optional)
-   - Candidate schemes are deep-cloned before binding to the project.
-   - Changes to cloned schemes stay local to that project.
+3. `CLONE_FROM_SHARED` (optional rebinding action)
+   - Use when a project currently points to a reusable shared scheme but now needs local isolation.
+   - Clone only scheme trees and project-scoped contexts; keep reusable global entities as references.
 
 ## System Scheme Materialization (Tenant Isolation)
 
-When a resolved source scheme belongs to system tenant (`tenant_id=0`), project provisioning should not bind tenant projects directly to mutable system-owned rows.
+When a resolved source artifact belongs to system tenant (`tenant_id=0`), tenant projects should not bind directly to mutable system-owned rows.
 
-Recommended strategy for shared mode:
+Recommended strategy:
 
-1. Check if tenant already has a shared materialized copy for `(scheme_type, source_scheme_id)`.
+1. For reusable shared schemes, check if tenant already has a shared materialized copy for `(scheme_type, source_scheme_id)`.
 2. If yes, bind project to that tenant copy.
-3. If no, clone system scheme once into tenant scope, persist mapping, then bind project.
+3. If no, clone the system scheme once into tenant scope, persist mapping, then bind project.
+4. For project-scoped families, materialize the needed rows directly into tenant/project scope during provisioning and keep lineage metadata.
 
 Suggested helper table:
 
@@ -56,45 +76,67 @@ Suggested helper table:
 
 This allows tenants to customize their own shared schemes without impacting other tenants.
 
-## Scheme Types Covered
+## Scheme Families Covered
 
-| scheme_type | Scheme root table | Project binding column |
-|---|---|---|
-| ISSUE_TYPE | issue_type_schemes | projects.issue_type_scheme_id |
-| WORKFLOW | workflow_schemes | projects.workflow_scheme_id |
-| FIELD_CONFIG | field_config_schemes | projects.field_config_scheme_id |
-| SCREEN | issue_type_screen_schemes | projects.issue_type_screen_scheme_id |
-| PERMISSION | permission_schemes | projects.permission_scheme_id |
-| ISSUE_SECURITY | issue_security_schemes | projects.issue_security_scheme_id |
-| NOTIFICATION | notification_schemes | projects.notification_scheme_id |
-| PRIORITY | priority_schemes | projects.priority_scheme_id |
+| scheme_type | Scheme root table | Project binding column | Typical template-based default |
+|---|---|---|---|
+| ISSUE_TYPE | issue_type_schemes | projects.issue_type_scheme_id | Materialize project-scoped scheme/items, reuse global `issue_types` |
+| WORKFLOW | workflow_schemes | projects.workflow_scheme_id | Materialize project-scoped workflows/schemes, reuse global `statuses` + `status_categories` |
+| FIELD_CONFIG | field_config_schemes | projects.field_config_scheme_id | Materialize project-scoped field config family |
+| SCREEN | issue_type_screen_schemes | projects.issue_type_screen_scheme_id | Materialize project-scoped screen family |
+| PERMISSION | permission_schemes | projects.permission_scheme_id | Bind tenant shared/default scheme unless blueprint requires a dedicated copy |
+| ISSUE_SECURITY | issue_security_schemes | projects.issue_security_scheme_id | Bind tenant shared/default scheme unless blueprint requires a dedicated copy |
+| NOTIFICATION | notification_schemes | projects.notification_scheme_id | Bind tenant shared/default notification scheme |
+| PRIORITY | priority_schemes | projects.priority_scheme_id | Bind tenant shared/default priority scheme |
 
-## Default Association Flow (SHARED_ASSOCIATION)
+There is no single universal provisioning default across all scheme families.
+
+## Default Template Provisioning Flow (`TEMPLATE_DEFAULT`)
 
 All steps run in one DB transaction.
 
 1. Create `projects` row first (scheme columns nullable until validation passes).
-2. Resolve target scheme IDs by precedence (override -> blueprint default -> system default).
-3. Resolve each mapped workflow root to its `current_published_version_id`; drafts never bind directly to projects.
-4. Validate cross-scheme compatibility gates against resolved IDs.
-5. Update scheme columns on `projects` with resolved IDs.
-6. Commit transaction, then publish `PROJECT_CREATED`.
+2. Resolve source templates/schemes by precedence (override -> blueprint default -> tenant default).
+3. Materialize project-scoped families:
+   - ISSUE_TYPE: `issue_type_schemes`, `issue_type_scheme_items`; keep `issue_type_id` references to reusable `issue_types`
+   - WORKFLOW: `workflows`, `workflow_versions`, `workflow_steps`, `workflow_transitions`, `workflow_transition_rules`, `workflow_schemes`, `workflow_scheme_items`; keep `status_id` references to reusable `statuses`
+   - FIELD_CONFIG: `field_configurations`, `field_configuration_items`, `field_config_schemes`, `field_config_scheme_items`
+   - SCREEN: `screens`, `screen_tabs`, `screen_tab_fields`, `screen_schemes`, `screen_scheme_items`, `issue_type_screen_schemes`, `issue_type_screen_scheme_items`
+4. Bind shared/default families:
+   - PRIORITY and NOTIFICATION normally bind tenant shared/default schemes
+   - PERMISSION and ISSUE_SECURITY may bind tenant shared/default schemes unless the blueprint explicitly requires dedicated copies
+5. Resolve each mapped workflow root to its `current_published_version_id`; drafts never bind directly to projects.
+6. Validate cross-scheme compatibility gates against the effective IDs.
+7. Update scheme columns on `projects` with the effective IDs.
+8. Commit transaction, then publish `PROJECT_CREATED`.
 
-## Optional Clone Flow (CLONE_ON_ASSOCIATE)
+## Explicit Shared Configuration Flow (`SHARED_FROM_EXISTING`)
 
-Use this only when explicit isolation is required.
+Use this when the admin intentionally creates a project with shared configuration from an existing project or existing reusable scheme.
 
 1. Create `projects` row first (scheme columns nullable until finalized).
-2. Clone ISSUE_TYPE tree:
-   - `issue_types`
+2. Resolve target reusable scheme IDs by precedence (explicit shared source -> blueprint default -> tenant shared default).
+3. For system-owned reusable sources, materialize one tenant-scoped shared copy first if needed.
+4. Resolve each mapped workflow root to its `current_published_version_id`; drafts never bind directly to projects.
+5. Validate cross-scheme compatibility gates.
+6. Update scheme columns on `projects` with the resolved shared IDs.
+7. Commit transaction, then publish `PROJECT_CREATED`.
+
+## Optional Isolation Flow (`CLONE_FROM_SHARED`)
+
+Use this only when a project is currently using reusable shared schemes and explicit local isolation is required.
+
+1. Create `projects` row first (scheme columns nullable until finalized).
+2. Clone ISSUE_TYPE scheme tree only:
    - `issue_type_schemes`
    - `issue_type_scheme_items`
    - patch `issue_type_schemes.default_issue_type_id`
-3. Clone PRIORITY tree:
-   - `priorities`
+   - keep `issue_type_id` references pointed at reusable `issue_types`
+3. Clone PRIORITY scheme tree only if a dedicated priority set is explicitly required:
    - `priority_schemes`
    - `priority_scheme_items`
    - patch `priority_schemes.default_priority_id`
+   - keep `priority_id` references pointed at reusable `priorities`
 4. Clone SCREEN tree:
    - `screens`
    - `screen_tabs`
@@ -102,30 +144,29 @@ Use this only when explicit isolation is required.
    - `screen_schemes`
    - `screen_scheme_items`
    - `issue_type_screen_schemes`
-   - `issue_type_screen_scheme_items` (map `issue_type_id`)
+   - `issue_type_screen_scheme_items` (reuse `issue_type_id` references)
 5. Clone WORKFLOW tree:
-   - `status_categories`
-   - `statuses`
    - `workflows`
    - `workflow_versions`
    - `workflow_steps`
+   - keep `workflow_steps.status_id` references pointed at reusable `statuses`
    - `workflow_transitions` (map `screen_id` to cloned screen ids)
    - `workflow_transition_rules`
    - `workflow_schemes`
-   - `workflow_scheme_items` (map `issue_type_id` + `workflow_id`)
+   - `workflow_scheme_items` (reuse `issue_type_id`, map `workflow_id`)
    - patch `workflows.current_published_version_id` and `workflows.draft_version_id`
 6. Clone FIELD_CONFIG tree:
    - `field_configurations`
    - `field_configuration_items`
    - `field_config_schemes`
-   - `field_config_scheme_items` (map `issue_type_id`)
+   - `field_config_scheme_items` (reuse `issue_type_id` references)
 7. If isolation must also cover project-specific field contexts, clone matching custom-field context trees:
    - `custom_field_contexts`
    - `custom_field_context_projects`
-   - `custom_field_context_issue_types`
+   - `custom_field_context_issue_types` (reuse `issue_type_id` references)
    - `custom_field_options`
    - `custom_field_context_default_values`
-   - patch `project_id` and `issue_type_id` references to cloned IDs
+   - patch `project_id`; keep `custom_field_id` and `issue_type_id` as reusable references unless a deeper field-model fork is explicitly required
 8. Clone PERMISSION tree:
    - `permission_schemes`
    - `permission_scheme_entries`
@@ -142,13 +183,15 @@ Use this only when explicit isolation is required.
 12. Validate cross-scheme compatibility gates.
 13. Commit transaction, then publish `PROJECT_CREATED`.
 
-## Required ID Mapping Contract (clone mode only)
+Do not clone `issue_types`, `priorities`, `statuses`, `status_categories`, or `custom_fields` as part of normal project isolation. Jira-like isolation happens by cloning scheme/context rows, not these reusable dictionaries.
+
+## Required ID Mapping Contract (`CLONE_FROM_SHARED` only)
 
 Maintain in-memory maps for every cloned root/child ID used by FK remapping:
 
-- `issue_type_map`, `priority_map`
+- `issue_type_scheme_map`, `priority_scheme_map`
 - `screen_map`, `screen_scheme_map`, `issue_type_screen_scheme_map`
-- `status_category_map`, `status_map`, `workflow_map`, `workflow_version_map`, `workflow_step_map`, `workflow_transition_map`, `workflow_scheme_map`
+- `workflow_map`, `workflow_version_map`, `workflow_step_map`, `workflow_transition_map`, `workflow_scheme_map`
 - `field_configuration_map`, `field_config_scheme_map`
 - `custom_field_context_map`, `custom_field_option_map`, `custom_field_context_default_map`
 - `permission_scheme_map`
@@ -167,22 +210,26 @@ Never insert child records with source IDs.
 6. Transition screens: any `workflow_transitions.screen_id` must reference a valid screen in tenant scope.
 7. Custom field context resolution: no field may have two effective contexts with the same specificity for the same `(project_id, issue_type_id)` pair.
 8. Default IDs (`default_*_id`) must belong to the same target scheme.
+9. Reusable global entity references (`issue_type_id`, `status_id`, `priority_id`, `custom_field_id`) must resolve inside the same tenant scope as the target project.
 
 ## Lifecycle Rules
 
 1. Blueprint default updates affect only future project creation unless explicit rebinding is performed.
-2. In `SHARED_ASSOCIATION`, scheme changes propagate to all associated projects.
-3. In `CLONE_ON_ASSOCIATE`, scheme changes remain project-local.
-4. Project scheme rebinding must validate compatibility and apply atomically.
-5. Rebinding from shared to cloned (or cloned to shared) must preserve current work item integrity and migration constraints.
-6. Workflow draft publication and workflow-scheme rebinding may require explicit status/step migration plans for in-flight work items.
+2. Template-based company-managed creation does not imply one universal shared default across all scheme families.
+3. Creating a project with shared configuration from an existing project is explicit opt-in.
+4. Changes to reusable global entities (`issue_types`, `statuses`, `status_categories`, `priorities`, `custom_fields`) can affect multiple projects even when scheme rows are isolated.
+5. Changes to shared schemes propagate to all associated projects.
+6. Changes to materialized/cloned project-scoped schemes remain local to that project.
+7. Project scheme rebinding must validate compatibility and apply atomically.
+8. Rebinding from shared to project-scoped (or project-scoped to shared) must preserve current work item integrity and migration constraints.
+9. Workflow draft publication and workflow-scheme rebinding may require explicit status/step migration plans for in-flight work items.
 
 ## Optional Metadata for Traceability
 
 If lineage tracing is required, add metadata fields on scheme root tables:
 
 - `source_scheme_id BIGINT NULL`
-- `association_mode VARCHAR(30)` (`SHARED_ASSOCIATION`, `CLONE_ON_ASSOCIATE`)
+- `provisioning_mode VARCHAR(40)` (`TEMPLATE_DEFAULT`, `SHARED_FROM_EXISTING`, `CLONE_FROM_SHARED`, `PROJECT_REBIND`)
 - `provision_source_type VARCHAR(20)` (`SYSTEM_DEFAULT`, `BLUEPRINT`, `EXPLICIT_OVERRIDE`, `PROJECT_REBIND`)
 - `provision_source_ref_id BIGINT NULL` (e.g. blueprint ID)
 
