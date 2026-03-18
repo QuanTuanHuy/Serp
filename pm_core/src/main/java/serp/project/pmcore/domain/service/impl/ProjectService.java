@@ -11,8 +11,9 @@ import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import serp.project.pmcore.domain.dto.request.GetProjectParams;
 import serp.project.pmcore.domain.entity.project.ProjectEntity;
-import serp.project.pmcore.domain.exception.AppException;
-import serp.project.pmcore.domain.exception.ErrorCode;
+import serp.project.pmcore.domain.exception.BusinessRuleViolationException;
+import serp.project.pmcore.domain.exception.DomainErrorCode;
+import serp.project.pmcore.domain.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.port.store.IProjectCategoryPort;
 import serp.project.pmcore.domain.port.store.IProjectPort;
 import serp.project.pmcore.domain.service.IProjectService;
@@ -54,7 +55,7 @@ public class ProjectService implements IProjectService {
         ProjectEntity existing = getProjectById(projectId, tenantId);
 
         if (Boolean.TRUE.equals(existing.getIsArchived())) {
-            throw new AppException(ErrorCode.PROJECT_ARCHIVED);
+            throw new BusinessRuleViolationException(DomainErrorCode.PROJECT_ARCHIVED);
         }
 
         if (updateData.getName() != null) {
@@ -86,13 +87,13 @@ public class ProjectService implements IProjectService {
     @Override
     public ProjectEntity getProjectById(Long id, Long tenantId) {
         return projectPort.getProjectById(id, tenantId)
-                .orElseThrow(() -> new AppException(ErrorCode.PROJECT_NOT_FOUND));
+                .orElseThrow(() -> ResourceNotFoundException.project(id));
     }
 
     @Override
     public ProjectEntity getProjectByKey(String key, Long tenantId) {
         return projectPort.getProjectByKey(key, tenantId)
-                .orElseThrow(() -> new AppException(ErrorCode.PROJECT_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(DomainErrorCode.PROJECT_NOT_FOUND));
     }
 
     @Override
@@ -122,7 +123,7 @@ public class ProjectService implements IProjectService {
         ProjectEntity project = getProjectById(id, tenantId);
 
         if (Boolean.TRUE.equals(project.getIsArchived())) {
-            throw new AppException(ErrorCode.PROJECT_ALREADY_ARCHIVED);
+            throw new BusinessRuleViolationException(DomainErrorCode.PROJECT_ALREADY_ARCHIVED);
         }
 
         project.setIsArchived(true);
@@ -138,7 +139,7 @@ public class ProjectService implements IProjectService {
         ProjectEntity project = getProjectById(id, tenantId);
 
         if (!Boolean.TRUE.equals(project.getIsArchived())) {
-            throw new AppException(ErrorCode.PROJECT_NOT_ARCHIVED);
+            throw new BusinessRuleViolationException(DomainErrorCode.PROJECT_NOT_ARCHIVED);
         }
 
         project.setIsArchived(false);
@@ -152,14 +153,14 @@ public class ProjectService implements IProjectService {
     @Override
     public void validateKeyFormat(String key) {
         if (key == null || !PROJECT_KEY_PATTERN.matcher(key).matches()) {
-            throw new AppException(ErrorCode.PROJECT_KEY_INVALID_FORMAT);
+            throw new BusinessRuleViolationException(DomainErrorCode.PROJECT_KEY_INVALID_FORMAT);
         }
     }
 
     @Override
     public void validateKeyUniqueness(String key, Long tenantId) {
         if (projectPort.existsByKeyAndTenantId(key, tenantId)) {
-            throw new AppException(ErrorCode.PROJECT_KEY_ALREADY_EXISTS);
+            throw new BusinessRuleViolationException(DomainErrorCode.PROJECT_KEY_ALREADY_EXISTS);
         }
     }
 
@@ -167,7 +168,7 @@ public class ProjectService implements IProjectService {
     public void validateCategoryExists(Long categoryId, Long tenantId) {
         if (categoryId != null) {
             projectCategoryPort.getCategoryByIdIncludingSystem(categoryId, tenantId)
-                    .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
+                    .orElseThrow(() -> new ResourceNotFoundException(DomainErrorCode.CATEGORY_NOT_FOUND));
         }
     }
 }
