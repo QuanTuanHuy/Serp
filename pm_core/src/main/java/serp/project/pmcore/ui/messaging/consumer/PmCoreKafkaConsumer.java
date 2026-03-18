@@ -12,8 +12,8 @@ import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import serp.project.pmcore.core.service.IConsumerInboxService;
-import serp.project.pmcore.core.service.messaging.strategy.KafkaEventHandlerStrategyRegistry;
+import serp.project.pmcore.domain.service.IConsumerInboxService;
+import serp.project.pmcore.domain.service.messaging.strategy.KafkaEventHandlerStrategyRegistry;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
 @Component

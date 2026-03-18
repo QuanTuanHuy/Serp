@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.SQLRestriction;
-import serp.project.pmcore.core.domain.enums.SchemeType;
+import serp.project.pmcore.domain.enums.SchemeType;
 
 @Entity
 @Table(name = "tenant_scheme_mappings")

@@ -10,9 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.core.exception.AppException;
-import serp.project.pmcore.core.exception.ErrorCode;
-import serp.project.pmcore.core.port.store.IProjectIssueCounterPort;
+import serp.project.pmcore.domain.exception.AppException;
+import serp.project.pmcore.domain.exception.ErrorCode;
+import serp.project.pmcore.domain.port.store.IProjectIssueCounterPort;
 
 @Component
 @RequiredArgsConstructor

@@ -14,9 +14,9 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 
-import serp.project.pmcore.core.domain.enums.ConsumerInboxAcquireResult;
-import serp.project.pmcore.core.domain.enums.ConsumerInboxStatus;
-import serp.project.pmcore.core.port.store.IConsumerInboxPort;
+import serp.project.pmcore.domain.enums.ConsumerInboxAcquireResult;
+import serp.project.pmcore.domain.enums.ConsumerInboxStatus;
+import serp.project.pmcore.domain.port.store.IConsumerInboxPort;
 
 @Component
 public class ConsumerInboxAdapter implements IConsumerInboxPort {
