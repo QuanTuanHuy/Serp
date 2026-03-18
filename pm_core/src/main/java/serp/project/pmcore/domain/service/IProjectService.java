@@ -6,7 +6,7 @@
 package serp.project.pmcore.domain.service;
 
 import org.springframework.data.util.Pair;
-import serp.project.pmcore.domain.dto.request.GetProjectParams;
+import serp.project.pmcore.domain.dto.request.project.GetProjectParams;
 import serp.project.pmcore.domain.entity.project.ProjectEntity;
 
 import java.util.List;

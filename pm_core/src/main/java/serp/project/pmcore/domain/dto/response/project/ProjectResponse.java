@@ -3,9 +3,8 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.domain.dto.request;
+package serp.project.pmcore.domain.dto.response.project;
 
-import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,8 +14,20 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UpdateProjectSchemesRequest {
+public class ProjectResponse {
+    private Long id;
+    private String key;
+    private String name;
+    private String description;
+    private String url;
+    private Long leadUserId;
+    private Long avatarId;
+    private Long categoryId;
+    private String projectTypeKey;
+    private Boolean isArchived;
+    private Long archivedAt;
 
+    // Scheme bindings
     private Long issueTypeSchemeId;
     private Long workflowSchemeId;
     private Long fieldConfigSchemeId;
@@ -26,9 +37,8 @@ public class UpdateProjectSchemesRequest {
     private Long prioritySchemeId;
     private Long issueSecuritySchemeId;
 
-    @Pattern(
-            regexp = "^(SHARED_ASSOCIATION|CLONE_ON_ASSOCIATE)?$",
-            message = "associationMode must be SHARED_ASSOCIATION or CLONE_ON_ASSOCIATE"
-    )
-    private String associationMode;
+    private Long createdAt;
+    private Long createdBy;
+    private Long updatedAt;
+    private Long updatedBy;
 }

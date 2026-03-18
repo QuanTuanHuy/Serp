@@ -2,7 +2,7 @@ package serp.project.pmcore.application.command.project.validator;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.dto.request.CreateProjectRequest;
+import serp.project.pmcore.domain.dto.request.project.CreateProjectRequest;
 import serp.project.pmcore.domain.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.exception.DomainErrorCode;
 import serp.project.pmcore.domain.exception.DomainValidationException;

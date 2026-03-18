@@ -3,7 +3,7 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.domain.dto.response;
+package serp.project.pmcore.domain.dto.response.workitem;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

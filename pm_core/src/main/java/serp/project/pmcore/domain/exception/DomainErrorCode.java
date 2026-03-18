@@ -171,6 +171,7 @@ public enum DomainErrorCode {
     SCHEME_PROVISIONING_FAILED   ("Failed to provision project schemes"),
 
     USER_NOT_FOUND               ("User not found"),
+    TENANT_NOT_FOUND             ("Tenant not found"),
 
     CONCURRENT_MODIFICATION      ("Resource was modified by another request — please retry"),
 

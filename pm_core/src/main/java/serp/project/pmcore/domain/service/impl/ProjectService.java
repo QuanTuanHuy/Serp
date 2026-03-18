@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
-import serp.project.pmcore.domain.dto.request.GetProjectParams;
+import serp.project.pmcore.domain.dto.request.project.GetProjectParams;
 import serp.project.pmcore.domain.entity.project.ProjectEntity;
 import serp.project.pmcore.domain.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.exception.DomainErrorCode;

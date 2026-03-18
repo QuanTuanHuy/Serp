@@ -3,13 +3,14 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.domain.dto.request;
+package serp.project.pmcore.domain.dto.request.project;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import serp.project.pmcore.domain.dto.request.BaseGetParams;
 
 @Getter
 @Setter
