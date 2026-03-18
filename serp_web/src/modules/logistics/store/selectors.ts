@@ -191,7 +191,7 @@ export const selectFacilityById = createSelector(
 export const selectDefaultFacility = createSelector(
   selectFacilityItems,
   (facilities: Facility[]) =>
-    facilities.find((facility: Facility) => facility.default === true)
+    facilities.find((facility: Facility) => facility.isDefault === true)
 );
 
 // Inventory Item selectors

@@ -4,10 +4,10 @@
 
 export type ResponseStatus = 'SUCCESS' | 'FAILED';
 export type EntityType = 'PRODUCT' | 'SUPPLIER' | 'CUSTOMER' | 'FACILITY';
-export type AddressType = 'FACILIY' | 'SHIPPING' | 'BUSSINESS';
+export type AddressType = 'FACILITY' | 'SHIPPING' | 'BUSINESS';
 export type CustomerStatus = 'ACTIVE' | 'INACTIVE';
 export type FacilityStatus = 'ACTIVE' | 'INACTIVE';
-export type InventoryItemStatus = 'VALID' | 'EXPIRED' | 'DAMAGED';
+export type InventoryItemStatus = 'VALID' | 'INVALID';
 export type OrderItemStatus = 'CREATED' | 'DELIVERED';
 export type OrderStatus =
   | 'CREATED'
@@ -54,7 +54,7 @@ export interface Address {
   createdStamp: string;
   lastUpdatedStamp: string;
   tenantId: number;
-  default: boolean;
+  isDefault: boolean;
 }
 
 export interface AddressCreationForm {
@@ -64,7 +64,7 @@ export interface AddressCreationForm {
   latitude: number;
   longitude: number;
   fullAddress: string;
-  default?: boolean;
+  isDefault?: boolean;
 }
 
 export interface AddressUpdateForm {
@@ -72,7 +72,7 @@ export interface AddressUpdateForm {
   latitude?: number;
   longitude?: number;
   fullAddress?: string;
-  default?: boolean;
+  isDefault?: boolean;
 }
 
 // Category types
@@ -142,10 +142,9 @@ export interface Facility {
   length: number;
   width: number;
   height: number;
-  capacity: number;
   tenantId: number;
   address?: Address;
-  default: boolean;
+  isDefault: boolean;
 }
 
 export interface FacilityCreationForm {
