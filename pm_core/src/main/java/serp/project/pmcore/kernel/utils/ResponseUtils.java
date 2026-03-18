@@ -7,8 +7,10 @@
 package serp.project.pmcore.kernel.utils;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.core.domain.constant.Constants;
-import serp.project.pmcore.core.domain.dto.response.GeneralResponse;
+import serp.project.pmcore.domain.constant.Constants;
+import serp.project.pmcore.domain.dto.response.GeneralResponse;
+
+import java.util.List;
 
 @Component
 public class ResponseUtils {
@@ -28,6 +30,15 @@ public class ResponseUtils {
                 .code(code)
                 .message(message)
                 .data(null)
+                .build();
+    }
+
+    public GeneralResponse<?> error(int code, String message, List<String> details) {
+        return GeneralResponse.builder()
+                .status(Constants.HttpStatus.ERROR)
+                .code(code)
+                .message(message)
+                .data(details)
                 .build();
     }
 

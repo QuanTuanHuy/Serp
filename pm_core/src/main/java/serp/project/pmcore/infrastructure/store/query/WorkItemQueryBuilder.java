@@ -8,9 +8,9 @@ package serp.project.pmcore.infrastructure.store.query;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.core.domain.dto.filter.FilterOperator;
-import serp.project.pmcore.core.domain.dto.filter.SortField;
-import serp.project.pmcore.core.domain.dto.filter.WorkItemFilterRequest;
+import serp.project.pmcore.domain.dto.filter.FilterOperator;
+import serp.project.pmcore.domain.dto.filter.SortField;
+import serp.project.pmcore.domain.dto.filter.WorkItemFilterRequest;
 
 import java.util.Set;
 

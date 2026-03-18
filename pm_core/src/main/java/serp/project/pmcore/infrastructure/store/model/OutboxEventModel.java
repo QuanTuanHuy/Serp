@@ -23,7 +23,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import serp.project.pmcore.core.domain.enums.OutboxEventStatus;
+import serp.project.pmcore.domain.enums.OutboxEventStatus;
 
 @Entity
 @Table(name = "outbox_events")

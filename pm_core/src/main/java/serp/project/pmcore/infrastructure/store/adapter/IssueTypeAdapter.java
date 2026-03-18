@@ -7,8 +7,8 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.core.domain.entity.IssueTypeEntity;
-import serp.project.pmcore.core.port.store.IIssueTypePort;
+import serp.project.pmcore.domain.entity.workitem.IssueTypeEntity;
+import serp.project.pmcore.domain.port.store.IIssueTypePort;
 import serp.project.pmcore.infrastructure.store.mapper.IssueTypeMapper;
 import serp.project.pmcore.infrastructure.store.repository.IIssueTypeRepository;
 

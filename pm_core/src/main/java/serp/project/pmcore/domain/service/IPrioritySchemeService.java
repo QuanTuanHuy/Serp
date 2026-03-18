@@ -1,0 +1,15 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
+package serp.project.pmcore.domain.service;
+
+import serp.project.pmcore.domain.entity.PrioritySchemeEntity;
+
+public interface IPrioritySchemeService {
+
+    PrioritySchemeEntity getPrioritySchemeById(Long prioritySchemeId, Long tenantId);
+
+    Long resolvePriorityId(Long prioritySchemeId, Long tenantId);
+}

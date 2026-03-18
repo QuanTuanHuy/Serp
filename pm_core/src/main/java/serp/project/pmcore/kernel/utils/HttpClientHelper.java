@@ -17,8 +17,8 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.util.UriComponentsBuilder;
-import serp.project.pmcore.core.exception.AppException;
-import serp.project.pmcore.core.exception.ErrorCode;
+import serp.project.pmcore.domain.exception.AppException;
+import serp.project.pmcore.domain.exception.ErrorCode;
 import serp.project.pmcore.kernel.property.HttpClientProperties;
 
 import java.io.IOException;
