@@ -1,6 +1,6 @@
-# Module 01: Projects & Configuration (JIRA-like Core)
+# Module 01: Projects & Configuration (Jira Company-Managed Core)
 
-**Design Philosophy:** `projects` acts as a stable container that binds reusable schemes by default (Jira company-managed parity), with optional clone-on-associate isolation where tenants require project-specific copies.
+**Design Philosophy:** `projects` is a stable company-managed container that binds reusable schemes by default, carries the project-level defaults Jira needs for components and releases, and keeps clone-on-associate available only as an explicit isolation mode.
 
 ## Shared Base Columns (applies to all tables in this module)
 
@@ -59,6 +59,7 @@ Replace opaque JSON defaults with relational mapping.
 | avatar_id | BIGINT | Optional avatar asset id |
 | project_category_id | BIGINT | FK -> project_categories (nullable) |
 | project_type_key | VARCHAR(50) | software, business, service_desk, etc. |
+| default_assignee_type | VARCHAR(20) | Project default assignee policy (`PROJECT_LEAD`, `UNASSIGNED`); used when component assignee is `PROJECT_DEFAULT` |
 | archived | BOOLEAN | Default false |
 | archived_at | TIMESTAMP | Archived timestamp |
 | issue_type_scheme_id | BIGINT | FK -> issue_type_schemes (Module 02, shared association by default) |
@@ -81,7 +82,7 @@ Replace opaque JSON defaults with relational mapping.
 | name | VARCHAR(255) | Component name |
 | description | TEXT | Description |
 | lead_user_id | BIGINT | Component lead |
-| assignee_type | VARCHAR(30) | PROJECT_DEFAULT, COMPONENT_LEAD, PROJECT_LEAD, UNASSIGNED |
+| assignee_type | VARCHAR(30) | PROJECT_DEFAULT, COMPONENT_LEAD, PROJECT_LEAD, UNASSIGNED; `PROJECT_DEFAULT` resolves via `projects.default_assignee_type` |
 | created_at, updated_at, created_by, updated_by, deleted_at | TIMESTAMP/BIGINT | Base audit columns |
 
 ## 1.6. `project_versions` (Releases / Fix versions)
@@ -93,10 +94,11 @@ Replace opaque JSON defaults with relational mapping.
 | project_id | BIGINT | FK -> projects |
 | name | VARCHAR(255) | Version name |
 | description | TEXT | Description |
-| sequence | INT | Display order |
+| sequence | INT | Display order within project |
+| driver_user_id | BIGINT | Optional release driver / owner |
 | released | BOOLEAN | Release state |
 | archived | BOOLEAN | Archive state |
-| release_date | DATE | Planned release date |
+| release_date | DATE | Planned or actual release date |
 | start_date | DATE | Planned start date |
 | created_at, updated_at, created_by, updated_by, deleted_at | TIMESTAMP/BIGINT | Base audit columns |
 
@@ -133,6 +135,7 @@ Polymorphic assignment model for future actor types.
 2. Updating blueprint defaults does not mutate scheme bindings of existing projects.
 3. Project scheme rebinding must validate compatibility and apply atomically in one transaction.
 4. Clone-on-associate is optional and should be used only when project-level isolation is explicitly required.
+5. Component assignee resolution must always remain deterministic through `projects.default_assignee_type`.
 
 ## Suggested Constraints & Indexes
 
@@ -140,5 +143,8 @@ Polymorphic assignment model for future actor types.
 - `UNIQUE (tenant_id, name)` on `project_categories`, `project_roles`
 - `UNIQUE (tenant_id, project_id, name)` on `project_components`, `project_versions`
 - `UNIQUE (tenant_id, blueprint_id, scheme_type)` on `blueprint_scheme_defaults`
-- Composite tenant-safe FKs are recommended for all scheme bindings on `projects` (e.g., `(tenant_id, permission_scheme_id)` -> `permission_schemes(tenant_id, id)`, `(tenant_id, issue_security_scheme_id)` -> `issue_security_schemes(tenant_id, id)`)
+- `CHECK default_assignee_type IN ('PROJECT_LEAD','UNASSIGNED')` on `projects`
+- `CHECK assignee_type IN ('PROJECT_DEFAULT','COMPONENT_LEAD','PROJECT_LEAD','UNASSIGNED')` on `project_components`
+- Composite tenant-safe FKs are required for all scheme bindings on `projects` and all project-scoped child tables.
+- All UNIQUE constraints above should be implemented as partial unique indexes filtered by `deleted_at IS NULL`.
 - `INDEX (tenant_id, project_id)` on all project-scoped child tables

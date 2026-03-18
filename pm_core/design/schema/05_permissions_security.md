@@ -1,6 +1,6 @@
 # Module 05: Permissions & Security (Access Control)
 
-**Design Philosophy:** Jira-like security is layered and explicit: project role assignment -> permission scheme grants -> issue-level security restrictions. Access is default-deny unless a grant matches.
+**Design Philosophy:** Jira-like security is layered and explicit: project role assignment -> permission scheme grants -> issue-level security restrictions. Access is default-deny unless a grant matches, and the schema must support Jira-style contextual actors such as project lead, assignee, logged-in users, and custom-field-based user/group resolution.
 
 Provisioning note: permission and issue security schemes are shared by default across associated projects. Clone-on-associate is optional when project-level isolation is required (see Module 00).
 
@@ -55,8 +55,9 @@ If no matching entry exists, access is denied implicitly.
 | tenant_id | BIGINT | Tenant scope |
 | scheme_id | BIGINT | FK -> permission_schemes |
 | permission_key | VARCHAR(100) | FK -> permission_definitions.permission_key (same tenant) |
-| grantee_type | VARCHAR(30) | PROJECT_ROLE, GROUP, USER, PROJECT_LEAD, REPORTER, ASSIGNEE |
-| grantee_id | VARCHAR(255) | Actor identifier (nullable for contextual grantee) |
+| grantee_type | VARCHAR(40) | PROJECT_ROLE, GROUP, USER, PROJECT_LEAD, REPORTER, ASSIGNEE, APPLICATION_ACCESS, ANYONE_ON_WEB, USER_CUSTOM_FIELD_VALUE, GROUP_CUSTOM_FIELD_VALUE |
+| grantee_ref | VARCHAR(255) | Role/group/user/application-access identifier (nullable for contextual grantees) |
+| custom_field_id | BIGINT | FK -> custom_fields when grantee resolves from a user/group custom field |
 | created_at, updated_at, created_by, updated_by, deleted_at | TIMESTAMP/BIGINT | Base audit columns |
 
 ## 5.5. `issue_security_schemes`
@@ -90,22 +91,27 @@ Who can view issues tagged with a given security level.
 | id | BIGINT | PK |
 | tenant_id | BIGINT | Tenant scope |
 | level_id | BIGINT | FK -> issue_security_levels |
-| subject_type | VARCHAR(20) | PROJECT_ROLE, GROUP, USER, PROJECT_LEAD, REPORTER, ASSIGNEE |
-| subject_id | VARCHAR(255) | Actor identifier (nullable for contextual subject) |
+| subject_type | VARCHAR(40) | PROJECT_ROLE, GROUP, USER, PROJECT_LEAD, REPORTER, ASSIGNEE, USER_CUSTOM_FIELD_VALUE, GROUP_CUSTOM_FIELD_VALUE |
+| subject_ref | VARCHAR(255) | Role/group/user identifier (nullable for contextual subjects) |
+| custom_field_id | BIGINT | FK -> custom_fields when member resolves from a user/group custom field |
 | created_at, updated_at, created_by, updated_by, deleted_at | TIMESTAMP/BIGINT | Base audit columns |
 
 ## Suggested Constraints & Indexes
 
 - `UNIQUE (tenant_id, permission_key)` on `permission_definitions`
-- `UNIQUE (tenant_id, scheme_id, permission_key, grantee_type, COALESCE(grantee_id, '__CTX__'))` on `permission_scheme_entries`
-- `UNIQUE (tenant_id, level_id, subject_type, COALESCE(subject_id, '__CTX__'))` on `issue_security_level_members`
+- `UNIQUE (tenant_id, scheme_id, permission_key, grantee_type, COALESCE(grantee_ref, '__CTX__'), COALESCE(custom_field_id, 0))` on `permission_scheme_entries`
+- `UNIQUE (tenant_id, level_id, subject_type, COALESCE(subject_ref, '__CTX__'), COALESCE(custom_field_id, 0))` on `issue_security_level_members`
 - `CHECK` on `permission_scheme_entries`:
-  - `grantee_type IN ('PROJECT_ROLE','GROUP','USER','PROJECT_LEAD','REPORTER','ASSIGNEE')`
-  - `grantee_id IS NOT NULL` for `PROJECT_ROLE/GROUP/USER`
-  - `grantee_id IS NULL` for contextual grantees
+  - `grantee_type IN ('PROJECT_ROLE','GROUP','USER','PROJECT_LEAD','REPORTER','ASSIGNEE','APPLICATION_ACCESS','ANYONE_ON_WEB','USER_CUSTOM_FIELD_VALUE','GROUP_CUSTOM_FIELD_VALUE')`
+  - `grantee_ref IS NOT NULL` for `PROJECT_ROLE/GROUP/USER/APPLICATION_ACCESS`
+  - `custom_field_id IS NOT NULL` for `USER_CUSTOM_FIELD_VALUE/GROUP_CUSTOM_FIELD_VALUE`
+  - `grantee_ref IS NULL` for contextual grantees other than `APPLICATION_ACCESS`
+- `CHECK rights-like semantics at service layer`: `ANYONE_ON_WEB` should only be allowed when deployment policy permits anonymous access.
 - `CHECK` on `issue_security_level_members`:
-  - `subject_type IN ('PROJECT_ROLE','GROUP','USER','PROJECT_LEAD','REPORTER','ASSIGNEE')`
-  - `subject_id IS NOT NULL` for `PROJECT_ROLE/GROUP/USER`
-  - `subject_id IS NULL` for contextual subjects
-- Composite tenant-safe FKs are recommended for all references (`(tenant_id, id)` pattern)
+  - `subject_type IN ('PROJECT_ROLE','GROUP','USER','PROJECT_LEAD','REPORTER','ASSIGNEE','USER_CUSTOM_FIELD_VALUE','GROUP_CUSTOM_FIELD_VALUE')`
+  - `subject_ref IS NOT NULL` for `PROJECT_ROLE/GROUP/USER`
+  - `custom_field_id IS NOT NULL` for `USER_CUSTOM_FIELD_VALUE/GROUP_CUSTOM_FIELD_VALUE`
+  - `subject_ref IS NULL` for contextual subjects
+- Composite tenant-safe FKs are required for all references (`(tenant_id, id)` pattern)
+- All UNIQUE constraints above should be implemented as partial unique indexes filtered by `deleted_at IS NULL`.
 - `INDEX (tenant_id, scheme_id)` on all scheme child tables

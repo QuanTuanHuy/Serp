@@ -1,6 +1,6 @@
 # Module 00: Project Provisioning & Scheme Association
 
-**Design Philosophy:** Jira-closer parity for company-managed projects: associate shared schemes by default, with optional clone-on-associate mode for tenants that require project-level isolation.
+**Design Philosophy:** Jira company-managed parity means projects bind reusable shared schemes by default, workflow drafts never become project-effective until published, and any rebinding that changes active behavior must be validated and applied transactionally.
 
 ## Shared Base Columns (applies to optional helper tables in this module)
 
@@ -16,6 +16,7 @@
 3. Enforce compatibility validation when associating or re-associating schemes.
 4. Keep project creation and scheme binding updates atomic with full rollback on failure.
 5. Support optional isolation via cloning without making it the default behavior.
+6. Treat workflow publication and workflow-scheme migration as explicit lifecycle events, not implicit config edits.
 
 ## Provisioning Inputs
 
@@ -74,9 +75,10 @@ All steps run in one DB transaction.
 
 1. Create `projects` row first (scheme columns nullable until validation passes).
 2. Resolve target scheme IDs by precedence (override -> blueprint default -> system default).
-3. Validate cross-scheme compatibility gates against resolved IDs.
-4. Update scheme columns on `projects` with resolved IDs.
-5. Commit transaction, then publish `PROJECT_CREATED`.
+3. Resolve each mapped workflow root to its `current_published_version_id`; drafts never bind directly to projects.
+4. Validate cross-scheme compatibility gates against resolved IDs.
+5. Update scheme columns on `projects` with resolved IDs.
+6. Commit transaction, then publish `PROJECT_CREATED`.
 
 ## Optional Clone Flow (CLONE_ON_ASSOCIATE)
 
@@ -105,31 +107,40 @@ Use this only when explicit isolation is required.
    - `status_categories`
    - `statuses`
    - `workflows`
+   - `workflow_versions`
    - `workflow_steps`
    - `workflow_transitions` (map `screen_id` to cloned screen ids)
    - `workflow_transition_rules`
    - `workflow_schemes`
    - `workflow_scheme_items` (map `issue_type_id` + `workflow_id`)
+   - patch `workflows.current_published_version_id` and `workflows.draft_version_id`
 6. Clone FIELD_CONFIG tree:
    - `field_configurations`
    - `field_configuration_items`
    - `field_config_schemes`
    - `field_config_scheme_items` (map `issue_type_id`)
-7. Clone PERMISSION tree:
+7. If isolation must also cover project-specific field contexts, clone matching custom-field context trees:
+   - `custom_field_contexts`
+   - `custom_field_context_projects`
+   - `custom_field_context_issue_types`
+   - `custom_field_options`
+   - `custom_field_context_default_values`
+   - patch `project_id` and `issue_type_id` references to cloned IDs
+8. Clone PERMISSION tree:
    - `permission_schemes`
    - `permission_scheme_entries`
-8. Clone ISSUE_SECURITY tree (2-pass):
+9. Clone ISSUE_SECURITY tree (2-pass):
    - insert `issue_security_schemes` with `default_level_id=NULL`
    - clone `issue_security_levels`
    - clone `issue_security_level_members`
    - patch `issue_security_schemes.default_level_id`
-9. Clone NOTIFICATION tree:
+10. Clone NOTIFICATION tree:
    - `notification_schemes`
    - `notification_scheme_entries`
    - keep `notification_events` tenant-shared unless project-specific events are required
-10. Update scheme columns on `projects` with cloned IDs.
-11. Validate cross-scheme compatibility gates.
-12. Commit transaction, then publish `PROJECT_CREATED`.
+11. Update scheme columns on `projects` with cloned IDs.
+12. Validate cross-scheme compatibility gates.
+13. Commit transaction, then publish `PROJECT_CREATED`.
 
 ## Required ID Mapping Contract (clone mode only)
 
@@ -137,8 +148,9 @@ Maintain in-memory maps for every cloned root/child ID used by FK remapping:
 
 - `issue_type_map`, `priority_map`
 - `screen_map`, `screen_scheme_map`, `issue_type_screen_scheme_map`
-- `status_category_map`, `status_map`, `workflow_map`, `workflow_transition_map`, `workflow_scheme_map`
+- `status_category_map`, `status_map`, `workflow_map`, `workflow_version_map`, `workflow_step_map`, `workflow_transition_map`, `workflow_scheme_map`
 - `field_configuration_map`, `field_config_scheme_map`
+- `custom_field_context_map`, `custom_field_option_map`, `custom_field_context_default_map`
 - `permission_scheme_map`
 - `issue_security_scheme_map`, `issue_security_level_map`
 - `notification_scheme_map`
@@ -148,10 +160,13 @@ Never insert child records with source IDs.
 ## Compatibility Gates Before Commit
 
 1. Workflow coverage: every issue type in the effective issue type scheme has a workflow mapping.
-2. Field config coverage: every issue type in the effective issue type scheme has a field configuration mapping.
-3. Screen coverage: every issue type in the effective issue type scheme has an issue-type-to-screen-scheme mapping.
-4. Workflow initial status: each mapped workflow has exactly one `is_initial=true` step.
-5. Default IDs (`default_*_id`) must belong to the same target scheme.
+2. Workflow publication: every mapped workflow root has one valid `current_published_version_id`.
+3. Workflow initial step: each published workflow version has exactly one `is_initial=true` step.
+4. Field config coverage: every issue type in the effective issue type scheme has a field configuration mapping.
+5. Screen coverage: every issue type in the effective issue type scheme has an issue-type-to-screen-scheme mapping for CREATE, EDIT, and VIEW operations.
+6. Transition screens: any `workflow_transitions.screen_id` must reference a valid screen in tenant scope.
+7. Custom field context resolution: no field may have two effective contexts with the same specificity for the same `(project_id, issue_type_id)` pair.
+8. Default IDs (`default_*_id`) must belong to the same target scheme.
 
 ## Lifecycle Rules
 
@@ -160,6 +175,7 @@ Never insert child records with source IDs.
 3. In `CLONE_ON_ASSOCIATE`, scheme changes remain project-local.
 4. Project scheme rebinding must validate compatibility and apply atomically.
 5. Rebinding from shared to cloned (or cloned to shared) must preserve current work item integrity and migration constraints.
+6. Workflow draft publication and workflow-scheme rebinding may require explicit status/step migration plans for in-flight work items.
 
 ## Optional Metadata for Traceability
 
@@ -168,6 +184,6 @@ If lineage tracing is required, add metadata fields on scheme root tables:
 - `source_scheme_id BIGINT NULL`
 - `association_mode VARCHAR(30)` (`SHARED_ASSOCIATION`, `CLONE_ON_ASSOCIATE`)
 - `provision_source_type VARCHAR(20)` (`SYSTEM_DEFAULT`, `BLUEPRINT`, `EXPLICIT_OVERRIDE`, `PROJECT_REBIND`)
-- `provision_source_ref_id BIGINT NULL` (e.g., blueprint ID)
+- `provision_source_ref_id BIGINT NULL` (e.g. blueprint ID)
 
 These fields are optional but strongly recommended for debugging and audit.

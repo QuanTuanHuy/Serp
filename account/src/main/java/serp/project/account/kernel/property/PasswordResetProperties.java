@@ -15,4 +15,11 @@ import org.springframework.context.annotation.Configuration;
 public class PasswordResetProperties {
     private String frontendResetUrl = "http://localhost:3000/auth/reset-password";
     private Long expirationMinutes = 60L;
+
+    public Long getExpirationMinutes() {
+        if (expirationMinutes == null || expirationMinutes <= 0) {
+            return 60L;
+        }
+        return expirationMinutes;
+    }
 }

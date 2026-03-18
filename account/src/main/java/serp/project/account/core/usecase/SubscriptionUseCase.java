@@ -12,11 +12,14 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.message.CreateNotificationEvent;
 import serp.project.account.core.domain.dto.request.*;
+import serp.project.account.core.domain.entity.ModuleEntity;
 import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.exception.AppException;
@@ -102,7 +105,7 @@ public class SubscriptionUseCase {
             }
             var organization = organizationService.getOrganizationById(organizationId);
             var modules = moduleService.getModulesByIds(request.getModuleIds()).stream()
-                    .filter(module -> module.isAvailable()).toList();
+                    .filter(ModuleEntity::isAvailable).toList();
             if (CollectionUtils.isEmpty(modules)) {
                 throw new AppException(Constants.ErrorMessage.MODULE_NOT_FOUND);
             }
@@ -134,7 +137,7 @@ public class SubscriptionUseCase {
             var currentPlan = subscriptionPlanService.getPlanById(currentSubscription.getSubscriptionPlanId());
 
             var modulesToAdd = moduleService.getModulesByIds(request.getAdditionalModuleIds()).stream()
-                    .filter(module -> module.isAvailable())
+                    .filter(ModuleEntity::isAvailable)
                     .toList();
             if (CollectionUtils.isEmpty(modulesToAdd)) {
                 throw new AppException(Constants.ErrorMessage.MODULE_NOT_AVAILABLE);
@@ -430,9 +433,14 @@ public class SubscriptionUseCase {
         try {
             log.info("[UseCase] Rejecting subscription {}", subscriptionId);
 
+            var subscription = subscriptionService.getSubscriptionById(subscriptionId);
+            var organization = organizationService.getOrganizationById(subscription.getOrganizationId());
+
             subscriptionService.rejectSubscription(subscriptionId, request.getReason(), rejectedBy);
 
             var notificationEvent = CreateNotificationEvent.builder()
+                    .userId(organization != null ? organization.getOwnerId() : null)
+                    .tenantId(subscription.getOrganizationId())
                     .title("Subscription Rejected")
                     .message("Your subscription has been rejected. Reason: " + request.getReason())
                     .actionUrl("/contact-support")
@@ -442,9 +450,11 @@ public class SubscriptionUseCase {
             log.info("[UseCase] Successfully rejected subscription {}", subscriptionId);
             return responseUtils.success("Subscription rejected successfully");
         } catch (AppException e) {
+            markTransactionForRollback();
             log.error("Error rejecting subscription {}: {}", subscriptionId, e.getMessage());
             return responseUtils.error(e.getCode(), e.getMessage());
         } catch (Exception e) {
+            markTransactionForRollback();
             log.error("Unexpected error when rejecting subscription {}: {}", subscriptionId, e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
@@ -597,6 +607,12 @@ public class SubscriptionUseCase {
         } catch (Exception e) {
             log.error("Unexpected error when getting all subscriptions: {}", e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
+        }
+    }
+
+    private void markTransactionForRollback() {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
         }
     }
 

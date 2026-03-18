@@ -53,25 +53,6 @@ public class UserRoleAdapter implements IUserRolePort {
         return userRoleMapper.toEntityList(userRoleRepository.findByUserIdIn(userIds));
     }
 
-    public void testBatchInsert() {
-        Long start = System.currentTimeMillis();
-        String sql = """
-                INSERT INTO tests(name, created_at, updated_at)
-                VALUES (?, ?, ?)
-                """;
-        List<Integer> testList = new ArrayList<>();
-        for (int i = 0; i < 10000; i++) {
-            testList.add(i);
-        }
-        jdbcTemplate.batchUpdate(sql, testList, 1000, (ps, argument) -> {
-            ps.setString(1, "Name " + argument);
-            ps.setObject(2, System.currentTimeMillis());
-            ps.setObject(3, System.currentTimeMillis());
-        });
-        Long end = System.currentTimeMillis();
-        log.info("Time taken to insert 10000 records: {} ms", (end - start));
-    }
-
     @Override
     public void deleteUserRolesByUserIdAndRoleIds(Long userId, List<Long> roleIds) {
         userRoleRepository.deleteByUserIdAndRoleIdIn(userId, roleIds);

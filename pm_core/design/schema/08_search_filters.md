@@ -1,6 +1,6 @@
 # Module 08: Search & Reporting (Filters & Dashboards)
 
-**Design Philosophy:** Search artifacts (filters/dashboards) are first-class entities with explicit sharing and subscription policies.
+**Design Philosophy:** Search artifacts (filters/dashboards) are first-class entities with explicit sharing and subscription policies. Visibility semantics should clearly distinguish private, shared, tenant-open, and public access so board/filter behavior is predictable.
 
 ## Shared Base Columns (applies to all tables in this module)
 
@@ -8,6 +8,13 @@
 - `created_at TIMESTAMP`, `updated_at TIMESTAMP`
 - `created_by BIGINT`, `updated_by BIGINT`
 - `deleted_at TIMESTAMP NULL`
+
+## Visibility Model
+
+1. `PRIVATE`: only owner and admins; no share rows required.
+2. `SHARED`: visibility granted by explicit `share_permissions` rows.
+3. `OPEN`: visible to all authenticated users in the tenant.
+4. `PUBLIC`: visible outside the tenant only if deployment policy explicitly allows it.
 
 ## 8.1. `search_requests` (Saved filters)
 
@@ -19,7 +26,7 @@
 | description | TEXT | Description |
 | author_id | BIGINT | Owner user id |
 | query_string | TEXT | JQL-like query |
-| is_favorite | BOOLEAN | Owner favorite marker |
+| visibility_scope | VARCHAR(20) | PRIVATE, SHARED, OPEN, PUBLIC |
 | created_at, updated_at, created_by, updated_by, deleted_at | TIMESTAMP/BIGINT | Base audit columns |
 
 ## 8.2. `search_request_favorites`
@@ -36,7 +43,7 @@ Separate table to support many users favoriting same filter.
 
 ## 8.3. `share_permissions`
 
-Who can read/edit a filter or dashboard.
+Who can read/edit a filter or dashboard for non-private visibility scopes.
 
 | Column | Type | Description |
 |---|---|---|
@@ -44,9 +51,9 @@ Who can read/edit a filter or dashboard.
 | tenant_id | BIGINT | Tenant scope |
 | entity_type | VARCHAR(20) | FILTER, DASHBOARD |
 | entity_id | BIGINT | Target id |
-| share_type | VARCHAR(20) | GLOBAL, GROUP, PROJECT, ROLE, USER |
-| share_param | VARCHAR(255) | Subject id |
-| rights | VARCHAR(20) | READ, EDIT |
+| share_type | VARCHAR(20) | GROUP, PROJECT, PROJECT_ROLE, USER, OPEN, PUBLIC |
+| share_ref | VARCHAR(255) | Subject id; null for OPEN/PUBLIC |
+| rights | VARCHAR(20) | VIEW, EDIT |
 | created_at, updated_at, created_by, updated_by, deleted_at | TIMESTAMP/BIGINT | Base audit columns |
 
 ## 8.4. `filter_subscriptions`
@@ -77,6 +84,7 @@ Periodic delivery settings for saved filters.
 | description | TEXT | Description |
 | author_id | BIGINT | Owner user id |
 | layout | VARCHAR(20) | AA, AAA, AB, BA |
+| visibility_scope | VARCHAR(20) | PRIVATE, SHARED, OPEN, PUBLIC |
 | is_system | BOOLEAN | System dashboard marker |
 | created_at, updated_at, created_by, updated_by, deleted_at | TIMESTAMP/BIGINT | Base audit columns |
 
@@ -113,3 +121,14 @@ Keep JSONB only for plugin-specific gadget options.
 - `INDEX (tenant_id, entity_type, entity_id)` on `share_permissions`
 - `INDEX (tenant_id, next_run_at, is_active)` on `filter_subscriptions`
 - `UNIQUE (tenant_id, dashboard_id, column_idx, row_idx)` on `gadgets`
+- `CHECK visibility_scope IN ('PRIVATE','SHARED','OPEN','PUBLIC')` on `search_requests` and `dashboards`
+- `CHECK share_type IN ('GROUP','PROJECT','PROJECT_ROLE','USER','OPEN','PUBLIC')` on `share_permissions`
+- `CHECK rights IN ('VIEW','EDIT')` on `share_permissions`
+- `CHECK share_ref IS NULL` for `OPEN/PUBLIC` share rows and non-null for `GROUP/PROJECT/PROJECT_ROLE/USER`
+- `CHECK rights='VIEW'` for `OPEN/PUBLIC` share rows
+- For `visibility_scope='PRIVATE'`, no `share_permissions` rows should exist.
+- For `visibility_scope='SHARED'`, use only `GROUP/PROJECT/PROJECT_ROLE/USER` share rows plus owner/admin rights.
+- For `visibility_scope='OPEN'`, require one `share_type='OPEN' AND rights='VIEW'` row; optional extra `EDIT` rows may still be granted to specific users/roles/groups.
+- For `visibility_scope='PUBLIC'`, require one `share_type='PUBLIC' AND rights='VIEW'` row; optional extra `EDIT` rows may still be granted to specific users/roles/groups.
+- All UNIQUE constraints above should be implemented as partial unique indexes filtered by `deleted_at IS NULL`.
+- Composite tenant-safe FKs are required for all intra-module references.
