@@ -13,6 +13,7 @@ import serp.project.pmcore.application.command.project.validator.CreateProjectVa
 import serp.project.pmcore.domain.dto.request.project.CreateProjectRequest;
 import serp.project.pmcore.domain.dto.response.project.ProjectResponse;
 import serp.project.pmcore.domain.entity.project.ProjectEntity;
+import serp.project.pmcore.domain.entity.project.ProjectSchemeBindings;
 import serp.project.pmcore.domain.service.IProjectService;
 
 @Service
@@ -23,9 +24,23 @@ public class CreateProjectCommand {
     private final IProjectService projectService;
 
     @Transactional(rollbackFor = Exception.class)
-    public ProjectResponse execute(CreateProjectRequest request, Long userId, Long tenantId) {
+    public ProjectResponse execute(CreateProjectRequest request, Long tenantId, Long userId) {
         projectValidator.validate(request, tenantId);
 
+        ProjectSchemeBindings schemeBindings = ProjectSchemeBindings.fromRequest(request);
+        log.info("Creating project key={} tenantId={} schemeBindings={}",
+                request.getKey(), tenantId, schemeBindings.toSchemeMap());
+
+        ProjectEntity project = buildProjectEntity(request, schemeBindings);
+        ProjectEntity saved = projectService.createProject(project, tenantId, userId);
+
+        log.info("Created project id={} key={} tenantId={}",
+                saved.getId(), saved.getKey(), tenantId);
+        return ProjectResponse.from(saved);
+    }
+
+    private ProjectEntity buildProjectEntity(CreateProjectRequest request,
+                                             ProjectSchemeBindings schemeBindings) {
         ProjectEntity project = ProjectEntity.builder()
                 .key(request.getKey())
                 .name(request.getName())
@@ -35,45 +50,9 @@ public class CreateProjectCommand {
                 .avatarId(request.getAvatarId())
                 .categoryId(request.getCategoryId())
                 .projectTypeKey(request.getProjectTypeKey())
-                .issueTypeSchemeId(request.getIssueTypeSchemeId())
-                .workflowSchemeId(request.getWorkflowSchemeId())
-                .fieldConfigSchemeId(request.getFieldConfigSchemeId())
-                .issueTypeScreenSchemeId(request.getIssueTypeScreenSchemeId())
-                .permissionSchemeId(request.getPermissionSchemeId())
-                .notificationSchemeId(request.getNotificationSchemeId())
-                .prioritySchemeId(request.getPrioritySchemeId())
-                .issueSecuritySchemeId(request.getIssueSecuritySchemeId())
                 .build();
 
-        ProjectEntity saved = projectService.createProject(project, tenantId, userId);
-        return toResponse(saved);
-    }
-
-    private ProjectResponse toResponse(ProjectEntity entity) {
-        return ProjectResponse.builder()
-                .id(entity.getId())
-                .key(entity.getKey())
-                .name(entity.getName())
-                .description(entity.getDescription())
-                .url(entity.getUrl())
-                .leadUserId(entity.getLeadUserId())
-                .avatarId(entity.getAvatarId())
-                .categoryId(entity.getCategoryId())
-                .projectTypeKey(entity.getProjectTypeKey())
-                .isArchived(entity.getIsArchived())
-                .archivedAt(entity.getArchivedAt())
-                .issueTypeSchemeId(entity.getIssueTypeSchemeId())
-                .workflowSchemeId(entity.getWorkflowSchemeId())
-                .fieldConfigSchemeId(entity.getFieldConfigSchemeId())
-                .issueTypeScreenSchemeId(entity.getIssueTypeScreenSchemeId())
-                .permissionSchemeId(entity.getPermissionSchemeId())
-                .notificationSchemeId(entity.getNotificationSchemeId())
-                .prioritySchemeId(entity.getPrioritySchemeId())
-                .issueSecuritySchemeId(entity.getIssueSecuritySchemeId())
-                .createdAt(entity.getCreatedAt())
-                .createdBy(entity.getCreatedBy())
-                .updatedAt(entity.getUpdatedAt())
-                .updatedBy(entity.getUpdatedBy())
-                .build();
+        schemeBindings.applyTo(project);
+        return project;
     }
 }

@@ -141,6 +141,7 @@ public enum DomainErrorCode {
     // ----------------------------------------------------------------
     // Permissions & Security
     // ----------------------------------------------------------------
+    NOTIFICATION_SCHEME_NOT_FOUND("Notification scheme not found"),
     PERMISSION_SCHEME_NOT_FOUND  ("Permission scheme not found"),
     PERMISSION_KEY_NOT_FOUND     ("Permission definition not found"),
     DUPLICATE_PERMISSION_ENTRY   ("This permission grant already exists in the scheme"),

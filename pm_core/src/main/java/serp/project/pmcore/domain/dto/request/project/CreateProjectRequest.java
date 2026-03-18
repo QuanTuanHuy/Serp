@@ -41,6 +41,8 @@ public class CreateProjectRequest {
     private Long leadUserId;
 
     private Long categoryId;
+
+    // Reserved for a future template-based provisioning flow. Ignored in round one.
     private Long blueprintId;
     private String url;
     private Long avatarId;
@@ -55,9 +57,6 @@ public class CreateProjectRequest {
     private Long prioritySchemeId;
     private Long issueSecuritySchemeId;
 
-    @Pattern(
-            regexp = "^(SHARED_ASSOCIATION|CLONE_ON_ASSOCIATE)?$",
-            message = "associationMode must be SHARED_ASSOCIATION or CLONE_ON_ASSOCIATE"
-    )
+    // Reserved for a future provisioning strategy switch. Ignored in round one.
     private String associationMode;
 }

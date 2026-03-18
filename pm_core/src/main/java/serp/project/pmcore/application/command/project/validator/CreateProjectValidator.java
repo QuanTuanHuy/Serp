@@ -8,14 +8,22 @@ package serp.project.pmcore.application.command.project.validator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import serp.project.pmcore.domain.dto.request.project.CreateProjectRequest;
+import serp.project.pmcore.domain.entity.project.ProjectSchemeBindings;
 import serp.project.pmcore.domain.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.exception.DomainErrorCode;
 import serp.project.pmcore.domain.exception.DomainValidationException;
 import serp.project.pmcore.domain.exception.ResourceNotFoundException;
-import serp.project.pmcore.domain.port.store.*;
+import serp.project.pmcore.domain.port.store.IFieldConfigSchemePort;
+import serp.project.pmcore.domain.port.store.IIssueSecuritySchemePort;
+import serp.project.pmcore.domain.port.store.IProjectCategoryPort;
+import serp.project.pmcore.domain.port.store.IProjectPort;
+import serp.project.pmcore.domain.port.store.IIssueTypeSchemePort;
+import serp.project.pmcore.domain.port.store.IIssueTypeScreenSchemePort;
+import serp.project.pmcore.domain.port.store.INotificationSchemePort;
+import serp.project.pmcore.domain.port.store.IPermissionSchemePort;
+import serp.project.pmcore.domain.port.store.IPrioritySchemePort;
+import serp.project.pmcore.domain.port.store.IWorkflowSchemePort;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -25,10 +33,14 @@ public class CreateProjectValidator {
 
     private final IProjectPort projectPort;
     private final IProjectCategoryPort categoryPort;
-    private final IProjectBlueprintPort blueprintPort;
     private final IIssueTypeSchemePort issueTypeSchemePort;
     private final IWorkflowSchemePort workflowSchemePort;
     private final IPrioritySchemePort prioritySchemePort;
+    private final IFieldConfigSchemePort fieldConfigSchemePort;
+    private final IIssueTypeScreenSchemePort issueTypeScreenSchemePort;
+    private final IPermissionSchemePort permissionSchemePort;
+    private final INotificationSchemePort notificationSchemePort;
+    private final IIssueSecuritySchemePort issueSecuritySchemePort;
 
     private static final Pattern KEY_PATTERN =
             Pattern.compile("^[A-Z][A-Z0-9]{1,9}$");
@@ -36,22 +48,18 @@ public class CreateProjectValidator {
     private static final Set<String> VALID_PROJECT_TYPES =
             Set.of("software", "business");
 
-    private static final Set<String> VALID_ASSOCIATION_MODES =
-            Set.of("SHARED_ASSOCIATION", "CLONE_ON_ASSOCIATE");
-
 
     public void validate(CreateProjectRequest request, Long tenantId) {
         validateProjectMetadata(request, tenantId);
-        validateSchemeOverrides(request, tenantId);
-        validateExplicitSchemeBindings(request);
-        validateBlueprintConsistency(request, tenantId);
+        ProjectSchemeBindings schemeBindings = ProjectSchemeBindings.fromRequest(request);
+        validateExplicitSchemeBindings(schemeBindings);
+        validateSchemeBindings(schemeBindings, tenantId);
     }
 
     private void validateProjectMetadata(CreateProjectRequest request, Long tenantId) {
         validateKeyFormat(request.getKey());
         validateKeyUniqueness(request.getKey(), tenantId);
         validateProjectType(request.getProjectTypeKey());
-        validateAssociationMode(request.getAssociationMode());
         validateCategoryExists(request.getCategoryId(), tenantId);
     }
 
@@ -81,31 +89,21 @@ public class CreateProjectValidator {
         }
     }
 
-    private void validateAssociationMode(String associationMode) {
-        if (associationMode == null) return;
-        if (!VALID_ASSOCIATION_MODES.contains(associationMode.toUpperCase())) {
-            throw new DomainValidationException(
-                    DomainErrorCode.INVALID_ASSOCIATION_MODE,
-                    "Association mode must be one of " + VALID_ASSOCIATION_MODES
-                            + ", got: '" + associationMode + "'");
-        }
-    }
-
     private void validateCategoryExists(Long categoryId, Long tenantId) {
         if (categoryId == null) return;
         categoryPort.getCategoryByIdIncludingSystem(categoryId, tenantId)
                 .orElseThrow(() -> ResourceNotFoundException.category(categoryId));
     }
 
-    private void validateSchemeOverrides(CreateProjectRequest request, Long tenantId) {
-        validateIssueTypeSchemeExists(request.getIssueTypeSchemeId(), tenantId);
-        validateWorkflowSchemeExists(request.getWorkflowSchemeId(), tenantId);
-        validatePrioritySchemeExists(request.getPrioritySchemeId(), tenantId);
-        validateFieldConfigSchemeExists(request.getFieldConfigSchemeId(), tenantId);
-        validateIssueTypeScreenSchemeExists(request.getIssueTypeScreenSchemeId(), tenantId);
-        validatePermissionSchemeExists(request.getPermissionSchemeId(), tenantId);
-        validateNotificationSchemeExists(request.getNotificationSchemeId(), tenantId);
-        validateIssueSecuritySchemeExists(request.getIssueSecuritySchemeId(), tenantId);
+    private void validateSchemeBindings(ProjectSchemeBindings schemeBindings, Long tenantId) {
+        validateIssueTypeSchemeExists(schemeBindings.getIssueTypeSchemeId(), tenantId);
+        validateWorkflowSchemeExists(schemeBindings.getWorkflowSchemeId(), tenantId);
+        validateFieldConfigSchemeExists(schemeBindings.getFieldConfigSchemeId(), tenantId);
+        validateIssueTypeScreenSchemeExists(schemeBindings.getIssueTypeScreenSchemeId(), tenantId);
+        validatePermissionSchemeExists(schemeBindings.getPermissionSchemeId(), tenantId);
+        validateNotificationSchemeExists(schemeBindings.getNotificationSchemeId(), tenantId);
+        validatePrioritySchemeExists(schemeBindings.getPrioritySchemeId(), tenantId);
+        validateIssueSecuritySchemeExists(schemeBindings.getIssueSecuritySchemeId(), tenantId);
     }
 
     private void validateIssueTypeSchemeExists(Long schemeId, Long tenantId) {
@@ -133,43 +131,48 @@ public class CreateProjectValidator {
     }
 
     private void validateFieldConfigSchemeExists(Long schemeId, Long tenantId) {
+        if (schemeId == null) return;
+        fieldConfigSchemePort.getFieldConfigSchemeByIdIncludingSystem(schemeId, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        DomainErrorCode.FIELD_CONFIG_SCHEME_NOT_FOUND,
+                        "Field configuration scheme not found: id=" + schemeId));
     }
 
     private void validateIssueTypeScreenSchemeExists(Long schemeId, Long tenantId) {
+        if (schemeId == null) return;
+        issueTypeScreenSchemePort.getIssueTypeScreenSchemeByIdIncludingSystem(schemeId, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        DomainErrorCode.ISSUE_TYPE_SCREEN_SCHEME_NOT_FOUND,
+                        "Issue type screen scheme not found: id=" + schemeId));
     }
 
     private void validatePermissionSchemeExists(Long schemeId, Long tenantId) {
+        if (schemeId == null) return;
+        permissionSchemePort.getPermissionSchemeByIdIncludingSystem(schemeId, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        DomainErrorCode.PERMISSION_SCHEME_NOT_FOUND,
+                        "Permission scheme not found: id=" + schemeId));
     }
 
     private void validateNotificationSchemeExists(Long schemeId, Long tenantId) {
+        if (schemeId == null) return;
+        notificationSchemePort.getNotificationSchemeByIdIncludingSystem(schemeId, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        DomainErrorCode.NOTIFICATION_SCHEME_NOT_FOUND,
+                        "Notification scheme not found: id=" + schemeId));
     }
 
     private void validateIssueSecuritySchemeExists(Long schemeId, Long tenantId) {
+        if (schemeId == null) return;
+        issueSecuritySchemePort.getIssueSecuritySchemeByIdIncludingSystem(schemeId, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        DomainErrorCode.ISSUE_SECURITY_SCHEME_NOT_FOUND,
+                        "Issue security scheme not found: id=" + schemeId));
     }
 
 
-    private void validateBlueprintConsistency(CreateProjectRequest request, Long tenantId) {
-        if (request.getBlueprintId() == null) {
-            return;
-        }
-
-        validateBlueprintExists(request.getBlueprintId(), tenantId);
-        validateBlueprintProjectTypeMatch(request.getBlueprintId(),
-                request.getProjectTypeKey(), tenantId);
-    }
-
-    private void validateExplicitSchemeBindings(CreateProjectRequest request) {
-        List<String> missing = new ArrayList<>();
-
-        if (request.getIssueTypeSchemeId() == null) missing.add("issueTypeSchemeId");
-        if (request.getWorkflowSchemeId() == null) missing.add("workflowSchemeId");
-        if (request.getFieldConfigSchemeId() == null) missing.add("fieldConfigSchemeId");
-        if (request.getIssueTypeScreenSchemeId() == null) missing.add("issueTypeScreenSchemeId");
-        if (request.getPermissionSchemeId() == null) missing.add("permissionSchemeId");
-        if (request.getNotificationSchemeId() == null) missing.add("notificationSchemeId");
-        if (request.getPrioritySchemeId() == null) missing.add("prioritySchemeId");
-        if (request.getIssueSecuritySchemeId() == null) missing.add("issueSecuritySchemeId");
-
+    private void validateExplicitSchemeBindings(ProjectSchemeBindings schemeBindings) {
+        var missing = schemeBindings.getMissingRequiredFields();
         if (!missing.isEmpty()) {
             throw new DomainValidationException(
                     DomainErrorCode.SCHEME_PROVISIONING_FAILED,
@@ -177,26 +180,4 @@ public class CreateProjectValidator {
                             + missing + ". In round one, all effective scheme bindings must be provided explicitly.");
         }
     }
-
-    private void validateBlueprintExists(Long blueprintId, Long tenantId) {
-        blueprintPort.getBlueprintByIdIncludingSystem(blueprintId, tenantId)
-                .orElseThrow(() -> ResourceNotFoundException.blueprint(blueprintId));
-    }
-
-    private void validateBlueprintProjectTypeMatch(Long blueprintId,
-                                                   String projectTypeKey,
-                                                   Long tenantId) {
-        blueprintPort.getBlueprintByIdIncludingSystem(blueprintId, tenantId)
-                .filter(bp -> bp.getTypeKey() != null)
-                .ifPresent(bp -> {
-                    if (!bp.getTypeKey().equalsIgnoreCase(projectTypeKey)) {
-                        throw new DomainValidationException(
-                                DomainErrorCode.BLUEPRINT_PROJECT_TYPE_MISMATCH,
-                                "Blueprint '" + bp.getName() + "' is for project type '"
-                                        + bp.getTypeKey() + "', but request specifies '"
-                                        + projectTypeKey + "'");
-                    }
-                });
-    }
-
 }
