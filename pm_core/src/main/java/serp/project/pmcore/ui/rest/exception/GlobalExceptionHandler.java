@@ -13,7 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import serp.project.pmcore.core.exception.AppException;
+import serp.project.pmcore.domain.exception.AppException;
 import serp.project.pmcore.kernel.utils.ResponseUtils;
 
 import java.util.stream.Collectors;

@@ -11,11 +11,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
-import serp.project.pmcore.core.domain.constant.RestControllerConstants;
-import serp.project.pmcore.core.domain.dto.response.GeneralResponse;
-import serp.project.pmcore.core.exception.AppException;
-import serp.project.pmcore.core.exception.ErrorCode;
-import serp.project.pmcore.core.usecase.OnboardingUseCase;
+import serp.project.pmcore.domain.constant.RestControllerConstants;
+import serp.project.pmcore.domain.dto.response.GeneralResponse;
+import serp.project.pmcore.domain.exception.AppException;
+import serp.project.pmcore.domain.exception.ErrorCode;
+import serp.project.pmcore.application.usecase.OnboardingUseCase;
 import serp.project.pmcore.kernel.utils.AuthUtils;
 import serp.project.pmcore.kernel.utils.ResponseUtils;
 

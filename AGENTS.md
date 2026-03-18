@@ -292,7 +292,7 @@ try {
 5. **Keycloak JWT**: Verify JWKS URL is accessible and realm name matches config
    - Default realm: `serp-realm`, admin: `serp-admin/serp-admin`
 6. **Port Conflicts**: `logistics` and `serp_llm` both use 8089 by default - configure `SERVER_PORT`
-7. **Kafka Events**: Always send events AFTER DB commit, inside transaction callback
+7. **Kafka Events**: Always send events using outbox pattern
 8. **Import Order**: Go and Java have strict import grouping (std lib, external, internal)
 
 ## Additional Resources

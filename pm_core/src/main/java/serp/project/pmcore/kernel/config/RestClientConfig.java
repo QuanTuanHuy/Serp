@@ -19,8 +19,8 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.util.StreamUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
-import serp.project.pmcore.core.exception.AppException;
-import serp.project.pmcore.core.exception.ErrorCode;
+import serp.project.pmcore.domain.exception.AppException;
+import serp.project.pmcore.domain.exception.ErrorCode;
 import serp.project.pmcore.kernel.property.HttpClientProperties;
 
 import java.io.IOException;

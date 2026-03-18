@@ -19,12 +19,12 @@ import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import serp.project.pmcore.core.domain.dto.message.KafkaEventContext;
-import serp.project.pmcore.core.domain.enums.ConsumerInboxAcquireResult;
-import serp.project.pmcore.core.exception.KafkaNonRetryableException;
-import serp.project.pmcore.core.service.IConsumerInboxService;
-import serp.project.pmcore.core.service.messaging.strategy.IKafkaEventHandlerStrategy;
-import serp.project.pmcore.core.service.messaging.strategy.KafkaEventHandlerStrategyRegistry;
+import serp.project.pmcore.domain.dto.message.KafkaEventContext;
+import serp.project.pmcore.domain.enums.ConsumerInboxAcquireResult;
+import serp.project.pmcore.domain.exception.KafkaNonRetryableException;
+import serp.project.pmcore.domain.service.IConsumerInboxService;
+import serp.project.pmcore.domain.service.messaging.strategy.IKafkaEventHandlerStrategy;
+import serp.project.pmcore.domain.service.messaging.strategy.KafkaEventHandlerStrategyRegistry;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
 public abstract class AbstractKafkaConsumerTemplate {

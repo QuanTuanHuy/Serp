@@ -11,39 +11,39 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import serp.project.pmcore.core.domain.entity.IssueTypeEntity;
-import serp.project.pmcore.core.domain.entity.PriorityEntity;
-import serp.project.pmcore.core.domain.entity.PrioritySchemeEntity;
-import serp.project.pmcore.core.domain.entity.PrioritySchemeItemEntity;
-import serp.project.pmcore.core.domain.entity.StatusCategoryEntity;
-import serp.project.pmcore.core.domain.entity.StatusEntity;
-import serp.project.pmcore.core.domain.entity.TenantSchemeMappingEntity;
-import serp.project.pmcore.core.domain.entity.TenantWorkflowMappingEntity;
-import serp.project.pmcore.core.domain.entity.WorkflowEntity;
-import serp.project.pmcore.core.domain.entity.WorkflowSchemeEntity;
-import serp.project.pmcore.core.domain.entity.WorkflowSchemeItemEntity;
-import serp.project.pmcore.core.domain.entity.WorkflowStepEntity;
-import serp.project.pmcore.core.domain.entity.WorkflowTransitionEntity;
-import serp.project.pmcore.core.domain.entity.WorkflowTransitionRuleEntity;
-import serp.project.pmcore.core.domain.enums.SchemeType;
-import serp.project.pmcore.core.domain.enums.TransitionRuleStage;
-import serp.project.pmcore.core.port.store.IBlueprintSchemeDefaultPort;
-import serp.project.pmcore.core.port.store.IIssueTypePort;
-import serp.project.pmcore.core.port.store.IIssueTypeSchemeItemPort;
-import serp.project.pmcore.core.port.store.IIssueTypeSchemePort;
-import serp.project.pmcore.core.port.store.IPriorityPort;
-import serp.project.pmcore.core.port.store.IPrioritySchemeItemPort;
-import serp.project.pmcore.core.port.store.IPrioritySchemePort;
-import serp.project.pmcore.core.port.store.IStatusCategoryPort;
-import serp.project.pmcore.core.port.store.IStatusPort;
-import serp.project.pmcore.core.port.store.ITenantSchemeMappingPort;
-import serp.project.pmcore.core.port.store.ITenantWorkflowMappingPort;
-import serp.project.pmcore.core.port.store.IWorkflowPort;
-import serp.project.pmcore.core.port.store.IWorkflowSchemeItemPort;
-import serp.project.pmcore.core.port.store.IWorkflowSchemePort;
-import serp.project.pmcore.core.port.store.IWorkflowStepPort;
-import serp.project.pmcore.core.port.store.IWorkflowTransitionPort;
-import serp.project.pmcore.core.port.store.IWorkflowTransitionRulePort;
+import serp.project.pmcore.domain.entity.workitem.IssueTypeEntity;
+import serp.project.pmcore.domain.entity.PriorityEntity;
+import serp.project.pmcore.domain.entity.PrioritySchemeEntity;
+import serp.project.pmcore.domain.entity.PrioritySchemeItemEntity;
+import serp.project.pmcore.domain.entity.StatusCategoryEntity;
+import serp.project.pmcore.domain.entity.StatusEntity;
+import serp.project.pmcore.domain.entity.TenantSchemeMappingEntity;
+import serp.project.pmcore.domain.entity.TenantWorkflowMappingEntity;
+import serp.project.pmcore.domain.entity.workflow.WorkflowEntity;
+import serp.project.pmcore.domain.entity.WorkflowSchemeEntity;
+import serp.project.pmcore.domain.entity.WorkflowSchemeItemEntity;
+import serp.project.pmcore.domain.entity.workflow.WorkflowStepEntity;
+import serp.project.pmcore.domain.entity.workflow.WorkflowTransitionRuleEntity;
+import serp.project.pmcore.domain.enums.SchemeType;
+import serp.project.pmcore.domain.enums.TransitionRuleStage;
+import serp.project.pmcore.domain.port.store.IBlueprintSchemeDefaultPort;
+import serp.project.pmcore.domain.port.store.IIssueTypePort;
+import serp.project.pmcore.domain.port.store.IIssueTypeSchemeItemPort;
+import serp.project.pmcore.domain.port.store.IIssueTypeSchemePort;
+import serp.project.pmcore.domain.port.store.IPriorityPort;
+import serp.project.pmcore.domain.port.store.IPrioritySchemeItemPort;
+import serp.project.pmcore.domain.port.store.IPrioritySchemePort;
+import serp.project.pmcore.domain.port.store.IStatusCategoryPort;
+import serp.project.pmcore.domain.port.store.IStatusPort;
+import serp.project.pmcore.domain.port.store.ITenantSchemeMappingPort;
+import serp.project.pmcore.domain.port.store.ITenantWorkflowMappingPort;
+import serp.project.pmcore.domain.port.store.IWorkflowPort;
+import serp.project.pmcore.domain.port.store.IWorkflowSchemeItemPort;
+import serp.project.pmcore.domain.port.store.IWorkflowSchemePort;
+import serp.project.pmcore.domain.port.store.IWorkflowStepPort;
+import serp.project.pmcore.domain.port.store.IWorkflowTransitionPort;
+import serp.project.pmcore.domain.port.store.IWorkflowTransitionRulePort;
+import serp.project.pmcore.domain.service.impl.SchemeProvisioningService;
 
 import java.util.List;
 import java.util.Optional;
@@ -157,7 +157,7 @@ class SchemeProvisioningServiceTest {
                 .isFinal(true)
                 .build();
 
-        WorkflowTransitionEntity sourceTransition = WorkflowTransitionEntity.builder()
+        WorkflowEntity.WorkflowTransitionEntity sourceTransition = WorkflowEntity.WorkflowTransitionEntity.builder()
                 .id(400L)
                 .tenantId(0L)
                 .workflowId(100L)
@@ -275,7 +275,7 @@ class SchemeProvisioningServiceTest {
         when(workflowTransitionPort.createWorkflowTransitions(anyList()))
                 .thenAnswer(invocation -> {
                     @SuppressWarnings("unchecked")
-                    List<WorkflowTransitionEntity> transitions = invocation.getArgument(0);
+                    List<WorkflowEntity.WorkflowTransitionEntity> transitions = invocation.getArgument(0);
                     for (int i = 0; i < transitions.size(); i++) {
                         transitions.get(i).setId(1400L + i);
                     }
@@ -318,9 +318,9 @@ class SchemeProvisioningServiceTest {
         assertEquals(1301L, createdSteps.get(1).getStatusId());
 
         @SuppressWarnings("unchecked")
-        ArgumentCaptor<List<WorkflowTransitionEntity>> createdTransitionsCaptor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<WorkflowEntity.WorkflowTransitionEntity>> createdTransitionsCaptor = ArgumentCaptor.forClass(List.class);
         verify(workflowTransitionPort).createWorkflowTransitions(createdTransitionsCaptor.capture());
-        List<WorkflowTransitionEntity> createdTransitions = createdTransitionsCaptor.getValue();
+        List<WorkflowEntity.WorkflowTransitionEntity> createdTransitions = createdTransitionsCaptor.getValue();
         assertEquals(1, createdTransitions.size());
         assertEquals(1100L, createdTransitions.get(0).getWorkflowId());
         assertEquals(1300L, createdTransitions.get(0).getFromStatusId());
@@ -603,7 +603,7 @@ class SchemeProvisioningServiceTest {
                 .isFinal(true)
                 .build();
 
-        WorkflowTransitionEntity sourceTransition = WorkflowTransitionEntity.builder()
+        WorkflowEntity.WorkflowTransitionEntity sourceTransition = WorkflowEntity.WorkflowTransitionEntity.builder()
                 .id(400L)
                 .tenantId(0L)
                 .workflowId(100L)
@@ -718,7 +718,7 @@ class SchemeProvisioningServiceTest {
         when(workflowTransitionPort.createWorkflowTransitions(anyList()))
                 .thenAnswer(invocation -> {
                     @SuppressWarnings("unchecked")
-                    List<WorkflowTransitionEntity> transitions = invocation.getArgument(0);
+                    List<WorkflowEntity.WorkflowTransitionEntity> transitions = invocation.getArgument(0);
                     for (int i = 0; i < transitions.size(); i++) {
                         transitions.get(i).setId(2400L + i);
                     }

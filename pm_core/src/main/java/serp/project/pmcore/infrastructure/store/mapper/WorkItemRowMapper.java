@@ -7,11 +7,10 @@ package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.core.domain.entity.WorkItemEntity;
+import serp.project.pmcore.domain.entity.workitem.WorkItemEntity;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 
 @Component
 public class WorkItemRowMapper extends BaseRowMapper implements RowMapper<WorkItemEntity> {

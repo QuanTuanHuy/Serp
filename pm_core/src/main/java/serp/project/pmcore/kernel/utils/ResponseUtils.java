@@ -7,8 +7,8 @@
 package serp.project.pmcore.kernel.utils;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.core.domain.constant.Constants;
-import serp.project.pmcore.core.domain.dto.response.GeneralResponse;
+import serp.project.pmcore.domain.constant.Constants;
+import serp.project.pmcore.domain.dto.response.GeneralResponse;
 
 @Component
 public class ResponseUtils {
