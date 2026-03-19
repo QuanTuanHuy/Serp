@@ -40,6 +40,7 @@ import serp.project.pmcore.domain.entity.TenantSchemeMappingEntity;
 import serp.project.pmcore.domain.entity.TenantWorkflowMappingEntity;
 import serp.project.pmcore.domain.entity.workflow.WorkflowEntity;
 import serp.project.pmcore.domain.entity.workflow.WorkflowStepEntity;
+import serp.project.pmcore.domain.entity.workflow.WorkflowVersionEntity;
 import serp.project.pmcore.domain.entity.ScreenEntity;
 import serp.project.pmcore.domain.entity.ScreenSchemeEntity;
 import serp.project.pmcore.domain.entity.ScreenSchemeItemEntity;
@@ -50,6 +51,8 @@ import serp.project.pmcore.domain.entity.WorkflowSchemeItemEntity;
 import serp.project.pmcore.domain.entity.workflow.WorkflowTransitionRuleEntity;
 import serp.project.pmcore.domain.enums.ProvisioningMode;
 import serp.project.pmcore.domain.enums.SchemeType;
+import serp.project.pmcore.domain.enums.WorkflowLifecycleState;
+import serp.project.pmcore.domain.enums.WorkflowVersionState;
 import serp.project.pmcore.domain.exception.DomainErrorCode;
 import serp.project.pmcore.domain.exception.DomainValidationException;
 import serp.project.pmcore.domain.exception.AppException;
@@ -86,6 +89,7 @@ import serp.project.pmcore.domain.port.store.ITenantSchemeDefaultPort;
 import serp.project.pmcore.domain.port.store.ITenantWorkflowMappingPort;
 import serp.project.pmcore.domain.port.store.IWorkflowPort;
 import serp.project.pmcore.domain.port.store.IWorkflowStepPort;
+import serp.project.pmcore.domain.port.store.IWorkflowVersionPort;
 import serp.project.pmcore.domain.port.store.IWorkflowSchemeItemPort;
 import serp.project.pmcore.domain.port.store.IWorkflowSchemePort;
 import serp.project.pmcore.domain.port.store.IWorkflowTransitionPort;
@@ -141,6 +145,7 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
     private final IStatusCategoryPort statusCategoryPort;
     private final IStatusPort statusPort;
     private final IWorkflowPort workflowPort;
+    private final IWorkflowVersionPort workflowVersionPort;
     private final IWorkflowStepPort workflowStepPort;
     private final IWorkflowTransitionPort workflowTransitionPort;
     private final IWorkflowTransitionRulePort workflowTransitionRulePort;
@@ -1346,36 +1351,33 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
     }
 
     private Long cloneWorkflowForTenant(WorkflowEntity source, Long tenantId, Long userId, String cloneMode) {
-        List<WorkflowStepEntity> sourceSteps = workflowStepPort
-                .getWorkflowStepsByWorkflowIdIncludingSystem(source.getId(), tenantId);
-        List<WorkflowTransitionEntity> sourceTransitions = workflowTransitionPort
-                .getWorkflowTransitionsByWorkflowIdIncludingSystem(source.getId(), tenantId);
+        if (source.getCurrentPublishedVersionId() == null) {
+            throw new DomainValidationException(
+                    DomainErrorCode.SCHEME_PROVISIONING_FAILED,
+                    "Workflow root must have a current published version before provisioning: workflowId=" + source.getId()
+            );
+        }
 
-        Map<Long, Long> statusIdMap = new HashMap<>();
-        Set<Long> sourceStatusIds = new HashSet<>();
-        sourceSteps.stream()
-                .map(WorkflowStepEntity::getStatusId)
-                .filter(Objects::nonNull)
-                .forEach(sourceStatusIds::add);
-        sourceTransitions.stream()
-                .map(WorkflowTransitionEntity::getFromStatusId)
-                .filter(Objects::nonNull)
-                .forEach(sourceStatusIds::add);
-        sourceTransitions.stream()
-                .map(WorkflowTransitionEntity::getToStatusId)
-                .filter(Objects::nonNull)
-                .forEach(sourceStatusIds::add);
-        for (Long sourceStatusId : sourceStatusIds) {
-            statusIdMap.put(sourceStatusId,
-                    materializeStatusForTenant(sourceStatusId, tenantId, userId));
+        List<WorkflowVersionEntity> sourceVersions = workflowVersionPort
+                .getWorkflowVersionsByWorkflowIdIncludingSystem(source.getId(), tenantId);
+
+        if (sourceVersions.isEmpty()) {
+            throw new DomainValidationException(
+                    DomainErrorCode.SCHEME_PROVISIONING_FAILED,
+                    "Workflow root has no version history to provision: workflowId=" + source.getId()
+            );
         }
 
         WorkflowEntity cloned = WorkflowEntity.builder()
                 .tenantId(tenantId)
+                .workflowKey(buildWorkflowCloneKey(source.getWorkflowKey(), source.getId(), cloneMode))
                 .name(buildSchemeCloneName(source.getName(), source.getId(), cloneMode))
                 .description(buildSchemeCloneDescription(source.getDescription(), source.getId(), cloneMode))
-                .versionNo(source.getVersionNo())
-                .isActive(source.getIsActive())
+                .currentPublishedVersionId(null)
+                .draftVersionId(null)
+                .lifecycleState(source.getLifecycleState() == null
+                        ? WorkflowLifecycleState.ACTIVE
+                        : source.getLifecycleState())
                 .isSystem(false)
                 .build();
         cloned.setCreatedAt(System.currentTimeMillis());
@@ -1385,29 +1387,109 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
 
         WorkflowEntity savedWorkflow = workflowPort.createWorkflow(cloned);
 
+        Map<Long, Long> versionIdMap = new HashMap<>();
+        if (!sourceVersions.isEmpty()) {
+            List<WorkflowVersionEntity> clonedVersions = sourceVersions.stream()
+                    .map(version -> WorkflowVersionEntity.builder()
+                            .tenantId(tenantId)
+                            .workflowId(savedWorkflow.getId())
+                            .versionNo(version.getVersionNo())
+                            .versionState(version.getVersionState())
+                            .baseVersionId(null)
+                            .publishedAt(version.getPublishedAt())
+                            .publishedBy(version.getPublishedBy())
+                            .createdAt(System.currentTimeMillis())
+                            .updatedAt(System.currentTimeMillis())
+                            .createdBy(userId)
+                            .updatedBy(userId)
+                            .build())
+                    .collect(Collectors.toList());
+
+            List<WorkflowVersionEntity> savedVersions = workflowVersionPort.createWorkflowVersions(clonedVersions);
+            for (int i = 0; i < sourceVersions.size(); i++) {
+                versionIdMap.put(sourceVersions.get(i).getId(), savedVersions.get(i).getId());
+            }
+
+            for (int i = 0; i < sourceVersions.size(); i++) {
+                WorkflowVersionEntity sourceVersion = sourceVersions.get(i);
+                WorkflowVersionEntity savedVersion = savedVersions.get(i);
+                savedVersion.setBaseVersionId(requireMappedId(versionIdMap, sourceVersion.getBaseVersionId(), "workflow version"));
+                workflowVersionPort.updateWorkflowVersion(savedVersion);
+                cloneWorkflowVersionTree(sourceVersion, savedVersion.getId(), tenantId, userId, cloneMode);
+            }
+        }
+
+        savedWorkflow.setCurrentPublishedVersionId(
+                requireMappedId(versionIdMap, source.getCurrentPublishedVersionId(), "workflow version")
+        );
+        savedWorkflow.setDraftVersionId(
+                requireMappedId(versionIdMap, source.getDraftVersionId(), "workflow version")
+        );
+        workflowPort.updateWorkflow(savedWorkflow);
+
+        log.info("Created {} WORKFLOW clone: source={} -> target={} (tenantId={})",
+                cloneMode, source.getId(), savedWorkflow.getId(), tenantId);
+        return savedWorkflow.getId();
+    }
+
+    private void cloneWorkflowVersionTree(WorkflowVersionEntity sourceVersion,
+                                          Long targetWorkflowVersionId,
+                                          Long tenantId,
+                                          Long userId,
+                                          String cloneMode) {
+        List<WorkflowStepEntity> sourceSteps = workflowStepPort
+                .getWorkflowStepsByWorkflowVersionIdIncludingSystem(sourceVersion.getId(), tenantId);
+        List<WorkflowTransitionEntity> sourceTransitions = workflowTransitionPort
+                .getWorkflowTransitionsByWorkflowVersionIdIncludingSystem(sourceVersion.getId(), tenantId);
+
+        Map<Long, Long> statusIdMap = new HashMap<>();
+        Set<Long> sourceStatusIds = sourceSteps.stream()
+                .map(WorkflowStepEntity::getStatusId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        for (Long sourceStatusId : sourceStatusIds) {
+            statusIdMap.put(sourceStatusId, materializeStatusForTenant(sourceStatusId, tenantId, userId));
+        }
+
+        Map<Long, Long> stepIdMap = new HashMap<>();
         if (!sourceSteps.isEmpty()) {
             List<WorkflowStepEntity> clonedSteps = sourceSteps.stream()
                     .map(step -> WorkflowStepEntity.builder()
                             .tenantId(tenantId)
-                            .workflowId(savedWorkflow.getId())
+                            .workflowVersionId(targetWorkflowVersionId)
+                            .stepKey(step.getStepKey())
+                            .name(step.getName())
                             .statusId(requireMappedId(statusIdMap, step.getStatusId(), "status"))
-                            .sequence(step.getSequence())
+                            .stepOrder(step.getStepOrder())
                             .isInitial(step.getIsInitial())
-                            .isFinal(step.getIsFinal())
+                            .isTerminal(step.getIsTerminal())
                             .build())
                     .collect(Collectors.toList());
-            workflowStepPort.createWorkflowSteps(clonedSteps);
+            List<WorkflowStepEntity> savedSteps = workflowStepPort.createWorkflowSteps(clonedSteps);
+            for (int i = 0; i < sourceSteps.size(); i++) {
+                stepIdMap.put(sourceSteps.get(i).getId(), savedSteps.get(i).getId());
+            }
         }
+
+        Map<Long, Long> screenIdMap = new HashMap<>();
+        sourceTransitions.stream()
+                .map(WorkflowTransitionEntity::getScreenId)
+                .filter(Objects::nonNull)
+                .forEach(sourceScreenId -> screenIdMap.computeIfAbsent(
+                        sourceScreenId,
+                        key -> cloneScreenForTenantBySourceId(key, tenantId, userId, cloneMode)
+                ));
 
         Map<Long, Long> transitionIdMap = new HashMap<>();
         if (!sourceTransitions.isEmpty()) {
             List<WorkflowTransitionEntity> clonedTransitions = sourceTransitions.stream()
                     .map(transition -> WorkflowTransitionEntity.builder()
                             .tenantId(tenantId)
-                            .workflowId(savedWorkflow.getId())
+                            .workflowVersionId(targetWorkflowVersionId)
                             .name(transition.getName())
-                            .fromStatusId(requireMappedId(statusIdMap, transition.getFromStatusId(), "status"))
-                            .toStatusId(requireMappedId(statusIdMap, transition.getToStatusId(), "status"))
+                            .fromStepId(requireMappedId(stepIdMap, transition.getFromStepId(), "workflow step"))
+                            .toStepId(requireMappedId(stepIdMap, transition.getToStepId(), "workflow step"))
+                            .screenId(requireMappedId(screenIdMap, transition.getScreenId(), "screen"))
                             .sequence(transition.getSequence())
                             .build())
                     .collect(Collectors.toList());
@@ -1440,10 +1522,6 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
                 workflowTransitionRulePort.createWorkflowTransitionRules(clonedRules);
             }
         }
-
-        log.info("Created {} WORKFLOW clone: source={} -> target={} (tenantId={})",
-                cloneMode, source.getId(), savedWorkflow.getId(), tenantId);
-        return savedWorkflow.getId();
     }
 
     private Long materializeStatusForTenant(Long sourceStatusId, Long tenantId, Long userId) {
@@ -1544,6 +1622,16 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
             priorityKey = "priority_" + sourcePriorityId;
         }
         return priorityKey;
+    }
+
+    private String buildWorkflowCloneKey(String sourceWorkflowKey, Long sourceWorkflowId, String cloneMode) {
+        String baseKey = sourceWorkflowKey;
+        if (baseKey == null || baseKey.isBlank()) {
+            baseKey = "workflow_" + sourceWorkflowId;
+        }
+
+        String normalizedMode = cloneMode == null ? "copy" : cloneMode.toLowerCase(Locale.ROOT);
+        return baseKey + "_" + normalizedMode + "_" + sourceWorkflowId + "_" + System.currentTimeMillis();
     }
 
     private String normalizePriorityKey(String value) {

@@ -17,15 +17,15 @@ import java.util.Optional;
 @Repository
 public interface IWorkflowStepRepository extends JpaRepository<WorkflowStepModel, Long> {
 
-    @Query("SELECT s FROM WorkflowStepModel s WHERE s.workflowId = :workflowId " +
+    @Query("SELECT s FROM WorkflowStepModel s WHERE s.workflowVersionId = :workflowVersionId " +
            "AND (s.tenantId = :tenantId OR s.tenantId = 0)")
-    List<WorkflowStepModel> findByWorkflowIdAndTenantIdOrSystemTenant(
-            @Param("workflowId") Long workflowId, @Param("tenantId") Long tenantId);
+    List<WorkflowStepModel> findByWorkflowVersionIdAndTenantIdOrSystemTenant(
+            @Param("workflowVersionId") Long workflowVersionId, @Param("tenantId") Long tenantId);
     
-    List<WorkflowStepModel> findByWorkflowIdAndTenantId(Long workflowId, Long tenantId);
+    List<WorkflowStepModel> findByWorkflowVersionIdAndTenantId(Long workflowVersionId, Long tenantId);
 
-    @Query("SELECT s FROM WorkflowStepModel s WHERE s.workflowId = :workflowId " +
+    @Query("SELECT s FROM WorkflowStepModel s WHERE s.workflowVersionId = :workflowVersionId " +
            "AND s.isInitial = true AND (s.tenantId = :tenantId OR s.tenantId = 0)")
-    Optional<WorkflowStepModel> findInitialStepByWorkflowId(
-            @Param("workflowId") Long workflowId, @Param("tenantId") Long tenantId);
+    Optional<WorkflowStepModel> findInitialStepByWorkflowVersionId(
+            @Param("workflowVersionId") Long workflowVersionId, @Param("tenantId") Long tenantId);
 }

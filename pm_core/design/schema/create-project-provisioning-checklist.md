@@ -32,8 +32,8 @@ Source of truth: `pm_core/design/schema/00_project_provisioning.md`
 
 ## Phase 5 - Workflow Model Alignment
 
-- [ ] `CP-17` Add workflow versioning model (`workflow_versions`, published/draft pointers)
-- [ ] `CP-18` Make workflow provisioning version-aware and bind only published workflows
+- [x] `CP-17` Add workflow versioning model (`workflow_versions`, published/draft pointers)
+- [x] `CP-18` Make workflow provisioning version-aware and bind only published workflows
 
 ## Phase 6 - Compatibility Validation
 
@@ -62,5 +62,5 @@ Source of truth: `pm_core/design/schema/00_project_provisioning.md`
 - Done: system-owned sources are no longer bound directly; supported families materialize via mappings, and unsupported families require a pre-materialized tenant mapping.
 - Done: `FIELD_CONFIG`, `SCREEN`, `PERMISSION`, `ISSUE_SECURITY`, and `NOTIFICATION` now have provisioning trees and infrastructure roots/children required for create-project provisioning.
 - Done: reusable `issue_types`, `priorities`, `statuses`, and `status_categories` are no longer cloned per project; the service now reuses tenant-local dictionaries when present, otherwise materializes them once into tenant scope from system-owned seeds.
-- Partial: per-family behavior is now aligned for current scheme families, but full Jira-parity workflow behavior still depends on phase 5 workflow versioning.
+- Done: workflow roots now carry `currentPublishedVersionId` and `draftVersionId`, and workflow provisioning clones version trees so runtime resolves through published workflow versions instead of mutable draft data.
 - Transitional limitation: full Jira-parity family behavior, compatibility gates, and full exception unification will follow in later phases.

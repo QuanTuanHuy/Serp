@@ -21,10 +21,11 @@ import java.util.List;
 @SuperBuilder
 public class WorkflowTransitionEntity extends BaseEntity {
     private Long tenantId;
-    private Long workflowId;
+    private Long workflowVersionId;
     private String name;
-    private Long fromStatusId;
-    private Long toStatusId;
+    private Long fromStepId;
+    private Long toStepId;
+    private Long screenId;
     private Integer sequence;
 
     private List<WorkflowTransitionRuleEntity> rules;

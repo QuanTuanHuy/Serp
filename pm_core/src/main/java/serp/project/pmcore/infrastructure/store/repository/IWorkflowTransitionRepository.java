@@ -16,8 +16,8 @@ import java.util.List;
 @Repository
 public interface IWorkflowTransitionRepository extends JpaRepository<WorkflowTransitionModel, Long> {
 
-    @Query("SELECT t FROM WorkflowTransitionModel t WHERE t.workflowId = :workflowId " +
+    @Query("SELECT t FROM WorkflowTransitionModel t WHERE t.workflowVersionId = :workflowVersionId " +
            "AND (t.tenantId = :tenantId OR t.tenantId = 0) ORDER BY t.sequence ASC, t.id ASC")
-    List<WorkflowTransitionModel> findByWorkflowIdAndTenantIdOrSystemTenant(
-            @Param("workflowId") Long workflowId, @Param("tenantId") Long tenantId);
+    List<WorkflowTransitionModel> findByWorkflowVersionIdAndTenantIdOrSystemTenant(
+            @Param("workflowVersionId") Long workflowVersionId, @Param("tenantId") Long tenantId);
 }

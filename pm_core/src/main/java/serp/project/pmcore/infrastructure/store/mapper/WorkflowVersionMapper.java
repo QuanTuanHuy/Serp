@@ -6,28 +6,28 @@
 package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.workflow.WorkflowTransitionEntity;
-import serp.project.pmcore.infrastructure.store.model.WorkflowTransitionModel;
+import serp.project.pmcore.domain.entity.workflow.WorkflowVersionEntity;
+import serp.project.pmcore.infrastructure.store.model.WorkflowVersionModel;
 
 import java.util.Collections;
 import java.util.List;
 
 @Component
-public class WorkflowTransitionMapper extends BaseMapper {
+public class WorkflowVersionMapper extends BaseMapper {
 
-    public WorkflowTransitionModel toModel(WorkflowTransitionEntity entity) {
+    public WorkflowVersionModel toModel(WorkflowVersionEntity entity) {
         if (entity == null) {
             return null;
         }
-        return WorkflowTransitionModel.builder()
+        return WorkflowVersionModel.builder()
                 .id(entity.getId())
                 .tenantId(entity.getTenantId())
-                .workflowVersionId(entity.getWorkflowVersionId())
-                .name(entity.getName())
-                .fromStepId(entity.getFromStepId())
-                .toStepId(entity.getToStepId())
-                .screenId(entity.getScreenId())
-                .sequence(entity.getSequence())
+                .workflowId(entity.getWorkflowId())
+                .versionNo(entity.getVersionNo())
+                .versionState(entity.getVersionState())
+                .baseVersionId(entity.getBaseVersionId())
+                .publishedAt(longToLocalDateTime(entity.getPublishedAt()))
+                .publishedBy(entity.getPublishedBy())
                 .createdAt(longToLocalDateTime(entity.getCreatedAt()))
                 .createdBy(entity.getCreatedBy())
                 .updatedAt(longToLocalDateTime(entity.getUpdatedAt()))
@@ -35,19 +35,19 @@ public class WorkflowTransitionMapper extends BaseMapper {
                 .build();
     }
 
-    public WorkflowTransitionEntity toEntity(WorkflowTransitionModel model) {
+    public WorkflowVersionEntity toEntity(WorkflowVersionModel model) {
         if (model == null) {
             return null;
         }
-        return WorkflowTransitionEntity.builder()
+        return WorkflowVersionEntity.builder()
                 .id(model.getId())
                 .tenantId(model.getTenantId())
-                .workflowVersionId(model.getWorkflowVersionId())
-                .name(model.getName())
-                .fromStepId(model.getFromStepId())
-                .toStepId(model.getToStepId())
-                .screenId(model.getScreenId())
-                .sequence(model.getSequence())
+                .workflowId(model.getWorkflowId())
+                .versionNo(model.getVersionNo())
+                .versionState(model.getVersionState())
+                .baseVersionId(model.getBaseVersionId())
+                .publishedAt(localDateTimeToLong(model.getPublishedAt()))
+                .publishedBy(model.getPublishedBy())
                 .createdAt(localDateTimeToLong(model.getCreatedAt()))
                 .createdBy(model.getCreatedBy())
                 .updatedAt(localDateTimeToLong(model.getUpdatedAt()))
@@ -55,14 +55,14 @@ public class WorkflowTransitionMapper extends BaseMapper {
                 .build();
     }
 
-    public List<WorkflowTransitionEntity> toEntities(List<WorkflowTransitionModel> models) {
+    public List<WorkflowVersionEntity> toEntities(List<WorkflowVersionModel> models) {
         if (models == null || models.isEmpty()) {
             return Collections.emptyList();
         }
         return models.stream().map(this::toEntity).toList();
     }
 
-    public List<WorkflowTransitionModel> toModels(List<WorkflowTransitionEntity> entities) {
+    public List<WorkflowVersionModel> toModels(List<WorkflowVersionEntity> entities) {
         if (entities == null || entities.isEmpty()) {
             return Collections.emptyList();
         }

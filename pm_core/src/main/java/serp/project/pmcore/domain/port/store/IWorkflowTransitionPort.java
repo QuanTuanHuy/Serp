@@ -12,5 +12,5 @@ import java.util.List;
 public interface IWorkflowTransitionPort {
     List<WorkflowTransitionEntity> createWorkflowTransitions(List<WorkflowTransitionEntity> transitions);
 
-    List<WorkflowTransitionEntity> getWorkflowTransitionsByWorkflowIdIncludingSystem(Long workflowId, Long tenantId);
+    List<WorkflowTransitionEntity> getWorkflowTransitionsByWorkflowVersionIdIncludingSystem(Long workflowVersionId, Long tenantId);
 }
