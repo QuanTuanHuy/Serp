@@ -9,15 +9,24 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import serp.project.pmcore.domain.entity.BlueprintSchemeDefaultEntity;
+import serp.project.pmcore.domain.entity.FieldConfigSchemeEntity;
 import serp.project.pmcore.domain.entity.workitem.IssueTypeEntity;
+import serp.project.pmcore.domain.entity.IssueTypeScreenSchemeEntity;
 import serp.project.pmcore.domain.entity.IssueTypeSchemeEntity;
 import serp.project.pmcore.domain.entity.IssueTypeSchemeItemEntity;
+import serp.project.pmcore.domain.entity.IssueSecuritySchemeEntity;
+import serp.project.pmcore.domain.entity.NotificationSchemeEntity;
+import serp.project.pmcore.domain.entity.PermissionSchemeEntity;
 import serp.project.pmcore.domain.entity.PriorityEntity;
 import serp.project.pmcore.domain.entity.PrioritySchemeEntity;
 import serp.project.pmcore.domain.entity.PrioritySchemeItemEntity;
+import serp.project.pmcore.domain.dto.project.ProjectProvisioningRequest;
+import serp.project.pmcore.domain.dto.project.ProjectProvisioningResult;
 import serp.project.pmcore.domain.entity.project.ProjectEntity;
+import serp.project.pmcore.domain.entity.project.ProjectSchemeBindings;
 import serp.project.pmcore.domain.entity.StatusCategoryEntity;
 import serp.project.pmcore.domain.entity.StatusEntity;
+import serp.project.pmcore.domain.entity.TenantSchemeDefaultEntity;
 import serp.project.pmcore.domain.entity.TenantSchemeMappingEntity;
 import serp.project.pmcore.domain.entity.TenantWorkflowMappingEntity;
 import serp.project.pmcore.domain.entity.workflow.WorkflowEntity;
@@ -25,19 +34,28 @@ import serp.project.pmcore.domain.entity.workflow.WorkflowStepEntity;
 import serp.project.pmcore.domain.entity.WorkflowSchemeEntity;
 import serp.project.pmcore.domain.entity.WorkflowSchemeItemEntity;
 import serp.project.pmcore.domain.entity.workflow.WorkflowTransitionRuleEntity;
+import serp.project.pmcore.domain.enums.ProvisioningMode;
 import serp.project.pmcore.domain.enums.SchemeType;
+import serp.project.pmcore.domain.exception.DomainErrorCode;
+import serp.project.pmcore.domain.exception.DomainValidationException;
 import serp.project.pmcore.domain.exception.AppException;
 import serp.project.pmcore.domain.exception.ErrorCode;
 import serp.project.pmcore.domain.port.store.IBlueprintSchemeDefaultPort;
+import serp.project.pmcore.domain.port.store.IFieldConfigSchemePort;
+import serp.project.pmcore.domain.port.store.IIssueSecuritySchemePort;
 import serp.project.pmcore.domain.port.store.IIssueTypePort;
 import serp.project.pmcore.domain.port.store.IIssueTypeSchemeItemPort;
 import serp.project.pmcore.domain.port.store.IIssueTypeSchemePort;
+import serp.project.pmcore.domain.port.store.IIssueTypeScreenSchemePort;
+import serp.project.pmcore.domain.port.store.INotificationSchemePort;
+import serp.project.pmcore.domain.port.store.IPermissionSchemePort;
 import serp.project.pmcore.domain.port.store.IPriorityPort;
 import serp.project.pmcore.domain.port.store.IPrioritySchemeItemPort;
 import serp.project.pmcore.domain.port.store.IPrioritySchemePort;
 import serp.project.pmcore.domain.port.store.IStatusCategoryPort;
 import serp.project.pmcore.domain.port.store.IStatusPort;
 import serp.project.pmcore.domain.port.store.ITenantSchemeMappingPort;
+import serp.project.pmcore.domain.port.store.ITenantSchemeDefaultPort;
 import serp.project.pmcore.domain.port.store.ITenantWorkflowMappingPort;
 import serp.project.pmcore.domain.port.store.IWorkflowPort;
 import serp.project.pmcore.domain.port.store.IWorkflowStepPort;
@@ -57,22 +75,17 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.LongPredicate;
 import java.util.stream.Collectors;
 
 /**
  * Handles scheme provisioning for project creation.
  *
- * Shared-association default strategy:
- * - If source scheme already belongs to tenant, bind directly.
- * - If source scheme is system (tenant_id=0), clone once to tenant-shared scheme,
- *   store mapping (tenant, scheme_type, source_scheme_id -> tenant_scheme_id),
- *   then bind project to tenant-shared scheme.
- * - If mapping already exists and target scheme is still present, reuse it.
- *
- * ISSUE_TYPE/PRIORITY/WORKFLOW are implemented.
- * For system-sourced schemes, dictionary/workflow graph rows are
- * materialized into tenant scope and scheme items/default IDs are remapped.
- * Other scheme families remain pending and are currently logged as stubs.
+ * Current phase:
+ * - resolve source schemes by precedence: explicit override -> blueprint default -> tenant default/shared default
+ * - keep create-project orchestration routed through a typed provisioning contract
+ * - materialize supported system-owned sources to tenant scope for ISSUE_TYPE/PRIORITY/WORKFLOW
+ * - enforce tenant-owned bindings or pre-materialized mapping reuse for other scheme families
  */
 @Service
 @RequiredArgsConstructor
@@ -82,6 +95,12 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
     private static final Long SYSTEM_TENANT_ID = 0L;
 
     private final IBlueprintSchemeDefaultPort blueprintSchemeDefaultPort;
+    private final ITenantSchemeDefaultPort tenantSchemeDefaultPort;
+    private final IFieldConfigSchemePort fieldConfigSchemePort;
+    private final IIssueTypeScreenSchemePort issueTypeScreenSchemePort;
+    private final IPermissionSchemePort permissionSchemePort;
+    private final INotificationSchemePort notificationSchemePort;
+    private final IIssueSecuritySchemePort issueSecuritySchemePort;
     private final IIssueTypePort issueTypePort;
     private final IIssueTypeSchemePort issueTypeSchemePort;
     private final IIssueTypeSchemeItemPort issueTypeSchemeItemPort;
@@ -100,42 +119,93 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
     private final ITenantWorkflowMappingPort tenantWorkflowMappingPort;
 
     @Override
-    public void provisionSchemes(ProjectEntity project, Long tenantId, Long userId,
-                                 Long blueprintId, Map<String, Long> schemeOverrides, String associationMode) {
-        Map<SchemeType, Long> blueprintDefaults = loadBlueprintDefaults(blueprintId, tenantId);
-        Map<SchemeType, Long> resolvedSources = resolveTemplateSources(schemeOverrides, blueprintDefaults);
+    public ProjectProvisioningResult provisionProjectSchemes(ProjectEntity project,
+                                                             ProjectProvisioningRequest request) {
+        Map<SchemeType, Long> requestedSources = request.getRequestedSchemeBindings() == null
+                ? Collections.emptyMap()
+                : request.getRequestedSchemeBindings().toSchemeMap();
+        Map<SchemeType, Long> blueprintDefaults = loadBlueprintDefaults(request.getBlueprintId(), request.getTenantId());
+        Map<SchemeType, Long> tenantDefaults = loadTenantDefaults(request.getTenantId());
+        Map<SchemeType, Long> resolvedSources = resolveTemplateSources(requestedSources, blueprintDefaults, tenantDefaults);
+        Map<SchemeType, Long> effectiveBindings = provisionEffectiveBindings(
+                project,
+                resolvedSources,
+                request.getTenantId(),
+                request.getUserId(),
+                request.getEffectiveProvisioningMode()
+        );
 
-        String mode = associationMode == null ? "SHARED_ASSOCIATION" : associationMode.toUpperCase(Locale.ROOT);
-        boolean cloneOnAssociate = "CLONE_ON_ASSOCIATE".equals(mode);
-
-        Long issueTypeSourceId = requireSourceSchemeId(resolvedSources, SchemeType.ISSUE_TYPE);
-        Long prioritySourceId = requireSourceSchemeId(resolvedSources, SchemeType.PRIORITY);
-        Long workflowSourceId = requireSourceSchemeId(resolvedSources, SchemeType.WORKFLOW);
-
-        if (cloneOnAssociate) {
-            project.setIssueTypeSchemeId(resolveClonedSchemeBinding(SchemeType.ISSUE_TYPE, issueTypeSourceId, tenantId, userId));
-            project.setPrioritySchemeId(resolveClonedSchemeBinding(SchemeType.PRIORITY, prioritySourceId, tenantId, userId));
-            project.setWorkflowSchemeId(resolveClonedSchemeBinding(SchemeType.WORKFLOW, workflowSourceId, tenantId, userId));
-        } else {
-            project.setIssueTypeSchemeId(resolveSharedSchemeBinding(SchemeType.ISSUE_TYPE, issueTypeSourceId, tenantId, userId));
-            project.setPrioritySchemeId(resolveSharedSchemeBinding(SchemeType.PRIORITY, prioritySourceId, tenantId, userId));
-            project.setWorkflowSchemeId(resolveSharedSchemeBinding(SchemeType.WORKFLOW, workflowSourceId, tenantId, userId));
-        }
-
-        log.info("Provisioned core {} scheme bindings for project key={}: issueTypeSchemeId={}, prioritySchemeId={}, workflowSchemeId={}",
-                cloneOnAssociate ? "CLONE" : "SHARED",
-                project.getKey(), project.getIssueTypeSchemeId(), project.getPrioritySchemeId(), project.getWorkflowSchemeId());
-
-        // Stub provisioning for scheme types without infrastructure
-        stubProvision("FIELD_CONFIG", SchemeType.FIELD_CONFIG, resolvedSources, project);
-        stubProvision("SCREEN", SchemeType.SCREEN, resolvedSources, project);
-        stubProvision("PERMISSION", SchemeType.PERMISSION, resolvedSources, project);
-        stubProvision("ISSUE_SECURITY", SchemeType.ISSUE_SECURITY, resolvedSources, project);
-        stubProvision("NOTIFICATION", SchemeType.NOTIFICATION, resolvedSources, project);
+        return ProjectProvisioningResult.builder()
+                .resolvedSourceBindings(ProjectSchemeBindings.fromSchemeMap(resolvedSources))
+                .effectiveBindings(ProjectSchemeBindings.fromSchemeMap(effectiveBindings))
+                .build();
     }
 
-    @Override
-    public Long resolveSharedSchemeBinding(SchemeType schemeType, Long sourceSchemeId, Long tenantId, Long userId) {
+    private Map<SchemeType, Long> provisionEffectiveBindings(ProjectEntity project,
+                                                             Map<SchemeType, Long> resolvedSources,
+                                                             Long tenantId,
+                                                             Long userId,
+                                                             ProvisioningMode provisioningMode) {
+        if (ProvisioningMode.CLONE_FROM_SHARED.equals(provisioningMode)) {
+            throw new DomainValidationException(
+                    DomainErrorCode.INVALID_PROVISIONING_MODE,
+                    "CLONE_FROM_SHARED is reserved for future project rebinding and is not supported by create project yet."
+            );
+        }
+
+        Map<SchemeType, Long> effectiveBindings = new EnumMap<>(SchemeType.class);
+
+        Long issueTypeSourceId = requireSourceSchemeId(resolvedSources, SchemeType.ISSUE_TYPE);
+        Long workflowSourceId = requireSourceSchemeId(resolvedSources, SchemeType.WORKFLOW);
+        Long fieldConfigSourceId = requireSourceSchemeId(resolvedSources, SchemeType.FIELD_CONFIG);
+        Long screenSourceId = requireSourceSchemeId(resolvedSources, SchemeType.SCREEN);
+        Long permissionSourceId = requireSourceSchemeId(resolvedSources, SchemeType.PERMISSION);
+        Long notificationSourceId = requireSourceSchemeId(resolvedSources, SchemeType.NOTIFICATION);
+        Long prioritySourceId = requireSourceSchemeId(resolvedSources, SchemeType.PRIORITY);
+        Long issueSecuritySourceId = requireSourceSchemeId(resolvedSources, SchemeType.ISSUE_SECURITY);
+
+        if (ProvisioningMode.TEMPLATE_DEFAULT.equals(provisioningMode)) {
+            effectiveBindings.put(SchemeType.ISSUE_TYPE,
+                    resolveClonedSchemeBinding(SchemeType.ISSUE_TYPE, issueTypeSourceId, tenantId, userId));
+            effectiveBindings.put(SchemeType.WORKFLOW,
+                    resolveClonedSchemeBinding(SchemeType.WORKFLOW, workflowSourceId, tenantId, userId));
+            effectiveBindings.put(SchemeType.FIELD_CONFIG,
+                    resolveFieldConfigSchemeBinding(fieldConfigSourceId, tenantId, provisioningMode));
+            effectiveBindings.put(SchemeType.SCREEN,
+                    resolveIssueTypeScreenSchemeBinding(screenSourceId, tenantId, provisioningMode));
+            effectiveBindings.put(SchemeType.PERMISSION,
+                    resolvePermissionSchemeBinding(permissionSourceId, tenantId, provisioningMode));
+            effectiveBindings.put(SchemeType.NOTIFICATION,
+                    resolveNotificationSchemeBinding(notificationSourceId, tenantId, provisioningMode));
+            effectiveBindings.put(SchemeType.PRIORITY,
+                    resolveSharedSchemeBinding(SchemeType.PRIORITY, prioritySourceId, tenantId, userId));
+            effectiveBindings.put(SchemeType.ISSUE_SECURITY,
+                    resolveIssueSecuritySchemeBinding(issueSecuritySourceId, tenantId, provisioningMode));
+        } else {
+            effectiveBindings.put(SchemeType.ISSUE_TYPE,
+                    resolveSharedSchemeBinding(SchemeType.ISSUE_TYPE, issueTypeSourceId, tenantId, userId));
+            effectiveBindings.put(SchemeType.WORKFLOW,
+                    resolveSharedSchemeBinding(SchemeType.WORKFLOW, workflowSourceId, tenantId, userId));
+            effectiveBindings.put(SchemeType.FIELD_CONFIG,
+                    resolveFieldConfigSchemeBinding(fieldConfigSourceId, tenantId, provisioningMode));
+            effectiveBindings.put(SchemeType.SCREEN,
+                    resolveIssueTypeScreenSchemeBinding(screenSourceId, tenantId, provisioningMode));
+            effectiveBindings.put(SchemeType.PERMISSION,
+                    resolvePermissionSchemeBinding(permissionSourceId, tenantId, provisioningMode));
+            effectiveBindings.put(SchemeType.NOTIFICATION,
+                    resolveNotificationSchemeBinding(notificationSourceId, tenantId, provisioningMode));
+            effectiveBindings.put(SchemeType.PRIORITY,
+                    resolveSharedSchemeBinding(SchemeType.PRIORITY, prioritySourceId, tenantId, userId));
+            effectiveBindings.put(SchemeType.ISSUE_SECURITY,
+                    resolveIssueSecuritySchemeBinding(issueSecuritySourceId, tenantId, provisioningMode));
+        }
+
+        log.info("Provisioned schemes for project key={} mode={} resolvedSources={} effectiveBindings={}",
+                project.getKey(), provisioningMode, resolvedSources, effectiveBindings);
+        return effectiveBindings;
+    }
+
+    private Long resolveSharedSchemeBinding(SchemeType schemeType, Long sourceSchemeId, Long tenantId, Long userId) {
         if (schemeType == null || sourceSchemeId == null) {
             throw new AppException(
                     ErrorCode.SCHEME_PROVISIONING_FAILED,
@@ -154,8 +224,7 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
         };
     }
 
-    @Override
-    public Long resolveClonedSchemeBinding(SchemeType schemeType, Long sourceSchemeId, Long tenantId, Long userId) {
+    private Long resolveClonedSchemeBinding(SchemeType schemeType, Long sourceSchemeId, Long tenantId, Long userId) {
         if (schemeType == null || sourceSchemeId == null) {
             throw new AppException(
                     ErrorCode.SCHEME_PROVISIONING_FAILED,
@@ -206,27 +275,75 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
         List<BlueprintSchemeDefaultEntity> defaults =
                 blueprintSchemeDefaultPort.getDefaultsByBlueprintIdIncludingSystem(blueprintId, tenantId);
 
-        return defaults.stream()
-                .filter(d -> d.getSchemeType() != null && d.getSchemeId() != null)
-                .collect(Collectors.toMap(
-                        BlueprintSchemeDefaultEntity::getSchemeType,
-                        BlueprintSchemeDefaultEntity::getSchemeId,
-                        (a, b) -> a
-                ));
+        Map<SchemeType, BlueprintSchemeDefaultEntity> preferredDefaults = new EnumMap<>(SchemeType.class);
+        for (BlueprintSchemeDefaultEntity candidate : defaults) {
+            if (candidate.getSchemeType() == null || candidate.getSchemeId() == null) {
+                continue;
+            }
+
+            BlueprintSchemeDefaultEntity existing = preferredDefaults.get(candidate.getSchemeType());
+            if (shouldReplaceDefault(existing == null ? null : existing.getTenantId(), candidate.getTenantId(), tenantId)) {
+                preferredDefaults.put(candidate.getSchemeType(), candidate);
+            }
+        }
+
+        Map<SchemeType, Long> resolvedDefaults = new EnumMap<>(SchemeType.class);
+        for (Map.Entry<SchemeType, BlueprintSchemeDefaultEntity> entry : preferredDefaults.entrySet()) {
+            resolvedDefaults.put(entry.getKey(), entry.getValue().getSchemeId());
+        }
+
+        return resolvedDefaults;
     }
 
-    private Map<SchemeType, Long> resolveTemplateSources(Map<String, Long> overrides,
-                                                          Map<SchemeType, Long> blueprintDefaults) {
+    private Map<SchemeType, Long> loadTenantDefaults(Long tenantId) {
+        List<TenantSchemeDefaultEntity> defaults = tenantSchemeDefaultPort.getDefaultsByTenantIdIncludingSystem(tenantId);
+        Map<SchemeType, TenantSchemeDefaultEntity> preferredDefaults = new EnumMap<>(SchemeType.class);
+
+        for (TenantSchemeDefaultEntity candidate : defaults) {
+            if (candidate.getSchemeType() == null || candidate.getSchemeId() == null) {
+                continue;
+            }
+
+            TenantSchemeDefaultEntity existing = preferredDefaults.get(candidate.getSchemeType());
+            if (shouldReplaceDefault(existing == null ? null : existing.getTenantId(), candidate.getTenantId(), tenantId)) {
+                preferredDefaults.put(candidate.getSchemeType(), candidate);
+            }
+        }
+
+        Map<SchemeType, Long> resolvedDefaults = new EnumMap<>(SchemeType.class);
+        for (Map.Entry<SchemeType, TenantSchemeDefaultEntity> entry : preferredDefaults.entrySet()) {
+            resolvedDefaults.put(entry.getKey(), entry.getValue().getSchemeId());
+        }
+
+        return resolvedDefaults;
+    }
+
+    private boolean shouldReplaceDefault(Long existingTenantId, Long candidateTenantId, Long tenantId) {
+        if (existingTenantId == null) {
+            return true;
+        }
+
+        return tenantId.equals(candidateTenantId) && !tenantId.equals(existingTenantId);
+    }
+
+    private Map<SchemeType, Long> resolveTemplateSources(Map<SchemeType, Long> overrides,
+                                                         Map<SchemeType, Long> blueprintDefaults,
+                                                         Map<SchemeType, Long> tenantDefaults) {
         Map<SchemeType, Long> resolved = new EnumMap<>(SchemeType.class);
 
         for (SchemeType type : SchemeType.values()) {
-            if (overrides != null && overrides.containsKey(type.toString())) {
-                resolved.put(type, overrides.get(type.toString()));
+            if (overrides != null && overrides.containsKey(type)) {
+                resolved.put(type, overrides.get(type));
                 continue;
             }
 
             if (blueprintDefaults.containsKey(type)) {
                 resolved.put(type, blueprintDefaults.get(type));
+                continue;
+            }
+
+            if (tenantDefaults.containsKey(type)) {
+                resolved.put(type, tenantDefaults.get(type));
             }
         }
 
@@ -236,12 +353,132 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
     private Long requireSourceSchemeId(Map<SchemeType, Long> resolvedSources, SchemeType type) {
         Long sourceId = resolvedSources.get(type);
         if (sourceId == null) {
-            throw new AppException(
-                    ErrorCode.SCHEME_PROVISIONING_FAILED,
-                    "Missing source scheme for " + type + ". Provide explicit override or blueprint default"
+            throw new DomainValidationException(
+                    DomainErrorCode.SCHEME_PROVISIONING_FAILED,
+                    "Missing source scheme for " + type
+                            + ". Provide an explicit override, blueprint default, or tenant default/shared default."
             );
         }
         return sourceId;
+    }
+
+    private Long resolveFieldConfigSchemeBinding(Long sourceSchemeId, Long tenantId, ProvisioningMode provisioningMode) {
+        FieldConfigSchemeEntity source = fieldConfigSchemePort
+                .getFieldConfigSchemeByIdIncludingSystem(sourceSchemeId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
+
+        return resolveTenantOwnedBindingUntilImplemented(
+                "FIELD_CONFIG",
+                SchemeType.FIELD_CONFIG,
+                source.getId(),
+                source.getTenantId(),
+                tenantId,
+                provisioningMode,
+                tenantSchemeId -> fieldConfigSchemePort.getFieldConfigSchemeById(tenantSchemeId, tenantId).isPresent()
+        );
+    }
+
+    private Long resolveIssueTypeScreenSchemeBinding(Long sourceSchemeId, Long tenantId, ProvisioningMode provisioningMode) {
+        IssueTypeScreenSchemeEntity source = issueTypeScreenSchemePort
+                .getIssueTypeScreenSchemeByIdIncludingSystem(sourceSchemeId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
+
+        return resolveTenantOwnedBindingUntilImplemented(
+                "SCREEN",
+                SchemeType.SCREEN,
+                source.getId(),
+                source.getTenantId(),
+                tenantId,
+                provisioningMode,
+                tenantSchemeId -> issueTypeScreenSchemePort.getIssueTypeScreenSchemeById(tenantSchemeId, tenantId).isPresent()
+        );
+    }
+
+    private Long resolvePermissionSchemeBinding(Long sourceSchemeId, Long tenantId, ProvisioningMode provisioningMode) {
+        PermissionSchemeEntity source = permissionSchemePort
+                .getPermissionSchemeByIdIncludingSystem(sourceSchemeId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
+
+        return resolveTenantOwnedBindingUntilImplemented(
+                "PERMISSION",
+                SchemeType.PERMISSION,
+                source.getId(),
+                source.getTenantId(),
+                tenantId,
+                provisioningMode,
+                tenantSchemeId -> permissionSchemePort.getPermissionSchemeById(tenantSchemeId, tenantId).isPresent()
+        );
+    }
+
+    private Long resolveNotificationSchemeBinding(Long sourceSchemeId, Long tenantId, ProvisioningMode provisioningMode) {
+        NotificationSchemeEntity source = notificationSchemePort
+                .getNotificationSchemeByIdIncludingSystem(sourceSchemeId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
+
+        return resolveTenantOwnedBindingUntilImplemented(
+                "NOTIFICATION",
+                SchemeType.NOTIFICATION,
+                source.getId(),
+                source.getTenantId(),
+                tenantId,
+                provisioningMode,
+                tenantSchemeId -> notificationSchemePort.getNotificationSchemeById(tenantSchemeId, tenantId).isPresent()
+        );
+    }
+
+    private Long resolveIssueSecuritySchemeBinding(Long sourceSchemeId, Long tenantId, ProvisioningMode provisioningMode) {
+        IssueSecuritySchemeEntity source = issueSecuritySchemePort
+                .getIssueSecuritySchemeByIdIncludingSystem(sourceSchemeId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
+
+        return resolveTenantOwnedBindingUntilImplemented(
+                "ISSUE_SECURITY",
+                SchemeType.ISSUE_SECURITY,
+                source.getId(),
+                source.getTenantId(),
+                tenantId,
+                provisioningMode,
+                tenantSchemeId -> issueSecuritySchemePort.getIssueSecuritySchemeById(tenantSchemeId, tenantId).isPresent()
+        );
+    }
+
+    private Long resolveTenantOwnedBindingUntilImplemented(String schemeFamily,
+                                                           SchemeType schemeType,
+                                                           Long sourceSchemeId,
+                                                           Long sourceTenantId,
+                                                           Long tenantId,
+                                                           ProvisioningMode provisioningMode,
+                                                           LongPredicate tenantSchemeExists) {
+        if (tenantId.equals(sourceTenantId)) {
+            log.warn("Phase 2 fallback binds tenant-owned {} scheme {} directly in mode {}",
+                    schemeFamily, sourceSchemeId, provisioningMode);
+            return sourceSchemeId;
+        }
+
+        if (SYSTEM_TENANT_ID.equals(sourceTenantId)) {
+            Optional<TenantSchemeMappingEntity> mapping = tenantSchemeMappingPort
+                    .getMapping(tenantId, schemeType, sourceSchemeId);
+
+            if (mapping.isPresent()) {
+                Long tenantSchemeId = mapping.get().getTenantSchemeId();
+                if (tenantSchemeExists.test(tenantSchemeId)) {
+                    log.info("Reusing pre-materialized tenant mapping for {} sourceSchemeId={} tenantSchemeId={}",
+                            schemeFamily, sourceSchemeId, tenantSchemeId);
+                    return tenantSchemeId;
+                }
+
+                log.warn("Stale {} mapping found (tenantId={}, sourceSchemeId={}, mappedSchemeId={})",
+                        schemeFamily, tenantId, sourceSchemeId, tenantSchemeId);
+            }
+
+            throw new DomainValidationException(
+                    DomainErrorCode.SCHEME_PROVISIONING_FAILED,
+                    "System-owned " + schemeFamily + " provisioning is not implemented yet for mode "
+                            + provisioningMode + ". Materialize a tenant-owned scheme and tenant mapping first."
+            );
+        }
+
+        throw new AppException(ErrorCode.SCHEME_NOT_FOUND);
     }
 
     private Long resolveIssueTypeSchemeBinding(Long sourceSchemeId, Long tenantId, Long userId) {
@@ -912,14 +1149,4 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
         return prefix + " | " + sourceDescription;
     }
 
-    private void stubProvision(String typeName, SchemeType type,
-                                  Map<SchemeType, Long> resolvedSources, ProjectEntity project) {
-        Long sourceId = resolvedSources.get(type);
-        if (sourceId != null) {
-            log.warn("Scheme type {} has source ID {} but shared association provisioning is not implemented yet. " +
-                    "Skipping provisioning for project key={}. " +
-                    "The project's {} binding will remain null.",
-                    typeName, sourceId, project.getKey(), typeName);
-        }
-    }
 }

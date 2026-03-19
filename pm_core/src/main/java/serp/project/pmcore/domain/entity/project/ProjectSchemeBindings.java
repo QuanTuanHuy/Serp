@@ -44,6 +44,23 @@ public class ProjectSchemeBindings {
                 .build();
     }
 
+    public static ProjectSchemeBindings fromSchemeMap(Map<SchemeType, Long> schemeMap) {
+        if (schemeMap == null) {
+            return ProjectSchemeBindings.builder().build();
+        }
+
+        return ProjectSchemeBindings.builder()
+                .issueTypeSchemeId(schemeMap.get(SchemeType.ISSUE_TYPE))
+                .workflowSchemeId(schemeMap.get(SchemeType.WORKFLOW))
+                .fieldConfigSchemeId(schemeMap.get(SchemeType.FIELD_CONFIG))
+                .issueTypeScreenSchemeId(schemeMap.get(SchemeType.SCREEN))
+                .permissionSchemeId(schemeMap.get(SchemeType.PERMISSION))
+                .notificationSchemeId(schemeMap.get(SchemeType.NOTIFICATION))
+                .prioritySchemeId(schemeMap.get(SchemeType.PRIORITY))
+                .issueSecuritySchemeId(schemeMap.get(SchemeType.ISSUE_SECURITY))
+                .build();
+    }
+
     public List<String> getMissingRequiredFields() {
         List<String> missing = new ArrayList<>();
 
@@ -70,6 +87,19 @@ public class ProjectSchemeBindings {
         schemeMap.put(SchemeType.PRIORITY, prioritySchemeId);
         schemeMap.put(SchemeType.ISSUE_SECURITY, issueSecuritySchemeId);
         return schemeMap;
+    }
+
+    public Long getSchemeId(SchemeType schemeType) {
+        return switch (schemeType) {
+            case ISSUE_TYPE -> issueTypeSchemeId;
+            case WORKFLOW -> workflowSchemeId;
+            case FIELD_CONFIG -> fieldConfigSchemeId;
+            case SCREEN -> issueTypeScreenSchemeId;
+            case PERMISSION -> permissionSchemeId;
+            case NOTIFICATION -> notificationSchemeId;
+            case PRIORITY -> prioritySchemeId;
+            case ISSUE_SECURITY -> issueSecuritySchemeId;
+        };
     }
 
     public void applyTo(ProjectEntity project) {

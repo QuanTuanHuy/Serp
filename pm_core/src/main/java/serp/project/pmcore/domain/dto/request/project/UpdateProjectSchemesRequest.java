@@ -5,11 +5,11 @@
 
 package serp.project.pmcore.domain.dto.request.project;
 
-import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.pmcore.domain.enums.ProvisioningMode;
 
 @Data
 @Builder
@@ -26,9 +26,5 @@ public class UpdateProjectSchemesRequest {
     private Long prioritySchemeId;
     private Long issueSecuritySchemeId;
 
-    @Pattern(
-            regexp = "^(SHARED_ASSOCIATION|CLONE_ON_ASSOCIATE)?$",
-            message = "associationMode must be SHARED_ASSOCIATION or CLONE_ON_ASSOCIATE"
-    )
-    private String associationMode;
+    private ProvisioningMode provisioningMode;
 }

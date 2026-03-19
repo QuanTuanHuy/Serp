@@ -73,8 +73,9 @@ Recommended strategy:
 Suggested helper table:
 
 - `tenant_scheme_mappings(tenant_id, scheme_type, source_scheme_id, tenant_scheme_id, ...)`
+- `tenant_scheme_defaults(tenant_id, scheme_type, scheme_id, ...)`
 
-This allows tenants to customize their own shared schemes without impacting other tenants.
+This allows tenants to customize both their resolved default source schemes and their shared materialized copies without impacting other tenants.
 
 ## Scheme Families Covered
 

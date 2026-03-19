@@ -13,6 +13,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.pmcore.domain.enums.ProvisioningMode;
 
 @Data
 @Builder
@@ -41,13 +42,11 @@ public class CreateProjectRequest {
     private Long leadUserId;
 
     private Long categoryId;
-
-    // Reserved for a future template-based provisioning flow. Ignored in round one.
     private Long blueprintId;
     private String url;
     private Long avatarId;
 
-    // Explicit effective scheme bindings are required in round one project creation.
+    // Optional explicit source scheme IDs. These override blueprint/default resolution when provided.
     private Long issueTypeSchemeId;
     private Long workflowSchemeId;
     private Long fieldConfigSchemeId;
@@ -57,6 +56,5 @@ public class CreateProjectRequest {
     private Long prioritySchemeId;
     private Long issueSecuritySchemeId;
 
-    // Reserved for a future provisioning strategy switch. Ignored in round one.
-    private String associationMode;
+    private ProvisioningMode provisioningMode;
 }

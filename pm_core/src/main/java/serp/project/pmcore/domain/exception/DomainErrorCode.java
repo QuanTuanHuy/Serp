@@ -40,7 +40,7 @@ public enum DomainErrorCode {
     ROLE_ACTOR_ALREADY_ASSIGNED  ("Actor is already assigned to this role in the project"),
 
     PROJECT_TYPE_INVALID             ("Project type is not valid"),
-    INVALID_ASSOCIATION_MODE         ("Association mode must be SHARED_ASSOCIATION or CLONE_ON_ASSOCIATE"),
+    INVALID_PROVISIONING_MODE        ("Provisioning mode must be TEMPLATE_DEFAULT or SHARED_FROM_EXISTING"),
     BLUEPRINT_PROJECT_TYPE_MISMATCH  ("Blueprint project type does not match the requested project type"),
 
     // ----------------------------------------------------------------
