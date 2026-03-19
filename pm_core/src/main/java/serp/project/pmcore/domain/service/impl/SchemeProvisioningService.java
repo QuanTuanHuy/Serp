@@ -1261,7 +1261,7 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
                 .build();
 
         IssueTypeEntity saved = issueTypePort.createIssueType(clone);
-        log.info("Materialized ISSUE_TYPE source={} -> tenant={} for tenantId={}",
+        log.info("Materialized shared ISSUE_TYPE source={} -> tenant={} for tenantId={}",
                 sourceIssueTypeId, saved.getId(), tenantId);
         return saved.getId();
     }
@@ -1306,7 +1306,7 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
                 .build();
 
         PriorityEntity saved = priorityPort.createPriority(clone);
-        log.info("Materialized PRIORITY source={} -> tenant={} for tenantId={}",
+        log.info("Materialized shared PRIORITY source={} -> tenant={} for tenantId={}",
                 sourcePriorityId, saved.getId(), tenantId);
         return saved.getId();
     }
@@ -1484,7 +1484,7 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
                 .build();
 
         StatusEntity saved = statusPort.createStatus(clone);
-        log.info("Materialized STATUS source={} -> tenant={} for tenantId={}",
+        log.info("Materialized shared STATUS source={} -> tenant={} for tenantId={}",
                 sourceStatusId, saved.getId(), tenantId);
         return saved.getId();
     }
@@ -1530,7 +1530,7 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
                 .build();
 
         StatusCategoryEntity saved = statusCategoryPort.createStatusCategory(clone);
-        log.info("Materialized STATUS_CATEGORY source={} -> tenant={} for tenantId={}",
+        log.info("Materialized shared STATUS_CATEGORY source={} -> tenant={} for tenantId={}",
                 sourceCategoryId, saved.getId(), tenantId);
         return saved.getId();
     }

@@ -45,6 +45,8 @@ These entities remain reusable tenant/site dictionaries even when scheme rows ar
 
 Project isolation in Jira-like company-managed setup is achieved at the scheme/context layer, not by copying these dictionaries per project. Renaming or changing one of these reusable entities can affect every workflow, scheme, or project that references it.
 
+For system-owned seeds, tenant provisioning should materialize these dictionary rows into tenant scope once when needed, then reuse the tenant-local rows across all future projects and schemes. They should not be recreated per project.
+
 ## Provisioning Paths (Jira Parity)
 
 1. `TEMPLATE_DEFAULT` (default)

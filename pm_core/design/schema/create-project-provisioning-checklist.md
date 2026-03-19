@@ -25,10 +25,10 @@ Source of truth: `pm_core/design/schema/00_project_provisioning.md`
 
 ## Phase 4 - Align Existing Provisioners
 
-- [ ] `CP-13` Stop cloning reusable `issue_types`
-- [ ] `CP-14` Stop cloning reusable `priorities`
-- [ ] `CP-15` Stop cloning reusable `statuses` and `status_categories`
-- [ ] `CP-16` Apply per-family behavior for `TEMPLATE_DEFAULT` vs `SHARED_FROM_EXISTING`
+- [x] `CP-13` Stop cloning reusable `issue_types`
+- [x] `CP-14` Stop cloning reusable `priorities`
+- [x] `CP-15` Stop cloning reusable `statuses` and `status_categories`
+- [~] `CP-16` Apply per-family behavior for `TEMPLATE_DEFAULT` vs `SHARED_FROM_EXISTING`
 
 ## Phase 5 - Workflow Model Alignment
 
@@ -61,4 +61,6 @@ Source of truth: `pm_core/design/schema/00_project_provisioning.md`
 - Done: source resolution now supports explicit overrides, blueprint defaults, and `tenant_scheme_defaults` with tenant-over-system precedence.
 - Done: system-owned sources are no longer bound directly; supported families materialize via mappings, and unsupported families require a pre-materialized tenant mapping.
 - Done: `FIELD_CONFIG`, `SCREEN`, `PERMISSION`, `ISSUE_SECURITY`, and `NOTIFICATION` now have provisioning trees and infrastructure roots/children required for create-project provisioning.
+- Done: reusable `issue_types`, `priorities`, `statuses`, and `status_categories` are no longer cloned per project; the service now reuses tenant-local dictionaries when present, otherwise materializes them once into tenant scope from system-owned seeds.
+- Partial: per-family behavior is now aligned for current scheme families, but full Jira-parity workflow behavior still depends on phase 5 workflow versioning.
 - Transitional limitation: full Jira-parity family behavior, compatibility gates, and full exception unification will follow in later phases.
