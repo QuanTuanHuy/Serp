@@ -5,6 +5,8 @@
 
 package serp.project.pmcore.domain.entity;
 
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,4 +23,6 @@ public class IssueTypeScreenSchemeEntity extends BaseEntity {
     private String name;
     private String description;
     private Long defaultScreenSchemeId;
+
+    private List<IssueTypeScreenSchemeItemEntity> items;
 }

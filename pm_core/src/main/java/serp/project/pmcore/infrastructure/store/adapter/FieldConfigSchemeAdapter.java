@@ -22,6 +22,11 @@ public class FieldConfigSchemeAdapter implements IFieldConfigSchemePort {
     private final FieldConfigSchemeMapper fieldConfigSchemeMapper;
 
     @Override
+    public FieldConfigSchemeEntity createFieldConfigScheme(FieldConfigSchemeEntity scheme) {
+        return fieldConfigSchemeMapper.toEntity(fieldConfigSchemeRepository.save(fieldConfigSchemeMapper.toModel(scheme)));
+    }
+
+    @Override
     public Optional<FieldConfigSchemeEntity> getFieldConfigSchemeById(Long schemeId, Long tenantId) {
         return fieldConfigSchemeRepository.findByIdAndTenantId(schemeId, tenantId)
                 .map(fieldConfigSchemeMapper::toEntity);

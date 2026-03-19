@@ -22,6 +22,13 @@ public class IssueTypeScreenSchemeAdapter implements IIssueTypeScreenSchemePort 
     private final IssueTypeScreenSchemeMapper issueTypeScreenSchemeMapper;
 
     @Override
+    public IssueTypeScreenSchemeEntity createIssueTypeScreenScheme(IssueTypeScreenSchemeEntity scheme) {
+        return issueTypeScreenSchemeMapper.toEntity(
+                issueTypeScreenSchemeRepository.save(issueTypeScreenSchemeMapper.toModel(scheme))
+        );
+    }
+
+    @Override
     public Optional<IssueTypeScreenSchemeEntity> getIssueTypeScreenSchemeById(Long schemeId, Long tenantId) {
         return issueTypeScreenSchemeRepository.findByIdAndTenantId(schemeId, tenantId)
                 .map(issueTypeScreenSchemeMapper::toEntity);

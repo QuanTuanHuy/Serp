@@ -29,20 +29,4 @@ public class WorkflowEntity extends BaseEntity {
 
     private List<WorkflowStepEntity> steps;
     private List<WorkflowTransitionEntity> transitions;
-
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @SuperBuilder
-    public static class WorkflowTransitionEntity extends BaseEntity {
-        private Long tenantId;
-        private Long workflowId;
-        private String name;
-        private Long fromStatusId;
-        private Long toStatusId;
-        private Integer sequence;
-
-        private List<WorkflowTransitionRuleEntity> rules;
-    }
 }

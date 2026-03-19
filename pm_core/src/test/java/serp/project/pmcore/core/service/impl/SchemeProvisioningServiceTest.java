@@ -11,6 +11,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import serp.project.pmcore.domain.entity.workflow.WorkflowTransitionEntity;
 import serp.project.pmcore.domain.entity.workitem.IssueTypeEntity;
 import serp.project.pmcore.domain.entity.PriorityEntity;
 import serp.project.pmcore.domain.entity.PrioritySchemeEntity;
@@ -157,7 +158,7 @@ class SchemeProvisioningServiceTest {
                 .isFinal(true)
                 .build();
 
-        WorkflowEntity.WorkflowTransitionEntity sourceTransition = WorkflowEntity.WorkflowTransitionEntity.builder()
+        WorkflowTransitionEntity sourceTransition = WorkflowTransitionEntity.builder()
                 .id(400L)
                 .tenantId(0L)
                 .workflowId(100L)
@@ -275,7 +276,7 @@ class SchemeProvisioningServiceTest {
         when(workflowTransitionPort.createWorkflowTransitions(anyList()))
                 .thenAnswer(invocation -> {
                     @SuppressWarnings("unchecked")
-                    List<WorkflowEntity.WorkflowTransitionEntity> transitions = invocation.getArgument(0);
+                    List<WorkflowTransitionEntity> transitions = invocation.getArgument(0);
                     for (int i = 0; i < transitions.size(); i++) {
                         transitions.get(i).setId(1400L + i);
                     }
@@ -318,9 +319,9 @@ class SchemeProvisioningServiceTest {
         assertEquals(1301L, createdSteps.get(1).getStatusId());
 
         @SuppressWarnings("unchecked")
-        ArgumentCaptor<List<WorkflowEntity.WorkflowTransitionEntity>> createdTransitionsCaptor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<WorkflowTransitionEntity>> createdTransitionsCaptor = ArgumentCaptor.forClass(List.class);
         verify(workflowTransitionPort).createWorkflowTransitions(createdTransitionsCaptor.capture());
-        List<WorkflowEntity.WorkflowTransitionEntity> createdTransitions = createdTransitionsCaptor.getValue();
+        List<WorkflowTransitionEntity> createdTransitions = createdTransitionsCaptor.getValue();
         assertEquals(1, createdTransitions.size());
         assertEquals(1100L, createdTransitions.get(0).getWorkflowId());
         assertEquals(1300L, createdTransitions.get(0).getFromStatusId());
@@ -603,7 +604,7 @@ class SchemeProvisioningServiceTest {
                 .isFinal(true)
                 .build();
 
-        WorkflowEntity.WorkflowTransitionEntity sourceTransition = WorkflowEntity.WorkflowTransitionEntity.builder()
+        WorkflowTransitionEntity sourceTransition = WorkflowTransitionEntity.builder()
                 .id(400L)
                 .tenantId(0L)
                 .workflowId(100L)
@@ -718,7 +719,7 @@ class SchemeProvisioningServiceTest {
         when(workflowTransitionPort.createWorkflowTransitions(anyList()))
                 .thenAnswer(invocation -> {
                     @SuppressWarnings("unchecked")
-                    List<WorkflowEntity.WorkflowTransitionEntity> transitions = invocation.getArgument(0);
+                    List<WorkflowTransitionEntity> transitions = invocation.getArgument(0);
                     for (int i = 0; i < transitions.size(); i++) {
                         transitions.get(i).setId(2400L + i);
                     }

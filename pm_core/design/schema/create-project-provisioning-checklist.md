@@ -17,11 +17,11 @@ Source of truth: `pm_core/design/schema/00_project_provisioning.md`
 
 ## Phase 3 - Missing Scheme Family Trees
 
-- [ ] `CP-08` Add full `FIELD_CONFIG` child-tree infra and provisioning
-- [ ] `CP-09` Add full `SCREEN` family infra and provisioning
-- [ ] `CP-10` Add full `PERMISSION` family infra and provisioning
-- [ ] `CP-11` Add full `ISSUE_SECURITY` family infra and provisioning
-- [ ] `CP-12` Add full `NOTIFICATION` family infra and provisioning
+- [x] `CP-08` Add full `FIELD_CONFIG` child-tree infra and provisioning
+- [x] `CP-09` Add full `SCREEN` family infra and provisioning
+- [x] `CP-10` Add full `PERMISSION` family infra and provisioning
+- [x] `CP-11` Add full `ISSUE_SECURITY` family infra and provisioning
+- [x] `CP-12` Add full `NOTIFICATION` family infra and provisioning
 
 ## Phase 4 - Align Existing Provisioners
 
@@ -60,4 +60,5 @@ Source of truth: `pm_core/design/schema/00_project_provisioning.md`
 - Done: create-project now routes through `ISchemeProvisioningService` using `ProvisioningMode` and typed provisioning DTOs.
 - Done: source resolution now supports explicit overrides, blueprint defaults, and `tenant_scheme_defaults` with tenant-over-system precedence.
 - Done: system-owned sources are no longer bound directly; supported families materialize via mappings, and unsupported families require a pre-materialized tenant mapping.
+- Done: `FIELD_CONFIG`, `SCREEN`, `PERMISSION`, `ISSUE_SECURITY`, and `NOTIFICATION` now have provisioning trees and infrastructure roots/children required for create-project provisioning.
 - Transitional limitation: full Jira-parity family behavior, compatibility gates, and full exception unification will follow in later phases.

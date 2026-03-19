@@ -7,7 +7,7 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.workflow.WorkflowEntity;
+import serp.project.pmcore.domain.entity.workflow.WorkflowTransitionEntity;
 import serp.project.pmcore.domain.port.store.IWorkflowTransitionPort;
 import serp.project.pmcore.infrastructure.store.mapper.WorkflowTransitionMapper;
 import serp.project.pmcore.infrastructure.store.repository.IWorkflowTransitionRepository;
@@ -23,7 +23,7 @@ public class WorkflowTransitionAdapter implements IWorkflowTransitionPort {
     private final WorkflowTransitionMapper workflowTransitionMapper;
 
     @Override
-    public List<WorkflowEntity.WorkflowTransitionEntity> createWorkflowTransitions(List<WorkflowEntity.WorkflowTransitionEntity> transitions) {
+    public List<WorkflowTransitionEntity> createWorkflowTransitions(List<WorkflowTransitionEntity> transitions) {
         if (transitions == null || transitions.isEmpty()) {
             return new ArrayList<>();
         }
@@ -33,7 +33,7 @@ public class WorkflowTransitionAdapter implements IWorkflowTransitionPort {
     }
 
     @Override
-    public List<WorkflowEntity.WorkflowTransitionEntity> getWorkflowTransitionsByWorkflowIdIncludingSystem(Long workflowId, Long tenantId) {
+    public List<WorkflowTransitionEntity> getWorkflowTransitionsByWorkflowIdIncludingSystem(Long workflowId, Long tenantId) {
         return workflowTransitionMapper.toEntities(
                 workflowTransitionRepository.findByWorkflowIdAndTenantIdOrSystemTenant(workflowId, tenantId)
         );

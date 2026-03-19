@@ -9,14 +9,23 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import serp.project.pmcore.domain.entity.BlueprintSchemeDefaultEntity;
+import serp.project.pmcore.domain.entity.FieldConfigEntity;
+import serp.project.pmcore.domain.entity.FieldConfigItemEntity;
 import serp.project.pmcore.domain.entity.FieldConfigSchemeEntity;
+import serp.project.pmcore.domain.entity.FieldConfigSchemeItemEntity;
+import serp.project.pmcore.domain.entity.workflow.WorkflowTransitionEntity;
 import serp.project.pmcore.domain.entity.workitem.IssueTypeEntity;
 import serp.project.pmcore.domain.entity.IssueTypeScreenSchemeEntity;
+import serp.project.pmcore.domain.entity.IssueTypeScreenSchemeItemEntity;
 import serp.project.pmcore.domain.entity.IssueTypeSchemeEntity;
 import serp.project.pmcore.domain.entity.IssueTypeSchemeItemEntity;
+import serp.project.pmcore.domain.entity.IssueSecurityLevelEntity;
+import serp.project.pmcore.domain.entity.IssueSecurityLevelMemberEntity;
 import serp.project.pmcore.domain.entity.IssueSecuritySchemeEntity;
 import serp.project.pmcore.domain.entity.NotificationSchemeEntity;
+import serp.project.pmcore.domain.entity.NotificationSchemeEntryEntity;
 import serp.project.pmcore.domain.entity.PermissionSchemeEntity;
+import serp.project.pmcore.domain.entity.PermissionSchemeEntryEntity;
 import serp.project.pmcore.domain.entity.PriorityEntity;
 import serp.project.pmcore.domain.entity.PrioritySchemeEntity;
 import serp.project.pmcore.domain.entity.PrioritySchemeItemEntity;
@@ -31,6 +40,11 @@ import serp.project.pmcore.domain.entity.TenantSchemeMappingEntity;
 import serp.project.pmcore.domain.entity.TenantWorkflowMappingEntity;
 import serp.project.pmcore.domain.entity.workflow.WorkflowEntity;
 import serp.project.pmcore.domain.entity.workflow.WorkflowStepEntity;
+import serp.project.pmcore.domain.entity.ScreenEntity;
+import serp.project.pmcore.domain.entity.ScreenSchemeEntity;
+import serp.project.pmcore.domain.entity.ScreenSchemeItemEntity;
+import serp.project.pmcore.domain.entity.ScreenTabEntity;
+import serp.project.pmcore.domain.entity.ScreenTabFieldEntity;
 import serp.project.pmcore.domain.entity.WorkflowSchemeEntity;
 import serp.project.pmcore.domain.entity.WorkflowSchemeItemEntity;
 import serp.project.pmcore.domain.entity.workflow.WorkflowTransitionRuleEntity;
@@ -41,17 +55,30 @@ import serp.project.pmcore.domain.exception.DomainValidationException;
 import serp.project.pmcore.domain.exception.AppException;
 import serp.project.pmcore.domain.exception.ErrorCode;
 import serp.project.pmcore.domain.port.store.IBlueprintSchemeDefaultPort;
+import serp.project.pmcore.domain.port.store.IFieldConfigItemPort;
+import serp.project.pmcore.domain.port.store.IFieldConfigPort;
 import serp.project.pmcore.domain.port.store.IFieldConfigSchemePort;
+import serp.project.pmcore.domain.port.store.IFieldConfigSchemeItemPort;
+import serp.project.pmcore.domain.port.store.IIssueSecurityLevelMemberPort;
+import serp.project.pmcore.domain.port.store.IIssueSecurityLevelPort;
 import serp.project.pmcore.domain.port.store.IIssueSecuritySchemePort;
 import serp.project.pmcore.domain.port.store.IIssueTypePort;
+import serp.project.pmcore.domain.port.store.IIssueTypeScreenSchemeItemPort;
 import serp.project.pmcore.domain.port.store.IIssueTypeSchemeItemPort;
 import serp.project.pmcore.domain.port.store.IIssueTypeSchemePort;
 import serp.project.pmcore.domain.port.store.IIssueTypeScreenSchemePort;
+import serp.project.pmcore.domain.port.store.INotificationSchemeEntryPort;
 import serp.project.pmcore.domain.port.store.INotificationSchemePort;
+import serp.project.pmcore.domain.port.store.IPermissionSchemeEntryPort;
 import serp.project.pmcore.domain.port.store.IPermissionSchemePort;
 import serp.project.pmcore.domain.port.store.IPriorityPort;
 import serp.project.pmcore.domain.port.store.IPrioritySchemeItemPort;
 import serp.project.pmcore.domain.port.store.IPrioritySchemePort;
+import serp.project.pmcore.domain.port.store.IScreenPort;
+import serp.project.pmcore.domain.port.store.IScreenSchemeItemPort;
+import serp.project.pmcore.domain.port.store.IScreenSchemePort;
+import serp.project.pmcore.domain.port.store.IScreenTabFieldPort;
+import serp.project.pmcore.domain.port.store.IScreenTabPort;
 import serp.project.pmcore.domain.port.store.IStatusCategoryPort;
 import serp.project.pmcore.domain.port.store.IStatusPort;
 import serp.project.pmcore.domain.port.store.ITenantSchemeMappingPort;
@@ -65,16 +92,7 @@ import serp.project.pmcore.domain.port.store.IWorkflowTransitionPort;
 import serp.project.pmcore.domain.port.store.IWorkflowTransitionRulePort;
 import serp.project.pmcore.domain.service.ISchemeProvisioningService;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.function.LongPredicate;
 import java.util.stream.Collectors;
 
@@ -96,10 +114,23 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
 
     private final IBlueprintSchemeDefaultPort blueprintSchemeDefaultPort;
     private final ITenantSchemeDefaultPort tenantSchemeDefaultPort;
+    private final IFieldConfigPort fieldConfigPort;
+    private final IFieldConfigItemPort fieldConfigItemPort;
     private final IFieldConfigSchemePort fieldConfigSchemePort;
+    private final IFieldConfigSchemeItemPort fieldConfigSchemeItemPort;
+    private final IScreenPort screenPort;
+    private final IScreenTabPort screenTabPort;
+    private final IScreenTabFieldPort screenTabFieldPort;
+    private final IScreenSchemePort screenSchemePort;
+    private final IScreenSchemeItemPort screenSchemeItemPort;
     private final IIssueTypeScreenSchemePort issueTypeScreenSchemePort;
+    private final IIssueTypeScreenSchemeItemPort issueTypeScreenSchemeItemPort;
     private final IPermissionSchemePort permissionSchemePort;
+    private final IPermissionSchemeEntryPort permissionSchemeEntryPort;
     private final INotificationSchemePort notificationSchemePort;
+    private final INotificationSchemeEntryPort notificationSchemeEntryPort;
+    private final IIssueSecurityLevelPort issueSecurityLevelPort;
+    private final IIssueSecurityLevelMemberPort issueSecurityLevelMemberPort;
     private final IIssueSecuritySchemePort issueSecuritySchemePort;
     private final IIssueTypePort issueTypePort;
     private final IIssueTypeSchemePort issueTypeSchemePort;
@@ -170,34 +201,34 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
             effectiveBindings.put(SchemeType.WORKFLOW,
                     resolveClonedSchemeBinding(SchemeType.WORKFLOW, workflowSourceId, tenantId, userId));
             effectiveBindings.put(SchemeType.FIELD_CONFIG,
-                    resolveFieldConfigSchemeBinding(fieldConfigSourceId, tenantId, provisioningMode));
+                    resolveClonedSchemeBinding(SchemeType.FIELD_CONFIG, fieldConfigSourceId, tenantId, userId));
             effectiveBindings.put(SchemeType.SCREEN,
-                    resolveIssueTypeScreenSchemeBinding(screenSourceId, tenantId, provisioningMode));
+                    resolveClonedSchemeBinding(SchemeType.SCREEN, screenSourceId, tenantId, userId));
             effectiveBindings.put(SchemeType.PERMISSION,
-                    resolvePermissionSchemeBinding(permissionSourceId, tenantId, provisioningMode));
+                    resolveSharedSchemeBinding(SchemeType.PERMISSION, permissionSourceId, tenantId, userId));
             effectiveBindings.put(SchemeType.NOTIFICATION,
-                    resolveNotificationSchemeBinding(notificationSourceId, tenantId, provisioningMode));
+                    resolveSharedSchemeBinding(SchemeType.NOTIFICATION, notificationSourceId, tenantId, userId));
             effectiveBindings.put(SchemeType.PRIORITY,
                     resolveSharedSchemeBinding(SchemeType.PRIORITY, prioritySourceId, tenantId, userId));
             effectiveBindings.put(SchemeType.ISSUE_SECURITY,
-                    resolveIssueSecuritySchemeBinding(issueSecuritySourceId, tenantId, provisioningMode));
+                    resolveSharedSchemeBinding(SchemeType.ISSUE_SECURITY, issueSecuritySourceId, tenantId, userId));
         } else {
             effectiveBindings.put(SchemeType.ISSUE_TYPE,
                     resolveSharedSchemeBinding(SchemeType.ISSUE_TYPE, issueTypeSourceId, tenantId, userId));
             effectiveBindings.put(SchemeType.WORKFLOW,
                     resolveSharedSchemeBinding(SchemeType.WORKFLOW, workflowSourceId, tenantId, userId));
             effectiveBindings.put(SchemeType.FIELD_CONFIG,
-                    resolveFieldConfigSchemeBinding(fieldConfigSourceId, tenantId, provisioningMode));
+                    resolveSharedSchemeBinding(SchemeType.FIELD_CONFIG, fieldConfigSourceId, tenantId, userId));
             effectiveBindings.put(SchemeType.SCREEN,
-                    resolveIssueTypeScreenSchemeBinding(screenSourceId, tenantId, provisioningMode));
+                    resolveSharedSchemeBinding(SchemeType.SCREEN, screenSourceId, tenantId, userId));
             effectiveBindings.put(SchemeType.PERMISSION,
-                    resolvePermissionSchemeBinding(permissionSourceId, tenantId, provisioningMode));
+                    resolveSharedSchemeBinding(SchemeType.PERMISSION, permissionSourceId, tenantId, userId));
             effectiveBindings.put(SchemeType.NOTIFICATION,
-                    resolveNotificationSchemeBinding(notificationSourceId, tenantId, provisioningMode));
+                    resolveSharedSchemeBinding(SchemeType.NOTIFICATION, notificationSourceId, tenantId, userId));
             effectiveBindings.put(SchemeType.PRIORITY,
                     resolveSharedSchemeBinding(SchemeType.PRIORITY, prioritySourceId, tenantId, userId));
             effectiveBindings.put(SchemeType.ISSUE_SECURITY,
-                    resolveIssueSecuritySchemeBinding(issueSecuritySourceId, tenantId, provisioningMode));
+                    resolveSharedSchemeBinding(SchemeType.ISSUE_SECURITY, issueSecuritySourceId, tenantId, userId));
         }
 
         log.info("Provisioned schemes for project key={} mode={} resolvedSources={} effectiveBindings={}",
@@ -217,9 +248,14 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
             case ISSUE_TYPE -> resolveIssueTypeSchemeBinding(sourceSchemeId, tenantId, userId);
             case PRIORITY -> resolvePrioritySchemeBinding(sourceSchemeId, tenantId, userId);
             case WORKFLOW -> resolveWorkflowSchemeBinding(sourceSchemeId, tenantId, userId);
+            case FIELD_CONFIG -> resolveFieldConfigSchemeSharedBinding(sourceSchemeId, tenantId, userId);
+            case SCREEN -> resolveIssueTypeScreenSchemeSharedBinding(sourceSchemeId, tenantId, userId);
+            case PERMISSION -> resolvePermissionSchemeBinding(sourceSchemeId, tenantId, userId);
+            case NOTIFICATION -> resolveNotificationSchemeBinding(sourceSchemeId, tenantId, userId);
+            case ISSUE_SECURITY -> resolveIssueSecuritySchemeBinding(sourceSchemeId, tenantId, userId);
             default -> throw new AppException(
                     ErrorCode.SCHEME_PROVISIONING_FAILED,
-                    "Shared association provisioning is not implemented for scheme type " + schemeType
+                    "Shared provisioning is not implemented for scheme type " + schemeType
             );
         };
     }
@@ -236,9 +272,11 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
             case ISSUE_TYPE -> resolveIssueTypeSchemeCloneBinding(sourceSchemeId, tenantId, userId);
             case PRIORITY -> resolvePrioritySchemeCloneBinding(sourceSchemeId, tenantId, userId);
             case WORKFLOW -> resolveWorkflowSchemeCloneBinding(sourceSchemeId, tenantId, userId);
+            case FIELD_CONFIG -> resolveFieldConfigSchemeCloneBinding(sourceSchemeId, tenantId, userId);
+            case SCREEN -> resolveIssueTypeScreenSchemeCloneBinding(sourceSchemeId, tenantId, userId);
             default -> throw new AppException(
                     ErrorCode.SCHEME_PROVISIONING_FAILED,
-                    "Clone-on-associate provisioning is not implemented for scheme type " + schemeType
+                    "Project-scoped clone provisioning is not implemented for scheme type " + schemeType
             );
         };
     }
@@ -265,6 +303,22 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
                 .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
 
         return cloneWorkflowSchemeForTenant(source, tenantId, userId, "CLONE", false);
+    }
+
+    private Long resolveFieldConfigSchemeCloneBinding(Long sourceSchemeId, Long tenantId, Long userId) {
+        FieldConfigSchemeEntity source = fieldConfigSchemePort
+                .getFieldConfigSchemeByIdIncludingSystem(sourceSchemeId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
+
+        return cloneFieldConfigSchemeForTenant(source, tenantId, userId, "CLONE");
+    }
+
+    private Long resolveIssueTypeScreenSchemeCloneBinding(Long sourceSchemeId, Long tenantId, Long userId) {
+        IssueTypeScreenSchemeEntity source = issueTypeScreenSchemePort
+                .getIssueTypeScreenSchemeByIdIncludingSystem(sourceSchemeId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
+
+        return cloneIssueTypeScreenSchemeForTenant(source, tenantId, userId, "CLONE");
     }
 
     private Map<SchemeType, Long> loadBlueprintDefaults(Long blueprintId, Long tenantId) {
@@ -362,123 +416,149 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
         return sourceId;
     }
 
-    private Long resolveFieldConfigSchemeBinding(Long sourceSchemeId, Long tenantId, ProvisioningMode provisioningMode) {
+    private Long resolveFieldConfigSchemeSharedBinding(Long sourceSchemeId, Long tenantId, Long userId) {
         FieldConfigSchemeEntity source = fieldConfigSchemePort
                 .getFieldConfigSchemeByIdIncludingSystem(sourceSchemeId, tenantId)
                 .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
 
-        return resolveTenantOwnedBindingUntilImplemented(
-                "FIELD_CONFIG",
-                SchemeType.FIELD_CONFIG,
-                source.getId(),
-                source.getTenantId(),
-                tenantId,
-                provisioningMode,
-                tenantSchemeId -> fieldConfigSchemePort.getFieldConfigSchemeById(tenantSchemeId, tenantId).isPresent()
-        );
+        if (tenantId.equals(source.getTenantId())) {
+            return source.getId();
+        }
+        if (!SYSTEM_TENANT_ID.equals(source.getTenantId())) {
+            throw new AppException(ErrorCode.SCHEME_NOT_FOUND);
+        }
+
+        Optional<TenantSchemeMappingEntity> mapping = tenantSchemeMappingPort
+                .getMapping(tenantId, SchemeType.FIELD_CONFIG, sourceSchemeId);
+
+        if (mapping.isPresent()) {
+            Long tenantSchemeId = mapping.get().getTenantSchemeId();
+            if (fieldConfigSchemePort.getFieldConfigSchemeById(tenantSchemeId, tenantId).isPresent()) {
+                return tenantSchemeId;
+            }
+            log.warn("Stale FIELD_CONFIG mapping found (tenantId={}, sourceSchemeId={}, mappedSchemeId={})",
+                    tenantId, sourceSchemeId, tenantSchemeId);
+        }
+
+        Long clonedSchemeId = cloneFieldConfigSchemeForTenant(source, tenantId, userId, "SHARED");
+        upsertTenantSchemeMapping(mapping, tenantId, userId, SchemeType.FIELD_CONFIG, sourceSchemeId, clonedSchemeId);
+        return clonedSchemeId;
     }
 
-    private Long resolveIssueTypeScreenSchemeBinding(Long sourceSchemeId, Long tenantId, ProvisioningMode provisioningMode) {
+    private Long resolveIssueTypeScreenSchemeSharedBinding(Long sourceSchemeId, Long tenantId, Long userId) {
         IssueTypeScreenSchemeEntity source = issueTypeScreenSchemePort
                 .getIssueTypeScreenSchemeByIdIncludingSystem(sourceSchemeId, tenantId)
                 .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
 
-        return resolveTenantOwnedBindingUntilImplemented(
-                "SCREEN",
-                SchemeType.SCREEN,
-                source.getId(),
-                source.getTenantId(),
-                tenantId,
-                provisioningMode,
-                tenantSchemeId -> issueTypeScreenSchemePort.getIssueTypeScreenSchemeById(tenantSchemeId, tenantId).isPresent()
-        );
+        if (tenantId.equals(source.getTenantId())) {
+            return source.getId();
+        }
+        if (!SYSTEM_TENANT_ID.equals(source.getTenantId())) {
+            throw new AppException(ErrorCode.SCHEME_NOT_FOUND);
+        }
+
+        Optional<TenantSchemeMappingEntity> mapping = tenantSchemeMappingPort
+                .getMapping(tenantId, SchemeType.SCREEN, sourceSchemeId);
+
+        if (mapping.isPresent()) {
+            Long tenantSchemeId = mapping.get().getTenantSchemeId();
+            if (issueTypeScreenSchemePort.getIssueTypeScreenSchemeById(tenantSchemeId, tenantId).isPresent()) {
+                return tenantSchemeId;
+            }
+            log.warn("Stale SCREEN mapping found (tenantId={}, sourceSchemeId={}, mappedSchemeId={})",
+                    tenantId, sourceSchemeId, tenantSchemeId);
+        }
+
+        Long clonedSchemeId = cloneIssueTypeScreenSchemeForTenant(source, tenantId, userId, "SHARED");
+        upsertTenantSchemeMapping(mapping, tenantId, userId, SchemeType.SCREEN, sourceSchemeId, clonedSchemeId);
+        return clonedSchemeId;
     }
 
-    private Long resolvePermissionSchemeBinding(Long sourceSchemeId, Long tenantId, ProvisioningMode provisioningMode) {
+    private Long resolvePermissionSchemeBinding(Long sourceSchemeId, Long tenantId, Long userId) {
         PermissionSchemeEntity source = permissionSchemePort
                 .getPermissionSchemeByIdIncludingSystem(sourceSchemeId, tenantId)
                 .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
 
-        return resolveTenantOwnedBindingUntilImplemented(
-                "PERMISSION",
-                SchemeType.PERMISSION,
-                source.getId(),
-                source.getTenantId(),
-                tenantId,
-                provisioningMode,
-                tenantSchemeId -> permissionSchemePort.getPermissionSchemeById(tenantSchemeId, tenantId).isPresent()
-        );
+        if (tenantId.equals(source.getTenantId())) {
+            return source.getId();
+        }
+        if (!SYSTEM_TENANT_ID.equals(source.getTenantId())) {
+            throw new AppException(ErrorCode.SCHEME_NOT_FOUND);
+        }
+
+        Optional<TenantSchemeMappingEntity> mapping = tenantSchemeMappingPort
+                .getMapping(tenantId, SchemeType.PERMISSION, sourceSchemeId);
+
+        if (mapping.isPresent()) {
+            Long tenantSchemeId = mapping.get().getTenantSchemeId();
+            if (permissionSchemePort.getPermissionSchemeById(tenantSchemeId, tenantId).isPresent()) {
+                return tenantSchemeId;
+            }
+            log.warn("Stale PERMISSION mapping found (tenantId={}, sourceSchemeId={}, mappedSchemeId={})",
+                    tenantId, sourceSchemeId, tenantSchemeId);
+        }
+
+        Long clonedSchemeId = clonePermissionSchemeForTenant(source, tenantId, userId, "SHARED");
+        upsertTenantSchemeMapping(mapping, tenantId, userId, SchemeType.PERMISSION, sourceSchemeId, clonedSchemeId);
+        return clonedSchemeId;
     }
 
-    private Long resolveNotificationSchemeBinding(Long sourceSchemeId, Long tenantId, ProvisioningMode provisioningMode) {
+    private Long resolveNotificationSchemeBinding(Long sourceSchemeId, Long tenantId, Long userId) {
         NotificationSchemeEntity source = notificationSchemePort
                 .getNotificationSchemeByIdIncludingSystem(sourceSchemeId, tenantId)
                 .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
 
-        return resolveTenantOwnedBindingUntilImplemented(
-                "NOTIFICATION",
-                SchemeType.NOTIFICATION,
-                source.getId(),
-                source.getTenantId(),
-                tenantId,
-                provisioningMode,
-                tenantSchemeId -> notificationSchemePort.getNotificationSchemeById(tenantSchemeId, tenantId).isPresent()
-        );
+        if (tenantId.equals(source.getTenantId())) {
+            return source.getId();
+        }
+        if (!SYSTEM_TENANT_ID.equals(source.getTenantId())) {
+            throw new AppException(ErrorCode.SCHEME_NOT_FOUND);
+        }
+
+        Optional<TenantSchemeMappingEntity> mapping = tenantSchemeMappingPort
+                .getMapping(tenantId, SchemeType.NOTIFICATION, sourceSchemeId);
+
+        if (mapping.isPresent()) {
+            Long tenantSchemeId = mapping.get().getTenantSchemeId();
+            if (notificationSchemePort.getNotificationSchemeById(tenantSchemeId, tenantId).isPresent()) {
+                return tenantSchemeId;
+            }
+            log.warn("Stale NOTIFICATION mapping found (tenantId={}, sourceSchemeId={}, mappedSchemeId={})",
+                    tenantId, sourceSchemeId, tenantSchemeId);
+        }
+
+        Long clonedSchemeId = cloneNotificationSchemeForTenant(source, tenantId, userId, "SHARED");
+        upsertTenantSchemeMapping(mapping, tenantId, userId, SchemeType.NOTIFICATION, sourceSchemeId, clonedSchemeId);
+        return clonedSchemeId;
     }
 
-    private Long resolveIssueSecuritySchemeBinding(Long sourceSchemeId, Long tenantId, ProvisioningMode provisioningMode) {
+    private Long resolveIssueSecuritySchemeBinding(Long sourceSchemeId, Long tenantId, Long userId) {
         IssueSecuritySchemeEntity source = issueSecuritySchemePort
                 .getIssueSecuritySchemeByIdIncludingSystem(sourceSchemeId, tenantId)
                 .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
 
-        return resolveTenantOwnedBindingUntilImplemented(
-                "ISSUE_SECURITY",
-                SchemeType.ISSUE_SECURITY,
-                source.getId(),
-                source.getTenantId(),
-                tenantId,
-                provisioningMode,
-                tenantSchemeId -> issueSecuritySchemePort.getIssueSecuritySchemeById(tenantSchemeId, tenantId).isPresent()
-        );
-    }
-
-    private Long resolveTenantOwnedBindingUntilImplemented(String schemeFamily,
-                                                           SchemeType schemeType,
-                                                           Long sourceSchemeId,
-                                                           Long sourceTenantId,
-                                                           Long tenantId,
-                                                           ProvisioningMode provisioningMode,
-                                                           LongPredicate tenantSchemeExists) {
-        if (tenantId.equals(sourceTenantId)) {
-            log.warn("Phase 2 fallback binds tenant-owned {} scheme {} directly in mode {}",
-                    schemeFamily, sourceSchemeId, provisioningMode);
-            return sourceSchemeId;
+        if (tenantId.equals(source.getTenantId())) {
+            return source.getId();
+        }
+        if (!SYSTEM_TENANT_ID.equals(source.getTenantId())) {
+            throw new AppException(ErrorCode.SCHEME_NOT_FOUND);
         }
 
-        if (SYSTEM_TENANT_ID.equals(sourceTenantId)) {
-            Optional<TenantSchemeMappingEntity> mapping = tenantSchemeMappingPort
-                    .getMapping(tenantId, schemeType, sourceSchemeId);
+        Optional<TenantSchemeMappingEntity> mapping = tenantSchemeMappingPort
+                .getMapping(tenantId, SchemeType.ISSUE_SECURITY, sourceSchemeId);
 
-            if (mapping.isPresent()) {
-                Long tenantSchemeId = mapping.get().getTenantSchemeId();
-                if (tenantSchemeExists.test(tenantSchemeId)) {
-                    log.info("Reusing pre-materialized tenant mapping for {} sourceSchemeId={} tenantSchemeId={}",
-                            schemeFamily, sourceSchemeId, tenantSchemeId);
-                    return tenantSchemeId;
-                }
-
-                log.warn("Stale {} mapping found (tenantId={}, sourceSchemeId={}, mappedSchemeId={})",
-                        schemeFamily, tenantId, sourceSchemeId, tenantSchemeId);
+        if (mapping.isPresent()) {
+            Long tenantSchemeId = mapping.get().getTenantSchemeId();
+            if (issueSecuritySchemePort.getIssueSecuritySchemeById(tenantSchemeId, tenantId).isPresent()) {
+                return tenantSchemeId;
             }
-
-            throw new DomainValidationException(
-                    DomainErrorCode.SCHEME_PROVISIONING_FAILED,
-                    "System-owned " + schemeFamily + " provisioning is not implemented yet for mode "
-                            + provisioningMode + ". Materialize a tenant-owned scheme and tenant mapping first."
-            );
+            log.warn("Stale ISSUE_SECURITY mapping found (tenantId={}, sourceSchemeId={}, mappedSchemeId={})",
+                    tenantId, sourceSchemeId, tenantSchemeId);
         }
 
-        throw new AppException(ErrorCode.SCHEME_NOT_FOUND);
+        Long clonedSchemeId = cloneIssueSecuritySchemeForTenant(source, tenantId, userId, "SHARED");
+        upsertTenantSchemeMapping(mapping, tenantId, userId, SchemeType.ISSUE_SECURITY, sourceSchemeId, clonedSchemeId);
+        return clonedSchemeId;
     }
 
     private Long resolveIssueTypeSchemeBinding(Long sourceSchemeId, Long tenantId, Long userId) {
@@ -724,6 +804,415 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
         return saved.getId();
     }
 
+    private Long cloneFieldConfigSchemeForTenant(FieldConfigSchemeEntity source,
+                                                 Long tenantId,
+                                                 Long userId,
+                                                 String cloneMode) {
+        List<FieldConfigSchemeItemEntity> sourceItems = fieldConfigSchemeItemPort
+                .getFieldConfigSchemeItemsBySchemeIdIncludingSystem(source.getId(), tenantId);
+
+        Map<Long, Long> issueTypeIdMap = new HashMap<>();
+        Set<Long> sourceIssueTypeIds = sourceItems.stream()
+                .map(FieldConfigSchemeItemEntity::getIssueTypeId)
+                .collect(Collectors.toSet());
+        for (Long sourceIssueTypeId : sourceIssueTypeIds) {
+            issueTypeIdMap.put(sourceIssueTypeId, materializeIssueTypeForTenant(sourceIssueTypeId, tenantId, userId));
+        }
+
+        Map<Long, Long> fieldConfigIdMap = new HashMap<>();
+        Set<Long> sourceFieldConfigIds = sourceItems.stream()
+                .map(FieldConfigSchemeItemEntity::getFieldConfigId)
+                .collect(Collectors.toSet());
+        if (source.getDefaultFieldConfigId() != null) {
+            sourceFieldConfigIds.add(source.getDefaultFieldConfigId());
+        }
+        for (Long sourceFieldConfigId : sourceFieldConfigIds) {
+            fieldConfigIdMap.put(sourceFieldConfigId,
+                    cloneFieldConfigForTenantBySourceId(sourceFieldConfigId, tenantId, userId, cloneMode));
+        }
+
+        FieldConfigSchemeEntity cloned = FieldConfigSchemeEntity.builder()
+                .tenantId(tenantId)
+                .name(buildSchemeCloneName(source.getName(), source.getId(), cloneMode))
+                .description(buildSchemeCloneDescription(source.getDescription(), source.getId(), cloneMode))
+                .defaultFieldConfigId(requireMappedId(fieldConfigIdMap, source.getDefaultFieldConfigId(), "field configuration"))
+                .build();
+        cloned.setCreatedAt(System.currentTimeMillis());
+        cloned.setUpdatedAt(System.currentTimeMillis());
+        cloned.setCreatedBy(userId);
+        cloned.setUpdatedBy(userId);
+
+        FieldConfigSchemeEntity saved = fieldConfigSchemePort.createFieldConfigScheme(cloned);
+
+        if (!sourceItems.isEmpty()) {
+            List<FieldConfigSchemeItemEntity> clonedItems = sourceItems.stream()
+                    .map(item -> FieldConfigSchemeItemEntity.builder()
+                            .tenantId(tenantId)
+                            .schemeId(saved.getId())
+                            .issueTypeId(requireMappedId(issueTypeIdMap, item.getIssueTypeId(), "issue type"))
+                            .fieldConfigId(requireMappedId(fieldConfigIdMap, item.getFieldConfigId(), "field configuration"))
+                            .build())
+                    .collect(Collectors.toList());
+            fieldConfigSchemeItemPort.createFieldConfigSchemeItems(clonedItems);
+        }
+
+        log.info("Created {} FIELD_CONFIG scheme clone: source={} -> cloned={} (tenantId={})",
+                cloneMode, source.getId(), saved.getId(), tenantId);
+        return saved.getId();
+    }
+
+    private Long cloneFieldConfigForTenantBySourceId(Long sourceFieldConfigId,
+                                                     Long tenantId,
+                                                     Long userId,
+                                                     String cloneMode) {
+        FieldConfigEntity source = fieldConfigPort
+                .getFieldConfigByIdIncludingSystem(sourceFieldConfigId, tenantId)
+                .orElseThrow(() -> new AppException(
+                        ErrorCode.SCHEME_PROVISIONING_FAILED,
+                        "Field configuration not found for source id=" + sourceFieldConfigId));
+
+        List<FieldConfigItemEntity> sourceItems = fieldConfigItemPort
+                .getFieldConfigItemsByFieldConfigIdIncludingSystem(source.getId(), tenantId);
+
+        FieldConfigEntity cloned = FieldConfigEntity.builder()
+                .tenantId(tenantId)
+                .name(buildSchemeCloneName(source.getName(), source.getId(), cloneMode))
+                .description(buildSchemeCloneDescription(source.getDescription(), source.getId(), cloneMode))
+                .isSystem(false)
+                .createdAt(System.currentTimeMillis())
+                .updatedAt(System.currentTimeMillis())
+                .createdBy(userId)
+                .updatedBy(userId)
+                .build();
+
+        FieldConfigEntity saved = fieldConfigPort.createFieldConfig(cloned);
+
+        if (!sourceItems.isEmpty()) {
+            List<FieldConfigItemEntity> clonedItems = sourceItems.stream()
+                    .map(item -> FieldConfigItemEntity.builder()
+                            .tenantId(tenantId)
+                            .fieldConfigId(saved.getId())
+                            .fieldRefType(item.getFieldRefType())
+                            .fieldRef(item.getFieldRef())
+                            .isRequired(item.getIsRequired())
+                            .isHidden(item.getIsHidden())
+                            .rendererKey(item.getRendererKey())
+                            .sequence(item.getSequence())
+                            .build())
+                    .collect(Collectors.toList());
+            fieldConfigItemPort.createFieldConfigItems(clonedItems);
+        }
+
+        return saved.getId();
+    }
+
+    private Long cloneIssueTypeScreenSchemeForTenant(IssueTypeScreenSchemeEntity source,
+                                                     Long tenantId,
+                                                     Long userId,
+                                                     String cloneMode) {
+        List<IssueTypeScreenSchemeItemEntity> sourceItems = issueTypeScreenSchemeItemPort
+                .getIssueTypeScreenSchemeItemsBySchemeIdIncludingSystem(source.getId(), tenantId);
+
+        Map<Long, Long> issueTypeIdMap = new HashMap<>();
+        Set<Long> sourceIssueTypeIds = sourceItems.stream()
+                .map(IssueTypeScreenSchemeItemEntity::getIssueTypeId)
+                .collect(Collectors.toSet());
+        for (Long sourceIssueTypeId : sourceIssueTypeIds) {
+            issueTypeIdMap.put(sourceIssueTypeId, materializeIssueTypeForTenant(sourceIssueTypeId, tenantId, userId));
+        }
+
+        Map<Long, Long> screenSchemeIdMap = new HashMap<>();
+        Set<Long> sourceScreenSchemeIds = sourceItems.stream()
+                .map(IssueTypeScreenSchemeItemEntity::getScreenSchemeId)
+                .collect(Collectors.toSet());
+        if (source.getDefaultScreenSchemeId() != null) {
+            sourceScreenSchemeIds.add(source.getDefaultScreenSchemeId());
+        }
+        for (Long sourceScreenSchemeId : sourceScreenSchemeIds) {
+            screenSchemeIdMap.put(sourceScreenSchemeId,
+                    cloneScreenSchemeForTenantBySourceId(sourceScreenSchemeId, tenantId, userId, cloneMode));
+        }
+
+        IssueTypeScreenSchemeEntity cloned = IssueTypeScreenSchemeEntity.builder()
+                .tenantId(tenantId)
+                .name(buildSchemeCloneName(source.getName(), source.getId(), cloneMode))
+                .description(buildSchemeCloneDescription(source.getDescription(), source.getId(), cloneMode))
+                .defaultScreenSchemeId(requireMappedId(screenSchemeIdMap, source.getDefaultScreenSchemeId(), "screen scheme"))
+                .build();
+        cloned.setCreatedAt(System.currentTimeMillis());
+        cloned.setUpdatedAt(System.currentTimeMillis());
+        cloned.setCreatedBy(userId);
+        cloned.setUpdatedBy(userId);
+
+        IssueTypeScreenSchemeEntity saved = issueTypeScreenSchemePort.createIssueTypeScreenScheme(cloned);
+
+        if (!sourceItems.isEmpty()) {
+            List<IssueTypeScreenSchemeItemEntity> clonedItems = sourceItems.stream()
+                    .map(item -> IssueTypeScreenSchemeItemEntity.builder()
+                            .tenantId(tenantId)
+                            .schemeId(saved.getId())
+                            .issueTypeId(requireMappedId(issueTypeIdMap, item.getIssueTypeId(), "issue type"))
+                            .screenSchemeId(requireMappedId(screenSchemeIdMap, item.getScreenSchemeId(), "screen scheme"))
+                            .build())
+                    .collect(Collectors.toList());
+            issueTypeScreenSchemeItemPort.createIssueTypeScreenSchemeItems(clonedItems);
+        }
+
+        log.info("Created {} SCREEN scheme clone: source={} -> cloned={} (tenantId={})",
+                cloneMode, source.getId(), saved.getId(), tenantId);
+        return saved.getId();
+    }
+
+    private Long cloneScreenSchemeForTenantBySourceId(Long sourceScreenSchemeId,
+                                                      Long tenantId,
+                                                      Long userId,
+                                                      String cloneMode) {
+        ScreenSchemeEntity source = screenSchemePort
+                .getScreenSchemeByIdIncludingSystem(sourceScreenSchemeId, tenantId)
+                .orElseThrow(() -> new AppException(
+                        ErrorCode.SCHEME_PROVISIONING_FAILED,
+                        "Screen scheme not found for source id=" + sourceScreenSchemeId));
+
+        List<ScreenSchemeItemEntity> sourceItems = screenSchemeItemPort
+                .getScreenSchemeItemsByScreenSchemeIdIncludingSystem(source.getId(), tenantId);
+
+        Map<Long, Long> screenIdMap = new HashMap<>();
+        Set<Long> sourceScreenIds = sourceItems.stream()
+                .map(ScreenSchemeItemEntity::getScreenId)
+                .collect(Collectors.toSet());
+        if (source.getDefaultScreenId() != null) {
+            sourceScreenIds.add(source.getDefaultScreenId());
+        }
+        for (Long sourceScreenId : sourceScreenIds) {
+            screenIdMap.put(sourceScreenId, cloneScreenForTenantBySourceId(sourceScreenId, tenantId, userId, cloneMode));
+        }
+
+        ScreenSchemeEntity cloned = ScreenSchemeEntity.builder()
+                .tenantId(tenantId)
+                .name(buildSchemeCloneName(source.getName(), source.getId(), cloneMode))
+                .description(buildSchemeCloneDescription(source.getDescription(), source.getId(), cloneMode))
+                .defaultScreenId(requireMappedId(screenIdMap, source.getDefaultScreenId(), "screen"))
+                .createdAt(System.currentTimeMillis())
+                .updatedAt(System.currentTimeMillis())
+                .createdBy(userId)
+                .updatedBy(userId)
+                .build();
+
+        ScreenSchemeEntity saved = screenSchemePort.createScreenScheme(cloned);
+
+        if (!sourceItems.isEmpty()) {
+            List<ScreenSchemeItemEntity> clonedItems = sourceItems.stream()
+                    .map(item -> ScreenSchemeItemEntity.builder()
+                            .tenantId(tenantId)
+                            .screenSchemeId(saved.getId())
+                            .operationKey(item.getOperationKey())
+                            .screenId(requireMappedId(screenIdMap, item.getScreenId(), "screen"))
+                            .build())
+                    .collect(Collectors.toList());
+            screenSchemeItemPort.createScreenSchemeItems(clonedItems);
+        }
+
+        return saved.getId();
+    }
+
+    private Long cloneScreenForTenantBySourceId(Long sourceScreenId,
+                                                Long tenantId,
+                                                Long userId,
+                                                String cloneMode) {
+        ScreenEntity source = screenPort
+                .getScreenByIdIncludingSystem(sourceScreenId, tenantId)
+                .orElseThrow(() -> new AppException(
+                        ErrorCode.SCHEME_PROVISIONING_FAILED,
+                        "Screen not found for source id=" + sourceScreenId));
+
+        List<ScreenTabEntity> sourceTabs = screenTabPort.getScreenTabsByScreenIdIncludingSystem(source.getId(), tenantId);
+
+        ScreenEntity cloned = ScreenEntity.builder()
+                .tenantId(tenantId)
+                .name(buildSchemeCloneName(source.getName(), source.getId(), cloneMode))
+                .description(buildSchemeCloneDescription(source.getDescription(), source.getId(), cloneMode))
+                .createdAt(System.currentTimeMillis())
+                .updatedAt(System.currentTimeMillis())
+                .createdBy(userId)
+                .updatedBy(userId)
+                .build();
+
+        ScreenEntity saved = screenPort.createScreen(cloned);
+
+        Map<Long, Long> tabIdMap = new HashMap<>();
+        if (!sourceTabs.isEmpty()) {
+            List<ScreenTabEntity> clonedTabs = sourceTabs.stream()
+                    .map(tab -> ScreenTabEntity.builder()
+                            .tenantId(tenantId)
+                            .screenId(saved.getId())
+                            .name(tab.getName())
+                            .sequence(tab.getSequence())
+                            .build())
+                    .collect(Collectors.toList());
+            List<ScreenTabEntity> savedTabs = screenTabPort.createScreenTabs(clonedTabs);
+            for (int i = 0; i < sourceTabs.size(); i++) {
+                tabIdMap.put(sourceTabs.get(i).getId(), savedTabs.get(i).getId());
+            }
+
+            List<ScreenTabFieldEntity> clonedFields = new ArrayList<>();
+            for (ScreenTabEntity sourceTab : sourceTabs) {
+                List<ScreenTabFieldEntity> sourceFields = screenTabFieldPort
+                        .getScreenTabFieldsByScreenTabIdIncludingSystem(sourceTab.getId(), tenantId);
+                for (ScreenTabFieldEntity sourceField : sourceFields) {
+                    clonedFields.add(ScreenTabFieldEntity.builder()
+                            .tenantId(tenantId)
+                            .screenTabId(requireMappedId(tabIdMap, sourceTab.getId(), "screen tab"))
+                            .fieldRefType(sourceField.getFieldRefType())
+                            .fieldRef(sourceField.getFieldRef())
+                            .sequence(sourceField.getSequence())
+                            .build());
+                }
+            }
+
+            if (!clonedFields.isEmpty()) {
+                screenTabFieldPort.createScreenTabFields(clonedFields);
+            }
+        }
+
+        return saved.getId();
+    }
+
+    private Long clonePermissionSchemeForTenant(PermissionSchemeEntity source,
+                                                Long tenantId,
+                                                Long userId,
+                                                String cloneMode) {
+        List<PermissionSchemeEntryEntity> sourceEntries = permissionSchemeEntryPort
+                .getPermissionSchemeEntriesBySchemeIdIncludingSystem(source.getId(), tenantId);
+
+        PermissionSchemeEntity cloned = PermissionSchemeEntity.builder()
+                .tenantId(tenantId)
+                .name(buildSchemeCloneName(source.getName(), source.getId(), cloneMode))
+                .description(buildSchemeCloneDescription(source.getDescription(), source.getId(), cloneMode))
+                .createdAt(System.currentTimeMillis())
+                .updatedAt(System.currentTimeMillis())
+                .createdBy(userId)
+                .updatedBy(userId)
+                .build();
+
+        PermissionSchemeEntity saved = permissionSchemePort.createPermissionScheme(cloned);
+
+        if (!sourceEntries.isEmpty()) {
+            List<PermissionSchemeEntryEntity> clonedEntries = sourceEntries.stream()
+                    .map(entry -> PermissionSchemeEntryEntity.builder()
+                            .tenantId(tenantId)
+                            .schemeId(saved.getId())
+                            .permissionKey(entry.getPermissionKey())
+                            .granteeType(entry.getGranteeType())
+                            .granteeRef(entry.getGranteeRef())
+                            .customFieldId(entry.getCustomFieldId())
+                            .build())
+                    .collect(Collectors.toList());
+            permissionSchemeEntryPort.createPermissionSchemeEntries(clonedEntries);
+        }
+
+        return saved.getId();
+    }
+
+    private Long cloneIssueSecuritySchemeForTenant(IssueSecuritySchemeEntity source,
+                                                   Long tenantId,
+                                                   Long userId,
+                                                   String cloneMode) {
+        List<IssueSecurityLevelEntity> sourceLevels = issueSecurityLevelPort
+                .getIssueSecurityLevelsBySchemeIdIncludingSystem(source.getId(), tenantId);
+
+        IssueSecuritySchemeEntity cloned = IssueSecuritySchemeEntity.builder()
+                .tenantId(tenantId)
+                .name(buildSchemeCloneName(source.getName(), source.getId(), cloneMode))
+                .description(buildSchemeCloneDescription(source.getDescription(), source.getId(), cloneMode))
+                .defaultLevelId(null)
+                .createdAt(System.currentTimeMillis())
+                .updatedAt(System.currentTimeMillis())
+                .createdBy(userId)
+                .updatedBy(userId)
+                .build();
+
+        IssueSecuritySchemeEntity saved = issueSecuritySchemePort.createIssueSecurityScheme(cloned);
+
+        Map<Long, Long> levelIdMap = new HashMap<>();
+        if (!sourceLevels.isEmpty()) {
+            List<IssueSecurityLevelEntity> clonedLevels = sourceLevels.stream()
+                    .map(level -> IssueSecurityLevelEntity.builder()
+                            .tenantId(tenantId)
+                            .schemeId(saved.getId())
+                            .name(level.getName())
+                            .description(level.getDescription())
+                            .build())
+                    .collect(Collectors.toList());
+            List<IssueSecurityLevelEntity> savedLevels = issueSecurityLevelPort.createIssueSecurityLevels(clonedLevels);
+            for (int i = 0; i < sourceLevels.size(); i++) {
+                levelIdMap.put(sourceLevels.get(i).getId(), savedLevels.get(i).getId());
+            }
+
+            List<IssueSecurityLevelMemberEntity> clonedMembers = new ArrayList<>();
+            for (IssueSecurityLevelEntity sourceLevel : sourceLevels) {
+                List<IssueSecurityLevelMemberEntity> sourceMembers = issueSecurityLevelMemberPort
+                        .getIssueSecurityLevelMembersByLevelIdIncludingSystem(sourceLevel.getId(), tenantId);
+                for (IssueSecurityLevelMemberEntity member : sourceMembers) {
+                    clonedMembers.add(IssueSecurityLevelMemberEntity.builder()
+                            .tenantId(tenantId)
+                            .levelId(requireMappedId(levelIdMap, sourceLevel.getId(), "issue security level"))
+                            .subjectType(member.getSubjectType())
+                            .subjectRef(member.getSubjectRef())
+                            .customFieldId(member.getCustomFieldId())
+                            .build());
+                }
+            }
+
+            if (!clonedMembers.isEmpty()) {
+                issueSecurityLevelMemberPort.createIssueSecurityLevelMembers(clonedMembers);
+            }
+        }
+
+        saved.setDefaultLevelId(requireMappedId(levelIdMap, source.getDefaultLevelId(), "issue security level"));
+        issueSecuritySchemePort.updateIssueSecurityScheme(saved);
+        return saved.getId();
+    }
+
+    private Long cloneNotificationSchemeForTenant(NotificationSchemeEntity source,
+                                                  Long tenantId,
+                                                  Long userId,
+                                                  String cloneMode) {
+        List<NotificationSchemeEntryEntity> sourceEntries = notificationSchemeEntryPort
+                .getNotificationSchemeEntriesBySchemeIdIncludingSystem(source.getId(), tenantId);
+
+        NotificationSchemeEntity cloned = NotificationSchemeEntity.builder()
+                .tenantId(tenantId)
+                .name(buildSchemeCloneName(source.getName(), source.getId(), cloneMode))
+                .description(buildSchemeCloneDescription(source.getDescription(), source.getId(), cloneMode))
+                .createdAt(System.currentTimeMillis())
+                .updatedAt(System.currentTimeMillis())
+                .createdBy(userId)
+                .updatedBy(userId)
+                .build();
+
+        NotificationSchemeEntity saved = notificationSchemePort.createNotificationScheme(cloned);
+
+        if (!sourceEntries.isEmpty()) {
+            List<NotificationSchemeEntryEntity> clonedEntries = sourceEntries.stream()
+                    .map(entry -> NotificationSchemeEntryEntity.builder()
+                            .tenantId(tenantId)
+                            .schemeId(saved.getId())
+                            .eventId(entry.getEventId())
+                            .recipientType(entry.getRecipientType())
+                            .recipientRef(entry.getRecipientRef())
+                            .customFieldId(entry.getCustomFieldId())
+                            .channel(entry.getChannel())
+                            .templateId(entry.getTemplateId())
+                            .isEnabled(entry.getIsEnabled())
+                            .conditionsJson(entry.getConditionsJson())
+                            .build())
+                    .collect(Collectors.toList());
+            notificationSchemeEntryPort.createNotificationSchemeEntries(clonedEntries);
+        }
+
+        return saved.getId();
+    }
+
     private Long cloneWorkflowForTenantBySourceId(Long sourceWorkflowId, Long tenantId, Long userId) {
         WorkflowEntity source = workflowPort
                 .getWorkflowByIdIncludingSystem(sourceWorkflowId, tenantId)
@@ -859,22 +1348,22 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
     private Long cloneWorkflowForTenant(WorkflowEntity source, Long tenantId, Long userId, String cloneMode) {
         List<WorkflowStepEntity> sourceSteps = workflowStepPort
                 .getWorkflowStepsByWorkflowIdIncludingSystem(source.getId(), tenantId);
-        List<WorkflowEntity.WorkflowTransitionEntity> sourceTransitions = workflowTransitionPort
+        List<WorkflowTransitionEntity> sourceTransitions = workflowTransitionPort
                 .getWorkflowTransitionsByWorkflowIdIncludingSystem(source.getId(), tenantId);
 
         Map<Long, Long> statusIdMap = new HashMap<>();
         Set<Long> sourceStatusIds = new HashSet<>();
         sourceSteps.stream()
                 .map(WorkflowStepEntity::getStatusId)
-                .filter(id -> id != null)
+                .filter(Objects::nonNull)
                 .forEach(sourceStatusIds::add);
         sourceTransitions.stream()
-                .map(WorkflowEntity.WorkflowTransitionEntity::getFromStatusId)
-                .filter(id -> id != null)
+                .map(WorkflowTransitionEntity::getFromStatusId)
+                .filter(Objects::nonNull)
                 .forEach(sourceStatusIds::add);
         sourceTransitions.stream()
-                .map(WorkflowEntity.WorkflowTransitionEntity::getToStatusId)
-                .filter(id -> id != null)
+                .map(WorkflowTransitionEntity::getToStatusId)
+                .filter(Objects::nonNull)
                 .forEach(sourceStatusIds::add);
         for (Long sourceStatusId : sourceStatusIds) {
             statusIdMap.put(sourceStatusId,
@@ -912,8 +1401,8 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
 
         Map<Long, Long> transitionIdMap = new HashMap<>();
         if (!sourceTransitions.isEmpty()) {
-            List<WorkflowEntity.WorkflowTransitionEntity> clonedTransitions = sourceTransitions.stream()
-                    .map(transition -> WorkflowEntity.WorkflowTransitionEntity.builder()
+            List<WorkflowTransitionEntity> clonedTransitions = sourceTransitions.stream()
+                    .map(transition -> WorkflowTransitionEntity.builder()
                             .tenantId(tenantId)
                             .workflowId(savedWorkflow.getId())
                             .name(transition.getName())
@@ -923,14 +1412,14 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
                             .build())
                     .collect(Collectors.toList());
 
-            List<WorkflowEntity.WorkflowTransitionEntity> savedTransitions = workflowTransitionPort
+            List<WorkflowTransitionEntity> savedTransitions = workflowTransitionPort
                     .createWorkflowTransitions(clonedTransitions);
             for (int i = 0; i < sourceTransitions.size(); i++) {
                 transitionIdMap.put(sourceTransitions.get(i).getId(), savedTransitions.get(i).getId());
             }
 
             List<WorkflowTransitionRuleEntity> clonedRules = new ArrayList<>();
-            for (WorkflowEntity.WorkflowTransitionEntity sourceTransition : sourceTransitions) {
+            for (WorkflowTransitionEntity sourceTransition : sourceTransitions) {
                 List<WorkflowTransitionRuleEntity> sourceRules = workflowTransitionRulePort
                         .getWorkflowTransitionRulesByTransitionIdIncludingSystem(sourceTransition.getId(), tenantId);
                 Long targetTransitionId = requireMappedId(transitionIdMap, sourceTransition.getId(), "transition");

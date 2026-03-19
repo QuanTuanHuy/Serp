@@ -10,6 +10,8 @@ import serp.project.pmcore.domain.entity.NotificationSchemeEntity;
 import java.util.Optional;
 
 public interface INotificationSchemePort {
+    NotificationSchemeEntity createNotificationScheme(NotificationSchemeEntity scheme);
+
     Optional<NotificationSchemeEntity> getNotificationSchemeById(Long schemeId, Long tenantId);
 
     Optional<NotificationSchemeEntity> getNotificationSchemeByIdIncludingSystem(Long schemeId, Long tenantId);
