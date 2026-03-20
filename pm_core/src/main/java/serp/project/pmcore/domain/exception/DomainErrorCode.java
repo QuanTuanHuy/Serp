@@ -126,6 +126,8 @@ public enum DomainErrorCode {
     CUSTOM_FIELD_TYPE_IMMUTABLE  ("Custom field type cannot be changed after creation"),
     FIELD_CONFIG_NOT_FOUND       ("Field configuration not found"),
     FIELD_CONFIG_SCHEME_NOT_FOUND("Field configuration scheme not found"),
+    FIELD_CONFIG_SCHEME_COVERAGE_MISSING(
+                                  "Field configuration scheme does not cover all issue types"),
     FIELD_CANNOT_BE_REQUIRED_AND_HIDDEN(
                                   "A field cannot be both required and hidden"),
     SUMMARY_FIELD_CANNOT_BE_HIDDEN(
@@ -135,8 +137,12 @@ public enum DomainErrorCode {
     SCREEN_MUST_HAVE_ONE_TAB     ("A screen must have at least one tab"),
     SCREEN_FIELD_DUPLICATE       ("A field can only appear once per screen"),
     SCREEN_SCHEME_NOT_FOUND      ("Screen scheme not found"),
+    SCREEN_SCHEME_OPERATION_COVERAGE_MISSING(
+                                  "Screen scheme must define CREATE, EDIT, and VIEW operations"),
     ISSUE_TYPE_SCREEN_SCHEME_NOT_FOUND(
                                   "Issue type screen scheme not found"),
+    ISSUE_TYPE_SCREEN_SCHEME_COVERAGE_MISSING(
+                                  "Issue type screen scheme does not cover all issue types"),
 
     // ----------------------------------------------------------------
     // Permissions & Security

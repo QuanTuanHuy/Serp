@@ -26,4 +26,8 @@ public class WorkflowVersionEntity extends BaseEntity {
     private Long baseVersionId;
     private Long publishedAt;
     private Long publishedBy;
+
+    public boolean isActive() {
+        return WorkflowVersionState.PUBLISHED.equals(versionState);
+    }
 }

@@ -52,7 +52,6 @@ import serp.project.pmcore.domain.entity.workflow.WorkflowTransitionRuleEntity;
 import serp.project.pmcore.domain.enums.ProvisioningMode;
 import serp.project.pmcore.domain.enums.SchemeType;
 import serp.project.pmcore.domain.enums.WorkflowLifecycleState;
-import serp.project.pmcore.domain.enums.WorkflowVersionState;
 import serp.project.pmcore.domain.exception.DomainErrorCode;
 import serp.project.pmcore.domain.exception.DomainValidationException;
 import serp.project.pmcore.domain.exception.AppException;
@@ -97,12 +96,11 @@ import serp.project.pmcore.domain.port.store.IWorkflowTransitionRulePort;
 import serp.project.pmcore.domain.service.ISchemeProvisioningService;
 
 import java.util.*;
-import java.util.function.LongPredicate;
 import java.util.stream.Collectors;
 
 /**
  * Handles scheme provisioning for project creation.
- *
+ * <p>
  * Current phase:
  * - resolve source schemes by precedence: explicit override -> blueprint default -> tenant default/shared default
  * - keep create-project orchestration routed through a typed provisioning contract
@@ -182,62 +180,74 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
                                                              Long tenantId,
                                                              Long userId,
                                                              ProvisioningMode provisioningMode) {
-        if (ProvisioningMode.CLONE_FROM_SHARED.equals(provisioningMode)) {
-            throw new DomainValidationException(
-                    DomainErrorCode.INVALID_PROVISIONING_MODE,
-                    "CLONE_FROM_SHARED is reserved for future project rebinding and is not supported by create project yet."
-            );
-        }
-
-        Map<SchemeType, Long> effectiveBindings = new EnumMap<>(SchemeType.class);
-
-        Long issueTypeSourceId = requireSourceSchemeId(resolvedSources, SchemeType.ISSUE_TYPE);
-        Long workflowSourceId = requireSourceSchemeId(resolvedSources, SchemeType.WORKFLOW);
-        Long fieldConfigSourceId = requireSourceSchemeId(resolvedSources, SchemeType.FIELD_CONFIG);
-        Long screenSourceId = requireSourceSchemeId(resolvedSources, SchemeType.SCREEN);
-        Long permissionSourceId = requireSourceSchemeId(resolvedSources, SchemeType.PERMISSION);
-        Long notificationSourceId = requireSourceSchemeId(resolvedSources, SchemeType.NOTIFICATION);
-        Long prioritySourceId = requireSourceSchemeId(resolvedSources, SchemeType.PRIORITY);
-        Long issueSecuritySourceId = requireSourceSchemeId(resolvedSources, SchemeType.ISSUE_SECURITY);
-
-        if (ProvisioningMode.TEMPLATE_DEFAULT.equals(provisioningMode)) {
-            effectiveBindings.put(SchemeType.ISSUE_TYPE,
-                    resolveClonedSchemeBinding(SchemeType.ISSUE_TYPE, issueTypeSourceId, tenantId, userId));
-            effectiveBindings.put(SchemeType.WORKFLOW,
-                    resolveClonedSchemeBinding(SchemeType.WORKFLOW, workflowSourceId, tenantId, userId));
-            effectiveBindings.put(SchemeType.FIELD_CONFIG,
-                    resolveClonedSchemeBinding(SchemeType.FIELD_CONFIG, fieldConfigSourceId, tenantId, userId));
-            effectiveBindings.put(SchemeType.SCREEN,
-                    resolveClonedSchemeBinding(SchemeType.SCREEN, screenSourceId, tenantId, userId));
-            effectiveBindings.put(SchemeType.PERMISSION,
-                    resolveSharedSchemeBinding(SchemeType.PERMISSION, permissionSourceId, tenantId, userId));
-            effectiveBindings.put(SchemeType.NOTIFICATION,
-                    resolveSharedSchemeBinding(SchemeType.NOTIFICATION, notificationSourceId, tenantId, userId));
-            effectiveBindings.put(SchemeType.PRIORITY,
-                    resolveSharedSchemeBinding(SchemeType.PRIORITY, prioritySourceId, tenantId, userId));
-            effectiveBindings.put(SchemeType.ISSUE_SECURITY,
-                    resolveSharedSchemeBinding(SchemeType.ISSUE_SECURITY, issueSecuritySourceId, tenantId, userId));
-        } else {
-            effectiveBindings.put(SchemeType.ISSUE_TYPE,
-                    resolveSharedSchemeBinding(SchemeType.ISSUE_TYPE, issueTypeSourceId, tenantId, userId));
-            effectiveBindings.put(SchemeType.WORKFLOW,
-                    resolveSharedSchemeBinding(SchemeType.WORKFLOW, workflowSourceId, tenantId, userId));
-            effectiveBindings.put(SchemeType.FIELD_CONFIG,
-                    resolveSharedSchemeBinding(SchemeType.FIELD_CONFIG, fieldConfigSourceId, tenantId, userId));
-            effectiveBindings.put(SchemeType.SCREEN,
-                    resolveSharedSchemeBinding(SchemeType.SCREEN, screenSourceId, tenantId, userId));
-            effectiveBindings.put(SchemeType.PERMISSION,
-                    resolveSharedSchemeBinding(SchemeType.PERMISSION, permissionSourceId, tenantId, userId));
-            effectiveBindings.put(SchemeType.NOTIFICATION,
-                    resolveSharedSchemeBinding(SchemeType.NOTIFICATION, notificationSourceId, tenantId, userId));
-            effectiveBindings.put(SchemeType.PRIORITY,
-                    resolveSharedSchemeBinding(SchemeType.PRIORITY, prioritySourceId, tenantId, userId));
-            effectiveBindings.put(SchemeType.ISSUE_SECURITY,
-                    resolveSharedSchemeBinding(SchemeType.ISSUE_SECURITY, issueSecuritySourceId, tenantId, userId));
-        }
+        Map<SchemeType, Long> effectiveBindings = switch (provisioningMode) {
+            case TEMPLATE_DEFAULT -> provisionTemplateDefaultBindings(resolvedSources, tenantId, userId);
+            case SHARED_FROM_EXISTING -> provisionSharedFromExistingBindings(resolvedSources, tenantId, userId);
+            case CLONE_FROM_SHARED -> provisionClonedFromSharedBindings(resolvedSources, tenantId, userId);
+        };
 
         log.info("Provisioned schemes for project key={} mode={} resolvedSources={} effectiveBindings={}",
                 project.getKey(), provisioningMode, resolvedSources, effectiveBindings);
+        return effectiveBindings;
+    }
+
+    private Map<SchemeType, Long> provisionTemplateDefaultBindings(Map<SchemeType, Long> resolvedSources,
+                                                                   Long tenantId,
+                                                                   Long userId) {
+        Map<SchemeType, Long> effectiveBindings = new EnumMap<>(SchemeType.class);
+
+        effectiveBindings.put(SchemeType.ISSUE_TYPE,
+                resolveClonedSchemeBinding(SchemeType.ISSUE_TYPE,
+                        requireSourceSchemeId(resolvedSources, SchemeType.ISSUE_TYPE), tenantId, userId));
+        effectiveBindings.put(SchemeType.WORKFLOW,
+                resolveClonedSchemeBinding(SchemeType.WORKFLOW,
+                        requireSourceSchemeId(resolvedSources, SchemeType.WORKFLOW), tenantId, userId));
+        effectiveBindings.put(SchemeType.FIELD_CONFIG,
+                resolveClonedSchemeBinding(SchemeType.FIELD_CONFIG,
+                        requireSourceSchemeId(resolvedSources, SchemeType.FIELD_CONFIG), tenantId, userId));
+        effectiveBindings.put(SchemeType.SCREEN,
+                resolveClonedSchemeBinding(SchemeType.SCREEN,
+                        requireSourceSchemeId(resolvedSources, SchemeType.SCREEN), tenantId, userId));
+
+        effectiveBindings.put(SchemeType.PERMISSION,
+                resolveSharedSchemeBinding(SchemeType.PERMISSION,
+                        requireSourceSchemeId(resolvedSources, SchemeType.PERMISSION), tenantId, userId));
+        effectiveBindings.put(SchemeType.NOTIFICATION,
+                resolveSharedSchemeBinding(SchemeType.NOTIFICATION,
+                        requireSourceSchemeId(resolvedSources, SchemeType.NOTIFICATION), tenantId, userId));
+        effectiveBindings.put(SchemeType.PRIORITY,
+                resolveSharedSchemeBinding(SchemeType.PRIORITY,
+                        requireSourceSchemeId(resolvedSources, SchemeType.PRIORITY), tenantId, userId));
+        effectiveBindings.put(SchemeType.ISSUE_SECURITY,
+                resolveSharedSchemeBinding(SchemeType.ISSUE_SECURITY,
+                        requireSourceSchemeId(resolvedSources, SchemeType.ISSUE_SECURITY), tenantId, userId));
+
+        return effectiveBindings;
+    }
+
+    private Map<SchemeType, Long> provisionSharedFromExistingBindings(Map<SchemeType, Long> resolvedSources,
+                                                                      Long tenantId,
+                                                                      Long userId) {
+        Map<SchemeType, Long> effectiveBindings = new EnumMap<>(SchemeType.class);
+        for (SchemeType schemeType : SchemeType.values()) {
+            effectiveBindings.put(
+                    schemeType,
+                    resolveSharedSchemeBinding(schemeType, requireSourceSchemeId(resolvedSources, schemeType), tenantId, userId)
+            );
+        }
+        return effectiveBindings;
+    }
+
+    private Map<SchemeType, Long> provisionClonedFromSharedBindings(Map<SchemeType, Long> resolvedSources,
+                                                                    Long tenantId,
+                                                                    Long userId) {
+        Map<SchemeType, Long> effectiveBindings = new EnumMap<>(SchemeType.class);
+        for (SchemeType schemeType : SchemeType.values()) {
+            effectiveBindings.put(
+                    schemeType,
+                    resolveClonedSchemeBinding(schemeType, requireSourceSchemeId(resolvedSources, schemeType), tenantId, userId)
+            );
+        }
         return effectiveBindings;
     }
 
@@ -279,10 +289,13 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
             case WORKFLOW -> resolveWorkflowSchemeCloneBinding(sourceSchemeId, tenantId, userId);
             case FIELD_CONFIG -> resolveFieldConfigSchemeCloneBinding(sourceSchemeId, tenantId, userId);
             case SCREEN -> resolveIssueTypeScreenSchemeCloneBinding(sourceSchemeId, tenantId, userId);
+            case PERMISSION -> resolvePermissionSchemeCloneBinding(sourceSchemeId, tenantId, userId);
+            case NOTIFICATION -> resolveNotificationSchemeCloneBinding(sourceSchemeId, tenantId, userId);
+            case ISSUE_SECURITY -> resolveIssueSecuritySchemeCloneBinding(sourceSchemeId, tenantId, userId);
             default -> throw new AppException(
                     ErrorCode.SCHEME_PROVISIONING_FAILED,
                     "Project-scoped clone provisioning is not implemented for scheme type " + schemeType
-            );
+                );
         };
     }
 
@@ -324,6 +337,30 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
                 .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
 
         return cloneIssueTypeScreenSchemeForTenant(source, tenantId, userId, "CLONE");
+    }
+
+    private Long resolvePermissionSchemeCloneBinding(Long sourceSchemeId, Long tenantId, Long userId) {
+        PermissionSchemeEntity source = permissionSchemePort
+                .getPermissionSchemeByIdIncludingSystem(sourceSchemeId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
+
+        return clonePermissionSchemeForTenant(source, tenantId, userId, "CLONE");
+    }
+
+    private Long resolveNotificationSchemeCloneBinding(Long sourceSchemeId, Long tenantId, Long userId) {
+        NotificationSchemeEntity source = notificationSchemePort
+                .getNotificationSchemeByIdIncludingSystem(sourceSchemeId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
+
+        return cloneNotificationSchemeForTenant(source, tenantId, userId, "CLONE");
+    }
+
+    private Long resolveIssueSecuritySchemeCloneBinding(Long sourceSchemeId, Long tenantId, Long userId) {
+        IssueSecuritySchemeEntity source = issueSecuritySchemePort
+                .getIssueSecuritySchemeByIdIncludingSystem(sourceSchemeId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
+
+        return cloneIssueSecuritySchemeForTenant(source, tenantId, userId, "CLONE");
     }
 
     private Map<SchemeType, Long> loadBlueprintDefaults(Long blueprintId, Long tenantId) {

@@ -42,6 +42,7 @@ public class CreateProjectCommand {
                 buildProvisioningRequest(request, tenantId, userId, schemeBindings)
         );
         provisioningResult.applyEffectiveBindings(savedProject);
+        // projectSchemeCompatibilityValidator.validate(savedProject, tenantId);
         ProjectEntity finalProject = projectService.saveProject(savedProject, userId);
 
         log.info("Created project id={} key={} tenantId={}",

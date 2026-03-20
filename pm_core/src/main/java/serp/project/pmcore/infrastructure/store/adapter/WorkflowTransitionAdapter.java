@@ -33,6 +33,13 @@ public class WorkflowTransitionAdapter implements IWorkflowTransitionPort {
     }
 
     @Override
+    public List<WorkflowTransitionEntity> getWorkflowTransitionsByWorkflowVersionId(Long workflowVersionId, Long tenantId) {
+        return workflowTransitionMapper.toEntities(
+                workflowTransitionRepository.findByWorkflowVersionIdAndTenantId(workflowVersionId, tenantId)
+        );
+    }
+
+    @Override
     public List<WorkflowTransitionEntity> getWorkflowTransitionsByWorkflowVersionIdIncludingSystem(Long workflowVersionId, Long tenantId) {
         return workflowTransitionMapper.toEntities(
                 workflowTransitionRepository.findByWorkflowVersionIdAndTenantIdOrSystemTenant(workflowVersionId, tenantId)
