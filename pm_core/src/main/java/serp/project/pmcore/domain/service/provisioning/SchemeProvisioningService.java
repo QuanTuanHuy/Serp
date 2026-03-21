@@ -3,12 +3,11 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.domain.service.impl;
+package serp.project.pmcore.domain.service.provisioning;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import serp.project.pmcore.domain.entity.BlueprintSchemeDefaultEntity;
 import serp.project.pmcore.domain.entity.FieldConfigEntity;
 import serp.project.pmcore.domain.entity.FieldConfigItemEntity;
 import serp.project.pmcore.domain.entity.FieldConfigSchemeEntity;
@@ -35,7 +34,6 @@ import serp.project.pmcore.domain.entity.project.ProjectEntity;
 import serp.project.pmcore.domain.entity.project.ProjectSchemeBindings;
 import serp.project.pmcore.domain.entity.StatusCategoryEntity;
 import serp.project.pmcore.domain.entity.StatusEntity;
-import serp.project.pmcore.domain.entity.TenantSchemeDefaultEntity;
 import serp.project.pmcore.domain.entity.TenantSchemeMappingEntity;
 import serp.project.pmcore.domain.entity.TenantWorkflowMappingEntity;
 import serp.project.pmcore.domain.entity.workflow.WorkflowEntity;
@@ -56,7 +54,6 @@ import serp.project.pmcore.domain.exception.DomainErrorCode;
 import serp.project.pmcore.domain.exception.DomainValidationException;
 import serp.project.pmcore.domain.exception.AppException;
 import serp.project.pmcore.domain.exception.ErrorCode;
-import serp.project.pmcore.domain.port.store.IBlueprintSchemeDefaultPort;
 import serp.project.pmcore.domain.port.store.IFieldConfigItemPort;
 import serp.project.pmcore.domain.port.store.IFieldConfigPort;
 import serp.project.pmcore.domain.port.store.IFieldConfigSchemePort;
@@ -84,7 +81,6 @@ import serp.project.pmcore.domain.port.store.IScreenTabPort;
 import serp.project.pmcore.domain.port.store.IStatusCategoryPort;
 import serp.project.pmcore.domain.port.store.IStatusPort;
 import serp.project.pmcore.domain.port.store.ITenantSchemeMappingPort;
-import serp.project.pmcore.domain.port.store.ITenantSchemeDefaultPort;
 import serp.project.pmcore.domain.port.store.ITenantWorkflowMappingPort;
 import serp.project.pmcore.domain.port.store.IWorkflowPort;
 import serp.project.pmcore.domain.port.store.IWorkflowStepPort;
@@ -94,6 +90,7 @@ import serp.project.pmcore.domain.port.store.IWorkflowSchemePort;
 import serp.project.pmcore.domain.port.store.IWorkflowTransitionPort;
 import serp.project.pmcore.domain.port.store.IWorkflowTransitionRulePort;
 import serp.project.pmcore.domain.service.ISchemeProvisioningService;
+import serp.project.pmcore.domain.service.provisioning.mode.IProvisioningModeExecutor;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -114,8 +111,6 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
 
     private static final Long SYSTEM_TENANT_ID = 0L;
 
-    private final IBlueprintSchemeDefaultPort blueprintSchemeDefaultPort;
-    private final ITenantSchemeDefaultPort tenantSchemeDefaultPort;
     private final IFieldConfigPort fieldConfigPort;
     private final IFieldConfigItemPort fieldConfigItemPort;
     private final IFieldConfigSchemePort fieldConfigSchemePort;
@@ -152,15 +147,13 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
     private final ITenantSchemeMappingPort tenantSchemeMappingPort;
     private final ITenantWorkflowMappingPort tenantWorkflowMappingPort;
 
+    private final ProvisioningModeExecutorRegistry provisioningModeExecutorRegistry;
+    private final ISchemeSourceResolver schemeSourceResolver;
+
     @Override
     public ProjectProvisioningResult provisionProjectSchemes(ProjectEntity project,
                                                              ProjectProvisioningRequest request) {
-        Map<SchemeType, Long> requestedSources = request.getRequestedSchemeBindings() == null
-                ? Collections.emptyMap()
-                : request.getRequestedSchemeBindings().toSchemeMap();
-        Map<SchemeType, Long> blueprintDefaults = loadBlueprintDefaults(request.getBlueprintId(), request.getTenantId());
-        Map<SchemeType, Long> tenantDefaults = loadTenantDefaults(request.getTenantId());
-        Map<SchemeType, Long> resolvedSources = resolveTemplateSources(requestedSources, blueprintDefaults, tenantDefaults);
+        Map<SchemeType, Long> resolvedSources = schemeSourceResolver.resolve(request);
         Map<SchemeType, Long> effectiveBindings = provisionEffectiveBindings(
                 project,
                 resolvedSources,
@@ -180,11 +173,8 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
                                                              Long tenantId,
                                                              Long userId,
                                                              ProvisioningMode provisioningMode) {
-        Map<SchemeType, Long> effectiveBindings = switch (provisioningMode) {
-            case TEMPLATE_DEFAULT -> provisionTemplateDefaultBindings(resolvedSources, tenantId, userId);
-            case SHARED_FROM_EXISTING -> provisionSharedFromExistingBindings(resolvedSources, tenantId, userId);
-            case CLONE_FROM_SHARED -> provisionClonedFromSharedBindings(resolvedSources, tenantId, userId);
-        };
+        IProvisioningModeExecutor executor = provisioningModeExecutorRegistry.get(provisioningMode);
+        Map<SchemeType, Long> effectiveBindings = executor.provision(resolvedSources, tenantId, userId);
 
         log.info("Provisioned schemes for project key={} mode={} resolvedSources={} effectiveBindings={}",
                 project.getKey(), provisioningMode, resolvedSources, effectiveBindings);
@@ -361,89 +351,6 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
                 .orElseThrow(() -> new AppException(ErrorCode.SCHEME_NOT_FOUND));
 
         return cloneIssueSecuritySchemeForTenant(source, tenantId, userId, "CLONE");
-    }
-
-    private Map<SchemeType, Long> loadBlueprintDefaults(Long blueprintId, Long tenantId) {
-        if (blueprintId == null) {
-            return Collections.emptyMap();
-        }
-
-        List<BlueprintSchemeDefaultEntity> defaults =
-                blueprintSchemeDefaultPort.getDefaultsByBlueprintIdIncludingSystem(blueprintId, tenantId);
-
-        Map<SchemeType, BlueprintSchemeDefaultEntity> preferredDefaults = new EnumMap<>(SchemeType.class);
-        for (BlueprintSchemeDefaultEntity candidate : defaults) {
-            if (candidate.getSchemeType() == null || candidate.getSchemeId() == null) {
-                continue;
-            }
-
-            BlueprintSchemeDefaultEntity existing = preferredDefaults.get(candidate.getSchemeType());
-            if (shouldReplaceDefault(existing == null ? null : existing.getTenantId(), candidate.getTenantId(), tenantId)) {
-                preferredDefaults.put(candidate.getSchemeType(), candidate);
-            }
-        }
-
-        Map<SchemeType, Long> resolvedDefaults = new EnumMap<>(SchemeType.class);
-        for (Map.Entry<SchemeType, BlueprintSchemeDefaultEntity> entry : preferredDefaults.entrySet()) {
-            resolvedDefaults.put(entry.getKey(), entry.getValue().getSchemeId());
-        }
-
-        return resolvedDefaults;
-    }
-
-    private Map<SchemeType, Long> loadTenantDefaults(Long tenantId) {
-        List<TenantSchemeDefaultEntity> defaults = tenantSchemeDefaultPort.getDefaultsByTenantIdIncludingSystem(tenantId);
-        Map<SchemeType, TenantSchemeDefaultEntity> preferredDefaults = new EnumMap<>(SchemeType.class);
-
-        for (TenantSchemeDefaultEntity candidate : defaults) {
-            if (candidate.getSchemeType() == null || candidate.getSchemeId() == null) {
-                continue;
-            }
-
-            TenantSchemeDefaultEntity existing = preferredDefaults.get(candidate.getSchemeType());
-            if (shouldReplaceDefault(existing == null ? null : existing.getTenantId(), candidate.getTenantId(), tenantId)) {
-                preferredDefaults.put(candidate.getSchemeType(), candidate);
-            }
-        }
-
-        Map<SchemeType, Long> resolvedDefaults = new EnumMap<>(SchemeType.class);
-        for (Map.Entry<SchemeType, TenantSchemeDefaultEntity> entry : preferredDefaults.entrySet()) {
-            resolvedDefaults.put(entry.getKey(), entry.getValue().getSchemeId());
-        }
-
-        return resolvedDefaults;
-    }
-
-    private boolean shouldReplaceDefault(Long existingTenantId, Long candidateTenantId, Long tenantId) {
-        if (existingTenantId == null) {
-            return true;
-        }
-
-        return tenantId.equals(candidateTenantId) && !tenantId.equals(existingTenantId);
-    }
-
-    private Map<SchemeType, Long> resolveTemplateSources(Map<SchemeType, Long> overrides,
-                                                         Map<SchemeType, Long> blueprintDefaults,
-                                                         Map<SchemeType, Long> tenantDefaults) {
-        Map<SchemeType, Long> resolved = new EnumMap<>(SchemeType.class);
-
-        for (SchemeType type : SchemeType.values()) {
-            if (overrides != null && overrides.containsKey(type)) {
-                resolved.put(type, overrides.get(type));
-                continue;
-            }
-
-            if (blueprintDefaults.containsKey(type)) {
-                resolved.put(type, blueprintDefaults.get(type));
-                continue;
-            }
-
-            if (tenantDefaults.containsKey(type)) {
-                resolved.put(type, tenantDefaults.get(type));
-            }
-        }
-
-        return resolved;
     }
 
     private Long requireSourceSchemeId(Map<SchemeType, Long> resolvedSources, SchemeType type) {

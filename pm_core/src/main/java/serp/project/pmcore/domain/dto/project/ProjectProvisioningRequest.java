@@ -19,6 +19,8 @@ import serp.project.pmcore.domain.enums.ProvisioningMode;
 public class ProjectProvisioningRequest {
     private Long tenantId;
     private Long userId;
+    private Long projectId;
+    private String projectKey;
     private Long blueprintId;
     private ProvisioningMode provisioningMode;
     private ProjectSchemeBindings requestedSchemeBindings;
