@@ -7,6 +7,7 @@ import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import {
   persistStore,
   persistReducer,
+  createTransform,
   FLUSH,
   REHYDRATE,
   PAUSE,
@@ -14,6 +15,7 @@ import {
   PURGE,
   REGISTER,
 } from 'redux-persist';
+import type { PersistConfig } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 import { api } from './api';
 import { websocketMiddleware } from './middleware/websocketMiddleware';
@@ -28,18 +30,42 @@ import { purchaseReducer } from '@/modules/purchase/store';
 import { logisticsReducer } from '@/modules/logistics/store';
 import { notificationReducer } from '@/modules/notifications';
 
-// Persist configuration
-const accountPersistConfig = {
-  key: 'account',
-  storage,
-  whitelist: ['auth', 'user'],
-};
-
 // reducer
 const accountReducer = combineReducers({
   auth: authSlice,
   user: userSlice,
 });
+
+type AccountState = ReturnType<typeof accountReducer>;
+
+// Persist configuration
+const accountTransientStateTransform = createTransform<
+  Record<string, unknown>,
+  Record<string, unknown>,
+  AccountState,
+  AccountState
+>(
+  (inboundState: Record<string, unknown>) => ({
+    ...inboundState,
+    isLoading: false,
+    error: null,
+  }),
+  (outboundState: Record<string, unknown>) => ({
+    ...outboundState,
+    isLoading: false,
+    error: null,
+  }),
+  {
+    whitelist: ['auth', 'user'],
+  }
+);
+
+const accountPersistConfig: PersistConfig<AccountState> = {
+  key: 'account',
+  storage,
+  whitelist: ['auth', 'user'],
+  transforms: [accountTransientStateTransform],
+};
 
 // Root reducer
 const rootReducer = combineReducers({
