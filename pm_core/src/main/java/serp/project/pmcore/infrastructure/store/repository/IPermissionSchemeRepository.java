@@ -20,4 +20,16 @@ public interface IPermissionSchemeRepository extends JpaRepository<PermissionSch
 
     @Query("SELECT s FROM PermissionSchemeModel s WHERE s.id = :id AND (s.tenantId = :tenantId OR s.tenantId = 0)")
     Optional<PermissionSchemeModel> findByIdAndTenantIdOrSystemTenant(@Param("id") Long id, @Param("tenantId") Long tenantId);
+
+    @Query(value = """
+            SELECT *
+            FROM permission_schemes s
+            WHERE s.name = :name
+              AND s.deleted_at IS NULL
+              AND (s.tenant_id = :tenantId OR s.tenant_id = 0)
+            ORDER BY CASE WHEN s.tenant_id = :tenantId THEN 0 ELSE 1 END, s.id ASC
+            LIMIT 1
+            """, nativeQuery = true)
+    Optional<PermissionSchemeModel> findPreferredByNameIncludingSystem(@Param("name") String name,
+                                                                       @Param("tenantId") Long tenantId);
 }

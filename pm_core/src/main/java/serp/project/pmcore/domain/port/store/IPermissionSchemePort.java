@@ -15,4 +15,6 @@ public interface IPermissionSchemePort {
     Optional<PermissionSchemeEntity> getPermissionSchemeById(Long schemeId, Long tenantId);
 
     Optional<PermissionSchemeEntity> getPermissionSchemeByIdIncludingSystem(Long schemeId, Long tenantId);
+
+    Optional<PermissionSchemeEntity> getPermissionSchemeByNameIncludingSystem(String name, Long tenantId);
 }

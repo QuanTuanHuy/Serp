@@ -37,4 +37,10 @@ public class PermissionSchemeAdapter implements IPermissionSchemePort {
         return permissionSchemeRepository.findByIdAndTenantIdOrSystemTenant(schemeId, tenantId)
                 .map(permissionSchemeMapper::toEntity);
     }
+
+    @Override
+    public Optional<PermissionSchemeEntity> getPermissionSchemeByNameIncludingSystem(String name, Long tenantId) {
+        return permissionSchemeRepository.findPreferredByNameIncludingSystem(name, tenantId)
+                .map(permissionSchemeMapper::toEntity);
+    }
 }
