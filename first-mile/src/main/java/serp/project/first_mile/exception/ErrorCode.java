@@ -11,7 +11,8 @@ public enum ErrorCode {
     INVALID_KEY(9998, "error.9998", HttpStatus.BAD_REQUEST),
     DATA_INTEGRITY_VIOLATION(9997, "error.9997", HttpStatus.CONFLICT),
     INVALID_REQUEST(9996, "error.9996", HttpStatus.BAD_REQUEST),
-    UNAUTHORIZED(9995, "error.9995", HttpStatus.FORBIDDEN)
+    UNAUTHORIZED(9995, "error.9995", HttpStatus.FORBIDDEN),
+    PROVINCE_NOT_FOUND(9404, "error.9404", HttpStatus.NOT_FOUND)
     ;
     ErrorCode(int code, String messageKey, HttpStatusCode statusCode) {
         this.code = code;
