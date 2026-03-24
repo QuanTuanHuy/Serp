@@ -22,6 +22,13 @@ public class NotificationSchemeAdapter implements INotificationSchemePort {
     private final NotificationSchemeMapper notificationSchemeMapper;
 
     @Override
+    public NotificationSchemeEntity createNotificationScheme(NotificationSchemeEntity scheme) {
+        return notificationSchemeMapper.toEntity(
+                notificationSchemeRepository.save(notificationSchemeMapper.toModel(scheme))
+        );
+    }
+
+    @Override
     public Optional<NotificationSchemeEntity> getNotificationSchemeById(Long schemeId, Long tenantId) {
         return notificationSchemeRepository.findByIdAndTenantId(schemeId, tenantId)
                 .map(notificationSchemeMapper::toEntity);

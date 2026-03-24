@@ -9,9 +9,11 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import serp.project.pmcore.domain.entity.workflow.WorkflowEntity;
 import serp.project.pmcore.domain.entity.workflow.WorkflowStepEntity;
 import serp.project.pmcore.domain.exception.AppException;
 import serp.project.pmcore.domain.exception.ErrorCode;
+import serp.project.pmcore.domain.port.store.IWorkflowPort;
 import serp.project.pmcore.domain.port.store.IWorkflowStepPort;
 import serp.project.pmcore.domain.service.IWorkflowService;
 
@@ -20,11 +22,19 @@ import serp.project.pmcore.domain.service.IWorkflowService;
 @Slf4j
 public class WorkflowService implements IWorkflowService {
 
+    private final IWorkflowPort workflowPort;
     private final IWorkflowStepPort workflowStepPort;
 
     @Override
     public WorkflowStepEntity getInitialWorkflowStep(Long workflowId, Long tenantId) {
-        return workflowStepPort.getInitialStep(workflowId, tenantId)
+        WorkflowEntity workflow = workflowPort.getWorkflowById(workflowId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.WORKFLOW_NOT_FOUND));
+
+        if (workflow.getCurrentPublishedVersionId() == null) {
+            throw new AppException(ErrorCode.WORKFLOW_STEP_NOT_FOUND);
+        }
+
+        return workflowStepPort.getInitialStepByWorkflowVersionId(workflow.getCurrentPublishedVersionId(), tenantId)
                 .orElseThrow(() -> new AppException(ErrorCode.WORKFLOW_STEP_NOT_FOUND));
     }
 

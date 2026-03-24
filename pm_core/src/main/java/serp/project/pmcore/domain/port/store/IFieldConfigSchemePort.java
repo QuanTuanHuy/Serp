@@ -10,6 +10,8 @@ import serp.project.pmcore.domain.entity.FieldConfigSchemeEntity;
 import java.util.Optional;
 
 public interface IFieldConfigSchemePort {
+    FieldConfigSchemeEntity createFieldConfigScheme(FieldConfigSchemeEntity scheme);
+
     Optional<FieldConfigSchemeEntity> getFieldConfigSchemeById(Long schemeId, Long tenantId);
 
     Optional<FieldConfigSchemeEntity> getFieldConfigSchemeByIdIncludingSystem(Long schemeId, Long tenantId);

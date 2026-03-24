@@ -22,6 +22,18 @@ public class IssueSecuritySchemeAdapter implements IIssueSecuritySchemePort {
     private final IssueSecuritySchemeMapper issueSecuritySchemeMapper;
 
     @Override
+    public IssueSecuritySchemeEntity createIssueSecurityScheme(IssueSecuritySchemeEntity scheme) {
+        return issueSecuritySchemeMapper.toEntity(
+                issueSecuritySchemeRepository.save(issueSecuritySchemeMapper.toModel(scheme))
+        );
+    }
+
+    @Override
+    public void updateIssueSecurityScheme(IssueSecuritySchemeEntity scheme) {
+        issueSecuritySchemeRepository.save(issueSecuritySchemeMapper.toModel(scheme));
+    }
+
+    @Override
     public Optional<IssueSecuritySchemeEntity> getIssueSecuritySchemeById(Long schemeId, Long tenantId) {
         return issueSecuritySchemeRepository.findByIdAndTenantId(schemeId, tenantId)
                 .map(issueSecuritySchemeMapper::toEntity);

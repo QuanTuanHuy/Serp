@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import serp.project.pmcore.domain.dto.request.project.CreateProjectRequest;
 import serp.project.pmcore.domain.entity.project.ProjectSchemeBindings;
+import serp.project.pmcore.domain.enums.ProvisioningMode;
 import serp.project.pmcore.domain.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.exception.DomainErrorCode;
 import serp.project.pmcore.domain.exception.DomainValidationException;
@@ -16,6 +17,7 @@ import serp.project.pmcore.domain.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.port.store.IFieldConfigSchemePort;
 import serp.project.pmcore.domain.port.store.IIssueSecuritySchemePort;
 import serp.project.pmcore.domain.port.store.IProjectCategoryPort;
+import serp.project.pmcore.domain.port.store.IProjectBlueprintPort;
 import serp.project.pmcore.domain.port.store.IProjectPort;
 import serp.project.pmcore.domain.port.store.IIssueTypeSchemePort;
 import serp.project.pmcore.domain.port.store.IIssueTypeScreenSchemePort;
@@ -33,6 +35,7 @@ public class CreateProjectValidator {
 
     private final IProjectPort projectPort;
     private final IProjectCategoryPort categoryPort;
+    private final IProjectBlueprintPort projectBlueprintPort;
     private final IIssueTypeSchemePort issueTypeSchemePort;
     private final IWorkflowSchemePort workflowSchemePort;
     private final IPrioritySchemePort prioritySchemePort;
@@ -51,8 +54,9 @@ public class CreateProjectValidator {
 
     public void validate(CreateProjectRequest request, Long tenantId) {
         validateProjectMetadata(request, tenantId);
+        validateProvisioningMode(request.getProvisioningMode());
+        validateBlueprint(request, tenantId);
         ProjectSchemeBindings schemeBindings = ProjectSchemeBindings.fromRequest(request);
-        validateExplicitSchemeBindings(schemeBindings);
         validateSchemeBindings(schemeBindings, tenantId);
     }
 
@@ -93,6 +97,40 @@ public class CreateProjectValidator {
         if (categoryId == null) return;
         categoryPort.getCategoryByIdIncludingSystem(categoryId, tenantId)
                 .orElseThrow(() -> ResourceNotFoundException.category(categoryId));
+    }
+
+    private void validateProvisioningMode(ProvisioningMode provisioningMode) {
+        if (provisioningMode == null) {
+            return;
+        }
+
+        if (ProvisioningMode.CLONE_FROM_SHARED.equals(provisioningMode)) {
+            throw new DomainValidationException(
+                    DomainErrorCode.INVALID_PROVISIONING_MODE,
+                    "Create project supports only TEMPLATE_DEFAULT or SHARED_FROM_EXISTING. "
+                            + "CLONE_FROM_SHARED is reserved for a future rebinding flow.");
+        }
+    }
+
+    private void validateBlueprint(CreateProjectRequest request, Long tenantId) {
+        if (request.getBlueprintId() == null) {
+            return;
+        }
+
+        projectBlueprintPort.getBlueprintByIdIncludingSystem(request.getBlueprintId(), tenantId)
+                .ifPresentOrElse(blueprint -> {
+                    if (blueprint.getTypeKey() != null
+                            && !blueprint.getTypeKey().equalsIgnoreCase(request.getProjectTypeKey())) {
+                        throw new DomainValidationException(
+                                DomainErrorCode.BLUEPRINT_PROJECT_TYPE_MISMATCH,
+                                "Blueprint '" + blueprint.getName() + "' is for project type '"
+                                        + blueprint.getTypeKey() + "', but request specifies '"
+                                        + request.getProjectTypeKey() + "'"
+                        );
+                    }
+                }, () -> {
+                    throw ResourceNotFoundException.blueprint(request.getBlueprintId());
+                });
     }
 
     private void validateSchemeBindings(ProjectSchemeBindings schemeBindings, Long tenantId) {
@@ -168,16 +206,5 @@ public class CreateProjectValidator {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         DomainErrorCode.ISSUE_SECURITY_SCHEME_NOT_FOUND,
                         "Issue security scheme not found: id=" + schemeId));
-    }
-
-
-    private void validateExplicitSchemeBindings(ProjectSchemeBindings schemeBindings) {
-        var missing = schemeBindings.getMissingRequiredFields();
-        if (!missing.isEmpty()) {
-            throw new DomainValidationException(
-                    DomainErrorCode.SCHEME_PROVISIONING_FAILED,
-                    "Missing required explicit scheme IDs for project creation: "
-                            + missing + ". In round one, all effective scheme bindings must be provided explicitly.");
-        }
     }
 }

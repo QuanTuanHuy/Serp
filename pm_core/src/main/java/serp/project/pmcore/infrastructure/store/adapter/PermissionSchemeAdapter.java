@@ -22,6 +22,11 @@ public class PermissionSchemeAdapter implements IPermissionSchemePort {
     private final PermissionSchemeMapper permissionSchemeMapper;
 
     @Override
+    public PermissionSchemeEntity createPermissionScheme(PermissionSchemeEntity scheme) {
+        return permissionSchemeMapper.toEntity(permissionSchemeRepository.save(permissionSchemeMapper.toModel(scheme)));
+    }
+
+    @Override
     public Optional<PermissionSchemeEntity> getPermissionSchemeById(Long schemeId, Long tenantId) {
         return permissionSchemeRepository.findByIdAndTenantId(schemeId, tenantId)
                 .map(permissionSchemeMapper::toEntity);

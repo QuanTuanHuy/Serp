@@ -16,7 +16,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-public class FieldConfigItemEntity {
+public class FieldConfigItemEntity extends BaseEntity {
     private Long tenantId;
     private Long fieldConfigId;
     private String fieldRefType;
