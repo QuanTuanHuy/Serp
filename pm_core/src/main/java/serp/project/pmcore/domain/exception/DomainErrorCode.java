@@ -64,6 +64,7 @@ public enum DomainErrorCode {
     ROLE_NAME_ALREADY_EXISTS("Role name already exists in this tenant"),
     ROLE_IS_SYSTEM("Cannot modify a system role"),
     ROLE_IN_USE_BY_PERMISSION("Cannot delete role that is used in permission schemes"),
+    ROLE_ACTOR_NOT_FOUND("Project role actor not found"),
     ROLE_ACTOR_ALREADY_ASSIGNED("Actor is already assigned to this role in the project"),
 
     // Shared scheme provisioning
@@ -187,6 +188,7 @@ public enum DomainErrorCode {
     CLONE_NOTIFICATION_SCHEME_FAILED("Failed to clone notification scheme"),
     PERMISSION_SCHEME_NOT_FOUND("Permission scheme not found"),
     PERMISSION_KEY_NOT_FOUND("Permission definition not found"),
+    PROJECT_PERMISSION_DENIED("Project permission denied"),
     DUPLICATE_PERMISSION_ENTRY("This permission grant already exists in the scheme"),
 
     // Issue security
