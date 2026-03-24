@@ -107,6 +107,12 @@ func buildServiceRoutes(props *properties.ExternalServiceProperties) []ServiceRo
 			Target:       props.LogisticsService.BaseURL(),
 		},
 		{
+			Name:         "first-mile",
+			SourcePrefix: "/first-mile/api/v1",
+			TargetPrefix: "/api/v1",
+			Target:       props.FirstMileService.BaseURL(),
+		},
+		{
 			Name:         "discuss",
 			SourcePrefix: "/discuss/api/v1",
 			TargetPrefix: "/discuss/api/v1",

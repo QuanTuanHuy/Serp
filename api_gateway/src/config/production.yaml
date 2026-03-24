@@ -58,7 +58,7 @@ app:
     allowCredentials: true
     maxAge: 3600
     allowFiles: true
-  
+
   resilience:
     maxRequests: 3
     interval: 60s
@@ -91,6 +91,10 @@ external:
     logisticsService:
       host: ${LOGISTICS_SERVICE_HOST}
       port: ${LOGISTICS_SERVICE_PORT}
+      timeout: 15s
+    firstMileService:
+      host: ${FIRST_MILE_SERVICE_HOST}
+      port: ${FIRST_MILE_SERVICE_PORT}
       timeout: 15s
     salesService:
       host: ${SALES_SERVICE_HOST}
