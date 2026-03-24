@@ -12,7 +12,6 @@ import java.util.Objects;
 public class CloneNamingHelper {
 
     private static final int DEFAULT_NAME_MAX_LENGTH = 255;
-    private static final int DEFAULT_DESCRIPTION_MAX_LENGTH = 1000;
     private static final int DEFAULT_WORKFLOW_KEY_MAX_LENGTH = 100;
 
     /**
@@ -36,31 +35,6 @@ public class CloneNamingHelper {
         String candidate = normalizedProjectKey + " - " + baseName + suffix;
 
         return truncate(candidate, DEFAULT_NAME_MAX_LENGTH);
-    }
-
-    public String buildSchemeCloneDescription(String projectKey,
-                                              String sourceDescription,
-                                              Long sourceSchemeId,
-                                              SchemeType schemeType,
-                                              CloneMode cloneMode) {
-        String normalizedProjectKey = normalizeProjectKey(projectKey);
-        String modeText = cloneMode == CloneMode.SHARED ? "shared copy" : "project copy";
-        String schemeLabel = schemeLabel(schemeType);
-
-        String prefix = String.format(
-                Locale.ROOT,
-                "%s %s for project %s, cloned from source scheme %s",
-                capitalize(modeText),
-                schemeLabel,
-                normalizedProjectKey,
-                Objects.toString(sourceSchemeId, "unknown")
-        );
-
-        if (sourceDescription == null || sourceDescription.isBlank()) {
-            return truncate(prefix, DEFAULT_DESCRIPTION_MAX_LENGTH);
-        }
-
-        return truncate(prefix + " | " + sourceDescription, DEFAULT_DESCRIPTION_MAX_LENGTH);
     }
 
     public String buildWorkflowCloneKey(String projectKey,

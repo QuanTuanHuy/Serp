@@ -3,10 +3,10 @@ package serp.project.pmcore.domain.service.provisioning.mode;
 import serp.project.pmcore.domain.enums.ProvisioningMode;
 import serp.project.pmcore.domain.enums.SchemeType;
 import serp.project.pmcore.domain.exception.DomainErrorCode;
-import serp.project.pmcore.domain.exception.DomainException;
 import serp.project.pmcore.domain.exception.DomainValidationException;
 
 import java.util.Map;
+import java.util.Objects;
 
 public interface IProvisioningModeExecutor {
     ProvisioningMode supportsMode();
@@ -15,20 +15,11 @@ public interface IProvisioningModeExecutor {
                                     Long userId);
 
     default void validateArguments(Map<SchemeType, Long> resolvedSources,
-                           Long tenantId,
-                           Long userId) {
-        if (resolvedSources == null) {
-            throw new DomainException(DomainErrorCode.SCHEME_PROVISIONING_FAILED,
-                    "Resolved source bindings are required");
-        }
-        if (tenantId == null) {
-            throw new DomainException(DomainErrorCode.SCHEME_PROVISIONING_FAILED,
-                    "Tenant id is required");
-        }
-        if (userId == null) {
-            throw new DomainException(DomainErrorCode.SCHEME_PROVISIONING_FAILED,
-                    "User id is required");
-        }
+                                   Long tenantId,
+                                   Long userId) {
+        Objects.requireNonNull(resolvedSources, "resolvedSources must not be null");
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(userId, "userId must not be null");
     }
 
     default Long requireSourceSchemeId(Map<SchemeType, Long> resolvedSources, SchemeType type) {

@@ -5,6 +5,8 @@
 
 package serp.project.pmcore.domain.dto.project;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,12 +19,12 @@ import serp.project.pmcore.domain.enums.ProvisioningMode;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProjectProvisioningRequest {
-    private Long tenantId;
-    private Long userId;
-    private Long projectId;
-    private String projectKey;
+    @NotNull private Long tenantId;
+    @NotNull private Long userId;
+    @NotNull private Long projectId;
+    @NotBlank private String projectKey;
     private Long blueprintId;
-    private ProvisioningMode provisioningMode;
+    @NotNull private ProvisioningMode provisioningMode;
     private ProjectSchemeBindings requestedSchemeBindings;
 
     public ProvisioningMode getEffectiveProvisioningMode() {

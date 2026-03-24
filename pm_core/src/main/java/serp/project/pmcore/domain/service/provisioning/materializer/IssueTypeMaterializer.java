@@ -6,11 +6,10 @@ import org.springframework.stereotype.Component;
 import serp.project.pmcore.domain.constant.TenantConstants;
 import serp.project.pmcore.domain.entity.workitem.IssueTypeEntity;
 import serp.project.pmcore.domain.exception.DomainErrorCode;
-import serp.project.pmcore.domain.exception.DomainException;
-import serp.project.pmcore.domain.exception.DomainValidationException;
 import serp.project.pmcore.domain.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.port.store.IIssueTypePort;
 
+import java.util.Objects;
 import java.util.Optional;
 
 @Component
@@ -30,8 +29,8 @@ public class IssueTypeMaterializer {
             return source.getId();
         }
         if (!TenantConstants.SYSTEM_TENANT_ID.equals(source.getTenantId())) {
-            throw new DomainException(
-                    DomainErrorCode.SCHEME_PROVISIONING_FAILED,
+            throw new ResourceNotFoundException(
+                    DomainErrorCode.ISSUE_TYPE_NOT_FOUND,
                     "Issue type source is not tenant/system scoped: " + sourceIssueTypeId
             );
         }
@@ -58,23 +57,8 @@ public class IssueTypeMaterializer {
     }
 
     private void validateArguments(Long sourceIssueTypeId, Long tenantId, Long userId) {
-        if (sourceIssueTypeId == null) {
-            throw new DomainValidationException(
-                    DomainErrorCode.SCHEME_PROVISIONING_FAILED,
-                    "Source issue type id is required"
-            );
-        }
-        if (tenantId == null) {
-            throw new DomainValidationException(
-                    DomainErrorCode.SCHEME_PROVISIONING_FAILED,
-                    "Tenant id is required"
-            );
-        }
-        if (userId == null) {
-            throw new DomainValidationException(
-                    DomainErrorCode.SCHEME_PROVISIONING_FAILED,
-                    "User id is required"
-            );
-        }
+        Objects.requireNonNull(sourceIssueTypeId, "Source issue type ID must not be null");
+        Objects.requireNonNull(tenantId, "Tenant ID must not be null");
+        Objects.requireNonNull(userId, "User ID must not be null");
     }
 }
