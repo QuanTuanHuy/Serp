@@ -5,12 +5,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import serp.project.pmcore.domain.enums.ProvisioningMode;
 import serp.project.pmcore.domain.enums.SchemeType;
+import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.SchemeProvisionerRegistry;
 
 import java.util.EnumMap;
-import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.BiFunction;
 
 @Component
@@ -18,18 +18,18 @@ import java.util.function.BiFunction;
 @Slf4j
 public class TemplateDefaultProvisioningExecutor implements IProvisioningModeExecutor {
 
-    private static final Set<SchemeType> CLONED_SCHEME_TYPES = EnumSet.of(
+    private static final List<SchemeType> CLONED_SCHEME_TYPES = List.of(
             SchemeType.ISSUE_TYPE,
+            SchemeType.SCREEN,
             SchemeType.WORKFLOW,
-            SchemeType.FIELD_CONFIG,
-            SchemeType.SCREEN
+            SchemeType.FIELD_CONFIG
     );
 
-    private static final Set<SchemeType> SHARED_SCHEME_TYPES = EnumSet.of(
+    private static final List<SchemeType> SHARED_SCHEME_TYPES = List.of(
             SchemeType.PERMISSION,
+            SchemeType.ISSUE_SECURITY,
             SchemeType.NOTIFICATION,
-            SchemeType.PRIORITY,
-            SchemeType.ISSUE_SECURITY
+            SchemeType.PRIORITY
     );
 
     private final SchemeProvisionerRegistry provisionerRegistry;
@@ -42,8 +42,9 @@ public class TemplateDefaultProvisioningExecutor implements IProvisioningModeExe
     @Override
     public Map<SchemeType, Long> provision(Map<SchemeType, Long> resolvedSources,
                                            Long tenantId,
-                                           Long userId) {
-        validateArguments(resolvedSources, tenantId, userId);
+                                           Long userId,
+                                           ProvisioningExecutionContext context) {
+        validateArguments(resolvedSources, tenantId, userId, context);
 
         Map<SchemeType, Long> effectiveBindings = new EnumMap<>(SchemeType.class);
 
@@ -54,7 +55,7 @@ public class TemplateDefaultProvisioningExecutor implements IProvisioningModeExe
                 effectiveBindings,
                 CLONED_SCHEME_TYPES,
                 (schemeType, sourceSchemeId) -> provisionerRegistry.get(schemeType)
-                        .resolveClonedBinding(sourceSchemeId, tenantId, userId)
+                        .resolveClonedBinding(sourceSchemeId, tenantId, userId, context)
         );
 
         provisionGroup(
@@ -64,7 +65,7 @@ public class TemplateDefaultProvisioningExecutor implements IProvisioningModeExe
                 effectiveBindings,
                 SHARED_SCHEME_TYPES,
                 (schemeType, sourceSchemeId) -> provisionerRegistry.get(schemeType)
-                        .resolveSharedBinding(sourceSchemeId, tenantId, userId)
+                        .resolveSharedBinding(sourceSchemeId, tenantId, userId, context)
         );
 
         return effectiveBindings;
@@ -74,7 +75,7 @@ public class TemplateDefaultProvisioningExecutor implements IProvisioningModeExe
                                 Long tenantId,
                                 Long userId,
                                 Map<SchemeType, Long> effectiveBindings,
-                                Set<SchemeType> schemeTypes,
+                                List<SchemeType> schemeTypes,
                                 BiFunction<SchemeType, Long, Long> resolver) {
         for (SchemeType schemeType : schemeTypes) {
             Long sourceId = requireSourceSchemeId(resolvedSources, schemeType);

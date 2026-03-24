@@ -11,6 +11,7 @@ import serp.project.pmcore.domain.exception.DomainValidationException;
 import serp.project.pmcore.domain.port.store.IFieldConfigSchemeItemPort;
 import serp.project.pmcore.domain.port.store.IFieldConfigSchemePort;
 import serp.project.pmcore.domain.port.store.ITenantSchemeMappingPort;
+import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.cloner.FieldConfigCloner;
 import serp.project.pmcore.domain.service.provisioning.materializer.IssueTypeMaterializer;
 import serp.project.pmcore.domain.service.provisioning.provisioner.base.AbstractMappedSharedProvisioner;
@@ -77,7 +78,8 @@ public class FieldConfigSchemeProvisioner extends AbstractMappedSharedProvisione
     protected Long cloneForTenant(FieldConfigSchemeEntity source,
                                   Long tenantId,
                                   Long userId,
-                                  CloneMode cloneMode) {
+                                  CloneMode cloneMode,
+                                  ProvisioningExecutionContext context) {
         List<FieldConfigSchemeItemEntity> sourceItems = fieldConfigSchemeItemPort
                 .getFieldConfigSchemeItemsBySchemeIdIncludingSystem(source.getId(), tenantId);
 

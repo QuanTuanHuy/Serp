@@ -7,6 +7,7 @@ import serp.project.pmcore.domain.enums.CloneMode;
 import serp.project.pmcore.domain.enums.SchemeType;
 import serp.project.pmcore.domain.port.store.IIssueSecuritySchemePort;
 import serp.project.pmcore.domain.port.store.ITenantSchemeMappingPort;
+import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.cloner.IssueSecuritySchemeCloner;
 import serp.project.pmcore.domain.service.provisioning.provisioner.base.AbstractMappedSharedProvisioner;
 
@@ -61,7 +62,8 @@ public class IssueSecuritySchemeProvisioner extends AbstractMappedSharedProvisio
     protected Long cloneForTenant(IssueSecuritySchemeEntity source,
                                   Long tenantId,
                                   Long userId,
-                                  CloneMode cloneMode) {
+                                  CloneMode cloneMode,
+                                  ProvisioningExecutionContext context) {
         return issueSecuritySchemeCloner.cloneIssueSecurityScheme(source, tenantId, userId, cloneMode);
     }
 }

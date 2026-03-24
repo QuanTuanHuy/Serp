@@ -11,6 +11,7 @@ import serp.project.pmcore.domain.exception.DomainException;
 import serp.project.pmcore.domain.port.store.IPrioritySchemeItemPort;
 import serp.project.pmcore.domain.port.store.IPrioritySchemePort;
 import serp.project.pmcore.domain.port.store.ITenantSchemeMappingPort;
+import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.materializer.PriorityMaterializer;
 import serp.project.pmcore.domain.service.provisioning.provisioner.base.AbstractMappedSharedProvisioner;
 import serp.project.pmcore.domain.service.provisioning.support.CloneNamingHelper;
@@ -44,7 +45,11 @@ public class PrioritySchemeProvisioner extends AbstractMappedSharedProvisioner<P
     }
 
     @Override
-    protected Long cloneForTenant(PrioritySchemeEntity source, Long tenantId, Long userId, CloneMode mode) {
+    protected Long cloneForTenant(PrioritySchemeEntity source,
+                                  Long tenantId,
+                                  Long userId,
+                                  CloneMode mode,
+                                  ProvisioningExecutionContext context) {
         List<PrioritySchemeItemEntity> sourceItems = prioritySchemeItemPort
                 .getPrioritySchemeItemsBySchemeIdIncludingSystem(source.getId(), tenantId);
 
@@ -95,7 +100,7 @@ public class PrioritySchemeProvisioner extends AbstractMappedSharedProvisioner<P
                     mode, source.getId(), saved.getId(), tenantId);
         }
 
-        return 0L;
+        return saved.getId();
 
     }
 
@@ -116,7 +121,7 @@ public class PrioritySchemeProvisioner extends AbstractMappedSharedProvisioner<P
 
     @Override
     protected boolean tenantSchemeExists(Long tenantSchemeId, Long tenantId) {
-        return false;
+        return prioritySchemePort.getPrioritySchemeById(tenantSchemeId, tenantId).isPresent();
     }
 
     @Override

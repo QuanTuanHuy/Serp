@@ -11,6 +11,7 @@ import serp.project.pmcore.domain.exception.DomainException;
 import serp.project.pmcore.domain.port.store.IIssueTypeSchemeItemPort;
 import serp.project.pmcore.domain.port.store.IIssueTypeSchemePort;
 import serp.project.pmcore.domain.port.store.ITenantSchemeMappingPort;
+import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.materializer.IssueTypeMaterializer;
 import serp.project.pmcore.domain.service.provisioning.provisioner.base.AbstractMappedSharedProvisioner;
 import serp.project.pmcore.domain.service.provisioning.support.CloneNamingHelper;
@@ -45,7 +46,11 @@ public class IssueTypeSchemeProvisioner extends AbstractMappedSharedProvisioner<
     }
 
     @Override
-    protected Long cloneForTenant(IssueTypeSchemeEntity source, Long tenantId, Long userId, CloneMode mode) {
+    protected Long cloneForTenant(IssueTypeSchemeEntity source,
+                                  Long tenantId,
+                                  Long userId,
+                                  CloneMode mode,
+                                  ProvisioningExecutionContext context) {
         List<IssueTypeSchemeItemEntity> sourceItems = issueTypeSchemeItemPort
                 .getIssueTypeSchemeItemsBySchemeIdIncludingSystem(source.getId(), tenantId);
 

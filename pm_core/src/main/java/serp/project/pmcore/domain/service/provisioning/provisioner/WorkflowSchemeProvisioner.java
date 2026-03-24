@@ -9,6 +9,7 @@ import serp.project.pmcore.domain.enums.SchemeType;
 import serp.project.pmcore.domain.exception.DomainErrorCode;
 import serp.project.pmcore.domain.exception.DomainException;
 import serp.project.pmcore.domain.port.store.*;
+import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.cloner.WorkflowCloner;
 import serp.project.pmcore.domain.service.provisioning.materializer.IssueTypeMaterializer;
 import serp.project.pmcore.domain.service.provisioning.provisioner.base.AbstractMappedSharedProvisioner;
@@ -47,12 +48,16 @@ public class WorkflowSchemeProvisioner extends AbstractMappedSharedProvisioner<W
     }
 
     @Override
-    protected Long cloneForTenant(WorkflowSchemeEntity source, Long tenantId, Long userId, CloneMode mode) {
+    protected Long cloneForTenant(WorkflowSchemeEntity source,
+                                  Long tenantId,
+                                  Long userId,
+                                  CloneMode mode,
+                                  ProvisioningExecutionContext context) {
         List<WorkflowSchemeItemEntity> sourceItems = workflowSchemeItemPort
                 .getWorkflowSchemeItemsBySchemeIdIncludingSystem(source.getId(), tenantId);
 
         Map<Long, Long> issueTypeIdMap = materializeIssueTypes(sourceItems, tenantId, userId);
-        Map<Long, Long> workflowIdMap = materializeWorkflows(source, sourceItems, tenantId, userId, mode);
+        Map<Long, Long> workflowIdMap = materializeWorkflows(source, sourceItems, tenantId, userId, mode, context);
 
         long now = System.currentTimeMillis();
         WorkflowSchemeEntity cloned = WorkflowSchemeEntity.builder()
@@ -107,7 +112,10 @@ public class WorkflowSchemeProvisioner extends AbstractMappedSharedProvisioner<W
 
     private Map<Long, Long> materializeWorkflows(WorkflowSchemeEntity source,
                                                  List<WorkflowSchemeItemEntity> sourceItems,
-                                                 Long tenantId, Long userId, CloneMode mode) {
+                                                 Long tenantId,
+                                                 Long userId,
+                                                 CloneMode mode,
+                                                 ProvisioningExecutionContext context) {
         Map<Long, Long> workflowIdMap = new HashMap<>();
         Set<Long> sourceWorkflowIds = new HashSet<>();
 
@@ -123,7 +131,7 @@ public class WorkflowSchemeProvisioner extends AbstractMappedSharedProvisioner<W
         for (Long sourceWorkflowId : sourceWorkflowIds) {
             workflowIdMap.put(
                     sourceWorkflowId,
-                    workflowCloner.cloneWorkflowBySourceId(sourceWorkflowId, tenantId, userId, mode)
+                    workflowCloner.cloneWorkflowBySourceId(sourceWorkflowId, tenantId, userId, mode, context)
             );
         }
 

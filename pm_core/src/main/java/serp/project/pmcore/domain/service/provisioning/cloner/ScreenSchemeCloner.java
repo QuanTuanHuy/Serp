@@ -13,6 +13,7 @@ import serp.project.pmcore.domain.exception.DomainValidationException;
 import serp.project.pmcore.domain.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.port.store.IScreenSchemeItemPort;
 import serp.project.pmcore.domain.port.store.IScreenSchemePort;
+import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.support.CloneNamingHelper;
 
 import java.util.*;
@@ -30,7 +31,8 @@ public class ScreenSchemeCloner {
     public Long cloneScreenSchemeBySourceId(Long sourceScreenSchemeId,
                                             Long tenantId,
                                             Long userId,
-                                            CloneMode cloneMode) {
+                                            CloneMode cloneMode,
+                                            ProvisioningExecutionContext context) {
         validateRequired(sourceScreenSchemeId, "sourceScreenSchemeId");
         validateRequired(tenantId, "tenantId");
         validateRequired(userId, "userId");
@@ -41,13 +43,14 @@ public class ScreenSchemeCloner {
                         DomainErrorCode.SCREEN_SCHEME_NOT_FOUND,
                         "Screen scheme not found for source id=" + sourceScreenSchemeId
                 ));
-        return cloneScreenScheme(source, tenantId, userId, cloneMode);
+        return cloneScreenScheme(source, tenantId, userId, cloneMode, context);
     }
 
     public Long cloneScreenScheme(ScreenSchemeEntity source,
                                   Long tenantId,
                                   Long userId,
-                                  CloneMode cloneMode) {
+                                  CloneMode cloneMode,
+                                  ProvisioningExecutionContext context) {
         validateRequired(source, "source");
         validateRequired(tenantId, "tenantId");
         validateRequired(userId, "userId");
@@ -59,7 +62,7 @@ public class ScreenSchemeCloner {
         for (Long sourceScreenId : collectSourceScreenIds(source, sourceItems)) {
             screenIdMap.put(
                     sourceScreenId,
-                    screenCloner.cloneScreenBySourceId(sourceScreenId, tenantId, userId, cloneMode)
+                    screenCloner.cloneScreenBySourceId(sourceScreenId, tenantId, userId, cloneMode, context)
             );
         }
 
@@ -68,7 +71,7 @@ public class ScreenSchemeCloner {
                 .tenantId(tenantId)
                 .name(cloneNamingHelper.buildSchemeCloneName("", source.getName(), SchemeType.SCREEN, cloneMode))
                 .description(source.getDescription())
-                .defaultScreenId(requireMappedId(screenIdMap, source.getDefaultScreenId(), "screen"))
+                .defaultScreenId(requireMappedId(screenIdMap, source.getDefaultScreenId()))
                 .build();
         cloned.applyCreate(userId, now);
         ScreenSchemeEntity saved = screenSchemePort.createScreenScheme(cloned);
@@ -80,7 +83,7 @@ public class ScreenSchemeCloner {
                                 .tenantId(tenantId)
                                 .screenSchemeId(saved.getId())
                                 .operationKey(sourceItem.getOperationKey())
-                                .screenId(requireMappedId(screenIdMap, sourceItem.getScreenId(), "screen)"))
+                                .screenId(requireMappedId(screenIdMap, sourceItem.getScreenId()))
                                 .createdAt(now)
                                 .createdBy(userId)
                         .build());
@@ -107,7 +110,7 @@ public class ScreenSchemeCloner {
         return new ArrayList<>(screenIds);
     }
 
-    private Long requireMappedId(Map<Long, Long> mapping, Long sourceId, String entityName) {
+    private Long requireMappedId(Map<Long, Long> mapping, Long sourceId) {
         if (sourceId == null) {
             return null;
         }
@@ -116,7 +119,7 @@ public class ScreenSchemeCloner {
         if (mappedId == null) {
             throw new DomainException(
                     DomainErrorCode.CLONE_SCREEN_SCHEME_FAILED,
-                    "Missing " + entityName + " mapping for source id=" + sourceId
+                    "Missing screen mapping for source id=" + sourceId
             );
         }
         return mappedId;

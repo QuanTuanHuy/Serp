@@ -40,13 +40,18 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
     @Override
     public ProjectProvisioningResult provisionProjectSchemes(ProjectEntity project,
                                                              @Valid ProjectProvisioningRequest request) {
+        ProvisioningExecutionContext context = ProvisioningExecutionContext.builder()
+                .projectId(request.getProjectId() != null ? request.getProjectId() : project.getId())
+                .projectKey(request.getProjectKey() != null ? request.getProjectKey() : project.getKey())
+                .build();
         Map<SchemeType, Long> resolvedSources = schemeSourceResolver.resolve(request);
         Map<SchemeType, Long> effectiveBindings = provisionEffectiveBindings(
                 project,
                 resolvedSources,
                 request.getTenantId(),
                 request.getUserId(),
-                request.getEffectiveProvisioningMode()
+                request.getEffectiveProvisioningMode(),
+                context
         );
 
         return ProjectProvisioningResult.builder()
@@ -59,9 +64,10 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
                                                              Map<SchemeType, Long> resolvedSources,
                                                              Long tenantId,
                                                              Long userId,
-                                                             ProvisioningMode provisioningMode) {
+                                                             ProvisioningMode provisioningMode,
+                                                             ProvisioningExecutionContext context) {
         IProvisioningModeExecutor executor = provisioningModeExecutorRegistry.get(provisioningMode);
-        Map<SchemeType, Long> effectiveBindings = executor.provision(resolvedSources, tenantId, userId);
+        Map<SchemeType, Long> effectiveBindings = executor.provision(resolvedSources, tenantId, userId, context);
 
         log.info("Provisioned schemes for project key={} mode={} resolvedSources={} effectiveBindings={}",
                 project.getKey(), provisioningMode, resolvedSources, effectiveBindings);

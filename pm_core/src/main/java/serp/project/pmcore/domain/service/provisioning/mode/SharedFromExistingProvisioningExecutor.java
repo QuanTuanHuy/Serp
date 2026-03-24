@@ -5,27 +5,27 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import serp.project.pmcore.domain.enums.ProvisioningMode;
 import serp.project.pmcore.domain.enums.SchemeType;
+import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.SchemeProvisionerRegistry;
 
 import java.util.EnumMap;
-import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class SharedFromExistingProvisioningExecutor implements IProvisioningModeExecutor {
 
-    private static final Set<SchemeType> SUPPORTED_SCHEMES = EnumSet.of(
+    private static final List<SchemeType> SUPPORTED_SCHEMES = List.of(
             SchemeType.ISSUE_TYPE,
+            SchemeType.SCREEN,
             SchemeType.WORKFLOW,
             SchemeType.FIELD_CONFIG,
-            SchemeType.SCREEN,
             SchemeType.PERMISSION,
+            SchemeType.ISSUE_SECURITY,
             SchemeType.NOTIFICATION,
-            SchemeType.PRIORITY,
-            SchemeType.ISSUE_SECURITY
+            SchemeType.PRIORITY
     );
 
     private final SchemeProvisionerRegistry provisionerRegistry;
@@ -36,15 +36,18 @@ public class SharedFromExistingProvisioningExecutor implements IProvisioningMode
     }
 
     @Override
-    public Map<SchemeType, Long> provision(Map<SchemeType, Long> resolvedSources, Long tenantId, Long userId) {
-        validateArguments(resolvedSources, tenantId, userId);
+    public Map<SchemeType, Long> provision(Map<SchemeType, Long> resolvedSources,
+                                           Long tenantId,
+                                           Long userId,
+                                           ProvisioningExecutionContext context) {
+        validateArguments(resolvedSources, tenantId, userId, context);
         Map<SchemeType, Long> effectiveBindings = new EnumMap<>(SchemeType.class);
         for (SchemeType schemeType : SUPPORTED_SCHEMES) {
             Long sourceSchemeId = requireSourceSchemeId(resolvedSources, schemeType);
             effectiveBindings.put(
                     schemeType,
                     provisionerRegistry.get(schemeType)
-                            .resolveSharedBinding(sourceSchemeId, tenantId, userId)
+                            .resolveSharedBinding(sourceSchemeId, tenantId, userId, context)
             );
         }
         return effectiveBindings;

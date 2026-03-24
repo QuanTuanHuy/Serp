@@ -11,12 +11,14 @@ import serp.project.pmcore.domain.exception.DomainException;
 import serp.project.pmcore.domain.port.store.IIssueTypeScreenSchemeItemPort;
 import serp.project.pmcore.domain.port.store.IIssueTypeScreenSchemePort;
 import serp.project.pmcore.domain.port.store.ITenantSchemeMappingPort;
+import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.cloner.ScreenSchemeCloner;
 import serp.project.pmcore.domain.service.provisioning.materializer.IssueTypeMaterializer;
 import serp.project.pmcore.domain.service.provisioning.provisioner.base.AbstractMappedSharedProvisioner;
 import serp.project.pmcore.domain.service.provisioning.support.CloneNamingHelper;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 @Slf4j
@@ -52,12 +54,13 @@ public class ScreenSchemeProvisioner extends AbstractMappedSharedProvisioner<Iss
     protected Long cloneForTenant(IssueTypeScreenSchemeEntity source,
                                   Long tenantId,
                                   Long userId,
-                                  CloneMode mode) {
+                                  CloneMode mode,
+                                  ProvisioningExecutionContext context) {
         List<IssueTypeScreenSchemeItemEntity> sourceItems = issueTypeScreenSchemeItemPort
                 .getIssueTypeScreenSchemeItemsBySchemeIdIncludingSystem(source.getId(), tenantId);
 
         Map<Long, Long> issueTypeIdMap = materializeIssueTypes(sourceItems, tenantId, userId);
-        Map<Long, Long> screenSchemeIdMap = cloneScreenSchemes(source, sourceItems, tenantId, userId, mode);
+        Map<Long, Long> screenSchemeIdMap = cloneScreenSchemes(source, sourceItems, tenantId, userId, mode, context);
 
         long now = System.currentTimeMillis();
         IssueTypeScreenSchemeEntity cloned = IssueTypeScreenSchemeEntity.builder()
@@ -93,11 +96,10 @@ public class ScreenSchemeProvisioner extends AbstractMappedSharedProvisioner<Iss
                                                   Long tenantId,
                                                   Long userId) {
         Map<Long, Long> issueTypeIdMap = new HashMap<>();
-        List<Long> issueTypeIds = sourceItems.stream()
+        Set<Long> issueTypeIds = sourceItems.stream()
                 .map(IssueTypeScreenSchemeItemEntity::getIssueTypeId)
-                .filter(Objects::isNull)
-                .distinct()
-                .toList();
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
         for (Long issueTypeId : issueTypeIds) {
             issueTypeIdMap.put(
                     issueTypeId,
@@ -112,7 +114,8 @@ public class ScreenSchemeProvisioner extends AbstractMappedSharedProvisioner<Iss
                                                List<IssueTypeScreenSchemeItemEntity> sourceItems,
                                                Long tenantId,
                                                Long userId,
-                                               CloneMode mode) {
+                                               CloneMode mode,
+                                               ProvisioningExecutionContext context) {
         Map<Long, Long> screenSchemeIdMap = new HashMap<>();
         Set<Long> sourceScreenSchemeIds = new HashSet<>();
 
@@ -128,7 +131,7 @@ public class ScreenSchemeProvisioner extends AbstractMappedSharedProvisioner<Iss
         for (Long sourceScreenSchemeId : sourceScreenSchemeIds) {
             screenSchemeIdMap.put(
                     sourceScreenSchemeId,
-                    screenSchemeCloner.cloneScreenSchemeBySourceId(sourceScreenSchemeId, tenantId, userId, mode)
+                    screenSchemeCloner.cloneScreenSchemeBySourceId(sourceScreenSchemeId, tenantId, userId, mode, context)
             );
         }
 
@@ -137,7 +140,7 @@ public class ScreenSchemeProvisioner extends AbstractMappedSharedProvisioner<Iss
 
     @Override
     protected Optional<IssueTypeScreenSchemeEntity> loadSourceByIdIncludingSystem(Long sourceSchemeId, Long tenantId) {
-        return Optional.empty();
+        return issueTypeScreenSchemePort.getIssueTypeScreenSchemeByIdIncludingSystem(sourceSchemeId, tenantId);
     }
 
     @Override

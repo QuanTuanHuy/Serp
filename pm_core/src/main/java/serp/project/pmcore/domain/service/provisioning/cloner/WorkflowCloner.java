@@ -13,6 +13,7 @@ import serp.project.pmcore.domain.exception.DomainValidationException;
 import serp.project.pmcore.domain.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.port.store.IWorkflowPort;
 import serp.project.pmcore.domain.port.store.IWorkflowVersionPort;
+import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.support.CloneNamingHelper;
 
 import java.util.ArrayList;
@@ -34,7 +35,8 @@ public class WorkflowCloner {
     public Long cloneWorkflowBySourceId(Long sourceWorkflowId,
                                         Long tenantId,
                                         Long userId,
-                                        CloneMode cloneMode) {
+                                        CloneMode cloneMode,
+                                        ProvisioningExecutionContext context) {
         validateRequired(sourceWorkflowId, "sourceWorkflowId");
         validateRequired(tenantId, "tenantId");
         validateRequired(userId, "userId");
@@ -45,13 +47,14 @@ public class WorkflowCloner {
                         DomainErrorCode.WORKFLOW_NOT_FOUND,
                         "Workflow not found for source id=" + sourceWorkflowId
                 ));
-        return cloneWorkflow(source, tenantId, userId, cloneMode);
+        return cloneWorkflow(source, tenantId, userId, cloneMode, context);
     }
 
     public Long cloneWorkflow(WorkflowEntity source,
                               Long tenantId,
                               Long userId,
-                              CloneMode cloneMode) {
+                              CloneMode cloneMode,
+                              ProvisioningExecutionContext context) {
         validateRequired(source, "source");
         validateRequired(tenantId, "tenantId");
         validateRequired(userId, "userId");
@@ -122,7 +125,8 @@ public class WorkflowCloner {
                     savedVersion.getId(),
                     tenantId,
                     userId,
-                    cloneMode
+                    cloneMode,
+                    context
             );
         }
 

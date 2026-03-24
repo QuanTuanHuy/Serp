@@ -11,6 +11,7 @@ import serp.project.pmcore.domain.exception.*;
 import serp.project.pmcore.domain.port.store.IScreenPort;
 import serp.project.pmcore.domain.port.store.IScreenTabFieldPort;
 import serp.project.pmcore.domain.port.store.IScreenTabPort;
+import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 
 import java.util.*;
 
@@ -27,9 +28,24 @@ public class ScreenCloner {
                                       Long tenantId,
                                       Long userId,
                                       CloneMode cloneMode) {
+        return cloneScreenBySourceId(sourceScreenId, tenantId, userId, cloneMode, null);
+    }
+
+    public Long cloneScreenBySourceId(Long sourceScreenId,
+                                      Long tenantId,
+                                      Long userId,
+                                      CloneMode cloneMode,
+                                      ProvisioningExecutionContext context) {
         Objects.requireNonNull(sourceScreenId, "sourceScreenId must not be null");
         Objects.requireNonNull(tenantId, "tenantId must not be null");
         Objects.requireNonNull(userId, "userId must not be null");
+
+        if (context != null) {
+            Long mappedScreenId = context.getMappedScreenId(sourceScreenId);
+            if (mappedScreenId != null) {
+                return mappedScreenId;
+            }
+        }
 
         ScreenEntity source = screenPort
                 .getScreenByIdIncludingSystem(sourceScreenId, tenantId)
@@ -38,7 +54,11 @@ public class ScreenCloner {
                         "Screen not found for source id=" + sourceScreenId
                 ));
 
-        return cloneScreen(source, tenantId, userId, cloneMode);
+        Long clonedScreenId = cloneScreen(source, tenantId, userId, cloneMode);
+        if (context != null) {
+            context.rememberScreenId(sourceScreenId, clonedScreenId);
+        }
+        return clonedScreenId;
     }
 
     public Long cloneScreen(ScreenEntity source,

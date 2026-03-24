@@ -9,6 +9,7 @@ import serp.project.pmcore.domain.exception.DomainErrorCode;
 import serp.project.pmcore.domain.exception.DomainValidationException;
 import serp.project.pmcore.domain.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.port.store.ITenantSchemeMappingPort;
+import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.provisioner.ISchemeProvisioner;
 
 import java.util.Objects;
@@ -21,7 +22,10 @@ public abstract class AbstractMappedSharedProvisioner<S> implements ISchemeProvi
     private final ITenantSchemeMappingPort tenantSchemeMappingPort;
 
     @Override
-    public Long resolveSharedBinding(Long sourceSchemeId, Long tenantId, Long userId) {
+    public Long resolveSharedBinding(Long sourceSchemeId,
+                                     Long tenantId,
+                                     Long userId,
+                                     ProvisioningExecutionContext context) {
         validateCommonArguments(sourceSchemeId, tenantId, userId);
 
         S source = loadRequiredSource(sourceSchemeId, tenantId);
@@ -51,17 +55,20 @@ public abstract class AbstractMappedSharedProvisioner<S> implements ISchemeProvi
                     supports(), tenantId, sourceSchemeId, mappedSchemeId);
         }
 
-        Long clonedSchemeId = cloneForTenant(source, tenantId, userId, CloneMode.SHARED);
+        Long clonedSchemeId = cloneForTenant(source, tenantId, userId, CloneMode.SHARED, context);
         upsertMapping(existingMapping, tenantId, userId, sourceSchemeId, clonedSchemeId);
 
         return clonedSchemeId;
     }
 
     @Override
-    public Long resolveClonedBinding(Long sourceSchemeId, Long tenantId, Long userId) {
+    public Long resolveClonedBinding(Long sourceSchemeId,
+                                     Long tenantId,
+                                     Long userId,
+                                     ProvisioningExecutionContext context) {
         validateCommonArguments(sourceSchemeId, tenantId, userId);
         S source = loadRequiredSource(sourceSchemeId, tenantId);
-        return cloneForTenant(source, tenantId, userId, CloneMode.CLONE);
+        return cloneForTenant(source, tenantId, userId, CloneMode.CLONE, context);
     }
 
     protected S loadRequiredSource(Long sourceSchemeId, Long tenantId) {
@@ -128,7 +135,11 @@ public abstract class AbstractMappedSharedProvisioner<S> implements ISchemeProvi
     /**
      * Deep-clone source/root into tenant scope.
      */
-    protected abstract Long cloneForTenant(S source, Long tenantId, Long userId, CloneMode mode);
+    protected abstract Long cloneForTenant(S source,
+                                           Long tenantId,
+                                           Long userId,
+                                           CloneMode mode,
+                                           ProvisioningExecutionContext context);
 
     /**
      * Used only for clearer exception/log messages.

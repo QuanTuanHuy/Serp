@@ -4,26 +4,26 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import serp.project.pmcore.domain.enums.ProvisioningMode;
 import serp.project.pmcore.domain.enums.SchemeType;
+import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.SchemeProvisionerRegistry;
 
 import java.util.EnumMap;
-import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class CloneFromSharedProvisioningExecutor implements IProvisioningModeExecutor {
 
-    private static final Set<SchemeType> SUPPORTED_SCHEMES = EnumSet.of(
+    private static final List<SchemeType> SUPPORTED_SCHEMES = List.of(
             SchemeType.ISSUE_TYPE,
+            SchemeType.PRIORITY,
+            SchemeType.SCREEN,
             SchemeType.WORKFLOW,
             SchemeType.FIELD_CONFIG,
-            SchemeType.SCREEN,
             SchemeType.PERMISSION,
-            SchemeType.NOTIFICATION,
-            SchemeType.PRIORITY,
-            SchemeType.ISSUE_SECURITY
+            SchemeType.ISSUE_SECURITY,
+            SchemeType.NOTIFICATION
     );
 
     private final SchemeProvisionerRegistry provisionerRegistry;
@@ -34,8 +34,11 @@ public class CloneFromSharedProvisioningExecutor implements IProvisioningModeExe
     }
 
     @Override
-    public Map<SchemeType, Long> provision(Map<SchemeType, Long> resolvedSources, Long tenantId, Long userId) {
-        validateArguments(resolvedSources, tenantId, userId);
+    public Map<SchemeType, Long> provision(Map<SchemeType, Long> resolvedSources,
+                                           Long tenantId,
+                                           Long userId,
+                                           ProvisioningExecutionContext context) {
+        validateArguments(resolvedSources, tenantId, userId, context);
 
         Map<SchemeType, Long> effectiveBindings = new EnumMap<>(SchemeType.class);
         for (SchemeType schemeType : SUPPORTED_SCHEMES) {
@@ -43,7 +46,7 @@ public class CloneFromSharedProvisioningExecutor implements IProvisioningModeExe
             effectiveBindings.put(
                     schemeType,
                     provisionerRegistry.get(schemeType)
-                            .resolveClonedBinding(sourceSchemeId, tenantId, userId)
+                            .resolveClonedBinding(sourceSchemeId, tenantId, userId, context)
             );
         }
         return effectiveBindings;

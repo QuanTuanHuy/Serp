@@ -11,6 +11,7 @@ import serp.project.pmcore.domain.exception.*;
 import serp.project.pmcore.domain.port.store.IWorkflowStepPort;
 import serp.project.pmcore.domain.port.store.IWorkflowTransitionPort;
 import serp.project.pmcore.domain.port.store.IWorkflowTransitionRulePort;
+import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.materializer.StatusMaterializer;
 
 import java.util.ArrayList;
@@ -34,7 +35,8 @@ public class WorkflowVersionTreeCloner {
                                  Long targetWorkflowVersionId,
                                  Long tenantId,
                                  Long userId,
-                                 CloneMode cloneMode) {
+                                 CloneMode cloneMode,
+                                 ProvisioningExecutionContext context) {
         validateRequired(sourceVersion, "sourceVersion");
         validateRequired(targetWorkflowVersionId, "targetWorkflowVersionId");
         validateRequired(tenantId, "tenantId");
@@ -58,7 +60,8 @@ public class WorkflowVersionTreeCloner {
                 sourceTransitions,
                 tenantId,
                 userId,
-                cloneMode
+                cloneMode,
+                context
         );
         Map<Long, Long> transitionIdMap = cloneTransitions(
                 sourceTransitions,
@@ -136,9 +139,10 @@ public class WorkflowVersionTreeCloner {
     }
 
     private Map<Long, Long> cloneTransitionScreens(List<WorkflowTransitionEntity> sourceTransitions,
-                                                   Long tenantId,
-                                                   Long userId,
-                                                   CloneMode cloneMode) {
+                                                    Long tenantId,
+                                                    Long userId,
+                                                    CloneMode cloneMode,
+                                                    ProvisioningExecutionContext context) {
         Map<Long, Long> screenIdMap = new HashMap<>();
 
         for (WorkflowTransitionEntity transition : sourceTransitions) {
@@ -146,8 +150,7 @@ public class WorkflowVersionTreeCloner {
             if (sourceScreenId != null && !screenIdMap.containsKey(sourceScreenId)) {
                 screenIdMap.put(
                         sourceScreenId,
-                        // FIX ME: duplicate clone screen in ScreenSchemeCloner
-                        screenCloner.cloneScreenBySourceId(sourceScreenId, tenantId, userId, cloneMode)
+                        screenCloner.cloneScreenBySourceId(sourceScreenId, tenantId, userId, cloneMode, context)
                 );
             }
         }

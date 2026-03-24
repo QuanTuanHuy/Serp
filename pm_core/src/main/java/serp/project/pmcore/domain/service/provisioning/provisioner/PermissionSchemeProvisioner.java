@@ -7,6 +7,7 @@ import serp.project.pmcore.domain.enums.CloneMode;
 import serp.project.pmcore.domain.enums.SchemeType;
 import serp.project.pmcore.domain.port.store.IPermissionSchemePort;
 import serp.project.pmcore.domain.port.store.ITenantSchemeMappingPort;
+import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.cloner.PermissionSchemeCloner;
 import serp.project.pmcore.domain.service.provisioning.provisioner.base.AbstractMappedSharedProvisioner;
 
@@ -61,7 +62,8 @@ public class PermissionSchemeProvisioner extends AbstractMappedSharedProvisioner
     protected Long cloneForTenant(PermissionSchemeEntity source,
                                   Long tenantId,
                                   Long userId,
-                                  CloneMode cloneMode) {
+                                  CloneMode cloneMode,
+                                  ProvisioningExecutionContext context) {
         return permissionSchemeCloner.clonePermissionScheme(source, tenantId, userId, cloneMode);
     }
 }
