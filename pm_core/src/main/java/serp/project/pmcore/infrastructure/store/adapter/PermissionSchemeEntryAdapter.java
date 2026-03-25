@@ -38,4 +38,11 @@ public class PermissionSchemeEntryAdapter implements IPermissionSchemeEntryPort 
                 permissionSchemeEntryRepository.findAllBySchemeIdAndTenantIdOrSystemTenant(schemeId, tenantId)
         );
     }
+
+    @Override
+    public List<PermissionSchemeEntryEntity> getPermissionSchemeEntriesBySchemeId(Long schemeId, Long tenantId) {
+        return permissionSchemeEntryMapper.toEntities(
+                permissionSchemeEntryRepository.findAllBySchemeIdAndTenantId(schemeId, tenantId)
+        );
+    }
 }

@@ -95,6 +95,7 @@ public enum DomainErrorCode {
     // Priority management
     PRIORITY_NOT_FOUND("Priority not found"),
     PRIORITY_NOT_IN_SCHEME("Priority is not valid for this project's scheme"),
+    DEFAULT_PRIORITY_NOT_CONFIGURED("Default priority is not configured for this project"),
     PRIORITY_IS_SYSTEM("Cannot modify a system priority"),
     PRIORITY_SCHEME_NOT_FOUND("Priority scheme not found"),
     PRIORITY_SCHEME_DEFAULT_NOT_IN_ITEMS(
@@ -194,6 +195,7 @@ public enum DomainErrorCode {
     // Issue security
     ISSUE_SECURITY_SCHEME_NOT_FOUND("Issue security scheme not found"),
     SECURITY_LEVEL_NOT_FOUND("Issue security level not found"),
+    SECURITY_LEVEL_NOT_IN_SCHEME("Issue security level is not valid for this project's scheme"),
     SECURITY_LEVEL_IN_USE("Cannot delete security level that is assigned to work items"),
     SECURITY_LEVEL_DEFAULT_REQUIRED("Default security level must belong to the assigned scheme"),
     SECURITY_LEVEL_ACCESS_DENIED("Insufficient security level to access this work item"),

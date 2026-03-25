@@ -38,4 +38,11 @@ public class IssueSecurityLevelAdapter implements IIssueSecurityLevelPort {
                 issueSecurityLevelRepository.findAllBySchemeIdAndTenantIdOrSystemTenant(schemeId, tenantId)
         );
     }
+
+    @Override
+    public List<IssueSecurityLevelEntity> getIssueSecurityLevelsBySchemeId(Long schemeId, Long tenantId) {
+        return issueSecurityLevelMapper.toEntities(
+                issueSecurityLevelRepository.findAllBySchemeIdAndTenantId(schemeId, tenantId)
+        );
+    }
 }

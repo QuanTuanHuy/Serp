@@ -13,4 +13,6 @@ public interface IPermissionSchemeEntryPort {
     List<PermissionSchemeEntryEntity> createPermissionSchemeEntries(List<PermissionSchemeEntryEntity> entries);
 
     List<PermissionSchemeEntryEntity> getPermissionSchemeEntriesBySchemeIdIncludingSystem(Long schemeId, Long tenantId);
+
+    List<PermissionSchemeEntryEntity> getPermissionSchemeEntriesBySchemeId(Long schemeId, Long tenantId);
 }

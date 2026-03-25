@@ -18,4 +18,6 @@ public interface IPermissionSchemeEntryRepository extends JpaRepository<Permissi
     @Query("SELECT e FROM PermissionSchemeEntryModel e WHERE e.schemeId = :schemeId AND (e.tenantId = :tenantId OR e.tenantId = 0) ORDER BY e.id ASC")
     List<PermissionSchemeEntryModel> findAllBySchemeIdAndTenantIdOrSystemTenant(@Param("schemeId") Long schemeId,
                                                                                  @Param("tenantId") Long tenantId);
+
+    List<PermissionSchemeEntryModel> findAllBySchemeIdAndTenantId(Long schemeId, Long tenantId);
 }

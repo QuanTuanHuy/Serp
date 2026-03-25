@@ -19,6 +19,7 @@ import serp.project.pmcore.domain.port.store.IIssueTypePort;
 import serp.project.pmcore.domain.port.store.IProjectIssueCounterPort;
 import serp.project.pmcore.domain.port.store.IWorkItemPort;
 import serp.project.pmcore.domain.service.IWorkItemService;
+import serp.project.pmcore.kernel.utils.LexorankUtils;
 
 import java.util.List;
 
@@ -59,6 +60,13 @@ public class WorkItemService implements IWorkItemService {
     @Override
     public long getNextIssueNumber(Long projectId, Long tenantId) {
         return projectIssueCounterPort.getNextIssueNo(projectId, tenantId);
+    }
+
+    @Override
+    public String getNextRank(Long projectId, Long tenantId) {
+        return workItemPort.getLastRankByProjectId(projectId, tenantId)
+                .map(LexorankUtils::generateRankAfter)
+                .orElseGet(LexorankUtils::generateInitialRank);
     }
 
     @Override

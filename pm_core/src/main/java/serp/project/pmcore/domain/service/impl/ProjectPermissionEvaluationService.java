@@ -47,7 +47,7 @@ public class ProjectPermissionEvaluationService implements IProjectPermissionEva
         }
 
         List<PermissionSchemeEntryEntity> entries = permissionSchemeEntryPort
-                .getPermissionSchemeEntriesBySchemeIdIncludingSystem(project.getPermissionSchemeId(), project.getTenantId());
+                .getPermissionSchemeEntriesBySchemeId(project.getPermissionSchemeId(), project.getTenantId());
 
         return entries.stream()
                 .filter(entry -> permissionKey.equalsIgnoreCase(entry.getPermissionKey()))

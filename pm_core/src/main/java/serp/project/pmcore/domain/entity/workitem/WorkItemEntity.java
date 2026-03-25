@@ -27,12 +27,14 @@ public class WorkItemEntity extends BaseEntity {
     private String summary;
     private String description;
 
+    private Long workflowStepId;
     private Long statusId;
     private Long priorityId;
     private Long resolutionId;
     private Long assigneeId;
     private Long reporterId;
     private Long parentId;
+    private Long securityLevelId;
 
     private Long dueDate;
     private String rank;

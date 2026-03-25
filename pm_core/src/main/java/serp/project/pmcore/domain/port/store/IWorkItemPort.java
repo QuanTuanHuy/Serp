@@ -17,6 +17,7 @@ public interface IWorkItemPort {
     Optional<WorkItemEntity> getWorkItemById(Long id, Long tenantId);
     List<WorkItemEntity> getWorkItemsByProjectId(Long projectId, Long tenantId);
     List<WorkItemEntity> getWorkItemsByIssueTypeId(Long issueTypeId, Long tenantId);
+    Optional<String> getLastRankByProjectId(Long projectId, Long tenantId);
     void deleteWorkItemById(Long id, Long tenantId);
     Pair<List<WorkItemEntity>, Long> searchWorkItems(Long tenantId, WorkItemFilterRequest filter);
 }
