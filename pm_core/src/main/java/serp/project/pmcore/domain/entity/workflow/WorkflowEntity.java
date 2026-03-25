@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import serp.project.pmcore.domain.entity.BaseEntity;
+import serp.project.pmcore.domain.enums.WorkflowLifecycleState;
 
 import java.util.List;
 
@@ -21,28 +22,13 @@ import java.util.List;
 @SuperBuilder
 public class WorkflowEntity extends BaseEntity {
     private Long tenantId;
+    private String workflowKey;
     private String name;
     private String description;
-    private Integer versionNo;
-    private Boolean isActive;
+    private Long currentPublishedVersionId;
+    private Long draftVersionId;
+    private WorkflowLifecycleState lifecycleState;
     private Boolean isSystem;
 
-    private List<WorkflowStepEntity> steps;
-    private List<WorkflowTransitionEntity> transitions;
-
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @SuperBuilder
-    public static class WorkflowTransitionEntity extends BaseEntity {
-        private Long tenantId;
-        private Long workflowId;
-        private String name;
-        private Long fromStatusId;
-        private Long toStatusId;
-        private Integer sequence;
-
-        private List<WorkflowTransitionRuleEntity> rules;
-    }
+    private List<WorkflowVersionEntity> versions;
 }

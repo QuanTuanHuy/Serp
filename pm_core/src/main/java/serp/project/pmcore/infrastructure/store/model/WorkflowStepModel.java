@@ -28,18 +28,24 @@ public class WorkflowStepModel extends BaseModel {
     @Column(name = "tenant_id", nullable = false)
     private Long tenantId;
 
-    @Column(name = "workflow_id", nullable = false)
-    private Long workflowId;
+    @Column(name = "workflow_version_id", nullable = false)
+    private Long workflowVersionId;
+
+    @Column(name = "step_key", nullable = false)
+    private String stepKey;
+
+    @Column(name = "name", nullable = false)
+    private String name;
 
     @Column(name = "status_id", nullable = false)
     private Long statusId;
 
-    @Column(name = "sequence")
-    private Integer sequence;
+    @Column(name = "step_order")
+    private Integer stepOrder;
 
     @Column(name = "is_initial", nullable = false)
     private Boolean isInitial;
 
-    @Column(name = "is_final", nullable = false)
-    private Boolean isFinal;
+    @Column(name = "is_terminal", nullable = false)
+    private Boolean isTerminal;
 }

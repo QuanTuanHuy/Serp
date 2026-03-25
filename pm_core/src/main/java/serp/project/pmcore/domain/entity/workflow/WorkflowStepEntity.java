@@ -19,9 +19,11 @@ import serp.project.pmcore.domain.entity.BaseEntity;
 @SuperBuilder
 public class WorkflowStepEntity extends BaseEntity {
     private Long tenantId;
-    private Long workflowId;
+    private Long workflowVersionId;
+    private String stepKey;
+    private String name;
     private Long statusId;
-    private Integer sequence;
+    private Integer stepOrder;
     private Boolean isInitial;
-    private Boolean isFinal;
+    private Boolean isTerminal;
 }

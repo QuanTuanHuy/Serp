@@ -30,10 +30,4 @@ public interface IProjectService {
     ProjectEntity archiveProject(Long id, Long tenantId, Long userId);
 
     ProjectEntity unarchiveProject(Long id, Long tenantId, Long userId);
-
-    void validateKeyFormat(String key);
-
-    void validateKeyUniqueness(String key, Long tenantId);
-
-    void validateCategoryExists(Long categoryId, Long tenantId);
 }

@@ -9,6 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.pmcore.domain.entity.project.ProjectEntity;
 
 @Data
 @Builder
@@ -41,4 +42,32 @@ public class ProjectResponse {
     private Long createdBy;
     private Long updatedAt;
     private Long updatedBy;
+
+    public static ProjectResponse from(ProjectEntity entity) {
+        return ProjectResponse.builder()
+                .id(entity.getId())
+                .key(entity.getKey())
+                .name(entity.getName())
+                .description(entity.getDescription())
+                .url(entity.getUrl())
+                .leadUserId(entity.getLeadUserId())
+                .avatarId(entity.getAvatarId())
+                .categoryId(entity.getCategoryId())
+                .projectTypeKey(entity.getProjectTypeKey())
+                .isArchived(entity.getIsArchived())
+                .archivedAt(entity.getArchivedAt())
+                .issueTypeSchemeId(entity.getIssueTypeSchemeId())
+                .workflowSchemeId(entity.getWorkflowSchemeId())
+                .fieldConfigSchemeId(entity.getFieldConfigSchemeId())
+                .issueTypeScreenSchemeId(entity.getIssueTypeScreenSchemeId())
+                .permissionSchemeId(entity.getPermissionSchemeId())
+                .notificationSchemeId(entity.getNotificationSchemeId())
+                .prioritySchemeId(entity.getPrioritySchemeId())
+                .issueSecuritySchemeId(entity.getIssueSecuritySchemeId())
+                .createdAt(entity.getCreatedAt())
+                .createdBy(entity.getCreatedBy())
+                .updatedAt(entity.getUpdatedAt())
+                .updatedBy(entity.getUpdatedBy())
+                .build();
+    }
 }

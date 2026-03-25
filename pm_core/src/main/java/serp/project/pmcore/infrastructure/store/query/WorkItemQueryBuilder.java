@@ -45,7 +45,7 @@ public class WorkItemQueryBuilder {
     private static final String BASE_COLUMNS = """
             w.id, w.tenant_id, w.project_id, w.issue_type_id,
             w.issue_no, w.key, w.summary, w.description,
-            w.status_id, w.priority_id, w.resolution_id,
+            w.workflow_step_id, w.status_id, w.priority_id, w.resolution_id,
             w.assignee_id, w.reporter_id, w.parent_id,
             w.security_level_id, w.due_date, w.rank,
             w.time_original_estimate, w.time_remaining_estimate, w.time_spent,

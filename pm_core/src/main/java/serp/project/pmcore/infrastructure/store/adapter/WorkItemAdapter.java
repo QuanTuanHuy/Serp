@@ -15,6 +15,7 @@ import serp.project.pmcore.domain.entity.workitem.WorkItemEntity;
 import serp.project.pmcore.domain.port.store.IWorkItemPort;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemMapper;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemRowMapper;
+import serp.project.pmcore.infrastructure.store.model.WorkItemModel;
 import serp.project.pmcore.infrastructure.store.query.WorkItemQueryBuilder;
 import serp.project.pmcore.infrastructure.store.repository.IWorkItemRepository;
 
@@ -58,6 +59,12 @@ public class WorkItemAdapter implements IWorkItemPort {
         return workItemMapper.toEntities(
                 workItemRepository.findAllByTenantIdAndIssueTypeId(tenantId, issueTypeId)
         );
+    }
+
+    @Override
+    public Optional<String> getLastRankByProjectId(Long projectId, Long tenantId) {
+        return workItemRepository.findFirstByTenantIdAndProjectIdOrderByRankDescIdDesc(tenantId, projectId)
+                .map(WorkItemModel::getRank);
     }
 
     @Override

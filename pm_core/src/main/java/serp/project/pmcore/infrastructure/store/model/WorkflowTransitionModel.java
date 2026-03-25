@@ -28,17 +28,20 @@ public class WorkflowTransitionModel extends BaseModel {
     @Column(name = "tenant_id", nullable = false)
     private Long tenantId;
 
-    @Column(name = "workflow_id", nullable = false)
-    private Long workflowId;
+    @Column(name = "workflow_version_id", nullable = false)
+    private Long workflowVersionId;
 
     @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(name = "from_status_id")
-    private Long fromStatusId;
+    @Column(name = "from_step_id")
+    private Long fromStepId;
 
-    @Column(name = "to_status_id", nullable = false)
-    private Long toStatusId;
+    @Column(name = "to_step_id", nullable = false)
+    private Long toStepId;
+
+    @Column(name = "screen_id")
+    private Long screenId;
 
     @Column(name = "sequence")
     private Integer sequence;

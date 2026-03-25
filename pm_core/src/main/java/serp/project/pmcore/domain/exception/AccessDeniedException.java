@@ -21,4 +21,10 @@ public class AccessDeniedException extends DomainException {
                 DomainErrorCode.TRANSITION_CONDITION_FAILED,
                 "Transition condition not met: " + transitionName);
     }
+
+    public static AccessDeniedException projectPermission(String permissionKey, Long projectId) {
+        return new AccessDeniedException(
+                DomainErrorCode.PROJECT_PERMISSION_DENIED,
+                "Project permission denied: permission=" + permissionKey + ", projectId=" + projectId);
+    }
 }

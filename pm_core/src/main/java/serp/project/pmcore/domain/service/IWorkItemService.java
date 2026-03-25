@@ -21,6 +21,8 @@ public interface IWorkItemService {
 
     long getNextIssueNumber(Long projectId, Long tenantId);
 
+    String getNextRank(Long projectId, Long tenantId);
+
     void validateParentHierarchy(Long parentId, Long childIssueTypeId,
             Long projectId, Long tenantId);
 }
