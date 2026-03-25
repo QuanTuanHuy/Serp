@@ -13,4 +13,6 @@ public interface IScreenTabFieldPort {
     List<ScreenTabFieldEntity> createScreenTabFields(List<ScreenTabFieldEntity> fields);
 
     List<ScreenTabFieldEntity> getScreenTabFieldsByScreenTabIdIncludingSystem(Long screenTabId, Long tenantId);
+
+    List<ScreenTabFieldEntity> getScreenTabFieldsByScreenTabId(Long screenTabId, Long tenantId);
 }

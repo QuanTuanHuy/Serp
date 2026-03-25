@@ -26,6 +26,8 @@ public abstract class BaseEntity {
     public void applyCreate(Long createdBy, Long createdAt) {
         this.createdBy = createdBy;
         this.createdAt = createdAt;
+        this.updatedAt = createdAt;
+        this.updatedBy = createdBy;
     }
 
     public void applyUpdate(Long updatedBy, Long updatedAt) {

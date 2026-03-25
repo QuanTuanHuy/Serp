@@ -18,4 +18,8 @@ public interface IScreenSchemeItemRepository extends JpaRepository<ScreenSchemeI
     @Query("SELECT i FROM ScreenSchemeItemModel i WHERE i.screenSchemeId = :screenSchemeId AND (i.tenantId = :tenantId OR i.tenantId = 0) ORDER BY i.operationKey ASC, i.id ASC")
     List<ScreenSchemeItemModel> findAllByScreenSchemeIdAndTenantIdOrSystemTenant(@Param("screenSchemeId") Long screenSchemeId,
                                                                                   @Param("tenantId") Long tenantId);
+
+    @Query("SELECT i FROM ScreenSchemeItemModel i WHERE i.screenSchemeId = :screenSchemeId AND i.tenantId = :tenantId ORDER BY i.operationKey ASC, i.id ASC")
+    List<ScreenSchemeItemModel> findAllByScreenSchemeIdAndTenantId(@Param("screenSchemeId") Long screenSchemeId,
+                                                                   @Param("tenantId") Long tenantId);
 }

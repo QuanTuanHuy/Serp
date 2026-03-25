@@ -38,4 +38,11 @@ public class FieldConfigItemAdapter implements IFieldConfigItemPort {
                 fieldConfigItemRepository.findAllByFieldConfigIdAndTenantIdOrSystemTenant(fieldConfigId, tenantId)
         );
     }
+
+    @Override
+    public List<FieldConfigItemEntity> getFieldConfigItemsByFieldConfigId(Long fieldConfigId, Long tenantId) {
+        return fieldConfigItemMapper.toEntities(
+                fieldConfigItemRepository.findAllByFieldConfigIdAndTenantId(fieldConfigId, tenantId)
+        );
+    }
 }

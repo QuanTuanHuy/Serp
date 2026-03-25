@@ -36,4 +36,11 @@ public class ScreenTabAdapter implements IScreenTabPort {
                 screenTabRepository.findAllByScreenIdAndTenantIdOrSystemTenant(screenId, tenantId)
         );
     }
+
+    @Override
+    public List<ScreenTabEntity> getScreenTabsByScreenId(Long screenId, Long tenantId) {
+        return screenTabMapper.toEntities(
+                screenTabRepository.findAllByScreenIdAndTenantId(screenId, tenantId)
+        );
+    }
 }

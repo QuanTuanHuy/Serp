@@ -38,4 +38,11 @@ public class IssueTypeScreenSchemeItemAdapter implements IIssueTypeScreenSchemeI
                 issueTypeScreenSchemeItemRepository.findAllBySchemeIdAndTenantIdOrSystemTenant(schemeId, tenantId)
         );
     }
+
+    @Override
+    public List<IssueTypeScreenSchemeItemEntity> getIssueTypeScreenSchemeItemsBySchemeId(Long schemeId, Long tenantId) {
+        return issueTypeScreenSchemeItemMapper.toEntities(
+                issueTypeScreenSchemeItemRepository.findAllBySchemeIdAndTenantId(schemeId, tenantId)
+        );
+    }
 }

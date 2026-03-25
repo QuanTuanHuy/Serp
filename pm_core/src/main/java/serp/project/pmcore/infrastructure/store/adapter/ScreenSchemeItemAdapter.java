@@ -36,4 +36,11 @@ public class ScreenSchemeItemAdapter implements IScreenSchemeItemPort {
                 screenSchemeItemRepository.findAllByScreenSchemeIdAndTenantIdOrSystemTenant(screenSchemeId, tenantId)
         );
     }
+
+    @Override
+    public List<ScreenSchemeItemEntity> getScreenSchemeItemsByScreenSchemeId(Long screenSchemeId, Long tenantId) {
+        return screenSchemeItemMapper.toEntities(
+                screenSchemeItemRepository.findAllByScreenSchemeIdAndTenantId(screenSchemeId, tenantId)
+        );
+    }
 }

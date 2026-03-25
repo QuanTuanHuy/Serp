@@ -18,4 +18,8 @@ public interface IIssueTypeScreenSchemeItemRepository extends JpaRepository<Issu
     @Query("SELECT i FROM IssueTypeScreenSchemeItemModel i WHERE i.schemeId = :schemeId AND (i.tenantId = :tenantId OR i.tenantId = 0) ORDER BY i.id ASC")
     List<IssueTypeScreenSchemeItemModel> findAllBySchemeIdAndTenantIdOrSystemTenant(@Param("schemeId") Long schemeId,
                                                                                      @Param("tenantId") Long tenantId);
+
+    @Query("SELECT i FROM IssueTypeScreenSchemeItemModel i WHERE i.schemeId = :schemeId AND i.tenantId = :tenantId ORDER BY i.id ASC")
+    List<IssueTypeScreenSchemeItemModel> findAllBySchemeIdAndTenantId(@Param("schemeId") Long schemeId,
+                                                                      @Param("tenantId") Long tenantId);
 }

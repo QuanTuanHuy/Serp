@@ -13,4 +13,6 @@ public interface IFieldConfigItemPort {
     List<FieldConfigItemEntity> createFieldConfigItems(List<FieldConfigItemEntity> items);
 
     List<FieldConfigItemEntity> getFieldConfigItemsByFieldConfigIdIncludingSystem(Long fieldConfigId, Long tenantId);
+
+    List<FieldConfigItemEntity> getFieldConfigItemsByFieldConfigId(Long fieldConfigId, Long tenantId);
 }

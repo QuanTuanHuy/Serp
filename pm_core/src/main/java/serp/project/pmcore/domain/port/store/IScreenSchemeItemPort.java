@@ -13,4 +13,6 @@ public interface IScreenSchemeItemPort {
     List<ScreenSchemeItemEntity> createScreenSchemeItems(List<ScreenSchemeItemEntity> items);
 
     List<ScreenSchemeItemEntity> getScreenSchemeItemsByScreenSchemeIdIncludingSystem(Long screenSchemeId, Long tenantId);
+
+    List<ScreenSchemeItemEntity> getScreenSchemeItemsByScreenSchemeId(Long screenSchemeId, Long tenantId);
 }

@@ -8,6 +8,8 @@ package serp.project.pmcore.application.command.workitem.validator;
 import org.springframework.stereotype.Component;
 import serp.project.pmcore.domain.dto.request.CreateWorkItemRequest;
 
+import java.util.Map;
+
 @Component
 public class CreateWorkItemValidator {
 
@@ -16,8 +18,14 @@ public class CreateWorkItemValidator {
             throw new IllegalArgumentException("Create work item request is required");
         }
 
-        if (request.getCustomFields() != null && !request.getCustomFields().isEmpty()) {
-            throw new IllegalArgumentException("customFields are not supported yet in create work item slice 1+2");
+        if (request.getCustomFields() == null) {
+            return;
+        }
+
+        for (Map.Entry<String, Object> entry : request.getCustomFields().entrySet()) {
+            if (entry.getKey() == null || entry.getKey().isBlank()) {
+                throw new IllegalArgumentException("customFields keys must be non-blank");
+            }
         }
     }
 }

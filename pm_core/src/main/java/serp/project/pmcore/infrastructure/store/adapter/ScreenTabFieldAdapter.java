@@ -36,4 +36,11 @@ public class ScreenTabFieldAdapter implements IScreenTabFieldPort {
                 screenTabFieldRepository.findAllByScreenTabIdAndTenantIdOrSystemTenant(screenTabId, tenantId)
         );
     }
+
+    @Override
+    public List<ScreenTabFieldEntity> getScreenTabFieldsByScreenTabId(Long screenTabId, Long tenantId) {
+        return screenTabFieldMapper.toEntities(
+                screenTabFieldRepository.findAllByScreenTabIdAndTenantId(screenTabId, tenantId)
+        );
+    }
 }

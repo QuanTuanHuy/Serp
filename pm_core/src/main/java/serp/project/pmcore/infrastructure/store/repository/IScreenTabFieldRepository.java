@@ -18,4 +18,8 @@ public interface IScreenTabFieldRepository extends JpaRepository<ScreenTabFieldM
     @Query("SELECT f FROM ScreenTabFieldModel f WHERE f.screenTabId = :screenTabId AND (f.tenantId = :tenantId OR f.tenantId = 0) ORDER BY f.sequence ASC, f.id ASC")
     List<ScreenTabFieldModel> findAllByScreenTabIdAndTenantIdOrSystemTenant(@Param("screenTabId") Long screenTabId,
                                                                              @Param("tenantId") Long tenantId);
+
+    @Query("SELECT f FROM ScreenTabFieldModel f WHERE f.screenTabId = :screenTabId AND f.tenantId = :tenantId ORDER BY f.sequence ASC, f.id ASC")
+    List<ScreenTabFieldModel> findAllByScreenTabIdAndTenantId(@Param("screenTabId") Long screenTabId,
+                                                              @Param("tenantId") Long tenantId);
 }

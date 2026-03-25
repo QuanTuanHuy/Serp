@@ -13,4 +13,6 @@ public interface IScreenTabPort {
     List<ScreenTabEntity> createScreenTabs(List<ScreenTabEntity> tabs);
 
     List<ScreenTabEntity> getScreenTabsByScreenIdIncludingSystem(Long screenId, Long tenantId);
+
+    List<ScreenTabEntity> getScreenTabsByScreenId(Long screenId, Long tenantId);
 }

@@ -18,4 +18,8 @@ public interface IFieldConfigSchemeItemRepository extends JpaRepository<FieldCon
     @Query("SELECT i FROM FieldConfigSchemeItemModel i WHERE i.schemeId = :schemeId AND (i.tenantId = :tenantId OR i.tenantId = 0) ORDER BY i.id ASC")
     List<FieldConfigSchemeItemModel> findAllBySchemeIdAndTenantIdOrSystemTenant(@Param("schemeId") Long schemeId,
                                                                                  @Param("tenantId") Long tenantId);
+
+    @Query("SELECT i FROM FieldConfigSchemeItemModel i WHERE i.schemeId = :schemeId AND i.tenantId = :tenantId ORDER BY i.id ASC")
+    List<FieldConfigSchemeItemModel> findAllBySchemeIdAndTenantId(@Param("schemeId") Long schemeId,
+                                                                  @Param("tenantId") Long tenantId);
 }

@@ -38,4 +38,11 @@ public class FieldConfigSchemeItemAdapter implements IFieldConfigSchemeItemPort 
                 fieldConfigSchemeItemRepository.findAllBySchemeIdAndTenantIdOrSystemTenant(schemeId, tenantId)
         );
     }
+
+    @Override
+    public List<FieldConfigSchemeItemEntity> getFieldConfigSchemeItemsBySchemeId(Long schemeId, Long tenantId) {
+        return fieldConfigSchemeItemMapper.toEntities(
+                fieldConfigSchemeItemRepository.findAllBySchemeIdAndTenantId(schemeId, tenantId)
+        );
+    }
 }

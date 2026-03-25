@@ -160,6 +160,10 @@ public enum DomainErrorCode {
     // Custom fields & field configurations
     CUSTOM_FIELD_NOT_FOUND("Custom field not found"),
     CUSTOM_FIELD_TYPE_IMMUTABLE("Custom field type cannot be changed after creation"),
+    FIELD_NOT_WRITABLE_ON_CREATE("Field is not writable on create"),
+    REQUIRED_FIELDS_MISSING("Required fields are missing"),
+    CUSTOM_FIELD_CONTEXT_UNRESOLVABLE("Custom field context could not be resolved"),
+    CUSTOM_FIELD_VALUE_INVALID("Custom field value is invalid"),
     FIELD_CONFIG_NOT_FOUND("Field configuration not found"),
     FIELD_CONFIG_SCHEME_NOT_FOUND("Field configuration scheme not found"),
     FIELD_CONFIG_SCHEME_COVERAGE_MISSING(
