@@ -22,36 +22,48 @@ public final class PostOfficeMapper {
 
     public static PostOffice toEntity(CreatePostOfficeRequest request) {
         PostOffice postOffice = new PostOffice();
-        postOffice.setCode(request.code());
-        postOffice.setName(request.name());
-        postOffice.setProvinceCode(request.provinceCode());
-        postOffice.setWardCode(request.wardCode());
-        postOffice.setAddressDetail(request.addressDetail());
-        postOffice.setPhoneNumber(request.phoneNumber());
-        postOffice.setServiceRadiusM(request.serviceRadiusM());
-        postOffice.setDailyCapacity(request.dailyCapacity());
-        postOffice.setCurrentLoad(request.currentLoad());
-        postOffice.setPriority(request.priority());
-        postOffice.setStatus(request.status());
-        postOffice.setTenantId(request.tenantId());
-        postOffice.setLocation(toPoint(request.latitude(), request.longitude()));
+        postOffice.setCode(request.getCode());
+        postOffice.setName(request.getName());
+        postOffice.setProvinceCode(request.getProvinceCode());
+        postOffice.setWardCode(request.getWardCode());
+        postOffice.setAddressDetail(request.getAddressDetail());
+        postOffice.setPhoneNumber(request.getPhoneNumber());
+        postOffice.setOperationalStartDate(request.getOperationalStartDate());
+        postOffice.setOperationalEndDate(request.getOperationalEndDate());
+        postOffice.setWorkingStartTime(request.getWorkingStartTime());
+        postOffice.setWorkingEndTime(request.getWorkingEndTime());
+        postOffice.setServiceRadiusM(request.getServiceRadiusM());
+        if (request.getDailyCapacity() != null) {
+            postOffice.setDailyCapacity(request.getDailyCapacity());
+        }
+        if (request.getCurrentLoad() != null) {
+            postOffice.setCurrentLoad(request.getCurrentLoad());
+        }
+        if (request.getPriority() != null) {
+            postOffice.setPriority(request.getPriority());
+        }
+        postOffice.setStatus(request.getStatus());
+        postOffice.setLocation(toPoint(request.getLatitude(), request.getLongitude()));
         return postOffice;
     }
 
     public static void mapForUpdate(UpdatePostOfficeRequest request, PostOffice postOffice) {
-        postOffice.setCode(request.code());
-        postOffice.setName(request.name());
-        postOffice.setProvinceCode(request.provinceCode());
-        postOffice.setWardCode(request.wardCode());
-        postOffice.setAddressDetail(request.addressDetail());
-        postOffice.setPhoneNumber(request.phoneNumber());
-        postOffice.setServiceRadiusM(request.serviceRadiusM());
-        postOffice.setDailyCapacity(request.dailyCapacity());
-        postOffice.setCurrentLoad(request.currentLoad());
-        postOffice.setPriority(request.priority());
-        postOffice.setStatus(request.status());
-        postOffice.setTenantId(request.tenantId());
-        postOffice.setLocation(toPoint(request.latitude(), request.longitude()));
+        postOffice.setCode(request.getCode());
+        postOffice.setName(request.getName());
+        postOffice.setProvinceCode(request.getProvinceCode());
+        postOffice.setWardCode(request.getWardCode());
+        postOffice.setAddressDetail(request.getAddressDetail());
+        postOffice.setPhoneNumber(request.getPhoneNumber());
+        postOffice.setOperationalStartDate(request.getOperationalStartDate());
+        postOffice.setOperationalEndDate(request.getOperationalEndDate());
+        postOffice.setWorkingStartTime(request.getWorkingStartTime());
+        postOffice.setWorkingEndTime(request.getWorkingEndTime());
+        postOffice.setServiceRadiusM(request.getServiceRadiusM());
+        postOffice.setDailyCapacity(request.getDailyCapacity());
+        postOffice.setCurrentLoad(request.getCurrentLoad());
+        postOffice.setPriority(request.getPriority());
+        postOffice.setStatus(request.getStatus());
+        postOffice.setLocation(toPoint(request.getLatitude(), request.getLongitude()));
     }
 
     public static PostOfficeResponse toResponse(PostOffice postOffice) {
@@ -63,6 +75,10 @@ public final class PostOfficeMapper {
                 postOffice.getWardCode(),
                 postOffice.getAddressDetail(),
                 postOffice.getPhoneNumber(),
+                postOffice.getOperationalStartDate(),
+                postOffice.getOperationalEndDate(),
+                postOffice.getWorkingStartTime(),
+                postOffice.getWorkingEndTime(),
                 postOffice.getServiceRadiusM(),
                 postOffice.getDailyCapacity(),
                 postOffice.getCurrentLoad(),
@@ -73,6 +89,8 @@ public final class PostOfficeMapper {
                 postOffice.getVersion(),
                 postOffice.getCreatedAt(),
                 postOffice.getUpdatedAt(),
+                postOffice.getCreatedBy(),
+                postOffice.getUpdatedBy(),
                 postOffice.getTenantId()
         );
     }

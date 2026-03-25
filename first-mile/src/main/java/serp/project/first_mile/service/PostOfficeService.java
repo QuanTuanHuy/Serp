@@ -8,6 +8,7 @@ package serp.project.first_mile.service;
 import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.CreatePostOfficeRequest;
 import serp.project.first_mile.dto.request.UpdatePostOfficeRequest;
+import serp.project.first_mile.dto.response.PostOfficeGeocodeBatchResponse;
 import serp.project.first_mile.dto.response.PostOfficeResponse;
 
 public interface PostOfficeService {
@@ -20,4 +21,8 @@ public interface PostOfficeService {
     PostOfficeResponse updatePostOffice(Long id, UpdatePostOfficeRequest request);
 
     void deletePostOffice(Long id);
+
+    PostOfficeResponse updatePostOfficeLocationByGeocode(Long id);
+
+    PostOfficeGeocodeBatchResponse updatePostOfficesWithNullLocationByGeocode(int batch);
 }

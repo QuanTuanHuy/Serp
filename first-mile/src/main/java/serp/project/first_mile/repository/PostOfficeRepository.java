@@ -16,4 +16,6 @@ public interface PostOfficeRepository extends JpaRepository<PostOffice, Long> {
     boolean existsByCode(String code);
 
     Page<PostOffice> findByCodeContainingIgnoreCaseOrNameContainingIgnoreCase(String code, String name, Pageable pageable);
+
+    Page<PostOffice> findByLocationIsNull(Pageable pageable);
 }

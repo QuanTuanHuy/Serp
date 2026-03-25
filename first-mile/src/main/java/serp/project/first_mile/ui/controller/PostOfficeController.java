@@ -7,6 +7,7 @@ package serp.project.first_mile.ui.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,6 +21,7 @@ import serp.project.first_mile.dto.ApiResponse;
 import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.CreatePostOfficeRequest;
 import serp.project.first_mile.dto.request.UpdatePostOfficeRequest;
+import serp.project.first_mile.dto.response.PostOfficeGeocodeBatchResponse;
 import serp.project.first_mile.dto.response.PostOfficeResponse;
 import serp.project.first_mile.exception.MessageService;
 import serp.project.first_mile.service.PostOfficeService;
@@ -52,6 +54,7 @@ public class PostOfficeController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('TMS_ADMIN')")
     public ApiResponse<PostOfficeResponse> createPostOffice(@Valid @RequestBody CreatePostOfficeRequest request) {
         return ApiResponse.<PostOfficeResponse>builder()
                 .message(messageService.getMessage("success.post_offices.create"))
@@ -60,6 +63,7 @@ public class PostOfficeController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('TMS_ADMIN')")
     public ApiResponse<PostOfficeResponse> updatePostOffice(
             @PathVariable Long id,
             @Valid @RequestBody UpdatePostOfficeRequest request
@@ -71,10 +75,31 @@ public class PostOfficeController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('TMS_ADMIN')")
     public ApiResponse<Void> deletePostOffice(@PathVariable Long id) {
         postOfficeService.deletePostOffice(id);
         return ApiResponse.<Void>builder()
                 .message(messageService.getMessage("success.post_offices.delete"))
                 .build();
     }
+
+        @PutMapping("/{id}/location/geocode")
+        @PreAuthorize("hasRole('TMS_ADMIN')")
+        public ApiResponse<PostOfficeResponse> updatePostOfficeLocationByGeocode(@PathVariable Long id) {
+                return ApiResponse.<PostOfficeResponse>builder()
+                                .message(messageService.getMessage("success.post_offices.geocode.single"))
+                                .result(postOfficeService.updatePostOfficeLocationByGeocode(id))
+                                .build();
+        }
+
+        @PutMapping("/location/geocode-null")
+        @PreAuthorize("hasRole('TMS_ADMIN')")
+        public ApiResponse<PostOfficeGeocodeBatchResponse> updateNullLocationsByGeocode(
+                        @RequestParam(defaultValue = "50") int batch
+        ) {
+                return ApiResponse.<PostOfficeGeocodeBatchResponse>builder()
+                                .message(messageService.getMessage("success.post_offices.geocode.batch"))
+                                .result(postOfficeService.updatePostOfficesWithNullLocationByGeocode(batch))
+                                .build();
+        }
 }

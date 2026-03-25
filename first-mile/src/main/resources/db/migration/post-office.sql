@@ -6,6 +6,10 @@ CREATE TABLE post_offices (
                               ward_code VARCHAR(255) NOT NULL,
                               address_detail TEXT NOT NULL,
                               phone_number VARCHAR(15),
+                              operational_start_date DATE,
+                              operational_end_date DATE,
+                              working_start_time TIME,
+                              working_end_time TIME,
 
     -- Dữ liệu địa lý (Vĩ độ, Kinh độ)
                               location GEOGRAPHY(Point, 4326),
@@ -24,9 +28,14 @@ CREATE TABLE post_offices (
     -- Auditing fields
                               created_at TIMESTAMP WITHOUT TIME ZONE,
                               updated_at TIMESTAMP WITHOUT TIME ZONE,
+                              created_by VARCHAR(255),
+                              updated_by VARCHAR(255),
 
     -- Multi-tenancy
                               tenant_id BIGINT
+
+    -- manager_id BIGINT,
+                              manager_id BIGINT
 );
 
 -- Tạo Index cho location để tìm kiếm không gian nhanh hơn
