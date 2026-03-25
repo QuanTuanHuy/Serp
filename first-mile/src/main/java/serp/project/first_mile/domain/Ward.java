@@ -9,7 +9,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
 
+@Setter
+@Getter
 @Entity
 @Table(name = "wards")
 public class Ward {
@@ -30,43 +34,4 @@ public class Ward {
 	@JoinColumn(name = "province_code", referencedColumnName = "province_code", nullable = false, insertable = false, updatable = false)
 	private Province province;
 
-	public Long getId() {
-		return id;
-	}
-
-	public void setId(Long id) {
-		this.id = id;
-	}
-
-	public String getWardCode() {
-		return wardCode;
-	}
-
-	public void setWardCode(String wardCode) {
-		this.wardCode = wardCode;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
-	}
-
-	public String getProvinceCode() {
-		return provinceCode;
-	}
-
-	public void setProvinceCode(String provinceCode) {
-		this.provinceCode = provinceCode;
-	}
-
-	public Province getProvince() {
-		return province;
-	}
-
-	public void setProvince(Province province) {
-		this.province = province;
-	}
 }
