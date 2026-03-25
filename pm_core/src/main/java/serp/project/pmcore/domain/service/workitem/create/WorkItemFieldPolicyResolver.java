@@ -5,6 +5,7 @@
 
 package serp.project.pmcore.domain.service.workitem.create;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import serp.project.pmcore.domain.constant.WorkItemFieldConstants;
 import serp.project.pmcore.domain.dto.workitem.create.CreateFieldRules;
@@ -42,6 +43,7 @@ import java.util.Locale;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class WorkItemFieldPolicyResolver {
 
     private final IFieldConfigSchemePort fieldConfigSchemePort;
@@ -55,30 +57,6 @@ public class WorkItemFieldPolicyResolver {
     private final IScreenPort screenPort;
     private final IScreenTabPort screenTabPort;
     private final IScreenTabFieldPort screenTabFieldPort;
-
-    public WorkItemFieldPolicyResolver(IFieldConfigSchemePort fieldConfigSchemePort,
-                                       IFieldConfigSchemeItemPort fieldConfigSchemeItemPort,
-                                       IFieldConfigPort fieldConfigPort,
-                                       IFieldConfigItemPort fieldConfigItemPort,
-                                       IIssueTypeScreenSchemePort issueTypeScreenSchemePort,
-                                       IIssueTypeScreenSchemeItemPort issueTypeScreenSchemeItemPort,
-                                       IScreenSchemePort screenSchemePort,
-                                       IScreenSchemeItemPort screenSchemeItemPort,
-                                       IScreenPort screenPort,
-                                       IScreenTabPort screenTabPort,
-                                       IScreenTabFieldPort screenTabFieldPort) {
-        this.fieldConfigSchemePort = fieldConfigSchemePort;
-        this.fieldConfigSchemeItemPort = fieldConfigSchemeItemPort;
-        this.fieldConfigPort = fieldConfigPort;
-        this.fieldConfigItemPort = fieldConfigItemPort;
-        this.issueTypeScreenSchemePort = issueTypeScreenSchemePort;
-        this.issueTypeScreenSchemeItemPort = issueTypeScreenSchemeItemPort;
-        this.screenSchemePort = screenSchemePort;
-        this.screenSchemeItemPort = screenSchemeItemPort;
-        this.screenPort = screenPort;
-        this.screenTabPort = screenTabPort;
-        this.screenTabFieldPort = screenTabFieldPort;
-    }
 
     public CreateFieldRules resolveCreateFieldRules(ProjectEntity project, Long issueTypeId, Long tenantId) {
         Long fieldConfigId = resolveFieldConfigId(project, issueTypeId, tenantId);

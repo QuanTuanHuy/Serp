@@ -75,6 +75,8 @@ import serp.project.pmcore.domain.service.IOutboxEventService;
 import serp.project.pmcore.domain.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.service.IProjectService;
 import serp.project.pmcore.domain.service.IWorkItemService;
+import serp.project.pmcore.domain.service.workitem.create.WorkItemCreateAuthorizationService;
+import serp.project.pmcore.domain.service.workitem.create.WorkItemCreateConfigurationResolver;
 import serp.project.pmcore.domain.service.workitem.create.WorkItemFieldPolicyResolver;
 import serp.project.pmcore.domain.service.workitem.create.WorkItemFieldWriteValidator;
 import serp.project.pmcore.kernel.utils.JsonUtils;
@@ -190,6 +192,20 @@ class CreateWorkItemCommandTest {
                 createWorkItemValidator,
                 projectService,
                 workItemService,
+                new WorkItemCreateConfigurationResolver(
+                        issueTypePort,
+                        issueTypeSchemeItemPort,
+                        workflowSchemePort,
+                        workflowSchemeItemPort,
+                        workflowPort,
+                        workflowVersionPort,
+                        workflowStepPort,
+                        prioritySchemePort,
+                        prioritySchemeItemPort,
+                        issueSecuritySchemePort,
+                        issueSecurityLevelPort
+                ),
+                new WorkItemCreateAuthorizationService(projectPermissionEvaluationService),
                 new WorkItemFieldPolicyResolver(
                         fieldConfigSchemePort,
                         fieldConfigSchemeItemPort,
@@ -204,18 +220,6 @@ class CreateWorkItemCommandTest {
                         screenTabFieldPort
                 ),
                 new WorkItemFieldWriteValidator(),
-                projectPermissionEvaluationService,
-                issueTypePort,
-                issueTypeSchemeItemPort,
-                workflowSchemePort,
-                workflowSchemeItemPort,
-                workflowPort,
-                workflowVersionPort,
-                workflowStepPort,
-                prioritySchemePort,
-                prioritySchemeItemPort,
-                issueSecuritySchemePort,
-                issueSecurityLevelPort,
                 customFieldPort,
                 customFieldContextPort,
                 customFieldOptionPort,
