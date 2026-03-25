@@ -28,6 +28,7 @@ import serp.project.pmcore.domain.entity.project.ProjectEntity;
 import serp.project.pmcore.domain.entity.workflow.WorkflowEntity;
 import serp.project.pmcore.domain.entity.workflow.WorkflowStepEntity;
 import serp.project.pmcore.domain.entity.workflow.WorkflowVersionEntity;
+import serp.project.pmcore.domain.entity.workitem.IssueTypeEntity;
 import serp.project.pmcore.domain.entity.workitem.WorkItemEntity;
 import serp.project.pmcore.domain.enums.OutboxEventStatus;
 import serp.project.pmcore.domain.exception.BusinessRuleViolationException;
@@ -96,11 +97,12 @@ public class CreateWorkItemCommand {
         projectPermissionEvaluationService.checkPermission(project, actorContext, ProjectPermissionKeys.BROWSE_PROJECTS);
         projectPermissionEvaluationService.checkPermission(project, actorContext, ProjectPermissionKeys.CREATE_ISSUES);
 
-        issueTypePort.getIssueTypeById(request.getIssueTypeId(), tenantId)
+        IssueTypeEntity issueType = issueTypePort.getIssueTypeById(request.getIssueTypeId(), tenantId)
                 .orElseThrow(() -> ResourceNotFoundException.issueType(request.getIssueTypeId()));
-        validateIssueTypeInProjectScheme(project, request.getIssueTypeId(), tenantId);
+        validateIssueTypeInProjectScheme(project, issueType.getId(), tenantId);
+        validateParentRequirement(issueType, request.getParentId());
 
-        WorkflowStepEntity initialStep = resolveInitialWorkflowStep(project, request.getIssueTypeId(), tenantId);
+        WorkflowStepEntity initialStep = resolveInitialWorkflowStep(project, issueType.getId(), tenantId);
         Long priorityId = resolvePriorityId(project, request.getPriorityId(), tenantId);
 
         if (request.getDueDate() != null) {
@@ -111,7 +113,7 @@ public class CreateWorkItemCommand {
         Long securityLevelId = resolveSecurityLevelId(project, request.getSecurityLevelId(), actorContext, tenantId);
 
         if (request.getParentId() != null) {
-            workItemService.validateParentHierarchy(request.getParentId(), request.getIssueTypeId(), projectId, tenantId);
+            workItemService.validateParentHierarchy(request.getParentId(), issueType.getId(), projectId, tenantId);
         }
 
         long issueNo = workItemService.getNextIssueNumber(projectId, tenantId);
@@ -175,6 +177,30 @@ public class CreateWorkItemCommand {
             throw new BusinessRuleViolationException(
                     DomainErrorCode.ISSUE_TYPE_NOT_IN_SCHEME,
                     "Issue type is not allowed in project scheme: projectId=" + project.getId() + ", issueTypeId=" + issueTypeId
+            );
+        }
+    }
+
+    private void validateParentRequirement(IssueTypeEntity issueType, Long parentId) {
+        if (issueType.getHierarchyLevel() == null) {
+            throw new DomainValidationException(
+                    DomainErrorCode.INVALID_PARENT_HIERARCHY,
+                    "Issue type hierarchy level is missing: issueTypeId=" + issueType.getId()
+            );
+        }
+
+        if (issueType.getHierarchyLevel() == 0 && parentId == null) {
+            throw new BusinessRuleViolationException(
+                    DomainErrorCode.INVALID_PARENT_HIERARCHY,
+                    "Subtask issue type requires parent_id: issueTypeId=" + issueType.getId()
+            );
+        }
+
+        if (issueType.getHierarchyLevel() >= 2 && parentId != null) {
+            throw new BusinessRuleViolationException(
+                    DomainErrorCode.INVALID_PARENT_HIERARCHY,
+                    "Issue types with hierarchy level >= 2 cannot set parent_id: issueTypeId=" + issueType.getId()
+                            + ", hierarchyLevel=" + issueType.getHierarchyLevel()
             );
         }
     }
