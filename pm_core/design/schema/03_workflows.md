@@ -1,8 +1,8 @@
 # Module 03: Workflow Engine (Process Management)
 
-**Design Philosophy:** Workflow behavior is modeled relationally for validation, queryability, and Jira-like lifecycle control. Workflow roots are reusable, workflow versions capture draft/publish history, and workflow steps remain distinct from statuses so migration and transition semantics stay explicit.
+**Design Philosophy:** Workflow behavior is modeled relationally for validation, queryability, and Jira-like lifecycle control. Workflow roots and workflow schemes are reusable, workflow versions capture draft/publish history, and workflow steps remain distinct from statuses so migration and transition semantics stay explicit.
 
-Provisioning note: workflow schemes are shared across projects by default (Jira company-managed parity). Clone-on-associate remains optional for isolated project copies (see Module 00).
+Provisioning note: statuses and status categories remain reusable tenant dictionaries, while template-based company-managed provisioning may materialize a project-scoped effective workflow family unless an admin explicitly chooses shared configuration from an existing project (see Module 00).
 
 ## Shared Base Columns (applies to all tables in this module)
 
@@ -12,6 +12,8 @@ Provisioning note: workflow schemes are shared across projects by default (Jira 
 - `deleted_at TIMESTAMP NULL`
 
 ## 3.1. `status_categories`
+
+Reusable status-category dictionary shared by workflows in the same tenant.
 
 | Column | Type | Description |
 |---|---|---|
@@ -24,6 +26,8 @@ Provisioning note: workflow schemes are shared across projects by default (Jira 
 | created_at, updated_at, created_by, updated_by, deleted_at | TIMESTAMP/BIGINT | Base audit columns |
 
 ## 3.2. `statuses`
+
+Reusable status dictionary. Renaming or recategorizing a status can affect every workflow and project that references it.
 
 | Column | Type | Description |
 |---|---|---|

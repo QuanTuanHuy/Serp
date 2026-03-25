@@ -1,33 +1,70 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
 package serp.project.pmcore.application.command.project;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.command.project.validator.CreateProjectValidator;
+import serp.project.pmcore.domain.constant.PermissionSeedConstants;
+import serp.project.pmcore.domain.dto.project.ProjectProvisioningRequest;
+import serp.project.pmcore.domain.dto.project.ProjectProvisioningResult;
 import serp.project.pmcore.domain.dto.request.project.CreateProjectRequest;
 import serp.project.pmcore.domain.dto.response.project.ProjectResponse;
 import serp.project.pmcore.domain.entity.project.ProjectEntity;
+import serp.project.pmcore.domain.entity.project.ProjectRoleEntity;
+import serp.project.pmcore.domain.entity.project.ProjectSchemeBindings;
+import serp.project.pmcore.domain.enums.ProvisioningMode;
+import serp.project.pmcore.domain.enums.ProjectRoleActorSubjectType;
+import serp.project.pmcore.domain.exception.DomainErrorCode;
+import serp.project.pmcore.domain.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.service.IProjectService;
+import serp.project.pmcore.domain.service.IProjectRoleActorService;
+import serp.project.pmcore.domain.service.IProjectRoleService;
 import serp.project.pmcore.domain.service.ISchemeProvisioningService;
-import serp.project.pmcore.domain.validator.WorkflowSchemeCompatibilityValidator;
-
-import java.util.HashMap;
-import java.util.Map;
+import serp.project.pmcore.domain.validator.ProjectSchemeCompatibilityValidator;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class CreateProjectCommand {
     private final CreateProjectValidator projectValidator;
-    private final WorkflowSchemeCompatibilityValidator workflowSchemeCompatibilityValidator;
-
     private final IProjectService projectService;
+    private final IProjectRoleService projectRoleService;
+    private final IProjectRoleActorService projectRoleActorService;
     private final ISchemeProvisioningService schemeProvisioningService;
+    private final ProjectSchemeCompatibilityValidator projectSchemeCompatibilityValidator;
 
-    public ProjectResponse execute(CreateProjectRequest request, Long userId, Long tenantId) {
+    @Transactional(rollbackFor = Exception.class)
+    public ProjectResponse execute(CreateProjectRequest request, Long tenantId, Long userId) {
         projectValidator.validate(request, tenantId);
 
-        ProjectEntity project = ProjectEntity.builder()
+        ProjectSchemeBindings schemeBindings = ProjectSchemeBindings.fromRequest(request);
+        log.info("Creating project key={} tenantId={} schemeBindings={}",
+                request.getKey(), tenantId, schemeBindings.toSchemeMap());
+
+        ProjectEntity shellProject = buildProjectEntity(request);
+        ProjectEntity savedProject = projectService.createProject(shellProject, tenantId, userId);
+        ProjectProvisioningResult provisioningResult = schemeProvisioningService.provisionProjectSchemes(
+                savedProject,
+                buildProvisioningRequest(request, savedProject, tenantId, userId, schemeBindings)
+        );
+        provisioningResult.applyEffectiveBindings(savedProject);
+        projectSchemeCompatibilityValidator.validate(savedProject, tenantId);
+        ProjectEntity finalProject = projectService.saveProject(savedProject, userId);
+        assignLeadToAdministratorsRole(finalProject, userId);
+
+        log.info("Created project id={} key={} tenantId={}",
+                finalProject.getId(), finalProject.getKey(), tenantId);
+        return ProjectResponse.from(finalProject);
+    }
+
+    private ProjectEntity buildProjectEntity(CreateProjectRequest request) {
+        return ProjectEntity.builder()
                 .key(request.getKey())
                 .name(request.getName())
                 .description(request.getDescription())
@@ -37,75 +74,42 @@ public class CreateProjectCommand {
                 .categoryId(request.getCategoryId())
                 .projectTypeKey(request.getProjectTypeKey())
                 .build();
-        ProjectEntity saved = projectService.createProject(project, tenantId, userId);
-
-        Map<String, Long> schemeOverrides = buildSchemeOverrides(request);
-        schemeProvisioningService.provisionSchemes(
-                project,
-                tenantId,
-                userId,
-                request.getBlueprintId(),
-                schemeOverrides,
-                request.getAssociationMode());
-        ProjectEntity finalProject = projectService.saveProject(saved, userId);
-
-        return toResponse(finalProject);
     }
 
-    private Map<String, Long> buildSchemeOverrides(CreateProjectRequest request) {
-        Map<String, Long> overrides = new HashMap<>();
-        if (request.getIssueTypeSchemeId() != null) {
-            overrides.put("ISSUE_TYPE", request.getIssueTypeSchemeId());
-        }
-        if (request.getPrioritySchemeId() != null) {
-            overrides.put("PRIORITY", request.getPrioritySchemeId());
-        }
-        if (request.getWorkflowSchemeId() != null) {
-            overrides.put("WORKFLOW", request.getWorkflowSchemeId());
-        }
-        if (request.getFieldConfigSchemeId() != null) {
-            overrides.put("FIELD_CONFIG", request.getFieldConfigSchemeId());
-        }
-        if (request.getIssueTypeScreenSchemeId() != null) {
-            overrides.put("SCREEN", request.getIssueTypeScreenSchemeId());
-        }
-        if (request.getPermissionSchemeId() != null) {
-            overrides.put("PERMISSION", request.getPermissionSchemeId());
-        }
-        if (request.getNotificationSchemeId() != null) {
-            overrides.put("NOTIFICATION", request.getNotificationSchemeId());
-        }
-        if (request.getIssueSecuritySchemeId() != null) {
-            overrides.put("ISSUE_SECURITY", request.getIssueSecuritySchemeId());
-        }
-        return overrides;
-    }
-
-    private ProjectResponse toResponse(ProjectEntity entity) {
-        return ProjectResponse.builder()
-                .id(entity.getId())
-                .key(entity.getKey())
-                .name(entity.getName())
-                .description(entity.getDescription())
-                .url(entity.getUrl())
-                .leadUserId(entity.getLeadUserId())
-                .avatarId(entity.getAvatarId())
-                .categoryId(entity.getCategoryId())
-                .projectTypeKey(entity.getProjectTypeKey())
-                .isArchived(entity.getIsArchived())
-                .archivedAt(entity.getArchivedAt())
-                .issueTypeSchemeId(entity.getIssueTypeSchemeId())
-                .workflowSchemeId(entity.getWorkflowSchemeId())
-                .fieldConfigSchemeId(entity.getFieldConfigSchemeId())
-                .issueTypeScreenSchemeId(entity.getIssueTypeScreenSchemeId())
-                .permissionSchemeId(entity.getPermissionSchemeId())
-                .notificationSchemeId(entity.getNotificationSchemeId())
-                .prioritySchemeId(entity.getPrioritySchemeId())
-                .issueSecuritySchemeId(entity.getIssueSecuritySchemeId())
-                .createdAt(entity.getCreatedAt())
-                .createdBy(entity.getCreatedBy())
-                .updatedAt(entity.getUpdatedAt())
-                .updatedBy(entity.getUpdatedBy())
+    private ProjectProvisioningRequest buildProvisioningRequest(CreateProjectRequest request,
+                                                               ProjectEntity project,
+                                                               Long tenantId,
+                                                               Long userId,
+                                                               ProjectSchemeBindings schemeBindings) {
+        return ProjectProvisioningRequest.builder()
+                .tenantId(tenantId)
+                .userId(userId)
+                .projectId(project.getId())
+                .projectKey(project.getKey())
+                .blueprintId(request.getBlueprintId())
+                .provisioningMode(request.getProvisioningMode() == null
+                        ? ProvisioningMode.TEMPLATE_DEFAULT
+                        : request.getProvisioningMode())
+                .requestedSchemeBindings(schemeBindings)
                 .build();
+    }
+
+    private void assignLeadToAdministratorsRole(ProjectEntity project, Long userId) {
+        Long administratorsRoleId = projectRoleService
+                .getProjectRoleByNameIncludingSystem(PermissionSeedConstants.PROJECT_ROLE_ADMINISTRATORS, project.getTenantId())
+                .map(ProjectRoleEntity::getId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        DomainErrorCode.ROLE_NOT_FOUND,
+                        "Default project role not found: name=" + PermissionSeedConstants.PROJECT_ROLE_ADMINISTRATORS
+                ));
+
+        projectRoleActorService.assignActorIfAbsent(
+                project.getTenantId(),
+                project.getId(),
+                administratorsRoleId,
+                ProjectRoleActorSubjectType.USER.name(),
+                String.valueOf(project.getLeadUserId()),
+                userId
+        );
     }
 }

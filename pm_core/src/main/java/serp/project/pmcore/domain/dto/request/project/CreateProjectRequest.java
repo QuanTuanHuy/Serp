@@ -13,6 +13,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.pmcore.domain.enums.ProvisioningMode;
 
 @Data
 @Builder
@@ -33,8 +34,8 @@ public class CreateProjectRequest {
     private String description;
 
     @NotBlank(message = "Project type key is required")
-    @Pattern(regexp = "^(software|business|service_desk)$",
-            message = "Project type must be one of: software, business, service_desk")
+    @Pattern(regexp = "^(software|business)$",
+            message = "Project type must be one of: software, business")
     private String projectTypeKey;
 
     @NotNull(message = "Lead user ID is required")
@@ -45,7 +46,7 @@ public class CreateProjectRequest {
     private String url;
     private Long avatarId;
 
-    // Explicit scheme overrides (optional — if not provided, resolved from blueprint/system defaults)
+    // Optional explicit source scheme IDs. These override blueprint/default resolution when provided.
     private Long issueTypeSchemeId;
     private Long workflowSchemeId;
     private Long fieldConfigSchemeId;
@@ -55,9 +56,5 @@ public class CreateProjectRequest {
     private Long prioritySchemeId;
     private Long issueSecuritySchemeId;
 
-    @Pattern(
-            regexp = "^(SHARED_ASSOCIATION|CLONE_ON_ASSOCIATE)?$",
-            message = "associationMode must be SHARED_ASSOCIATION or CLONE_ON_ASSOCIATE"
-    )
-    private String associationMode;
+    private ProvisioningMode provisioningMode;
 }

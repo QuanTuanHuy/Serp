@@ -22,4 +22,16 @@ public abstract class BaseEntity {
     private Long createdBy;
     private Long updatedAt;
     private Long updatedBy;
+
+    public void applyCreate(Long createdBy, Long createdAt) {
+        this.createdBy = createdBy;
+        this.createdAt = createdAt;
+        this.updatedAt = createdAt;
+        this.updatedBy = createdBy;
+    }
+
+    public void applyUpdate(Long updatedBy, Long updatedAt) {
+        this.updatedBy = updatedBy;
+        this.updatedAt = updatedAt;
+    }
 }

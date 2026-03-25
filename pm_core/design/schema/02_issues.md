@@ -1,8 +1,8 @@
 # Module 02: Issues & Work Items (Data Structure)
 
-**Design Philosophy:** Work items remain the central entity, but Jira-parity behavior is preserved by separating workflow step from status, keeping scheme-driven catalogs reusable, and storing resolved field-context information alongside typed custom-field values.
+**Design Philosophy:** Work items remain the central entity, but Jira-parity behavior is preserved by separating workflow step from status, keeping reusable dictionaries distinct from scheme bindings, and storing resolved field-context information alongside typed custom-field values.
 
-Provisioning note: scheme roots in this module are reusable scheme entities. Projects associate to them by default (shared mode), with optional clone-on-associate for isolation (see Module 00).
+Provisioning note: `issue_types` and `priorities` are reusable tenant dictionaries. Projects gain access to them through `issue_type_schemes` and `priority_schemes`. Template-based provisioning may materialize project-scoped issue type schemes, while priority schemes commonly stay shared tenant defaults unless explicitly replaced (see Module 00).
 
 ## Shared Base Columns (applies to all tables in this module)
 
@@ -78,6 +78,8 @@ Support moving issues across sprints while preserving historical timeline. Order
 
 ## 2.5. `issue_types` (Issue type dictionary)
 
+Reusable work type dictionary for the tenant. Projects/schemes reference these rows; they are not normally cloned per project.
+
 | Column | Type | Description |
 |---|---|---|
 | id | BIGINT | PK |
@@ -114,6 +116,8 @@ Support moving issues across sprints while preserving historical timeline. Order
 
 ## 2.8. `priorities`
 
+Reusable priority dictionary for the tenant. Priority schemes choose which subset/order is available in each project.
+
 | Column | Type | Description |
 |---|---|---|
 | id | BIGINT | PK |
@@ -128,7 +132,7 @@ Support moving issues across sprints while preserving historical timeline. Order
 
 ## 2.9. `priority_schemes`
 
-Added to resolve missing FK target from `projects.priority_scheme_id`.
+Reusable scheme that associates a subset of tenant priorities with one or more projects.
 
 | Column | Type | Description |
 |---|---|---|

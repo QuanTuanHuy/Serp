@@ -2,7 +2,7 @@
 
 **Design Philosophy:** Match Jira company-managed behavior by separating globally defined custom fields from context-scoped applicability, defaults, and options. Screen schemes cover only CREATE/EDIT/VIEW operations; transition screens remain attached directly to workflow transitions.
 
-Provisioning note: field/screen schemes are associated in shared mode by default, with optional clone-on-associate isolation for project-specific customization (see Module 00).
+Provisioning note: custom fields remain globally reusable, but template-based company-managed provisioning may materialize project-scoped field configuration and screen families. Shared reuse of these schemes is explicit, not a blanket default for every project (see Module 00).
 
 ## Shared Base Columns (applies to all mutable tables in this module)
 

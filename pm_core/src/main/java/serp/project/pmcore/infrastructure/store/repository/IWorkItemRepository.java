@@ -22,6 +22,8 @@ public interface IWorkItemRepository extends JpaRepository<WorkItemModel, Long> 
 
     List<WorkItemModel> findAllByTenantIdAndIssueTypeId(Long tenantId, Long issueId);
 
+    Optional<WorkItemModel> findFirstByTenantIdAndProjectIdOrderByRankDescIdDesc(Long tenantId, Long projectId);
+
     @Modifying
     @Query("UPDATE WorkItemModel w SET w.deletedAt = CURRENT_TIMESTAMP WHERE w.id = :id AND w.tenantId = :tenantId AND w.deletedAt IS NULL")
     void deleteByIdAndTenantId(Long id, Long tenantId);

@@ -6,6 +6,7 @@
 package serp.project.pmcore.infrastructure.store.mapper;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 
@@ -19,5 +20,15 @@ public abstract class BaseMapper {
     protected LocalDateTime longToLocalDateTime(Long timestamp) {
         if (timestamp == null) { return null; }
         return LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.systemDefault());
+    }
+
+    protected Long localDateToLong(LocalDate localDate) {
+        if (localDate == null) { return null; }
+        return localDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
+    }
+
+    protected LocalDate longToLocalDate(Long timestamp) {
+        if (timestamp == null) { return null; }
+        return Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDate();
     }
 }

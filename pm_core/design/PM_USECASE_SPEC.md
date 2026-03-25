@@ -1,7 +1,7 @@
 # PM Core - Use Case Specification
 
-> **Version**: 1.0
-> **Date**: 2026-02-20
+> **Version**: 1.1
+> **Date**: 2026-03-19
 > **Module Code**: PM
 > **Tech Stack**: Java 21 (Spring Boot) + PostgreSQL + Kafka
 > **Soft Delete**: `deleted_at TIMESTAMP NULL`
@@ -17,7 +17,7 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 ### Scope
 
 **In Scope (Phase 1+2)**:
-- **Module 00**: Project Provisioning & Scheme Association (shared association by default, optional clone-on-associate, compatibility-safe rebinding)
+- **Module 00**: Project Provisioning & Scheme Materialization (template-default provisioning, opt-in shared configuration, compatibility-safe rebinding)
 - **Module 01**: Projects & Configuration (projects, categories, blueprints, components, versions, roles)
 - **Module 02**: Issues & Work Items (work items, issue types, priorities, resolutions, links, worklogs, custom field values)
 - **Module 03**: Workflow Engine (statuses, workflows, transitions, rules, workflow schemes)
@@ -33,9 +33,19 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 ### Terminology & Parity Profile
 
 - Canonical runtime term in PM Core is `Work Item`; this is equivalent to Jira `Issue`.
-- Jira parity target for company-managed projects is `shared scheme association` by default.
-- `Clone-on-associate` remains optional for tenant-specific isolation requirements.
-- Any shared scheme update must be treated as multi-project impact and validated before apply.
+- Jira parity target for company-managed projects is family-specific provisioning: `TEMPLATE_DEFAULT` is the default create path, while `SHARED_FROM_EXISTING` is explicit opt-in.
+- Reusable global entities (`issue_types`, `statuses`, `status_categories`, `priorities`, `custom_fields`) remain shared references rather than project-cloned data.
+- Project isolation normally happens at the scheme/context layer; `CLONE_FROM_SHARED` is an explicit rebinding path when local copies are required.
+- Any shared scheme update or reusable global-entity update must be treated as multi-project impact and validated before apply.
+
+### Authorization Model (Jira-aligned)
+
+- PM Core uses a layered authorization model: tenant-scoped administration uses platform RBAC outside Jira project permission schemes, while project-scoped runtime actions use Jira-style project permissions evaluated from the project's bound `permission_scheme_id`.
+- The canonical project permission catalog follows Jira semantics and keys such as `BROWSE_PROJECTS`, `CREATE_ISSUES`, `EDIT_ISSUES`, `ASSIGN_ISSUES`, `ASSIGNABLE_USER`, `TRANSITION_ISSUES`, `DELETE_ISSUES`, `LINK_ISSUES`, `WORK_ON_ISSUES`, `SCHEDULE_ISSUES`, `SET_ISSUE_SECURITY`, `MOVE_ISSUES`, and `ADMINISTER_PROJECTS`.
+- Permission evaluation is grant-only. Grants are resolved from `permission_scheme_entries` against `PROJECT_ROLE`, `GROUP`, `USER`, and contextual actors such as `PROJECT_LEAD`, `REPORTER`, and `ASSIGNEE`.
+- `PROJECT_ROLE` grants and issue-security memberships are resolved through `project_role_actors` within the target project.
+- Work item read access requires `BROWSE_PROJECTS`; if `security_level_id` is set, issue-security membership is evaluated in addition to `BROWSE_PROJECTS`.
+- Legacy `PM.*` permission strings that still appear in older use cases should be treated as placeholders pending migration. For project-scoped runtime behavior, the Jira-style permission catalog defined here is canonical.
 
 ### Integration Points
 
@@ -53,10 +63,10 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 
 | Actor | Type | Description | Key Permissions |
 |-------|------|-------------|-----------------|
-| PM Admin | Primary | Configures global schemes, workflows, fields, permissions, issue types, priorities, resolutions | `PM.PROJECT.ADMIN`, `PM.WORKFLOW.MANAGE`, `PM.FIELD.MANAGE`, `PM.PERMISSION.READ`, `PM.PERMISSION_SCHEME.MANAGE` |
-| Project Lead | Primary | Creates/manages projects, assigns roles, manages components and versions | `PM.PROJECT.CREATE`, `PM.PROJECT.UPDATE`, `PM.COMPONENT.MANAGE`, `PM.VERSION.MANAGE` |
-| Team Member | Primary | Creates/updates work items, logs work, transitions statuses, manages links | `PM.WORK_ITEM.CREATE`, `PM.WORK_ITEM.UPDATE`, `PM.WORK_ITEM.TRANSITION`, `PM.WORKLOG.MANAGE` |
-| Viewer | Secondary | Read-only access to projects, work items, and configurations | `PM.PROJECT.READ`, `PM.WORK_ITEM.READ` |
+| PM Admin | Primary | Tenant-scoped PM administrator who configures global schemes, workflows, fields, permissions, issue types, priorities, and resolutions | Platform tenant-admin RBAC outside project permission schemes; `ADMINISTER_PROJECTS` where a project-scoped admin action is performed |
+| Project Lead | Primary | Project-level administrator who manages projects, role actors, components, and versions | `BROWSE_PROJECTS`, `ADMINISTER_PROJECTS` |
+| Team Member | Primary | Project user who creates and collaborates on work items | `BROWSE_PROJECTS`, `CREATE_ISSUES`, `EDIT_ISSUES`, `TRANSITION_ISSUES`, `LINK_ISSUES`, `WORK_ON_ISSUES` |
+| Viewer | Secondary | Read-only project user | `BROWSE_PROJECTS` |
 | System (Kafka) | System | Handles async events from other services, triggers automation | N/A |
 
 ---
@@ -110,7 +120,7 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 
 | UC ID | Name | Actor | Priority | Complexity | Entity |
 |-------|------|-------|----------|------------|--------|
-| UC-PM-101 | Create Work Item | Team Member | High | Complex | Work Item |
+| UC-PM-101 | [Create Work Item](usecases/workitem/UC-PM-101-create-work-item.md) | Authenticated Project User | High | Complex | Work Item |
 | UC-PM-102 | Update Work Item | Team Member | High | Medium | Work Item |
 | UC-PM-103 | Get Work Item by ID | Team Member | High | Simple | Work Item |
 | UC-PM-104 | List Work Items with Filters | Team Member | High | Medium | Work Item |
@@ -380,14 +390,14 @@ Only one active version per workflow. Publishing increments `version_no` and swa
 | **Use Case ID** | UC-PM-001 |
 | **Use Case Name** | Create Project |
 | **Module** | PM Core |
-| **Version** | 1.0 |
-| **Last Updated** | 2026-02-20 |
+| **Version** | 1.1 |
+| **Last Updated** | 2026-03-19 |
 | **Priority** | High |
 | **Complexity** | Complex |
 
 ##### Description
 
-Allow a Project Lead to create a new project, optionally based on a blueprint template. The project is the central container that binds multiple configuration schemes (issue types, workflows, fields, screens, permissions, notifications, priorities). Creating a project resolves scheme bindings from explicit overrides, blueprint defaults, or system defaults, then associates them directly by default (with optional clone-on-associate mode when isolation is required).
+Allow a Project Lead to create a new project, optionally based on a blueprint template. The project is the central container that binds multiple configuration scheme families (issue types, workflows, fields, screens, permissions, notifications, priorities). Creating a project resolves effective scheme bindings from explicit overrides, blueprint defaults, or tenant defaults. In the default `TEMPLATE_DEFAULT` path, the system materializes project-scoped scheme rows for families such as issue type/workflow/field/screen and reuses shared tenant defaults for families such as priority/notification unless overridden. `SHARED_FROM_EXISTING` is an explicit opt-in path when the requester wants to reuse an existing shared configuration.
 
 ##### Actors
 
@@ -395,7 +405,7 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 |-------|------|-------------|
 | Project Lead | Primary | Initiates project creation |
 | PM Admin | Secondary | May also create projects |
-| System | System | Resolves scheme defaults, validates compatibility, optionally clones on demand, publishes event |
+| System | System | Resolves provisioning path per scheme family, materializes project-scoped copies where required, reuses shared tenant schemes where appropriate, validates compatibility, publishes event |
 
 ##### Preconditions
 
@@ -407,7 +417,7 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 
 ###### Success Postconditions
 1. Project record persisted in `projects` table with `deleted_at=NULL`
-2. Scheme bindings resolved and associated to the project; optional clone-on-associate applied if requested
+2. Effective scheme bindings resolved and persisted; some families may point to project-scoped materialized copies while reusable global entities remain shared references
 3. Kafka event `PROJECT_CREATED` published to topic `serp.pm.project.events`
 4. Audit fields set: `created_at`, `updated_at`, `created_by`, `updated_by`
 
@@ -429,7 +439,7 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 | 8 | System | If `project_category_id` provided, validates it exists in tenant |
 | 9 | System | Begins database transaction |
 | 10 | System | Creates Project entity with `archived=false`, sets audit fields |
-| 11 | System | Resolves schemes (explicit override > blueprint default > system default), validates compatibility, and binds scheme IDs to the project (or cloned IDs if clone-on-associate is requested) |
+| 11 | System | Resolves the provisioning path (explicit override > blueprint default > tenant default), materializes project-scoped families where required, binds shared/default families where appropriate, validates cross-scheme compatibility, and writes effective scheme IDs to the project |
 | 12 | System | Commits transaction |
 | 13 | System | Publishes `PROJECT_CREATED` event to Kafka topic `serp.pm.project.events` |
 | 14 | System | Returns HTTP 201 with created project data including resolved scheme names |
@@ -445,8 +455,8 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 |------|-------------|--------|
 | 11.1 | System | Validates blueprint exists and belongs to tenant |
 | 11.2 | System | Loads all `blueprint_scheme_defaults` for the blueprint |
-| 11.3 | System | Resolves blueprint default scheme IDs and validates cross-scheme compatibility |
-| 11.4 | System | Associates scheme IDs to the new project (or cloned IDs if clone mode is enabled) |
+| 11.3 | System | Resolves blueprint defaults as provisioning sources and validates cross-scheme compatibility |
+| 11.4 | System | Applies the effective provisioning strategy per scheme family: materialize project-scoped copies where required and/or bind shared tenant schemes where appropriate |
 
 **Rejoins**: Main Flow Step 12
 
@@ -458,7 +468,20 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 | Step | Actor/System | Action |
 |------|-------------|--------|
 | 11.1 | System | Validates each provided scheme ID exists and belongs to tenant |
-| 11.2 | System | Uses provided scheme IDs as direct association targets by default (or clone sources if clone mode is enabled) |
+| 11.2 | System | Uses provided scheme IDs as provisioning sources or direct shared-binding targets depending on `provisioning_mode` and scheme family |
+
+**Rejoins**: Main Flow Step 12
+
+###### AF-3: Shared Configuration from Existing Project or Scheme
+
+**Branches from**: Main Flow Step 11
+**Condition**: Request sets `provisioning_mode=SHARED_FROM_EXISTING`
+
+| Step | Actor/System | Action |
+|------|-------------|--------|
+| 11.1 | System | Validates the referenced shared schemes (or shared source project configuration) are visible in tenant scope |
+| 11.2 | System | Reuses existing tenant-shared schemes as binding targets instead of materializing project-scoped copies |
+| 11.3 | System | If any selected source is system-owned (`tenant_id=0`), materializes one tenant-scoped shared copy before binding |
 
 **Rejoins**: Main Flow Step 12
 
@@ -508,11 +531,12 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 | BR-PM-001-01 | Project key must be unique within tenant (case-insensitive, uppercase) | Service layer + DB unique constraint `(tenant_id, key)` |
 | BR-PM-001-02 | Project key format: 2-10 uppercase alphanumeric characters | DTO validation |
 | BR-PM-001-03 | Project name is required, 1-255 characters | DTO validation |
-| BR-PM-001-04 | If no blueprint and no explicit schemes, use tenant system default schemes for association | Service layer |
+| BR-PM-001-04 | If no blueprint and no explicit schemes, resolve tenant default templates/shared schemes per family | Service layer |
 | BR-PM-001-05 | `project_type_key` must be one of: `software`, `business`, `service_desk` | DTO validation |
 | BR-PM-001-06 | New projects are always created with `archived=false` | Service layer |
-| BR-PM-001-07 | Project creation uses shared scheme association by default; clone-on-associate is optional for isolated configuration | Service layer |
-| BR-PM-001-08 | If resolved source scheme is system-owned (`tenant_id=0`), system must materialize/reuse tenant-shared copy before binding project | Service layer |
+| BR-PM-001-07 | Project creation uses `TEMPLATE_DEFAULT` by default; `SHARED_FROM_EXISTING` is explicit opt-in | Service layer |
+| BR-PM-001-08 | If a resolved source artifact is system-owned (`tenant_id=0`), the system must materialize a tenant-scoped shared copy or project-scoped family copy before binding the project | Service layer |
+| BR-PM-001-09 | Normal project provisioning must not clone reusable global entities (`issue_types`, `statuses`, `status_categories`, `priorities`, `custom_fields`); only scheme/context rows may be materialized or cloned | Service layer |
 
 ##### Data Requirements
 
@@ -527,16 +551,17 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 | lead_user_id | int64 | Yes | must exist in Account Service | Project lead user |
 | project_category_id | int64 | No | must exist in tenant | Category classification |
 | blueprint_id | int64 | No | must exist in tenant | Blueprint template |
+| provisioning_mode | string | No | `TEMPLATE_DEFAULT`, `SHARED_FROM_EXISTING` | Provisioning path for effective scheme bindings |
 | url | string | No | valid URL, max:255 | External project URL |
 | avatar_id | int64 | No | valid asset ID | Project avatar |
-| issue_type_scheme_id | int64 | No | must exist in tenant | Explicit override |
-| workflow_scheme_id | int64 | No | must exist in tenant | Explicit override |
-| field_config_scheme_id | int64 | No | must exist in tenant | Explicit override |
-| issue_type_screen_scheme_id | int64 | No | must exist in tenant | Explicit override |
-| permission_scheme_id | int64 | No | must exist in tenant | Explicit override |
-| notification_scheme_id | int64 | No | must exist in tenant | Explicit override |
-| priority_scheme_id | int64 | No | must exist in tenant | Explicit override |
-| issue_security_scheme_id | int64 | No | must exist in tenant | Explicit override |
+| issue_type_scheme_id | int64 | No | must exist in tenant | Explicit source override or shared binding candidate |
+| workflow_scheme_id | int64 | No | must exist in tenant | Explicit source override or shared binding candidate |
+| field_config_scheme_id | int64 | No | must exist in tenant | Explicit source override or shared binding candidate |
+| issue_type_screen_scheme_id | int64 | No | must exist in tenant | Explicit source override or shared binding candidate |
+| permission_scheme_id | int64 | No | must exist in tenant | Explicit source override or shared binding candidate |
+| notification_scheme_id | int64 | No | must exist in tenant | Explicit source override or shared binding candidate |
+| priority_scheme_id | int64 | No | must exist in tenant | Explicit source override or shared binding candidate |
+| issue_security_scheme_id | int64 | No | must exist in tenant | Explicit source override or shared binding candidate |
 
 ###### Output Data
 
@@ -550,14 +575,14 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 | lead_user_id | int64 | Project lead |
 | project_category_id | int64 | Category (nullable) |
 | archived | bool | Archive state (false) |
-| issue_type_scheme_id | int64 | Bound issue type scheme ID (shared by default, cloned if requested) |
-| workflow_scheme_id | int64 | Bound workflow scheme ID (shared by default, cloned if requested) |
-| field_config_scheme_id | int64 | Bound field config scheme ID (shared by default, cloned if requested) |
-| issue_type_screen_scheme_id | int64 | Bound issue type screen scheme ID (shared by default, cloned if requested) |
-| permission_scheme_id | int64 | Bound permission scheme ID (shared by default, cloned if requested) |
-| notification_scheme_id | int64 | Bound notification scheme ID (shared by default, cloned if requested) |
-| priority_scheme_id | int64 | Bound priority scheme ID (shared by default, cloned if requested) |
-| issue_security_scheme_id | int64 | Bound issue security scheme ID (shared by default, cloned if requested) |
+| issue_type_scheme_id | int64 | Effective issue type scheme ID (often a project-scoped materialized copy in `TEMPLATE_DEFAULT`) |
+| workflow_scheme_id | int64 | Effective workflow scheme ID (often a project-scoped materialized copy in `TEMPLATE_DEFAULT`) |
+| field_config_scheme_id | int64 | Effective field config scheme ID (often a project-scoped materialized copy in `TEMPLATE_DEFAULT`) |
+| issue_type_screen_scheme_id | int64 | Effective issue type screen scheme ID (often a project-scoped materialized copy in `TEMPLATE_DEFAULT`) |
+| permission_scheme_id | int64 | Effective permission scheme ID (shared or project-scoped depending on policy/override) |
+| notification_scheme_id | int64 | Effective notification scheme ID (commonly a tenant shared/default scheme) |
+| priority_scheme_id | int64 | Effective priority scheme ID (commonly a tenant shared/default scheme) |
+| issue_security_scheme_id | int64 | Effective issue security scheme ID (shared or project-scoped depending on policy/override) |
 | created_at | timestamp | Creation time |
 | created_by | int64 | Creator user ID |
 
@@ -927,14 +952,14 @@ Toggle the archive state of a project. Archived projects are visible but read-on
 | **Use Case ID** | UC-PM-007 |
 | **Use Case Name** | Update Project Scheme Bindings |
 | **Module** | PM Core |
-| **Version** | 1.0 |
-| **Last Updated** | 2026-02-20 |
+| **Version** | 1.1 |
+| **Last Updated** | 2026-03-19 |
 | **Priority** | Medium |
 | **Complexity** | Complex |
 
 ##### Description
 
-Update the scheme associations for a project (issue type scheme, workflow scheme, field config scheme, screen scheme, permission scheme, notification scheme, priority scheme, issue security scheme). By default, the system re-associates the project directly to the selected shared schemes. Clone-on-associate remains optional for tenants that require isolated scheme copies.
+Update the effective scheme bindings for a project (issue type scheme, workflow scheme, field config scheme, screen scheme, permission scheme, notification scheme, priority scheme, issue security scheme). Rebinding is family-specific: the system may point the project to shared reusable schemes, materialize project-scoped copies, or clone from an existing shared scheme when explicit isolation is requested. Rebinding must never clone reusable dictionaries such as issue types, statuses, priorities, or custom fields.
 
 ##### Actors
 
@@ -956,7 +981,7 @@ Update the scheme associations for a project (issue type scheme, workflow scheme
 | 2 | System | Validates JWT and permissions |
 | 3 | System | Fetches project, validates it exists and is not archived |
 | 4 | System | For each provided scheme ID, validates the target scheme exists and belongs to tenant |
-| 5 | System | Begins transaction and resolves effective scheme IDs (direct association by default; optional clone-on-associate) |
+| 5 | System | Begins transaction and resolves the effective rebind action per scheme family (reuse shared scheme, materialize project-scoped copy, or `CLONE_FROM_SHARED` when explicit isolation is requested) |
 | 6 | System | Validates compatibility: workflow scheme covers all issue types in the resulting issue type scheme |
 | 7 | System | Updates project scheme binding fields to effective scheme IDs within transaction |
 | 8 | System | Commits transaction |
@@ -981,7 +1006,8 @@ Update the scheme associations for a project (issue type scheme, workflow scheme
 | BR-PM-007-01 | Cannot change schemes on archived projects | Service layer |
 | BR-PM-007-02 | New workflow scheme must provide workflow mappings for all issue types in the project's resulting issue type scheme | UseCase layer |
 | BR-PM-007-03 | Existing work items retain their current status; statuses not present in new workflow are flagged for migration | Service layer |
-| BR-PM-007-04 | Scheme rebinding uses shared association by default; clone-on-associate is optional for project isolation | Service layer |
+| BR-PM-007-04 | Scheme rebinding is family-specific; shared reuse is explicit, and project-scoped copies are created only where required | Service layer |
+| BR-PM-007-05 | Rebinding must not clone reusable global entities (`issue_types`, `statuses`, `status_categories`, `priorities`, `custom_fields`) | Service layer |
 
 ##### Data Requirements
 
@@ -997,6 +1023,7 @@ Update the scheme associations for a project (issue type scheme, workflow scheme
 | notification_scheme_id | int64 | No | must exist in tenant | Notification scheme |
 | priority_scheme_id | int64 | No | must exist in tenant | Priority scheme |
 | issue_security_scheme_id | int64 | No | must exist in tenant | Security scheme |
+| rebind_mode | string | No | `SHARED_FROM_EXISTING`, `CLONE_FROM_SHARED` | Optional rebinding strategy; if omitted, system applies family default |
 
 ---
 
@@ -1161,7 +1188,7 @@ Standard CRUD pattern. Permission: `PM.BLUEPRINT.MANAGE`.
 | **Priority** | Medium |
 | **Complexity** | Medium |
 
-**Description**: Set or update the default scheme bindings for a blueprint. When a project is created from this blueprint, these scheme IDs are resolved as association targets by default (or clone sources when clone-on-associate mode is requested).
+**Description**: Set or update the default scheme sources for a blueprint. When a project is created from this blueprint, these values act as provisioning inputs: some scheme families may be materialized as project-scoped copies, while others may bind directly to shared tenant schemes depending on the provisioning path.
 
 **Permission**: `PM.BLUEPRINT.MANAGE`
 
@@ -1413,172 +1440,16 @@ GET `/api/v1/projects/{projectId}/roles/{roleId}/actors` -> return list of actor
 
 #### UC-PM-101: Create Work Item
 
-##### Basic Information
+Detailed specification and next-session implementation plan are extracted to:
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-101 |
-| **Use Case Name** | Create Work Item |
-| **Module** | PM Core |
-| **Version** | 1.0 |
-| **Last Updated** | 2026-02-18 |
-| **Priority** | High |
-| **Complexity** | Complex |
+- [UC-PM-101 - Create Work Item](usecases/workitem/UC-PM-101-create-work-item.md)
 
-##### Description
+This extracted file is now the canonical detailed reference for UC-PM-101, including:
 
-Create a new work item (issue) within a project. The work item must conform to the project's issue type scheme (valid issue type), and is initialized with the workflow's initial status. Custom field values are validated against the project's field configuration and screen scheme.
-
-##### Actors
-
-| Actor | Type | Description |
-|-------|------|-------------|
-| Team Member | Primary | Creates work item |
-| System | System | Resolves workflow initial status, generates issue key |
-
-##### Preconditions
-
-1. User is authenticated with valid JWT token
-2. User has permission `PM.WORK_ITEM.CREATE`
-3. Project exists, is not archived, and is not deleted
-4. Issue type belongs to the project's issue type scheme
-
-##### Postconditions
-
-###### Success Postconditions
-1. Work item persisted with auto-generated `key` (`{PROJECT_KEY}-{issue_no}`) and initial status from workflow
-2. Custom field values persisted in `work_item_custom_field_values`
-3. Kafka event `WORK_ITEM_CREATED` published to topic `serp.pm.workitem.events`
-4. `time_spent=0`, `resolution_id=NULL`
-
-###### Failure Postconditions
-1. No data changes committed (transaction rolled back)
-2. Error response returned
-
-##### Main Flow
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 1 | Team Member | Sends POST `/api/v1/projects/{projectId}/work-items` with work item data |
-| 2 | System | Validates JWT and extracts `userId`, `tenantId` |
-| 3 | System | Checks user has `PM.WORK_ITEM.CREATE` permission |
-| 4 | System | Validates project exists, is not archived/deleted |
-| 5 | System | Validates `issue_type_id` is in the project's issue type scheme |
-| 6 | System | Resolves the workflow for this issue type via workflow scheme |
-| 7 | System | Determines initial status from workflow (step where `is_initial=true`) |
-| 8 | System | Validates `priority_id` is in the project's priority scheme |
-| 9 | System | If `assignee_id` provided, validates user exists |
-| 10 | System | If `parent_id` provided, validates parent work item exists in same project and hierarchy is valid |
-| 11 | System | Validates required fields per field configuration for CREATE screen |
-| 12 | System | Begins transaction |
-| 13 | System | Generates next `issue_no` for project, computes `key = PROJECT_KEY + "-" + issue_no` |
-| 14 | System | Creates Work Item entity with initial status, `reporter_id=userId`, generates Lexorank for `rank` |
-| 15 | System | If custom field values provided, persists to `work_item_custom_field_values` |
-| 16 | System | Commits transaction |
-| 17 | System | Publishes `WORK_ITEM_CREATED` event to `serp.pm.workitem.events` |
-| 18 | System | Returns HTTP 201 with created work item |
-
-##### Alternative Flows
-
-###### AF-1: Subtask Creation
-
-**Branches from**: Main Flow Step 10
-**Condition**: `parent_id` is provided and issue type has `hierarchy_level=0` (subtask)
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 10.1 | System | Validates parent exists in same project |
-| 10.2 | System | Validates parent issue type has `hierarchy_level >= 1` (standard or epic) |
-| 10.3 | System | Sets `parent_id` on work item |
-
-**Rejoins**: Main Flow Step 11
-
-###### AF-2: Epic Child Creation
-
-**Branches from**: Main Flow Step 10
-**Condition**: `parent_id` is provided and parent is an epic (`hierarchy_level=2`)
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 10.1 | System | Validates parent is an epic |
-| 10.2 | System | Validates child issue type has `hierarchy_level=1` (standard) |
-
-**Rejoins**: Main Flow Step 11
-
-##### Exception Flows
-
-###### EF-1: Invalid Issue Type for Project
-
-**Triggered at**: Main Flow Step 5
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 5.E1 | System | Returns HTTP 400 with error: `ISSUE_TYPE_NOT_IN_SCHEME` |
-
-###### EF-2: Invalid Hierarchy
-
-**Triggered at**: Main Flow Step 10
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 10.E1 | System | Returns HTTP 400 with error: `INVALID_PARENT_HIERARCHY` with details |
-
-###### EF-3: Required Field Missing
-
-**Triggered at**: Main Flow Step 11
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 11.E1 | System | Returns HTTP 400 with list of missing required fields |
-
-##### Business Rules
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-101-01 | Work item key format: `{PROJECT_KEY}-{issue_no}`, auto-generated, immutable | Service layer |
-| BR-PM-101-02 | Issue type must belong to the project's issue type scheme | UseCase layer |
-| BR-PM-101-03 | Initial status determined by the workflow's `is_initial=true` step | UseCase layer |
-| BR-PM-101-04 | Subtask hierarchy: subtask (level 0) -> standard (level 1) -> epic (level 2) | Service layer |
-| BR-PM-101-05 | `issue_no` is auto-incremented per project (sequence) | DB sequence or app-level lock |
-| BR-PM-101-06 | Reporter defaults to the authenticated user | Service layer |
-| BR-PM-101-07 | `summary` is always required regardless of field configuration | DTO validation |
-| BR-PM-101-08 | Priority defaults to the priority scheme's `default_priority_id` if not provided | Service layer |
-| BR-PM-101-09 | Cannot create work items in archived projects | Service layer |
-
-##### Data Requirements
-
-###### Input Data
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| summary | string | Yes | min:1, max:512 | Work item title |
-| description | string | No | max:50000 | Markdown/JSON description |
-| issue_type_id | int64 | Yes | must be in project's scheme | Issue type |
-| priority_id | int64 | No | must be in project's priority scheme, defaults to scheme default | Priority |
-| assignee_id | int64 | No | must exist | Assignee user |
-| parent_id | int64 | No | must exist in same project, valid hierarchy | Parent work item |
-| due_date | timestamp | No | valid date | Due date |
-| time_original_estimate | int64 | No | min:0 | Original estimate in seconds |
-| security_level_id | int64 | No | must be in project's security scheme | Security level |
-| custom_fields | map | No | validated per field config | Custom field values |
-
-###### Output Data
-
-| Field | Type | Description |
-|-------|------|-------------|
-| id | int64 | Generated work item ID |
-| key | string | Human key (e.g., SERP-123) |
-| summary | string | Title |
-| description | string | Description |
-| issue_type | object | Issue type details |
-| status | object | Initial status |
-| priority | object | Priority details |
-| assignee_id | int64 | Assignee (nullable) |
-| reporter_id | int64 | Reporter (creator) |
-| parent_id | int64 | Parent (nullable) |
-| rank | string | Lexorank value |
-| created_at | timestamp | Creation time |
-| created_by | int64 | Creator user ID |
+- full use case specification
+- Jira-aligned authorization model for create-time checks
+- detailed implementation plan for the next coding session
+- file-level task list and phased delivery slices
 
 ---
 
@@ -3120,7 +2991,7 @@ Standard scheme CRUD with `default_screen_id`.
 | **Priority** | Medium |
 | **Complexity** | Medium |
 
-**Description**: Map operations (CREATE, EDIT, VIEW, TRANSITION) to specific screens within a scheme.
+**Description**: Map operations (CREATE, EDIT, VIEW) to specific screens within a scheme. Transition screens are configured directly on workflow transitions, not in screen schemes.
 
 **Permission**: `PM.SCREEN_SCHEME.MANAGE`
 
@@ -3129,7 +3000,7 @@ Standard scheme CRUD with `default_screen_id`.
 | Field | Type | Required | Validation | Description |
 |-------|------|----------|------------|-------------|
 | items[] | array | Yes | | Operation-to-screen mappings |
-| items[].operation_key | string | Yes | CREATE, EDIT, VIEW, TRANSITION | Operation |
+| items[].operation_key | string | Yes | CREATE, EDIT, VIEW | Operation |
 | items[].screen_id | int64 | Yes | must exist | Screen |
 
 **Business Rules**:
@@ -3207,7 +3078,7 @@ Maps issue types to screen schemes. Issue types not explicitly mapped use the de
 
 | Field | Type | Required | Validation | Description |
 |-------|------|----------|------------|-------------|
-| category | string | No | PROJECT, ISSUE, COMMENT, ADMIN, AGILE | Category filter |
+| category | string | No | ADMINISTRATION, PROJECT, ISSUE, VOTERS_WATCHERS, COMMENTS, ATTACHMENTS, TIME_TRACKING | Category filter |
 
 **Note**: Create/update/delete permission definition APIs are intentionally not exposed in v1. Catalog seeding/sync is handled by system bootstrap/migrations.
 
@@ -3405,7 +3276,7 @@ Rules that apply across multiple use cases:
 | BR-PM-G01 | All queries MUST filter by `tenant_id` from JWT | All | Repository layer |
 | BR-PM-G02 | Soft delete sets `deleted_at` timestamp; never physically remove data | All delete ops | Service layer |
 | BR-PM-G03 | Audit fields: `created_at`, `updated_at` set automatically. `created_by`/`updated_by` set from JWT userId | All CUD ops | Service layer |
-| BR-PM-G04 | Kafka events published AFTER transaction commit for all CUD operations | All CUD ops | UseCase layer |
+| BR-PM-G04 | Domain outbox records are persisted in the same transaction as business data; Kafka publication happens asynchronously after commit | All CUD ops | UseCase layer |
 | BR-PM-G05 | Kafka topic naming: `serp.pm.[entity].events` | All events | Constant definition |
 | BR-PM-G06 | Kafka event type naming: `ENTITY_ACTION` uppercase (e.g., `WORK_ITEM_CREATED`) | All events | Constant definition |
 | BR-PM-G07 | Default pagination: page=0, pageSize=10, max pageSize=100 | All list endpoints | Controller layer |
@@ -3414,6 +3285,9 @@ Rules that apply across multiple use cases:
 | BR-PM-G10 | Archived projects reject all write operations on child entities | All project-scoped writes | Service layer |
 | BR-PM-G11 | Kafka message envelope follows standard format: `{ "meta": { id, type, source, v, ts, traceId, tenantId, entityType, entityId, userId }, "data": { ... } }` | All events | Event publisher |
 | BR-PM-G12 | Draft workflows (`is_active=false`) can be modified; active workflows are immutable | Workflow modification UCs | Service layer |
+| BR-PM-G13 | Project-scoped runtime authorization uses the Jira-style permission catalog evaluated from the project's bound permission scheme | All project-scoped runtime UCs | Authorization layer |
+| BR-PM-G14 | Work item visibility requires `BROWSE_PROJECTS`; if `security_level_id` is set, matching issue-security membership is additionally required | All work item read/list operations | Authorization layer |
+| BR-PM-G15 | Any `PROJECT_ROLE` grant or issue-security membership is resolved through `project_role_actors` in the target project | All project role-based authorization checks | Authorization layer |
 
 ---
 
@@ -3424,19 +3298,20 @@ Rules that apply across multiple use cases:
 | **Work Item** | The central entity representing a unit of work (issue, task, bug, story, epic). Equivalent to JIRA's "Issue". |
 | **Issue Type** | Classification of work items (Bug, Story, Task, Epic, Subtask) with hierarchy levels. |
 | **Workflow** | A directed graph of statuses and transitions that defines the lifecycle of a work item. |
-| **Workflow Scheme** | Maps issue types to workflows. Projects reference a workflow scheme to determine which workflow applies to each issue type. |
+| **Workflow Scheme** | Maps issue types to workflows. Projects reference an effective workflow scheme, which may be a shared scheme or a project-scoped materialized copy depending on provisioning path. |
 | **Status Category** | Logical grouping of statuses into three buckets: To Do (new), In Progress (indeterminate), Done (done). Used for reporting. |
 | **Transition** | A directed edge in a workflow graph from one status to another, with optional conditions, validators, and post-functions. |
 | **Screen** | A layout definition specifying which fields to display and in what order, organized into tabs. |
-| **Screen Scheme** | Maps operations (CREATE, EDIT, VIEW, TRANSITION) to specific screens. |
-| **Issue Type Screen Scheme** | Maps issue types to screen schemes. Projects reference this to determine which screen is shown for each issue type + operation. |
+| **Screen Scheme** | Maps CREATE, EDIT, and VIEW operations to specific screens. Transition screens are attached directly to workflow transitions. |
+| **Issue Type Screen Scheme** | Maps issue types to screen schemes. Projects reference this to determine which screen scheme applies for each issue type and CREATE/EDIT/VIEW operation. |
 | **Field Configuration** | Defines per-field behavior (required, hidden, renderer) for a set of fields. |
 | **Field Config Scheme** | Maps issue types to field configurations. |
 | **Custom Field** | A user-defined field that extends the work item data model with typed values. |
 | **Custom Field Context** | Scoping rule for a custom field, defining which projects and issue types it applies to. |
 | **Permission Scheme** | Maps permissions to grantees (project roles, groups, users, contextual actors) using grant-only rules; missing grant means deny. |
 | **Issue Security Level** | Restricts visibility of individual work items to specific project roles, groups, users, or contextual actors. |
-| **Project Blueprint** | A template that pre-configures default scheme bindings for new projects; association is shared by default with optional clone-on-associate isolation. |
+| **Project Blueprint** | A template that pre-configures default scheme sources for new projects; actual effective bindings depend on provisioning path and scheme family behavior. |
+| **Provisioning Mode** | Strategy used during project creation or rebinding to decide whether a scheme family is materialized per project or bound to a shared reusable scheme (`TEMPLATE_DEFAULT`, `SHARED_FROM_EXISTING`, `CLONE_FROM_SHARED`). |
 | **Project Component** | A sub-section of a project (e.g., "Backend", "Frontend") used to categorize work items. |
 | **Project Version** | A release marker (e.g., "v1.0", "v2.0") used to track fix targets and release planning. |
 | **Project Role** | A named role within PM Core (e.g., "Developer", "QA Lead") that actors can be assigned to per project. |
@@ -3444,5 +3319,5 @@ Rules that apply across multiple use cases:
 | **Worklog** | A time tracking entry recording work performed on a work item. |
 | **Issue Link** | A typed relationship between two work items (e.g., "blocks", "is blocked by", "clones"). |
 | **Resolution** | The outcome of a work item when it reaches a "done" status (e.g., "Done", "Won't Fix", "Duplicate"). |
-| **Scheme Indirection** | The architectural pattern where projects reference scheme roots (not individual configs), typically via shared association with optional clone-on-associate when isolation is needed. |
+| **Scheme Indirection** | The architectural pattern where projects reference scheme roots (not individual configs); effective bindings may point to shared schemes or project-scoped materialized copies depending on provisioning strategy. |
 | **Soft Delete** | Marking a record as deleted by setting `deleted_at` timestamp instead of physically removing it from the database. |
