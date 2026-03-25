@@ -6,6 +6,9 @@ import org.springframework.http.HttpStatusCode;
 
 @Getter
 public enum ErrorCode {
+    // Lỗi liên quan đến PostOffice (10xx)
+    POST_OFFICE_OVERLOADED(1001, "error.1001", HttpStatus.BAD_REQUEST),
+
     // Lỗi khác (99xx)
     UNCATEGORIZED_EXCEPTION(9999, "error.9999", HttpStatus.INTERNAL_SERVER_ERROR),
     INVALID_KEY(9998, "error.9998", HttpStatus.BAD_REQUEST),

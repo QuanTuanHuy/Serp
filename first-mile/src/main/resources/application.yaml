@@ -24,6 +24,7 @@ spring:
       schema-locations:
         - classpath:db/migration/province.sql
         - classpath:db/migration/ward.sql
+        - classpath:db/migration/post-office.sql
   messages:
     basename: i18n/messages
     use-code-as-default-message: true
