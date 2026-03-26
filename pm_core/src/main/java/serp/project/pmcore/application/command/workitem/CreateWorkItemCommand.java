@@ -5,83 +5,44 @@
 
 package serp.project.pmcore.application.command.workitem;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.command.workitem.validator.CreateWorkItemValidator;
 import serp.project.pmcore.domain.constant.EventConstants;
-import serp.project.pmcore.domain.constant.ProjectPermissionKeys;
+import serp.project.pmcore.domain.constant.WorkItemFieldConstants;
 import serp.project.pmcore.domain.dto.message.WorkItemEventPayload;
 import serp.project.pmcore.domain.dto.project.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.dto.request.CreateWorkItemRequest;
 import serp.project.pmcore.domain.dto.response.workitem.WorkItemResponse;
+import serp.project.pmcore.domain.dto.workitem.create.CreateFieldRules;
+import serp.project.pmcore.domain.dto.workitem.create.FieldPolicy;
+import serp.project.pmcore.domain.dto.workitem.create.ResolvedCustomFields;
+import serp.project.pmcore.domain.dto.workitem.create.ResolvedWorkItemCreateConfiguration;
 import serp.project.pmcore.domain.entity.CustomFieldContextDefaultValueEntity;
 import serp.project.pmcore.domain.entity.CustomFieldContextEntity;
 import serp.project.pmcore.domain.entity.CustomFieldEntity;
 import serp.project.pmcore.domain.entity.CustomFieldOptionEntity;
-import serp.project.pmcore.domain.entity.FieldConfigEntity;
-import serp.project.pmcore.domain.entity.FieldConfigItemEntity;
-import serp.project.pmcore.domain.entity.FieldConfigSchemeEntity;
-import serp.project.pmcore.domain.entity.FieldConfigSchemeItemEntity;
-import serp.project.pmcore.domain.entity.IssueSecurityLevelEntity;
-import serp.project.pmcore.domain.entity.IssueSecuritySchemeEntity;
-import serp.project.pmcore.domain.entity.IssueTypeSchemeItemEntity;
-import serp.project.pmcore.domain.entity.IssueTypeScreenSchemeEntity;
-import serp.project.pmcore.domain.entity.IssueTypeScreenSchemeItemEntity;
 import serp.project.pmcore.domain.entity.OutboxEventEntity;
-import serp.project.pmcore.domain.entity.PrioritySchemeEntity;
-import serp.project.pmcore.domain.entity.PrioritySchemeItemEntity;
-import serp.project.pmcore.domain.entity.ScreenEntity;
-import serp.project.pmcore.domain.entity.ScreenSchemeEntity;
-import serp.project.pmcore.domain.entity.ScreenSchemeItemEntity;
-import serp.project.pmcore.domain.entity.ScreenTabEntity;
-import serp.project.pmcore.domain.entity.ScreenTabFieldEntity;
-import serp.project.pmcore.domain.entity.WorkflowSchemeEntity;
-import serp.project.pmcore.domain.entity.WorkflowSchemeItemEntity;
 import serp.project.pmcore.domain.entity.project.ProjectEntity;
-import serp.project.pmcore.domain.entity.workflow.WorkflowEntity;
-import serp.project.pmcore.domain.entity.workflow.WorkflowStepEntity;
-import serp.project.pmcore.domain.entity.workflow.WorkflowVersionEntity;
-import serp.project.pmcore.domain.entity.workitem.IssueTypeEntity;
 import serp.project.pmcore.domain.entity.workitem.WorkItemCustomFieldValueEntity;
 import serp.project.pmcore.domain.entity.workitem.WorkItemEntity;
 import serp.project.pmcore.domain.enums.OutboxEventStatus;
 import serp.project.pmcore.domain.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.exception.DomainErrorCode;
 import serp.project.pmcore.domain.exception.DomainValidationException;
-import serp.project.pmcore.domain.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.port.store.ICustomFieldContextDefaultValuePort;
 import serp.project.pmcore.domain.port.store.ICustomFieldContextPort;
 import serp.project.pmcore.domain.port.store.ICustomFieldOptionPort;
 import serp.project.pmcore.domain.port.store.ICustomFieldPort;
-import serp.project.pmcore.domain.port.store.IFieldConfigItemPort;
-import serp.project.pmcore.domain.port.store.IFieldConfigPort;
-import serp.project.pmcore.domain.port.store.IFieldConfigSchemeItemPort;
-import serp.project.pmcore.domain.port.store.IFieldConfigSchemePort;
-import serp.project.pmcore.domain.port.store.IIssueSecurityLevelPort;
-import serp.project.pmcore.domain.port.store.IIssueSecuritySchemePort;
-import serp.project.pmcore.domain.port.store.IIssueTypePort;
-import serp.project.pmcore.domain.port.store.IIssueTypeSchemeItemPort;
-import serp.project.pmcore.domain.port.store.IIssueTypeScreenSchemeItemPort;
-import serp.project.pmcore.domain.port.store.IIssueTypeScreenSchemePort;
-import serp.project.pmcore.domain.port.store.IPrioritySchemeItemPort;
-import serp.project.pmcore.domain.port.store.IPrioritySchemePort;
-import serp.project.pmcore.domain.port.store.IScreenPort;
-import serp.project.pmcore.domain.port.store.IScreenSchemeItemPort;
-import serp.project.pmcore.domain.port.store.IScreenSchemePort;
-import serp.project.pmcore.domain.port.store.IScreenTabFieldPort;
-import serp.project.pmcore.domain.port.store.IScreenTabPort;
-import serp.project.pmcore.domain.port.store.IWorkflowPort;
-import serp.project.pmcore.domain.port.store.IWorkflowSchemeItemPort;
-import serp.project.pmcore.domain.port.store.IWorkflowSchemePort;
-import serp.project.pmcore.domain.port.store.IWorkflowStepPort;
-import serp.project.pmcore.domain.port.store.IWorkflowVersionPort;
 import serp.project.pmcore.domain.port.store.IWorkItemCustomFieldValuePort;
 import serp.project.pmcore.domain.service.IOutboxEventService;
-import serp.project.pmcore.domain.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.service.IProjectService;
 import serp.project.pmcore.domain.service.IWorkItemService;
+import serp.project.pmcore.domain.service.workitem.create.WorkItemCreateAuthorizationService;
+import serp.project.pmcore.domain.service.workitem.create.WorkItemCreateConfigurationResolver;
+import serp.project.pmcore.domain.service.workitem.create.WorkItemFieldPolicyResolver;
+import serp.project.pmcore.domain.service.workitem.create.WorkItemFieldWriteValidator;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.math.BigDecimal;
@@ -100,13 +61,8 @@ import java.util.Map;
 import java.util.Set;
 
 @Service
+@Slf4j
 public class CreateWorkItemCommand {
-
-    private static final Logger log = LoggerFactory.getLogger(CreateWorkItemCommand.class);
-
-    private static final String CREATE_OPERATION_KEY = "CREATE";
-    private static final String FIELD_REF_TYPE_SYSTEM = "SYSTEM";
-    private static final String FIELD_REF_TYPE_CUSTOM = "CUSTOM";
 
     private static final String VALUE_TYPE_TEXT = "TEXT";
     private static final String VALUE_TYPE_NUMBER = "NUMBER";
@@ -117,59 +73,13 @@ public class CreateWorkItemCommand {
     private static final String VALUE_TYPE_OPTION = "OPTION";
     private static final String VALUE_TYPE_JSON = "JSON";
 
-    private static final String SYSTEM_FIELD_ISSUE_TYPE_ID = "issue_type_id";
-    private static final String SYSTEM_FIELD_SUMMARY = "summary";
-    private static final String SYSTEM_FIELD_DESCRIPTION = "description";
-    private static final String SYSTEM_FIELD_PRIORITY_ID = "priority_id";
-    private static final String SYSTEM_FIELD_ASSIGNEE_ID = "assignee_id";
-    private static final String SYSTEM_FIELD_PARENT_ID = "parent_id";
-    private static final String SYSTEM_FIELD_DUE_DATE = "due_date";
-    private static final String SYSTEM_FIELD_TIME_ORIGINAL_ESTIMATE = "time_original_estimate";
-    private static final String SYSTEM_FIELD_SECURITY_LEVEL_ID = "security_level_id";
-
-    private static final Set<String> ALWAYS_WRITABLE_SYSTEM_FIELDS = Set.of(
-            SYSTEM_FIELD_ISSUE_TYPE_ID,
-            SYSTEM_FIELD_SUMMARY
-    );
-
-    private static final Set<String> SUPPORTED_SYSTEM_FIELDS = Set.of(
-            SYSTEM_FIELD_ISSUE_TYPE_ID,
-            SYSTEM_FIELD_SUMMARY,
-            SYSTEM_FIELD_DESCRIPTION,
-            SYSTEM_FIELD_PRIORITY_ID,
-            SYSTEM_FIELD_ASSIGNEE_ID,
-            SYSTEM_FIELD_PARENT_ID,
-            SYSTEM_FIELD_DUE_DATE,
-            SYSTEM_FIELD_TIME_ORIGINAL_ESTIMATE,
-            SYSTEM_FIELD_SECURITY_LEVEL_ID
-    );
-
     private final CreateWorkItemValidator createWorkItemValidator;
     private final IProjectService projectService;
     private final IWorkItemService workItemService;
-    private final IProjectPermissionEvaluationService projectPermissionEvaluationService;
-    private final IIssueTypePort issueTypePort;
-    private final IIssueTypeSchemeItemPort issueTypeSchemeItemPort;
-    private final IWorkflowSchemePort workflowSchemePort;
-    private final IWorkflowSchemeItemPort workflowSchemeItemPort;
-    private final IWorkflowPort workflowPort;
-    private final IWorkflowVersionPort workflowVersionPort;
-    private final IWorkflowStepPort workflowStepPort;
-    private final IFieldConfigSchemePort fieldConfigSchemePort;
-    private final IFieldConfigSchemeItemPort fieldConfigSchemeItemPort;
-    private final IFieldConfigPort fieldConfigPort;
-    private final IFieldConfigItemPort fieldConfigItemPort;
-    private final IIssueTypeScreenSchemePort issueTypeScreenSchemePort;
-    private final IIssueTypeScreenSchemeItemPort issueTypeScreenSchemeItemPort;
-    private final IScreenSchemePort screenSchemePort;
-    private final IScreenSchemeItemPort screenSchemeItemPort;
-    private final IScreenPort screenPort;
-    private final IScreenTabPort screenTabPort;
-    private final IScreenTabFieldPort screenTabFieldPort;
-    private final IPrioritySchemePort prioritySchemePort;
-    private final IPrioritySchemeItemPort prioritySchemeItemPort;
-    private final IIssueSecuritySchemePort issueSecuritySchemePort;
-    private final IIssueSecurityLevelPort issueSecurityLevelPort;
+    private final WorkItemCreateConfigurationResolver workItemCreateConfigurationResolver;
+    private final WorkItemCreateAuthorizationService workItemCreateAuthorizationService;
+    private final WorkItemFieldPolicyResolver workItemFieldPolicyResolver;
+    private final WorkItemFieldWriteValidator workItemFieldWriteValidator;
     private final ICustomFieldPort customFieldPort;
     private final ICustomFieldContextPort customFieldContextPort;
     private final ICustomFieldOptionPort customFieldOptionPort;
@@ -181,29 +91,10 @@ public class CreateWorkItemCommand {
     public CreateWorkItemCommand(CreateWorkItemValidator createWorkItemValidator,
                                  IProjectService projectService,
                                  IWorkItemService workItemService,
-                                 IProjectPermissionEvaluationService projectPermissionEvaluationService,
-                                 IIssueTypePort issueTypePort,
-                                 IIssueTypeSchemeItemPort issueTypeSchemeItemPort,
-                                 IWorkflowSchemePort workflowSchemePort,
-                                 IWorkflowSchemeItemPort workflowSchemeItemPort,
-                                 IWorkflowPort workflowPort,
-                                 IWorkflowVersionPort workflowVersionPort,
-                                 IWorkflowStepPort workflowStepPort,
-                                 IFieldConfigSchemePort fieldConfigSchemePort,
-                                 IFieldConfigSchemeItemPort fieldConfigSchemeItemPort,
-                                 IFieldConfigPort fieldConfigPort,
-                                 IFieldConfigItemPort fieldConfigItemPort,
-                                 IIssueTypeScreenSchemePort issueTypeScreenSchemePort,
-                                 IIssueTypeScreenSchemeItemPort issueTypeScreenSchemeItemPort,
-                                 IScreenSchemePort screenSchemePort,
-                                 IScreenSchemeItemPort screenSchemeItemPort,
-                                 IScreenPort screenPort,
-                                 IScreenTabPort screenTabPort,
-                                 IScreenTabFieldPort screenTabFieldPort,
-                                 IPrioritySchemePort prioritySchemePort,
-                                 IPrioritySchemeItemPort prioritySchemeItemPort,
-                                 IIssueSecuritySchemePort issueSecuritySchemePort,
-                                 IIssueSecurityLevelPort issueSecurityLevelPort,
+                                 WorkItemCreateConfigurationResolver workItemCreateConfigurationResolver,
+                                 WorkItemCreateAuthorizationService workItemCreateAuthorizationService,
+                                 WorkItemFieldPolicyResolver workItemFieldPolicyResolver,
+                                 WorkItemFieldWriteValidator workItemFieldWriteValidator,
                                  ICustomFieldPort customFieldPort,
                                  ICustomFieldContextPort customFieldContextPort,
                                  ICustomFieldOptionPort customFieldOptionPort,
@@ -214,29 +105,10 @@ public class CreateWorkItemCommand {
         this.createWorkItemValidator = createWorkItemValidator;
         this.projectService = projectService;
         this.workItemService = workItemService;
-        this.projectPermissionEvaluationService = projectPermissionEvaluationService;
-        this.issueTypePort = issueTypePort;
-        this.issueTypeSchemeItemPort = issueTypeSchemeItemPort;
-        this.workflowSchemePort = workflowSchemePort;
-        this.workflowSchemeItemPort = workflowSchemeItemPort;
-        this.workflowPort = workflowPort;
-        this.workflowVersionPort = workflowVersionPort;
-        this.workflowStepPort = workflowStepPort;
-        this.fieldConfigSchemePort = fieldConfigSchemePort;
-        this.fieldConfigSchemeItemPort = fieldConfigSchemeItemPort;
-        this.fieldConfigPort = fieldConfigPort;
-        this.fieldConfigItemPort = fieldConfigItemPort;
-        this.issueTypeScreenSchemePort = issueTypeScreenSchemePort;
-        this.issueTypeScreenSchemeItemPort = issueTypeScreenSchemeItemPort;
-        this.screenSchemePort = screenSchemePort;
-        this.screenSchemeItemPort = screenSchemeItemPort;
-        this.screenPort = screenPort;
-        this.screenTabPort = screenTabPort;
-        this.screenTabFieldPort = screenTabFieldPort;
-        this.prioritySchemePort = prioritySchemePort;
-        this.prioritySchemeItemPort = prioritySchemeItemPort;
-        this.issueSecuritySchemePort = issueSecuritySchemePort;
-        this.issueSecurityLevelPort = issueSecurityLevelPort;
+        this.workItemCreateConfigurationResolver = workItemCreateConfigurationResolver;
+        this.workItemCreateAuthorizationService = workItemCreateAuthorizationService;
+        this.workItemFieldPolicyResolver = workItemFieldPolicyResolver;
+        this.workItemFieldWriteValidator = workItemFieldWriteValidator;
         this.customFieldPort = customFieldPort;
         this.customFieldContextPort = customFieldContextPort;
         this.customFieldOptionPort = customFieldOptionPort;
@@ -255,41 +127,41 @@ public class CreateWorkItemCommand {
         createWorkItemValidator.validate(request);
 
         ProjectEntity project = projectService.getProjectById(projectId, tenantId);
-        ensureProjectWritable(project);
+        ProjectPermissionEvaluationContext actorContext = workItemCreateAuthorizationService.buildActorContext(userId, groupKeys);
+        workItemCreateAuthorizationService.checkCreatePermissions(project, actorContext);
 
-        ProjectPermissionEvaluationContext actorContext = ProjectPermissionEvaluationContext.builder()
-                .userId(userId)
-                .groupKeys(groupKeys)
-                .build();
+        ResolvedWorkItemCreateConfiguration resolvedConfiguration = workItemCreateConfigurationResolver
+                .resolve(project, request, tenantId);
+        CreateFieldRules createFieldRules = workItemFieldPolicyResolver.resolveCreateFieldRules(
+                project,
+                resolvedConfiguration.issueType().getId(),
+                tenantId
+        );
+        workItemFieldWriteValidator.validateClientSuppliedWritableFields(request, createFieldRules);
 
-        projectPermissionEvaluationService.checkPermission(project, actorContext, ProjectPermissionKeys.BROWSE_PROJECTS);
-        projectPermissionEvaluationService.checkPermission(project, actorContext, ProjectPermissionKeys.CREATE_ISSUES);
+        Long priorityId = resolvedConfiguration.priorityId();
 
-        IssueTypeEntity issueType = issueTypePort.getIssueTypeById(request.getIssueTypeId(), tenantId)
-                .orElseThrow(() -> ResourceNotFoundException.issueType(request.getIssueTypeId()));
-        validateIssueTypeInProjectScheme(project, issueType.getId(), tenantId);
-        validateParentRequirement(issueType, request.getParentId());
-
-        WorkflowStepEntity initialStep = resolveInitialWorkflowStep(project, issueType.getId(), tenantId);
-        CreateFieldRules createFieldRules = resolveCreateFieldRules(project, issueType.getId(), tenantId);
-        validateClientSuppliedWritableFields(request, createFieldRules);
-
-        Long priorityId = resolvePriorityId(project, request.getPriorityId(), tenantId);
-
-        if (request.getDueDate() != null) {
-            projectPermissionEvaluationService.checkPermission(project, actorContext, ProjectPermissionKeys.SCHEDULE_ISSUES);
-        }
-
-        Long assigneeId = resolveAssigneeId(project, request.getAssigneeId(), actorContext, tenantId);
-        Long securityLevelId = resolveSecurityLevelId(project, request.getSecurityLevelId(), actorContext, tenantId);
+        workItemCreateAuthorizationService.checkScheduleIssuesPermissionIfNeeded(project, actorContext, request.getDueDate());
+        Long assigneeId = workItemCreateAuthorizationService.resolveAssigneeId(project, request.getAssigneeId(), actorContext);
+        workItemCreateAuthorizationService.checkSetIssueSecurityPermissionIfNeeded(project, actorContext, request.getSecurityLevelId());
+        Long securityLevelId = workItemCreateConfigurationResolver.resolveSecurityLevelId(
+                project,
+                request.getSecurityLevelId(),
+                tenantId
+        );
 
         if (request.getParentId() != null) {
-            workItemService.validateParentHierarchy(request.getParentId(), issueType.getId(), projectId, tenantId);
+            workItemService.validateParentHierarchy(
+                    request.getParentId(),
+                    resolvedConfiguration.issueType().getId(),
+                    projectId,
+                    tenantId
+            );
         }
 
         ResolvedCustomFields resolvedCustomFields = resolveCustomFields(
                 projectId,
-                issueType.getId(),
+                resolvedConfiguration.issueType().getId(),
                 request.getCustomFields(),
                 createFieldRules,
                 tenantId
@@ -307,8 +179,8 @@ public class CreateWorkItemCommand {
                 .key(key)
                 .summary(request.getSummary())
                 .description(request.getDescription())
-                .workflowStepId(initialStep.getId())
-                .statusId(initialStep.getStatusId())
+                .workflowStepId(resolvedConfiguration.initialStep().getId())
+                .statusId(resolvedConfiguration.initialStep().getStatusId())
                 .priorityId(priorityId)
                 .resolutionId(null)
                 .assigneeId(assigneeId)
@@ -332,305 +204,13 @@ public class CreateWorkItemCommand {
         return WorkItemResponse.from(savedWorkItem);
     }
 
-    private CreateFieldRules resolveCreateFieldRules(ProjectEntity project, Long issueTypeId, Long tenantId) {
-        Long fieldConfigId = resolveFieldConfigId(project, issueTypeId, tenantId);
-        Long createScreenId = resolveCreateScreenId(project, issueTypeId, tenantId);
-
-        List<FieldConfigItemEntity> fieldConfigItems = fieldConfigItemPort.getFieldConfigItemsByFieldConfigId(fieldConfigId, tenantId);
-        List<FieldRef> createScreenFields = loadCreateScreenFields(createScreenId, tenantId);
-
-        Map<String, FieldPolicy> systemPolicies = new LinkedHashMap<>();
-        Map<String, FieldPolicy> customPolicies = new LinkedHashMap<>();
-
-        for (FieldConfigItemEntity fieldConfigItem : fieldConfigItems) {
-            FieldRef fieldRef = normalizeFieldRef(fieldConfigItem.getFieldRefType(), fieldConfigItem.getFieldRef());
-            if (fieldRef == null) {
-                continue;
-            }
-            mergeFieldPolicy(
-                    fieldRef,
-                    Boolean.TRUE.equals(fieldConfigItem.getIsRequired()),
-                    Boolean.TRUE.equals(fieldConfigItem.getIsHidden()),
-                    false,
-                    systemPolicies,
-                    customPolicies
-            );
-        }
-
-        for (FieldRef createScreenField : createScreenFields) {
-            mergeFieldPolicy(createScreenField, false, false, true, systemPolicies, customPolicies);
-        }
-
-        mergeFieldPolicy(
-                new FieldRef(FIELD_REF_TYPE_SYSTEM, SYSTEM_FIELD_SUMMARY),
-                true,
-                false,
-                true,
-                systemPolicies,
-                customPolicies
-        );
-        mergeFieldPolicy(
-                new FieldRef(FIELD_REF_TYPE_SYSTEM, SYSTEM_FIELD_ISSUE_TYPE_ID),
-                false,
-                false,
-                true,
-                systemPolicies,
-                customPolicies
-        );
-
-        return new CreateFieldRules(systemPolicies, customPolicies);
-    }
-
-    private Long resolveFieldConfigId(ProjectEntity project, Long issueTypeId, Long tenantId) {
-        if (project.getFieldConfigSchemeId() == null) {
-            throw new ResourceNotFoundException(
-                    DomainErrorCode.FIELD_CONFIG_SCHEME_NOT_FOUND,
-                    "Project has no field configuration scheme binding: projectId=" + project.getId()
-            );
-        }
-
-        FieldConfigSchemeEntity fieldConfigScheme = fieldConfigSchemePort
-                .getFieldConfigSchemeById(project.getFieldConfigSchemeId(), tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        DomainErrorCode.FIELD_CONFIG_SCHEME_NOT_FOUND,
-                        "Field configuration scheme not found: id=" + project.getFieldConfigSchemeId()
-                ));
-
-        Long fieldConfigId = fieldConfigSchemeItemPort.getFieldConfigSchemeItemsBySchemeId(project.getFieldConfigSchemeId(), tenantId)
-                .stream()
-                .filter(item -> issueTypeId.equals(item.getIssueTypeId()))
-                .map(FieldConfigSchemeItemEntity::getFieldConfigId)
-                .findFirst()
-                .orElse(fieldConfigScheme.getDefaultFieldConfigId());
-
-        if (fieldConfigId == null) {
-            throw new DomainValidationException(
-                    DomainErrorCode.FIELD_CONFIG_SCHEME_COVERAGE_MISSING,
-                    "Field configuration scheme does not cover issueTypeId=" + issueTypeId + " for projectId=" + project.getId()
-            );
-        }
-
-        fieldConfigPort.getFieldConfigById(fieldConfigId, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        DomainErrorCode.FIELD_CONFIG_NOT_FOUND,
-                        "Field configuration not found: id=" + fieldConfigId
-                ));
-
-        return fieldConfigId;
-    }
-
-    private Long resolveCreateScreenId(ProjectEntity project, Long issueTypeId, Long tenantId) {
-        if (project.getIssueTypeScreenSchemeId() == null) {
-            throw new ResourceNotFoundException(
-                    DomainErrorCode.ISSUE_TYPE_SCREEN_SCHEME_NOT_FOUND,
-                    "Project has no issue type screen scheme binding: projectId=" + project.getId()
-            );
-        }
-
-        IssueTypeScreenSchemeEntity issueTypeScreenScheme = issueTypeScreenSchemePort
-                .getIssueTypeScreenSchemeById(project.getIssueTypeScreenSchemeId(), tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        DomainErrorCode.ISSUE_TYPE_SCREEN_SCHEME_NOT_FOUND,
-                        "Issue type screen scheme not found: id=" + project.getIssueTypeScreenSchemeId()
-                ));
-
-        Long screenSchemeId = issueTypeScreenSchemeItemPort.getIssueTypeScreenSchemeItemsBySchemeId(project.getIssueTypeScreenSchemeId(), tenantId)
-                .stream()
-                .filter(item -> issueTypeId.equals(item.getIssueTypeId()))
-                .map(IssueTypeScreenSchemeItemEntity::getScreenSchemeId)
-                .findFirst()
-                .orElse(issueTypeScreenScheme.getDefaultScreenSchemeId());
-
-        if (screenSchemeId == null) {
-            throw new DomainValidationException(
-                    DomainErrorCode.ISSUE_TYPE_SCREEN_SCHEME_COVERAGE_MISSING,
-                    "Issue type screen scheme does not cover issueTypeId=" + issueTypeId + " for projectId=" + project.getId()
-            );
-        }
-
-        ScreenSchemeEntity screenScheme = screenSchemePort.getScreenSchemeById(screenSchemeId, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        DomainErrorCode.SCREEN_SCHEME_NOT_FOUND,
-                        "Screen scheme not found: id=" + screenSchemeId
-                ));
-
-        Long createScreenId = screenSchemeItemPort.getScreenSchemeItemsByScreenSchemeId(screenSchemeId, tenantId)
-                .stream()
-                .filter(item -> CREATE_OPERATION_KEY.equalsIgnoreCase(item.getOperationKey()))
-                .map(ScreenSchemeItemEntity::getScreenId)
-                .findFirst()
-                .orElse(screenScheme.getDefaultScreenId());
-
-        if (createScreenId == null) {
-            throw new DomainValidationException(
-                    DomainErrorCode.SCREEN_SCHEME_OPERATION_COVERAGE_MISSING,
-                    "CREATE screen is not resolvable for screenSchemeId=" + screenSchemeId
-            );
-        }
-
-        screenPort.getScreenById(createScreenId, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        DomainErrorCode.SCREEN_NOT_FOUND,
-                        "CREATE screen not found: id=" + createScreenId
-                ));
-
-        return createScreenId;
-    }
-
-    private List<FieldRef> loadCreateScreenFields(Long createScreenId, Long tenantId) {
-        List<ScreenTabEntity> screenTabs = screenTabPort.getScreenTabsByScreenId(createScreenId, tenantId);
-        List<FieldRef> fieldRefs = new ArrayList<>();
-        for (ScreenTabEntity screenTab : screenTabs) {
-            List<ScreenTabFieldEntity> screenTabFields = screenTabFieldPort
-                    .getScreenTabFieldsByScreenTabId(screenTab.getId(), tenantId);
-            for (ScreenTabFieldEntity screenTabField : screenTabFields) {
-                FieldRef fieldRef = normalizeFieldRef(screenTabField.getFieldRefType(), screenTabField.getFieldRef());
-                if (fieldRef != null) {
-                    fieldRefs.add(fieldRef);
-                }
-            }
-        }
-        return fieldRefs;
-    }
-
-    private FieldRef normalizeFieldRef(String fieldRefType, String fieldRef) {
-        if (fieldRefType == null || fieldRef == null || fieldRef.isBlank()) {
-            return null;
-        }
-
-        String normalizedType = normalizeToken(fieldRefType);
-        if (FIELD_REF_TYPE_SYSTEM.toLowerCase(Locale.ROOT).equals(normalizedType)) {
-            return new FieldRef(FIELD_REF_TYPE_SYSTEM, canonicalizeSystemFieldRef(fieldRef));
-        }
-
-        if (FIELD_REF_TYPE_CUSTOM.toLowerCase(Locale.ROOT).equals(normalizedType)) {
-            return new FieldRef(FIELD_REF_TYPE_CUSTOM, fieldRef.trim());
-        }
-
-        return null;
-    }
-
-    private String canonicalizeSystemFieldRef(String fieldRef) {
-        String normalized = normalizeToken(fieldRef);
-        return switch (normalized) {
-            case "issue_type_id", "issue_type", "issuetype" -> SYSTEM_FIELD_ISSUE_TYPE_ID;
-            case "summary" -> SYSTEM_FIELD_SUMMARY;
-            case "description" -> SYSTEM_FIELD_DESCRIPTION;
-            case "priority_id", "priority" -> SYSTEM_FIELD_PRIORITY_ID;
-            case "assignee_id", "assignee" -> SYSTEM_FIELD_ASSIGNEE_ID;
-            case "parent_id", "parent" -> SYSTEM_FIELD_PARENT_ID;
-            case "due_date", "due" -> SYSTEM_FIELD_DUE_DATE;
-            case "time_original_estimate", "original_estimate" -> SYSTEM_FIELD_TIME_ORIGINAL_ESTIMATE;
-            case "security_level_id", "security_level", "security" -> SYSTEM_FIELD_SECURITY_LEVEL_ID;
-            default -> normalized;
-        };
-    }
-
-    private String normalizeToken(String value) {
-        String normalized = value.trim().replaceAll("([a-z0-9])([A-Z])", "$1_$2");
-        normalized = normalized.replace('-', '_').replace(' ', '_');
-        return normalized.toLowerCase(Locale.ROOT);
-    }
-
-    private void mergeFieldPolicy(FieldRef fieldRef,
-                                  boolean required,
-                                  boolean hidden,
-                                  boolean onCreateScreen,
-                                  Map<String, FieldPolicy> systemPolicies,
-                                  Map<String, FieldPolicy> customPolicies) {
-        Map<String, FieldPolicy> targetPolicies = FIELD_REF_TYPE_SYSTEM.equals(fieldRef.fieldRefType())
-                ? systemPolicies
-                : customPolicies;
-
-        FieldPolicy existingPolicy = targetPolicies.get(fieldRef.fieldRef());
-        boolean mergedRequired = required;
-        boolean mergedHidden = hidden;
-        boolean mergedOnCreateScreen = onCreateScreen;
-
-        if (existingPolicy != null) {
-            mergedRequired = existingPolicy.required() || mergedRequired;
-            mergedHidden = existingPolicy.hidden() || mergedHidden;
-            mergedOnCreateScreen = existingPolicy.onCreateScreen() || mergedOnCreateScreen;
-        }
-
-        if (FIELD_REF_TYPE_SYSTEM.equals(fieldRef.fieldRefType())
-                && ALWAYS_WRITABLE_SYSTEM_FIELDS.contains(fieldRef.fieldRef())) {
-            mergedHidden = false;
-            mergedOnCreateScreen = true;
-        }
-
-        if (SYSTEM_FIELD_SUMMARY.equals(fieldRef.fieldRef())) {
-            mergedRequired = true;
-        }
-
-        targetPolicies.put(fieldRef.fieldRef(), new FieldPolicy(
-                fieldRef.fieldRefType(),
-                fieldRef.fieldRef(),
-                mergedRequired,
-                mergedHidden,
-                mergedOnCreateScreen
-        ));
-    }
-
-    private void validateClientSuppliedWritableFields(CreateWorkItemRequest request, CreateFieldRules createFieldRules) {
-        validateSystemFieldWritable(SYSTEM_FIELD_DESCRIPTION, request.getDescription(), createFieldRules);
-        validateSystemFieldWritable(SYSTEM_FIELD_PRIORITY_ID, request.getPriorityId(), createFieldRules);
-        validateSystemFieldWritable(SYSTEM_FIELD_ASSIGNEE_ID, request.getAssigneeId(), createFieldRules);
-        validateSystemFieldWritable(SYSTEM_FIELD_PARENT_ID, request.getParentId(), createFieldRules);
-        validateSystemFieldWritable(SYSTEM_FIELD_DUE_DATE, request.getDueDate(), createFieldRules);
-        validateSystemFieldWritable(SYSTEM_FIELD_TIME_ORIGINAL_ESTIMATE, request.getTimeOriginalEstimate(), createFieldRules);
-        validateSystemFieldWritable(SYSTEM_FIELD_SECURITY_LEVEL_ID, request.getSecurityLevelId(), createFieldRules);
-
-        if (request.getCustomFields() == null || request.getCustomFields().isEmpty()) {
-            return;
-        }
-
-        for (String customFieldKey : request.getCustomFields().keySet()) {
-            FieldPolicy fieldPolicy = createFieldRules.customPolicies().get(customFieldKey);
-            if (!isCustomFieldClientWritable(fieldPolicy)) {
-                throw new BusinessRuleViolationException(
-                        DomainErrorCode.FIELD_NOT_WRITABLE_ON_CREATE,
-                        "Field is not writable on create: field=" + customFieldKey
-                );
-            }
-        }
-    }
-
-    private void validateSystemFieldWritable(String fieldRef, Object value, CreateFieldRules createFieldRules) {
-        if (value == null) {
-            return;
-        }
-
-        FieldPolicy fieldPolicy = createFieldRules.systemPolicies().get(fieldRef);
-        if (!isSystemFieldClientWritable(fieldRef, fieldPolicy)) {
-            throw new BusinessRuleViolationException(
-                    DomainErrorCode.FIELD_NOT_WRITABLE_ON_CREATE,
-                    "Field is not writable on create: field=" + fieldRef
-            );
-        }
-    }
-
-    private boolean isSystemFieldClientWritable(String fieldRef, FieldPolicy fieldPolicy) {
-        if (ALWAYS_WRITABLE_SYSTEM_FIELDS.contains(fieldRef)) {
-            return true;
-        }
-        return SUPPORTED_SYSTEM_FIELDS.contains(fieldRef)
-                && fieldPolicy != null
-                && !fieldPolicy.hidden()
-                && fieldPolicy.onCreateScreen();
-    }
-
-    private boolean isCustomFieldClientWritable(FieldPolicy fieldPolicy) {
-        return fieldPolicy != null && !fieldPolicy.hidden() && fieldPolicy.onCreateScreen();
-    }
-
     private ResolvedCustomFields resolveCustomFields(Long projectId,
                                                      Long issueTypeId,
                                                      Map<String, Object> requestCustomFields,
                                                      CreateFieldRules createFieldRules,
                                                      Long tenantId) {
         if (createFieldRules.customPolicies().isEmpty()) {
-            return new ResolvedCustomFields(List.of(), List.of());
+            return ResolvedCustomFields.empty();
         }
 
         List<String> fieldKeys = new ArrayList<>(new LinkedHashSet<>(createFieldRules.customPolicies().keySet()));
@@ -743,8 +323,14 @@ public class CreateWorkItemCommand {
         return 4;
     }
 
+    private String normalizeToken(String value) {
+        String normalized = value.trim().replaceAll("([a-z0-9])([A-Z])", "$1_$2");
+        normalized = normalized.replace('-', '_').replace(' ', '_');
+        return normalized.toLowerCase(Locale.ROOT);
+    }
+
     private List<WorkItemCustomFieldValueEntity> buildProvidedCustomFieldValues(CustomFieldEntity customField,
-                                                                                Long contextId,
+                                                                                 Long contextId,
                                                                                 List<CustomFieldOptionEntity> options,
                                                                                 Object rawValue,
                                                                                 String fieldKey) {
@@ -1275,18 +861,18 @@ public class CreateWorkItemCommand {
         List<String> missingFields = new ArrayList<>();
 
         Map<String, Object> effectiveSystemValues = new LinkedHashMap<>();
-        effectiveSystemValues.put(SYSTEM_FIELD_ISSUE_TYPE_ID, request.getIssueTypeId());
-        effectiveSystemValues.put(SYSTEM_FIELD_SUMMARY, request.getSummary());
-        effectiveSystemValues.put(SYSTEM_FIELD_DESCRIPTION, request.getDescription());
-        effectiveSystemValues.put(SYSTEM_FIELD_PRIORITY_ID, priorityId);
-        effectiveSystemValues.put(SYSTEM_FIELD_ASSIGNEE_ID, assigneeId);
-        effectiveSystemValues.put(SYSTEM_FIELD_PARENT_ID, request.getParentId());
-        effectiveSystemValues.put(SYSTEM_FIELD_DUE_DATE, request.getDueDate());
-        effectiveSystemValues.put(SYSTEM_FIELD_TIME_ORIGINAL_ESTIMATE, request.getTimeOriginalEstimate());
-        effectiveSystemValues.put(SYSTEM_FIELD_SECURITY_LEVEL_ID, securityLevelId);
+        effectiveSystemValues.put(WorkItemFieldConstants.ISSUE_TYPE_ID, request.getIssueTypeId());
+        effectiveSystemValues.put(WorkItemFieldConstants.SUMMARY, request.getSummary());
+        effectiveSystemValues.put(WorkItemFieldConstants.DESCRIPTION, request.getDescription());
+        effectiveSystemValues.put(WorkItemFieldConstants.PRIORITY_ID, priorityId);
+        effectiveSystemValues.put(WorkItemFieldConstants.ASSIGNEE_ID, assigneeId);
+        effectiveSystemValues.put(WorkItemFieldConstants.PARENT_ID, request.getParentId());
+        effectiveSystemValues.put(WorkItemFieldConstants.DUE_DATE, request.getDueDate());
+        effectiveSystemValues.put(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE, request.getTimeOriginalEstimate());
+        effectiveSystemValues.put(WorkItemFieldConstants.SECURITY_LEVEL_ID, securityLevelId);
 
         for (FieldPolicy systemPolicy : createFieldRules.systemPolicies().values()) {
-            if (!systemPolicy.required() || !SUPPORTED_SYSTEM_FIELDS.contains(systemPolicy.fieldRef())) {
+            if (!systemPolicy.required() || !WorkItemFieldConstants.SUPPORTED_CREATE_SYSTEM_FIELDS.contains(systemPolicy.fieldRef())) {
                 continue;
             }
             if (isMissingValue(effectiveSystemValues.get(systemPolicy.fieldRef()))) {
@@ -1332,236 +918,6 @@ public class CreateWorkItemCommand {
         workItemCustomFieldValuePort.saveAll(values);
     }
 
-    private void ensureProjectWritable(ProjectEntity project) {
-        if (Boolean.TRUE.equals(project.getIsArchived())) {
-            throw new BusinessRuleViolationException(DomainErrorCode.PROJECT_ARCHIVED);
-        }
-    }
-
-    private void validateIssueTypeInProjectScheme(ProjectEntity project, Long issueTypeId, Long tenantId) {
-        if (project.getIssueTypeSchemeId() == null) {
-            throw new ResourceNotFoundException(
-                    DomainErrorCode.ISSUE_TYPE_SCHEME_NOT_FOUND,
-                    "Project has no issue type scheme binding: projectId=" + project.getId()
-            );
-        }
-
-        boolean exists = issueTypeSchemeItemPort.getIssueTypeSchemeItemsBySchemeId(
-                        project.getIssueTypeSchemeId(),
-                        tenantId
-                )
-                .stream()
-                .map(IssueTypeSchemeItemEntity::getIssueTypeId)
-                .anyMatch(issueTypeId::equals);
-
-        if (!exists) {
-            throw new BusinessRuleViolationException(
-                    DomainErrorCode.ISSUE_TYPE_NOT_IN_SCHEME,
-                    "Issue type is not allowed in project scheme: projectId=" + project.getId() + ", issueTypeId=" + issueTypeId
-            );
-        }
-    }
-
-    private void validateParentRequirement(IssueTypeEntity issueType, Long parentId) {
-        if (issueType.getHierarchyLevel() == null) {
-            throw new DomainValidationException(
-                    DomainErrorCode.INVALID_PARENT_HIERARCHY,
-                    "Issue type hierarchy level is missing: issueTypeId=" + issueType.getId()
-            );
-        }
-
-        if (issueType.getHierarchyLevel() == 0 && parentId == null) {
-            throw new BusinessRuleViolationException(
-                    DomainErrorCode.INVALID_PARENT_HIERARCHY,
-                    "Subtask issue type requires parent_id: issueTypeId=" + issueType.getId()
-            );
-        }
-
-        if (issueType.getHierarchyLevel() >= 2 && parentId != null) {
-            throw new BusinessRuleViolationException(
-                    DomainErrorCode.INVALID_PARENT_HIERARCHY,
-                    "Issue types with hierarchy level >= 2 cannot set parent_id: issueTypeId=" + issueType.getId()
-                            + ", hierarchyLevel=" + issueType.getHierarchyLevel()
-            );
-        }
-    }
-
-    private WorkflowStepEntity resolveInitialWorkflowStep(ProjectEntity project, Long issueTypeId, Long tenantId) {
-        if (project.getWorkflowSchemeId() == null) {
-            throw new ResourceNotFoundException(
-                    DomainErrorCode.WORKFLOW_SCHEME_NOT_FOUND,
-                    "Project has no workflow scheme binding: projectId=" + project.getId()
-            );
-        }
-
-        WorkflowSchemeEntity workflowScheme = workflowSchemePort
-                .getWorkflowSchemeById(project.getWorkflowSchemeId(), tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        DomainErrorCode.WORKFLOW_SCHEME_NOT_FOUND,
-                        "Workflow scheme not found: id=" + project.getWorkflowSchemeId()
-                ));
-
-        Long workflowId = workflowSchemeItemPort.getWorkflowSchemeItemsBySchemeId(
-                        project.getWorkflowSchemeId(),
-                        tenantId
-                )
-                .stream()
-                .filter(item -> issueTypeId.equals(item.getIssueTypeId()))
-                .map(WorkflowSchemeItemEntity::getWorkflowId)
-                .findFirst()
-                .orElse(workflowScheme.getDefaultWorkflowId());
-
-        if (workflowId == null) {
-            throw new DomainValidationException(
-                    DomainErrorCode.WORKFLOW_SCHEME_COVERAGE_MISSING,
-                    "Workflow scheme does not cover issueTypeId=" + issueTypeId + " for projectId=" + project.getId()
-            );
-        }
-
-        WorkflowEntity workflow = workflowPort.getWorkflowById(workflowId, tenantId)
-                .orElseThrow(() -> ResourceNotFoundException.workflow(workflowId));
-
-        if (workflow.getCurrentPublishedVersionId() == null) {
-            throw new DomainValidationException(
-                    DomainErrorCode.WORKFLOW_NOT_ACTIVE,
-                    "Workflow has no published version: workflowId=" + workflowId
-            );
-        }
-
-        WorkflowVersionEntity publishedVersion = workflowVersionPort
-                .getWorkflowVersionById(workflow.getCurrentPublishedVersionId(), tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        DomainErrorCode.WORKFLOW_NOT_ACTIVE,
-                        "Published workflow version not found: id=" + workflow.getCurrentPublishedVersionId()
-                ));
-
-        if (!publishedVersion.isActive()) {
-            throw new DomainValidationException(
-                    DomainErrorCode.WORKFLOW_NOT_ACTIVE,
-                    "Workflow current version is not published: workflowId=" + workflowId
-                            + ", versionId=" + publishedVersion.getId()
-            );
-        }
-
-        return workflowStepPort.getInitialStepByWorkflowVersionId(workflow.getCurrentPublishedVersionId(), tenantId)
-                .orElseThrow(() -> new DomainValidationException(
-                        DomainErrorCode.WORKFLOW_NO_INITIAL_STEP,
-                        "Workflow must have exactly one initial step: workflowId=" + workflowId
-                ));
-    }
-
-    private Long resolvePriorityId(ProjectEntity project, Long requestedPriorityId, Long tenantId) {
-        if (project.getPrioritySchemeId() == null) {
-            throw new ResourceNotFoundException(
-                    DomainErrorCode.PRIORITY_SCHEME_NOT_FOUND,
-                    "Project has no priority scheme binding: projectId=" + project.getId()
-            );
-        }
-
-        PrioritySchemeEntity priorityScheme = prioritySchemePort
-                .getPrioritySchemeById(project.getPrioritySchemeId(), tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        DomainErrorCode.PRIORITY_SCHEME_NOT_FOUND,
-                        "Priority scheme not found: id=" + project.getPrioritySchemeId()
-                ));
-
-        List<PrioritySchemeItemEntity> priorityItems = prioritySchemeItemPort
-                .getPrioritySchemeItemsBySchemeId(project.getPrioritySchemeId(), tenantId);
-
-        if (requestedPriorityId != null) {
-            boolean inScheme = priorityItems.stream()
-                    .map(PrioritySchemeItemEntity::getPriorityId)
-                    .anyMatch(requestedPriorityId::equals);
-            if (!inScheme) {
-                throw new BusinessRuleViolationException(
-                        DomainErrorCode.PRIORITY_NOT_IN_SCHEME,
-                        "Priority is not allowed in project scheme: projectId=" + project.getId() + ", priorityId=" + requestedPriorityId
-                );
-            }
-            return requestedPriorityId;
-        }
-
-        if (priorityScheme.getDefaultPriorityId() == null) {
-            throw new DomainValidationException(
-                    DomainErrorCode.DEFAULT_PRIORITY_NOT_CONFIGURED,
-                    "Priority scheme has no default priority: schemeId=" + project.getPrioritySchemeId()
-            );
-        }
-
-        return priorityScheme.getDefaultPriorityId();
-    }
-
-    private Long resolveAssigneeId(ProjectEntity project,
-                                   Long requestedAssigneeId,
-                                   ProjectPermissionEvaluationContext actorContext,
-                                   Long tenantId) {
-        if (requestedAssigneeId == null) {
-            return null;
-        }
-
-        projectPermissionEvaluationService.checkPermission(project, actorContext, ProjectPermissionKeys.ASSIGN_ISSUES);
-
-        ProjectPermissionEvaluationContext assigneeContext = ProjectPermissionEvaluationContext.builder()
-                .userId(requestedAssigneeId)
-                .build();
-
-        if (!projectPermissionEvaluationService.hasPermission(project, assigneeContext, ProjectPermissionKeys.ASSIGNABLE_USER)) {
-            throw new BusinessRuleViolationException(
-                    DomainErrorCode.PROJECT_PERMISSION_DENIED,
-                    "Assignee is not assignable in project: projectId=" + project.getId() + ", assigneeId=" + requestedAssigneeId
-            );
-        }
-
-        return requestedAssigneeId;
-    }
-
-    private Long resolveSecurityLevelId(ProjectEntity project,
-                                        Long requestedSecurityLevelId,
-                                        ProjectPermissionEvaluationContext actorContext,
-                                        Long tenantId) {
-        if (project.getIssueSecuritySchemeId() == null) {
-            return requestedSecurityLevelId == null ? null : missingIssueSecurityScheme(project.getId());
-        }
-
-        IssueSecuritySchemeEntity issueSecurityScheme = issueSecuritySchemePort
-                .getIssueSecuritySchemeById(project.getIssueSecuritySchemeId(), tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        DomainErrorCode.ISSUE_SECURITY_SCHEME_NOT_FOUND,
-                        "Issue security scheme not found: id=" + project.getIssueSecuritySchemeId()
-                ));
-
-        if (requestedSecurityLevelId == null) {
-            return issueSecurityScheme.getDefaultLevelId();
-        }
-
-        projectPermissionEvaluationService.checkPermission(project, actorContext, ProjectPermissionKeys.SET_ISSUE_SECURITY);
-
-        boolean inScheme = issueSecurityLevelPort.getIssueSecurityLevelsBySchemeId(
-                        project.getIssueSecuritySchemeId(),
-                        tenantId
-                )
-                .stream()
-                .map(IssueSecurityLevelEntity::getId)
-                .anyMatch(requestedSecurityLevelId::equals);
-
-        if (!inScheme) {
-            throw new BusinessRuleViolationException(
-                    DomainErrorCode.SECURITY_LEVEL_NOT_IN_SCHEME,
-                    "Security level is not allowed in project scheme: projectId=" + project.getId()
-                            + ", securityLevelId=" + requestedSecurityLevelId
-            );
-        }
-
-        return requestedSecurityLevelId;
-    }
-
-    private Long missingIssueSecurityScheme(Long projectId) {
-        throw new ResourceNotFoundException(
-                DomainErrorCode.ISSUE_SECURITY_SCHEME_NOT_FOUND,
-                "Project has no issue security scheme binding: projectId=" + projectId
-        );
-    }
-
     private void persistCreatedOutboxEvent(WorkItemEntity workItem,
                                            Long tenantId,
                                            Long userId,
@@ -1591,21 +947,4 @@ public class CreateWorkItemCommand {
         outboxEventService.saveEvent(outboxEvent);
     }
 
-    private record FieldRef(String fieldRefType, String fieldRef) {
-    }
-
-    private record FieldPolicy(String fieldRefType,
-                               String fieldRef,
-                               boolean required,
-                               boolean hidden,
-                               boolean onCreateScreen) {
-    }
-
-    private record CreateFieldRules(Map<String, FieldPolicy> systemPolicies,
-                                    Map<String, FieldPolicy> customPolicies) {
-    }
-
-    private record ResolvedCustomFields(List<WorkItemCustomFieldValueEntity> values,
-                                        List<String> missingFields) {
-    }
 }

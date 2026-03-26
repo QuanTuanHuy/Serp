@@ -9,16 +9,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import serp.project.pmcore.application.command.workitem.validator.CreateWorkItemValidator;
 import serp.project.pmcore.domain.dto.request.CreateWorkItemRequest;
+import serp.project.pmcore.domain.dto.response.workitem.WorkItemResponse;
 import serp.project.pmcore.domain.entity.CustomFieldContextDefaultValueEntity;
 import serp.project.pmcore.domain.entity.CustomFieldContextEntity;
 import serp.project.pmcore.domain.entity.CustomFieldEntity;
+import serp.project.pmcore.domain.entity.CustomFieldOptionEntity;
 import serp.project.pmcore.domain.entity.FieldConfigEntity;
 import serp.project.pmcore.domain.entity.FieldConfigItemEntity;
 import serp.project.pmcore.domain.entity.FieldConfigSchemeEntity;
@@ -42,6 +43,7 @@ import serp.project.pmcore.domain.entity.workitem.WorkItemEntity;
 import serp.project.pmcore.domain.enums.WorkflowVersionState;
 import serp.project.pmcore.domain.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.exception.DomainErrorCode;
+import serp.project.pmcore.domain.exception.DomainValidationException;
 import serp.project.pmcore.domain.port.store.ICustomFieldContextDefaultValuePort;
 import serp.project.pmcore.domain.port.store.ICustomFieldContextPort;
 import serp.project.pmcore.domain.port.store.ICustomFieldOptionPort;
@@ -73,9 +75,14 @@ import serp.project.pmcore.domain.service.IOutboxEventService;
 import serp.project.pmcore.domain.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.service.IProjectService;
 import serp.project.pmcore.domain.service.IWorkItemService;
+import serp.project.pmcore.domain.service.workitem.create.WorkItemCreateAuthorizationService;
+import serp.project.pmcore.domain.service.workitem.create.WorkItemCreateConfigurationResolver;
+import serp.project.pmcore.domain.service.workitem.create.WorkItemFieldPolicyResolver;
+import serp.project.pmcore.domain.service.workitem.create.WorkItemFieldWriteValidator;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -177,12 +184,75 @@ class CreateWorkItemCommandTest {
     @Mock
     private JsonUtils jsonUtils;
 
-    @InjectMocks
     private CreateWorkItemCommand createWorkItemCommand;
 
     @BeforeEach
     void setUp() {
+        createWorkItemCommand = new CreateWorkItemCommand(
+                createWorkItemValidator,
+                projectService,
+                workItemService,
+                new WorkItemCreateConfigurationResolver(
+                        issueTypePort,
+                        issueTypeSchemeItemPort,
+                        workflowSchemePort,
+                        workflowSchemeItemPort,
+                        workflowPort,
+                        workflowVersionPort,
+                        workflowStepPort,
+                        prioritySchemePort,
+                        prioritySchemeItemPort,
+                        issueSecuritySchemePort,
+                        issueSecurityLevelPort
+                ),
+                new WorkItemCreateAuthorizationService(projectPermissionEvaluationService),
+                new WorkItemFieldPolicyResolver(
+                        fieldConfigSchemePort,
+                        fieldConfigSchemeItemPort,
+                        fieldConfigPort,
+                        fieldConfigItemPort,
+                        issueTypeScreenSchemePort,
+                        issueTypeScreenSchemeItemPort,
+                        screenSchemePort,
+                        screenSchemeItemPort,
+                        screenPort,
+                        screenTabPort,
+                        screenTabFieldPort
+                ),
+                new WorkItemFieldWriteValidator(),
+                customFieldPort,
+                customFieldContextPort,
+                customFieldOptionPort,
+                customFieldContextDefaultValuePort,
+                workItemCustomFieldValuePort,
+                outboxEventService,
+                jsonUtils
+        );
         stubHappyPath(List.of(), List.of(screenField("SYSTEM", "summary")));
+    }
+
+    @Test
+    void executeShouldCreateWorkItemWhenOptionalFieldIsWritableOnCreate() {
+        stubHappyPath(List.of(), List.of(
+                screenField("SYSTEM", "summary"),
+                screenField("SYSTEM", "due_date")
+        ));
+
+        WorkItemResponse response = createWorkItemCommand.execute(
+                PROJECT_ID,
+                CreateWorkItemRequest.builder()
+                        .issueTypeId(ISSUE_TYPE_ID)
+                        .summary("Create task")
+                        .dueDate(1_700_000_000_000L)
+                        .build(),
+                TENANT_ID,
+                USER_ID,
+                Set.of()
+        );
+
+        assertEquals(9000L, response.getId());
+        assertEquals("SERP-1", response.getKey());
+        assertEquals(1_700_000_000_000L, response.getDueDate());
     }
 
     @Test
@@ -196,6 +266,26 @@ class CreateWorkItemCommandTest {
         BusinessRuleViolationException exception = assertThrows(
                 BusinessRuleViolationException.class,
                 () -> createWorkItemCommand.execute(PROJECT_ID, request, TENANT_ID, USER_ID, Set.of())
+        );
+
+        assertEquals(DomainErrorCode.FIELD_NOT_WRITABLE_ON_CREATE, exception.getErrorCode());
+    }
+
+    @Test
+    void executeShouldRejectCustomFieldNotWritableOnCreate() {
+        BusinessRuleViolationException exception = assertThrows(
+                BusinessRuleViolationException.class,
+                () -> createWorkItemCommand.execute(
+                        PROJECT_ID,
+                        CreateWorkItemRequest.builder()
+                                .issueTypeId(ISSUE_TYPE_ID)
+                                .summary("Create task")
+                                .customFields(Map.of("customfield_10001", "value"))
+                                .build(),
+                        TENANT_ID,
+                        USER_ID,
+                        Set.of()
+                )
         );
 
         assertEquals(DomainErrorCode.FIELD_NOT_WRITABLE_ON_CREATE, exception.getErrorCode());
@@ -257,6 +347,79 @@ class CreateWorkItemCommandTest {
         assertEquals("TEXT", savedValues.get(0).getValueType());
         assertEquals("Default environment", savedValues.get(0).getTextValue());
         assertEquals(9000L, savedValues.get(0).getWorkItemId());
+    }
+
+    @Test
+    void executeShouldRejectAmbiguousCustomFieldContext() {
+        stubHappyPath(
+                List.of(),
+                List.of(
+                        screenField("SYSTEM", "summary"),
+                        screenField("CUSTOM", "customfield_10001")
+                )
+        );
+
+        when(customFieldPort.getCustomFieldsByFieldKeysIncludingSystem(List.of("customfield_10001"), TENANT_ID))
+                .thenReturn(List.of(customField("customfield_10001", "text")));
+        when(customFieldContextPort.getApplicableCustomFieldContexts(CUSTOM_FIELD_ID, PROJECT_ID, ISSUE_TYPE_ID, TENANT_ID))
+                .thenReturn(List.of(
+                        projectSpecificContext(CUSTOM_FIELD_CONTEXT_ID),
+                        projectSpecificContext(CUSTOM_FIELD_CONTEXT_ID + 1)
+                ));
+
+        DomainValidationException exception = assertThrows(
+                DomainValidationException.class,
+                () -> createWorkItemCommand.execute(
+                        PROJECT_ID,
+                        CreateWorkItemRequest.builder()
+                                .issueTypeId(ISSUE_TYPE_ID)
+                                .summary("Create story")
+                                .customFields(Map.of("customfield_10001", "value"))
+                                .build(),
+                        TENANT_ID,
+                        USER_ID,
+                        Set.of()
+                )
+        );
+
+        assertEquals(DomainErrorCode.CUSTOM_FIELD_CONTEXT_UNRESOLVABLE, exception.getErrorCode());
+    }
+
+    @Test
+    void executeShouldRejectInvalidSelectOptionValue() {
+        stubHappyPath(
+                List.of(),
+                List.of(
+                        screenField("SYSTEM", "summary"),
+                        screenField("CUSTOM", "customfield_10001")
+                )
+        );
+
+        when(customFieldPort.getCustomFieldsByFieldKeysIncludingSystem(List.of("customfield_10001"), TENANT_ID))
+                .thenReturn(List.of(customField("customfield_10001", "select")));
+        when(customFieldContextPort.getApplicableCustomFieldContexts(CUSTOM_FIELD_ID, PROJECT_ID, ISSUE_TYPE_ID, TENANT_ID))
+                .thenReturn(List.of(globalContext(CUSTOM_FIELD_CONTEXT_ID)));
+        when(customFieldContextDefaultValuePort.getCustomFieldContextDefaultValuesByContextId(CUSTOM_FIELD_CONTEXT_ID, TENANT_ID))
+                .thenReturn(List.of());
+        when(customFieldOptionPort.getCustomFieldOptionsByContextId(CUSTOM_FIELD_CONTEXT_ID, TENANT_ID))
+                .thenReturn(List.of(customFieldOption(5001L, CUSTOM_FIELD_CONTEXT_ID, "allowed")));
+
+        BusinessRuleViolationException exception = assertThrows(
+                BusinessRuleViolationException.class,
+                () -> createWorkItemCommand.execute(
+                        PROJECT_ID,
+                        CreateWorkItemRequest.builder()
+                                .issueTypeId(ISSUE_TYPE_ID)
+                                .summary("Create story")
+                                .customFields(Map.of("customfield_10001", "invalid-option"))
+                                .build(),
+                        TENANT_ID,
+                        USER_ID,
+                        Set.of()
+                )
+        );
+
+        assertEquals(DomainErrorCode.CUSTOM_FIELD_VALUE_INVALID, exception.getErrorCode());
     }
 
     @Test
@@ -416,6 +579,46 @@ class CreateWorkItemCommandTest {
                 .screenTabId(SCREEN_TAB_ID)
                 .fieldRefType(fieldRefType)
                 .fieldRef(fieldRef)
+                .build();
+    }
+
+    private CustomFieldEntity customField(String fieldKey, String typeKey) {
+        return CustomFieldEntity.builder()
+                .id(CUSTOM_FIELD_ID)
+                .tenantId(TENANT_ID)
+                .fieldKey(fieldKey)
+                .typeKey(typeKey)
+                .build();
+    }
+
+    private CustomFieldContextEntity globalContext(Long contextId) {
+        return CustomFieldContextEntity.builder()
+                .id(contextId)
+                .tenantId(TENANT_ID)
+                .customFieldId(CUSTOM_FIELD_ID)
+                .appliesToAllProjects(true)
+                .appliesToAllIssueTypes(true)
+                .build();
+    }
+
+    private CustomFieldContextEntity projectSpecificContext(Long contextId) {
+        return CustomFieldContextEntity.builder()
+                .id(contextId)
+                .tenantId(TENANT_ID)
+                .customFieldId(CUSTOM_FIELD_ID)
+                .appliesToAllProjects(false)
+                .appliesToAllIssueTypes(false)
+                .build();
+    }
+
+    private CustomFieldOptionEntity customFieldOption(Long optionId, Long contextId, String optionKey) {
+        return CustomFieldOptionEntity.builder()
+                .id(optionId)
+                .tenantId(TENANT_ID)
+                .customFieldContextId(contextId)
+                .optionKey(optionKey)
+                .value(optionKey)
+                .isDisabled(false)
                 .build();
     }
 }
