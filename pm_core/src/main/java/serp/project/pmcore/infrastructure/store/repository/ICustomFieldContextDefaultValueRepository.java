@@ -18,5 +18,9 @@ public interface ICustomFieldContextDefaultValueRepository extends JpaRepository
 
     @Query("SELECT d FROM CustomFieldContextDefaultValueModel d WHERE d.contextId = :contextId AND d.tenantId = :tenantId ORDER BY d.sortOrder ASC, d.id ASC")
     List<CustomFieldContextDefaultValueModel> findAllByContextIdAndTenantId(@Param("contextId") Long contextId,
-                                                                            @Param("tenantId") Long tenantId);
+                                                                             @Param("tenantId") Long tenantId);
+
+    @Query("SELECT d FROM CustomFieldContextDefaultValueModel d WHERE d.contextId = :contextId AND (d.tenantId = :tenantId OR d.tenantId = 0) ORDER BY d.sortOrder ASC, d.id ASC")
+    List<CustomFieldContextDefaultValueModel> findAllByContextIdAndTenantIdOrSystemTenant(@Param("contextId") Long contextId,
+                                                                                            @Param("tenantId") Long tenantId);
 }

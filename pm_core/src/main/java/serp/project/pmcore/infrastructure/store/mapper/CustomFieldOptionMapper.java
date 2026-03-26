@@ -11,6 +11,7 @@ import serp.project.pmcore.infrastructure.store.model.CustomFieldOptionModel;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class CustomFieldOptionMapper extends BaseMapper {
@@ -40,5 +41,32 @@ public class CustomFieldOptionMapper extends BaseMapper {
             return Collections.emptyList();
         }
         return models.stream().map(this::toEntity).toList();
+    }
+
+    public CustomFieldOptionModel toModel(CustomFieldOptionEntity entity) {
+        if (entity == null) {
+            return null;
+        }
+        return CustomFieldOptionModel.builder()
+                .id(entity.getId())
+                .tenantId(entity.getTenantId())
+                .customFieldContextId(entity.getCustomFieldContextId())
+                .optionKey(entity.getOptionKey())
+                .value(entity.getValue())
+                .sequence(entity.getSequence())
+                .parentOptionId(entity.getParentOptionId())
+                .isDisabled(entity.getIsDisabled())
+                .createdAt(longToLocalDateTime(entity.getCreatedAt()))
+                .createdBy(entity.getCreatedBy())
+                .updatedAt(longToLocalDateTime(entity.getUpdatedAt()))
+                .updatedBy(entity.getUpdatedBy())
+                .build();
+    }
+
+    public List<CustomFieldOptionModel> toModels(List<CustomFieldOptionEntity> entities) {
+        if (entities == null || entities.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return entities.stream().map(this::toModel).collect(Collectors.toList());
     }
 }

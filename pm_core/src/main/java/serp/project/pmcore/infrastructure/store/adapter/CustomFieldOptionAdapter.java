@@ -22,9 +22,23 @@ public class CustomFieldOptionAdapter implements ICustomFieldOptionPort {
     private final CustomFieldOptionMapper customFieldOptionMapper;
 
     @Override
+    public List<CustomFieldOptionEntity> createCustomFieldOptions(List<CustomFieldOptionEntity> options) {
+        return customFieldOptionMapper.toEntities(
+                customFieldOptionRepository.saveAll(customFieldOptionMapper.toModels(options))
+        );
+    }
+
+    @Override
     public List<CustomFieldOptionEntity> getCustomFieldOptionsByContextId(Long contextId, Long tenantId) {
         return customFieldOptionMapper.toEntities(
                 customFieldOptionRepository.findAllByContextIdAndTenantId(contextId, tenantId)
+        );
+    }
+
+    @Override
+    public List<CustomFieldOptionEntity> getCustomFieldOptionsByContextIdIncludingSystem(Long contextId, Long tenantId) {
+        return customFieldOptionMapper.toEntities(
+                customFieldOptionRepository.findAllByContextIdAndTenantIdOrSystemTenant(contextId, tenantId)
         );
     }
 }

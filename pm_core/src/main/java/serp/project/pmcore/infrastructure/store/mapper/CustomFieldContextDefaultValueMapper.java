@@ -11,6 +11,7 @@ import serp.project.pmcore.infrastructure.store.model.CustomFieldContextDefaultV
 
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class CustomFieldContextDefaultValueMapper extends BaseMapper {
@@ -45,5 +46,37 @@ public class CustomFieldContextDefaultValueMapper extends BaseMapper {
             return Collections.emptyList();
         }
         return models.stream().map(this::toEntity).toList();
+    }
+
+    public CustomFieldContextDefaultValueModel toModel(CustomFieldContextDefaultValueEntity entity) {
+        if (entity == null) {
+            return null;
+        }
+        return CustomFieldContextDefaultValueModel.builder()
+                .id(entity.getId())
+                .tenantId(entity.getTenantId())
+                .contextId(entity.getContextId())
+                .valueType(entity.getValueType())
+                .textValue(entity.getTextValue())
+                .numberValue(entity.getNumberValue())
+                .dateValue(longToLocalDate(entity.getDateValue()))
+                .datetimeValue(longToLocalDateTime(entity.getDatetimeValue()))
+                .userValueId(entity.getUserValueId())
+                .groupValueId(entity.getGroupValueId())
+                .optionValueId(entity.getOptionValueId())
+                .jsonValue(entity.getJsonValue())
+                .sortOrder(entity.getSortOrder())
+                .createdAt(longToLocalDateTime(entity.getCreatedAt()))
+                .createdBy(entity.getCreatedBy())
+                .updatedAt(longToLocalDateTime(entity.getUpdatedAt()))
+                .updatedBy(entity.getUpdatedBy())
+                .build();
+    }
+
+    public List<CustomFieldContextDefaultValueModel> toModels(List<CustomFieldContextDefaultValueEntity> entities) {
+        if (entities == null || entities.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return entities.stream().map(this::toModel).collect(Collectors.toList());
     }
 }

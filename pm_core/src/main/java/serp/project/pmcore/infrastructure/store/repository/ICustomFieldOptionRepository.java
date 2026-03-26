@@ -19,4 +19,8 @@ public interface ICustomFieldOptionRepository extends JpaRepository<CustomFieldO
     @Query("SELECT o FROM CustomFieldOptionModel o WHERE o.customFieldContextId = :contextId AND o.tenantId = :tenantId ORDER BY o.sequence ASC, o.id ASC")
     List<CustomFieldOptionModel> findAllByContextIdAndTenantId(@Param("contextId") Long contextId,
                                                                @Param("tenantId") Long tenantId);
+
+    @Query("SELECT o FROM CustomFieldOptionModel o WHERE o.customFieldContextId = :contextId AND (o.tenantId = :tenantId OR o.tenantId = 0) ORDER BY o.sequence ASC, o.id ASC")
+    List<CustomFieldOptionModel> findAllByContextIdAndTenantIdOrSystemTenant(@Param("contextId") Long contextId,
+                                                                              @Param("tenantId") Long tenantId);
 }

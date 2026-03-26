@@ -36,6 +36,7 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
 
     private final ProvisioningModeExecutorRegistry provisioningModeExecutorRegistry;
     private final ISchemeSourceResolver schemeSourceResolver;
+    private final ProjectCustomFieldContextProvisioningService projectCustomFieldContextProvisioningService;
 
     @Override
     public ProjectProvisioningResult provisionProjectSchemes(ProjectEntity project,
@@ -53,6 +54,7 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
                 request.getEffectiveProvisioningMode(),
                 context
         );
+        projectCustomFieldContextProvisioningService.provision(project, request, effectiveBindings);
 
         return ProjectProvisioningResult.builder()
                 .resolvedSourceBindings(ProjectSchemeBindings.fromSchemeMap(resolvedSources))

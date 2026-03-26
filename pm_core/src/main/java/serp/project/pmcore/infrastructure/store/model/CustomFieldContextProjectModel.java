@@ -1,5 +1,6 @@
 package serp.project.pmcore.infrastructure.store.model;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.Getter;
@@ -16,4 +17,13 @@ import org.hibernate.annotations.SQLRestriction;
 @Setter
 @SuperBuilder
 public class CustomFieldContextProjectModel extends BaseModel {
+
+    @Column(name = "tenant_id", nullable = false)
+    private Long tenantId;
+
+    @Column(name = "context_id", nullable = false)
+    private Long contextId;
+
+    @Column(name = "project_id", nullable = false)
+    private Long projectId;
 }
