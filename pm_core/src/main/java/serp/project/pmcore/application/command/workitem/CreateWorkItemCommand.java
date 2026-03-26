@@ -19,10 +19,6 @@ import serp.project.pmcore.domain.dto.workitem.create.CreateFieldRules;
 import serp.project.pmcore.domain.dto.workitem.create.FieldPolicy;
 import serp.project.pmcore.domain.dto.workitem.create.ResolvedCustomFields;
 import serp.project.pmcore.domain.dto.workitem.create.ResolvedWorkItemCreateConfiguration;
-import serp.project.pmcore.domain.entity.CustomFieldContextDefaultValueEntity;
-import serp.project.pmcore.domain.entity.CustomFieldContextEntity;
-import serp.project.pmcore.domain.entity.CustomFieldEntity;
-import serp.project.pmcore.domain.entity.CustomFieldOptionEntity;
 import serp.project.pmcore.domain.entity.OutboxEventEntity;
 import serp.project.pmcore.domain.entity.project.ProjectEntity;
 import serp.project.pmcore.domain.entity.workitem.WorkItemCustomFieldValueEntity;
@@ -30,33 +26,20 @@ import serp.project.pmcore.domain.entity.workitem.WorkItemEntity;
 import serp.project.pmcore.domain.enums.OutboxEventStatus;
 import serp.project.pmcore.domain.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.exception.DomainErrorCode;
-import serp.project.pmcore.domain.exception.DomainValidationException;
-import serp.project.pmcore.domain.port.store.ICustomFieldContextDefaultValuePort;
-import serp.project.pmcore.domain.port.store.ICustomFieldContextPort;
-import serp.project.pmcore.domain.port.store.ICustomFieldOptionPort;
-import serp.project.pmcore.domain.port.store.ICustomFieldPort;
 import serp.project.pmcore.domain.port.store.IWorkItemCustomFieldValuePort;
 import serp.project.pmcore.domain.service.IOutboxEventService;
 import serp.project.pmcore.domain.service.IProjectService;
 import serp.project.pmcore.domain.service.IWorkItemService;
 import serp.project.pmcore.domain.service.workitem.create.WorkItemCreateAuthorizationService;
 import serp.project.pmcore.domain.service.workitem.create.WorkItemCreateConfigurationResolver;
+import serp.project.pmcore.domain.service.workitem.create.WorkItemCustomFieldResolver;
 import serp.project.pmcore.domain.service.workitem.create.WorkItemFieldPolicyResolver;
 import serp.project.pmcore.domain.service.workitem.create.WorkItemFieldWriteValidator;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -64,26 +47,14 @@ import java.util.Set;
 @Slf4j
 public class CreateWorkItemCommand {
 
-    private static final String VALUE_TYPE_TEXT = "TEXT";
-    private static final String VALUE_TYPE_NUMBER = "NUMBER";
-    private static final String VALUE_TYPE_DATE = "DATE";
-    private static final String VALUE_TYPE_DATETIME = "DATETIME";
-    private static final String VALUE_TYPE_USER = "USER";
-    private static final String VALUE_TYPE_GROUP = "GROUP";
-    private static final String VALUE_TYPE_OPTION = "OPTION";
-    private static final String VALUE_TYPE_JSON = "JSON";
-
     private final CreateWorkItemValidator createWorkItemValidator;
     private final IProjectService projectService;
     private final IWorkItemService workItemService;
     private final WorkItemCreateConfigurationResolver workItemCreateConfigurationResolver;
     private final WorkItemCreateAuthorizationService workItemCreateAuthorizationService;
+    private final WorkItemCustomFieldResolver workItemCustomFieldResolver;
     private final WorkItemFieldPolicyResolver workItemFieldPolicyResolver;
     private final WorkItemFieldWriteValidator workItemFieldWriteValidator;
-    private final ICustomFieldPort customFieldPort;
-    private final ICustomFieldContextPort customFieldContextPort;
-    private final ICustomFieldOptionPort customFieldOptionPort;
-    private final ICustomFieldContextDefaultValuePort customFieldContextDefaultValuePort;
     private final IWorkItemCustomFieldValuePort workItemCustomFieldValuePort;
     private final IOutboxEventService outboxEventService;
     private final JsonUtils jsonUtils;
@@ -93,12 +64,9 @@ public class CreateWorkItemCommand {
                                  IWorkItemService workItemService,
                                  WorkItemCreateConfigurationResolver workItemCreateConfigurationResolver,
                                  WorkItemCreateAuthorizationService workItemCreateAuthorizationService,
+                                 WorkItemCustomFieldResolver workItemCustomFieldResolver,
                                  WorkItemFieldPolicyResolver workItemFieldPolicyResolver,
                                  WorkItemFieldWriteValidator workItemFieldWriteValidator,
-                                 ICustomFieldPort customFieldPort,
-                                 ICustomFieldContextPort customFieldContextPort,
-                                 ICustomFieldOptionPort customFieldOptionPort,
-                                 ICustomFieldContextDefaultValuePort customFieldContextDefaultValuePort,
                                  IWorkItemCustomFieldValuePort workItemCustomFieldValuePort,
                                  IOutboxEventService outboxEventService,
                                  JsonUtils jsonUtils) {
@@ -107,12 +75,9 @@ public class CreateWorkItemCommand {
         this.workItemService = workItemService;
         this.workItemCreateConfigurationResolver = workItemCreateConfigurationResolver;
         this.workItemCreateAuthorizationService = workItemCreateAuthorizationService;
+        this.workItemCustomFieldResolver = workItemCustomFieldResolver;
         this.workItemFieldPolicyResolver = workItemFieldPolicyResolver;
         this.workItemFieldWriteValidator = workItemFieldWriteValidator;
-        this.customFieldPort = customFieldPort;
-        this.customFieldContextPort = customFieldContextPort;
-        this.customFieldOptionPort = customFieldOptionPort;
-        this.customFieldContextDefaultValuePort = customFieldContextDefaultValuePort;
         this.workItemCustomFieldValuePort = workItemCustomFieldValuePort;
         this.outboxEventService = outboxEventService;
         this.jsonUtils = jsonUtils;
@@ -139,8 +104,6 @@ public class CreateWorkItemCommand {
         );
         workItemFieldWriteValidator.validateClientSuppliedWritableFields(request, createFieldRules);
 
-        Long priorityId = resolvedConfiguration.priorityId();
-
         workItemCreateAuthorizationService.checkScheduleIssuesPermissionIfNeeded(project, actorContext, request.getDueDate());
         Long assigneeId = workItemCreateAuthorizationService.resolveAssigneeId(project, request.getAssigneeId(), actorContext);
         workItemCreateAuthorizationService.checkSetIssueSecurityPermissionIfNeeded(project, actorContext, request.getSecurityLevelId());
@@ -159,14 +122,21 @@ public class CreateWorkItemCommand {
             );
         }
 
-        ResolvedCustomFields resolvedCustomFields = resolveCustomFields(
+        ResolvedCustomFields resolvedCustomFields = workItemCustomFieldResolver.resolveCustomFields(
                 projectId,
                 resolvedConfiguration.issueType().getId(),
                 request.getCustomFields(),
                 createFieldRules,
                 tenantId
         );
-        validateRequiredFields(request, priorityId, assigneeId, securityLevelId, createFieldRules, resolvedCustomFields);
+        validateRequiredFields(
+                request,
+                resolvedConfiguration.priorityId(),
+                assigneeId,
+                securityLevelId,
+                createFieldRules,
+                resolvedCustomFields
+        );
 
         long issueNo = workItemService.getNextIssueNumber(projectId, tenantId);
         String key = project.getKey() + "-" + issueNo;
@@ -181,7 +151,7 @@ public class CreateWorkItemCommand {
                 .description(request.getDescription())
                 .workflowStepId(resolvedConfiguration.initialStep().getId())
                 .statusId(resolvedConfiguration.initialStep().getStatusId())
-                .priorityId(priorityId)
+                .priorityId(resolvedConfiguration.priorityId())
                 .resolutionId(null)
                 .assigneeId(assigneeId)
                 .reporterId(userId)
@@ -202,654 +172,6 @@ public class CreateWorkItemCommand {
                 savedWorkItem.getId(), savedWorkItem.getKey(), projectId, tenantId);
 
         return WorkItemResponse.from(savedWorkItem);
-    }
-
-    private ResolvedCustomFields resolveCustomFields(Long projectId,
-                                                     Long issueTypeId,
-                                                     Map<String, Object> requestCustomFields,
-                                                     CreateFieldRules createFieldRules,
-                                                     Long tenantId) {
-        if (createFieldRules.customPolicies().isEmpty()) {
-            return ResolvedCustomFields.empty();
-        }
-
-        List<String> fieldKeys = new ArrayList<>(new LinkedHashSet<>(createFieldRules.customPolicies().keySet()));
-        Map<String, CustomFieldEntity> customFieldByKey = toCustomFieldMap(
-                customFieldPort.getCustomFieldsByFieldKeysIncludingSystem(fieldKeys, tenantId)
-        );
-
-        List<WorkItemCustomFieldValueEntity> resolvedValues = new ArrayList<>();
-        List<String> missingRequiredFields = new ArrayList<>();
-        Map<String, Object> providedCustomFields = requestCustomFields == null ? Map.of() : requestCustomFields;
-
-        for (Map.Entry<String, FieldPolicy> entry : createFieldRules.customPolicies().entrySet()) {
-            String fieldKey = entry.getKey();
-            FieldPolicy fieldPolicy = entry.getValue();
-            CustomFieldEntity customField = customFieldByKey.get(fieldKey);
-
-            if (customField == null) {
-                throw new DomainValidationException(
-                        DomainErrorCode.CUSTOM_FIELD_CONTEXT_UNRESOLVABLE,
-                        "Custom field definition not found for field=" + fieldKey
-                );
-            }
-
-            CustomFieldContextEntity context = resolveCustomFieldContext(customField, projectId, issueTypeId, tenantId);
-            List<CustomFieldContextDefaultValueEntity> defaultValues = customFieldContextDefaultValuePort
-                    .getCustomFieldContextDefaultValuesByContextId(context.getId(), tenantId);
-            List<CustomFieldOptionEntity> options = customFieldOptionPort.getCustomFieldOptionsByContextId(context.getId(), tenantId);
-
-            boolean hasProvidedValue = providedCustomFields.containsKey(fieldKey) && providedCustomFields.get(fieldKey) != null;
-            List<WorkItemCustomFieldValueEntity> fieldValues = hasProvidedValue
-                    ? buildProvidedCustomFieldValues(customField, context.getId(), options, providedCustomFields.get(fieldKey), fieldKey)
-                    : buildDefaultCustomFieldValues(customField, context.getId(), options, defaultValues, fieldKey);
-
-            if (fieldValues.isEmpty()) {
-                if (fieldPolicy.required()) {
-                    missingRequiredFields.add(fieldKey);
-                }
-                continue;
-            }
-
-            resolvedValues.addAll(fieldValues);
-        }
-
-        return new ResolvedCustomFields(resolvedValues, missingRequiredFields);
-    }
-
-    private Map<String, CustomFieldEntity> toCustomFieldMap(List<CustomFieldEntity> customFields) {
-        Map<String, CustomFieldEntity> customFieldMap = new LinkedHashMap<>();
-        for (CustomFieldEntity customField : customFields) {
-            CustomFieldEntity existing = customFieldMap.get(customField.getFieldKey());
-            if (existing == null || (Long.valueOf(0L).equals(existing.getTenantId()) && !Long.valueOf(0L).equals(customField.getTenantId()))) {
-                customFieldMap.put(customField.getFieldKey(), customField);
-            }
-        }
-        return customFieldMap;
-    }
-
-    private CustomFieldContextEntity resolveCustomFieldContext(CustomFieldEntity customField,
-                                                               Long projectId,
-                                                               Long issueTypeId,
-                                                               Long tenantId) {
-        List<CustomFieldContextEntity> applicableContexts = customFieldContextPort
-                .getApplicableCustomFieldContexts(customField.getId(), projectId, issueTypeId, tenantId);
-
-        if (applicableContexts.isEmpty()) {
-            throw new DomainValidationException(
-                    DomainErrorCode.CUSTOM_FIELD_CONTEXT_UNRESOLVABLE,
-                    "No custom field context matches field=" + customField.getFieldKey()
-                            + ", projectId=" + projectId + ", issueTypeId=" + issueTypeId
-            );
-        }
-
-        Map<Integer, List<CustomFieldContextEntity>> contextsBySpecificity = new LinkedHashMap<>();
-        for (CustomFieldContextEntity applicableContext : applicableContexts) {
-            contextsBySpecificity.computeIfAbsent(customFieldContextSpecificity(applicableContext), ignored -> new ArrayList<>())
-                    .add(applicableContext);
-        }
-
-        Integer bestSpecificity = contextsBySpecificity.keySet().stream().min(Integer::compareTo)
-                .orElseThrow(() -> new DomainValidationException(
-                        DomainErrorCode.CUSTOM_FIELD_CONTEXT_UNRESOLVABLE,
-                        "Unable to determine context specificity for field=" + customField.getFieldKey()
-                ));
-
-        List<CustomFieldContextEntity> bestContexts = contextsBySpecificity.get(bestSpecificity);
-        if (bestContexts == null || bestContexts.size() != 1) {
-            throw new DomainValidationException(
-                    DomainErrorCode.CUSTOM_FIELD_CONTEXT_UNRESOLVABLE,
-                    "Custom field context is ambiguous for field=" + customField.getFieldKey()
-                            + ", projectId=" + projectId + ", issueTypeId=" + issueTypeId
-            );
-        }
-
-        return bestContexts.get(0);
-    }
-
-    private int customFieldContextSpecificity(CustomFieldContextEntity context) {
-        boolean allProjects = Boolean.TRUE.equals(context.getAppliesToAllProjects());
-        boolean allIssueTypes = Boolean.TRUE.equals(context.getAppliesToAllIssueTypes());
-
-        if (!allProjects && !allIssueTypes) {
-            return 1;
-        }
-        if (!allProjects) {
-            return 2;
-        }
-        if (!allIssueTypes) {
-            return 3;
-        }
-        return 4;
-    }
-
-    private String normalizeToken(String value) {
-        String normalized = value.trim().replaceAll("([a-z0-9])([A-Z])", "$1_$2");
-        normalized = normalized.replace('-', '_').replace(' ', '_');
-        return normalized.toLowerCase(Locale.ROOT);
-    }
-
-    private List<WorkItemCustomFieldValueEntity> buildProvidedCustomFieldValues(CustomFieldEntity customField,
-                                                                                 Long contextId,
-                                                                                List<CustomFieldOptionEntity> options,
-                                                                                Object rawValue,
-                                                                                String fieldKey) {
-        String typeKey = normalizeToken(customField.getTypeKey());
-        return switch (typeKey) {
-            case "text", "url" -> List.of(buildCustomFieldValue(
-                    customField.getId(),
-                    contextId,
-                    VALUE_TYPE_TEXT,
-                    requireTextValue(rawValue, fieldKey),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    0
-            ));
-            case "number" -> List.of(buildCustomFieldValue(
-                    customField.getId(),
-                    contextId,
-                    VALUE_TYPE_NUMBER,
-                    null,
-                    requireNumberValue(rawValue, fieldKey),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    0
-            ));
-            case "date" -> List.of(buildCustomFieldValue(
-                    customField.getId(),
-                    contextId,
-                    VALUE_TYPE_DATE,
-                    null,
-                    null,
-                    requireDateValue(rawValue, fieldKey),
-                    null,
-                    null,
-                    null,
-                    null,
-                    0
-            ));
-            case "datetime" -> List.of(buildCustomFieldValue(
-                    customField.getId(),
-                    contextId,
-                    VALUE_TYPE_DATETIME,
-                    null,
-                    null,
-                    null,
-                    requireDateTimeValue(rawValue, fieldKey),
-                    null,
-                    null,
-                    null,
-                    0
-            ));
-            case "user" -> List.of(buildCustomFieldValue(
-                    customField.getId(),
-                    contextId,
-                    VALUE_TYPE_USER,
-                    null,
-                    null,
-                    null,
-                    null,
-                    requireUserValue(rawValue, fieldKey),
-                    null,
-                    null,
-                    0
-            ));
-            case "group" -> List.of(buildCustomFieldValue(
-                    customField.getId(),
-                    contextId,
-                    VALUE_TYPE_GROUP,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    requireGroupValue(rawValue, fieldKey),
-                    null,
-                    0
-            ));
-            case "select" -> {
-                CustomFieldOptionEntity option = resolveOption(rawValue, options, fieldKey);
-                yield List.of(buildCustomFieldValue(
-                        customField.getId(),
-                        contextId,
-                        VALUE_TYPE_OPTION,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        option.getId(),
-                        0
-                ));
-            }
-            case "multiselect" -> {
-                List<?> values = asList(rawValue);
-                List<WorkItemCustomFieldValueEntity> resolvedValues = new ArrayList<>();
-                for (int index = 0; index < values.size(); index++) {
-                    CustomFieldOptionEntity option = resolveOption(values.get(index), options, fieldKey);
-                    resolvedValues.add(buildCustomFieldValue(
-                            customField.getId(),
-                            contextId,
-                            VALUE_TYPE_OPTION,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            option.getId(),
-                            index
-                    ));
-                }
-                yield resolvedValues;
-            }
-            default -> List.of(buildJsonCustomFieldValue(
-                    customField.getId(),
-                    contextId,
-                    jsonUtils.toJson(rawValue),
-                    0
-            ));
-        };
-    }
-
-    private List<WorkItemCustomFieldValueEntity> buildDefaultCustomFieldValues(CustomFieldEntity customField,
-                                                                               Long contextId,
-                                                                               List<CustomFieldOptionEntity> options,
-                                                                               List<CustomFieldContextDefaultValueEntity> defaultValues,
-                                                                               String fieldKey) {
-        if (defaultValues == null || defaultValues.isEmpty()) {
-            return List.of();
-        }
-
-        String typeKey = normalizeToken(customField.getTypeKey());
-        if (!"multiselect".equals(typeKey) && defaultValues.size() > 1) {
-            throw new BusinessRuleViolationException(
-                    DomainErrorCode.CUSTOM_FIELD_VALUE_INVALID,
-                    "Multiple default values are configured for single-value field=" + fieldKey
-            );
-        }
-
-        if ("multiselect".equals(typeKey)) {
-            List<WorkItemCustomFieldValueEntity> values = new ArrayList<>();
-            for (int index = 0; index < defaultValues.size(); index++) {
-                CustomFieldContextDefaultValueEntity defaultValue = defaultValues.get(index);
-                if (defaultValue.getOptionValueId() == null) {
-                    throw new BusinessRuleViolationException(
-                            DomainErrorCode.CUSTOM_FIELD_VALUE_INVALID,
-                            "Multiselect default must reference option value: field=" + fieldKey
-                    );
-                }
-
-                CustomFieldOptionEntity option = resolveOption(defaultValue.getOptionValueId(), options, fieldKey);
-                values.add(buildCustomFieldValue(
-                        customField.getId(),
-                        contextId,
-                        VALUE_TYPE_OPTION,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        option.getId(),
-                        defaultValue.getSortOrder() == null ? index : defaultValue.getSortOrder()
-                ));
-            }
-            return values;
-        }
-
-        CustomFieldContextDefaultValueEntity defaultValue = defaultValues.get(0);
-        return switch (typeKey) {
-            case "text", "url" -> defaultValue.getTextValue() == null
-                    ? List.of()
-                    : List.of(buildCustomFieldValue(
-                    customField.getId(),
-                    contextId,
-                    VALUE_TYPE_TEXT,
-                    defaultValue.getTextValue(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    0
-            ));
-            case "number" -> defaultValue.getNumberValue() == null
-                    ? List.of()
-                    : List.of(buildCustomFieldValue(
-                    customField.getId(),
-                    contextId,
-                    VALUE_TYPE_NUMBER,
-                    null,
-                    defaultValue.getNumberValue(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    0
-            ));
-            case "date" -> defaultValue.getDateValue() == null
-                    ? List.of()
-                    : List.of(buildCustomFieldValue(
-                    customField.getId(),
-                    contextId,
-                    VALUE_TYPE_DATE,
-                    null,
-                    null,
-                    defaultValue.getDateValue(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    0
-            ));
-            case "datetime" -> defaultValue.getDatetimeValue() == null
-                    ? List.of()
-                    : List.of(buildCustomFieldValue(
-                    customField.getId(),
-                    contextId,
-                    VALUE_TYPE_DATETIME,
-                    null,
-                    null,
-                    null,
-                    defaultValue.getDatetimeValue(),
-                    null,
-                    null,
-                    null,
-                    0
-            ));
-            case "user" -> defaultValue.getUserValueId() == null
-                    ? List.of()
-                    : List.of(buildCustomFieldValue(
-                    customField.getId(),
-                    contextId,
-                    VALUE_TYPE_USER,
-                    null,
-                    null,
-                    null,
-                    null,
-                    defaultValue.getUserValueId(),
-                    null,
-                    null,
-                    0
-            ));
-            case "group" -> defaultValue.getGroupValueId() == null
-                    ? List.of()
-                    : List.of(buildCustomFieldValue(
-                    customField.getId(),
-                    contextId,
-                    VALUE_TYPE_GROUP,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    defaultValue.getGroupValueId(),
-                    null,
-                    0
-            ));
-            case "select" -> {
-                if (defaultValue.getOptionValueId() == null) {
-                    yield List.of();
-                }
-                CustomFieldOptionEntity option = resolveOption(defaultValue.getOptionValueId(), options, fieldKey);
-                yield List.of(buildCustomFieldValue(
-                        customField.getId(),
-                        contextId,
-                        VALUE_TYPE_OPTION,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        option.getId(),
-                        0
-                ));
-            }
-            default -> extractFallbackJsonValue(defaultValue) == null
-                    ? List.of()
-                    : List.of(buildJsonCustomFieldValue(
-                    customField.getId(),
-                    contextId,
-                    extractFallbackJsonValue(defaultValue),
-                    0
-            ));
-        };
-    }
-
-    private String extractFallbackJsonValue(CustomFieldContextDefaultValueEntity defaultValue) {
-        if (defaultValue.getJsonValue() != null) {
-            return defaultValue.getJsonValue();
-        }
-        if (defaultValue.getTextValue() != null) {
-            return jsonUtils.toJson(defaultValue.getTextValue());
-        }
-        if (defaultValue.getNumberValue() != null) {
-            return jsonUtils.toJson(defaultValue.getNumberValue());
-        }
-        if (defaultValue.getDateValue() != null) {
-            return jsonUtils.toJson(defaultValue.getDateValue());
-        }
-        if (defaultValue.getDatetimeValue() != null) {
-            return jsonUtils.toJson(defaultValue.getDatetimeValue());
-        }
-        if (defaultValue.getUserValueId() != null) {
-            return jsonUtils.toJson(defaultValue.getUserValueId());
-        }
-        if (defaultValue.getGroupValueId() != null) {
-            return jsonUtils.toJson(defaultValue.getGroupValueId());
-        }
-        if (defaultValue.getOptionValueId() != null) {
-            return jsonUtils.toJson(defaultValue.getOptionValueId());
-        }
-        return null;
-    }
-
-    private WorkItemCustomFieldValueEntity buildJsonCustomFieldValue(Long customFieldId,
-                                                                     Long contextId,
-                                                                     String jsonValue,
-                                                                     Integer sortOrder) {
-        return WorkItemCustomFieldValueEntity.builder()
-                .customFieldId(customFieldId)
-                .customFieldContextId(contextId)
-                .valueType(VALUE_TYPE_JSON)
-                .jsonValue(jsonValue)
-                .sortOrder(sortOrder)
-                .build();
-    }
-
-    private WorkItemCustomFieldValueEntity buildCustomFieldValue(Long customFieldId,
-                                                                 Long contextId,
-                                                                 String valueType,
-                                                                 String textValue,
-                                                                 BigDecimal numberValue,
-                                                                 Long dateValue,
-                                                                 Long datetimeValue,
-                                                                 Long userValueId,
-                                                                 String groupValueId,
-                                                                 Long optionValueId,
-                                                                 Integer sortOrder) {
-        return WorkItemCustomFieldValueEntity.builder()
-                .customFieldId(customFieldId)
-                .customFieldContextId(contextId)
-                .valueType(valueType)
-                .textValue(textValue)
-                .numberValue(numberValue)
-                .dateValue(dateValue)
-                .datetimeValue(datetimeValue)
-                .userValueId(userValueId)
-                .groupValueId(groupValueId)
-                .optionValueId(optionValueId)
-                .sortOrder(sortOrder)
-                .build();
-    }
-
-    private String requireTextValue(Object rawValue, String fieldKey) {
-        if (rawValue instanceof String text && !text.isBlank()) {
-            return text;
-        }
-        throw new BusinessRuleViolationException(
-                DomainErrorCode.CUSTOM_FIELD_VALUE_INVALID,
-                "Custom field requires text value: field=" + fieldKey
-        );
-    }
-
-    private BigDecimal requireNumberValue(Object rawValue, String fieldKey) {
-        try {
-            if (rawValue instanceof Number number) {
-                return new BigDecimal(number.toString());
-            }
-            if (rawValue instanceof String text && !text.isBlank()) {
-                return new BigDecimal(text.trim());
-            }
-        } catch (NumberFormatException exception) {
-            throw new BusinessRuleViolationException(
-                    DomainErrorCode.CUSTOM_FIELD_VALUE_INVALID,
-                    "Custom field requires numeric value: field=" + fieldKey
-            );
-        }
-
-        throw new BusinessRuleViolationException(
-                DomainErrorCode.CUSTOM_FIELD_VALUE_INVALID,
-                "Custom field requires numeric value: field=" + fieldKey
-        );
-    }
-
-    private Long requireUserValue(Object rawValue, String fieldKey) {
-        try {
-            if (rawValue instanceof Number number) {
-                return number.longValue();
-            }
-            if (rawValue instanceof String text && !text.isBlank()) {
-                return Long.parseLong(text.trim());
-            }
-        } catch (NumberFormatException exception) {
-            throw new BusinessRuleViolationException(
-                    DomainErrorCode.CUSTOM_FIELD_VALUE_INVALID,
-                    "Custom field requires user id value: field=" + fieldKey
-            );
-        }
-
-        throw new BusinessRuleViolationException(
-                DomainErrorCode.CUSTOM_FIELD_VALUE_INVALID,
-                "Custom field requires user id value: field=" + fieldKey
-        );
-    }
-
-    private String requireGroupValue(Object rawValue, String fieldKey) {
-        if (rawValue instanceof String text && !text.isBlank()) {
-            return text;
-        }
-        throw new BusinessRuleViolationException(
-                DomainErrorCode.CUSTOM_FIELD_VALUE_INVALID,
-                "Custom field requires group value: field=" + fieldKey
-        );
-    }
-
-    private Long requireDateValue(Object rawValue, String fieldKey) {
-        try {
-            LocalDate localDate;
-            if (rawValue instanceof Number number) {
-                localDate = Instant.ofEpochMilli(number.longValue()).atZone(ZoneId.systemDefault()).toLocalDate();
-            } else if (rawValue instanceof String text && !text.isBlank()) {
-                try {
-                    localDate = LocalDate.parse(text.trim());
-                } catch (DateTimeParseException exception) {
-                    localDate = Instant.parse(text.trim()).atZone(ZoneId.systemDefault()).toLocalDate();
-                }
-            } else {
-                throw new DateTimeParseException("Unsupported date format", String.valueOf(rawValue), 0);
-            }
-            return localDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
-        } catch (DateTimeParseException exception) {
-            throw new BusinessRuleViolationException(
-                    DomainErrorCode.CUSTOM_FIELD_VALUE_INVALID,
-                    "Custom field requires date value: field=" + fieldKey
-            );
-        }
-    }
-
-    private Long requireDateTimeValue(Object rawValue, String fieldKey) {
-        try {
-            if (rawValue instanceof Number number) {
-                return number.longValue();
-            }
-            if (rawValue instanceof String text && !text.isBlank()) {
-                try {
-                    return Instant.parse(text.trim()).toEpochMilli();
-                } catch (DateTimeParseException exception) {
-                    return LocalDateTime.parse(text.trim())
-                            .atZone(ZoneId.systemDefault())
-                            .toInstant()
-                            .toEpochMilli();
-                }
-            }
-        } catch (DateTimeParseException exception) {
-            throw new BusinessRuleViolationException(
-                    DomainErrorCode.CUSTOM_FIELD_VALUE_INVALID,
-                    "Custom field requires datetime value: field=" + fieldKey
-            );
-        }
-
-        throw new BusinessRuleViolationException(
-                DomainErrorCode.CUSTOM_FIELD_VALUE_INVALID,
-                "Custom field requires datetime value: field=" + fieldKey
-        );
-    }
-
-    private List<?> asList(Object rawValue) {
-        if (rawValue == null) {
-            return List.of();
-        }
-        if (rawValue instanceof Collection<?> collection) {
-            return new ArrayList<>(collection);
-        }
-        return List.of(rawValue);
-    }
-
-    private CustomFieldOptionEntity resolveOption(Object rawValue,
-                                                  List<CustomFieldOptionEntity> options,
-                                                  String fieldKey) {
-        String textCandidate = rawValue instanceof String text ? text.trim() : null;
-        Long numericCandidate = null;
-
-        if (rawValue instanceof Number number) {
-            numericCandidate = number.longValue();
-        } else if (textCandidate != null && !textCandidate.isBlank()) {
-            try {
-                numericCandidate = Long.parseLong(textCandidate);
-            } catch (NumberFormatException ignored) {
-                numericCandidate = null;
-            }
-        }
-
-        for (CustomFieldOptionEntity option : options) {
-            if (Boolean.TRUE.equals(option.getIsDisabled())) {
-                continue;
-            }
-            if (textCandidate != null && !textCandidate.isBlank() && textCandidate.equals(option.getOptionKey())) {
-                return option;
-            }
-            if (numericCandidate != null && numericCandidate.equals(option.getId())) {
-                return option;
-            }
-        }
-
-        throw new BusinessRuleViolationException(
-                DomainErrorCode.CUSTOM_FIELD_VALUE_INVALID,
-                "Custom field option is invalid: field=" + fieldKey + ", value=" + rawValue
-        );
     }
 
     private void validateRequiredFields(CreateWorkItemRequest request,
@@ -946,5 +268,4 @@ public class CreateWorkItemCommand {
 
         outboxEventService.saveEvent(outboxEvent);
     }
-
 }

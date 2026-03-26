@@ -77,8 +77,18 @@ import serp.project.pmcore.domain.service.IProjectService;
 import serp.project.pmcore.domain.service.IWorkItemService;
 import serp.project.pmcore.domain.service.workitem.create.WorkItemCreateAuthorizationService;
 import serp.project.pmcore.domain.service.workitem.create.WorkItemCreateConfigurationResolver;
+import serp.project.pmcore.domain.service.workitem.create.WorkItemCustomFieldResolver;
 import serp.project.pmcore.domain.service.workitem.create.WorkItemFieldPolicyResolver;
 import serp.project.pmcore.domain.service.workitem.create.WorkItemFieldWriteValidator;
+import serp.project.pmcore.domain.service.workitem.create.handler.DateCustomFieldValueHandler;
+import serp.project.pmcore.domain.service.workitem.create.handler.DateTimeCustomFieldValueHandler;
+import serp.project.pmcore.domain.service.workitem.create.handler.GroupCustomFieldValueHandler;
+import serp.project.pmcore.domain.service.workitem.create.handler.JsonCustomFieldValueHandler;
+import serp.project.pmcore.domain.service.workitem.create.handler.MultiSelectCustomFieldValueHandler;
+import serp.project.pmcore.domain.service.workitem.create.handler.NumberCustomFieldValueHandler;
+import serp.project.pmcore.domain.service.workitem.create.handler.SelectCustomFieldValueHandler;
+import serp.project.pmcore.domain.service.workitem.create.handler.TextCustomFieldValueHandler;
+import serp.project.pmcore.domain.service.workitem.create.handler.UserCustomFieldValueHandler;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.util.List;
@@ -206,6 +216,7 @@ class CreateWorkItemCommandTest {
                         issueSecurityLevelPort
                 ),
                 new WorkItemCreateAuthorizationService(projectPermissionEvaluationService),
+                buildCustomFieldResolver(),
                 new WorkItemFieldPolicyResolver(
                         fieldConfigSchemePort,
                         fieldConfigSchemeItemPort,
@@ -220,10 +231,6 @@ class CreateWorkItemCommandTest {
                         screenTabFieldPort
                 ),
                 new WorkItemFieldWriteValidator(),
-                customFieldPort,
-                customFieldContextPort,
-                customFieldOptionPort,
-                customFieldContextDefaultValuePort,
                 workItemCustomFieldValuePort,
                 outboxEventService,
                 jsonUtils
@@ -580,6 +587,26 @@ class CreateWorkItemCommandTest {
                 .fieldRefType(fieldRefType)
                 .fieldRef(fieldRef)
                 .build();
+    }
+
+    private WorkItemCustomFieldResolver buildCustomFieldResolver() {
+        return new WorkItemCustomFieldResolver(
+                customFieldPort,
+                customFieldContextPort,
+                customFieldOptionPort,
+                customFieldContextDefaultValuePort,
+                List.of(
+                        new TextCustomFieldValueHandler(),
+                        new NumberCustomFieldValueHandler(),
+                        new DateCustomFieldValueHandler(),
+                        new DateTimeCustomFieldValueHandler(),
+                        new UserCustomFieldValueHandler(),
+                        new GroupCustomFieldValueHandler(),
+                        new SelectCustomFieldValueHandler(),
+                        new MultiSelectCustomFieldValueHandler(),
+                        new JsonCustomFieldValueHandler(jsonUtils)
+                )
+        );
     }
 
     private CustomFieldEntity customField(String fieldKey, String typeKey) {
