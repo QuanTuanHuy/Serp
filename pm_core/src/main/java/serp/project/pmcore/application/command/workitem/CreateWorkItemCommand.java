@@ -23,6 +23,8 @@ import serp.project.pmcore.domain.entity.project.ProjectEntity;
 import serp.project.pmcore.domain.entity.workitem.WorkItemCustomFieldValueEntity;
 import serp.project.pmcore.domain.entity.workitem.WorkItemEntity;
 import serp.project.pmcore.domain.enums.OutboxEventStatus;
+import serp.project.pmcore.domain.exception.BusinessRuleViolationException;
+import serp.project.pmcore.domain.exception.DomainErrorCode;
 import serp.project.pmcore.domain.port.store.IWorkItemCustomFieldValuePort;
 import serp.project.pmcore.domain.service.IOutboxEventService;
 import serp.project.pmcore.domain.service.IProjectService;
@@ -95,6 +97,7 @@ public class CreateWorkItemCommand {
         createWorkItemValidator.validate(request);
 
         ProjectEntity project = projectService.getProjectById(projectId, tenantId);
+        ensureProjectWritable(project);
         ProjectPermissionEvaluationContext actorContext = workItemCreateAuthorizationService.buildActorContext(userId, groupKeys);
         workItemCreateAuthorizationService.checkCreatePermissions(project, actorContext);
 
@@ -163,6 +166,12 @@ public class CreateWorkItemCommand {
                 savedWorkItem.getId(), savedWorkItem.getKey(), projectId, tenantId);
 
         return WorkItemResponse.from(savedWorkItem);
+    }
+
+    private void ensureProjectWritable(ProjectEntity project) {
+        if (Boolean.TRUE.equals(project.getIsArchived())) {
+            throw new BusinessRuleViolationException(DomainErrorCode.PROJECT_ARCHIVED);
+        }
     }
 
     private void persistCustomFieldValues(Long workItemId,
