@@ -77,7 +77,9 @@ import serp.project.pmcore.domain.service.IProjectService;
 import serp.project.pmcore.domain.service.IWorkItemService;
 import serp.project.pmcore.domain.service.workitem.create.WorkItemCreateAuthorizationService;
 import serp.project.pmcore.domain.service.workitem.create.WorkItemCreateConfigurationResolver;
+import serp.project.pmcore.domain.service.workitem.create.WorkItemCreateRequiredFieldValidator;
 import serp.project.pmcore.domain.service.workitem.create.WorkItemCustomFieldResolver;
+import serp.project.pmcore.domain.service.workitem.create.WorkItemDraftFactory;
 import serp.project.pmcore.domain.service.workitem.create.WorkItemFieldPolicyResolver;
 import serp.project.pmcore.domain.service.workitem.create.WorkItemFieldWriteValidator;
 import serp.project.pmcore.domain.service.workitem.create.handler.DateCustomFieldValueHandler;
@@ -217,6 +219,8 @@ class CreateWorkItemCommandTest {
                 ),
                 new WorkItemCreateAuthorizationService(projectPermissionEvaluationService),
                 buildCustomFieldResolver(),
+                new WorkItemCreateRequiredFieldValidator(),
+                new WorkItemDraftFactory(),
                 new WorkItemFieldPolicyResolver(
                         fieldConfigSchemePort,
                         fieldConfigSchemeItemPort,

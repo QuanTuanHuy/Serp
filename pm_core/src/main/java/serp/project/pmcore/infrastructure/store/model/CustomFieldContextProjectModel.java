@@ -2,7 +2,6 @@ package serp.project.pmcore.infrastructure.store.model;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -13,7 +12,6 @@ import org.hibernate.annotations.SQLRestriction;
 @Table(name = "custom_field_context_projects")
 @SQLRestriction("deleted_at IS NULL")
 @NoArgsConstructor
-@AllArgsConstructor
 @Getter
 @Setter
 @SuperBuilder
