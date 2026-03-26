@@ -3,15 +3,13 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.application.command.projectroleactor;
+package serp.project.pmcore.application.command.project;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.domain.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.dto.project.ProjectPermissionEvaluationContext;
-import serp.project.pmcore.domain.dto.request.project.AddProjectRoleActorRequest;
-import serp.project.pmcore.domain.dto.response.project.ProjectRoleActorResponse;
 import serp.project.pmcore.domain.entity.project.ProjectEntity;
 import serp.project.pmcore.domain.enums.ProjectRoleActorSubjectType;
 import serp.project.pmcore.domain.service.IProjectPermissionEvaluationService;
@@ -23,7 +21,7 @@ import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
-public class AddProjectRoleActorCommand {
+public class RemoveProjectRoleActorCommand {
 
     private final IProjectService projectService;
     private final IProjectRoleService projectRoleService;
@@ -31,12 +29,13 @@ public class AddProjectRoleActorCommand {
     private final IProjectPermissionEvaluationService projectPermissionEvaluationService;
 
     @Transactional(rollbackFor = Exception.class)
-    public ProjectRoleActorResponse execute(Long projectId,
-                                            Long roleId,
-                                            AddProjectRoleActorRequest request,
-                                            Long tenantId,
-                                            Long userId,
-                                            Set<String> groupKeys) {
+    public void execute(Long projectId,
+                        Long roleId,
+                        String subjectType,
+                        String subjectId,
+                        Long tenantId,
+                        Long userId,
+                        Set<String> groupKeys) {
         ProjectEntity project = projectService.getProjectById(projectId, tenantId);
         projectPermissionEvaluationService.checkPermission(
                 project,
@@ -48,14 +47,13 @@ public class AddProjectRoleActorCommand {
         );
 
         projectRoleService.getProjectRoleByIdIncludingSystem(roleId, tenantId);
-        var actor = projectRoleActorService.assignActor(
+        projectRoleActorService.removeActor(
                 tenantId,
                 projectId,
                 roleId,
-                ProjectRoleActorSubjectType.fromValue(request.getSubjectType()).name(),
-                request.getSubjectId(),
+                ProjectRoleActorSubjectType.fromValue(subjectType).name(),
+                subjectId,
                 userId
         );
-        return ProjectRoleActorResponse.from(actor);
     }
 }

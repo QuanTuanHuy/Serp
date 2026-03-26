@@ -1,303 +1,170 @@
-# AGENTS.md - Guide for AI Coding Agents
+# AGENTS.md - SERP Root Guide for Coding Agents
 
-This document provides essential information for AI coding agents working in the SERP ERP repository.
+This is the repository-wide default guide for coding agents working in SERP.
+Keep it cross-repo and lightweight; when a module has its own `AGENTS.md`, that local guide overrides this file for work inside that module.
 
-## Repository Overview
+## Local Guide Precedence
+- Read the nearest local guide first when you work in:
+  - `account/AGENTS.md`
+  - `api_gateway/AGENTS.md`
+  - `discuss_service/AGENTS.md`
+  - `notification_service/AGENTS.md`
+  - `pm_core/AGENTS.md`
+  - `serp_web/AGENTS.md`
+- Modules without a local guide currently rely on this root file plus nearby code conventions.
 
-SERP is an event-driven microservices ERP system built with Clean Architecture, using Java 21 (Spring Boot), Go 1.22+ (Gin), Python 3.12+ (FastAPI), and Next.js 15/TypeScript for the frontend. Services communicate via Kafka with JWT authentication through an API Gateway.
+## Repo Map
+- Frontend: `serp_web/` - Next.js 15, React 19, TypeScript.
+- Python service: `serp_llm/` - FastAPI, SQLAlchemy async, Poetry.
+- Go services: `api_gateway/`, `notification_service/`, `ptm_schedule/`, `ptm_task/`.
+- Spring Boot services: `account/`, `crm/`, `discuss_service/`, `first-mile/`, `logistics/`, `mailservice/`, `pm_core/`, `ptm_optimization/`, `purchase_service/`, `sales/`.
+- Shared Java libraries: `serp_java_platform/`.
+- Local infrastructure entrypoint: `docker-compose.dev.yml`.
 
-## Build, Test, and Lint Commands
-
-### Frontend (serp_web)
+## Cross-Repo Workflow
+- Start infrastructure first when integration behavior matters:
 ```bash
-cd serp_web
-npm install                    # Install dependencies
-npm run dev                    # Start development server (port 3000)
-npm run build                  # Production build
-npm run lint                   # Run ESLint
-npm run lint:fix               # Auto-fix lint issues
-npm run format                 # Format with Prettier
-npm run format:check           # Check formatting
-npm run type-check             # TypeScript type checking (no emit)
+docker-compose -f docker-compose.dev.yml up -d
+docker-compose -f docker-compose.dev.yml down
+docker-compose -f docker-compose.dev.yml logs -f <service>
 ```
+- Prefer the smallest relevant verification before handoff, then broaden if you changed wiring, config, persistence, or cross-module behavior.
+- Use `run-dev.sh` when a module has it; those scripts usually load `.env`.
+- Never commit `.env` files, generated secrets, or machine-local credentials.
+- Route authenticated API traffic through `api_gateway/` unless the module's own guide says otherwise.
 
-### Java Services (account, crm, purchase_service, logistics, discuss_service, etc.)
+## Build, Lint, and Test Commands
+
+### Frontend (`serp_web`)
+Run from `serp_web/`.
 ```bash
-cd <service-name>
-./run-dev.sh                   # Run with .env loaded
-./mvnw spring-boot:run         # Alternative run command
-./mvnw clean package           # Build JAR
-./mvnw test                    # Run all tests
-./mvnw test -Dtest=ClassName   # Run single test class
-./mvnw test -Dtest=ClassName#methodName  # Run single test method
-./mvnw clean install           # Build and install to local Maven repo
+npm install
+npm run dev
+npm run build
+npm run start
+npm run lint
+npm run lint:fix
+npm run format
+npm run format:check
+npm run type-check
+npx eslint src/path/to/file.tsx
+npx prettier --check src/path/to/file.tsx
 ```
+- There is currently no `test` script and no checked-in frontend test framework, so there is no supported single-test command today.
 
-### Go Services (ptm_task, ptm_schedule, notification_service, api_gateway)
+### Spring Boot services
+Applies to `account`, `crm`, `discuss_service`, `first-mile`, `logistics`, `mailservice`, `pm_core`, `ptm_optimization`, `purchase_service`, and `sales`.
+Run from the service directory.
 ```bash
-cd <service-name>
-./run-dev.sh                   # Run with .env loaded
-go run src/main.go             # Alternative run command
-go build -o bin/app src/main.go  # Build binary
-go test ./...                  # Run all tests
-go test -v ./src/core/usecase  # Run tests in specific package
-go test -run TestFunctionName  # Run single test function
-go fmt ./...                   # Format code
-go vet ./...                   # Static analysis
+./run-dev.sh                    # when present
+./mvnw spring-boot:run
+./mvnw clean compile
+./mvnw test
+./mvnw -Dtest=RoleEnumUtilsTest test
+./mvnw -Dtest=RoleEnumUtilsTest#testGetSystemRoles test
+./mvnw clean package
+./mvnw -DskipTests clean package
 ```
+- On Windows CMD or PowerShell, use `mvnw.cmd`.
+- `sales/` and `first-mile/` currently do not have `run-dev.sh`; start them via the Maven wrapper.
+- Most services do not have a dedicated lint plugin, so `clean compile` and `test` are the practical quality gate.
 
-### Python Service (serp_llm)
+### Shared Java platform (`serp_java_platform`)
+Run from `serp_java_platform/`.
 ```bash
-cd serp_llm
-poetry install                 # Install dependencies
-./run-dev.sh                   # Run with environment setup
-poetry run uvicorn src.main:app --reload  # Alternative run command
-poetry run pytest              # Run all tests
-poetry run pytest tests/test_file.py  # Run single test file
-poetry run pytest tests/test_file.py::test_function  # Run single test
-poetry run pytest -k test_name # Run tests matching pattern
-poetry run black .             # Format code (line-length: 100)
-poetry run ruff check .        # Lint with ruff
-poetry run mypy src            # Type checking
-poetry run alembic upgrade head           # Run database migrations
-poetry run alembic revision --autogenerate -m "message"  # Create migration
+mvn test
+mvn -pl serp-starter-kafka test
+mvn -pl serp-starter-kafka -Dtest=SerpKafkaTopicResolverTest test
+mvn -pl serp-starter-kafka -Dtest=SerpKafkaTopicResolverTest#shouldResolveDeadLetterTopicWithSuffix test
+mvn -pl serp-starter-kafka -am package
 ```
+- This directory currently uses plain `mvn`; there is no checked-in Maven wrapper here.
 
-### Infrastructure
+### Go services
+Applies to `api_gateway`, `notification_service`, `ptm_schedule`, and `ptm_task`.
+Run from the service directory.
 ```bash
-docker-compose -f docker-compose.dev.yml up -d     # Start all infrastructure
-docker-compose -f docker-compose.dev.yml down      # Stop all
-docker-compose -f docker-compose.dev.yml logs -f <service>  # View logs
+go mod download
+./run-dev.sh
+go run src/main.go
+go build -o bin/app src/main.go
+go fmt ./...
+go vet ./...
+go test ./...
+go test ./src/core/usecase -run '^TestCreateTask_Success_StandaloneTask$' -count=1
+go test ./src/ui/controller/common -run '^TestGenericProxyController_CRM_POSTDoesNotRetry$' -count=1
 ```
+- Prefer package-scoped single tests over `go test ./... -run ...` for faster feedback.
+- Use `-count=1` when rerunning a single test so Go does not reuse cached results.
 
-## Code Style Guidelines
+### Python service (`serp_llm`)
+Run from `serp_llm/`.
+```bash
+poetry install
+./run-dev.sh
+poetry run uvicorn src.main:app --reload
+poetry run pytest
+poetry run pytest tests/test_file.py
+poetry run pytest tests/test_file.py::test_name
+poetry run pytest -k pattern
+poetry run black .
+poetry run ruff check .
+poetry run mypy src
+poetry run alembic upgrade head
+poetry run alembic revision --autogenerate -m "message"
+```
+- `pyproject.toml` configures pytest, but there are currently no checked-in tests under `serp_llm/tests/`.
 
-### General Principles
-- **Clean Architecture**: Follow the layered structure strictly (Controller → UseCase → Service → Port → Adapter)
-- **Separation of Concerns**: Keep domain entities separate from persistence models
-- **Error Handling**: Return errors explicitly; use custom error constants
-- **File Headers**: All source files must include author/description comments
-- **Code Comments**: Add brief comments for tricky or non-obvious logic
+## Style Rules
 
-### File Header Format
-```go
-// Go/Java:
-/*
+### Shared architecture
+- Keep layer boundaries explicit: UI/controller -> use case/application -> service/domain -> port/repository/adapter.
+- Keep controllers, routes, and handlers thin; put business rules in use cases, services, or domain entities.
+- Do not leak persistence models into domain or API response layers.
+- Preserve tenant, organization, and user context handling through shared auth utilities.
+- For schema changes, add a migration instead of relying on implicit auto-update behavior.
+
+### File headers and comments
+- Many backend files start with the repository header below; add it to new Go/Java files and match local Python header style when present.
+```text
 Author: QuanTuanHuy
 Description: Part of Serp Project
-*/
 ```
-```python
-# Python:
-"""
-Author: QuanTuanHuy
-Description: Part of Serp Project
-"""
-```
+- Add comments only for non-obvious business rules or tricky control flow.
 
-### Import Organization
+### Imports
+- TypeScript: Next/React, then third-party, then `@/` aliases, then relative imports.
+- Go: standard library, then external packages, then internal module imports.
+- Java: match the local file; common order is `jakarta`, Lombok, Spring or third-party, internal packages, then JDK.
+- Python: standard library, third-party, then `src.` first-party imports.
 
-**TypeScript/JavaScript (serp_web):**
-```typescript
-// 1. React imports
-import React from 'react';
-// 2. Third-party libraries
-import { useRouter } from 'next/router';
-// 3. Internal imports with @ alias
-import { Button } from '@/shared/components/ui/button';
-import { useCRM } from '@/modules/crm';
-```
+### Formatting
+- `serp_web`: Prettier is the source of truth - 2 spaces, semicolons, single quotes, trailing commas `es5`, `printWidth: 80`.
+- Go: always let `go fmt` decide layout; do not hand-format against it.
+- Java: use 4 spaces and keep wrapping and import order consistent with the touched file.
+- Python: Black and Ruff use `line-length = 100`.
 
-**Go:**
-```go
-import (
-    // 1. Standard library
-    "context"
-    "errors"
-    
-    // 2. External packages
-    "github.com/gin-gonic/gin"
-    "gorm.io/gorm"
-    
-    // 3. Internal packages (module path)
-    "github.com/serp/ptm-task/src/core/domain/entity"
-    "github.com/serp/ptm-task/src/core/port/store"
-)
-```
+### Types and naming
+- TypeScript: keep `strict`-safe types, prefer explicit props/request/response types, use `import type`, avoid new `any`, components and types in `PascalCase`, functions and variables in `camelCase`, hooks as `useThing`, files usually in `kebab-case`.
+- Go: exported names `PascalCase`, unexported names `camelCase`, interfaces commonly use the `I` prefix, constructors use `New...`, errors are returned last, and `context.Context` is the first parameter in service and adapter methods.
+- Java: classes and interfaces `PascalCase`, fields and methods `camelCase`, constants `UPPER_SNAKE_CASE`, interfaces often use the `I` prefix, DTOs use `*Request` and `*Response`, domain types use `*Entity`, persistence types use `*Model`, adapters use `*Adapter`, mappers use `*Mapper`.
+- Python: classes `PascalCase`, functions and variables `snake_case`, constants `UPPER_SNAKE_CASE`, keep type hints on important public functions, and prefer async I/O patterns already used by FastAPI and SQLAlchemy.
 
-**Java:**
-```java
-// 1. Jakarta/javax
-import jakarta.validation.Valid;
-// 2. Lombok
-import lombok.RequiredArgsConstructor;
-// 3. Spring framework
-import org.springframework.stereotype.Service;
-// 4. Internal packages
-import serp.project.account.core.domain.entity.UserEntity;
-```
+### Error handling and transactions
+- TypeScript: use RTK Query `.unwrap()` inside `try/catch`; reuse shared error or toast helpers and `api.injectEndpoints()` with `extraOptions: { service: '...' }`.
+- Go: prefer early returns, wrap lower-level failures with `%w`, return `error` instead of panicking, use transaction services for multi-step writes, and register new components in `cmd/bootstrap/all.go` when the service uses FX.
+- Java: throw module-specific business exceptions (`AppException` or the module's domain exception types), use `@Transactional` for write operations and `@Transactional(readOnly = true)` for read paths, and preserve `ResponseUtils` and `GeneralResponse<?>` response shapes.
+- Python: raise custom app exceptions or `HTTPException`, keep exception-to-response mapping in the shared FastAPI middleware or handlers, and do not swallow infrastructure errors silently.
 
-### Naming Conventions
+### Testing conventions
+- Java tests are JUnit 5; most modules use Mockito and `spring-boot-starter-test`.
+- Go tests use the standard `testing` package; `testify` is present in `ptm_task` and `ptm_schedule`.
+- Python tests use `pytest` with `asyncio_mode = auto`.
+- When fixing a bug, prefer adding or updating the nearest focused regression test.
+- If a module has its own `AGENTS.md`, follow its testing advice over this root summary.
 
-**TypeScript/JavaScript:**
-- Components/Types: `PascalCase` (e.g., `CustomerCard`, `UserProps`)
-- Functions/variables: `camelCase` (e.g., `getUserData`, `isLoading`)
-- Files: `kebab-case` (e.g., `customer-list.tsx`)
-- Custom hooks: `use` prefix (e.g., `useCustomers`)
-- Constants: `UPPER_SNAKE_CASE` (e.g., `API_BASE_URL`)
-
-**Go:**
-- Exported identifiers: `PascalCase` (e.g., `CreateTask`, `TaskEntity`)
-- Unexported identifiers: `camelCase` (e.g., `taskService`, `validateData`)
-- Interfaces: `I` prefix (e.g., `ITaskService`, `ITaskAdapter`)
-- Test files: `_test.go` suffix (e.g., `task_usecase_test.go`)
-- Constructor functions: `New` prefix (e.g., `NewTaskService`)
-
-**Java:**
-- Classes/Interfaces: `PascalCase` (e.g., `UserEntity`, `ILeadService`)
-- Methods/variables: `camelCase` (e.g., `getUserById`, `totalCount`)
-- Interfaces: `I` prefix (e.g., `IUserPort`)
-- DTOs: Descriptive suffix (e.g., `CreateUserRequest`, `UserResponse`)
-- Test classes: `Test` suffix (e.g., `RoleEnumUtilsTest`)
-
-**Python:**
-- Classes: `PascalCase` (e.g., `ChatService`)
-- Functions/variables: `snake_case` (e.g., `get_user_data`, `is_active`)
-- Constants: `UPPER_SNAKE_CASE` (e.g., `MAX_TOKENS`)
-- Private members: `_` prefix (e.g., `_internal_method`)
-
-### TypeScript Patterns
-- Use explicit interfaces for props and function parameters
-- Prefer `type` imports: `import type { User } from '@/types'`
-- Use Zod for runtime validation
-- Leverage utility types: `ReturnType`, `Partial`, `Pick`, `Omit`
-- Client components: Add `'use client'` directive at top
-- Use `cn()` utility for conditional Tailwind classes
-
-### Go Patterns
-- Early returns for error handling: `if err != nil { return nil, err }`
-- Use `context.Context` as first parameter in functions
-- Pass `*gorm.DB` transaction explicitly to service layer methods
-- Pointer receivers for struct methods that modify state
-- Table-driven tests with `testify/assert` and `testify/mock`
-
-### Java Patterns
-- Constructor injection via `@RequiredArgsConstructor`
-- Lombok annotations: `@Getter`, `@Setter`, `@SuperBuilder` on entities
-- Use `Optional<T>` for potentially null returns
-- Validation: `@Valid` on DTOs, business validation in service layer
-- Logging: `@Slf4j` with structured messages
-- Transactions: `@Transactional` on use case methods
-
-### Python Patterns
-- Type hints on all function signatures
-- Async/await for I/O operations (SQLAlchemy, HTTP)
-- Pydantic models for validation
-- Dependency injection via FastAPI `Depends()`
-- Black formatting (line length: 100)
-
-### Error Handling
-
-**Go:**
-```go
-// Return errors as last value
-func CreateTask(ctx context.Context, task *entity.TaskEntity) (*entity.TaskEntity, error) {
-    if err := validate(task); err != nil {
-        return nil, fmt.Errorf("%s: %w", constant.ValidationFailed, err)
-    }
-    return task, nil
-}
-```
-
-**Java:**
-```java
-// Use custom AppException with error constants
-if (user == null) {
-    throw new AppException(ErrorMessage.USER_NOT_FOUND);
-}
-```
-
-**TypeScript:**
-```typescript
-// RTK Query handles errors automatically; use try-catch for manual calls
-try {
-    const result = await createCustomer(data).unwrap();
-} catch (error) {
-    toast.error('Failed to create customer');
-}
-```
-
-## Critical Development Rules
-
-### Go Services
-1. **ALWAYS register new components in `cmd/bootstrap/all.go`** - Missing registration causes runtime panics
-2. Use `TransactionService.ExecuteInTransaction` for database transactions
-3. Extract user/tenant context via `utils.GetUserIDFromContext(c)` and `utils.GetTenantIDFromContext(c)`
-4. Kafka events must be sent AFTER successful DB commit within transaction
-5. Entity ↔ Model mapping uses separate mapper structs
-
-### Java Services
-1. Use `./run-dev.sh` to load `.env` variables properly (not direct `./mvnw`)
-2. Database migrations: Flyway in `src/main/resources/db/migration/V{N}__description.sql`
-   - Format: `V1__Initial_schema.sql`, `V2__Add_user_table.sql`
-   - Migrations run automatically on startup
-3. Extract user context via `authUtils.getCurrentUserId()` and `authUtils.getCurrentTenantId()`
-4. Use `@Transactional(rollbackFor = Exception.class)` on service methods
-5. Entities extend `BaseEntity` with `@SuperBuilder` annotation
-6. Repository naming: `I{Entity}Port` interface, `{Entity}Adapter` implementation
-
-### Frontend (serp_web)
-1. **Module isolation**: No cross-imports between feature modules (e.g., crm cannot import from sales)
-2. Use `api.injectEndpoints()` with `extraOptions: { service: 'serviceName' }`
-3. Always run `npm run lint`, `npm run type-check`, `npm run format:check` before committing
-4. Use Shadcn components from `@/shared/components/ui/`
-5. State management: Redux Toolkit + RTK Query for API calls
-6. File naming: `kebab-case.tsx` for components, `PascalCase` for component names
-7. Use `'use client'` for client components (forms, interactivity, hooks)
-8. Import path aliases: Use `@/` for src root (e.g., `@/modules/crm`, `@/shared/components`)
-
-### General Rules
-1. Run infrastructure with `docker-compose -f docker-compose.dev.yml up -d` before starting services
-2. Never commit `.env` files (use `.env.example` for templates)
-3. All API requests flow through API Gateway (port 8080)
-4. JWT tokens required for all authenticated endpoints
-5. Each service has its own PostgreSQL schema/database
-
-## Testing Guidelines
-
-- **Coverage**: Write tests for use cases and critical business logic
-- **Go**: Table-driven tests with `testify/assert` and `testify/mock` for ports/adapters
-  - Test files: `*_test.go` in same directory as implementation
-  - Mock interfaces defined in `core/port/`
-  - Example: `task_usecase_test.go` tests `task_usecase.go`
-- **Java**: `@SpringBootTest` for integration tests, JUnit 5 for unit tests
-  - Test classes in `src/test/java/` mirror `src/main/java/` structure
-  - Use `@ExtendWith(MockitoExtension.class)` for mocks
-- **Python**: Pytest with async support (`asyncio_mode = "auto"`)
-  - Test files: `test_*.py` in `tests/` directory
-  - Use `pytest-asyncio` for async tests
-  - Use `pytest-httpx` for mocking HTTP calls
-- **Frontend**: Component tests with React Testing Library (if implemented)
-
-## Common Gotchas
-
-1. **Go FX Registration**: Forgetting `fx.Provide()` in `cmd/bootstrap/all.go` → runtime panic
-   - Every new adapter, service, usecase, controller must be registered
-2. **Entity/Model Mismatch**: Ensure mappers handle all field conversions (e.g., Unix ms ↔ `time.Time`)
-   - Go: Entities use `*int64` for timestamps, Models use `time.Time`
-   - Java: Entities use `Long`, Models use `Instant` or `LocalDateTime`
-3. **Transaction Rollback**: Manual `tx.Begin()` doesn't auto-rollback; use `txService.ExecuteInTransaction`
-4. **Environment Variables**: Use `./run-dev.sh`, not direct `mvnw` or `go run`
-   - Services won't start without proper `.env` configuration
-5. **Keycloak JWT**: Verify JWKS URL is accessible and realm name matches config
-   - Default realm: `serp-realm`, admin: `serp-admin/serp-admin`
-6. **Port Conflicts**: `logistics` and `serp_llm` both use 8089 by default - configure `SERVER_PORT`
-7. **Kafka Events**: Always send events using outbox pattern
-8. **Import Order**: Go and Java have strict import grouping (std lib, external, internal)
-
-## Additional Resources
-
-- Architecture details: `README.md` and `.github/copilot-instructions.md`
-- API Gateway routes: Check `api_gateway/src/ui/router/`
-- Database schemas: Each service has `db/migration/` or `alembic/versions/`
-- Infrastructure URLs: PostgreSQL:5432, Redis:6379, Kafka:9092, Keycloak:8180
+## Practical Reminders
+- Read the nearest module guide before making non-trivial changes.
+- Match nearby code before applying global preferences.
+- Run the narrowest relevant command first, then the full module check if the change is cross-cutting.
+- Keep new dependencies, routes, migrations, and DI registrations synchronized with the module's wiring files.
