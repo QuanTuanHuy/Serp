@@ -47,8 +47,7 @@ import static org.mockito.Mockito.when;
 class WorkItemCustomFieldResolverTest {
 
     private static final Long TENANT_ID = 1L;
-    private static final Long PROJECT_ID = 10L;
-    private static final Long ISSUE_TYPE_ID = 101L;
+    private static final String ISSUE_TYPE_KEY = "task";
     private static final Long CUSTOM_FIELD_ID = 1000L;
     private static final Long CONTEXT_ID = 1001L;
 
@@ -89,16 +88,15 @@ class WorkItemCustomFieldResolverTest {
     @Test
     void resolveCustomFieldsShouldApplyDefaultTextValue() {
         stubCustomFieldDefinition("customfield_10001", "text");
-        when(customFieldContextDefaultValuePort.getCustomFieldContextDefaultValuesByContextId(CONTEXT_ID, TENANT_ID))
+        when(customFieldContextDefaultValuePort.getCustomFieldContextDefaultValuesByContextId(CONTEXT_ID))
                 .thenReturn(List.of(CustomFieldContextDefaultValueEntity.builder()
                         .contextId(CONTEXT_ID)
                         .textValue("Default environment")
                         .build()));
-        when(customFieldOptionPort.getCustomFieldOptionsByContextId(CONTEXT_ID, TENANT_ID)).thenReturn(List.of());
+        when(customFieldOptionPort.getCustomFieldOptionsByContextId(CONTEXT_ID)).thenReturn(List.of());
 
         ResolvedCustomFields resolvedCustomFields = resolver.resolveCustomFields(
-                PROJECT_ID,
-                ISSUE_TYPE_ID,
+                ISSUE_TYPE_KEY,
                 Map.of(),
                 customFieldRules(false),
                 TENANT_ID
@@ -112,17 +110,16 @@ class WorkItemCustomFieldResolverTest {
     @Test
     void resolveCustomFieldsShouldResolveProvidedMultiselectValuesInOrder() {
         stubCustomFieldDefinition("customfield_10001", "multiselect");
-        when(customFieldContextDefaultValuePort.getCustomFieldContextDefaultValuesByContextId(CONTEXT_ID, TENANT_ID))
+        when(customFieldContextDefaultValuePort.getCustomFieldContextDefaultValuesByContextId(CONTEXT_ID))
                 .thenReturn(List.of());
-        when(customFieldOptionPort.getCustomFieldOptionsByContextId(CONTEXT_ID, TENANT_ID))
+        when(customFieldOptionPort.getCustomFieldOptionsByContextId(CONTEXT_ID))
                 .thenReturn(List.of(
                         option(2001L, "backend"),
                         option(2002L, "frontend")
                 ));
 
         ResolvedCustomFields resolvedCustomFields = resolver.resolveCustomFields(
-                PROJECT_ID,
-                ISSUE_TYPE_ID,
+                ISSUE_TYPE_KEY,
                 Map.of("customfield_10001", List.of("backend", "frontend")),
                 customFieldRules(false),
                 TENANT_ID
@@ -139,17 +136,16 @@ class WorkItemCustomFieldResolverTest {
     void resolveCustomFieldsShouldRejectAmbiguousContext() {
         when(customFieldPort.getCustomFieldsByFieldKeysIncludingSystem(List.of("customfield_10001"), TENANT_ID))
                 .thenReturn(List.of(customField("customfield_10001", "text")));
-        when(customFieldContextPort.getApplicableCustomFieldContexts(CUSTOM_FIELD_ID, PROJECT_ID, ISSUE_TYPE_ID, TENANT_ID))
+        when(customFieldContextPort.getApplicableCustomFieldContexts(CUSTOM_FIELD_ID, ISSUE_TYPE_KEY))
                 .thenReturn(List.of(
-                        specificContext(CONTEXT_ID),
-                        specificContext(CONTEXT_ID + 1)
+                        issueTypeContext(CONTEXT_ID, ISSUE_TYPE_KEY),
+                        issueTypeContext(CONTEXT_ID + 1, ISSUE_TYPE_KEY)
                 ));
 
         DomainValidationException exception = assertThrows(
                 DomainValidationException.class,
                 () -> resolver.resolveCustomFields(
-                        PROJECT_ID,
-                        ISSUE_TYPE_ID,
+                        ISSUE_TYPE_KEY,
                         Map.of("customfield_10001", "value"),
                         customFieldRules(false),
                         TENANT_ID
@@ -162,16 +158,15 @@ class WorkItemCustomFieldResolverTest {
     @Test
     void resolveCustomFieldsShouldRejectInvalidSelectOption() {
         stubCustomFieldDefinition("customfield_10001", "select");
-        when(customFieldContextDefaultValuePort.getCustomFieldContextDefaultValuesByContextId(CONTEXT_ID, TENANT_ID))
+        when(customFieldContextDefaultValuePort.getCustomFieldContextDefaultValuesByContextId(CONTEXT_ID))
                 .thenReturn(List.of());
-        when(customFieldOptionPort.getCustomFieldOptionsByContextId(CONTEXT_ID, TENANT_ID))
+        when(customFieldOptionPort.getCustomFieldOptionsByContextId(CONTEXT_ID))
                 .thenReturn(List.of(option(2001L, "backend")));
 
         BusinessRuleViolationException exception = assertThrows(
                 BusinessRuleViolationException.class,
                 () -> resolver.resolveCustomFields(
-                        PROJECT_ID,
-                        ISSUE_TYPE_ID,
+                        ISSUE_TYPE_KEY,
                         Map.of("customfield_10001", "unknown"),
                         customFieldRules(false),
                         TENANT_ID
@@ -181,11 +176,42 @@ class WorkItemCustomFieldResolverTest {
         assertEquals(DomainErrorCode.CUSTOM_FIELD_VALUE_INVALID, exception.getErrorCode());
     }
 
+    @Test
+    void resolveCustomFieldsShouldPreferExactIssueTypeContextOverGlobalFallback() {
+        when(customFieldPort.getCustomFieldsByFieldKeysIncludingSystem(List.of("customfield_10001"), TENANT_ID))
+                .thenReturn(List.of(customField("customfield_10001", "text")));
+        when(customFieldContextPort.getApplicableCustomFieldContexts(CUSTOM_FIELD_ID, ISSUE_TYPE_KEY))
+                .thenReturn(List.of(
+                        issueTypeContext(CONTEXT_ID, ISSUE_TYPE_KEY),
+                        globalContext(CONTEXT_ID + 1)
+                ));
+        when(customFieldContextDefaultValuePort.getCustomFieldContextDefaultValuesByContextId(CONTEXT_ID))
+                .thenReturn(List.of(CustomFieldContextDefaultValueEntity.builder()
+                        .contextId(CONTEXT_ID)
+                        .textValue("Issue type default")
+                        .build()));
+        when(customFieldOptionPort.getCustomFieldOptionsByContextId(CONTEXT_ID)).thenReturn(List.of());
+
+        ResolvedCustomFields resolvedCustomFields = resolver.resolveCustomFields(
+                ISSUE_TYPE_KEY,
+                Map.of(),
+                customFieldRules(false),
+                TENANT_ID
+        );
+
+        assertEquals(1, resolvedCustomFields.values().size());
+        assertEquals("Issue type default", resolvedCustomFields.values().getFirst().getTextValue());
+    }
+
     private void stubCustomFieldDefinition(String fieldKey, String typeKey) {
         when(customFieldPort.getCustomFieldsByFieldKeysIncludingSystem(List.of(fieldKey), TENANT_ID))
                 .thenReturn(List.of(customField(fieldKey, typeKey)));
-        when(customFieldContextPort.getApplicableCustomFieldContexts(CUSTOM_FIELD_ID, PROJECT_ID, ISSUE_TYPE_ID, TENANT_ID))
+        when(customFieldContextPort.getApplicableCustomFieldContexts(CUSTOM_FIELD_ID, ISSUE_TYPE_KEY))
                 .thenReturn(List.of(globalContext(CONTEXT_ID)));
+        when(customFieldContextDefaultValuePort.getCustomFieldContextDefaultValuesByContextId(CONTEXT_ID))
+                .thenReturn(List.of());
+        when(customFieldOptionPort.getCustomFieldOptionsByContextId(CONTEXT_ID))
+                .thenReturn(List.of());
     }
 
     private CreateFieldRules customFieldRules(boolean required) {
@@ -210,27 +236,21 @@ class WorkItemCustomFieldResolverTest {
     private CustomFieldContextEntity globalContext(Long contextId) {
         return CustomFieldContextEntity.builder()
                 .id(contextId)
-                .tenantId(TENANT_ID)
                 .customFieldId(CUSTOM_FIELD_ID)
-                .appliesToAllProjects(true)
-                .appliesToAllIssueTypes(true)
                 .build();
     }
 
-    private CustomFieldContextEntity specificContext(Long contextId) {
+    private CustomFieldContextEntity issueTypeContext(Long contextId, String issueTypeKey) {
         return CustomFieldContextEntity.builder()
                 .id(contextId)
-                .tenantId(TENANT_ID)
                 .customFieldId(CUSTOM_FIELD_ID)
-                .appliesToAllProjects(false)
-                .appliesToAllIssueTypes(false)
+                .issueTypeKey(issueTypeKey)
                 .build();
     }
 
     private CustomFieldOptionEntity option(Long optionId, String optionKey) {
         return CustomFieldOptionEntity.builder()
                 .id(optionId)
-                .tenantId(TENANT_ID)
                 .customFieldContextId(CONTEXT_ID)
                 .optionKey(optionKey)
                 .value(optionKey)

@@ -2691,126 +2691,27 @@ Standard CRUD.
 
 ---
 
-#### UC-PM-301 to UC-PM-306: Custom Field Management
+#### UC-PM-301 to UC-PM-311: Custom Field Catalog Management
 
-##### UC-PM-301: Create Custom Field
+Current implementation direction: PM Core uses a system-seeded custom field catalog for
+work-item create/update flows. Contexts, options, and default values are treated as
+read-only catalog data in this phase.
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-301 |
-| **Use Case Name** | Create Custom Field |
-| **Module** | PM Core |
-| **Version** | 1.0 |
-| **Last Updated** | 2026-02-18 |
-| **Priority** | High |
-| **Complexity** | Medium |
+- `UC-PM-301` to `UC-PM-305` are deferred for tenant-managed authoring.
+- `UC-PM-306` is deferred for tenant-managed option CRUD.
+- `UC-PM-311` is deferred for tenant-managed context CRUD.
 
-##### Description
+For the current phase, the runtime assumptions are:
 
-Create a custom field definition that extends the work item data model. Custom fields are typed and support contextual scoping (specific projects/issue types or global).
+1. `custom_fields` used by work-item flows are seeded ahead of time.
+2. `custom_field_contexts` are system-owned and resolve by `issue_type_key` exact match,
+   then global fallback.
+3. `custom_field_options` and `custom_field_context_default_values` are system-owned child
+   rows of the resolved context.
+4. No project-scoped custom-field context model exists in the active runtime design.
 
-**Permission**: `PM.CUSTOM_FIELD.CREATE`
-
-##### Main Flow
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 1 | PM Admin | Sends POST `/api/v1/custom-fields` with field definition |
-| 2 | System | Validates JWT, permissions, input |
-| 3 | System | Generates unique `field_key` (format: `customfield_{sequence}`) |
-| 4 | System | Validates `type_key` is supported |
-| 5 | System | Persists custom field |
-| 6 | System | If `is_global=true`, creates a global context entry |
-| 7 | System | Publishes `CUSTOM_FIELD_CREATED` to `serp.pm.customfield.events` |
-| 8 | System | Returns HTTP 201 |
-
-##### Input Data
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| name | string | Yes | min:1, max:255 | Display name |
-| description | string | No | max:2000 | Description |
-| type_key | string | Yes | text, number, date, user, select, multiselect, url, datetime | Field type |
-| search_template | string | No | text_search, range_search, user_search, option_search | Search behavior |
-| is_global | bool | No | default: true | Available in all contexts |
-| schema_json | json | No | valid JSON | Plugin-specific settings |
-
-##### Business Rules
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-301-01 | `field_key` is auto-generated and immutable | Service layer |
-| BR-PM-301-02 | `type_key` is immutable after creation (cannot change field type) | Service layer |
-| BR-PM-301-03 | For `select`/`multiselect` types, options are managed via UC-PM-306 | API design |
-
-##### UC-PM-302 to UC-PM-305: Custom Field Update, Get, List, Delete
-
-- **UC-PM-302**: Update name, description, search_template, schema_json. Cannot change type_key.
-- **UC-PM-303**: Get by ID with options and contexts.
-- **UC-PM-304**: List with filters (type_key, is_system, is_global, search by name).
-- **UC-PM-305**: Soft-delete. Cannot delete if work items have values for this field (warning, force option).
-
-##### UC-PM-306: Manage Custom Field Options
-
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-306 |
-| **Use Case Name** | Manage Custom Field Options |
-| **Priority** | Medium |
-| **Complexity** | Medium |
-
-**Description**: Add, update, reorder, and disable options for `select`/`multiselect` custom fields.
-
-**Permission**: `PM.CUSTOM_FIELD.MANAGE`
-
-**Operations**:
-- **Add**: POST `/api/v1/custom-fields/{fieldId}/options` with `{ value, sequence }`
-- **Update**: PUT `/api/v1/custom-fields/{fieldId}/options/{optionId}` with `{ value, sequence, is_disabled }`
-- **Remove**: Soft-delete (or set `is_disabled=true` to preserve existing data)
-
-**Input Data (Add)**:
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| option_key | string | Yes | unique per field | Stable key |
-| value | string | Yes | min:1, max:255 | Display value |
-| sequence | int | No | auto-calculated | Order |
-| parent_option_id | int64 | No | must exist | Cascade parent |
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-306-01 | Only applicable to select/multiselect field types | Service layer |
-| BR-PM-306-02 | Disabling an option preserves existing data but hides from new selections | Service layer |
-| BR-PM-306-03 | `option_key` unique per field | DB `UNIQUE(tenant_id, custom_field_id, option_key)` |
-
----
-
-#### UC-PM-311: Manage Custom Field Contexts
-
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-311 |
-| **Use Case Name** | Manage Custom Field Contexts |
-| **Priority** | Medium |
-| **Complexity** | Medium |
-
-**Description**: Define where a custom field is applicable (global, specific project, specific issue type, or combination).
-
-**Permission**: `PM.CUSTOM_FIELD.MANAGE`
-
-**Operations**:
-- **Add Context**: POST `/api/v1/custom-fields/{fieldId}/contexts` with `{ project_id?, issue_type_id?, is_global_context }`
-- **Remove Context**: DELETE `/api/v1/custom-fields/{fieldId}/contexts/{contextId}`
-- **List Contexts**: GET `/api/v1/custom-fields/{fieldId}/contexts`
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-311-01 | If `is_global_context=true`, `project_id` and `issue_type_id` must be null | Service layer |
-| BR-PM-311-02 | A field can have multiple non-global contexts for different project/issue type combinations | Service layer |
+Future admin use cases may reintroduce CRUD for this catalog, but they must align with the
+simplified issue-type-key context model rather than project/issue-type combination scoping.
 
 ---
 
@@ -3307,7 +3208,7 @@ Rules that apply across multiple use cases:
 | **Field Configuration** | Defines per-field behavior (required, hidden, renderer) for a set of fields. |
 | **Field Config Scheme** | Maps issue types to field configurations. |
 | **Custom Field** | A user-defined field that extends the work item data model with typed values. |
-| **Custom Field Context** | Scoping rule for a custom field, defining which projects and issue types it applies to. |
+| **Custom Field Context** | A system-owned catalog entry for a custom field, scoped by exact `issue_type_key` or global fallback. |
 | **Permission Scheme** | Maps permissions to grantees (project roles, groups, users, contextual actors) using grant-only rules; missing grant means deny. |
 | **Issue Security Level** | Restricts visibility of individual work items to specific project roles, groups, users, or contextual actors. |
 | **Project Blueprint** | A template that pre-configures default scheme sources for new projects; actual effective bindings depend on provisioning path and scheme family behavior. |

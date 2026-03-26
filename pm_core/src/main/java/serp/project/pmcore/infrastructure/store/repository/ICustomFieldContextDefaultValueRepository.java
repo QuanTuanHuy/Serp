@@ -16,7 +16,6 @@ import java.util.List;
 @Repository
 public interface ICustomFieldContextDefaultValueRepository extends JpaRepository<CustomFieldContextDefaultValueModel, Long> {
 
-    @Query("SELECT d FROM CustomFieldContextDefaultValueModel d WHERE d.contextId = :contextId AND d.tenantId = :tenantId ORDER BY d.sortOrder ASC, d.id ASC")
-    List<CustomFieldContextDefaultValueModel> findAllByContextIdAndTenantId(@Param("contextId") Long contextId,
-                                                                            @Param("tenantId") Long tenantId);
+    @Query("SELECT d FROM CustomFieldContextDefaultValueModel d WHERE d.contextId = :contextId ORDER BY d.sortOrder ASC, d.id ASC")
+    List<CustomFieldContextDefaultValueModel> findAllByContextId(@Param("contextId") Long contextId);
 }

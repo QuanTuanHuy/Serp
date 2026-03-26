@@ -113,6 +113,7 @@ class CreateWorkItemCommandTest {
     private static final Long USER_ID = 99L;
     private static final Long PROJECT_ID = 10L;
     private static final Long ISSUE_TYPE_ID = 1001L;
+    private static final String ISSUE_TYPE_KEY = "task";
     private static final Long FIELD_CONFIG_ID = 1101L;
     private static final Long FIELD_CONFIG_SCHEME_ID = 1100L;
     private static final Long ISSUE_TYPE_SCREEN_SCHEME_ID = 1200L;
@@ -319,22 +320,19 @@ class CreateWorkItemCommandTest {
                         .fieldKey("customfield_10001")
                         .typeKey("text")
                         .build()));
-        when(customFieldContextPort.getApplicableCustomFieldContexts(CUSTOM_FIELD_ID, PROJECT_ID, ISSUE_TYPE_ID, TENANT_ID))
+        when(customFieldContextPort.getApplicableCustomFieldContexts(CUSTOM_FIELD_ID, ISSUE_TYPE_KEY))
                 .thenReturn(List.of(CustomFieldContextEntity.builder()
                         .id(CUSTOM_FIELD_CONTEXT_ID)
-                        .tenantId(TENANT_ID)
                         .customFieldId(CUSTOM_FIELD_ID)
-                        .appliesToAllProjects(true)
-                        .appliesToAllIssueTypes(true)
                         .build()));
-        when(customFieldContextDefaultValuePort.getCustomFieldContextDefaultValuesByContextId(CUSTOM_FIELD_CONTEXT_ID, TENANT_ID))
+        when(customFieldContextDefaultValuePort.getCustomFieldContextDefaultValuesByContextId(CUSTOM_FIELD_CONTEXT_ID))
                 .thenReturn(List.of(CustomFieldContextDefaultValueEntity.builder()
                         .contextId(CUSTOM_FIELD_CONTEXT_ID)
                         .valueType("TEXT")
                         .textValue("Default environment")
                         .sortOrder(0)
                         .build()));
-        when(customFieldOptionPort.getCustomFieldOptionsByContextId(CUSTOM_FIELD_CONTEXT_ID, TENANT_ID))
+        when(customFieldOptionPort.getCustomFieldOptionsByContextId(CUSTOM_FIELD_CONTEXT_ID))
                 .thenReturn(List.of());
 
         createWorkItemCommand.execute(
@@ -372,10 +370,10 @@ class CreateWorkItemCommandTest {
 
         when(customFieldPort.getCustomFieldsByFieldKeysIncludingSystem(List.of("customfield_10001"), TENANT_ID))
                 .thenReturn(List.of(customField("customfield_10001", "text")));
-        when(customFieldContextPort.getApplicableCustomFieldContexts(CUSTOM_FIELD_ID, PROJECT_ID, ISSUE_TYPE_ID, TENANT_ID))
+        when(customFieldContextPort.getApplicableCustomFieldContexts(CUSTOM_FIELD_ID, ISSUE_TYPE_KEY))
                 .thenReturn(List.of(
-                        projectSpecificContext(CUSTOM_FIELD_CONTEXT_ID),
-                        projectSpecificContext(CUSTOM_FIELD_CONTEXT_ID + 1)
+                        issueTypeContext(CUSTOM_FIELD_CONTEXT_ID, ISSUE_TYPE_KEY),
+                        issueTypeContext(CUSTOM_FIELD_CONTEXT_ID + 1, ISSUE_TYPE_KEY)
                 ));
 
         DomainValidationException exception = assertThrows(
@@ -408,11 +406,11 @@ class CreateWorkItemCommandTest {
 
         when(customFieldPort.getCustomFieldsByFieldKeysIncludingSystem(List.of("customfield_10001"), TENANT_ID))
                 .thenReturn(List.of(customField("customfield_10001", "select")));
-        when(customFieldContextPort.getApplicableCustomFieldContexts(CUSTOM_FIELD_ID, PROJECT_ID, ISSUE_TYPE_ID, TENANT_ID))
+        when(customFieldContextPort.getApplicableCustomFieldContexts(CUSTOM_FIELD_ID, ISSUE_TYPE_KEY))
                 .thenReturn(List.of(globalContext(CUSTOM_FIELD_CONTEXT_ID)));
-        when(customFieldContextDefaultValuePort.getCustomFieldContextDefaultValuesByContextId(CUSTOM_FIELD_CONTEXT_ID, TENANT_ID))
+        when(customFieldContextDefaultValuePort.getCustomFieldContextDefaultValuesByContextId(CUSTOM_FIELD_CONTEXT_ID))
                 .thenReturn(List.of());
-        when(customFieldOptionPort.getCustomFieldOptionsByContextId(CUSTOM_FIELD_CONTEXT_ID, TENANT_ID))
+        when(customFieldOptionPort.getCustomFieldOptionsByContextId(CUSTOM_FIELD_CONTEXT_ID))
                 .thenReturn(List.of(customFieldOption(5001L, CUSTOM_FIELD_CONTEXT_ID, "allowed")));
 
         BusinessRuleViolationException exception = assertThrows(
@@ -455,17 +453,14 @@ class CreateWorkItemCommandTest {
                         .fieldKey("customfield_10001")
                         .typeKey("text")
                         .build()));
-        when(customFieldContextPort.getApplicableCustomFieldContexts(CUSTOM_FIELD_ID, PROJECT_ID, ISSUE_TYPE_ID, TENANT_ID))
+        when(customFieldContextPort.getApplicableCustomFieldContexts(CUSTOM_FIELD_ID, ISSUE_TYPE_KEY))
                 .thenReturn(List.of(CustomFieldContextEntity.builder()
                         .id(CUSTOM_FIELD_CONTEXT_ID)
-                        .tenantId(TENANT_ID)
                         .customFieldId(CUSTOM_FIELD_ID)
-                        .appliesToAllProjects(true)
-                        .appliesToAllIssueTypes(true)
                         .build()));
-        when(customFieldContextDefaultValuePort.getCustomFieldContextDefaultValuesByContextId(CUSTOM_FIELD_CONTEXT_ID, TENANT_ID))
+        when(customFieldContextDefaultValuePort.getCustomFieldContextDefaultValuesByContextId(CUSTOM_FIELD_CONTEXT_ID))
                 .thenReturn(List.of());
-        when(customFieldOptionPort.getCustomFieldOptionsByContextId(CUSTOM_FIELD_CONTEXT_ID, TENANT_ID))
+        when(customFieldOptionPort.getCustomFieldOptionsByContextId(CUSTOM_FIELD_CONTEXT_ID))
                 .thenReturn(List.of());
 
         BusinessRuleViolationException exception = assertThrows(
@@ -501,6 +496,7 @@ class CreateWorkItemCommandTest {
 
         when(issueTypePort.getIssueTypeById(ISSUE_TYPE_ID, TENANT_ID)).thenReturn(Optional.of(IssueTypeEntity.builder()
                 .id(ISSUE_TYPE_ID)
+                .typeKey(ISSUE_TYPE_KEY)
                 .hierarchyLevel(1)
                 .build()));
         when(issueTypeSchemeItemPort.getIssueTypeSchemeItemsBySchemeId(1000L, TENANT_ID)).thenReturn(List.of(
@@ -625,27 +621,21 @@ class CreateWorkItemCommandTest {
     private CustomFieldContextEntity globalContext(Long contextId) {
         return CustomFieldContextEntity.builder()
                 .id(contextId)
-                .tenantId(TENANT_ID)
                 .customFieldId(CUSTOM_FIELD_ID)
-                .appliesToAllProjects(true)
-                .appliesToAllIssueTypes(true)
                 .build();
     }
 
-    private CustomFieldContextEntity projectSpecificContext(Long contextId) {
+    private CustomFieldContextEntity issueTypeContext(Long contextId, String issueTypeKey) {
         return CustomFieldContextEntity.builder()
                 .id(contextId)
-                .tenantId(TENANT_ID)
                 .customFieldId(CUSTOM_FIELD_ID)
-                .appliesToAllProjects(false)
-                .appliesToAllIssueTypes(false)
+                .issueTypeKey(issueTypeKey)
                 .build();
     }
 
     private CustomFieldOptionEntity customFieldOption(Long optionId, Long contextId, String optionKey) {
         return CustomFieldOptionEntity.builder()
                 .id(optionId)
-                .tenantId(TENANT_ID)
                 .customFieldContextId(contextId)
                 .optionKey(optionKey)
                 .value(optionKey)

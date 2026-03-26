@@ -11,7 +11,5 @@ import java.util.List;
 
 public interface ICustomFieldContextPort {
     List<CustomFieldContextEntity> getApplicableCustomFieldContexts(Long customFieldId,
-                                                                    Long projectId,
-                                                                    Long issueTypeId,
-                                                                    Long tenantId);
+                                                                    String issueTypeKey);
 }

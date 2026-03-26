@@ -17,7 +17,6 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @SuperBuilder
 public class CustomFieldOptionEntity extends BaseEntity {
-    private Long tenantId;
     private Long customFieldContextId;
     private String optionKey;
     private String value;

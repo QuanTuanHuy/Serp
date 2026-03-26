@@ -19,7 +19,6 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @SuperBuilder
 public class CustomFieldContextDefaultValueEntity extends BaseEntity {
-    private Long tenantId;
     private Long contextId;
     private String valueType;
     private String textValue;

@@ -92,7 +92,7 @@ Create a new work item (issue) within a project using Jira-aligned project permi
 | 14 | System | If `assignee_id` is provided, validates the caller has `ASSIGN_ISSUES`, validates the assignee exists and is active in tenant scope, and validates the assignee matches `ASSIGNABLE_USER` for the project |
 | 15 | System | If `security_level_id` is provided, validates the caller has `SET_ISSUE_SECURITY` and validates the level belongs to the project's issue security scheme; otherwise, if the scheme defines `default_level_id`, applies that default |
 | 16 | System | If `parent_id` is provided, loads the parent work item in the same project, validates the caller can view the parent, and validates the parent-child hierarchy rules |
-| 17 | System | Resolves custom field contexts for `(projectId, issue_type_id)` using context specificity rules, applies field defaults and custom field context defaults, and builds the effective create payload |
+| 17 | System | Resolves custom field contexts from the system-owned catalog by the requested issue type's `type_key`, using exact issue-type match first and global fallback second; then applies custom field context defaults and builds the effective create payload |
 | 18 | System | Validates required fields after defaults are applied; validates typed custom field values, options, user/group references, and estimate values |
 | 19 | System | Begins database transaction |
 | 20 | System | Allocates the next `issue_no` atomically under a project-scoped lock and computes immutable `key = PROJECT_KEY + "-" + issue_no` |
@@ -263,7 +263,7 @@ Create a new work item (issue) within a project using Jira-aligned project permi
 
 | Step | Actor/System | Action |
 |------|-------------|--------|
-| 17.E1 | System | If a custom field resolves to zero or multiple contexts for `(projectId, issue_type_id)`, returns HTTP 422 with error: `CUSTOM_FIELD_CONTEXT_UNRESOLVABLE` |
+| 17.E1 | System | If a custom field resolves to zero or multiple contexts for the requested issue type's `type_key` after exact-match and global-fallback resolution, returns HTTP 422 with error: `CUSTOM_FIELD_CONTEXT_UNRESOLVABLE` |
 | 18.E1 | System | If required fields are still missing after defaults are applied, returns HTTP 400 with error: `REQUIRED_FIELDS_MISSING` and the missing field list |
 | 18.E2 | System | If a custom field value fails type, option, user/group, or multi-value validation, returns HTTP 400 with error: `CUSTOM_FIELD_VALUE_INVALID` and field-level details |
 
@@ -284,8 +284,8 @@ Create a new work item (issue) within a project using Jira-aligned project permi
 | BR-PM-101-11 | Only fields present on the resolved CREATE screen and not hidden by field configuration are writable on create | Service layer |
 | BR-PM-101-12 | System-managed fields (`reporter_id`, `status_id`, `workflow_step_id`, `resolution_id`, `rank`, `issue_no`, `key`, audit fields) must not be accepted from the request | DTO validation |
 | BR-PM-101-13 | `summary` is always required regardless of field configuration or screen setup | DTO validation |
-| BR-PM-101-14 | Defaults are applied before required-field validation: priority scheme default, issue-security default, and custom field context defaults may satisfy missing values | Service layer |
-| BR-PM-101-15 | Each custom field must resolve exactly one context for `(projectId, issue_type_id)` using the documented specificity order; zero or multiple matches are configuration errors | Service layer |
+| BR-PM-101-14 | Defaults are applied before required-field validation: priority scheme default, issue-security default, and system catalog custom field context defaults may satisfy missing values | Service layer |
+| BR-PM-101-15 | Each custom field must resolve exactly one system-owned context for the requested issue type `type_key` using exact match first and global fallback second; zero or multiple matches are configuration errors | Service layer |
 | BR-PM-101-16 | Parent work item must belong to the same project, be visible to the caller, and satisfy the allowed hierarchy matrix | Service layer |
 | BR-PM-101-17 | Allowed hierarchy matrix for v1 create: child level `0` -> parent level `1`; child level `1` -> parent level `>=2`; child level `>=2` cannot set `parent_id` via UC-PM-101 | Service layer |
 | BR-PM-101-18 | `issue_no` is allocated atomically per project, is never reused, and may be non-contiguous after retries or rollbacks | DB + Service layer |

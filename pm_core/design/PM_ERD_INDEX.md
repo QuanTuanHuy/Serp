@@ -8,7 +8,7 @@ The ERD is split into modules to keep configuration-heavy JIRA-like capabilities
 
 ## Global Design Rules (Applied To All Modules)
 
-1. **Row-level multi-tenancy**: every business table contains `tenant_id` and all queries must filter by `tenant_id`.
+1. **Row-level multi-tenancy by default**: every tenant-owned business table contains `tenant_id` and all such queries must filter by `tenant_id`; system-owned read-only catalog tables are the explicit exception.
 2. **Auditability**: all mutable entities include `created_at`, `updated_at`, `created_by`, `updated_by`.
 3. **Soft delete by default**: use `deleted_at` for recoverability and historical integrity.
 4. **Extensible config model**: prefer relational tables for query-heavy rules; use JSONB only for plugin-style configs.

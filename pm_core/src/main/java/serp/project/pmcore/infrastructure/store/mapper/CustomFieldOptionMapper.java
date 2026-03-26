@@ -21,7 +21,6 @@ public class CustomFieldOptionMapper extends BaseMapper {
         }
         return CustomFieldOptionEntity.builder()
                 .id(model.getId())
-                .tenantId(model.getTenantId())
                 .customFieldContextId(model.getCustomFieldContextId())
                 .optionKey(model.getOptionKey())
                 .value(model.getValue())

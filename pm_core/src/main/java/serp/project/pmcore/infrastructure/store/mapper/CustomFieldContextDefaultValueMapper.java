@@ -21,7 +21,6 @@ public class CustomFieldContextDefaultValueMapper extends BaseMapper {
         }
         return CustomFieldContextDefaultValueEntity.builder()
                 .id(model.getId())
-                .tenantId(model.getTenantId())
                 .contextId(model.getContextId())
                 .valueType(model.getValueType())
                 .textValue(model.getTextValue())

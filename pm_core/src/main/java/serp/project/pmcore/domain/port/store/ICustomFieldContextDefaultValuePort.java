@@ -10,6 +10,5 @@ import serp.project.pmcore.domain.entity.CustomFieldContextDefaultValueEntity;
 import java.util.List;
 
 public interface ICustomFieldContextDefaultValuePort {
-    List<CustomFieldContextDefaultValueEntity> getCustomFieldContextDefaultValuesByContextId(Long contextId,
-                                                                                              Long tenantId);
+    List<CustomFieldContextDefaultValueEntity> getCustomFieldContextDefaultValuesByContextId(Long contextId);
 }

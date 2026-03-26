@@ -5,7 +5,8 @@
 
 package serp.project.pmcore.application.command.workitem;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.command.workitem.validator.CreateWorkItemValidator;
@@ -39,8 +40,9 @@ import java.util.List;
 import java.util.Set;
 
 @Service
-@Slf4j
 public class CreateWorkItemCommand {
+
+    private static final Logger log = LoggerFactory.getLogger(CreateWorkItemCommand.class);
 
     private final CreateWorkItemValidator createWorkItemValidator;
     private final IProjectService projectService;
@@ -124,8 +126,7 @@ public class CreateWorkItemCommand {
         }
 
         ResolvedCustomFields resolvedCustomFields = workItemCustomFieldResolver.resolveCustomFields(
-                projectId,
-                resolvedConfiguration.issueType().getId(),
+                resolvedConfiguration.issueType().getTypeKey(),
                 request.getCustomFields(),
                 createFieldRules,
                 tenantId

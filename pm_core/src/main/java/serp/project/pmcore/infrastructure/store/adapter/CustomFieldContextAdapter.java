@@ -23,11 +23,9 @@ public class CustomFieldContextAdapter implements ICustomFieldContextPort {
 
     @Override
     public List<CustomFieldContextEntity> getApplicableCustomFieldContexts(Long customFieldId,
-                                                                           Long projectId,
-                                                                           Long issueTypeId,
-                                                                           Long tenantId) {
+                                                                           String issueTypeKey) {
         return customFieldContextMapper.toEntities(
-                customFieldContextRepository.findApplicableContexts(customFieldId, projectId, issueTypeId, tenantId)
+                customFieldContextRepository.findApplicableContexts(customFieldId, issueTypeKey)
         );
     }
 }

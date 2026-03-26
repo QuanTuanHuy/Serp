@@ -17,11 +17,8 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @SuperBuilder
 public class CustomFieldContextEntity extends BaseEntity {
-    private Long tenantId;
     private Long customFieldId;
     private String name;
     private String description;
-    private Boolean isGlobalContext;
-    private Boolean appliesToAllProjects;
-    private Boolean appliesToAllIssueTypes;
+    private String issueTypeKey;
 }

@@ -67,6 +67,6 @@ Source of truth: `pm_core/design/schema/00_project_provisioning.md`
 - Done: create-project now runs centralized scheme compatibility validation before final project save.
 - Done: workflow coverage/publication/initial-step, field config coverage, screen coverage, transition-screen integrity, default-id integrity, and issue_type/status/priority tenant-scope reference checks are now enforced.
 - Done: reusable `CLONE_FROM_SHARED`-style resolution helpers now exist for all create-project scheme families and can be reused later by project rebinding flows.
-- Partial: custom-field context resolution and `custom_field_id` tenant-scope checks still depend on custom-field context infrastructure that is not yet implemented in this Java module.
+- Updated direction: custom-field contexts now use a simplified system-owned catalog model resolved by `issue_type_key` with global fallback, so project provisioning no longer needs project-scoped custom-field context cloning.
 - Note: `CreateProjectCommand` currently has the compatibility-validator call commented out locally, so the create path is provisioning-complete for phase 7 but phase 6 enforcement is temporarily bypassed in that command.
 - Transitional limitation: full Jira-parity family behavior, compatibility gates, and full exception unification will follow in later phases.

@@ -22,10 +22,9 @@ public class CustomFieldContextDefaultValueAdapter implements ICustomFieldContex
     private final CustomFieldContextDefaultValueMapper customFieldContextDefaultValueMapper;
 
     @Override
-    public List<CustomFieldContextDefaultValueEntity> getCustomFieldContextDefaultValuesByContextId(Long contextId,
-                                                                                                     Long tenantId) {
+    public List<CustomFieldContextDefaultValueEntity> getCustomFieldContextDefaultValuesByContextId(Long contextId) {
         return customFieldContextDefaultValueMapper.toEntities(
-                customFieldContextDefaultValueRepository.findAllByContextIdAndTenantId(contextId, tenantId)
+                customFieldContextDefaultValueRepository.findAllByContextId(contextId)
         );
     }
 }

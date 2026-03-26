@@ -51,8 +51,7 @@ public class WorkItemCustomFieldResolver {
         this.customFieldValueHandlers = customFieldValueHandlers;
     }
 
-    public ResolvedCustomFields resolveCustomFields(Long projectId,
-                                                    Long issueTypeId,
+    public ResolvedCustomFields resolveCustomFields(String issueTypeKey,
                                                     Map<String, Object> requestCustomFields,
                                                     CreateFieldRules createFieldRules,
                                                     Long tenantId) {
@@ -81,10 +80,10 @@ public class WorkItemCustomFieldResolver {
                 );
             }
 
-            CustomFieldContextEntity context = resolveCustomFieldContext(customField, projectId, issueTypeId, tenantId);
+            CustomFieldContextEntity context = resolveCustomFieldContext(customField, issueTypeKey);
             List<CustomFieldContextDefaultValueEntity> defaultValues = customFieldContextDefaultValuePort
-                    .getCustomFieldContextDefaultValuesByContextId(context.getId(), tenantId);
-            List<CustomFieldOptionEntity> options = customFieldOptionPort.getCustomFieldOptionsByContextId(context.getId(), tenantId);
+                    .getCustomFieldContextDefaultValuesByContextId(context.getId());
+            List<CustomFieldOptionEntity> options = customFieldOptionPort.getCustomFieldOptionsByContextId(context.getId());
 
             CustomFieldResolutionContext resolutionContext = new CustomFieldResolutionContext(
                     customField.getId(),
@@ -112,7 +111,6 @@ public class WorkItemCustomFieldResolver {
 
         return new ResolvedCustomFields(resolvedValues, missingRequiredFields);
     }
-
     private Map<String, CustomFieldEntity> toCustomFieldMap(List<CustomFieldEntity> customFields) {
         Map<String, CustomFieldEntity> customFieldMap = new LinkedHashMap<>();
         for (CustomFieldEntity customField : customFields) {
@@ -125,58 +123,44 @@ public class WorkItemCustomFieldResolver {
     }
 
     private CustomFieldContextEntity resolveCustomFieldContext(CustomFieldEntity customField,
-                                                               Long projectId,
-                                                               Long issueTypeId,
-                                                               Long tenantId) {
+                                                               String issueTypeKey) {
         List<CustomFieldContextEntity> applicableContexts = customFieldContextPort
-                .getApplicableCustomFieldContexts(customField.getId(), projectId, issueTypeId, tenantId);
+                .getApplicableCustomFieldContexts(customField.getId(), issueTypeKey);
 
-        if (applicableContexts.isEmpty()) {
-            throw new DomainValidationException(
-                    DomainErrorCode.CUSTOM_FIELD_CONTEXT_UNRESOLVABLE,
-                    "No custom field context matches field=" + customField.getFieldKey()
-                            + ", projectId=" + projectId + ", issueTypeId=" + issueTypeId
-            );
+        List<CustomFieldContextEntity> exactMatchContexts = applicableContexts.stream()
+                .filter(context -> issueTypeKey.equals(context.getIssueTypeKey()))
+                .toList();
+        if (exactMatchContexts.size() == 1) {
+            return exactMatchContexts.getFirst();
         }
-
-        Map<Integer, List<CustomFieldContextEntity>> contextsBySpecificity = new LinkedHashMap<>();
-        for (CustomFieldContextEntity applicableContext : applicableContexts) {
-            contextsBySpecificity.computeIfAbsent(customFieldContextSpecificity(applicableContext), ignored -> new ArrayList<>())
-                    .add(applicableContext);
-        }
-
-        Integer bestSpecificity = contextsBySpecificity.keySet().stream().min(Integer::compareTo)
-                .orElseThrow(() -> new DomainValidationException(
-                        DomainErrorCode.CUSTOM_FIELD_CONTEXT_UNRESOLVABLE,
-                        "Unable to determine context specificity for field=" + customField.getFieldKey()
-                ));
-
-        List<CustomFieldContextEntity> bestContexts = contextsBySpecificity.get(bestSpecificity);
-        if (bestContexts == null || bestContexts.size() != 1) {
+        if (exactMatchContexts.size() > 1) {
             throw new DomainValidationException(
                     DomainErrorCode.CUSTOM_FIELD_CONTEXT_UNRESOLVABLE,
                     "Custom field context is ambiguous for field=" + customField.getFieldKey()
-                            + ", projectId=" + projectId + ", issueTypeId=" + issueTypeId
+                            + ", issueTypeKey=" + issueTypeKey
             );
         }
 
-        return bestContexts.getFirst();
-    }
+        List<CustomFieldContextEntity> globalContexts = applicableContexts.stream()
+                .filter(context -> context.getIssueTypeKey() == null)
+                .toList();
+        if (globalContexts.size() == 1) {
+            return globalContexts.getFirst();
+        }
 
-    private int customFieldContextSpecificity(CustomFieldContextEntity context) {
-        boolean allProjects = Boolean.TRUE.equals(context.getAppliesToAllProjects());
-        boolean allIssueTypes = Boolean.TRUE.equals(context.getAppliesToAllIssueTypes());
+        if (globalContexts.isEmpty()) {
+            throw new DomainValidationException(
+                    DomainErrorCode.CUSTOM_FIELD_CONTEXT_UNRESOLVABLE,
+                    "No custom field context matches field=" + customField.getFieldKey()
+                            + ", issueTypeKey=" + issueTypeKey
+            );
+        }
 
-        if (!allProjects && !allIssueTypes) {
-            return 1;
-        }
-        if (!allProjects) {
-            return 2;
-        }
-        if (!allIssueTypes) {
-            return 3;
-        }
-        return 4;
+        throw new DomainValidationException(
+                DomainErrorCode.CUSTOM_FIELD_CONTEXT_UNRESOLVABLE,
+                "Custom field context is ambiguous for field=" + customField.getFieldKey()
+                        + ", issueTypeKey=" + issueTypeKey
+        );
     }
 
     private String normalizeTypeKey(String value) {
