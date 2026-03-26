@@ -128,8 +128,7 @@ public class CreateWorkItemCommand {
         ResolvedCustomFields resolvedCustomFields = workItemCustomFieldResolver.resolveCustomFields(
                 resolvedConfiguration.issueType().getTypeKey(),
                 request.getCustomFields(),
-                createFieldRules,
-                tenantId
+                createFieldRules
         );
         workItemCreateRequiredFieldValidator.validate(
                 request,

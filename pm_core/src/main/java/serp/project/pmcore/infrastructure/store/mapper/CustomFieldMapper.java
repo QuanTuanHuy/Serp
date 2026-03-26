@@ -21,7 +21,6 @@ public class CustomFieldMapper extends BaseMapper {
         }
         return CustomFieldEntity.builder()
                 .id(model.getId())
-                .tenantId(model.getTenantId())
                 .fieldKey(model.getFieldKey())
                 .name(model.getName())
                 .description(model.getDescription())

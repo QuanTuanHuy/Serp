@@ -34,7 +34,7 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 
 - Canonical runtime term in PM Core is `Work Item`; this is equivalent to Jira `Issue`.
 - Jira parity target for company-managed projects is family-specific provisioning: `TEMPLATE_DEFAULT` is the default create path, while `SHARED_FROM_EXISTING` is explicit opt-in.
-- Reusable global entities (`issue_types`, `statuses`, `status_categories`, `priorities`, `custom_fields`) remain shared references rather than project-cloned data.
+- Reusable global entities (`issue_types`, `statuses`, `status_categories`, `priorities`, `custom_fields`) remain shared references rather than project-cloned data; in the current phase `custom_fields` are a system-owned catalog.
 - Project isolation normally happens at the scheme/context layer; `CLONE_FROM_SHARED` is an explicit rebinding path when local copies are required.
 - Any shared scheme update or reusable global-entity update must be treated as multi-project impact and validated before apply.
 
@@ -536,7 +536,7 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 | BR-PM-001-06 | New projects are always created with `archived=false` | Service layer |
 | BR-PM-001-07 | Project creation uses `TEMPLATE_DEFAULT` by default; `SHARED_FROM_EXISTING` is explicit opt-in | Service layer |
 | BR-PM-001-08 | If a resolved source artifact is system-owned (`tenant_id=0`), the system must materialize a tenant-scoped shared copy or project-scoped family copy before binding the project | Service layer |
-| BR-PM-001-09 | Normal project provisioning must not clone reusable global entities (`issue_types`, `statuses`, `status_categories`, `priorities`, `custom_fields`); only scheme/context rows may be materialized or cloned | Service layer |
+| BR-PM-001-09 | Normal project provisioning must not clone reusable global entities (`issue_types`, `statuses`, `status_categories`, `priorities`, `custom_fields`); only family-specific scheme rows may be materialized or cloned, while the custom-field catalog remains shared system-owned data | Service layer |
 
 ##### Data Requirements
 
@@ -1007,7 +1007,7 @@ Update the effective scheme bindings for a project (issue type scheme, workflow 
 | BR-PM-007-02 | New workflow scheme must provide workflow mappings for all issue types in the project's resulting issue type scheme | UseCase layer |
 | BR-PM-007-03 | Existing work items retain their current status; statuses not present in new workflow are flagged for migration | Service layer |
 | BR-PM-007-04 | Scheme rebinding is family-specific; shared reuse is explicit, and project-scoped copies are created only where required | Service layer |
-| BR-PM-007-05 | Rebinding must not clone reusable global entities (`issue_types`, `statuses`, `status_categories`, `priorities`, `custom_fields`) | Service layer |
+| BR-PM-007-05 | Rebinding must not clone reusable global entities (`issue_types`, `statuses`, `status_categories`, `priorities`, `custom_fields`); the custom-field catalog remains shared system-owned data | Service layer |
 
 ##### Data Requirements
 
@@ -2703,7 +2703,7 @@ read-only catalog data in this phase.
 
 For the current phase, the runtime assumptions are:
 
-1. `custom_fields` used by work-item flows are seeded ahead of time.
+1. `custom_fields` used by work-item flows are system-owned catalog rows seeded ahead of time.
 2. `custom_field_contexts` are system-owned and resolve by `issue_type_key` exact match,
    then global fallback.
 3. `custom_field_options` and `custom_field_context_default_values` are system-owned child

@@ -313,10 +313,9 @@ class CreateWorkItemCommandTest {
                 )
         );
 
-        when(customFieldPort.getCustomFieldsByFieldKeysIncludingSystem(List.of("customfield_10001"), TENANT_ID))
+        when(customFieldPort.getCustomFieldsByFieldKeys(List.of("customfield_10001")))
                 .thenReturn(List.of(CustomFieldEntity.builder()
                         .id(CUSTOM_FIELD_ID)
-                        .tenantId(TENANT_ID)
                         .fieldKey("customfield_10001")
                         .typeKey("text")
                         .build()));
@@ -351,11 +350,11 @@ class CreateWorkItemCommandTest {
 
         List<WorkItemCustomFieldValueEntity> savedValues = captor.getValue();
         assertEquals(1, savedValues.size());
-        assertEquals(CUSTOM_FIELD_ID, savedValues.get(0).getCustomFieldId());
-        assertEquals(CUSTOM_FIELD_CONTEXT_ID, savedValues.get(0).getCustomFieldContextId());
-        assertEquals("TEXT", savedValues.get(0).getValueType());
-        assertEquals("Default environment", savedValues.get(0).getTextValue());
-        assertEquals(9000L, savedValues.get(0).getWorkItemId());
+        assertEquals(CUSTOM_FIELD_ID, savedValues.getFirst().getCustomFieldId());
+        assertEquals(CUSTOM_FIELD_CONTEXT_ID, savedValues.getFirst().getCustomFieldContextId());
+        assertEquals("TEXT", savedValues.getFirst().getValueType());
+        assertEquals("Default environment", savedValues.getFirst().getTextValue());
+        assertEquals(9000L, savedValues.getFirst().getWorkItemId());
     }
 
     @Test
@@ -368,7 +367,7 @@ class CreateWorkItemCommandTest {
                 )
         );
 
-        when(customFieldPort.getCustomFieldsByFieldKeysIncludingSystem(List.of("customfield_10001"), TENANT_ID))
+        when(customFieldPort.getCustomFieldsByFieldKeys(List.of("customfield_10001")))
                 .thenReturn(List.of(customField("customfield_10001", "text")));
         when(customFieldContextPort.getApplicableCustomFieldContexts(CUSTOM_FIELD_ID, ISSUE_TYPE_KEY))
                 .thenReturn(List.of(
@@ -404,7 +403,7 @@ class CreateWorkItemCommandTest {
                 )
         );
 
-        when(customFieldPort.getCustomFieldsByFieldKeysIncludingSystem(List.of("customfield_10001"), TENANT_ID))
+        when(customFieldPort.getCustomFieldsByFieldKeys(List.of("customfield_10001")))
                 .thenReturn(List.of(customField("customfield_10001", "select")));
         when(customFieldContextPort.getApplicableCustomFieldContexts(CUSTOM_FIELD_ID, ISSUE_TYPE_KEY))
                 .thenReturn(List.of(globalContext(CUSTOM_FIELD_CONTEXT_ID)));
@@ -446,10 +445,9 @@ class CreateWorkItemCommandTest {
                 )
         );
 
-        when(customFieldPort.getCustomFieldsByFieldKeysIncludingSystem(List.of("customfield_10001"), TENANT_ID))
+        when(customFieldPort.getCustomFieldsByFieldKeys(List.of("customfield_10001")))
                 .thenReturn(List.of(CustomFieldEntity.builder()
                         .id(CUSTOM_FIELD_ID)
-                        .tenantId(TENANT_ID)
                         .fieldKey("customfield_10001")
                         .typeKey("text")
                         .build()));
@@ -612,7 +610,6 @@ class CreateWorkItemCommandTest {
     private CustomFieldEntity customField(String fieldKey, String typeKey) {
         return CustomFieldEntity.builder()
                 .id(CUSTOM_FIELD_ID)
-                .tenantId(TENANT_ID)
                 .fieldKey(fieldKey)
                 .typeKey(typeKey)
                 .build();

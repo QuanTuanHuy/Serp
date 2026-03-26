@@ -10,5 +10,5 @@ import serp.project.pmcore.domain.entity.CustomFieldEntity;
 import java.util.List;
 
 public interface ICustomFieldPort {
-    List<CustomFieldEntity> getCustomFieldsByFieldKeysIncludingSystem(List<String> fieldKeys, Long tenantId);
+    List<CustomFieldEntity> getCustomFieldsByFieldKeys(List<String> fieldKeys);
 }

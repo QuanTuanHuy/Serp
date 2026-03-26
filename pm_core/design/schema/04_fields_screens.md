@@ -11,17 +11,19 @@ Provisioning note: custom fields remain globally reusable, but template-based co
 - `created_by BIGINT`, `updated_by BIGINT`
 - `deleted_at TIMESTAMP NULL`
 
-Current-phase simplification: `custom_field_contexts`, `custom_field_options`, and
-`custom_field_context_default_values` are system-owned read-only catalog tables.
+Current-phase simplification: `custom_fields`, `custom_field_contexts`,
+`custom_field_options`, and `custom_field_context_default_values` are system-owned
+read-only catalog tables.
 They do not support project-scoped overrides or tenant-managed customization in
 this phase.
 
 ## 4.1. `custom_fields`
 
+Current phase: custom field definitions are seeded as shared system catalog rows.
+
 | Column | Type | Description |
 |---|---|---|
 | id | BIGINT | PK |
-| tenant_id | BIGINT | Tenant scope |
 | field_key | VARCHAR(100) | Stable key (`customfield_10001`) |
 | name | VARCHAR(255) | Display name |
 | description | TEXT | Description |
@@ -219,7 +221,7 @@ Map operation to screen (`CREATE`, `EDIT`, `VIEW`) only. Transition screens are 
 
 ## Suggested Constraints & Indexes
 
-- `UNIQUE (tenant_id, field_key)` on `custom_fields`
+- `UNIQUE (field_key)` on `custom_fields`
 - `UNIQUE (custom_field_id, issue_type_key)` on `custom_field_contexts`
 - partial unique index on `custom_field_contexts(custom_field_id)` filtered by `issue_type_key IS NULL AND deleted_at IS NULL` to enforce one global fallback per field
 - `UNIQUE (custom_field_context_id, option_key)` on `custom_field_options`

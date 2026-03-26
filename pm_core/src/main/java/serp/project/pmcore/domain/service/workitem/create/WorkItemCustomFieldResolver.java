@@ -53,15 +53,14 @@ public class WorkItemCustomFieldResolver {
 
     public ResolvedCustomFields resolveCustomFields(String issueTypeKey,
                                                     Map<String, Object> requestCustomFields,
-                                                    CreateFieldRules createFieldRules,
-                                                    Long tenantId) {
+                                                    CreateFieldRules createFieldRules) {
         if (createFieldRules.customPolicies().isEmpty()) {
             return ResolvedCustomFields.empty();
         }
 
         List<String> fieldKeys = new ArrayList<>(new LinkedHashSet<>(createFieldRules.customPolicies().keySet()));
         Map<String, CustomFieldEntity> customFieldByKey = toCustomFieldMap(
-                customFieldPort.getCustomFieldsByFieldKeysIncludingSystem(fieldKeys, tenantId)
+                customFieldPort.getCustomFieldsByFieldKeys(fieldKeys)
         );
 
         List<WorkItemCustomFieldValueEntity> resolvedValues = new ArrayList<>();
@@ -111,13 +110,11 @@ public class WorkItemCustomFieldResolver {
 
         return new ResolvedCustomFields(resolvedValues, missingRequiredFields);
     }
+
     private Map<String, CustomFieldEntity> toCustomFieldMap(List<CustomFieldEntity> customFields) {
         Map<String, CustomFieldEntity> customFieldMap = new LinkedHashMap<>();
         for (CustomFieldEntity customField : customFields) {
-            CustomFieldEntity existing = customFieldMap.get(customField.getFieldKey());
-            if (existing == null || (Long.valueOf(0L).equals(existing.getTenantId()) && !Long.valueOf(0L).equals(customField.getTenantId()))) {
-                customFieldMap.put(customField.getFieldKey(), customField);
-            }
+            customFieldMap.putIfAbsent(customField.getFieldKey(), customField);
         }
         return customFieldMap;
     }

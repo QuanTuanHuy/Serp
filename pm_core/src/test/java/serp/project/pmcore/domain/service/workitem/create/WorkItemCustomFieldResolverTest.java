@@ -46,7 +46,6 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class WorkItemCustomFieldResolverTest {
 
-    private static final Long TENANT_ID = 1L;
     private static final String ISSUE_TYPE_KEY = "task";
     private static final Long CUSTOM_FIELD_ID = 1000L;
     private static final Long CONTEXT_ID = 1001L;
@@ -98,8 +97,7 @@ class WorkItemCustomFieldResolverTest {
         ResolvedCustomFields resolvedCustomFields = resolver.resolveCustomFields(
                 ISSUE_TYPE_KEY,
                 Map.of(),
-                customFieldRules(false),
-                TENANT_ID
+                customFieldRules(false)
         );
 
         assertEquals(1, resolvedCustomFields.values().size());
@@ -121,8 +119,7 @@ class WorkItemCustomFieldResolverTest {
         ResolvedCustomFields resolvedCustomFields = resolver.resolveCustomFields(
                 ISSUE_TYPE_KEY,
                 Map.of("customfield_10001", List.of("backend", "frontend")),
-                customFieldRules(false),
-                TENANT_ID
+                customFieldRules(false)
         );
 
         assertEquals(2, resolvedCustomFields.values().size());
@@ -134,7 +131,7 @@ class WorkItemCustomFieldResolverTest {
 
     @Test
     void resolveCustomFieldsShouldRejectAmbiguousContext() {
-        when(customFieldPort.getCustomFieldsByFieldKeysIncludingSystem(List.of("customfield_10001"), TENANT_ID))
+        when(customFieldPort.getCustomFieldsByFieldKeys(List.of("customfield_10001")))
                 .thenReturn(List.of(customField("customfield_10001", "text")));
         when(customFieldContextPort.getApplicableCustomFieldContexts(CUSTOM_FIELD_ID, ISSUE_TYPE_KEY))
                 .thenReturn(List.of(
@@ -147,8 +144,7 @@ class WorkItemCustomFieldResolverTest {
                 () -> resolver.resolveCustomFields(
                         ISSUE_TYPE_KEY,
                         Map.of("customfield_10001", "value"),
-                        customFieldRules(false),
-                        TENANT_ID
+                        customFieldRules(false)
                 )
         );
 
@@ -168,8 +164,7 @@ class WorkItemCustomFieldResolverTest {
                 () -> resolver.resolveCustomFields(
                         ISSUE_TYPE_KEY,
                         Map.of("customfield_10001", "unknown"),
-                        customFieldRules(false),
-                        TENANT_ID
+                        customFieldRules(false)
                 )
         );
 
@@ -178,7 +173,7 @@ class WorkItemCustomFieldResolverTest {
 
     @Test
     void resolveCustomFieldsShouldPreferExactIssueTypeContextOverGlobalFallback() {
-        when(customFieldPort.getCustomFieldsByFieldKeysIncludingSystem(List.of("customfield_10001"), TENANT_ID))
+        when(customFieldPort.getCustomFieldsByFieldKeys(List.of("customfield_10001")))
                 .thenReturn(List.of(customField("customfield_10001", "text")));
         when(customFieldContextPort.getApplicableCustomFieldContexts(CUSTOM_FIELD_ID, ISSUE_TYPE_KEY))
                 .thenReturn(List.of(
@@ -195,8 +190,7 @@ class WorkItemCustomFieldResolverTest {
         ResolvedCustomFields resolvedCustomFields = resolver.resolveCustomFields(
                 ISSUE_TYPE_KEY,
                 Map.of(),
-                customFieldRules(false),
-                TENANT_ID
+                customFieldRules(false)
         );
 
         assertEquals(1, resolvedCustomFields.values().size());
@@ -204,7 +198,7 @@ class WorkItemCustomFieldResolverTest {
     }
 
     private void stubCustomFieldDefinition(String fieldKey, String typeKey) {
-        when(customFieldPort.getCustomFieldsByFieldKeysIncludingSystem(List.of(fieldKey), TENANT_ID))
+        when(customFieldPort.getCustomFieldsByFieldKeys(List.of(fieldKey)))
                 .thenReturn(List.of(customField(fieldKey, typeKey)));
         when(customFieldContextPort.getApplicableCustomFieldContexts(CUSTOM_FIELD_ID, ISSUE_TYPE_KEY))
                 .thenReturn(List.of(globalContext(CONTEXT_ID)));
@@ -227,7 +221,6 @@ class WorkItemCustomFieldResolverTest {
     private CustomFieldEntity customField(String fieldKey, String typeKey) {
         return CustomFieldEntity.builder()
                 .id(CUSTOM_FIELD_ID)
-                .tenantId(TENANT_ID)
                 .fieldKey(fieldKey)
                 .typeKey(typeKey)
                 .build();

@@ -23,12 +23,12 @@ public class CustomFieldAdapter implements ICustomFieldPort {
     private final CustomFieldMapper customFieldMapper;
 
     @Override
-    public List<CustomFieldEntity> getCustomFieldsByFieldKeysIncludingSystem(List<String> fieldKeys, Long tenantId) {
+    public List<CustomFieldEntity> getCustomFieldsByFieldKeys(List<String> fieldKeys) {
         if (fieldKeys == null || fieldKeys.isEmpty()) {
             return Collections.emptyList();
         }
         return customFieldMapper.toEntities(
-                customFieldRepository.findAllByFieldKeyInAndTenantIdOrSystemTenant(fieldKeys, tenantId)
+                customFieldRepository.findAllByFieldKeyIn(fieldKeys)
         );
     }
 }
