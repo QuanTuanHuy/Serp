@@ -4,8 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.locationtech.jts.geom.Point;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-import serp.project.first_mile.enums.OrderProductCategory;
-import serp.project.first_mile.enums.OrderStatus;
+import serp.project.first_mile.enums.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -92,6 +91,33 @@ public class Order extends AbstractAudit{
     @Column(name = "order_product_category")
     @Enumerated(EnumType.STRING)
     private OrderProductCategory orderProductCategory;
+
+    @Column(name = "order_type")
+    @Enumerated(EnumType.STRING)
+    private OrderType orderType;
+
+    @Column(name = "base_shipping_fee")
+    private Long baseShippingFee;
+
+    @Column(name = "cod_fee")
+    private Long codFee;
+
+    @Column(name = "extra_fee")
+    private Long extraFee;
+
+    @Column(name = "total_shipping_fee")
+    private Long totalShippingFee;
+
+    @Column(name = "cod_amount")
+    private Long codAmount;
+
+    @Column(name = "fee_payer")
+    @Enumerated(EnumType.STRING)
+    private FeePayer feePayer;
+
+    @Column(name = "payment_status")
+    @Enumerated(EnumType.STRING)
+    private PaymentStatus paymentStatus;
 
     public void addProduct(Product product) {
         products.add(product);
