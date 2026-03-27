@@ -78,14 +78,30 @@ public class ProjectSchemeBindings {
 
     public Map<SchemeType, Long> toSchemeMap() {
         Map<SchemeType, Long> schemeMap = new EnumMap<>(SchemeType.class);
-        schemeMap.put(SchemeType.ISSUE_TYPE, issueTypeSchemeId);
-        schemeMap.put(SchemeType.WORKFLOW, workflowSchemeId);
-        schemeMap.put(SchemeType.FIELD_CONFIG, fieldConfigSchemeId);
-        schemeMap.put(SchemeType.SCREEN, issueTypeScreenSchemeId);
-        schemeMap.put(SchemeType.PERMISSION, permissionSchemeId);
-        schemeMap.put(SchemeType.NOTIFICATION, notificationSchemeId);
-        schemeMap.put(SchemeType.PRIORITY, prioritySchemeId);
-        schemeMap.put(SchemeType.ISSUE_SECURITY, issueSecuritySchemeId);
+        if (issueTypeSchemeId != null) {
+            schemeMap.put(SchemeType.ISSUE_TYPE, issueTypeSchemeId);
+        }
+        if (workflowSchemeId != null) {
+            schemeMap.put(SchemeType.WORKFLOW, workflowSchemeId);
+        }
+        if (fieldConfigSchemeId != null) {
+            schemeMap.put(SchemeType.FIELD_CONFIG, fieldConfigSchemeId);
+        }
+        if (issueTypeScreenSchemeId != null) {
+            schemeMap.put(SchemeType.SCREEN, issueTypeScreenSchemeId);
+        }
+        if (permissionSchemeId != null) {
+            schemeMap.put(SchemeType.PERMISSION, permissionSchemeId);
+        }
+        if (notificationSchemeId != null) {
+            schemeMap.put(SchemeType.NOTIFICATION, notificationSchemeId);
+        }
+        if (prioritySchemeId != null) {
+            schemeMap.put(SchemeType.PRIORITY, prioritySchemeId);
+        }
+        if (issueSecuritySchemeId != null) {
+            schemeMap.put(SchemeType.ISSUE_SECURITY, issueSecuritySchemeId);
+        }
         return schemeMap;
     }
 

@@ -31,9 +31,13 @@ public class SchemeSourceResolver implements ISchemeSourceResolver {
         Map<SchemeType, Long> overrides = request.getRequestedSchemeBindings() != null ?
                 request.getRequestedSchemeBindings().toSchemeMap() :
                 Collections.emptyMap();
+        log.info("Resolved scheme overrides: {}", overrides);
 
         Map<SchemeType, Long> blueprintDefaults = loadBlueprintDefaults(request.getBlueprintId(), request.getTenantId());
+        log.info("Resolved blueprint defaults: {}", blueprintDefaults);
+
         Map<SchemeType, Long> tenantDefaults = loadTenantDefaults(request.getTenantId());
+        log.info("Resolved tenant defaults: {}", tenantDefaults);
 
         return resolve(overrides, blueprintDefaults, tenantDefaults);
     }
@@ -43,21 +47,24 @@ public class SchemeSourceResolver implements ISchemeSourceResolver {
                                           Map<SchemeType, Long> tenantDefaults) {
         Map<SchemeType, Long> resolve = new EnumMap<>(SchemeType.class);
         for (SchemeType type : SchemeType.values()) {
-            if (overrides != null && overrides.containsKey(type)) {
+            if (overrides.containsKey(type) && overrides.get(type) != null) {
                 resolve.put(type, overrides.get(type));
                 continue;
             }
-            if (blueprintDefaults.containsKey(type)) {
+            if (blueprintDefaults.containsKey(type) && blueprintDefaults.get(type) != null) {
                 resolve.put(type, blueprintDefaults.get(type));
                 continue;
             }
-            if (tenantDefaults.containsKey(type)) {
+            if (tenantDefaults.containsKey(type) && tenantDefaults.get(type) != null) {
                 resolve.put(type, tenantDefaults.get(type));
                 continue;
             }
+            log.error("Missing source scheme for {}. No override in request, no default in blueprint or tenant settings.", type);
             throw new DomainException(DomainErrorCode.SCHEME_PROVISIONING_FAILED,
                     "Missing source scheme for " + type + ". Please specify in request, or set a default in blueprint or tenant settings.");
         }
+
+        log.info("Resolved scheme sources: {}", resolve);
         return resolve;
     }
 

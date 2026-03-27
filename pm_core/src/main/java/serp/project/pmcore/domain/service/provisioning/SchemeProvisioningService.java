@@ -44,7 +44,10 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
                 .projectId(request.getProjectId() != null ? request.getProjectId() : project.getId())
                 .projectKey(request.getProjectKey() != null ? request.getProjectKey() : project.getKey())
                 .build();
+
         Map<SchemeType, Long> resolvedSources = schemeSourceResolver.resolve(request);
+        log.info("Resolved sources for project key={} resolvedSources={}", project.getKey(), resolvedSources);
+
         Map<SchemeType, Long> effectiveBindings = provisionEffectiveBindings(
                 project,
                 resolvedSources,
@@ -53,6 +56,7 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
                 request.getEffectiveProvisioningMode(),
                 context
         );
+        log.info("Provisioned effective bindings for project key={} effectiveBindings={}", project.getKey(), effectiveBindings);
 
         return ProjectProvisioningResult.builder()
                 .resolvedSourceBindings(ProjectSchemeBindings.fromSchemeMap(resolvedSources))

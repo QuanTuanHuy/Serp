@@ -49,13 +49,17 @@ public class CreateProjectCommand {
 
         ProjectEntity shellProject = buildProjectEntity(request);
         ProjectEntity savedProject = projectService.createProject(shellProject, tenantId, userId);
+
         ProjectProvisioningResult provisioningResult = schemeProvisioningService.provisionProjectSchemes(
                 savedProject,
                 buildProvisioningRequest(request, savedProject, tenantId, userId, schemeBindings)
         );
         provisioningResult.applyEffectiveBindings(savedProject);
+
         projectSchemeCompatibilityValidator.validate(savedProject, tenantId);
+
         ProjectEntity finalProject = projectService.saveProject(savedProject, userId);
+
         assignLeadToAdministratorsRole(finalProject, userId);
 
         log.info("Created project id={} key={} tenantId={}",
