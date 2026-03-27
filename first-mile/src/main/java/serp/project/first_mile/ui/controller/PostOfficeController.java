@@ -83,23 +83,23 @@ public class PostOfficeController {
                 .build();
     }
 
-        @PutMapping("/{id}/location/geocode")
-        @PreAuthorize("hasRole('TMS_ADMIN')")
-        public ApiResponse<PostOfficeResponse> updatePostOfficeLocationByGeocode(@PathVariable Long id) {
-                return ApiResponse.<PostOfficeResponse>builder()
-                                .message(messageService.getMessage("success.post_offices.geocode.single"))
-                                .result(postOfficeService.updatePostOfficeLocationByGeocode(id))
-                                .build();
-        }
+    @PutMapping("/{id}/location/geocode")
+    @PreAuthorize("hasRole('TMS_ADMIN')")
+    public ApiResponse<PostOfficeResponse> updatePostOfficeLocationByGeocode(@PathVariable Long id) {
+        return ApiResponse.<PostOfficeResponse>builder()
+                .message(messageService.getMessage("success.post_offices.geocode.single"))
+                .result(postOfficeService.updatePostOfficeLocationByGeocode(id))
+                .build();
+    }
 
-        @PutMapping("/location/geocode-null")
-        @PreAuthorize("hasRole('TMS_ADMIN')")
-        public ApiResponse<PostOfficeGeocodeBatchResponse> updateNullLocationsByGeocode(
-                        @RequestParam(defaultValue = "50") int batch
-        ) {
-                return ApiResponse.<PostOfficeGeocodeBatchResponse>builder()
-                                .message(messageService.getMessage("success.post_offices.geocode.batch"))
-                                .result(postOfficeService.updatePostOfficesWithNullLocationByGeocode(batch))
-                                .build();
-        }
+    @PutMapping("/location/geocode-null")
+    @PreAuthorize("hasRole('TMS_ADMIN')")
+    public ApiResponse<PostOfficeGeocodeBatchResponse> updateNullLocationsByGeocode(
+            @RequestParam(defaultValue = "50") int batch
+    ) {
+        return ApiResponse.<PostOfficeGeocodeBatchResponse>builder()
+                .message(messageService.getMessage("success.post_offices.geocode.batch"))
+                .result(postOfficeService.updatePostOfficesWithNullLocationByGeocode(batch))
+                .build();
+    }
 }
