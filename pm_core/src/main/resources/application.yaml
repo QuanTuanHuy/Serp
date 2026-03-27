@@ -15,7 +15,7 @@ spring:
       minimum-idle: 3
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: true
     properties:
       hibernate:
@@ -25,11 +25,11 @@ spring:
         order_inserts: true
         order_updates: true
         batch_versioned_data: true
+        format_sql: true
 
   flyway:
     enabled: true
-    baseline-on-migrate: true
-    baseline-version: 1
+    baseline-on-migrate: false
     locations: classpath:db/migration
 
   data:
