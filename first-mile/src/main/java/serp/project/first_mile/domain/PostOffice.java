@@ -1,9 +1,8 @@
 package serp.project.first_mile.domain;
 
 import jakarta.persistence.*;
+import lombok.*;
 import org.locationtech.jts.geom.Point;
-import lombok.Getter;
-import lombok.Setter;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -21,9 +20,12 @@ import java.time.LocalTime;
 @Setter
 @Getter
 @Entity
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 @Table(name = "post_offices")
 @EntityListeners(AuditingEntityListener.class)
-public class PostOffice {
+public class PostOffice extends AbstractAudit {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -83,25 +85,6 @@ public class PostOffice {
     @Version
     @Column(name = "version")
     private Long version;
-
-    @CreatedDate
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
-    @LastModifiedDate
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    @CreatedBy
-    @Column(name = "created_by", updatable = false)
-    private String createdBy;
-
-    @LastModifiedBy
-    @Column(name = "updated_by")
-    private String updatedBy;
-
-    @Column(name = "tenant_id")
-    private Long tenantId;
 
     public boolean isActive() {
         return PostOfficeStatus.ACTIVE.equals(status);
