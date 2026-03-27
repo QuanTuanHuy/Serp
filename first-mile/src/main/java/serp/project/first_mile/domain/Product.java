@@ -2,13 +2,7 @@ package serp.project.first_mile.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.CreatedBy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedBy;
-import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
-import java.time.LocalDateTime;
 
 @Setter
 @Getter
@@ -32,20 +26,8 @@ public class Product extends AbstractAudit {
     @Column(name = "quantity")
     private Integer quantity;
 
-    @Column(name = "length")
-    private Double length;
-
-    @Column(name = "width")
-    private Double width;
-
-    @Column(name = "height")
-    private Double height;
-
     @Column(name = "weight")
     private Double weight;
-
-    @Column(name = "volume")
-    private Double volume;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)

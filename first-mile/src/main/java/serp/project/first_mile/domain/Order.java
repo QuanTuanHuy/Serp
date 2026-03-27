@@ -2,6 +2,8 @@ package serp.project.first_mile.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.locationtech.jts.geom.Point;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import serp.project.first_mile.enums.*;
@@ -48,6 +50,11 @@ public class Order extends AbstractAudit{
     @Column(name = "pickup_time_end")
     private LocalDateTime pickupTimeEnd;
 
+    // Khung giờ yêu cầu giao hàng
+    @Column(name = "delivery_request_time")
+    @Enumerated(EnumType.STRING)
+    private DeliveryRequestTime deliveryRequestTime;
+
     @Column(name = "receiver_name")
     private String receiverName;
     @Column(name = "receiver_phone")
@@ -77,6 +84,10 @@ public class Order extends AbstractAudit{
 
     @Column(name = "total_value")
     private Double totalValue;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "dimensions", columnDefinition = "jsonb")
+    private Dimension dimensions;
 
     @Column(name = "total_volume")
     private Double totalVolume;
@@ -118,6 +129,9 @@ public class Order extends AbstractAudit{
     @Column(name = "payment_status")
     @Enumerated(EnumType.STRING)
     private PaymentStatus paymentStatus;
+
+    @Column(name = "note")
+    private String note;
 
     public void addProduct(Product product) {
         products.add(product);
