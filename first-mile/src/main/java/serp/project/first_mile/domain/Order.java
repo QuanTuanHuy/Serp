@@ -1,43 +1,105 @@
 package serp.project.first_mile.domain;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import org.springframework.data.annotation.CreatedBy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedBy;
-import org.springframework.data.annotation.LastModifiedDate;
+import lombok.*;
+import org.locationtech.jts.geom.Point;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import serp.project.first_mile.enums.OrderProductCategory;
+import serp.project.first_mile.enums.OrderStatus;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Setter
 @Getter
+@Builder
 @Entity
 @Table(name = "orders")
 @EntityListeners(AuditingEntityListener.class)
-public class Order {
+@NoArgsConstructor
+@AllArgsConstructor
+public class Order extends AbstractAudit{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "order_code")
+    private String orderCode;
 
-    @CreatedDate
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+    @Column(name = "customer_order_code")
+    private String customerOrderCode;
 
-    @LastModifiedDate
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    @Column(name = "sender_name")
+    private String senderName;
+    @Column(name = "sender_phone")
+    private String senderPhone;
+    @Column(name = "sender_ward_code")
+    private String senderWardCode;
+    @Column(name = "sender_province_code")
+    private String senderProvinceCode;
+    @Column(name = "sender_address_detail")
+    private String senderAddressDetail;
+    @Column(name = "sender_location", columnDefinition = "geography(Point, 4326)")
+    private Point senderLocation;
 
-    @CreatedBy
-    @Column(name = "created_by", updatable = false)
-    private String createdBy;
+    // Khung giờ yêu cầu lấy hàng
+    @Column(name = "pickup_time_start")
+    private LocalDateTime pickupTimeStart;
+    @Column(name = "pickup_time_end")
+    private LocalDateTime pickupTimeEnd;
 
-    @LastModifiedBy
-    @Column(name = "updated_by")
-    private String updatedBy;
+    @Column(name = "receiver_name")
+    private String receiverName;
+    @Column(name = "receiver_phone")
+    private String receiverPhone;
+    @Column(name = "receiver_ward_code")
+    private String receiverWardCode;
+    @Column(name = "receiver_province_code")
+    private String receiverProvinceCode;
+    @Column(name = "receiver_address_detail")
+    private String receiverAddressDetail;
+    @Column(name = "receiver_location", columnDefinition = "geography(Point, 4326)")
+    private Point receiverLocation;
 
-    @Column(name = "tenant_id")
-    private Long tenantId;
+    // ĐỊNH TUYẾN BƯU CỤC
+    @Column(name = "origin_post_office_code")
+    private String originPostOfficeCode; // Bưu cục nhận hàng ở First-mile
+
+    @Column(name = "destination_post_office_code")
+    private String destinationPostOfficeCode; // Bưu cục sẽ đi giao ở Last-mile
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private OrderStatus status;
+
+    @Column(name = "total_weight")
+    private Double totalWeight;
+
+    @Column(name = "total_value")
+    private Double totalValue;
+
+    @Column(name = "total_volume")
+    private Double totalVolume;
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Product> products = new ArrayList<>();
+
+    @Column(name = "pickup_attempts")
+    @Builder.Default
+    private Integer pickupAttempts = 0;
+
+    @Column(name = "order_product_category")
+    @Enumerated(EnumType.STRING)
+    private OrderProductCategory orderProductCategory;
+
+    public void addProduct(Product product) {
+        products.add(product);
+        product.setOrder(this);
+    }
+
+    public void removeProduct(Product product) {
+        products.remove(product);
+        product.setOrder(null);
+    }
 }
