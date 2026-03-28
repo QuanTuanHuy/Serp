@@ -7,7 +7,7 @@ package serp.project.pmcore.domain.service.workitem.create;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import serp.project.pmcore.domain.dto.request.CreateWorkItemRequest;
+import serp.project.pmcore.domain.dto.workitem.create.CreateWorkItemData;
 import serp.project.pmcore.domain.dto.workitem.create.ResolvedWorkItemCreateConfiguration;
 import serp.project.pmcore.domain.entity.IssueSecurityLevelEntity;
 import serp.project.pmcore.domain.entity.IssueSecuritySchemeEntity;
@@ -56,7 +56,7 @@ public class WorkItemCreateConfigurationResolver {
     private final IIssueSecurityLevelPort issueSecurityLevelPort;
 
     public ResolvedWorkItemCreateConfiguration resolve(ProjectEntity project,
-                                                       CreateWorkItemRequest request,
+                                                       CreateWorkItemData request,
                                                        Long tenantId) {
         ensureProjectWritable(project);
 

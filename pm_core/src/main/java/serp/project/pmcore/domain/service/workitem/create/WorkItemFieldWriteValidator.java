@@ -7,7 +7,7 @@ package serp.project.pmcore.domain.service.workitem.create;
 
 import org.springframework.stereotype.Component;
 import serp.project.pmcore.domain.constant.WorkItemFieldConstants;
-import serp.project.pmcore.domain.dto.request.CreateWorkItemRequest;
+import serp.project.pmcore.domain.dto.workitem.create.CreateWorkItemData;
 import serp.project.pmcore.domain.dto.workitem.create.CreateFieldRules;
 import serp.project.pmcore.domain.dto.workitem.create.FieldPolicy;
 import serp.project.pmcore.domain.exception.BusinessRuleViolationException;
@@ -18,7 +18,7 @@ import java.util.Map;
 @Component
 public class WorkItemFieldWriteValidator {
 
-    public void validateClientSuppliedWritableFields(CreateWorkItemRequest request, CreateFieldRules createFieldRules) {
+    public void validateClientSuppliedWritableFields(CreateWorkItemData request, CreateFieldRules createFieldRules) {
         validateSystemFieldWritable(WorkItemFieldConstants.DESCRIPTION, request.getDescription(), createFieldRules);
         validateSystemFieldWritable(WorkItemFieldConstants.PRIORITY_ID, request.getPriorityId(), createFieldRules);
         validateSystemFieldWritable(WorkItemFieldConstants.ASSIGNEE_ID, request.getAssigneeId(), createFieldRules);

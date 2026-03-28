@@ -14,8 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import serp.project.pmcore.application.command.workitem.validator.CreateWorkItemValidator;
-import serp.project.pmcore.domain.dto.request.CreateWorkItemRequest;
-import serp.project.pmcore.domain.dto.response.workitem.WorkItemResponse;
+import serp.project.pmcore.domain.dto.workitem.create.CreateWorkItemData;
 import serp.project.pmcore.domain.entity.CustomFieldContextDefaultValueEntity;
 import serp.project.pmcore.domain.entity.CustomFieldContextEntity;
 import serp.project.pmcore.domain.entity.CustomFieldEntity;
@@ -92,6 +91,7 @@ import serp.project.pmcore.domain.service.workitem.create.handler.SelectCustomFi
 import serp.project.pmcore.domain.service.workitem.create.handler.TextCustomFieldValueHandler;
 import serp.project.pmcore.domain.service.workitem.create.handler.UserCustomFieldValueHandler;
 import serp.project.pmcore.kernel.utils.JsonUtils;
+import serp.project.pmcore.ui.rest.workitem.dto.response.WorkItemResponse;
 
 import java.util.List;
 import java.util.Map;
@@ -252,7 +252,7 @@ class CreateWorkItemCommandTest {
 
         WorkItemResponse response = createWorkItemCommand.execute(
                 PROJECT_ID,
-                CreateWorkItemRequest.builder()
+                CreateWorkItemData.builder()
                         .issueTypeId(ISSUE_TYPE_ID)
                         .summary("Create task")
                         .dueDate(1_700_000_000_000L)
@@ -269,7 +269,7 @@ class CreateWorkItemCommandTest {
 
     @Test
     void executeShouldRejectSystemFieldNotWritableOnCreate() {
-        CreateWorkItemRequest request = CreateWorkItemRequest.builder()
+        CreateWorkItemData request = CreateWorkItemData.builder()
                 .issueTypeId(ISSUE_TYPE_ID)
                 .summary("Write slice 4 tests")
                 .dueDate(1_700_000_000_000L)
@@ -289,7 +289,7 @@ class CreateWorkItemCommandTest {
                 BusinessRuleViolationException.class,
                 () -> createWorkItemCommand.execute(
                         PROJECT_ID,
-                        CreateWorkItemRequest.builder()
+                        CreateWorkItemData.builder()
                                 .issueTypeId(ISSUE_TYPE_ID)
                                 .summary("Create task")
                                 .customFields(Map.of("customfield_10001", "value"))
@@ -336,7 +336,7 @@ class CreateWorkItemCommandTest {
 
         createWorkItemCommand.execute(
                 PROJECT_ID,
-                CreateWorkItemRequest.builder()
+                CreateWorkItemData.builder()
                         .issueTypeId(ISSUE_TYPE_ID)
                         .summary("Create bug")
                         .build(),
@@ -379,7 +379,7 @@ class CreateWorkItemCommandTest {
                 DomainValidationException.class,
                 () -> createWorkItemCommand.execute(
                         PROJECT_ID,
-                        CreateWorkItemRequest.builder()
+                        CreateWorkItemData.builder()
                                 .issueTypeId(ISSUE_TYPE_ID)
                                 .summary("Create story")
                                 .customFields(Map.of("customfield_10001", "value"))
@@ -416,7 +416,7 @@ class CreateWorkItemCommandTest {
                 BusinessRuleViolationException.class,
                 () -> createWorkItemCommand.execute(
                         PROJECT_ID,
-                        CreateWorkItemRequest.builder()
+                        CreateWorkItemData.builder()
                                 .issueTypeId(ISSUE_TYPE_ID)
                                 .summary("Create story")
                                 .customFields(Map.of("customfield_10001", "invalid-option"))
@@ -465,7 +465,7 @@ class CreateWorkItemCommandTest {
                 BusinessRuleViolationException.class,
                 () -> createWorkItemCommand.execute(
                         PROJECT_ID,
-                        CreateWorkItemRequest.builder()
+                        CreateWorkItemData.builder()
                                 .issueTypeId(ISSUE_TYPE_ID)
                                 .summary("Create story")
                                 .build(),

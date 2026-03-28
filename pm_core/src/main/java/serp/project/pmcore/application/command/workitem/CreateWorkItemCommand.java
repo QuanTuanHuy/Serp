@@ -13,8 +13,7 @@ import serp.project.pmcore.application.command.workitem.validator.CreateWorkItem
 import serp.project.pmcore.domain.constant.EventConstants;
 import serp.project.pmcore.domain.dto.message.WorkItemEventPayload;
 import serp.project.pmcore.domain.dto.project.ProjectPermissionEvaluationContext;
-import serp.project.pmcore.domain.dto.request.CreateWorkItemRequest;
-import serp.project.pmcore.domain.dto.response.workitem.WorkItemResponse;
+import serp.project.pmcore.domain.dto.workitem.create.CreateWorkItemData;
 import serp.project.pmcore.domain.dto.workitem.create.CreateFieldRules;
 import serp.project.pmcore.domain.dto.workitem.create.ResolvedCustomFields;
 import serp.project.pmcore.domain.dto.workitem.create.ResolvedWorkItemCreateConfiguration;
@@ -37,6 +36,7 @@ import serp.project.pmcore.domain.service.workitem.create.WorkItemDraftFactory;
 import serp.project.pmcore.domain.service.workitem.create.WorkItemFieldPolicyResolver;
 import serp.project.pmcore.domain.service.workitem.create.WorkItemFieldWriteValidator;
 import serp.project.pmcore.kernel.utils.JsonUtils;
+import serp.project.pmcore.ui.rest.workitem.dto.response.WorkItemResponse;
 
 import java.util.List;
 import java.util.Set;
@@ -90,11 +90,11 @@ public class CreateWorkItemCommand {
 
     @Transactional(rollbackFor = Exception.class)
     public WorkItemResponse execute(Long projectId,
-                                    CreateWorkItemRequest request,
+                                    CreateWorkItemData createWorkItemData,
                                     Long tenantId,
                                     Long userId,
                                     Set<String> groupKeys) {
-        createWorkItemValidator.validate(request);
+        createWorkItemValidator.validate(createWorkItemData);
 
         ProjectEntity project = projectService.getProjectById(projectId, tenantId);
         ensureProjectWritable(project);
@@ -102,26 +102,26 @@ public class CreateWorkItemCommand {
         workItemCreateAuthorizationService.checkCreatePermissions(project, actorContext);
 
         ResolvedWorkItemCreateConfiguration resolvedConfiguration = workItemCreateConfigurationResolver
-                .resolve(project, request, tenantId);
+                .resolve(project, createWorkItemData, tenantId);
         CreateFieldRules createFieldRules = workItemFieldPolicyResolver.resolveCreateFieldRules(
                 project,
                 resolvedConfiguration.issueType().getId(),
                 tenantId
         );
-        workItemFieldWriteValidator.validateClientSuppliedWritableFields(request, createFieldRules);
+        workItemFieldWriteValidator.validateClientSuppliedWritableFields(createWorkItemData, createFieldRules);
 
-        workItemCreateAuthorizationService.checkScheduleIssuesPermissionIfNeeded(project, actorContext, request.getDueDate());
-        Long assigneeId = workItemCreateAuthorizationService.resolveAssigneeId(project, request.getAssigneeId(), actorContext);
-        workItemCreateAuthorizationService.checkSetIssueSecurityPermissionIfNeeded(project, actorContext, request.getSecurityLevelId());
+        workItemCreateAuthorizationService.checkScheduleIssuesPermissionIfNeeded(project, actorContext, createWorkItemData.getDueDate());
+        Long assigneeId = workItemCreateAuthorizationService.resolveAssigneeId(project, createWorkItemData.getAssigneeId(), actorContext);
+        workItemCreateAuthorizationService.checkSetIssueSecurityPermissionIfNeeded(project, actorContext, createWorkItemData.getSecurityLevelId());
         Long securityLevelId = workItemCreateConfigurationResolver.resolveSecurityLevelId(
                 project,
-                request.getSecurityLevelId(),
+                createWorkItemData.getSecurityLevelId(),
                 tenantId
         );
 
-        if (request.getParentId() != null) {
+        if (createWorkItemData.getParentId() != null) {
             workItemService.validateParentHierarchy(
-                    request.getParentId(),
+                    createWorkItemData.getParentId(),
                     resolvedConfiguration.issueType().getId(),
                     projectId,
                     tenantId
@@ -130,11 +130,11 @@ public class CreateWorkItemCommand {
 
         ResolvedCustomFields resolvedCustomFields = workItemCustomFieldResolver.resolveCustomFields(
                 resolvedConfiguration.issueType().getTypeKey(),
-                request.getCustomFields(),
+                createWorkItemData.getCustomFields(),
                 createFieldRules
         );
         workItemCreateRequiredFieldValidator.validate(
-                request,
+                createWorkItemData,
                 resolvedConfiguration.priorityId(),
                 assigneeId,
                 securityLevelId,
@@ -148,7 +148,7 @@ public class CreateWorkItemCommand {
 
         WorkItemEntity workItem = workItemDraftFactory.buildDraft(
                 projectId,
-                request,
+                createWorkItemData,
                 resolvedConfiguration,
                 issueNo,
                 key,

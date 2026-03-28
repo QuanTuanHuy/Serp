@@ -9,7 +9,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import serp.project.pmcore.domain.dto.request.project.CreateProjectRequest;
 import serp.project.pmcore.domain.enums.SchemeType;
 
 import java.util.ArrayList;
@@ -30,19 +29,6 @@ public class ProjectSchemeBindings {
     private Long notificationSchemeId;
     private Long prioritySchemeId;
     private Long issueSecuritySchemeId;
-
-    public static ProjectSchemeBindings fromRequest(CreateProjectRequest request) {
-        return ProjectSchemeBindings.builder()
-                .issueTypeSchemeId(request.getIssueTypeSchemeId())
-                .workflowSchemeId(request.getWorkflowSchemeId())
-                .fieldConfigSchemeId(request.getFieldConfigSchemeId())
-                .issueTypeScreenSchemeId(request.getIssueTypeScreenSchemeId())
-                .permissionSchemeId(request.getPermissionSchemeId())
-                .notificationSchemeId(request.getNotificationSchemeId())
-                .prioritySchemeId(request.getPrioritySchemeId())
-                .issueSecuritySchemeId(request.getIssueSecuritySchemeId())
-                .build();
-    }
 
     public static ProjectSchemeBindings fromSchemeMap(Map<SchemeType, Long> schemeMap) {
         if (schemeMap == null) {

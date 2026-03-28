@@ -6,7 +6,7 @@
 package serp.project.pmcore.domain.service.workitem.create;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.dto.request.CreateWorkItemRequest;
+import serp.project.pmcore.domain.dto.workitem.create.CreateWorkItemData;
 import serp.project.pmcore.domain.dto.workitem.create.ResolvedWorkItemCreateConfiguration;
 import serp.project.pmcore.domain.entity.workitem.WorkItemEntity;
 
@@ -14,7 +14,7 @@ import serp.project.pmcore.domain.entity.workitem.WorkItemEntity;
 public class WorkItemDraftFactory {
 
     public WorkItemEntity buildDraft(Long projectId,
-                                     CreateWorkItemRequest request,
+                                     CreateWorkItemData request,
                                      ResolvedWorkItemCreateConfiguration resolvedConfiguration,
                                      Long issueNo,
                                      String key,

@@ -7,7 +7,7 @@ package serp.project.pmcore.domain.service.workitem.create;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import serp.project.pmcore.domain.dto.request.CreateWorkItemRequest;
+import serp.project.pmcore.domain.dto.workitem.create.CreateWorkItemData;
 import serp.project.pmcore.domain.dto.workitem.create.ResolvedWorkItemCreateConfiguration;
 import serp.project.pmcore.domain.entity.workflow.WorkflowStepEntity;
 import serp.project.pmcore.domain.entity.workitem.IssueTypeEntity;
@@ -35,7 +35,7 @@ class WorkItemDraftFactoryTest {
 
         WorkItemEntity draft = factory.buildDraft(
                 10L,
-                CreateWorkItemRequest.builder()
+                CreateWorkItemData.builder()
                         .issueTypeId(101L)
                         .summary("Create task")
                         .description("Task details")

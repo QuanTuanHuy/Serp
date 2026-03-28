@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import serp.project.pmcore.domain.dto.request.CreateWorkItemRequest;
+import serp.project.pmcore.domain.dto.workitem.create.CreateWorkItemData;
 import serp.project.pmcore.domain.dto.workitem.create.ResolvedWorkItemCreateConfiguration;
 import serp.project.pmcore.domain.entity.IssueSecurityLevelEntity;
 import serp.project.pmcore.domain.entity.IssueSecuritySchemeEntity;
@@ -105,7 +105,7 @@ class WorkItemCreateConfigurationResolverTest {
     @Test
     void resolveShouldReturnIssueTypeWorkflowAndPriority() {
         ProjectEntity project = project();
-        CreateWorkItemRequest request = CreateWorkItemRequest.builder()
+        CreateWorkItemData request = CreateWorkItemData.builder()
                 .issueTypeId(ISSUE_TYPE_ID)
                 .summary("Create task")
                 .build();

@@ -16,12 +16,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import serp.project.pmcore.application.command.workitem.CreateWorkItemCommand;
 import serp.project.pmcore.domain.constant.RestControllerConstants;
-import serp.project.pmcore.domain.dto.request.CreateWorkItemRequest;
-import serp.project.pmcore.domain.dto.response.GeneralResponse;
+import serp.project.pmcore.domain.dto.workitem.create.CreateWorkItemData;
 import serp.project.pmcore.domain.exception.AccessDeniedException;
 import serp.project.pmcore.domain.exception.DomainErrorCode;
 import serp.project.pmcore.kernel.utils.AuthUtils;
-import serp.project.pmcore.kernel.utils.ResponseUtils;
+import serp.project.pmcore.ui.rest.shared.response.GeneralResponse;
+import serp.project.pmcore.ui.rest.shared.response.ResponseUtils;
+import serp.project.pmcore.ui.rest.workitem.dto.request.CreateWorkItemRequest;
 
 @RestController
 @RequestMapping(RestControllerConstants.WORKITEMS)
@@ -42,12 +43,27 @@ public class WorkItemController {
 
         var response = createWorkItemCommand.execute(
                 projectId,
-                request,
+                toCreateWorkItemData(request),
                 tenantId,
                 userId,
                 authUtils.getCurrentGroups()
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(responseUtils.success(response));
+    }
+
+    private CreateWorkItemData toCreateWorkItemData(CreateWorkItemRequest request) {
+        return CreateWorkItemData.builder()
+                .issueTypeId(request.getIssueTypeId())
+                .summary(request.getSummary())
+                .description(request.getDescription())
+                .priorityId(request.getPriorityId())
+                .assigneeId(request.getAssigneeId())
+                .parentId(request.getParentId())
+                .dueDate(request.getDueDate())
+                .timeOriginalEstimate(request.getTimeOriginalEstimate())
+                .securityLevelId(request.getSecurityLevelId())
+                .customFields(request.getCustomFields())
+                .build();
     }
 }

@@ -7,7 +7,7 @@ package serp.project.pmcore.domain.service.workitem.create;
 
 import org.springframework.stereotype.Component;
 import serp.project.pmcore.domain.constant.WorkItemFieldConstants;
-import serp.project.pmcore.domain.dto.request.CreateWorkItemRequest;
+import serp.project.pmcore.domain.dto.workitem.create.CreateWorkItemData;
 import serp.project.pmcore.domain.dto.workitem.create.CreateFieldRules;
 import serp.project.pmcore.domain.dto.workitem.create.FieldPolicy;
 import serp.project.pmcore.domain.dto.workitem.create.ResolvedCustomFields;
@@ -22,7 +22,7 @@ import java.util.Map;
 @Component
 public class WorkItemCreateRequiredFieldValidator {
 
-    public void validate(CreateWorkItemRequest request,
+    public void validate(CreateWorkItemData request,
                          Long priorityId,
                          Long assigneeId,
                          Long securityLevelId,

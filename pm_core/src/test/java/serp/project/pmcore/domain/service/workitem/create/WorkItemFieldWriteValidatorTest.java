@@ -8,7 +8,7 @@ package serp.project.pmcore.domain.service.workitem.create;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import serp.project.pmcore.domain.constant.WorkItemFieldConstants;
-import serp.project.pmcore.domain.dto.request.CreateWorkItemRequest;
+import serp.project.pmcore.domain.dto.workitem.create.CreateWorkItemData;
 import serp.project.pmcore.domain.dto.workitem.create.CreateFieldRules;
 import serp.project.pmcore.domain.dto.workitem.create.FieldPolicy;
 import serp.project.pmcore.domain.exception.BusinessRuleViolationException;
@@ -51,7 +51,7 @@ class WorkItemFieldWriteValidatorTest {
         );
 
         assertDoesNotThrow(() -> validator.validateClientSuppliedWritableFields(
-                CreateWorkItemRequest.builder()
+                CreateWorkItemData.builder()
                         .issueTypeId(1L)
                         .summary("Create task")
                         .dueDate(1_700_000_000_000L)
@@ -78,7 +78,7 @@ class WorkItemFieldWriteValidatorTest {
         BusinessRuleViolationException exception = assertThrows(
                 BusinessRuleViolationException.class,
                 () -> validator.validateClientSuppliedWritableFields(
-                        CreateWorkItemRequest.builder()
+                        CreateWorkItemData.builder()
                                 .issueTypeId(1L)
                                 .summary("Create task")
                                 .dueDate(1_700_000_000_000L)
@@ -95,7 +95,7 @@ class WorkItemFieldWriteValidatorTest {
         BusinessRuleViolationException exception = assertThrows(
                 BusinessRuleViolationException.class,
                 () -> validator.validateClientSuppliedWritableFields(
-                        CreateWorkItemRequest.builder()
+                        CreateWorkItemData.builder()
                                 .issueTypeId(1L)
                                 .summary("Create task")
                                 .customFields(Map.of("customfield_10001", "value"))

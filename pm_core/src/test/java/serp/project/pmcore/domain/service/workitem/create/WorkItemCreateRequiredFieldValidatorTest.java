@@ -8,7 +8,7 @@ package serp.project.pmcore.domain.service.workitem.create;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import serp.project.pmcore.domain.constant.WorkItemFieldConstants;
-import serp.project.pmcore.domain.dto.request.CreateWorkItemRequest;
+import serp.project.pmcore.domain.dto.workitem.create.CreateWorkItemData;
 import serp.project.pmcore.domain.dto.workitem.create.CreateFieldRules;
 import serp.project.pmcore.domain.dto.workitem.create.FieldPolicy;
 import serp.project.pmcore.domain.dto.workitem.create.ResolvedCustomFields;
@@ -48,7 +48,7 @@ class WorkItemCreateRequiredFieldValidatorTest {
         );
 
         assertDoesNotThrow(() -> validator.validate(
-                CreateWorkItemRequest.builder()
+                CreateWorkItemData.builder()
                         .issueTypeId(1L)
                         .summary("Create task")
                         .build(),
@@ -79,7 +79,7 @@ class WorkItemCreateRequiredFieldValidatorTest {
         BusinessRuleViolationException exception = assertThrows(
                 BusinessRuleViolationException.class,
                 () -> validator.validate(
-                        CreateWorkItemRequest.builder()
+                        CreateWorkItemData.builder()
                                 .issueTypeId(1L)
                                 .summary("Create task")
                                 .build(),
@@ -99,7 +99,7 @@ class WorkItemCreateRequiredFieldValidatorTest {
         BusinessRuleViolationException exception = assertThrows(
                 BusinessRuleViolationException.class,
                 () -> validator.validate(
-                        CreateWorkItemRequest.builder()
+                        CreateWorkItemData.builder()
                                 .issueTypeId(1L)
                                 .summary("Create task")
                                 .build(),

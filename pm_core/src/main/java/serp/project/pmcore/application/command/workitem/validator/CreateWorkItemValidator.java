@@ -6,14 +6,14 @@
 package serp.project.pmcore.application.command.workitem.validator;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.dto.request.CreateWorkItemRequest;
+import serp.project.pmcore.domain.dto.workitem.create.CreateWorkItemData;
 
 import java.util.Map;
 
 @Component
 public class CreateWorkItemValidator {
 
-    public void validate(CreateWorkItemRequest request) {
+    public void validate(CreateWorkItemData request) {
         if (request == null) {
             throw new IllegalArgumentException("Create work item request is required");
         }
