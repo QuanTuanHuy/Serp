@@ -28,11 +28,14 @@ public class CloneNamingHelper {
                                        String sourceName,
                                        SchemeType schemeType,
                                        CloneMode cloneMode) {
-        String normalizedProjectKey = normalizeProjectKey(projectKey);
+        String normalizedProjectKey = cloneMode == CloneMode.SHARED ? "" : normalizeProjectKey(projectKey);
         String baseName = safeSourceName(sourceName, schemeType);
 
         String suffix = cloneMode == CloneMode.SHARED ? " (Shared)" : "";
-        String candidate = normalizedProjectKey + " - " + baseName + suffix;
+        String candidate = baseName + suffix;
+        if (!normalizedProjectKey.isBlank()) {
+            candidate = candidate + " - " + normalizedProjectKey;
+        }
 
         return truncate(candidate, DEFAULT_NAME_MAX_LENGTH);
     }

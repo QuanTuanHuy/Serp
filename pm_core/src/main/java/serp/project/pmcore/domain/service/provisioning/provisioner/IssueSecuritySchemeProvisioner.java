@@ -64,6 +64,11 @@ public class IssueSecuritySchemeProvisioner extends AbstractMappedSharedProvisio
                                   Long userId,
                                   CloneMode cloneMode,
                                   ProvisioningExecutionContext context) {
-        return issueSecuritySchemeCloner.cloneIssueSecurityScheme(source, tenantId, userId, cloneMode);
+        return issueSecuritySchemeCloner.cloneIssueSecurityScheme(
+                source,
+                tenantId,
+                userId,
+                cloneMode,
+                context);
     }
 }

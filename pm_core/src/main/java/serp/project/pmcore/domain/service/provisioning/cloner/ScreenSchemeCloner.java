@@ -69,7 +69,7 @@ public class ScreenSchemeCloner {
         long now = System.currentTimeMillis();
         ScreenSchemeEntity cloned = ScreenSchemeEntity.builder()
                 .tenantId(tenantId)
-                .name(cloneNamingHelper.buildSchemeCloneName("", source.getName(), SchemeType.SCREEN, cloneMode))
+                .name(cloneNamingHelper.buildSchemeCloneName(context.getProjectKey(), source.getName(), SchemeType.SCREEN, cloneMode))
                 .description(source.getDescription())
                 .defaultScreenId(requireMappedId(screenIdMap, source.getDefaultScreenId()))
                 .build();

@@ -65,7 +65,7 @@ public class ScreenSchemeProvisioner extends AbstractMappedSharedProvisioner<Iss
         long now = System.currentTimeMillis();
         IssueTypeScreenSchemeEntity cloned = IssueTypeScreenSchemeEntity.builder()
                 .tenantId(tenantId)
-                .name(cloneNamingHelper.buildSchemeCloneName("", source.getName(), SchemeType.SCREEN, mode))
+                .name(cloneNamingHelper.buildSchemeCloneName(context.getProjectKey(), source.getName(), SchemeType.SCREEN, mode))
                 .description(source.getDescription())
                 .defaultScreenSchemeId(requireMappedId(screenSchemeIdMap, source.getDefaultScreenSchemeId(), "screen scheme"))
                 .build();

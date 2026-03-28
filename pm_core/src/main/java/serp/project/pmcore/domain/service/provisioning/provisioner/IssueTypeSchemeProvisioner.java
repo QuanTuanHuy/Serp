@@ -75,7 +75,7 @@ public class IssueTypeSchemeProvisioner extends AbstractMappedSharedProvisioner<
         long now = System.currentTimeMillis();
         IssueTypeSchemeEntity cloned = IssueTypeSchemeEntity.builder()
                 .tenantId(tenantId)
-                .name(cloneNamingHelper.buildSchemeCloneName("", source.getName(), SchemeType.ISSUE_TYPE, mode))
+                .name(cloneNamingHelper.buildSchemeCloneName(context.getProjectKey(), source.getName(), SchemeType.ISSUE_TYPE, mode))
                 .description(source.getDescription())
                 .defaultIssueTypeId(requiredMappedId(issueTypeIdMap, source.getDefaultIssueTypeId()))
                 .build();

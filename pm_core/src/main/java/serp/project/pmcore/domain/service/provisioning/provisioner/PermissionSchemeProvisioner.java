@@ -64,6 +64,11 @@ public class PermissionSchemeProvisioner extends AbstractMappedSharedProvisioner
                                   Long userId,
                                   CloneMode cloneMode,
                                   ProvisioningExecutionContext context) {
-        return permissionSchemeCloner.clonePermissionScheme(source, tenantId, userId, cloneMode);
+        return permissionSchemeCloner.clonePermissionScheme(
+                source,
+                tenantId,
+                userId,
+                cloneMode,
+                context);
     }
 }

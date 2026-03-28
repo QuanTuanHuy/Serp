@@ -74,7 +74,7 @@ public class PrioritySchemeProvisioner extends AbstractMappedSharedProvisioner<P
         long now = System.currentTimeMillis();
         PrioritySchemeEntity schemeCloned = PrioritySchemeEntity.builder()
                 .tenantId(tenantId)
-                .name(cloneNamingHelper.buildSchemeCloneName("", source.getName(), SchemeType.PRIORITY, mode))
+                .name(cloneNamingHelper.buildSchemeCloneName(context.getProjectKey(), source.getName(), SchemeType.PRIORITY, mode))
                 .description(source.getDescription())
                 .defaultPriorityId(requiredMappedId(priorityMap, source.getDefaultPriorityId()))
                 .build();

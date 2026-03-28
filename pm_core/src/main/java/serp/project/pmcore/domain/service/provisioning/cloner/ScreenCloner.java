@@ -27,13 +27,6 @@ public class ScreenCloner {
     public Long cloneScreenBySourceId(Long sourceScreenId,
                                       Long tenantId,
                                       Long userId,
-                                      CloneMode cloneMode) {
-        return cloneScreenBySourceId(sourceScreenId, tenantId, userId, cloneMode, null);
-    }
-
-    public Long cloneScreenBySourceId(Long sourceScreenId,
-                                      Long tenantId,
-                                      Long userId,
                                       CloneMode cloneMode,
                                       ProvisioningExecutionContext context) {
         Objects.requireNonNull(sourceScreenId, "sourceScreenId must not be null");

@@ -62,7 +62,7 @@ public class WorkflowSchemeProvisioner extends AbstractMappedSharedProvisioner<W
         long now = System.currentTimeMillis();
         WorkflowSchemeEntity cloned = WorkflowSchemeEntity.builder()
                 .tenantId(tenantId)
-                .name(cloneNamingHelper.buildSchemeCloneName("", source.getName(), SchemeType.WORKFLOW, mode))
+                .name(cloneNamingHelper.buildSchemeCloneName(context.getProjectKey(), source.getName(), SchemeType.WORKFLOW, mode))
                 .description(source.getDescription())
                 .defaultWorkflowId(requireMappedId(workflowIdMap, source.getDefaultWorkflowId(), "workflow"))
                 .build();

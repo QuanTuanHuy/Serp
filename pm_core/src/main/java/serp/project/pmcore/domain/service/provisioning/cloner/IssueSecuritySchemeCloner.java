@@ -10,10 +10,10 @@ import serp.project.pmcore.domain.enums.CloneMode;
 import serp.project.pmcore.domain.enums.SchemeType;
 import serp.project.pmcore.domain.exception.DomainErrorCode;
 import serp.project.pmcore.domain.exception.DomainValidationException;
-import serp.project.pmcore.domain.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.port.store.IIssueSecurityLevelMemberPort;
 import serp.project.pmcore.domain.port.store.IIssueSecurityLevelPort;
 import serp.project.pmcore.domain.port.store.IIssueSecuritySchemePort;
+import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.support.CloneNamingHelper;
 
 import java.util.ArrayList;
@@ -31,28 +31,11 @@ public class IssueSecuritySchemeCloner {
     private final IIssueSecurityLevelMemberPort issueSecurityLevelMemberPort;
     private final CloneNamingHelper cloneNamingHelper;
 
-    public Long cloneIssueSecuritySchemeBySourceId(Long sourceIssueSecuritySchemeId,
-                                                   Long tenantId,
-                                                   Long userId,
-                                                   CloneMode cloneMode) {
-        validateRequired(sourceIssueSecuritySchemeId, "sourceIssueSecuritySchemeId");
-        validateRequired(tenantId, "tenantId");
-        validateRequired(userId, "userId");
-
-        IssueSecuritySchemeEntity source = issueSecuritySchemePort
-                .getIssueSecuritySchemeByIdIncludingSystem(sourceIssueSecuritySchemeId, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        DomainErrorCode.ISSUE_SECURITY_SCHEME_NOT_FOUND,
-                        "Issue security scheme not found for source id=" + sourceIssueSecuritySchemeId
-                ));
-
-        return cloneIssueSecurityScheme(source, tenantId, userId, cloneMode);
-    }
-
     public Long cloneIssueSecurityScheme(IssueSecuritySchemeEntity source,
                                          Long tenantId,
                                          Long userId,
-                                         CloneMode cloneMode) {
+                                         CloneMode cloneMode,
+                                         ProvisioningExecutionContext context) {
         validateRequired(source, "source");
         validateRequired(tenantId, "tenantId");
         validateRequired(userId, "userId");
@@ -63,7 +46,7 @@ public class IssueSecuritySchemeCloner {
         long now = System.currentTimeMillis();
         IssueSecuritySchemeEntity cloned = IssueSecuritySchemeEntity.builder()
                 .tenantId(tenantId)
-                .name(cloneNamingHelper.buildSchemeCloneName("", source.getName(), SchemeType.ISSUE_SECURITY, cloneMode))
+                .name(cloneNamingHelper.buildSchemeCloneName(context.getProjectKey(), source.getName(), SchemeType.ISSUE_SECURITY, cloneMode))
                 .description(source.getDescription())
                 .defaultLevelId(null)
                 .build();

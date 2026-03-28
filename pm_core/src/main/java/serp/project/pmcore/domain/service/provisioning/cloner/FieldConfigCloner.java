@@ -6,13 +6,11 @@ import org.springframework.stereotype.Component;
 import serp.project.pmcore.domain.entity.FieldConfigEntity;
 import serp.project.pmcore.domain.entity.FieldConfigItemEntity;
 import serp.project.pmcore.domain.enums.CloneMode;
-import serp.project.pmcore.domain.enums.SchemeType;
 import serp.project.pmcore.domain.exception.DomainErrorCode;
 import serp.project.pmcore.domain.exception.DomainValidationException;
 import serp.project.pmcore.domain.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.port.store.IFieldConfigItemPort;
 import serp.project.pmcore.domain.port.store.IFieldConfigPort;
-import serp.project.pmcore.domain.service.provisioning.support.CloneNamingHelper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,7 +22,6 @@ public class FieldConfigCloner {
 
     private final IFieldConfigPort fieldConfigPort;
     private final IFieldConfigItemPort fieldConfigItemPort;
-    private final CloneNamingHelper cloneNamingHelper;
 
     public Long cloneFieldConfigBySourceId(Long sourceFieldConfigId,
                                            Long tenantId,
@@ -59,7 +56,7 @@ public class FieldConfigCloner {
 
         FieldConfigEntity cloned = FieldConfigEntity.builder()
                 .tenantId(tenantId)
-                .name(cloneNamingHelper.buildSchemeCloneName("", source.getName(), SchemeType.FIELD_CONFIG, cloneMode))
+                .name(source.getName())
                 .description(source.getDescription())
                 .isSystem(false)
                 .build();

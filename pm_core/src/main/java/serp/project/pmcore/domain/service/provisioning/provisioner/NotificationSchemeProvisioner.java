@@ -64,6 +64,6 @@ public class NotificationSchemeProvisioner extends AbstractMappedSharedProvision
                                   Long userId,
                                   CloneMode cloneMode,
                                   ProvisioningExecutionContext context) {
-        return notificationSchemeCloner.cloneNotificationScheme(source, tenantId, userId, cloneMode);
+        return notificationSchemeCloner.cloneNotificationScheme(source, tenantId, userId, cloneMode, context);
     }
 }

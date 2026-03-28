@@ -9,9 +9,9 @@ import serp.project.pmcore.domain.enums.CloneMode;
 import serp.project.pmcore.domain.enums.SchemeType;
 import serp.project.pmcore.domain.exception.DomainErrorCode;
 import serp.project.pmcore.domain.exception.DomainValidationException;
-import serp.project.pmcore.domain.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.port.store.IPermissionSchemeEntryPort;
 import serp.project.pmcore.domain.port.store.IPermissionSchemePort;
+import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.support.CloneNamingHelper;
 
 import java.util.ArrayList;
@@ -26,28 +26,11 @@ public class PermissionSchemeCloner {
     private final IPermissionSchemeEntryPort permissionSchemeEntryPort;
     private final CloneNamingHelper cloneNamingHelper;
 
-    public Long clonePermissionSchemeBySourceId(Long sourcePermissionSchemeId,
-                                                Long tenantId,
-                                                Long userId,
-                                                CloneMode cloneMode) {
-        validateRequired(sourcePermissionSchemeId, "sourcePermissionSchemeId");
-        validateRequired(tenantId, "tenantId");
-        validateRequired(userId, "userId");
-
-        PermissionSchemeEntity source = permissionSchemePort
-                .getPermissionSchemeByIdIncludingSystem(sourcePermissionSchemeId, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        DomainErrorCode.PERMISSION_SCHEME_NOT_FOUND,
-                        "Permission scheme not found for source id=" + sourcePermissionSchemeId
-                ));
-
-        return clonePermissionScheme(source, tenantId, userId, cloneMode);
-    }
-
     public Long clonePermissionScheme(PermissionSchemeEntity source,
                                       Long tenantId,
                                       Long userId,
-                                      CloneMode cloneMode) {
+                                      CloneMode cloneMode,
+                                      ProvisioningExecutionContext context) {
         validateRequired(source, "source");
         validateRequired(tenantId, "tenantId");
         validateRequired(userId, "userId");
@@ -59,7 +42,7 @@ public class PermissionSchemeCloner {
 
         PermissionSchemeEntity cloned = PermissionSchemeEntity.builder()
                 .tenantId(tenantId)
-                .name(cloneNamingHelper.buildSchemeCloneName("", source.getName(), SchemeType.PERMISSION, cloneMode))
+                .name(cloneNamingHelper.buildSchemeCloneName(context.getProjectKey(), source.getName(), SchemeType.PERMISSION, cloneMode))
                 .description(source.getDescription())
                 .build();
         cloned.applyCreate(userId, now);

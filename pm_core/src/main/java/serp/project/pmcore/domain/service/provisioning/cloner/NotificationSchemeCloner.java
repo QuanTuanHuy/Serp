@@ -9,9 +9,9 @@ import serp.project.pmcore.domain.enums.CloneMode;
 import serp.project.pmcore.domain.enums.SchemeType;
 import serp.project.pmcore.domain.exception.DomainErrorCode;
 import serp.project.pmcore.domain.exception.DomainValidationException;
-import serp.project.pmcore.domain.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.port.store.INotificationSchemeEntryPort;
 import serp.project.pmcore.domain.port.store.INotificationSchemePort;
+import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.support.CloneNamingHelper;
 
 import java.util.ArrayList;
@@ -26,28 +26,11 @@ public class NotificationSchemeCloner {
     private final INotificationSchemeEntryPort notificationSchemeEntryPort;
     private final CloneNamingHelper cloneNamingHelper;
 
-    public Long cloneNotificationSchemeBySourceId(Long sourceNotificationSchemeId,
-                                                  Long tenantId,
-                                                  Long userId,
-                                                  CloneMode cloneMode) {
-        validateRequired(sourceNotificationSchemeId, "sourceNotificationSchemeId");
-        validateRequired(tenantId, "tenantId");
-        validateRequired(userId, "userId");
-
-        NotificationSchemeEntity source = notificationSchemePort
-                .getNotificationSchemeByIdIncludingSystem(sourceNotificationSchemeId, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        DomainErrorCode.NOTIFICATION_SCHEME_NOT_FOUND,
-                        "Notification scheme not found for source id=" + sourceNotificationSchemeId
-                ));
-
-        return cloneNotificationScheme(source, tenantId, userId, cloneMode);
-    }
-
     public Long cloneNotificationScheme(NotificationSchemeEntity source,
                                         Long tenantId,
                                         Long userId,
-                                        CloneMode cloneMode) {
+                                        CloneMode cloneMode,
+                                        ProvisioningExecutionContext context) {
         validateRequired(source, "source");
         validateRequired(tenantId, "tenantId");
         validateRequired(userId, "userId");
@@ -59,7 +42,7 @@ public class NotificationSchemeCloner {
 
         NotificationSchemeEntity cloned = NotificationSchemeEntity.builder()
                 .tenantId(tenantId)
-                .name(cloneNamingHelper.buildSchemeCloneName("", source.getName(), SchemeType.NOTIFICATION, cloneMode))
+                .name(cloneNamingHelper.buildSchemeCloneName(context.getProjectKey(), source.getName(), SchemeType.NOTIFICATION, cloneMode))
                 .description(source.getDescription())
                 .build();
         cloned.applyCreate(userId, now);

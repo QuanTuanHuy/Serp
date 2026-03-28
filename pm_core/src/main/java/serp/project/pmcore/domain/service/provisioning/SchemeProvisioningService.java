@@ -22,12 +22,6 @@ import java.util.*;
 
 /**
  * Handles scheme provisioning for project creation.
- * <p>
- * Current phase:
- * - resolve source schemes by precedence: explicit override -> blueprint default -> tenant default/shared default
- * - keep create-project orchestration routed through a typed provisioning contract
- * - materialize supported system-owned sources to tenant scope for ISSUE_TYPE/PRIORITY/WORKFLOW
- * - enforce tenant-owned bindings or pre-materialized mapping reuse for other scheme families
  */
 @Service
 @RequiredArgsConstructor

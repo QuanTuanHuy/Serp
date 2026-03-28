@@ -79,8 +79,8 @@ public class WorkflowCloner {
         WorkflowEntity cloned = WorkflowEntity.builder()
                 .tenantId(tenantId)
                 .workflowKey(cloneNamingHelper.buildWorkflowCloneKey(
-                        "", source.getWorkflowKey(), source.getName(), source.getId(), cloneMode, true))
-                .name(cloneNamingHelper.buildSchemeCloneName("", source.getName(), SchemeType.WORKFLOW, cloneMode))
+                        context.getProjectKey(), source.getWorkflowKey(), source.getName(), source.getId(), cloneMode, true))
+                .name(cloneNamingHelper.buildSchemeCloneName(context.getProjectKey(), source.getName(), SchemeType.WORKFLOW, cloneMode))
                 .description(source.getDescription())
                 .currentPublishedVersionId(null)
                 .draftVersionId(null)

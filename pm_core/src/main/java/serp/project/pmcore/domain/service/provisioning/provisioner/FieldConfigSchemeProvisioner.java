@@ -90,7 +90,7 @@ public class FieldConfigSchemeProvisioner extends AbstractMappedSharedProvisione
 
         FieldConfigSchemeEntity cloned = FieldConfigSchemeEntity.builder()
                 .tenantId(tenantId)
-                .name(cloneNamingHelper.buildSchemeCloneName("", source.getName(), SchemeType.FIELD_CONFIG, cloneMode))
+                .name(cloneNamingHelper.buildSchemeCloneName(context.getProjectKey(), source.getName(), SchemeType.FIELD_CONFIG, cloneMode))
                 .description(source.getDescription())
                 .defaultFieldConfigId(requireMappedId(
                         fieldConfigIdMap,
