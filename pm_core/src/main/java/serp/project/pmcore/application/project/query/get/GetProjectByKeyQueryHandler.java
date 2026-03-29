@@ -17,13 +17,13 @@ import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 @RequiredArgsConstructor
 public class GetProjectByKeyQueryHandler implements IQueryHandler<GetProjectByKeyQuery, ProjectDetailView> {
     private final IProjectReadPort projectReadPort;
-    private final ProjectDetailViewFactory projectDetailViewFactory;
+    private final ProjectDetailViewAssembler projectDetailViewAssembler;
 
     @Override
     @Transactional(readOnly = true)
     public ProjectDetailView handle(GetProjectByKeyQuery query) {
         ProjectEntity project = projectReadPort.getProjectByKey(query.key(), query.tenantId())
                 .orElseThrow(() -> ResourceNotFoundException.projectByKey(query.key()));
-        return projectDetailViewFactory.toView(project, query.tenantId(), query.expand());
+        return projectDetailViewAssembler.toView(project, query.tenantId(), query.expand());
     }
 }

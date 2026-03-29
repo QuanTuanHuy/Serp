@@ -5,7 +5,6 @@
 
 package serp.project.pmcore.domain.project.provisioning;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,7 +32,7 @@ public class SchemeProvisioningService implements ISchemeProvisioningService {
 
     @Override
     public ProjectProvisioningResult provisionProjectSchemes(ProjectEntity project,
-                                                             @Valid ProjectProvisioningRequest request) {
+                                                             ProjectProvisioningRequest request) {
         ProvisioningExecutionContext context = ProvisioningExecutionContext.builder()
                 .projectId(request.getProjectId() != null ? request.getProjectId() : project.getId())
                 .projectKey(request.getProjectKey() != null ? request.getProjectKey() : project.getKey())

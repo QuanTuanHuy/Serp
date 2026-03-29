@@ -15,7 +15,7 @@ import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
-public class ProjectDetailViewFactory {
+public class ProjectDetailViewAssembler {
     private final IProjectCategoryPort projectCategoryPort;
 
     public ProjectDetailView toView(ProjectEntity project,

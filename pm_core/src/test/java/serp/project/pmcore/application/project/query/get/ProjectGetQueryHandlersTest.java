@@ -44,9 +44,9 @@ class ProjectGetQueryHandlersTest {
 
     @BeforeEach
     void setUp() {
-        ProjectDetailViewFactory projectDetailViewFactory = new ProjectDetailViewFactory(projectCategoryPort);
-        getProjectByIdQueryHandler = new GetProjectByIdQueryHandler(projectPort, projectDetailViewFactory);
-        getProjectByKeyQueryHandler = new GetProjectByKeyQueryHandler(projectPort, projectDetailViewFactory);
+        ProjectDetailViewAssembler projectDetailViewAssembler = new ProjectDetailViewAssembler(projectCategoryPort);
+        getProjectByIdQueryHandler = new GetProjectByIdQueryHandler(projectPort, projectDetailViewAssembler);
+        getProjectByKeyQueryHandler = new GetProjectByKeyQueryHandler(projectPort, projectDetailViewAssembler);
     }
 
     @Test
