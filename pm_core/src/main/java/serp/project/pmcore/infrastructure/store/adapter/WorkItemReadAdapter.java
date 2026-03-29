@@ -3,7 +3,7 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.infrastructure.workitem.store.read;
+package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,11 +13,11 @@ import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 import serp.project.pmcore.domain.workitem.query.WorkItemSearchCriteria;
-import serp.project.pmcore.infrastructure.workitem.store.read.mapper.WorkItemRowMapper;
-import serp.project.pmcore.infrastructure.workitem.store.read.query.WorkItemQueryBuilder;
-import serp.project.pmcore.infrastructure.workitem.store.write.mapper.WorkItemMapper;
-import serp.project.pmcore.infrastructure.workitem.store.write.model.WorkItemModel;
-import serp.project.pmcore.infrastructure.workitem.store.write.repository.IWorkItemRepository;
+import serp.project.pmcore.infrastructure.store.mapper.WorkItemMapper;
+import serp.project.pmcore.infrastructure.store.mapper.WorkItemRowMapper;
+import serp.project.pmcore.infrastructure.store.model.WorkItemModel;
+import serp.project.pmcore.infrastructure.store.query.WorkItemQueryBuilder;
+import serp.project.pmcore.infrastructure.store.repository.IWorkItemRepository;
 
 import java.util.List;
 import java.util.Optional;

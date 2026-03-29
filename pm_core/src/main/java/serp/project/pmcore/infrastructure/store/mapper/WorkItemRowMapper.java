@@ -3,13 +3,12 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.infrastructure.workitem.store.read.mapper;
+package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
-import serp.project.pmcore.infrastructure.store.mapper.BaseRowMapper;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;

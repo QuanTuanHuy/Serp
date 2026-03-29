@@ -3,7 +3,7 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.infrastructure.workitem.store.read.query;
+package serp.project.pmcore.infrastructure.store.query;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -12,8 +12,6 @@ import org.springframework.stereotype.Component;
 import serp.project.pmcore.domain.shared.dto.filter.FilterOperator;
 import serp.project.pmcore.domain.shared.pagination.SortSpec;
 import serp.project.pmcore.domain.workitem.query.WorkItemSearchCriteria;
-import serp.project.pmcore.infrastructure.store.query.BaseQueryBuilder;
-import serp.project.pmcore.infrastructure.store.query.QueryResult;
 
 import java.util.Set;
 

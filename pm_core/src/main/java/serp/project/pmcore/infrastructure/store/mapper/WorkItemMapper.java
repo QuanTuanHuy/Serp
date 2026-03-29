@@ -3,13 +3,12 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.infrastructure.workitem.store.write.mapper;
+package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.stereotype.Component;
 
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
-import serp.project.pmcore.infrastructure.store.mapper.BaseMapper;
-import serp.project.pmcore.infrastructure.workitem.store.write.model.WorkItemModel;
+import serp.project.pmcore.infrastructure.store.model.WorkItemModel;
 
 import java.util.Collections;
 import java.util.List;

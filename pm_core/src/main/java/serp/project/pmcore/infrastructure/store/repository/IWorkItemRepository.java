@@ -3,13 +3,14 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.infrastructure.workitem.store.write.repository;
+package serp.project.pmcore.infrastructure.store.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
-import serp.project.pmcore.infrastructure.workitem.store.write.model.WorkItemModel;
+
+import serp.project.pmcore.infrastructure.store.model.WorkItemModel;
 
 import java.util.List;
 import java.util.Optional;

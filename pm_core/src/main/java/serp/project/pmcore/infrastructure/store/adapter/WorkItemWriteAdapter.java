@@ -3,15 +3,15 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.infrastructure.workitem.store.write;
+package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.write.IWorkItemWritePort;
-import serp.project.pmcore.infrastructure.workitem.store.write.mapper.WorkItemMapper;
-import serp.project.pmcore.infrastructure.workitem.store.write.repository.IWorkItemRepository;
+import serp.project.pmcore.infrastructure.store.mapper.WorkItemMapper;
+import serp.project.pmcore.infrastructure.store.repository.IWorkItemRepository;
 
 @Component
 @RequiredArgsConstructor
