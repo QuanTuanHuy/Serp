@@ -10,11 +10,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.port.IProjectPort;
+import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.infrastructure.store.mapper.ProjectMapper;
 import serp.project.pmcore.infrastructure.store.model.ProjectModel;
 import serp.project.pmcore.infrastructure.store.repository.IProjectRepository;
@@ -54,10 +54,10 @@ public class ProjectAdapter implements IProjectPort {
     }
 
     @Override
-    public Pair<List<ProjectEntity>, Long> getProjects(Long tenantId, String search,
-                                                        Long categoryId, String projectTypeKey,
-                                                        Boolean archived, int page, int size,
-                                                        String sortBy, String sortDirection) {
+    public PageResult<ProjectEntity> getProjects(Long tenantId, String search,
+                                                 Long categoryId, String projectTypeKey,
+                                                 Boolean archived, int page, int size,
+                                                 String sortBy, String sortDirection) {
         Sort.Direction direction = "desc".equalsIgnoreCase(sortDirection)
                 ? Sort.Direction.DESC : Sort.Direction.ASC;
         String sortField = (sortBy != null && !sortBy.isEmpty()) ? sortBy : "id";
@@ -67,7 +67,7 @@ public class ProjectAdapter implements IProjectPort {
                 tenantId, search, categoryId, projectTypeKey, archived, pageable);
 
         List<ProjectEntity> entities = projectMapper.toEntities(result.getContent());
-        return Pair.of(entities, result.getTotalElements());
+        return new PageResult<>(entities, result.getTotalElements());
     }
 
     @Override

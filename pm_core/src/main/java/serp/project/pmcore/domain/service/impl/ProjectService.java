@@ -7,17 +7,15 @@ package serp.project.pmcore.domain.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
-import serp.project.pmcore.application.project.query.list.model.GetProjectParams;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.port.IProjectPort;
+import serp.project.pmcore.domain.project.query.ProjectListCriteria;
 import serp.project.pmcore.domain.service.IProjectService;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
-
-import java.util.List;
+import serp.project.pmcore.domain.shared.pagination.PageResult;
 
 @Service
 @RequiredArgsConstructor
@@ -91,17 +89,17 @@ public class ProjectService implements IProjectService {
     }
 
     @Override
-    public Pair<List<ProjectEntity>, Long> getProjects(Long tenantId, GetProjectParams params) {
+    public PageResult<ProjectEntity> getProjects(Long tenantId, ProjectListCriteria criteria) {
         return projectPort.getProjects(
                 tenantId,
-                params.getSearch(),
-                params.getCategoryId(),
-                params.getProjectTypeKey(),
-                params.getArchived(),
-                params.getPage(),
-                params.getPageSize(),
-                params.getSortBy(),
-                params.getSortDirection()
+                criteria.getSearch(),
+                criteria.getCategoryId(),
+                criteria.getProjectTypeKey(),
+                criteria.getArchived(),
+                criteria.getPage(),
+                criteria.getPageSize(),
+                criteria.getSortBy(),
+                criteria.getSortDirection()
         );
     }
 

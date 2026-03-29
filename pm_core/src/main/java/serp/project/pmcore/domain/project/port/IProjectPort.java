@@ -5,11 +5,9 @@
 
 package serp.project.pmcore.domain.project.port;
 
-import org.springframework.data.util.Pair;
-
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
+import serp.project.pmcore.domain.shared.pagination.PageResult;
 
-import java.util.List;
 import java.util.Optional;
 
 public interface IProjectPort {
@@ -21,10 +19,10 @@ public interface IProjectPort {
 
     boolean existsByKeyAndTenantId(String key, Long tenantId);
 
-    Pair<List<ProjectEntity>, Long> getProjects(Long tenantId, String search,
-                                                 Long categoryId, String projectTypeKey,
-                                                 Boolean archived, int page, int size,
-                                                 String sortBy, String sortDirection);
+    PageResult<ProjectEntity> getProjects(Long tenantId, String search,
+                                          Long categoryId, String projectTypeKey,
+                                          Boolean archived, int page, int size,
+                                          String sortBy, String sortDirection);
 
     void deleteProjectById(Long id, Long tenantId);
 }

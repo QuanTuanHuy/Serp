@@ -5,9 +5,9 @@
 
 package serp.project.pmcore.domain.workitem.port.read;
 
-import org.springframework.data.util.Pair;
-import serp.project.pmcore.application.workitem.query.search.model.WorkItemFilterRequest;
+import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
+import serp.project.pmcore.domain.workitem.query.WorkItemSearchCriteria;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,5 +21,5 @@ public interface IWorkItemReadPort {
 
     Optional<String> getLastRankByProjectId(Long projectId, Long tenantId);
 
-    Pair<List<WorkItemEntity>, Long> searchWorkItems(Long tenantId, WorkItemFilterRequest filter);
+    PageResult<WorkItemEntity> searchWorkItems(Long tenantId, WorkItemSearchCriteria criteria);
 }

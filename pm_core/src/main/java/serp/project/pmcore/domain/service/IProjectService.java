@@ -5,11 +5,9 @@
 
 package serp.project.pmcore.domain.service;
 
-import org.springframework.data.util.Pair;
-import serp.project.pmcore.application.project.query.list.model.GetProjectParams;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
-
-import java.util.List;
+import serp.project.pmcore.domain.project.query.ProjectListCriteria;
+import serp.project.pmcore.domain.shared.pagination.PageResult;
 
 public interface IProjectService {
 
@@ -23,7 +21,7 @@ public interface IProjectService {
 
     ProjectEntity getProjectByKey(String key, Long tenantId);
 
-    Pair<List<ProjectEntity>, Long> getProjects(Long tenantId, GetProjectParams params);
+    PageResult<ProjectEntity> getProjects(Long tenantId, ProjectListCriteria criteria);
 
     void deleteProject(Long id, Long tenantId);
 

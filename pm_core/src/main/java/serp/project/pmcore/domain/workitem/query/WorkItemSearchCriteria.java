@@ -3,14 +3,15 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.application.workitem.query.search.model;
+package serp.project.pmcore.domain.workitem.query;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
-import serp.project.pmcore.application.shared.query.model.BaseGetParams;
+import serp.project.pmcore.domain.shared.pagination.PageCriteria;
+import serp.project.pmcore.domain.shared.pagination.SortSpec;
 
 import java.util.List;
 
@@ -19,7 +20,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-public class WorkItemFilterRequest extends BaseGetParams {
+public class WorkItemSearchCriteria extends PageCriteria {
 
     private Long projectId;
 
@@ -35,11 +36,8 @@ public class WorkItemFilterRequest extends BaseGetParams {
     private List<Long> excludeStatusIds;
     private List<Long> excludeIssueTypeIds;
 
-
     private Boolean unassigned;
-
     private Boolean unresolved;
-
 
     private Long dueDateFrom;
     private Long dueDateTo;
@@ -56,22 +54,12 @@ public class WorkItemFilterRequest extends BaseGetParams {
 
     private List<Long> labelIds;
 
-    // ---- Computed / derived filters ----
     private Boolean isOverdue;
-
-    /**
-     * If true: time_spent > 0
-     */
     private Boolean hasTimeLogged;
 
-    // ---- Sort override ----
-
-    private SortField sort;
-
-    // ---- Enrichment control ----
+    private SortSpec sort;
 
     private Boolean enriched;
-
 
     public boolean hasKeyword() {
         return keyword != null && !keyword.trim().isEmpty();

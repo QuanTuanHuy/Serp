@@ -7,12 +7,12 @@ package serp.project.pmcore.infrastructure.workitem.store.read;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.util.Pair;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.application.workitem.query.search.model.WorkItemFilterRequest;
+import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
+import serp.project.pmcore.domain.workitem.query.WorkItemSearchCriteria;
 import serp.project.pmcore.infrastructure.workitem.store.read.mapper.WorkItemRowMapper;
 import serp.project.pmcore.infrastructure.workitem.store.read.query.WorkItemQueryBuilder;
 import serp.project.pmcore.infrastructure.workitem.store.write.mapper.WorkItemMapper;
@@ -60,13 +60,13 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
     }
 
     @Override
-    public Pair<List<WorkItemEntity>, Long> searchWorkItems(Long tenantId, WorkItemFilterRequest filter) {
-        var qr = queryBuilder.build(tenantId, filter);
+    public PageResult<WorkItemEntity> searchWorkItems(Long tenantId, WorkItemSearchCriteria criteria) {
+        var qr = queryBuilder.build(tenantId, criteria);
         log.debug("WorkItem search SQL: {}", qr.dataSql());
         log.debug("WorkItem count SQL: {}", qr.countSql());
 
         List<WorkItemEntity> data = jdbcTemplate.query(qr.dataSql(), qr.params(), rowMapper);
         Long total = jdbcTemplate.queryForObject(qr.countSql(), qr.params(), Long.class);
-        return Pair.of(data, total);
+        return new PageResult<>(data, total != null ? total : 0L);
     }
 }

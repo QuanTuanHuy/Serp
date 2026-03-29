@@ -1,0 +1,11 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
+package serp.project.pmcore.domain.shared.pagination;
+
+import java.util.List;
+
+public record PageResult<T>(List<T> items, long total) {
+}

@@ -3,7 +3,7 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.application.workitem.query.search.model;
+package serp.project.pmcore.domain.shared.pagination;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,16 +16,13 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SortField {
+public class SortSpec {
 
     private String field;
 
     @Builder.Default
     private String direction = "ASC";
 
-    /**
-     * NULLS FIRST or NULLS LAST. Defaults to LAST.
-     */
     @Builder.Default
     private String nullsPosition = "LAST";
 }
