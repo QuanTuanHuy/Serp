@@ -36,11 +36,11 @@ public class SyncUserFirstMileConsumer {
         try {
             SyncUserFirstMileEvent event = objectMapper.readValue(payload, SyncUserFirstMileEvent.class);
             postOfficeStaffSyncService.syncUser(event);
-            log.info("Consumed sync-user event: topic={}, key={}, userId={}, role={}",
+            log.info("Consumed sync-user event: topic={}, key={}, userId={}, roles={}",
                     topic,
                     key,
                     event.getUserId(),
-                    event.getRoleName());
+                event.getRoleNames());
         } catch (Exception exception) {
             Long tenantId = extractTenantId(payload);
             kafkaDlqService.saveFailedMessage(topic, key, payload, exception.getMessage(), tenantId);

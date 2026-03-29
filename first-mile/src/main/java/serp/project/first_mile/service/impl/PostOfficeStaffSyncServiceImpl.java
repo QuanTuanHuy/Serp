@@ -17,7 +17,9 @@ import serp.project.first_mile.repository.PostOfficeStaffRepository;
 import serp.project.first_mile.service.PostOfficeStaffSyncService;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -31,14 +33,16 @@ public class PostOfficeStaffSyncServiceImpl implements PostOfficeStaffSyncServic
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void syncUser(SyncUserFirstMileEvent event) {
-        if (!isValidEvent(event)) {
+        List<String> normalizedRoleNames = normalizeRoleNames(event);
+
+        if (!isValidEvent(event, normalizedRoleNames)) {
             log.warn("Skip sync user first-mile: invalid event payload {}", event);
             return;
         }
 
-        PostOfficeStaffRole staffRole = mapRole(event.getRoleName());
+        PostOfficeStaffRole staffRole = mapRole(normalizedRoleNames);
         if (staffRole == null) {
-            log.debug("Skip sync user first-mile: unsupported role {}", event.getRoleName());
+            log.debug("Skip sync user first-mile: unsupported role names {}", normalizedRoleNames);
             return;
         }
 
@@ -63,20 +67,21 @@ public class PostOfficeStaffSyncServiceImpl implements PostOfficeStaffSyncServic
 
         postOfficeStaffRepository.save(staff);
         log.info(
-            "Synced post office staff from account: userId={}, tenantId={}, organizationId={}, role={}, code={}",
+            "Synced post office staff from account: userId={}, tenantId={}, organizationId={}, role={}, sourceRoles={}, code={}",
                 event.getUserId(),
-            tenantId,
+                tenantId,
                 event.getOrganizationId(),
                 staffRole,
+                normalizedRoleNames,
                 staffCode
         );
     }
 
-    private boolean isValidEvent(SyncUserFirstMileEvent event) {
+    private boolean isValidEvent(SyncUserFirstMileEvent event, List<String> normalizedRoleNames) {
         return event != null
                 && event.getUserId() != null
                 && resolveTenantId(event) != null
-                && hasText(event.getRoleName());
+                && !normalizedRoleNames.isEmpty();
     }
 
     private Long resolveTenantId(SyncUserFirstMileEvent event) {
@@ -90,13 +95,27 @@ public class PostOfficeStaffSyncServiceImpl implements PostOfficeStaffSyncServic
         return "USR_" + userId + "_" + role.name();
     }
 
-    private PostOfficeStaffRole mapRole(String roleName) {
-        String normalizedRole = roleName.trim().toUpperCase(Locale.ROOT);
-        return switch (normalizedRole) {
-            case ROLE_TMS_POSTOFFICER_MANAGER -> PostOfficeStaffRole.MANAGER;
-            case ROLE_TMS_POSTOFFICER -> PostOfficeStaffRole.COURIER;
-            default -> null;
-        };
+    private PostOfficeStaffRole mapRole(List<String> normalizedRoleNames) {
+        if (normalizedRoleNames.contains(ROLE_TMS_POSTOFFICER_MANAGER)) {
+            return PostOfficeStaffRole.MANAGER;
+        }
+        if (normalizedRoleNames.contains(ROLE_TMS_POSTOFFICER)) {
+            return PostOfficeStaffRole.COURIER;
+        }
+        return null;
+    }
+
+    private List<String> normalizeRoleNames(SyncUserFirstMileEvent event) {
+        if (event == null || event.getRoleNames() == null) {
+            return List.of();
+        }
+
+        return event.getRoleNames().stream()
+                .filter(Objects::nonNull)
+                .map(roleName -> roleName.trim().toUpperCase(Locale.ROOT))
+                .filter(roleName -> !roleName.isEmpty())
+                .distinct()
+                .toList();
     }
 
     private String resolveFullName(SyncUserFirstMileEvent event) {

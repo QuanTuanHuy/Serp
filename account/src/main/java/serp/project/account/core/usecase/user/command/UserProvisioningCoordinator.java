@@ -114,41 +114,39 @@ public class UserProvisioningCoordinator {
         }
 
         String topic = kafkaTopicProperties.getSyncUser();
-        for (String roleName : matchedRoleNames) {
-            SyncUserEvent event = SyncUserEvent.builder()
-                    .userId(user.getId())
-                    .organizationId(organizationId)
-                    .tenantId(organizationId)
-                    .email(user.getEmail())
-                    .phoneNumber(user.getPhoneNumber())
-                    .firstName(user.getFirstName())
-                    .lastName(user.getLastName())
-                    .fullName(user.getFullName())
-                    .roleName(roleName)
-                    .build();
+        SyncUserEvent event = SyncUserEvent.builder()
+                .userId(user.getId())
+                .organizationId(organizationId)
+                .tenantId(organizationId)
+                .email(user.getEmail())
+                .phoneNumber(user.getPhoneNumber())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .fullName(user.getFullName())
+                .roleNames(matchedRoleNames)
+                .build();
 
-            String partitionKey = user.getId() + ":" + roleName;
-            kafkaProducer.sendMessageAsync(partitionKey, event, topic, (success, sentTopic, payload, ex) -> {
-                if (success) {
-                    log.info(
-                            "Published sync-user event: organizationId={}, userId={}, roleName={}, topic={}",
-                            organizationId,
-                            user.getId(),
-                            roleName,
-                            sentTopic
-                    );
-                    return;
-                }
-
-                log.error(
-                        "Failed to publish sync-user event: organizationId={}, userId={}, roleName={}, topic={}",
+        String partitionKey = String.valueOf(user.getId());
+        kafkaProducer.sendMessageAsync(partitionKey, event, topic, (success, sentTopic, payload, ex) -> {
+            if (success) {
+                log.info(
+                        "Published sync-user event: organizationId={}, userId={}, roleNames={}, topic={}",
                         organizationId,
                         user.getId(),
-                        roleName,
-                        topic,
-                        ex
+                        matchedRoleNames,
+                        sentTopic
                 );
-            });
-        }
+                return;
+            }
+
+            log.error(
+                    "Failed to publish sync-user event: organizationId={}, userId={}, roleNames={}, topic={}",
+                    organizationId,
+                    user.getId(),
+                    matchedRoleNames,
+                    topic,
+                    ex
+            );
+        });
     }
 }

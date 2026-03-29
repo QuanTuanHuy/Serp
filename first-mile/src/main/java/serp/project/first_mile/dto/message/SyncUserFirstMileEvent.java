@@ -12,6 +12,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -27,5 +29,5 @@ public class SyncUserFirstMileEvent {
     private String firstName;
     private String lastName;
     private String fullName;
-    private String roleName;
+    private List<String> roleNames;
 }
