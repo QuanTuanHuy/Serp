@@ -8,10 +8,14 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@Setter
+@Getter
 @Entity
 @Table(name = "provinces")
 public class Province {
@@ -40,67 +44,4 @@ public class Province {
 	@OneToMany(mappedBy = "province", fetch = FetchType.LAZY)
 	private List<Ward> wards = new ArrayList<>();
 
-	public Long getId() {
-		return id;
-	}
-
-	public void setId(Long id) {
-		this.id = id;
-	}
-
-	public String getProvinceCode() {
-		return provinceCode;
-	}
-
-	public void setProvinceCode(String provinceCode) {
-		this.provinceCode = provinceCode;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
-	}
-
-	public String getShortName() {
-		return shortName;
-	}
-
-	public void setShortName(String shortName) {
-		this.shortName = shortName;
-	}
-
-	public String getCode() {
-		return code;
-	}
-
-	public void setCode(String code) {
-		this.code = code;
-	}
-
-	public String getPlaceType() {
-		return placeType;
-	}
-
-	public void setPlaceType(String placeType) {
-		this.placeType = placeType;
-	}
-
-	public String getCountryCode() {
-		return countryCode;
-	}
-
-	public void setCountryCode(String countryCode) {
-		this.countryCode = countryCode;
-	}
-
-	public List<Ward> getWards() {
-		return wards;
-	}
-
-	public void setWards(List<Ward> wards) {
-		this.wards = wards;
-	}
 }

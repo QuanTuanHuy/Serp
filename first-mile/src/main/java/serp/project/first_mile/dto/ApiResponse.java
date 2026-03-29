@@ -14,5 +14,8 @@ public class ApiResponse<T> {
     @Builder.Default
     int code = 1000;
     String message;
+    String detail;
+    String path;
+    String timestamp;
     T result;
 }
