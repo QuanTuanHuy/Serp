@@ -7,8 +7,9 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.CustomFieldEntity;
-import serp.project.pmcore.domain.port.store.ICustomFieldPort;
+
+import serp.project.pmcore.domain.customfield.entity.CustomFieldEntity;
+import serp.project.pmcore.domain.customfield.port.ICustomFieldPort;
 import serp.project.pmcore.infrastructure.store.mapper.CustomFieldMapper;
 import serp.project.pmcore.infrastructure.store.repository.ICustomFieldRepository;
 
@@ -23,12 +24,12 @@ public class CustomFieldAdapter implements ICustomFieldPort {
     private final CustomFieldMapper customFieldMapper;
 
     @Override
-    public List<CustomFieldEntity> getCustomFieldsByFieldKeysIncludingSystem(List<String> fieldKeys, Long tenantId) {
+    public List<CustomFieldEntity> getCustomFieldsByFieldKeys(List<String> fieldKeys) {
         if (fieldKeys == null || fieldKeys.isEmpty()) {
             return Collections.emptyList();
         }
         return customFieldMapper.toEntities(
-                customFieldRepository.findAllByFieldKeyInAndTenantIdOrSystemTenant(fieldKeys, tenantId)
+                customFieldRepository.findAllByFieldKeyIn(fieldKeys)
         );
     }
 }

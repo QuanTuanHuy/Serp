@@ -7,8 +7,9 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.ScreenSchemeEntity;
-import serp.project.pmcore.domain.port.store.IScreenSchemePort;
+
+import serp.project.pmcore.domain.screen.entity.ScreenSchemeEntity;
+import serp.project.pmcore.domain.screen.port.IScreenSchemePort;
 import serp.project.pmcore.infrastructure.store.mapper.ScreenSchemeMapper;
 import serp.project.pmcore.infrastructure.store.repository.IScreenSchemeRepository;
 

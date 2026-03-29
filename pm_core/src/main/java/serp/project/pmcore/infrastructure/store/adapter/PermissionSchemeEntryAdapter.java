@@ -7,8 +7,9 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.PermissionSchemeEntryEntity;
-import serp.project.pmcore.domain.port.store.IPermissionSchemeEntryPort;
+
+import serp.project.pmcore.domain.permission.entity.PermissionSchemeEntryEntity;
+import serp.project.pmcore.domain.permission.port.IPermissionSchemeEntryPort;
 import serp.project.pmcore.infrastructure.store.mapper.PermissionSchemeEntryMapper;
 import serp.project.pmcore.infrastructure.store.repository.IPermissionSchemeEntryRepository;
 

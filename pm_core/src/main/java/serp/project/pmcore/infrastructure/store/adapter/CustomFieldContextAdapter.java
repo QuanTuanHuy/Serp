@@ -7,8 +7,9 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.CustomFieldContextEntity;
-import serp.project.pmcore.domain.port.store.ICustomFieldContextPort;
+
+import serp.project.pmcore.domain.customfield.entity.CustomFieldContextEntity;
+import serp.project.pmcore.domain.customfield.port.ICustomFieldContextPort;
 import serp.project.pmcore.infrastructure.store.mapper.CustomFieldContextMapper;
 import serp.project.pmcore.infrastructure.store.repository.ICustomFieldContextRepository;
 
@@ -23,11 +24,9 @@ public class CustomFieldContextAdapter implements ICustomFieldContextPort {
 
     @Override
     public List<CustomFieldContextEntity> getApplicableCustomFieldContexts(Long customFieldId,
-                                                                           Long projectId,
-                                                                           Long issueTypeId,
-                                                                           Long tenantId) {
+                                                                           String issueTypeKey) {
         return customFieldContextMapper.toEntities(
-                customFieldContextRepository.findApplicableContexts(customFieldId, projectId, issueTypeId, tenantId)
+                customFieldContextRepository.findApplicableContexts(customFieldId, issueTypeKey)
         );
     }
 }

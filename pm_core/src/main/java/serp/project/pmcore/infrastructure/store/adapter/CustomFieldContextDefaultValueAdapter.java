@@ -7,8 +7,9 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.CustomFieldContextDefaultValueEntity;
-import serp.project.pmcore.domain.port.store.ICustomFieldContextDefaultValuePort;
+
+import serp.project.pmcore.domain.customfield.entity.CustomFieldContextDefaultValueEntity;
+import serp.project.pmcore.domain.customfield.port.ICustomFieldContextDefaultValuePort;
 import serp.project.pmcore.infrastructure.store.mapper.CustomFieldContextDefaultValueMapper;
 import serp.project.pmcore.infrastructure.store.repository.ICustomFieldContextDefaultValueRepository;
 
@@ -22,10 +23,9 @@ public class CustomFieldContextDefaultValueAdapter implements ICustomFieldContex
     private final CustomFieldContextDefaultValueMapper customFieldContextDefaultValueMapper;
 
     @Override
-    public List<CustomFieldContextDefaultValueEntity> getCustomFieldContextDefaultValuesByContextId(Long contextId,
-                                                                                                     Long tenantId) {
+    public List<CustomFieldContextDefaultValueEntity> getCustomFieldContextDefaultValuesByContextId(Long contextId) {
         return customFieldContextDefaultValueMapper.toEntities(
-                customFieldContextDefaultValueRepository.findAllByContextIdAndTenantId(contextId, tenantId)
+                customFieldContextDefaultValueRepository.findAllByContextId(contextId)
         );
     }
 }

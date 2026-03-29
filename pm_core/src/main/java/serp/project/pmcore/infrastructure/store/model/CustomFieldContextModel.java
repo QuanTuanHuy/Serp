@@ -25,9 +25,6 @@ import org.hibernate.annotations.SQLRestriction;
 @SuperBuilder
 public class CustomFieldContextModel extends BaseModel {
 
-    @Column(name = "tenant_id", nullable = false)
-    private Long tenantId;
-
     @Column(name = "custom_field_id", nullable = false)
     private Long customFieldId;
 
@@ -37,12 +34,6 @@ public class CustomFieldContextModel extends BaseModel {
     @Column(name = "description")
     private String description;
 
-    @Column(name = "is_global_context")
-    private Boolean isGlobalContext;
-
-    @Column(name = "applies_to_all_projects")
-    private Boolean appliesToAllProjects;
-
-    @Column(name = "applies_to_all_issue_types")
-    private Boolean appliesToAllIssueTypes;
+    @Column(name = "issue_type_key")
+    private String issueTypeKey;
 }

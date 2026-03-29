@@ -29,9 +29,6 @@ import java.time.LocalDateTime;
 @SuperBuilder
 public class CustomFieldContextDefaultValueModel extends BaseModel {
 
-    @Column(name = "tenant_id", nullable = false)
-    private Long tenantId;
-
     @Column(name = "context_id", nullable = false)
     private Long contextId;
 

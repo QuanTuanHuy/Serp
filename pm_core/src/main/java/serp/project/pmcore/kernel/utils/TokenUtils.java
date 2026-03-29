@@ -8,7 +8,8 @@ package serp.project.pmcore.kernel.utils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.exception.AppException;
+
+import serp.project.pmcore.domain.shared.exception.AppException;
 import serp.project.pmcore.kernel.property.KeycloakProperties;
 
 import java.util.Map;

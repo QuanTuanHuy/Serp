@@ -7,7 +7,8 @@ package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.workitem.WorkItemEntity;
+
+import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;

@@ -1,0 +1,52 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
+
+package serp.project.pmcore.domain.workitem.service.impl;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+
+import lombok.RequiredArgsConstructor;
+import serp.project.pmcore.domain.workitem.service.IStatusService;
+import serp.project.pmcore.domain.workitem.entity.StatusEntity;
+import serp.project.pmcore.domain.workitem.port.IStatusPort;
+
+@Service
+@RequiredArgsConstructor
+public class StatusService implements IStatusService {
+    private final IStatusPort statusPort;
+
+    @Override
+    public List<StatusEntity> getStatusesByTenantId(Long tenantId) {
+        return statusPort.getStatusesByTenantId(tenantId);
+    }
+
+    @Override
+    public List<StatusEntity> createStatuses(List<StatusEntity> statuses, Long tenantId, Long userId) {
+        if (statuses == null || statuses.isEmpty()) {
+            return List.of();
+        }
+        List<StatusEntity> newStatuses = statuses.stream()
+                .map(s -> StatusEntity.builder()
+                        .tenantId(tenantId)
+                        .name(s.getName())
+                        .statusKey(s.getStatusKey())
+                        .description(s.getDescription())
+                        .iconUrl(s.getIconUrl())
+                        .categoryId(s.getCategoryId())
+                        .isSystem(false)
+                        .createdAt(System.currentTimeMillis())
+                        .createdBy(userId)
+                        .updatedAt(System.currentTimeMillis())
+                        .updatedBy(userId)
+                        .build())
+                .collect(Collectors.toList());
+        return statusPort.createStatuses(newStatuses);
+    }
+
+}

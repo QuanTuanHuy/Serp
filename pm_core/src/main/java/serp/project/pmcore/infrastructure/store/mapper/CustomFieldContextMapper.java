@@ -6,7 +6,8 @@
 package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.CustomFieldContextEntity;
+
+import serp.project.pmcore.domain.customfield.entity.CustomFieldContextEntity;
 import serp.project.pmcore.infrastructure.store.model.CustomFieldContextModel;
 
 import java.util.Collections;
@@ -21,13 +22,10 @@ public class CustomFieldContextMapper extends BaseMapper {
         }
         return CustomFieldContextEntity.builder()
                 .id(model.getId())
-                .tenantId(model.getTenantId())
                 .customFieldId(model.getCustomFieldId())
                 .name(model.getName())
                 .description(model.getDescription())
-                .isGlobalContext(model.getIsGlobalContext())
-                .appliesToAllProjects(model.getAppliesToAllProjects())
-                .appliesToAllIssueTypes(model.getAppliesToAllIssueTypes())
+                .issueTypeKey(model.getIssueTypeKey())
                 .createdAt(localDateTimeToLong(model.getCreatedAt()))
                 .createdBy(model.getCreatedBy())
                 .updatedAt(localDateTimeToLong(model.getUpdatedAt()))

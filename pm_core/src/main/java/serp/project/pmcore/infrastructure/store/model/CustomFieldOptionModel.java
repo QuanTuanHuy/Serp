@@ -25,9 +25,6 @@ import org.hibernate.annotations.SQLRestriction;
 @SuperBuilder
 public class CustomFieldOptionModel extends BaseModel {
 
-    @Column(name = "tenant_id", nullable = false)
-    private Long tenantId;
-
     @Column(name = "custom_field_context_id", nullable = false)
     private Long customFieldContextId;
 
