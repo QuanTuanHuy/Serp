@@ -1,157 +1,141 @@
 # AGENTS.md - PM Core Guide for Coding Agents
 
-This file is for coding agents working inside `pm_core`.
+This guide is for coding agents working inside `pm_core/`.
 `pm_core` is a Java 21 / Spring Boot 3.5 service for project management domain logic.
-It follows layered boundaries across `ui`, `application`, `domain`, `infrastructure`, and `kernel`.
-Prefer this guide over generic repo advice when local code shows a clearer pattern.
+Use this file as the local source of truth, then apply the repo root `AGENTS.md` for shared rules.
+
+## Rule Sources and Precedence
+- Primary for this module: `pm_core/AGENTS.md`.
+- Secondary shared guidance: repo root `AGENTS.md`.
+- Preserve Copilot architecture constraints: Clean Architecture boundaries, Kafka-first async integration, Keycloak/JWT auth baseline, and API-Gateway-first authenticated routing.
 
 ## Module Layout
-- `src/main/java/serp/project/pmcore/ui` - REST controllers, Kafka consumers, exception handling.
-- `src/main/java/serp/project/pmcore/application` - commands, queries, validators, orchestration.
-- `src/main/java/serp/project/pmcore/domain` - entities, DTOs, enums, exceptions, ports, services.
-- `src/main/java/serp/project/pmcore/infrastructure/store` - JPA models, repositories, adapters, mappers, query builders.
-- `src/main/java/serp/project/pmcore/kernel` - config, properties, and utilities.
-- `src/main/resources/db/migration` - Flyway migrations.
-- `src/test/java` - JUnit 5 + Mockito tests mirroring main packages.
+- `src/main/java/serp/project/pmcore/ui` - REST controllers, Kafka consumers, exception mapping.
+- `src/main/java/serp/project/pmcore/application` - command/query handlers and orchestration.
+- `src/main/java/serp/project/pmcore/domain` - entities, services, ports, validators, exceptions.
+- `src/main/java/serp/project/pmcore/infrastructure` - JPA models/repositories, adapters, mappers, clients.
+- `src/main/java/serp/project/pmcore/kernel` - config, properties, utility helpers.
+- `src/main/resources/db/migration` - Flyway SQL migrations (`V{N}__description.sql`).
+- `src/test/java` - JUnit 5 + Mockito tests, mostly package-mirrored unit tests.
 
-## Build, Run, Test, and Checks
-Use `./run-dev.sh` for local dev because it loads `.env` before Spring Boot starts.
-Use `./mvnw.cmd ...` instead of `./mvnw ...` from plain Windows CMD or PowerShell.
+## Build, Run, Test, and Quality Commands
+Run all commands from `pm_core/`.
+On Windows CMD/PowerShell prefer `./mvnw.cmd ...`; on Bash use `./mvnw ...`.
+
 ```bash
-cd pm_core
-
-# start the app with .env loaded
+# Run app with .env loaded (preferred dev path)
 ./run-dev.sh
 
-# start the app directly
+# Run app directly
 ./mvnw spring-boot:run
 
-# run all tests
+# Compile-only sanity check
+./mvnw clean compile
+
+# Run full tests
 ./mvnw test
 
-# clean + run all tests
+# Clean + full tests
 ./mvnw clean test
 
-# run one test class
-./mvnw -Dtest=CreateWorkItemCommandTest test
+# Run one test class
+./mvnw -Dtest=CreateWorkItemCommandHandlerTest test
 
-# run one test method
-./mvnw -Dtest=CreateWorkItemCommandTest#executeShouldPersistDefaultCustomFieldValue test
+# Run one test method
+./mvnw -Dtest=CreateWorkItemCommandHandlerTest#executeShouldPersistDefaultCustomFieldValue test
 
-# build the jar
+# Run multiple tests by class pattern
+./mvnw -Dtest='*WorkItem*Test' test
+
+# Build artifact
 ./mvnw clean package
 
-# build without tests
+# Build without tests (only when needed)
 ./mvnw -DskipTests clean package
 ```
-- `pom.xml` currently has no Checkstyle, Spotless, PMD, JaCoCo, or Failsafe config.
-- There is no dedicated lint command; `./mvnw test` is the built-in quality gate.
-- For a narrow change, run the most relevant single test first.
-- Put schema changes in Flyway migrations even though `application.yaml` enables `ddl-auto: update`.
 
-## Architecture Rules
-- Keep controllers thin: get auth context, validate, call a command/query, wrap with `ResponseUtils`.
-- Put write orchestration in `application.command.*` and read orchestration in `application.query.*`.
-- Keep reusable business logic in domain services, not in controllers or adapters.
-- Domain services depend on ports such as `IProjectPort`, not Spring Data repositories.
-- Adapters in `infrastructure.store.adapter` implement ports and delegate to repositories + mappers.
-- Repositories stay infrastructure-only and should remain tenant-aware.
-- Mappers translate between domain entities using epoch millis and JPA models using Java time types.
-- Kafka side effects follow the outbox pattern; do not publish directly from controllers.
+## Linting and Static Checks
+- `pom.xml` currently has no dedicated lint/static plugin setup (no Checkstyle, Spotless, PMD, JaCoCo, or Failsafe plugin config).
+- Use `./mvnw clean compile` as the fast code-quality gate.
+- Use `./mvnw test` as the behavioral quality gate.
+- For narrow changes, run one focused test first, then expand scope only if needed.
 
-## Code Style
-### File headers and formatting
-- Most Java source files start with this header; add it to new source files in this module:
+## Testing Conventions
+- Testing stack: JUnit 5 + Mockito (`spring-boot-starter-test`, `spring-kafka-test`).
+- Typical unit-test annotation: `@ExtendWith(MockitoExtension.class)`.
+- Use `@MockitoSettings(strictness = Strictness.LENIENT)` only when strict stubbing causes significant setup noise.
+- Keep `@SpringBootTest` usage minimal; prefer focused unit tests for application/domain logic.
+- Test naming should be behavior-driven (for example `executeShouldRejectAmbiguousCustomFieldContext`).
+- For business failures, assert exception type and `DomainErrorCode`.
+- Verify critical side effects with Mockito `verify(...)` and captors when needed.
+
+## Architecture and Layering
+- Maintain clean boundaries: `ui -> application -> domain -> infrastructure`.
+- Keep controllers thin: resolve auth, validate input, delegate to a single command/query handler, return `GeneralResponse<?>` via `ResponseUtils`.
+- Put write orchestration in `application.*.command.*` and read orchestration in `application.*.query.*`.
+- Keep business rules in domain services/validators, not in controllers/adapters.
+- Domain services should depend on domain ports, not Spring Data repositories.
+- Infrastructure adapters implement ports and translate between domain entities and persistence models.
+- Do not leak JPA models into domain or API contracts.
+
+## Formatting and File Style
+- Most Java files in this module use this header; add it for new source files:
 ```java
 /**
  * Author: QuanTuanHuy
  * Description: Part of Serp Project
  */
 ```
-- Keep the package declaration after the header with one blank line.
-- Prefer 4-space indentation in new or edited blocks.
-- If a file already uses tabs or mixed indentation, match nearby style instead of reformatting the whole file.
-- Split long builder chains one call per line.
-- Add comments only for non-obvious tenancy, workflow, or validation logic.
-- Use parameterized SLF4J logging.
+- Keep package declaration immediately after the header with a blank line separator.
+- Use 4-space indentation for new/modified blocks.
+- Match the touched file's local formatting; avoid unrelated whole-file reformatting.
+- Keep long builder chains readable (usually one chained call per line).
+- Use parameterized SLF4J logging; avoid string concatenation in log statements.
+- Add comments only for non-obvious business rules (tenant, security, workflow edge cases).
 
-### Imports
-- Match the surrounding file instead of reordering unrelated imports across the whole file.
-- The common local order is: `jakarta` / Lombok / Spring or other third-party, then `serp.project.pmcore...`, then `java.*`.
-- In tests, place static imports after regular imports.
-- Avoid wildcard imports unless the file already uses them and changing them would just create noise.
+## Imports, Types, and Naming
+- Follow existing import ordering in the touched file; common local order is `jakarta`, Lombok, Spring/third-party, `serp.project.pmcore...`, then `java.*`.
+- In tests, keep static imports grouped after regular imports.
+- Avoid wildcard imports unless they are already established in the file.
+- Use `Long` for IDs and nullable numeric values.
+- Domain entities commonly store timestamps/dates as epoch millis (`Long`).
+- Persistence models commonly use `LocalDateTime`/`LocalDate`.
+- Keep time conversions in mappers (for example via `BaseMapper`), not in controllers.
+- Use `Optional<T>` for nullable read lookups and unwrap with domain-specific exceptions at service/handler boundaries.
+- Prefer immutable collection factories (`List.of`, `Set.of`, `Map.of`) unless mutation/order control is required.
+- Naming conventions to preserve: interfaces often `I*`; domain `*Entity`; persistence `*Model`; adapters `*Adapter`; mappers `*Mapper`; DTOs `*Request`/`*Response`; handlers `*Command`/`*Query`.
 
-### Types and data modeling
-- Use `Long` for IDs and nullable numeric fields.
-- Domain entities commonly store timestamps and date-like values as epoch millis in `Long` fields.
-- JPA models commonly store timestamps as `LocalDateTime` and sometimes `LocalDate`.
-- Do time conversion in mappers via `BaseMapper`; do not scatter it through controllers or repositories.
-- Use `Optional<T>` for nullable lookups from ports and repositories.
-- Unwrap optionals at service or command boundaries with `orElseThrow(...)` and a domain-specific exception.
-- Use records for small immutable computed types such as field policies and resolved configurations.
-- Use Lombok heavily for DTOs, entities, and models; `@RequiredArgsConstructor` and `@SuperBuilder` are common.
-- Prefer `List.of`, `Set.of`, and `Map.of` for immutable defaults.
-- Use `ArrayList`, `LinkedHashMap`, or `LinkedHashSet` when mutation or stable ordering is required.
-- Preserve `tenantId` in method signatures and queries; do not bypass tenant scoping.
+## Dependency Injection and Transactions
+- Prefer constructor injection, commonly via `@RequiredArgsConstructor`.
+- Use explicit constructors when collaborator count is high and readability improves.
+- Typical transaction patterns:
+  - `@Transactional(rollbackFor = Exception.class)` for write commands/use cases.
+  - `@Transactional(readOnly = true)` for read query handlers.
+- Keep transaction boundaries out of controllers.
 
-### Naming conventions
-- Classes, enums, DTOs, and records use `PascalCase`.
-- Interfaces use an `I` prefix in this module: `IProjectService`, `IProjectPort`, `IProjectRepository`.
-- Commands end with `Command`; queries end with `Query`; validators end with `Validator`.
-- Persistence adapters end with `Adapter`; mappers end with `Mapper`; JPA persistence types end with `Model`.
-- Domain objects end with `Entity`; request/response DTOs end with `Request` and `Response`.
-- Constants use `UPPER_SNAKE_CASE`; package names stay lowercase.
-- Test classes end with `Test`; prefer descriptive method names like `executeShouldRejectAmbiguousCustomFieldContext`.
+## Error Handling and Validation
+- Use domain exceptions for business paths; avoid generic `RuntimeException` for expected domain failures.
+- Common exceptions include `ResourceNotFoundException`, `BusinessRuleViolationException`, `DomainValidationException`, and `AccessDeniedException`.
+- Add/update `DomainErrorCode` when introducing new business error conditions.
+- If a new business error needs different HTTP mapping, update `ui/rest/exception/GlobalExceptionHandler.java`.
+- Use Jakarta validation annotations on request DTOs and `@Valid` in controllers.
+- Keep API responses in the `GeneralResponse<?>` envelope via `ResponseUtils`.
 
-### Dependency injection and layering
-- Prefer constructor injection.
-- Use `@RequiredArgsConstructor` when it keeps the class readable.
-- Use an explicit constructor when a class has many collaborators and grouping them improves clarity.
-- Controllers should depend on commands, queries, services, and utilities, not repositories.
-- Application commands and queries may coordinate multiple domain services and ports.
-- Domain services should not depend on controller DTOs.
+## Persistence, Messaging, and Security
+- Keep repository access tenant-aware (`...AndTenantId(...)` patterns).
+- Respect soft-delete constraints (`@SQLRestriction("deleted_at IS NULL")` is widely used).
+- Use Flyway migrations for schema changes under `src/main/resources/db/migration`.
+- `application.yaml` sets `spring.jpa.hibernate.ddl-auto: validate`; do not rely on auto schema creation.
+- For write flows that emit events, persist outbox records in the same transaction.
+- Let outbox publisher scheduling perform Kafka publish; do not publish directly from controllers.
+- Keep consumer processing in the provided consumer template flow so commits/acks stay consistent.
+- Resolve auth context through `AuthUtils` (`uid`, `tid`, `groups`) and fail securely when claims are missing.
+- Never bypass tenant scoping in reads or writes.
 
-### Error handling and validation
-- Throw domain-specific exceptions for business failures; avoid raw `RuntimeException` for normal error paths.
-- Use `ResourceNotFoundException` for missing data.
-- Use `BusinessRuleViolationException` for invalid state, conflicts, or permission failures.
-- Use `DomainValidationException` when you need structured violations.
-- Use `AccessDeniedException` when auth context like user or tenant cannot be resolved.
-- Add new error codes to `DomainErrorCode`.
-- If a new business error needs a different HTTP status, update `ui/rest/exception/GlobalExceptionHandler.java`.
-- Use Jakarta validation annotations on request DTOs and annotate controller bodies with `@Valid`.
-- Prefer fail-fast checks and early returns.
-
-### Persistence, transactions, and messaging
-- Put `@Transactional(rollbackFor = Exception.class)` on write commands that change persistent state.
-- Use `@Transactional(readOnly = true)` for read queries when appropriate.
-- Respect soft-delete conventions such as `deletedAt` and `@SQLRestriction("deleted_at IS NULL")`.
-- Keep repository method names tenant-aware, e.g. `findByIdAndTenantId(...)`.
-- When a use case writes data and emits Kafka side effects, persist an outbox event in the same transaction.
-- Let `OutboxPollingPublisher` publish later; do not bypass the outbox flow.
-- Keep Kafka consumers inside `AbstractKafkaConsumerTemplate` so ack happens after commit.
-- New schema changes belong in `src/main/resources/db/migration/V{N}__description.sql`.
-
-## Testing Conventions
-- Use JUnit 5 with Mockito for unit tests.
-- Most tests use `@ExtendWith(MockitoExtension.class)`.
-- Use `@MockitoSettings(strictness = Strictness.LENIENT)` only when reusable setup makes strict stubbing impractical.
-- Mirror the main package structure under `src/test/java`.
-- Prefer builder-based fixtures and helper methods for setup.
-- Assert both the exception type and `DomainErrorCode` for failure scenarios.
-- Verify important side effects with Mockito `verify(...)`.
-- Keep `@SpringBootTest` usage minimal; most new tests should remain unit tests.
-
-## Module-specific gotchas
-- `AuthUtils` reads JWT claims `uid`, `tid`, and `groups`; controllers usually translate missing values into `AccessDeniedException`.
-- REST responses are wrapped in `GeneralResponse<?>` via `ResponseUtils`; preserve that response shape.
-- `PmcoreApplication` enables scheduling; outbox polling and cleanup run on schedules.
-- Paginated searches commonly return `org.springframework.data.util.Pair<List<T>, Long>`.
-- Many services set audit fields with `System.currentTimeMillis()` before saving.
-- Query builders such as `WorkItemQueryBuilder` maintain allowlists for sortable columns; extend those cautiously.
-
-## Before You Finish
-- Run at least the most relevant single test for the code you changed.
-- If the change is broad or cross-cutting, run `./mvnw test`.
-- Keep imports, formatting, and line wrapping consistent with the touched file.
-- Do not replace the entity-model mapper layer with direct JPA exposure.
+## Practical Workflow and Handoff Checklist
+- Read nearby classes in the same package before editing; mirror established conventions.
+- Keep edits scoped to the requested change; avoid opportunistic refactors.
+- Run the narrowest test that proves your change, then broaden if the change is cross-cutting.
+- Never commit `.env`, credentials, or machine-local secrets.
+- Note: `run-dev.sh` prints "Starting Discuss Service" but still starts `pm_core` with `./mvnw spring-boot:run`.
+- Before handoff, verify compile/tests, style consistency, layer boundaries, and tenant/security/outbox behavior.
