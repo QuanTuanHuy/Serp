@@ -28,7 +28,7 @@ import serp.project.pmcore.application.project.query.list.ListProjectsQuery;
 import serp.project.pmcore.application.project.query.list.ListProjectsQueryHandler;
 import serp.project.pmcore.application.project.query.list.ProjectSummaryView;
 import serp.project.pmcore.application.shared.pagination.PageView;
-import serp.project.pmcore.domain.shared.constant.RestControllerConstants;
+import serp.project.pmcore.ui.rest.shared.constant.PathConstants;
 import serp.project.pmcore.domain.shared.exception.AccessDeniedException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.kernel.utils.AuthUtils;
@@ -37,7 +37,7 @@ import serp.project.pmcore.ui.rest.shared.response.GeneralResponse;
 import serp.project.pmcore.ui.rest.shared.response.ResponseUtils;
 
 @RestController
-@RequestMapping(RestControllerConstants.PROJECTS)
+@RequestMapping(PathConstants.PROJECTS)
 @RequiredArgsConstructor
 public class ProjectController {
 

@@ -24,7 +24,7 @@ import serp.project.pmcore.application.workitem.query.search.SearchWorkItemsQuer
 import serp.project.pmcore.application.workitem.query.search.SearchWorkItemsQueryHandler;
 import serp.project.pmcore.application.workitem.query.search.WorkItemSearchView;
 import serp.project.pmcore.domain.shared.pagination.SortSpec;
-import serp.project.pmcore.domain.shared.constant.RestControllerConstants;
+import serp.project.pmcore.ui.rest.shared.constant.PathConstants;
 import serp.project.pmcore.domain.shared.exception.AccessDeniedException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.workitem.query.WorkItemSearchCriteria;
@@ -35,7 +35,7 @@ import serp.project.pmcore.ui.rest.workitem.dto.request.CreateWorkItemRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.response.WorkItemResponse;
 
 @RestController
-@RequestMapping(RestControllerConstants.WORKITEMS)
+@RequestMapping(PathConstants.WORKITEMS)
 @RequiredArgsConstructor
 public class WorkItemController {
 

@@ -17,7 +17,7 @@ import serp.project.pmcore.application.project.command.roleactor.remove.RemovePr
 import serp.project.pmcore.application.project.command.roleactor.remove.RemoveProjectRoleActorCommandHandler;
 import serp.project.pmcore.application.project.query.roleactor.list.ListProjectRoleActorsQuery;
 import serp.project.pmcore.application.project.query.roleactor.list.ListProjectRoleActorsQueryHandler;
-import serp.project.pmcore.domain.shared.constant.RestControllerConstants;
+import serp.project.pmcore.ui.rest.shared.constant.PathConstants;
 import serp.project.pmcore.domain.shared.exception.AccessDeniedException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.kernel.utils.AuthUtils;
@@ -29,7 +29,7 @@ import serp.project.pmcore.ui.rest.shared.response.ResponseUtils;
 import java.util.List;
 
 @RestController
-@RequestMapping(RestControllerConstants.PROJECT_ROLE_ACTORS)
+@RequestMapping(PathConstants.PROJECT_ROLE_ACTORS)
 @RequiredArgsConstructor
 public class ProjectRoleActorController {
 
