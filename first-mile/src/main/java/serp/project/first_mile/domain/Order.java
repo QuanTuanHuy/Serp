@@ -94,6 +94,7 @@ public class Order extends AbstractAudit{
     private Double totalVolume;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<Product> products = new ArrayList<>();
 
     @Column(name = "pickup_attempts")
@@ -135,11 +136,17 @@ public class Order extends AbstractAudit{
     private String note;
 
     public void addProduct(Product product) {
+        if (products == null) {
+            products = new ArrayList<>();
+        }
         products.add(product);
         product.setOrder(this);
     }
 
     public void removeProduct(Product product) {
+        if (products == null) {
+            return;
+        }
         products.remove(product);
         product.setOrder(null);
     }
