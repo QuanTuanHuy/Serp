@@ -8,7 +8,7 @@ package serp.project.pmcore.domain.project.validator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import serp.project.pmcore.domain.issyetype.port.IIssueTypePort;
+import serp.project.pmcore.domain.issuetype.port.IIssueTypePort;
 import serp.project.pmcore.domain.screen.port.IScreenPort;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.DomainValidationException;

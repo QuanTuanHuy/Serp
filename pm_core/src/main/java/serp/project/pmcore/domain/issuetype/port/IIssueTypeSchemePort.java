@@ -3,12 +3,12 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.domain.issyetype.port;
+package serp.project.pmcore.domain.issuetype.port;
 
 import java.util.List;
 import java.util.Optional;
 
-import serp.project.pmcore.domain.issyetype.entity.IssueTypeSchemeEntity;
+import serp.project.pmcore.domain.issuetype.entity.IssueTypeSchemeEntity;
 
 public interface IIssueTypeSchemePort {
     IssueTypeSchemeEntity createIssueTypeScheme(IssueTypeSchemeEntity scheme);

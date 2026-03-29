@@ -9,8 +9,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import serp.project.pmcore.domain.issyetype.entity.IssueTypeEntity;
-import serp.project.pmcore.domain.issyetype.port.IIssueTypePort;
+import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
+import serp.project.pmcore.domain.issuetype.port.IIssueTypePort;
 import serp.project.pmcore.domain.project.port.IProjectIssueCounterPort;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;

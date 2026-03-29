@@ -3,7 +3,9 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.domain.issyetype.entity;
+package serp.project.pmcore.domain.issuetype.entity;
+
+import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -14,12 +16,14 @@ import serp.project.pmcore.domain.shared.entity.BaseEntity;
 
 @Getter
 @Setter
-@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public class IssueTypeSchemeItemEntity extends BaseEntity {
+@SuperBuilder
+public class IssueTypeScreenSchemeEntity extends BaseEntity {
     private Long tenantId;
-    private Long schemeId;
-    private Long issueTypeId;
-    private Integer sequence;
+    private String name;
+    private String description;
+    private Long defaultScreenSchemeId;
+
+    private List<IssueTypeScreenSchemeItemEntity> items;
 }

@@ -11,8 +11,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import serp.project.pmcore.domain.issyetype.entity.IssueTypeEntity;
-import serp.project.pmcore.domain.issyetype.port.IIssueTypePort;
+import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
+import serp.project.pmcore.domain.issuetype.port.IIssueTypePort;
 import serp.project.pmcore.domain.project.port.IProjectIssueCounterPort;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;

@@ -3,7 +3,7 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.domain.issyetype.entity;
+package serp.project.pmcore.domain.issuetype.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

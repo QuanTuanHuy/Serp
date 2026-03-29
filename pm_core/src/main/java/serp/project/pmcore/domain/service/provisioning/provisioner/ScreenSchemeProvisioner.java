@@ -3,10 +3,10 @@ package serp.project.pmcore.domain.service.provisioning.provisioner;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import serp.project.pmcore.domain.issyetype.entity.IssueTypeScreenSchemeEntity;
-import serp.project.pmcore.domain.issyetype.entity.IssueTypeScreenSchemeItemEntity;
-import serp.project.pmcore.domain.issyetype.port.IIssueTypeScreenSchemeItemPort;
-import serp.project.pmcore.domain.issyetype.port.IIssueTypeScreenSchemePort;
+import serp.project.pmcore.domain.issuetype.entity.IssueTypeScreenSchemeEntity;
+import serp.project.pmcore.domain.issuetype.entity.IssueTypeScreenSchemeItemEntity;
+import serp.project.pmcore.domain.issuetype.port.IIssueTypeScreenSchemeItemPort;
+import serp.project.pmcore.domain.issuetype.port.IIssueTypeScreenSchemePort;
 import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.cloner.ScreenSchemeCloner;
 import serp.project.pmcore.domain.service.provisioning.materializer.IssueTypeMaterializer;
