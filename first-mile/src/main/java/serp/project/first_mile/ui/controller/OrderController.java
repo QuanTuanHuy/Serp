@@ -5,9 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import serp.project.first_mile.dto.request.OrderImportDTO;
+import serp.project.first_mile.dto.response.ValidateImportFileDTO;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.kernel.utils.AuthUtils;
@@ -35,5 +36,13 @@ public class OrderController {
             .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=order_template.xlsx")
             .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
             .body(excelData);
+    }
+
+    @PostMapping("/validate")
+    public ValidateImportFileDTO<OrderImportDTO> validateFile(
+            @RequestParam("file") MultipartFile file
+    ) {
+        // TODO: impl validate file
+        return null;
     }
 }
