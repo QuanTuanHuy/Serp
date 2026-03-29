@@ -14,12 +14,16 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import serp.project.first_mile.dto.request.OrderImportDTO;
 import serp.project.first_mile.dto.response.ProductTypeTemplateDTO;
 import serp.project.first_mile.dto.response.ProvinceExcelTemplateDTO;
+import serp.project.first_mile.dto.response.ValidateImportFileDTO;
 import serp.project.first_mile.dto.response.WardExcelTemplateDTO;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.service.OrderExcelService;
+import serp.project.first_mile.service.OrderImportExcelService;
 import serp.project.first_mile.service.OrderService;
 
 import java.io.ByteArrayOutputStream;
@@ -40,6 +44,7 @@ public class OrderServiceImpl implements OrderService {
     private static final int PRODUCT_TYPE_COLUMN_INDEX = 5;
 
     private final OrderExcelService orderExcelService;
+    private final OrderImportExcelService orderImportExcelService;
 
     @Override
     public byte[] exportTemplate(Long tenantId) {
@@ -65,6 +70,11 @@ public class OrderServiceImpl implements OrderService {
         } catch (IOException exception) {
             throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
         }
+    }
+
+    @Override
+    public ValidateImportFileDTO<OrderImportDTO> validateImportFile(MultipartFile file, Long tenantId) {
+        return orderImportExcelService.validateImportFile(file, tenantId);
     }
 
     private void populateWardColumn(Sheet sheet, List<WardExcelTemplateDTO> wards) {

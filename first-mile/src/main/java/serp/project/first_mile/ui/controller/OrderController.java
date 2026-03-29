@@ -42,7 +42,10 @@ public class OrderController {
     public ValidateImportFileDTO<OrderImportDTO> validateFile(
             @RequestParam("file") MultipartFile file
     ) {
-        // TODO: impl validate file
-        return null;
+        Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
+            () -> new AppException(ErrorCode.UNAUTHORIZED)
+        );
+        log.info("REST request to validate Order import file for tenant {}", tenantId);
+        return orderService.validateImportFile(file, tenantId);
     }
 }

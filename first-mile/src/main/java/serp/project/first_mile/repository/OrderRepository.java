@@ -6,5 +6,6 @@ import serp.project.first_mile.domain.Order;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
+	boolean existsByCustomerOrderCodeIgnoreCaseAndTenantId(String customerOrderCode, Long tenantId);
 
 }
