@@ -42,4 +42,6 @@ public interface ProductTypeRepository extends JpaRepository<ProductType, Long> 
 			order by p.name asc
 			""")
 	List<CodeNameProjection> findTemplateCodeNameList(@Param("tenantId") Long tenantId);
+
+	List<ProductType> findByTenantIdAndIsActiveTrueOrderByNameAsc(Long tenantId);
 }
