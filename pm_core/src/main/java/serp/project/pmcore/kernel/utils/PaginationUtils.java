@@ -10,7 +10,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.dto.request.BaseGetParams;
+import serp.project.pmcore.application.shared.query.model.BaseGetParams;
 
 import java.util.Map;
 

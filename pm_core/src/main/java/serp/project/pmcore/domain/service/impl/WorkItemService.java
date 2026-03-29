@@ -10,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 
-import serp.project.pmcore.domain.dto.filter.WorkItemFilterRequest;
+import serp.project.pmcore.application.workitem.query.search.model.WorkItemFilterRequest;
 import serp.project.pmcore.domain.entity.workitem.IssueTypeEntity;
 import serp.project.pmcore.domain.entity.workitem.WorkItemEntity;
 import serp.project.pmcore.domain.exception.BusinessRuleViolationException;
