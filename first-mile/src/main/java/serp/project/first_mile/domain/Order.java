@@ -2,6 +2,7 @@ package serp.project.first_mile.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import org.locationtech.jts.geom.Point;
@@ -14,7 +15,7 @@ import java.util.List;
 
 @Setter
 @Getter
-@Builder
+@SuperBuilder
 @Entity
 @Table(name = "orders")
 @EntityListeners(AuditingEntityListener.class)
