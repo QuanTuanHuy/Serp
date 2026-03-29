@@ -3,16 +3,14 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.domain.project.port;
+package serp.project.pmcore.domain.project.port.read;
 
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
 
 import java.util.Optional;
 
-public interface IProjectPort {
-    ProjectEntity saveProject(ProjectEntity project);
-
+public interface IProjectReadPort {
     Optional<ProjectEntity> getProjectById(Long id, Long tenantId);
 
     Optional<ProjectEntity> getProjectByKey(String key, Long tenantId);
@@ -23,6 +21,4 @@ public interface IProjectPort {
                                           Long categoryId, String projectTypeKey,
                                           Boolean archived, int page, int size,
                                           String sortBy, String sortDirection);
-
-    void deleteProjectById(Long id, Long tenantId);
 }

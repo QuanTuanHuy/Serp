@@ -6,8 +6,6 @@
 package serp.project.pmcore.domain.project.service;
 
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
-import serp.project.pmcore.domain.project.query.ProjectListCriteria;
-import serp.project.pmcore.domain.shared.pagination.PageResult;
 
 public interface IProjectService {
 
@@ -20,8 +18,6 @@ public interface IProjectService {
     ProjectEntity getProjectById(Long id, Long tenantId);
 
     ProjectEntity getProjectByKey(String key, Long tenantId);
-
-    PageResult<ProjectEntity> getProjects(Long tenantId, ProjectListCriteria criteria);
 
     void deleteProject(Long id, Long tenantId);
 

@@ -14,7 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.pmcore.domain.project.entity.ProjectCategoryEntity;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.port.IProjectCategoryPort;
-import serp.project.pmcore.domain.project.port.IProjectPort;
+import serp.project.pmcore.domain.project.port.read.IProjectReadPort;
 
 import java.util.Optional;
 import java.util.Set;
@@ -35,7 +35,7 @@ class ProjectGetQueryHandlersTest {
     private static final String PROJECT_KEY = "SERP";
 
     @Mock
-    private IProjectPort projectPort;
+    private IProjectReadPort projectPort;
     @Mock
     private IProjectCategoryPort projectCategoryPort;
 

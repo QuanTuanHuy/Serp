@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import serp.project.pmcore.application.project.command.create.CreateProjectCommand;
 import serp.project.pmcore.application.project.command.create.CreateProjectCommandHandler;
@@ -23,6 +24,10 @@ import serp.project.pmcore.application.project.query.get.GetProjectByIdQueryHand
 import serp.project.pmcore.application.project.query.get.GetProjectByKeyQuery;
 import serp.project.pmcore.application.project.query.get.GetProjectByKeyQueryHandler;
 import serp.project.pmcore.application.project.query.get.ProjectDetailView;
+import serp.project.pmcore.application.project.query.list.ListProjectsQuery;
+import serp.project.pmcore.application.project.query.list.ListProjectsQueryHandler;
+import serp.project.pmcore.application.project.query.list.ProjectSummaryView;
+import serp.project.pmcore.application.shared.pagination.PageView;
 import serp.project.pmcore.domain.shared.constant.RestControllerConstants;
 import serp.project.pmcore.domain.shared.exception.AccessDeniedException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
@@ -41,6 +46,7 @@ public class ProjectController {
     private final CreateProjectCommandHandler createProjectCommandHandler;
     private final GetProjectByIdQueryHandler getProjectByIdQueryHandler;
     private final GetProjectByKeyQueryHandler getProjectByKeyQueryHandler;
+    private final ListProjectsQueryHandler listProjectsQueryHandler;
 
     @PostMapping
     public ResponseEntity<GeneralResponse<CreateProjectResult>> createProject(
@@ -83,6 +89,34 @@ public class ProjectController {
                 .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
 
         ProjectDetailView response = getProjectByIdQueryHandler.handle(new GetProjectByIdQuery(projectId, tenantId));
+        return ResponseEntity.ok(responseUtils.success(response));
+    }
+
+    @GetMapping
+    public ResponseEntity<GeneralResponse<PageView<ProjectSummaryView>>> listProjects(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) String projectTypeKey,
+            @RequestParam(required = false) Boolean archived,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer pageSize,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortDirection) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        PageView<ProjectSummaryView> response = listProjectsQueryHandler.handle(new ListProjectsQuery(
+                tenantId,
+                search,
+                categoryId,
+                projectTypeKey,
+                archived,
+                page,
+                pageSize,
+                sortBy,
+                sortDirection
+        ));
+
         return ResponseEntity.ok(responseUtils.success(response));
     }
 

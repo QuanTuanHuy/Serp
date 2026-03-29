@@ -13,7 +13,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
-import serp.project.pmcore.domain.project.port.IProjectPort;
+import serp.project.pmcore.domain.project.port.read.IProjectReadPort;
+import serp.project.pmcore.domain.project.port.write.IProjectWritePort;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.infrastructure.store.mapper.ProjectMapper;
 import serp.project.pmcore.infrastructure.store.model.ProjectModel;
@@ -24,7 +25,7 @@ import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
-public class ProjectAdapter implements IProjectPort {
+public class ProjectAdapter implements IProjectReadPort, IProjectWritePort {
 
     private final IProjectRepository projectRepository;
     private final ProjectMapper projectMapper;

@@ -18,7 +18,7 @@ import serp.project.pmcore.domain.permission.port.IPermissionSchemePort;
 import serp.project.pmcore.domain.priority.port.IPrioritySchemePort;
 import serp.project.pmcore.domain.project.dto.ProjectSchemeBindings;
 import serp.project.pmcore.domain.project.port.IProjectCategoryPort;
-import serp.project.pmcore.domain.project.port.IProjectPort;
+import serp.project.pmcore.domain.project.port.read.IProjectReadPort;
 import serp.project.pmcore.domain.shared.enums.ProvisioningMode;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
@@ -39,7 +39,7 @@ public class CreateProjectValidator {
     private static final Set<String> VALID_PROJECT_TYPES =
             Set.of("software", "business");
 
-    private final IProjectPort projectPort;
+    private final IProjectReadPort projectReadPort;
     private final IProjectCategoryPort categoryPort;
     private final IProjectBlueprintPort projectBlueprintPort;
     private final IIssueTypeSchemePort issueTypeSchemePort;
@@ -75,7 +75,7 @@ public class CreateProjectValidator {
     }
 
     private void validateKeyUniqueness(String key, Long tenantId) {
-        if (projectPort.existsByKeyAndTenantId(key, tenantId)) {
+        if (projectReadPort.existsByKeyAndTenantId(key, tenantId)) {
             throw new BusinessRuleViolationException(
                     DomainErrorCode.PROJECT_KEY_ALREADY_EXISTS,
                     "Project key '" + key + "' is already taken in this tenant");
