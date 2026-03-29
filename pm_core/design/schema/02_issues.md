@@ -213,7 +213,7 @@ Replaces `work_items.custom_field_values` JSONB for better indexing and validati
 | tenant_id | BIGINT | Tenant scope |
 | work_item_id | BIGINT | FK -> work_items |
 | custom_field_id | BIGINT | FK -> custom_fields (Module 04) |
-| custom_field_context_id | BIGINT | FK -> custom_field_contexts (Module 04); resolved context at write time |
+| custom_field_context_id | BIGINT | FK -> system-owned `custom_field_contexts` catalog row (Module 04); resolved at write time |
 | value_type | VARCHAR(30) | TEXT, NUMBER, DATE, DATETIME, USER, GROUP, OPTION, JSON |
 | text_value | TEXT | Value for text-like fields |
 | number_value | NUMERIC(20,6) | Value for numeric fields |
@@ -237,4 +237,4 @@ Replaces `work_items.custom_field_values` JSONB for better indexing and validati
 - `CHECK` that `status_id` matches `workflow_step_id.status_id` on `work_items`
 - `CHECK` that only the typed value columns allowed by `value_type` are populated on `work_item_custom_field_values`
 - All UNIQUE constraints above should be implemented as partial unique indexes filtered by `deleted_at IS NULL`.
-- Composite tenant-safe FKs are required for all intra-module and cross-module references.
+- Composite tenant-safe FKs are required for tenant-owned references. Links from tenant work-item data into the system-owned custom-field catalog are the explicit exception in the current phase.

@@ -10,7 +10,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.dto.request.BaseGetParams;
+import serp.project.pmcore.domain.shared.pagination.PageCriteria;
 
 import java.util.Map;
 
@@ -21,7 +21,7 @@ public class PaginationUtils {
     public static final int DEFAULT_PAGE = 0;
     public static final int DEFAULT_PAGE_SIZE = 10;
 
-    public Pageable getPageable(BaseGetParams params) {
+    public Pageable getPageable(PageCriteria params) {
         int page = (params.getPage() != null && params.getPage() >= 0) ? params.getPage() : DEFAULT_PAGE;
         int size = (params.getPageSize() != null && params.getPageSize() > 0) ? params.getPageSize()
                 : DEFAULT_PAGE_SIZE;

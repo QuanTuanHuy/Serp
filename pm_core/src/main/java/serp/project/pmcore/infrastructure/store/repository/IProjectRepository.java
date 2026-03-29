@@ -27,12 +27,35 @@ public interface IProjectRepository extends JpaRepository<ProjectModel, Long> {
 
     Page<ProjectModel> findAllByTenantId(Long tenantId, Pageable pageable);
 
-    @Query("SELECT p FROM ProjectModel p WHERE p.tenantId = :tenantId " +
-            "AND (:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
-            "OR LOWER(p.key) LIKE LOWER(CONCAT('%', :search, '%'))) " +
-            "AND (:categoryId IS NULL OR p.projectCategoryId = :categoryId) " +
-            "AND (:projectTypeKey IS NULL OR p.projectTypeKey = :projectTypeKey) " +
-            "AND (:archived IS NULL OR p.archived = :archived)")
+    @Query(value = """
+    SELECT *
+    FROM projects p
+    WHERE p.tenant_id = :tenantId
+      AND p.deleted_at IS NULL
+      AND (
+            :search IS NULL
+            OR p.name ILIKE CONCAT('%', :search, '%')
+            OR p.key ILIKE CONCAT('%', :search, '%')
+          )
+      AND (:categoryId IS NULL OR p.project_category_id = :categoryId)
+      AND (:projectTypeKey IS NULL OR p.project_type_key = :projectTypeKey)
+      AND (:archived IS NULL OR p.archived = :archived)
+    """,
+            countQuery = """
+    SELECT COUNT(*)
+    FROM projects p
+    WHERE p.tenant_id = :tenantId
+      AND p.deleted_at IS NULL
+      AND (
+            :search IS NULL
+            OR p.name ILIKE CONCAT('%', :search, '%')
+            OR p.key ILIKE CONCAT('%', :search, '%')
+          )
+      AND (:categoryId IS NULL OR p.project_category_id = :categoryId)
+      AND (:projectTypeKey IS NULL OR p.project_type_key = :projectTypeKey)
+      AND (:archived IS NULL OR p.archived = :archived)
+    """,
+            nativeQuery = true)
     Page<ProjectModel> findAllWithFilters(
             @Param("tenantId") Long tenantId,
             @Param("search") String search,

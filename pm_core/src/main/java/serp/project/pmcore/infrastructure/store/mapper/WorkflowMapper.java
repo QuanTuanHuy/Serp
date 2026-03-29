@@ -6,7 +6,8 @@
 package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.workflow.WorkflowEntity;
+
+import serp.project.pmcore.domain.workflow.entity.WorkflowEntity;
 import serp.project.pmcore.infrastructure.store.model.WorkflowModel;
 
 import java.util.Collections;

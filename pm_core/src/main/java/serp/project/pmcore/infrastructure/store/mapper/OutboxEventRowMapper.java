@@ -11,8 +11,8 @@ import java.sql.SQLException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
-import serp.project.pmcore.domain.entity.OutboxEventEntity;
-import serp.project.pmcore.domain.enums.OutboxEventStatus;
+import serp.project.pmcore.domain.shared.entity.OutboxEventEntity;
+import serp.project.pmcore.domain.shared.enums.OutboxEventStatus;
 
 @Component
 public class OutboxEventRowMapper extends BaseRowMapper implements RowMapper<OutboxEventEntity> {

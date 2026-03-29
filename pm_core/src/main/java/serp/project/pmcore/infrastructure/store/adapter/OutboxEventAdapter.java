@@ -17,9 +17,9 @@ import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import serp.project.pmcore.domain.entity.OutboxEventEntity;
-import serp.project.pmcore.domain.enums.OutboxEventStatus;
-import serp.project.pmcore.domain.port.store.IOutboxEventPort;
+import serp.project.pmcore.domain.shared.entity.OutboxEventEntity;
+import serp.project.pmcore.domain.shared.enums.OutboxEventStatus;
+import serp.project.pmcore.domain.shared.port.store.IOutboxEventPort;
 import serp.project.pmcore.infrastructure.store.mapper.OutboxEventMapper;
 import serp.project.pmcore.infrastructure.store.mapper.OutboxEventRowMapper;
 import serp.project.pmcore.infrastructure.store.repository.IOutboxEventRepository;

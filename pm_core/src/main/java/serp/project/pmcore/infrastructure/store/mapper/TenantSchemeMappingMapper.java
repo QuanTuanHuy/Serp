@@ -6,7 +6,8 @@
 package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.TenantSchemeMappingEntity;
+
+import serp.project.pmcore.domain.shared.entity.TenantSchemeMappingEntity;
 import serp.project.pmcore.infrastructure.store.model.TenantSchemeMappingModel;
 
 @Component

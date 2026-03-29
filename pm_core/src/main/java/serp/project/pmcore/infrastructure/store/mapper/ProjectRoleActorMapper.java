@@ -6,7 +6,8 @@
 package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.project.ProjectRoleActorEntity;
+
+import serp.project.pmcore.domain.project.entity.ProjectRoleActorEntity;
 import serp.project.pmcore.infrastructure.store.model.ProjectRoleActorModel;
 
 import java.util.Collections;

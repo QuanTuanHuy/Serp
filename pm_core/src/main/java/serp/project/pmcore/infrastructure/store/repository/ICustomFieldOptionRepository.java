@@ -16,7 +16,6 @@ import java.util.List;
 @Repository
 public interface ICustomFieldOptionRepository extends JpaRepository<CustomFieldOptionModel, Long> {
 
-    @Query("SELECT o FROM CustomFieldOptionModel o WHERE o.customFieldContextId = :contextId AND o.tenantId = :tenantId ORDER BY o.sequence ASC, o.id ASC")
-    List<CustomFieldOptionModel> findAllByContextIdAndTenantId(@Param("contextId") Long contextId,
-                                                               @Param("tenantId") Long tenantId);
+    @Query("SELECT o FROM CustomFieldOptionModel o WHERE o.customFieldContextId = :contextId ORDER BY o.sequence ASC, o.id ASC")
+    List<CustomFieldOptionModel> findAllByContextId(@Param("contextId") Long contextId);
 }

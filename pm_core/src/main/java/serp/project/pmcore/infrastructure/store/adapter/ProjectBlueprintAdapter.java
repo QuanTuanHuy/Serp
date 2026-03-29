@@ -7,8 +7,9 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.project.ProjectBlueprintEntity;
-import serp.project.pmcore.domain.port.store.IProjectBlueprintPort;
+
+import serp.project.pmcore.domain.blueprint.entity.ProjectBlueprintEntity;
+import serp.project.pmcore.domain.blueprint.port.IProjectBlueprintPort;
 import serp.project.pmcore.infrastructure.store.mapper.ProjectBlueprintMapper;
 import serp.project.pmcore.infrastructure.store.repository.IProjectBlueprintRepository;
 

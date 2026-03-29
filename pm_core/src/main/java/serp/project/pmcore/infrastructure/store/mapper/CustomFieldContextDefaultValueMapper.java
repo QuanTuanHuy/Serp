@@ -6,7 +6,8 @@
 package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.CustomFieldContextDefaultValueEntity;
+
+import serp.project.pmcore.domain.customfield.entity.CustomFieldContextDefaultValueEntity;
 import serp.project.pmcore.infrastructure.store.model.CustomFieldContextDefaultValueModel;
 
 import java.util.Collections;
@@ -21,7 +22,6 @@ public class CustomFieldContextDefaultValueMapper extends BaseMapper {
         }
         return CustomFieldContextDefaultValueEntity.builder()
                 .id(model.getId())
-                .tenantId(model.getTenantId())
                 .contextId(model.getContextId())
                 .valueType(model.getValueType())
                 .textValue(model.getTextValue())

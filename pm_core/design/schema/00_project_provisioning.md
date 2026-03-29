@@ -59,7 +59,7 @@ For system-owned seeds, tenant provisioning should materialize these dictionary 
    - Updating a shared scheme can affect all projects associated with it.
 3. `CLONE_FROM_SHARED` (optional rebinding action)
    - Use when a project currently points to a reusable shared scheme but now needs local isolation.
-   - Clone only scheme trees and project-scoped contexts; keep reusable global entities as references.
+   - Clone only scheme trees that are explicitly project-isolated in this phase; keep reusable global entities and the system-owned custom-field context catalog as references.
 
 ## System Scheme Materialization (Tenant Isolation)
 
@@ -163,13 +163,7 @@ Use this only when a project is currently using reusable shared schemes and expl
    - `field_configuration_items`
    - `field_config_schemes`
    - `field_config_scheme_items` (reuse `issue_type_id` references)
-7. If isolation must also cover project-specific field contexts, clone matching custom-field context trees:
-   - `custom_field_contexts`
-   - `custom_field_context_projects`
-   - `custom_field_context_issue_types` (reuse `issue_type_id` references)
-   - `custom_field_options`
-   - `custom_field_context_default_values`
-   - patch `project_id`; keep `custom_field_id` and `issue_type_id` as reusable references unless a deeper field-model fork is explicitly required
+7. Custom-field context trees are not cloned in the current phase. `custom_field_contexts`, `custom_field_options`, and `custom_field_context_default_values` remain shared system-owned catalog data resolved by `issue_type_key` with global fallback.
 8. Clone PERMISSION tree:
    - `permission_schemes`
    - `permission_scheme_entries`
@@ -186,7 +180,7 @@ Use this only when a project is currently using reusable shared schemes and expl
 12. Validate cross-scheme compatibility gates.
 13. Commit transaction, then publish `PROJECT_CREATED`.
 
-Do not clone `issue_types`, `priorities`, `statuses`, `status_categories`, or `custom_fields` as part of normal project isolation. Jira-like isolation happens by cloning scheme/context rows, not these reusable dictionaries.
+Do not clone `issue_types`, `priorities`, `statuses`, `status_categories`, or `custom_fields` as part of normal project isolation. Jira-like isolation happens by cloning scheme rows, not these reusable dictionaries; the current-phase custom-field context catalog also remains shared and system-owned.
 
 ## Required ID Mapping Contract (`CLONE_FROM_SHARED` only)
 
@@ -196,7 +190,6 @@ Maintain in-memory maps for every cloned root/child ID used by FK remapping:
 - `screen_map`, `screen_scheme_map`, `issue_type_screen_scheme_map`
 - `workflow_map`, `workflow_version_map`, `workflow_step_map`, `workflow_transition_map`, `workflow_scheme_map`
 - `field_configuration_map`, `field_config_scheme_map`
-- `custom_field_context_map`, `custom_field_option_map`, `custom_field_context_default_map`
 - `permission_scheme_map`
 - `issue_security_scheme_map`, `issue_security_level_map`
 - `notification_scheme_map`
@@ -211,9 +204,9 @@ Never insert child records with source IDs.
 4. Field config coverage: every issue type in the effective issue type scheme has a field configuration mapping.
 5. Screen coverage: every issue type in the effective issue type scheme has an issue-type-to-screen-scheme mapping for CREATE, EDIT, and VIEW operations.
 6. Transition screens: any `workflow_transitions.screen_id` must reference a valid screen in tenant scope.
-7. Custom field context resolution: no field may have two effective contexts with the same specificity for the same `(project_id, issue_type_id)` pair.
+7. Custom field context resolution: no field may have two effective contexts for the same `(custom_field_id, issue_type_key)`, and each field may define at most one global fallback context.
 8. Default IDs (`default_*_id`) must belong to the same target scheme.
-9. Reusable global entity references (`issue_type_id`, `status_id`, `priority_id`, `custom_field_id`) must resolve inside the same tenant scope as the target project.
+9. Reusable tenant-owned entity references (`issue_type_id`, `status_id`, `priority_id`) must resolve inside the same tenant scope as the target project. References into the system-owned custom-field catalog are allowed directly in the current phase.
 
 ## Lifecycle Rules
 

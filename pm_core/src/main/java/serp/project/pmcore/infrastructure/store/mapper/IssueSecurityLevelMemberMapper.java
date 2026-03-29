@@ -6,7 +6,8 @@
 package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.IssueSecurityLevelMemberEntity;
+
+import serp.project.pmcore.domain.issuesecurity.entity.IssueSecurityLevelMemberEntity;
 import serp.project.pmcore.infrastructure.store.model.IssueSecurityLevelMemberModel;
 
 import java.util.Collections;
