@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.CreateUserForOrgRequest;
-import serp.project.account.core.domain.dto.message.SyncUserFirstMileEvent;
+import serp.project.account.core.domain.dto.message.SyncUserEvent;
 import serp.project.account.core.domain.entity.OrganizationEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.UserEntity;
@@ -25,24 +25,16 @@ import serp.project.account.core.service.IUserService;
 import serp.project.account.core.usecase.support.OrganizationRoleResolver;
 import serp.project.account.infrastructure.store.mapper.UserMapper;
 import serp.project.account.kernel.property.KafkaTopicProperties;
-import serp.project.account.kernel.utils.AuthUtils;
 import serp.project.account.kernel.utils.CollectionUtils;
 
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class UserProvisioningCoordinator {
-    private static final String ROLE_TMS_POSTOFFICER_MANAGER = "TMS_POSTOFFICER_MANAGER";
-    private static final String ROLE_TMS_POSTOFFICER = "TMS_POSTOFFICER";
-    private static final Set<String> FIRST_MILE_SYNC_ROLES = Set.of(
-            ROLE_TMS_POSTOFFICER_MANAGER,
-            ROLE_TMS_POSTOFFICER
-    );
 
     private final IUserService userService;
     private final IKeycloakUserService keycloakUserService;
@@ -74,7 +66,7 @@ public class UserProvisioningCoordinator {
 
             combineRoleService.assignRolesToUser(user, roles);
             assignOrganizationRoles(organization.getId(), user.getId(), roles);
-            publishUserSyncForFirstMile(organization.getId(), user, roles);
+            publishUserSync(organization.getId(), user, roles);
             return user;
         } catch (Exception e) {
             cleanupKeycloakUser(keycloakUserId);
@@ -105,7 +97,7 @@ public class UserProvisioningCoordinator {
         }
     }
 
-    private void publishUserSyncForFirstMile(Long organizationId, UserEntity user, List<RoleEntity> roles) {
+    private void publishUserSync(Long organizationId, UserEntity user, List<RoleEntity> roles) {
         if (organizationId == null || user == null || user.getId() == null || CollectionUtils.isEmpty(roles)) {
             return;
         }
@@ -114,7 +106,6 @@ public class UserProvisioningCoordinator {
                 .map(RoleEntity::getName)
                 .filter(Objects::nonNull)
                 .map(roleName -> roleName.toUpperCase(Locale.ROOT))
-                .filter(FIRST_MILE_SYNC_ROLES::contains)
                 .distinct()
                 .toList();
 
@@ -122,9 +113,9 @@ public class UserProvisioningCoordinator {
             return;
         }
 
-        String topic = kafkaTopicProperties.getSyncUserFirstMile();
+        String topic = kafkaTopicProperties.getSyncUser();
         for (String roleName : matchedRoleNames) {
-            SyncUserFirstMileEvent event = SyncUserFirstMileEvent.builder()
+            SyncUserEvent event = SyncUserEvent.builder()
                     .userId(user.getId())
                     .organizationId(organizationId)
                     .tenantId(organizationId)
@@ -140,7 +131,7 @@ public class UserProvisioningCoordinator {
             kafkaProducer.sendMessageAsync(partitionKey, event, topic, (success, sentTopic, payload, ex) -> {
                 if (success) {
                     log.info(
-                            "Published sync-user-first-mile event: organizationId={}, userId={}, roleName={}, topic={}",
+                            "Published sync-user event: organizationId={}, userId={}, roleName={}, topic={}",
                             organizationId,
                             user.getId(),
                             roleName,
@@ -150,7 +141,7 @@ public class UserProvisioningCoordinator {
                 }
 
                 log.error(
-                        "Failed to publish sync-user-first-mile event: organizationId={}, userId={}, roleName={}, topic={}",
+                        "Failed to publish sync-user event: organizationId={}, userId={}, roleName={}, topic={}",
                         organizationId,
                         user.getId(),
                         roleName,

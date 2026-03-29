@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SyncUserFirstMileEvent {
+public class SyncUserEvent {
     private Long userId;
     private Long organizationId;
     @JsonProperty("tid")

@@ -380,7 +380,7 @@ app:
 
   kafka:
     topics:
-      sync-user-first-mile: ${SYNC_USER_FIRST_MILE_TOPIC:SYNC_USER_FIRST_MILE}
+      sync-user: ${SYNC_USER_FIRST_MILE_TOPIC:SYNC_USER_FIRST_MILE}
 
 server:
   port: 8081

@@ -25,7 +25,7 @@ public class SyncUserFirstMileConsumer {
     private final KafkaDlqService kafkaDlqService;
 
     @KafkaListener(
-            topics = "${app.kafka.topics.sync-user-first-mile:SYNC_USER_FIRST_MILE}",
+            topics = "${app.kafka.topics.sync-user-first-mile:SYNC_USER}",
             groupId = "${spring.kafka.consumer.group-id:first-mile-sync-user}"
     )
     public void consume(
@@ -36,7 +36,7 @@ public class SyncUserFirstMileConsumer {
         try {
             SyncUserFirstMileEvent event = objectMapper.readValue(payload, SyncUserFirstMileEvent.class);
             postOfficeStaffSyncService.syncUser(event);
-            log.info("Consumed sync-user-first-mile event: topic={}, key={}, userId={}, role={}",
+            log.info("Consumed sync-user event: topic={}, key={}, userId={}, role={}",
                     topic,
                     key,
                     event.getUserId(),
@@ -45,7 +45,7 @@ public class SyncUserFirstMileConsumer {
             Long tenantId = extractTenantId(payload);
             kafkaDlqService.saveFailedMessage(topic, key, payload, exception.getMessage(), tenantId);
             log.error(
-                    "Failed to consume sync-user-first-mile event and moved to DLQ: topic={}, key={}, tenantId={}, payload={}",
+                    "Failed to consume sync-user event and moved to DLQ: topic={}, key={}, tenantId={}, payload={}",
                     topic,
                     key,
                     tenantId,

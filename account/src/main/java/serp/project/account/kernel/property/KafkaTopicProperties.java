@@ -15,5 +15,5 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "app.kafka.topics")
 public class KafkaTopicProperties {
-    private String syncUserFirstMile = "SYNC_USER_FIRST_MILE";
+    private String syncUser = "SYNC_USER";
 }
