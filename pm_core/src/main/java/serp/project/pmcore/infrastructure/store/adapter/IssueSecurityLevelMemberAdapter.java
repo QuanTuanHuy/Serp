@@ -7,8 +7,9 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.IssueSecurityLevelMemberEntity;
-import serp.project.pmcore.domain.port.store.IIssueSecurityLevelMemberPort;
+
+import serp.project.pmcore.domain.issuesecurity.entity.IssueSecurityLevelMemberEntity;
+import serp.project.pmcore.domain.issuesecurity.port.IIssueSecurityLevelMemberPort;
 import serp.project.pmcore.infrastructure.store.mapper.IssueSecurityLevelMemberMapper;
 import serp.project.pmcore.infrastructure.store.repository.IIssueSecurityLevelMemberRepository;
 

@@ -9,14 +9,15 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import serp.project.pmcore.domain.dto.project.ProjectProvisioningRequest;
-import serp.project.pmcore.domain.dto.project.ProjectProvisioningResult;
-import serp.project.pmcore.domain.entity.project.ProjectEntity;
-import serp.project.pmcore.domain.entity.project.ProjectSchemeBindings;
-import serp.project.pmcore.domain.enums.ProvisioningMode;
-import serp.project.pmcore.domain.enums.SchemeType;
+
+import serp.project.pmcore.domain.project.dto.ProjectProvisioningRequest;
+import serp.project.pmcore.domain.project.dto.ProjectProvisioningResult;
+import serp.project.pmcore.domain.project.dto.ProjectSchemeBindings;
+import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.service.ISchemeProvisioningService;
 import serp.project.pmcore.domain.service.provisioning.mode.IProvisioningModeExecutor;
+import serp.project.pmcore.domain.shared.enums.ProvisioningMode;
+import serp.project.pmcore.domain.shared.enums.SchemeType;
 
 import java.util.*;
 

@@ -7,8 +7,9 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.PriorityEntity;
-import serp.project.pmcore.domain.port.store.IPriorityPort;
+
+import serp.project.pmcore.domain.priority.entity.PriorityEntity;
+import serp.project.pmcore.domain.priority.port.IPriorityPort;
 import serp.project.pmcore.infrastructure.store.mapper.PriorityMapper;
 import serp.project.pmcore.infrastructure.store.repository.IPriorityRepository;
 

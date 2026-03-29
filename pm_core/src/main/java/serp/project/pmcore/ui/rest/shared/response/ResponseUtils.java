@@ -7,7 +7,8 @@
 package serp.project.pmcore.ui.rest.shared.response;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.constant.Constants;
+
+import serp.project.pmcore.domain.shared.constant.Constants;
 
 import java.util.List;
 

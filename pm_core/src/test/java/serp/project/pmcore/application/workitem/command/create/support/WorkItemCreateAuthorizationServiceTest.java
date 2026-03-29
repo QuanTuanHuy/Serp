@@ -10,12 +10,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import serp.project.pmcore.domain.constant.ProjectPermissionKeys;
-import serp.project.pmcore.domain.dto.project.ProjectPermissionEvaluationContext;
-import serp.project.pmcore.domain.entity.project.ProjectEntity;
-import serp.project.pmcore.domain.exception.BusinessRuleViolationException;
-import serp.project.pmcore.domain.exception.DomainErrorCode;
+
+import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
+import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.service.IProjectPermissionEvaluationService;
+import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
+import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
+import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 
 import java.util.Set;
 

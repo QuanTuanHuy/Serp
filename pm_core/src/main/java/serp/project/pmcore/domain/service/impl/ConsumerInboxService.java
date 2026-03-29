@@ -10,9 +10,9 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
-import serp.project.pmcore.domain.enums.ConsumerInboxAcquireResult;
-import serp.project.pmcore.domain.port.store.IConsumerInboxPort;
 import serp.project.pmcore.domain.service.IConsumerInboxService;
+import serp.project.pmcore.domain.shared.enums.ConsumerInboxAcquireResult;
+import serp.project.pmcore.domain.shared.port.store.IConsumerInboxPort;
 
 @Service
 @RequiredArgsConstructor

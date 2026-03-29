@@ -7,8 +7,9 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.project.ProjectRoleActorEntity;
-import serp.project.pmcore.domain.port.store.IProjectRoleActorPort;
+
+import serp.project.pmcore.domain.project.entity.ProjectRoleActorEntity;
+import serp.project.pmcore.domain.project.port.IProjectRoleActorPort;
 import serp.project.pmcore.infrastructure.store.mapper.ProjectRoleActorMapper;
 import serp.project.pmcore.infrastructure.store.repository.IProjectRoleActorRepository;
 

@@ -5,7 +5,7 @@
 
 package serp.project.pmcore.domain.workitem.service;
 
-import serp.project.pmcore.domain.entity.workitem.WorkItemEntity;
+import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 
 public interface IWorkItemService {
 

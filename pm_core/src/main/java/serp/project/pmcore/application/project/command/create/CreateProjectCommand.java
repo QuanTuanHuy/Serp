@@ -6,8 +6,8 @@
 package serp.project.pmcore.application.project.command.create;
 
 import serp.project.pmcore.application.shared.cqrs.command.ICommand;
-import serp.project.pmcore.domain.entity.project.ProjectSchemeBindings;
-import serp.project.pmcore.domain.enums.ProvisioningMode;
+import serp.project.pmcore.domain.project.dto.ProjectSchemeBindings;
+import serp.project.pmcore.domain.shared.enums.ProvisioningMode;
 
 public record CreateProjectCommand(
         String name,

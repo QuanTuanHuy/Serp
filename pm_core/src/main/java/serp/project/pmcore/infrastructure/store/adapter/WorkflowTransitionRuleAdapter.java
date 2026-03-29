@@ -7,8 +7,9 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.workflow.WorkflowTransitionRuleEntity;
-import serp.project.pmcore.domain.port.store.IWorkflowTransitionRulePort;
+
+import serp.project.pmcore.domain.workflow.entity.WorkflowTransitionRuleEntity;
+import serp.project.pmcore.domain.workflow.port.IWorkflowTransitionRulePort;
 import serp.project.pmcore.infrastructure.store.mapper.WorkflowTransitionRuleMapper;
 import serp.project.pmcore.infrastructure.store.repository.IWorkflowTransitionRuleRepository;
 

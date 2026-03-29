@@ -10,11 +10,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import serp.project.pmcore.domain.entity.workitem.IssueTypeEntity;
-import serp.project.pmcore.domain.entity.workitem.WorkItemEntity;
-import serp.project.pmcore.domain.exception.BusinessRuleViolationException;
-import serp.project.pmcore.domain.port.store.IIssueTypePort;
-import serp.project.pmcore.domain.port.store.IProjectIssueCounterPort;
+
+import serp.project.pmcore.domain.issyetype.entity.IssueTypeEntity;
+import serp.project.pmcore.domain.issyetype.port.IIssueTypePort;
+import serp.project.pmcore.domain.project.port.IProjectIssueCounterPort;
+import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
+import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 import serp.project.pmcore.domain.workitem.port.write.IWorkItemWritePort;
 

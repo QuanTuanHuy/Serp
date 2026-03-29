@@ -7,8 +7,9 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.TenantSchemeDefaultEntity;
-import serp.project.pmcore.domain.port.store.ITenantSchemeDefaultPort;
+
+import serp.project.pmcore.domain.shared.entity.TenantSchemeDefaultEntity;
+import serp.project.pmcore.domain.shared.port.store.ITenantSchemeDefaultPort;
 import serp.project.pmcore.infrastructure.store.mapper.TenantSchemeDefaultMapper;
 import serp.project.pmcore.infrastructure.store.repository.ITenantSchemeDefaultRepository;
 

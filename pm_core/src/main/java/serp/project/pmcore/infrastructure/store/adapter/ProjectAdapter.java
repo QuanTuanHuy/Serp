@@ -12,8 +12,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.project.ProjectEntity;
-import serp.project.pmcore.domain.port.store.IProjectPort;
+
+import serp.project.pmcore.domain.project.entity.ProjectEntity;
+import serp.project.pmcore.domain.project.port.IProjectPort;
 import serp.project.pmcore.infrastructure.store.mapper.ProjectMapper;
 import serp.project.pmcore.infrastructure.store.model.ProjectModel;
 import serp.project.pmcore.infrastructure.store.repository.IProjectRepository;

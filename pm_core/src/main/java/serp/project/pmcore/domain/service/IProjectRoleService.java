@@ -5,9 +5,9 @@
 
 package serp.project.pmcore.domain.service;
 
-import serp.project.pmcore.domain.entity.project.ProjectRoleEntity;
-
 import java.util.Optional;
+
+import serp.project.pmcore.domain.project.entity.ProjectRoleEntity;
 
 public interface IProjectRoleService {
     ProjectRoleEntity getProjectRoleByIdIncludingSystem(Long roleId, Long tenantId);

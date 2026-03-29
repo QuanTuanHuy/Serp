@@ -19,9 +19,10 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
-import serp.project.pmcore.domain.constant.Constants;
-import serp.project.pmcore.domain.constant.KeyCloakConstants;
-import serp.project.pmcore.domain.enums.ExternalServices;
+
+import serp.project.pmcore.domain.shared.constant.Constants;
+import serp.project.pmcore.domain.shared.constant.KeyCloakConstants;
+import serp.project.pmcore.domain.shared.enums.ExternalServices;
 import serp.project.pmcore.kernel.property.KeycloakProperties;
 import serp.project.pmcore.kernel.property.RequestFilter;
 import serp.project.pmcore.kernel.utils.DataUtils;

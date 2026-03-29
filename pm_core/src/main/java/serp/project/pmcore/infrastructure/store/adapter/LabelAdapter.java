@@ -7,8 +7,9 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.LabelEntity;
-import serp.project.pmcore.domain.port.store.ILabelPort;
+
+import serp.project.pmcore.domain.project.entity.LabelEntity;
+import serp.project.pmcore.domain.project.port.ILabelPort;
 import serp.project.pmcore.infrastructure.store.mapper.LabelMapper;
 import serp.project.pmcore.infrastructure.store.repository.ILabelRepository;
 

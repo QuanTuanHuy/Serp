@@ -1,7 +1,7 @@
 package serp.project.pmcore.domain.service.provisioning;
 
-import serp.project.pmcore.domain.dto.project.ProjectProvisioningRequest;
-import serp.project.pmcore.domain.enums.SchemeType;
+import serp.project.pmcore.domain.project.dto.ProjectProvisioningRequest;
+import serp.project.pmcore.domain.shared.enums.SchemeType;
 
 import java.util.Map;
 

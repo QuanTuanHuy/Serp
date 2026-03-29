@@ -7,18 +7,19 @@ package serp.project.pmcore.domain.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import serp.project.pmcore.domain.constant.ProjectPermissionKeys;
-import serp.project.pmcore.domain.dto.project.ProjectPermissionEvaluationContext;
-import serp.project.pmcore.domain.entity.PermissionSchemeEntryEntity;
-import serp.project.pmcore.domain.entity.project.ProjectEntity;
-import serp.project.pmcore.domain.entity.project.ProjectRoleEntity;
-import serp.project.pmcore.domain.enums.ProjectPermissionGranteeType;
-import serp.project.pmcore.domain.enums.ProjectRoleActorSubjectType;
-import serp.project.pmcore.domain.exception.AccessDeniedException;
-import serp.project.pmcore.domain.port.store.IPermissionSchemeEntryPort;
+
+import serp.project.pmcore.domain.permission.entity.PermissionSchemeEntryEntity;
+import serp.project.pmcore.domain.permission.port.IPermissionSchemeEntryPort;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
+import serp.project.pmcore.domain.project.entity.ProjectEntity;
+import serp.project.pmcore.domain.project.entity.ProjectRoleEntity;
 import serp.project.pmcore.domain.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.service.IProjectRoleActorService;
 import serp.project.pmcore.domain.service.IProjectRoleService;
+import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
+import serp.project.pmcore.domain.shared.enums.ProjectPermissionGranteeType;
+import serp.project.pmcore.domain.shared.enums.ProjectRoleActorSubjectType;
+import serp.project.pmcore.domain.shared.exception.AccessDeniedException;
 
 import java.util.Collections;
 import java.util.List;

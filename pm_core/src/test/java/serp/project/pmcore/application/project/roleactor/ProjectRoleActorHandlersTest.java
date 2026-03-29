@@ -19,15 +19,15 @@ import serp.project.pmcore.application.project.query.roleactor.list.ListProjectR
 import serp.project.pmcore.application.project.query.roleactor.list.ListProjectRoleActorsQueryHandler;
 import serp.project.pmcore.application.project.roleactor.model.ProjectRoleActorView;
 import serp.project.pmcore.application.shared.cqrs.Unit;
-import serp.project.pmcore.domain.constant.ProjectPermissionKeys;
-import serp.project.pmcore.domain.dto.project.ProjectPermissionEvaluationContext;
-import serp.project.pmcore.domain.entity.project.ProjectEntity;
-import serp.project.pmcore.domain.entity.project.ProjectRoleActorEntity;
-import serp.project.pmcore.domain.entity.project.ProjectRoleEntity;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
+import serp.project.pmcore.domain.project.entity.ProjectEntity;
+import serp.project.pmcore.domain.project.entity.ProjectRoleActorEntity;
+import serp.project.pmcore.domain.project.entity.ProjectRoleEntity;
 import serp.project.pmcore.domain.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.service.IProjectRoleActorService;
 import serp.project.pmcore.domain.service.IProjectRoleService;
 import serp.project.pmcore.domain.service.IProjectService;
+import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 
 import java.util.List;
 import java.util.Set;

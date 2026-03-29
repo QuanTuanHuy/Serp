@@ -1,7 +1,7 @@
 package serp.project.pmcore.domain.service.provisioning.provisioner;
 
-import serp.project.pmcore.domain.enums.SchemeType;
 import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
+import serp.project.pmcore.domain.shared.enums.SchemeType;
 
 public interface ISchemeProvisioner {
     SchemeType supports();

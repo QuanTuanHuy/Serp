@@ -7,9 +7,10 @@ package serp.project.pmcore.infrastructure.store.query;
 
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.dto.filter.FieldFilter;
-import serp.project.pmcore.domain.dto.filter.FilterOperator;
+
 import serp.project.pmcore.application.workitem.query.search.model.SortField;
+import serp.project.pmcore.domain.shared.dto.filter.FieldFilter;
+import serp.project.pmcore.domain.shared.dto.filter.FilterOperator;
 
 import java.time.Instant;
 import java.time.LocalDateTime;

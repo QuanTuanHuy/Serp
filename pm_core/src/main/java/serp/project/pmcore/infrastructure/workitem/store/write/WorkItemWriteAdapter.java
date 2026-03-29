@@ -7,7 +7,8 @@ package serp.project.pmcore.infrastructure.workitem.store.write;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.workitem.WorkItemEntity;
+
+import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.write.IWorkItemWritePort;
 import serp.project.pmcore.infrastructure.workitem.store.write.mapper.WorkItemMapper;
 import serp.project.pmcore.infrastructure.workitem.store.write.repository.IWorkItemRepository;

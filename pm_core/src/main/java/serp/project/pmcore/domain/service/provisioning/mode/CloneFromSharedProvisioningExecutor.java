@@ -2,10 +2,11 @@ package serp.project.pmcore.domain.service.provisioning.mode;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import serp.project.pmcore.domain.enums.ProvisioningMode;
-import serp.project.pmcore.domain.enums.SchemeType;
+
 import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.SchemeProvisionerRegistry;
+import serp.project.pmcore.domain.shared.enums.ProvisioningMode;
+import serp.project.pmcore.domain.shared.enums.SchemeType;
 
 import java.util.EnumMap;
 import java.util.List;

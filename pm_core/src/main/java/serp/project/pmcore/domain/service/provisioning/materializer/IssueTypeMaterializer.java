@@ -3,11 +3,12 @@ package serp.project.pmcore.domain.service.provisioning.materializer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.constant.TenantConstants;
-import serp.project.pmcore.domain.entity.workitem.IssueTypeEntity;
-import serp.project.pmcore.domain.exception.DomainErrorCode;
-import serp.project.pmcore.domain.exception.ResourceNotFoundException;
-import serp.project.pmcore.domain.port.store.IIssueTypePort;
+
+import serp.project.pmcore.domain.issyetype.entity.IssueTypeEntity;
+import serp.project.pmcore.domain.issyetype.port.IIssueTypePort;
+import serp.project.pmcore.domain.shared.constant.TenantConstants;
+import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
+import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 
 import java.util.Objects;
 import java.util.Optional;

@@ -6,7 +6,8 @@
 package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.project.ProjectBlueprintEntity;
+
+import serp.project.pmcore.domain.blueprint.entity.ProjectBlueprintEntity;
 import serp.project.pmcore.infrastructure.store.model.ProjectBlueprintModel;
 
 import java.util.Collections;

@@ -8,9 +8,9 @@ package serp.project.pmcore.domain.service.impl;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
-import serp.project.pmcore.domain.entity.OutboxEventEntity;
-import serp.project.pmcore.domain.port.store.IOutboxEventPort;
 import serp.project.pmcore.domain.service.IOutboxEventService;
+import serp.project.pmcore.domain.shared.entity.OutboxEventEntity;
+import serp.project.pmcore.domain.shared.port.store.IOutboxEventPort;
 
 @Service
 @RequiredArgsConstructor

@@ -1,8 +1,9 @@
 package serp.project.pmcore.domain.service.provisioning.support;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.enums.CloneMode;
-import serp.project.pmcore.domain.enums.SchemeType;
+
+import serp.project.pmcore.domain.shared.enums.CloneMode;
+import serp.project.pmcore.domain.shared.enums.SchemeType;
 
 import java.text.Normalizer;
 import java.util.Locale;

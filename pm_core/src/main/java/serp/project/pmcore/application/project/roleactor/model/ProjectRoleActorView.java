@@ -5,7 +5,7 @@
 
 package serp.project.pmcore.application.project.roleactor.model;
 
-import serp.project.pmcore.domain.entity.project.ProjectRoleActorEntity;
+import serp.project.pmcore.domain.project.entity.ProjectRoleActorEntity;
 
 public record ProjectRoleActorView(
         Long id,

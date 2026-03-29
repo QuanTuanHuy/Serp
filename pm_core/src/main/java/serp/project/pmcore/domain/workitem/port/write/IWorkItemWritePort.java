@@ -5,7 +5,7 @@
 
 package serp.project.pmcore.domain.workitem.port.write;
 
-import serp.project.pmcore.domain.entity.workitem.WorkItemEntity;
+import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 
 public interface IWorkItemWritePort {
     WorkItemEntity saveWorkItem(WorkItemEntity workItem);

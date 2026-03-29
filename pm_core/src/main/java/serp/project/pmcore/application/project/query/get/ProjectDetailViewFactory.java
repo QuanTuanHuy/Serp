@@ -7,8 +7,9 @@ package serp.project.pmcore.application.project.query.get;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.project.ProjectEntity;
-import serp.project.pmcore.domain.port.store.IProjectCategoryPort;
+
+import serp.project.pmcore.domain.project.entity.ProjectEntity;
+import serp.project.pmcore.domain.project.port.IProjectCategoryPort;
 
 import java.util.Set;
 

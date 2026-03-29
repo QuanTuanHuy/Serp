@@ -9,11 +9,11 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import serp.project.pmcore.domain.entity.PrioritySchemeEntity;
-import serp.project.pmcore.domain.exception.AppException;
-import serp.project.pmcore.domain.exception.ErrorCode;
-import serp.project.pmcore.domain.port.store.IPrioritySchemePort;
+import serp.project.pmcore.domain.priority.entity.PrioritySchemeEntity;
+import serp.project.pmcore.domain.priority.port.IPrioritySchemePort;
 import serp.project.pmcore.domain.service.IPrioritySchemeService;
+import serp.project.pmcore.domain.shared.exception.AppException;
+import serp.project.pmcore.domain.shared.exception.ErrorCode;
 
 @Service
 @RequiredArgsConstructor

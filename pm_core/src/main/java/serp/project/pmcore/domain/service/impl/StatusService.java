@@ -12,9 +12,9 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
-import serp.project.pmcore.domain.entity.StatusEntity;
-import serp.project.pmcore.domain.port.store.IStatusPort;
 import serp.project.pmcore.domain.service.IStatusService;
+import serp.project.pmcore.domain.workitem.entity.StatusEntity;
+import serp.project.pmcore.domain.workitem.port.IStatusPort;
 
 @Service
 @RequiredArgsConstructor

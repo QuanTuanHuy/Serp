@@ -3,16 +3,17 @@ package serp.project.pmcore.domain.service.provisioning.cloner;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.NotificationSchemeEntity;
-import serp.project.pmcore.domain.entity.NotificationSchemeEntryEntity;
-import serp.project.pmcore.domain.enums.CloneMode;
-import serp.project.pmcore.domain.enums.SchemeType;
-import serp.project.pmcore.domain.exception.DomainErrorCode;
-import serp.project.pmcore.domain.exception.DomainValidationException;
-import serp.project.pmcore.domain.port.store.INotificationSchemeEntryPort;
-import serp.project.pmcore.domain.port.store.INotificationSchemePort;
+
+import serp.project.pmcore.domain.notification.entity.NotificationSchemeEntity;
+import serp.project.pmcore.domain.notification.entity.NotificationSchemeEntryEntity;
+import serp.project.pmcore.domain.notification.port.INotificationSchemeEntryPort;
+import serp.project.pmcore.domain.notification.port.INotificationSchemePort;
 import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.support.CloneNamingHelper;
+import serp.project.pmcore.domain.shared.enums.CloneMode;
+import serp.project.pmcore.domain.shared.enums.SchemeType;
+import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
+import serp.project.pmcore.domain.shared.exception.DomainValidationException;
 
 import java.util.ArrayList;
 import java.util.List;

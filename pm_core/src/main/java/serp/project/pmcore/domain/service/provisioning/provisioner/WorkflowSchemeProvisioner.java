@@ -2,18 +2,21 @@ package serp.project.pmcore.domain.service.provisioning.provisioner;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.WorkflowSchemeEntity;
-import serp.project.pmcore.domain.entity.WorkflowSchemeItemEntity;
-import serp.project.pmcore.domain.enums.CloneMode;
-import serp.project.pmcore.domain.enums.SchemeType;
-import serp.project.pmcore.domain.exception.DomainErrorCode;
-import serp.project.pmcore.domain.exception.DomainException;
-import serp.project.pmcore.domain.port.store.*;
+
 import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.cloner.WorkflowCloner;
 import serp.project.pmcore.domain.service.provisioning.materializer.IssueTypeMaterializer;
 import serp.project.pmcore.domain.service.provisioning.provisioner.base.AbstractMappedSharedProvisioner;
 import serp.project.pmcore.domain.service.provisioning.support.CloneNamingHelper;
+import serp.project.pmcore.domain.shared.enums.CloneMode;
+import serp.project.pmcore.domain.shared.enums.SchemeType;
+import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
+import serp.project.pmcore.domain.shared.exception.DomainException;
+import serp.project.pmcore.domain.shared.port.store.ITenantSchemeMappingPort;
+import serp.project.pmcore.domain.workflow.entity.WorkflowSchemeEntity;
+import serp.project.pmcore.domain.workflow.entity.WorkflowSchemeItemEntity;
+import serp.project.pmcore.domain.workflow.port.IWorkflowSchemeItemPort;
+import serp.project.pmcore.domain.workflow.port.IWorkflowSchemePort;
 
 import java.util.*;
 

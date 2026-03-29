@@ -9,7 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import serp.project.pmcore.domain.entity.project.ProjectEntity;
+import serp.project.pmcore.domain.project.entity.ProjectEntity;
 
 @Data
 @Builder

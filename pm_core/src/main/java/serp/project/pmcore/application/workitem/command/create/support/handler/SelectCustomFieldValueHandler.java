@@ -7,9 +7,9 @@ package serp.project.pmcore.application.workitem.command.create.support.handler;
 
 import org.springframework.stereotype.Component;
 import serp.project.pmcore.application.workitem.command.create.model.CustomFieldResolutionContext;
-import serp.project.pmcore.domain.entity.CustomFieldContextDefaultValueEntity;
-import serp.project.pmcore.domain.entity.CustomFieldOptionEntity;
-import serp.project.pmcore.domain.entity.workitem.WorkItemCustomFieldValueEntity;
+import serp.project.pmcore.domain.customfield.entity.CustomFieldContextDefaultValueEntity;
+import serp.project.pmcore.domain.customfield.entity.CustomFieldOptionEntity;
+import serp.project.pmcore.domain.workitem.entity.WorkItemCustomFieldValueEntity;
 
 import java.util.List;
 

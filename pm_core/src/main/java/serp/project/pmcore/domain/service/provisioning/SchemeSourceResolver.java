@@ -3,14 +3,15 @@ package serp.project.pmcore.domain.service.provisioning;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.dto.project.ProjectProvisioningRequest;
-import serp.project.pmcore.domain.entity.BlueprintSchemeDefaultEntity;
-import serp.project.pmcore.domain.entity.TenantSchemeDefaultEntity;
-import serp.project.pmcore.domain.enums.SchemeType;
-import serp.project.pmcore.domain.exception.DomainErrorCode;
-import serp.project.pmcore.domain.exception.DomainException;
-import serp.project.pmcore.domain.port.store.IBlueprintSchemeDefaultPort;
-import serp.project.pmcore.domain.port.store.ITenantSchemeDefaultPort;
+
+import serp.project.pmcore.domain.blueprint.entity.BlueprintSchemeDefaultEntity;
+import serp.project.pmcore.domain.blueprint.port.IBlueprintSchemeDefaultPort;
+import serp.project.pmcore.domain.project.dto.ProjectProvisioningRequest;
+import serp.project.pmcore.domain.shared.entity.TenantSchemeDefaultEntity;
+import serp.project.pmcore.domain.shared.enums.SchemeType;
+import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
+import serp.project.pmcore.domain.shared.exception.DomainException;
+import serp.project.pmcore.domain.shared.port.store.ITenantSchemeDefaultPort;
 
 import java.util.Collections;
 import java.util.EnumMap;

@@ -5,7 +5,7 @@
 
 package serp.project.pmcore.domain.service;
 
-import serp.project.pmcore.domain.entity.PrioritySchemeEntity;
+import serp.project.pmcore.domain.priority.entity.PrioritySchemeEntity;
 
 public interface IPrioritySchemeService {
 

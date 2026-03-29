@@ -7,9 +7,10 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.TenantSchemeMappingEntity;
-import serp.project.pmcore.domain.enums.SchemeType;
-import serp.project.pmcore.domain.port.store.ITenantSchemeMappingPort;
+
+import serp.project.pmcore.domain.shared.entity.TenantSchemeMappingEntity;
+import serp.project.pmcore.domain.shared.enums.SchemeType;
+import serp.project.pmcore.domain.shared.port.store.ITenantSchemeMappingPort;
 import serp.project.pmcore.infrastructure.store.mapper.TenantSchemeMappingMapper;
 import serp.project.pmcore.infrastructure.store.repository.ITenantSchemeMappingRepository;
 

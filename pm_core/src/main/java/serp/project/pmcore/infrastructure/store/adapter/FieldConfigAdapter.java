@@ -7,8 +7,9 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.FieldConfigEntity;
-import serp.project.pmcore.domain.port.store.IFieldConfigPort;
+
+import serp.project.pmcore.domain.fieldconfig.entity.FieldConfigEntity;
+import serp.project.pmcore.domain.fieldconfig.port.IFieldConfigPort;
 import serp.project.pmcore.infrastructure.store.mapper.FieldConfigMapper;
 import serp.project.pmcore.infrastructure.store.repository.IFieldConfigRepository;
 

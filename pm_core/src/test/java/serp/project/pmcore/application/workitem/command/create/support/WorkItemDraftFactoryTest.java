@@ -9,9 +9,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import serp.project.pmcore.application.workitem.command.create.model.CreateWorkItemData;
 import serp.project.pmcore.application.workitem.command.create.model.ResolvedWorkItemCreateConfiguration;
-import serp.project.pmcore.domain.entity.workflow.WorkflowStepEntity;
-import serp.project.pmcore.domain.entity.workitem.IssueTypeEntity;
-import serp.project.pmcore.domain.entity.workitem.WorkItemEntity;
+import serp.project.pmcore.domain.issyetype.entity.IssueTypeEntity;
+import serp.project.pmcore.domain.workflow.entity.WorkflowStepEntity;
+import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;

@@ -8,7 +8,7 @@ package serp.project.pmcore.application.workitem.command.create.support;
 import org.springframework.stereotype.Component;
 import serp.project.pmcore.application.workitem.command.create.model.CreateWorkItemData;
 import serp.project.pmcore.application.workitem.command.create.model.ResolvedWorkItemCreateConfiguration;
-import serp.project.pmcore.domain.entity.workitem.WorkItemEntity;
+import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 
 @Component
 public class WorkItemDraftFactory {

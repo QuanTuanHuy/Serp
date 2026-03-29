@@ -8,7 +8,7 @@ package serp.project.pmcore.domain.service;
 
 import java.util.List;
 
-import serp.project.pmcore.domain.entity.StatusEntity;
+import serp.project.pmcore.domain.workitem.entity.StatusEntity;
 
 public interface IStatusService {
     List<StatusEntity> getStatusesByTenantId(Long tenantId);

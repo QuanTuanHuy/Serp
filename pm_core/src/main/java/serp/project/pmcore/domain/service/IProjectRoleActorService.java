@@ -5,9 +5,9 @@
 
 package serp.project.pmcore.domain.service;
 
-import serp.project.pmcore.domain.entity.project.ProjectRoleActorEntity;
-
 import java.util.List;
+
+import serp.project.pmcore.domain.project.entity.ProjectRoleActorEntity;
 
 public interface IProjectRoleActorService {
     ProjectRoleActorEntity assignActor(Long tenantId,

@@ -8,8 +8,9 @@ package serp.project.pmcore.domain.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import serp.project.pmcore.domain.entity.project.ProjectBlueprintEntity;
-import serp.project.pmcore.domain.port.store.IProjectBlueprintPort;
+
+import serp.project.pmcore.domain.blueprint.entity.ProjectBlueprintEntity;
+import serp.project.pmcore.domain.blueprint.port.IProjectBlueprintPort;
 import serp.project.pmcore.domain.service.IProjectBlueprintService;
 
 import java.util.Optional;

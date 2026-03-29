@@ -5,9 +5,9 @@
 
 package serp.project.pmcore.application.workitem.command.create.model;
 
-import serp.project.pmcore.domain.entity.workitem.WorkItemCustomFieldValueEntity;
-
 import java.util.List;
+
+import serp.project.pmcore.domain.workitem.entity.WorkItemCustomFieldValueEntity;
 
 public record ResolvedCustomFields(List<WorkItemCustomFieldValueEntity> values,
                                    List<String> missingFields) {

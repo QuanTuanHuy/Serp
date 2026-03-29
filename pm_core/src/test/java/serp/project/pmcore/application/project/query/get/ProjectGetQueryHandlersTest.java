@@ -10,10 +10,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import serp.project.pmcore.domain.entity.project.ProjectCategoryEntity;
-import serp.project.pmcore.domain.entity.project.ProjectEntity;
-import serp.project.pmcore.domain.port.store.IProjectCategoryPort;
-import serp.project.pmcore.domain.port.store.IProjectPort;
+
+import serp.project.pmcore.domain.project.entity.ProjectCategoryEntity;
+import serp.project.pmcore.domain.project.entity.ProjectEntity;
+import serp.project.pmcore.domain.project.port.IProjectCategoryPort;
+import serp.project.pmcore.domain.project.port.IProjectPort;
 
 import java.util.Optional;
 import java.util.Set;

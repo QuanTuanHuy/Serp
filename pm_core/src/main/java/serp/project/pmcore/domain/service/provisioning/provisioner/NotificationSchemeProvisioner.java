@@ -2,14 +2,15 @@ package serp.project.pmcore.domain.service.provisioning.provisioner;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.NotificationSchemeEntity;
-import serp.project.pmcore.domain.enums.CloneMode;
-import serp.project.pmcore.domain.enums.SchemeType;
-import serp.project.pmcore.domain.port.store.INotificationSchemePort;
-import serp.project.pmcore.domain.port.store.ITenantSchemeMappingPort;
+
+import serp.project.pmcore.domain.notification.entity.NotificationSchemeEntity;
+import serp.project.pmcore.domain.notification.port.INotificationSchemePort;
 import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.cloner.NotificationSchemeCloner;
 import serp.project.pmcore.domain.service.provisioning.provisioner.base.AbstractMappedSharedProvisioner;
+import serp.project.pmcore.domain.shared.enums.CloneMode;
+import serp.project.pmcore.domain.shared.enums.SchemeType;
+import serp.project.pmcore.domain.shared.port.store.ITenantSchemeMappingPort;
 
 import java.util.Optional;
 

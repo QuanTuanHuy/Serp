@@ -2,17 +2,18 @@ package serp.project.pmcore.domain.service.provisioning.cloner;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.workflow.WorkflowStepEntity;
-import serp.project.pmcore.domain.entity.workflow.WorkflowTransitionEntity;
-import serp.project.pmcore.domain.entity.workflow.WorkflowTransitionRuleEntity;
-import serp.project.pmcore.domain.entity.workflow.WorkflowVersionEntity;
-import serp.project.pmcore.domain.enums.CloneMode;
-import serp.project.pmcore.domain.exception.*;
-import serp.project.pmcore.domain.port.store.IWorkflowStepPort;
-import serp.project.pmcore.domain.port.store.IWorkflowTransitionPort;
-import serp.project.pmcore.domain.port.store.IWorkflowTransitionRulePort;
+
 import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.materializer.StatusMaterializer;
+import serp.project.pmcore.domain.shared.enums.CloneMode;
+import serp.project.pmcore.domain.shared.exception.*;
+import serp.project.pmcore.domain.workflow.entity.WorkflowStepEntity;
+import serp.project.pmcore.domain.workflow.entity.WorkflowTransitionEntity;
+import serp.project.pmcore.domain.workflow.entity.WorkflowTransitionRuleEntity;
+import serp.project.pmcore.domain.workflow.entity.WorkflowVersionEntity;
+import serp.project.pmcore.domain.workflow.port.IWorkflowStepPort;
+import serp.project.pmcore.domain.workflow.port.IWorkflowTransitionPort;
+import serp.project.pmcore.domain.workflow.port.IWorkflowTransitionRulePort;
 
 import java.util.ArrayList;
 import java.util.HashMap;

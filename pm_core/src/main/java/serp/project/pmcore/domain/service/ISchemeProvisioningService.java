@@ -5,9 +5,9 @@
 
 package serp.project.pmcore.domain.service;
 
-import serp.project.pmcore.domain.dto.project.ProjectProvisioningRequest;
-import serp.project.pmcore.domain.dto.project.ProjectProvisioningResult;
-import serp.project.pmcore.domain.entity.project.ProjectEntity;
+import serp.project.pmcore.domain.project.dto.ProjectProvisioningRequest;
+import serp.project.pmcore.domain.project.dto.ProjectProvisioningResult;
+import serp.project.pmcore.domain.project.entity.ProjectEntity;
 
 /**
  * Service responsible for resolving source schemes into effective

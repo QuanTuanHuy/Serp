@@ -5,9 +5,9 @@
 
 package serp.project.pmcore.domain.service;
 
-import serp.project.pmcore.domain.entity.project.ProjectBlueprintEntity;
-
 import java.util.Optional;
+
+import serp.project.pmcore.domain.blueprint.entity.ProjectBlueprintEntity;
 
 public interface IProjectBlueprintService {
 

@@ -10,21 +10,21 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
-import serp.project.pmcore.domain.constant.PermissionSeedConstants;
-import serp.project.pmcore.domain.dto.project.ProjectProvisioningRequest;
-import serp.project.pmcore.domain.dto.project.ProjectProvisioningResult;
-import serp.project.pmcore.domain.entity.project.ProjectEntity;
-import serp.project.pmcore.domain.entity.project.ProjectRoleEntity;
-import serp.project.pmcore.domain.entity.project.ProjectSchemeBindings;
-import serp.project.pmcore.domain.enums.ProjectRoleActorSubjectType;
-import serp.project.pmcore.domain.enums.ProvisioningMode;
-import serp.project.pmcore.domain.exception.DomainErrorCode;
-import serp.project.pmcore.domain.exception.ResourceNotFoundException;
+import serp.project.pmcore.domain.project.dto.ProjectProvisioningRequest;
+import serp.project.pmcore.domain.project.dto.ProjectProvisioningResult;
+import serp.project.pmcore.domain.project.dto.ProjectSchemeBindings;
+import serp.project.pmcore.domain.project.entity.ProjectEntity;
+import serp.project.pmcore.domain.project.entity.ProjectRoleEntity;
+import serp.project.pmcore.domain.project.validator.ProjectSchemeCompatibilityValidator;
 import serp.project.pmcore.domain.service.IProjectRoleActorService;
 import serp.project.pmcore.domain.service.IProjectRoleService;
 import serp.project.pmcore.domain.service.IProjectService;
 import serp.project.pmcore.domain.service.ISchemeProvisioningService;
-import serp.project.pmcore.domain.validator.ProjectSchemeCompatibilityValidator;
+import serp.project.pmcore.domain.shared.constant.PermissionSeedConstants;
+import serp.project.pmcore.domain.shared.enums.ProjectRoleActorSubjectType;
+import serp.project.pmcore.domain.shared.enums.ProvisioningMode;
+import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
+import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 
 @Service
 @RequiredArgsConstructor

@@ -11,17 +11,18 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import serp.project.pmcore.domain.constant.PermissionSeedConstants;
-import serp.project.pmcore.domain.dto.project.ProjectProvisioningRequest;
-import serp.project.pmcore.domain.dto.project.ProjectProvisioningResult;
-import serp.project.pmcore.domain.entity.project.ProjectEntity;
-import serp.project.pmcore.domain.entity.project.ProjectRoleEntity;
-import serp.project.pmcore.domain.enums.ProvisioningMode;
+
+import serp.project.pmcore.domain.project.dto.ProjectProvisioningRequest;
+import serp.project.pmcore.domain.project.dto.ProjectProvisioningResult;
+import serp.project.pmcore.domain.project.entity.ProjectEntity;
+import serp.project.pmcore.domain.project.entity.ProjectRoleEntity;
+import serp.project.pmcore.domain.project.validator.ProjectSchemeCompatibilityValidator;
 import serp.project.pmcore.domain.service.IProjectRoleActorService;
 import serp.project.pmcore.domain.service.IProjectRoleService;
 import serp.project.pmcore.domain.service.IProjectService;
 import serp.project.pmcore.domain.service.ISchemeProvisioningService;
-import serp.project.pmcore.domain.validator.ProjectSchemeCompatibilityValidator;
+import serp.project.pmcore.domain.shared.constant.PermissionSeedConstants;
+import serp.project.pmcore.domain.shared.enums.ProvisioningMode;
 
 import java.util.Optional;
 

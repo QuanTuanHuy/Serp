@@ -6,7 +6,8 @@
 package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.CustomFieldEntity;
+
+import serp.project.pmcore.domain.customfield.entity.CustomFieldEntity;
 import serp.project.pmcore.infrastructure.store.model.CustomFieldModel;
 
 import java.util.Collections;

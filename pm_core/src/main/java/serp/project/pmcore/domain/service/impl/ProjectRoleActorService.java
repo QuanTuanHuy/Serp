@@ -7,12 +7,13 @@ package serp.project.pmcore.domain.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import serp.project.pmcore.domain.entity.project.ProjectRoleActorEntity;
-import serp.project.pmcore.domain.exception.BusinessRuleViolationException;
-import serp.project.pmcore.domain.exception.DomainErrorCode;
-import serp.project.pmcore.domain.exception.ResourceNotFoundException;
-import serp.project.pmcore.domain.port.store.IProjectRoleActorPort;
+
+import serp.project.pmcore.domain.project.entity.ProjectRoleActorEntity;
+import serp.project.pmcore.domain.project.port.IProjectRoleActorPort;
 import serp.project.pmcore.domain.service.IProjectRoleActorService;
+import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
+import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
+import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 
 import java.util.List;
 

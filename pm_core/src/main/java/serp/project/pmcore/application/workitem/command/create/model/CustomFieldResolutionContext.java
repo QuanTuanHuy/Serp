@@ -5,9 +5,9 @@
 
 package serp.project.pmcore.application.workitem.command.create.model;
 
-import serp.project.pmcore.domain.entity.CustomFieldOptionEntity;
-
 import java.util.List;
+
+import serp.project.pmcore.domain.customfield.entity.CustomFieldOptionEntity;
 
 public record CustomFieldResolutionContext(Long customFieldId,
                                            Long customFieldContextId,

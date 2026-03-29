@@ -7,8 +7,9 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.workitem.WorkItemCustomFieldValueEntity;
-import serp.project.pmcore.domain.port.store.IWorkItemCustomFieldValuePort;
+
+import serp.project.pmcore.domain.workitem.entity.WorkItemCustomFieldValueEntity;
+import serp.project.pmcore.domain.workitem.port.IWorkItemCustomFieldValuePort;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemCustomFieldValueMapper;
 import serp.project.pmcore.infrastructure.store.repository.IWorkItemCustomFieldValueRepository;
 

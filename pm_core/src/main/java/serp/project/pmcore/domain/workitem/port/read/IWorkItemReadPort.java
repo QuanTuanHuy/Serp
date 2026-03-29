@@ -7,7 +7,7 @@ package serp.project.pmcore.domain.workitem.port.read;
 
 import org.springframework.data.util.Pair;
 import serp.project.pmcore.application.workitem.query.search.model.WorkItemFilterRequest;
-import serp.project.pmcore.domain.entity.workitem.WorkItemEntity;
+import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 
 import java.util.List;
 import java.util.Optional;

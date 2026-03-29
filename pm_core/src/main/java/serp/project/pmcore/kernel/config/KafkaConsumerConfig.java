@@ -21,8 +21,8 @@ import org.springframework.kafka.support.ExponentialBackOffWithMaxRetries;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
-import serp.project.pmcore.domain.exception.KafkaNonRetryableException;
 import serp.project.pmcore.domain.service.IConsumerInboxService;
+import serp.project.pmcore.domain.shared.exception.KafkaNonRetryableException;
 import serp.project.pmcore.kernel.property.KafkaConsumerProperties;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 

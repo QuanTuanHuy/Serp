@@ -13,7 +13,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import serp.project.pmcore.domain.enums.ProvisioningMode;
+import serp.project.pmcore.domain.shared.enums.ProvisioningMode;
 
 @Data
 @Builder

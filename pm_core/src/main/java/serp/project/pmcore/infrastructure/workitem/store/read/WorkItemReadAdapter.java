@@ -11,7 +11,7 @@ import org.springframework.data.util.Pair;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 import serp.project.pmcore.application.workitem.query.search.model.WorkItemFilterRequest;
-import serp.project.pmcore.domain.entity.workitem.WorkItemEntity;
+import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 import serp.project.pmcore.infrastructure.workitem.store.read.mapper.WorkItemRowMapper;
 import serp.project.pmcore.infrastructure.workitem.store.read.query.WorkItemQueryBuilder;

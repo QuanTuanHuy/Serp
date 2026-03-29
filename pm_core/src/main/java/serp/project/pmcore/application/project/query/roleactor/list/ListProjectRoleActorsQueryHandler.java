@@ -10,13 +10,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.project.roleactor.model.ProjectRoleActorView;
 import serp.project.pmcore.application.shared.cqrs.query.IQueryHandler;
-import serp.project.pmcore.domain.constant.ProjectPermissionKeys;
-import serp.project.pmcore.domain.dto.project.ProjectPermissionEvaluationContext;
-import serp.project.pmcore.domain.entity.project.ProjectEntity;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
+import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.service.IProjectRoleActorService;
 import serp.project.pmcore.domain.service.IProjectRoleService;
 import serp.project.pmcore.domain.service.IProjectService;
+import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 
 import java.util.List;
 import java.util.Set;

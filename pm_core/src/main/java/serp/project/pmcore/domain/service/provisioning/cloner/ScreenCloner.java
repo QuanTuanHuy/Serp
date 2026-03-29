@@ -3,15 +3,16 @@ package serp.project.pmcore.domain.service.provisioning.cloner;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.ScreenEntity;
-import serp.project.pmcore.domain.entity.ScreenTabEntity;
-import serp.project.pmcore.domain.entity.ScreenTabFieldEntity;
-import serp.project.pmcore.domain.enums.CloneMode;
-import serp.project.pmcore.domain.exception.*;
-import serp.project.pmcore.domain.port.store.IScreenPort;
-import serp.project.pmcore.domain.port.store.IScreenTabFieldPort;
-import serp.project.pmcore.domain.port.store.IScreenTabPort;
+
+import serp.project.pmcore.domain.screen.entity.ScreenEntity;
+import serp.project.pmcore.domain.screen.entity.ScreenTabEntity;
+import serp.project.pmcore.domain.screen.entity.ScreenTabFieldEntity;
+import serp.project.pmcore.domain.screen.port.IScreenPort;
+import serp.project.pmcore.domain.screen.port.IScreenTabFieldPort;
+import serp.project.pmcore.domain.screen.port.IScreenTabPort;
 import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
+import serp.project.pmcore.domain.shared.enums.CloneMode;
+import serp.project.pmcore.domain.shared.exception.*;
 
 import java.util.*;
 

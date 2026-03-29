@@ -2,19 +2,20 @@ package serp.project.pmcore.domain.service.provisioning.provisioner;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import serp.project.pmcore.domain.entity.PrioritySchemeEntity;
-import serp.project.pmcore.domain.entity.PrioritySchemeItemEntity;
-import serp.project.pmcore.domain.enums.CloneMode;
-import serp.project.pmcore.domain.enums.SchemeType;
-import serp.project.pmcore.domain.exception.DomainErrorCode;
-import serp.project.pmcore.domain.exception.DomainException;
-import serp.project.pmcore.domain.port.store.IPrioritySchemeItemPort;
-import serp.project.pmcore.domain.port.store.IPrioritySchemePort;
-import serp.project.pmcore.domain.port.store.ITenantSchemeMappingPort;
+
+import serp.project.pmcore.domain.priority.entity.PrioritySchemeEntity;
+import serp.project.pmcore.domain.priority.entity.PrioritySchemeItemEntity;
+import serp.project.pmcore.domain.priority.port.IPrioritySchemeItemPort;
+import serp.project.pmcore.domain.priority.port.IPrioritySchemePort;
 import serp.project.pmcore.domain.service.provisioning.ProvisioningExecutionContext;
 import serp.project.pmcore.domain.service.provisioning.materializer.PriorityMaterializer;
 import serp.project.pmcore.domain.service.provisioning.provisioner.base.AbstractMappedSharedProvisioner;
 import serp.project.pmcore.domain.service.provisioning.support.CloneNamingHelper;
+import serp.project.pmcore.domain.shared.enums.CloneMode;
+import serp.project.pmcore.domain.shared.enums.SchemeType;
+import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
+import serp.project.pmcore.domain.shared.exception.DomainException;
+import serp.project.pmcore.domain.shared.port.store.ITenantSchemeMappingPort;
 
 import java.util.*;
 

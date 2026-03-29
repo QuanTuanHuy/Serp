@@ -9,13 +9,13 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import serp.project.pmcore.domain.entity.workflow.WorkflowEntity;
-import serp.project.pmcore.domain.entity.workflow.WorkflowStepEntity;
-import serp.project.pmcore.domain.exception.AppException;
-import serp.project.pmcore.domain.exception.ErrorCode;
-import serp.project.pmcore.domain.port.store.IWorkflowPort;
-import serp.project.pmcore.domain.port.store.IWorkflowStepPort;
 import serp.project.pmcore.domain.service.IWorkflowService;
+import serp.project.pmcore.domain.shared.exception.AppException;
+import serp.project.pmcore.domain.shared.exception.ErrorCode;
+import serp.project.pmcore.domain.workflow.entity.WorkflowEntity;
+import serp.project.pmcore.domain.workflow.entity.WorkflowStepEntity;
+import serp.project.pmcore.domain.workflow.port.IWorkflowPort;
+import serp.project.pmcore.domain.workflow.port.IWorkflowStepPort;
 
 @Service
 @RequiredArgsConstructor

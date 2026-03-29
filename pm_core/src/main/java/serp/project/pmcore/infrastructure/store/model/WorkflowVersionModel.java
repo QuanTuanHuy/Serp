@@ -15,8 +15,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import serp.project.pmcore.domain.shared.enums.WorkflowVersionState;
+
 import org.hibernate.annotations.SQLRestriction;
-import serp.project.pmcore.domain.enums.WorkflowVersionState;
 
 import java.time.LocalDateTime;
 

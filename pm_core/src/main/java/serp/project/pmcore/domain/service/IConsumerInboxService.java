@@ -5,7 +5,7 @@
 
 package serp.project.pmcore.domain.service;
 
-import serp.project.pmcore.domain.enums.ConsumerInboxAcquireResult;
+import serp.project.pmcore.domain.shared.enums.ConsumerInboxAcquireResult;
 
 public interface IConsumerInboxService {
     ConsumerInboxAcquireResult acquireForProcessing(

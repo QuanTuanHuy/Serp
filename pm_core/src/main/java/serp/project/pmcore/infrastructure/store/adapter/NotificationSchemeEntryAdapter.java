@@ -7,8 +7,9 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.NotificationSchemeEntryEntity;
-import serp.project.pmcore.domain.port.store.INotificationSchemeEntryPort;
+
+import serp.project.pmcore.domain.notification.entity.NotificationSchemeEntryEntity;
+import serp.project.pmcore.domain.notification.port.INotificationSchemeEntryPort;
 import serp.project.pmcore.infrastructure.store.mapper.NotificationSchemeEntryMapper;
 import serp.project.pmcore.infrastructure.store.repository.INotificationSchemeEntryRepository;
 

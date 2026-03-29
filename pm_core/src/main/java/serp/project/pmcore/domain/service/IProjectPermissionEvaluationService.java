@@ -5,8 +5,8 @@
 
 package serp.project.pmcore.domain.service;
 
-import serp.project.pmcore.domain.dto.project.ProjectPermissionEvaluationContext;
-import serp.project.pmcore.domain.entity.project.ProjectEntity;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
+import serp.project.pmcore.domain.project.entity.ProjectEntity;
 
 public interface IProjectPermissionEvaluationService {
     boolean hasPermission(ProjectEntity project,

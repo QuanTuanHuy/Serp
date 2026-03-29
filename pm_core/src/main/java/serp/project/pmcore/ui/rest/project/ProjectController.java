@@ -23,9 +23,9 @@ import serp.project.pmcore.application.project.query.get.GetProjectByIdQueryHand
 import serp.project.pmcore.application.project.query.get.GetProjectByKeyQuery;
 import serp.project.pmcore.application.project.query.get.GetProjectByKeyQueryHandler;
 import serp.project.pmcore.application.project.query.get.ProjectDetailView;
-import serp.project.pmcore.domain.constant.RestControllerConstants;
-import serp.project.pmcore.domain.exception.AccessDeniedException;
-import serp.project.pmcore.domain.exception.DomainErrorCode;
+import serp.project.pmcore.domain.shared.constant.RestControllerConstants;
+import serp.project.pmcore.domain.shared.exception.AccessDeniedException;
+import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.kernel.utils.AuthUtils;
 import serp.project.pmcore.ui.rest.project.dto.request.CreateProjectRequest;
 import serp.project.pmcore.ui.rest.shared.response.GeneralResponse;

@@ -7,12 +7,13 @@ package serp.project.pmcore.application.workitem.command.create.support;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import serp.project.pmcore.domain.constant.WorkItemFieldConstants;
+
+import serp.project.pmcore.domain.shared.constant.WorkItemFieldConstants;
+import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
+import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.application.workitem.command.create.model.CreateWorkItemData;
 import serp.project.pmcore.application.workitem.command.create.model.CreateFieldRules;
 import serp.project.pmcore.application.workitem.command.create.model.FieldPolicy;
-import serp.project.pmcore.domain.exception.BusinessRuleViolationException;
-import serp.project.pmcore.domain.exception.DomainErrorCode;
 
 import java.util.Map;
 

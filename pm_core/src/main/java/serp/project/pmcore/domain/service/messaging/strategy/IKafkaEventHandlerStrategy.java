@@ -7,7 +7,7 @@ package serp.project.pmcore.domain.service.messaging.strategy;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
-import serp.project.pmcore.domain.dto.message.KafkaEventContext;
+import serp.project.pmcore.domain.shared.dto.message.KafkaEventContext;
 
 public interface IKafkaEventHandlerStrategy {
     String getEventType();

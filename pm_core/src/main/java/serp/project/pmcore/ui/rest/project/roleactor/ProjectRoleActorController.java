@@ -24,9 +24,9 @@ import serp.project.pmcore.application.project.command.roleactor.remove.RemovePr
 import serp.project.pmcore.application.project.query.roleactor.list.ListProjectRoleActorsQuery;
 import serp.project.pmcore.application.project.query.roleactor.list.ListProjectRoleActorsQueryHandler;
 import serp.project.pmcore.application.project.roleactor.model.ProjectRoleActorView;
-import serp.project.pmcore.domain.constant.RestControllerConstants;
-import serp.project.pmcore.domain.exception.AccessDeniedException;
-import serp.project.pmcore.domain.exception.DomainErrorCode;
+import serp.project.pmcore.domain.shared.constant.RestControllerConstants;
+import serp.project.pmcore.domain.shared.exception.AccessDeniedException;
+import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.kernel.utils.AuthUtils;
 import serp.project.pmcore.ui.rest.project.roleactor.dto.request.AddProjectRoleActorRequest;
 import serp.project.pmcore.ui.rest.project.roleactor.dto.response.ProjectRoleActorResponse;

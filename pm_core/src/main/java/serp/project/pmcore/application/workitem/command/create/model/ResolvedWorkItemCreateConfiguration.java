@@ -5,8 +5,8 @@
 
 package serp.project.pmcore.application.workitem.command.create.model;
 
-import serp.project.pmcore.domain.entity.workflow.WorkflowStepEntity;
-import serp.project.pmcore.domain.entity.workitem.IssueTypeEntity;
+import serp.project.pmcore.domain.issyetype.entity.IssueTypeEntity;
+import serp.project.pmcore.domain.workflow.entity.WorkflowStepEntity;
 
 public record ResolvedWorkItemCreateConfiguration(IssueTypeEntity issueType,
                                                   WorkflowStepEntity initialStep,
