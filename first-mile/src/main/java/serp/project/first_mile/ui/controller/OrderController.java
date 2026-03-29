@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import serp.project.first_mile.dto.request.OrderImportDTO;
+import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
@@ -47,5 +48,27 @@ public class OrderController {
         );
         log.info("REST request to validate Order import file for tenant {}", tenantId);
         return orderService.validateImportFile(file, tenantId);
+    }
+
+    @PostMapping("/import")
+    public ImportHistoryResponse importFile(
+            @RequestParam("file") MultipartFile file
+    ) {
+        Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
+                () -> new AppException(ErrorCode.UNAUTHORIZED)
+        );
+        log.info("REST request to import Order file for tenant {}", tenantId);
+        return orderService.importOrdersAsync(file, tenantId);
+    }
+
+    @GetMapping("/import-history/{importHistoryId}")
+    public ImportHistoryResponse getImportHistory(
+            @PathVariable Long importHistoryId
+    ) {
+        Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
+                () -> new AppException(ErrorCode.UNAUTHORIZED)
+        );
+        log.info("REST request to get order import history {} for tenant {}", importHistoryId, tenantId);
+        return orderService.getImportHistory(importHistoryId, tenantId);
     }
 }

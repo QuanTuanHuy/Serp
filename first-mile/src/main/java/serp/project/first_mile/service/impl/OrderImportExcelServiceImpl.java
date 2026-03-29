@@ -16,17 +16,30 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import serp.project.first_mile.domain.Dimension;
+import serp.project.first_mile.domain.ImportHistory;
+import serp.project.first_mile.domain.Order;
+import serp.project.first_mile.domain.Product;
 import serp.project.first_mile.domain.ProductType;
 import serp.project.first_mile.domain.Ward;
 import serp.project.first_mile.dto.request.OrderImportDTO;
+import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
 import serp.project.first_mile.enums.DeliveryRequestTime;
 import serp.project.first_mile.enums.FeePayer;
+import serp.project.first_mile.enums.ImportHistoryStatus;
 import serp.project.first_mile.enums.OrderProductCategory;
+import serp.project.first_mile.enums.OrderStatus;
 import serp.project.first_mile.enums.OrderType;
+import serp.project.first_mile.enums.PaymentStatus;
+import serp.project.first_mile.exception.AppException;
+import serp.project.first_mile.exception.ErrorCode;
+import serp.project.first_mile.exception.MessageService;
+import serp.project.first_mile.repository.ImportHistoryRepository;
 import serp.project.first_mile.repository.OrderRepository;
 import serp.project.first_mile.repository.ProductTypeRepository;
 import serp.project.first_mile.repository.ProvinceRepository;
@@ -34,7 +47,8 @@ import serp.project.first_mile.repository.WardRepository;
 import serp.project.first_mile.repository.projection.CodeNameProjection;
 import serp.project.first_mile.service.OrderImportExcelService;
 
-import java.io.InputStream;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -46,8 +60,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -92,8 +109,15 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
     private static final int LAST_COLUMN_INDEX = 26;
 
     private static final DateTimeFormatter IMPORT_DATE_FORMATTER = DateTimeFormatter.ofPattern("d/M/uuuu");
+    private static final DateTimeFormatter ORDER_CODE_DATE_FORMATTER = DateTimeFormatter.BASIC_ISO_DATE;
     private static final Pattern PHONE_PATTERN = Pattern.compile("^[0-9]{8,15}$");
     private static final Pattern CODE_NAME_PATTERN = Pattern.compile("^(.+?)\\s+-\\s+(.+)$");
+
+    private static final String ORDER_CODE_PREFIX = "OD_";
+    private static final int ORDER_CODE_SEQUENCE_LENGTH = 6;
+    private static final int MAX_ERROR_MESSAGE_LENGTH = 20000;
+
+    private static final Object ORDER_CODE_LOCK = new Object();
 
     private static final List<String> EXPECTED_HEADERS = List.of(
             "STT",
@@ -168,22 +192,85 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
     private final ProductTypeRepository productTypeRepository;
     private final ProvinceRepository provinceRepository;
     private final WardRepository wardRepository;
+    private final ImportHistoryRepository importHistoryRepository;
+    private final MessageService messageService;
+
+    @Qualifier("orderImportTaskExecutor")
+    private final Executor orderImportTaskExecutor;
 
     @Override
     public ValidateImportFileDTO<OrderImportDTO> validateImportFile(MultipartFile file, Long tenantId) {
         ValidateImportFileDTO<OrderImportDTO> response = buildBaseValidateResponse();
 
         if (file == null || file.isEmpty()) {
-            setValidationFailed(response, List.of("File import không được để trống."));
+            setValidationFailed(response, List.of(message("order.import.validation.file.empty")));
             return response;
         }
 
-        try (InputStream inputStream = file.getInputStream();
+        try {
+            return validateImportFileBytes(file.getBytes(), tenantId);
+        } catch (IOException exception) {
+            log.error("Validate order import file failed", exception);
+            setValidationFailed(response, List.of(message("order.import.validation.file.unreadable")));
+            return response;
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ImportHistoryResponse importOrdersAsync(MultipartFile file, Long tenantId) {
+        if (file == null || file.isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        byte[] fileBytes;
+        try {
+            fileBytes = file.getBytes();
+        } catch (IOException exception) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        ImportHistory importHistory = ImportHistory.builder()
+                .fileId(UUID.randomUUID())
+                .fileName(file.getOriginalFilename())
+                .status(ImportHistoryStatus.PENDING)
+                .totalRecords(0)
+                .successRecords(0)
+                .failedRecords(0)
+                .tenantId(tenantId)
+                .build();
+
+        ImportHistory savedImportHistory = importHistoryRepository.save(importHistory);
+        Long importHistoryId = savedImportHistory.getId();
+
+        CompletableFuture.runAsync(
+                () -> processImportJob(fileBytes, tenantId, importHistoryId),
+                orderImportTaskExecutor
+        ).exceptionally(exception -> {
+            log.error("Order import async execution failed for importHistoryId={}", importHistoryId, exception);
+            markImportFailed(importHistoryId, tenantId, resolveExceptionMessage(exception));
+            return null;
+        });
+
+        return toImportHistoryResponse(savedImportHistory);
+    }
+
+    @Override
+    public ImportHistoryResponse getImportHistory(Long importHistoryId, Long tenantId) {
+        ImportHistory importHistory = importHistoryRepository.findByIdAndTenantId(importHistoryId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST));
+        return toImportHistoryResponse(importHistory);
+    }
+
+    private ValidateImportFileDTO<OrderImportDTO> validateImportFileBytes(byte[] fileBytes, Long tenantId) {
+        ValidateImportFileDTO<OrderImportDTO> response = buildBaseValidateResponse();
+
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(fileBytes);
              Workbook workbook = WorkbookFactory.create(inputStream)) {
 
             Sheet orderSheet = workbook.getSheet(ORDER_SHEET_NAME);
             if (orderSheet == null) {
-                setValidationFailed(response, List.of("Không tìm thấy sheet Order trong file import."));
+                setValidationFailed(response, List.of(message("order.import.validation.sheet.order.missing")));
                 return response;
             }
 
@@ -197,11 +284,18 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
             }
 
             MasterDataLookup masterData = loadMasterData(tenantId);
-            ValidationResult validationResult = validateRows(orderSheet, tenantId, formatter, evaluator, masterData);
+            Set<String> existingCustomerOrderCodes = loadExistingCustomerOrderCodes(orderSheet, tenantId, formatter, evaluator);
+            ValidationResult validationResult = validateRows(
+                    orderSheet,
+                    formatter,
+                    evaluator,
+                    masterData,
+                    existingCustomerOrderCodes
+            );
 
             response.setData(validationResult.orders());
             if (validationResult.orders().isEmpty() && validationResult.errors().isEmpty()) {
-                setValidationFailed(response, List.of("Không tìm thấy dữ liệu đơn hàng từ dòng 4 trở đi."));
+                setValidationFailed(response, List.of(message("order.import.validation.data.empty")));
                 return response;
             }
 
@@ -216,9 +310,319 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
             return response;
         } catch (Exception exception) {
             log.error("Validate order import file failed", exception);
-            setValidationFailed(response, List.of("Không thể đọc file Excel hoặc dữ liệu không đúng định dạng."));
+            setValidationFailed(response, List.of(message("order.import.validation.file.unreadable")));
             return response;
         }
+    }
+
+    private void processImportJob(byte[] fileBytes, Long tenantId, Long importHistoryId) {
+        ImportHistory importHistory = importHistoryRepository.findByIdAndTenantId(importHistoryId, tenantId)
+                .orElse(null);
+        if (importHistory == null) {
+            log.warn("Import history not found: id={}, tenantId={}", importHistoryId, tenantId);
+            return;
+        }
+
+        importHistory.setStatus(ImportHistoryStatus.PROCESSING);
+        importHistory.setStartedAt(LocalDateTime.now());
+        importHistoryRepository.save(importHistory);
+
+        try {
+            ValidateImportFileDTO<OrderImportDTO> validationResult = validateImportFileBytes(fileBytes, tenantId);
+            List<OrderImportDTO> validOrders = validationResult.getData() == null
+                    ? List.of()
+                    : validationResult.getData();
+
+            importHistory.setTotalRecords(validOrders.size());
+
+            if (!validationResult.isSuccess()) {
+                importHistory.setStatus(ImportHistoryStatus.FAILED);
+                importHistory.setSuccessRecords(0);
+                importHistory.setFailedRecords(validOrders.size());
+                importHistory.setErrorMessage(truncateErrorMessage(validationResult.getErrorMessage()));
+                importHistory.setFinishedAt(LocalDateTime.now());
+                importHistoryRepository.save(importHistory);
+                return;
+            }
+
+            ImportExecutionResult executionResult = saveImportedOrders(validOrders, tenantId);
+            importHistory.setSuccessRecords(executionResult.successRecords());
+            importHistory.setFailedRecords(executionResult.failedRecords());
+            importHistory.setErrorMessage(truncateErrorMessage(executionResult.errorMessage()));
+            importHistory.setStatus(
+                    executionResult.failedRecords() > 0
+                            ? ImportHistoryStatus.PARTIAL_SUCCESS
+                            : ImportHistoryStatus.COMPLETED
+            );
+            importHistory.setFinishedAt(LocalDateTime.now());
+            importHistoryRepository.save(importHistory);
+        } catch (Exception exception) {
+            log.error("Process order import failed for importHistoryId={}", importHistoryId, exception);
+            markImportFailed(importHistoryId, tenantId, resolveExceptionMessage(exception));
+        }
+    }
+
+    private ImportExecutionResult saveImportedOrders(List<OrderImportDTO> orderImports, Long tenantId) {
+        if (orderImports == null || orderImports.isEmpty()) {
+            return new ImportExecutionResult(0, 0, 0, null);
+        }
+
+        Map<Long, ProductType> productTypeById = loadProductTypeById(orderImports);
+
+        int successRecords = 0;
+        List<String> errors = new ArrayList<>();
+
+        String orderCodePrefix = ORDER_CODE_PREFIX + LocalDate.now().format(ORDER_CODE_DATE_FORMATTER);
+        synchronized (ORDER_CODE_LOCK) {
+            int currentSequence = resolveCurrentOrderCodeSequence(orderCodePrefix);
+
+            for (OrderImportDTO orderImport : orderImports) {
+                currentSequence++;
+                String orderCode = formatOrderCode(orderCodePrefix, currentSequence);
+
+                try {
+                    Order order = mapToOrderEntity(orderImport, tenantId, orderCode, productTypeById);
+                    orderRepository.save(order);
+                    successRecords++;
+                } catch (Exception exception) {
+                    errors.add(buildImportPersistError(orderImport, exception));
+                }
+            }
+        }
+
+        int totalRecords = orderImports.size();
+        int failedRecords = totalRecords - successRecords;
+        String errorMessage = errors.isEmpty() ? null : String.join("\n", errors);
+
+        return new ImportExecutionResult(totalRecords, successRecords, failedRecords, errorMessage);
+    }
+
+    private Map<Long, ProductType> loadProductTypeById(List<OrderImportDTO> orderImports) {
+        Set<Long> productTypeIds = orderImports.stream()
+                .filter(Objects::nonNull)
+                .flatMap(orderImport -> orderImport.getProducts().stream())
+                .map(OrderImportDTO.ProductImportItemDTO::getProductTypeId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        return productTypeRepository.findAllById(productTypeIds)
+                .stream()
+                .collect(Collectors.toMap(ProductType::getId, value -> value));
+    }
+
+    private Order mapToOrderEntity(
+            OrderImportDTO orderImport,
+            Long tenantId,
+            String orderCode,
+            Map<Long, ProductType> productTypeById
+    ) {
+        Dimension dimensions = buildDimensions(orderImport);
+
+        Order order = Order.builder()
+                .orderCode(orderCode)
+                .customerOrderCode(orderImport.getCustomerOrderCode())
+                .senderName(orderImport.getSenderName())
+                .senderPhone(orderImport.getSenderPhone())
+                .senderProvinceCode(orderImport.getSenderProvinceCode())
+                .senderWardCode(orderImport.getSenderWardCode())
+                .senderAddressDetail(orderImport.getSenderAddressDetail())
+                .pickupTimeStart(orderImport.getPickupTimeStart())
+                .pickupTimeEnd(orderImport.getPickupTimeEnd())
+                .deliveryRequestTime(orderImport.getDeliveryRequestTime())
+                .receiverName(orderImport.getReceiverName())
+                .receiverPhone(orderImport.getReceiverPhone())
+                .receiverProvinceCode(orderImport.getReceiverProvinceCode())
+                .receiverWardCode(orderImport.getReceiverWardCode())
+                .receiverAddressDetail(orderImport.getReceiverAddressDetail())
+                .status(OrderStatus.CREATED)
+                .totalWeight(calculateTotalWeight(orderImport))
+                .totalValue(calculateTotalValue(orderImport))
+                .dimensions(dimensions)
+                .totalVolume(orderImport.getTotalVolumeM3())
+                .pickupAttempts(0)
+                .orderProductCategory(orderImport.getOrderProductCategory())
+                .orderType(orderImport.getOrderType())
+                .baseShippingFee(0L)
+                .codFee(0L)
+                .extraFee(0L)
+                .totalShippingFee(0L)
+                .codAmount(0L)
+                .feePayer(orderImport.getFeePayer())
+                .paymentStatus(PaymentStatus.UNPAID)
+                .note(orderImport.getNote())
+                .tenantId(tenantId)
+                .build();
+
+        for (OrderImportDTO.ProductImportItemDTO productImport : orderImport.getProducts()) {
+            ProductType productType = productTypeById.get(productImport.getProductTypeId());
+            if (productType == null) {
+                throw new AppException(ErrorCode.PRODUCT_TYPE_NOT_FOUND);
+            }
+
+            Product product = Product.builder()
+                    .name(productImport.getName())
+                    .value(productImport.getValue())
+                    .quantity(productImport.getQuantity())
+                    .weight(productImport.getWeightGram())
+                    .productType(productType)
+                    .tenantId(tenantId)
+                    .build();
+            order.addProduct(product);
+        }
+
+        return order;
+    }
+
+    private Dimension buildDimensions(OrderImportDTO orderImport) {
+        if (orderImport.getDimensionLengthCm() == null
+                || orderImport.getDimensionWidthCm() == null
+                || orderImport.getDimensionHeightCm() == null) {
+            return null;
+        }
+
+        Dimension dimensions = new Dimension();
+        dimensions.setLength(orderImport.getDimensionLengthCm());
+        dimensions.setWidth(orderImport.getDimensionWidthCm());
+        dimensions.setHeight(orderImport.getDimensionHeightCm());
+        return dimensions;
+    }
+
+    private Double calculateTotalWeight(OrderImportDTO orderImport) {
+        if (orderImport.getProducts() == null) {
+            return 0D;
+        }
+
+        return orderImport.getProducts().stream()
+                .mapToDouble(product -> safeDouble(product.getWeightGram()) * safeInt(product.getQuantity()))
+                .sum();
+    }
+
+    private Double calculateTotalValue(OrderImportDTO orderImport) {
+        if (orderImport.getProducts() == null) {
+            return 0D;
+        }
+
+        return orderImport.getProducts().stream()
+                .mapToDouble(product -> safeLong(product.getValue()) * safeInt(product.getQuantity()))
+                .sum();
+    }
+
+    private int resolveCurrentOrderCodeSequence(String orderCodePrefix) {
+        String maxOrderCode = orderRepository.findMaxOrderCodeByPrefix(orderCodePrefix);
+        if (!hasText(maxOrderCode) || !maxOrderCode.startsWith(orderCodePrefix)) {
+            return 0;
+        }
+
+        String sequencePart = maxOrderCode.substring(orderCodePrefix.length());
+        if (!hasText(sequencePart)) {
+            return 0;
+        }
+
+        try {
+            return Integer.parseInt(sequencePart);
+        } catch (NumberFormatException exception) {
+            return 0;
+        }
+    }
+
+    private String formatOrderCode(String orderCodePrefix, int sequence) {
+        return String.format(Locale.ROOT, "%s%0" + ORDER_CODE_SEQUENCE_LENGTH + "d", orderCodePrefix, sequence);
+    }
+
+    private void markImportFailed(Long importHistoryId, Long tenantId, String errorMessage) {
+        importHistoryRepository.findByIdAndTenantId(importHistoryId, tenantId).ifPresent(importHistory -> {
+            importHistory.setStatus(ImportHistoryStatus.FAILED);
+            if (importHistory.getStartedAt() == null) {
+                importHistory.setStartedAt(LocalDateTime.now());
+            }
+            if (importHistory.getTotalRecords() == null) {
+                importHistory.setTotalRecords(0);
+            }
+            if (importHistory.getSuccessRecords() == null) {
+                importHistory.setSuccessRecords(0);
+            }
+            if (importHistory.getFailedRecords() == null) {
+                importHistory.setFailedRecords(importHistory.getTotalRecords());
+            }
+            importHistory.setErrorMessage(truncateErrorMessage(errorMessage));
+            importHistory.setFinishedAt(LocalDateTime.now());
+            importHistoryRepository.save(importHistory);
+        });
+    }
+
+    private ImportHistoryResponse toImportHistoryResponse(ImportHistory importHistory) {
+        return ImportHistoryResponse.builder()
+                .id(importHistory.getId())
+                .fileId(importHistory.getFileId())
+                .fileName(importHistory.getFileName())
+                .status(importHistory.getStatus())
+                .totalRecords(importHistory.getTotalRecords())
+                .successRecords(importHistory.getSuccessRecords())
+                .failedRecords(importHistory.getFailedRecords())
+                .errorMessage(importHistory.getErrorMessage())
+                .startedAt(importHistory.getStartedAt())
+                .finishedAt(importHistory.getFinishedAt())
+                .build();
+    }
+
+    private String buildImportPersistError(OrderImportDTO orderImport, Exception exception) {
+        String customerOrderCode = hasText(orderImport.getCustomerOrderCode())
+                ? orderImport.getCustomerOrderCode()
+                : message("order.import.import_job.unknown_order_code");
+        return message(
+                "order.import.import_job.persist_error",
+                customerOrderCode,
+                resolveExceptionMessage(exception)
+        );
+    }
+
+    private String resolveExceptionMessage(Throwable throwable) {
+        if (throwable == null) {
+            return message(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessageKey());
+        }
+
+        Throwable rootCause = throwable;
+        while (rootCause.getCause() != null) {
+            rootCause = rootCause.getCause();
+        }
+
+        if (rootCause instanceof AppException appException) {
+            return message(appException.getErrorCode().getMessageKey());
+        }
+
+        String rootMessage = rootCause.getMessage();
+        if (!hasText(rootMessage)) {
+            return message(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessageKey());
+        }
+
+        if (rootMessage.startsWith("error.")) {
+            return message(rootMessage);
+        }
+        return rootMessage;
+    }
+
+    private String truncateErrorMessage(String errorMessage) {
+        if (!hasText(errorMessage)) {
+            return null;
+        }
+
+        if (errorMessage.length() <= MAX_ERROR_MESSAGE_LENGTH) {
+            return errorMessage;
+        }
+
+        return errorMessage.substring(0, MAX_ERROR_MESSAGE_LENGTH);
+    }
+
+    private double safeDouble(Double value) {
+        return value == null ? 0D : value;
+    }
+
+    private long safeLong(Long value) {
+        return value == null ? 0L : value;
+    }
+
+    private int safeInt(Integer value) {
+        return value == null ? 0 : value;
     }
 
     private ValidateImportFileDTO<OrderImportDTO> buildBaseValidateResponse() {
@@ -249,7 +653,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
         List<String> errors = new ArrayList<>();
         Row headerRow = orderSheet.getRow(HEADER_ROW_INDEX);
         if (headerRow == null) {
-            errors.add("Không tìm thấy dòng header ở dòng 3 của sheet Order.");
+            errors.add(message("order.import.validation.header.row.missing"));
             return errors;
         }
 
@@ -257,8 +661,8 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
             String actualHeader = normalizeWhitespace(getCellText(headerRow, columnIndex, formatter, evaluator));
             String expectedHeader = normalizeWhitespace(EXPECTED_HEADERS.get(columnIndex));
             if (!expectedHeader.equalsIgnoreCase(actualHeader)) {
-                errors.add(String.format(
-                        "Header không hợp lệ tại cột %s: kỳ vọng '%s' nhưng nhận '%s'.",
+                errors.add(message(
+                    "order.import.validation.header.invalid",
                         toColumnName(columnIndex),
                         EXPECTED_HEADERS.get(columnIndex),
                         actualHeader
@@ -270,10 +674,10 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
 
     private ValidationResult validateRows(
             Sheet orderSheet,
-            Long tenantId,
             DataFormatter formatter,
             FormulaEvaluator evaluator,
-            MasterDataLookup masterData
+            MasterDataLookup masterData,
+            Set<String> existingCustomerOrderCodes
     ) {
         List<OrderImportDTO> orders = new ArrayList<>();
         List<String> errors = new ArrayList<>();
@@ -295,11 +699,11 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                 currentOrder = parseFirstOrderRow(
                         row,
                         excelRowNumber,
-                        tenantId,
                         formatter,
                         evaluator,
                         masterData,
                         fileOrderCodeSet,
+                        existingCustomerOrderCodes,
                         errors
                 );
                 orders.add(currentOrder);
@@ -307,8 +711,8 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
             }
 
             if (currentOrder == null) {
-                errors.add(String.format(
-                        "Dòng %d: thiếu Mã đơn hàng tự quản ở dòng đầu đơn hàng.",
+                errors.add(message(
+                    "order.import.validation.row.customer_code.required_first_row",
                         excelRowNumber
                 ));
                 continue;
@@ -334,22 +738,50 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
             if (order.getProducts() == null || order.getProducts().isEmpty()) {
                 String code = hasText(order.getCustomerOrderCode())
                         ? order.getCustomerOrderCode()
-                        : "(không xác định)";
-                errors.add(String.format("Đơn hàng %s không có dòng sản phẩm hợp lệ.", code));
+                        : message("order.import.import_job.unknown_order_code");
+                errors.add(message("order.import.validation.order.no_valid_product_rows", code));
             }
         }
 
         return new ValidationResult(orders, errors);
     }
 
+    private Set<String> loadExistingCustomerOrderCodes(
+            Sheet orderSheet,
+            Long tenantId,
+            DataFormatter formatter,
+            FormulaEvaluator evaluator
+    ) {
+        Set<String> normalizedCodes = new HashSet<>();
+        for (int rowIndex = DATA_START_ROW_INDEX; rowIndex <= orderSheet.getLastRowNum(); rowIndex++) {
+            Row row = orderSheet.getRow(rowIndex);
+            if (row == null) {
+                continue;
+            }
+
+            String customerOrderCode = normalizeWhitespace(
+                    getCellText(row, COLUMN_CUSTOMER_ORDER_CODE, formatter, evaluator)
+            );
+            if (hasText(customerOrderCode)) {
+                normalizedCodes.add(normalizeLookupKey(customerOrderCode));
+            }
+        }
+
+        if (normalizedCodes.isEmpty()) {
+            return Set.of();
+        }
+
+        return orderRepository.findExistingCustomerOrderCodes(tenantId, normalizedCodes);
+    }
+
     private OrderImportDTO parseFirstOrderRow(
             Row row,
             int excelRowNumber,
-            Long tenantId,
             DataFormatter formatter,
             FormulaEvaluator evaluator,
             MasterDataLookup masterData,
             Set<String> fileOrderCodeSet,
+            Set<String> existingCustomerOrderCodes,
             List<String> errors
     ) {
         OrderImportDTO order = OrderImportDTO.builder()
@@ -371,15 +803,15 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
         if (hasText(customerOrderCode)) {
             String normalizedCode = normalizeCodeKey(customerOrderCode);
             if (!fileOrderCodeSet.add(normalizedCode)) {
-                errors.add(String.format(
-                        "%s: mã đơn hàng tự quản bị trùng trong file.",
+            errors.add(message(
+                "order.import.validation.customer_order_code.duplicate_in_file",
                         buildCellRef(excelRowNumber, COLUMN_CUSTOMER_ORDER_CODE)
                 ));
             }
 
-            if (orderRepository.existsByCustomerOrderCodeIgnoreCaseAndTenantId(customerOrderCode, tenantId)) {
-                errors.add(String.format(
-                        "%s: mã đơn hàng tự quản đã tồn tại trong hệ thống.",
+            if (existingCustomerOrderCodes.contains(normalizeLookupKey(customerOrderCode))) {
+            errors.add(message(
+                "order.import.validation.customer_order_code.exists",
                         buildCellRef(excelRowNumber, COLUMN_CUSTOMER_ORDER_CODE)
                 ));
             }
@@ -408,7 +840,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                 formatter,
                 evaluator,
                 masterData.provinceNameByCode(),
-                "tỉnh/thành phố",
+                message("order.import.field.province"),
                 errors
         );
         String senderWardCode = resolveMasterCode(
@@ -418,7 +850,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                 formatter,
                 evaluator,
                 masterData.wardNameByCode(),
-                "phường/xã",
+                message("order.import.field.ward"),
                 errors
         );
         order.setSenderProvinceCode(senderProvinceCode);
@@ -428,7 +860,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                 senderProvinceCode,
                 excelRowNumber,
                 COLUMN_SENDER_WARD,
-                "người gửi",
+                message("order.import.owner.sender"),
                 masterData,
                 errors
         );
@@ -456,7 +888,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                 formatter,
                 evaluator,
                 masterData.provinceNameByCode(),
-                "tỉnh/thành phố",
+                message("order.import.field.province"),
                 errors
         );
         String receiverWardCode = resolveMasterCode(
@@ -466,7 +898,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                 formatter,
                 evaluator,
                 masterData.wardNameByCode(),
-                "phường/xã",
+                message("order.import.field.ward"),
                 errors
         );
         order.setReceiverProvinceCode(receiverProvinceCode);
@@ -476,7 +908,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                 receiverProvinceCode,
                 excelRowNumber,
                 COLUMN_RECEIVER_WARD,
-                "người nhận",
+                message("order.import.owner.receiver"),
                 masterData,
                 errors
         );
@@ -488,7 +920,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                 formatter,
                 evaluator,
                 ORDER_CATEGORY_MAP,
-                "Dễ vỡ, Giá trị cao, Nguyên khối, Quá khổ, Chất lỏng, Từ tính/pin",
+                message("order.import.allowed.order_category"),
                 errors
         ));
 
@@ -499,7 +931,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                 formatter,
                 evaluator,
                 ORDER_TYPE_MAP,
-                "Hỏa tốc, Tiêu chuẩn",
+                message("order.import.allowed.order_type"),
                 errors
         ));
 
@@ -513,14 +945,14 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                 formatter,
                 evaluator,
                 PICKUP_TIME_MAP,
-                "Cả ngày, Sáng (7h30 - 12h00), Chiều (13h30 - 18h00)",
+                message("order.import.allowed.pickup_time"),
                 errors
         );
         order.setPickupDate(pickupDate);
         order.setPickupRequestTime(pickupRequestTime);
         if ((pickupDate == null) != (pickupRequestTime == null)) {
-            errors.add(String.format(
-                    "Dòng %d: Ngày hẹn lấy và Giờ hẹn lấy phải được nhập đồng thời.",
+            errors.add(message(
+                "order.import.validation.pickup.date_time.paired",
                     excelRowNumber
             ));
         }
@@ -536,7 +968,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                 formatter,
                 evaluator,
                 DELIVERY_TIME_MAP,
-                "Cả ngày, Sáng (7h30 - 12h00), Chiều (13h30 - 18h00), Chủ nhật, Ngày nghỉ lễ, Giờ hành chính (7h30 - 11h30, 13h30 - 17h30)",
+                message("order.import.allowed.delivery_time"),
                 errors
         ));
 
@@ -547,7 +979,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                 formatter,
                 evaluator,
                 COD_FLAG_MAP,
-                "Có, Không",
+                message("order.import.allowed.cod_flag"),
                 errors
         );
         order.setIsCod(codFlag);
@@ -583,7 +1015,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                 formatter,
                 evaluator,
                 FEE_PAYER_MAP,
-                "Người nhận, Người gửi",
+                message("order.import.allowed.fee_payer"),
                 errors
         ));
 
@@ -610,8 +1042,8 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
             List<String> errors
     ) {
         if (hasAnyDataInRange(row, COLUMN_CUSTOMER_ORDER_CODE, COLUMN_FEE_PAYER, formatter, evaluator)) {
-            errors.add(String.format(
-                    "Dòng %d: dòng sản phẩm bổ sung chỉ được nhập dữ liệu từ cột W đến cột AA.",
+            errors.add(message(
+                "order.import.validation.extra_product_row.invalid_columns",
                     excelRowNumber
             ));
         }
@@ -681,14 +1113,14 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
             if (codeName != null) {
                 productType = masterData.productTypeByCode().get(normalizeCodeKey(codeName.code()));
                 if (productType == null) {
-                    errors.add(String.format(
-                            "%s: loại sản phẩm '%s' không tồn tại hoặc không hoạt động cho tenant hiện tại.",
+                    errors.add(message(
+                        "order.import.validation.product_type.not_found_or_inactive",
                             buildCellRef(excelRowNumber, COLUMN_PRODUCT_TYPE),
                             codeName.code()
                     ));
                 } else if (!normalizeWhitespace(productType.getName()).equalsIgnoreCase(normalizeWhitespace(codeName.name()))) {
-                    errors.add(String.format(
-                            "%s: tên loại sản phẩm không khớp mã. Kỳ vọng '%s - %s'.",
+                    errors.add(message(
+                        "order.import.validation.product_type.name_mismatch",
                             buildCellRef(excelRowNumber, COLUMN_PRODUCT_TYPE),
                             productType.getCode(),
                             productType.getName()
@@ -722,7 +1154,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
     ) {
         String value = normalizeWhitespace(getCellText(row, columnIndex, formatter, evaluator));
         if (!hasText(value)) {
-            errors.add(String.format("%s: không được để trống.", buildCellRef(excelRowNumber, columnIndex)));
+            errors.add(message("order.import.validation.required", buildCellRef(excelRowNumber, columnIndex)));
             return null;
         }
         return value;
@@ -735,8 +1167,8 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
 
         String normalizedPhone = phone.replaceAll("\\s+", "");
         if (!PHONE_PATTERN.matcher(normalizedPhone).matches()) {
-            errors.add(String.format(
-                    "%s: số điện thoại không hợp lệ.",
+            errors.add(message(
+                "order.import.validation.phone.invalid",
                     buildCellRef(excelRowNumber, columnIndex)
             ));
         }
@@ -766,8 +1198,8 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
         String lookupCode = normalizeCodeKey(codeName.code());
         String expectedName = masterCodeNameMap.get(lookupCode);
         if (!hasText(expectedName)) {
-            errors.add(String.format(
-                    "%s: %s '%s' không tồn tại.",
+            errors.add(message(
+                    "order.import.validation.master_code.not_found",
                     buildCellRef(excelRowNumber, columnIndex),
                     fieldDisplay,
                     codeName.code()
@@ -776,8 +1208,8 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
         }
 
         if (!normalizeWhitespace(expectedName).equalsIgnoreCase(normalizeWhitespace(codeName.name()))) {
-            errors.add(String.format(
-                    "%s: tên %s không khớp mã. Kỳ vọng '%s - %s'.",
+            errors.add(message(
+                "order.import.validation.master_code.name_mismatch",
                     buildCellRef(excelRowNumber, columnIndex),
                     fieldDisplay,
                     codeName.code(),
@@ -807,8 +1239,8 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
         }
 
         if (!normalizeCodeKey(provinceCode).equals(normalizeCodeKey(expectedProvinceCode))) {
-            errors.add(String.format(
-                    "%s: phường/xã của %s không thuộc tỉnh/thành phố đã chọn.",
+            errors.add(message(
+                    "order.import.validation.ward_province.mismatch",
                     buildCellRef(excelRowNumber, wardColumnIndex),
                     ownerDisplay
             ));
@@ -833,8 +1265,8 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
         String key = normalizeLookupKey(rawValue);
         T mappedValue = valueMap.get(key);
         if (mappedValue == null) {
-            errors.add(String.format(
-                    "%s: giá trị không hợp lệ '%s'. Các giá trị hợp lệ: %s.",
+            errors.add(message(
+                "order.import.validation.value.invalid_option",
                     buildCellRef(excelRowNumber, columnIndex),
                     rawValue,
                     allowedValues
@@ -861,8 +1293,8 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
         String key = normalizeLookupKey(rawValue);
         T mappedValue = valueMap.get(key);
         if (mappedValue == null) {
-            errors.add(String.format(
-                    "%s: giá trị không hợp lệ '%s'. Các giá trị hợp lệ: %s.",
+            errors.add(message(
+                "order.import.validation.value.invalid_option",
                     buildCellRef(excelRowNumber, columnIndex),
                     rawValue,
                     allowedValues
@@ -901,8 +1333,8 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
         try {
             return LocalDate.parse(rawDate, IMPORT_DATE_FORMATTER);
         } catch (DateTimeParseException exception) {
-            errors.add(String.format(
-                    "%s: ngày không đúng định dạng dd/mm/yyyy.",
+            errors.add(message(
+                    "order.import.validation.date.invalid_format",
                     buildCellRef(excelRowNumber, columnIndex)
             ));
             return null;
@@ -940,8 +1372,8 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
 
         String[] parts = rawDimensions.trim().split("\\s*[xX×]\\s*");
         if (parts.length != 3) {
-            errors.add(String.format(
-                    "%s: kích cỡ phải theo định dạng dài x rộng x cao (cm).",
+            errors.add(message(
+                "order.import.validation.dimension.invalid_format",
                     buildCellRef(excelRowNumber, columnIndex)
             ));
             return null;
@@ -951,8 +1383,8 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
         Double width = parseNumber(parts[1]);
         Double height = parseNumber(parts[2]);
         if (length == null || width == null || height == null || length <= 0 || width <= 0 || height <= 0) {
-            errors.add(String.format(
-                    "%s: kích cỡ phải gồm 3 số dương.",
+            errors.add(message(
+                "order.import.validation.dimension.invalid_positive",
                     buildCellRef(excelRowNumber, columnIndex)
             ));
             return null;
@@ -977,8 +1409,8 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
 
         Double value = parseNumber(rawValue);
         if (value == null || !isWholeNumber(value)) {
-            errors.add(String.format(
-                    "%s: giá trị phải là số nguyên hợp lệ.",
+            errors.add(message(
+                "order.import.validation.number.invalid_integer",
                     buildCellRef(excelRowNumber, columnIndex)
             ));
             return null;
@@ -986,8 +1418,8 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
 
         long parsed = value.longValue();
         if (parsed < minValue) {
-            errors.add(String.format(
-                    "%s: giá trị phải lớn hơn hoặc bằng %d.",
+            errors.add(message(
+                "order.import.validation.number.min_value",
                     buildCellRef(excelRowNumber, columnIndex),
                     minValue
             ));
@@ -1020,8 +1452,8 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
         }
 
         if (value > Integer.MAX_VALUE) {
-            errors.add(String.format(
-                    "%s: số lượng vượt quá giới hạn cho phép.",
+            errors.add(message(
+                    "order.import.validation.quantity.exceeds_max",
                     buildCellRef(excelRowNumber, columnIndex)
             ));
             return null;
@@ -1046,16 +1478,16 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
 
         Double value = parseNumber(rawValue);
         if (value == null) {
-            errors.add(String.format(
-                    "%s: giá trị phải là số hợp lệ.",
+            errors.add(message(
+                "order.import.validation.number.invalid",
                     buildCellRef(excelRowNumber, columnIndex)
             ));
             return null;
         }
 
         if (strictlyPositive && value <= 0) {
-            errors.add(String.format(
-                    "%s: giá trị phải lớn hơn 0.",
+            errors.add(message(
+                "order.import.validation.number.must_be_positive",
                     buildCellRef(excelRowNumber, columnIndex)
             ));
             return null;
@@ -1097,8 +1529,8 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
         String normalizedValue = normalizeWhitespace(value);
         Matcher matcher = CODE_NAME_PATTERN.matcher(normalizedValue);
         if (!matcher.matches()) {
-            errors.add(String.format(
-                    "%s: định dạng phải là 'code - name'.",
+            errors.add(message(
+                    "order.import.validation.code_name.invalid_format",
                     buildCellRef(excelRowNumber, columnIndex)
             ));
             return null;
@@ -1107,8 +1539,8 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
         String code = matcher.group(1).trim();
         String name = matcher.group(2).trim();
         if (!hasText(code) || !hasText(name)) {
-            errors.add(String.format(
-                    "%s: định dạng phải là 'code - name'.",
+            errors.add(message(
+                    "order.import.validation.code_name.invalid_format",
                     buildCellRef(excelRowNumber, columnIndex)
             ));
             return null;
@@ -1207,8 +1639,8 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
     }
 
     private String buildCellRef(int excelRowNumber, int columnIndex) {
-        return String.format(
-                "Dòng %d, cột %s (%s)",
+        return message(
+                "order.import.validation.cell_ref",
                 excelRowNumber,
                 toColumnName(columnIndex),
                 EXPECTED_HEADERS.get(columnIndex)
@@ -1246,6 +1678,13 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
         return value != null && !value.trim().isEmpty();
     }
 
+    private String message(String key, Object... args) {
+        if (args == null || args.length == 0) {
+            return messageService.getMessage(key);
+        }
+        return messageService.getMessage(key, args);
+    }
+
     private record ValidationResult(List<OrderImportDTO> orders, List<String> errors) {
     }
 
@@ -1260,6 +1699,14 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
             Map<String, String> wardNameByCode,
             Map<String, String> wardProvinceByCode,
             Map<String, ProductType> productTypeByCode
+    ) {
+    }
+
+    private record ImportExecutionResult(
+            int totalRecords,
+            int successRecords,
+            int failedRecords,
+            String errorMessage
     ) {
     }
 }

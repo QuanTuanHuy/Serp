@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import serp.project.first_mile.dto.request.OrderImportDTO;
+import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.ProductTypeTemplateDTO;
 import serp.project.first_mile.dto.response.ProvinceExcelTemplateDTO;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
@@ -75,6 +76,16 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public ValidateImportFileDTO<OrderImportDTO> validateImportFile(MultipartFile file, Long tenantId) {
         return orderImportExcelService.validateImportFile(file, tenantId);
+    }
+
+    @Override
+    public ImportHistoryResponse importOrdersAsync(MultipartFile file, Long tenantId) {
+        return orderImportExcelService.importOrdersAsync(file, tenantId);
+    }
+
+    @Override
+    public ImportHistoryResponse getImportHistory(Long importHistoryId, Long tenantId) {
+        return orderImportExcelService.getImportHistory(importHistoryId, tenantId);
     }
 
     private void populateWardColumn(Sheet sheet, List<WardExcelTemplateDTO> wards) {
