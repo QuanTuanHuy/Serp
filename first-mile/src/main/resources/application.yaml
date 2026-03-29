@@ -32,9 +32,28 @@ spring:
         - classpath:db/migration/ward.sql
         - classpath:db/migration/post-office.sql
         - classpath:db/migration/post-office-staff.sql
+        - classpath:db/migration/kafka-dlq-message.sql
   messages:
     basename: i18n/messages
     use-code-as-default-message: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${KAFKA_FIRST_MILE_GROUP_ID:first-mile-sync-user}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      missing-topics-fatal: false
+
+app:
+  kafka:
+    topics:
+      sync-user-first-mile: ${SYNC_USER_FIRST_MILE_TOPIC:SYNC_USER_FIRST_MILE}
+    dlq:
+      retry-interval-ms: ${KAFKA_DLQ_RETRY_INTERVAL_MS:30000}
+      batch-size: ${KAFKA_DLQ_BATCH_SIZE:50}
+      max-retries: ${KAFKA_DLQ_MAX_RETRIES:5}
 
 geocode:
   base-url: ${GEOCODE_BASE_URL:https://geocode.maps.co/search}
