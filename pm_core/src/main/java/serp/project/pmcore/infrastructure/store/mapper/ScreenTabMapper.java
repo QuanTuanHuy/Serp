@@ -6,7 +6,8 @@
 package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.ScreenTabEntity;
+
+import serp.project.pmcore.domain.screen.entity.ScreenTabEntity;
 import serp.project.pmcore.infrastructure.store.model.ScreenTabModel;
 
 import java.util.Collections;

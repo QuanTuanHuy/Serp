@@ -7,8 +7,9 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.ScreenTabEntity;
-import serp.project.pmcore.domain.port.store.IScreenTabPort;
+
+import serp.project.pmcore.domain.screen.entity.ScreenTabEntity;
+import serp.project.pmcore.domain.screen.port.IScreenTabPort;
 import serp.project.pmcore.infrastructure.store.mapper.ScreenTabMapper;
 import serp.project.pmcore.infrastructure.store.repository.IScreenTabRepository;
 

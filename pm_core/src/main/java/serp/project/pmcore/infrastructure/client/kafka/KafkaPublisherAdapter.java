@@ -10,7 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.port.client.IKafkaPublisher;
+
+import serp.project.pmcore.domain.shared.port.client.IKafkaPublisher;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.util.concurrent.CompletableFuture;

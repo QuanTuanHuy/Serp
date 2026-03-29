@@ -6,7 +6,8 @@
 package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.PermissionSchemeEntryEntity;
+
+import serp.project.pmcore.domain.permission.entity.PermissionSchemeEntryEntity;
 import serp.project.pmcore.infrastructure.store.model.PermissionSchemeEntryModel;
 
 import java.util.Collections;

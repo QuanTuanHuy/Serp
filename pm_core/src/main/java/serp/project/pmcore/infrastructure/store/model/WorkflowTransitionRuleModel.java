@@ -15,8 +15,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import serp.project.pmcore.domain.shared.enums.TransitionRuleStage;
+
 import org.hibernate.annotations.SQLRestriction;
-import serp.project.pmcore.domain.enums.TransitionRuleStage;
 
 @Entity
 @Table(name = "workflow_transition_rules")

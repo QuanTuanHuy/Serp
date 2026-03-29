@@ -7,8 +7,9 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.CustomFieldContextEntity;
-import serp.project.pmcore.domain.port.store.ICustomFieldContextPort;
+
+import serp.project.pmcore.domain.customfield.entity.CustomFieldContextEntity;
+import serp.project.pmcore.domain.customfield.port.ICustomFieldContextPort;
 import serp.project.pmcore.infrastructure.store.mapper.CustomFieldContextMapper;
 import serp.project.pmcore.infrastructure.store.repository.ICustomFieldContextRepository;
 

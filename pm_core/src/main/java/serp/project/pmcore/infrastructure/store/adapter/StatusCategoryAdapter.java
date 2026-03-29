@@ -7,8 +7,9 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.StatusCategoryEntity;
-import serp.project.pmcore.domain.port.store.IStatusCategoryPort;
+
+import serp.project.pmcore.domain.workitem.entity.StatusCategoryEntity;
+import serp.project.pmcore.domain.workitem.port.IStatusCategoryPort;
 import serp.project.pmcore.infrastructure.store.mapper.StatusCategoryMapper;
 import serp.project.pmcore.infrastructure.store.repository.IStatusCategoryRepository;
 

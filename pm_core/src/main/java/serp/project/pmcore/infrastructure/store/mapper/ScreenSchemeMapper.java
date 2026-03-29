@@ -6,7 +6,8 @@
 package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.ScreenSchemeEntity;
+
+import serp.project.pmcore.domain.screen.entity.ScreenSchemeEntity;
 import serp.project.pmcore.infrastructure.store.model.ScreenSchemeModel;
 
 @Component

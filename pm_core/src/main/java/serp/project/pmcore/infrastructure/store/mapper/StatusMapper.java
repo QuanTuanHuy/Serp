@@ -6,7 +6,8 @@
 package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.entity.StatusEntity;
+
+import serp.project.pmcore.domain.workitem.entity.StatusEntity;
 import serp.project.pmcore.infrastructure.store.model.StatusModel;
 
 import java.util.Collections;
