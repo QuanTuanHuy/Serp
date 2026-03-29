@@ -8,7 +8,6 @@ package serp.project.pmcore.application.project.query.roleactor.list;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import serp.project.pmcore.application.project.roleactor.model.ProjectRoleActorView;
 import serp.project.pmcore.application.shared.cqrs.query.IQueryHandler;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;

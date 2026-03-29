@@ -5,7 +5,6 @@
 
 package serp.project.pmcore.application.project.command.roleactor.add;
 
-import serp.project.pmcore.application.project.roleactor.model.ProjectRoleActorView;
 import serp.project.pmcore.application.shared.cqrs.command.ICommand;
 
 import java.util.Set;
@@ -18,7 +17,7 @@ public record AddProjectRoleActorCommand(
         Long tenantId,
         Long userId,
         Set<String> groupKeys
-) implements ICommand<ProjectRoleActorView> {
+) implements ICommand<AddProjectRoleActorResult> {
     public AddProjectRoleActorCommand {
         groupKeys = groupKeys == null ? Set.of() : Set.copyOf(groupKeys);
     }

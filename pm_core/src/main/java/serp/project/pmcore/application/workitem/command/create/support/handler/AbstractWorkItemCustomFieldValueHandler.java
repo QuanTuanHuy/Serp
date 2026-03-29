@@ -5,7 +5,7 @@
 
 package serp.project.pmcore.application.workitem.command.create.support.handler;
 
-import serp.project.pmcore.application.workitem.command.create.model.CustomFieldResolutionContext;
+import serp.project.pmcore.application.workitem.command.create.internal.CustomFieldResolutionContext;
 import serp.project.pmcore.domain.customfield.entity.CustomFieldContextDefaultValueEntity;
 import serp.project.pmcore.domain.customfield.entity.CustomFieldOptionEntity;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;

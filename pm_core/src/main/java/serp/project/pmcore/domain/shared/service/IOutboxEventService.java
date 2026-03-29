@@ -3,7 +3,7 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.domain.service;
+package serp.project.pmcore.domain.shared.service;
 
 import serp.project.pmcore.domain.shared.entity.OutboxEventEntity;
 

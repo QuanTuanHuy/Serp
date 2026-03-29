@@ -3,12 +3,12 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.domain.service.impl;
+package serp.project.pmcore.domain.shared.service.impl;
 
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
-import serp.project.pmcore.domain.service.IOutboxEventService;
+import serp.project.pmcore.domain.shared.service.IOutboxEventService;
 import serp.project.pmcore.domain.shared.entity.OutboxEventEntity;
 import serp.project.pmcore.domain.shared.port.store.IOutboxEventPort;
 

@@ -6,7 +6,7 @@
 package serp.project.pmcore.application.workitem.command.create;
 
 import serp.project.pmcore.application.shared.cqrs.command.ICommand;
-import serp.project.pmcore.application.workitem.command.create.model.CreateWorkItemData;
+import serp.project.pmcore.application.workitem.command.create.internal.CreateWorkItemData;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;

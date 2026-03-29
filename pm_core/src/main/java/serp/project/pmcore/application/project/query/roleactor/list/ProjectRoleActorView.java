@@ -3,7 +3,7 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.application.project.roleactor.model;
+package serp.project.pmcore.application.project.query.roleactor.list;
 
 import serp.project.pmcore.domain.project.entity.ProjectRoleActorEntity;
 

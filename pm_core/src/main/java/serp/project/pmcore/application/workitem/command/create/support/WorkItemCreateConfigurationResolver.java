@@ -7,8 +7,8 @@ package serp.project.pmcore.application.workitem.command.create.support;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import serp.project.pmcore.application.workitem.command.create.model.CreateWorkItemData;
-import serp.project.pmcore.application.workitem.command.create.model.ResolvedWorkItemCreateConfiguration;
+import serp.project.pmcore.application.workitem.command.create.internal.CreateWorkItemData;
+import serp.project.pmcore.application.workitem.command.create.internal.ResolvedWorkItemCreateConfiguration;
 import serp.project.pmcore.domain.issuesecurity.entity.IssueSecurityLevelEntity;
 import serp.project.pmcore.domain.issuesecurity.entity.IssueSecuritySchemeEntity;
 import serp.project.pmcore.domain.issuesecurity.port.IIssueSecurityLevelPort;

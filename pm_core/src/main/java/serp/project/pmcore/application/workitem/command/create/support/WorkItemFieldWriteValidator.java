@@ -10,9 +10,9 @@ import org.springframework.stereotype.Component;
 import serp.project.pmcore.domain.shared.constant.WorkItemFieldConstants;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
-import serp.project.pmcore.application.workitem.command.create.model.CreateWorkItemData;
-import serp.project.pmcore.application.workitem.command.create.model.CreateFieldRules;
-import serp.project.pmcore.application.workitem.command.create.model.FieldPolicy;
+import serp.project.pmcore.application.workitem.command.create.internal.CreateFieldRules;
+import serp.project.pmcore.application.workitem.command.create.internal.CreateWorkItemData;
+import serp.project.pmcore.application.workitem.command.create.internal.FieldPolicy;
 
 import java.util.Map;
 

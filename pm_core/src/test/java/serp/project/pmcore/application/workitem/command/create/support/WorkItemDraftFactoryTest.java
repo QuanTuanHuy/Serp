@@ -7,8 +7,8 @@ package serp.project.pmcore.application.workitem.command.create.support;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import serp.project.pmcore.application.workitem.command.create.model.CreateWorkItemData;
-import serp.project.pmcore.application.workitem.command.create.model.ResolvedWorkItemCreateConfiguration;
+import serp.project.pmcore.application.workitem.command.create.internal.CreateWorkItemData;
+import serp.project.pmcore.application.workitem.command.create.internal.ResolvedWorkItemCreateConfiguration;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
 import serp.project.pmcore.domain.workflow.entity.WorkflowStepEntity;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;

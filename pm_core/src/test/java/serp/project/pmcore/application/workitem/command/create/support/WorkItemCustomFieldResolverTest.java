@@ -19,9 +19,9 @@ import serp.project.pmcore.domain.customfield.port.ICustomFieldContextDefaultVal
 import serp.project.pmcore.domain.customfield.port.ICustomFieldContextPort;
 import serp.project.pmcore.domain.customfield.port.ICustomFieldOptionPort;
 import serp.project.pmcore.domain.customfield.port.ICustomFieldPort;
-import serp.project.pmcore.application.workitem.command.create.model.CreateFieldRules;
-import serp.project.pmcore.application.workitem.command.create.model.FieldPolicy;
-import serp.project.pmcore.application.workitem.command.create.model.ResolvedCustomFields;
+import serp.project.pmcore.application.workitem.command.create.internal.CreateFieldRules;
+import serp.project.pmcore.application.workitem.command.create.internal.FieldPolicy;
+import serp.project.pmcore.application.workitem.command.create.internal.ResolvedCustomFields;
 import serp.project.pmcore.domain.shared.constant.WorkItemFieldConstants;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;

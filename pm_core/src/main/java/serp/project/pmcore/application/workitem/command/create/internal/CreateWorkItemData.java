@@ -3,7 +3,7 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.application.workitem.command.create.model;
+package serp.project.pmcore.application.workitem.command.create.internal;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

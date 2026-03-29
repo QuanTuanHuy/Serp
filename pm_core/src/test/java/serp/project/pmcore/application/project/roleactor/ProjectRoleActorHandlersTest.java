@@ -13,11 +13,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.pmcore.application.project.command.roleactor.add.AddProjectRoleActorCommand;
 import serp.project.pmcore.application.project.command.roleactor.add.AddProjectRoleActorCommandHandler;
+import serp.project.pmcore.application.project.command.roleactor.add.AddProjectRoleActorResult;
 import serp.project.pmcore.application.project.command.roleactor.remove.RemoveProjectRoleActorCommand;
 import serp.project.pmcore.application.project.command.roleactor.remove.RemoveProjectRoleActorCommandHandler;
 import serp.project.pmcore.application.project.query.roleactor.list.ListProjectRoleActorsQuery;
 import serp.project.pmcore.application.project.query.roleactor.list.ListProjectRoleActorsQueryHandler;
-import serp.project.pmcore.application.project.roleactor.model.ProjectRoleActorView;
+import serp.project.pmcore.application.project.query.roleactor.list.ProjectRoleActorView;
 import serp.project.pmcore.application.shared.cqrs.Unit;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
@@ -83,7 +84,7 @@ class ProjectRoleActorHandlersTest {
     }
 
     @Test
-    void addHandlerShouldAssignActorAndReturnView() {
+    void addHandlerShouldAssignActorAndReturnResult() {
         ProjectEntity project = project();
 
         when(projectService.getProjectById(PROJECT_ID, TENANT_ID)).thenReturn(project);
@@ -98,7 +99,7 @@ class ProjectRoleActorHandlersTest {
                 USER_ID
         )).thenReturn(actorEntity(100L, "USER", "99"));
 
-        ProjectRoleActorView result = addHandler.handle(new AddProjectRoleActorCommand(
+        AddProjectRoleActorResult result = addHandler.handle(new AddProjectRoleActorCommand(
                 PROJECT_ID,
                 ROLE_ID,
                 "user",

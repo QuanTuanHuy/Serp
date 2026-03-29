@@ -5,7 +5,6 @@
 
 package serp.project.pmcore.application.project.query.roleactor.list;
 
-import serp.project.pmcore.application.project.roleactor.model.ProjectRoleActorView;
 import serp.project.pmcore.application.shared.cqrs.query.IQuery;
 
 import java.util.List;

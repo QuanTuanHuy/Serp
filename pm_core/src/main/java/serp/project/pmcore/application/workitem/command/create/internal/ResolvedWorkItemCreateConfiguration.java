@@ -3,7 +3,7 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.application.workitem.command.create.model;
+package serp.project.pmcore.application.workitem.command.create.internal;
 
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
 import serp.project.pmcore.domain.workflow.entity.WorkflowStepEntity;

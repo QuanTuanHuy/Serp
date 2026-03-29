@@ -3,7 +3,7 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.domain.service.messaging.strategy;
+package serp.project.pmcore.domain.messaging.strategy;
 
 import com.fasterxml.jackson.databind.JsonNode;
 

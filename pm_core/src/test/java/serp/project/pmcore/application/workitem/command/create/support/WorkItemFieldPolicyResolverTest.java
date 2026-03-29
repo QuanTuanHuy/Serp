@@ -11,8 +11,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import serp.project.pmcore.application.workitem.command.create.model.CreateFieldRules;
-import serp.project.pmcore.application.workitem.command.create.model.FieldPolicy;
+import serp.project.pmcore.application.workitem.command.create.internal.CreateFieldRules;
+import serp.project.pmcore.application.workitem.command.create.internal.FieldPolicy;
 import serp.project.pmcore.domain.fieldconfig.entity.FieldConfigEntity;
 import serp.project.pmcore.domain.fieldconfig.entity.FieldConfigItemEntity;
 import serp.project.pmcore.domain.fieldconfig.entity.FieldConfigSchemeEntity;

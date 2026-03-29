@@ -8,7 +8,6 @@ package serp.project.pmcore.application.project.command.roleactor.add;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import serp.project.pmcore.application.project.roleactor.model.ProjectRoleActorView;
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
@@ -25,7 +24,7 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class AddProjectRoleActorCommandHandler
-        implements ICommandHandler<AddProjectRoleActorCommand, ProjectRoleActorView> {
+        implements ICommandHandler<AddProjectRoleActorCommand, AddProjectRoleActorResult> {
 
     private final IProjectService projectService;
     private final IProjectRoleService projectRoleService;
@@ -34,7 +33,7 @@ public class AddProjectRoleActorCommandHandler
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public ProjectRoleActorView handle(AddProjectRoleActorCommand command) {
+    public AddProjectRoleActorResult handle(AddProjectRoleActorCommand command) {
         ProjectEntity project = projectService.getProjectById(command.projectId(), command.tenantId());
         projectPermissionEvaluationService.checkPermission(
                 project,
@@ -51,7 +50,7 @@ public class AddProjectRoleActorCommandHandler
                 command.subjectId(),
                 command.userId()
         );
-        return ProjectRoleActorView.from(actor);
+        return AddProjectRoleActorResult.from(actor);
     }
 
     private ProjectPermissionEvaluationContext buildEvaluationContext(Long userId, Set<String> groupKeys) {

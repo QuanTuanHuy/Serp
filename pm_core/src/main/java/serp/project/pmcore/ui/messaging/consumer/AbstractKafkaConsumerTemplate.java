@@ -19,9 +19,9 @@ import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import serp.project.pmcore.domain.service.IConsumerInboxService;
-import serp.project.pmcore.domain.service.messaging.strategy.IKafkaEventHandlerStrategy;
-import serp.project.pmcore.domain.service.messaging.strategy.KafkaEventHandlerStrategyRegistry;
+import serp.project.pmcore.domain.shared.service.IConsumerInboxService;
+import serp.project.pmcore.domain.messaging.strategy.IKafkaEventHandlerStrategy;
+import serp.project.pmcore.domain.messaging.strategy.KafkaEventHandlerStrategyRegistry;
 import serp.project.pmcore.domain.shared.dto.message.KafkaEventContext;
 import serp.project.pmcore.domain.shared.enums.ConsumerInboxAcquireResult;
 import serp.project.pmcore.domain.shared.exception.KafkaNonRetryableException;

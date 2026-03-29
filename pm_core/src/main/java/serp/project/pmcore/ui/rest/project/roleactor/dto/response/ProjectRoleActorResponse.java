@@ -9,7 +9,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import serp.project.pmcore.application.project.roleactor.model.ProjectRoleActorView;
+import serp.project.pmcore.application.project.command.roleactor.add.AddProjectRoleActorResult;
+import serp.project.pmcore.application.project.query.roleactor.list.ProjectRoleActorView;
 
 @Data
 @Builder
@@ -25,6 +26,18 @@ public class ProjectRoleActorResponse {
     private Long createdBy;
 
     public static ProjectRoleActorResponse from(ProjectRoleActorView entity) {
+        return ProjectRoleActorResponse.builder()
+                .id(entity.id())
+                .projectId(entity.projectId())
+                .projectRoleId(entity.projectRoleId())
+                .subjectType(entity.subjectType())
+                .subjectId(entity.subjectId())
+                .createdAt(entity.createdAt())
+                .createdBy(entity.createdBy())
+                .build();
+    }
+
+    public static ProjectRoleActorResponse from(AddProjectRoleActorResult entity) {
         return ProjectRoleActorResponse.builder()
                 .id(entity.id())
                 .projectId(entity.projectId())

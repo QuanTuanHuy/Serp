@@ -3,14 +3,14 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.domain.service.impl;
+package serp.project.pmcore.domain.shared.service.impl;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
-import serp.project.pmcore.domain.service.IConsumerInboxService;
+import serp.project.pmcore.domain.shared.service.IConsumerInboxService;
 import serp.project.pmcore.domain.shared.enums.ConsumerInboxAcquireResult;
 import serp.project.pmcore.domain.shared.port.store.IConsumerInboxPort;
 
