@@ -34,7 +34,7 @@ import serp.project.pmcore.domain.exception.DomainErrorCode;
 import serp.project.pmcore.domain.port.store.IWorkItemCustomFieldValuePort;
 import serp.project.pmcore.domain.service.IOutboxEventService;
 import serp.project.pmcore.domain.service.IProjectService;
-import serp.project.pmcore.domain.service.IWorkItemService;
+import serp.project.pmcore.domain.workitem.service.IWorkItemService;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.util.List;

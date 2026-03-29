@@ -3,7 +3,9 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.infrastructure.store.model;
+package serp.project.pmcore.infrastructure.workitem.store.write.model;
+
+import serp.project.pmcore.infrastructure.store.model.BaseModel;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

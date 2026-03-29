@@ -72,7 +72,7 @@ import serp.project.pmcore.domain.port.store.IWorkItemCustomFieldValuePort;
 import serp.project.pmcore.domain.service.IOutboxEventService;
 import serp.project.pmcore.domain.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.service.IProjectService;
-import serp.project.pmcore.domain.service.IWorkItemService;
+import serp.project.pmcore.domain.workitem.service.IWorkItemService;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemCreateAuthorizationService;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemCreateConfigurationResolver;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemCreateRequiredFieldValidator;

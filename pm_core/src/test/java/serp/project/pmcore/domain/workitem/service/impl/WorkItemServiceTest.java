@@ -3,7 +3,7 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.domain.service.impl;
+package serp.project.pmcore.domain.workitem.service.impl;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,7 +15,8 @@ import serp.project.pmcore.domain.entity.workitem.WorkItemEntity;
 import serp.project.pmcore.domain.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.port.store.IIssueTypePort;
 import serp.project.pmcore.domain.port.store.IProjectIssueCounterPort;
-import serp.project.pmcore.domain.port.store.IWorkItemPort;
+import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
+import serp.project.pmcore.domain.workitem.port.write.IWorkItemWritePort;
 
 import java.util.Optional;
 
@@ -27,7 +28,10 @@ import static org.mockito.Mockito.when;
 class WorkItemServiceTest {
 
     @Mock
-    private IWorkItemPort workItemPort;
+    private IWorkItemReadPort workItemReadPort;
+
+    @Mock
+    private IWorkItemWritePort workItemWritePort;
 
     @Mock
     private IProjectIssueCounterPort projectIssueCounterPort;
@@ -79,7 +83,7 @@ class WorkItemServiceTest {
                 .projectId(999L)
                 .issueTypeId(200L)
                 .build();
-        when(workItemPort.getWorkItemById(10L, 1L)).thenReturn(Optional.of(parent));
+        when(workItemReadPort.getWorkItemById(10L, 1L)).thenReturn(Optional.of(parent));
 
         assertThrows(BusinessRuleViolationException.class,
                 () -> workItemService.validateParentHierarchy(10L, 201L, 100L, 1L));
@@ -100,7 +104,7 @@ class WorkItemServiceTest {
                 .projectId(projectId)
                 .issueTypeId(issueTypeId)
                 .build();
-        when(workItemPort.getWorkItemById(parentId, 1L)).thenReturn(Optional.of(parent));
+        when(workItemReadPort.getWorkItemById(parentId, 1L)).thenReturn(Optional.of(parent));
 
         IssueTypeEntity parentIssueType = IssueTypeEntity.builder()
                 .id(issueTypeId)
