@@ -24,7 +24,7 @@ import serp.project.pmcore.application.workitem.command.create.support.WorkItemF
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.service.IOutboxEventService;
-import serp.project.pmcore.domain.service.IProjectService;
+import serp.project.pmcore.domain.project.service.IProjectService;
 import serp.project.pmcore.domain.shared.constant.EventConstants;
 import serp.project.pmcore.domain.shared.dto.message.WorkItemEventPayload;
 import serp.project.pmcore.domain.shared.entity.OutboxEventEntity;

@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
-import serp.project.pmcore.domain.service.IProjectPermissionEvaluationService;
+import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;

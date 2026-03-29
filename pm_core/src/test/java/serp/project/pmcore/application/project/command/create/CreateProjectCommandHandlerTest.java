@@ -17,10 +17,10 @@ import serp.project.pmcore.domain.project.dto.ProjectProvisioningResult;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.entity.ProjectRoleEntity;
 import serp.project.pmcore.domain.project.validator.ProjectSchemeCompatibilityValidator;
-import serp.project.pmcore.domain.service.IProjectRoleActorService;
-import serp.project.pmcore.domain.service.IProjectRoleService;
-import serp.project.pmcore.domain.service.IProjectService;
-import serp.project.pmcore.domain.service.ISchemeProvisioningService;
+import serp.project.pmcore.domain.project.provisioning.ISchemeProvisioningService;
+import serp.project.pmcore.domain.project.service.IProjectRoleActorService;
+import serp.project.pmcore.domain.project.service.IProjectRoleService;
+import serp.project.pmcore.domain.project.service.IProjectService;
 import serp.project.pmcore.domain.shared.constant.PermissionSeedConstants;
 import serp.project.pmcore.domain.shared.enums.ProvisioningMode;
 

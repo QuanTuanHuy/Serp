@@ -23,10 +23,10 @@ import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.entity.ProjectRoleActorEntity;
 import serp.project.pmcore.domain.project.entity.ProjectRoleEntity;
-import serp.project.pmcore.domain.service.IProjectPermissionEvaluationService;
-import serp.project.pmcore.domain.service.IProjectRoleActorService;
-import serp.project.pmcore.domain.service.IProjectRoleService;
-import serp.project.pmcore.domain.service.IProjectService;
+import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
+import serp.project.pmcore.domain.project.service.IProjectRoleActorService;
+import serp.project.pmcore.domain.project.service.IProjectRoleService;
+import serp.project.pmcore.domain.project.service.IProjectService;
 import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 
 import java.util.List;
