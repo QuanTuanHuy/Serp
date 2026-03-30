@@ -15,14 +15,18 @@ import serp.project.pmcore.domain.project.dto.ProjectProvisioningResult;
 import serp.project.pmcore.domain.project.dto.ProjectSchemeBindings;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.entity.ProjectRoleEntity;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.validator.ProjectSchemeCompatibilityValidator;
 import serp.project.pmcore.domain.project.provisioning.ISchemeProvisioningService;
+import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.project.service.IProjectRoleActorService;
 import serp.project.pmcore.domain.project.service.IProjectRoleService;
 import serp.project.pmcore.domain.project.service.IProjectService;
 import serp.project.pmcore.domain.shared.constant.PermissionSeedConstants;
+import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.shared.enums.ProjectRoleActorSubjectType;
 import serp.project.pmcore.domain.shared.enums.ProvisioningMode;
+import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 
@@ -34,6 +38,7 @@ public class CreateProjectCommandHandler implements ICommandHandler<CreateProjec
     private final IProjectService projectService;
     private final IProjectRoleService projectRoleService;
     private final IProjectRoleActorService projectRoleActorService;
+    private final IProjectPermissionEvaluationService projectPermissionEvaluationService;
     private final ISchemeProvisioningService schemeProvisioningService;
     private final ProjectSchemeCompatibilityValidator projectSchemeCompatibilityValidator;
 
@@ -60,6 +65,7 @@ public class CreateProjectCommandHandler implements ICommandHandler<CreateProjec
         ProjectEntity finalProject = projectService.saveProject(savedProject, command.userId());
 
         assignLeadToAdministratorsRole(finalProject, command.userId());
+        ensureLeadAdminAccess(finalProject);
 
         log.info("Created project id={} key={} tenantId={}",
                 finalProject.getId(), finalProject.getKey(), command.tenantId());
@@ -115,5 +121,32 @@ public class CreateProjectCommandHandler implements ICommandHandler<CreateProjec
                 String.valueOf(project.getLeadUserId()),
                 userId
         );
+    }
+
+    private void ensureLeadAdminAccess(ProjectEntity project) {
+        if (project.getLeadUserId() == null) {
+            throw new BusinessRuleViolationException(
+                    DomainErrorCode.PROJECT_PERMISSION_DENIED,
+                    "Project lead is required to bootstrap admin access for projectId=" + project.getId()
+            );
+        }
+
+        ProjectPermissionEvaluationContext leadContext = ProjectPermissionEvaluationContext.builder()
+                .userId(project.getLeadUserId())
+                .build();
+
+        boolean hasAdminPermission = projectPermissionEvaluationService.hasPermission(
+                project,
+                leadContext,
+                ProjectPermissionKeys.ADMINISTER_PROJECTS
+        );
+
+        if (!hasAdminPermission) {
+            throw new BusinessRuleViolationException(
+                    DomainErrorCode.PROJECT_PERMISSION_DENIED,
+                    "Project lead does not have ADMINISTER_PROJECTS after bootstrap: projectId="
+                            + project.getId() + ", leadUserId=" + project.getLeadUserId()
+            );
+        }
     }
 }

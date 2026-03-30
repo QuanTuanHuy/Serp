@@ -14,7 +14,9 @@ public record AddProjectRoleActorResult(
         String subjectType,
         String subjectId,
         Long createdAt,
-        Long createdBy
+        Long createdBy,
+        Long updatedAt,
+        Long updatedBy
 ) {
     public static AddProjectRoleActorResult from(ProjectRoleActorEntity entity) {
         return new AddProjectRoleActorResult(
@@ -24,7 +26,9 @@ public record AddProjectRoleActorResult(
                 entity.getSubjectType(),
                 entity.getSubjectId(),
                 entity.getCreatedAt(),
-                entity.getCreatedBy()
+                entity.getCreatedBy(),
+                entity.getUpdatedAt(),
+                entity.getUpdatedBy()
         );
     }
 }

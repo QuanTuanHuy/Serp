@@ -79,13 +79,19 @@ public class ProjectService implements IProjectService {
     @Override
     public ProjectEntity getProjectById(Long id, Long tenantId) {
         return projectReadPort.getProjectById(id, tenantId)
-                .orElseThrow(() -> ResourceNotFoundException.project(id));
+                .orElseThrow(() -> {
+                    log.warn("[ProjectService] Project not found: id={}, tenantId={}", id, tenantId);
+                    return ResourceNotFoundException.project(id);
+                });
     }
 
     @Override
     public ProjectEntity getProjectByKey(String key, Long tenantId) {
         return projectReadPort.getProjectByKey(key, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException(DomainErrorCode.PROJECT_NOT_FOUND));
+                .orElseThrow(() -> {
+                    log.warn("[ProjectService] Project not found: key={}, tenantId={}", key, tenantId);
+                    return new ResourceNotFoundException(DomainErrorCode.PROJECT_NOT_FOUND);
+                });
     }
 
     @Override

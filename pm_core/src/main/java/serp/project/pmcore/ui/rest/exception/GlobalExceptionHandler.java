@@ -142,6 +142,9 @@ public class GlobalExceptionHandler {
                  ROLE_ACTOR_ALREADY_ASSIGNED,
                  SPRINT_ALREADY_ACTIVE -> HttpStatus.CONFLICT;
 
+            case USER_NOT_FOUND,
+                 SERVICE_ACCOUNT_NOT_FOUND -> HttpStatus.NOT_FOUND;
+
             case SCHEME_INCOMPATIBLE,
                  WORKFLOW_VALIDATION_FAILED,
                  TRANSITION_VALIDATION_FAILED,

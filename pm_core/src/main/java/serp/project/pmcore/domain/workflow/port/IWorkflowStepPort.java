@@ -19,4 +19,6 @@ public interface IWorkflowStepPort {
     List<WorkflowStepEntity> getWorkflowStepsByWorkflowVersionIdIncludingSystem(Long workflowVersionId, Long tenantId);
 
     Optional<WorkflowStepEntity> getInitialStepByWorkflowVersionId(Long workflowVersionId, Long tenantId);
+
+    Optional<WorkflowStepEntity> getWorkflowStepById(Long id, Long tenantId);
 }

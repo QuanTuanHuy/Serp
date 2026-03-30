@@ -6,6 +6,7 @@
 package serp.project.pmcore.domain.project.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import serp.project.pmcore.domain.permission.entity.PermissionSchemeEntryEntity;
@@ -23,12 +24,13 @@ import serp.project.pmcore.domain.shared.exception.AccessDeniedException;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ProjectPermissionEvaluationService implements IProjectPermissionEvaluationService {
 
     private final IPermissionSchemeEntryPort permissionSchemeEntryPort;
@@ -40,6 +42,10 @@ public class ProjectPermissionEvaluationService implements IProjectPermissionEva
                                  ProjectPermissionEvaluationContext context,
                                  String permissionKey) {
         if (project == null || context == null || permissionKey == null || permissionKey.isBlank()) {
+            log.debug("Permission check skipped due to invalid input: project={}, context={}, permissionKey={} ",
+                    project == null ? "null" : project.getId(),
+                    context == null ? "null" : context.getUserId(),
+                    permissionKey);
             return false;
         }
 
@@ -50,9 +56,16 @@ public class ProjectPermissionEvaluationService implements IProjectPermissionEva
         List<PermissionSchemeEntryEntity> entries = permissionSchemeEntryPort
                 .getPermissionSchemeEntriesBySchemeId(project.getPermissionSchemeId(), project.getTenantId());
 
-        return entries.stream()
+        boolean granted = entries.stream()
                 .filter(entry -> permissionKey.equalsIgnoreCase(entry.getPermissionKey()))
                 .anyMatch(entry -> matchesEntry(project, context, entry));
+
+        if (!granted) {
+            log.debug("Permission denied by scheme evaluation: projectId={}, tenantId={}, userId={}, permissionKey={}",
+                    project.getId(), project.getTenantId(), context.getUserId(), permissionKey);
+        }
+
+        return granted;
     }
 
     @Override
@@ -76,6 +89,8 @@ public class ProjectPermissionEvaluationService implements IProjectPermissionEva
                                  PermissionSchemeEntryEntity entry) {
         ProjectPermissionGranteeType granteeType = parseGranteeType(entry.getGranteeType());
         if (granteeType == null) {
+            log.debug("Unsupported project permission grantee type: rawValue={}, entryId={}",
+                    entry.getGranteeType(), entry.getId());
             return false;
         }
 
@@ -86,6 +101,7 @@ public class ProjectPermissionEvaluationService implements IProjectPermissionEva
             case REPORTER -> Objects.equals(context.getReporterUserId(), context.getUserId());
             case ASSIGNEE -> Objects.equals(context.getAssigneeUserId(), context.getUserId());
             case ANY_LOGGED_IN_USER, AUTHENTICATED -> context.getUserId() != null;
+            case APPLICATION_ACCESS, ANYONE_ON_WEB, USER_CUSTOM_FIELD_VALUE, GROUP_CUSTOM_FIELD_VALUE -> false;
             case PROJECT_ROLE -> matchesProjectRoleGrant(project, context, entry.getGranteeRef());
         };
     }
@@ -97,33 +113,43 @@ public class ProjectPermissionEvaluationService implements IProjectPermissionEva
             return false;
         }
 
-        ProjectRoleEntity role = projectRoleService.getProjectRoleByNameIncludingSystem(roleName, project.getTenantId())
-                .orElse(null);
-        if (role == null) {
+        List<ProjectRoleEntity> roles = projectRoleService.getProjectRolesByNameIncludingSystem(roleName, project.getTenantId());
+        if (roles.isEmpty()) {
+            log.debug("No project role found for grant resolution: roleName={}, projectId={}, tenantId={}",
+                    roleName, project.getId(), project.getTenantId());
             return false;
         }
 
-        if (projectRoleActorService.hasRoleAssignment(
-                project.getTenantId(),
-                project.getId(),
-                role.getId(),
-                ProjectRoleActorSubjectType.USER.name(),
-                String.valueOf(context.getUserId())
-        )) {
-            return true;
-        }
-
-        for (String groupKey : safeGroupKeys(context.getGroupKeys())) {
+        for (ProjectRoleEntity role : roles) {
             if (projectRoleActorService.hasRoleAssignment(
                     project.getTenantId(),
                     project.getId(),
                     role.getId(),
-                    ProjectRoleActorSubjectType.GROUP.name(),
-                    groupKey
+                    ProjectRoleActorSubjectType.USER.name(),
+                    String.valueOf(context.getUserId())
             )) {
                 return true;
             }
+
+            for (String groupKey : safeGroupKeys(context.getGroupKeys())) {
+                if (projectRoleActorService.hasRoleAssignment(
+                        project.getTenantId(),
+                        project.getId(),
+                        role.getId(),
+                        ProjectRoleActorSubjectType.GROUP.name(),
+                        groupKey
+                )) {
+                    return true;
+                }
+            }
         }
+
+        log.debug("Project role grant did not match actor assignments: roleName={}, candidateRoleIds={}, projectId={}, userId={}, groups={}",
+                roleName,
+                roles.stream().map(ProjectRoleEntity::getId).collect(Collectors.toList()),
+                project.getId(),
+                context.getUserId(),
+                safeGroupKeys(context.getGroupKeys()));
 
         return false;
     }
@@ -132,29 +158,36 @@ public class ProjectPermissionEvaluationService implements IProjectPermissionEva
         if (granteeRef == null || granteeRef.isBlank()) {
             return false;
         }
-        return safeGroupKeys(groupKeys).contains(granteeRef);
+
+        String normalizedGranteeRef = normalizeToken(granteeRef);
+        if (normalizedGranteeRef == null) {
+            return false;
+        }
+
+        return safeGroupKeys(groupKeys).contains(normalizedGranteeRef);
     }
 
     private Set<String> safeGroupKeys(Set<String> groupKeys) {
-        return groupKeys == null ? Collections.emptySet() : groupKeys;
+        if (groupKeys == null || groupKeys.isEmpty()) {
+            return Collections.emptySet();
+        }
+
+        return groupKeys.stream()
+                .map(this::normalizeToken)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
     }
 
     private ProjectPermissionGranteeType parseGranteeType(String rawValue) {
-        if (rawValue == null || rawValue.isBlank()) {
+        return ProjectPermissionGranteeType.fromValue(rawValue);
+    }
+
+    private String normalizeToken(String token) {
+        if (token == null) {
             return null;
         }
 
-        String normalized = rawValue.trim().toUpperCase(Locale.ROOT);
-        return switch (normalized) {
-            case "PROJECT_ROLE" -> ProjectPermissionGranteeType.PROJECT_ROLE;
-            case "GROUP" -> ProjectPermissionGranteeType.GROUP;
-            case "USER" -> ProjectPermissionGranteeType.USER;
-            case "PROJECT_LEAD" -> ProjectPermissionGranteeType.PROJECT_LEAD;
-            case "REPORTER" -> ProjectPermissionGranteeType.REPORTER;
-            case "ASSIGNEE" -> ProjectPermissionGranteeType.ASSIGNEE;
-            case "ANY_LOGGED_IN_USER", "LOGGED_IN_USER" -> ProjectPermissionGranteeType.ANY_LOGGED_IN_USER;
-            case "AUTHENTICATED" -> ProjectPermissionGranteeType.AUTHENTICATED;
-            default -> null;
-        };
+        String normalized = token.trim().toLowerCase();
+        return normalized.isEmpty() ? null : normalized;
     }
 }

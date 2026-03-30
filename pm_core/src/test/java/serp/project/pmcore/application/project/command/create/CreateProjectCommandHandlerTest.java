@@ -18,15 +18,20 @@ import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.entity.ProjectRoleEntity;
 import serp.project.pmcore.domain.project.validator.ProjectSchemeCompatibilityValidator;
 import serp.project.pmcore.domain.project.provisioning.ISchemeProvisioningService;
+import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.project.service.IProjectRoleActorService;
 import serp.project.pmcore.domain.project.service.IProjectRoleService;
 import serp.project.pmcore.domain.project.service.IProjectService;
 import serp.project.pmcore.domain.shared.constant.PermissionSeedConstants;
+import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.shared.enums.ProvisioningMode;
+import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
+import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -50,6 +55,8 @@ class CreateProjectCommandHandlerTest {
     @Mock
     private IProjectRoleActorService projectRoleActorService;
     @Mock
+    private IProjectPermissionEvaluationService projectPermissionEvaluationService;
+    @Mock
     private ISchemeProvisioningService schemeProvisioningService;
     @Mock
     private ProjectSchemeCompatibilityValidator projectSchemeCompatibilityValidator;
@@ -63,6 +70,7 @@ class CreateProjectCommandHandlerTest {
                 projectService,
                 projectRoleService,
                 projectRoleActorService,
+                projectPermissionEvaluationService,
                 schemeProvisioningService,
                 projectSchemeCompatibilityValidator
         );
@@ -135,6 +143,11 @@ class CreateProjectCommandHandlerTest {
                 PermissionSeedConstants.PROJECT_ROLE_ADMINISTRATORS,
                 TENANT_ID
         )).thenReturn(Optional.of(ProjectRoleEntity.builder().id(ROLE_ID).build()));
+        when(projectPermissionEvaluationService.hasPermission(
+                eq(finalProject),
+                any(),
+                eq(ProjectPermissionKeys.ADMINISTER_PROJECTS)
+        )).thenReturn(true);
 
         CreateProjectResult result = handler.handle(command);
 
@@ -168,9 +181,87 @@ class CreateProjectCommandHandlerTest {
                 String.valueOf(LEAD_USER_ID),
                 USER_ID
         );
+        verify(projectPermissionEvaluationService).hasPermission(
+                eq(finalProject),
+                any(),
+                eq(ProjectPermissionKeys.ADMINISTER_PROJECTS)
+        );
 
         assertEquals(PROJECT_ID, result.getId());
         assertEquals(command.key(), result.getKey());
         assertEquals(command.issueSecuritySchemeId(), result.getIssueSecuritySchemeId());
+    }
+
+    @Test
+    void handleShouldFailWhenLeadDoesNotHaveAdminPermissionAfterBootstrap() {
+        CreateProjectCommand command = new CreateProjectCommand(
+                "SERP Platform",
+                "SERP",
+                "Project management core",
+                "software",
+                LEAD_USER_ID,
+                40L,
+                50L,
+                "https://serp.local/project",
+                60L,
+                100L,
+                101L,
+                102L,
+                103L,
+                104L,
+                105L,
+                106L,
+                107L,
+                ProvisioningMode.SHARED_FROM_EXISTING,
+                TENANT_ID,
+                USER_ID
+        );
+
+        ProjectEntity savedProject = ProjectEntity.builder()
+                .id(PROJECT_ID)
+                .tenantId(TENANT_ID)
+                .key(command.key())
+                .leadUserId(command.leadUserId())
+                .build();
+        ProjectEntity finalProject = ProjectEntity.builder()
+                .id(PROJECT_ID)
+                .tenantId(TENANT_ID)
+                .key(command.key())
+                .leadUserId(command.leadUserId())
+                .permissionSchemeId(command.permissionSchemeId())
+                .build();
+
+        when(projectService.createProject(any(ProjectEntity.class), eq(TENANT_ID), eq(USER_ID)))
+                .thenReturn(savedProject);
+        when(schemeProvisioningService.provisionProjectSchemes(eq(savedProject), any(ProjectProvisioningRequest.class)))
+                .thenReturn(ProjectProvisioningResult.builder()
+                        .effectiveBindings(command.toSchemeBindings())
+                        .build());
+        when(projectService.saveProject(savedProject, USER_ID)).thenReturn(finalProject);
+        when(projectRoleService.getProjectRoleByNameIncludingSystem(
+                PermissionSeedConstants.PROJECT_ROLE_ADMINISTRATORS,
+                TENANT_ID
+        )).thenReturn(Optional.of(ProjectRoleEntity.builder().id(ROLE_ID).build()));
+        when(projectPermissionEvaluationService.hasPermission(
+                eq(finalProject),
+                any(),
+                eq(ProjectPermissionKeys.ADMINISTER_PROJECTS)
+        )).thenReturn(false);
+
+        BusinessRuleViolationException exception = assertThrows(
+                BusinessRuleViolationException.class,
+                () -> handler.handle(command)
+        );
+
+        assertEquals(DomainErrorCode.PROJECT_PERMISSION_DENIED, exception.getErrorCode());
+
+        verify(projectRoleActorService).assignActorIfAbsent(
+                TENANT_ID,
+                PROJECT_ID,
+                ROLE_ID,
+                "USER",
+                String.valueOf(LEAD_USER_ID),
+                USER_ID
+        );
     }
 }
