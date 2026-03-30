@@ -7,11 +7,9 @@ package serp.project.pmcore.application.workitem.query.get;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;
-import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
-import serp.project.pmcore.domain.priority.entity.PriorityEntity;
-import serp.project.pmcore.domain.workflow.entity.WorkflowStepEntity;
-import serp.project.pmcore.domain.workitem.entity.StatusEntity;
-import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
+import serp.project.pmcore.domain.workitem.projection.WorkItemDetailProjection;
+
+import java.time.Instant;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Builder
@@ -54,13 +52,7 @@ public record WorkItemDetailView(
         Long updatedBy
 ) {
 
-    public static WorkItemDetailView from(WorkItemEntity workItem,
-                                          IssueTypeEntity issueType,
-                                          StatusEntity status,
-                                          PriorityEntity priority,
-                                          WorkflowStepEntity workflowStep,
-                                          String assigneeName,
-                                          String reporterName) {
+    public static WorkItemDetailView from(WorkItemDetailProjection workItem) {
 
         return WorkItemDetailView.builder()
                 .id(workItem.getId())
@@ -72,25 +64,35 @@ public record WorkItemDetailView(
                 .resolutionId(workItem.getResolutionId())
                 .parentId(workItem.getParentId())
                 .securityLevelId(workItem.getSecurityLevelId())
-                .dueDate(workItem.getDueDate())
+                .dueDate(instantToEpochMilli(workItem.getDueDate()))
                 .rank(workItem.getRank())
                 .timeOriginalEstimate(workItem.getTimeOriginalEstimate())
                 .timeRemainingEstimate(workItem.getTimeRemainingEstimate())
                 .timeSpent(workItem.getTimeSpent())
 
-                .issueType(issueType != null ? new IssueTypeSummaryView(issueType.getId(), issueType.getName()) : null)
-                .workflowStep(workflowStep != null ? new WorkflowStepSummaryView(workflowStep.getId(), workflowStep.getName()) : null)
-                .status(status != null ? new StatusSummaryView(status.getId(), status.getName()) : null)
-                .priority(priority != null ? new PrioritySummaryView(priority.getId(), priority.getName(), priority.getColor()) : null)
+                .issueType(workItem.getIssueTypeId() != null ?
+                        new WorkItemDetailView.IssueTypeSummaryView(workItem.getIssueTypeId(), workItem.getIssueTypeName()) : null)
+                .priority(workItem.getPriorityId() != null ?
+                        new WorkItemDetailView.PrioritySummaryView(workItem.getPriorityId(), workItem.getPriorityName(), workItem.getPriorityColor()) : null)
+                .status(workItem.getStatusId() != null ?
+                        new WorkItemDetailView.StatusSummaryView(workItem.getStatusId(), workItem.getStatusName()) : null)
+                .workflowStep(workItem.getWorkflowStepId() != null ?
+                        new WorkItemDetailView.WorkflowStepSummaryView(workItem.getWorkflowStepId(), workItem.getWorkflowStepName()) : null)
 
-                .assignee(workItem.getAssigneeId() != null ? new UserSummaryView(workItem.getAssigneeId(), assigneeName) : null)
-                .reporter(workItem.getReporterId() != null ? new UserSummaryView(workItem.getReporterId(), reporterName) : null)
+                .assignee(workItem.getAssigneeId() != null ?
+                        new WorkItemDetailView.UserSummaryView(workItem.getAssigneeId(), null) : null)
+                .reporter(workItem.getReporterId() != null ?
+                        new WorkItemDetailView.UserSummaryView(workItem.getReporterId(), null) : null)
 
-                .createdAt(workItem.getCreatedAt())
+                .createdAt(instantToEpochMilli(workItem.getCreatedAt()))
                 .createdBy(workItem.getCreatedBy())
-                .updatedAt(workItem.getUpdatedAt())
+                .updatedAt(instantToEpochMilli(workItem.getUpdatedAt()))
                 .updatedBy(workItem.getUpdatedBy())
                 .build();
+    }
+
+    private static long instantToEpochMilli(Instant instant) {
+        return instant != null ? instant.toEpochMilli() : 0L;
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
+import serp.project.pmcore.domain.workitem.projection.WorkItemDetailProjection;
 import serp.project.pmcore.domain.workitem.query.WorkItemSearchCriteria;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemMapper;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemRowMapper;
@@ -68,5 +69,10 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
         List<WorkItemEntity> data = jdbcTemplate.query(qr.dataSql(), qr.params(), rowMapper);
         Long total = jdbcTemplate.queryForObject(qr.countSql(), qr.params(), Long.class);
         return new PageResult<>(data, total != null ? total : 0L);
+    }
+
+    @Override
+    public Optional<WorkItemDetailProjection> getWorkItemDetailById(Long id, Long tenantId) {
+        return workItemRepository.findWorkItemDetailById(id, tenantId);
     }
 }

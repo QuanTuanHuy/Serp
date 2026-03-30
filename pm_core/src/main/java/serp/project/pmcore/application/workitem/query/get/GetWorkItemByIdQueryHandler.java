@@ -16,8 +16,8 @@ import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationSe
 import serp.project.pmcore.domain.project.service.IProjectService;
 import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
-import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
+import serp.project.pmcore.domain.workitem.projection.WorkItemDetailProjection;
 
 @Service
 @RequiredArgsConstructor
@@ -25,8 +25,6 @@ import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 public class GetWorkItemByIdQueryHandler implements IQueryHandler<GetWorkItemByIdQuery, WorkItemDetailView> {
 
     private final IWorkItemReadPort workItemReadPort;
-
-    private final WorkItemDetailAssembler workItemDetailAssembler;
 
     private final IProjectService projectService;
     private final IProjectPermissionEvaluationService permissionEvaluationService;
@@ -45,7 +43,7 @@ public class GetWorkItemByIdQueryHandler implements IQueryHandler<GetWorkItemByI
                 ProjectPermissionKeys.BROWSE_PROJECTS
         );
 
-        WorkItemEntity workItem = workItemReadPort.getWorkItemById(query.workItemId(), query.tenantId())
+        WorkItemDetailProjection workItem = workItemReadPort.getWorkItemDetailById(query.workItemId(), query.tenantId())
                 .orElseThrow(() -> {
                     log.warn("[GetWorkItemByIdQueryHandler] Work item not found: workItemId={}", query.workItemId());
                     return ResourceNotFoundException.workItem(query.workItemId());
@@ -56,6 +54,7 @@ public class GetWorkItemByIdQueryHandler implements IQueryHandler<GetWorkItemByI
         }
 
 
-        return workItemDetailAssembler.toView(workItem);
+        return WorkItemDetailView.from(workItem);
     }
+
 }
