@@ -34,6 +34,7 @@ public class ListProjectRoleActorsQueryHandler
     @Transactional(readOnly = true)
     public List<ProjectRoleActorView> handle(ListProjectRoleActorsQuery query) {
         ProjectEntity project = projectService.getProjectById(query.projectId(), query.tenantId());
+
         projectPermissionEvaluationService.checkPermission(
                 project,
                 buildEvaluationContext(query.userId(), query.groupKeys()),
