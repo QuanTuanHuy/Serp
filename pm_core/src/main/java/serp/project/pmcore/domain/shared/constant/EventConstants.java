@@ -19,6 +19,8 @@ public class EventConstants {
             public static final String PROJECT_ARCHIVED = "PROJECT_ARCHIVED";
             public static final String PROJECT_UNARCHIVED = "PROJECT_UNARCHIVED";
             public static final String PROJECT_SCHEMES_UPDATED = "PROJECT_SCHEMES_UPDATED";
+            public static final String ROLE_ACTOR_ADDED = "ROLE_ACTOR_ADDED";
+            public static final String ROLE_ACTOR_REMOVED = "ROLE_ACTOR_REMOVED";
         }
     }
 
