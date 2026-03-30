@@ -122,7 +122,7 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 |-------|------|-------|----------|------------|--------|
 | UC-PM-101 | [Create Work Item](usecases/workitem/UC-PM-101-create-work-item.md) | Authenticated Project User | High | Complex | Work Item |
 | UC-PM-102 | Update Work Item | Team Member | High | Medium | Work Item |
-| UC-PM-103 | Get Work Item by ID | Team Member | High | Simple | Work Item |
+| UC-PM-103 | [Get Work Item by ID](usecases/workitem/UC-PM-103-get-work-item-by-id.md) | Team Member | High | Simple | Work Item |
 | UC-PM-104 | List Work Items with Filters | Team Member | High | Medium | Work Item |
 | UC-PM-105 | Delete Work Item | Project Lead | Medium | Medium | Work Item |
 | UC-PM-106 | Transition Work Item Status | Team Member | High | Complex | Work Item |
@@ -1514,26 +1514,16 @@ Update work item fields (summary, description, priority, assignee, due date, est
 
 #### UC-PM-103: Get Work Item by ID
 
-##### Basic Information
+Detailed specification is extracted to:
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-103 |
-| **Use Case Name** | Get Work Item by ID |
-| **Priority** | High |
-| **Complexity** | Simple |
+- [UC-PM-103 - Get Work Item by ID](usecases/workitem/UC-PM-103-get-work-item-by-id.md)
 
-**Permission**: `PM.WORK_ITEM.READ`
+This extracted file is now the canonical detailed reference for UC-PM-103, including:
 
-**Main Flow**: GET `/api/v1/work-items/{workItemId}` or GET `/api/v1/work-items/key/{key}` -> validate JWT -> fetch with tenant_id + deleted_at IS NULL -> enrich with issue type, status, priority, assignee details -> check issue security level access -> return 200.
-
-**Alternative Flow**: Support lookup by `key` (e.g., `SERP-123`) in addition to numeric ID.
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-103-01 | If work item has a security_level_id, user must be a member of that security level | UseCase layer |
+- full use case specification
+- Jira-aligned authorization model for read-time checks (`BROWSE_PROJECTS` + issue security)
+- detailed main/alternative/exception flows for ID and key lookup
+- business rules and data requirements for work item detail retrieval
 
 ---
 

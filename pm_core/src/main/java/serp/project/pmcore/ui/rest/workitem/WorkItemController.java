@@ -20,6 +20,9 @@ import org.springframework.web.bind.annotation.RestController;
 import serp.project.pmcore.application.shared.pagination.PageView;
 import serp.project.pmcore.application.workitem.command.create.CreateWorkItemCommand;
 import serp.project.pmcore.application.workitem.command.create.CreateWorkItemCommandHandler;
+import serp.project.pmcore.application.workitem.query.get.GetWorkItemByIdQuery;
+import serp.project.pmcore.application.workitem.query.get.GetWorkItemByIdQueryHandler;
+import serp.project.pmcore.application.workitem.query.get.WorkItemDetailView;
 import serp.project.pmcore.application.workitem.query.search.SearchWorkItemsQuery;
 import serp.project.pmcore.application.workitem.query.search.SearchWorkItemsQueryHandler;
 import serp.project.pmcore.application.workitem.query.search.WorkItemSearchView;
@@ -42,11 +45,13 @@ public class WorkItemController {
     private final AuthUtils authUtils;
     private final ResponseUtils responseUtils;
     private final CreateWorkItemCommandHandler createWorkItemCommandHandler;
+
     private final SearchWorkItemsQueryHandler searchWorkItemsQueryHandler;
+    private final GetWorkItemByIdQueryHandler getWorkItemByIdQueryHandler;
 
     @GetMapping
     public ResponseEntity<GeneralResponse<PageView<WorkItemSearchView>>> searchWorkItems(
-            @PathVariable("projectId") Long projectId,
+            @PathVariable Long projectId,
             @ModelAttribute WorkItemSearchCriteria criteria,
             @RequestParam(required = false) String sortField,
             @RequestParam(required = false) String sortDirection,
@@ -68,8 +73,8 @@ public class WorkItemController {
     }
 
     @PostMapping
-    public ResponseEntity<GeneralResponse<WorkItemResponse>> createWorkItem(@PathVariable("projectId") Long projectId,
-                                                                             @Valid @RequestBody CreateWorkItemRequest request) {
+    public ResponseEntity<GeneralResponse<WorkItemResponse>> createWorkItem(@PathVariable Long projectId,
+                                                                            @Valid @RequestBody CreateWorkItemRequest request) {
         Long userId = authUtils.getCurrentUserId()
                 .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
         Long tenantId = authUtils.getCurrentTenantId()
@@ -93,6 +98,27 @@ public class WorkItemController {
         )));
 
         return ResponseEntity.status(HttpStatus.CREATED).body(responseUtils.success(response));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<GeneralResponse<WorkItemDetailView>> getWorkItemById(@PathVariable Long projectId,
+                                                                               @PathVariable Long id) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+
+        WorkItemDetailView workItemDetail = getWorkItemByIdQueryHandler.handle(
+                new GetWorkItemByIdQuery(
+                        tenantId,
+                        userId,
+                        projectId,
+                        id
+                )
+        );
+        return ResponseEntity.ok(responseUtils.success(workItemDetail));
+
     }
 
     private WorkItemSearchCriteria applySearchRequest(Long projectId,
