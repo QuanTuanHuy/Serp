@@ -14,6 +14,7 @@ import serp.project.pmcore.domain.project.service.IProjectRoleService;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -34,5 +35,10 @@ public class ProjectRoleService implements IProjectRoleService {
     @Override
     public Optional<ProjectRoleEntity> getProjectRoleByNameIncludingSystem(String roleName, Long tenantId) {
         return projectRolePort.getProjectRoleByNameIncludingSystem(roleName, tenantId);
+    }
+
+    @Override
+    public List<ProjectRoleEntity> getProjectRolesByNameIncludingSystem(String roleName, Long tenantId) {
+        return projectRolePort.getProjectRolesByNameIncludingSystem(roleName, tenantId);
     }
 }

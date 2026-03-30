@@ -19,5 +19,7 @@ public interface IProjectRolePort {
 
     Optional<ProjectRoleEntity> getProjectRoleByNameIncludingSystem(String name, Long tenantId);
 
+    List<ProjectRoleEntity> getProjectRolesByNameIncludingSystem(String name, Long tenantId);
+
     List<ProjectRoleEntity> getProjectRolesIncludingSystem(Long tenantId);
 }

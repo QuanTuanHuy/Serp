@@ -122,10 +122,10 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 |-------|------|-------|----------|------------|--------|
 | UC-PM-101 | [Create Work Item](usecases/workitem/UC-PM-101-create-work-item.md) | Authenticated Project User | High | Complex | Work Item |
 | UC-PM-102 | Update Work Item | Team Member | High | Medium | Work Item |
-| UC-PM-103 | Get Work Item by ID | Team Member | High | Simple | Work Item |
+| UC-PM-103 | [Get Work Item by ID](usecases/workitem/UC-PM-103-get-work-item-by-id.md) | Team Member | High | Simple | Work Item |
 | UC-PM-104 | List Work Items with Filters | Team Member | High | Medium | Work Item |
-| UC-PM-105 | Delete Work Item | Project Lead | Medium | Medium | Work Item |
-| UC-PM-106 | Transition Work Item Status | Team Member | High | Complex | Work Item |
+| UC-PM-105 | [Delete Work Item](usecases/workitem/UC-PM-105-delete-work-item.md) | Project Lead | Medium | Medium | Work Item |
+| UC-PM-106 | [Transition Work Item Status](usecases/workitem/UC-PM-106-transition-work-item-status.md) | Team Member | High | Complex | Work Item |
 | UC-PM-107 | Assign Work Item | Team Member | High | Simple | Work Item |
 | UC-PM-108 | Re-rank Work Item (Lexorank) | Team Member | Medium | Medium | Work Item |
 | UC-PM-109 | Bulk Update Work Items | Project Lead | Medium | Complex | Work Item |
@@ -1514,26 +1514,16 @@ Update work item fields (summary, description, priority, assignee, due date, est
 
 #### UC-PM-103: Get Work Item by ID
 
-##### Basic Information
+Detailed specification is extracted to:
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-103 |
-| **Use Case Name** | Get Work Item by ID |
-| **Priority** | High |
-| **Complexity** | Simple |
+- [UC-PM-103 - Get Work Item by ID](usecases/workitem/UC-PM-103-get-work-item-by-id.md)
 
-**Permission**: `PM.WORK_ITEM.READ`
+This extracted file is now the canonical detailed reference for UC-PM-103, including:
 
-**Main Flow**: GET `/api/v1/work-items/{workItemId}` or GET `/api/v1/work-items/key/{key}` -> validate JWT -> fetch with tenant_id + deleted_at IS NULL -> enrich with issue type, status, priority, assignee details -> check issue security level access -> return 200.
-
-**Alternative Flow**: Support lookup by `key` (e.g., `SERP-123`) in addition to numeric ID.
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-103-01 | If work item has a security_level_id, user must be a member of that security level | UseCase layer |
+- full use case specification
+- Jira-aligned authorization model for read-time checks (`BROWSE_PROJECTS` + issue security)
+- detailed main/alternative/exception flows for ID and key lookup
+- business rules and data requirements for work item detail retrieval
 
 ---
 
@@ -1586,173 +1576,33 @@ Update work item fields (summary, description, priority, assignee, due date, est
 
 ---
 
-#### UC-PM-105: Delete Work Item (Soft Delete)
+#### UC-PM-105: Delete Work Item
 
-##### Basic Information
+Detailed specification is extracted to:
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-105 |
-| **Use Case Name** | Delete Work Item |
-| **Priority** | Medium |
-| **Complexity** | Medium |
+- [UC-PM-105 - Delete Work Item](usecases/workitem/UC-PM-105-delete-work-item.md)
 
-**Permission**: `PM.WORK_ITEM.DELETE`
+This extracted file is now the canonical detailed reference for UC-PM-105, including:
 
-**Main Flow**:
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 1 | Project Lead | Sends DELETE `/api/v1/work-items/{workItemId}` |
-| 2 | System | Validates JWT and permissions |
-| 3 | System | Fetches work item, validates it exists |
-| 4 | System | Sets `deleted_at=NOW()` on work item |
-| 5 | System | Cascades soft-delete to subtasks (children with `parent_id = workItemId`) |
-| 6 | System | Removes issue links referencing this work item |
-| 7 | System | Publishes `WORK_ITEM_DELETED` event |
-| 8 | System | Returns HTTP 200 |
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-105-01 | Deleting a parent cascades soft-delete to all subtasks | Service layer |
-| BR-PM-105-02 | Issue links pointing to/from deleted items are also soft-deleted | Service layer |
+- full use case specification
+- Jira-aligned authorization model for delete-time checks (`BROWSE_PROJECTS` + `DELETE_ISSUES` + issue security)
+- recursive soft-delete scope for descendants and bundled relations
+- business rules and data requirements for transactional delete + outbox behavior
 
 ---
 
 #### UC-PM-106: Transition Work Item Status
 
-##### Basic Information
+Detailed specification is extracted to:
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-106 |
-| **Use Case Name** | Transition Work Item Status |
-| **Module** | PM Core |
-| **Version** | 1.0 |
-| **Last Updated** | 2026-02-18 |
-| **Priority** | High |
-| **Complexity** | Complex |
+- [UC-PM-106 - Transition Work Item Status](usecases/workitem/UC-PM-106-transition-work-item-status.md)
 
-##### Description
+This extracted file is now the canonical detailed reference for UC-PM-106, including:
 
-Execute a workflow transition to change a work item's status. The system validates the transition is allowed by the workflow, evaluates conditions and validators, executes the transition, and runs post-functions.
-
-##### Actors
-
-| Actor | Type | Description |
-|-------|------|-------------|
-| Team Member | Primary | Initiates status transition |
-| System | System | Evaluates workflow rules |
-
-##### Preconditions
-
-1. User is authenticated with valid JWT token
-2. User has permission `PM.WORK_ITEM.TRANSITION`
-3. Work item exists and is not deleted
-4. Project is not archived
-
-##### Postconditions
-
-###### Success Postconditions
-1. Work item `status_id` updated to target status
-2. If transition is to a "done" category status, `resolution_id` is set
-3. Transition rules (post-functions) executed
-4. Kafka event `WORK_ITEM_STATUS_CHANGED` published to `serp.pm.workitem.events`
-5. Change recorded in history (change_groups/change_items)
-
-###### Failure Postconditions
-1. Status unchanged, transaction rolled back
-2. Error response with reason
-
-##### Main Flow
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 1 | Team Member | Sends POST `/api/v1/work-items/{workItemId}/transitions` with `{ transition_id, resolution_id?, fields? }` |
-| 2 | System | Validates JWT and permissions |
-| 3 | System | Fetches work item, validates it exists |
-| 4 | System | Resolves the applicable workflow for this work item (via project's workflow scheme + issue type) |
-| 5 | System | Validates `transition_id` exists in workflow and is valid from current status |
-| 6 | System | Evaluates CONDITION rules on the transition (e.g., `user_is_assignee`) |
-| 7 | System | Evaluates VALIDATOR rules (e.g., `field_required` for resolution) |
-| 8 | System | If transition has an associated screen, validates provided field values |
-| 9 | System | Begins transaction |
-| 10 | System | Updates `status_id` to the transition's `to_status_id` |
-| 11 | System | If resolution provided, sets `resolution_id` |
-| 12 | System | Executes POST_FUNCTION rules (e.g., `fire_event`, `update_field`) |
-| 13 | System | Records status change in change history |
-| 14 | System | Commits transaction |
-| 15 | System | Publishes `WORK_ITEM_STATUS_CHANGED` event to Kafka |
-| 16 | System | Returns HTTP 200 with updated work item |
-
-##### Alternative Flows
-
-###### AF-1: Global Transition
-
-**Branches from**: Main Flow Step 5
-**Condition**: Transition has `from_status_id=NULL` (global, available from any status)
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 5.1 | System | Transition is valid regardless of current status |
-
-**Rejoins**: Main Flow Step 6
-
-##### Exception Flows
-
-###### EF-1: Invalid Transition
-
-**Triggered at**: Main Flow Step 5
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 5.E1 | System | Returns HTTP 400 with error: `INVALID_TRANSITION` and list of available transitions |
-
-###### EF-2: Condition Not Met
-
-**Triggered at**: Main Flow Step 6
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 6.E1 | System | Returns HTTP 403 with error: `TRANSITION_CONDITION_FAILED` and condition details |
-
-###### EF-3: Validator Failed
-
-**Triggered at**: Main Flow Step 7
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 7.E1 | System | Returns HTTP 400 with error: `TRANSITION_VALIDATION_FAILED` and validator details |
-
-##### Business Rules
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-106-01 | Only transitions defined in the workflow from current status are allowed | UseCase layer |
-| BR-PM-106-02 | Global transitions (from_status_id=NULL) are available from any status | UseCase layer |
-| BR-PM-106-03 | CONDITIONS are evaluated before VALIDATORS; if condition fails, transition is rejected | UseCase layer |
-| BR-PM-106-04 | Transition to "done" category status requires resolution_id to be set | Service layer |
-| BR-PM-106-05 | POST_FUNCTION rules execute within the same transaction | UseCase layer |
-| BR-PM-106-06 | Kafka event published AFTER transaction commit | UseCase layer |
-
-##### Data Requirements
-
-###### Input Data
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| transition_id | int64 | Yes | must be valid for current status | Workflow transition |
-| resolution_id | int64 | No | required if target is "done" category | Resolution |
-| fields | map | No | per transition screen requirements | Screen field values |
-
-###### Output Data
-
-| Field | Type | Description |
-|-------|------|-------------|
-| work_item | object | Updated work item with new status |
-| transition | object | Executed transition details |
+- full use case specification
+- Jira-aligned authorization model for transition-time checks (`BROWSE_PROJECTS` + `TRANSITION_ISSUES` + issue security)
+- workflow transition execution model (conditions, validators, transition screen, post-functions)
+- business rules and data requirements for step/status consistency and outbox publication
 
 ---
 

@@ -149,6 +149,36 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
             "Loại sản phẩm (*)"
     );
 
+    private static final List<String> HEADER_KEYS = List.of(
+            "stt",
+            "customer_order_code",
+            "sender_name",
+            "sender_phone",
+            "sender_province_code",
+            "sender_ward_code",
+            "sender_address_detail",
+            "receiver_name",
+            "receiver_phone",
+            "receiver_province_code",
+            "receiver_ward_code",
+            "receiver_address_detail",
+            "order_product_category",
+            "order_type",
+            "note",
+            "pickup_date",
+            "pickup_request_time",
+            "delivery_request_time",
+            "is_cod",
+            "dimension",
+            "total_volume_m3",
+            "fee_payer",
+            "product_name",
+            "product_value",
+            "product_quantity",
+            "product_weight_gram",
+            "product_type"
+    );
+
     private static final Map<String, OrderProductCategory> ORDER_CATEGORY_MAP = Map.of(
             "dễ vỡ", OrderProductCategory.FRAGILE,
             "giá trị cao", OrderProductCategory.HIGH_VALUE,
@@ -417,6 +447,8 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
             Map<Long, ProductType> productTypeById
     ) {
         Dimension dimensions = buildDimensions(orderImport);
+        long totalValueAmount = calculateTotalValueAmount(orderImport);
+        long codAmount = Boolean.TRUE.equals(orderImport.getIsCod()) ? totalValueAmount : 0L;
 
         Order order = Order.builder()
                 .orderCode(orderCode)
@@ -436,7 +468,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                 .receiverAddressDetail(orderImport.getReceiverAddressDetail())
                 .status(OrderStatus.CREATED)
                 .totalWeight(calculateTotalWeight(orderImport))
-                .totalValue(calculateTotalValue(orderImport))
+                .totalValue((double) totalValueAmount)
                 .dimensions(dimensions)
                 .totalVolume(orderImport.getTotalVolumeM3())
                 .pickupAttempts(0)
@@ -446,7 +478,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                 .codFee(0L)
                 .extraFee(0L)
                 .totalShippingFee(0L)
-                .codAmount(0L)
+                .codAmount(codAmount)
                 .feePayer(orderImport.getFeePayer())
                 .paymentStatus(PaymentStatus.UNPAID)
                 .note(orderImport.getNote())
@@ -497,13 +529,13 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                 .sum();
     }
 
-    private Double calculateTotalValue(OrderImportDTO orderImport) {
+    private long calculateTotalValueAmount(OrderImportDTO orderImport) {
         if (orderImport.getProducts() == null) {
-            return 0D;
+            return 0L;
         }
 
         return orderImport.getProducts().stream()
-                .mapToDouble(product -> safeLong(product.getValue()) * safeInt(product.getQuantity()))
+                .mapToLong(product -> safeLong(product.getValue()) * safeInt(product.getQuantity()))
                 .sum();
     }
 
@@ -638,7 +670,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
     private LinkedHashMap<String, String> buildHeaderMap() {
         LinkedHashMap<String, String> headerMap = new LinkedHashMap<>();
         for (int i = 0; i <= LAST_COLUMN_INDEX; i++) {
-            headerMap.put(toColumnName(i), EXPECTED_HEADERS.get(i));
+            headerMap.put(HEADER_KEYS.get(i), EXPECTED_HEADERS.get(i));
         }
         return headerMap;
     }

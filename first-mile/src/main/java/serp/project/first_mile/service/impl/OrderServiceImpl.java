@@ -79,6 +79,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public ImportHistoryResponse importOrdersAsync(MultipartFile file, Long tenantId) {
         return orderImportExcelService.importOrdersAsync(file, tenantId);
     }

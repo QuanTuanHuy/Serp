@@ -14,7 +14,9 @@ public record ProjectRoleActorView(
         String subjectType,
         String subjectId,
         Long createdAt,
-        Long createdBy
+        Long createdBy,
+        Long updatedAt,
+        Long updatedBy
 ) {
     public static ProjectRoleActorView from(ProjectRoleActorEntity entity) {
         return new ProjectRoleActorView(
@@ -24,7 +26,9 @@ public record ProjectRoleActorView(
                 entity.getSubjectType(),
                 entity.getSubjectId(),
                 entity.getCreatedAt(),
-                entity.getCreatedBy()
+                entity.getCreatedBy(),
+                entity.getUpdatedAt(),
+                entity.getUpdatedBy()
         );
     }
 }

@@ -49,6 +49,13 @@ public class ProjectRoleAdapter implements IProjectRolePort {
     }
 
     @Override
+    public List<ProjectRoleEntity> getProjectRolesByNameIncludingSystem(String name, Long tenantId) {
+        return projectRoleMapper.toEntities(
+                projectRoleRepository.findByNameAndTenantIdOrSystemTenant(name, tenantId)
+        );
+    }
+
+    @Override
     public List<ProjectRoleEntity> getProjectRolesIncludingSystem(Long tenantId) {
         return projectRoleMapper.toEntities(projectRoleRepository.findAllByTenantIdOrSystemTenant(tenantId));
     }

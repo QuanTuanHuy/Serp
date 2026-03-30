@@ -5,6 +5,8 @@
 
 package serp.project.pmcore.domain.shared.enums;
 
+import java.util.Locale;
+
 public enum ProjectPermissionGranteeType {
     PROJECT_ROLE,
     GROUP,
@@ -13,9 +15,26 @@ public enum ProjectPermissionGranteeType {
     REPORTER,
     ASSIGNEE,
     ANY_LOGGED_IN_USER,
-    AUTHENTICATED;
+    AUTHENTICATED,
+    APPLICATION_ACCESS,
+    ANYONE_ON_WEB,
+    USER_CUSTOM_FIELD_VALUE,
+    GROUP_CUSTOM_FIELD_VALUE;
 
     public static ProjectPermissionGranteeType fromValue(String value) {
-        return ProjectPermissionGranteeType.valueOf(value.toUpperCase());
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        String normalized = value.trim().toUpperCase(Locale.ROOT);
+        if ("LOGGED_IN_USER".equals(normalized)) {
+            return ANY_LOGGED_IN_USER;
+        }
+
+        try {
+            return ProjectPermissionGranteeType.valueOf(normalized);
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
     }
 }

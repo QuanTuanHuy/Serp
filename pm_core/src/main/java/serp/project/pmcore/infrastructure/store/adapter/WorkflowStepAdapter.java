@@ -53,4 +53,10 @@ public class WorkflowStepAdapter implements IWorkflowStepPort {
         return workflowStepRepository.findInitialStepByWorkflowVersionId(workflowVersionId, tenantId)
                 .map(workflowStepMapper::toEntity);
     }
+
+    @Override
+    public Optional<WorkflowStepEntity> getWorkflowStepById(Long id, Long tenantId) {
+        return workflowStepRepository.findByIdAndTenantId(id, tenantId)
+                .map(workflowStepMapper::toEntity);
+    }
 }

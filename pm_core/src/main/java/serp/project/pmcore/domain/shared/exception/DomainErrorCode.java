@@ -20,6 +20,17 @@ public enum DomainErrorCode {
     // Shared Context & Cross-cutting Constraints
     // ----------------------------------------------------------------
 
+    UNAUTHORIZED("Unauthorized"),
+    FORBIDDEN("You do not have permission to perform this action"),
+    REQUEST_TIMEOUT("Request timeout"),
+    BAD_REQUEST("Bad request"),
+    NOT_FOUND("Resource not found"),
+    INTERNAL_SERVER_ERROR("Internal server error"),
+    SERVICE_UNAVAILABLE("Service is currently unavailable"),
+    CONFLICT("Conflict occurred"),
+    TOO_MANY_REQUESTS("Too many requests"),
+    INVALID_TOKEN("Invalid or expired token"),
+
     // Request / tenant context
     USER_NOT_FOUND("User not found"),
     TENANT_NOT_FOUND("Tenant not found"),
@@ -66,6 +77,8 @@ public enum DomainErrorCode {
     ROLE_IN_USE_BY_PERMISSION("Cannot delete role that is used in permission schemes"),
     ROLE_ACTOR_NOT_FOUND("Project role actor not found"),
     ROLE_ACTOR_ALREADY_ASSIGNED("Actor is already assigned to this role in the project"),
+    ROLE_ACTOR_SUBJECT_INVALID("Project role actor subject is invalid"),
+    SERVICE_ACCOUNT_NOT_FOUND("Service account not found"),
 
     // Shared scheme provisioning
     SCHEME_NOT_FOUND("Scheme not found"),

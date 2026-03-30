@@ -5,17 +5,18 @@
 
 package serp.project.pmcore.ui.rest.workitem.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import serp.project.pmcore.application.workitem.command.create.CreateWorkItemResult;
-import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class WorkItemResponse {
     private Long id;
     private Long projectId;
@@ -46,35 +47,6 @@ public class WorkItemResponse {
     private Long createdBy;
     private Long updatedAt;
     private Long updatedBy;
-
-    public static WorkItemResponse from(WorkItemEntity entity) {
-        return WorkItemResponse.builder()
-                .id(entity.getId())
-                .projectId(entity.getProjectId())
-                .issueTypeId(entity.getIssueTypeId())
-                .issueNo(entity.getIssueNo())
-                .key(entity.getKey())
-                .summary(entity.getSummary())
-                .description(entity.getDescription())
-                .workflowStepId(entity.getWorkflowStepId())
-                .statusId(entity.getStatusId())
-                .priorityId(entity.getPriorityId())
-                .resolutionId(entity.getResolutionId())
-                .assigneeId(entity.getAssigneeId())
-                .reporterId(entity.getReporterId())
-                .parentId(entity.getParentId())
-                .securityLevelId(entity.getSecurityLevelId())
-                .dueDate(entity.getDueDate())
-                .rank(entity.getRank())
-                .timeOriginalEstimate(entity.getTimeOriginalEstimate())
-                .timeRemainingEstimate(entity.getTimeRemainingEstimate())
-                .timeSpent(entity.getTimeSpent())
-                .createdAt(entity.getCreatedAt())
-                .createdBy(entity.getCreatedBy())
-                .updatedAt(entity.getUpdatedAt())
-                .updatedBy(entity.getUpdatedBy())
-                .build();
-    }
 
     public static WorkItemResponse from(CreateWorkItemResult result) {
         return WorkItemResponse.builder()

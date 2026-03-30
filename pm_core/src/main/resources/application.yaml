@@ -103,3 +103,7 @@ app:
       dlq-suffix: ".dlq"
       inbox-retention-days: 14
       inbox-cleanup-cron: "0 30 3 * * *"
+
+services:
+  account:
+    url: ${ACCOUNT_SERVICE_URL:http://localhost:8081/account-service}

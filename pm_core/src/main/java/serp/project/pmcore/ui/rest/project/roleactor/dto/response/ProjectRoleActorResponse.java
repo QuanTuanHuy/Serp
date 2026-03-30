@@ -24,6 +24,8 @@ public class ProjectRoleActorResponse {
     private String subjectId;
     private Long createdAt;
     private Long createdBy;
+    private Long updatedAt;
+    private Long updatedBy;
 
     public static ProjectRoleActorResponse from(ProjectRoleActorView entity) {
         return ProjectRoleActorResponse.builder()
@@ -34,6 +36,8 @@ public class ProjectRoleActorResponse {
                 .subjectId(entity.subjectId())
                 .createdAt(entity.createdAt())
                 .createdBy(entity.createdBy())
+                .updatedAt(entity.updatedAt())
+                .updatedBy(entity.updatedBy())
                 .build();
     }
 
@@ -46,6 +50,8 @@ public class ProjectRoleActorResponse {
                 .subjectId(entity.subjectId())
                 .createdAt(entity.createdAt())
                 .createdBy(entity.createdBy())
+                .updatedAt(entity.updatedAt())
+                .updatedBy(entity.updatedBy())
                 .build();
     }
 }
