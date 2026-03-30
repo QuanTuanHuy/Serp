@@ -6,6 +6,7 @@
 package serp.project.pmcore.application.workitem.query.get;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.Builder;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
 import serp.project.pmcore.domain.priority.entity.PriorityEntity;
 import serp.project.pmcore.domain.workflow.entity.WorkflowStepEntity;
@@ -13,6 +14,7 @@ import serp.project.pmcore.domain.workitem.entity.StatusEntity;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@Builder
 public record WorkItemDetailView(
         Long id,
         Long projectId,
@@ -56,39 +58,39 @@ public record WorkItemDetailView(
                                           IssueTypeEntity issueType,
                                           StatusEntity status,
                                           PriorityEntity priority,
-                                          WorkflowStepEntity workflowStep) {
-        return new WorkItemDetailView(
-                workItem.getId(),
-                workItem.getProjectId(),
-                workItem.getIssueTypeId(),
-                workItem.getIssueNo(),
-                workItem.getKey(),
-                workItem.getSummary(),
-                workItem.getDescription(),
-                workItem.getWorkflowStepId(),
-                workItem.getStatusId(),
-                workItem.getPriorityId(),
-                workItem.getResolutionId(),
-                workItem.getAssigneeId(),
-                workItem.getReporterId(),
-                workItem.getParentId(),
-                workItem.getSecurityLevelId(),
-                workItem.getDueDate(),
-                workItem.getRank(),
-                workItem.getTimeOriginalEstimate(),
-                workItem.getTimeRemainingEstimate(),
-                workItem.getTimeSpent(),
-                new IssueTypeSummaryView(issueType.getId(), issueType.getName()),
-                new UserSummaryView(workItem.getAssigneeId(), null),
-                new UserSummaryView(workItem.getReporterId(), null),
-                new WorkflowStepSummaryView(workflowStep.getId(), workflowStep.getName()),
-                new StatusSummaryView(status.getId(), status.getName()),
-                new PrioritySummaryView(priority.getId(), priority.getName(), priority.getColor()),
-                workItem.getCreatedAt(),
-                workItem.getCreatedBy(),
-                workItem.getUpdatedAt(),
-                workItem.getUpdatedBy()
-        );
+                                          WorkflowStepEntity workflowStep,
+                                          String assigneeName,
+                                          String reporterName) {
+
+        return WorkItemDetailView.builder()
+                .id(workItem.getId())
+                .projectId(workItem.getProjectId())
+                .issueNo(workItem.getIssueNo())
+                .key(workItem.getKey())
+                .summary(workItem.getSummary())
+                .description(workItem.getDescription())
+                .resolutionId(workItem.getResolutionId())
+                .parentId(workItem.getParentId())
+                .securityLevelId(workItem.getSecurityLevelId())
+                .dueDate(workItem.getDueDate())
+                .rank(workItem.getRank())
+                .timeOriginalEstimate(workItem.getTimeOriginalEstimate())
+                .timeRemainingEstimate(workItem.getTimeRemainingEstimate())
+                .timeSpent(workItem.getTimeSpent())
+
+                .issueType(issueType != null ? new IssueTypeSummaryView(issueType.getId(), issueType.getName()) : null)
+                .workflowStep(workflowStep != null ? new WorkflowStepSummaryView(workflowStep.getId(), workflowStep.getName()) : null)
+                .status(status != null ? new StatusSummaryView(status.getId(), status.getName()) : null)
+                .priority(priority != null ? new PrioritySummaryView(priority.getId(), priority.getName(), priority.getColor()) : null)
+
+                .assignee(workItem.getAssigneeId() != null ? new UserSummaryView(workItem.getAssigneeId(), assigneeName) : null)
+                .reporter(workItem.getReporterId() != null ? new UserSummaryView(workItem.getReporterId(), reporterName) : null)
+
+                .createdAt(workItem.getCreatedAt())
+                .createdBy(workItem.getCreatedBy())
+                .updatedAt(workItem.getUpdatedAt())
+                .updatedBy(workItem.getUpdatedBy())
+                .build();
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)

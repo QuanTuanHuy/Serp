@@ -44,7 +44,9 @@ public class WorkItemDetailAssembler {
                 issueType,
                 status,
                 priority,
-                workflowStep
+                workflowStep,
+                null,
+                null
         );
     }
 }

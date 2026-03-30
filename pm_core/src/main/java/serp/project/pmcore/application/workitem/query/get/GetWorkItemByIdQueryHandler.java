@@ -47,11 +47,11 @@ public class GetWorkItemByIdQueryHandler implements IQueryHandler<GetWorkItemByI
 
         WorkItemEntity workItem = workItemReadPort.getWorkItemById(query.workItemId(), query.tenantId())
                 .orElseThrow(() -> {
-                    log.error("[GetWorkItemByIdQueryHandler] Work item not found: workItemId={}", query.workItemId());
+                    log.warn("[GetWorkItemByIdQueryHandler] Work item not found: workItemId={}", query.workItemId());
                     return ResourceNotFoundException.workItem(query.workItemId());
                 });
         if (!workItem.getProjectId().equals(query.projectId())) {
-            log.error("[GetWorkItemByIdQueryHandler] Work item {} does not belong to project {}", query.workItemId(), query.projectId());
+            log.warn("[GetWorkItemByIdQueryHandler] Work item {} does not belong to project {}", query.workItemId(), query.projectId());
             throw ResourceNotFoundException.workItem(query.workItemId());
         }
 
