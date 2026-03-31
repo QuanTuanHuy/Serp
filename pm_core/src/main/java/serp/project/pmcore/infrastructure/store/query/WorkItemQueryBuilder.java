@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 
 import serp.project.pmcore.domain.shared.dto.filter.FilterOperator;
 import serp.project.pmcore.domain.shared.pagination.SortSpec;
-import serp.project.pmcore.domain.workitem.query.WorkItemSearchCriteria;
+import serp.project.pmcore.domain.workitem.dto.WorkItemSearchCriteria;
 
 import java.util.Set;
 

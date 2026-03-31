@@ -13,4 +13,6 @@ public interface IIssueSecurityLevelMemberPort {
     List<IssueSecurityLevelMemberEntity> createIssueSecurityLevelMembers(List<IssueSecurityLevelMemberEntity> members);
 
     List<IssueSecurityLevelMemberEntity> getIssueSecurityLevelMembersByLevelIdIncludingSystem(Long levelId, Long tenantId);
+
+    List<IssueSecurityLevelMemberEntity> getIssueSecurityLevelMembersByLevelId(Long levelId, Long tenantId);
 }

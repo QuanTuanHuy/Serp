@@ -17,7 +17,7 @@ import serp.project.pmcore.domain.project.service.IProjectService;
 import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
-import serp.project.pmcore.domain.workitem.projection.WorkItemDetailProjection;
+import serp.project.pmcore.domain.workitem.dto.WorkItemDetailProjection;
 
 @Service
 @RequiredArgsConstructor

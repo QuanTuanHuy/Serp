@@ -19,7 +19,7 @@ import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationSe
 import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
-import serp.project.pmcore.domain.workitem.query.WorkItemSearchCriteria;
+import serp.project.pmcore.domain.workitem.dto.WorkItemSearchCriteria;
 
 import java.util.List;
 import java.util.Optional;

@@ -3,7 +3,7 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.domain.workitem.projection;
+package serp.project.pmcore.domain.workitem.dto;
 
 import java.time.Instant;
 

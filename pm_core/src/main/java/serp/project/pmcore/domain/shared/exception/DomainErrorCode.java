@@ -93,6 +93,7 @@ public enum DomainErrorCode {
     WORK_ITEM_NOT_FOUND("Work item not found"),
     INVALID_PARENT_HIERARCHY("Invalid parent-child hierarchy: child level must be lower than parent level"),
     PARENT_NOT_IN_SAME_PROJECT("Parent work item must belong to the same project"),
+    WORK_ITEM_DELETE_SCOPE_INVALID("Work item delete scope is invalid"),
 
     // Issue types & issue type schemes
     ISSUE_TYPE_NOT_FOUND("Issue type not found"),

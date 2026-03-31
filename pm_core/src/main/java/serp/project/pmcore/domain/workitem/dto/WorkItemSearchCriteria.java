@@ -3,7 +3,7 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.domain.workitem.query;
+package serp.project.pmcore.domain.workitem.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

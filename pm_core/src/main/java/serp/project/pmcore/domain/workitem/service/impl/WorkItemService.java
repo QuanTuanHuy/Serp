@@ -15,11 +15,17 @@ import serp.project.pmcore.domain.project.port.IProjectIssueCounterPort;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
+import serp.project.pmcore.domain.workitem.dto.WorkItemDeleteExecutionResult;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 import serp.project.pmcore.domain.workitem.port.write.IWorkItemWritePort;
 import serp.project.pmcore.domain.workitem.service.IWorkItemService;
 import serp.project.pmcore.kernel.utils.LexorankUtils;
+
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -118,6 +124,81 @@ public class WorkItemService implements IWorkItemService {
                 "Issue types with hierarchy level >= 2 cannot set parent: childIssueTypeId=" + childIssueTypeId
                         + ", childLevel=" + childLevel
         );
+    }
+
+    @Override
+    public WorkItemDeleteExecutionResult softDeleteWorkItem(Long rootWorkItemId,
+                                                            Long projectId,
+                                                            Long tenantId,
+                                                            Long userId,
+                                                            Long deletedAt) {
+        WorkItemEntity rootWorkItem = getWorkItemById(rootWorkItemId, tenantId);
+        if (!projectId.equals(rootWorkItem.getProjectId())) {
+            throw new ResourceNotFoundException(DomainErrorCode.WORK_ITEM_NOT_FOUND);
+        }
+
+        LinkedHashSet<Long> scopeIds = new LinkedHashSet<>();
+        Map<Long, VisitState> visitStates = new HashMap<>();
+
+        collectDeleteScope(rootWorkItem, projectId, tenantId, visitStates, scopeIds);
+
+        WorkItemDeleteExecutionResult result = workItemWritePort.softDeleteWorkItems(
+                projectId,
+                tenantId,
+                scopeIds,
+                userId,
+                deletedAt
+        );
+
+        log.info("Soft-deleted work item scope: rootId={}, scopeSize={}, deletedWorkItems={}, deletedRelations={}, deletedLinks={}",
+                rootWorkItemId,
+                scopeIds.size(),
+                result.deletedWorkItemCount(),
+                result.deletedRelationCount(),
+                result.deletedLinkCount());
+
+        return result;
+    }
+
+    private void collectDeleteScope(WorkItemEntity current,
+                                    Long projectId,
+                                    Long tenantId,
+                                    Map<Long, VisitState> visitStates,
+                                    LinkedHashSet<Long> scopeIds) {
+        VisitState state = visitStates.get(current.getId());
+        if (state == VisitState.VISITING) {
+            throw new BusinessRuleViolationException(
+                    DomainErrorCode.WORK_ITEM_DELETE_SCOPE_INVALID,
+                    "Cycle detected while resolving delete scope: workItemId=" + current.getId()
+            );
+        }
+        if (state == VisitState.VISITED) {
+            return;
+        }
+
+        visitStates.put(current.getId(), VisitState.VISITING);
+        scopeIds.add(current.getId());
+
+        List<WorkItemEntity> children = workItemReadPort.getActiveChildrenByParentId(current.getId(), tenantId);
+        for (WorkItemEntity child : children) {
+            if (!projectId.equals(child.getProjectId())) {
+                throw new BusinessRuleViolationException(
+                        DomainErrorCode.WORK_ITEM_DELETE_SCOPE_INVALID,
+                        "Cross-project child detected while resolving delete scope: parentId=" + current.getId()
+                                + ", childId=" + child.getId()
+                                + ", childProjectId=" + child.getProjectId()
+                                + ", expectedProjectId=" + projectId
+                );
+            }
+            collectDeleteScope(child, projectId, tenantId, visitStates, scopeIds);
+        }
+
+        visitStates.put(current.getId(), VisitState.VISITED);
+    }
+
+    private enum VisitState {
+        VISITING,
+        VISITED
     }
 
     private int safeHierarchyLevel(IssueTypeEntity issueType) {

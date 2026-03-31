@@ -12,7 +12,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import serp.project.pmcore.infrastructure.store.model.WorkItemModel;
-import serp.project.pmcore.domain.workitem.projection.WorkItemDetailProjection;
+import serp.project.pmcore.domain.workitem.dto.WorkItemDetailProjection;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +24,8 @@ public interface IWorkItemRepository extends JpaRepository<WorkItemModel, Long> 
     List<WorkItemModel> findAllByTenantIdAndProjectId(Long tenantId, Long projectId);
 
     List<WorkItemModel> findAllByTenantIdAndIssueTypeId(Long tenantId, Long issueId);
+
+    List<WorkItemModel> findAllByTenantIdAndParentId(Long tenantId, Long parentId);
 
     Optional<WorkItemModel> findFirstByTenantIdAndProjectIdOrderByRankDescIdDesc(Long tenantId, Long projectId);
 

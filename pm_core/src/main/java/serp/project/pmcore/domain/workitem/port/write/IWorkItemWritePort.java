@@ -5,10 +5,17 @@
 
 package serp.project.pmcore.domain.workitem.port.write;
 
+import serp.project.pmcore.domain.workitem.dto.WorkItemDeleteExecutionResult;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
+
+import java.util.Set;
 
 public interface IWorkItemWritePort {
     WorkItemEntity saveWorkItem(WorkItemEntity workItem);
 
-    void deleteWorkItemById(Long id, Long tenantId);
+    WorkItemDeleteExecutionResult softDeleteWorkItems(Long projectId,
+                                                      Long tenantId,
+                                                      Set<Long> workItemIds,
+                                                      Long userId,
+                                                      Long deletedAt);
 }
