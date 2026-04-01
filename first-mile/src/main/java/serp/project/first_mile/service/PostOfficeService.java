@@ -10,6 +10,7 @@ import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.CreatePostOfficeRequest;
 import serp.project.first_mile.dto.request.PostOfficeImportDTO;
 import serp.project.first_mile.dto.request.UpdatePostOfficeRequest;
+import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.PostOfficeGeocodeBatchResponse;
 import serp.project.first_mile.dto.response.PostOfficeResponse;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
@@ -32,4 +33,8 @@ public interface PostOfficeService {
     byte[] exportTemplate();
 
     ValidateImportFileDTO<PostOfficeImportDTO> validateImportFile(MultipartFile file, Long tenantId);
+
+    ImportHistoryResponse importPostOfficesAsync(MultipartFile file, Long tenantId);
+
+    ImportHistoryResponse getImportHistory(Long importHistoryId, Long tenantId);
 }

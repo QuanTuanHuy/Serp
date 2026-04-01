@@ -16,14 +16,22 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import serp.project.first_mile.domain.ImportHistory;
+import serp.project.first_mile.domain.PostOffice;
 import serp.project.first_mile.domain.Ward;
 import serp.project.first_mile.dto.request.PostOfficeImportDTO;
+import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
+import serp.project.first_mile.enums.ImportHistoryStatus;
 import serp.project.first_mile.enums.PostOfficeStatus;
+import serp.project.first_mile.exception.AppException;
+import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.exception.MessageService;
+import serp.project.first_mile.repository.ImportHistoryRepository;
 import serp.project.first_mile.repository.PostOfficeRepository;
 import serp.project.first_mile.repository.ProvinceRepository;
 import serp.project.first_mile.repository.WardRepository;
@@ -33,6 +41,7 @@ import serp.project.first_mile.service.PostOfficeImportExcelService;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -45,6 +54,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -77,6 +88,7 @@ public class PostOfficeImportExcelServiceImpl implements PostOfficeImportExcelSe
     private static final DateTimeFormatter IMPORT_TIME_FORMATTER = DateTimeFormatter.ofPattern("H:mm");
     private static final Pattern PHONE_PATTERN = Pattern.compile("^0\\d{9,10}$");
     private static final Pattern CODE_NAME_PATTERN = Pattern.compile("^(.+?)\\s+-\\s+(.+)$");
+    private static final int MAX_ERROR_MESSAGE_LENGTH = 20000;
 
     private static final List<String> DATA_SHEET_CANDIDATE_NAMES = List.of("PostOffice", "Post Office");
 
@@ -122,7 +134,11 @@ public class PostOfficeImportExcelServiceImpl implements PostOfficeImportExcelSe
     private final PostOfficeRepository postOfficeRepository;
     private final ProvinceRepository provinceRepository;
     private final WardRepository wardRepository;
+    private final ImportHistoryRepository importHistoryRepository;
     private final MessageService messageService;
+
+    @Qualifier("orderImportTaskExecutor")
+    private final Executor orderImportTaskExecutor;
 
     @Override
     public ValidateImportFileDTO<PostOfficeImportDTO> validateImportFile(MultipartFile file, Long tenantId) {
@@ -140,6 +156,52 @@ public class PostOfficeImportExcelServiceImpl implements PostOfficeImportExcelSe
             setValidationFailed(response, List.of(message("post.office.import.validation.file.unreadable")));
             return response;
         }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ImportHistoryResponse importPostOfficesAsync(MultipartFile file, Long tenantId) {
+        if (file == null || file.isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        byte[] fileBytes;
+        try {
+            fileBytes = file.getBytes();
+        } catch (IOException exception) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        ImportHistory importHistory = ImportHistory.builder()
+                .fileId(UUID.randomUUID())
+                .fileName(file.getOriginalFilename())
+                .status(ImportHistoryStatus.PENDING)
+                .totalRecords(0)
+                .successRecords(0)
+                .failedRecords(0)
+                .tenantId(tenantId)
+                .build();
+
+        ImportHistory savedImportHistory = importHistoryRepository.save(importHistory);
+        Long importHistoryId = savedImportHistory.getId();
+
+        CompletableFuture.runAsync(
+                () -> processImportJob(fileBytes, tenantId, importHistoryId),
+                orderImportTaskExecutor
+        ).exceptionally(exception -> {
+            log.error("Post office import async execution failed for importHistoryId={}", importHistoryId, exception);
+            markImportFailed(importHistoryId, tenantId, resolveExceptionMessage(exception));
+            return null;
+        });
+
+        return toImportHistoryResponse(savedImportHistory);
+    }
+
+    @Override
+    public ImportHistoryResponse getImportHistory(Long importHistoryId, Long tenantId) {
+        ImportHistory importHistory = importHistoryRepository.findByIdAndTenantId(importHistoryId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST));
+        return toImportHistoryResponse(importHistory);
     }
 
     private ValidateImportFileDTO<PostOfficeImportDTO> validateImportFileBytes(byte[] fileBytes, Long tenantId) {
@@ -193,6 +255,100 @@ public class PostOfficeImportExcelServiceImpl implements PostOfficeImportExcelSe
             setValidationFailed(response, List.of(message("post.office.import.validation.file.unreadable")));
             return response;
         }
+    }
+
+    private void processImportJob(byte[] fileBytes, Long tenantId, Long importHistoryId) {
+        ImportHistory importHistory = importHistoryRepository.findByIdAndTenantId(importHistoryId, tenantId)
+                .orElse(null);
+        if (importHistory == null) {
+            log.warn("Import history not found: id={}, tenantId={}", importHistoryId, tenantId);
+            return;
+        }
+
+        importHistory.setStatus(ImportHistoryStatus.PROCESSING);
+        importHistory.setStartedAt(LocalDateTime.now());
+        importHistoryRepository.save(importHistory);
+
+        try {
+            ValidateImportFileDTO<PostOfficeImportDTO> validationResult = validateImportFileBytes(fileBytes, tenantId);
+            List<PostOfficeImportDTO> validPostOffices = validationResult.getData() == null
+                    ? List.of()
+                    : validationResult.getData();
+
+            importHistory.setTotalRecords(validPostOffices.size());
+
+            if (!validationResult.isSuccess()) {
+                importHistory.setStatus(ImportHistoryStatus.FAILED);
+                importHistory.setSuccessRecords(0);
+                importHistory.setFailedRecords(validPostOffices.size());
+                importHistory.setErrorMessage(truncateErrorMessage(validationResult.getErrorMessage()));
+                importHistory.setFinishedAt(LocalDateTime.now());
+                importHistoryRepository.save(importHistory);
+                return;
+            }
+
+            ImportExecutionResult executionResult = saveImportedPostOffices(validPostOffices, tenantId);
+            importHistory.setSuccessRecords(executionResult.successRecords());
+            importHistory.setFailedRecords(executionResult.failedRecords());
+            importHistory.setErrorMessage(truncateErrorMessage(executionResult.errorMessage()));
+            importHistory.setStatus(
+                    executionResult.failedRecords() > 0
+                            ? ImportHistoryStatus.PARTIAL_SUCCESS
+                            : ImportHistoryStatus.COMPLETED
+            );
+            importHistory.setFinishedAt(LocalDateTime.now());
+            importHistoryRepository.save(importHistory);
+        } catch (Exception exception) {
+            log.error("Process post office import failed for importHistoryId={}", importHistoryId, exception);
+            markImportFailed(importHistoryId, tenantId, resolveExceptionMessage(exception));
+        }
+    }
+
+    private ImportExecutionResult saveImportedPostOffices(List<PostOfficeImportDTO> postOfficeImports, Long tenantId) {
+        if (postOfficeImports == null || postOfficeImports.isEmpty()) {
+            return new ImportExecutionResult(0, 0, 0, null);
+        }
+
+        int successRecords = 0;
+        List<String> errors = new ArrayList<>();
+
+        for (PostOfficeImportDTO postOfficeImport : postOfficeImports) {
+            try {
+                PostOffice postOffice = mapToPostOfficeEntity(postOfficeImport, tenantId);
+                postOfficeRepository.save(postOffice);
+                successRecords++;
+            } catch (Exception exception) {
+                errors.add(buildImportPersistError(postOfficeImport, exception));
+            }
+        }
+
+        int totalRecords = postOfficeImports.size();
+        int failedRecords = totalRecords - successRecords;
+        String errorMessage = errors.isEmpty() ? null : String.join("\n", errors);
+
+        return new ImportExecutionResult(totalRecords, successRecords, failedRecords, errorMessage);
+    }
+
+    private PostOffice mapToPostOfficeEntity(PostOfficeImportDTO postOfficeImport, Long tenantId) {
+        PostOffice postOffice = new PostOffice();
+        postOffice.setCode(postOfficeImport.getCode());
+        postOffice.setName(postOfficeImport.getName());
+        postOffice.setProvinceCode(postOfficeImport.getProvinceCode());
+        postOffice.setWardCode(postOfficeImport.getWardCode());
+        postOffice.setAddressDetail(postOfficeImport.getAddressDetail());
+        postOffice.setPhoneNumber(postOfficeImport.getPhoneNumber());
+        postOffice.setOperationalStartDate(postOfficeImport.getOperationalStartDate());
+        postOffice.setOperationalEndDate(postOfficeImport.getOperationalEndDate());
+        postOffice.setWorkingStartTime(postOfficeImport.getWorkingStartTime());
+        postOffice.setWorkingEndTime(postOfficeImport.getWorkingEndTime());
+        if (postOfficeImport.getServiceRadiusM() != null) {
+            postOffice.setServiceRadiusM(postOfficeImport.getServiceRadiusM());
+        }
+        if (postOfficeImport.getStatus() != null) {
+            postOffice.setStatus(postOfficeImport.getStatus());
+        }
+        postOffice.setTenantId(tenantId);
+        return postOffice;
     }
 
     private Sheet resolveDataSheet(Workbook workbook, DataFormatter formatter, FormulaEvaluator evaluator) {
@@ -874,6 +1030,90 @@ public class PostOfficeImportExcelServiceImpl implements PostOfficeImportExcelSe
         return messageService.getMessage(key, args);
     }
 
+    private void markImportFailed(Long importHistoryId, Long tenantId, String errorMessage) {
+        importHistoryRepository.findByIdAndTenantId(importHistoryId, tenantId).ifPresent(importHistory -> {
+            importHistory.setStatus(ImportHistoryStatus.FAILED);
+            if (importHistory.getStartedAt() == null) {
+                importHistory.setStartedAt(LocalDateTime.now());
+            }
+            if (importHistory.getTotalRecords() == null) {
+                importHistory.setTotalRecords(0);
+            }
+            if (importHistory.getSuccessRecords() == null) {
+                importHistory.setSuccessRecords(0);
+            }
+            if (importHistory.getFailedRecords() == null) {
+                importHistory.setFailedRecords(importHistory.getTotalRecords());
+            }
+            importHistory.setErrorMessage(truncateErrorMessage(errorMessage));
+            importHistory.setFinishedAt(LocalDateTime.now());
+            importHistoryRepository.save(importHistory);
+        });
+    }
+
+    private ImportHistoryResponse toImportHistoryResponse(ImportHistory importHistory) {
+        return ImportHistoryResponse.builder()
+                .id(importHistory.getId())
+                .fileId(importHistory.getFileId())
+                .fileName(importHistory.getFileName())
+                .status(importHistory.getStatus())
+                .totalRecords(importHistory.getTotalRecords())
+                .successRecords(importHistory.getSuccessRecords())
+                .failedRecords(importHistory.getFailedRecords())
+                .errorMessage(importHistory.getErrorMessage())
+                .startedAt(importHistory.getStartedAt())
+                .finishedAt(importHistory.getFinishedAt())
+                .build();
+    }
+
+    private String buildImportPersistError(PostOfficeImportDTO postOfficeImport, Exception exception) {
+        String postOfficeCode = hasText(postOfficeImport.getCode())
+                ? postOfficeImport.getCode()
+                : message("post.office.import.import_job.unknown_post_office_code");
+        return message(
+                "post.office.import.import_job.persist_error",
+                postOfficeCode,
+                resolveExceptionMessage(exception)
+        );
+    }
+
+    private String resolveExceptionMessage(Throwable throwable) {
+        if (throwable == null) {
+            return message(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessageKey());
+        }
+
+        Throwable rootCause = throwable;
+        while (rootCause.getCause() != null) {
+            rootCause = rootCause.getCause();
+        }
+
+        if (rootCause instanceof AppException appException) {
+            return message(appException.getErrorCode().getMessageKey());
+        }
+
+        String rootMessage = rootCause.getMessage();
+        if (!hasText(rootMessage)) {
+            return message(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessageKey());
+        }
+
+        if (rootMessage.startsWith("error.")) {
+            return message(rootMessage);
+        }
+        return rootMessage;
+    }
+
+    private String truncateErrorMessage(String errorMessage) {
+        if (!hasText(errorMessage)) {
+            return null;
+        }
+
+        if (errorMessage.length() <= MAX_ERROR_MESSAGE_LENGTH) {
+            return errorMessage;
+        }
+
+        return errorMessage.substring(0, MAX_ERROR_MESSAGE_LENGTH);
+    }
+
     private record ValidationResult(List<PostOfficeImportDTO> postOffices, List<String> errors) {
     }
 
@@ -886,4 +1126,12 @@ public class PostOfficeImportExcelServiceImpl implements PostOfficeImportExcelSe
             Map<String, String> wardProvinceByCode
     ) {
     }
+
+        private record ImportExecutionResult(
+            int totalRecords,
+            int successRecords,
+            int failedRecords,
+            String errorMessage
+        ) {
+        }
 }
