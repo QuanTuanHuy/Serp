@@ -56,5 +56,5 @@ app:
       max-retries: ${KAFKA_DLQ_MAX_RETRIES:5}
 
 geocode:
-  base-url: ${GEOCODE_BASE_URL:https://geocode.maps.co/search}
-  api-key: ${GEOCODE_API_KEY:${GEOCODE-API-KEY:}}
+  base-url: ${GEOCODE_BASE_URL:https://rsapi.goong.io/geocode}
+  api-key: ${GOONG_API_KEY:${GEOCODE_API_KEY:${GEOCODE-API-KEY:}}}
