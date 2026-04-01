@@ -27,6 +27,7 @@ import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.CreatePostOfficeRequest;
 import serp.project.first_mile.dto.request.PostOfficeImportDTO;
 import serp.project.first_mile.dto.request.UpdatePostOfficeRequest;
+import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.PostOfficeGeocodeBatchResponse;
 import serp.project.first_mile.dto.response.PostOfficeResponse;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
@@ -141,5 +142,29 @@ public class PostOfficeController {
         );
         log.info("REST request to validate Post Office import file for tenant {}", tenantId);
         return postOfficeService.validateImportFile(file, tenantId);
+    }
+
+    @PostMapping("/import")
+    @PreAuthorize("hasRole('TMS_ADMIN')")
+    public ImportHistoryResponse importFile(
+            @RequestParam("file") MultipartFile file
+    ) {
+        Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
+                () -> new AppException(ErrorCode.UNAUTHORIZED)
+        );
+        log.info("REST request to import Post Office file for tenant {}", tenantId);
+        return postOfficeService.importPostOfficesAsync(file, tenantId);
+    }
+
+    @GetMapping("/import-history/{importHistoryId}")
+    @PreAuthorize("hasRole('TMS_ADMIN')")
+    public ImportHistoryResponse getImportHistory(
+            @PathVariable Long importHistoryId
+    ) {
+        Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
+                () -> new AppException(ErrorCode.UNAUTHORIZED)
+        );
+        log.info("REST request to get post office import history {} for tenant {}", importHistoryId, tenantId);
+        return postOfficeService.getImportHistory(importHistoryId, tenantId);
     }
 }

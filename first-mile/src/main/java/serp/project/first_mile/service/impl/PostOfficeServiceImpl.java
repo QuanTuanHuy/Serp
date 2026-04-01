@@ -39,6 +39,7 @@ import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.CreatePostOfficeRequest;
 import serp.project.first_mile.dto.request.PostOfficeImportDTO;
 import serp.project.first_mile.dto.request.UpdatePostOfficeRequest;
+import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.PostOfficeGeocodeBatchResponse;
 import serp.project.first_mile.dto.response.PostOfficeResponse;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
@@ -295,6 +296,16 @@ public class PostOfficeServiceImpl implements PostOfficeService {
     @Override
     public ValidateImportFileDTO<PostOfficeImportDTO> validateImportFile(MultipartFile file, Long tenantId) {
         return postOfficeImportExcelService.validateImportFile(file, tenantId);
+    }
+
+    @Override
+    public ImportHistoryResponse importPostOfficesAsync(MultipartFile file, Long tenantId) {
+        return postOfficeImportExcelService.importPostOfficesAsync(file, tenantId);
+    }
+
+    @Override
+    public ImportHistoryResponse getImportHistory(Long importHistoryId, Long tenantId) {
+        return postOfficeImportExcelService.getImportHistory(importHistoryId, tenantId);
     }
 
     private PostOffice getPostOfficeOrThrow(Long id) {
