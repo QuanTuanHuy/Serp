@@ -7,17 +7,27 @@ package serp.project.first_mile.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import serp.project.first_mile.caller.GeocodeCaller;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.PrecisionModel;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import serp.project.first_mile.caller.GeocodeCaller;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -27,16 +37,21 @@ import serp.project.first_mile.domain.Province;
 import serp.project.first_mile.domain.Ward;
 import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.CreatePostOfficeRequest;
+import serp.project.first_mile.dto.request.PostOfficeImportDTO;
 import serp.project.first_mile.dto.request.UpdatePostOfficeRequest;
+import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.PostOfficeGeocodeBatchResponse;
 import serp.project.first_mile.dto.response.PostOfficeResponse;
+import serp.project.first_mile.dto.response.ValidateImportFileDTO;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.mapper.PostOfficeMapper;
 import serp.project.first_mile.repository.PostOfficeRepository;
 import serp.project.first_mile.repository.ProvinceRepository;
 import serp.project.first_mile.repository.WardRepository;
+import serp.project.first_mile.repository.projection.CodeNameProjection;
 import serp.project.first_mile.kernel.utils.AuthUtils;
+import serp.project.first_mile.service.PostOfficeImportExcelService;
 import serp.project.first_mile.service.PostOfficeService;
 
 @Service
@@ -45,12 +60,18 @@ import serp.project.first_mile.service.PostOfficeService;
 public class PostOfficeServiceImpl implements PostOfficeService {
     private static final int MAX_GEO_BATCH = 200;
     private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
+    private static final String TEMPLATE_PATH = "excel/post_office_template.xlsx";
+    private static final String UNIT_SHEET_NAME = "Unit";
+    private static final int START_ROW_INDEX = 1;
+    private static final int PROVINCE_COLUMN_INDEX = 0;
+    private static final int WARD_COLUMN_INDEX = 1;
 
     private final PostOfficeRepository postOfficeRepository;
     private final ProvinceRepository provinceRepository;
     private final WardRepository wardRepository;
     private final AuthUtils authUtils;
     private final GeocodeCaller geocodeCaller;
+    private final PostOfficeImportExcelService postOfficeImportExcelService;
 
     @Override
     public PageResponse<PostOfficeResponse> getPostOffices(int page, int size, String keyword) {
@@ -246,9 +267,92 @@ public class PostOfficeServiceImpl implements PostOfficeService {
         return new PostOfficeGeocodeBatchResponse(batch, postOffices.size(), updated, skipped);
     }
 
+    @Override
+    public byte[] exportTemplate() {
+        getCurrentTenantIdOrThrow();
+
+        List<CodeNameProjection> provinces = provinceRepository.findTemplateCodeNameList();
+        List<CodeNameProjection> wards = wardRepository.findTemplateCodeNameList();
+
+        try (InputStream inputStream = new ClassPathResource(TEMPLATE_PATH).getInputStream();
+             Workbook workbook = new XSSFWorkbook(inputStream);
+             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+
+            Sheet unitSheet = workbook.getSheet(UNIT_SHEET_NAME);
+            if (unitSheet == null) {
+                throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
+            }
+
+            populateProvinceColumn(unitSheet, provinces);
+            populateWardColumn(unitSheet, wards);
+
+            workbook.write(outputStream);
+            return outputStream.toByteArray();
+        } catch (IOException exception) {
+            throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
+        }
+    }
+
+    @Override
+    public ValidateImportFileDTO<PostOfficeImportDTO> validateImportFile(MultipartFile file, Long tenantId) {
+        return postOfficeImportExcelService.validateImportFile(file, tenantId);
+    }
+
+    @Override
+    public ImportHistoryResponse importPostOfficesAsync(MultipartFile file, Long tenantId) {
+        return postOfficeImportExcelService.importPostOfficesAsync(file, tenantId);
+    }
+
+    @Override
+    public ImportHistoryResponse getImportHistory(Long importHistoryId, Long tenantId) {
+        return postOfficeImportExcelService.getImportHistory(importHistoryId, tenantId);
+    }
+
     private PostOffice getPostOfficeOrThrow(Long id) {
         return postOfficeRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.POST_OFFICE_NOT_FOUND));
+    }
+
+    private void populateProvinceColumn(Sheet sheet, List<CodeNameProjection> provinces) {
+        for (int i = 0; i < provinces.size(); i++) {
+            CodeNameProjection province = provinces.get(i);
+            setTextCellValue(
+                    sheet,
+                    START_ROW_INDEX + i,
+                    PROVINCE_COLUMN_INDEX,
+                    formatCodeAndName(province.getCode(), province.getName())
+            );
+        }
+    }
+
+    private void populateWardColumn(Sheet sheet, List<CodeNameProjection> wards) {
+        for (int i = 0; i < wards.size(); i++) {
+            CodeNameProjection ward = wards.get(i);
+            setTextCellValue(
+                    sheet,
+                    START_ROW_INDEX + i,
+                    WARD_COLUMN_INDEX,
+                    formatCodeAndName(ward.getCode(), ward.getName())
+            );
+        }
+    }
+
+    private void setTextCellValue(Sheet sheet, int rowIndex, int columnIndex, String value) {
+        Row row = sheet.getRow(rowIndex);
+        if (row == null) {
+            row = sheet.createRow(rowIndex);
+        }
+        Cell cell = row.getCell(columnIndex);
+        if (cell == null) {
+            cell = row.createCell(columnIndex);
+        }
+        cell.setCellValue(value);
+    }
+
+    private String formatCodeAndName(String code, String name) {
+        String safeCode = code == null ? "" : code.trim();
+        String safeName = name == null ? "" : name.trim();
+        return safeCode + " - " + safeName;
     }
 
     private void validateAddress(String provinceCode, String wardCode) {
