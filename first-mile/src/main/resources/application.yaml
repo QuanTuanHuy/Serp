@@ -58,3 +58,5 @@ app:
 geocode:
   base-url: ${GEOCODE_BASE_URL:https://rsapi.goong.io/geocode}
   api-key: ${GOONG_API_KEY:${GEOCODE_API_KEY:${GEOCODE-API-KEY:}}}
+  rate-limit:
+    tps: ${GEOCODE_RATE_LIMIT_TPS:1}

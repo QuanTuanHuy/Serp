@@ -16,6 +16,8 @@ public enum ErrorCode {
     WARD_NOT_FOUND(9407, "error.9407", HttpStatus.NOT_FOUND),
     PRODUCT_TYPE_NOT_FOUND(9408, "error.9408", HttpStatus.NOT_FOUND),
     PRODUCT_TYPE_CODE_EXISTED(9409, "error.9409", HttpStatus.CONFLICT),
+    GEOCODE_NOT_FOUND(9410, "error.9410", HttpStatus.NOT_FOUND),
+    RATE_LIMIT_EXCEEDED(9429, "error.9429", HttpStatus.TOO_MANY_REQUESTS),
 
     // Lỗi khác (99xx)
     UNCATEGORIZED_EXCEPTION(9999, "error.9999", HttpStatus.INTERNAL_SERVER_ERROR),
