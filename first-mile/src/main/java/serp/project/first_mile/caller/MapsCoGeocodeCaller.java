@@ -18,7 +18,7 @@ import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
 
 import java.text.Normalizer;
-import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -32,7 +32,7 @@ public class MapsCoGeocodeCaller implements GeocodeCaller {
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
 
-    @Value("${geocode.api-key:${GEOCODE_API_KEY:${GEOCODE-API-KEY:}}}")
+    @Value("${geocode.api-key:${GOONG_API_KEY:${GEOCODE_API_KEY:${GEOCODE-API-KEY:}}}}")
     private String geocodeApiKey;
 
     /**
@@ -41,7 +41,7 @@ public class MapsCoGeocodeCaller implements GeocodeCaller {
     public MapsCoGeocodeCaller(
             RestClient.Builder restClientBuilder,
             ObjectMapper objectMapper,
-            @Value("${geocode.base-url:https://geocode.maps.co/search}") String geocodeBaseUrl) {
+            @Value("${geocode.base-url:https://rsapi.goong.io/geocode}") String geocodeBaseUrl) {
 
         this.restClient = restClientBuilder.baseUrl(geocodeBaseUrl).build();
         this.objectMapper = objectMapper;
@@ -53,7 +53,7 @@ public class MapsCoGeocodeCaller implements GeocodeCaller {
         String sanitizedApiKey = (geocodeApiKey == null) ? "" : geocodeApiKey.trim();
 
         if (sanitizedApiKey.isBlank()) {
-            log.error("Geocode API key is empty. Please check your configuration (GEOCODE_API_KEY).");
+            log.error("Geocode API key is empty. Please check GOONG_API_KEY or GEOCODE_API_KEY.");
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
@@ -63,7 +63,7 @@ public class MapsCoGeocodeCaller implements GeocodeCaller {
             // Sử dụng uriBuilder để thêm query parameters một cách an toàn
             String responseBody = restClient.get()
                     .uri(uriBuilder -> uriBuilder
-                            .queryParam("q", normalizedQuery)
+                            .queryParam("address", normalizedQuery)
                             .queryParam("api_key", sanitizedApiKey)
                             .build())
                     .header(HttpHeaders.USER_AGENT, CLIENT_USER_AGENT)
@@ -82,19 +82,30 @@ public class MapsCoGeocodeCaller implements GeocodeCaller {
             log.info("Geocode response received. Length: {}, Preview: {}",
                     responseBody.length(), abbreviate(responseBody));
 
-            // Parse trực tiếp sang Array Record
-            GeocodeSearchItem[] items = objectMapper.readValue(responseBody, GeocodeSearchItem[].class);
+            GoongGeocodeResponse goongResponse = objectMapper.readValue(responseBody, GoongGeocodeResponse.class);
+            if (goongResponse == null || goongResponse.results() == null || goongResponse.results().isEmpty()) {
+                log.debug("No geocode results returned for query: {}", query);
+                return Optional.empty();
+            }
 
-            return Arrays.stream(items)
+            if (goongResponse.status() != null && !"OK".equalsIgnoreCase(goongResponse.status())) {
+                log.warn("Goong geocode returned status={} for query={}", goongResponse.status(), query);
+            }
+
+            return goongResponse.results().stream()
                     .map(item -> {
-                        Double lat = parseDouble(item.lat());
-                        Double lon = parseDouble(item.lon());
-                        return (lat != null && lon != null) ? new GeoPoint(lat, lon) : null;
+                        GoongLocation location = Optional.ofNullable(item.geometry())
+                                .map(GoongGeometry::location)
+                                .orElse(null);
+
+                        return (location != null && location.lat() != null && location.lng() != null)
+                                ? new GeoPoint(location.lat(), location.lng())
+                                : null;
                     })
                     .filter(Objects::nonNull)
                     .findFirst()
                     .or(() -> {
-                        log.debug("No valid coordinates found in {} items for query: {}", items.length, query);
+                        log.debug("No valid coordinates found in {} items for query: {}", goongResponse.results().size(), query);
                         return Optional.empty();
                     });
 
@@ -102,14 +113,6 @@ public class MapsCoGeocodeCaller implements GeocodeCaller {
             log.error("Geocode call failed for query [{}]: {}", query, e.getMessage());
             // Tránh leak thông tin exception chi tiết ra ngoài nếu không cần thiết
             throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
-        }
-    }
-
-    private Double parseDouble(String value) {
-        try {
-            return (value == null) ? null : Double.parseDouble(value);
-        } catch (NumberFormatException e) {
-            return null;
         }
     }
 
@@ -145,9 +148,21 @@ public class MapsCoGeocodeCaller implements GeocodeCaller {
     }
 
     /**
-     * Record đại diện cho item trong mảng JSON trả về từ Maps.co
+     * Record đại diện cho cấu trúc JSON trả về từ Goong Geocode API.
      */
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private record GeocodeSearchItem(String lat, String lon) {
+    private record GoongGeocodeResponse(String status, List<GoongGeocodeResult> results) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record GoongGeocodeResult(GoongGeometry geometry) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record GoongGeometry(GoongLocation location) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record GoongLocation(Double lat, Double lng) {
     }
 }
