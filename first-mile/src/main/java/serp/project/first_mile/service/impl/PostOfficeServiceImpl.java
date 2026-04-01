@@ -22,6 +22,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import serp.project.first_mile.caller.GeocodeCaller;
 
 import java.io.ByteArrayOutputStream;
@@ -36,9 +37,11 @@ import serp.project.first_mile.domain.Province;
 import serp.project.first_mile.domain.Ward;
 import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.CreatePostOfficeRequest;
+import serp.project.first_mile.dto.request.PostOfficeImportDTO;
 import serp.project.first_mile.dto.request.UpdatePostOfficeRequest;
 import serp.project.first_mile.dto.response.PostOfficeGeocodeBatchResponse;
 import serp.project.first_mile.dto.response.PostOfficeResponse;
+import serp.project.first_mile.dto.response.ValidateImportFileDTO;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.mapper.PostOfficeMapper;
@@ -47,6 +50,7 @@ import serp.project.first_mile.repository.ProvinceRepository;
 import serp.project.first_mile.repository.WardRepository;
 import serp.project.first_mile.repository.projection.CodeNameProjection;
 import serp.project.first_mile.kernel.utils.AuthUtils;
+import serp.project.first_mile.service.PostOfficeImportExcelService;
 import serp.project.first_mile.service.PostOfficeService;
 
 @Service
@@ -66,6 +70,7 @@ public class PostOfficeServiceImpl implements PostOfficeService {
     private final WardRepository wardRepository;
     private final AuthUtils authUtils;
     private final GeocodeCaller geocodeCaller;
+    private final PostOfficeImportExcelService postOfficeImportExcelService;
 
     @Override
     public PageResponse<PostOfficeResponse> getPostOffices(int page, int size, String keyword) {
@@ -285,6 +290,11 @@ public class PostOfficeServiceImpl implements PostOfficeService {
         } catch (IOException exception) {
             throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
         }
+    }
+
+    @Override
+    public ValidateImportFileDTO<PostOfficeImportDTO> validateImportFile(MultipartFile file, Long tenantId) {
+        return postOfficeImportExcelService.validateImportFile(file, tenantId);
     }
 
     private PostOffice getPostOfficeOrThrow(Long id) {
