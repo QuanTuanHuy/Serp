@@ -4,5 +4,4 @@ public enum ShipmentStatus {
     CREATED,
     IMPORTED,
     EXPORTED
-
 }
