@@ -55,8 +55,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class PostOfficeImportExcelServiceImpl implements PostOfficeImportExcelService {
 
-    private static final int HEADER_ROW_INDEX = 2;
-    private static final int DATA_START_ROW_INDEX = 3;
+    private static final int HEADER_ROW_INDEX = 0;
+    private static final int DATA_START_ROW_INDEX = 1;
 
     private static final int COLUMN_STT = 0;
     private static final int COLUMN_NAME = 1;
