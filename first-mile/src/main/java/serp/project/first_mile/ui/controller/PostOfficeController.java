@@ -7,6 +7,10 @@ package serp.project.first_mile.ui.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,15 +27,20 @@ import serp.project.first_mile.dto.request.CreatePostOfficeRequest;
 import serp.project.first_mile.dto.request.UpdatePostOfficeRequest;
 import serp.project.first_mile.dto.response.PostOfficeGeocodeBatchResponse;
 import serp.project.first_mile.dto.response.PostOfficeResponse;
+import serp.project.first_mile.exception.AppException;
+import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.exception.MessageService;
+import serp.project.first_mile.kernel.utils.AuthUtils;
 import serp.project.first_mile.service.PostOfficeService;
 
 @RestController
 @RequestMapping("/api/v1/post-offices")
 @RequiredArgsConstructor
+@Slf4j
 public class PostOfficeController {
     private final PostOfficeService postOfficeService;
     private final MessageService messageService;
+    private final AuthUtils authUtils;
 
     @GetMapping
     public ApiResponse<PageResponse<PostOfficeResponse>> getPostOffices(
@@ -101,5 +110,21 @@ public class PostOfficeController {
                 .message(messageService.getMessage("success.post_offices.geocode.batch"))
                 .result(postOfficeService.updatePostOfficesWithNullLocationByGeocode(batch))
                 .build();
+    }
+
+    @GetMapping("/template")
+    @PreAuthorize("hasRole('TMS_ADMIN')")
+    public ResponseEntity<byte[]> exportTemplate() {
+        Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
+                () -> new AppException(ErrorCode.UNAUTHORIZED)
+        );
+        log.info("REST request to export Post Office Template Excel for tenant {}", tenantId);
+
+        byte[] excelData = postOfficeService.exportTemplate();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=post_office_template.xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excelData);
     }
 }

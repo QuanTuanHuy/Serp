@@ -25,4 +25,6 @@ public interface PostOfficeService {
     PostOfficeResponse updatePostOfficeLocationByGeocode(Long id);
 
     PostOfficeGeocodeBatchResponse updatePostOfficesWithNullLocationByGeocode(int batch);
+
+    byte[] exportTemplate();
 }
