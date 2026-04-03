@@ -155,16 +155,4 @@ public class PostOfficeController {
         log.info("REST request to import Post Office file for tenant {}", tenantId);
         return postOfficeService.importPostOfficesAsync(file, tenantId);
     }
-
-    @GetMapping("/import-history/{importHistoryId}")
-    @PreAuthorize("hasRole('TMS_ADMIN')")
-    public ImportHistoryResponse getImportHistory(
-            @PathVariable Long importHistoryId
-    ) {
-        Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
-                () -> new AppException(ErrorCode.UNAUTHORIZED)
-        );
-        log.info("REST request to get post office import history {} for tenant {}", importHistoryId, tenantId);
-        return postOfficeService.getImportHistory(importHistoryId, tenantId);
-    }
 }

@@ -29,13 +29,7 @@ import serp.project.first_mile.domain.Ward;
 import serp.project.first_mile.dto.request.OrderImportDTO;
 import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
-import serp.project.first_mile.enums.DeliveryRequestTime;
-import serp.project.first_mile.enums.FeePayer;
-import serp.project.first_mile.enums.ImportHistoryStatus;
-import serp.project.first_mile.enums.OrderProductCategory;
-import serp.project.first_mile.enums.OrderStatus;
-import serp.project.first_mile.enums.OrderType;
-import serp.project.first_mile.enums.PaymentStatus;
+import serp.project.first_mile.enums.*;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.exception.MessageService;
@@ -285,13 +279,6 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
         return toImportHistoryResponse(savedImportHistory);
     }
 
-    @Override
-    public ImportHistoryResponse getImportHistory(Long importHistoryId, Long tenantId) {
-        ImportHistory importHistory = importHistoryRepository.findByIdAndTenantId(importHistoryId, tenantId)
-                .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST));
-        return toImportHistoryResponse(importHistory);
-    }
-
     private ValidateImportFileDTO<OrderImportDTO> validateImportFileBytes(byte[] fileBytes, Long tenantId) {
         ValidateImportFileDTO<OrderImportDTO> response = buildBaseValidateResponse();
 
@@ -355,6 +342,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
 
         importHistory.setStatus(ImportHistoryStatus.PROCESSING);
         importHistory.setStartedAt(LocalDateTime.now());
+        importHistory.setType(ImportType.ORDER);
         importHistoryRepository.save(importHistory);
 
         try {

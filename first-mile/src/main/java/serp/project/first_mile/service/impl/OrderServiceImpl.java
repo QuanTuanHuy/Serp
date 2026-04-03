@@ -84,11 +84,6 @@ public class OrderServiceImpl implements OrderService {
         return orderImportExcelService.importOrdersAsync(file, tenantId);
     }
 
-    @Override
-    public ImportHistoryResponse getImportHistory(Long importHistoryId, Long tenantId) {
-        return orderImportExcelService.getImportHistory(importHistoryId, tenantId);
-    }
-
     private void populateWardColumn(Sheet sheet, List<WardExcelTemplateDTO> wards) {
         for (int i = 0; i < wards.size(); i++) {
             WardExcelTemplateDTO ward = wards.get(i);

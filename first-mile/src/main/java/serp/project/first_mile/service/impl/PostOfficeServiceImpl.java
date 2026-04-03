@@ -303,11 +303,6 @@ public class PostOfficeServiceImpl implements PostOfficeService {
         return postOfficeImportExcelService.importPostOfficesAsync(file, tenantId);
     }
 
-    @Override
-    public ImportHistoryResponse getImportHistory(Long importHistoryId, Long tenantId) {
-        return postOfficeImportExcelService.getImportHistory(importHistoryId, tenantId);
-    }
-
     private PostOffice getPostOfficeOrThrow(Long id) {
         return postOfficeRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.POST_OFFICE_NOT_FOUND));

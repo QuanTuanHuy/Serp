@@ -27,6 +27,7 @@ import serp.project.first_mile.dto.request.PostOfficeImportDTO;
 import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
 import serp.project.first_mile.enums.ImportHistoryStatus;
+import serp.project.first_mile.enums.ImportType;
 import serp.project.first_mile.enums.PostOfficeStatus;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
@@ -197,13 +198,6 @@ public class PostOfficeImportExcelServiceImpl implements PostOfficeImportExcelSe
         return toImportHistoryResponse(savedImportHistory);
     }
 
-    @Override
-    public ImportHistoryResponse getImportHistory(Long importHistoryId, Long tenantId) {
-        ImportHistory importHistory = importHistoryRepository.findByIdAndTenantId(importHistoryId, tenantId)
-                .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST));
-        return toImportHistoryResponse(importHistory);
-    }
-
     private ValidateImportFileDTO<PostOfficeImportDTO> validateImportFileBytes(byte[] fileBytes, Long tenantId) {
         ValidateImportFileDTO<PostOfficeImportDTO> response = buildBaseValidateResponse();
 
@@ -267,6 +261,7 @@ public class PostOfficeImportExcelServiceImpl implements PostOfficeImportExcelSe
 
         importHistory.setStatus(ImportHistoryStatus.PROCESSING);
         importHistory.setStartedAt(LocalDateTime.now());
+        importHistory.setType(ImportType.POST_OFFICE);
         importHistoryRepository.save(importHistory);
 
         try {

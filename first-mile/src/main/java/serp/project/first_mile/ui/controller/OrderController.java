@@ -60,15 +60,4 @@ public class OrderController {
         log.info("REST request to import Order file for tenant {}", tenantId);
         return orderService.importOrdersAsync(file, tenantId);
     }
-
-    @GetMapping("/import-history/{importHistoryId}")
-    public ImportHistoryResponse getImportHistory(
-            @PathVariable Long importHistoryId
-    ) {
-        Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
-                () -> new AppException(ErrorCode.UNAUTHORIZED)
-        );
-        log.info("REST request to get order import history {} for tenant {}", importHistoryId, tenantId);
-        return orderService.getImportHistory(importHistoryId, tenantId);
-    }
 }
