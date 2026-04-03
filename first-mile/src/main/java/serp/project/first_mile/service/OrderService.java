@@ -11,6 +11,4 @@ public interface OrderService {
 	ValidateImportFileDTO<OrderImportDTO> validateImportFile(MultipartFile file, Long tenantId);
 
 	ImportHistoryResponse importOrdersAsync(MultipartFile file, Long tenantId);
-
-	ImportHistoryResponse getImportHistory(Long importHistoryId, Long tenantId);
 }

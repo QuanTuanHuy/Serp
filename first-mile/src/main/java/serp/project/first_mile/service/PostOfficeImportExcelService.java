@@ -14,6 +14,4 @@ public interface PostOfficeImportExcelService {
     ValidateImportFileDTO<PostOfficeImportDTO> validateImportFile(MultipartFile file, Long tenantId);
 
     ImportHistoryResponse importPostOfficesAsync(MultipartFile file, Long tenantId);
-
-    ImportHistoryResponse getImportHistory(Long importHistoryId, Long tenantId);
 }

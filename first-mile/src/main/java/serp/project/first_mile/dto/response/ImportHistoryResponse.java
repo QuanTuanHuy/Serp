@@ -11,6 +11,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import serp.project.first_mile.enums.ImportHistoryStatus;
+import serp.project.first_mile.enums.ImportType;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -47,4 +48,7 @@ public class ImportHistoryResponse {
 
     @JsonProperty("finished_at")
     private LocalDateTime finishedAt;
+
+    @JsonProperty("type")
+    private ImportType type;
 }
