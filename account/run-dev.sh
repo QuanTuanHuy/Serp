@@ -13,4 +13,9 @@ echo ""
 echo "Starting Account Service in development mode..."
 echo ""
 
-./mvnw spring-boot:run
+# On Windows Git Bash, prefer mvnw.cmd to avoid curl/TLS issues in shell wrapper downloads.
+if [[ "$(uname -s)" == MINGW* || "$(uname -s)" == CYGWIN* ]]; then
+  ./mvnw.cmd spring-boot:run
+else
+  ./mvnw spring-boot:run
+fi

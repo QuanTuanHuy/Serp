@@ -250,6 +250,8 @@ export const api = createApi({
     'Message',
     'DiscussActivity',
     'Presence',
+    // TTCRS tags
+    'Todo',
   ],
 
   // Define endpoints in separate files for each module
