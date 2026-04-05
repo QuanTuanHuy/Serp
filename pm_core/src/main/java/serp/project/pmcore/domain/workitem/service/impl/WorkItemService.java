@@ -41,13 +41,19 @@ public class WorkItemService implements IWorkItemService {
     public WorkItemEntity createWorkItem(WorkItemEntity workItem, Long tenantId, Long userId) {
         long now = System.currentTimeMillis();
         workItem.setTenantId(tenantId);
-        workItem.setCreatedBy(userId);
-        workItem.setUpdatedBy(userId);
-        workItem.setCreatedAt(now);
-        workItem.setUpdatedAt(now);
+        workItem.applyCreate(userId, now);
 
         WorkItemEntity saved = workItemWritePort.saveWorkItem(workItem);
         log.info("Created work item id={}, key={}, projectId={}", saved.getId(), saved.getKey(), saved.getProjectId());
+        return saved;
+    }
+
+    @Override
+    public WorkItemEntity updateWorkItem(WorkItemEntity workItem, Long userId) {
+        workItem.applyUpdate(userId, System.currentTimeMillis());
+        WorkItemEntity saved = workItemWritePort.saveWorkItem(workItem);
+        log.info("Updated work item id={}, key={}, projectId={}",
+                saved.getId(), saved.getKey(), saved.getProjectId());
         return saved;
     }
 

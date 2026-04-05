@@ -34,6 +34,7 @@ public class EventConstants {
             public static final String WORK_ITEM_UPDATED = "WORK_ITEM_UPDATED";
             public static final String WORK_ITEM_DELETED = "WORK_ITEM_DELETED";
             public static final String WORK_ITEM_MOVED = "WORK_ITEM_MOVED";
+            public static final String WORK_ITEM_STATUS_CHANGED = "WORK_ITEM_STATUS_CHANGED";
         }
     }
 }

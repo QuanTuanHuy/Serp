@@ -54,11 +54,21 @@ public class WorkItemCustomFieldResolver {
     public ResolvedCustomFields resolveCustomFields(String issueTypeKey,
                                                     Map<String, Object> requestCustomFields,
                                                     CreateFieldRules createFieldRules) {
-        if (createFieldRules.customPolicies().isEmpty()) {
+        Map<String, Boolean> requiredByFieldKey = new LinkedHashMap<>();
+        for (Map.Entry<String, FieldPolicy> entry : createFieldRules.customPolicies().entrySet()) {
+            requiredByFieldKey.put(entry.getKey(), entry.getValue().required());
+        }
+        return resolveCustomFields(issueTypeKey, requestCustomFields, requiredByFieldKey);
+    }
+
+    public ResolvedCustomFields resolveCustomFields(String issueTypeKey,
+                                                    Map<String, Object> requestCustomFields,
+                                                    Map<String, Boolean> requiredByFieldKey) {
+        if (requiredByFieldKey == null || requiredByFieldKey.isEmpty()) {
             return ResolvedCustomFields.empty();
         }
 
-        List<String> fieldKeys = new ArrayList<>(new LinkedHashSet<>(createFieldRules.customPolicies().keySet()));
+        List<String> fieldKeys = new ArrayList<>(new LinkedHashSet<>(requiredByFieldKey.keySet()));
         Map<String, CustomFieldEntity> customFieldByKey = toCustomFieldMap(
                 customFieldPort.getCustomFieldsByFieldKeys(fieldKeys)
         );
@@ -67,9 +77,9 @@ public class WorkItemCustomFieldResolver {
         List<String> missingRequiredFields = new ArrayList<>();
         Map<String, Object> providedCustomFields = requestCustomFields == null ? Map.of() : requestCustomFields;
 
-        for (Map.Entry<String, FieldPolicy> entry : createFieldRules.customPolicies().entrySet()) {
+        for (Map.Entry<String, Boolean> entry : requiredByFieldKey.entrySet()) {
             String fieldKey = entry.getKey();
-            FieldPolicy fieldPolicy = entry.getValue();
+            boolean required = Boolean.TRUE.equals(entry.getValue());
             CustomFieldEntity customField = customFieldByKey.get(fieldKey);
 
             if (customField == null) {
@@ -99,7 +109,7 @@ public class WorkItemCustomFieldResolver {
                     : handler.resolveDefaults(resolutionContext, defaultValues);
 
             if (fieldValues.isEmpty()) {
-                if (fieldPolicy.required()) {
+                if (required) {
                     missingRequiredFields.add(fieldKey);
                 }
                 continue;

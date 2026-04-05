@@ -15,6 +15,7 @@ import serp.project.pmcore.infrastructure.store.repository.IWorkflowSchemeItemRe
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -45,6 +46,12 @@ public class WorkflowSchemeItemAdapter implements IWorkflowSchemeItemPort {
         return workflowSchemeItemMapper.toEntities(
                 workflowSchemeItemRepository.findAllBySchemeIdAndTenantIdOrSystemTenant(schemeId, tenantId)
         );
+    }
+
+    @Override
+    public Optional<WorkflowSchemeItemEntity> getItemBySchemeIdAndIssueTypeId(Long schemeId, Long issueTypeId, Long tenantId) {
+        return workflowSchemeItemRepository.findFirstByTenantIdAndSchemeIdAndIssueTypeId(tenantId, schemeId, issueTypeId)
+                .map(workflowSchemeItemMapper::toEntity);
     }
 
     @Override

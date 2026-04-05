@@ -15,6 +15,7 @@ import serp.project.pmcore.infrastructure.store.repository.IFieldConfigSchemeIte
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -45,5 +46,12 @@ public class FieldConfigSchemeItemAdapter implements IFieldConfigSchemeItemPort 
         return fieldConfigSchemeItemMapper.toEntities(
                 fieldConfigSchemeItemRepository.findAllBySchemeIdAndTenantId(schemeId, tenantId)
         );
+    }
+
+    @Override
+    public Optional<FieldConfigSchemeItemEntity> getItemBySchemeIdAndIssueTypeId(Long schemeId, Long issueTypeId, Long tenantId) {
+        return fieldConfigSchemeItemRepository.findFirstBySchemeIdAndIssueTypeIdAndTenantId(
+                schemeId, issueTypeId, tenantId
+        ).map(fieldConfigSchemeItemMapper::toEntity);
     }
 }

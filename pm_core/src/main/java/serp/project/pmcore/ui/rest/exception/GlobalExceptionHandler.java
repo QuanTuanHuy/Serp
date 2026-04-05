@@ -145,10 +145,16 @@ public class GlobalExceptionHandler {
             case USER_NOT_FOUND,
                  SERVICE_ACCOUNT_NOT_FOUND -> HttpStatus.NOT_FOUND;
 
+            case PROJECT_PERMISSION_DENIED,
+                 WORK_ITEM_SECURITY_ACCESS_DENIED,
+                 TRANSITION_CONDITION_FAILED -> HttpStatus.FORBIDDEN;
+
+            case PROJECT_ARCHIVED -> HttpStatus.CONFLICT;
+
             case SCHEME_INCOMPATIBLE,
-                 WORKFLOW_VALIDATION_FAILED,
-                 TRANSITION_VALIDATION_FAILED,
-                 FIELD_CANNOT_BE_REQUIRED_AND_HIDDEN,
+                  WORKFLOW_VALIDATION_FAILED,
+                  TRANSITION_VALIDATION_FAILED,
+                  FIELD_CANNOT_BE_REQUIRED_AND_HIDDEN,
                  SUMMARY_FIELD_CANNOT_BE_HIDDEN -> HttpStatus.UNPROCESSABLE_ENTITY;
 
             default -> HttpStatus.BAD_REQUEST;

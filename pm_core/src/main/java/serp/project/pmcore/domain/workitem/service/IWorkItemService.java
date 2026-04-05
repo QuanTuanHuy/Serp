@@ -12,6 +12,8 @@ public interface IWorkItemService {
 
     WorkItemEntity createWorkItem(WorkItemEntity workItem, Long tenantId, Long userId);
 
+    WorkItemEntity updateWorkItem(WorkItemEntity workItem, Long userId);
+
     WorkItemEntity getWorkItemById(Long id, Long tenantId);
 
     long getNextIssueNumber(Long projectId, Long tenantId);

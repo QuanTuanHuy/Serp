@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 import serp.project.pmcore.infrastructure.store.model.WorkflowSchemeItemModel;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface IWorkflowSchemeItemRepository extends JpaRepository<WorkflowSchemeItemModel, Long> {
@@ -21,6 +22,8 @@ public interface IWorkflowSchemeItemRepository extends JpaRepository<WorkflowSch
 
     @Query("SELECT i FROM WorkflowSchemeItemModel i WHERE i.schemeId = :schemeId AND (i.tenantId = :tenantId OR i.tenantId = 0)")
     List<WorkflowSchemeItemModel> findAllBySchemeIdAndTenantIdOrSystemTenant(@Param("schemeId") Long schemeId, @Param("tenantId") Long tenantId);
+
+    Optional<WorkflowSchemeItemModel> findFirstByTenantIdAndSchemeIdAndIssueTypeId(Long tenantId, Long schemeId, Long issueTypeId);
 
     @Modifying
     @Query("UPDATE WorkflowSchemeItemModel i SET i.deletedAt = CURRENT_TIMESTAMP WHERE i.schemeId = :schemeId AND i.tenantId = :tenantId AND i.deletedAt IS NULL")

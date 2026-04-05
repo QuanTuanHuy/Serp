@@ -9,17 +9,24 @@ package serp.project.pmcore.domain.workitem.service.impl;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
+import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
+import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
+import serp.project.pmcore.domain.workitem.entity.StatusCategoryEntity;
+import serp.project.pmcore.domain.workitem.port.IStatusCategoryPort;
 import serp.project.pmcore.domain.workitem.service.IStatusService;
 import serp.project.pmcore.domain.workitem.entity.StatusEntity;
 import serp.project.pmcore.domain.workitem.port.IStatusPort;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class StatusService implements IStatusService {
     private final IStatusPort statusPort;
+    private final IStatusCategoryPort statusCategoryPort;
 
     @Override
     public List<StatusEntity> getStatusesByTenantId(Long tenantId) {
@@ -49,4 +56,27 @@ public class StatusService implements IStatusService {
         return statusPort.createStatuses(newStatuses);
     }
 
+    @Override
+    public StatusEntity getStatusById(Long id, Long tenantId) {
+        return statusPort.getStatusById(id, tenantId)
+                .orElseThrow(() -> {
+                    log.error("Status not found: id={}, tenantId={}", id, tenantId);
+                    return new ResourceNotFoundException(
+                            DomainErrorCode.STATUS_NOT_FOUND,
+                            String.format("Status not found: id=%s, tenantId=%s", id, tenantId)
+                    );
+                });
+    }
+
+    @Override
+    public StatusCategoryEntity getStatusCategoryById(Long id, Long tenantId) {
+        return statusCategoryPort.getStatusCategoryById(id, tenantId)
+                .orElseThrow(() -> {
+                    log.error("Status category not found: id={}, tenantId={}", id, tenantId);
+                    return new ResourceNotFoundException(
+                            DomainErrorCode.STATUS_CATEGORY_NOT_FOUND,
+                            String.format("Status category not found: id=%s, tenantId=%s", id, tenantId)
+                    );
+                });
+    }
 }

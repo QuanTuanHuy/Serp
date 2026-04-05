@@ -94,6 +94,10 @@ public enum DomainErrorCode {
     INVALID_PARENT_HIERARCHY("Invalid parent-child hierarchy: child level must be lower than parent level"),
     PARENT_NOT_IN_SAME_PROJECT("Parent work item must belong to the same project"),
     WORK_ITEM_DELETE_SCOPE_INVALID("Work item delete scope is invalid"),
+    WORK_ITEM_SECURITY_ACCESS_DENIED("Insufficient issue security level to transition this work item"),
+    WORKFLOW_NOT_RESOLVABLE("Effective workflow cannot be resolved for this work item"),
+    WORK_ITEM_WORKFLOW_STATE_INVALID("Work item workflow_step_id/status_id is inconsistent with the effective workflow"),
+    TRANSITION_FIELD_INVALID("Transition field payload is invalid"),
 
     // Issue types & issue type schemes
     ISSUE_TYPE_NOT_FOUND("Issue type not found"),
