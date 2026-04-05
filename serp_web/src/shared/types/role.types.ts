@@ -18,3 +18,10 @@ export const PURCHASE_ROLES: string[] = [
   'PURCHASE_MANAGER',
   'PURCHASE_STAFF',
 ];
+
+export const FIRST_MILE_ROLES: string[] = [
+  'TMS_CUSTOMER',
+  'TMS_ADMIN',
+  'TMS_POSTOFFICER_MANAGER',
+  'TMS_POSTOFFICER',
+];
