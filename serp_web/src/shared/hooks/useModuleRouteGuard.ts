@@ -11,6 +11,13 @@ import {
   useGetMenuDisplaysByModuleAndUserQuery,
   useGetMyModulesQuery,
 } from '@/modules/account/services';
+import { selectUserProfile } from '@/modules/account/store';
+import { useAppSelector } from '@/shared/hooks/redux';
+import { FIRST_MILE_ROLES } from '@/shared/types';
+import { isSameModuleCode, toCanonicalModuleCode } from '@/shared/utils';
+
+const FIRST_MILE_ROUTE_PREFIX = '/first-mile';
+const FIRST_MILE_ROLE_SET = new Set(FIRST_MILE_ROLES);
 
 interface RouteGuardResult {
   hasAccess: boolean;
@@ -47,13 +54,29 @@ interface RouteGuardResult {
  */
 export const useModuleRouteGuard = (moduleCode: string): RouteGuardResult => {
   const pathname = usePathname();
-  const moduleRootPath = `/${moduleCode.toLowerCase()}`;
+  const user = useAppSelector(selectUserProfile);
+  const moduleRootPath = useMemo(() => {
+    const [rootSegment] = pathname.split('/').filter(Boolean);
+    return rootSegment ? `/${rootSegment}` : '/';
+  }, [pathname]);
+
+  const hasFirstMileRoleAccess = useMemo(() => {
+    if (!pathname.startsWith(FIRST_MILE_ROUTE_PREFIX)) {
+      return false;
+    }
+
+    if (toCanonicalModuleCode(moduleCode) !== 'TMS') {
+      return false;
+    }
+
+    return (user?.roles || []).some((role) => FIRST_MILE_ROLE_SET.has(role));
+  }, [pathname, moduleCode, user?.roles]);
 
   const { data: userModules, isLoading: modulesLoading } =
     useGetMyModulesQuery();
 
   const currentModule = useMemo(() => {
-    return userModules?.find((m) => m.moduleCode === moduleCode);
+    return userModules?.find((m) => isSameModuleCode(m.moduleCode, moduleCode));
   }, [userModules, moduleCode]);
 
   const {
@@ -65,12 +88,19 @@ export const useModuleRouteGuard = (moduleCode: string): RouteGuardResult => {
   });
 
   const hasAccess = useMemo(() => {
+    // First-mile currently needs role fallback because menu API may not include
+    // all paths for TMS roles in some environments.
+    if (hasFirstMileRoleAccess) {
+      return true;
+    }
+
     if (!menuDisplays || menuDisplays.length === 0) {
       return false;
     }
 
     const normalizePath = (path: string) => {
-      return path.replace(/\/+$/, ''); // Remove trailing slashes
+      const normalizedPath = path.replace(/\/+$/, '');
+      return normalizedPath || '/';
     };
 
     const currentPath = normalizePath(pathname);
@@ -98,12 +128,17 @@ export const useModuleRouteGuard = (moduleCode: string): RouteGuardResult => {
       return menuDisplays.some((menu) => {
         if (!menu.path) return false;
         const menuPath = normalizePath(menu.path);
+
+        if (menuPath === normalizePath(moduleRootPath)) {
+          return true;
+        }
+
         return menuPath.startsWith(normalizePath(moduleRootPath) + '/');
       });
     }
 
     return false;
-  }, [menuDisplays, pathname, moduleRootPath]);
+  }, [hasFirstMileRoleAccess, menuDisplays, pathname, moduleRootPath]);
 
   const isLoading = modulesLoading || menusLoading;
 

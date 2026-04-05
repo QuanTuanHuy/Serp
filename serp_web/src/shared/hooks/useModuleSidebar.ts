@@ -9,6 +9,7 @@ import {
   useGetMyModulesQuery,
 } from '@/modules/account/services';
 import type { MenuDisplayDetail } from '@/modules/admin/types';
+import { isSameModuleCode } from '@/shared/utils';
 
 export interface SidebarMenuItem {
   id: number;
@@ -90,7 +91,7 @@ export const useModuleSidebar = (moduleCode: string) => {
     useGetMyModulesQuery();
 
   const currentModule = useMemo(() => {
-    return userModules?.find((m) => m.moduleCode === moduleCode);
+    return userModules?.find((m) => isSameModuleCode(m.moduleCode, moduleCode));
   }, [userModules, moduleCode]);
 
   // Get menu displays for this module and current user
