@@ -12,15 +12,15 @@ import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
 import serp.project.pmcore.application.workitem.command.create.internal.CreateFieldRules;
 import serp.project.pmcore.application.workitem.command.create.internal.CreateWorkItemData;
-import serp.project.pmcore.application.workitem.command.create.internal.ResolvedCustomFields;
 import serp.project.pmcore.application.workitem.command.create.internal.ResolvedWorkItemCreateConfiguration;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemCreateAuthorizationService;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemCreateConfigurationResolver;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemCreateRequiredFieldValidator;
-import serp.project.pmcore.application.workitem.command.create.support.WorkItemCustomFieldResolver;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemDraftFactory;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemFieldPolicyResolver;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemFieldWriteValidator;
+import serp.project.pmcore.domain.customfield.dto.ResolvedCustomFields;
+import serp.project.pmcore.domain.customfield.service.impl.WorkItemCustomFieldResolver;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.shared.service.IOutboxEventService;
@@ -38,6 +38,7 @@ import serp.project.pmcore.domain.workitem.service.IWorkItemService;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class CreateWorkItemCommandHandler
@@ -133,7 +134,7 @@ public class CreateWorkItemCommandHandler
         ResolvedCustomFields resolvedCustomFields = workItemCustomFieldResolver.resolveCustomFields(
                 resolvedConfiguration.issueType().getTypeKey(),
                 createWorkItemData.getCustomFields(),
-                createFieldRules
+                toRequiredCustomFieldMap(createFieldRules)
         );
         workItemCreateRequiredFieldValidator.validate(
                 createWorkItemData,
@@ -220,5 +221,15 @@ public class CreateWorkItemCommandHandler
                 .build();
 
         outboxEventService.saveEvent(outboxEvent);
+    }
+
+    private Map<String, Boolean> toRequiredCustomFieldMap(CreateFieldRules createFieldRules) {
+        return createFieldRules.customPolicies().entrySet().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().required(),
+                        (left, right) -> left,
+                        java.util.LinkedHashMap::new
+                ));
     }
 }

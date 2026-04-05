@@ -3,7 +3,7 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.application.workitem.command.create.internal;
+package serp.project.pmcore.domain.customfield.dto;
 
 import java.util.List;
 

@@ -33,8 +33,8 @@ import serp.project.pmcore.domain.workitem.port.IWorkItemCustomFieldValuePort;
 import serp.project.pmcore.domain.workitem.service.IWorkItemFieldResolver;
 import serp.project.pmcore.domain.workitem.service.IWorkItemService;
 import serp.project.pmcore.domain.workitem.service.IWorkItemTransitionAuthorizationService;
+import serp.project.pmcore.domain.customfield.service.impl.WorkItemCustomFieldResolver;
 import serp.project.pmcore.kernel.utils.JsonUtils;
-import serp.project.pmcore.application.workitem.command.create.support.WorkItemCustomFieldResolver;
 
 import java.util.List;
 import java.util.Map;

@@ -3,10 +3,10 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.application.workitem.command.create.support.handler;
+package serp.project.pmcore.domain.customfield.service.handler;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.application.workitem.command.create.internal.CustomFieldResolutionContext;
+import serp.project.pmcore.domain.customfield.dto.CustomFieldResolutionContext;
 import serp.project.pmcore.domain.customfield.entity.CustomFieldContextDefaultValueEntity;
 import serp.project.pmcore.domain.workitem.entity.WorkItemCustomFieldValueEntity;
 

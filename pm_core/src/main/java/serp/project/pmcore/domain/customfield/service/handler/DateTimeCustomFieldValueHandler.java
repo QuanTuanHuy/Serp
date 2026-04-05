@@ -3,32 +3,32 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.application.workitem.command.create.support.handler;
+package serp.project.pmcore.domain.customfield.service.handler;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.application.workitem.command.create.internal.CustomFieldResolutionContext;
+import serp.project.pmcore.domain.customfield.dto.CustomFieldResolutionContext;
 import serp.project.pmcore.domain.customfield.entity.CustomFieldContextDefaultValueEntity;
 import serp.project.pmcore.domain.workitem.entity.WorkItemCustomFieldValueEntity;
 
 import java.util.List;
 
 @Component
-public class NumberCustomFieldValueHandler extends AbstractWorkItemCustomFieldValueHandler {
+public class DateTimeCustomFieldValueHandler extends AbstractWorkItemCustomFieldValueHandler {
 
     @Override
     public boolean supports(String normalizedTypeKey) {
-        return "number".equals(normalizedTypeKey);
+        return "datetime".equals(normalizedTypeKey);
     }
 
     @Override
     public List<WorkItemCustomFieldValueEntity> resolveProvided(CustomFieldResolutionContext context, Object rawValue) {
         return List.of(buildCustomFieldValue(
                 context,
-                VALUE_TYPE_NUMBER,
-                null,
-                requireNumberValue(rawValue, context.fieldKey()),
+                VALUE_TYPE_DATETIME,
                 null,
                 null,
+                null,
+                requireDateTimeValue(rawValue, context.fieldKey()),
                 null,
                 null,
                 null,
@@ -41,17 +41,17 @@ public class NumberCustomFieldValueHandler extends AbstractWorkItemCustomFieldVa
     public List<WorkItemCustomFieldValueEntity> resolveDefaults(CustomFieldResolutionContext context,
                                                                 List<CustomFieldContextDefaultValueEntity> defaultValues) {
         CustomFieldContextDefaultValueEntity defaultValue = requireSingleDefaultValue(defaultValues, context.fieldKey());
-        if (defaultValue == null || defaultValue.getNumberValue() == null) {
+        if (defaultValue == null || defaultValue.getDatetimeValue() == null) {
             return List.of();
         }
 
         return List.of(buildCustomFieldValue(
                 context,
-                VALUE_TYPE_NUMBER,
-                null,
-                defaultValue.getNumberValue(),
+                VALUE_TYPE_DATETIME,
                 null,
                 null,
+                null,
+                defaultValue.getDatetimeValue(),
                 null,
                 null,
                 null,

@@ -3,13 +3,11 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.application.workitem.command.create.support;
+package serp.project.pmcore.domain.customfield.service.impl;
 
 import org.springframework.stereotype.Service;
-import serp.project.pmcore.application.workitem.command.create.internal.CreateFieldRules;
-import serp.project.pmcore.application.workitem.command.create.internal.CustomFieldResolutionContext;
-import serp.project.pmcore.application.workitem.command.create.internal.FieldPolicy;
-import serp.project.pmcore.application.workitem.command.create.internal.ResolvedCustomFields;
+import serp.project.pmcore.domain.customfield.dto.CustomFieldResolutionContext;
+import serp.project.pmcore.domain.customfield.dto.ResolvedCustomFields;
 import serp.project.pmcore.domain.customfield.entity.CustomFieldContextDefaultValueEntity;
 import serp.project.pmcore.domain.customfield.entity.CustomFieldContextEntity;
 import serp.project.pmcore.domain.customfield.entity.CustomFieldEntity;
@@ -18,10 +16,10 @@ import serp.project.pmcore.domain.customfield.port.ICustomFieldContextDefaultVal
 import serp.project.pmcore.domain.customfield.port.ICustomFieldContextPort;
 import serp.project.pmcore.domain.customfield.port.ICustomFieldOptionPort;
 import serp.project.pmcore.domain.customfield.port.ICustomFieldPort;
+import serp.project.pmcore.domain.customfield.service.handler.IWorkItemCustomFieldValueHandler;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.DomainValidationException;
 import serp.project.pmcore.domain.workitem.entity.WorkItemCustomFieldValueEntity;
-import serp.project.pmcore.application.workitem.command.create.support.handler.IWorkItemCustomFieldValueHandler;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -49,16 +47,6 @@ public class WorkItemCustomFieldResolver {
         this.customFieldOptionPort = customFieldOptionPort;
         this.customFieldContextDefaultValuePort = customFieldContextDefaultValuePort;
         this.customFieldValueHandlers = customFieldValueHandlers;
-    }
-
-    public ResolvedCustomFields resolveCustomFields(String issueTypeKey,
-                                                    Map<String, Object> requestCustomFields,
-                                                    CreateFieldRules createFieldRules) {
-        Map<String, Boolean> requiredByFieldKey = new LinkedHashMap<>();
-        for (Map.Entry<String, FieldPolicy> entry : createFieldRules.customPolicies().entrySet()) {
-            requiredByFieldKey.put(entry.getKey(), entry.getValue().required());
-        }
-        return resolveCustomFields(issueTypeKey, requestCustomFields, requiredByFieldKey);
     }
 
     public ResolvedCustomFields resolveCustomFields(String issueTypeKey,
