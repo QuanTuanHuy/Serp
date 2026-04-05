@@ -38,6 +38,7 @@ import serp.project.pmcore.domain.fieldconfig.port.IFieldConfigItemPort;
 import serp.project.pmcore.domain.fieldconfig.port.IFieldConfigPort;
 import serp.project.pmcore.domain.fieldconfig.port.IFieldConfigSchemeItemPort;
 import serp.project.pmcore.domain.fieldconfig.port.IFieldConfigSchemePort;
+import serp.project.pmcore.domain.fieldconfig.service.IFieldConfigService;
 import serp.project.pmcore.domain.issuesecurity.port.IIssueSecurityLevelPort;
 import serp.project.pmcore.domain.issuesecurity.port.IIssueSecuritySchemePort;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
@@ -61,6 +62,7 @@ import serp.project.pmcore.domain.screen.port.IScreenSchemeItemPort;
 import serp.project.pmcore.domain.screen.port.IScreenSchemePort;
 import serp.project.pmcore.domain.screen.port.IScreenTabFieldPort;
 import serp.project.pmcore.domain.screen.port.IScreenTabPort;
+import serp.project.pmcore.domain.screen.service.IScreenService;
 import serp.project.pmcore.domain.shared.service.IOutboxEventService;
 import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.project.service.IProjectService;
@@ -81,12 +83,14 @@ import serp.project.pmcore.domain.workflow.port.IWorkflowVersionPort;
 import serp.project.pmcore.domain.workitem.entity.WorkItemCustomFieldValueEntity;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.IWorkItemCustomFieldValuePort;
+import serp.project.pmcore.domain.workitem.service.IWorkItemFieldResolver;
+import serp.project.pmcore.domain.workitem.service.impl.WorkItemFieldResolver;
 import serp.project.pmcore.domain.workitem.service.IWorkItemService;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemCreateAuthorizationService;
+import serp.project.pmcore.application.workitem.command.create.support.CreateWorkItemFieldRulesResolver;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemCreateConfigurationResolver;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemCreateRequiredFieldValidator;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemDraftFactory;
-import serp.project.pmcore.application.workitem.command.create.support.WorkItemFieldPolicyResolver;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemFieldWriteValidator;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 import serp.project.pmcore.ui.rest.workitem.dto.response.WorkItemResponse;
@@ -173,6 +177,10 @@ class CreateWorkItemCommandHandlerTest {
     @Mock
     private IScreenTabFieldPort screenTabFieldPort;
     @Mock
+    private IScreenService screenService;
+    @Mock
+    private IFieldConfigService fieldConfigService;
+    @Mock
     private IPrioritySchemePort prioritySchemePort;
     @Mock
     private IPrioritySchemeItemPort prioritySchemeItemPort;
@@ -199,6 +207,8 @@ class CreateWorkItemCommandHandlerTest {
 
     @BeforeEach
     void setUp() {
+        IWorkItemFieldResolver workItemFieldResolver = buildWorkItemFieldResolver();
+
         createWorkItemCommandHandler = new CreateWorkItemCommandHandler(
                 createWorkItemValidator,
                 projectService,
@@ -220,18 +230,9 @@ class CreateWorkItemCommandHandlerTest {
                 buildCustomFieldResolver(),
                 new WorkItemCreateRequiredFieldValidator(),
                 new WorkItemDraftFactory(),
-                new WorkItemFieldPolicyResolver(
-                        fieldConfigSchemePort,
-                        fieldConfigSchemeItemPort,
-                        fieldConfigPort,
-                        fieldConfigItemPort,
-                        issueTypeScreenSchemePort,
-                        issueTypeScreenSchemeItemPort,
-                        screenSchemePort,
-                        screenSchemeItemPort,
-                        screenPort,
-                        screenTabPort,
-                        screenTabFieldPort
+                new CreateWorkItemFieldRulesResolver(
+                        screenService,
+                        workItemFieldResolver
                 ),
                 new WorkItemFieldWriteValidator(),
                 workItemCustomFieldValuePort,
@@ -518,14 +519,8 @@ class CreateWorkItemCommandHandlerTest {
                 .statusId(STATUS_ID)
                 .build()));
 
-        when(fieldConfigSchemePort.getFieldConfigSchemeById(FIELD_CONFIG_SCHEME_ID, TENANT_ID)).thenReturn(Optional.of(FieldConfigSchemeEntity.builder()
-                .id(FIELD_CONFIG_SCHEME_ID)
-                .defaultFieldConfigId(FIELD_CONFIG_ID)
-                .build()));
-        when(fieldConfigSchemeItemPort.getFieldConfigSchemeItemsBySchemeId(FIELD_CONFIG_SCHEME_ID, TENANT_ID)).thenReturn(List.of());
-        when(fieldConfigPort.getFieldConfigById(FIELD_CONFIG_ID, TENANT_ID)).thenReturn(Optional.of(FieldConfigEntity.builder()
-                .id(FIELD_CONFIG_ID)
-                .build()));
+        when(fieldConfigService.resolveFieldConfigId(FIELD_CONFIG_SCHEME_ID, ISSUE_TYPE_ID, TENANT_ID))
+                .thenReturn(FIELD_CONFIG_ID);
         when(fieldConfigItemPort.getFieldConfigItemsByFieldConfigId(FIELD_CONFIG_ID, TENANT_ID)).thenReturn(fieldConfigItems);
 
         when(issueTypeScreenSchemePort.getIssueTypeScreenSchemeById(ISSUE_TYPE_SCREEN_SCHEME_ID, TENANT_ID)).thenReturn(Optional.of(IssueTypeScreenSchemeEntity.builder()
@@ -547,11 +542,13 @@ class CreateWorkItemCommandHandlerTest {
         when(screenPort.getScreenById(SCREEN_ID, TENANT_ID)).thenReturn(Optional.of(ScreenEntity.builder()
                 .id(SCREEN_ID)
                 .build()));
-        when(screenTabPort.getScreenTabsByScreenId(SCREEN_ID, TENANT_ID)).thenReturn(List.of(ScreenTabEntity.builder()
-                .id(SCREEN_TAB_ID)
-                .screenId(SCREEN_ID)
-                .build()));
-        when(screenTabFieldPort.getScreenTabFieldsByScreenTabId(SCREEN_TAB_ID, TENANT_ID)).thenReturn(screenFields);
+        when(screenService.resolveScreenIdForOperation(
+                any(ProjectEntity.class),
+                eq(ISSUE_TYPE_ID),
+                eq("CREATE"),
+                eq(TENANT_ID)
+        )).thenReturn(SCREEN_ID);
+        when(screenService.getScreenTabFieldsByScreenId(SCREEN_ID, TENANT_ID)).thenReturn(screenFields);
 
         when(prioritySchemePort.getPrioritySchemeById(PRIORITY_SCHEME_ID, TENANT_ID)).thenReturn(Optional.of(PrioritySchemeEntity.builder()
                 .id(PRIORITY_SCHEME_ID)
@@ -577,6 +574,10 @@ class CreateWorkItemCommandHandlerTest {
                 .fieldRefType(fieldRefType)
                 .fieldRef(fieldRef)
                 .build();
+    }
+
+    private IWorkItemFieldResolver buildWorkItemFieldResolver() {
+        return new WorkItemFieldResolver(fieldConfigItemPort, screenService, fieldConfigService);
     }
 
     private CreateWorkItemCommand createCommand(String summary,

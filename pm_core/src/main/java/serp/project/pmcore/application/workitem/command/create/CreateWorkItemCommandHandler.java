@@ -5,18 +5,19 @@
 
 package serp.project.pmcore.application.workitem.command.create;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
 import serp.project.pmcore.application.workitem.command.create.internal.CreateWorkItemData;
 import serp.project.pmcore.application.workitem.command.create.internal.ResolvedWorkItemCreateConfiguration;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemCreateAuthorizationService;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemCreateConfigurationResolver;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemCreateRequiredFieldValidator;
+import serp.project.pmcore.application.workitem.command.create.support.CreateWorkItemFieldRulesResolver;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemDraftFactory;
-import serp.project.pmcore.application.workitem.command.create.support.WorkItemFieldPolicyResolver;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemFieldWriteValidator;
 import serp.project.pmcore.domain.customfield.dto.ResolvedCustomFields;
 import serp.project.pmcore.domain.customfield.service.impl.WorkItemCustomFieldResolver;
@@ -41,10 +42,10 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class CreateWorkItemCommandHandler
         implements ICommandHandler<CreateWorkItemCommand, CreateWorkItemResult> {
-
-    private static final Logger log = LoggerFactory.getLogger(CreateWorkItemCommandHandler.class);
 
     private final CreateWorkItemValidator createWorkItemValidator;
     private final IProjectService projectService;
@@ -54,39 +55,11 @@ public class CreateWorkItemCommandHandler
     private final WorkItemCustomFieldResolver workItemCustomFieldResolver;
     private final WorkItemCreateRequiredFieldValidator workItemCreateRequiredFieldValidator;
     private final WorkItemDraftFactory workItemDraftFactory;
-    private final WorkItemFieldPolicyResolver workItemFieldPolicyResolver;
+    private final CreateWorkItemFieldRulesResolver createWorkItemFieldRulesResolver;
     private final WorkItemFieldWriteValidator workItemFieldWriteValidator;
     private final IWorkItemCustomFieldValuePort workItemCustomFieldValuePort;
     private final IOutboxEventService outboxEventService;
     private final JsonUtils jsonUtils;
-
-    public CreateWorkItemCommandHandler(CreateWorkItemValidator createWorkItemValidator,
-                                        IProjectService projectService,
-                                        IWorkItemService workItemService,
-                                        WorkItemCreateConfigurationResolver workItemCreateConfigurationResolver,
-                                        WorkItemCreateAuthorizationService workItemCreateAuthorizationService,
-                                        WorkItemCustomFieldResolver workItemCustomFieldResolver,
-                                        WorkItemCreateRequiredFieldValidator workItemCreateRequiredFieldValidator,
-                                        WorkItemDraftFactory workItemDraftFactory,
-                                        WorkItemFieldPolicyResolver workItemFieldPolicyResolver,
-                                        WorkItemFieldWriteValidator workItemFieldWriteValidator,
-                                        IWorkItemCustomFieldValuePort workItemCustomFieldValuePort,
-                                        IOutboxEventService outboxEventService,
-                                        JsonUtils jsonUtils) {
-        this.createWorkItemValidator = createWorkItemValidator;
-        this.projectService = projectService;
-        this.workItemService = workItemService;
-        this.workItemCreateConfigurationResolver = workItemCreateConfigurationResolver;
-        this.workItemCreateAuthorizationService = workItemCreateAuthorizationService;
-        this.workItemCustomFieldResolver = workItemCustomFieldResolver;
-        this.workItemCreateRequiredFieldValidator = workItemCreateRequiredFieldValidator;
-        this.workItemDraftFactory = workItemDraftFactory;
-        this.workItemFieldPolicyResolver = workItemFieldPolicyResolver;
-        this.workItemFieldWriteValidator = workItemFieldWriteValidator;
-        this.workItemCustomFieldValuePort = workItemCustomFieldValuePort;
-        this.outboxEventService = outboxEventService;
-        this.jsonUtils = jsonUtils;
-    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -106,7 +79,7 @@ public class CreateWorkItemCommandHandler
 
         ResolvedWorkItemCreateConfiguration resolvedConfiguration = workItemCreateConfigurationResolver
                 .resolve(project, createWorkItemData, tenantId);
-        WorkItemFieldRules fieldRules = workItemFieldPolicyResolver.resolveCreateFieldRules(
+        WorkItemFieldRules fieldRules = createWorkItemFieldRulesResolver.resolveCreateFieldRules(
                 project,
                 resolvedConfiguration.issueType().getId(),
                 tenantId
