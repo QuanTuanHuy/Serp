@@ -11,8 +11,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import serp.project.pmcore.application.workitem.command.create.internal.CreateFieldRules;
-import serp.project.pmcore.application.workitem.command.create.internal.FieldPolicy;
 import serp.project.pmcore.domain.fieldconfig.entity.FieldConfigEntity;
 import serp.project.pmcore.domain.fieldconfig.entity.FieldConfigItemEntity;
 import serp.project.pmcore.domain.fieldconfig.entity.FieldConfigSchemeEntity;
@@ -35,6 +33,8 @@ import serp.project.pmcore.domain.screen.port.IScreenSchemePort;
 import serp.project.pmcore.domain.screen.port.IScreenTabFieldPort;
 import serp.project.pmcore.domain.screen.port.IScreenTabPort;
 import serp.project.pmcore.domain.shared.constant.WorkItemFieldConstants;
+import serp.project.pmcore.domain.workitem.dto.WorkItemFieldPolicy;
+import serp.project.pmcore.domain.workitem.dto.WorkItemFieldRules;
 
 import java.util.List;
 import java.util.Optional;
@@ -157,19 +157,19 @@ class WorkItemFieldPolicyResolverTest {
                         ScreenTabFieldEntity.builder().fieldRefType("CUSTOM").fieldRef("customfield_10001").build()
                 ));
 
-        CreateFieldRules rules = resolver.resolveCreateFieldRules(project, ISSUE_TYPE_ID, TENANT_ID);
+        WorkItemFieldRules rules = resolver.resolveCreateFieldRules(project, ISSUE_TYPE_ID, TENANT_ID);
 
-        FieldPolicy summaryPolicy = rules.getSystemFieldPolicy(WorkItemFieldConstants.SUMMARY);
-        FieldPolicy dueDatePolicy = rules.getSystemFieldPolicy(WorkItemFieldConstants.DUE_DATE);
-        FieldPolicy customPolicy = rules.getCustomFieldPolicy("customfield_10001");
-        FieldPolicy issueTypePolicy = rules.getSystemFieldPolicy(WorkItemFieldConstants.ISSUE_TYPE_ID);
+        WorkItemFieldPolicy summaryPolicy = rules.getSystemFieldPolicy(WorkItemFieldConstants.SUMMARY);
+        WorkItemFieldPolicy dueDatePolicy = rules.getSystemFieldPolicy(WorkItemFieldConstants.DUE_DATE);
+        WorkItemFieldPolicy customPolicy = rules.getCustomFieldPolicy("customfield_10001");
+        WorkItemFieldPolicy issueTypePolicy = rules.getSystemFieldPolicy(WorkItemFieldConstants.ISSUE_TYPE_ID);
 
         assertNotNull(summaryPolicy);
         assertTrue(summaryPolicy.required());
-        assertTrue(summaryPolicy.onCreateScreen());
+        assertTrue(summaryPolicy.onScreen());
 
         assertNotNull(issueTypePolicy);
-        assertTrue(issueTypePolicy.onCreateScreen());
+        assertTrue(issueTypePolicy.onScreen());
 
         assertNotNull(dueDatePolicy);
         assertEquals(WorkItemFieldConstants.DUE_DATE, dueDatePolicy.fieldRef());
@@ -177,6 +177,6 @@ class WorkItemFieldPolicyResolverTest {
 
         assertNotNull(customPolicy);
         assertTrue(customPolicy.required());
-        assertTrue(customPolicy.onCreateScreen());
+        assertTrue(customPolicy.onScreen());
     }
 }

@@ -8,12 +8,12 @@ package serp.project.pmcore.application.workitem.command.create.support;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import serp.project.pmcore.application.workitem.command.create.internal.CreateWorkItemData;
 import serp.project.pmcore.domain.shared.constant.WorkItemFieldConstants;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
-import serp.project.pmcore.application.workitem.command.create.internal.CreateFieldRules;
-import serp.project.pmcore.application.workitem.command.create.internal.CreateWorkItemData;
-import serp.project.pmcore.application.workitem.command.create.internal.FieldPolicy;
+import serp.project.pmcore.domain.workitem.dto.WorkItemFieldPolicy;
+import serp.project.pmcore.domain.workitem.dto.WorkItemFieldRules;
 
 import java.util.Map;
 
@@ -32,10 +32,10 @@ class WorkItemFieldWriteValidatorTest {
 
     @Test
     void validateClientSuppliedWritableFieldsShouldAllowWritableSystemAndCustomFields() {
-        CreateFieldRules rules = new CreateFieldRules(
+        WorkItemFieldRules rules = new WorkItemFieldRules(
                 Map.of(
                         WorkItemFieldConstants.DUE_DATE,
-                        new FieldPolicy(WorkItemFieldConstants.FIELD_REF_TYPE_SYSTEM,
+                        new WorkItemFieldPolicy(WorkItemFieldConstants.FIELD_REF_TYPE_SYSTEM,
                                 WorkItemFieldConstants.DUE_DATE,
                                 false,
                                 false,
@@ -43,7 +43,7 @@ class WorkItemFieldWriteValidatorTest {
                 ),
                 Map.of(
                         "customfield_10001",
-                        new FieldPolicy(WorkItemFieldConstants.FIELD_REF_TYPE_CUSTOM,
+                        new WorkItemFieldPolicy(WorkItemFieldConstants.FIELD_REF_TYPE_CUSTOM,
                                 "customfield_10001",
                                 false,
                                 false,
@@ -64,10 +64,10 @@ class WorkItemFieldWriteValidatorTest {
 
     @Test
     void validateClientSuppliedWritableFieldsShouldRejectHiddenSystemField() {
-        CreateFieldRules rules = new CreateFieldRules(
+        WorkItemFieldRules rules = new WorkItemFieldRules(
                 Map.of(
                         WorkItemFieldConstants.DUE_DATE,
-                        new FieldPolicy(WorkItemFieldConstants.FIELD_REF_TYPE_SYSTEM,
+                        new WorkItemFieldPolicy(WorkItemFieldConstants.FIELD_REF_TYPE_SYSTEM,
                                 WorkItemFieldConstants.DUE_DATE,
                                 false,
                                 true,
@@ -101,7 +101,7 @@ class WorkItemFieldWriteValidatorTest {
                                 .summary("Create task")
                                 .customFields(Map.of("customfield_10001", "value"))
                                 .build(),
-                        CreateFieldRules.empty()
+                        WorkItemFieldRules.empty()
                 )
         );
 

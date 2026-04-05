@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
-import serp.project.pmcore.application.workitem.command.create.internal.CreateFieldRules;
 import serp.project.pmcore.application.workitem.command.create.internal.CreateWorkItemData;
 import serp.project.pmcore.application.workitem.command.create.internal.ResolvedWorkItemCreateConfiguration;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemCreateAuthorizationService;
@@ -31,6 +30,7 @@ import serp.project.pmcore.domain.shared.entity.OutboxEventEntity;
 import serp.project.pmcore.domain.shared.enums.OutboxEventStatus;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
+import serp.project.pmcore.domain.workitem.dto.WorkItemFieldRules;
 import serp.project.pmcore.domain.workitem.entity.WorkItemCustomFieldValueEntity;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.IWorkItemCustomFieldValuePort;
@@ -106,12 +106,12 @@ public class CreateWorkItemCommandHandler
 
         ResolvedWorkItemCreateConfiguration resolvedConfiguration = workItemCreateConfigurationResolver
                 .resolve(project, createWorkItemData, tenantId);
-        CreateFieldRules createFieldRules = workItemFieldPolicyResolver.resolveCreateFieldRules(
+        WorkItemFieldRules fieldRules = workItemFieldPolicyResolver.resolveCreateFieldRules(
                 project,
                 resolvedConfiguration.issueType().getId(),
                 tenantId
         );
-        workItemFieldWriteValidator.validateClientSuppliedWritableFields(createWorkItemData, createFieldRules);
+        workItemFieldWriteValidator.validateClientSuppliedWritableFields(createWorkItemData, fieldRules);
 
         workItemCreateAuthorizationService.checkScheduleIssuesPermissionIfNeeded(project, actorContext, createWorkItemData.getDueDate());
         Long assigneeId = workItemCreateAuthorizationService.resolveAssigneeId(project, createWorkItemData.getAssigneeId(), actorContext);
@@ -134,14 +134,14 @@ public class CreateWorkItemCommandHandler
         ResolvedCustomFields resolvedCustomFields = workItemCustomFieldResolver.resolveCustomFields(
                 resolvedConfiguration.issueType().getTypeKey(),
                 createWorkItemData.getCustomFields(),
-                toRequiredCustomFieldMap(createFieldRules)
+                toRequiredCustomFieldMap(fieldRules)
         );
         workItemCreateRequiredFieldValidator.validate(
                 createWorkItemData,
                 resolvedConfiguration.priorityId(),
                 assigneeId,
                 securityLevelId,
-                createFieldRules,
+                fieldRules,
                 resolvedCustomFields
         );
 
@@ -223,8 +223,8 @@ public class CreateWorkItemCommandHandler
         outboxEventService.saveEvent(outboxEvent);
     }
 
-    private Map<String, Boolean> toRequiredCustomFieldMap(CreateFieldRules createFieldRules) {
-        return createFieldRules.customPolicies().entrySet().stream()
+    private Map<String, Boolean> toRequiredCustomFieldMap(WorkItemFieldRules fieldRules) {
+        return fieldRules.customPolicies().entrySet().stream()
                 .collect(java.util.stream.Collectors.toMap(
                         Map.Entry::getKey,
                         entry -> entry.getValue().required(),

@@ -8,8 +8,6 @@ package serp.project.pmcore.application.workitem.command.create.support;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import serp.project.pmcore.application.workitem.command.create.internal.CreateFieldRules;
-import serp.project.pmcore.application.workitem.command.create.internal.FieldPolicy;
 import serp.project.pmcore.application.workitem.command.create.internal.FieldRef;
 import serp.project.pmcore.domain.fieldconfig.entity.FieldConfigItemEntity;
 import serp.project.pmcore.domain.fieldconfig.entity.FieldConfigSchemeEntity;
@@ -36,6 +34,8 @@ import serp.project.pmcore.domain.shared.constant.WorkItemFieldConstants;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.DomainValidationException;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
+import serp.project.pmcore.domain.workitem.dto.WorkItemFieldPolicy;
+import serp.project.pmcore.domain.workitem.dto.WorkItemFieldRules;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -59,15 +59,15 @@ public class WorkItemFieldPolicyResolver {
     private final IScreenTabPort screenTabPort;
     private final IScreenTabFieldPort screenTabFieldPort;
 
-    public CreateFieldRules resolveCreateFieldRules(ProjectEntity project, Long issueTypeId, Long tenantId) {
+    public WorkItemFieldRules resolveCreateFieldRules(ProjectEntity project, Long issueTypeId, Long tenantId) {
         Long fieldConfigId = resolveFieldConfigId(project, issueTypeId, tenantId);
         Long createScreenId = resolveCreateScreenId(project, issueTypeId, tenantId);
 
         List<FieldConfigItemEntity> fieldConfigItems = fieldConfigItemPort.getFieldConfigItemsByFieldConfigId(fieldConfigId, tenantId);
         List<FieldRef> createScreenFields = loadCreateScreenFields(createScreenId, tenantId);
 
-        Map<String, FieldPolicy> systemPolicies = new LinkedHashMap<>();
-        Map<String, FieldPolicy> customPolicies = new LinkedHashMap<>();
+        Map<String, WorkItemFieldPolicy> systemPolicies = new LinkedHashMap<>();
+        Map<String, WorkItemFieldPolicy> customPolicies = new LinkedHashMap<>();
 
         for (FieldConfigItemEntity fieldConfigItem : fieldConfigItems) {
             FieldRef fieldRef = normalizeFieldRef(fieldConfigItem.getFieldRefType(), fieldConfigItem.getFieldRef());
@@ -105,7 +105,7 @@ public class WorkItemFieldPolicyResolver {
                 customPolicies
         );
 
-        return new CreateFieldRules(systemPolicies, customPolicies);
+        return new WorkItemFieldRules(systemPolicies, customPolicies);
     }
 
     private Long resolveFieldConfigId(ProjectEntity project, Long issueTypeId, Long tenantId) {
@@ -263,13 +263,13 @@ public class WorkItemFieldPolicyResolver {
                                   boolean required,
                                   boolean hidden,
                                   boolean onCreateScreen,
-                                  Map<String, FieldPolicy> systemPolicies,
-                                  Map<String, FieldPolicy> customPolicies) {
-        Map<String, FieldPolicy> targetPolicies = WorkItemFieldConstants.FIELD_REF_TYPE_SYSTEM.equals(fieldRef.fieldRefType())
+                                  Map<String, WorkItemFieldPolicy> systemPolicies,
+                                  Map<String, WorkItemFieldPolicy> customPolicies) {
+        Map<String, WorkItemFieldPolicy> targetPolicies = WorkItemFieldConstants.FIELD_REF_TYPE_SYSTEM.equals(fieldRef.fieldRefType())
                 ? systemPolicies
                 : customPolicies;
 
-        FieldPolicy existingPolicy = targetPolicies.get(fieldRef.fieldRef());
+        WorkItemFieldPolicy existingPolicy = targetPolicies.get(fieldRef.fieldRef());
         boolean mergedRequired = required;
         boolean mergedHidden = hidden;
         boolean mergedOnCreateScreen = onCreateScreen;
@@ -277,7 +277,7 @@ public class WorkItemFieldPolicyResolver {
         if (existingPolicy != null) {
             mergedRequired = existingPolicy.required() || mergedRequired;
             mergedHidden = existingPolicy.hidden() || mergedHidden;
-            mergedOnCreateScreen = existingPolicy.onCreateScreen() || mergedOnCreateScreen;
+            mergedOnCreateScreen = existingPolicy.onScreen() || mergedOnCreateScreen;
         }
 
         if (WorkItemFieldConstants.FIELD_REF_TYPE_SYSTEM.equals(fieldRef.fieldRefType())
@@ -290,7 +290,7 @@ public class WorkItemFieldPolicyResolver {
             mergedRequired = true;
         }
 
-        targetPolicies.put(fieldRef.fieldRef(), new FieldPolicy(
+        targetPolicies.put(fieldRef.fieldRef(), new WorkItemFieldPolicy(
                 fieldRef.fieldRefType(),
                 fieldRef.fieldRef(),
                 mergedRequired,
