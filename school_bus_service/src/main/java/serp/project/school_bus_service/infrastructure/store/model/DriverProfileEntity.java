@@ -1,0 +1,29 @@
+package serp.project.school_bus_service.infrastructure.store.model;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
+
+@Entity
+@Table(name = "school_bus_driver_profile")
+@Getter
+@Setter
+public class DriverProfileEntity extends BaseModel {
+
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+
+    @Column(name = "full_name", nullable = false)
+    private String fullName;
+
+    private String phone;
+
+    @Column(name = "license_number")
+    private String licenseNumber;
+
+    @Column(nullable = false)
+    private String status;
+
+}

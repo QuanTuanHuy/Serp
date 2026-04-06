@@ -1,0 +1,47 @@
+package serp.project.school_bus_service.infrastructure.store.model;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
+import serp.project.school_bus_service.enums.AttendanceStatus;
+import serp.project.school_bus_service.enums.AttendanceType;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "school_bus_attendance")
+@Getter
+@Setter
+public class AttendanceEntity extends BaseModel {
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "route_id")
+    private RoutePlanEntity route;
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "student_id")
+    private StudentEntity student;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "attendance_type", nullable = false)
+    private AttendanceType attendanceType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private AttendanceStatus status;
+
+    @Column(name = "recorded_at", nullable = false)
+    private LocalDateTime recordedAt;
+
+    @Column(name = "recorded_by", nullable = false)
+    private Long recordedBy;
+
+    @Column(columnDefinition = "TEXT")
+    private String notes;
+}

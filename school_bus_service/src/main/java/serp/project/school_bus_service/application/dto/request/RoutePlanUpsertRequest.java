@@ -1,0 +1,32 @@
+package serp.project.school_bus_service.application.dto.request;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.time.LocalDate;
+
+@Getter
+@Setter
+@NoArgsConstructor
+public class RoutePlanUpsertRequest extends BaseCommandRequest {
+
+    @NotNull
+    private Long schoolId;
+
+    @NotBlank
+    private String routeCode;
+
+    @NotBlank
+    private String routeName;
+
+    @NotNull
+    private LocalDate serviceDate;
+
+    @NotBlank
+    private String shiftType;
+
+    private String planningNotes;
+}
