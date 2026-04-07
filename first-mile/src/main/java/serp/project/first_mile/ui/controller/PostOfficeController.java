@@ -87,6 +87,18 @@ public class PostOfficeController {
                 .build();
     }
 
+    @PostMapping("/{id}/image")
+    @PreAuthorize("hasRole('TMS_ADMIN')")
+    public ApiResponse<PostOfficeResponse> uploadPostOfficeImage(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return ApiResponse.<PostOfficeResponse>builder()
+                .message(messageService.getMessage("success.post_offices.image.upload"))
+                .result(postOfficeService.uploadImage(id, file))
+                .build();
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('TMS_ADMIN')")
     public ApiResponse<Void> deletePostOffice(@PathVariable Long id) {

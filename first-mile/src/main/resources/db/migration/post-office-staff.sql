@@ -5,6 +5,7 @@ CREATE TABLE post_office_staff (
                                    full_name VARCHAR(255) NOT NULL,
                                    phone_number VARCHAR(15),
                                    email VARCHAR(255),
+                                   avatar_url TEXT,
                                    role VARCHAR(20) NOT NULL CHECK (role IN ('MANAGER', 'COURIER')),
                                    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE'
                                        CHECK (status IN ('ACTIVE', 'INACTIVE', 'ON_LEAVE')),

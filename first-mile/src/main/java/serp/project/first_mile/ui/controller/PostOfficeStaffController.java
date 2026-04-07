@@ -3,11 +3,14 @@ package serp.project.first_mile.ui.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import serp.project.first_mile.dto.ApiResponse;
 import serp.project.first_mile.dto.request.UpdatePostOfficeStaffRequest;
 import serp.project.first_mile.dto.response.PostOfficeStaffAssignmentResponse;
@@ -56,6 +59,18 @@ public class PostOfficeStaffController {
         return ApiResponse.<PostOfficeStaffAssignmentResponse>builder()
                 .message(messageService.getMessage("success.post_office_staffs.assign.manager"))
                 .result(postOfficeStaffService.assignManagerToPostOffice(id, postOfficeId))
+                .build();
+    }
+
+    @PostMapping("/{id}/avatar")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_POSTOFFICER_MANAGER', 'TMS_POSTOFFICER')")
+    public ApiResponse<PostOfficeStaffResponse> uploadAvatar(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return ApiResponse.<PostOfficeStaffResponse>builder()
+                .message(messageService.getMessage("success.post_office_staffs.avatar.upload"))
+                .result(postOfficeStaffService.uploadAvatar(id, file))
                 .build();
     }
 

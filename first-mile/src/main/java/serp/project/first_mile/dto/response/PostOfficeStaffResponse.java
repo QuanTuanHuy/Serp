@@ -17,6 +17,7 @@ public record PostOfficeStaffResponse(
         String fullName,
         String phoneNumber,
         String email,
+        String avatarUrl,
         PostOfficeStaffRole role,
         PostOfficeStaffStatus status,
         LocalDate hireDate,

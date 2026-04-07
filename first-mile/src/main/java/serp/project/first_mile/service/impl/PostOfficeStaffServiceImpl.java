@@ -8,10 +8,13 @@ package serp.project.first_mile.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import serp.project.first_mile.domain.PostOffice;
 import serp.project.first_mile.domain.PostOfficeStaff;
 import serp.project.first_mile.domain.PostOfficeStaffAssignment;
+import serp.project.first_mile.dto.request.FileUploadRequest;
 import serp.project.first_mile.dto.request.UpdatePostOfficeStaffRequest;
+import serp.project.first_mile.dto.response.FileUploadResponse;
 import serp.project.first_mile.dto.response.PostOfficeStaffAssignmentResponse;
 import serp.project.first_mile.dto.response.PostOfficeStaffResponse;
 import serp.project.first_mile.enums.PostOfficeStaffRole;
@@ -23,11 +26,14 @@ import serp.project.first_mile.mapper.PostOfficeStaffMapper;
 import serp.project.first_mile.repository.PostOfficeRepository;
 import serp.project.first_mile.repository.PostOfficeStaffAssignmentRepository;
 import serp.project.first_mile.repository.PostOfficeStaffRepository;
+import serp.project.first_mile.service.FileStorageService;
 import serp.project.first_mile.service.PostOfficeStaffService;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 @Service
@@ -35,10 +41,12 @@ import java.util.Set;
 public class PostOfficeStaffServiceImpl implements PostOfficeStaffService {
     private static final String ROLE_TMS_ADMIN = "TMS_ADMIN";
     private static final String ROLE_TMS_POSTOFFICER_MANAGER = "TMS_POSTOFFICER_MANAGER";
+    private static final String STORAGE_SERVICE_NAME = "first-mile";
 
     private final PostOfficeStaffRepository postOfficeStaffRepository;
     private final PostOfficeRepository postOfficeRepository;
     private final PostOfficeStaffAssignmentRepository postOfficeStaffAssignmentRepository;
+    private final FileStorageService fileStorageService;
     private final AuthUtils authUtils;
 
     @Override
@@ -140,6 +148,30 @@ public class PostOfficeStaffServiceImpl implements PostOfficeStaffService {
         return PostOfficeStaffMapper.toAssignmentResponse(savedAssignment);
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PostOfficeStaffResponse uploadAvatar(Long id, MultipartFile file) {
+        Long tenantId = getCurrentTenantIdOrThrow();
+        PostOfficeStaff staff = getPostOfficeStaffByIdAndTenantOrThrow(id, tenantId);
+
+        if (isManagerScopedAccess()) {
+            Set<Long> managedPostOfficeIds = getManagedPostOfficeIdsOrThrow(tenantId);
+            validateManagerCanAccessStaff(staff.getId(), tenantId, managedPostOfficeIds);
+        }
+
+        validateStaffRoleForAvatar(staff);
+
+        String folder = staff.getRole() == PostOfficeStaffRole.MANAGER
+                ? "manager-avatar"
+                : "courier-avatar";
+
+        FileUploadResponse uploadResponse = uploadImageFile(file, tenantId, folder);
+        staff.setAvatarUrl(uploadResponse.getUrl());
+
+        PostOfficeStaff updatedStaff = postOfficeStaffRepository.save(staff);
+        return PostOfficeStaffMapper.toResponse(updatedStaff);
+    }
+
     private PostOfficeStaffAssignment buildDefaultAssignment(
             PostOffice postOffice,
             PostOfficeStaff staff,
@@ -225,6 +257,51 @@ public class PostOfficeStaffServiceImpl implements PostOfficeStaffService {
 
     private String buildStaffCode(Long userId, PostOfficeStaffRole role) {
         return "USR_" + userId + "_" + role.name();
+    }
+
+    private void validateStaffRoleForAvatar(PostOfficeStaff staff) {
+        if (staff.getRole() == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (!PostOfficeStaffRole.COURIER.equals(staff.getRole())
+                && !PostOfficeStaffRole.MANAGER.equals(staff.getRole())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+    }
+
+    private FileUploadResponse uploadImageFile(MultipartFile file, Long tenantId, String folder) {
+        if (file == null || file.isEmpty()) {
+            throw new AppException(ErrorCode.FILE_UPLOAD_EMPTY);
+        }
+
+        String contentType = normalizeImageContentType(file.getContentType());
+
+        try {
+            return fileStorageService.upload(FileUploadRequest.builder()
+                    .content(file.getBytes())
+                    .originalFileName(file.getOriginalFilename())
+                    .contentType(contentType)
+                    .serviceName(STORAGE_SERVICE_NAME)
+                    .folder(folder)
+                    .tenantId(tenantId)
+                    .uploaderId(authUtils.getCurrentUserId().orElse(null))
+                    .publicFile(true)
+                    .build());
+        } catch (IOException exception) {
+            throw new AppException(ErrorCode.FILE_UPLOAD_FAILED);
+        }
+    }
+
+    private String normalizeImageContentType(String contentType) {
+        String normalized = contentType == null
+                ? ""
+                : contentType.trim().toLowerCase(Locale.ROOT);
+
+        if (!normalized.startsWith("image/")) {
+            throw new AppException(ErrorCode.FILE_IMAGE_TYPE_INVALID);
+        }
+        return normalized;
     }
 
     private Long getCurrentTenantIdOrThrow() {

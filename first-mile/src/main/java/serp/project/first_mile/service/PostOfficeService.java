@@ -24,6 +24,8 @@ public interface PostOfficeService {
 
     PostOfficeResponse updatePostOffice(Long id, UpdatePostOfficeRequest request);
 
+    PostOfficeResponse uploadImage(Long id, MultipartFile file);
+
     void deletePostOffice(Long id);
 
     PostOfficeResponse updatePostOfficeLocationByGeocode(Long id);

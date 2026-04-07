@@ -23,6 +23,7 @@ public final class PostOfficeStaffMapper {
                 staff.getFullName(),
                 staff.getPhoneNumber(),
                 staff.getEmail(),
+                staff.getAvatarUrl(),
                 staff.getRole(),
                 staff.getStatus(),
                 staff.getHireDate(),
