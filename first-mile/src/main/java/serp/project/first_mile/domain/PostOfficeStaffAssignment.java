@@ -64,4 +64,7 @@ public class PostOfficeStaffAssignment extends AbstractAudit {
 
     @Column(name = "notes")
     private String notes;
+
+    @Column(name = "tenant_id")
+    private Long tenantId;
 }
