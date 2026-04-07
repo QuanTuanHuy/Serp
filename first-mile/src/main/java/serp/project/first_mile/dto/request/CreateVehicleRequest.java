@@ -13,6 +13,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import serp.project.first_mile.enums.VehicleStatus;
+import serp.project.first_mile.enums.VehicleType;
 
 @Data
 @NoArgsConstructor
@@ -40,4 +41,8 @@ public class CreateVehicleRequest {
     @JsonProperty("status")
     @NotNull
     private VehicleStatus status;
+
+    @JsonProperty("vehicle_type")
+    @NotNull
+    private VehicleType vehicleType;
 }

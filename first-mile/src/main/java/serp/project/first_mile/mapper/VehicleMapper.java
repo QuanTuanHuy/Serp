@@ -24,6 +24,7 @@ public final class VehicleMapper {
                 .postOffice(postOffice)
                 .postOfficeStaffId(postOfficeStaffId)
                 .status(request.getStatus())
+            .vehicleType(request.getVehicleType())
                 .build();
     }
 
@@ -39,6 +40,7 @@ public final class VehicleMapper {
         vehicle.setPostOffice(postOffice);
         vehicle.setPostOfficeStaffId(postOfficeStaffId);
         vehicle.setStatus(request.getStatus());
+        vehicle.setVehicleType(request.getVehicleType());
     }
 
     public static VehicleResponse toResponse(Vehicle vehicle) {
@@ -57,11 +59,13 @@ public final class VehicleMapper {
                 vehicle.getLicensePlate(),
                 vehicle.getMaxWeight(),
                 vehicle.getMaxVolume(),
+                vehicle.getImageUrl(),
                 postOfficeId,
                 postOfficeCode,
                 postOfficeName,
                 vehicle.getPostOfficeStaffId(),
                 vehicle.getStatus(),
+                vehicle.getVehicleType(),
                 vehicle.getCreatedAt(),
                 vehicle.getUpdatedAt(),
                 vehicle.getCreatedBy(),

@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import serp.project.first_mile.dto.ApiResponse;
 import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.CreateVehicleRequest;
@@ -71,6 +72,18 @@ public class VehicleController {
         return ApiResponse.<VehicleResponse>builder()
                 .message(messageService.getMessage("success.vehicles.update"))
                 .result(vehicleService.updateVehicle(id, request))
+                .build();
+    }
+
+    @PostMapping("/{id}/image")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_POSTOFFICER_MANAGER')")
+    public ApiResponse<VehicleResponse> uploadVehicleImage(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return ApiResponse.<VehicleResponse>builder()
+                .message(messageService.getMessage("success.vehicles.image.upload"))
+                .result(vehicleService.uploadImage(id, file))
                 .build();
     }
 

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import serp.project.first_mile.enums.VehicleStatus;
+import serp.project.first_mile.enums.VehicleType;
 
 @Setter
 @Getter
@@ -26,6 +27,9 @@ public class Vehicle extends AbstractAudit {
     @Column(name = "max_volume")
     private Double maxVolume;
 
+    @Column(name = "image_url")
+    private String imageUrl;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "post_office_id")
     private PostOffice postOffice;
@@ -36,4 +40,8 @@ public class Vehicle extends AbstractAudit {
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
     private VehicleStatus status;
+
+    @Column(name = "vehicle_type", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private VehicleType vehicleType;
 }

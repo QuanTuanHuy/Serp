@@ -12,12 +12,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import serp.project.first_mile.domain.PostOffice;
 import serp.project.first_mile.domain.PostOfficeStaff;
 import serp.project.first_mile.domain.Vehicle;
 import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.CreateVehicleRequest;
+import serp.project.first_mile.dto.request.FileUploadRequest;
 import serp.project.first_mile.dto.request.UpdateVehicleRequest;
+import serp.project.first_mile.dto.response.FileUploadResponse;
 import serp.project.first_mile.dto.response.VehicleResponse;
 import serp.project.first_mile.enums.PostOfficeStaffRole;
 import serp.project.first_mile.enums.PostOfficeStaffStatus;
@@ -29,8 +32,10 @@ import serp.project.first_mile.repository.PostOfficeRepository;
 import serp.project.first_mile.repository.PostOfficeStaffAssignmentRepository;
 import serp.project.first_mile.repository.PostOfficeStaffRepository;
 import serp.project.first_mile.repository.VehicleRepository;
+import serp.project.first_mile.service.FileStorageService;
 import serp.project.first_mile.service.VehicleService;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
@@ -41,11 +46,14 @@ import java.util.Set;
 public class VehicleServiceImpl implements VehicleService {
     private static final String ROLE_TMS_ADMIN = "TMS_ADMIN";
     private static final String ROLE_TMS_POSTOFFICER_MANAGER = "TMS_POSTOFFICER_MANAGER";
+    private static final String STORAGE_SERVICE_NAME = "first-mile";
+    private static final String VEHICLE_IMAGE_FOLDER = "vehicle-image";
 
     private final VehicleRepository vehicleRepository;
     private final PostOfficeRepository postOfficeRepository;
     private final PostOfficeStaffAssignmentRepository postOfficeStaffAssignmentRepository;
     private final PostOfficeStaffRepository postOfficeStaffRepository;
+    private final FileStorageService fileStorageService;
     private final AuthUtils authUtils;
 
     @Override
@@ -157,6 +165,43 @@ public class VehicleServiceImpl implements VehicleService {
 
         Vehicle updatedVehicle = vehicleRepository.save(vehicle);
         return VehicleMapper.toResponse(updatedVehicle);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public VehicleResponse uploadImage(Long id, MultipartFile file) {
+        Long tenantId = getCurrentTenantIdOrThrow();
+        Vehicle vehicle = getVehicleByIdAndTenantOrThrow(id, tenantId);
+
+        if (isManagerScopedAccess()) {
+            Set<Long> managedPostOfficeIds = getManagedPostOfficeIdsOrThrow(tenantId);
+            validateManagerCanAccessVehicle(vehicle, tenantId, managedPostOfficeIds);
+        }
+
+        if (file == null || file.isEmpty()) {
+            throw new AppException(ErrorCode.FILE_UPLOAD_EMPTY);
+        }
+
+        String contentType = normalizeImageContentType(file.getContentType());
+
+        try {
+            FileUploadResponse uploadResponse = fileStorageService.upload(FileUploadRequest.builder()
+                    .content(file.getBytes())
+                    .originalFileName(file.getOriginalFilename())
+                    .contentType(contentType)
+                    .serviceName(STORAGE_SERVICE_NAME)
+                    .folder(VEHICLE_IMAGE_FOLDER)
+                    .tenantId(vehicle.getTenantId())
+                    .uploaderId(authUtils.getCurrentUserId().orElse(null))
+                    .publicFile(true)
+                    .build());
+
+            vehicle.setImageUrl(uploadResponse.getUrl());
+            Vehicle updatedVehicle = vehicleRepository.save(vehicle);
+            return VehicleMapper.toResponse(updatedVehicle);
+        } catch (IOException exception) {
+            throw new AppException(ErrorCode.FILE_UPLOAD_FAILED);
+        }
     }
 
     @Override
@@ -397,6 +442,17 @@ public class VehicleServiceImpl implements VehicleService {
 
     private boolean isPostOfficerManager() {
         return authUtils.hasAnyRole(ROLE_TMS_POSTOFFICER_MANAGER);
+    }
+
+    private String normalizeImageContentType(String contentType) {
+        String normalized = contentType == null
+                ? ""
+                : contentType.trim().toLowerCase(Locale.ROOT);
+
+        if (!normalized.startsWith("image/")) {
+            throw new AppException(ErrorCode.FILE_IMAGE_TYPE_INVALID);
+        }
+        return normalized;
     }
 
     private String normalizeLicensePlate(String licensePlate) {
