@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import serp.project.first_mile.dto.ApiResponse;
+import serp.project.first_mile.dto.request.UpdatePostOfficeStaffAssignmentRequest;
 import serp.project.first_mile.dto.request.UpdatePostOfficeStaffRequest;
 import serp.project.first_mile.dto.response.PostOfficeStaffAssignmentResponse;
 import serp.project.first_mile.dto.response.PostOfficeStaffResponse;
@@ -59,6 +60,18 @@ public class PostOfficeStaffController {
         return ApiResponse.<PostOfficeStaffAssignmentResponse>builder()
                 .message(messageService.getMessage("success.post_office_staffs.assign.manager"))
                 .result(postOfficeStaffService.assignManagerToPostOffice(id, postOfficeId))
+                .build();
+    }
+
+    @PutMapping("/assignments/{assignmentId}/courier-details")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_POSTOFFICER_MANAGER')")
+    public ApiResponse<PostOfficeStaffAssignmentResponse> updateCourierAssignmentDetails(
+            @PathVariable Long assignmentId,
+            @RequestBody UpdatePostOfficeStaffAssignmentRequest request
+    ) {
+        return ApiResponse.<PostOfficeStaffAssignmentResponse>builder()
+                .message(messageService.getMessage("success.post_office_staffs.assignments.update"))
+                .result(postOfficeStaffService.updateCourierAssignmentDetails(assignmentId, request))
                 .build();
     }
 

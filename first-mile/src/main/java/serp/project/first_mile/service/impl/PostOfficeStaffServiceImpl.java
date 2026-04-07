@@ -13,6 +13,7 @@ import serp.project.first_mile.domain.PostOffice;
 import serp.project.first_mile.domain.PostOfficeStaff;
 import serp.project.first_mile.domain.PostOfficeStaffAssignment;
 import serp.project.first_mile.dto.request.FileUploadRequest;
+import serp.project.first_mile.dto.request.UpdatePostOfficeStaffAssignmentRequest;
 import serp.project.first_mile.dto.request.UpdatePostOfficeStaffRequest;
 import serp.project.first_mile.dto.response.FileUploadResponse;
 import serp.project.first_mile.dto.response.PostOfficeStaffAssignmentResponse;
@@ -150,6 +151,28 @@ public class PostOfficeStaffServiceImpl implements PostOfficeStaffService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public PostOfficeStaffAssignmentResponse updateCourierAssignmentDetails(
+            Long assignmentId,
+            UpdatePostOfficeStaffAssignmentRequest request
+    ) {
+        Long tenantId = getCurrentTenantIdOrThrow();
+        PostOfficeStaffAssignment assignment = getAssignmentByIdAndTenantOrThrow(assignmentId, tenantId);
+        validateAssignmentBelongsToCourier(assignment);
+
+        if (isManagerScopedAccess()) {
+            Set<Long> managedPostOfficeIds = getManagedPostOfficeIdsOrThrow(tenantId);
+            Long postOfficeId = assignment.getPostOffice() != null ? assignment.getPostOffice().getId() : null;
+            validateManagerCanAccessPostOffice(postOfficeId, managedPostOfficeIds);
+        }
+
+        applyAssignmentDetailUpdate(assignment, request);
+
+        PostOfficeStaffAssignment updatedAssignment = postOfficeStaffAssignmentRepository.save(assignment);
+        return PostOfficeStaffMapper.toAssignmentResponse(updatedAssignment);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public PostOfficeStaffResponse uploadAvatar(Long id, MultipartFile file) {
         Long tenantId = getCurrentTenantIdOrThrow();
         PostOfficeStaff staff = getPostOfficeStaffByIdAndTenantOrThrow(id, tenantId);
@@ -195,6 +218,64 @@ public class PostOfficeStaffServiceImpl implements PostOfficeStaffService {
     private PostOffice getPostOfficeByIdAndTenantOrThrow(Long id, Long tenantId) {
         return postOfficeRepository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorCode.POST_OFFICE_NOT_FOUND));
+    }
+
+    private PostOfficeStaffAssignment getAssignmentByIdAndTenantOrThrow(Long assignmentId, Long tenantId) {
+        return postOfficeStaffAssignmentRepository.findByIdAndTenantId(assignmentId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.POST_OFFICE_STAFF_ASSIGNMENT_NOT_FOUND));
+    }
+
+    private void validateAssignmentBelongsToCourier(PostOfficeStaffAssignment assignment) {
+        if (assignment == null
+                || assignment.getStaff() == null
+                || !PostOfficeStaffRole.COURIER.equals(assignment.getStaff().getRole())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+    }
+
+    private void applyAssignmentDetailUpdate(
+            PostOfficeStaffAssignment assignment,
+            UpdatePostOfficeStaffAssignmentRequest request
+    ) {
+        if (request == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (request.getAssignedFrom() != null) {
+            assignment.setAssignedFrom(request.getAssignedFrom());
+        }
+
+        if (request.getAssignedTo() != null) {
+            assignment.setAssignedTo(request.getAssignedTo());
+        }
+
+        LocalDate effectiveAssignedFrom = assignment.getAssignedFrom();
+        LocalDate effectiveAssignedTo = assignment.getAssignedTo();
+        if (effectiveAssignedFrom == null
+                || (effectiveAssignedTo != null && effectiveAssignedTo.isBefore(effectiveAssignedFrom))) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (request.getShiftStartTime() != null || request.getShiftEndTime() != null) {
+            if (request.getShiftStartTime() == null || request.getShiftEndTime() == null) {
+                throw new AppException(ErrorCode.INVALID_REQUEST);
+            }
+
+            if (!request.getShiftEndTime().isAfter(request.getShiftStartTime())) {
+                throw new AppException(ErrorCode.INVALID_REQUEST);
+            }
+
+            assignment.setShiftStartTime(request.getShiftStartTime());
+            assignment.setShiftEndTime(request.getShiftEndTime());
+        }
+
+        if (request.getIsPrimary() != null) {
+            assignment.setIsPrimary(request.getIsPrimary());
+        }
+
+        if (request.getNotes() != null) {
+            assignment.setNotes(normalizeText(request.getNotes()));
+        }
     }
 
     private void validateStaffRole(PostOfficeStaff staff, PostOfficeStaffRole expectedRole) {

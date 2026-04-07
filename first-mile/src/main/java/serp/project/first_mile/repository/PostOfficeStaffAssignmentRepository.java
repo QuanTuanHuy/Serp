@@ -5,6 +5,7 @@ Description: Part of Serp Project
 
 package serp.project.first_mile.repository;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.repository.query.Param;
@@ -22,6 +23,9 @@ import java.util.Set;
 @Repository
 public interface PostOfficeStaffAssignmentRepository extends JpaRepository<PostOfficeStaffAssignment, Long> {
     boolean existsByStaffIdAndAssignedToIsNull(Long staffId);
+
+    @EntityGraph(attributePaths = {"staff", "postOffice"})
+    Optional<PostOfficeStaffAssignment> findByIdAndTenantId(Long id, Long tenantId);
 
     @Query("""
         select a
