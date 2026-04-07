@@ -17,7 +17,7 @@ public class Vehicle extends AbstractAudit {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "license_plate")
+    @Column(name = "license_plate", nullable = false, length = 50)
     private String licensePlate;
 
     @Column(name = "max_weight")
@@ -33,7 +33,7 @@ public class Vehicle extends AbstractAudit {
     @Column(name = "post_office_staff_id")
     private Long postOfficeStaffId;
 
-    @Column(name = "status")
+    @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
     private VehicleStatus status;
 }

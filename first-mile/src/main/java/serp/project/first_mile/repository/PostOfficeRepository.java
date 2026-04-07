@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 import serp.project.first_mile.domain.PostOffice;
 
 import java.util.Collection;
+import java.util.Optional;
 import java.util.Set;
 
 @Repository
@@ -36,4 +37,6 @@ public interface PostOfficeRepository extends JpaRepository<PostOffice, Long> {
     Page<PostOffice> findByCodeContainingIgnoreCaseOrNameContainingIgnoreCase(String code, String name, Pageable pageable);
 
     Page<PostOffice> findByLocationIsNull(Pageable pageable);
+
+    Optional<PostOffice> findByIdAndTenantId(Long id, Long tenantId);
 }

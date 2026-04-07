@@ -32,6 +32,8 @@ spring:
         - classpath:db/migration/ward.sql
         - classpath:db/migration/post-office.sql
         - classpath:db/migration/post-office-staff.sql
+        - classpath:db/migration/vehicle.sql
+        - classpath:db/migration/trip.sql
         - classpath:db/migration/kafka-dlq-message.sql
   messages:
     basename: i18n/messages
@@ -60,3 +62,9 @@ geocode:
   api-key: ${GOONG_API_KEY:${GEOCODE_API_KEY:${GEOCODE-API-KEY:}}}
   rate-limit:
     tps: ${GEOCODE_RATE_LIMIT_TPS:1}
+
+distance-matrix:
+  base-url: ${DISTANCE_MATRIX_BASE_URL:https://rsapi.goong.io/DistanceMatrix}
+  api-key: ${GOONG_API_KEY:${GEOCODE_API_KEY:${GEOCODE-API-KEY:}}}
+  batch-size: ${DISTANCE_MATRIX_BATCH_SIZE:20}
+  max-nodes: ${DISTANCE_MATRIX_MAX_NODES:120}

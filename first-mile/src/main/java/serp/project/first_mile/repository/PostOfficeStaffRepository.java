@@ -16,4 +16,8 @@ public interface PostOfficeStaffRepository extends JpaRepository<PostOfficeStaff
     boolean existsByCode(String code);
 
     Optional<PostOfficeStaff> findByCode(String code);
+
+    Optional<PostOfficeStaff> findByCodeAndTenantId(String code, Long tenantId);
+
+    Optional<PostOfficeStaff> findByIdAndTenantId(Long id, Long tenantId);
 }

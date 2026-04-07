@@ -12,6 +12,7 @@ CREATE TABLE post_office_staff (
                                    max_daily_stops INTEGER,
                                    max_daily_parcels INTEGER,
                                    notes TEXT,
+                                   user_id BIGINT,
                                    created_at TIMESTAMP WITHOUT TIME ZONE,
                                    updated_at TIMESTAMP WITHOUT TIME ZONE,
                                    created_by VARCHAR(255),
