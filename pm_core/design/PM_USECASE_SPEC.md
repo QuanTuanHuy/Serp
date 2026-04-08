@@ -126,7 +126,7 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 | UC-PM-104 | List Work Items with Filters | Team Member | High | Medium | Work Item |
 | UC-PM-105 | [Delete Work Item](usecases/workitem/UC-PM-105-delete-work-item.md) | Project Lead | Medium | Medium | Work Item |
 | UC-PM-106 | [Transition Work Item Status](usecases/workitem/UC-PM-106-transition-work-item-status.md) | Team Member | High | Complex | Work Item |
-| UC-PM-107 | Assign Work Item | Team Member | High | Simple | Work Item |
+| UC-PM-107 | [Assign Work Item](usecases/workitem/UC-PM-107-assign-work-item.md) | Team Member | High | Simple | Work Item |
 | UC-PM-108 | Re-rank Work Item (Lexorank) | Team Member | Medium | Medium | Work Item |
 | UC-PM-109 | Bulk Update Work Items | Project Lead | Medium | Complex | Work Item |
 | UC-PM-110 | Clone Work Item | Team Member | Medium | Medium | Work Item |
@@ -1608,34 +1608,16 @@ This extracted file is now the canonical detailed reference for UC-PM-106, inclu
 
 #### UC-PM-107: Assign Work Item
 
-##### Basic Information
+Detailed specification is extracted to:
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-107 |
-| **Use Case Name** | Assign Work Item |
-| **Priority** | High |
-| **Complexity** | Simple |
+- [UC-PM-107 - Assign Work Item](usecases/workitem/UC-PM-107-assign-work-item.md)
 
-**Permission**: `PM.WORK_ITEM.ASSIGN`
+This extracted file is now the canonical detailed reference for UC-PM-107, including:
 
-**Main Flow**:
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 1 | Team Member | Sends PUT `/api/v1/work-items/{workItemId}/assign` with `{ assignee_id }` |
-| 2 | System | Validates JWT and permissions |
-| 3 | System | Fetches work item, validates it exists |
-| 4 | System | Validates `assignee_id` exists (null to unassign) |
-| 5 | System | Updates `assignee_id` |
-| 6 | System | Publishes `WORK_ITEM_ASSIGNED` event |
-| 7 | System | Returns HTTP 200 |
-
-**Input Data**:
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| assignee_id | int64 | No | must exist or null to unassign | New assignee |
+- full use case specification
+- Jira-aligned authorization model for assignment-time checks (`BROWSE_PROJECTS` + `ASSIGN_ISSUES` + `ASSIGNABLE_USER` + issue security)
+- assign/unassign flows, no-op behavior, and outbox publication details
+- implementation traceability to the Java runtime code
 
 ---
 

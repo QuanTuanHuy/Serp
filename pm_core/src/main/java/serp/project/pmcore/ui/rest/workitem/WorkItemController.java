@@ -11,6 +11,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import serp.project.pmcore.application.shared.pagination.PageView;
+import serp.project.pmcore.application.workitem.command.assign.AssignWorkItemCommand;
+import serp.project.pmcore.application.workitem.command.assign.AssignWorkItemCommandHandler;
+import serp.project.pmcore.application.workitem.command.assign.AssignWorkItemResult;
 import serp.project.pmcore.application.workitem.command.create.CreateWorkItemCommand;
 import serp.project.pmcore.application.workitem.command.create.CreateWorkItemCommandHandler;
 import serp.project.pmcore.application.workitem.command.delete.DeleteWorkItemCommand;
@@ -33,6 +36,7 @@ import serp.project.pmcore.domain.workitem.dto.WorkItemSearchCriteria;
 import serp.project.pmcore.kernel.utils.AuthUtils;
 import serp.project.pmcore.ui.rest.shared.response.GeneralResponse;
 import serp.project.pmcore.ui.rest.shared.response.ResponseUtils;
+import serp.project.pmcore.ui.rest.workitem.dto.request.AssignWorkItemRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.request.CreateWorkItemRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.request.TransitionWorkItemStatusRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.response.WorkItemResponse;
@@ -44,6 +48,7 @@ public class WorkItemController {
 
     private final AuthUtils authUtils;
     private final ResponseUtils responseUtils;
+    private final AssignWorkItemCommandHandler assignWorkItemCommandHandler;
     private final CreateWorkItemCommandHandler createWorkItemCommandHandler;
     private final DeleteWorkItemCommandHandler deleteWorkItemCommandHandler;
     private final TransitionWorkItemCommandHandler transitionWorkItemCommandHandler;
@@ -72,6 +77,27 @@ public class WorkItemController {
         ));
 
         return ResponseEntity.ok(responseUtils.success(response));
+    }
+
+    @PutMapping("/{id}/assign")
+    public ResponseEntity<GeneralResponse<AssignWorkItemResult>> assignWorkItem(@PathVariable Long projectId,
+                                                                                @PathVariable Long id,
+                                                                                @Valid @RequestBody AssignWorkItemRequest request) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        AssignWorkItemResult result = assignWorkItemCommandHandler.handle(new AssignWorkItemCommand(
+                projectId,
+                id,
+                request.getAssigneeId(),
+                tenantId,
+                userId,
+                authUtils.getCurrentGroups()
+        ));
+
+        return ResponseEntity.ok(responseUtils.success(result));
     }
 
     @PostMapping

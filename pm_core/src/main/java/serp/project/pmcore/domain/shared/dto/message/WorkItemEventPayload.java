@@ -38,6 +38,15 @@ public class WorkItemEventPayload {
     @JsonProperty("assigneeId")
     private Long assigneeId;
 
+    @JsonProperty("previousAssigneeId")
+    private Long previousAssigneeId;
+
+    @JsonProperty("assignedBy")
+    private Long assignedBy;
+
+    @JsonProperty("assignedAt")
+    private Long assignedAt;
+
     @JsonProperty("transitionId")
     private Long transitionId;
 

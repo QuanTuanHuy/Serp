@@ -30,6 +30,7 @@ public class EventConstants {
         public static final String AGGREGATE = "WORK_ITEM";
 
         public static class EventType {
+            public static final String WORK_ITEM_ASSIGNED = "WORK_ITEM_ASSIGNED";
             public static final String WORK_ITEM_CREATED = "WORK_ITEM_CREATED";
             public static final String WORK_ITEM_UPDATED = "WORK_ITEM_UPDATED";
             public static final String WORK_ITEM_DELETED = "WORK_ITEM_DELETED";
