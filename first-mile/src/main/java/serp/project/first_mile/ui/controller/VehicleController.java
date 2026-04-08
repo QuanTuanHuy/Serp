@@ -7,6 +7,9 @@ package serp.project.first_mile.ui.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -52,6 +55,17 @@ public class VehicleController {
                 .message(messageService.getMessage("success.vehicles.detail"))
                 .result(vehicleService.getVehicleById(id))
                 .build();
+    }
+
+    @GetMapping("/template")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_POSTOFFICER_MANAGER')")
+    public ResponseEntity<byte[]> exportTemplate() {
+        byte[] excelData = vehicleService.exportTemplate();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=vehicle_template.xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excelData);
     }
 
     @PostMapping

@@ -1,5 +1,5 @@
 /*
-Author: QuanTuanHuy
+Author: Nguyen The Anh
 Description: Part of Serp Project
 */
 
@@ -33,6 +33,7 @@ import serp.project.first_mile.repository.PostOfficeStaffAssignmentRepository;
 import serp.project.first_mile.repository.PostOfficeStaffRepository;
 import serp.project.first_mile.repository.VehicleRepository;
 import serp.project.first_mile.service.FileStorageService;
+import serp.project.first_mile.service.VehicleImportExcelService;
 import serp.project.first_mile.service.VehicleService;
 
 import java.io.IOException;
@@ -54,6 +55,7 @@ public class VehicleServiceImpl implements VehicleService {
     private final PostOfficeStaffAssignmentRepository postOfficeStaffAssignmentRepository;
     private final PostOfficeStaffRepository postOfficeStaffRepository;
     private final FileStorageService fileStorageService;
+    private final VehicleImportExcelService vehicleImportExcelService;
     private final AuthUtils authUtils;
 
     @Override
@@ -98,6 +100,12 @@ public class VehicleServiceImpl implements VehicleService {
         }
 
         return VehicleMapper.toResponse(vehicle);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] exportTemplate() {
+        return vehicleImportExcelService.exportTemplate();
     }
 
     @Override

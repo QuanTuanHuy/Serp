@@ -12,6 +12,8 @@ import serp.project.first_mile.dto.request.UpdateVehicleRequest;
 import serp.project.first_mile.dto.response.VehicleResponse;
 
 public interface VehicleService {
+    byte[] exportTemplate();
+
     PageResponse<VehicleResponse> getVehicles(int page, int size, String keyword);
 
     VehicleResponse getVehicleById(Long id);

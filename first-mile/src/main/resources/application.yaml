@@ -25,7 +25,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
-    show-sql: ${SHOW_SQL:false}
+    show-sql: ${SHOW_SQL:true}
     open-in-view: false
   sql:
     init:
@@ -83,3 +83,7 @@ storage:
     public-base-url: ${STORAGE_S3_PUBLIC_BASE_URL:https://datn-tms.sgp1.digitaloceanspaces.com}
     path-style-access-enabled: ${STORAGE_S3_PATH_STYLE_ACCESS_ENABLED:false}
     max-file-size-bytes: ${STORAGE_S3_MAX_FILE_SIZE_BYTES:104857600}
+
+logging:
+  level:
+    org.apache.kafka.clients.NetworkClient: ${KAFKA_NETWORK_CLIENT_LOG_LEVEL:ERROR}

@@ -12,10 +12,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import serp.project.first_mile.domain.PostOffice;
+import serp.project.first_mile.repository.projection.CodeNameProjection;
 
 import java.util.Collection;
-import java.util.Set;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface PostOfficeRepository extends JpaRepository<PostOffice, Long> {
@@ -37,6 +39,26 @@ public interface PostOfficeRepository extends JpaRepository<PostOffice, Long> {
     Page<PostOffice> findByCodeContainingIgnoreCaseOrNameContainingIgnoreCase(String code, String name, Pageable pageable);
 
     Page<PostOffice> findByLocationIsNull(Pageable pageable);
+
+    @Query("""
+            select p.code as code, p.name as name
+            from PostOffice p
+            where p.tenantId = :tenantId
+            order by p.name asc
+            """)
+    List<CodeNameProjection> findTemplateCodeNameListByTenantId(@Param("tenantId") Long tenantId);
+
+    @Query("""
+            select p.code as code, p.name as name
+            from PostOffice p
+            where p.tenantId = :tenantId
+                and p.id in :postOfficeIds
+            order by p.name asc
+            """)
+    List<CodeNameProjection> findTemplateCodeNameListByTenantIdAndIds(
+            @Param("tenantId") Long tenantId,
+            @Param("postOfficeIds") Collection<Long> postOfficeIds
+    );
 
     Optional<PostOffice> findByIdAndTenantId(Long id, Long tenantId);
 }

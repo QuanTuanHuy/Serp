@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 import serp.project.first_mile.domain.PostOfficeStaffAssignment;
 import serp.project.first_mile.enums.PostOfficeStaffRole;
 import serp.project.first_mile.enums.PostOfficeStaffStatus;
+import serp.project.first_mile.repository.projection.CodeNameProjection;
 
 import java.time.LocalDate;
 import java.util.Collection;
@@ -140,5 +141,43 @@ public interface PostOfficeStaffAssignmentRepository extends JpaRepository<PostO
         @Param("tenantId") Long tenantId,
         @Param("today") LocalDate today,
         @Param("role") PostOfficeStaffRole role
+    );
+
+    @Query("""
+        select distinct s.code as code, s.fullName as name
+        from PostOfficeStaffAssignment a
+        join a.staff s
+        where a.tenantId = :tenantId
+            and a.assignedFrom <= :today
+            and (a.assignedTo is null or a.assignedTo >= :today)
+            and s.role = :role
+            and s.status = :status
+        order by s.fullName asc
+        """)
+    List<CodeNameProjection> findActiveCourierTemplateCodeNameListByTenantId(
+        @Param("tenantId") Long tenantId,
+        @Param("today") LocalDate today,
+        @Param("role") PostOfficeStaffRole role,
+        @Param("status") PostOfficeStaffStatus status
+    );
+
+    @Query("""
+        select distinct s.code as code, s.fullName as name
+        from PostOfficeStaffAssignment a
+        join a.staff s
+        where a.tenantId = :tenantId
+            and a.postOffice.id in :postOfficeIds
+            and a.assignedFrom <= :today
+            and (a.assignedTo is null or a.assignedTo >= :today)
+            and s.role = :role
+            and s.status = :status
+        order by s.fullName asc
+        """)
+    List<CodeNameProjection> findActiveCourierTemplateCodeNameListByTenantIdAndPostOfficeIds(
+        @Param("tenantId") Long tenantId,
+        @Param("postOfficeIds") Collection<Long> postOfficeIds,
+        @Param("today") LocalDate today,
+        @Param("role") PostOfficeStaffRole role,
+        @Param("status") PostOfficeStaffStatus status
     );
 }
