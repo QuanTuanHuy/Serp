@@ -83,10 +83,10 @@ import serp.project.pmcore.domain.workflow.port.IWorkflowVersionPort;
 import serp.project.pmcore.domain.workitem.entity.WorkItemCustomFieldValueEntity;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.IWorkItemCustomFieldValuePort;
+import serp.project.pmcore.domain.workitem.service.impl.WorkItemAuthorizationSupportService;
 import serp.project.pmcore.domain.workitem.service.IWorkItemFieldResolver;
 import serp.project.pmcore.domain.workitem.service.impl.WorkItemFieldResolver;
 import serp.project.pmcore.domain.workitem.service.IWorkItemService;
-import serp.project.pmcore.application.workitem.command.create.support.WorkItemCreateAuthorizationService;
 import serp.project.pmcore.application.workitem.command.create.support.CreateWorkItemFieldRulesResolver;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemCreateConfigurationResolver;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemCreateRequiredFieldValidator;
@@ -226,7 +226,7 @@ class CreateWorkItemCommandHandlerTest {
                         issueSecuritySchemePort,
                         issueSecurityLevelPort
                 ),
-                new WorkItemCreateAuthorizationService(projectPermissionEvaluationService),
+                new WorkItemAuthorizationSupportService(projectPermissionEvaluationService),
                 buildCustomFieldResolver(),
                 new WorkItemCreateRequiredFieldValidator(),
                 new WorkItemDraftFactory(),

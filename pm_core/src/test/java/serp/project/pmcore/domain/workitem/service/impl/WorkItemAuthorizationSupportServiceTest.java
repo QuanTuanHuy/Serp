@@ -3,14 +3,13 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.application.workitem.command.create.support;
+package serp.project.pmcore.domain.workitem.service.impl;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
@@ -29,32 +28,36 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class WorkItemCreateAuthorizationServiceTest {
+class WorkItemAuthorizationSupportServiceTest {
 
     @Mock
     private IProjectPermissionEvaluationService projectPermissionEvaluationService;
 
-    private WorkItemCreateAuthorizationService service;
+    private WorkItemAuthorizationSupportService service;
 
     @BeforeEach
     void setUp() {
-        service = new WorkItemCreateAuthorizationService(projectPermissionEvaluationService);
+        service = new WorkItemAuthorizationSupportService(projectPermissionEvaluationService);
     }
 
     @Test
-    void buildActorContextShouldPopulateUserAndGroups() {
-        ProjectPermissionEvaluationContext context = service.buildActorContext(99L, Set.of("dev", "qa"));
+    void buildActorContextShouldPopulateUserGroupsReporterAndAssignee() {
+        ProjectPermissionEvaluationContext context = service.buildActorContext(99L, Set.of("dev", "qa"), 11L, 12L);
 
         assertEquals(99L, context.getUserId());
         assertEquals(Set.of("dev", "qa"), context.getGroupKeys());
+        assertEquals(11L, context.getReporterUserId());
+        assertEquals(12L, context.getAssigneeUserId());
     }
 
     @Test
-    void checkCreatePermissionsShouldRequireBrowseAndCreate() {
+    void checkRequiredPermissionsShouldDelegateAllPermissions() {
         ProjectEntity project = ProjectEntity.builder().id(10L).build();
         ProjectPermissionEvaluationContext actorContext = service.buildActorContext(99L, Set.of());
 
-        service.checkCreatePermissions(project, actorContext);
+        service.checkRequiredPermissions(project, actorContext,
+                ProjectPermissionKeys.BROWSE_PROJECTS,
+                ProjectPermissionKeys.CREATE_ISSUES);
 
         verify(projectPermissionEvaluationService).checkPermission(project, actorContext, ProjectPermissionKeys.BROWSE_PROJECTS);
         verify(projectPermissionEvaluationService).checkPermission(project, actorContext, ProjectPermissionKeys.CREATE_ISSUES);

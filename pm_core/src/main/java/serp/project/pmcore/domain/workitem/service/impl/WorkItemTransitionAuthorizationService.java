@@ -8,19 +8,18 @@ package serp.project.pmcore.domain.workitem.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import serp.project.pmcore.application.workitem.command.create.support.WorkItemCreateAuthorizationService;
 import serp.project.pmcore.application.workitem.command.transition.internal.TransitionWorkItemStatusData;
 import serp.project.pmcore.domain.issuesecurity.port.IIssueSecurityLevelPort;
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
-import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.shared.constant.WorkItemFieldConstants;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
+import serp.project.pmcore.domain.workitem.service.IWorkItemAuthorizationSupportService;
 import serp.project.pmcore.domain.workitem.service.IWorkItemTransitionAuthorizationService;
 
 @Service
@@ -28,26 +27,28 @@ import serp.project.pmcore.domain.workitem.service.IWorkItemTransitionAuthorizat
 @Slf4j
 public class WorkItemTransitionAuthorizationService implements IWorkItemTransitionAuthorizationService {
 
-    private final IProjectPermissionEvaluationService projectPermissionEvaluationService;
     private final IIssueSecurityLevelPort issueSecurityLevelPort;
-    private final WorkItemCreateAuthorizationService workItemCreateAuthorizationService;
-
+    private final IWorkItemAuthorizationSupportService workItemAuthorizationSupportService;
     private final IIssueSecurityService issueSecurityService;
 
     public void checkTransitionPermissions(ProjectEntity project,
                                            ProjectPermissionEvaluationContext actorContext) {
-        projectPermissionEvaluationService.checkPermission(project, actorContext, ProjectPermissionKeys.BROWSE_PROJECTS);
-        projectPermissionEvaluationService.checkPermission(project, actorContext, ProjectPermissionKeys.TRANSITION_ISSUES);
+        workItemAuthorizationSupportService.checkRequiredPermissions(
+                project,
+                actorContext,
+                ProjectPermissionKeys.BROWSE_PROJECTS,
+                ProjectPermissionKeys.TRANSITION_ISSUES
+        );
     }
 
     public void checkFieldLevelPermissions(ProjectEntity project,
                                            ProjectPermissionEvaluationContext actorContext,
                                            TransitionWorkItemStatusData data) {
         Long dueDate = asNullableLong(data.getSystemField(WorkItemFieldConstants.DUE_DATE));
-        workItemCreateAuthorizationService.checkScheduleIssuesPermissionIfNeeded(project, actorContext, dueDate);
+        workItemAuthorizationSupportService.checkScheduleIssuesPermissionIfNeeded(project, actorContext, dueDate);
 
         if (data.hasSystemField(WorkItemFieldConstants.SECURITY_LEVEL_ID)) {
-            workItemCreateAuthorizationService.checkSetIssueSecurityPermissionIfNeeded(
+            workItemAuthorizationSupportService.checkSetIssueSecurityPermissionIfNeeded(
                     project,
                     actorContext,
                     asNullableLong(data.getSystemField(WorkItemFieldConstants.SECURITY_LEVEL_ID))
@@ -62,7 +63,7 @@ public class WorkItemTransitionAuthorizationService implements IWorkItemTransiti
         if (!data.hasSystemField(WorkItemFieldConstants.ASSIGNEE_ID)) {
             return workItem.getAssigneeId();
         }
-        return workItemCreateAuthorizationService.resolveAssigneeId(
+        return workItemAuthorizationSupportService.resolveAssigneeId(
                 project,
                 asNullableLong(data.getSystemField(WorkItemFieldConstants.ASSIGNEE_ID)),
                 actorContext

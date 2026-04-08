@@ -17,6 +17,7 @@ import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.workitem.dto.WorkItemDeleteExecutionResult;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
+import serp.project.pmcore.domain.workitem.service.IWorkItemAuthorizationSupportService;
 import serp.project.pmcore.domain.workitem.service.IWorkItemDeleteAuthorizationService;
 import serp.project.pmcore.domain.workitem.service.IWorkItemService;
 
@@ -47,6 +48,9 @@ class DeleteWorkItemCommandHandlerTest {
     private IWorkItemDeleteAuthorizationService workItemDeleteAuthorizationService;
 
     @Mock
+    private IWorkItemAuthorizationSupportService workItemAuthorizationSupportService;
+
+    @Mock
     private DeleteWorkItemValidator deleteWorkItemValidator;
 
     @InjectMocks
@@ -67,6 +71,11 @@ class DeleteWorkItemCommandHandlerTest {
 
         when(deleteWorkItemValidator.validateWritableProject(PROJECT_ID, TENANT_ID)).thenReturn(project);
         when(workItemService.getWorkItemById(WORK_ITEM_ID, TENANT_ID)).thenReturn(workItem);
+        when(workItemAuthorizationSupportService.buildActorContext(USER_ID, Set.of("dev-team", "qa"), null, null))
+                .thenReturn(ProjectPermissionEvaluationContext.builder()
+                        .userId(USER_ID)
+                        .groupKeys(Set.of("dev-team", "qa"))
+                        .build());
         when(workItemService.softDeleteWorkItem(
                 eq(WORK_ITEM_ID),
                 eq(PROJECT_ID),

@@ -15,6 +15,7 @@ import serp.project.pmcore.application.workitem.command.transition.internal.Reso
 import serp.project.pmcore.application.workitem.command.transition.support.TransitionConfigurationResolver;
 import serp.project.pmcore.domain.customfield.port.ICustomFieldPort;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.service.IProjectService;
 import serp.project.pmcore.domain.shared.constant.EventConstants;
@@ -30,6 +31,7 @@ import serp.project.pmcore.domain.workitem.entity.StatusCategoryEntity;
 import serp.project.pmcore.domain.workitem.entity.StatusEntity;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.IWorkItemCustomFieldValuePort;
+import serp.project.pmcore.domain.workitem.service.IWorkItemAuthorizationSupportService;
 import serp.project.pmcore.domain.workitem.service.IWorkItemFieldResolver;
 import serp.project.pmcore.domain.workitem.service.IWorkItemService;
 import serp.project.pmcore.domain.workitem.service.IWorkItemTransitionAuthorizationService;
@@ -67,6 +69,8 @@ class TransitionWorkItemCommandHandlerTest {
     @Mock
     private IWorkItemService workItemService;
     @Mock
+    private IWorkItemAuthorizationSupportService workItemAuthorizationSupportService;
+    @Mock
     private IWorkItemTransitionAuthorizationService workItemTransitionAuthorizationService;
     @Mock
     private TransitionConfigurationResolver transitionConfigurationResolver;
@@ -94,6 +98,7 @@ class TransitionWorkItemCommandHandlerTest {
         handler = new TransitionWorkItemCommandHandler(
                 projectService,
                 workItemService,
+                workItemAuthorizationSupportService,
                 workItemTransitionAuthorizationService,
                 transitionConfigurationResolver,
                 workItemTransitionRuleEvaluator,
@@ -140,6 +145,11 @@ class TransitionWorkItemCommandHandlerTest {
 
         when(projectService.getProjectById(PROJECT_ID, TENANT_ID)).thenReturn(project);
         when(workItemService.getWorkItemById(WORK_ITEM_ID, TENANT_ID)).thenReturn(workItem);
+        when(workItemAuthorizationSupportService.buildActorContext(USER_ID, Set.of("dev-team"), workItem.getReporterId(), workItem.getAssigneeId()))
+                .thenReturn(ProjectPermissionEvaluationContext.builder()
+                        .userId(USER_ID)
+                        .groupKeys(Set.of("dev-team"))
+                        .build());
         when(transitionConfigurationResolver.resolve(project, workItem, TRANSITION_ID, TENANT_ID)).thenReturn(execution);
         when(workItemCustomFieldValuePort.getActiveValuesByWorkItemId(WORK_ITEM_ID, TENANT_ID)).thenReturn(List.of());
         when(workItemTransitionAuthorizationService.resolveAssigneeId(eq(project), any(), eq(workItem), any())).thenReturn(77L);
@@ -207,6 +217,11 @@ class TransitionWorkItemCommandHandlerTest {
 
         when(projectService.getProjectById(PROJECT_ID, TENANT_ID)).thenReturn(project);
         when(workItemService.getWorkItemById(WORK_ITEM_ID, TENANT_ID)).thenReturn(workItem);
+        when(workItemAuthorizationSupportService.buildActorContext(USER_ID, Set.of(), workItem.getReporterId(), workItem.getAssigneeId()))
+                .thenReturn(ProjectPermissionEvaluationContext.builder()
+                        .userId(USER_ID)
+                        .groupKeys(Set.of())
+                        .build());
         when(transitionConfigurationResolver.resolve(project, workItem, TRANSITION_ID, TENANT_ID)).thenReturn(execution);
         when(workItemCustomFieldValuePort.getActiveValuesByWorkItemId(WORK_ITEM_ID, TENANT_ID)).thenReturn(List.of());
         when(workItemTransitionRuleEvaluator.evaluateValidatorsAndResolveResolution(

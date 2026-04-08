@@ -15,6 +15,7 @@ import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.workitem.dto.WorkItemDeleteExecutionResult;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
+import serp.project.pmcore.domain.workitem.service.IWorkItemAuthorizationSupportService;
 import serp.project.pmcore.domain.workitem.service.IWorkItemDeleteAuthorizationService;
 import serp.project.pmcore.domain.workitem.service.IWorkItemService;
 
@@ -25,6 +26,7 @@ public class DeleteWorkItemCommandHandler
         implements ICommandHandler<DeleteWorkItemCommand, DeleteWorkItemResult> {
 
     private final IWorkItemService workItemService;
+    private final IWorkItemAuthorizationSupportService workItemAuthorizationSupportService;
     private final IWorkItemDeleteAuthorizationService workItemDeleteAuthorizationService;
 
     private final DeleteWorkItemValidator deleteWorkItemValidator;
@@ -42,10 +44,12 @@ public class DeleteWorkItemCommandHandler
             throw new ResourceNotFoundException(DomainErrorCode.WORK_ITEM_NOT_FOUND);
         }
 
-        var baseActorContext = ProjectPermissionEvaluationContext.builder()
-                .userId(command.userId())
-                .groupKeys(command.groupKeys())
-                .build();
+        ProjectPermissionEvaluationContext baseActorContext = workItemAuthorizationSupportService.buildActorContext(
+                command.userId(),
+                command.groupKeys(),
+                workItem.getReporterId(),
+                workItem.getAssigneeId()
+        );
         workItemDeleteAuthorizationService.checkDeletePermission(project, baseActorContext);
 
         workItemDeleteAuthorizationService.checkDeleteSecurityAccess(project, workItem, baseActorContext);

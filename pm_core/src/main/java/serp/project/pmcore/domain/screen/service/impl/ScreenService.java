@@ -24,7 +24,6 @@ import serp.project.pmcore.domain.screen.port.IScreenSchemePort;
 import serp.project.pmcore.domain.screen.port.IScreenTabFieldPort;
 import serp.project.pmcore.domain.screen.port.IScreenTabPort;
 import serp.project.pmcore.domain.shared.exception.DomainValidationException;
-import serp.project.pmcore.domain.shared.constant.WorkItemFieldConstants;
 import serp.project.pmcore.domain.screen.service.IScreenService;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
@@ -49,7 +48,7 @@ public class ScreenService implements IScreenService {
     public List<ScreenTabFieldEntity> getScreenTabFieldsByScreenId(Long screenId, Long tenantId) {
         getScreenById(screenId, tenantId);
 
-        List< ScreenTabEntity> tabs = screenTabPort.getScreenTabsByScreenId(screenId, tenantId);
+        List<ScreenTabEntity> tabs = screenTabPort.getScreenTabsByScreenId(screenId, tenantId);
         if (tabs.isEmpty()) {
             log.debug("[ScreenService] No tabs found for screen: id={}, tenantId={}", screenId, tenantId);
             return Collections.emptyList();

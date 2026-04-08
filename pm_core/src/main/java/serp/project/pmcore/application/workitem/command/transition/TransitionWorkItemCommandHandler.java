@@ -38,6 +38,7 @@ import serp.project.pmcore.domain.workitem.dto.WorkItemFieldRules;
 import serp.project.pmcore.domain.workitem.entity.WorkItemCustomFieldValueEntity;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.IWorkItemCustomFieldValuePort;
+import serp.project.pmcore.domain.workitem.service.IWorkItemAuthorizationSupportService;
 import serp.project.pmcore.domain.workitem.service.IWorkItemFieldResolver;
 import serp.project.pmcore.domain.workitem.service.IWorkItemService;
 import serp.project.pmcore.domain.workitem.service.IWorkItemTransitionAuthorizationService;
@@ -64,6 +65,7 @@ public class TransitionWorkItemCommandHandler
 
     private final IProjectService projectService;
     private final IWorkItemService workItemService;
+    private final IWorkItemAuthorizationSupportService workItemAuthorizationSupportService;
     private final IWorkItemTransitionAuthorizationService workItemTransitionAuthorizationService;
     private final TransitionConfigurationResolver transitionConfigurationResolver;
     private final IWorkItemTransitionRuleEvaluator workItemTransitionRuleEvaluator;
@@ -90,7 +92,12 @@ public class TransitionWorkItemCommandHandler
         WorkItemEntity workItem = workItemService.getWorkItemById(command.workItemId(), tenantId);
         ensureWorkItemBelongsToProject(workItem, project);
 
-        ProjectPermissionEvaluationContext actorContext = buildActorContext(command.groupKeys(), userId, workItem);
+        ProjectPermissionEvaluationContext actorContext = workItemAuthorizationSupportService.buildActorContext(
+                userId,
+                command.groupKeys(),
+                workItem.getReporterId(),
+                workItem.getAssigneeId()
+        );
         workItemTransitionAuthorizationService.checkTransitionPermissions(project, actorContext);
         workItemTransitionAuthorizationService.checkIssueSecurityAccessIfNeeded(project, workItem, actorContext, tenantId);
 
@@ -213,17 +220,6 @@ public class TransitionWorkItemCommandHandler
         if (!Objects.equals(workItem.getProjectId(), project.getId())) {
             throw new ResourceNotFoundException(DomainErrorCode.WORK_ITEM_NOT_FOUND);
         }
-    }
-
-    private ProjectPermissionEvaluationContext buildActorContext(Set<String> groupKeys,
-                                                                Long userId,
-                                                                WorkItemEntity workItem) {
-        return ProjectPermissionEvaluationContext.builder()
-                .userId(userId)
-                .groupKeys(groupKeys == null ? Set.of() : groupKeys)
-                .reporterUserId(workItem.getReporterId())
-                .assigneeUserId(workItem.getAssigneeId())
-                .build();
     }
 
     private WorkItemFieldRules resolveFieldRules(ResolvedTransitionExecution execution,

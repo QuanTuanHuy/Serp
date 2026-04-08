@@ -3,38 +3,54 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.application.workitem.command.create.support;
+package serp.project.pmcore.domain.workitem.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
+import serp.project.pmcore.domain.workitem.service.IWorkItemAuthorizationSupportService;
 
 import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
-public class WorkItemCreateAuthorizationService {
+public class WorkItemAuthorizationSupportService implements IWorkItemAuthorizationSupportService {
 
     private final IProjectPermissionEvaluationService projectPermissionEvaluationService;
 
+    @Override
     public ProjectPermissionEvaluationContext buildActorContext(Long userId, Set<String> groupKeys) {
+        return buildActorContext(userId, groupKeys, null, null);
+    }
+
+    @Override
+    public ProjectPermissionEvaluationContext buildActorContext(Long userId,
+                                                                Set<String> groupKeys,
+                                                                Long reporterUserId,
+                                                                Long assigneeUserId) {
         return ProjectPermissionEvaluationContext.builder()
                 .userId(userId)
                 .groupKeys(groupKeys == null ? Set.of() : groupKeys)
+                .reporterUserId(reporterUserId)
+                .assigneeUserId(assigneeUserId)
                 .build();
     }
 
-    public void checkCreatePermissions(ProjectEntity project, ProjectPermissionEvaluationContext actorContext) {
-        projectPermissionEvaluationService.checkPermission(project, actorContext, ProjectPermissionKeys.BROWSE_PROJECTS);
-        projectPermissionEvaluationService.checkPermission(project, actorContext, ProjectPermissionKeys.CREATE_ISSUES);
+    @Override
+    public void checkRequiredPermissions(ProjectEntity project,
+                                         ProjectPermissionEvaluationContext actorContext,
+                                         String... permissionKeys) {
+        for (String permissionKey : permissionKeys) {
+            projectPermissionEvaluationService.checkPermission(project, actorContext, permissionKey);
+        }
     }
 
+    @Override
     public void checkScheduleIssuesPermissionIfNeeded(ProjectEntity project,
                                                       ProjectPermissionEvaluationContext actorContext,
                                                       Long dueDate) {
@@ -43,6 +59,7 @@ public class WorkItemCreateAuthorizationService {
         }
     }
 
+    @Override
     public Long resolveAssigneeId(ProjectEntity project,
                                   Long requestedAssigneeId,
                                   ProjectPermissionEvaluationContext actorContext) {
@@ -66,6 +83,7 @@ public class WorkItemCreateAuthorizationService {
         return requestedAssigneeId;
     }
 
+    @Override
     public void checkSetIssueSecurityPermissionIfNeeded(ProjectEntity project,
                                                         ProjectPermissionEvaluationContext actorContext,
                                                         Long requestedSecurityLevelId) {
