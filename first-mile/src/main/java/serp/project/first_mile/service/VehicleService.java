@@ -9,10 +9,17 @@ import org.springframework.web.multipart.MultipartFile;
 import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.CreateVehicleRequest;
 import serp.project.first_mile.dto.request.UpdateVehicleRequest;
+import serp.project.first_mile.dto.request.VehicleImportDTO;
+import serp.project.first_mile.dto.response.ImportHistoryResponse;
+import serp.project.first_mile.dto.response.ValidateImportFileDTO;
 import serp.project.first_mile.dto.response.VehicleResponse;
 
 public interface VehicleService {
     byte[] exportTemplate();
+
+    ValidateImportFileDTO<VehicleImportDTO> validateImportFile(MultipartFile file, Long tenantId);
+
+    ImportHistoryResponse importVehiclesAsync(MultipartFile file, Long tenantId);
 
     PageResponse<VehicleResponse> getVehicles(int page, int size, String keyword);
 

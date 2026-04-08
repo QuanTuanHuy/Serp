@@ -6,50 +6,146 @@ Description: Part of Serp Project
 package serp.project.first_mile.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.FormulaEvaluator;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import serp.project.first_mile.domain.ImportHistory;
+import serp.project.first_mile.domain.PostOffice;
 import serp.project.first_mile.domain.PostOfficeStaff;
+import serp.project.first_mile.domain.Vehicle;
+import serp.project.first_mile.dto.request.VehicleImportDTO;
+import serp.project.first_mile.dto.response.ImportHistoryResponse;
+import serp.project.first_mile.dto.response.ValidateImportFileDTO;
+import serp.project.first_mile.enums.ImportHistoryStatus;
+import serp.project.first_mile.enums.ImportType;
 import serp.project.first_mile.enums.PostOfficeStaffRole;
 import serp.project.first_mile.enums.PostOfficeStaffStatus;
+import serp.project.first_mile.enums.VehicleStatus;
+import serp.project.first_mile.enums.VehicleType;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
+import serp.project.first_mile.exception.MessageService;
 import serp.project.first_mile.kernel.utils.AuthUtils;
+import serp.project.first_mile.repository.ImportHistoryRepository;
 import serp.project.first_mile.repository.PostOfficeRepository;
 import serp.project.first_mile.repository.PostOfficeStaffAssignmentRepository;
 import serp.project.first_mile.repository.PostOfficeStaffRepository;
+import serp.project.first_mile.repository.VehicleRepository;
 import serp.project.first_mile.repository.projection.CodeNameProjection;
 import serp.project.first_mile.service.VehicleImportExcelService;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class VehicleImportExcelServiceImpl implements VehicleImportExcelService {
 
     private static final String ROLE_TMS_ADMIN = "TMS_ADMIN";
     private static final String ROLE_TMS_POSTOFFICER_MANAGER = "TMS_POSTOFFICER_MANAGER";
+
     private static final String TEMPLATE_PATH = "excel/vehicle_template.xlsx";
     private static final String UNIT_SHEET_NAME = "Unit";
+    private static final String VEHICLE_SHEET_NAME = "VEHICLE";
+
     private static final int START_ROW_INDEX = 1;
     private static final int POST_OFFICE_COLUMN_INDEX = 2;
     private static final int COURIER_COLUMN_INDEX = 3;
 
+    private static final int HEADER_ROW_INDEX = 0;
+    private static final int DATA_START_ROW_INDEX = 1;
+
+    private static final int COLUMN_STT = 0;
+    private static final int COLUMN_LICENSE_PLATE = 1;
+    private static final int COLUMN_MAX_WEIGHT = 2;
+    private static final int COLUMN_MAX_VOLUME = 3;
+    private static final int COLUMN_POST_OFFICE = 4;
+    private static final int COLUMN_COURIER = 5;
+    private static final int COLUMN_VEHICLE_TYPE = 6;
+    private static final int COLUMN_STATUS = 7;
+    private static final int LAST_COLUMN_INDEX = 7;
+
+    private static final List<String> EXPECTED_HEADERS = List.of(
+            "STT",
+            "Biển số xe (dạng 17B6-72685)",
+            "Tải trọng tối đa (kg)",
+            "Dung tích tối đa (m3)",
+            "Bưu cục",
+            "Bưu tá",
+            "Loại phương tiện",
+            "Trạng thái"
+    );
+
+    private static final List<String> HEADER_KEYS = List.of(
+            "stt",
+            "license_plate",
+            "max_weight",
+            "max_volume",
+            "post_office",
+            "courier",
+            "vehicle_type",
+            "status"
+    );
+
+    private static final Pattern CODE_NAME_PATTERN = Pattern.compile("^(.+?)\\s+-\\s+(.+)$");
+    private static final int MAX_ERROR_MESSAGE_LENGTH = 20000;
+
+    private static final Map<String, VehicleStatus> STATUS_MAP = Map.of(
+            "active", VehicleStatus.ACTIVE,
+            "inactive", VehicleStatus.INACTIVE,
+            "maintenance", VehicleStatus.MAINTENANCE,
+            "in_use", VehicleStatus.IN_USE,
+            "full", VehicleStatus.FULL
+    );
+
+    private static final Map<String, VehicleType> VEHICLE_TYPE_MAP = Map.of(
+            "bike", VehicleType.BIKE,
+            "truck", VehicleType.TRUCK
+    );
+
     private final PostOfficeRepository postOfficeRepository;
     private final PostOfficeStaffAssignmentRepository postOfficeStaffAssignmentRepository;
     private final PostOfficeStaffRepository postOfficeStaffRepository;
+    private final VehicleRepository vehicleRepository;
+    private final ImportHistoryRepository importHistoryRepository;
+    private final MessageService messageService;
     private final AuthUtils authUtils;
+
+    @Qualifier("orderImportTaskExecutor")
+    private final Executor orderImportTaskExecutor;
 
     @Override
     public byte[] exportTemplate() {
@@ -81,6 +177,905 @@ public class VehicleImportExcelServiceImpl implements VehicleImportExcelService 
         } catch (IOException exception) {
             throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
         }
+    }
+
+    @Override
+    public ValidateImportFileDTO<VehicleImportDTO> validateImportFile(MultipartFile file, Long tenantId) {
+        ValidateImportFileDTO<VehicleImportDTO> response = buildBaseValidateResponse();
+
+        if (file == null || file.isEmpty()) {
+            setValidationFailed(response, List.of(message("vehicle.import.validation.file.empty")));
+            return response;
+        }
+
+        try {
+            AccessScope accessScope = resolveAccessScope(tenantId);
+            return validateImportFileBytes(file.getBytes(), tenantId, accessScope);
+        } catch (IOException exception) {
+            log.error("Validate vehicle import file failed", exception);
+            setValidationFailed(response, List.of(message("vehicle.import.validation.file.unreadable")));
+            return response;
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ImportHistoryResponse importVehiclesAsync(MultipartFile file, Long tenantId) {
+        if (file == null || file.isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        byte[] fileBytes;
+        try {
+            fileBytes = file.getBytes();
+        } catch (IOException exception) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        AccessScope accessScope = resolveAccessScope(tenantId);
+
+        ImportHistory importHistory = ImportHistory.builder()
+                .fileId(UUID.randomUUID())
+                .fileName(file.getOriginalFilename())
+                .status(ImportHistoryStatus.PENDING)
+                .totalRecords(0)
+                .successRecords(0)
+                .failedRecords(0)
+                .tenantId(tenantId)
+                .build();
+
+        ImportHistory savedImportHistory = importHistoryRepository.save(importHistory);
+        Long importHistoryId = savedImportHistory.getId();
+
+        CompletableFuture.runAsync(
+                () -> processImportJob(fileBytes, tenantId, importHistoryId, accessScope),
+                orderImportTaskExecutor
+        ).exceptionally(exception -> {
+            log.error("Vehicle import async execution failed for importHistoryId={}", importHistoryId, exception);
+            markImportFailed(importHistoryId, tenantId, resolveExceptionMessage(exception));
+            return null;
+        });
+
+        return toImportHistoryResponse(savedImportHistory);
+    }
+
+    private ValidateImportFileDTO<VehicleImportDTO> validateImportFileBytes(
+            byte[] fileBytes,
+            Long tenantId,
+            AccessScope accessScope
+    ) {
+        ValidateImportFileDTO<VehicleImportDTO> response = buildBaseValidateResponse();
+
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(fileBytes);
+             Workbook workbook = WorkbookFactory.create(inputStream)) {
+
+            FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
+            DataFormatter formatter = new DataFormatter(Locale.forLanguageTag("vi-VN"));
+
+            Sheet vehicleSheet = resolveVehicleSheet(workbook);
+            if (vehicleSheet == null) {
+                setValidationFailed(response, List.of(message("vehicle.import.validation.sheet.vehicle.missing")));
+                return response;
+            }
+
+            List<String> headerErrors = validateHeader(vehicleSheet, formatter, evaluator);
+            if (!headerErrors.isEmpty()) {
+                setValidationFailed(response, headerErrors);
+                return response;
+            }
+
+            MasterDataLookup masterData = loadMasterData(tenantId, accessScope.managedPostOfficeIds());
+            Set<String> existingLicensePlates = loadExistingLicensePlates(vehicleSheet, tenantId, formatter, evaluator);
+            ValidationResult validationResult = validateRows(
+                    vehicleSheet,
+                    formatter,
+                    evaluator,
+                    masterData,
+                    existingLicensePlates,
+                    tenantId,
+                    accessScope
+            );
+
+            response.setData(validationResult.vehicles());
+            if (validationResult.vehicles().isEmpty() && validationResult.errors().isEmpty()) {
+                setValidationFailed(response, List.of(message("vehicle.import.validation.data.empty")));
+                return response;
+            }
+
+            if (!validationResult.errors().isEmpty()) {
+                setValidationFailed(response, validationResult.errors());
+                return response;
+            }
+
+            response.setSuccess(true);
+            response.setErrorMessage(null);
+            response.setType(1);
+            return response;
+        } catch (Exception exception) {
+            log.error("Validate vehicle import file failed", exception);
+            setValidationFailed(response, List.of(message("vehicle.import.validation.file.unreadable")));
+            return response;
+        }
+    }
+
+    private void processImportJob(
+            byte[] fileBytes,
+            Long tenantId,
+            Long importHistoryId,
+            AccessScope accessScope
+    ) {
+        ImportHistory importHistory = importHistoryRepository.findByIdAndTenantId(importHistoryId, tenantId)
+                .orElse(null);
+        if (importHistory == null) {
+            log.warn("Import history not found: id={}, tenantId={}", importHistoryId, tenantId);
+            return;
+        }
+
+        importHistory.setStatus(ImportHistoryStatus.PROCESSING);
+        importHistory.setStartedAt(LocalDateTime.now());
+        importHistory.setType(ImportType.VEHICLE);
+        importHistoryRepository.save(importHistory);
+
+        try {
+            ValidateImportFileDTO<VehicleImportDTO> validationResult = validateImportFileBytes(
+                    fileBytes,
+                    tenantId,
+                    accessScope
+            );
+            List<VehicleImportDTO> validVehicles = validationResult.getData() == null
+                    ? List.of()
+                    : validationResult.getData();
+
+            importHistory.setTotalRecords(validVehicles.size());
+
+            if (!validationResult.isSuccess()) {
+                importHistory.setStatus(ImportHistoryStatus.FAILED);
+                importHistory.setSuccessRecords(0);
+                importHistory.setFailedRecords(validVehicles.size());
+                importHistory.setErrorMessage(truncateErrorMessage(validationResult.getErrorMessage()));
+                importHistory.setFinishedAt(LocalDateTime.now());
+                importHistoryRepository.save(importHistory);
+                return;
+            }
+
+            ImportExecutionResult executionResult = saveImportedVehicles(validVehicles, tenantId);
+            importHistory.setSuccessRecords(executionResult.successRecords());
+            importHistory.setFailedRecords(executionResult.failedRecords());
+            importHistory.setErrorMessage(truncateErrorMessage(executionResult.errorMessage()));
+            importHistory.setStatus(
+                    executionResult.failedRecords() > 0
+                            ? ImportHistoryStatus.PARTIAL_SUCCESS
+                            : ImportHistoryStatus.COMPLETED
+            );
+            importHistory.setFinishedAt(LocalDateTime.now());
+            importHistoryRepository.save(importHistory);
+        } catch (Exception exception) {
+            log.error("Process vehicle import failed for importHistoryId={}", importHistoryId, exception);
+            markImportFailed(importHistoryId, tenantId, resolveExceptionMessage(exception));
+        }
+    }
+
+    private ImportExecutionResult saveImportedVehicles(List<VehicleImportDTO> vehicleImports, Long tenantId) {
+        if (vehicleImports == null || vehicleImports.isEmpty()) {
+            return new ImportExecutionResult(0, 0, 0, null);
+        }
+
+        Map<Long, PostOffice> postOfficeById = loadPostOfficeById(vehicleImports, tenantId);
+
+        int successRecords = 0;
+        List<String> errors = new ArrayList<>();
+
+        for (VehicleImportDTO vehicleImport : vehicleImports) {
+            try {
+                Vehicle vehicle = mapToVehicleEntity(vehicleImport, tenantId, postOfficeById);
+                vehicleRepository.save(vehicle);
+                successRecords++;
+            } catch (Exception exception) {
+                errors.add(buildImportPersistError(vehicleImport, exception));
+            }
+        }
+
+        int totalRecords = vehicleImports.size();
+        int failedRecords = totalRecords - successRecords;
+        String errorMessage = errors.isEmpty() ? null : String.join("\n", errors);
+
+        return new ImportExecutionResult(totalRecords, successRecords, failedRecords, errorMessage);
+    }
+
+    private Map<Long, PostOffice> loadPostOfficeById(List<VehicleImportDTO> vehicleImports, Long tenantId) {
+        Set<Long> postOfficeIds = vehicleImports.stream()
+                .filter(Objects::nonNull)
+                .map(VehicleImportDTO::getPostOfficeId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        if (postOfficeIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return postOfficeRepository.findAllByTenantIdAndIdIn(tenantId, postOfficeIds)
+                .stream()
+                .collect(Collectors.toMap(PostOffice::getId, value -> value));
+    }
+
+    private Vehicle mapToVehicleEntity(
+            VehicleImportDTO vehicleImport,
+            Long tenantId,
+            Map<Long, PostOffice> postOfficeById
+    ) {
+        PostOffice postOffice = null;
+        if (vehicleImport.getPostOfficeId() != null) {
+            postOffice = postOfficeById.get(vehicleImport.getPostOfficeId());
+            if (postOffice == null) {
+                throw new AppException(ErrorCode.POST_OFFICE_NOT_FOUND);
+            }
+        }
+
+        Vehicle vehicle = new Vehicle();
+        vehicle.setLicensePlate(vehicleImport.getLicensePlate());
+        vehicle.setMaxWeight(vehicleImport.getMaxWeight());
+        vehicle.setMaxVolume(vehicleImport.getMaxVolume());
+        vehicle.setPostOffice(postOffice);
+        vehicle.setPostOfficeStaffId(vehicleImport.getPostOfficeStaffId());
+        vehicle.setVehicleType(vehicleImport.getVehicleType());
+        vehicle.setStatus(vehicleImport.getStatus());
+        vehicle.setTenantId(tenantId);
+        return vehicle;
+    }
+
+    private Sheet resolveVehicleSheet(Workbook workbook) {
+        Sheet vehicleSheet = workbook.getSheet(VEHICLE_SHEET_NAME);
+        if (vehicleSheet != null) {
+            return vehicleSheet;
+        }
+
+        for (int sheetIndex = 0; sheetIndex < workbook.getNumberOfSheets(); sheetIndex++) {
+            Sheet candidate = workbook.getSheetAt(sheetIndex);
+            if (VEHICLE_SHEET_NAME.equalsIgnoreCase(candidate.getSheetName())) {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private List<String> validateHeader(Sheet vehicleSheet, DataFormatter formatter, FormulaEvaluator evaluator) {
+        List<String> errors = new ArrayList<>();
+        Row headerRow = vehicleSheet.getRow(HEADER_ROW_INDEX);
+        if (headerRow == null) {
+            errors.add(message("vehicle.import.validation.header.row.missing"));
+            return errors;
+        }
+
+        for (int columnIndex = 0; columnIndex <= LAST_COLUMN_INDEX; columnIndex++) {
+            String actualHeader = normalizeWhitespace(getCellText(headerRow, columnIndex, formatter, evaluator));
+            String expectedHeader = normalizeWhitespace(EXPECTED_HEADERS.get(columnIndex));
+            if (!expectedHeader.equalsIgnoreCase(actualHeader)) {
+                errors.add(message(
+                        "vehicle.import.validation.header.invalid",
+                        toColumnName(columnIndex),
+                        EXPECTED_HEADERS.get(columnIndex),
+                        actualHeader
+                ));
+            }
+        }
+        return errors;
+    }
+
+    private ValidationResult validateRows(
+            Sheet vehicleSheet,
+            DataFormatter formatter,
+            FormulaEvaluator evaluator,
+            MasterDataLookup masterData,
+            Set<String> existingLicensePlates,
+            Long tenantId,
+            AccessScope accessScope
+    ) {
+        List<VehicleImportDTO> vehicles = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+        Set<String> fileLicensePlates = new HashSet<>();
+
+        for (int rowIndex = DATA_START_ROW_INDEX; rowIndex <= vehicleSheet.getLastRowNum(); rowIndex++) {
+            Row row = vehicleSheet.getRow(rowIndex);
+            if (isBlankRow(row, formatter, evaluator)) {
+                continue;
+            }
+
+            int excelRowNumber = rowIndex + 1;
+            VehicleImportDTO vehicle = VehicleImportDTO.builder()
+                    .sourceRows(new ArrayList<>())
+                    .build();
+            vehicle.getSourceRows().add(excelRowNumber);
+
+            String licensePlate = requireText(
+                    row,
+                    COLUMN_LICENSE_PLATE,
+                    excelRowNumber,
+                    formatter,
+                    evaluator,
+                    errors
+            );
+            if (hasText(licensePlate)) {
+                String normalizedKey = normalizeLookupKey(licensePlate);
+                if (!fileLicensePlates.add(normalizedKey)) {
+                    errors.add(message(
+                            "vehicle.import.validation.license_plate.duplicate_in_file",
+                            buildCellRef(excelRowNumber, COLUMN_LICENSE_PLATE)
+                    ));
+                }
+
+                if (existingLicensePlates.contains(normalizedKey)) {
+                    errors.add(message(
+                            "vehicle.import.validation.license_plate.exists",
+                            buildCellRef(excelRowNumber, COLUMN_LICENSE_PLATE)
+                    ));
+                }
+            }
+            vehicle.setLicensePlate(normalizeLicensePlate(licensePlate));
+
+            vehicle.setMaxWeight(parseRequiredDouble(
+                    row,
+                    COLUMN_MAX_WEIGHT,
+                    excelRowNumber,
+                    formatter,
+                    evaluator,
+                    errors
+            ));
+
+            vehicle.setMaxVolume(parseRequiredDouble(
+                    row,
+                    COLUMN_MAX_VOLUME,
+                    excelRowNumber,
+                    formatter,
+                    evaluator,
+                    errors
+            ));
+
+            PostOfficeResolution postOffice = resolvePostOffice(
+                    row,
+                    excelRowNumber,
+                    formatter,
+                    evaluator,
+                    masterData,
+                    accessScope,
+                    errors
+            );
+            if (postOffice != null) {
+                vehicle.setPostOfficeId(postOffice.postOffice().getId());
+                vehicle.setPostOfficeCode(postOffice.postOffice().getCode());
+                vehicle.setPostOfficeName(postOffice.postOffice().getName());
+            }
+
+            CourierResolution courier = resolveCourier(
+                    row,
+                    excelRowNumber,
+                    formatter,
+                    evaluator,
+                    masterData,
+                    errors
+            );
+            if (courier != null) {
+                vehicle.setPostOfficeStaffId(courier.courier().getId());
+                vehicle.setPostOfficeStaffCode(courier.courier().getCode());
+                vehicle.setPostOfficeStaffName(courier.courier().getFullName());
+            }
+
+            if (postOffice != null && courier != null) {
+                validateCourierBelongsToPostOffice(
+                        courier.courier().getId(),
+                        postOffice.postOffice().getId(),
+                        tenantId,
+                        excelRowNumber,
+                        errors
+                );
+            }
+
+            vehicle.setVehicleType(mapRequiredValue(
+                    row,
+                    COLUMN_VEHICLE_TYPE,
+                    excelRowNumber,
+                    formatter,
+                    evaluator,
+                    VEHICLE_TYPE_MAP,
+                    message("vehicle.import.allowed.vehicle_type"),
+                    errors
+            ));
+
+            vehicle.setStatus(mapRequiredValue(
+                    row,
+                    COLUMN_STATUS,
+                    excelRowNumber,
+                    formatter,
+                    evaluator,
+                    STATUS_MAP,
+                    message("vehicle.import.allowed.status"),
+                    errors
+            ));
+
+            vehicles.add(vehicle);
+        }
+
+        return new ValidationResult(vehicles, errors);
+    }
+
+    private Set<String> loadExistingLicensePlates(
+            Sheet vehicleSheet,
+            Long tenantId,
+            DataFormatter formatter,
+            FormulaEvaluator evaluator
+    ) {
+        Set<String> normalizedLicensePlates = new LinkedHashSet<>();
+        for (int rowIndex = DATA_START_ROW_INDEX; rowIndex <= vehicleSheet.getLastRowNum(); rowIndex++) {
+            Row row = vehicleSheet.getRow(rowIndex);
+            if (row == null) {
+                continue;
+            }
+
+            String licensePlate = normalizeWhitespace(getCellText(row, COLUMN_LICENSE_PLATE, formatter, evaluator));
+            if (hasText(licensePlate)) {
+                normalizedLicensePlates.add(normalizeLookupKey(licensePlate));
+            }
+        }
+
+        if (normalizedLicensePlates.isEmpty()) {
+            return Set.of();
+        }
+
+        return vehicleRepository.findExistingLicensePlatesByTenantId(tenantId, normalizedLicensePlates);
+    }
+
+    private String requireText(
+            Row row,
+            int columnIndex,
+            int excelRowNumber,
+            DataFormatter formatter,
+            FormulaEvaluator evaluator,
+            List<String> errors
+    ) {
+        String value = normalizeWhitespace(getCellText(row, columnIndex, formatter, evaluator));
+        if (!hasText(value)) {
+            errors.add(message("vehicle.import.validation.required", buildCellRef(excelRowNumber, columnIndex)));
+            return null;
+        }
+        return value;
+    }
+
+    private Double parseRequiredDouble(
+            Row row,
+            int columnIndex,
+            int excelRowNumber,
+            DataFormatter formatter,
+            FormulaEvaluator evaluator,
+            List<String> errors
+    ) {
+        String rawValue = requireText(row, columnIndex, excelRowNumber, formatter, evaluator, errors);
+        if (!hasText(rawValue)) {
+            return null;
+        }
+
+        Double value = parseNumber(rawValue);
+        if (value == null) {
+            errors.add(message(
+                    "vehicle.import.validation.number.invalid",
+                    buildCellRef(excelRowNumber, columnIndex)
+            ));
+            return null;
+        }
+
+        if (value <= 0) {
+            errors.add(message(
+                    "vehicle.import.validation.number.must_be_positive",
+                    buildCellRef(excelRowNumber, columnIndex)
+            ));
+            return null;
+        }
+
+        return value;
+    }
+
+    private Double parseNumber(String rawValue) {
+        if (!hasText(rawValue)) {
+            return null;
+        }
+
+        String value = rawValue.trim().replace(" ", "");
+        if (value.matches("[-+]?\\d+(\\.\\d+)?")) {
+            return Double.parseDouble(value);
+        }
+
+        if (value.matches("[-+]?\\d+(,\\d+)?")) {
+            return Double.parseDouble(value.replace(",", "."));
+        }
+
+        if (value.matches("[-+]?\\d{1,3}(,\\d{3})+(\\.\\d+)?")) {
+            return Double.parseDouble(value.replace(",", ""));
+        }
+
+        if (value.matches("[-+]?\\d{1,3}(\\.\\d{3})+(,\\d+)?")) {
+            String normalized = value.replace(".", "").replace(",", ".");
+            return Double.parseDouble(normalized);
+        }
+
+        return null;
+    }
+
+    private PostOfficeResolution resolvePostOffice(
+            Row row,
+            int excelRowNumber,
+            DataFormatter formatter,
+            FormulaEvaluator evaluator,
+            MasterDataLookup masterData,
+            AccessScope accessScope,
+            List<String> errors
+    ) {
+        String rawValue = requireText(row, COLUMN_POST_OFFICE, excelRowNumber, formatter, evaluator, errors);
+        if (!hasText(rawValue)) {
+            return null;
+        }
+
+        CodeNameValue codeName = parseCodeAndName(rawValue, excelRowNumber, COLUMN_POST_OFFICE, errors);
+        if (codeName == null) {
+            return null;
+        }
+
+        PostOffice postOffice = masterData.postOfficeByCode().get(normalizeCodeKey(codeName.code()));
+        if (postOffice == null) {
+            errors.add(message(
+                    "vehicle.import.validation.post_office.not_found",
+                    buildCellRef(excelRowNumber, COLUMN_POST_OFFICE),
+                    codeName.code()
+            ));
+            return null;
+        }
+
+        if (!normalizeWhitespace(postOffice.getName()).equalsIgnoreCase(normalizeWhitespace(codeName.name()))) {
+            errors.add(message(
+                    "vehicle.import.validation.post_office.name_mismatch",
+                    buildCellRef(excelRowNumber, COLUMN_POST_OFFICE),
+                    postOffice.getCode(),
+                    postOffice.getName()
+            ));
+        }
+
+        if (accessScope.managerScoped()
+                && (accessScope.managedPostOfficeIds() == null
+                || !accessScope.managedPostOfficeIds().contains(postOffice.getId()))) {
+            errors.add(message(
+                    "vehicle.import.validation.post_office.not_allowed",
+                    buildCellRef(excelRowNumber, COLUMN_POST_OFFICE)
+            ));
+            return null;
+        }
+
+        return new PostOfficeResolution(postOffice);
+    }
+
+    private CourierResolution resolveCourier(
+            Row row,
+            int excelRowNumber,
+            DataFormatter formatter,
+            FormulaEvaluator evaluator,
+            MasterDataLookup masterData,
+            List<String> errors
+    ) {
+        String rawValue = requireText(row, COLUMN_COURIER, excelRowNumber, formatter, evaluator, errors);
+        if (!hasText(rawValue)) {
+            return null;
+        }
+
+        CodeNameValue codeName = parseCodeAndName(rawValue, excelRowNumber, COLUMN_COURIER, errors);
+        if (codeName == null) {
+            return null;
+        }
+
+        PostOfficeStaff courier = masterData.courierByCode().get(normalizeCodeKey(codeName.code()));
+        if (courier == null) {
+            errors.add(message(
+                    "vehicle.import.validation.courier.not_found_or_inactive",
+                    buildCellRef(excelRowNumber, COLUMN_COURIER),
+                    codeName.code()
+            ));
+            return null;
+        }
+
+        if (!normalizeWhitespace(courier.getFullName()).equalsIgnoreCase(normalizeWhitespace(codeName.name()))) {
+            errors.add(message(
+                    "vehicle.import.validation.courier.name_mismatch",
+                    buildCellRef(excelRowNumber, COLUMN_COURIER),
+                    courier.getCode(),
+                    courier.getFullName()
+            ));
+        }
+
+        return new CourierResolution(courier);
+    }
+
+    private void validateCourierBelongsToPostOffice(
+            Long courierId,
+            Long postOfficeId,
+            Long tenantId,
+            int excelRowNumber,
+            List<String> errors
+    ) {
+        boolean belongs = postOfficeStaffAssignmentRepository.existsActiveAssignmentByStaffIdAndPostOfficeIdAndTenantId(
+                courierId,
+                postOfficeId,
+                tenantId,
+                LocalDate.now()
+        );
+        if (!belongs) {
+            errors.add(message(
+                    "vehicle.import.validation.courier.not_belong_post_office",
+                    excelRowNumber
+            ));
+        }
+    }
+
+    private <T> T mapRequiredValue(
+            Row row,
+            int columnIndex,
+            int excelRowNumber,
+            DataFormatter formatter,
+            FormulaEvaluator evaluator,
+            Map<String, T> valueMap,
+            String allowedValues,
+            List<String> errors
+    ) {
+        String rawValue = requireText(row, columnIndex, excelRowNumber, formatter, evaluator, errors);
+        if (!hasText(rawValue)) {
+            return null;
+        }
+
+        String key = normalizeLookupKey(rawValue);
+        T mappedValue = valueMap.get(key);
+        if (mappedValue == null) {
+            errors.add(message(
+                    "vehicle.import.validation.value.invalid_option",
+                    buildCellRef(excelRowNumber, columnIndex),
+                    rawValue,
+                    allowedValues
+            ));
+        }
+        return mappedValue;
+    }
+
+    private CodeNameValue parseCodeAndName(String value, int excelRowNumber, int columnIndex, List<String> errors) {
+        String normalizedValue = normalizeWhitespace(value);
+        Matcher matcher = CODE_NAME_PATTERN.matcher(normalizedValue);
+        if (!matcher.matches()) {
+            errors.add(message(
+                    "vehicle.import.validation.code_name.invalid_format",
+                    buildCellRef(excelRowNumber, columnIndex)
+            ));
+            return null;
+        }
+
+        String code = matcher.group(1).trim();
+        String name = matcher.group(2).trim();
+        if (!hasText(code) || !hasText(name)) {
+            errors.add(message(
+                    "vehicle.import.validation.code_name.invalid_format",
+                    buildCellRef(excelRowNumber, columnIndex)
+            ));
+            return null;
+        }
+
+        return new CodeNameValue(code, name);
+    }
+
+    private MasterDataLookup loadMasterData(Long tenantId, Set<Long> managedPostOfficeIds) {
+        List<PostOffice> postOffices = postOfficeRepository.findAllByTenantId(tenantId);
+        Map<String, PostOffice> postOfficeByCode = postOffices.stream()
+                .collect(Collectors.toMap(
+                        value -> normalizeCodeKey(value.getCode()),
+                        value -> value,
+                        (first, second) -> first,
+                        LinkedHashMap::new
+                ));
+
+        List<PostOfficeStaff> activeCouriers = postOfficeStaffRepository.findByTenantIdAndRoleAndStatus(
+                tenantId,
+                PostOfficeStaffRole.COURIER,
+                PostOfficeStaffStatus.ACTIVE
+        );
+        Map<String, PostOfficeStaff> courierByCode = activeCouriers.stream()
+                .collect(Collectors.toMap(
+                        value -> normalizeCodeKey(value.getCode()),
+                        value -> value,
+                        (first, second) -> first,
+                        HashMap::new
+                ));
+
+        return new MasterDataLookup(postOfficeByCode, courierByCode, managedPostOfficeIds);
+    }
+
+    private ValidateImportFileDTO<VehicleImportDTO> buildBaseValidateResponse() {
+        ValidateImportFileDTO<VehicleImportDTO> response = new ValidateImportFileDTO<>();
+        response.setFileId(UUID.randomUUID());
+        response.setHeader(buildHeaderMap());
+        response.setData(new ArrayList<>());
+        response.setSuccess(false);
+        response.setType(0);
+        return response;
+    }
+
+    private LinkedHashMap<String, String> buildHeaderMap() {
+        LinkedHashMap<String, String> headerMap = new LinkedHashMap<>();
+        for (int i = 0; i <= LAST_COLUMN_INDEX; i++) {
+            headerMap.put(HEADER_KEYS.get(i), EXPECTED_HEADERS.get(i));
+        }
+        return headerMap;
+    }
+
+    private void setValidationFailed(ValidateImportFileDTO<VehicleImportDTO> response, List<String> errors) {
+        response.setSuccess(false);
+        response.setType(0);
+        response.setErrorMessage(String.join("\n", errors));
+    }
+
+    private boolean isBlankRow(Row row, DataFormatter formatter, FormulaEvaluator evaluator) {
+        if (row == null) {
+            return true;
+        }
+
+        for (int columnIndex = 0; columnIndex <= LAST_COLUMN_INDEX; columnIndex++) {
+            if (hasText(getCellText(row, columnIndex, formatter, evaluator))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private String getCellText(Row row, int columnIndex, DataFormatter formatter, FormulaEvaluator evaluator) {
+        Cell cell = getCell(row, columnIndex);
+        if (cell == null) {
+            return "";
+        }
+        return formatter.formatCellValue(cell, evaluator);
+    }
+
+    private Cell getCell(Row row, int columnIndex) {
+        if (row == null) {
+            return null;
+        }
+        return row.getCell(columnIndex, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
+    }
+
+    private String buildCellRef(int excelRowNumber, int columnIndex) {
+        return message(
+                "vehicle.import.validation.cell_ref",
+                excelRowNumber,
+                toColumnName(columnIndex),
+                EXPECTED_HEADERS.get(columnIndex)
+        );
+    }
+
+    private String toColumnName(int columnIndex) {
+        int current = columnIndex + 1;
+        StringBuilder columnName = new StringBuilder();
+        while (current > 0) {
+            int remainder = (current - 1) % 26;
+            columnName.insert(0, (char) ('A' + remainder));
+            current = (current - 1) / 26;
+        }
+        return columnName.toString();
+    }
+
+    private String normalizeWhitespace(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace('\n', ' ').replaceAll("\\s+", " ").trim();
+    }
+
+    private String normalizeLookupKey(String value) {
+        return normalizeWhitespace(value).toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizeCodeKey(String code) {
+        return normalizeWhitespace(code).toUpperCase(Locale.ROOT);
+    }
+
+    private String normalizeLicensePlate(String value) {
+        if (!hasText(value)) {
+            return null;
+        }
+        return normalizeWhitespace(value).toUpperCase(Locale.ROOT);
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
+
+    private String message(String key, Object... args) {
+        if (args == null || args.length == 0) {
+            return messageService.getMessage(key);
+        }
+        return messageService.getMessage(key, args);
+    }
+
+    private void markImportFailed(Long importHistoryId, Long tenantId, String errorMessage) {
+        importHistoryRepository.findByIdAndTenantId(importHistoryId, tenantId).ifPresent(importHistory -> {
+            importHistory.setStatus(ImportHistoryStatus.FAILED);
+            if (importHistory.getStartedAt() == null) {
+                importHistory.setStartedAt(LocalDateTime.now());
+            }
+            if (importHistory.getTotalRecords() == null) {
+                importHistory.setTotalRecords(0);
+            }
+            if (importHistory.getSuccessRecords() == null) {
+                importHistory.setSuccessRecords(0);
+            }
+            if (importHistory.getFailedRecords() == null) {
+                importHistory.setFailedRecords(importHistory.getTotalRecords());
+            }
+            importHistory.setErrorMessage(truncateErrorMessage(errorMessage));
+            importHistory.setFinishedAt(LocalDateTime.now());
+            importHistoryRepository.save(importHistory);
+        });
+    }
+
+    private ImportHistoryResponse toImportHistoryResponse(ImportHistory importHistory) {
+        return ImportHistoryResponse.builder()
+                .id(importHistory.getId())
+                .fileId(importHistory.getFileId())
+                .fileName(importHistory.getFileName())
+                .status(importHistory.getStatus())
+                .totalRecords(importHistory.getTotalRecords())
+                .successRecords(importHistory.getSuccessRecords())
+                .failedRecords(importHistory.getFailedRecords())
+                .errorMessage(importHistory.getErrorMessage())
+                .startedAt(importHistory.getStartedAt())
+                .finishedAt(importHistory.getFinishedAt())
+                .build();
+    }
+
+    private String buildImportPersistError(VehicleImportDTO vehicleImport, Exception exception) {
+        String licensePlate = hasText(vehicleImport.getLicensePlate())
+                ? vehicleImport.getLicensePlate()
+                : message("vehicle.import.import_job.unknown_license_plate");
+        return message(
+                "vehicle.import.import_job.persist_error",
+                licensePlate,
+                resolveExceptionMessage(exception)
+        );
+    }
+
+    private String resolveExceptionMessage(Throwable throwable) {
+        if (throwable == null) {
+            return message(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessageKey());
+        }
+
+        Throwable rootCause = throwable;
+        while (rootCause.getCause() != null) {
+            rootCause = rootCause.getCause();
+        }
+
+        if (rootCause instanceof AppException appException) {
+            return message(appException.getErrorCode().getMessageKey());
+        }
+
+        String rootMessage = rootCause.getMessage();
+        if (!hasText(rootMessage)) {
+            return message(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessageKey());
+        }
+
+        if (rootMessage.startsWith("error.")) {
+            return message(rootMessage);
+        }
+        return rootMessage;
+    }
+
+    private String truncateErrorMessage(String errorMessage) {
+        if (!hasText(errorMessage)) {
+            return null;
+        }
+
+        if (errorMessage.length() <= MAX_ERROR_MESSAGE_LENGTH) {
+            return errorMessage;
+        }
+
+        return errorMessage.substring(0, MAX_ERROR_MESSAGE_LENGTH);
     }
 
     private List<CodeNameProjection> loadTemplatePostOffices(Long tenantId, Set<Long> managedPostOfficeIds) {
@@ -154,6 +1149,13 @@ public class VehicleImportExcelServiceImpl implements VehicleImportExcelService 
         return safeCode + " - " + safeName;
     }
 
+    private AccessScope resolveAccessScope(Long tenantId) {
+        if (isManagerScopedAccess()) {
+            return new AccessScope(true, getManagedPostOfficeIdsOrThrow(tenantId));
+        }
+        return new AccessScope(false, null);
+    }
+
     private Set<Long> getManagedPostOfficeIdsOrThrow(Long tenantId) {
         Long currentUserId = authUtils.getCurrentUserId().orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
         String managerCode = buildStaffCode(currentUserId, PostOfficeStaffRole.MANAGER);
@@ -186,5 +1188,35 @@ public class VehicleImportExcelServiceImpl implements VehicleImportExcelService 
 
     private boolean isPostOfficerManager() {
         return authUtils.hasAnyRole(ROLE_TMS_POSTOFFICER_MANAGER);
+    }
+
+    private record ValidationResult(List<VehicleImportDTO> vehicles, List<String> errors) {
+    }
+
+    private record CodeNameValue(String code, String name) {
+    }
+
+    private record PostOfficeResolution(PostOffice postOffice) {
+    }
+
+    private record CourierResolution(PostOfficeStaff courier) {
+    }
+
+    private record MasterDataLookup(
+            Map<String, PostOffice> postOfficeByCode,
+            Map<String, PostOfficeStaff> courierByCode,
+            Set<Long> managedPostOfficeIds
+    ) {
+    }
+
+    private record AccessScope(boolean managerScoped, Set<Long> managedPostOfficeIds) {
+    }
+
+    private record ImportExecutionResult(
+            int totalRecords,
+            int successRecords,
+            int failedRecords,
+            String errorMessage
+    ) {
     }
 }

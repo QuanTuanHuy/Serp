@@ -7,6 +7,7 @@ package serp.project.first_mile.ui.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -25,17 +26,25 @@ import serp.project.first_mile.dto.ApiResponse;
 import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.CreateVehicleRequest;
 import serp.project.first_mile.dto.request.UpdateVehicleRequest;
+import serp.project.first_mile.dto.request.VehicleImportDTO;
+import serp.project.first_mile.dto.response.ImportHistoryResponse;
+import serp.project.first_mile.dto.response.ValidateImportFileDTO;
 import serp.project.first_mile.dto.response.VehicleResponse;
+import serp.project.first_mile.exception.AppException;
+import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.exception.MessageService;
+import serp.project.first_mile.kernel.utils.AuthUtils;
 import serp.project.first_mile.service.VehicleService;
 
 @RestController
 @RequestMapping("/api/v1/vehicles")
 @RequiredArgsConstructor
+@Slf4j
 public class VehicleController {
 
     private final VehicleService vehicleService;
     private final MessageService messageService;
+        private final AuthUtils authUtils;
 
     @GetMapping
     public ApiResponse<PageResponse<VehicleResponse>> getVehicles(
@@ -66,6 +75,30 @@ public class VehicleController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=vehicle_template.xlsx")
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .body(excelData);
+    }
+
+    @PostMapping("/validate")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_POSTOFFICER_MANAGER')")
+    public ValidateImportFileDTO<VehicleImportDTO> validateFile(
+            @RequestParam("file") MultipartFile file
+    ) {
+        Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
+                () -> new AppException(ErrorCode.UNAUTHORIZED)
+        );
+        log.info("REST request to validate Vehicle import file for tenant {}", tenantId);
+        return vehicleService.validateImportFile(file, tenantId);
+    }
+
+    @PostMapping("/import")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_POSTOFFICER_MANAGER')")
+    public ImportHistoryResponse importFile(
+            @RequestParam("file") MultipartFile file
+    ) {
+        Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
+                () -> new AppException(ErrorCode.UNAUTHORIZED)
+        );
+        log.info("REST request to import Vehicle file for tenant {}", tenantId);
+        return vehicleService.importVehiclesAsync(file, tenantId);
     }
 
     @PostMapping

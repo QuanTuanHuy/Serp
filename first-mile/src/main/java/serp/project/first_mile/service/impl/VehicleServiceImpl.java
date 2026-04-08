@@ -20,7 +20,10 @@ import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.CreateVehicleRequest;
 import serp.project.first_mile.dto.request.FileUploadRequest;
 import serp.project.first_mile.dto.request.UpdateVehicleRequest;
+import serp.project.first_mile.dto.request.VehicleImportDTO;
 import serp.project.first_mile.dto.response.FileUploadResponse;
+import serp.project.first_mile.dto.response.ImportHistoryResponse;
+import serp.project.first_mile.dto.response.ValidateImportFileDTO;
 import serp.project.first_mile.dto.response.VehicleResponse;
 import serp.project.first_mile.enums.PostOfficeStaffRole;
 import serp.project.first_mile.enums.PostOfficeStaffStatus;
@@ -106,6 +109,17 @@ public class VehicleServiceImpl implements VehicleService {
     @Transactional(readOnly = true)
     public byte[] exportTemplate() {
         return vehicleImportExcelService.exportTemplate();
+    }
+
+    @Override
+    public ValidateImportFileDTO<VehicleImportDTO> validateImportFile(MultipartFile file, Long tenantId) {
+        return vehicleImportExcelService.validateImportFile(file, tenantId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ImportHistoryResponse importVehiclesAsync(MultipartFile file, Long tenantId) {
+        return vehicleImportExcelService.importVehiclesAsync(file, tenantId);
     }
 
     @Override

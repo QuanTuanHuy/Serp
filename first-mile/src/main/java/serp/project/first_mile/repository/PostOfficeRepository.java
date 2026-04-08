@@ -36,6 +36,10 @@ public interface PostOfficeRepository extends JpaRepository<PostOffice, Long> {
             @Param("normalizedCodes") Collection<String> normalizedCodes
     );
 
+    List<PostOffice> findAllByTenantId(Long tenantId);
+
+    List<PostOffice> findAllByTenantIdAndIdIn(Long tenantId, Collection<Long> ids);
+
     Page<PostOffice> findByCodeContainingIgnoreCaseOrNameContainingIgnoreCase(String code, String name, Pageable pageable);
 
     Page<PostOffice> findByLocationIsNull(Pageable pageable);

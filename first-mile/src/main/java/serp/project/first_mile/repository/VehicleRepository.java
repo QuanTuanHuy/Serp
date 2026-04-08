@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
@@ -73,6 +74,17 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
     boolean existsByLicensePlateIgnoreCaseAndTenantId(String licensePlate, Long tenantId);
 
     boolean existsByLicensePlateIgnoreCaseAndTenantIdAndIdNot(String licensePlate, Long tenantId, Long id);
+
+    @Query("""
+            select lower(trim(v.licensePlate))
+            from Vehicle v
+            where v.tenantId = :tenantId
+            and lower(trim(v.licensePlate)) in :normalizedLicensePlates
+            """)
+    Set<String> findExistingLicensePlatesByTenantId(
+            @Param("tenantId") Long tenantId,
+            @Param("normalizedLicensePlates") Collection<String> normalizedLicensePlates
+    );
 
     List<Vehicle> findByTenantIdAndPostOffice_IdAndStatusIn(
             Long tenantId,
