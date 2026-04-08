@@ -15,14 +15,14 @@ import serp.project.school_bus_service.kernel.shared.exception.AppException;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(AppException.class)
-    public ResponseEntity<?> handleAppException(AppException e) {
+    public ResponseEntity<GeneralResponse<Void>> handleAppException(AppException e) {
         AppErrorCode errorCode = e.getErrorCode();
         return ResponseEntity.status(errorCode.getStatus())
                 .body(GeneralResponse.error(errorCode.getStatus(), "FAILED", errorCode.getMessage()));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<?> handleDataIntegrityViolationException(DataIntegrityViolationException e) {
+    public ResponseEntity<GeneralResponse<Void>> handleDataIntegrityViolationException(DataIntegrityViolationException e) {
         log.error("Data integrity violation", e);
         AppErrorCode errorCode = AppErrorCode.DATA_INTEGRITY_VIOLATION;
         return ResponseEntity.status(errorCode.getStatus())
@@ -30,14 +30,14 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<?> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
+    public ResponseEntity<GeneralResponse<Void>> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
         AppErrorCode errorCode = AppErrorCode.REQUEST_VALIDATION_FAILED;
         return ResponseEntity.status(errorCode.getStatus())
                 .body(GeneralResponse.error(errorCode.getStatus(), "FAILED", errorCode.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<?> handleException(Exception e) {
+    public ResponseEntity<GeneralResponse<Void>> handleException(Exception e) {
         log.error("Unexpected exception", e);
         AppErrorCode errorCode = AppErrorCode.UNEXPECTED_EXCEPTION;
         return ResponseEntity.status(errorCode.getStatus())

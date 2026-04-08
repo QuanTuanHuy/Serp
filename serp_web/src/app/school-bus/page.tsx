@@ -7,7 +7,7 @@ export default function SchoolBusPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/school-bus/dashboard');
+    router.replace('/bds/dashboard');
   }, [router]);
 
   return (

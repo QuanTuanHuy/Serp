@@ -292,6 +292,8 @@ public class RoleEnumUtils {
                 return RoleEnum.PTM_USER;
             case "ACCOUNTING":
                 return RoleEnum.ACCOUNTANT;
+            case "SCHOOL_BUS":
+                return RoleEnum.SCHOOL_BUS_PARENT;
             default:
                 return RoleEnum.MODULE_USER;
         }

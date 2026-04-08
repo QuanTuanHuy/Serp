@@ -17,13 +17,22 @@ import serp.project.school_bus_service.application.dto.request.ParentProfileUpse
 import serp.project.school_bus_service.application.dto.request.PickupPointUpsertRequest;
 import serp.project.school_bus_service.application.dto.request.SchoolUpsertRequest;
 import serp.project.school_bus_service.application.dto.request.StudentUpsertRequest;
+import serp.project.school_bus_service.application.dto.response.AttendantProfileResponse;
+import serp.project.school_bus_service.application.dto.response.BusResponse;
+import serp.project.school_bus_service.application.dto.response.DriverProfileResponse;
 import serp.project.school_bus_service.application.dto.response.GeneralResponse;
+import serp.project.school_bus_service.application.dto.response.ParentProfileResponse;
+import serp.project.school_bus_service.application.dto.response.PickupPointResponse;
+import serp.project.school_bus_service.application.dto.response.SchoolResponse;
+import serp.project.school_bus_service.application.dto.response.StudentResponse;
 import serp.project.school_bus_service.core.service.IMasterDataService;
 import serp.project.school_bus_service.kernel.shared.auth.AuthUtils;
 import serp.project.school_bus_service.kernel.shared.base.AbstractBaseController;
 
+import java.util.List;
+
 @RestController
-@RequestMapping("/school-bus/api/v1")
+@RequestMapping
 public class MasterDataController extends AbstractBaseController {
 
     private final IMasterDataService masterDataService;
@@ -34,206 +43,220 @@ public class MasterDataController extends AbstractBaseController {
     }
 
     @GetMapping("/schools")
-    public ResponseEntity<?> getSchools() {
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.school.read')")
+    public ResponseEntity<GeneralResponse<List<SchoolResponse>>> getSchools() {
         return ok("Fetched schools", masterDataService.getSchools(getCurrentTenantId()));
     }
 
     @PostMapping("/schools")
-    public ResponseEntity<?> createSchool(@Valid @RequestBody SchoolUpsertRequest request) {
-        requireAnyRole("SCHOOL_BUS_ADMIN");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.school.write')")
+    public ResponseEntity<GeneralResponse<SchoolResponse>> createSchool(@Valid @RequestBody SchoolUpsertRequest request) {
         return created("Created school", masterDataService.createSchool(request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @GetMapping("/schools/{id}")
-    public ResponseEntity<?> getSchool(@PathVariable Long id) {
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.school.read')")
+    public ResponseEntity<GeneralResponse<SchoolResponse>> getSchool(@PathVariable Long id) {
         return ok("Fetched school", masterDataService.getSchoolResponse(id, getCurrentTenantId()));
     }
 
     @PatchMapping("/schools/{id}")
-    public ResponseEntity<?> updateSchool(@PathVariable Long id, @Valid @RequestBody SchoolUpsertRequest request) {
-        requireAnyRole("SCHOOL_BUS_ADMIN");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.school.write')")
+    public ResponseEntity<GeneralResponse<SchoolResponse>> updateSchool(@PathVariable Long id, @Valid @RequestBody SchoolUpsertRequest request) {
         return ok("Updated school", masterDataService.updateSchool(id, request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @DeleteMapping("/schools/{id}")
-    public ResponseEntity<?> deleteSchool(@PathVariable Long id) {
-        requireAnyRole("SCHOOL_BUS_ADMIN");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.school.delete')")
+    public ResponseEntity<GeneralResponse<Void>> deleteSchool(@PathVariable Long id) {
         masterDataService.deleteSchool(id, getCurrentTenantId(), getCurrentUserId());
         return ok("Deleted school");
     }
 
     @GetMapping("/parents")
-    public ResponseEntity<?> getParents() {
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.parent.read')")
+    public ResponseEntity<GeneralResponse<List<ParentProfileResponse>>> getParents() {
         return ok("Fetched parents", masterDataService.getParents(getCurrentTenantId()));
     }
 
     @PostMapping("/parents")
-    public ResponseEntity<?> createParent(@Valid @RequestBody ParentProfileUpsertRequest request) {
-        requireAnyRole("SCHOOL_BUS_ADMIN", "SCHOOL_BUS_DISPATCHER");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.parent.write')")
+    public ResponseEntity<GeneralResponse<ParentProfileResponse>> createParent(@Valid @RequestBody ParentProfileUpsertRequest request) {
         return created("Created parent", masterDataService.createParent(request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @GetMapping("/parents/{id}")
-    public ResponseEntity<?> getParent(@PathVariable Long id) {
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.parent.read')")
+    public ResponseEntity<GeneralResponse<ParentProfileResponse>> getParent(@PathVariable Long id) {
         return ok("Fetched parent", masterDataService.getParentResponse(id, getCurrentTenantId()));
     }
 
     @PatchMapping("/parents/{id}")
-    public ResponseEntity<?> updateParent(@PathVariable Long id,
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.parent.write')")
+    public ResponseEntity<GeneralResponse<ParentProfileResponse>> updateParent(@PathVariable Long id,
             @Valid @RequestBody ParentProfileUpsertRequest request) {
-        requireAnyRole("SCHOOL_BUS_ADMIN", "SCHOOL_BUS_DISPATCHER");
         return ok("Updated parent", masterDataService.updateParent(id, request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @DeleteMapping("/parents/{id}")
-    public ResponseEntity<?> deleteParent(@PathVariable Long id) {
-        requireAnyRole("SCHOOL_BUS_ADMIN");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.parent.delete')")
+    public ResponseEntity<GeneralResponse<Void>> deleteParent(@PathVariable Long id) {
         masterDataService.deleteParent(id, getCurrentTenantId(), getCurrentUserId());
         return ok("Deleted parent");
     }
 
     @GetMapping("/students")
-    public ResponseEntity<?> getStudents() {
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.student.read')")
+    public ResponseEntity<GeneralResponse<List<StudentResponse>>> getStudents() {
         return ok("Fetched students", masterDataService.getStudents(getCurrentTenantId()));
     }
 
     @PostMapping("/students")
-    public ResponseEntity<?> createStudent(@Valid @RequestBody StudentUpsertRequest request) {
-        requireAnyRole("SCHOOL_BUS_ADMIN", "SCHOOL_BUS_DISPATCHER");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.student.write')")
+    public ResponseEntity<GeneralResponse<StudentResponse>> createStudent(@Valid @RequestBody StudentUpsertRequest request) {
         return created("Created student", masterDataService.createStudent(request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @GetMapping("/students/{id}")
-    public ResponseEntity<?> getStudent(@PathVariable Long id) {
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.student.read')")
+    public ResponseEntity<GeneralResponse<StudentResponse>> getStudent(@PathVariable Long id) {
         return ok("Fetched student", masterDataService.getStudentResponse(id, getCurrentTenantId()));
     }
 
     @PatchMapping("/students/{id}")
-    public ResponseEntity<?> updateStudent(@PathVariable Long id, @Valid @RequestBody StudentUpsertRequest request) {
-        requireAnyRole("SCHOOL_BUS_ADMIN", "SCHOOL_BUS_DISPATCHER");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.student.write')")
+    public ResponseEntity<GeneralResponse<StudentResponse>> updateStudent(@PathVariable Long id, @Valid @RequestBody StudentUpsertRequest request) {
         return ok("Updated student", masterDataService.updateStudent(id, request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @DeleteMapping("/students/{id}")
-    public ResponseEntity<?> deleteStudent(@PathVariable Long id) {
-        requireAnyRole("SCHOOL_BUS_ADMIN");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.student.delete')")
+    public ResponseEntity<GeneralResponse<Void>> deleteStudent(@PathVariable Long id) {
         masterDataService.deleteStudent(id, getCurrentTenantId(), getCurrentUserId());
         return ok("Deleted student");
     }
 
     @GetMapping("/buses")
-    public ResponseEntity<?> getBuses() {
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.bus.read')")
+    public ResponseEntity<GeneralResponse<List<BusResponse>>> getBuses() {
         return ok("Fetched buses", masterDataService.getBuses(getCurrentTenantId()));
     }
 
     @PostMapping("/buses")
-    public ResponseEntity<?> createBus(@Valid @RequestBody BusUpsertRequest request) {
-        requireAnyRole("SCHOOL_BUS_ADMIN", "SCHOOL_BUS_DISPATCHER");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.bus.write')")
+    public ResponseEntity<GeneralResponse<BusResponse>> createBus(@Valid @RequestBody BusUpsertRequest request) {
         return created("Created bus", masterDataService.createBus(request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @GetMapping("/buses/{id}")
-    public ResponseEntity<?> getBus(@PathVariable Long id) {
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.bus.read')")
+    public ResponseEntity<GeneralResponse<BusResponse>> getBus(@PathVariable Long id) {
         return ok("Fetched bus", masterDataService.getBusResponse(id, getCurrentTenantId()));
     }
 
     @PatchMapping("/buses/{id}")
-    public ResponseEntity<?> updateBus(@PathVariable Long id, @Valid @RequestBody BusUpsertRequest request) {
-        requireAnyRole("SCHOOL_BUS_ADMIN", "SCHOOL_BUS_DISPATCHER");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.bus.write')")
+    public ResponseEntity<GeneralResponse<BusResponse>> updateBus(@PathVariable Long id, @Valid @RequestBody BusUpsertRequest request) {
         return ok("Updated bus", masterDataService.updateBus(id, request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @DeleteMapping("/buses/{id}")
-    public ResponseEntity<?> deleteBus(@PathVariable Long id) {
-        requireAnyRole("SCHOOL_BUS_ADMIN");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.bus.delete')")
+    public ResponseEntity<GeneralResponse<Void>> deleteBus(@PathVariable Long id) {
         masterDataService.deleteBus(id, getCurrentTenantId(), getCurrentUserId());
         return ok("Deleted bus");
     }
 
     @GetMapping("/drivers")
-    public ResponseEntity<?> getDrivers() {
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.driver.read')")
+    public ResponseEntity<GeneralResponse<List<DriverProfileResponse>>> getDrivers() {
         return ok("Fetched drivers", masterDataService.getDrivers(getCurrentTenantId()));
     }
 
     @PostMapping("/drivers")
-    public ResponseEntity<?> createDriver(@Valid @RequestBody DriverProfileUpsertRequest request) {
-        requireAnyRole("SCHOOL_BUS_ADMIN", "SCHOOL_BUS_DISPATCHER");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.driver.write')")
+    public ResponseEntity<GeneralResponse<DriverProfileResponse>> createDriver(@Valid @RequestBody DriverProfileUpsertRequest request) {
         return created("Created driver", masterDataService.createDriver(request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @GetMapping("/drivers/{id}")
-    public ResponseEntity<?> getDriver(@PathVariable Long id) {
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.driver.read')")
+    public ResponseEntity<GeneralResponse<DriverProfileResponse>> getDriver(@PathVariable Long id) {
         return ok("Fetched driver", masterDataService.getDriverResponse(id, getCurrentTenantId()));
     }
 
     @PatchMapping("/drivers/{id}")
-    public ResponseEntity<?> updateDriver(@PathVariable Long id, @Valid @RequestBody DriverProfileUpsertRequest request) {
-        requireAnyRole("SCHOOL_BUS_ADMIN", "SCHOOL_BUS_DISPATCHER");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.driver.write')")
+    public ResponseEntity<GeneralResponse<DriverProfileResponse>> updateDriver(@PathVariable Long id, @Valid @RequestBody DriverProfileUpsertRequest request) {
         return ok("Updated driver", masterDataService.updateDriver(id, request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @DeleteMapping("/drivers/{id}")
-    public ResponseEntity<?> deleteDriver(@PathVariable Long id) {
-        requireAnyRole("SCHOOL_BUS_ADMIN");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.driver.delete')")
+    public ResponseEntity<GeneralResponse<Void>> deleteDriver(@PathVariable Long id) {
         masterDataService.deleteDriver(id, getCurrentTenantId(), getCurrentUserId());
         return ok("Deleted driver");
     }
 
     @GetMapping("/attendants")
-    public ResponseEntity<?> getAttendants() {
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.attendant.read')")
+    public ResponseEntity<GeneralResponse<List<AttendantProfileResponse>>> getAttendants() {
         return ok("Fetched attendants", masterDataService.getAttendants(getCurrentTenantId()));
     }
 
     @PostMapping("/attendants")
-    public ResponseEntity<?> createAttendant(@Valid @RequestBody BusAttendantProfileUpsertRequest request) {
-        requireAnyRole("SCHOOL_BUS_ADMIN", "SCHOOL_BUS_DISPATCHER");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.attendant.write')")
+    public ResponseEntity<GeneralResponse<AttendantProfileResponse>> createAttendant(@Valid @RequestBody BusAttendantProfileUpsertRequest request) {
         return created("Created attendant", masterDataService.createAttendant(request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @GetMapping("/attendants/{id}")
-    public ResponseEntity<?> getAttendant(@PathVariable Long id) {
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.attendant.read')")
+    public ResponseEntity<GeneralResponse<AttendantProfileResponse>> getAttendant(@PathVariable Long id) {
         return ok("Fetched attendant", masterDataService.getAttendantResponse(id, getCurrentTenantId()));
     }
 
     @PatchMapping("/attendants/{id}")
-    public ResponseEntity<?> updateAttendant(@PathVariable Long id,
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.attendant.write')")
+    public ResponseEntity<GeneralResponse<AttendantProfileResponse>> updateAttendant(@PathVariable Long id,
             @Valid @RequestBody BusAttendantProfileUpsertRequest request) {
-        requireAnyRole("SCHOOL_BUS_ADMIN", "SCHOOL_BUS_DISPATCHER");
         return ok("Updated attendant", masterDataService.updateAttendant(id, request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @DeleteMapping("/attendants/{id}")
-    public ResponseEntity<?> deleteAttendant(@PathVariable Long id) {
-        requireAnyRole("SCHOOL_BUS_ADMIN");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.attendant.delete')")
+    public ResponseEntity<GeneralResponse<Void>> deleteAttendant(@PathVariable Long id) {
         masterDataService.deleteAttendant(id, getCurrentTenantId(), getCurrentUserId());
         return ok("Deleted attendant");
     }
 
     @GetMapping("/pickup-points")
-    public ResponseEntity<?> getPickupPoints() {
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.pickup-point.read')")
+    public ResponseEntity<GeneralResponse<List<PickupPointResponse>>> getPickupPoints() {
         return ok("Fetched pickup points", masterDataService.getPickupPoints(getCurrentTenantId()));
     }
 
     @PostMapping("/pickup-points")
-    public ResponseEntity<?> createPickupPoint(@Valid @RequestBody PickupPointUpsertRequest request) {
-        requireAnyRole("SCHOOL_BUS_ADMIN", "SCHOOL_BUS_DISPATCHER");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.pickup-point.write')")
+    public ResponseEntity<GeneralResponse<PickupPointResponse>> createPickupPoint(@Valid @RequestBody PickupPointUpsertRequest request) {
         return created("Created pickup point", masterDataService.createPickupPoint(request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @GetMapping("/pickup-points/{id}")
-    public ResponseEntity<?> getPickupPoint(@PathVariable Long id) {
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.pickup-point.read')")
+    public ResponseEntity<GeneralResponse<PickupPointResponse>> getPickupPoint(@PathVariable Long id) {
         return ok("Fetched pickup point", masterDataService.getPickupPointResponse(id, getCurrentTenantId()));
     }
 
     @PatchMapping("/pickup-points/{id}")
-    public ResponseEntity<?> updatePickupPoint(@PathVariable Long id, @Valid @RequestBody PickupPointUpsertRequest request) {
-        requireAnyRole("SCHOOL_BUS_ADMIN", "SCHOOL_BUS_DISPATCHER");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.pickup-point.write')")
+    public ResponseEntity<GeneralResponse<PickupPointResponse>> updatePickupPoint(@PathVariable Long id, @Valid @RequestBody PickupPointUpsertRequest request) {
         return ok("Updated pickup point", masterDataService.updatePickupPoint(id, request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @DeleteMapping("/pickup-points/{id}")
-    public ResponseEntity<?> deletePickupPoint(@PathVariable Long id) {
-        requireAnyRole("SCHOOL_BUS_ADMIN");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.pickup-point.delete')")
+    public ResponseEntity<GeneralResponse<Void>> deletePickupPoint(@PathVariable Long id) {
         masterDataService.deletePickupPoint(id, getCurrentTenantId(), getCurrentUserId());
         return ok("Deleted pickup point");
     }

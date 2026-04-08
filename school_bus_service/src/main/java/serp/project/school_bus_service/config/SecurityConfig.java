@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -21,6 +22,7 @@ import java.util.Map;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     @Value("${security.roles.serp_service}")
@@ -52,18 +54,13 @@ public class SecurityConfig {
     @Bean
     @Order(2)
     public SecurityFilterChain publicApiFilterChain(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity.securityMatcher("/school-bus/api/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+        httpSecurity.securityMatcher("/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                 .authorizeHttpRequests(request -> request
                         .requestMatchers(HttpMethod.GET, "/v3/api-docs", "/v3/api-docs/**", "/swagger-ui/**",
                                 "/swagger-ui.html")
                         .permitAll()
-                        .requestMatchers("/school-bus/api/v1/**")
-                        .hasAnyRole(
-                                "SCHOOL_BUS_ADMIN",
-                                "SCHOOL_BUS_DISPATCHER",
-                                "SCHOOL_BUS_DRIVER",
-                                "SCHOOL_BUS_ATTENDANT",
-                                "SCHOOL_BUS_PARENT")
+                        .requestMatchers("/error")
+                        .permitAll()
                         .anyRequest()
                         .authenticated());
 

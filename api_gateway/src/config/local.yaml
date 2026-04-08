@@ -92,6 +92,10 @@ external:
       host: localhost
       port: "8089"
       timeout: 15s
+    schoolBusService:
+      host: localhost
+      port: "8094"
+      timeout: 15s
     firstMileService:
       host: localhost
       port: "8093"

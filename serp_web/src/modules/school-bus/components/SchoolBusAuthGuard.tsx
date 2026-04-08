@@ -16,7 +16,7 @@ export const SchoolBusAuthGuard: React.FC<SchoolBusAuthGuardProps> = ({
 
   React.useEffect(() => {
     if (!isAuthenticated) {
-      router.push('/auth/login?redirect=/school-bus');
+      router.push('/auth?redirect=/bds/dashboard');
     }
   }, [isAuthenticated, router]);
 

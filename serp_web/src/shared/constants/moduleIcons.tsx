@@ -17,6 +17,7 @@ import {
   Settings,
   Headphones,
   MapPin,
+  Bus,
   Shield,
   LucideIcon,
   MessageSquare,
@@ -27,6 +28,7 @@ export type ModuleCode =
   | 'PURCHASE'
   | 'SALES'
   | 'LOGISTICS'
+  | 'SCHOOL_BUS'
   | 'MARKETING'
   | 'PTM'
   | 'PROJECT'
@@ -114,6 +116,11 @@ export const MODULE_ICONS: Record<ModuleCode, ModuleIconConfig> = {
     color: 'text-green-600',
     bgColor: 'bg-green-50 dark:bg-green-950',
   },
+  SCHOOL_BUS: {
+    icon: Bus,
+    color: 'text-yellow-700',
+    bgColor: 'bg-yellow-50 dark:bg-yellow-950',
+  },
 
   // Finance
   ACCOUNTING: {
@@ -179,5 +186,15 @@ export const getModuleRoute = (moduleCode: string): string => {
   if (moduleCode === 'SETTINGS') return '/settings';
   if (moduleCode === 'PTM') return '/ptm/dashboard';
   if (moduleCode === 'CRM') return '/crm/dashboard';
+  if (moduleCode === 'SCHOOL_BUS') return '/bds/dashboard';
+  return `/${moduleCode.toLowerCase()}`;
+};
+
+export const getModuleRootRoute = (moduleCode: string): string => {
+  if (moduleCode === 'ADMIN') return '/admin';
+  if (moduleCode === 'SETTINGS') return '/settings';
+  if (moduleCode === 'PTM') return '/ptm';
+  if (moduleCode === 'CRM') return '/crm';
+  if (moduleCode === 'SCHOOL_BUS') return '/bds';
   return `/${moduleCode.toLowerCase()}`;
 };

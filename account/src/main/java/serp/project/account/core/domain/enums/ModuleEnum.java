@@ -230,6 +230,25 @@ public enum ModuleEnum {
             "0.4.0",
             List.of("INVENTORY")),
 
+    /**
+     * SCHOOL_BUS - School Bus Operations
+     * Quản lý điều phối xe bus trường học, đưa đón, tuyến, điểm danh
+     */
+    SCHOOL_BUS(
+            "SCHOOL_BUS",
+            "School Bus Operations",
+            "serp-school-bus",
+            "Operations",
+            "bus",
+            12,
+            ModuleType.CUSTOM,
+            false,
+            true,
+            PricingModel.PER_ORG,
+            ModuleStatus.ACTIVE,
+            "0.1.0",
+            List.of()),
+
     // ==================== SUPPORT & SERVICE ====================
     /**
      * HELPDESK - Customer Support
@@ -241,7 +260,7 @@ public enum ModuleEnum {
             "serp-helpdesk",
             "Support & Service",
             "headset",
-            12,
+            13,
             ModuleType.SYSTEM,
             true,
             false,
@@ -260,7 +279,7 @@ public enum ModuleEnum {
             "serp-field-service",
             "Support & Service",
             "map-marked-alt",
-            13,
+            14,
             ModuleType.SYSTEM,
             true,
             false,

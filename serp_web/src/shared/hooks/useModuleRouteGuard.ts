@@ -11,6 +11,7 @@ import {
   useGetMenuDisplaysByModuleAndUserQuery,
   useGetMyModulesQuery,
 } from '@/modules/account/services';
+import { getModuleRootRoute } from '@/shared/constants/moduleIcons';
 
 interface RouteGuardResult {
   hasAccess: boolean;
@@ -47,7 +48,7 @@ interface RouteGuardResult {
  */
 export const useModuleRouteGuard = (moduleCode: string): RouteGuardResult => {
   const pathname = usePathname();
-  const moduleRootPath = `/${moduleCode.toLowerCase()}`;
+  const moduleRootPath = getModuleRootRoute(moduleCode);
 
   const { data: userModules, isLoading: modulesLoading } =
     useGetMyModulesQuery();
@@ -73,32 +74,52 @@ export const useModuleRouteGuard = (moduleCode: string): RouteGuardResult => {
       return path.replace(/\/+$/, ''); // Remove trailing slashes
     };
 
-    const currentPath = normalizePath(pathname);
+    const buildEquivalentPaths = (path: string) => {
+      const normalizedPath = normalizePath(path);
+      const equivalentPaths = new Set([normalizedPath]);
+
+      if (moduleCode === 'SCHOOL_BUS') {
+        if (normalizedPath === '/bds' || normalizedPath.startsWith('/bds/')) {
+          equivalentPaths.add(normalizedPath.replace(/^\/bds/, '/school-bus'));
+        }
+
+        if (
+          normalizedPath === '/school-bus' ||
+          normalizedPath.startsWith('/school-bus/')
+        ) {
+          equivalentPaths.add(normalizedPath.replace(/^\/school-bus/, '/bds'));
+        }
+      }
+
+      return Array.from(equivalentPaths);
+    };
+
+    const currentPaths = buildEquivalentPaths(pathname);
 
     const hasMatch = menuDisplays.some((menu) => {
       if (!menu.path) return false;
 
-      const menuPath = normalizePath(menu.path);
+      const menuPaths = buildEquivalentPaths(menu.path);
 
-      if (currentPath === menuPath) return true;
-
-      // Parent path match (e.g., /ptm/tasks/123 matches /ptm/tasks)
-      if (currentPath.startsWith(menuPath + '/')) return true;
-
-      return false;
+      return currentPaths.some((currentPath) =>
+        menuPaths.some((menuPath) => {
+          if (currentPath === menuPath) return true;
+          if (currentPath.startsWith(menuPath + '/')) return true;
+          return false;
+        })
+      );
     });
 
     if (hasMatch) {
       return true;
     }
 
-    // Allow module root path (e.g., /sales) if user has any accessible child path
-    // (e.g., /sales/dashboard). This prevents root redirects from being blocked.
-    if (currentPath === normalizePath(moduleRootPath)) {
+    if (currentPaths.includes(normalizePath(moduleRootPath))) {
       return menuDisplays.some((menu) => {
         if (!menu.path) return false;
-        const menuPath = normalizePath(menu.path);
-        return menuPath.startsWith(normalizePath(moduleRootPath) + '/');
+        return buildEquivalentPaths(menu.path).some((menuPath) =>
+          menuPath.startsWith(normalizePath(moduleRootPath) + '/')
+        );
       });
     }
 

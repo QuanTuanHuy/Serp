@@ -12,12 +12,18 @@ import org.springframework.web.bind.annotation.RestController;
 import serp.project.school_bus_service.application.dto.request.RouteAssignmentRequest;
 import serp.project.school_bus_service.application.dto.request.RoutePlanUpsertRequest;
 import serp.project.school_bus_service.application.dto.response.GeneralResponse;
+import serp.project.school_bus_service.application.dto.response.RouteAssignmentResponse;
+import serp.project.school_bus_service.application.dto.response.RouteDetailResponse;
+import serp.project.school_bus_service.application.dto.response.RoutePlanResponse;
+import serp.project.school_bus_service.application.dto.response.RouteStopResponse;
 import serp.project.school_bus_service.core.service.IRouteService;
 import serp.project.school_bus_service.kernel.shared.auth.AuthUtils;
 import serp.project.school_bus_service.kernel.shared.base.AbstractBaseController;
 
+import java.util.List;
+
 @RestController
-@RequestMapping("/school-bus/api/v1/routes")
+@RequestMapping("/routes")
 public class RouteController extends AbstractBaseController {
 
     private final IRouteService routeService;
@@ -28,49 +34,51 @@ public class RouteController extends AbstractBaseController {
     }
 
     @GetMapping
-    public ResponseEntity<?> getRoutes() {
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.read')")
+    public ResponseEntity<GeneralResponse<List<RoutePlanResponse>>> getRoutes() {
         return ok("Fetched routes", routeService.getRoutes(getCurrentTenantId()));
     }
 
     @PostMapping
-    public ResponseEntity<?> createRoute(@Valid @RequestBody RoutePlanUpsertRequest request) {
-        requireAnyRole("SCHOOL_BUS_ADMIN", "SCHOOL_BUS_DISPATCHER");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.write')")
+    public ResponseEntity<GeneralResponse<RoutePlanResponse>> createRoute(@Valid @RequestBody RoutePlanUpsertRequest request) {
         return created("Created route", routeService.createRoute(request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getRoute(@PathVariable Long id) {
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.read')")
+    public ResponseEntity<GeneralResponse<RouteDetailResponse>> getRoute(@PathVariable Long id) {
         return ok("Fetched route", routeService.getRoute(id, getCurrentTenantId()));
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<?> updateRoute(@PathVariable Long id, @Valid @RequestBody RoutePlanUpsertRequest request) {
-        requireAnyRole("SCHOOL_BUS_ADMIN", "SCHOOL_BUS_DISPATCHER");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.write')")
+    public ResponseEntity<GeneralResponse<RoutePlanResponse>> updateRoute(@PathVariable Long id, @Valid @RequestBody RoutePlanUpsertRequest request) {
         return ok("Updated route", routeService.updateRoute(id, request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @PostMapping("/{id}/generate-greedy-plan")
-    public ResponseEntity<?> generateGreedyPlan(@PathVariable Long id) {
-        requireAnyRole("SCHOOL_BUS_ADMIN", "SCHOOL_BUS_DISPATCHER");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.generate-plan')")
+    public ResponseEntity<GeneralResponse<List<RouteStopResponse>>> generateGreedyPlan(@PathVariable Long id) {
         return ok("Generated greedy route plan", routeService.generateGreedyPlan(id, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @PostMapping("/{id}/assign")
-    public ResponseEntity<?> assignRoute(@PathVariable Long id,
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.assign')")
+    public ResponseEntity<GeneralResponse<RouteAssignmentResponse>> assignRoute(@PathVariable Long id,
             @Valid @RequestBody RouteAssignmentRequest request) {
-        requireAnyRole("SCHOOL_BUS_ADMIN", "SCHOOL_BUS_DISPATCHER");
         return ok("Assigned route", routeService.assignRoute(id, request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @PostMapping("/{id}/start")
-    public ResponseEntity<?> startRoute(@PathVariable Long id) {
-        requireAnyRole("SCHOOL_BUS_ADMIN", "SCHOOL_BUS_DISPATCHER", "SCHOOL_BUS_DRIVER", "SCHOOL_BUS_ATTENDANT");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.start')")
+    public ResponseEntity<GeneralResponse<RoutePlanResponse>> startRoute(@PathVariable Long id) {
         return ok("Started route", routeService.startRoute(id, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @PostMapping("/{id}/complete")
-    public ResponseEntity<?> completeRoute(@PathVariable Long id) {
-        requireAnyRole("SCHOOL_BUS_ADMIN", "SCHOOL_BUS_DISPATCHER", "SCHOOL_BUS_DRIVER", "SCHOOL_BUS_ATTENDANT");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.complete')")
+    public ResponseEntity<GeneralResponse<RoutePlanResponse>> completeRoute(@PathVariable Long id) {
         return ok("Completed route", routeService.completeRoute(id, getCurrentTenantId(), getCurrentUserId()));
     }
 }

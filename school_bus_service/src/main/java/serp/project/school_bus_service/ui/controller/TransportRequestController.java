@@ -12,12 +12,16 @@ import org.springframework.web.bind.annotation.RestController;
 import serp.project.school_bus_service.application.dto.request.RejectRequest;
 import serp.project.school_bus_service.application.dto.request.TransportRequestUpsertRequest;
 import serp.project.school_bus_service.application.dto.response.GeneralResponse;
+import serp.project.school_bus_service.application.dto.response.TransportRequestDetailResponse;
+import serp.project.school_bus_service.application.dto.response.TransportRequestResponse;
 import serp.project.school_bus_service.core.service.ITransportRequestService;
 import serp.project.school_bus_service.kernel.shared.auth.AuthUtils;
 import serp.project.school_bus_service.kernel.shared.base.AbstractBaseController;
 
+import java.util.List;
+
 @RestController
-@RequestMapping("/school-bus/api/v1/transport-requests")
+@RequestMapping("/transport-requests")
 public class TransportRequestController extends AbstractBaseController {
 
     private final ITransportRequestService transportRequestService;
@@ -28,41 +32,43 @@ public class TransportRequestController extends AbstractBaseController {
     }
 
     @GetMapping
-    public ResponseEntity<?> getTransportRequests() {
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.transport-request.read')")
+    public ResponseEntity<GeneralResponse<List<TransportRequestResponse>>> getTransportRequests() {
         return ok("Fetched transport requests", transportRequestService.getTransportRequests(getCurrentTenantId()));
     }
 
     @PostMapping
-    public ResponseEntity<?> createTransportRequest(@Valid @RequestBody TransportRequestUpsertRequest request) {
-        requireAnyRole("SCHOOL_BUS_ADMIN", "SCHOOL_BUS_DISPATCHER", "SCHOOL_BUS_PARENT");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.transport-request.write')")
+    public ResponseEntity<GeneralResponse<TransportRequestResponse>> createTransportRequest(@Valid @RequestBody TransportRequestUpsertRequest request) {
         return created("Created transport request",
                 transportRequestService.createTransportRequest(request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getTransportRequest(@PathVariable Long id) {
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.transport-request.read')")
+    public ResponseEntity<GeneralResponse<TransportRequestDetailResponse>> getTransportRequest(@PathVariable Long id) {
         return ok("Fetched transport request", transportRequestService.getTransportRequest(id, getCurrentTenantId()));
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<?> updateTransportRequest(@PathVariable Long id,
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.transport-request.write')")
+    public ResponseEntity<GeneralResponse<TransportRequestResponse>> updateTransportRequest(@PathVariable Long id,
             @Valid @RequestBody TransportRequestUpsertRequest request) {
-        requireAnyRole("SCHOOL_BUS_ADMIN", "SCHOOL_BUS_DISPATCHER", "SCHOOL_BUS_PARENT");
         return ok("Updated transport request",
                 transportRequestService.updateTransportRequest(id, request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @PostMapping("/{id}/approve")
-    public ResponseEntity<?> approveTransportRequest(@PathVariable Long id) {
-        requireAnyRole("SCHOOL_BUS_ADMIN", "SCHOOL_BUS_DISPATCHER");
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.transport-request.approve')")
+    public ResponseEntity<GeneralResponse<TransportRequestResponse>> approveTransportRequest(@PathVariable Long id) {
         return ok("Approved transport request",
                 transportRequestService.approveTransportRequest(id, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @PostMapping("/{id}/reject")
-    public ResponseEntity<?> rejectTransportRequest(@PathVariable Long id,
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.transport-request.reject')")
+    public ResponseEntity<GeneralResponse<TransportRequestResponse>> rejectTransportRequest(@PathVariable Long id,
             @Valid @RequestBody RejectRequest request) {
-        requireAnyRole("SCHOOL_BUS_ADMIN", "SCHOOL_BUS_DISPATCHER");
         return ok("Rejected transport request",
                 transportRequestService.rejectTransportRequest(id, request, getCurrentTenantId(), getCurrentUserId()));
     }

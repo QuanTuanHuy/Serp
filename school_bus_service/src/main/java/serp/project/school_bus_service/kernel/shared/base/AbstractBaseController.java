@@ -19,10 +19,6 @@ public abstract class AbstractBaseController {
         return authUtils.getCurrentUserIdOrThrow();
     }
 
-    protected void requireAnyRole(String... roles) {
-        authUtils.requireAnyRole(roles);
-    }
-
     protected <T> ResponseEntity<GeneralResponse<T>> ok(String message, T data) {
         return ResponseEntity.ok(GeneralResponse.success(message, data));
     }
