@@ -1,10 +1,5 @@
-/*
- * Author: TranNgocHung
- * Description: Part of Serp Project
- */
-
-import { TodoList } from '@/modules/ttcrs';
+import { redirect } from 'next/navigation';
 
 export default function TtcrsPage() {
-  return <TodoList />;
+  redirect('/ttcrs/dispatcher');
 }

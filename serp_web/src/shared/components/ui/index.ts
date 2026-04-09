@@ -143,3 +143,16 @@ export { Skeleton } from './skeleton';
 
 // ScrollArea Component
 export { ScrollArea, ScrollBar } from './scroll-area';
+
+// Table Components
+export {
+  Table,
+  TableHeader,
+  TableBody,
+  TableFooter,
+  TableRow,
+  TableHead,
+  TableCell,
+  TableCaption,
+} from './table';
+

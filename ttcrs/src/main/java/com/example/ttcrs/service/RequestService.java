@@ -1,5 +1,7 @@
 package com.example.ttcrs.service;
 
+import com.example.ttcrs.constant.RequestStatus;
+import com.example.ttcrs.dto.request.CreateRequestDTO;
 import com.example.ttcrs.dto.request.RequestFilterDTO;
 import com.example.ttcrs.dto.response.PageResponse;
 import com.example.ttcrs.dto.response.RequestResponseDTO;
@@ -15,6 +17,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Service xử lý business logic cho Request.
@@ -67,6 +73,61 @@ public class RequestService {
                 .map(RequestResponseDTO::fromEntity);
 
         return PageResponse.from(resultPage);
+    }
+
+    /**
+     * Tạo hàng loạt N request cho một customer (dành cho Dispatcher).
+     *
+     * <p>Luồng xử lý:
+     * <ol>
+     *   <li>Lấy tenantId + userId từ JWT.</li>
+     *   <li>Tạo {@code quantity} bản sao {@link RequestEntity} với status PENDING.</li>
+     *   <li>Lưu tất cả vào DB bằng {@code saveAll}.</li>
+     *   <li>Trả về danh sách {@link RequestResponseDTO}.</li>
+     * </ol>
+     *
+     * @param dto tham số tạo request từ dispatcher
+     * @return danh sách request vừa tạo (size == dto.quantity)
+     */
+    @Transactional
+    public List<RequestResponseDTO> createRequests(CreateRequestDTO dto) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Không thể xác định tenant từ token. Vui lòng kiểm tra lại JWT."
+                ));
+
+        Long createdBy = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Không thể xác định user từ token."
+                ));
+
+        log.info("Creating {} requests for customerId={}, tenantId={}, type={}",
+                dto.getQuantity(), dto.getCustomerId(), tenantId, dto.getType());
+
+        List<RequestEntity> entities = new ArrayList<>(dto.getQuantity());
+        for (int i = 0; i < dto.getQuantity(); i++) {
+            entities.add(RequestEntity.builder()
+                    .tenantId(tenantId)
+                    .customerId(dto.getCustomerId())
+                    .type(dto.getType())
+                    .srcLocationCode(dto.getSrcLocationCode())
+                    .destLocationCode(dto.getDestLocationCode())
+                    .weight(dto.getWeight())
+                    .dropTrailerRequired(dto.getDropTrailerRequired())
+                    .earlyAtSrc(dto.getEarlyAtSrc())
+                    .lateAtSrc(dto.getLateAtSrc())
+                    .earlyAtDest(dto.getEarlyAtDest())
+                    .lateAtDest(dto.getLateAtDest())
+                    .status(RequestStatus.PENDING)
+                    .createdBy(createdBy)
+                    .build());
+        }
+
+        List<RequestEntity> saved = requestRepository.saveAll(entities);
+
+        return saved.stream()
+                .map(RequestResponseDTO::fromEntity)
+                .toList();
     }
 
     // =========================================================================

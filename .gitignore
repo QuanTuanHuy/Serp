@@ -187,7 +187,7 @@ target/
 .claude/
 ui-ux*
 backend-expert.prompt.md
-
+CLAUDE.md
 plan-*.md
 ### NetBeans ###
 /nbproject/private/

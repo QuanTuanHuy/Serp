@@ -1,8 +1,11 @@
-/*
- * Author: TranNgocHung
- * Description: Part of Serp Project
- */
-
-export * from './types';
+// Export API
 export * from './api/ttcrsApi';
-export { TodoList } from './components/TodoList';
+
+// Export types
+export * from './types';
+
+// Export components
+export * from './components';
+
+// Export pages
+export * from './pages';
