@@ -49,14 +49,12 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 					or o.originPostOfficeCode = :postOfficeCode
 				)
 				and (
-					:horizonStart is null
-					or o.pickupTimeEnd is null
-					or o.pickupTimeEnd >= :horizonStart
+					o.pickupTimeEnd is null
+					or o.pickupTimeEnd >= coalesce(:horizonStart, o.pickupTimeEnd)
 				)
 				and (
-					:horizonEnd is null
-					or o.pickupTimeStart is null
-					or o.pickupTimeStart <= :horizonEnd
+					o.pickupTimeStart is null
+					or o.pickupTimeStart <= coalesce(:horizonEnd, o.pickupTimeStart)
 				)
 			order by o.pickupTimeEnd asc, o.id asc
 			""")
