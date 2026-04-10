@@ -5,9 +5,11 @@ Description: Part of Serp Project
 
 package serp.project.first_mile.repository;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -65,4 +67,16 @@ public interface PostOfficeRepository extends JpaRepository<PostOffice, Long> {
     );
 
     Optional<PostOffice> findByIdAndTenantId(Long id, Long tenantId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select p
+            from PostOffice p
+            where p.id = :id
+                and p.tenantId = :tenantId
+            """)
+    Optional<PostOffice> findByIdAndTenantIdForUpdate(
+            @Param("id") Long id,
+            @Param("tenantId") Long tenantId
+    );
 }

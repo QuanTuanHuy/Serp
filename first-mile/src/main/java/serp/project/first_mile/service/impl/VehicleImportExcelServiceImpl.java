@@ -44,6 +44,7 @@ import serp.project.first_mile.repository.PostOfficeStaffRepository;
 import serp.project.first_mile.repository.VehicleRepository;
 import serp.project.first_mile.repository.projection.CodeNameProjection;
 import serp.project.first_mile.service.VehicleImportExcelService;
+import serp.project.first_mile.service.dto.import_record.ImportExecutionResult;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -1210,13 +1211,5 @@ public class VehicleImportExcelServiceImpl implements VehicleImportExcelService 
     }
 
     private record AccessScope(boolean managerScoped, Set<Long> managedPostOfficeIds) {
-    }
-
-    private record ImportExecutionResult(
-            int totalRecords,
-            int successRecords,
-            int failedRecords,
-            String errorMessage
-    ) {
     }
 }

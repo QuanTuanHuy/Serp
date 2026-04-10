@@ -38,6 +38,7 @@ import serp.project.first_mile.repository.ProvinceRepository;
 import serp.project.first_mile.repository.WardRepository;
 import serp.project.first_mile.repository.projection.CodeNameProjection;
 import serp.project.first_mile.service.PostOfficeImportExcelService;
+import serp.project.first_mile.service.dto.import_record.ImportExecutionResult;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -1121,12 +1122,4 @@ public class PostOfficeImportExcelServiceImpl implements PostOfficeImportExcelSe
             Map<String, String> wardProvinceByCode
     ) {
     }
-
-        private record ImportExecutionResult(
-            int totalRecords,
-            int successRecords,
-            int failedRecords,
-            String errorMessage
-        ) {
-        }
 }

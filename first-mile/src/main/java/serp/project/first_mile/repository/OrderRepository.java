@@ -2,9 +2,11 @@ package serp.project.first_mile.repository;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import jakarta.persistence.LockModeType;
 import serp.project.first_mile.domain.Order;
 import serp.project.first_mile.enums.OrderStatus;
 
@@ -44,7 +46,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 				and o.senderLocation is not null
 				and (
 					:postOfficeCode is null
-					or o.originPostOfficeCode is null
 					or o.originPostOfficeCode = :postOfficeCode
 				)
 				and (
@@ -66,6 +67,18 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 			@Param("horizonStart") LocalDateTime horizonStart,
 			@Param("horizonEnd") LocalDateTime horizonEnd,
 			Pageable pageable
+	);
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("""
+			select o
+			from Order o
+			where o.tenantId = :tenantId
+				and o.id in :orderIds
+			""")
+	List<Order> findByTenantIdAndIdInWithLock(
+			@Param("tenantId") Long tenantId,
+			@Param("orderIds") Collection<Long> orderIds
 	);
 
 		Optional<Order> findByIdAndTenantId(Long id, Long tenantId);
