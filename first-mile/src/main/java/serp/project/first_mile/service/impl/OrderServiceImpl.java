@@ -11,18 +11,25 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.locationtech.jts.geom.Point;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import serp.project.first_mile.domain.Order;
+import serp.project.first_mile.domain.PostOffice;
 import serp.project.first_mile.dto.request.OrderImportDTO;
 import serp.project.first_mile.dto.response.ImportHistoryResponse;
+import serp.project.first_mile.dto.response.OrderConfirmationResponse;
 import serp.project.first_mile.dto.response.ProductTypeTemplateDTO;
 import serp.project.first_mile.dto.response.ProvinceExcelTemplateDTO;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
 import serp.project.first_mile.dto.response.WardExcelTemplateDTO;
+import serp.project.first_mile.enums.OrderStatus;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
+import serp.project.first_mile.repository.OrderRepository;
+import serp.project.first_mile.repository.PostOfficeRepository;
 import serp.project.first_mile.service.OrderExcelService;
 import serp.project.first_mile.service.OrderImportExcelService;
 import serp.project.first_mile.service.OrderService;
@@ -30,7 +37,10 @@ import serp.project.first_mile.service.OrderService;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -43,9 +53,15 @@ public class OrderServiceImpl implements OrderService {
     private static final int WARD_COLUMN_INDEX = 0;
     private static final int PROVINCE_COLUMN_INDEX = 1;
     private static final int PRODUCT_TYPE_COLUMN_INDEX = 5;
+    private static final Set<OrderStatus> CONFIRMABLE_ORDER_STATUSES = Set.of(
+            OrderStatus.CREATED,
+            OrderStatus.PICKUP_FAILED
+    );
 
     private final OrderExcelService orderExcelService;
     private final OrderImportExcelService orderImportExcelService;
+    private final OrderRepository orderRepository;
+    private final PostOfficeRepository postOfficeRepository;
 
     @Override
     public byte[] exportTemplate(Long tenantId) {
@@ -85,8 +101,112 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public ImportHistoryResponse getImportHistory(Long importHistoryId, Long tenantId) {
-        return orderImportExcelService.getImportHistory(importHistoryId, tenantId);
+    @Transactional(rollbackFor = Exception.class)
+    public OrderConfirmationResponse confirmOrder(Long orderId, Long tenantId) {
+        Order order = orderRepository.findByIdAndTenantIdForUpdate(orderId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        if (Boolean.TRUE.equals(order.getIsConfirm())) {
+            Optional<PostOffice> assignedPostOffice = resolveAssignedPostOffice(order, tenantId);
+            return toOrderConfirmationResponse(order, assignedPostOffice.orElse(null), true);
+        }
+
+        if (hasText(order.getOriginPostOfficeCode())) {
+            order.setIsConfirm(true);
+            orderRepository.save(order);
+
+            Optional<PostOffice> assignedPostOffice = resolveAssignedPostOffice(order, tenantId);
+            return toOrderConfirmationResponse(order, assignedPostOffice.orElse(null), true);
+        }
+
+        validateOrderForConfirmation(order);
+
+        PostOffice postOffice = postOfficeRepository.findBestAssignablePostOfficeForSenderForUpdate(
+                        tenantId,
+                        order.getSenderLocation(),
+                        LocalDate.now()
+                )
+                .orElseThrow(() -> new AppException(ErrorCode.NO_SUITABLE_ORIGIN_POST_OFFICE));
+
+        postOffice.addLoad(1);
+        order.setOriginPostOfficeCode(postOffice.getCode());
+        order.setIsConfirm(true);
+
+        postOfficeRepository.save(postOffice);
+        orderRepository.save(order);
+
+        return toOrderConfirmationResponse(order, postOffice, false);
+    }
+
+    private void validateOrderForConfirmation(Order order) {
+        if (order == null) {
+            throw new AppException(ErrorCode.ORDER_NOT_FOUND);
+        }
+        if (order.getStatus() == null || !CONFIRMABLE_ORDER_STATUSES.contains(order.getStatus())) {
+            throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE);
+        }
+
+        Point senderLocation = order.getSenderLocation();
+        if (senderLocation == null) {
+            throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE);
+        }
+
+        double latitude = senderLocation.getY();
+        double longitude = senderLocation.getX();
+        if (!isValidCoordinate(latitude, longitude)) {
+            throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE);
+        }
+    }
+
+    private boolean isValidCoordinate(double latitude, double longitude) {
+        return !Double.isNaN(latitude)
+                && !Double.isNaN(longitude)
+                && !Double.isInfinite(latitude)
+                && !Double.isInfinite(longitude)
+                && latitude >= -90.0
+                && latitude <= 90.0
+                && longitude >= -180.0
+                && longitude <= 180.0;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
+
+    private Optional<PostOffice> resolveAssignedPostOffice(Order order, Long tenantId) {
+        if (order == null || !hasText(order.getOriginPostOfficeCode())) {
+            return Optional.empty();
+        }
+
+        return postOfficeRepository.findByCodeIgnoreCaseAndTenantId(order.getOriginPostOfficeCode(), tenantId);
+    }
+
+    private OrderConfirmationResponse toOrderConfirmationResponse(
+            Order order,
+            PostOffice postOffice,
+            boolean alreadyConfirmed
+    ) {
+        String postOfficeCode = postOffice == null
+                ? order.getOriginPostOfficeCode()
+                : postOffice.getCode();
+
+        OrderConfirmationResponse.OriginPostOfficeInfo originInfo =
+                new OrderConfirmationResponse.OriginPostOfficeInfo(
+                        postOffice == null ? null : postOffice.getId(),
+                        postOfficeCode,
+                        postOffice == null ? null : postOffice.getName(),
+                        postOffice == null ? null : postOffice.getCurrentLoad(),
+                        postOffice == null ? null : postOffice.getDailyCapacity()
+                );
+
+        return new OrderConfirmationResponse(
+                order.getId(),
+                order.getOrderCode(),
+                order.getCustomerOrderCode(),
+                order.getStatus(),
+                alreadyConfirmed,
+                originInfo
+        );
     }
 
     private void populateWardColumn(Sheet sheet, List<WardExcelTemplateDTO> wards) {

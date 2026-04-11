@@ -36,9 +36,12 @@ import serp.project.first_mile.domain.PostOffice;
 import serp.project.first_mile.domain.Province;
 import serp.project.first_mile.domain.Ward;
 import serp.project.first_mile.dto.PageResponse;
+import serp.project.first_mile.dto.request.FileUploadRequest;
 import serp.project.first_mile.dto.request.CreatePostOfficeRequest;
+import serp.project.first_mile.dto.request.PostOfficeFilterRequest;
 import serp.project.first_mile.dto.request.PostOfficeImportDTO;
 import serp.project.first_mile.dto.request.UpdatePostOfficeRequest;
+import serp.project.first_mile.dto.response.FileUploadResponse;
 import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.PostOfficeGeocodeBatchResponse;
 import serp.project.first_mile.dto.response.PostOfficeResponse;
@@ -50,9 +53,13 @@ import serp.project.first_mile.repository.PostOfficeRepository;
 import serp.project.first_mile.repository.ProvinceRepository;
 import serp.project.first_mile.repository.WardRepository;
 import serp.project.first_mile.repository.projection.CodeNameProjection;
+import serp.project.first_mile.repository.specification.PostOfficeSpecification;
 import serp.project.first_mile.kernel.utils.AuthUtils;
+import serp.project.first_mile.service.FileStorageService;
 import serp.project.first_mile.service.PostOfficeImportExcelService;
 import serp.project.first_mile.service.PostOfficeService;
+
+import java.util.Locale;
 
 @Service
 @Slf4j
@@ -65,27 +72,29 @@ public class PostOfficeServiceImpl implements PostOfficeService {
     private static final int START_ROW_INDEX = 1;
     private static final int PROVINCE_COLUMN_INDEX = 0;
     private static final int WARD_COLUMN_INDEX = 1;
+    private static final String STORAGE_SERVICE_NAME = "first-mile";
+    private static final String POST_OFFICE_IMAGE_FOLDER = "post-office-image";
 
     private final PostOfficeRepository postOfficeRepository;
     private final ProvinceRepository provinceRepository;
     private final WardRepository wardRepository;
     private final AuthUtils authUtils;
     private final GeocodeCaller geocodeCaller;
+    private final FileStorageService fileStorageService;
     private final PostOfficeImportExcelService postOfficeImportExcelService;
 
     @Override
-    public PageResponse<PostOfficeResponse> getPostOffices(int page, int size, String keyword) {
+    @Transactional(readOnly = true)
+    public PageResponse<PostOfficeResponse> getPostOffices(int page, int size, PostOfficeFilterRequest filterRequest) {
+        Long tenantId = getCurrentTenantIdOrThrow();
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
-        Page<PostOffice> postOfficePage;
-        if (keyword == null || keyword.isBlank()) {
-            postOfficePage = postOfficeRepository.findAll(pageable);
-        } else {
-            postOfficePage = postOfficeRepository.findByCodeContainingIgnoreCaseOrNameContainingIgnoreCase(
-                    keyword,
-                    keyword,
-                    pageable
-            );
-        }
+        PostOfficeFilterRequest normalizedFilterRequest = normalizeFilterRequest(filterRequest);
+        validateFilterRanges(normalizedFilterRequest);
+
+        Page<PostOffice> postOfficePage = postOfficeRepository.findAll(
+                PostOfficeSpecification.byFilter(tenantId, normalizedFilterRequest),
+                pageable
+        );
 
         Page<PostOfficeResponse> mappedPage = postOfficePage.map(PostOfficeMapper::toResponse);
 
@@ -98,6 +107,53 @@ public class PostOfficeServiceImpl implements PostOfficeService {
                 .hasNext(mappedPage.hasNext())
                 .hasPrevious(mappedPage.hasPrevious())
                 .build();
+    }
+
+    private PostOfficeFilterRequest normalizeFilterRequest(PostOfficeFilterRequest filterRequest) {
+        if (filterRequest == null) {
+            return PostOfficeFilterRequest.builder().build();
+        }
+
+        return PostOfficeFilterRequest.builder()
+                .keyword(normalizeText(filterRequest.getKeyword()))
+                .code(normalizeText(filterRequest.getCode()))
+                .name(normalizeText(filterRequest.getName()))
+                .provinceCode(normalizeText(filterRequest.getProvinceCode()))
+                .wardCode(normalizeText(filterRequest.getWardCode()))
+                .status(filterRequest.getStatus())
+                .hasLocation(filterRequest.getHasLocation())
+                .minServiceRadiusM(filterRequest.getMinServiceRadiusM())
+                .maxServiceRadiusM(filterRequest.getMaxServiceRadiusM())
+                .minDailyCapacity(filterRequest.getMinDailyCapacity())
+                .maxDailyCapacity(filterRequest.getMaxDailyCapacity())
+                .minCurrentLoad(filterRequest.getMinCurrentLoad())
+                .maxCurrentLoad(filterRequest.getMaxCurrentLoad())
+                .minPriority(filterRequest.getMinPriority())
+                .maxPriority(filterRequest.getMaxPriority())
+                .build();
+    }
+
+    private String normalizeText(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmedValue = value.trim();
+        return trimmedValue.isEmpty() ? null : trimmedValue;
+    }
+
+    private void validateFilterRanges(PostOfficeFilterRequest filterRequest) {
+        validateRange(filterRequest.getMinServiceRadiusM(), filterRequest.getMaxServiceRadiusM());
+        validateRange(filterRequest.getMinDailyCapacity(), filterRequest.getMaxDailyCapacity());
+        validateRange(filterRequest.getMinCurrentLoad(), filterRequest.getMaxCurrentLoad());
+        validateRange(filterRequest.getMinPriority(), filterRequest.getMaxPriority());
+    }
+
+    private void validateRange(Integer minValue, Integer maxValue) {
+        if ((minValue != null && minValue < 0)
+                || (maxValue != null && maxValue < 0)
+                || (minValue != null && maxValue != null && minValue > maxValue)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
     }
 
     @Override
@@ -150,6 +206,38 @@ public class PostOfficeServiceImpl implements PostOfficeService {
         postOffice.setTenantId(getCurrentTenantIdOrThrow());
         PostOffice updatedPostOffice = postOfficeRepository.save(postOffice);
         return PostOfficeMapper.toResponse(updatedPostOffice);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PostOfficeResponse uploadImage(Long id, MultipartFile file) {
+        PostOffice postOffice = getPostOfficeOrThrow(id);
+        validateTenantAccess(postOffice);
+
+        if (file == null || file.isEmpty()) {
+            throw new AppException(ErrorCode.FILE_UPLOAD_EMPTY);
+        }
+
+        String contentType = normalizeImageContentType(file.getContentType());
+
+        try {
+            FileUploadResponse uploadResponse = fileStorageService.upload(FileUploadRequest.builder()
+                    .content(file.getBytes())
+                    .originalFileName(file.getOriginalFilename())
+                    .contentType(contentType)
+                    .serviceName(STORAGE_SERVICE_NAME)
+                    .folder(POST_OFFICE_IMAGE_FOLDER)
+                    .tenantId(postOffice.getTenantId())
+                    .uploaderId(authUtils.getCurrentUserId().orElse(null))
+                    .publicFile(true)
+                    .build());
+
+            postOffice.setImageUrl(uploadResponse.getUrl());
+            PostOffice updatedPostOffice = postOfficeRepository.save(postOffice);
+            return PostOfficeMapper.toResponse(updatedPostOffice);
+        } catch (IOException exception) {
+            throw new AppException(ErrorCode.FILE_UPLOAD_FAILED);
+        }
     }
 
     @Override
@@ -303,11 +391,6 @@ public class PostOfficeServiceImpl implements PostOfficeService {
         return postOfficeImportExcelService.importPostOfficesAsync(file, tenantId);
     }
 
-    @Override
-    public ImportHistoryResponse getImportHistory(Long importHistoryId, Long tenantId) {
-        return postOfficeImportExcelService.getImportHistory(importHistoryId, tenantId);
-    }
-
     private PostOffice getPostOfficeOrThrow(Long id) {
         return postOfficeRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.POST_OFFICE_NOT_FOUND));
@@ -390,6 +473,17 @@ public class PostOfficeServiceImpl implements PostOfficeService {
         if (workingStartTime != null && !workingEndTime.isAfter(workingStartTime)) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
+    }
+
+    private String normalizeImageContentType(String contentType) {
+        String normalized = contentType == null
+                ? ""
+                : contentType.trim().toLowerCase(Locale.ROOT);
+
+        if (!normalized.startsWith("image/")) {
+            throw new AppException(ErrorCode.FILE_IMAGE_TYPE_INVALID);
+        }
+        return normalized;
     }
 
     private Long getCurrentTenantIdOrThrow() {

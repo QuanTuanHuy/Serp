@@ -34,6 +34,7 @@ import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.ISubscriptionPlanService;
 import serp.project.account.core.service.IUserModuleAccessService;
 import serp.project.account.core.service.IUserService;
+import serp.project.account.core.usecase.support.UserSyncPublisher;
 import serp.project.account.kernel.utils.CollectionUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
 
@@ -53,6 +54,7 @@ public class ModuleAccessUseCase {
 
     private final IKeycloakUserService keycloakUserService;
     private final INotificationService notificationService;
+    private final UserSyncPublisher userSyncPublisher;
 
     private final ResponseUtils responseUtils;
 
@@ -194,6 +196,7 @@ public class ModuleAccessUseCase {
                 throw new AppException(Constants.ErrorMessage.NO_ROLES_FOUND_FOR_MODULE);
             }
             combineRoleService.assignRolesToUser(user, assignedRoles);
+            userSyncPublisher.publishUserSync(organizationId, request.getUserId());
 
             if (user.getKeycloakId() != null) {
                 keycloakUserService.logoutUser(user.getKeycloakId());
@@ -254,10 +257,14 @@ public class ModuleAccessUseCase {
             List<RoleEntity> moduleRoles = roleService.getRolesByModuleId(request.getModuleId()).stream()
                     .filter(RoleEntity::isAutoAssigned)
                     .toList();
+            if (CollectionUtils.isEmpty(moduleRoles)) {
+                throw new AppException(Constants.ErrorMessage.NO_ROLES_FOUND_FOR_MODULE);
+            }
             for (Long userId : request.getUserIds()) {
                 var user = userService.getUserById(userId);
                 if (user != null) {
                     combineRoleService.assignRolesToUser(user, moduleRoles);
+                    userSyncPublisher.publishUserSync(request.getOrganizationId(), userId);
                 }
             }
 
@@ -287,6 +294,7 @@ public class ModuleAccessUseCase {
             var user = userService.getUserById(userId);
             if (user != null && !CollectionUtils.isEmpty(moduleRoles)) {
                 combineRoleService.removeRolesFromUser(user, moduleRoles);
+                userSyncPublisher.publishUserSync(organizationId, userId);
                 if (user.getKeycloakId() != null) {
                     keycloakUserService.logoutUser(user.getKeycloakId());
                     log.info("Logged out user {} to refresh permissions", userId);

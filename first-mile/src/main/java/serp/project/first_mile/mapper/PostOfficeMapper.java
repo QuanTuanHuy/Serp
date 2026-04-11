@@ -75,6 +75,7 @@ public final class PostOfficeMapper {
                 postOffice.getWardCode(),
                 postOffice.getAddressDetail(),
                 postOffice.getPhoneNumber(),
+                postOffice.getImageUrl(),
                 postOffice.getOperationalStartDate(),
                 postOffice.getOperationalEndDate(),
                 postOffice.getWorkingStartTime(),

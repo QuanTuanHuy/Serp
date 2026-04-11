@@ -59,6 +59,16 @@ class RoleEnumUtilsTest {
     }
 
     @Test
+    void testGetTmsRoles() {
+        List<RoleEnum> tmsRoles = RoleEnumUtils.getTmsRoles();
+
+        assertTrue(tmsRoles.contains(RoleEnum.TMS_ADMIN));
+        assertTrue(tmsRoles.contains(RoleEnum.TMS_POSTOFFICER_MANAGER));
+        assertTrue(tmsRoles.contains(RoleEnum.TMS_POSTOFFICER));
+        assertTrue(tmsRoles.stream().allMatch(role -> role.getRoleName().startsWith("TMS_")));
+    }
+
+    @Test
     void testGetHighestPriorityRole() {
         List<RoleEnum> roles = Arrays.asList(
                 RoleEnum.ORG_USER, // priority 7
@@ -169,6 +179,7 @@ class RoleEnumUtilsTest {
     void testGetDefaultModuleRole() {
         assertEquals(RoleEnum.CRM_SALES_PERSON, RoleEnumUtils.getDefaultModuleRole("CRM"));
         assertEquals(RoleEnum.PTM_USER, RoleEnumUtils.getDefaultModuleRole("PTM"));
+        assertEquals(RoleEnum.TMS_POSTOFFICER, RoleEnumUtils.getDefaultModuleRole("TMS"));
         assertEquals(RoleEnum.ACCOUNTANT, RoleEnumUtils.getDefaultModuleRole("ACCOUNTING"));
         assertEquals(RoleEnum.MODULE_USER, RoleEnumUtils.getDefaultModuleRole("UNKNOWN"));
     }

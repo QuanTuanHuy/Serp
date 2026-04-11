@@ -16,6 +16,7 @@ import serp.project.account.core.service.ICombineRoleService;
 import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.IUserService;
 import serp.project.account.core.usecase.support.OrganizationRoleResolver;
+import serp.project.account.core.usecase.support.UserSyncPublisher;
 import serp.project.account.kernel.utils.CollectionUtils;
 
 import java.util.List;
@@ -28,6 +29,7 @@ public class UserRoleCoordinator {
     private final IRoleService roleService;
     private final ICombineRoleService combineRoleService;
     private final OrganizationRoleResolver organizationRoleResolver;
+    private final UserSyncPublisher userSyncPublisher;
 
     @Transactional(rollbackFor = Exception.class)
     public void assignRolesAsSystemAdmin(Long userId, List<Long> roleIds) {
@@ -40,6 +42,7 @@ public class UserRoleCoordinator {
         }
 
         combineRoleService.assignRolesToUser(user, roles);
+        userSyncPublisher.publishUserSync(user.getPrimaryOrganizationId(), userId);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -74,6 +77,8 @@ public class UserRoleCoordinator {
         if (!rolesToRemove.isEmpty()) {
             combineRoleService.removeRolesFromUser(user, rolesToRemove);
         }
+
+        userSyncPublisher.publishUserSync(organizationId, userId);
     }
 
     private UserEntity getUserOrThrow(Long userId) {

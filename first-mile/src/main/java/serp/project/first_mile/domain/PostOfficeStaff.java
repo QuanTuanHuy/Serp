@@ -46,12 +46,16 @@ public class PostOfficeStaff extends AbstractAudit {
     @Column(name = "email")
     private String email;
 
+    @Column(name = "avatar_url")
+    private String avatarUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 20)
     private PostOfficeStaffRole role;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
+    @Builder.Default
     private PostOfficeStaffStatus status = PostOfficeStaffStatus.ACTIVE;
 
     @Column(name = "hire_date")
@@ -65,4 +69,7 @@ public class PostOfficeStaff extends AbstractAudit {
 
     @Column(name = "notes")
     private String notes;
+
+    @Column(name = "user_id")
+    private Long userId;
 }

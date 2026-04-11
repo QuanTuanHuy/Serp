@@ -25,12 +25,14 @@ import org.springframework.web.multipart.MultipartFile;
 import serp.project.first_mile.dto.ApiResponse;
 import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.CreatePostOfficeRequest;
+import serp.project.first_mile.dto.request.PostOfficeFilterRequest;
 import serp.project.first_mile.dto.request.PostOfficeImportDTO;
 import serp.project.first_mile.dto.request.UpdatePostOfficeRequest;
 import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.PostOfficeGeocodeBatchResponse;
 import serp.project.first_mile.dto.response.PostOfficeResponse;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
+import serp.project.first_mile.enums.PostOfficeStatus;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.exception.MessageService;
@@ -50,11 +52,43 @@ public class PostOfficeController {
     public ApiResponse<PageResponse<PostOfficeResponse>> getPostOffices(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String keyword
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String code,
+            @RequestParam(required = false) String name,
+            @RequestParam(name = "province_code", required = false) String provinceCode,
+            @RequestParam(name = "ward_code", required = false) String wardCode,
+            @RequestParam(required = false) PostOfficeStatus status,
+            @RequestParam(name = "has_location", required = false) Boolean hasLocation,
+            @RequestParam(name = "min_service_radius_m", required = false) Integer minServiceRadiusM,
+            @RequestParam(name = "max_service_radius_m", required = false) Integer maxServiceRadiusM,
+            @RequestParam(name = "min_daily_capacity", required = false) Integer minDailyCapacity,
+            @RequestParam(name = "max_daily_capacity", required = false) Integer maxDailyCapacity,
+            @RequestParam(name = "min_current_load", required = false) Integer minCurrentLoad,
+            @RequestParam(name = "max_current_load", required = false) Integer maxCurrentLoad,
+            @RequestParam(name = "min_priority", required = false) Integer minPriority,
+            @RequestParam(name = "max_priority", required = false) Integer maxPriority
     ) {
+        PostOfficeFilterRequest filterRequest = PostOfficeFilterRequest.builder()
+                .keyword(keyword)
+                .code(code)
+                .name(name)
+                .provinceCode(provinceCode)
+                .wardCode(wardCode)
+                .status(status)
+                .hasLocation(hasLocation)
+                .minServiceRadiusM(minServiceRadiusM)
+                .maxServiceRadiusM(maxServiceRadiusM)
+                .minDailyCapacity(minDailyCapacity)
+                .maxDailyCapacity(maxDailyCapacity)
+                .minCurrentLoad(minCurrentLoad)
+                .maxCurrentLoad(maxCurrentLoad)
+                .minPriority(minPriority)
+                .maxPriority(maxPriority)
+                .build();
+
         return ApiResponse.<PageResponse<PostOfficeResponse>>builder()
                 .message(messageService.getMessage("success.post_offices.list"))
-                .result(postOfficeService.getPostOffices(page, size, keyword))
+                .result(postOfficeService.getPostOffices(page, size, filterRequest))
                 .build();
     }
 
@@ -84,6 +118,18 @@ public class PostOfficeController {
         return ApiResponse.<PostOfficeResponse>builder()
                 .message(messageService.getMessage("success.post_offices.update"))
                 .result(postOfficeService.updatePostOffice(id, request))
+                .build();
+    }
+
+    @PostMapping("/{id}/image")
+    @PreAuthorize("hasRole('TMS_ADMIN')")
+    public ApiResponse<PostOfficeResponse> uploadPostOfficeImage(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return ApiResponse.<PostOfficeResponse>builder()
+                .message(messageService.getMessage("success.post_offices.image.upload"))
+                .result(postOfficeService.uploadImage(id, file))
                 .build();
     }
 
@@ -154,17 +200,5 @@ public class PostOfficeController {
         );
         log.info("REST request to import Post Office file for tenant {}", tenantId);
         return postOfficeService.importPostOfficesAsync(file, tenantId);
-    }
-
-    @GetMapping("/import-history/{importHistoryId}")
-    @PreAuthorize("hasRole('TMS_ADMIN')")
-    public ImportHistoryResponse getImportHistory(
-            @PathVariable Long importHistoryId
-    ) {
-        Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
-                () -> new AppException(ErrorCode.UNAUTHORIZED)
-        );
-        log.info("REST request to get post office import history {} for tenant {}", importHistoryId, tenantId);
-        return postOfficeService.getImportHistory(importHistoryId, tenantId);
     }
 }
