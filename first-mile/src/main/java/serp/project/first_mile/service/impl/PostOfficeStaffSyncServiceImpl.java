@@ -57,6 +57,7 @@ public class PostOfficeStaffSyncServiceImpl implements PostOfficeStaffSyncServic
         staff.setRole(staffRole);
         staff.setStatus(PostOfficeStaffStatus.ACTIVE);
         staff.setTenantId(tenantId);
+        staff.setUserId(event.getUserId());
 
         if (staff.getHireDate() == null) {
             staff.setHireDate(LocalDate.now());

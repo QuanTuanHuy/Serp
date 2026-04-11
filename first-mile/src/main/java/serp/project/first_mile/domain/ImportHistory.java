@@ -21,6 +21,7 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import serp.project.first_mile.enums.ImportHistoryStatus;
+import serp.project.first_mile.enums.ImportType;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -47,6 +48,10 @@ public class ImportHistory extends AbstractAudit {
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
     private ImportHistoryStatus status;
+
+    @Column(name = "type")
+    @Enumerated(EnumType.STRING)
+    private ImportType type;
 
     @Column(name = "total_records")
     private Integer totalRecords;

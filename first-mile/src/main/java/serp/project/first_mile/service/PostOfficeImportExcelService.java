@@ -1,5 +1,5 @@
 /*
-Author: QuanTuanHuy
+Author: Nguyen The Anh
 Description: Part of Serp Project
 */
 
@@ -14,6 +14,4 @@ public interface PostOfficeImportExcelService {
     ValidateImportFileDTO<PostOfficeImportDTO> validateImportFile(MultipartFile file, Long tenantId);
 
     ImportHistoryResponse importPostOfficesAsync(MultipartFile file, Long tenantId);
-
-    ImportHistoryResponse getImportHistory(Long importHistoryId, Long tenantId);
 }

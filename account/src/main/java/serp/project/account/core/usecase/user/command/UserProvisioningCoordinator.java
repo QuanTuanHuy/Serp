@@ -11,25 +11,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.CreateUserForOrgRequest;
-import serp.project.account.core.domain.dto.message.SyncUserEvent;
 import serp.project.account.core.domain.entity.OrganizationEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.UserEntity;
 import serp.project.account.core.domain.enums.UserStatus;
 import serp.project.account.core.exception.AppException;
-import serp.project.account.core.port.client.IKafkaProducer;
 import serp.project.account.core.service.ICombineRoleService;
 import serp.project.account.core.service.IKeycloakUserService;
 import serp.project.account.core.service.IOrganizationService;
 import serp.project.account.core.service.IUserService;
 import serp.project.account.core.usecase.support.OrganizationRoleResolver;
+import serp.project.account.core.usecase.support.UserSyncPublisher;
 import serp.project.account.infrastructure.store.mapper.UserMapper;
-import serp.project.account.kernel.property.KafkaTopicProperties;
 import serp.project.account.kernel.utils.CollectionUtils;
 
 import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -42,8 +38,7 @@ public class UserProvisioningCoordinator {
     private final ICombineRoleService combineRoleService;
     private final OrganizationRoleResolver organizationRoleResolver;
     private final UserMapper userMapper;
-    private final IKafkaProducer kafkaProducer;
-    private final KafkaTopicProperties kafkaTopicProperties;
+    private final UserSyncPublisher userSyncPublisher;
 
     @Transactional(rollbackFor = Exception.class)
     public UserEntity createOrganizationUser(OrganizationEntity organization, CreateUserForOrgRequest request) {
@@ -66,7 +61,7 @@ public class UserProvisioningCoordinator {
 
             combineRoleService.assignRolesToUser(user, roles);
             assignOrganizationRoles(organization.getId(), user.getId(), roles);
-            publishUserSync(organization.getId(), user, roles);
+            userSyncPublisher.publishUserSync(organization.getId(), user.getId());
             return user;
         } catch (Exception e) {
             cleanupKeycloakUser(keycloakUserId);
@@ -95,58 +90,5 @@ public class UserProvisioningCoordinator {
         } catch (Exception cleanupException) {
             log.error("Failed to cleanup keycloak user {}", keycloakUserId, cleanupException);
         }
-    }
-
-    private void publishUserSync(Long organizationId, UserEntity user, List<RoleEntity> roles) {
-        if (organizationId == null || user == null || user.getId() == null || CollectionUtils.isEmpty(roles)) {
-            return;
-        }
-
-        List<String> matchedRoleNames = roles.stream()
-                .map(RoleEntity::getName)
-                .filter(Objects::nonNull)
-                .map(roleName -> roleName.toUpperCase(Locale.ROOT))
-                .distinct()
-                .toList();
-
-        if (matchedRoleNames.isEmpty()) {
-            return;
-        }
-
-        String topic = kafkaTopicProperties.getSyncUser();
-        SyncUserEvent event = SyncUserEvent.builder()
-                .userId(user.getId())
-                .organizationId(organizationId)
-                .tenantId(organizationId)
-                .email(user.getEmail())
-                .phoneNumber(user.getPhoneNumber())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .fullName(user.getFullName())
-                .roleNames(matchedRoleNames)
-                .build();
-
-        String partitionKey = String.valueOf(user.getId());
-        kafkaProducer.sendMessageAsync(partitionKey, event, topic, (success, sentTopic, payload, ex) -> {
-            if (success) {
-                log.info(
-                        "Published sync-user event: organizationId={}, userId={}, roleNames={}, topic={}",
-                        organizationId,
-                        user.getId(),
-                        matchedRoleNames,
-                        sentTopic
-                );
-                return;
-            }
-
-            log.error(
-                    "Failed to publish sync-user event: organizationId={}, userId={}, roleNames={}, topic={}",
-                    organizationId,
-                    user.getId(),
-                    matchedRoleNames,
-                    topic,
-                    ex
-            );
-        });
     }
 }

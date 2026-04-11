@@ -15,5 +15,4 @@ public interface OrderImportExcelService {
 
     ImportHistoryResponse importOrdersAsync(MultipartFile file, Long tenantId);
 
-    ImportHistoryResponse getImportHistory(Long importHistoryId, Long tenantId);
 }

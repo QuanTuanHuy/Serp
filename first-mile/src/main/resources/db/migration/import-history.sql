@@ -21,3 +21,6 @@ CREATE TABLE import_history (
 CREATE INDEX idx_import_history_tenant_id ON import_history(tenant_id);
 CREATE INDEX idx_import_history_status ON import_history(status);
 CREATE INDEX idx_import_history_created_at ON import_history(created_at DESC);
+
+ALTER TABLE import_history
+ADD COLUMN type VARCHAR(64);
