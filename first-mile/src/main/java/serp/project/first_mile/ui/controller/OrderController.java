@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import serp.project.first_mile.dto.request.OrderImportDTO;
 import serp.project.first_mile.dto.response.ImportHistoryResponse;
+import serp.project.first_mile.dto.response.OrderConfirmationResponse;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
@@ -59,5 +60,14 @@ public class OrderController {
         );
         log.info("REST request to import Order file for tenant {}", tenantId);
         return orderService.importOrdersAsync(file, tenantId);
+    }
+
+    @PostMapping("/{orderId}/confirm")
+    public OrderConfirmationResponse confirmOrder(@PathVariable Long orderId) {
+        Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
+                () -> new AppException(ErrorCode.UNAUTHORIZED)
+        );
+        log.info("REST request to confirm Order {} for tenant {}", orderId, tenantId);
+        return orderService.confirmOrder(orderId, tenantId);
     }
 }

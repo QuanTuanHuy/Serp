@@ -79,6 +79,18 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 			@Param("orderIds") Collection<Long> orderIds
 	);
 
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("""
+			select o
+			from Order o
+			where o.id = :id
+				and o.tenantId = :tenantId
+			""")
+	Optional<Order> findByIdAndTenantIdForUpdate(
+			@Param("id") Long id,
+			@Param("tenantId") Long tenantId
+	);
+
 		Optional<Order> findByIdAndTenantId(Long id, Long tenantId);
 
 		List<Order> findByIdInAndTenantId(Collection<Long> ids, Long tenantId);
