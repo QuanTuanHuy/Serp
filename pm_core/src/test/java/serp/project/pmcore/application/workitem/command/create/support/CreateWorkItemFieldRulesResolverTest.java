@@ -10,9 +10,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import serp.project.pmcore.domain.issuetype.entity.IssueTypeScreenSchemeEntity;
-import serp.project.pmcore.domain.issuetype.port.IIssueTypeScreenSchemeItemPort;
-import serp.project.pmcore.domain.issuetype.port.IIssueTypeScreenSchemePort;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.screen.service.IScreenService;
 import serp.project.pmcore.domain.shared.constant.WorkItemFieldConstants;
@@ -54,12 +51,25 @@ class CreateWorkItemFieldRulesResolverTest {
     void resolveCreateFieldRulesShouldDelegateAndApplyCreateOverrides() {
         ProjectEntity project = ProjectEntity.builder()
                 .id(10L)
+                .issueTypeScreenSchemeId(501L)
                 .fieldConfigSchemeId(FIELD_CONFIG_SCHEME_ID)
                 .build();
 
-        when(screenService.resolveScreenIdForOperation(project, ISSUE_TYPE_ID, WorkItemFieldConstants.CREATE_OPERATION_KEY, TENANT_ID))
+        when(screenService.resolveScreenIdForOperation(
+                project.getId(),
+                project.getIssueTypeScreenSchemeId(),
+                ISSUE_TYPE_ID,
+                WorkItemFieldConstants.CREATE_OPERATION_KEY,
+                TENANT_ID
+        ))
                 .thenReturn(SCREEN_ID);
-        when(workItemFieldResolver.resolveFieldRules(project, ISSUE_TYPE_ID, SCREEN_ID, TENANT_ID))
+        when(workItemFieldResolver.resolveFieldRules(
+                project.getId(),
+                project.getFieldConfigSchemeId(),
+                ISSUE_TYPE_ID,
+                SCREEN_ID,
+                TENANT_ID
+        ))
                 .thenReturn(new WorkItemFieldRules(
                         Map.of(
                                 WorkItemFieldConstants.DUE_DATE,

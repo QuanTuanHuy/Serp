@@ -17,7 +17,7 @@ import java.util.Map;
 
 @Getter
 @NoArgsConstructor
-@JsonIgnoreProperties(ignoreUnknown = false)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class UpdateWorkItemRequest {
 
     private String summary;

@@ -10,12 +10,10 @@ import org.springframework.stereotype.Service;
 import serp.project.pmcore.application.workitem.command.update.internal.UpdateWorkItemData;
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
 import serp.project.pmcore.domain.priority.service.IPrioritySchemeService;
-import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.shared.constant.WorkItemFieldConstants;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.shared.util.WorkItemFieldValueUtils;
-import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 
 @Service
 @RequiredArgsConstructor
@@ -24,12 +22,13 @@ public class UpdateWorkItemConfigurationResolver {
     private final IPrioritySchemeService prioritySchemeService;
     private final IIssueSecurityService issueSecurityService;
 
-    public Long resolvePriorityId(ProjectEntity project,
-                                  WorkItemEntity workItem,
+    public Long resolvePriorityId(Long projectId,
+                                  Long prioritySchemeId,
+                                  Long currentPriorityId,
                                   UpdateWorkItemData data,
                                   Long tenantId) {
         if (!data.hasSystemField(WorkItemFieldConstants.PRIORITY_ID)) {
-            return workItem.getPriorityId();
+            return currentPriorityId;
         }
 
         Long requestedPriorityId = WorkItemFieldValueUtils.asNullablePositiveLong(
@@ -37,22 +36,23 @@ public class UpdateWorkItemConfigurationResolver {
         if (requestedPriorityId == null) {
             return null;
         }
-        if (project.getPrioritySchemeId() == null) {
+        if (prioritySchemeId == null) {
             throw new ResourceNotFoundException(
                     DomainErrorCode.PRIORITY_SCHEME_NOT_FOUND,
-                    "Project has no priority scheme binding: projectId=" + project.getId()
+                    "Project has no priority scheme binding: projectId=" + projectId
             );
         }
 
-        return prioritySchemeService.validatePriorityIdInScheme(project.getPrioritySchemeId(), requestedPriorityId, tenantId);
+        return prioritySchemeService.validatePriorityIdInScheme(prioritySchemeId, requestedPriorityId, tenantId);
     }
 
-    public Long resolveSecurityLevelId(ProjectEntity project,
-                                       WorkItemEntity workItem,
+    public Long resolveSecurityLevelId(Long projectId,
+                                       Long issueSecuritySchemeId,
+                                       Long currentSecurityLevelId,
                                        UpdateWorkItemData data,
                                        Long tenantId) {
         if (!data.hasSystemField(WorkItemFieldConstants.SECURITY_LEVEL_ID)) {
-            return workItem.getSecurityLevelId();
+            return currentSecurityLevelId;
         }
 
         Long requestedSecurityLevelId = WorkItemFieldValueUtils.asNullablePositiveLong(
@@ -60,15 +60,15 @@ public class UpdateWorkItemConfigurationResolver {
         if (requestedSecurityLevelId == null) {
             return null;
         }
-        if (project.getIssueSecuritySchemeId() == null) {
+        if (issueSecuritySchemeId == null) {
             throw new ResourceNotFoundException(
                     DomainErrorCode.ISSUE_SECURITY_SCHEME_NOT_FOUND,
-                    "Project has no issue security scheme binding: projectId=" + project.getId()
+                    "Project has no issue security scheme binding: projectId=" + projectId
             );
         }
 
         return issueSecurityService.validateSecurityLevelId(
-                project.getIssueSecuritySchemeId(),
+                issueSecuritySchemeId,
                 requestedSecurityLevelId,
                 tenantId
         );

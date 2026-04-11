@@ -129,10 +129,15 @@ public class TransitionWorkItemCommandHandler
         validateTransitionFieldPayload(execution, data, fieldRules);
         workItemTransitionAuthorizationService.checkFieldLevelPermissions(project, actorContext, data);
 
-        Long resolvedAssigneeId = workItemTransitionAuthorizationService.resolveAssigneeId(project, actorContext, workItem, data);
-        Long resolvedSecurityLevelId = workItemTransitionAuthorizationService.resolveSecurityLevelId(
+        Long resolvedAssigneeId = workItemTransitionAuthorizationService.resolveAssigneeId(
                 project,
-                workItem,
+                workItem.getAssigneeId(),
+                actorContext,
+                data
+        );
+        Long resolvedSecurityLevelId = workItemTransitionAuthorizationService.resolveSecurityLevelId(
+                workItem.getSecurityLevelId(),
+                project.getIssueSecuritySchemeId(),
                 data,
                 tenantId
         );
@@ -232,7 +237,8 @@ public class TransitionWorkItemCommandHandler
         }
 
         return workItemFieldResolver.resolveFieldRules(
-                project,
+                project.getId(),
+                project.getFieldConfigSchemeId(),
                 workItem.getIssueTypeId(),
                 execution.transition().getScreenId(),
                 tenantId

@@ -115,8 +115,20 @@ public class UpdateWorkItemCommandHandler
 
         checkFieldLevelPermissions(project, actorContext, data);
         Long resolvedAssigneeId = resolveAssigneeId(project, actorContext, data);
-        Long resolvedPriorityId = updateWorkItemConfigurationResolver.resolvePriorityId(project, workItem, data, tenantId);
-        Long resolvedSecurityLevelId = updateWorkItemConfigurationResolver.resolveSecurityLevelId(project, workItem, data, tenantId);
+        Long resolvedPriorityId = updateWorkItemConfigurationResolver.resolvePriorityId(
+                project.getId(),
+                project.getPrioritySchemeId(),
+                workItem.getPriorityId(),
+                data,
+                tenantId
+        );
+        Long resolvedSecurityLevelId = updateWorkItemConfigurationResolver.resolveSecurityLevelId(
+                project.getId(),
+                project.getIssueSecuritySchemeId(),
+                workItem.getSecurityLevelId(),
+                data,
+                tenantId
+        );
 
         List<WorkItemCustomFieldValueEntity> existingCustomFieldValues = workItemCustomFieldValuePort
                 .getActiveValuesByWorkItemId(workItem.getId(), tenantId);

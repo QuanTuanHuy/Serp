@@ -22,12 +22,19 @@ public class UpdateWorkItemFieldRulesResolver {
 
     public WorkItemFieldRules resolveEditFieldRules(ProjectEntity project, Long issueTypeId, Long tenantId) {
         Long editScreenId = screenService.resolveScreenIdForOperation(
-                project,
+                project.getId(),
+                project.getIssueTypeScreenSchemeId(),
                 issueTypeId,
                 WorkItemFieldConstants.EDIT_OPERATION_KEY,
                 tenantId
         );
 
-        return workItemFieldResolver.resolveFieldRules(project, issueTypeId, editScreenId, tenantId);
+        return workItemFieldResolver.resolveFieldRules(
+                project.getId(),
+                project.getFieldConfigSchemeId(),
+                issueTypeId,
+                editScreenId,
+                tenantId
+        );
     }
 }

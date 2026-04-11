@@ -27,14 +27,16 @@ public class CreateWorkItemFieldRulesResolver {
 
     public WorkItemFieldRules resolveCreateFieldRules(ProjectEntity project, Long issueTypeId, Long tenantId) {
         Long createScreenId = screenService.resolveScreenIdForOperation(
-                project,
+                project.getId(),
+                project.getIssueTypeScreenSchemeId(),
                 issueTypeId,
                 WorkItemFieldConstants.CREATE_OPERATION_KEY,
                 tenantId
         );
 
         WorkItemFieldRules baseRules = workItemFieldResolver.resolveFieldRules(
-                project,
+                project.getId(),
+                project.getFieldConfigSchemeId(),
                 issueTypeId,
                 createScreenId,
                 tenantId

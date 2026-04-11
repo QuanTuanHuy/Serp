@@ -144,9 +144,9 @@ class UpdateWorkItemCommandHandlerTest {
                                 new WorkItemFieldPolicy("SYSTEM", WorkItemFieldConstants.SUMMARY, true, false, true)),
                         Map.of()
                 ));
-        when(updateWorkItemConfigurationResolver.resolvePriorityId(project, workItem, command.data(), TENANT_ID))
+        when(updateWorkItemConfigurationResolver.resolvePriorityId(PROJECT_ID, project.getPrioritySchemeId(), workItem.getPriorityId(), command.data(), TENANT_ID))
                 .thenReturn(workItem.getPriorityId());
-        when(updateWorkItemConfigurationResolver.resolveSecurityLevelId(project, workItem, command.data(), TENANT_ID))
+        when(updateWorkItemConfigurationResolver.resolveSecurityLevelId(PROJECT_ID, project.getIssueSecuritySchemeId(), workItem.getSecurityLevelId(), command.data(), TENANT_ID))
                 .thenReturn(workItem.getSecurityLevelId());
         when(workItemCustomFieldValuePort.getActiveValuesByWorkItemId(WORK_ITEM_ID, TENANT_ID)).thenReturn(List.of());
         when(workItemService.updateWorkItem(workItem, USER_ID)).thenAnswer(invocation -> {
@@ -196,9 +196,9 @@ class UpdateWorkItemCommandHandlerTest {
                         Map.of()
                 ));
         when(workItemAuthorizationSupportService.resolveAssigneeId(project, 123L, actorContext)).thenReturn(123L);
-        when(updateWorkItemConfigurationResolver.resolvePriorityId(project, workItem, command.data(), TENANT_ID))
+        when(updateWorkItemConfigurationResolver.resolvePriorityId(PROJECT_ID, project.getPrioritySchemeId(), workItem.getPriorityId(), command.data(), TENANT_ID))
                 .thenReturn(workItem.getPriorityId());
-        when(updateWorkItemConfigurationResolver.resolveSecurityLevelId(project, workItem, command.data(), TENANT_ID))
+        when(updateWorkItemConfigurationResolver.resolveSecurityLevelId(PROJECT_ID, project.getIssueSecuritySchemeId(), workItem.getSecurityLevelId(), command.data(), TENANT_ID))
                 .thenReturn(workItem.getSecurityLevelId());
         when(workItemCustomFieldValuePort.getActiveValuesByWorkItemId(WORK_ITEM_ID, TENANT_ID)).thenReturn(List.of());
         when(workItemService.updateWorkItem(workItem, USER_ID)).thenAnswer(invocation -> {
@@ -262,9 +262,9 @@ class UpdateWorkItemCommandHandlerTest {
                         Map.of(),
                         Map.of("cf_text", new WorkItemFieldPolicy("CUSTOM", "cf_text", false, false, true))
                 ));
-        when(updateWorkItemConfigurationResolver.resolvePriorityId(project, workItem, command.data(), TENANT_ID))
+        when(updateWorkItemConfigurationResolver.resolvePriorityId(PROJECT_ID, project.getPrioritySchemeId(), workItem.getPriorityId(), command.data(), TENANT_ID))
                 .thenReturn(workItem.getPriorityId());
-        when(updateWorkItemConfigurationResolver.resolveSecurityLevelId(project, workItem, command.data(), TENANT_ID))
+        when(updateWorkItemConfigurationResolver.resolveSecurityLevelId(PROJECT_ID, project.getIssueSecuritySchemeId(), workItem.getSecurityLevelId(), command.data(), TENANT_ID))
                 .thenReturn(workItem.getSecurityLevelId());
         when(workItemCustomFieldValuePort.getActiveValuesByWorkItemId(WORK_ITEM_ID, TENANT_ID)).thenReturn(List.of(existingValue));
         when(customFieldPort.getCustomFieldsByFieldKeys(any())).thenReturn(List.of(customField));

@@ -102,7 +102,8 @@ class ScreenServiceTest {
                 .thenReturn(Optional.of(ScreenEntity.builder().id(SCREEN_ID).build()));
 
         Long resolvedScreenId = screenService.resolveScreenIdForOperation(
-                project,
+                project.getId(),
+                project.getIssueTypeScreenSchemeId(),
                 ISSUE_TYPE_ID,
                 WorkItemFieldConstants.CREATE_OPERATION_KEY,
                 TENANT_ID

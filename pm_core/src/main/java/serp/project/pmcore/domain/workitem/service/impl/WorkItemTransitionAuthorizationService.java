@@ -13,6 +13,8 @@ import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.shared.constant.WorkItemFieldConstants;
+import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
+import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.shared.util.WorkItemFieldValueUtils;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.service.IWorkItemAuthorizationSupportService;
@@ -51,11 +53,11 @@ public class WorkItemTransitionAuthorizationService implements IWorkItemTransiti
     }
 
     public Long resolveAssigneeId(ProjectEntity project,
+                                  Long currentAssigneeId,
                                   ProjectPermissionEvaluationContext actorContext,
-                                  WorkItemEntity workItem,
                                   TransitionWorkItemStatusData data) {
         if (!data.hasSystemField(WorkItemFieldConstants.ASSIGNEE_ID)) {
-            return workItem.getAssigneeId();
+            return currentAssigneeId;
         }
         return workItemAuthorizationSupportService.resolveAssigneeId(
                 project,
@@ -64,12 +66,12 @@ public class WorkItemTransitionAuthorizationService implements IWorkItemTransiti
         );
     }
 
-    public Long resolveSecurityLevelId(ProjectEntity project,
-                                       WorkItemEntity workItem,
+    public Long resolveSecurityLevelId(Long currentSecurityLevelId,
+                                       Long issueSecuritySchemeId,
                                        TransitionWorkItemStatusData data,
                                        Long tenantId) {
         if (!data.hasSystemField(WorkItemFieldConstants.SECURITY_LEVEL_ID)) {
-            return workItem.getSecurityLevelId();
+            return currentSecurityLevelId;
         }
 
         Long requestedSecurityLevelId = WorkItemFieldValueUtils.asNullableLong(
@@ -78,8 +80,15 @@ public class WorkItemTransitionAuthorizationService implements IWorkItemTransiti
             return null;
         }
 
+        if (issueSecuritySchemeId == null) {
+            throw new ResourceNotFoundException(
+                    DomainErrorCode.ISSUE_SECURITY_SCHEME_NOT_FOUND,
+                    "Issue security scheme binding is required"
+            );
+        }
+
         return issueSecurityService.validateSecurityLevelId(
-                project.getIssueSecuritySchemeId(),
+                issueSecuritySchemeId,
                 requestedSecurityLevelId,
                 tenantId
         );

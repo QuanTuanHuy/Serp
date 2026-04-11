@@ -5,7 +5,6 @@
 
 package serp.project.pmcore.domain.screen.service;
 
-import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.screen.entity.ScreenEntity;
 import serp.project.pmcore.domain.screen.entity.ScreenTabFieldEntity;
 
@@ -16,7 +15,8 @@ public interface IScreenService {
 
     ScreenEntity getScreenById(Long screenId, Long tenantId);
 
-    Long resolveScreenIdForOperation(ProjectEntity project,
+    Long resolveScreenIdForOperation(Long projectId,
+                                     Long issueTypeScreenSchemeId,
                                      Long issueTypeId,
                                      String operationKey,
                                      Long tenantId);

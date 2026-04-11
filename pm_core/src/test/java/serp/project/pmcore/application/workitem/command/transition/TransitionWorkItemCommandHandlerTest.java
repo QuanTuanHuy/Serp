@@ -152,8 +152,8 @@ class TransitionWorkItemCommandHandlerTest {
                         .build());
         when(transitionConfigurationResolver.resolve(project, workItem, TRANSITION_ID, TENANT_ID)).thenReturn(execution);
         when(workItemCustomFieldValuePort.getActiveValuesByWorkItemId(WORK_ITEM_ID, TENANT_ID)).thenReturn(List.of());
-        when(workItemTransitionAuthorizationService.resolveAssigneeId(eq(project), any(), eq(workItem), any())).thenReturn(77L);
-        when(workItemTransitionAuthorizationService.resolveSecurityLevelId(project, workItem, command.toData(), TENANT_ID))
+        when(workItemTransitionAuthorizationService.resolveAssigneeId(eq(project), eq(workItem.getAssigneeId()), any(), any())).thenReturn(77L);
+        when(workItemTransitionAuthorizationService.resolveSecurityLevelId(workItem.getSecurityLevelId(), project.getIssueSecuritySchemeId(), command.toData(), TENANT_ID))
                 .thenReturn(null);
         when(workItemTransitionRuleEvaluator.evaluateValidatorsAndResolveResolution(
                 eq(execution),

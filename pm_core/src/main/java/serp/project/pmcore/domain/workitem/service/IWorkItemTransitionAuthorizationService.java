@@ -15,16 +15,16 @@ public interface IWorkItemTransitionAuthorizationService {
                                    ProjectPermissionEvaluationContext actorContext);
 
     void checkFieldLevelPermissions(ProjectEntity project,
-                                    ProjectPermissionEvaluationContext actorContext,
-                                    TransitionWorkItemStatusData data);
+                                     ProjectPermissionEvaluationContext actorContext,
+                                     TransitionWorkItemStatusData data);
 
     Long resolveAssigneeId(ProjectEntity project,
-                            ProjectPermissionEvaluationContext actorContext,
-                            WorkItemEntity workItem,
-                            TransitionWorkItemStatusData data);
+                           Long currentAssigneeId,
+                           ProjectPermissionEvaluationContext actorContext,
+                           TransitionWorkItemStatusData data);
 
-    Long resolveSecurityLevelId(ProjectEntity project,
-                                WorkItemEntity workItem,
+    Long resolveSecurityLevelId(Long currentSecurityLevelId,
+                                Long issueSecuritySchemeId,
                                 TransitionWorkItemStatusData data,
                                 Long tenantId);
 

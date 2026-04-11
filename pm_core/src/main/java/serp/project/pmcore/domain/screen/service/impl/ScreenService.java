@@ -12,7 +12,6 @@ import serp.project.pmcore.domain.issuetype.entity.IssueTypeScreenSchemeEntity;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeScreenSchemeItemEntity;
 import serp.project.pmcore.domain.issuetype.port.IIssueTypeScreenSchemeItemPort;
 import serp.project.pmcore.domain.issuetype.port.IIssueTypeScreenSchemePort;
-import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.screen.entity.ScreenEntity;
 import serp.project.pmcore.domain.screen.entity.ScreenSchemeEntity;
 import serp.project.pmcore.domain.screen.entity.ScreenSchemeItemEntity;
@@ -69,26 +68,27 @@ public class ScreenService implements IScreenService {
     }
 
     @Override
-    public Long resolveScreenIdForOperation(ProjectEntity project,
+    public Long resolveScreenIdForOperation(Long projectId,
+                                            Long issueTypeScreenSchemeId,
                                             Long issueTypeId,
                                             String operationKey,
                                             Long tenantId) {
-        if (project.getIssueTypeScreenSchemeId() == null) {
+        if (issueTypeScreenSchemeId == null) {
             throw new ResourceNotFoundException(
                     DomainErrorCode.ISSUE_TYPE_SCREEN_SCHEME_NOT_FOUND,
-                    "Project has no issue type screen scheme binding: projectId=" + project.getId()
+                    "Project has no issue type screen scheme binding: projectId=" + projectId
             );
         }
 
         IssueTypeScreenSchemeEntity issueTypeScreenScheme = issueTypeScreenSchemePort
-                .getIssueTypeScreenSchemeById(project.getIssueTypeScreenSchemeId(), tenantId)
+                .getIssueTypeScreenSchemeById(issueTypeScreenSchemeId, tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         DomainErrorCode.ISSUE_TYPE_SCREEN_SCHEME_NOT_FOUND,
-                        "Issue type screen scheme not found: id=" + project.getIssueTypeScreenSchemeId()
+                        "Issue type screen scheme not found: id=" + issueTypeScreenSchemeId
                 ));
 
         Long screenSchemeId = issueTypeScreenSchemeItemPort
-                .getIssueTypeScreenSchemeItemsBySchemeId(project.getIssueTypeScreenSchemeId(), tenantId)
+                .getIssueTypeScreenSchemeItemsBySchemeId(issueTypeScreenSchemeId, tenantId)
                 .stream()
                 .filter(item -> issueTypeId.equals(item.getIssueTypeId()))
                 .map(IssueTypeScreenSchemeItemEntity::getScreenSchemeId)
@@ -98,7 +98,7 @@ public class ScreenService implements IScreenService {
         if (screenSchemeId == null) {
             throw new DomainValidationException(
                     DomainErrorCode.ISSUE_TYPE_SCREEN_SCHEME_COVERAGE_MISSING,
-                    "Issue type screen scheme does not cover issueTypeId=" + issueTypeId + " for projectId=" + project.getId()
+                    "Issue type screen scheme does not cover issueTypeId=" + issueTypeId + " for projectId=" + projectId
             );
         }
 

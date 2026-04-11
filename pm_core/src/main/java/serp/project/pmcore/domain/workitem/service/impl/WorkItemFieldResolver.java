@@ -11,7 +11,6 @@ import org.springframework.stereotype.Component;
 import serp.project.pmcore.domain.fieldconfig.entity.FieldConfigItemEntity;
 import serp.project.pmcore.domain.fieldconfig.port.IFieldConfigItemPort;
 import serp.project.pmcore.domain.fieldconfig.service.IFieldConfigService;
-import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.screen.entity.ScreenTabFieldEntity;
 import serp.project.pmcore.domain.screen.service.IScreenService;
 import serp.project.pmcore.domain.shared.constant.WorkItemFieldConstants;
@@ -34,7 +33,8 @@ public class WorkItemFieldResolver implements IWorkItemFieldResolver {
     private final IFieldConfigService fieldConfigService;
 
     @Override
-    public WorkItemFieldRules resolveFieldRules(ProjectEntity project,
+    public WorkItemFieldRules resolveFieldRules(Long projectId,
+                                                Long fieldConfigSchemeId,
                                                 Long issueTypeId,
                                                 Long screenId,
                                                 Long tenantId) {
@@ -43,7 +43,7 @@ public class WorkItemFieldResolver implements IWorkItemFieldResolver {
         }
 
         Long fieldConfigId = fieldConfigService.resolveFieldConfigId(
-                project.getFieldConfigSchemeId(),
+                fieldConfigSchemeId,
                 issueTypeId,
                 tenantId
         );
@@ -81,7 +81,7 @@ public class WorkItemFieldResolver implements IWorkItemFieldResolver {
         }
 
         log.info("[WorkItemFieldResolver] Resolved field policies for project={}, issueTypeId={}, screenId={}, tenantId={}: systemFields={}, customFields={}",
-                project.getId(), issueTypeId, screenId, tenantId, systemPolicies.keySet(), customPolicies.keySet());
+                projectId, issueTypeId, screenId, tenantId, systemPolicies.keySet(), customPolicies.keySet());
 
         return new WorkItemFieldRules(systemPolicies, customPolicies);
     }

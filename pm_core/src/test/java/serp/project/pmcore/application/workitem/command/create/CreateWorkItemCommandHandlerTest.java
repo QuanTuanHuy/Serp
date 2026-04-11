@@ -31,9 +31,7 @@ import serp.project.pmcore.domain.customfield.port.ICustomFieldContextDefaultVal
 import serp.project.pmcore.domain.customfield.port.ICustomFieldContextPort;
 import serp.project.pmcore.domain.customfield.port.ICustomFieldOptionPort;
 import serp.project.pmcore.domain.customfield.port.ICustomFieldPort;
-import serp.project.pmcore.domain.fieldconfig.entity.FieldConfigEntity;
 import serp.project.pmcore.domain.fieldconfig.entity.FieldConfigItemEntity;
-import serp.project.pmcore.domain.fieldconfig.entity.FieldConfigSchemeEntity;
 import serp.project.pmcore.domain.fieldconfig.port.IFieldConfigItemPort;
 import serp.project.pmcore.domain.fieldconfig.port.IFieldConfigPort;
 import serp.project.pmcore.domain.fieldconfig.port.IFieldConfigSchemeItemPort;
@@ -49,7 +47,6 @@ import serp.project.pmcore.domain.issuetype.port.IIssueTypePort;
 import serp.project.pmcore.domain.issuetype.port.IIssueTypeSchemeItemPort;
 import serp.project.pmcore.domain.issuetype.port.IIssueTypeScreenSchemeItemPort;
 import serp.project.pmcore.domain.issuetype.port.IIssueTypeScreenSchemePort;
-import serp.project.pmcore.domain.priority.entity.PrioritySchemeEntity;
 import serp.project.pmcore.domain.priority.port.IPrioritySchemeItemPort;
 import serp.project.pmcore.domain.priority.port.IPrioritySchemePort;
 import serp.project.pmcore.domain.priority.service.IPrioritySchemeService;
@@ -57,7 +54,6 @@ import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.screen.entity.ScreenEntity;
 import serp.project.pmcore.domain.screen.entity.ScreenSchemeEntity;
 import serp.project.pmcore.domain.screen.entity.ScreenSchemeItemEntity;
-import serp.project.pmcore.domain.screen.entity.ScreenTabEntity;
 import serp.project.pmcore.domain.screen.entity.ScreenTabFieldEntity;
 import serp.project.pmcore.domain.screen.port.IScreenPort;
 import serp.project.pmcore.domain.screen.port.IScreenSchemeItemPort;
@@ -547,7 +543,8 @@ class CreateWorkItemCommandHandlerTest {
                 .id(SCREEN_ID)
                 .build()));
         when(screenService.resolveScreenIdForOperation(
-                any(ProjectEntity.class),
+                any(Long.class),
+                any(Long.class),
                 eq(ISSUE_TYPE_ID),
                 eq("CREATE"),
                 eq(TENANT_ID)
