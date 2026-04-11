@@ -8,6 +8,7 @@ package serp.project.first_mile.service;
 import org.springframework.web.multipart.MultipartFile;
 import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.CreatePostOfficeRequest;
+import serp.project.first_mile.dto.request.PostOfficeFilterRequest;
 import serp.project.first_mile.dto.request.PostOfficeImportDTO;
 import serp.project.first_mile.dto.request.UpdatePostOfficeRequest;
 import serp.project.first_mile.dto.response.ImportHistoryResponse;
@@ -16,7 +17,7 @@ import serp.project.first_mile.dto.response.PostOfficeResponse;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
 
 public interface PostOfficeService {
-    PageResponse<PostOfficeResponse> getPostOffices(int page, int size, String keyword);
+    PageResponse<PostOfficeResponse> getPostOffices(int page, int size, PostOfficeFilterRequest filterRequest);
 
     PostOfficeResponse getPostOfficeById(Long id);
 

@@ -16,6 +16,7 @@ import type {
   PostOffice,
   PostOfficeGeocodeBatchResponse,
   PostOfficeImportItem,
+  PostOfficeListFilters,
   ProductType,
   Province,
   UpdatePostOfficeRequest,
@@ -23,7 +24,11 @@ import type {
   ValidateImportFileResponse,
   Ward,
 } from '../types';
-import { unwrapFirstMilePageResult, unwrapFirstMileResult } from './transforms';
+import {
+  unwrapFirstMilePageResult,
+  unwrapFirstMileResult,
+  unwrapFirstMileResultOrRaw,
+} from './transforms';
 
 const FIRST_MILE_SERVICE = { service: 'first-mile' as const };
 
@@ -31,15 +36,59 @@ export const firstMileApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getPostOffices: builder.query<
       FirstMilePaginatedData<PostOffice>,
-      { page?: number; size?: number; keyword?: string }
+      { page?: number; size?: number } & PostOfficeListFilters
     >({
-      query: ({ page = 0, size = 20, keyword }) => ({
+      query: ({
+        page = 0,
+        size = 20,
+        keyword,
+        code,
+        name,
+        provinceCode,
+        wardCode,
+        status,
+        hasLocation,
+        minServiceRadiusM,
+        maxServiceRadiusM,
+        minDailyCapacity,
+        maxDailyCapacity,
+        minCurrentLoad,
+        maxCurrentLoad,
+        minPriority,
+        maxPriority,
+      }) => ({
         url: '/post-offices',
         method: 'GET',
         params: {
           page,
           size,
           ...(keyword ? { keyword } : {}),
+          ...(code ? { code } : {}),
+          ...(name ? { name } : {}),
+          ...(provinceCode ? { province_code: provinceCode } : {}),
+          ...(wardCode ? { ward_code: wardCode } : {}),
+          ...(status ? { status } : {}),
+          ...(hasLocation !== undefined ? { has_location: hasLocation } : {}),
+          ...(minServiceRadiusM !== undefined
+            ? { min_service_radius_m: minServiceRadiusM }
+            : {}),
+          ...(maxServiceRadiusM !== undefined
+            ? { max_service_radius_m: maxServiceRadiusM }
+            : {}),
+          ...(minDailyCapacity !== undefined
+            ? { min_daily_capacity: minDailyCapacity }
+            : {}),
+          ...(maxDailyCapacity !== undefined
+            ? { max_daily_capacity: maxDailyCapacity }
+            : {}),
+          ...(minCurrentLoad !== undefined
+            ? { min_current_load: minCurrentLoad }
+            : {}),
+          ...(maxCurrentLoad !== undefined
+            ? { max_current_load: maxCurrentLoad }
+            : {}),
+          ...(minPriority !== undefined ? { min_priority: minPriority } : {}),
+          ...(maxPriority !== undefined ? { max_priority: maxPriority } : {}),
         },
       }),
       extraOptions: FIRST_MILE_SERVICE,
@@ -129,7 +178,7 @@ export const firstMileApi = api.injectEndpoints({
         body: formData,
       }),
       extraOptions: FIRST_MILE_SERVICE,
-      transformResponse: unwrapFirstMileResult<
+      transformResponse: unwrapFirstMileResultOrRaw<
         ValidateImportFileResponse<PostOfficeImportItem>
       >,
     }),
@@ -141,7 +190,7 @@ export const firstMileApi = api.injectEndpoints({
         body: formData,
       }),
       extraOptions: FIRST_MILE_SERVICE,
-      transformResponse: unwrapFirstMileResult<ImportHistory>,
+      transformResponse: unwrapFirstMileResultOrRaw<ImportHistory>,
     }),
 
     getProductTypes: builder.query<
@@ -287,7 +336,7 @@ export const firstMileApi = api.injectEndpoints({
         body: formData,
       }),
       extraOptions: FIRST_MILE_SERVICE,
-      transformResponse: unwrapFirstMileResult<
+      transformResponse: unwrapFirstMileResultOrRaw<
         ValidateImportFileResponse<OrderImportItem>
       >,
     }),
@@ -299,7 +348,7 @@ export const firstMileApi = api.injectEndpoints({
         body: formData,
       }),
       extraOptions: FIRST_MILE_SERVICE,
-      transformResponse: unwrapFirstMileResult<ImportHistory>,
+      transformResponse: unwrapFirstMileResultOrRaw<ImportHistory>,
     }),
   }),
   overrideExisting: false,
@@ -325,6 +374,7 @@ export const {
   useGetImportHistoryByIdQuery,
   useGetProvincesQuery,
   useGetWardsByProvinceCodeQuery,
+  useLazyGetWardsByProvinceCodeQuery,
   useGeocodeAddressMutation,
   useLazyExportOrderTemplateQuery,
   useValidateOrderImportMutation,

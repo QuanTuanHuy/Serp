@@ -15,12 +15,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   Input,
   Label,
   Select,
@@ -31,247 +25,132 @@ import {
 } from '@/shared/components/ui';
 import { useNotification } from '@/shared/hooks';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
-import {
-  Loader2,
-  Pencil,
-  Plus,
-  RefreshCw,
-  Search,
-  ShieldAlert,
-  Trash2,
-} from 'lucide-react';
+import { Plus, RefreshCw, Search, ShieldAlert } from 'lucide-react';
 import {
   useCreatePostOfficeMutation,
   useDeletePostOfficeMutation,
   useGetPostOfficesQuery,
+  useGetWardsByProvinceCodeQuery,
+  useImportPostOfficesMutation,
+  useLazyExportPostOfficeTemplateQuery,
   useUpdatePostOfficeMutation,
+  useValidatePostOfficeImportMutation,
 } from '../../api';
 import type {
-  CreatePostOfficeRequest,
+  ImportHistory,
   PostOffice,
+  PostOfficeImportItem,
+  PostOfficeListFilters,
   PostOfficeStatus,
+  ValidateImportFileResponse,
+  Ward,
 } from '../../types';
+import {
+  PostOfficeFormDialog,
+  PostOfficeImportCard,
+  PostOfficeResultsCard,
+} from './components';
+import {
+  buildCreatePostOfficeRequest,
+  DEFAULT_POST_OFFICE_FORM,
+  getStatusBadgeVariant,
+  mapPostOfficeToFormState,
+  POST_OFFICE_STATUS_OPTIONS,
+  type PostOfficeFormMode,
+  type PostOfficeFormState,
+  type PostOfficeViewMode,
+  validatePostOfficeForm,
+} from './postOfficeForm';
+import { usePostOfficeLocations } from './usePostOfficeLocations';
 
 const PAGE_SIZE = 20;
+const IMPORT_PREVIEW_LIMIT = 5;
 
-type PostOfficeFormMode = 'create' | 'edit';
+type HasLocationFilter = 'ALL' | 'YES' | 'NO';
 
-interface PostOfficeFormState {
+interface PostOfficeFilterFormState {
+  keyword: string;
   code: string;
   name: string;
-  province_code: string;
-  ward_code: string;
-  address_detail: string;
-  phone_number: string;
-  operational_start_date: string;
-  operational_end_date: string;
-  working_start_time: string;
-  working_end_time: string;
-  service_radius_m: string;
-  daily_capacity: string;
-  current_load: string;
-  priority: string;
-  latitude: string;
-  longitude: string;
-  status: PostOfficeStatus;
+  provinceCode: string;
+  wardCode: string;
+  status: 'ALL' | PostOfficeStatus;
+  hasLocation: HasLocationFilter;
+  minServiceRadiusM: string;
+  maxServiceRadiusM: string;
+  minDailyCapacity: string;
+  maxDailyCapacity: string;
+  minCurrentLoad: string;
+  maxCurrentLoad: string;
+  minPriority: string;
+  maxPriority: string;
 }
 
-const POST_OFFICE_STATUS_OPTIONS: Array<{
-  value: PostOfficeStatus;
-  label: string;
-}> = [
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'INACTIVE', label: 'Inactive' },
-  { value: 'MAINTENANCE', label: 'Maintenance' },
-  { value: 'SUSPENDED', label: 'Suspended' },
-];
-
-const DEFAULT_POST_OFFICE_FORM: PostOfficeFormState = {
+const DEFAULT_POST_OFFICE_FILTER_FORM: PostOfficeFilterFormState = {
+  keyword: '',
   code: '',
   name: '',
-  province_code: '',
-  ward_code: '',
-  address_detail: '',
-  phone_number: '',
-  operational_start_date: '',
-  operational_end_date: '',
-  working_start_time: '',
-  working_end_time: '',
-  service_radius_m: '1',
-  daily_capacity: '0',
-  current_load: '0',
-  priority: '0',
-  latitude: '',
-  longitude: '',
-  status: 'ACTIVE',
+  provinceCode: '',
+  wardCode: '',
+  status: 'ALL',
+  hasLocation: 'ALL',
+  minServiceRadiusM: '',
+  maxServiceRadiusM: '',
+  minDailyCapacity: '',
+  maxDailyCapacity: '',
+  minCurrentLoad: '',
+  maxCurrentLoad: '',
+  minPriority: '',
+  maxPriority: '',
 };
 
-const toDateInputValue = (value?: string): string => {
-  if (!value) {
-    return '';
+const parseOptionalNonNegativeInteger = (
+  rawValue: string,
+  fieldLabel: string
+): number | undefined => {
+  const trimmedValue = rawValue.trim();
+  if (!trimmedValue) {
+    return undefined;
   }
 
-  return value.slice(0, 10);
+  const parsedValue = Number(trimmedValue);
+  if (!Number.isInteger(parsedValue) || parsedValue < 0) {
+    throw new Error(`${fieldLabel} must be a non-negative integer.`);
+  }
+
+  return parsedValue;
 };
 
-const toTimeInputValue = (value?: string): string => {
-  if (!value) {
-    return '';
+const validateRange = (
+  minValue: number | undefined,
+  maxValue: number | undefined,
+  fieldLabel: string
+) => {
+  if (minValue !== undefined && maxValue !== undefined && minValue > maxValue) {
+    throw new Error(
+      `${fieldLabel}: min value must be less than or equal to max value.`
+    );
   }
-
-  return value.slice(0, 5);
 };
 
-const mapPostOfficeToFormState = (
-  postOffice: PostOffice
-): PostOfficeFormState => {
-  return {
-    code: postOffice.code || '',
-    name: postOffice.name || '',
-    province_code: postOffice.provinceCode || '',
-    ward_code: postOffice.wardCode || '',
-    address_detail: postOffice.addressDetail || '',
-    phone_number: postOffice.phoneNumber || '',
-    operational_start_date: toDateInputValue(postOffice.operationalStartDate),
-    operational_end_date: toDateInputValue(postOffice.operationalEndDate),
-    working_start_time: toTimeInputValue(postOffice.workingStartTime),
-    working_end_time: toTimeInputValue(postOffice.workingEndTime),
-    service_radius_m: String(postOffice.serviceRadiusM ?? 1),
-    daily_capacity: String(postOffice.dailyCapacity ?? 0),
-    current_load: String(postOffice.currentLoad ?? 0),
-    priority: String(postOffice.priority ?? 0),
-    latitude:
-      postOffice.latitude === undefined || postOffice.latitude === null
-        ? ''
-        : String(postOffice.latitude),
-    longitude:
-      postOffice.longitude === undefined || postOffice.longitude === null
-        ? ''
-        : String(postOffice.longitude),
-    status: postOffice.status || 'ACTIVE',
-  };
-};
-
-const validatePostOfficeForm = (values: PostOfficeFormState): string | null => {
-  if (!values.code.trim()) {
-    return 'Code is required.';
-  }
-
-  if (!values.name.trim()) {
-    return 'Name is required.';
-  }
-
-  if (!values.province_code.trim()) {
-    return 'Province code is required.';
-  }
-
-  if (!values.ward_code.trim()) {
-    return 'Ward code is required.';
-  }
-
-  if (!values.address_detail.trim()) {
-    return 'Address detail is required.';
-  }
-
-  const serviceRadius = Number(values.service_radius_m);
-  if (!Number.isInteger(serviceRadius) || serviceRadius < 1) {
-    return 'Service radius must be an integer greater than or equal to 1.';
-  }
-
-  const dailyCapacity = Number(values.daily_capacity);
-  if (!Number.isInteger(dailyCapacity) || dailyCapacity < 0) {
-    return 'Daily capacity must be an integer greater than or equal to 0.';
-  }
-
-  const currentLoad = Number(values.current_load);
-  if (!Number.isInteger(currentLoad) || currentLoad < 0) {
-    return 'Current load must be an integer greater than or equal to 0.';
-  }
-
-  const priority = Number(values.priority);
-  if (!Number.isInteger(priority) || priority < 0) {
-    return 'Priority must be an integer greater than or equal to 0.';
-  }
-
-  if (values.latitude.trim()) {
-    const latitude = Number(values.latitude);
-    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
-      return 'Latitude must be between -90 and 90.';
-    }
-  }
-
-  if (values.longitude.trim()) {
-    const longitude = Number(values.longitude);
-    if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-      return 'Longitude must be between -180 and 180.';
-    }
-  }
-
-  return null;
-};
-
-const buildCreatePostOfficeRequest = (
-  values: PostOfficeFormState
-): CreatePostOfficeRequest => {
-  return {
-    code: values.code.trim(),
-    name: values.name.trim(),
-    province_code: values.province_code.trim(),
-    ward_code: values.ward_code.trim(),
-    address_detail: values.address_detail.trim(),
-    service_radius_m: Number(values.service_radius_m),
-    daily_capacity: Number(values.daily_capacity),
-    current_load: Number(values.current_load),
-    priority: Number(values.priority),
-    status: values.status,
-    ...(values.phone_number.trim()
-      ? { phone_number: values.phone_number.trim() }
-      : {}),
-    ...(values.operational_start_date
-      ? { operational_start_date: values.operational_start_date }
-      : {}),
-    ...(values.operational_end_date
-      ? { operational_end_date: values.operational_end_date }
-      : {}),
-    ...(values.working_start_time
-      ? { working_start_time: values.working_start_time }
-      : {}),
-    ...(values.working_end_time
-      ? { working_end_time: values.working_end_time }
-      : {}),
-    ...(values.latitude.trim() ? { latitude: Number(values.latitude) } : {}),
-    ...(values.longitude.trim() ? { longitude: Number(values.longitude) } : {}),
-  };
-};
-
-const getStatusBadgeVariant = (
-  status: PostOfficeStatus
-): 'default' | 'secondary' | 'outline' | 'destructive' => {
-  if (status === 'ACTIVE') {
-    return 'default';
-  }
-
-  if (status === 'SUSPENDED') {
-    return 'destructive';
-  }
-
-  if (status === 'MAINTENANCE') {
-    return 'outline';
-  }
-
-  return 'secondary';
+const normalizeText = (value: string): string | undefined => {
+  const trimmedValue = value.trim();
+  return trimmedValue ? trimmedValue : undefined;
 };
 
 export const PostOfficeListPage: React.FC = () => {
   const notification = useNotification();
   const isTmsAdmin = useAppSelector((state) =>
-    state.account.user.profile?.roles?.includes('TMS_ADMIN')
+    Boolean(state.account.user.profile?.roles?.includes('TMS_ADMIN'))
   );
 
   const [page, setPage] = React.useState(0);
-  const [keywordInput, setKeywordInput] = React.useState('');
-  const [keyword, setKeyword] = React.useState<string | undefined>(undefined);
+  const [filterFormValues, setFilterFormValues] =
+    React.useState<PostOfficeFilterFormState>(DEFAULT_POST_OFFICE_FILTER_FORM);
+  const [appliedFilters, setAppliedFilters] =
+    React.useState<PostOfficeListFilters>({});
   const [formMode, setFormMode] = React.useState<PostOfficeFormMode>('create');
+  const [viewMode, setViewMode] = React.useState<PostOfficeViewMode>('list');
   const [isFormDialogOpen, setIsFormDialogOpen] = React.useState(false);
   const [editingId, setEditingId] = React.useState<number | null>(null);
   const [formValues, setFormValues] = React.useState<PostOfficeFormState>(
@@ -280,12 +159,60 @@ export const PostOfficeListPage: React.FC = () => {
   const [deleteTarget, setDeleteTarget] = React.useState<PostOffice | null>(
     null
   );
+  const [selectedImportFile, setSelectedImportFile] =
+    React.useState<File | null>(null);
+  const [importFileInputKey, setImportFileInputKey] = React.useState(0);
+  const [validateImportResult, setValidateImportResult] =
+    React.useState<ValidateImportFileResponse<PostOfficeImportItem> | null>(
+      null
+    );
+  const [lastImportJob, setLastImportJob] =
+    React.useState<ImportHistory | null>(null);
 
   const { data, isLoading, isFetching, refetch } = useGetPostOfficesQuery({
     page,
     size: PAGE_SIZE,
-    keyword,
+    ...appliedFilters,
   });
+
+  const selectedFilterProvinceCode = React.useMemo(
+    () => filterFormValues.provinceCode.trim(),
+    [filterFormValues.provinceCode]
+  );
+
+  const selectedFilterWardCode = React.useMemo(
+    () => filterFormValues.wardCode.trim(),
+    [filterFormValues.wardCode]
+  );
+
+  const { data: wardsForFilterData, isFetching: isFetchingWardsForFilter } =
+    useGetWardsByProvinceCodeQuery(
+      {
+        provinceCode: selectedFilterProvinceCode,
+        page: 0,
+        size: 1000,
+      },
+      {
+        skip: !selectedFilterProvinceCode,
+      }
+    );
+
+  const filterWardOptions = React.useMemo(() => {
+    const options = [...(wardsForFilterData?.items ?? [])];
+
+    if (
+      selectedFilterWardCode &&
+      !options.some((ward) => ward.wardCode === selectedFilterWardCode)
+    ) {
+      options.unshift({
+        wardCode: selectedFilterWardCode,
+        name: selectedFilterWardCode,
+        provinceCode: selectedFilterProvinceCode,
+      } as Ward);
+    }
+
+    return options;
+  }, [selectedFilterProvinceCode, selectedFilterWardCode, wardsForFilterData]);
 
   const [createPostOffice, { isLoading: isCreating }] =
     useCreatePostOfficeMutation();
@@ -293,8 +220,16 @@ export const PostOfficeListPage: React.FC = () => {
     useUpdatePostOfficeMutation();
   const [deletePostOffice, { isLoading: isDeleting }] =
     useDeletePostOfficeMutation();
+  const [triggerExportPostOfficeTemplate, { isFetching: isExportingTemplate }] =
+    useLazyExportPostOfficeTemplateQuery();
+  const [validatePostOfficeImport, { isLoading: isValidatingImport }] =
+    useValidatePostOfficeImportMutation();
+  const [importPostOfficeFile, { isLoading: isImportingPostOffices }] =
+    useImportPostOfficesMutation();
 
   const isSaving = isCreating || isUpdating;
+  const isImportFlowBusy =
+    isExportingTemplate || isValidatingImport || isImportingPostOffices;
 
   const updateFormField = React.useCallback(
     <K extends keyof PostOfficeFormState>(
@@ -309,10 +244,248 @@ export const PostOfficeListPage: React.FC = () => {
     []
   );
 
-  const handleSearch = (event: React.FormEvent) => {
+  const updateFilterField = React.useCallback(
+    <K extends keyof PostOfficeFilterFormState>(
+      field: K,
+      value: PostOfficeFilterFormState[K]
+    ) => {
+      setFilterFormValues((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
+    },
+    []
+  );
+
+  const buildPostOfficeFilters =
+    React.useCallback((): PostOfficeListFilters => {
+      const minServiceRadiusM = parseOptionalNonNegativeInteger(
+        filterFormValues.minServiceRadiusM,
+        'Min service radius'
+      );
+      const maxServiceRadiusM = parseOptionalNonNegativeInteger(
+        filterFormValues.maxServiceRadiusM,
+        'Max service radius'
+      );
+      const minDailyCapacity = parseOptionalNonNegativeInteger(
+        filterFormValues.minDailyCapacity,
+        'Min daily capacity'
+      );
+      const maxDailyCapacity = parseOptionalNonNegativeInteger(
+        filterFormValues.maxDailyCapacity,
+        'Max daily capacity'
+      );
+      const minCurrentLoad = parseOptionalNonNegativeInteger(
+        filterFormValues.minCurrentLoad,
+        'Min current load'
+      );
+      const maxCurrentLoad = parseOptionalNonNegativeInteger(
+        filterFormValues.maxCurrentLoad,
+        'Max current load'
+      );
+      const minPriority = parseOptionalNonNegativeInteger(
+        filterFormValues.minPriority,
+        'Min priority'
+      );
+      const maxPriority = parseOptionalNonNegativeInteger(
+        filterFormValues.maxPriority,
+        'Max priority'
+      );
+
+      validateRange(minServiceRadiusM, maxServiceRadiusM, 'Service radius');
+      validateRange(minDailyCapacity, maxDailyCapacity, 'Daily capacity');
+      validateRange(minCurrentLoad, maxCurrentLoad, 'Current load');
+      validateRange(minPriority, maxPriority, 'Priority');
+
+      return {
+        keyword: normalizeText(filterFormValues.keyword),
+        code: normalizeText(filterFormValues.code),
+        name: normalizeText(filterFormValues.name),
+        provinceCode: normalizeText(filterFormValues.provinceCode),
+        wardCode: normalizeText(filterFormValues.wardCode),
+        status:
+          filterFormValues.status === 'ALL'
+            ? undefined
+            : filterFormValues.status,
+        hasLocation:
+          filterFormValues.hasLocation === 'ALL'
+            ? undefined
+            : filterFormValues.hasLocation === 'YES',
+        minServiceRadiusM,
+        maxServiceRadiusM,
+        minDailyCapacity,
+        maxDailyCapacity,
+        minCurrentLoad,
+        maxCurrentLoad,
+        minPriority,
+        maxPriority,
+      };
+    }, [filterFormValues]);
+
+  const handleApplyFilters = (event: React.FormEvent) => {
     event.preventDefault();
+
+    try {
+      const nextFilters = buildPostOfficeFilters();
+      setPage(0);
+      setAppliedFilters(nextFilters);
+    } catch (error) {
+      notification.error(
+        error instanceof Error ? error.message : 'Invalid filter values.'
+      );
+    }
+  };
+
+  const handleClearFilters = () => {
+    setFilterFormValues(DEFAULT_POST_OFFICE_FILTER_FORM);
+    setAppliedFilters({});
     setPage(0);
-    setKeyword(keywordInput.trim() || undefined);
+  };
+
+  const validatedPreviewItems = React.useMemo(
+    () => validateImportResult?.data?.slice(0, IMPORT_PREVIEW_LIMIT) ?? [],
+    [validateImportResult]
+  );
+
+  const {
+    selectedProvinceCode,
+    selectedWardCode,
+    provinceSelectOptions,
+    wardSelectOptions,
+    isFetchingWardsForForm,
+    getProvinceLabel,
+    getWardLabel,
+  } = usePostOfficeLocations({
+    postOffices: data?.items,
+    previewItems: validatedPreviewItems,
+    formProvinceCode: formValues.province_code,
+    formWardCode: formValues.ward_code,
+  });
+
+  const resetImportFileSelection = React.useCallback(() => {
+    setSelectedImportFile(null);
+    setValidateImportResult(null);
+    setImportFileInputKey((prev) => prev + 1);
+  }, []);
+
+  const handleSelectImportFile = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0] ?? null;
+    setSelectedImportFile(file);
+    setValidateImportResult(null);
+    setLastImportJob(null);
+  };
+
+  const buildImportFormData = () => {
+    if (!selectedImportFile) {
+      return null;
+    }
+
+    const formData = new FormData();
+    formData.append('file', selectedImportFile);
+    return formData;
+  };
+
+  const handleDownloadTemplate = async () => {
+    if (!isTmsAdmin) {
+      notification.error('Only TMS_ADMIN can download post office templates.');
+      return;
+    }
+
+    try {
+      const blob = await triggerExportPostOfficeTemplate(undefined).unwrap();
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+
+      link.href = downloadUrl;
+      link.download = 'post_office_template.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(downloadUrl);
+
+      notification.success('Post office template downloaded successfully.');
+    } catch (error) {
+      notification.error('Failed to download post office template.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleValidateImportFile = async () => {
+    if (!isTmsAdmin) {
+      notification.error('Only TMS_ADMIN can validate post office imports.');
+      return;
+    }
+
+    const formData = buildImportFormData();
+    if (!formData) {
+      notification.error('Please select an Excel file first.');
+      return;
+    }
+
+    try {
+      const result = await validatePostOfficeImport(formData).unwrap();
+      setValidateImportResult(result);
+
+      if (result.is_success) {
+        notification.success('File validated successfully.', {
+          description: `${result.data.length} row(s) are ready to import.`,
+        });
+      } else {
+        notification.error('Validation completed with errors.', {
+          description:
+            result.error_message ||
+            'Please fix the Excel data before importing.',
+        });
+      }
+    } catch (error) {
+      notification.error('Failed to validate post office import file.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleImportFile = async () => {
+    if (!isTmsAdmin) {
+      notification.error('Only TMS_ADMIN can import post offices.');
+      return;
+    }
+
+    if (!validateImportResult) {
+      notification.error('Please validate the selected file before importing.');
+      return;
+    }
+
+    if (!validateImportResult.is_success) {
+      notification.error(
+        'Validation has errors. Please fix them before import.'
+      );
+      return;
+    }
+
+    const formData = buildImportFormData();
+    if (!formData) {
+      notification.error('Please select an Excel file first.');
+      return;
+    }
+
+    try {
+      const importResult = await importPostOfficeFile(formData).unwrap();
+      setLastImportJob(importResult);
+      resetImportFileSelection();
+
+      notification.success('Post office import job created.', {
+        description: `Job #${importResult.id} is ${importResult.status}.`,
+      });
+
+      void refetch();
+    } catch (error) {
+      notification.error('Failed to import post office file.', {
+        description: getErrorMessage(error),
+      });
+    }
   };
 
   const handleOpenCreateDialog = () => {
@@ -339,7 +512,12 @@ export const PostOfficeListPage: React.FC = () => {
     setIsFormDialogOpen(true);
   };
 
-  const closeFormDialog = () => {
+  const handleFormDialogOpenChange = (open: boolean) => {
+    if (open) {
+      setIsFormDialogOpen(true);
+      return;
+    }
+
     if (isSaving) {
       return;
     }
@@ -460,414 +638,407 @@ export const PostOfficeListPage: React.FC = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Search</CardTitle>
+            <CardTitle>Filters</CardTitle>
             <CardDescription>
-              Use keyword to filter by code, name, or location.
+              Combine one or more criteria to filter post offices.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSearch} className='flex gap-2'>
-              <div className='relative flex-1'>
-                <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                <Input
-                  className='pl-10'
-                  value={keywordInput}
-                  onChange={(event) => setKeywordInput(event.target.value)}
-                  placeholder='Search post office...'
-                />
+            <form onSubmit={handleApplyFilters} className='space-y-4'>
+              <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-4'>
+                <div className='space-y-2 sm:col-span-2'>
+                  <Label htmlFor='post-office-filter-keyword'>Keyword</Label>
+                  <div className='relative'>
+                    <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+                    <Input
+                      id='post-office-filter-keyword'
+                      className='pl-10'
+                      value={filterFormValues.keyword}
+                      onChange={(event) =>
+                        updateFilterField('keyword', event.target.value)
+                      }
+                      placeholder='Code, name, address...'
+                    />
+                  </div>
+                </div>
+
+                <div className='space-y-2'>
+                  <Label htmlFor='post-office-filter-code'>Code</Label>
+                  <Input
+                    id='post-office-filter-code'
+                    value={filterFormValues.code}
+                    onChange={(event) =>
+                      updateFilterField('code', event.target.value)
+                    }
+                    placeholder='PO-HCM-01'
+                  />
+                </div>
+
+                <div className='space-y-2'>
+                  <Label htmlFor='post-office-filter-name'>Name</Label>
+                  <Input
+                    id='post-office-filter-name'
+                    value={filterFormValues.name}
+                    onChange={(event) =>
+                      updateFilterField('name', event.target.value)
+                    }
+                    placeholder='Post office name'
+                  />
+                </div>
+
+                <div className='space-y-2'>
+                  <Label htmlFor='post-office-filter-status'>Status</Label>
+                  <Select
+                    value={filterFormValues.status}
+                    onValueChange={(value) =>
+                      updateFilterField(
+                        'status',
+                        value as PostOfficeFilterFormState['status']
+                      )
+                    }
+                  >
+                    <SelectTrigger
+                      id='post-office-filter-status'
+                      className='w-full'
+                    >
+                      <SelectValue placeholder='All statuses' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='ALL'>All statuses</SelectItem>
+                      {POST_OFFICE_STATUS_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className='space-y-2'>
+                  <Label htmlFor='post-office-filter-province'>Province</Label>
+                  <Select
+                    value={selectedFilterProvinceCode || 'ALL'}
+                    onValueChange={(value) => {
+                      const nextProvinceCode = value === 'ALL' ? '' : value;
+                      updateFilterField('provinceCode', nextProvinceCode);
+                      updateFilterField('wardCode', '');
+                    }}
+                  >
+                    <SelectTrigger
+                      id='post-office-filter-province'
+                      className='w-full'
+                    >
+                      <SelectValue placeholder='All provinces' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='ALL'>All provinces</SelectItem>
+                      {provinceSelectOptions.map((province) => {
+                        if (!province.provinceCode) {
+                          return null;
+                        }
+
+                        return (
+                          <SelectItem
+                            key={province.provinceCode}
+                            value={province.provinceCode}
+                          >
+                            {province.name} ({province.provinceCode})
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className='space-y-2'>
+                  <Label htmlFor='post-office-filter-ward'>Ward</Label>
+                  <Select
+                    value={selectedFilterWardCode || 'ALL'}
+                    onValueChange={(value) =>
+                      updateFilterField(
+                        'wardCode',
+                        value === 'ALL' ? '' : value
+                      )
+                    }
+                    disabled={!selectedFilterProvinceCode}
+                  >
+                    <SelectTrigger
+                      id='post-office-filter-ward'
+                      className='w-full'
+                    >
+                      <SelectValue
+                        placeholder={
+                          selectedFilterProvinceCode
+                            ? 'All wards'
+                            : 'Select province first'
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='ALL'>All wards</SelectItem>
+                      {selectedFilterProvinceCode &&
+                      isFetchingWardsForFilter ? (
+                        <SelectItem value='__loading__' disabled>
+                          Loading wards...
+                        </SelectItem>
+                      ) : filterWardOptions.length > 0 ? (
+                        filterWardOptions.map((ward) => {
+                          if (!ward.wardCode) {
+                            return null;
+                          }
+
+                          return (
+                            <SelectItem
+                              key={ward.wardCode}
+                              value={ward.wardCode}
+                            >
+                              {ward.name} ({ward.wardCode})
+                            </SelectItem>
+                          );
+                        })
+                      ) : (
+                        <SelectItem value='__empty__' disabled>
+                          No wards available
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className='space-y-2'>
+                  <Label htmlFor='post-office-filter-has-location'>
+                    Has Location
+                  </Label>
+                  <Select
+                    value={filterFormValues.hasLocation}
+                    onValueChange={(value) =>
+                      updateFilterField(
+                        'hasLocation',
+                        value as PostOfficeFilterFormState['hasLocation']
+                      )
+                    }
+                  >
+                    <SelectTrigger
+                      id='post-office-filter-has-location'
+                      className='w-full'
+                    >
+                      <SelectValue placeholder='All records' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='ALL'>All records</SelectItem>
+                      <SelectItem value='YES'>Has location</SelectItem>
+                      <SelectItem value='NO'>No location</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <Button type='submit'>Apply</Button>
-              <Button
-                type='button'
-                variant='outline'
-                onClick={() => refetch()}
-                disabled={isFetching}
-              >
-                <RefreshCw className='h-4 w-4 mr-2' />
-                Refresh
-              </Button>
+
+              <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-4'>
+                <div className='space-y-2'>
+                  <Label htmlFor='post-office-filter-min-service-radius'>
+                    Min service radius (m)
+                  </Label>
+                  <Input
+                    id='post-office-filter-min-service-radius'
+                    type='number'
+                    min={0}
+                    step={1}
+                    value={filterFormValues.minServiceRadiusM}
+                    onChange={(event) =>
+                      updateFilterField('minServiceRadiusM', event.target.value)
+                    }
+                  />
+                </div>
+
+                <div className='space-y-2'>
+                  <Label htmlFor='post-office-filter-max-service-radius'>
+                    Max service radius (m)
+                  </Label>
+                  <Input
+                    id='post-office-filter-max-service-radius'
+                    type='number'
+                    min={0}
+                    step={1}
+                    value={filterFormValues.maxServiceRadiusM}
+                    onChange={(event) =>
+                      updateFilterField('maxServiceRadiusM', event.target.value)
+                    }
+                  />
+                </div>
+
+                <div className='space-y-2'>
+                  <Label htmlFor='post-office-filter-min-daily-capacity'>
+                    Min daily capacity
+                  </Label>
+                  <Input
+                    id='post-office-filter-min-daily-capacity'
+                    type='number'
+                    min={0}
+                    step={1}
+                    value={filterFormValues.minDailyCapacity}
+                    onChange={(event) =>
+                      updateFilterField('minDailyCapacity', event.target.value)
+                    }
+                  />
+                </div>
+
+                <div className='space-y-2'>
+                  <Label htmlFor='post-office-filter-max-daily-capacity'>
+                    Max daily capacity
+                  </Label>
+                  <Input
+                    id='post-office-filter-max-daily-capacity'
+                    type='number'
+                    min={0}
+                    step={1}
+                    value={filterFormValues.maxDailyCapacity}
+                    onChange={(event) =>
+                      updateFilterField('maxDailyCapacity', event.target.value)
+                    }
+                  />
+                </div>
+
+                <div className='space-y-2'>
+                  <Label htmlFor='post-office-filter-min-current-load'>
+                    Min current load
+                  </Label>
+                  <Input
+                    id='post-office-filter-min-current-load'
+                    type='number'
+                    min={0}
+                    step={1}
+                    value={filterFormValues.minCurrentLoad}
+                    onChange={(event) =>
+                      updateFilterField('minCurrentLoad', event.target.value)
+                    }
+                  />
+                </div>
+
+                <div className='space-y-2'>
+                  <Label htmlFor='post-office-filter-max-current-load'>
+                    Max current load
+                  </Label>
+                  <Input
+                    id='post-office-filter-max-current-load'
+                    type='number'
+                    min={0}
+                    step={1}
+                    value={filterFormValues.maxCurrentLoad}
+                    onChange={(event) =>
+                      updateFilterField('maxCurrentLoad', event.target.value)
+                    }
+                  />
+                </div>
+
+                <div className='space-y-2'>
+                  <Label htmlFor='post-office-filter-min-priority'>
+                    Min priority
+                  </Label>
+                  <Input
+                    id='post-office-filter-min-priority'
+                    type='number'
+                    min={0}
+                    step={1}
+                    value={filterFormValues.minPriority}
+                    onChange={(event) =>
+                      updateFilterField('minPriority', event.target.value)
+                    }
+                  />
+                </div>
+
+                <div className='space-y-2'>
+                  <Label htmlFor='post-office-filter-max-priority'>
+                    Max priority
+                  </Label>
+                  <Input
+                    id='post-office-filter-max-priority'
+                    type='number'
+                    min={0}
+                    step={1}
+                    value={filterFormValues.maxPriority}
+                    onChange={(event) =>
+                      updateFilterField('maxPriority', event.target.value)
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className='flex flex-wrap gap-2'>
+                <Button type='submit'>Apply filters</Button>
+                <Button
+                  type='button'
+                  variant='outline'
+                  onClick={handleClearFilters}
+                >
+                  Clear
+                </Button>
+                <Button
+                  type='button'
+                  variant='outline'
+                  onClick={() => refetch()}
+                  disabled={isFetching}
+                >
+                  <RefreshCw className='h-4 w-4 mr-2' />
+                  Refresh
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Results ({data?.totalItems ?? 0})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className='flex items-center gap-2 text-muted-foreground'>
-                <Loader2 className='h-4 w-4 animate-spin' />
-                Loading post offices...
-              </div>
-            ) : data && data.items.length > 0 ? (
-              <div className='space-y-3'>
-                {data.items.map((item) => (
-                  <div
-                    key={item.id}
-                    className='rounded-lg border p-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'
-                  >
-                    <div className='space-y-1'>
-                      <div className='flex items-center gap-2'>
-                        <p className='font-medium'>
-                          {item.code} - {item.name}
-                        </p>
-                        <Badge variant={getStatusBadgeVariant(item.status)}>
-                          {item.status}
-                        </Badge>
-                      </div>
-                      <p className='text-sm text-muted-foreground'>
-                        {item.addressDetail}
-                      </p>
-                      <p className='text-xs text-muted-foreground'>
-                        Province/Ward: {item.provinceCode} / {item.wardCode}
-                      </p>
-                      {item.latitude !== undefined &&
-                        item.latitude !== null &&
-                        item.longitude !== undefined &&
-                        item.longitude !== null && (
-                          <p className='text-xs text-muted-foreground'>
-                            GPS: {item.latitude}, {item.longitude}
-                          </p>
-                        )}
-                    </div>
+        <PostOfficeImportCard
+          isTmsAdmin={isTmsAdmin}
+          isImportFlowBusy={isImportFlowBusy}
+          isExportingTemplate={isExportingTemplate}
+          isValidatingImport={isValidatingImport}
+          isImportingPostOffices={isImportingPostOffices}
+          importFileInputKey={importFileInputKey}
+          selectedImportFile={selectedImportFile}
+          validateImportResult={validateImportResult}
+          validatedPreviewItems={validatedPreviewItems}
+          lastImportJob={lastImportJob}
+          previewLimit={IMPORT_PREVIEW_LIMIT}
+          onSelectImportFile={handleSelectImportFile}
+          onDownloadTemplate={handleDownloadTemplate}
+          onValidateImportFile={handleValidateImportFile}
+          onImportFile={handleImportFile}
+          getProvinceLabel={getProvinceLabel}
+          getWardLabel={getWardLabel}
+        />
 
-                    {isTmsAdmin && (
-                      <div className='flex items-center gap-2 self-end sm:self-start'>
-                        <Button
-                          type='button'
-                          variant='outline'
-                          size='sm'
-                          onClick={() => handleOpenEditDialog(item)}
-                          disabled={isSaving || isDeleting}
-                        >
-                          <Pencil className='h-4 w-4 mr-1' />
-                          Edit
-                        </Button>
-                        <Button
-                          type='button'
-                          variant='destructive'
-                          size='sm'
-                          onClick={() => handleRequestDelete(item)}
-                          disabled={isSaving || isDeleting}
-                        >
-                          <Trash2 className='h-4 w-4 mr-1' />
-                          Delete
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                <div className='flex items-center justify-between pt-2'>
-                  <Button
-                    variant='outline'
-                    onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
-                    disabled={!data.hasPrevious || isFetching}
-                  >
-                    Previous
-                  </Button>
-                  <span className='text-sm text-muted-foreground'>
-                    Page {data.currentPage + 1} / {Math.max(data.totalPages, 1)}
-                  </span>
-                  <Button
-                    variant='outline'
-                    onClick={() => setPage((prev) => prev + 1)}
-                    disabled={!data.hasNext || isFetching}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <p className='text-muted-foreground'>No post offices found.</p>
-            )}
-          </CardContent>
-        </Card>
+        <PostOfficeResultsCard
+          data={data}
+          isLoading={isLoading}
+          isFetching={isFetching}
+          viewMode={viewMode}
+          isTmsAdmin={isTmsAdmin}
+          isSaving={isSaving}
+          isDeleting={isDeleting}
+          onViewModeChange={setViewMode}
+          onEdit={handleOpenEditDialog}
+          onDelete={handleRequestDelete}
+          onPreviousPage={() => setPage((prev) => Math.max(prev - 1, 0))}
+          onNextPage={() => setPage((prev) => prev + 1)}
+          getProvinceLabel={getProvinceLabel}
+          getWardLabel={getWardLabel}
+          getStatusBadgeVariant={getStatusBadgeVariant}
+        />
       </div>
 
-      <Dialog open={isFormDialogOpen} onOpenChange={closeFormDialog}>
-        <DialogContent className='sm:max-w-3xl max-h-[85vh] overflow-y-auto'>
-          <DialogHeader>
-            <DialogTitle>
-              {formMode === 'create'
-                ? 'Create Post Office'
-                : 'Update Post Office'}
-            </DialogTitle>
-            <DialogDescription>
-              Fill in required fields to{' '}
-              {formMode === 'create' ? 'create a new' : 'update the'} post
-              office.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleSubmitForm} className='space-y-4'>
-            <div className='grid gap-4 sm:grid-cols-2'>
-              <div className='space-y-2'>
-                <Label htmlFor='post-office-code'>Code *</Label>
-                <Input
-                  id='post-office-code'
-                  value={formValues.code}
-                  onChange={(event) =>
-                    updateFormField('code', event.target.value)
-                  }
-                  disabled={isSaving}
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='post-office-name'>Name *</Label>
-                <Input
-                  id='post-office-name'
-                  value={formValues.name}
-                  onChange={(event) =>
-                    updateFormField('name', event.target.value)
-                  }
-                  disabled={isSaving}
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='post-office-province'>Province code *</Label>
-                <Input
-                  id='post-office-province'
-                  value={formValues.province_code}
-                  onChange={(event) =>
-                    updateFormField('province_code', event.target.value)
-                  }
-                  disabled={isSaving}
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='post-office-ward'>Ward code *</Label>
-                <Input
-                  id='post-office-ward'
-                  value={formValues.ward_code}
-                  onChange={(event) =>
-                    updateFormField('ward_code', event.target.value)
-                  }
-                  disabled={isSaving}
-                />
-              </div>
-
-              <div className='space-y-2 sm:col-span-2'>
-                <Label htmlFor='post-office-address'>Address detail *</Label>
-                <Input
-                  id='post-office-address'
-                  value={formValues.address_detail}
-                  onChange={(event) =>
-                    updateFormField('address_detail', event.target.value)
-                  }
-                  disabled={isSaving}
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='post-office-phone'>Phone number</Label>
-                <Input
-                  id='post-office-phone'
-                  value={formValues.phone_number}
-                  onChange={(event) =>
-                    updateFormField('phone_number', event.target.value)
-                  }
-                  disabled={isSaving}
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='post-office-status'>Status *</Label>
-                <Select
-                  value={formValues.status}
-                  onValueChange={(value) =>
-                    updateFormField('status', value as PostOfficeStatus)
-                  }
-                  disabled={isSaving}
-                >
-                  <SelectTrigger id='post-office-status' className='w-full'>
-                    <SelectValue placeholder='Select status' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {POST_OFFICE_STATUS_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='post-office-service-radius'>
-                  Service radius (m) *
-                </Label>
-                <Input
-                  id='post-office-service-radius'
-                  type='number'
-                  min={1}
-                  value={formValues.service_radius_m}
-                  onChange={(event) =>
-                    updateFormField('service_radius_m', event.target.value)
-                  }
-                  disabled={isSaving}
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='post-office-daily-capacity'>
-                  Daily capacity *
-                </Label>
-                <Input
-                  id='post-office-daily-capacity'
-                  type='number'
-                  min={0}
-                  value={formValues.daily_capacity}
-                  onChange={(event) =>
-                    updateFormField('daily_capacity', event.target.value)
-                  }
-                  disabled={isSaving}
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='post-office-current-load'>Current load *</Label>
-                <Input
-                  id='post-office-current-load'
-                  type='number'
-                  min={0}
-                  value={formValues.current_load}
-                  onChange={(event) =>
-                    updateFormField('current_load', event.target.value)
-                  }
-                  disabled={isSaving}
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='post-office-priority'>Priority *</Label>
-                <Input
-                  id='post-office-priority'
-                  type='number'
-                  min={0}
-                  value={formValues.priority}
-                  onChange={(event) =>
-                    updateFormField('priority', event.target.value)
-                  }
-                  disabled={isSaving}
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='post-office-latitude'>Latitude</Label>
-                <Input
-                  id='post-office-latitude'
-                  type='number'
-                  step='any'
-                  min={-90}
-                  max={90}
-                  value={formValues.latitude}
-                  onChange={(event) =>
-                    updateFormField('latitude', event.target.value)
-                  }
-                  disabled={isSaving}
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='post-office-longitude'>Longitude</Label>
-                <Input
-                  id='post-office-longitude'
-                  type='number'
-                  step='any'
-                  min={-180}
-                  max={180}
-                  value={formValues.longitude}
-                  onChange={(event) =>
-                    updateFormField('longitude', event.target.value)
-                  }
-                  disabled={isSaving}
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='post-office-start-date'>
-                  Operational start date
-                </Label>
-                <Input
-                  id='post-office-start-date'
-                  type='date'
-                  value={formValues.operational_start_date}
-                  onChange={(event) =>
-                    updateFormField(
-                      'operational_start_date',
-                      event.target.value
-                    )
-                  }
-                  disabled={isSaving}
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='post-office-end-date'>
-                  Operational end date
-                </Label>
-                <Input
-                  id='post-office-end-date'
-                  type='date'
-                  value={formValues.operational_end_date}
-                  onChange={(event) =>
-                    updateFormField('operational_end_date', event.target.value)
-                  }
-                  disabled={isSaving}
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='post-office-start-time'>
-                  Working start time
-                </Label>
-                <Input
-                  id='post-office-start-time'
-                  type='time'
-                  value={formValues.working_start_time}
-                  onChange={(event) =>
-                    updateFormField('working_start_time', event.target.value)
-                  }
-                  disabled={isSaving}
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='post-office-end-time'>Working end time</Label>
-                <Input
-                  id='post-office-end-time'
-                  type='time'
-                  value={formValues.working_end_time}
-                  onChange={(event) =>
-                    updateFormField('working_end_time', event.target.value)
-                  }
-                  disabled={isSaving}
-                />
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button
-                type='button'
-                variant='outline'
-                onClick={closeFormDialog}
-                disabled={isSaving}
-              >
-                Cancel
-              </Button>
-              <Button type='submit' disabled={isSaving}>
-                {isSaving && <Loader2 className='h-4 w-4 mr-2 animate-spin' />}
-                {formMode === 'create' ? 'Create' : 'Save changes'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <PostOfficeFormDialog
+        open={isFormDialogOpen}
+        formMode={formMode}
+        isSaving={isSaving}
+        formValues={formValues}
+        selectedProvinceCode={selectedProvinceCode}
+        selectedWardCode={selectedWardCode}
+        provinceSelectOptions={provinceSelectOptions}
+        wardSelectOptions={wardSelectOptions}
+        isFetchingWardsForForm={isFetchingWardsForForm}
+        onOpenChange={handleFormDialogOpenChange}
+        onSubmit={handleSubmitForm}
+        updateFormField={updateFormField}
+      />
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}

@@ -53,6 +53,7 @@ export interface PostOffice {
   wardCode: string;
   addressDetail: string;
   phoneNumber?: string;
+  imageUrl?: string;
   operationalStartDate?: string;
   operationalEndDate?: string;
   workingStartTime?: string;
@@ -70,6 +71,24 @@ export interface PostOffice {
   createdBy?: string;
   updatedBy?: string;
   tenantId?: number;
+}
+
+export interface PostOfficeListFilters {
+  keyword?: string;
+  code?: string;
+  name?: string;
+  provinceCode?: string;
+  wardCode?: string;
+  status?: PostOfficeStatus;
+  hasLocation?: boolean;
+  minServiceRadiusM?: number;
+  maxServiceRadiusM?: number;
+  minDailyCapacity?: number;
+  maxDailyCapacity?: number;
+  minCurrentLoad?: number;
+  maxCurrentLoad?: number;
+  minPriority?: number;
+  maxPriority?: number;
 }
 
 export interface CreatePostOfficeRequest {

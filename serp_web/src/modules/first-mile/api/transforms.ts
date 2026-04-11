@@ -16,6 +16,22 @@ export const unwrapFirstMileResult = <T>(
   return transformTimestampFields((response?.result ?? null) as T);
 };
 
+export const unwrapFirstMileResultOrRaw = <T>(
+  response: FirstMileApiResponse<T> | T
+): T => {
+  if (
+    response &&
+    typeof response === 'object' &&
+    'result' in (response as Record<string, unknown>)
+  ) {
+    return transformTimestampFields(
+      ((response as FirstMileApiResponse<T>).result ?? null) as T
+    );
+  }
+
+  return transformTimestampFields(response as T);
+};
+
 export const unwrapFirstMilePageResult = <T>(
   response: FirstMileApiResponse<FirstMilePageResponse<T>>
 ): FirstMilePaginatedData<T> => {

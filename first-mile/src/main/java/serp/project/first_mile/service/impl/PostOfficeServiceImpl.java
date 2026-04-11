@@ -38,6 +38,7 @@ import serp.project.first_mile.domain.Ward;
 import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.FileUploadRequest;
 import serp.project.first_mile.dto.request.CreatePostOfficeRequest;
+import serp.project.first_mile.dto.request.PostOfficeFilterRequest;
 import serp.project.first_mile.dto.request.PostOfficeImportDTO;
 import serp.project.first_mile.dto.request.UpdatePostOfficeRequest;
 import serp.project.first_mile.dto.response.FileUploadResponse;
@@ -52,6 +53,7 @@ import serp.project.first_mile.repository.PostOfficeRepository;
 import serp.project.first_mile.repository.ProvinceRepository;
 import serp.project.first_mile.repository.WardRepository;
 import serp.project.first_mile.repository.projection.CodeNameProjection;
+import serp.project.first_mile.repository.specification.PostOfficeSpecification;
 import serp.project.first_mile.kernel.utils.AuthUtils;
 import serp.project.first_mile.service.FileStorageService;
 import serp.project.first_mile.service.PostOfficeImportExcelService;
@@ -82,18 +84,17 @@ public class PostOfficeServiceImpl implements PostOfficeService {
     private final PostOfficeImportExcelService postOfficeImportExcelService;
 
     @Override
-    public PageResponse<PostOfficeResponse> getPostOffices(int page, int size, String keyword) {
+    @Transactional(readOnly = true)
+    public PageResponse<PostOfficeResponse> getPostOffices(int page, int size, PostOfficeFilterRequest filterRequest) {
+        Long tenantId = getCurrentTenantIdOrThrow();
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
-        Page<PostOffice> postOfficePage;
-        if (keyword == null || keyword.isBlank()) {
-            postOfficePage = postOfficeRepository.findAll(pageable);
-        } else {
-            postOfficePage = postOfficeRepository.findByCodeContainingIgnoreCaseOrNameContainingIgnoreCase(
-                    keyword,
-                    keyword,
-                    pageable
-            );
-        }
+        PostOfficeFilterRequest normalizedFilterRequest = normalizeFilterRequest(filterRequest);
+        validateFilterRanges(normalizedFilterRequest);
+
+        Page<PostOffice> postOfficePage = postOfficeRepository.findAll(
+                PostOfficeSpecification.byFilter(tenantId, normalizedFilterRequest),
+                pageable
+        );
 
         Page<PostOfficeResponse> mappedPage = postOfficePage.map(PostOfficeMapper::toResponse);
 
@@ -106,6 +107,53 @@ public class PostOfficeServiceImpl implements PostOfficeService {
                 .hasNext(mappedPage.hasNext())
                 .hasPrevious(mappedPage.hasPrevious())
                 .build();
+    }
+
+    private PostOfficeFilterRequest normalizeFilterRequest(PostOfficeFilterRequest filterRequest) {
+        if (filterRequest == null) {
+            return PostOfficeFilterRequest.builder().build();
+        }
+
+        return PostOfficeFilterRequest.builder()
+                .keyword(normalizeText(filterRequest.getKeyword()))
+                .code(normalizeText(filterRequest.getCode()))
+                .name(normalizeText(filterRequest.getName()))
+                .provinceCode(normalizeText(filterRequest.getProvinceCode()))
+                .wardCode(normalizeText(filterRequest.getWardCode()))
+                .status(filterRequest.getStatus())
+                .hasLocation(filterRequest.getHasLocation())
+                .minServiceRadiusM(filterRequest.getMinServiceRadiusM())
+                .maxServiceRadiusM(filterRequest.getMaxServiceRadiusM())
+                .minDailyCapacity(filterRequest.getMinDailyCapacity())
+                .maxDailyCapacity(filterRequest.getMaxDailyCapacity())
+                .minCurrentLoad(filterRequest.getMinCurrentLoad())
+                .maxCurrentLoad(filterRequest.getMaxCurrentLoad())
+                .minPriority(filterRequest.getMinPriority())
+                .maxPriority(filterRequest.getMaxPriority())
+                .build();
+    }
+
+    private String normalizeText(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmedValue = value.trim();
+        return trimmedValue.isEmpty() ? null : trimmedValue;
+    }
+
+    private void validateFilterRanges(PostOfficeFilterRequest filterRequest) {
+        validateRange(filterRequest.getMinServiceRadiusM(), filterRequest.getMaxServiceRadiusM());
+        validateRange(filterRequest.getMinDailyCapacity(), filterRequest.getMaxDailyCapacity());
+        validateRange(filterRequest.getMinCurrentLoad(), filterRequest.getMaxCurrentLoad());
+        validateRange(filterRequest.getMinPriority(), filterRequest.getMaxPriority());
+    }
+
+    private void validateRange(Integer minValue, Integer maxValue) {
+        if ((minValue != null && minValue < 0)
+                || (maxValue != null && maxValue < 0)
+                || (minValue != null && maxValue != null && minValue > maxValue)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
     }
 
     @Override
