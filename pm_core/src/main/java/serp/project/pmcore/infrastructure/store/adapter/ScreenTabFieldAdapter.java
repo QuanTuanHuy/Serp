@@ -14,6 +14,7 @@ import serp.project.pmcore.infrastructure.store.mapper.ScreenTabFieldMapper;
 import serp.project.pmcore.infrastructure.store.repository.IScreenTabFieldRepository;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 @Component
@@ -42,6 +43,13 @@ public class ScreenTabFieldAdapter implements IScreenTabFieldPort {
     public List<ScreenTabFieldEntity> getScreenTabFieldsByScreenTabId(Long screenTabId, Long tenantId) {
         return screenTabFieldMapper.toEntities(
                 screenTabFieldRepository.findAllByScreenTabIdAndTenantId(screenTabId, tenantId)
+        );
+    }
+
+    @Override
+    public List<ScreenTabFieldEntity> getScreenTabFieldsByScreenTabIds(Collection<Long> screenTabIds, Long tenantId) {
+        return screenTabFieldMapper.toEntities(
+                screenTabFieldRepository.findAllByScreenTabIdsAndTenantId(screenTabIds, tenantId)
         );
     }
 }

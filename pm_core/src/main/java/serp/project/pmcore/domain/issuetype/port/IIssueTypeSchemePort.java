@@ -26,4 +26,6 @@ public interface IIssueTypeSchemePort {
     void deleteIssueTypeScheme(Long schemeId, Long tenantId);
 
     boolean existsByName(Long tenantId, String name);
+
+    boolean existsByDefaultIssueTypeId(Long issueTypeId, Long tenantId);
 }

@@ -15,6 +15,7 @@ import serp.project.pmcore.infrastructure.store.repository.IIssueTypeScreenSchem
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -41,9 +42,20 @@ public class IssueTypeScreenSchemeItemAdapter implements IIssueTypeScreenSchemeI
     }
 
     @Override
+    public Optional<IssueTypeScreenSchemeItemEntity> getItemBySchemeIdAndIssueTypeId(Long schemeId, Long issueTypeId, Long tenantId) {
+        return issueTypeScreenSchemeItemRepository.findBySchemeIdAndIssueTypeIdAndTenantId(schemeId, issueTypeId, tenantId)
+                .map(issueTypeScreenSchemeItemMapper::toEntity);
+    }
+
+    @Override
     public List<IssueTypeScreenSchemeItemEntity> getIssueTypeScreenSchemeItemsBySchemeId(Long schemeId, Long tenantId) {
         return issueTypeScreenSchemeItemMapper.toEntities(
                 issueTypeScreenSchemeItemRepository.findAllBySchemeIdAndTenantId(schemeId, tenantId)
         );
+    }
+
+    @Override
+    public boolean existsByIssueTypeId(Long issueTypeId, Long tenantId) {
+        return issueTypeScreenSchemeItemRepository.existsByIssueTypeIdAndTenantId(issueTypeId, tenantId);
     }
 }

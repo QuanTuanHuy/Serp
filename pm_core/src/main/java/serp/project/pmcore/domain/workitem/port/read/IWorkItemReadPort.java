@@ -7,8 +7,8 @@ package serp.project.pmcore.domain.workitem.port.read;
 
 import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
-import serp.project.pmcore.domain.workitem.projection.WorkItemDetailProjection;
-import serp.project.pmcore.domain.workitem.query.WorkItemSearchCriteria;
+import serp.project.pmcore.domain.workitem.dto.WorkItemDetailProjection;
+import serp.project.pmcore.domain.workitem.dto.WorkItemSearchCriteria;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,4 +25,6 @@ public interface IWorkItemReadPort {
     PageResult<WorkItemEntity> searchWorkItems(Long tenantId, WorkItemSearchCriteria criteria);
 
     Optional<WorkItemDetailProjection> getWorkItemDetailById(Long id, Long tenantId);
+
+    List<WorkItemEntity> getActiveChildrenByParentId(Long parentId, Long tenantId);
 }

@@ -75,4 +75,9 @@ public class IssueTypeSchemeAdapter implements IIssueTypeSchemePort {
     public boolean existsByName(Long tenantId, String name) {
         return issueTypeSchemeRepository.existsByTenantIdAndName(tenantId, name);
     }
+
+    @Override
+    public boolean existsByDefaultIssueTypeId(Long issueTypeId, Long tenantId) {
+        return issueTypeSchemeRepository.existsByDefaultIssueTypeIdAndTenantId(issueTypeId, tenantId);
+    }
 }

@@ -5,6 +5,7 @@
 
 package serp.project.pmcore.domain.screen.port;
 
+import java.util.Collection;
 import java.util.List;
 
 import serp.project.pmcore.domain.screen.entity.ScreenTabFieldEntity;
@@ -15,4 +16,6 @@ public interface IScreenTabFieldPort {
     List<ScreenTabFieldEntity> getScreenTabFieldsByScreenTabIdIncludingSystem(Long screenTabId, Long tenantId);
 
     List<ScreenTabFieldEntity> getScreenTabFieldsByScreenTabId(Long screenTabId, Long tenantId);
+
+    List<ScreenTabFieldEntity> getScreenTabFieldsByScreenTabIds(Collection<Long> screenTabIds, Long tenantId);
 }

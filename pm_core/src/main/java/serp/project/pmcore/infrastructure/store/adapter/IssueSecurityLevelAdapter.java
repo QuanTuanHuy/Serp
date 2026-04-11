@@ -15,6 +15,7 @@ import serp.project.pmcore.infrastructure.store.repository.IIssueSecurityLevelRe
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -45,5 +46,11 @@ public class IssueSecurityLevelAdapter implements IIssueSecurityLevelPort {
         return issueSecurityLevelMapper.toEntities(
                 issueSecurityLevelRepository.findAllBySchemeIdAndTenantId(schemeId, tenantId)
         );
+    }
+
+    @Override
+    public Optional<IssueSecurityLevelEntity> getIssueSecurityLevelByIdAndSchemeId(Long levelId, Long schemeId, Long tenantId) {
+        return issueSecurityLevelRepository.findByIdAndSchemeIdAndTenantId(levelId, schemeId, tenantId)
+                .map(issueSecurityLevelMapper::toEntity);
     }
 }

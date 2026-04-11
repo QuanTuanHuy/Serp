@@ -91,7 +91,7 @@ On Windows CMD/PowerShell prefer `./mvnw.cmd ...`; on Bash use `./mvnw ...`.
 - Match the touched file's local formatting; avoid unrelated whole-file reformatting.
 - Keep long builder chains readable (usually one chained call per line).
 - Use parameterized SLF4J logging; avoid string concatenation in log statements.
-- Add comments only for non-obvious business rules (tenant, security, workflow edge cases).
+- Code style: add brief comments for tricky logic; keep files under ~500 LOC when feasible (split/refactor as needed).
 
 ## Imports, Types, and Naming
 - Follow existing import ordering in the touched file; common local order is `jakarta`, Lombok, Spring/third-party, `serp.project.pmcore...`, then `java.*`.

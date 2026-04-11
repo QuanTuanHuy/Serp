@@ -7,7 +7,7 @@ package serp.project.pmcore.application.workitem.query.get;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;
-import serp.project.pmcore.domain.workitem.projection.WorkItemDetailProjection;
+import serp.project.pmcore.domain.workitem.dto.WorkItemDetailProjection;
 
 import java.time.Instant;
 

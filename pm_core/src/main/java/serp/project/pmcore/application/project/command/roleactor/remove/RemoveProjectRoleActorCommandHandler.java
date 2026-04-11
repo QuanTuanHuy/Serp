@@ -13,6 +13,7 @@ import serp.project.pmcore.application.project.command.roleactor.RoleActorOutbox
 import serp.project.pmcore.application.shared.cqrs.Unit;
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.project.service.IProjectRoleActorService;
@@ -47,7 +48,7 @@ public class RemoveProjectRoleActorCommandHandler
                 .groupKeys(command.groupKeys())
                 .build();
         projectPermissionEvaluationService.checkPermission(
-                project,
+                ProjectPermissionSubject.from(project),
                 evaluationContext,
                 ProjectPermissionKeys.ADMINISTER_PROJECTS
         );

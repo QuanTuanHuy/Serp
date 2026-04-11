@@ -25,4 +25,5 @@ public class IssueTypeEntity extends BaseEntity {
     private String iconUrl;
     private Integer hierarchyLevel;
     private boolean isSystem;
+    private Long deletedAt;
 }

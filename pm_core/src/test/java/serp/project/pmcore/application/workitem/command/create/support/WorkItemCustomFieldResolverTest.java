@@ -11,6 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import serp.project.pmcore.domain.customfield.dto.ResolvedCustomFields;
 import serp.project.pmcore.domain.customfield.entity.CustomFieldContextDefaultValueEntity;
 import serp.project.pmcore.domain.customfield.entity.CustomFieldContextEntity;
 import serp.project.pmcore.domain.customfield.entity.CustomFieldEntity;
@@ -19,22 +20,19 @@ import serp.project.pmcore.domain.customfield.port.ICustomFieldContextDefaultVal
 import serp.project.pmcore.domain.customfield.port.ICustomFieldContextPort;
 import serp.project.pmcore.domain.customfield.port.ICustomFieldOptionPort;
 import serp.project.pmcore.domain.customfield.port.ICustomFieldPort;
-import serp.project.pmcore.application.workitem.command.create.internal.CreateFieldRules;
-import serp.project.pmcore.application.workitem.command.create.internal.FieldPolicy;
-import serp.project.pmcore.application.workitem.command.create.internal.ResolvedCustomFields;
-import serp.project.pmcore.domain.shared.constant.WorkItemFieldConstants;
+import serp.project.pmcore.domain.customfield.service.handler.DateCustomFieldValueHandler;
+import serp.project.pmcore.domain.customfield.service.handler.DateTimeCustomFieldValueHandler;
+import serp.project.pmcore.domain.customfield.service.handler.GroupCustomFieldValueHandler;
+import serp.project.pmcore.domain.customfield.service.handler.JsonCustomFieldValueHandler;
+import serp.project.pmcore.domain.customfield.service.handler.MultiSelectCustomFieldValueHandler;
+import serp.project.pmcore.domain.customfield.service.handler.NumberCustomFieldValueHandler;
+import serp.project.pmcore.domain.customfield.service.handler.SelectCustomFieldValueHandler;
+import serp.project.pmcore.domain.customfield.service.handler.TextCustomFieldValueHandler;
+import serp.project.pmcore.domain.customfield.service.handler.UserCustomFieldValueHandler;
+import serp.project.pmcore.domain.customfield.service.impl.WorkItemCustomFieldResolver;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.DomainValidationException;
-import serp.project.pmcore.application.workitem.command.create.support.handler.DateCustomFieldValueHandler;
-import serp.project.pmcore.application.workitem.command.create.support.handler.DateTimeCustomFieldValueHandler;
-import serp.project.pmcore.application.workitem.command.create.support.handler.GroupCustomFieldValueHandler;
-import serp.project.pmcore.application.workitem.command.create.support.handler.JsonCustomFieldValueHandler;
-import serp.project.pmcore.application.workitem.command.create.support.handler.MultiSelectCustomFieldValueHandler;
-import serp.project.pmcore.application.workitem.command.create.support.handler.NumberCustomFieldValueHandler;
-import serp.project.pmcore.application.workitem.command.create.support.handler.SelectCustomFieldValueHandler;
-import serp.project.pmcore.application.workitem.command.create.support.handler.TextCustomFieldValueHandler;
-import serp.project.pmcore.application.workitem.command.create.support.handler.UserCustomFieldValueHandler;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.util.List;
@@ -98,7 +96,7 @@ class WorkItemCustomFieldResolverTest {
         ResolvedCustomFields resolvedCustomFields = resolver.resolveCustomFields(
                 ISSUE_TYPE_KEY,
                 Map.of(),
-                customFieldRules(false)
+                requiredByFieldKey(false)
         );
 
         assertEquals(1, resolvedCustomFields.values().size());
@@ -120,7 +118,7 @@ class WorkItemCustomFieldResolverTest {
         ResolvedCustomFields resolvedCustomFields = resolver.resolveCustomFields(
                 ISSUE_TYPE_KEY,
                 Map.of("customfield_10001", List.of("backend", "frontend")),
-                customFieldRules(false)
+                requiredByFieldKey(false)
         );
 
         assertEquals(2, resolvedCustomFields.values().size());
@@ -145,7 +143,7 @@ class WorkItemCustomFieldResolverTest {
                 () -> resolver.resolveCustomFields(
                         ISSUE_TYPE_KEY,
                         Map.of("customfield_10001", "value"),
-                        customFieldRules(false)
+                        requiredByFieldKey(false)
                 )
         );
 
@@ -165,7 +163,7 @@ class WorkItemCustomFieldResolverTest {
                 () -> resolver.resolveCustomFields(
                         ISSUE_TYPE_KEY,
                         Map.of("customfield_10001", "unknown"),
-                        customFieldRules(false)
+                        requiredByFieldKey(false)
                 )
         );
 
@@ -191,7 +189,7 @@ class WorkItemCustomFieldResolverTest {
         ResolvedCustomFields resolvedCustomFields = resolver.resolveCustomFields(
                 ISSUE_TYPE_KEY,
                 Map.of(),
-                customFieldRules(false)
+                requiredByFieldKey(false)
         );
 
         assertEquals(1, resolvedCustomFields.values().size());
@@ -209,14 +207,8 @@ class WorkItemCustomFieldResolverTest {
                 .thenReturn(List.of());
     }
 
-    private CreateFieldRules customFieldRules(boolean required) {
-        return new CreateFieldRules(
-                Map.of(),
-                Map.of(
-                        "customfield_10001",
-                        new FieldPolicy(WorkItemFieldConstants.FIELD_REF_TYPE_CUSTOM, "customfield_10001", required, false, true)
-                )
-        );
+    private Map<String, Boolean> requiredByFieldKey(boolean required) {
+        return Map.of("customfield_10001", required);
     }
 
     private CustomFieldEntity customField(String fieldKey, String typeKey) {
