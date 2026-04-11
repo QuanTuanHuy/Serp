@@ -9,9 +9,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import serp.project.pmcore.application.workitem.command.transition.internal.ResolvedTransitionExecution;
+import serp.project.pmcore.application.workitem.command.transition.internal.TransitionSubjectContext;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
 import serp.project.pmcore.domain.issuetype.service.IIssueTypeService;
-import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.DomainValidationException;
@@ -24,7 +24,6 @@ import serp.project.pmcore.domain.workflow.port.IWorkflowVersionPort;
 import serp.project.pmcore.domain.workflow.service.IWorkflowService;
 import serp.project.pmcore.domain.workitem.entity.StatusCategoryEntity;
 import serp.project.pmcore.domain.workitem.entity.StatusEntity;
-import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.service.IStatusService;
 
 import java.util.List;
@@ -44,19 +43,18 @@ public class TransitionConfigurationResolver {
     private final IWorkflowTransitionPort workflowTransitionPort;
     private final IWorkflowTransitionRulePort workflowTransitionRulePort;
 
-    public ResolvedTransitionExecution resolve(ProjectEntity project,
-                                               WorkItemEntity workItem,
+    public ResolvedTransitionExecution resolve(TransitionSubjectContext context,
                                                Long transitionId,
                                                Long tenantId) {
-        IssueTypeEntity issueType = issueTypeService.getIssueTypeById(workItem.getIssueTypeId(), tenantId);
+        IssueTypeEntity issueType = issueTypeService.getIssueTypeById(context.issueTypeId(), tenantId);
 
         WorkflowEntity workflow;
         try {
-            workflow = workflowService.resolveWorkflow(project.getWorkflowSchemeId(), workItem.getIssueTypeId(), tenantId);
+            workflow = workflowService.resolveWorkflow(context.workflowSchemeId(), context.issueTypeId(), tenantId);
         } catch (ResourceNotFoundException ex) {
             throw new DomainValidationException(
                     DomainErrorCode.WORKFLOW_NOT_RESOLVABLE,
-                    "Effective workflow cannot be resolved for work item: workItemId=" + workItem.getId()
+                    "Effective workflow cannot be resolved for work item: workItemId=" + context.workItemId()
             );
         }
 
@@ -64,18 +62,18 @@ public class TransitionConfigurationResolver {
                 workflow.getId(), workflow.getCurrentPublishedVersionId(), tenantId);
 
         WorkflowStepEntity currentStep = resolveWorkflowStep(
-                workItem.getId(),
-                workItem.getWorkflowStepId(),
+                context.workItemId(),
+                context.workflowStepId(),
                 workflowVersion.getId(),
                 tenantId
         );
 
-        if (!Objects.equals(currentStep.getStatusId(), workItem.getStatusId())) {
+        if (!Objects.equals(currentStep.getStatusId(), context.statusId())) {
             throw new DomainValidationException(
                     DomainErrorCode.WORK_ITEM_WORKFLOW_STATE_INVALID,
-                    "Work item status does not match workflow step: workItemId=" + workItem.getId()
+                    "Work item status does not match workflow step: workItemId=" + context.workItemId()
                             + ", workflowStepId=" + currentStep.getId()
-                            + ", workItemStatusId=" + workItem.getStatusId()
+                            + ", workItemStatusId=" + context.statusId()
                             + ", expectedStatusId=" + currentStep.getStatusId()
             );
         }
@@ -106,7 +104,7 @@ public class TransitionConfigurationResolver {
                 .getWorkflowTransitionRulesByTransitionIdIncludingSystem(transitionId, tenantId);
 
         WorkflowStepEntity targetStep = resolveWorkflowStep(
-                workItem.getId(),
+                context.workItemId(),
                 transition.getToStepId(),
                 workflowVersion.getId(),
                 tenantId

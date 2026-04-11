@@ -12,6 +12,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.pmcore.application.workitem.command.transition.internal.ResolvedTransitionExecution;
+import serp.project.pmcore.application.workitem.command.transition.internal.TransitionSubjectContext;
 import serp.project.pmcore.application.workitem.command.transition.support.TransitionConfigurationResolver;
 import serp.project.pmcore.domain.customfield.port.ICustomFieldPort;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
@@ -150,7 +151,14 @@ class TransitionWorkItemCommandHandlerTest {
                         .userId(USER_ID)
                         .groupKeys(Set.of("dev-team"))
                         .build());
-        when(transitionConfigurationResolver.resolve(project, workItem, TRANSITION_ID, TENANT_ID)).thenReturn(execution);
+        when(transitionConfigurationResolver.resolve(new TransitionSubjectContext(
+                project.getId(),
+                project.getWorkflowSchemeId(),
+                workItem.getId(),
+                workItem.getIssueTypeId(),
+                workItem.getWorkflowStepId(),
+                workItem.getStatusId()
+        ), TRANSITION_ID, TENANT_ID)).thenReturn(execution);
         when(workItemCustomFieldValuePort.getActiveValuesByWorkItemId(WORK_ITEM_ID, TENANT_ID)).thenReturn(List.of());
         when(workItemTransitionAuthorizationService.resolveAssigneeId(eq(project), eq(workItem.getAssigneeId()), any(), any())).thenReturn(77L);
         when(workItemTransitionAuthorizationService.resolveSecurityLevelId(workItem.getSecurityLevelId(), project.getIssueSecuritySchemeId(), command.toData(), TENANT_ID))
@@ -222,7 +230,14 @@ class TransitionWorkItemCommandHandlerTest {
                         .userId(USER_ID)
                         .groupKeys(Set.of())
                         .build());
-        when(transitionConfigurationResolver.resolve(project, workItem, TRANSITION_ID, TENANT_ID)).thenReturn(execution);
+        when(transitionConfigurationResolver.resolve(new TransitionSubjectContext(
+                project.getId(),
+                project.getWorkflowSchemeId(),
+                workItem.getId(),
+                workItem.getIssueTypeId(),
+                workItem.getWorkflowStepId(),
+                workItem.getStatusId()
+        ), TRANSITION_ID, TENANT_ID)).thenReturn(execution);
         when(workItemCustomFieldValuePort.getActiveValuesByWorkItemId(WORK_ITEM_ID, TENANT_ID)).thenReturn(List.of());
         when(workItemTransitionRuleEvaluator.evaluateValidatorsAndResolveResolution(
                 eq(execution),

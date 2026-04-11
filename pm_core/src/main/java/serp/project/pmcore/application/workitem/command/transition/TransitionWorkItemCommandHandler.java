@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
 import serp.project.pmcore.application.workitem.command.transition.internal.ResolvedTransitionExecution;
+import serp.project.pmcore.application.workitem.command.transition.internal.TransitionSubjectContext;
 import serp.project.pmcore.application.workitem.command.transition.internal.TransitionWorkItemStatusData;
 import serp.project.pmcore.application.workitem.command.transition.support.TransitionConfigurationResolver;
 import serp.project.pmcore.domain.customfield.entity.CustomFieldEntity;
@@ -103,8 +104,14 @@ public class TransitionWorkItemCommandHandler
         workItemTransitionAuthorizationService.checkIssueSecurityAccessIfNeeded(project, workItem, actorContext, tenantId);
 
         ResolvedTransitionExecution execution = transitionConfigurationResolver.resolve(
-                project,
-                workItem,
+                new TransitionSubjectContext(
+                        project.getId(),
+                        project.getWorkflowSchemeId(),
+                        workItem.getId(),
+                        workItem.getIssueTypeId(),
+                        workItem.getWorkflowStepId(),
+                        workItem.getStatusId()
+                ),
                 command.transitionId(),
                 tenantId
         );
