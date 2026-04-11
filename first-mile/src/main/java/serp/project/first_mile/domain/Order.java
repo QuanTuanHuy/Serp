@@ -80,6 +80,10 @@ public class Order extends AbstractAudit{
     @Column(name = "status")
     private OrderStatus status;
 
+    @Column(name = "is_confirm")
+    @Builder.Default
+    private Boolean isConfirm = false;
+
     @Column(name = "total_weight")
     private Double totalWeight;
 

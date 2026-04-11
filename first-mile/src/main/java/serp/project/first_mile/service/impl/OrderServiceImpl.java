@@ -106,11 +106,16 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findByIdAndTenantIdForUpdate(orderId, tenantId)
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
 
+        if (Boolean.TRUE.equals(order.getIsConfirm())) {
+            Optional<PostOffice> assignedPostOffice = resolveAssignedPostOffice(order, tenantId);
+            return toOrderConfirmationResponse(order, assignedPostOffice.orElse(null), true);
+        }
+
         if (hasText(order.getOriginPostOfficeCode())) {
-            Optional<PostOffice> assignedPostOffice = postOfficeRepository.findByCodeIgnoreCaseAndTenantId(
-                    order.getOriginPostOfficeCode(),
-                    tenantId
-            );
+            order.setIsConfirm(true);
+            orderRepository.save(order);
+
+            Optional<PostOffice> assignedPostOffice = resolveAssignedPostOffice(order, tenantId);
             return toOrderConfirmationResponse(order, assignedPostOffice.orElse(null), true);
         }
 
@@ -125,6 +130,7 @@ public class OrderServiceImpl implements OrderService {
 
         postOffice.addLoad(1);
         order.setOriginPostOfficeCode(postOffice.getCode());
+        order.setIsConfirm(true);
 
         postOfficeRepository.save(postOffice);
         orderRepository.save(order);
@@ -165,6 +171,14 @@ public class OrderServiceImpl implements OrderService {
 
     private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
+    }
+
+    private Optional<PostOffice> resolveAssignedPostOffice(Order order, Long tenantId) {
+        if (order == null || !hasText(order.getOriginPostOfficeCode())) {
+            return Optional.empty();
+        }
+
+        return postOfficeRepository.findByCodeIgnoreCaseAndTenantId(order.getOriginPostOfficeCode(), tenantId);
     }
 
     private OrderConfirmationResponse toOrderConfirmationResponse(

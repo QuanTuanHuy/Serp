@@ -35,6 +35,7 @@ CREATE TABLE orders (
 
     -- Thông tin hàng hóa và trạng thái
                         status VARCHAR(255),
+                        is_confirm BOOLEAN NOT NULL DEFAULT FALSE,
                         total_weight DOUBLE PRECISION,
                         total_value DOUBLE PRECISION,
                         dimensions jsonb,

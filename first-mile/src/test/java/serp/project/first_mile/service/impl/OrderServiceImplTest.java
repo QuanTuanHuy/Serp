@@ -89,6 +89,7 @@ class OrderServiceImplTest {
         OrderConfirmationResponse response = orderService.confirmOrder(orderId, tenantId);
 
         assertEquals("PO-HCM-01", order.getOriginPostOfficeCode());
+        assertTrue(Boolean.TRUE.equals(order.getIsConfirm()));
         assertEquals(5, postOffice.getCurrentLoad());
         assertFalse(response.alreadyConfirmed());
         assertEquals("PO-HCM-01", response.originPostOffice().code());
@@ -132,6 +133,7 @@ class OrderServiceImplTest {
         order.setOrderCode("FM000101");
         order.setCustomerOrderCode("CUS000101");
         order.setStatus(OrderStatus.ASSIGNED_TO_PICKUP);
+        order.setIsConfirm(true);
         order.setOriginPostOfficeCode("PO-HCM-02");
 
         PostOffice postOffice = new PostOffice();
@@ -158,6 +160,45 @@ class OrderServiceImplTest {
         );
         verify(postOfficeRepository, never()).save(any(PostOffice.class));
         verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    void confirmOrderShouldMarkConfirmedWhenOriginExistsButFlagIsFalse() {
+        Long tenantId = 1L;
+        Long orderId = 102L;
+
+        Order order = new Order();
+        order.setId(orderId);
+        order.setOrderCode("FM000102");
+        order.setCustomerOrderCode("CUS000102");
+        order.setStatus(OrderStatus.CREATED);
+        order.setIsConfirm(false);
+        order.setOriginPostOfficeCode("PO-HCM-03");
+
+        PostOffice postOffice = new PostOffice();
+        postOffice.setId(12L);
+        postOffice.setCode("PO-HCM-03");
+        postOffice.setName("Post Office 03");
+        postOffice.setCurrentLoad(6);
+        postOffice.setDailyCapacity(20);
+
+        when(orderRepository.findByIdAndTenantIdForUpdate(orderId, tenantId)).thenReturn(Optional.of(order));
+        when(postOfficeRepository.findByCodeIgnoreCaseAndTenantId("PO-HCM-03", tenantId))
+                .thenReturn(Optional.of(postOffice));
+
+        OrderConfirmationResponse response = orderService.confirmOrder(orderId, tenantId);
+
+        assertTrue(Boolean.TRUE.equals(order.getIsConfirm()));
+        assertTrue(response.alreadyConfirmed());
+        assertEquals("PO-HCM-03", response.originPostOffice().code());
+
+        verify(orderRepository).save(order);
+        verify(postOfficeRepository, never()).findBestAssignablePostOfficeForSenderForUpdate(
+                eq(tenantId),
+                any(Point.class),
+                any(LocalDate.class)
+        );
+        verify(postOfficeRepository, never()).save(any(PostOffice.class));
     }
 
     private Point point(double latitude, double longitude) {

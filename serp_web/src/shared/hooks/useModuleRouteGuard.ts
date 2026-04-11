@@ -11,13 +11,12 @@ import {
   useGetMenuDisplaysByModuleAndUserQuery,
   useGetMyModulesQuery,
 } from '@/modules/account/services';
-import { selectUserProfile } from '@/modules/account/store';
-import { useAppSelector } from '@/shared/hooks/redux';
-import { FIRST_MILE_ROLES } from '@/shared/types';
-import { isSameModuleCode, toCanonicalModuleCode } from '@/shared/utils';
-
-const FIRST_MILE_ROUTE_PREFIX = '/first-mile';
-const FIRST_MILE_ROLE_SET = new Set(FIRST_MILE_ROLES);
+import {
+  getModuleRootPath,
+  isSameModuleCode,
+  normalizeMenuPathForModule,
+  normalizePath,
+} from '@/shared/utils';
 
 interface RouteGuardResult {
   hasAccess: boolean;
@@ -54,23 +53,14 @@ interface RouteGuardResult {
  */
 export const useModuleRouteGuard = (moduleCode: string): RouteGuardResult => {
   const pathname = usePathname();
-  const user = useAppSelector(selectUserProfile);
-  const moduleRootPath = useMemo(() => {
-    const [rootSegment] = pathname.split('/').filter(Boolean);
-    return rootSegment ? `/${rootSegment}` : '/';
-  }, [pathname]);
-
-  const hasFirstMileRoleAccess = useMemo(() => {
-    if (!pathname.startsWith(FIRST_MILE_ROUTE_PREFIX)) {
-      return false;
-    }
-
-    if (toCanonicalModuleCode(moduleCode) !== 'TMS') {
-      return false;
-    }
-
-    return (user?.roles || []).some((role) => FIRST_MILE_ROLE_SET.has(role));
-  }, [pathname, moduleCode, user?.roles]);
+  const moduleRootPath = useMemo(
+    () => getModuleRootPath(moduleCode),
+    [moduleCode]
+  );
+  const currentPath = useMemo(
+    () => normalizeMenuPathForModule(pathname, moduleCode),
+    [pathname, moduleCode]
+  );
 
   const { data: userModules, isLoading: modulesLoading } =
     useGetMyModulesQuery();
@@ -88,27 +78,16 @@ export const useModuleRouteGuard = (moduleCode: string): RouteGuardResult => {
   });
 
   const hasAccess = useMemo(() => {
-    // First-mile currently needs role fallback because menu API may not include
-    // all paths for TMS roles in some environments.
-    if (hasFirstMileRoleAccess) {
-      return true;
-    }
-
     if (!menuDisplays || menuDisplays.length === 0) {
       return false;
     }
 
-    const normalizePath = (path: string) => {
-      const normalizedPath = path.replace(/\/+$/, '');
-      return normalizedPath || '/';
-    };
-
-    const currentPath = normalizePath(pathname);
+    const normalizedModuleRootPath = normalizePath(moduleRootPath);
 
     const hasMatch = menuDisplays.some((menu) => {
       if (!menu.path) return false;
 
-      const menuPath = normalizePath(menu.path);
+      const menuPath = normalizeMenuPathForModule(menu.path, moduleCode);
 
       if (currentPath === menuPath) return true;
 
@@ -124,21 +103,21 @@ export const useModuleRouteGuard = (moduleCode: string): RouteGuardResult => {
 
     // Allow module root path (e.g., /sales) if user has any accessible child path
     // (e.g., /sales/dashboard). This prevents root redirects from being blocked.
-    if (currentPath === normalizePath(moduleRootPath)) {
+    if (currentPath === normalizedModuleRootPath) {
       return menuDisplays.some((menu) => {
         if (!menu.path) return false;
-        const menuPath = normalizePath(menu.path);
+        const menuPath = normalizeMenuPathForModule(menu.path, moduleCode);
 
-        if (menuPath === normalizePath(moduleRootPath)) {
+        if (menuPath === normalizedModuleRootPath) {
           return true;
         }
 
-        return menuPath.startsWith(normalizePath(moduleRootPath) + '/');
+        return menuPath.startsWith(normalizedModuleRootPath + '/');
       });
     }
 
     return false;
-  }, [hasFirstMileRoleAccess, menuDisplays, pathname, moduleRootPath]);
+  }, [currentPath, menuDisplays, moduleCode, moduleRootPath]);
 
   const isLoading = modulesLoading || menusLoading;
 

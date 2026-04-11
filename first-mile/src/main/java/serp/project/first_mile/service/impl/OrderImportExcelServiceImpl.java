@@ -456,6 +456,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                 .receiverWardCode(orderImport.getReceiverWardCode())
                 .receiverAddressDetail(orderImport.getReceiverAddressDetail())
                 .status(OrderStatus.CREATED)
+                .isConfirm(false)
                 .totalWeight(calculateTotalWeight(orderImport))
                 .totalValue((double) totalValueAmount)
                 .dimensions(dimensions)
