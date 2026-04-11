@@ -15,6 +15,7 @@ import serp.project.pmcore.application.workitem.command.transition.internal.Reso
 import serp.project.pmcore.application.workitem.command.transition.internal.TransitionSubjectContext;
 import serp.project.pmcore.application.workitem.command.transition.support.TransitionConfigurationResolver;
 import serp.project.pmcore.domain.customfield.port.ICustomFieldPort;
+import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldResolver;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
@@ -36,7 +37,6 @@ import serp.project.pmcore.domain.workitem.service.IWorkItemAuthorizationSupport
 import serp.project.pmcore.domain.workitem.service.IWorkItemFieldResolver;
 import serp.project.pmcore.domain.workitem.service.IWorkItemService;
 import serp.project.pmcore.domain.workitem.service.IWorkItemTransitionAuthorizationService;
-import serp.project.pmcore.domain.customfield.service.impl.WorkItemCustomFieldResolver;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.util.List;
@@ -80,7 +80,7 @@ class TransitionWorkItemCommandHandlerTest {
     @Mock
     private IWorkItemFieldResolver workItemFieldResolver;
     @Mock
-    private WorkItemCustomFieldResolver workItemCustomFieldResolver;
+    private IWorkItemCustomFieldResolver workItemCustomFieldResolver;
     @Mock
     private ICustomFieldPort customFieldPort;
     @Mock

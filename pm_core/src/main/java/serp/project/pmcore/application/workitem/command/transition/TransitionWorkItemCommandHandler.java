@@ -18,7 +18,7 @@ import serp.project.pmcore.application.workitem.command.transition.support.Trans
 import serp.project.pmcore.domain.customfield.entity.CustomFieldEntity;
 import serp.project.pmcore.domain.customfield.dto.ResolvedCustomFields;
 import serp.project.pmcore.domain.customfield.port.ICustomFieldPort;
-import serp.project.pmcore.domain.customfield.service.impl.WorkItemCustomFieldResolver;
+import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldResolver;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.service.IProjectService;
@@ -72,7 +72,7 @@ public class TransitionWorkItemCommandHandler
     private final TransitionConfigurationResolver transitionConfigurationResolver;
     private final IWorkItemTransitionRuleEvaluator workItemTransitionRuleEvaluator;
     private final IWorkItemFieldResolver workItemFieldResolver;
-    private final WorkItemCustomFieldResolver workItemCustomFieldResolver;
+    private final IWorkItemCustomFieldResolver workItemCustomFieldResolver;
     private final ICustomFieldPort customFieldPort;
     private final IWorkItemCustomFieldValuePort workItemCustomFieldValuePort;
     private final IOutboxEventService outboxEventService;

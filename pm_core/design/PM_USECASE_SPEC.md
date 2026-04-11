@@ -134,11 +134,11 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 | UC-PM-116 | Manage Work Item Fix Versions | Team Member | Medium | Simple | Work Item Fix Version |
 | UC-PM-121 | Move Work Item to Sprint | Team Member | High | Medium | Work Item Sprint |
 | UC-PM-122 | Remove Work Item from Sprint | Team Member | Medium | Simple | Work Item Sprint |
-| UC-PM-131 | Create Issue Type | PM Admin | High | Simple | Issue Type |
-| UC-PM-132 | Update Issue Type | PM Admin | Medium | Simple | Issue Type |
-| UC-PM-133 | Get Issue Type by ID | PM Admin | Low | Simple | Issue Type |
-| UC-PM-134 | List Issue Types | PM Admin | Medium | Simple | Issue Type |
-| UC-PM-135 | Delete Issue Type | PM Admin | Low | Simple | Issue Type |
+| UC-PM-131 | [Create Issue Type](usecases/issue-type/UC-PM-131-create-issue-type.md) | PM Admin | High | Simple | Issue Type |
+| UC-PM-132 | [Update Issue Type](usecases/issue-type/UC-PM-132-update-issue-type.md) | PM Admin | Medium | Simple | Issue Type |
+| UC-PM-133 | [Get Issue Type by ID](usecases/issue-type/UC-PM-133-get-issue-type-by-id.md) | PM Admin | Low | Simple | Issue Type |
+| UC-PM-134 | [List Issue Types](usecases/issue-type/UC-PM-134-list-issue-types.md) | PM Admin | Medium | Simple | Issue Type |
+| UC-PM-135 | [Delete Issue Type](usecases/issue-type/UC-PM-135-delete-issue-type.md) | PM Admin | Low | Simple | Issue Type |
 | UC-PM-136 | Create Issue Type Scheme | PM Admin | Medium | Simple | Issue Type Scheme |
 | UC-PM-137 | Update Issue Type Scheme | PM Admin | Medium | Simple | Issue Type Scheme |
 | UC-PM-138 | Get Issue Type Scheme by ID | PM Admin | Low | Simple | Issue Type Scheme |
@@ -1777,48 +1777,20 @@ Set `is_active=false` and `removed_at=NOW()` on current sprint entry. Publish `W
 
 #### UC-PM-131 to UC-PM-135: Issue Type CRUD
 
-##### UC-PM-131: Create Issue Type
+Detailed specifications are extracted to separate files:
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-131 |
-| **Use Case Name** | Create Issue Type |
-| **Priority** | High |
-| **Complexity** | Simple |
+- [UC-PM-131 - Create Issue Type](usecases/issue-type/UC-PM-131-create-issue-type.md)
+- [UC-PM-132 - Update Issue Type](usecases/issue-type/UC-PM-132-update-issue-type.md)
+- [UC-PM-133 - Get Issue Type by ID](usecases/issue-type/UC-PM-133-get-issue-type-by-id.md)
+- [UC-PM-134 - List Issue Types](usecases/issue-type/UC-PM-134-list-issue-types.md)
+- [UC-PM-135 - Delete Issue Type](usecases/issue-type/UC-PM-135-delete-issue-type.md)
 
-**Permission**: `PM.ISSUE_TYPE.CREATE`
+Issue type management is tenant-scoped administration behavior:
 
-**Main Flow**:
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 1 | PM Admin | Sends POST `/api/v1/issue-types` with issue type data |
-| 2 | System | Validates JWT, permissions, input |
-| 3 | System | Validates `type_key` is unique within tenant |
-| 4 | System | Persists issue type with `is_system=false` |
-| 5 | System | Publishes `ISSUE_TYPE_CREATED` to `serp.pm.issuetype.events` |
-| 6 | System | Returns HTTP 201 |
-
-**Input Data**:
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| type_key | string | Yes | min:1, max:100, unique per tenant | Stable key |
-| name | string | Yes | min:1, max:255 | Display name |
-| description | string | No | max:2000 | Description |
-| icon_url | string | No | valid URL | Icon |
-| hierarchy_level | int | Yes | 0=subtask, 1=standard, 2=epic | Hierarchy level |
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-131-01 | `type_key` is unique per tenant and immutable after creation | DB + Service |
-| BR-PM-131-02 | System issue types cannot be created via API | Service layer |
-
-##### UC-PM-132 to UC-PM-135: Issue Type Update, Get, List, Delete
-
-Standard CRUD. System issue types (`is_system=true`) cannot be deleted or have their `type_key` changed.
+- Read APIs may return both tenant-owned issue types and system-owned issue types visible to that tenant
+- System-owned issue types are read-only from tenant APIs
+- Tenant callers may create, update, and delete only issue types owned by their own tenant
+- `tenant_id` for write operations is always resolved from JWT context and never accepted from the request payload
 
 ---
 

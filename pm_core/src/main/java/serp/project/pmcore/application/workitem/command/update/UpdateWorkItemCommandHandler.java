@@ -18,7 +18,8 @@ import serp.project.pmcore.application.workitem.command.update.support.UpdateWor
 import serp.project.pmcore.domain.customfield.dto.ResolvedCustomFields;
 import serp.project.pmcore.domain.customfield.entity.CustomFieldEntity;
 import serp.project.pmcore.domain.customfield.port.ICustomFieldPort;
-import serp.project.pmcore.domain.customfield.service.impl.WorkItemCustomFieldResolver;
+import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldResolver;
+import serp.project.pmcore.domain.issuesecurity.dto.IssueSecurityAccessContext;
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
 import serp.project.pmcore.domain.issuetype.port.IIssueTypePort;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
@@ -71,7 +72,7 @@ public class UpdateWorkItemCommandHandler
     private final UpdateWorkItemFieldRulesResolver updateWorkItemFieldRulesResolver;
     private final UpdateWorkItemFieldWriteValidator updateWorkItemFieldWriteValidator;
     private final UpdateWorkItemConfigurationResolver updateWorkItemConfigurationResolver;
-    private final WorkItemCustomFieldResolver workItemCustomFieldResolver;
+    private final IWorkItemCustomFieldResolver workItemCustomFieldResolver;
     private final ICustomFieldPort customFieldPort;
     private final IIssueTypePort issueTypePort;
     private final IWorkItemCustomFieldValuePort workItemCustomFieldValuePort;
@@ -106,7 +107,7 @@ public class UpdateWorkItemCommandHandler
                 ProjectPermissionKeys.BROWSE_PROJECTS,
                 ProjectPermissionKeys.EDIT_ISSUES
         );
-        issueSecurityService.checkSecurityAccessIfNeeded(project, workItem, actorContext, tenantId);
+        issueSecurityService.checkSecurityAccessIfNeeded(IssueSecurityAccessContext.from(project, workItem), actorContext);
 
         WorkItemFieldRules fieldRules = updateWorkItemFieldRulesResolver.resolveEditFieldRules(
                 project,

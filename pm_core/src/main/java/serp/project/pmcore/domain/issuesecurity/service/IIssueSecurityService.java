@@ -1,14 +1,11 @@
 package serp.project.pmcore.domain.issuesecurity.service;
 
+import serp.project.pmcore.domain.issuesecurity.dto.IssueSecurityAccessContext;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
-import serp.project.pmcore.domain.project.entity.ProjectEntity;
-import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 
 public interface IIssueSecurityService {
-    void checkSecurityAccessIfNeeded(ProjectEntity project,
-                                     WorkItemEntity workItem,
-                                     ProjectPermissionEvaluationContext actorContext,
-                                     Long tenantId);
+    void checkSecurityAccessIfNeeded(IssueSecurityAccessContext accessContext,
+                                     ProjectPermissionEvaluationContext actorContext);
 
     Long resolveDefaultSecurityLevelId(Long issueSecuritySchemeId, Long tenantId);
 

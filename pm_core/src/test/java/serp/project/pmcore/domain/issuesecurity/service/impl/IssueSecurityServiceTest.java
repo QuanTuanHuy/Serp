@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import serp.project.pmcore.domain.issuesecurity.dto.IssueSecurityAccessContext;
 import serp.project.pmcore.domain.issuesecurity.entity.IssueSecurityLevelEntity;
 import serp.project.pmcore.domain.issuesecurity.entity.IssueSecurityLevelMemberEntity;
 import serp.project.pmcore.domain.issuesecurity.port.IIssueSecurityLevelMemberPort;
@@ -68,7 +69,7 @@ class IssueSecurityServiceTest {
 
         ResourceNotFoundException exception = assertThrows(
                 ResourceNotFoundException.class,
-                () -> service.checkSecurityAccessIfNeeded(project, workItem, actorContext(USER_ID, Set.of("dev")), TENANT_ID)
+                () -> service.checkSecurityAccessIfNeeded(IssueSecurityAccessContext.from(project, workItem), actorContext(USER_ID, Set.of("dev")))
         );
 
         assertEquals(DomainErrorCode.ISSUE_SECURITY_SCHEME_NOT_FOUND, exception.getErrorCode());
@@ -84,7 +85,7 @@ class IssueSecurityServiceTest {
 
         BusinessRuleViolationException exception = assertThrows(
                 BusinessRuleViolationException.class,
-                () -> service.checkSecurityAccessIfNeeded(project, workItem, actorContext(USER_ID, Set.of("dev")), TENANT_ID)
+                () -> service.checkSecurityAccessIfNeeded(IssueSecurityAccessContext.from(project, workItem), actorContext(USER_ID, Set.of("dev")))
         );
 
         assertEquals(DomainErrorCode.SECURITY_LEVEL_NOT_IN_SCHEME, getField(exception, "errorCode"));
@@ -100,7 +101,7 @@ class IssueSecurityServiceTest {
         when(issueSecurityLevelMemberPort.getIssueSecurityLevelMembersByLevelId(SECURITY_LEVEL_ID, TENANT_ID))
                 .thenReturn(List.of(member("GROUP", "dev-team")));
 
-        service.checkSecurityAccessIfNeeded(project, workItem, actorContext(USER_ID, Set.of(" Dev-Team ")), TENANT_ID);
+        service.checkSecurityAccessIfNeeded(IssueSecurityAccessContext.from(project, workItem), actorContext(USER_ID, Set.of(" Dev-Team ")));
     }
 
     @Test
@@ -122,7 +123,7 @@ class IssueSecurityServiceTest {
         when(projectRoleActorService.hasRoleAssignment(TENANT_ID, PROJECT_ID, 601L, ProjectRoleActorSubjectType.GROUP.name(), "team_alpha"))
                 .thenReturn(true);
 
-        service.checkSecurityAccessIfNeeded(project, workItem, actorContext(USER_ID, Set.of(" Team-Alpha ")), TENANT_ID);
+        service.checkSecurityAccessIfNeeded(IssueSecurityAccessContext.from(project, workItem), actorContext(USER_ID, Set.of(" Team-Alpha ")));
 
         verify(projectRoleActorService).hasRoleAssignment(
                 TENANT_ID,
@@ -146,7 +147,7 @@ class IssueSecurityServiceTest {
         ProjectPermissionEvaluationContext context = actorContext(USER_ID, Set.of());
         setField(context, "reporterUserId", USER_ID);
 
-        service.checkSecurityAccessIfNeeded(project, workItem, context, TENANT_ID);
+        service.checkSecurityAccessIfNeeded(IssueSecurityAccessContext.from(project, workItem), context);
     }
 
     private ProjectEntity project() {

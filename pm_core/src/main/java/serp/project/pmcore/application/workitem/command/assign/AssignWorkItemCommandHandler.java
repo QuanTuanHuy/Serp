@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.project.command.roleactor.RoleActorSubjectValidator;
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
+import serp.project.pmcore.domain.issuesecurity.dto.IssueSecurityAccessContext;
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
@@ -74,7 +75,7 @@ public class AssignWorkItemCommandHandler
                 ProjectPermissionKeys.BROWSE_PROJECTS,
                 ProjectPermissionKeys.ASSIGN_ISSUES
         );
-        issueSecurityService.checkSecurityAccessIfNeeded(project, workItem, actorContext, command.tenantId());
+        issueSecurityService.checkSecurityAccessIfNeeded(IssueSecurityAccessContext.from(project, workItem), actorContext);
 
         if (command.assigneeId() != null) {
             roleActorSubjectValidator.validateSubjectExistsForAdd(

@@ -8,6 +8,7 @@ package serp.project.pmcore.domain.workitem.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import serp.project.pmcore.application.workitem.command.transition.internal.TransitionWorkItemStatusData;
+import serp.project.pmcore.domain.issuesecurity.dto.IssueSecurityAccessContext;
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
@@ -103,6 +104,6 @@ public class WorkItemTransitionAuthorizationService implements IWorkItemTransiti
             return;
         }
 
-        issueSecurityService.checkSecurityAccessIfNeeded(project, workItem, actorContext, tenantId);
+        issueSecurityService.checkSecurityAccessIfNeeded(IssueSecurityAccessContext.from(project, workItem), actorContext);
     }
 }

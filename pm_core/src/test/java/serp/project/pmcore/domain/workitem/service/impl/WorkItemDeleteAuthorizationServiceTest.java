@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import serp.project.pmcore.domain.issuesecurity.dto.IssueSecurityAccessContext;
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
@@ -57,7 +58,7 @@ class WorkItemDeleteAuthorizationServiceTest {
 
         service.checkDeleteSecurityAccess(project, workItem, actorContext);
 
-        verify(issueSecurityService).checkSecurityAccessIfNeeded(project, workItem, actorContext, 1L);
+        verify(issueSecurityService).checkSecurityAccessIfNeeded(IssueSecurityAccessContext.from(project, workItem), actorContext);
     }
 
     private ProjectEntity project() {

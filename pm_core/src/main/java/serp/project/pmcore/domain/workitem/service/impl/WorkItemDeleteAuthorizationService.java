@@ -8,6 +8,7 @@ package serp.project.pmcore.domain.workitem.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import serp.project.pmcore.domain.issuesecurity.dto.IssueSecurityAccessContext;
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
@@ -40,7 +41,7 @@ public class WorkItemDeleteAuthorizationService implements IWorkItemDeleteAuthor
     public void checkDeleteSecurityAccess(ProjectEntity project,
                                           WorkItemEntity workItem,
                                           ProjectPermissionEvaluationContext actorContext) {
-        issueSecurityService.checkSecurityAccessIfNeeded(project, workItem, actorContext, project.getTenantId());
+        issueSecurityService.checkSecurityAccessIfNeeded(IssueSecurityAccessContext.from(project, workItem), actorContext);
     }
 
 }

@@ -19,7 +19,7 @@ import serp.project.pmcore.application.workitem.command.create.support.CreateWor
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemDraftFactory;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemFieldWriteValidator;
 import serp.project.pmcore.domain.customfield.dto.ResolvedCustomFields;
-import serp.project.pmcore.domain.customfield.service.impl.WorkItemCustomFieldResolver;
+import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldResolver;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
@@ -54,7 +54,7 @@ public class CreateWorkItemCommandHandler
     private final IWorkItemService workItemService;
     private final WorkItemCreateConfigurationResolver workItemCreateConfigurationResolver;
     private final IWorkItemAuthorizationSupportService workItemAuthorizationSupportService;
-    private final WorkItemCustomFieldResolver workItemCustomFieldResolver;
+    private final IWorkItemCustomFieldResolver workItemCustomFieldResolver;
     private final WorkItemCreateRequiredFieldValidator workItemCreateRequiredFieldValidator;
     private final WorkItemDraftFactory workItemDraftFactory;
     private final CreateWorkItemFieldRulesResolver createWorkItemFieldRulesResolver;

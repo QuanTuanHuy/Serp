@@ -19,7 +19,7 @@ import serp.project.pmcore.application.workitem.command.update.support.UpdateWor
 import serp.project.pmcore.domain.customfield.dto.ResolvedCustomFields;
 import serp.project.pmcore.domain.customfield.entity.CustomFieldEntity;
 import serp.project.pmcore.domain.customfield.port.ICustomFieldPort;
-import serp.project.pmcore.domain.customfield.service.impl.WorkItemCustomFieldResolver;
+import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldResolver;
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
 import serp.project.pmcore.domain.issuetype.port.IIssueTypePort;
@@ -81,7 +81,7 @@ class UpdateWorkItemCommandHandlerTest {
     @Mock
     private UpdateWorkItemConfigurationResolver updateWorkItemConfigurationResolver;
     @Mock
-    private WorkItemCustomFieldResolver workItemCustomFieldResolver;
+    private IWorkItemCustomFieldResolver workItemCustomFieldResolver;
     @Mock
     private ICustomFieldPort customFieldPort;
     @Mock

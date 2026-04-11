@@ -17,6 +17,7 @@ import serp.project.pmcore.domain.customfield.entity.CustomFieldContextDefaultVa
 import serp.project.pmcore.domain.customfield.entity.CustomFieldContextEntity;
 import serp.project.pmcore.domain.customfield.entity.CustomFieldEntity;
 import serp.project.pmcore.domain.customfield.entity.CustomFieldOptionEntity;
+import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldResolver;
 import serp.project.pmcore.domain.customfield.service.handler.DateCustomFieldValueHandler;
 import serp.project.pmcore.domain.customfield.service.handler.DateTimeCustomFieldValueHandler;
 import serp.project.pmcore.domain.customfield.service.handler.GroupCustomFieldValueHandler;
@@ -602,7 +603,7 @@ class CreateWorkItemCommandHandlerTest {
         );
     }
 
-    private WorkItemCustomFieldResolver buildCustomFieldResolver() {
+    private IWorkItemCustomFieldResolver buildCustomFieldResolver() {
         return new WorkItemCustomFieldResolver(
                 customFieldPort,
                 customFieldContextPort,

@@ -5,6 +5,7 @@
 
 package serp.project.pmcore.domain.customfield.service.impl;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import serp.project.pmcore.domain.customfield.dto.CustomFieldResolutionContext;
 import serp.project.pmcore.domain.customfield.dto.ResolvedCustomFields;
@@ -16,6 +17,7 @@ import serp.project.pmcore.domain.customfield.port.ICustomFieldContextDefaultVal
 import serp.project.pmcore.domain.customfield.port.ICustomFieldContextPort;
 import serp.project.pmcore.domain.customfield.port.ICustomFieldOptionPort;
 import serp.project.pmcore.domain.customfield.port.ICustomFieldPort;
+import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldResolver;
 import serp.project.pmcore.domain.customfield.service.handler.IWorkItemCustomFieldValueHandler;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.DomainValidationException;
@@ -29,7 +31,8 @@ import java.util.Locale;
 import java.util.Map;
 
 @Service
-public class WorkItemCustomFieldResolver {
+@RequiredArgsConstructor
+public class WorkItemCustomFieldResolver implements IWorkItemCustomFieldResolver {
 
     private final ICustomFieldPort customFieldPort;
     private final ICustomFieldContextPort customFieldContextPort;
@@ -37,18 +40,7 @@ public class WorkItemCustomFieldResolver {
     private final ICustomFieldContextDefaultValuePort customFieldContextDefaultValuePort;
     private final List<IWorkItemCustomFieldValueHandler> customFieldValueHandlers;
 
-    public WorkItemCustomFieldResolver(ICustomFieldPort customFieldPort,
-                                       ICustomFieldContextPort customFieldContextPort,
-                                       ICustomFieldOptionPort customFieldOptionPort,
-                                       ICustomFieldContextDefaultValuePort customFieldContextDefaultValuePort,
-                                       List<IWorkItemCustomFieldValueHandler> customFieldValueHandlers) {
-        this.customFieldPort = customFieldPort;
-        this.customFieldContextPort = customFieldContextPort;
-        this.customFieldOptionPort = customFieldOptionPort;
-        this.customFieldContextDefaultValuePort = customFieldContextDefaultValuePort;
-        this.customFieldValueHandlers = customFieldValueHandlers;
-    }
-
+    @Override
     public ResolvedCustomFields resolveCustomFields(String issueTypeKey,
                                                     Map<String, Object> requestCustomFields,
                                                     Map<String, Boolean> requiredByFieldKey) {

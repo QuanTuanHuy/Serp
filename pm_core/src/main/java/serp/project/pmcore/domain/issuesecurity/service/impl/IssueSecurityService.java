@@ -8,6 +8,7 @@ package serp.project.pmcore.domain.issuesecurity.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import serp.project.pmcore.domain.issuesecurity.dto.IssueSecurityAccessContext;
 import serp.project.pmcore.domain.issuesecurity.entity.IssueSecurityLevelEntity;
 import serp.project.pmcore.domain.issuesecurity.entity.IssueSecurityLevelMemberEntity;
 import serp.project.pmcore.domain.issuesecurity.port.IIssueSecurityLevelPort;
@@ -15,7 +16,6 @@ import serp.project.pmcore.domain.issuesecurity.port.IIssueSecurityLevelMemberPo
 import serp.project.pmcore.domain.issuesecurity.port.IIssueSecuritySchemePort;
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
-import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.entity.ProjectRoleEntity;
 import serp.project.pmcore.domain.project.service.IProjectRoleActorService;
 import serp.project.pmcore.domain.project.service.IProjectRoleService;
@@ -23,7 +23,6 @@ import serp.project.pmcore.domain.shared.enums.ProjectRoleActorSubjectType;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
-import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 
 import java.util.List;
 import java.util.Locale;
@@ -43,68 +42,64 @@ public class IssueSecurityService implements IIssueSecurityService {
     private final IProjectRoleActorService projectRoleActorService;
 
     @Override
-    public void checkSecurityAccessIfNeeded(ProjectEntity project,
-                                            WorkItemEntity workItem,
-                                            ProjectPermissionEvaluationContext actorContext,
-                                            Long tenantId) {
-        if (workItem.getSecurityLevelId() == null) {
+    public void checkSecurityAccessIfNeeded(IssueSecurityAccessContext accessContext,
+                                            ProjectPermissionEvaluationContext actorContext) {
+        if (accessContext.securityLevelId() == null) {
             return;
         }
 
-        if (project.getIssueSecuritySchemeId() == null) {
+        if (accessContext.issueSecuritySchemeId() == null) {
             throw new ResourceNotFoundException(
                     DomainErrorCode.ISSUE_SECURITY_SCHEME_NOT_FOUND,
                     "Work item has security level but project has no issue security scheme: projectId="
-                            + project.getId() + ", workItemId=" + workItem.getId()
+                            + accessContext.projectId() + ", workItemId=" + accessContext.workItemId()
             );
         }
 
-        long securityLevelId = workItem.getSecurityLevelId();
+        long securityLevelId = accessContext.securityLevelId();
         IssueSecurityLevelEntity level = issueSecurityLevelPort
-                .getIssueSecurityLevelByIdAndSchemeId(securityLevelId, project.getIssueSecuritySchemeId(), tenantId)
+                .getIssueSecurityLevelByIdAndSchemeId(securityLevelId, accessContext.issueSecuritySchemeId(), accessContext.tenantId())
                 .orElseThrow(() -> new BusinessRuleViolationException(
                         DomainErrorCode.SECURITY_LEVEL_NOT_IN_SCHEME,
                         "Security level is not valid for project issue security scheme: projectId="
-                                + project.getId() + ", securityLevelId=" + securityLevelId
+                                + accessContext.projectId() + ", securityLevelId=" + securityLevelId
                 ));
 
         List<IssueSecurityLevelMemberEntity> members = issueSecurityLevelMemberPort
-                .getIssueSecurityLevelMembersByLevelId(level.getId(), tenantId);
+                .getIssueSecurityLevelMembersByLevelId(level.getId(), accessContext.tenantId());
 
         boolean granted = members.stream().anyMatch(member ->
-                matchesMember(project, workItem, actorContext, member, tenantId));
+                matchesMember(accessContext, actorContext, member));
         log.info("Checked issue security access for workItemId={}, securityLevelId={}, userId={}, granted={}",
-                workItem.getId(), securityLevelId, actorContext.getUserId(), granted);
+                accessContext.workItemId(), securityLevelId, actorContext.getUserId(), granted);
         if (!granted) {
             throw new BusinessRuleViolationException(
                     DomainErrorCode.WORK_ITEM_SECURITY_ACCESS_DENIED,
-                    "Issue security access denied for workItemId=" + workItem.getId()
-                            + ", securityLevelId=" + workItem.getSecurityLevelId()
+                    "Issue security access denied for workItemId=" + accessContext.workItemId()
+                            + ", securityLevelId=" + accessContext.securityLevelId()
             );
         }
     }
 
-    private boolean matchesMember(ProjectEntity project,
-                                  WorkItemEntity workItem,
+    private boolean matchesMember(IssueSecurityAccessContext accessContext,
                                   ProjectPermissionEvaluationContext actorContext,
-                                  IssueSecurityLevelMemberEntity member,
-                                  Long tenantId) {
+                                  IssueSecurityLevelMemberEntity member) {
         String subjectType = normalizeToken(member.getSubjectType());
         Long currentUserId = actorContext.getUserId();
         Long reporterUserId = actorContext.getReporterUserId() != null
                 ? actorContext.getReporterUserId()
-                : workItem.getReporterId();
+                : accessContext.reporterUserId();
         Long assigneeUserId = actorContext.getAssigneeUserId() != null
                 ? actorContext.getAssigneeUserId()
-                : workItem.getAssigneeId();
+                : accessContext.assigneeUserId();
 
         return switch (subjectType) {
             case "user" -> currentUserId != null && String.valueOf(currentUserId).equals(member.getSubjectRef());
             case "group" -> safeGroupKeys(actorContext.getGroupKeys()).contains(normalizeToken(member.getSubjectRef()));
-            case "project_lead" -> currentUserId != null && currentUserId.equals(project.getLeadUserId());
+            case "project_lead" -> currentUserId != null && currentUserId.equals(accessContext.leadUserId());
             case "reporter" -> currentUserId != null && currentUserId.equals(reporterUserId);
             case "assignee" -> currentUserId != null && currentUserId.equals(assigneeUserId);
-            case "project_role" -> matchesProjectRole(project, actorContext, member.getSubjectRef());
+            case "project_role" -> matchesProjectRole(accessContext, actorContext, member.getSubjectRef());
             case "user_custom_field_value", "group_custom_field_value" -> {
                 log.debug("Issue security custom-field subject is not implemented yet: memberId={}", member.getId());
                 yield false;
@@ -160,22 +155,22 @@ public class IssueSecurityService implements IIssueSecurityService {
         return requestedSecurityLevelId;
     }
 
-    private boolean matchesProjectRole(ProjectEntity project,
+    private boolean matchesProjectRole(IssueSecurityAccessContext accessContext,
                                        ProjectPermissionEvaluationContext actorContext,
                                        String roleName) {
         if (roleName == null || roleName.isBlank() || actorContext.getUserId() == null) {
             return false;
         }
 
-        List<ProjectRoleEntity> roles = projectRoleService.getProjectRolesByNameIncludingSystem(roleName, project.getTenantId());
+        List<ProjectRoleEntity> roles = projectRoleService.getProjectRolesByNameIncludingSystem(roleName, accessContext.tenantId());
         if (roles.isEmpty()) {
             return false;
         }
 
         for (ProjectRoleEntity role : roles) {
             if (projectRoleActorService.hasRoleAssignment(
-                    project.getTenantId(),
-                    project.getId(),
+                    accessContext.tenantId(),
+                    accessContext.projectId(),
                     role.getId(),
                     ProjectRoleActorSubjectType.USER.name(),
                     String.valueOf(actorContext.getUserId())
@@ -185,8 +180,8 @@ public class IssueSecurityService implements IIssueSecurityService {
 
             for (String groupKey : safeGroupKeys(actorContext.getGroupKeys())) {
                 if (projectRoleActorService.hasRoleAssignment(
-                        project.getTenantId(),
-                        project.getId(),
+                        accessContext.tenantId(),
+                        accessContext.projectId(),
                         role.getId(),
                         ProjectRoleActorSubjectType.GROUP.name(),
                         groupKey
