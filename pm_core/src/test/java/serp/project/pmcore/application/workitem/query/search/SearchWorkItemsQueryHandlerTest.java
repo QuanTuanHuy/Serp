@@ -13,13 +13,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.pmcore.application.shared.pagination.PageView;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.port.read.IProjectReadPort;
 import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
-import serp.project.pmcore.domain.workitem.query.WorkItemSearchCriteria;
+import serp.project.pmcore.domain.workitem.dto.WorkItemSearchCriteria;
 
 import java.util.List;
 import java.util.Optional;
@@ -108,7 +109,7 @@ class SearchWorkItemsQueryHandlerTest {
 
         ArgumentCaptor<ProjectPermissionEvaluationContext> contextCaptor =
                 ArgumentCaptor.forClass(ProjectPermissionEvaluationContext.class);
-        verify(projectPermissionEvaluationService).checkPermission(any(ProjectEntity.class), contextCaptor.capture(), eq("BROWSE_PROJECTS"));
+        verify(projectPermissionEvaluationService).checkPermission(any(ProjectPermissionSubject.class), contextCaptor.capture(), eq("BROWSE_PROJECTS"));
         verify(workItemReadPort).searchWorkItems(TENANT_ID, criteria);
 
         ProjectPermissionEvaluationContext context = contextCaptor.getValue();

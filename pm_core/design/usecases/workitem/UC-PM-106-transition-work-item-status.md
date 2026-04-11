@@ -72,28 +72,28 @@ Execute a workflow transition for a work item using Jira-aligned authorization a
 
 ### Main Flow
 
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 1 | Team Member | Sends POST `/api/v1/work-items/{workItemId}/transitions` with `{ transition_id, resolution_id?, fields? }` |
-| 2 | System | Validates JWT and extracts `userId`, `tenantId`, and security context |
-| 3 | System | Loads work item by `id=workItemId`, `tenant_id=tenantId`, `deleted_at IS NULL` |
-| 4 | System | Loads project context and validates project is not archived |
-| 5 | System | Evaluates `BROWSE_PROJECTS` and `TRANSITION_ISSUES` permissions |
-| 6 | System | If `security_level_id` is set, evaluates issue-security membership |
-| 7 | System | Resolves effective workflow from project workflow scheme using work item `issue_type_id`; loads `current_published_version_id` |
-| 8 | System | Validates current `workflow_step_id` belongs to effective workflow version and maps to current denormalized `status_id` |
+| Step | Actor/System | Action                                                                                                                                                                   |
+|------|-------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1 | Team Member | Sends POST `/api/v1/projects/{projectId}/work-items/{workItemId}/transitions` with `{ transition_id, resolution_id?, fields? }`                                          |
+| 2 | System | Validates JWT and extracts `userId`, `tenantId`, and security context                                                                                                    |
+| 3 | System | Loads work item by `id=workItemId`, `tenant_id=tenantId`, `deleted_at IS NULL`                                                                                           |
+| 4 | System | Loads project context and validates project is not archived                                                                                                              |
+| 5 | System | Evaluates `BROWSE_PROJECTS` and `TRANSITION_ISSUES` permissions                                                                                                          |
+| 6 | System | If `security_level_id` is set, evaluates issue-security membership                                                                                                       |
+| 7 | System | Resolves effective workflow from project workflow scheme using work item `issue_type_id`; loads `current_published_version_id`                                           |
+| 8 | System | Validates current `workflow_step_id` belongs to effective workflow version and maps to current denormalized `status_id`                                                  |
 | 9 | System | Loads transition by `transition_id` in workflow version and validates availability from current step (`from_step_id = current_step_id` or global `from_step_id IS NULL`) |
-| 10 | System | Evaluates transition CONDITION rules in sequence |
-| 11 | System | Evaluates transition VALIDATOR rules in sequence |
-| 12 | System | If transition has `screen_id`, resolves transition screen and validates writable fields in `fields` payload |
-| 13 | System | Begins transaction |
-| 14 | System | Updates `workflow_step_id` to transition `to_step_id` and updates denormalized `status_id` from target step |
-| 15 | System | Applies resolution behavior (`resolution_id` from request if provided/required; otherwise retain or clear based on rule config) |
-| 16 | System | Executes POST_FUNCTION rules in sequence (e.g., field update, event marker) |
-| 17 | System | Persists transition audit record and change history entry |
-| 18 | System | Persists `WORK_ITEM_STATUS_CHANGED` to domain outbox with transition metadata |
-| 19 | System | Commits transaction |
-| 20 | System | Returns HTTP 200 with updated work item and executed transition details |
+| 10 | System | Evaluates transition CONDITION rules in sequence                                                                                                                         |
+| 11 | System | Evaluates transition VALIDATOR rules in sequence                                                                                                                         |
+| 12 | System | If transition has `screen_id`, resolves transition screen and validates writable fields in `fields` payload                                                              |
+| 13 | System | Begins transaction                                                                                                                                                       |
+| 14 | System | Updates `workflow_step_id` to transition `to_step_id` and updates denormalized `status_id` from target step                                                              |
+| 15 | System | Applies resolution behavior (`resolution_id` from request if provided/required; otherwise retain or clear based on rule config)                                          |
+| 16 | System | Executes POST_FUNCTION rules in sequence (e.g., field update, event marker)                                                                                              |
+| 17 | System | Persists transition audit record and change history entry                                                                                                                |
+| 18 | System | Persists `WORK_ITEM_STATUS_CHANGED` to domain outbox with transition metadata                                                                                            |
+| 19 | System | Commits transaction                                                                                                                                                      |
+| 20 | System | Returns HTTP 200 with updated work item and executed transition details                                                                                                  |
 
 ### Alternative Flows
 

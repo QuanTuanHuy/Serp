@@ -7,7 +7,7 @@ package serp.project.pmcore.application.workitem.query.search;
 
 import serp.project.pmcore.application.shared.cqrs.query.IQuery;
 import serp.project.pmcore.application.shared.pagination.PageView;
-import serp.project.pmcore.domain.workitem.query.WorkItemSearchCriteria;
+import serp.project.pmcore.domain.workitem.dto.WorkItemSearchCriteria;
 
 import java.util.Set;
 

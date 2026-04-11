@@ -9,17 +9,22 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import serp.project.pmcore.application.shared.pagination.PageView;
+import serp.project.pmcore.application.workitem.command.assign.AssignWorkItemCommand;
+import serp.project.pmcore.application.workitem.command.assign.AssignWorkItemCommandHandler;
+import serp.project.pmcore.application.workitem.command.assign.AssignWorkItemResult;
 import serp.project.pmcore.application.workitem.command.create.CreateWorkItemCommand;
 import serp.project.pmcore.application.workitem.command.create.CreateWorkItemCommandHandler;
+import serp.project.pmcore.application.workitem.command.delete.DeleteWorkItemCommand;
+import serp.project.pmcore.application.workitem.command.delete.DeleteWorkItemCommandHandler;
+import serp.project.pmcore.application.workitem.command.delete.DeleteWorkItemResult;
+import serp.project.pmcore.application.workitem.command.update.UpdateWorkItemCommand;
+import serp.project.pmcore.application.workitem.command.update.UpdateWorkItemCommandHandler;
+import serp.project.pmcore.application.workitem.command.update.UpdateWorkItemResult;
+import serp.project.pmcore.application.workitem.command.transition.TransitionWorkItemCommandHandler;
+import serp.project.pmcore.application.workitem.command.transition.TransitionWorkItemStatusCommand;
+import serp.project.pmcore.application.workitem.command.transition.TransitionWorkItemStatusResult;
 import serp.project.pmcore.application.workitem.query.get.GetWorkItemByIdQuery;
 import serp.project.pmcore.application.workitem.query.get.GetWorkItemByIdQueryHandler;
 import serp.project.pmcore.application.workitem.query.get.WorkItemDetailView;
@@ -30,11 +35,14 @@ import serp.project.pmcore.domain.shared.pagination.SortSpec;
 import serp.project.pmcore.ui.rest.shared.constant.PathConstants;
 import serp.project.pmcore.domain.shared.exception.AccessDeniedException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
-import serp.project.pmcore.domain.workitem.query.WorkItemSearchCriteria;
+import serp.project.pmcore.domain.workitem.dto.WorkItemSearchCriteria;
 import serp.project.pmcore.kernel.utils.AuthUtils;
 import serp.project.pmcore.ui.rest.shared.response.GeneralResponse;
 import serp.project.pmcore.ui.rest.shared.response.ResponseUtils;
+import serp.project.pmcore.ui.rest.workitem.dto.request.AssignWorkItemRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.request.CreateWorkItemRequest;
+import serp.project.pmcore.ui.rest.workitem.dto.request.TransitionWorkItemStatusRequest;
+import serp.project.pmcore.ui.rest.workitem.dto.request.UpdateWorkItemRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.response.WorkItemResponse;
 
 @RestController
@@ -44,7 +52,11 @@ public class WorkItemController {
 
     private final AuthUtils authUtils;
     private final ResponseUtils responseUtils;
+    private final AssignWorkItemCommandHandler assignWorkItemCommandHandler;
     private final CreateWorkItemCommandHandler createWorkItemCommandHandler;
+    private final DeleteWorkItemCommandHandler deleteWorkItemCommandHandler;
+    private final UpdateWorkItemCommandHandler updateWorkItemCommandHandler;
+    private final TransitionWorkItemCommandHandler transitionWorkItemCommandHandler;
 
     private final SearchWorkItemsQueryHandler searchWorkItemsQueryHandler;
     private final GetWorkItemByIdQueryHandler getWorkItemByIdQueryHandler;
@@ -70,6 +82,27 @@ public class WorkItemController {
         ));
 
         return ResponseEntity.ok(responseUtils.success(response));
+    }
+
+    @PutMapping("/{id}/assign")
+    public ResponseEntity<GeneralResponse<AssignWorkItemResult>> assignWorkItem(@PathVariable Long projectId,
+                                                                                @PathVariable Long id,
+                                                                                @Valid @RequestBody AssignWorkItemRequest request) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        AssignWorkItemResult result = assignWorkItemCommandHandler.handle(new AssignWorkItemCommand(
+                projectId,
+                id,
+                request.getAssigneeId(),
+                tenantId,
+                userId,
+                authUtils.getCurrentGroups()
+        ));
+
+        return ResponseEntity.ok(responseUtils.success(result));
     }
 
     @PostMapping
@@ -100,6 +133,27 @@ public class WorkItemController {
         return ResponseEntity.status(HttpStatus.CREATED).body(responseUtils.success(response));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<GeneralResponse<UpdateWorkItemResult>> updateWorkItem(@PathVariable Long projectId,
+                                                                                @PathVariable Long id,
+                                                                                @Valid @RequestBody UpdateWorkItemRequest request) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        UpdateWorkItemResult result = updateWorkItemCommandHandler.handle(new UpdateWorkItemCommand(
+                projectId,
+                id,
+                request.toData(),
+                tenantId,
+                userId,
+                authUtils.getCurrentGroups()
+        ));
+
+        return ResponseEntity.ok(responseUtils.success(result));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<GeneralResponse<WorkItemDetailView>> getWorkItemById(@PathVariable Long projectId,
                                                                                @PathVariable Long id) {
@@ -119,6 +173,53 @@ public class WorkItemController {
         );
         return ResponseEntity.ok(responseUtils.success(workItemDetail));
 
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<GeneralResponse<DeleteWorkItemResult>> deleteWorkItem(@PathVariable Long projectId,
+                                                                                 @PathVariable Long id) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        var result = deleteWorkItemCommandHandler.handle(
+                new DeleteWorkItemCommand(
+                        projectId,
+                        id,
+                        tenantId,
+                        userId,
+                        authUtils.getCurrentGroups()
+                )
+        );
+
+        return ResponseEntity.ok(responseUtils.success(result));
+    }
+
+    @PostMapping("/{id}/transitions")
+    public ResponseEntity<GeneralResponse<TransitionWorkItemStatusResult>> transitionWorkItemStatus(
+            @PathVariable Long projectId,
+            @PathVariable Long id,
+            @Valid @RequestBody TransitionWorkItemStatusRequest request) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        TransitionWorkItemStatusResult result = transitionWorkItemCommandHandler.handle(
+                new TransitionWorkItemStatusCommand(
+                        projectId,
+                        id,
+                        request.getTransitionId(),
+                        request.getResolutionId(),
+                        request.getFields(),
+                        tenantId,
+                        userId,
+                        authUtils.getCurrentGroups()
+                )
+        );
+
+        return ResponseEntity.ok(responseUtils.success(result));
     }
 
     private WorkItemSearchCriteria applySearchRequest(Long projectId,

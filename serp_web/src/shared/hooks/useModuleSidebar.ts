@@ -9,6 +9,7 @@ import {
   useGetMyModulesQuery,
 } from '@/modules/account/services';
 import type { MenuDisplayDetail } from '@/modules/admin/types';
+import { isSameModuleCode, normalizeMenuPathForModule } from '@/shared/utils';
 
 export interface SidebarMenuItem {
   id: number;
@@ -24,18 +25,25 @@ export interface SidebarMenuItem {
  * Build tree structure from flat menu display list (max 2 levels)
  */
 const buildMenuTree = (
-  menuDisplays: MenuDisplayDetail[]
+  menuDisplays: MenuDisplayDetail[],
+  moduleCode: string
 ): SidebarMenuItem[] => {
   const menuMap = new Map<number, SidebarMenuItem>();
   const rootMenus: SidebarMenuItem[] = [];
 
-  menuDisplays.forEach((menu) => {
+  const sidebarMenus = menuDisplays.filter(
+    (menu) =>
+      menu.isVisible !== false &&
+      (!menu.menuType || menu.menuType === 'SIDEBAR')
+  );
+
+  sidebarMenus.forEach((menu) => {
     if (!menu.id) return;
 
     menuMap.set(menu.id, {
       id: menu.id,
       name: menu.name,
-      href: menu.path || '/',
+      href: normalizeMenuPathForModule(menu.path, moduleCode),
       icon: menu.icon,
       order: menu.order,
       children: [],
@@ -43,7 +51,7 @@ const buildMenuTree = (
     });
   });
 
-  menuDisplays.forEach((menu) => {
+  sidebarMenus.forEach((menu) => {
     if (!menu.id) return;
 
     const node = menuMap.get(menu.id)!;
@@ -90,7 +98,7 @@ export const useModuleSidebar = (moduleCode: string) => {
     useGetMyModulesQuery();
 
   const currentModule = useMemo(() => {
-    return userModules?.find((m) => m.moduleCode === moduleCode);
+    return userModules?.find((m) => isSameModuleCode(m.moduleCode, moduleCode));
   }, [userModules, moduleCode]);
 
   // Get menu displays for this module and current user
@@ -107,8 +115,8 @@ export const useModuleSidebar = (moduleCode: string) => {
     if (!menuDisplaysData || menuDisplaysData.length === 0) {
       return [];
     }
-    return buildMenuTree(menuDisplaysData);
-  }, [menuDisplaysData]);
+    return buildMenuTree(menuDisplaysData, moduleCode);
+  }, [menuDisplaysData, moduleCode]);
 
   const isLoading = modulesLoading || menusLoading;
 

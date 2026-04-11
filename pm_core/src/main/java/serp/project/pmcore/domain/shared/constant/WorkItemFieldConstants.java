@@ -12,6 +12,7 @@ import java.util.Set;
 @UtilityClass
 public class WorkItemFieldConstants {
     public static final String CREATE_OPERATION_KEY = "CREATE";
+    public static final String EDIT_OPERATION_KEY = "EDIT";
     public static final String FIELD_REF_TYPE_SYSTEM = "SYSTEM";
     public static final String FIELD_REF_TYPE_CUSTOM = "CUSTOM";
 
@@ -24,6 +25,7 @@ public class WorkItemFieldConstants {
     public static final String DUE_DATE = "due_date";
     public static final String TIME_ORIGINAL_ESTIMATE = "time_original_estimate";
     public static final String SECURITY_LEVEL_ID = "security_level_id";
+    public static final String RESOLUTION_ID = "resolution_id";
 
     public static final Set<String> ALWAYS_WRITABLE_ON_CREATE_SYSTEM_FIELDS = Set.of(
             ISSUE_TYPE_ID,
@@ -37,6 +39,26 @@ public class WorkItemFieldConstants {
             PRIORITY_ID,
             ASSIGNEE_ID,
             PARENT_ID,
+            DUE_DATE,
+            TIME_ORIGINAL_ESTIMATE,
+            SECURITY_LEVEL_ID
+    );
+
+    public static final Set<String> SUPPORTED_TRANSITION_SYSTEM_FIELDS = Set.of(
+            SUMMARY,
+            DESCRIPTION,
+            PRIORITY_ID,
+            ASSIGNEE_ID,
+            DUE_DATE,
+            TIME_ORIGINAL_ESTIMATE,
+            SECURITY_LEVEL_ID
+    );
+
+    public static final Set<String> SUPPORTED_UPDATE_SYSTEM_FIELDS = Set.of(
+            SUMMARY,
+            DESCRIPTION,
+            PRIORITY_ID,
+            ASSIGNEE_ID,
             DUE_DATE,
             TIME_ORIGINAL_ESTIMATE,
             SECURITY_LEVEL_ID

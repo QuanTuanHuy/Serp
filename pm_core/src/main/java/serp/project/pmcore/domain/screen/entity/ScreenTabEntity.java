@@ -12,6 +12,8 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import serp.project.pmcore.domain.shared.entity.BaseEntity;
 
+import java.util.List;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -22,4 +24,6 @@ public class ScreenTabEntity extends BaseEntity {
     private Long screenId;
     private String name;
     private Integer sequence;
+
+    private List<ScreenTabFieldEntity> fields;
 }

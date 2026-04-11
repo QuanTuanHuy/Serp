@@ -9,6 +9,12 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
+import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
+import serp.project.pmcore.domain.workflow.entity.WorkflowSchemeEntity;
+import serp.project.pmcore.domain.workflow.entity.WorkflowSchemeItemEntity;
+import serp.project.pmcore.domain.workflow.port.IWorkflowSchemeItemPort;
+import serp.project.pmcore.domain.workflow.port.IWorkflowSchemePort;
 import serp.project.pmcore.domain.workflow.service.IWorkflowService;
 import serp.project.pmcore.domain.shared.exception.AppException;
 import serp.project.pmcore.domain.shared.exception.ErrorCode;
@@ -22,8 +28,52 @@ import serp.project.pmcore.domain.workflow.port.IWorkflowStepPort;
 @Slf4j
 public class WorkflowService implements IWorkflowService {
 
+    private final IWorkflowSchemePort workflowSchemePort;
+    private final IWorkflowSchemeItemPort workflowSchemeItemPort;
     private final IWorkflowPort workflowPort;
     private final IWorkflowStepPort workflowStepPort;
+
+    @Override
+    public WorkflowEntity resolveWorkflow(Long workflowSchemeId, Long issueTypeId, Long tenantId) {
+        if (workflowSchemeId == null) {
+            log.error("[WorkflowService] Workflow scheme id is null");
+            throw new ResourceNotFoundException(
+                    DomainErrorCode.WORKFLOW_SCHEME_NOT_FOUND,
+                    "Project has no workflow scheme binding"
+            );
+        }
+
+        WorkflowSchemeEntity scheme = workflowSchemePort.getWorkflowSchemeById(workflowSchemeId, tenantId)
+                .orElseThrow(() -> {
+                    log.error("[WorkflowService] Workflow scheme not found: id={}, tenantId={}", workflowSchemeId, tenantId);
+                    return new ResourceNotFoundException(
+                            DomainErrorCode.WORKFLOW_SCHEME_NOT_FOUND,
+                            "Workflow scheme not found: id=" + workflowSchemeId
+                    );
+                });
+
+        Long workflowId = workflowSchemeItemPort
+                .getItemBySchemeIdAndIssueTypeId(workflowSchemeId, issueTypeId, tenantId)
+                .map(WorkflowSchemeItemEntity::getWorkflowId)
+                .orElse(scheme.getDefaultWorkflowId());
+        if (workflowId == null) {
+            log.error("[WorkflowService] No workflow found for issue type id={}, workflow scheme id={}",
+                    issueTypeId, workflowSchemeId);
+            throw new ResourceNotFoundException(
+                    DomainErrorCode.WORKFLOW_NOT_FOUND,
+                    "No workflow found for issue type id=" + issueTypeId + " in workflow scheme id=" + workflowSchemeId
+            );
+        }
+
+        return workflowPort.getWorkflowById(workflowId, tenantId)
+                .orElseThrow(() -> {
+                    log.error("[WorkflowService] Workflow not found: id={}, tenantId={}", workflowId, tenantId);
+                    return new ResourceNotFoundException(
+                            DomainErrorCode.WORKFLOW_NOT_FOUND,
+                            "Workflow not found: id=" + workflowId
+                    );
+                });
+    }
 
     @Override
     public WorkflowStepEntity getInitialWorkflowStep(Long workflowId, Long tenantId) {

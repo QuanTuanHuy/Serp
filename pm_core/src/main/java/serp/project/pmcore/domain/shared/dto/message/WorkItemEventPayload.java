@@ -12,6 +12,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -35,4 +37,37 @@ public class WorkItemEventPayload {
 
     @JsonProperty("assigneeId")
     private Long assigneeId;
+
+    @JsonProperty("previousAssigneeId")
+    private Long previousAssigneeId;
+
+    @JsonProperty("assignedBy")
+    private Long assignedBy;
+
+    @JsonProperty("assignedAt")
+    private Long assignedAt;
+
+    @JsonProperty("transitionId")
+    private Long transitionId;
+
+    @JsonProperty("transitionName")
+    private String transitionName;
+
+    @JsonProperty("fromStepId")
+    private Long fromStepId;
+
+    @JsonProperty("toStepId")
+    private Long toStepId;
+
+    @JsonProperty("resolutionId")
+    private Long resolutionId;
+
+    @JsonProperty("transitionedAt")
+    private Long transitionedAt;
+
+    @JsonProperty("transitionedBy")
+    private Long transitionedBy;
+
+    @JsonProperty("changedFields")
+    private List<String> changedFields;
 }

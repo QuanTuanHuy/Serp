@@ -1,8 +1,8 @@
 # UC-PM-105 - Delete Work Item
 
 > Extracted from `PM_USECASE_SPEC.md`
-> Version: 1.1
-> Last Updated: 2026-03-30
+> Version: 1.2
+> Last Updated: 2026-03-31
 
 ## Related References
 
@@ -20,8 +20,8 @@
 | **Use Case ID** | UC-PM-105 |
 | **Use Case Name** | Delete Work Item |
 | **Module** | PM Core |
-| **Version** | 1.1 |
-| **Last Updated** | 2026-03-30 |
+| **Version** | 1.2 |
+| **Last Updated** | 2026-03-31 |
 | **Priority** | Medium |
 | **Complexity** | Medium |
 
@@ -71,7 +71,7 @@ Soft-delete a work item in tenant scope using Jira-aligned project authorization
 
 | Step | Actor/System | Action |
 |------|-------------|--------|
-| 1 | Project Lead | Sends DELETE `/api/v1/work-items/{workItemId}` |
+| 1 | Project Lead | Sends DELETE `/api/v1/projects/{projectId}/work-items/{workItemId}` |
 | 2 | System | Validates JWT and extracts `userId`, `tenantId`, and security context |
 | 3 | System | Loads work item by `id=workItemId`, `tenant_id=tenantId`, `deleted_at IS NULL` |
 | 4 | System | Loads project context and validates the project is not archived |
@@ -144,7 +144,7 @@ Soft-delete a work item in tenant scope using Jira-aligned project authorization
 
 | Step | Actor/System | Action |
 |------|-------------|--------|
-| 7.E1 | System | Returns HTTP 403 with error: `WORK_ITEM_SECURITY_ACCESS_DENIED` |
+| 7.E1 | System | Returns HTTP 403 with error: `SECURITY_LEVEL_ACCESS_DENIED` |
 
 #### EF-5: Invalid Delete Scope
 
@@ -193,3 +193,34 @@ Soft-delete a work item in tenant scope using Jira-aligned project authorization
 | userId | JWT token | Authenticated user performing delete |
 | tenantId | JWT token | Tenant scope for data isolation |
 | groups | JWT token | Group memberships used by permission and issue-security evaluation |
+
+## Implementation Traceability (Current Code)
+
+### Application/Domain Mapping
+
+| Use Case Flow | Current Implementation |
+|---------------|------------------------|
+| Validate command payload and IDs | `DeleteWorkItemValidator.validateCommand(...)` |
+| Validate project exists and writable (not archived) | `DeleteWorkItemValidator.validateWritableProject(...)` |
+| Load target work item in tenant scope | `DeleteWorkItemCommandHandler.handle(...)` + `IWorkItemService.getWorkItemById(...)` |
+| Enforce project boundary (`projectId` path vs work item project) | `DeleteWorkItemCommandHandler.handle(...)` (`WORK_ITEM_NOT_FOUND` on mismatch) |
+| Enforce project permissions (`BROWSE_PROJECTS`, `DELETE_ISSUES`) | `WorkItemDeleteAuthorizationService.checkDeletePermission(...)` |
+| Enforce issue-security membership when `security_level_id` exists | `WorkItemDeleteAuthorizationService.checkDeleteSecurityAccess(...)` |
+| Resolve recursive delete scope and validate hierarchy safety | `WorkItemService.collectDeleteScope(...)` |
+| Execute soft delete | `WorkItemService.softDeleteWorkItem(...)` -> `IWorkItemWritePort.softDeleteWorkItems(...)` |
+| Return delete summary payload | `DeleteWorkItemResult.from(...)` |
+
+### Current Gap Notes (Spec vs Runtime)
+
+1. `WORK_ITEM_DELETED` outbox persistence is not yet emitted in the current delete command path.
+2. Cascading bundled-relation/link soft-delete SQL is scaffolded in `WorkItemWriteAdapter` but currently disabled (commented SQL blocks), so only `work_items` soft-delete is active.
+3. Security denial is currently represented by `SECURITY_LEVEL_ACCESS_DENIED` (domain error code), not `WORK_ITEM_SECURITY_ACCESS_DENIED`.
+
+### Unit Test Coverage Added/Updated
+
+| Test Class | Scope |
+|------------|-------|
+| `DeleteWorkItemCommandHandlerTest` | Happy path orchestration, permission/security context propagation, project-boundary rejection |
+| `DeleteWorkItemValidatorTest` | Command input validation and archived-project rejection |
+| `WorkItemDeleteAuthorizationServiceTest` | Project permission checks, issue-security allow/deny paths, group normalization, project-role membership evaluation |
+| `WorkItemServiceTest` | Recursive delete-scope assembly, cross-project child rejection, cycle detection, root-project mismatch handling |

@@ -121,12 +121,12 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 | UC ID | Name | Actor | Priority | Complexity | Entity |
 |-------|------|-------|----------|------------|--------|
 | UC-PM-101 | [Create Work Item](usecases/workitem/UC-PM-101-create-work-item.md) | Authenticated Project User | High | Complex | Work Item |
-| UC-PM-102 | Update Work Item | Team Member | High | Medium | Work Item |
+| UC-PM-102 | [Update Work Item](usecases/workitem/UC-PM-102-update-work-item.md) | Team Member | High | Medium | Work Item |
 | UC-PM-103 | [Get Work Item by ID](usecases/workitem/UC-PM-103-get-work-item-by-id.md) | Team Member | High | Simple | Work Item |
 | UC-PM-104 | List Work Items with Filters | Team Member | High | Medium | Work Item |
 | UC-PM-105 | [Delete Work Item](usecases/workitem/UC-PM-105-delete-work-item.md) | Project Lead | Medium | Medium | Work Item |
 | UC-PM-106 | [Transition Work Item Status](usecases/workitem/UC-PM-106-transition-work-item-status.md) | Team Member | High | Complex | Work Item |
-| UC-PM-107 | Assign Work Item | Team Member | High | Simple | Work Item |
+| UC-PM-107 | [Assign Work Item](usecases/workitem/UC-PM-107-assign-work-item.md) | Team Member | High | Simple | Work Item |
 | UC-PM-108 | Re-rank Work Item (Lexorank) | Team Member | Medium | Medium | Work Item |
 | UC-PM-109 | Bulk Update Work Items | Project Lead | Medium | Complex | Work Item |
 | UC-PM-110 | Clone Work Item | Team Member | Medium | Medium | Work Item |
@@ -134,11 +134,11 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 | UC-PM-116 | Manage Work Item Fix Versions | Team Member | Medium | Simple | Work Item Fix Version |
 | UC-PM-121 | Move Work Item to Sprint | Team Member | High | Medium | Work Item Sprint |
 | UC-PM-122 | Remove Work Item from Sprint | Team Member | Medium | Simple | Work Item Sprint |
-| UC-PM-131 | Create Issue Type | PM Admin | High | Simple | Issue Type |
-| UC-PM-132 | Update Issue Type | PM Admin | Medium | Simple | Issue Type |
-| UC-PM-133 | Get Issue Type by ID | PM Admin | Low | Simple | Issue Type |
-| UC-PM-134 | List Issue Types | PM Admin | Medium | Simple | Issue Type |
-| UC-PM-135 | Delete Issue Type | PM Admin | Low | Simple | Issue Type |
+| UC-PM-131 | [Create Issue Type](usecases/issue-type/UC-PM-131-create-issue-type.md) | PM Admin | High | Simple | Issue Type |
+| UC-PM-132 | [Update Issue Type](usecases/issue-type/UC-PM-132-update-issue-type.md) | PM Admin | Medium | Simple | Issue Type |
+| UC-PM-133 | [Get Issue Type by ID](usecases/issue-type/UC-PM-133-get-issue-type-by-id.md) | PM Admin | Low | Simple | Issue Type |
+| UC-PM-134 | [List Issue Types](usecases/issue-type/UC-PM-134-list-issue-types.md) | PM Admin | Medium | Simple | Issue Type |
+| UC-PM-135 | [Delete Issue Type](usecases/issue-type/UC-PM-135-delete-issue-type.md) | PM Admin | Low | Simple | Issue Type |
 | UC-PM-136 | Create Issue Type Scheme | PM Admin | Medium | Simple | Issue Type Scheme |
 | UC-PM-137 | Update Issue Type Scheme | PM Admin | Medium | Simple | Issue Type Scheme |
 | UC-PM-138 | Get Issue Type Scheme by ID | PM Admin | Low | Simple | Issue Type Scheme |
@@ -1455,60 +1455,16 @@ This extracted file is now the canonical detailed reference for UC-PM-101, inclu
 
 #### UC-PM-102: Update Work Item
 
-##### Basic Information
+Detailed specification is extracted to:
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-102 |
-| **Use Case Name** | Update Work Item |
-| **Module** | PM Core |
-| **Version** | 1.0 |
-| **Last Updated** | 2026-02-18 |
-| **Priority** | High |
-| **Complexity** | Medium |
+- [UC-PM-102 - Update Work Item](usecases/workitem/UC-PM-102-update-work-item.md)
 
-##### Description
+This extracted file is now the canonical detailed reference for UC-PM-102, including:
 
-Update work item fields (summary, description, priority, assignee, due date, estimates, custom fields). Status transitions use a separate use case (UC-PM-106).
-
-##### Actors
-
-| Actor | Type | Description |
-|-------|------|-------------|
-| Team Member | Primary | Updates work item fields |
-
-##### Preconditions
-
-1. User is authenticated with valid JWT token
-2. User has permission `PM.WORK_ITEM.UPDATE`
-3. Work item exists and is not deleted
-4. Project is not archived
-
-##### Main Flow
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 1 | Team Member | Sends PUT `/api/v1/work-items/{workItemId}` with updated fields |
-| 2 | System | Validates JWT and permissions |
-| 3 | System | Fetches work item, validates it exists and belongs to tenant |
-| 4 | System | Validates project is not archived |
-| 5 | System | Validates editable fields per field configuration for EDIT screen |
-| 6 | System | If `issue_type_id` changed, validates new type is in project's scheme and re-evaluates workflow |
-| 7 | System | If `assignee_id` changed, validates user exists |
-| 8 | System | Updates work item, sets `updated_by=userId` |
-| 9 | System | Records field changes in `change_groups` / `change_items` (Module 09, deferred) |
-| 10 | System | Commits transaction |
-| 11 | System | Publishes `WORK_ITEM_UPDATED` event to `serp.pm.workitem.events` |
-| 12 | System | Returns HTTP 200 with updated work item |
-
-##### Business Rules
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-102-01 | `key` and `issue_no` are immutable | Service layer |
-| BR-PM-102-02 | `status_id` cannot be changed via update; must use transition (UC-PM-106) | Service layer |
-| BR-PM-102-03 | Cannot update work items in archived projects | Service layer |
-| BR-PM-102-04 | Hidden fields (per field configuration) cannot be updated | Service layer |
+- full use case specification
+- Jira-aligned authorization model for update-time checks (`BROWSE_PROJECTS` + `EDIT_ISSUES` + conditional field-level permissions)
+- UC-PM-102 v1 scope that excludes `issue_type_id` changes
+- implementation traceability to the Java runtime code
 
 ---
 
@@ -1608,34 +1564,16 @@ This extracted file is now the canonical detailed reference for UC-PM-106, inclu
 
 #### UC-PM-107: Assign Work Item
 
-##### Basic Information
+Detailed specification is extracted to:
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-107 |
-| **Use Case Name** | Assign Work Item |
-| **Priority** | High |
-| **Complexity** | Simple |
+- [UC-PM-107 - Assign Work Item](usecases/workitem/UC-PM-107-assign-work-item.md)
 
-**Permission**: `PM.WORK_ITEM.ASSIGN`
+This extracted file is now the canonical detailed reference for UC-PM-107, including:
 
-**Main Flow**:
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 1 | Team Member | Sends PUT `/api/v1/work-items/{workItemId}/assign` with `{ assignee_id }` |
-| 2 | System | Validates JWT and permissions |
-| 3 | System | Fetches work item, validates it exists |
-| 4 | System | Validates `assignee_id` exists (null to unassign) |
-| 5 | System | Updates `assignee_id` |
-| 6 | System | Publishes `WORK_ITEM_ASSIGNED` event |
-| 7 | System | Returns HTTP 200 |
-
-**Input Data**:
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| assignee_id | int64 | No | must exist or null to unassign | New assignee |
+- full use case specification
+- Jira-aligned authorization model for assignment-time checks (`BROWSE_PROJECTS` + `ASSIGN_ISSUES` + `ASSIGNABLE_USER` + issue security)
+- assign/unassign flows, no-op behavior, and outbox publication details
+- implementation traceability to the Java runtime code
 
 ---
 
@@ -1839,48 +1777,20 @@ Set `is_active=false` and `removed_at=NOW()` on current sprint entry. Publish `W
 
 #### UC-PM-131 to UC-PM-135: Issue Type CRUD
 
-##### UC-PM-131: Create Issue Type
+Detailed specifications are extracted to separate files:
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-131 |
-| **Use Case Name** | Create Issue Type |
-| **Priority** | High |
-| **Complexity** | Simple |
+- [UC-PM-131 - Create Issue Type](usecases/issue-type/UC-PM-131-create-issue-type.md)
+- [UC-PM-132 - Update Issue Type](usecases/issue-type/UC-PM-132-update-issue-type.md)
+- [UC-PM-133 - Get Issue Type by ID](usecases/issue-type/UC-PM-133-get-issue-type-by-id.md)
+- [UC-PM-134 - List Issue Types](usecases/issue-type/UC-PM-134-list-issue-types.md)
+- [UC-PM-135 - Delete Issue Type](usecases/issue-type/UC-PM-135-delete-issue-type.md)
 
-**Permission**: `PM.ISSUE_TYPE.CREATE`
+Issue type management is tenant-scoped administration behavior:
 
-**Main Flow**:
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 1 | PM Admin | Sends POST `/api/v1/issue-types` with issue type data |
-| 2 | System | Validates JWT, permissions, input |
-| 3 | System | Validates `type_key` is unique within tenant |
-| 4 | System | Persists issue type with `is_system=false` |
-| 5 | System | Publishes `ISSUE_TYPE_CREATED` to `serp.pm.issuetype.events` |
-| 6 | System | Returns HTTP 201 |
-
-**Input Data**:
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| type_key | string | Yes | min:1, max:100, unique per tenant | Stable key |
-| name | string | Yes | min:1, max:255 | Display name |
-| description | string | No | max:2000 | Description |
-| icon_url | string | No | valid URL | Icon |
-| hierarchy_level | int | Yes | 0=subtask, 1=standard, 2=epic | Hierarchy level |
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-131-01 | `type_key` is unique per tenant and immutable after creation | DB + Service |
-| BR-PM-131-02 | System issue types cannot be created via API | Service layer |
-
-##### UC-PM-132 to UC-PM-135: Issue Type Update, Get, List, Delete
-
-Standard CRUD. System issue types (`is_system=true`) cannot be deleted or have their `type_key` changed.
+- Read APIs may return both tenant-owned issue types and system-owned issue types visible to that tenant
+- System-owned issue types are read-only from tenant APIs
+- Tenant callers may create, update, and delete only issue types owned by their own tenant
+- `tenant_id` for write operations is always resolved from JWT context and never accepted from the request payload
 
 ---
 

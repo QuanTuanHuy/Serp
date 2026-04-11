@@ -9,18 +9,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import serp.project.pmcore.application.workitem.command.create.internal.CreateWorkItemData;
 import serp.project.pmcore.application.workitem.command.create.internal.ResolvedWorkItemCreateConfiguration;
-import serp.project.pmcore.domain.issuesecurity.entity.IssueSecurityLevelEntity;
-import serp.project.pmcore.domain.issuesecurity.entity.IssueSecuritySchemeEntity;
-import serp.project.pmcore.domain.issuesecurity.port.IIssueSecurityLevelPort;
-import serp.project.pmcore.domain.issuesecurity.port.IIssueSecuritySchemePort;
+import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeSchemeItemEntity;
 import serp.project.pmcore.domain.issuetype.port.IIssueTypePort;
 import serp.project.pmcore.domain.issuetype.port.IIssueTypeSchemeItemPort;
-import serp.project.pmcore.domain.priority.entity.PrioritySchemeEntity;
-import serp.project.pmcore.domain.priority.entity.PrioritySchemeItemEntity;
-import serp.project.pmcore.domain.priority.port.IPrioritySchemeItemPort;
-import serp.project.pmcore.domain.priority.port.IPrioritySchemePort;
+import serp.project.pmcore.domain.priority.service.IPrioritySchemeService;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
@@ -37,8 +31,6 @@ import serp.project.pmcore.domain.workflow.port.IWorkflowSchemePort;
 import serp.project.pmcore.domain.workflow.port.IWorkflowStepPort;
 import serp.project.pmcore.domain.workflow.port.IWorkflowVersionPort;
 
-import java.util.List;
-
 @Service
 @RequiredArgsConstructor
 public class WorkItemCreateConfigurationResolver {
@@ -50,10 +42,8 @@ public class WorkItemCreateConfigurationResolver {
     private final IWorkflowPort workflowPort;
     private final IWorkflowVersionPort workflowVersionPort;
     private final IWorkflowStepPort workflowStepPort;
-    private final IPrioritySchemePort prioritySchemePort;
-    private final IPrioritySchemeItemPort prioritySchemeItemPort;
-    private final IIssueSecuritySchemePort issueSecuritySchemePort;
-    private final IIssueSecurityLevelPort issueSecurityLevelPort;
+    private final IPrioritySchemeService prioritySchemeService;
+    private final IIssueSecurityService issueSecurityService;
 
     public ResolvedWorkItemCreateConfiguration resolve(ProjectEntity project,
                                                        CreateWorkItemData request,
@@ -66,7 +56,11 @@ public class WorkItemCreateConfigurationResolver {
         validateParentRequirement(issueType, request.getParentId());
 
         WorkflowStepEntity initialStep = resolveInitialWorkflowStep(project, issueType.getId(), tenantId);
-        Long priorityId = resolvePriorityId(project, request.getPriorityId(), tenantId);
+        Long priorityId = project.getPrioritySchemeId() == null
+                ? null
+                : request.getPriorityId() == null
+                ? prioritySchemeService.resolveDefaultPriorityId(project.getPrioritySchemeId(), tenantId)
+                : prioritySchemeService.validatePriorityIdInScheme(project.getPrioritySchemeId(), request.getPriorityId(), tenantId);
 
         return new ResolvedWorkItemCreateConfiguration(issueType, initialStep, priorityId);
     }
@@ -78,34 +72,9 @@ public class WorkItemCreateConfigurationResolver {
             return requestedSecurityLevelId == null ? null : missingIssueSecurityScheme(project.getId());
         }
 
-        IssueSecuritySchemeEntity issueSecurityScheme = issueSecuritySchemePort
-                .getIssueSecuritySchemeById(project.getIssueSecuritySchemeId(), tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        DomainErrorCode.ISSUE_SECURITY_SCHEME_NOT_FOUND,
-                        "Issue security scheme not found: id=" + project.getIssueSecuritySchemeId()
-                ));
-
-        if (requestedSecurityLevelId == null) {
-            return issueSecurityScheme.getDefaultLevelId();
-        }
-
-        boolean inScheme = issueSecurityLevelPort.getIssueSecurityLevelsBySchemeId(
-                        project.getIssueSecuritySchemeId(),
-                        tenantId
-                )
-                .stream()
-                .map(IssueSecurityLevelEntity::getId)
-                .anyMatch(requestedSecurityLevelId::equals);
-
-        if (!inScheme) {
-            throw new BusinessRuleViolationException(
-                    DomainErrorCode.SECURITY_LEVEL_NOT_IN_SCHEME,
-                    "Security level is not allowed in project scheme: projectId=" + project.getId()
-                            + ", securityLevelId=" + requestedSecurityLevelId
-            );
-        }
-
-        return requestedSecurityLevelId;
+        return requestedSecurityLevelId == null
+                ? issueSecurityService.resolveDefaultSecurityLevelId(project.getIssueSecuritySchemeId(), tenantId)
+                : issueSecurityService.validateSecurityLevelId(project.getIssueSecuritySchemeId(), requestedSecurityLevelId, tenantId);
     }
 
     private void ensureProjectWritable(ProjectEntity project) {
@@ -225,48 +194,6 @@ public class WorkItemCreateConfigurationResolver {
                         "Workflow must have exactly one initial step: workflowId=" + workflowId
                 ));
     }
-
-    private Long resolvePriorityId(ProjectEntity project, Long requestedPriorityId, Long tenantId) {
-        if (project.getPrioritySchemeId() == null) {
-            throw new ResourceNotFoundException(
-                    DomainErrorCode.PRIORITY_SCHEME_NOT_FOUND,
-                    "Project has no priority scheme binding: projectId=" + project.getId()
-            );
-        }
-
-        PrioritySchemeEntity priorityScheme = prioritySchemePort
-                .getPrioritySchemeById(project.getPrioritySchemeId(), tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        DomainErrorCode.PRIORITY_SCHEME_NOT_FOUND,
-                        "Priority scheme not found: id=" + project.getPrioritySchemeId()
-                ));
-
-        List<PrioritySchemeItemEntity> priorityItems = prioritySchemeItemPort
-                .getPrioritySchemeItemsBySchemeId(project.getPrioritySchemeId(), tenantId);
-
-        if (requestedPriorityId != null) {
-            boolean inScheme = priorityItems.stream()
-                    .map(PrioritySchemeItemEntity::getPriorityId)
-                    .anyMatch(requestedPriorityId::equals);
-            if (!inScheme) {
-                throw new BusinessRuleViolationException(
-                        DomainErrorCode.PRIORITY_NOT_IN_SCHEME,
-                        "Priority is not allowed in project scheme: projectId=" + project.getId() + ", priorityId=" + requestedPriorityId
-                );
-            }
-            return requestedPriorityId;
-        }
-
-        if (priorityScheme.getDefaultPriorityId() == null) {
-            throw new DomainValidationException(
-                    DomainErrorCode.DEFAULT_PRIORITY_NOT_CONFIGURED,
-                    "Priority scheme has no default priority: schemeId=" + project.getPrioritySchemeId()
-            );
-        }
-
-        return priorityScheme.getDefaultPriorityId();
-    }
-
     private Long missingIssueSecurityScheme(Long projectId) {
         throw new ResourceNotFoundException(
                 DomainErrorCode.ISSUE_SECURITY_SCHEME_NOT_FOUND,

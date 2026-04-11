@@ -15,6 +15,7 @@ import serp.project.pmcore.infrastructure.store.repository.IWorkflowTransitionRe
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -45,5 +46,15 @@ public class WorkflowTransitionAdapter implements IWorkflowTransitionPort {
         return workflowTransitionMapper.toEntities(
                 workflowTransitionRepository.findByWorkflowVersionIdAndTenantIdOrSystemTenant(workflowVersionId, tenantId)
         );
+    }
+
+    @Override
+    public Optional<WorkflowTransitionEntity> getWorkflowTransitionByIdAndWorkflowVersionId(Long id, Long workflowVersionId, Long tenantId) {
+        return workflowTransitionRepository.findById(id)
+                .filter(workflowTransition ->
+                        workflowTransition.getWorkflowVersionId().equals(workflowVersionId) &&
+                        workflowTransition.getTenantId().equals(tenantId))
+                .map(workflowTransitionMapper::toEntity);
+
     }
 }

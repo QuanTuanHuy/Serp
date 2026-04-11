@@ -11,7 +11,7 @@ public record ProjectRoleView(
         Long tenantId,
         String name,
         String description,
-        Boolean isDefault
+        Boolean isSystem
 ) {
     public static ProjectRoleView from(ProjectRoleEntity entity) {
         return new ProjectRoleView(

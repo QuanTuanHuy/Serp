@@ -123,6 +123,8 @@ poetry run alembic revision --autogenerate -m "message"
 - Do not leak persistence models into domain or API response layers.
 - Preserve tenant, organization, and user context handling through shared auth utilities.
 - For schema changes, add a migration instead of relying on implicit auto-update behavior.
+- Code style: add brief comments for tricky logic; keep files under ~500 LOC when feasible (split/refactor as needed).
+
 
 ### File headers and comments
 - Many backend files start with the repository header below; add it to new Go/Java files and match local Python header style when present.

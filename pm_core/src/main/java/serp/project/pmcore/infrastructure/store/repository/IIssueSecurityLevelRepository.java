@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 import serp.project.pmcore.infrastructure.store.model.IssueSecurityLevelModel;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface IIssueSecurityLevelRepository extends JpaRepository<IssueSecurityLevelModel, Long> {
@@ -20,4 +21,6 @@ public interface IIssueSecurityLevelRepository extends JpaRepository<IssueSecuri
                                                                               @Param("tenantId") Long tenantId);
 
     List<IssueSecurityLevelModel> findAllBySchemeIdAndTenantId(Long schemeId, Long tenantId);
+
+    Optional<IssueSecurityLevelModel> findByIdAndSchemeIdAndTenantId(Long id, Long schemeId, Long tenantId);
 }

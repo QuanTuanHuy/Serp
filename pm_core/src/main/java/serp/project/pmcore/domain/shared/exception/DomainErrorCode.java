@@ -93,6 +93,11 @@ public enum DomainErrorCode {
     WORK_ITEM_NOT_FOUND("Work item not found"),
     INVALID_PARENT_HIERARCHY("Invalid parent-child hierarchy: child level must be lower than parent level"),
     PARENT_NOT_IN_SAME_PROJECT("Parent work item must belong to the same project"),
+    WORK_ITEM_DELETE_SCOPE_INVALID("Work item delete scope is invalid"),
+    WORK_ITEM_SECURITY_ACCESS_DENIED("Insufficient issue security level to transition this work item"),
+    WORKFLOW_NOT_RESOLVABLE("Effective workflow cannot be resolved for this work item"),
+    WORK_ITEM_WORKFLOW_STATE_INVALID("Work item workflow_step_id/status_id is inconsistent with the effective workflow"),
+    TRANSITION_FIELD_INVALID("Transition field payload is invalid"),
 
     // Issue types & issue type schemes
     ISSUE_TYPE_NOT_FOUND("Issue type not found"),
@@ -174,6 +179,7 @@ public enum DomainErrorCode {
     CUSTOM_FIELD_NOT_FOUND("Custom field not found"),
     CUSTOM_FIELD_TYPE_IMMUTABLE("Custom field type cannot be changed after creation"),
     FIELD_NOT_WRITABLE_ON_CREATE("Field is not writable on create"),
+    FIELD_NOT_WRITABLE_ON_UPDATE("Field is not writable on update"),
     REQUIRED_FIELDS_MISSING("Required fields are missing"),
     CUSTOM_FIELD_CONTEXT_UNRESOLVABLE("Custom field context could not be resolved"),
     CUSTOM_FIELD_VALUE_INVALID("Custom field value is invalid"),

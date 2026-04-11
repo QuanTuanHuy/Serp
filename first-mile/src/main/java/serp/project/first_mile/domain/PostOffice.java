@@ -48,6 +48,9 @@ public class PostOffice extends AbstractAudit {
     @Column(name = "phone_number", length = 15)
     private String phoneNumber;
 
+    @Column(name = "image_url")
+    private String imageUrl;
+
     @Column(name = "operational_start_date")
     private LocalDate operationalStartDate;
 
@@ -64,22 +67,27 @@ public class PostOffice extends AbstractAudit {
     private Point location;
 
     @Column(name = "service_radius_m", nullable = false)
+    @Builder.Default
     private Integer serviceRadiusM = 5000;
 
     // @Column(name = "coverage_polygon", columnDefinition = "geometry(Polygon,4326)")
     // private Polygon coveragePolygon;
 
     @Column(name = "daily_capacity", nullable = false)
+    @Builder.Default
     private Integer dailyCapacity = 0;
 
     @Column(name = "current_load", nullable = false)
+    @Builder.Default
     private Integer currentLoad = 0;
 
     @Column(name = "priority", nullable = false)
+    @Builder.Default
     private Integer priority = 100;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
+    @Builder.Default
     private PostOfficeStatus status = PostOfficeStatus.INACTIVE;
 
     @Version

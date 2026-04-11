@@ -30,10 +30,24 @@ public class EventConstants {
         public static final String AGGREGATE = "WORK_ITEM";
 
         public static class EventType {
+            public static final String WORK_ITEM_ASSIGNED = "WORK_ITEM_ASSIGNED";
             public static final String WORK_ITEM_CREATED = "WORK_ITEM_CREATED";
             public static final String WORK_ITEM_UPDATED = "WORK_ITEM_UPDATED";
             public static final String WORK_ITEM_DELETED = "WORK_ITEM_DELETED";
             public static final String WORK_ITEM_MOVED = "WORK_ITEM_MOVED";
+            public static final String WORK_ITEM_STATUS_CHANGED = "WORK_ITEM_STATUS_CHANGED";
+        }
+    }
+
+    @UtilityClass
+    public static class IssueType {
+        public static final String TOPIC = "serp.pm.issuetype.events";
+        public static final String AGGREGATE = "ISSUE_TYPE";
+
+        public static class EventType {
+            public static final String ISSUE_TYPE_CREATED = "ISSUE_TYPE_CREATED";
+            public static final String ISSUE_TYPE_UPDATED = "ISSUE_TYPE_UPDATED";
+            public static final String ISSUE_TYPE_DELETED = "ISSUE_TYPE_DELETED";
         }
     }
 }
