@@ -21,6 +21,7 @@ import serp.project.pmcore.application.workitem.command.create.support.WorkItemF
 import serp.project.pmcore.domain.customfield.dto.ResolvedCustomFields;
 import serp.project.pmcore.domain.customfield.service.impl.WorkItemCustomFieldResolver;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.shared.service.IOutboxEventService;
 import serp.project.pmcore.domain.project.service.IProjectService;
@@ -74,10 +75,11 @@ public class CreateWorkItemCommandHandler
 
         ProjectEntity project = projectService.getProjectById(projectId, tenantId);
         ensureProjectWritable(project);
+        ProjectPermissionSubject permissionSubject = ProjectPermissionSubject.from(project);
         ProjectPermissionEvaluationContext actorContext = workItemAuthorizationSupportService
                 .buildActorContext(userId, command.groupKeys());
         workItemAuthorizationSupportService.checkRequiredPermissions(
-                project,
+                permissionSubject,
                 actorContext,
                 ProjectPermissionKeys.BROWSE_PROJECTS,
                 ProjectPermissionKeys.CREATE_ISSUES
@@ -92,9 +94,9 @@ public class CreateWorkItemCommandHandler
         );
         workItemFieldWriteValidator.validateClientSuppliedWritableFields(createWorkItemData, fieldRules);
 
-        workItemAuthorizationSupportService.checkScheduleIssuesPermissionIfNeeded(project, actorContext, createWorkItemData.getDueDate());
-        Long assigneeId = workItemAuthorizationSupportService.resolveAssigneeId(project, createWorkItemData.getAssigneeId(), actorContext);
-        workItemAuthorizationSupportService.checkSetIssueSecurityPermissionIfNeeded(project, actorContext, createWorkItemData.getSecurityLevelId());
+        workItemAuthorizationSupportService.checkScheduleIssuesPermissionIfNeeded(permissionSubject, actorContext, createWorkItemData.getDueDate());
+        Long assigneeId = workItemAuthorizationSupportService.resolveAssigneeId(permissionSubject, createWorkItemData.getAssigneeId(), actorContext);
+        workItemAuthorizationSupportService.checkSetIssueSecurityPermissionIfNeeded(permissionSubject, actorContext, createWorkItemData.getSecurityLevelId());
         Long securityLevelId = workItemCreateConfigurationResolver.resolveSecurityLevelId(
                 project,
                 createWorkItemData.getSecurityLevelId(),

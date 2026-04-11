@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.shared.cqrs.query.IQueryHandler;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.project.service.IProjectService;
@@ -38,7 +39,7 @@ public class GetWorkItemByIdQueryHandler implements IQueryHandler<GetWorkItemByI
                 .userId(query.userId())
                 .build();
         permissionEvaluationService.checkPermission(
-                project,
+                ProjectPermissionSubject.from(project),
                 evaluationContext,
                 ProjectPermissionKeys.BROWSE_PROJECTS
         );

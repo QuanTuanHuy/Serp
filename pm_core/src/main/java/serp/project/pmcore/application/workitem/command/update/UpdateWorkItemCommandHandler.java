@@ -22,6 +22,7 @@ import serp.project.pmcore.domain.customfield.service.impl.WorkItemCustomFieldRe
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
 import serp.project.pmcore.domain.issuetype.port.IIssueTypePort;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.service.IProjectService;
 import serp.project.pmcore.domain.shared.constant.EventConstants;
@@ -88,6 +89,7 @@ public class UpdateWorkItemCommandHandler
 
         ProjectEntity project = projectService.getProjectById(command.projectId(), tenantId);
         ensureProjectWritable(project);
+        ProjectPermissionSubject permissionSubject = ProjectPermissionSubject.from(project);
 
         WorkItemEntity workItem = workItemService.getWorkItemById(command.workItemId(), tenantId);
         ensureWorkItemBelongsToProject(workItem, project);
@@ -99,7 +101,7 @@ public class UpdateWorkItemCommandHandler
                 workItem.getAssigneeId()
         );
         workItemAuthorizationSupportService.checkRequiredPermissions(
-                project,
+                permissionSubject,
                 actorContext,
                 ProjectPermissionKeys.BROWSE_PROJECTS,
                 ProjectPermissionKeys.EDIT_ISSUES
@@ -113,8 +115,8 @@ public class UpdateWorkItemCommandHandler
         );
         updateWorkItemFieldWriteValidator.validateClientSuppliedWritableFields(data, fieldRules);
 
-        checkFieldLevelPermissions(project, actorContext, data);
-        Long resolvedAssigneeId = resolveAssigneeId(project, actorContext, data);
+        checkFieldLevelPermissions(permissionSubject, actorContext, data);
+        Long resolvedAssigneeId = resolveAssigneeId(permissionSubject, actorContext, data);
         Long resolvedPriorityId = updateWorkItemConfigurationResolver.resolvePriorityId(
                 project.getId(),
                 project.getPrioritySchemeId(),
@@ -184,21 +186,21 @@ public class UpdateWorkItemCommandHandler
         }
     }
 
-    private void checkFieldLevelPermissions(ProjectEntity project,
+    private void checkFieldLevelPermissions(ProjectPermissionSubject permissionSubject,
                                             ProjectPermissionEvaluationContext actorContext,
                                             UpdateWorkItemData data) {
         if (data.hasSystemField(WorkItemFieldConstants.DUE_DATE)) {
-            workItemAuthorizationSupportService.checkScheduleIssuesPermissionIfNeeded(project, actorContext, 0L);
+            workItemAuthorizationSupportService.checkScheduleIssuesPermissionIfNeeded(permissionSubject, actorContext, 0L);
         }
         if (data.hasSystemField(WorkItemFieldConstants.ASSIGNEE_ID)) {
-            workItemAuthorizationSupportService.checkRequiredPermissions(project, actorContext, ProjectPermissionKeys.ASSIGN_ISSUES);
+            workItemAuthorizationSupportService.checkRequiredPermissions(permissionSubject, actorContext, ProjectPermissionKeys.ASSIGN_ISSUES);
         }
         if (data.hasSystemField(WorkItemFieldConstants.SECURITY_LEVEL_ID)) {
-            workItemAuthorizationSupportService.checkRequiredPermissions(project, actorContext, ProjectPermissionKeys.SET_ISSUE_SECURITY);
+            workItemAuthorizationSupportService.checkRequiredPermissions(permissionSubject, actorContext, ProjectPermissionKeys.SET_ISSUE_SECURITY);
         }
     }
 
-    private Long resolveAssigneeId(ProjectEntity project,
+    private Long resolveAssigneeId(ProjectPermissionSubject permissionSubject,
                                    ProjectPermissionEvaluationContext actorContext,
                                    UpdateWorkItemData data) {
         if (!data.hasSystemField(WorkItemFieldConstants.ASSIGNEE_ID)) {
@@ -216,7 +218,7 @@ public class UpdateWorkItemCommandHandler
 
         return requestedAssigneeId == null
                 ? null
-                : workItemAuthorizationSupportService.resolveAssigneeId(project, requestedAssigneeId, actorContext);
+                : workItemAuthorizationSupportService.resolveAssigneeId(permissionSubject, requestedAssigneeId, actorContext);
     }
 
     private Map<String, CustomFieldEntity> loadCustomFieldsByKey(Collection<String> fieldKeys) {

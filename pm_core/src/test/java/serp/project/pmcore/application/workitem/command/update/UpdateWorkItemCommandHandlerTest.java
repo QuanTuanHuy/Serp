@@ -24,6 +24,7 @@ import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
 import serp.project.pmcore.domain.issuetype.port.IIssueTypePort;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.service.IProjectService;
 import serp.project.pmcore.domain.shared.constant.EventConstants;
@@ -195,7 +196,7 @@ class UpdateWorkItemCommandHandlerTest {
                                 new WorkItemFieldPolicy("SYSTEM", WorkItemFieldConstants.ASSIGNEE_ID, false, false, true)),
                         Map.of()
                 ));
-        when(workItemAuthorizationSupportService.resolveAssigneeId(project, 123L, actorContext)).thenReturn(123L);
+        when(workItemAuthorizationSupportService.resolveAssigneeId(ProjectPermissionSubject.from(project), 123L, actorContext)).thenReturn(123L);
         when(updateWorkItemConfigurationResolver.resolvePriorityId(PROJECT_ID, project.getPrioritySchemeId(), workItem.getPriorityId(), command.data(), TENANT_ID))
                 .thenReturn(workItem.getPriorityId());
         when(updateWorkItemConfigurationResolver.resolveSecurityLevelId(PROJECT_ID, project.getIssueSecuritySchemeId(), workItem.getSecurityLevelId(), command.data(), TENANT_ID))

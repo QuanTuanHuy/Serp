@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
@@ -41,7 +42,7 @@ class WorkItemDeleteAuthorizationServiceTest {
         service.checkDeletePermission(project, actorContext);
 
         verify(workItemAuthorizationSupportService).checkRequiredPermissions(
-                project,
+                ProjectPermissionSubject.from(project),
                 actorContext,
                 ProjectPermissionKeys.BROWSE_PROJECTS,
                 ProjectPermissionKeys.DELETE_ISSUES

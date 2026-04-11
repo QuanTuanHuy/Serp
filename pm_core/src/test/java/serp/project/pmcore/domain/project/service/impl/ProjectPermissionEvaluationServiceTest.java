@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.pmcore.domain.permission.entity.PermissionSchemeEntryEntity;
 import serp.project.pmcore.domain.permission.port.IPermissionSchemeEntryPort;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.entity.ProjectRoleEntity;
 import serp.project.pmcore.domain.project.service.IProjectRoleActorService;
@@ -67,7 +68,7 @@ class ProjectPermissionEvaluationServiceTest {
 
         mockEntries(List.of(entry(1L, ProjectPermissionKeys.BROWSE_PROJECTS, "USER", "42")));
 
-        assertTrue(service.hasPermission(project, context, ProjectPermissionKeys.BROWSE_PROJECTS));
+        assertTrue(service.hasPermission(ProjectPermissionSubject.from(project), context, ProjectPermissionKeys.BROWSE_PROJECTS));
     }
 
     @Test
@@ -77,7 +78,7 @@ class ProjectPermissionEvaluationServiceTest {
 
         mockEntries(List.of(entry(2L, ProjectPermissionKeys.BROWSE_PROJECTS, "GROUP", "dev-team")));
 
-        assertTrue(service.hasPermission(project, context, ProjectPermissionKeys.BROWSE_PROJECTS));
+        assertTrue(service.hasPermission(ProjectPermissionSubject.from(project), context, ProjectPermissionKeys.BROWSE_PROJECTS));
     }
 
     @Test
@@ -86,11 +87,11 @@ class ProjectPermissionEvaluationServiceTest {
 
         ProjectPermissionEvaluationContext reporterContext = context(55L, Set.of(), 55L, null);
         mockEntries(List.of(entry(3L, ProjectPermissionKeys.BROWSE_PROJECTS, "REPORTER", null)));
-        assertTrue(service.hasPermission(project, reporterContext, ProjectPermissionKeys.BROWSE_PROJECTS));
+        assertTrue(service.hasPermission(ProjectPermissionSubject.from(project), reporterContext, ProjectPermissionKeys.BROWSE_PROJECTS));
 
         ProjectPermissionEvaluationContext assigneeContext = context(66L, Set.of(), null, 66L);
         mockEntries(List.of(entry(4L, ProjectPermissionKeys.BROWSE_PROJECTS, "ASSIGNEE", null)));
-        assertTrue(service.hasPermission(project, assigneeContext, ProjectPermissionKeys.BROWSE_PROJECTS));
+        assertTrue(service.hasPermission(ProjectPermissionSubject.from(project), assigneeContext, ProjectPermissionKeys.BROWSE_PROJECTS));
     }
 
     @Test
@@ -122,7 +123,7 @@ class ProjectPermissionEvaluationServiceTest {
                 "77"
         )).thenReturn(true);
 
-        assertTrue(service.hasPermission(project, context, ProjectPermissionKeys.ADMINISTER_PROJECTS));
+        assertTrue(service.hasPermission(ProjectPermissionSubject.from(project), context, ProjectPermissionKeys.ADMINISTER_PROJECTS));
     }
 
     @Test
@@ -137,9 +138,9 @@ class ProjectPermissionEvaluationServiceTest {
         ProjectPermissionEvaluationContext leadContext = context(LEAD_USER_ID, Set.of(), null, null);
         ProjectPermissionEvaluationContext nonLeadContext = context(999L, Set.of(), null, null);
 
-        assertTrue(service.hasPermission(project, leadContext, ProjectPermissionKeys.ADMINISTER_PROJECTS));
-        assertFalse(service.hasPermission(project, nonLeadContext, ProjectPermissionKeys.ADMINISTER_PROJECTS));
-        assertFalse(service.hasPermission(project, leadContext, ProjectPermissionKeys.BROWSE_PROJECTS));
+        assertTrue(service.hasPermission(ProjectPermissionSubject.from(project), leadContext, ProjectPermissionKeys.ADMINISTER_PROJECTS));
+        assertFalse(service.hasPermission(ProjectPermissionSubject.from(project), nonLeadContext, ProjectPermissionKeys.ADMINISTER_PROJECTS));
+        assertFalse(service.hasPermission(ProjectPermissionSubject.from(project), leadContext, ProjectPermissionKeys.BROWSE_PROJECTS));
     }
 
     @Test
@@ -149,7 +150,7 @@ class ProjectPermissionEvaluationServiceTest {
 
         mockEntries(List.of(entry(6L, ProjectPermissionKeys.BROWSE_PROJECTS, "LOGGED_IN_USER", null)));
 
-        assertTrue(service.hasPermission(project, context, ProjectPermissionKeys.BROWSE_PROJECTS));
+        assertTrue(service.hasPermission(ProjectPermissionSubject.from(project), context, ProjectPermissionKeys.BROWSE_PROJECTS));
     }
 
     @Test
@@ -164,7 +165,7 @@ class ProjectPermissionEvaluationServiceTest {
                 entry(10L, ProjectPermissionKeys.BROWSE_PROJECTS, "ANYONE_ON_WEB", null)
         ));
 
-        assertFalse(service.hasPermission(project, context, ProjectPermissionKeys.BROWSE_PROJECTS));
+        assertFalse(service.hasPermission(ProjectPermissionSubject.from(project), context, ProjectPermissionKeys.BROWSE_PROJECTS));
     }
 
     @Test
@@ -174,7 +175,7 @@ class ProjectPermissionEvaluationServiceTest {
 
         mockEntries(List.of(entry(11L, ProjectPermissionKeys.BROWSE_PROJECTS, "UNKNOWN_TYPE", null)));
 
-        assertFalse(service.hasPermission(project, context, ProjectPermissionKeys.BROWSE_PROJECTS));
+        assertFalse(service.hasPermission(ProjectPermissionSubject.from(project), context, ProjectPermissionKeys.BROWSE_PROJECTS));
     }
 
     @Test
@@ -185,7 +186,7 @@ class ProjectPermissionEvaluationServiceTest {
 
         AccessDeniedException exception = assertThrows(
                 AccessDeniedException.class,
-                () -> service.checkPermission(project, context, ProjectPermissionKeys.BROWSE_PROJECTS)
+                () -> service.checkPermission(ProjectPermissionSubject.from(project), context, ProjectPermissionKeys.BROWSE_PROJECTS)
         );
 
         assertEquals(DomainErrorCode.PROJECT_PERMISSION_DENIED, exception.getErrorCode());
@@ -218,7 +219,7 @@ class ProjectPermissionEvaluationServiceTest {
                 "team-alpha"
         )).thenReturn(true);
 
-        assertTrue(service.hasPermission(project, context, ProjectPermissionKeys.BROWSE_PROJECTS));
+        assertTrue(service.hasPermission(ProjectPermissionSubject.from(project), context, ProjectPermissionKeys.BROWSE_PROJECTS));
 
         verify(projectRoleActorService).hasRoleAssignment(
                 TENANT_ID,

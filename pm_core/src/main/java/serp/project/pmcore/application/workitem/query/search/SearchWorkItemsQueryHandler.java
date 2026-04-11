@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.shared.cqrs.query.IQueryHandler;
 import serp.project.pmcore.application.shared.pagination.PageView;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.port.read.IProjectReadPort;
 import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
@@ -38,7 +39,7 @@ public class SearchWorkItemsQueryHandler implements IQueryHandler<SearchWorkItem
                 .orElseThrow(() -> ResourceNotFoundException.project(criteria.getProjectId()));
 
         projectPermissionEvaluationService.checkPermission(
-                project,
+                ProjectPermissionSubject.from(project),
                 buildEvaluationContext(query.userId(), query.groupKeys()),
                 ProjectPermissionKeys.BROWSE_PROJECTS
         );

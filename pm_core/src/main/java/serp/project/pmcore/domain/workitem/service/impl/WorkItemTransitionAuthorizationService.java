@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import serp.project.pmcore.application.workitem.command.transition.internal.TransitionWorkItemStatusData;
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.shared.constant.WorkItemFieldConstants;
@@ -30,7 +31,7 @@ public class WorkItemTransitionAuthorizationService implements IWorkItemTransiti
     public void checkTransitionPermissions(ProjectEntity project,
                                            ProjectPermissionEvaluationContext actorContext) {
         workItemAuthorizationSupportService.checkRequiredPermissions(
-                project,
+                ProjectPermissionSubject.from(project),
                 actorContext,
                 ProjectPermissionKeys.BROWSE_PROJECTS,
                 ProjectPermissionKeys.TRANSITION_ISSUES
@@ -41,11 +42,11 @@ public class WorkItemTransitionAuthorizationService implements IWorkItemTransiti
                                            ProjectPermissionEvaluationContext actorContext,
                                            TransitionWorkItemStatusData data) {
         Long dueDate = WorkItemFieldValueUtils.asNullableLong(data.getSystemField(WorkItemFieldConstants.DUE_DATE));
-        workItemAuthorizationSupportService.checkScheduleIssuesPermissionIfNeeded(project, actorContext, dueDate);
+        workItemAuthorizationSupportService.checkScheduleIssuesPermissionIfNeeded(ProjectPermissionSubject.from(project), actorContext, dueDate);
 
         if (data.hasSystemField(WorkItemFieldConstants.SECURITY_LEVEL_ID)) {
             workItemAuthorizationSupportService.checkSetIssueSecurityPermissionIfNeeded(
-                    project,
+                    ProjectPermissionSubject.from(project),
                     actorContext,
                     WorkItemFieldValueUtils.asNullableLong(data.getSystemField(WorkItemFieldConstants.SECURITY_LEVEL_ID))
             );
@@ -60,7 +61,7 @@ public class WorkItemTransitionAuthorizationService implements IWorkItemTransiti
             return currentAssigneeId;
         }
         return workItemAuthorizationSupportService.resolveAssigneeId(
-                project,
+                ProjectPermissionSubject.from(project),
                 WorkItemFieldValueUtils.asNullableLong(data.getSystemField(WorkItemFieldConstants.ASSIGNEE_ID)),
                 actorContext
         );

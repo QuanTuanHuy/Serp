@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.shared.cqrs.query.IQueryHandler;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.project.service.IProjectRoleActorService;
@@ -36,7 +37,7 @@ public class ListProjectRoleActorsQueryHandler
         ProjectEntity project = projectService.getProjectById(query.projectId(), query.tenantId());
 
         projectPermissionEvaluationService.checkPermission(
-                project,
+                ProjectPermissionSubject.from(project),
                 buildEvaluationContext(query.userId(), query.groupKeys()),
                 ProjectPermissionKeys.ADMINISTER_PROJECTS
         );

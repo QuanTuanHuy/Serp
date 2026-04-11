@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.pmcore.application.shared.pagination.PageView;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.port.read.IProjectReadPort;
 import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
@@ -108,7 +109,7 @@ class SearchWorkItemsQueryHandlerTest {
 
         ArgumentCaptor<ProjectPermissionEvaluationContext> contextCaptor =
                 ArgumentCaptor.forClass(ProjectPermissionEvaluationContext.class);
-        verify(projectPermissionEvaluationService).checkPermission(any(ProjectEntity.class), contextCaptor.capture(), eq("BROWSE_PROJECTS"));
+        verify(projectPermissionEvaluationService).checkPermission(any(ProjectPermissionSubject.class), contextCaptor.capture(), eq("BROWSE_PROJECTS"));
         verify(workItemReadPort).searchWorkItems(TENANT_ID, criteria);
 
         ProjectPermissionEvaluationContext context = contextCaptor.getValue();

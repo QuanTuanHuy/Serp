@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.pmcore.application.project.command.roleactor.RoleActorSubjectValidator;
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.service.IProjectService;
@@ -111,7 +112,7 @@ class AssignWorkItemCommandHandlerTest {
         when(workItemService.getWorkItemById(WORK_ITEM_ID, TENANT_ID)).thenReturn(workItem);
         when(workItemAuthorizationSupportService.buildActorContext(USER_ID, Set.of("dev-team"), 70L, 77L))
                 .thenReturn(actorContext);
-        when(workItemAuthorizationSupportService.resolveAssigneeId(project, 123L, actorContext)).thenReturn(123L);
+        when(workItemAuthorizationSupportService.resolveAssigneeId(ProjectPermissionSubject.from(project), 123L, actorContext)).thenReturn(123L);
         when(workItemService.updateWorkItem(workItem, USER_ID)).thenAnswer(invocation -> {
             workItem.setUpdatedAt(1_710_000_000_000L);
             workItem.setUpdatedBy(USER_ID);
@@ -167,7 +168,7 @@ class AssignWorkItemCommandHandlerTest {
         when(workItemService.getWorkItemById(WORK_ITEM_ID, TENANT_ID)).thenReturn(workItem);
         when(workItemAuthorizationSupportService.buildActorContext(USER_ID, Set.of(), 70L, 77L))
                 .thenReturn(actorContext);
-        when(workItemAuthorizationSupportService.resolveAssigneeId(project, null, actorContext)).thenReturn(null);
+        when(workItemAuthorizationSupportService.resolveAssigneeId(ProjectPermissionSubject.from(project), null, actorContext)).thenReturn(null);
         when(workItemService.updateWorkItem(workItem, USER_ID)).thenAnswer(invocation -> {
             workItem.setUpdatedAt(1_710_000_000_000L);
             workItem.setUpdatedBy(USER_ID);
@@ -219,7 +220,7 @@ class AssignWorkItemCommandHandlerTest {
         when(workItemService.getWorkItemById(WORK_ITEM_ID, TENANT_ID)).thenReturn(workItem);
         when(workItemAuthorizationSupportService.buildActorContext(USER_ID, Set.of(), 70L, 77L))
                 .thenReturn(actorContext);
-        when(workItemAuthorizationSupportService.resolveAssigneeId(project, 77L, actorContext)).thenReturn(77L);
+        when(workItemAuthorizationSupportService.resolveAssigneeId(ProjectPermissionSubject.from(project), 77L, actorContext)).thenReturn(77L);
 
         AssignWorkItemResult result = handler.handle(command);
 

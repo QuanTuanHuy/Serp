@@ -8,7 +8,7 @@ package serp.project.pmcore.domain.workitem.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
-import serp.project.pmcore.domain.project.entity.ProjectEntity;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
@@ -42,41 +42,41 @@ public class WorkItemAuthorizationSupportService implements IWorkItemAuthorizati
     }
 
     @Override
-    public void checkRequiredPermissions(ProjectEntity project,
+    public void checkRequiredPermissions(ProjectPermissionSubject subject,
                                          ProjectPermissionEvaluationContext actorContext,
                                          String... permissionKeys) {
         for (String permissionKey : permissionKeys) {
-            projectPermissionEvaluationService.checkPermission(project, actorContext, permissionKey);
+            projectPermissionEvaluationService.checkPermission(subject, actorContext, permissionKey);
         }
     }
 
     @Override
-    public void checkScheduleIssuesPermissionIfNeeded(ProjectEntity project,
+    public void checkScheduleIssuesPermissionIfNeeded(ProjectPermissionSubject subject,
                                                       ProjectPermissionEvaluationContext actorContext,
                                                       Long dueDate) {
         if (dueDate != null) {
-            projectPermissionEvaluationService.checkPermission(project, actorContext, ProjectPermissionKeys.SCHEDULE_ISSUES);
+            projectPermissionEvaluationService.checkPermission(subject, actorContext, ProjectPermissionKeys.SCHEDULE_ISSUES);
         }
     }
 
     @Override
-    public Long resolveAssigneeId(ProjectEntity project,
+    public Long resolveAssigneeId(ProjectPermissionSubject subject,
                                   Long requestedAssigneeId,
                                   ProjectPermissionEvaluationContext actorContext) {
         if (requestedAssigneeId == null) {
             return null;
         }
 
-        projectPermissionEvaluationService.checkPermission(project, actorContext, ProjectPermissionKeys.ASSIGN_ISSUES);
+        projectPermissionEvaluationService.checkPermission(subject, actorContext, ProjectPermissionKeys.ASSIGN_ISSUES);
 
         ProjectPermissionEvaluationContext assigneeContext = ProjectPermissionEvaluationContext.builder()
                 .userId(requestedAssigneeId)
                 .build();
 
-        if (!projectPermissionEvaluationService.hasPermission(project, assigneeContext, ProjectPermissionKeys.ASSIGNABLE_USER)) {
+        if (!projectPermissionEvaluationService.hasPermission(subject, assigneeContext, ProjectPermissionKeys.ASSIGNABLE_USER)) {
             throw new BusinessRuleViolationException(
                     DomainErrorCode.PROJECT_PERMISSION_DENIED,
-                    "Assignee is not assignable in project: projectId=" + project.getId() + ", assigneeId=" + requestedAssigneeId
+                    "Assignee is not assignable in project: projectId=" + subject.projectId() + ", assigneeId=" + requestedAssigneeId
             );
         }
 
@@ -84,11 +84,11 @@ public class WorkItemAuthorizationSupportService implements IWorkItemAuthorizati
     }
 
     @Override
-    public void checkSetIssueSecurityPermissionIfNeeded(ProjectEntity project,
+    public void checkSetIssueSecurityPermissionIfNeeded(ProjectPermissionSubject subject,
                                                         ProjectPermissionEvaluationContext actorContext,
                                                         Long requestedSecurityLevelId) {
         if (requestedSecurityLevelId != null) {
-            projectPermissionEvaluationService.checkPermission(project, actorContext, ProjectPermissionKeys.SET_ISSUE_SECURITY);
+            projectPermissionEvaluationService.checkPermission(subject, actorContext, ProjectPermissionKeys.SET_ISSUE_SECURITY);
         }
     }
 }

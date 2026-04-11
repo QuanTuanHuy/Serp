@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 import serp.project.pmcore.domain.permission.entity.PermissionSchemeEntryEntity;
 import serp.project.pmcore.domain.permission.port.IPermissionSchemeEntryPort;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
-import serp.project.pmcore.domain.project.entity.ProjectEntity;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectRoleEntity;
 import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.project.service.IProjectRoleActorService;
@@ -38,53 +38,53 @@ public class ProjectPermissionEvaluationService implements IProjectPermissionEva
     private final IProjectRoleActorService projectRoleActorService;
 
     @Override
-    public boolean hasPermission(ProjectEntity project,
+    public boolean hasPermission(ProjectPermissionSubject subject,
                                  ProjectPermissionEvaluationContext context,
                                  String permissionKey) {
-        if (project == null || context == null || permissionKey == null || permissionKey.isBlank()) {
+        if (subject == null || context == null || permissionKey == null || permissionKey.isBlank()) {
             log.debug("Permission check skipped due to invalid input: project={}, context={}, permissionKey={} ",
-                    project == null ? "null" : project.getId(),
+                    subject == null ? "null" : subject.projectId(),
                     context == null ? "null" : context.getUserId(),
                     permissionKey);
             return false;
         }
 
-        if (project.getPermissionSchemeId() == null) {
-            return isFallbackProjectLeadGrant(project, context, permissionKey);
+        if (subject.permissionSchemeId() == null) {
+            return isFallbackProjectLeadGrant(subject, context, permissionKey);
         }
 
         List<PermissionSchemeEntryEntity> entries = permissionSchemeEntryPort
-                .getPermissionSchemeEntriesBySchemeId(project.getPermissionSchemeId(), project.getTenantId());
+                .getPermissionSchemeEntriesBySchemeId(subject.permissionSchemeId(), subject.tenantId());
 
         boolean granted = entries.stream()
                 .filter(entry -> permissionKey.equalsIgnoreCase(entry.getPermissionKey()))
-                .anyMatch(entry -> matchesEntry(project, context, entry));
+                .anyMatch(entry -> matchesEntry(subject, context, entry));
 
         if (!granted) {
             log.debug("Permission denied by scheme evaluation: projectId={}, tenantId={}, userId={}, permissionKey={}",
-                    project.getId(), project.getTenantId(), context.getUserId(), permissionKey);
+                    subject.projectId(), subject.tenantId(), context.getUserId(), permissionKey);
         }
 
         return granted;
     }
 
     @Override
-    public void checkPermission(ProjectEntity project,
+    public void checkPermission(ProjectPermissionSubject subject,
                                 ProjectPermissionEvaluationContext context,
                                 String permissionKey) {
-        if (!hasPermission(project, context, permissionKey)) {
-            throw AccessDeniedException.projectPermission(permissionKey, project.getId());
+        if (!hasPermission(subject, context, permissionKey)) {
+            throw AccessDeniedException.projectPermission(permissionKey, subject.projectId());
         }
     }
 
-    private boolean isFallbackProjectLeadGrant(ProjectEntity project,
+    private boolean isFallbackProjectLeadGrant(ProjectPermissionSubject subject,
                                                ProjectPermissionEvaluationContext context,
                                                String permissionKey) {
         return ProjectPermissionKeys.ADMINISTER_PROJECTS.equalsIgnoreCase(permissionKey)
-                && Objects.equals(project.getLeadUserId(), context.getUserId());
+                && Objects.equals(subject.leadUserId(), context.getUserId());
     }
 
-    private boolean matchesEntry(ProjectEntity project,
+    private boolean matchesEntry(ProjectPermissionSubject subject,
                                  ProjectPermissionEvaluationContext context,
                                  PermissionSchemeEntryEntity entry) {
         ProjectPermissionGranteeType granteeType = parseGranteeType(entry.getGranteeType());
@@ -97,33 +97,33 @@ public class ProjectPermissionEvaluationService implements IProjectPermissionEva
         return switch (granteeType) {
             case USER -> Objects.equals(String.valueOf(context.getUserId()), entry.getGranteeRef());
             case GROUP -> matchesAnyGroup(context.getGroupKeys(), entry.getGranteeRef());
-            case PROJECT_LEAD -> Objects.equals(project.getLeadUserId(), context.getUserId());
+            case PROJECT_LEAD -> Objects.equals(subject.leadUserId(), context.getUserId());
             case REPORTER -> Objects.equals(context.getReporterUserId(), context.getUserId());
             case ASSIGNEE -> Objects.equals(context.getAssigneeUserId(), context.getUserId());
             case ANY_LOGGED_IN_USER, AUTHENTICATED -> context.getUserId() != null;
             case APPLICATION_ACCESS, ANYONE_ON_WEB, USER_CUSTOM_FIELD_VALUE, GROUP_CUSTOM_FIELD_VALUE -> false;
-            case PROJECT_ROLE -> matchesProjectRoleGrant(project, context, entry.getGranteeRef());
+            case PROJECT_ROLE -> matchesProjectRoleGrant(subject, context, entry.getGranteeRef());
         };
     }
 
-    private boolean matchesProjectRoleGrant(ProjectEntity project,
+    private boolean matchesProjectRoleGrant(ProjectPermissionSubject subject,
                                             ProjectPermissionEvaluationContext context,
                                             String roleName) {
         if (roleName == null || roleName.isBlank() || context.getUserId() == null) {
             return false;
         }
 
-        List<ProjectRoleEntity> roles = projectRoleService.getProjectRolesByNameIncludingSystem(roleName, project.getTenantId());
+        List<ProjectRoleEntity> roles = projectRoleService.getProjectRolesByNameIncludingSystem(roleName, subject.tenantId());
         if (roles.isEmpty()) {
             log.debug("No project role found for grant resolution: roleName={}, projectId={}, tenantId={}",
-                    roleName, project.getId(), project.getTenantId());
+                    roleName, subject.projectId(), subject.tenantId());
             return false;
         }
 
         for (ProjectRoleEntity role : roles) {
             if (projectRoleActorService.hasRoleAssignment(
-                    project.getTenantId(),
-                    project.getId(),
+                    subject.tenantId(),
+                    subject.projectId(),
                     role.getId(),
                     ProjectRoleActorSubjectType.USER.name(),
                     String.valueOf(context.getUserId())
@@ -133,8 +133,8 @@ public class ProjectPermissionEvaluationService implements IProjectPermissionEva
 
             for (String groupKey : safeGroupKeys(context.getGroupKeys())) {
                 if (projectRoleActorService.hasRoleAssignment(
-                        project.getTenantId(),
-                        project.getId(),
+                        subject.tenantId(),
+                        subject.projectId(),
                         role.getId(),
                         ProjectRoleActorSubjectType.GROUP.name(),
                         groupKey
@@ -147,7 +147,7 @@ public class ProjectPermissionEvaluationService implements IProjectPermissionEva
         log.debug("Project role grant did not match actor assignments: roleName={}, candidateRoleIds={}, projectId={}, userId={}, groups={}",
                 roleName,
                 roles.stream().map(ProjectRoleEntity::getId).collect(Collectors.toList()),
-                project.getId(),
+                subject.projectId(),
                 context.getUserId(),
                 safeGroupKeys(context.getGroupKeys()));
 

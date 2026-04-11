@@ -6,7 +6,7 @@
 package serp.project.pmcore.domain.workitem.service;
 
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
-import serp.project.pmcore.domain.project.entity.ProjectEntity;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 
 import java.util.Set;
 
@@ -18,19 +18,19 @@ public interface IWorkItemAuthorizationSupportService {
                                                          Long reporterUserId,
                                                          Long assigneeUserId);
 
-    void checkRequiredPermissions(ProjectEntity project,
+    void checkRequiredPermissions(ProjectPermissionSubject subject,
                                   ProjectPermissionEvaluationContext actorContext,
                                   String... permissionKeys);
 
-    void checkScheduleIssuesPermissionIfNeeded(ProjectEntity project,
-                                              ProjectPermissionEvaluationContext actorContext,
-                                              Long dueDate);
+    void checkScheduleIssuesPermissionIfNeeded(ProjectPermissionSubject subject,
+                                               ProjectPermissionEvaluationContext actorContext,
+                                               Long dueDate);
 
-    Long resolveAssigneeId(ProjectEntity project,
-                          Long requestedAssigneeId,
-                          ProjectPermissionEvaluationContext actorContext);
+    Long resolveAssigneeId(ProjectPermissionSubject subject,
+                           Long requestedAssigneeId,
+                           ProjectPermissionEvaluationContext actorContext);
 
-    void checkSetIssueSecurityPermissionIfNeeded(ProjectEntity project,
-                                                ProjectPermissionEvaluationContext actorContext,
-                                                Long requestedSecurityLevelId);
+    void checkSetIssueSecurityPermissionIfNeeded(ProjectPermissionSubject subject,
+                                                 ProjectPermissionEvaluationContext actorContext,
+                                                 Long requestedSecurityLevelId);
 }

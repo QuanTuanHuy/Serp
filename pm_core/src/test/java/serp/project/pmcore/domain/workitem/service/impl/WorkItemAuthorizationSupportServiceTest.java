@@ -11,6 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
@@ -53,31 +54,33 @@ class WorkItemAuthorizationSupportServiceTest {
     @Test
     void checkRequiredPermissionsShouldDelegateAllPermissions() {
         ProjectEntity project = ProjectEntity.builder().id(10L).build();
+        ProjectPermissionSubject subject = ProjectPermissionSubject.from(project);
         ProjectPermissionEvaluationContext actorContext = service.buildActorContext(99L, Set.of());
 
-        service.checkRequiredPermissions(project, actorContext,
+        service.checkRequiredPermissions(subject, actorContext,
                 ProjectPermissionKeys.BROWSE_PROJECTS,
                 ProjectPermissionKeys.CREATE_ISSUES);
 
-        verify(projectPermissionEvaluationService).checkPermission(project, actorContext, ProjectPermissionKeys.BROWSE_PROJECTS);
-        verify(projectPermissionEvaluationService).checkPermission(project, actorContext, ProjectPermissionKeys.CREATE_ISSUES);
+        verify(projectPermissionEvaluationService).checkPermission(subject, actorContext, ProjectPermissionKeys.BROWSE_PROJECTS);
+        verify(projectPermissionEvaluationService).checkPermission(subject, actorContext, ProjectPermissionKeys.CREATE_ISSUES);
     }
 
     @Test
     void resolveAssigneeIdShouldReturnNullWhenAssigneeOmitted() {
-        assertNull(service.resolveAssigneeId(ProjectEntity.builder().id(10L).build(), null, service.buildActorContext(1L, Set.of())));
+        assertNull(service.resolveAssigneeId(ProjectPermissionSubject.from(ProjectEntity.builder().id(10L).build()), null, service.buildActorContext(1L, Set.of())));
     }
 
     @Test
     void resolveAssigneeIdShouldRejectNonAssignableUser() {
         ProjectEntity project = ProjectEntity.builder().id(10L).build();
+        ProjectPermissionSubject subject = ProjectPermissionSubject.from(project);
         ProjectPermissionEvaluationContext actorContext = service.buildActorContext(99L, Set.of());
-        when(projectPermissionEvaluationService.hasPermission(eq(project), any(ProjectPermissionEvaluationContext.class), eq(ProjectPermissionKeys.ASSIGNABLE_USER)))
+        when(projectPermissionEvaluationService.hasPermission(eq(subject), any(ProjectPermissionEvaluationContext.class), eq(ProjectPermissionKeys.ASSIGNABLE_USER)))
                 .thenReturn(false);
 
         BusinessRuleViolationException exception = assertThrows(
                 BusinessRuleViolationException.class,
-                () -> service.resolveAssigneeId(project, 100L, actorContext)
+                () -> service.resolveAssigneeId(subject, 100L, actorContext)
         );
 
         assertEquals(DomainErrorCode.PROJECT_PERMISSION_DENIED, exception.getErrorCode());
@@ -86,20 +89,22 @@ class WorkItemAuthorizationSupportServiceTest {
     @Test
     void checkScheduleIssuesPermissionIfNeededShouldDelegateWhenDueDatePresent() {
         ProjectEntity project = ProjectEntity.builder().id(10L).build();
+        ProjectPermissionSubject subject = ProjectPermissionSubject.from(project);
         ProjectPermissionEvaluationContext actorContext = service.buildActorContext(99L, Set.of());
 
-        service.checkScheduleIssuesPermissionIfNeeded(project, actorContext, 1_700_000_000_000L);
+        service.checkScheduleIssuesPermissionIfNeeded(subject, actorContext, 1_700_000_000_000L);
 
-        verify(projectPermissionEvaluationService).checkPermission(project, actorContext, ProjectPermissionKeys.SCHEDULE_ISSUES);
+        verify(projectPermissionEvaluationService).checkPermission(subject, actorContext, ProjectPermissionKeys.SCHEDULE_ISSUES);
     }
 
     @Test
     void checkSetIssueSecurityPermissionIfNeededShouldDelegateWhenExplicitSecurityProvided() {
         ProjectEntity project = ProjectEntity.builder().id(10L).build();
+        ProjectPermissionSubject subject = ProjectPermissionSubject.from(project);
         ProjectPermissionEvaluationContext actorContext = service.buildActorContext(99L, Set.of());
 
-        service.checkSetIssueSecurityPermissionIfNeeded(project, actorContext, 12L);
+        service.checkSetIssueSecurityPermissionIfNeeded(subject, actorContext, 12L);
 
-        verify(projectPermissionEvaluationService).checkPermission(project, actorContext, ProjectPermissionKeys.SET_ISSUE_SECURITY);
+        verify(projectPermissionEvaluationService).checkPermission(subject, actorContext, ProjectPermissionKeys.SET_ISSUE_SECURITY);
     }
 }

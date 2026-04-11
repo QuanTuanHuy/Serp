@@ -13,6 +13,7 @@ import serp.project.pmcore.application.project.command.roleactor.RoleActorSubjec
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.shared.constant.EventConstants;
 import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
@@ -56,6 +57,7 @@ public class AssignWorkItemCommandHandler
 
         ProjectEntity project = projectService.getProjectById(command.projectId(), command.tenantId());
         ensureProjectWritable(project);
+        ProjectPermissionSubject permissionSubject = ProjectPermissionSubject.from(project);
 
         WorkItemEntity workItem = workItemService.getWorkItemById(command.workItemId(), command.tenantId());
         ensureWorkItemBelongsToProject(workItem, project);
@@ -67,7 +69,7 @@ public class AssignWorkItemCommandHandler
                 workItem.getAssigneeId()
         );
         workItemAuthorizationSupportService.checkRequiredPermissions(
-                project,
+                permissionSubject,
                 actorContext,
                 ProjectPermissionKeys.BROWSE_PROJECTS,
                 ProjectPermissionKeys.ASSIGN_ISSUES
@@ -83,7 +85,7 @@ public class AssignWorkItemCommandHandler
 
         Long previousAssigneeId = workItem.getAssigneeId();
         Long resolvedAssigneeId = workItemAuthorizationSupportService.resolveAssigneeId(
-                project,
+                permissionSubject,
                 command.assigneeId(),
                 actorContext
         );
