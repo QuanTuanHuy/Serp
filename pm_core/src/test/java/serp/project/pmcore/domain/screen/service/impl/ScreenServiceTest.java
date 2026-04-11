@@ -83,8 +83,11 @@ class ScreenServiceTest {
                         .id(ISSUE_TYPE_SCREEN_SCHEME_ID)
                         .defaultScreenSchemeId(SCREEN_SCHEME_ID)
                         .build()));
-        when(issueTypeScreenSchemeItemPort.getIssueTypeScreenSchemeItemsBySchemeId(ISSUE_TYPE_SCREEN_SCHEME_ID, TENANT_ID))
-                .thenReturn(List.of(IssueTypeScreenSchemeItemEntity.builder()
+        when(issueTypeScreenSchemeItemPort.getItemBySchemeIdAndIssueTypeId(
+                ISSUE_TYPE_SCREEN_SCHEME_ID,
+                ISSUE_TYPE_ID,
+                TENANT_ID
+        )).thenReturn(Optional.of(IssueTypeScreenSchemeItemEntity.builder()
                         .issueTypeId(ISSUE_TYPE_ID)
                         .screenSchemeId(SCREEN_SCHEME_ID)
                         .build()));

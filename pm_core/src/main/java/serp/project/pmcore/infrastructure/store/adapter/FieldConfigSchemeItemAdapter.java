@@ -54,4 +54,9 @@ public class FieldConfigSchemeItemAdapter implements IFieldConfigSchemeItemPort 
                 schemeId, issueTypeId, tenantId
         ).map(fieldConfigSchemeItemMapper::toEntity);
     }
+
+    @Override
+    public boolean existsByIssueTypeId(Long issueTypeId, Long tenantId) {
+        return fieldConfigSchemeItemRepository.existsByIssueTypeIdAndTenantId(issueTypeId, tenantId);
+    }
 }

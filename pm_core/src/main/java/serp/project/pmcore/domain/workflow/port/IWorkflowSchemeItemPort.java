@@ -20,4 +20,6 @@ public interface IWorkflowSchemeItemPort {
     Optional<WorkflowSchemeItemEntity> getItemBySchemeIdAndIssueTypeId(Long schemeId, Long issueTypeId, Long tenantId);
 
     void deleteWorkflowSchemeItemsBySchemeId(Long schemeId, Long tenantId);
+
+    boolean existsByIssueTypeId(Long issueTypeId, Long tenantId);
 }

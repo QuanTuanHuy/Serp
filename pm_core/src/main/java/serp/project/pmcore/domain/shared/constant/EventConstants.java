@@ -38,4 +38,16 @@ public class EventConstants {
             public static final String WORK_ITEM_STATUS_CHANGED = "WORK_ITEM_STATUS_CHANGED";
         }
     }
+
+    @UtilityClass
+    public static class IssueType {
+        public static final String TOPIC = "serp.pm.issuetype.events";
+        public static final String AGGREGATE = "ISSUE_TYPE";
+
+        public static class EventType {
+            public static final String ISSUE_TYPE_CREATED = "ISSUE_TYPE_CREATED";
+            public static final String ISSUE_TYPE_UPDATED = "ISSUE_TYPE_UPDATED";
+            public static final String ISSUE_TYPE_DELETED = "ISSUE_TYPE_DELETED";
+        }
+    }
 }

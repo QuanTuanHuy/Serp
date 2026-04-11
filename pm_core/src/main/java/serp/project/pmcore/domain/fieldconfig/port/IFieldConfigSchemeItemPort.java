@@ -18,4 +18,6 @@ public interface IFieldConfigSchemeItemPort {
     List<FieldConfigSchemeItemEntity> getFieldConfigSchemeItemsBySchemeId(Long schemeId, Long tenantId);
 
     Optional<FieldConfigSchemeItemEntity> getItemBySchemeIdAndIssueTypeId(Long schemeId, Long issueTypeId, Long tenantId);
+
+    boolean existsByIssueTypeId(Long issueTypeId, Long tenantId);
 }

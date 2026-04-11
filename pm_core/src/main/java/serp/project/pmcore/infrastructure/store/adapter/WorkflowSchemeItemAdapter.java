@@ -58,4 +58,9 @@ public class WorkflowSchemeItemAdapter implements IWorkflowSchemeItemPort {
     public void deleteWorkflowSchemeItemsBySchemeId(Long schemeId, Long tenantId) {
         workflowSchemeItemRepository.deleteBySchemeIdAndTenantId(schemeId, tenantId);
     }
+
+    @Override
+    public boolean existsByIssueTypeId(Long issueTypeId, Long tenantId) {
+        return workflowSchemeItemRepository.existsByIssueTypeIdAndTenantId(issueTypeId, tenantId);
+    }
 }
