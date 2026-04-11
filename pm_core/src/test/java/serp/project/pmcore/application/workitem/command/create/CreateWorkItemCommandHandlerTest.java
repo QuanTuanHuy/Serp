@@ -41,6 +41,7 @@ import serp.project.pmcore.domain.fieldconfig.port.IFieldConfigSchemePort;
 import serp.project.pmcore.domain.fieldconfig.service.IFieldConfigService;
 import serp.project.pmcore.domain.issuesecurity.port.IIssueSecurityLevelPort;
 import serp.project.pmcore.domain.issuesecurity.port.IIssueSecuritySchemePort;
+import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeSchemeItemEntity;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeScreenSchemeEntity;
@@ -51,6 +52,7 @@ import serp.project.pmcore.domain.issuetype.port.IIssueTypeScreenSchemePort;
 import serp.project.pmcore.domain.priority.entity.PrioritySchemeEntity;
 import serp.project.pmcore.domain.priority.port.IPrioritySchemeItemPort;
 import serp.project.pmcore.domain.priority.port.IPrioritySchemePort;
+import serp.project.pmcore.domain.priority.service.IPrioritySchemeService;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.screen.entity.ScreenEntity;
 import serp.project.pmcore.domain.screen.entity.ScreenSchemeEntity;
@@ -189,6 +191,10 @@ class CreateWorkItemCommandHandlerTest {
     @Mock
     private IIssueSecurityLevelPort issueSecurityLevelPort;
     @Mock
+    private IPrioritySchemeService prioritySchemeService;
+    @Mock
+    private IIssueSecurityService issueSecurityService;
+    @Mock
     private ICustomFieldPort customFieldPort;
     @Mock
     private ICustomFieldContextPort customFieldContextPort;
@@ -221,10 +227,8 @@ class CreateWorkItemCommandHandlerTest {
                         workflowPort,
                         workflowVersionPort,
                         workflowStepPort,
-                        prioritySchemePort,
-                        prioritySchemeItemPort,
-                        issueSecuritySchemePort,
-                        issueSecurityLevelPort
+                        prioritySchemeService,
+                        issueSecurityService
                 ),
                 new WorkItemAuthorizationSupportService(projectPermissionEvaluationService),
                 buildCustomFieldResolver(),
@@ -550,11 +554,7 @@ class CreateWorkItemCommandHandlerTest {
         )).thenReturn(SCREEN_ID);
         when(screenService.getScreenTabFieldsByScreenId(SCREEN_ID, TENANT_ID)).thenReturn(screenFields);
 
-        when(prioritySchemePort.getPrioritySchemeById(PRIORITY_SCHEME_ID, TENANT_ID)).thenReturn(Optional.of(PrioritySchemeEntity.builder()
-                .id(PRIORITY_SCHEME_ID)
-                .defaultPriorityId(PRIORITY_ID)
-                .build()));
-        when(prioritySchemeItemPort.getPrioritySchemeItemsBySchemeId(PRIORITY_SCHEME_ID, TENANT_ID)).thenReturn(List.of());
+        when(prioritySchemeService.resolveDefaultPriorityId(PRIORITY_SCHEME_ID, TENANT_ID)).thenReturn(PRIORITY_ID);
 
         when(workItemService.getNextIssueNumber(PROJECT_ID, TENANT_ID)).thenReturn(1L);
         when(workItemService.getNextRank(PROJECT_ID, TENANT_ID)).thenReturn("0|hzzzzz:");

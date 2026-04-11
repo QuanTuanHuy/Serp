@@ -253,7 +253,7 @@ Update editable work item fields using Jira-aligned project authorization and ED
 | Enforce project permissions | `IWorkItemAuthorizationSupportService.checkRequiredPermissions(...)` |
 | Enforce issue-security membership | `IIssueSecurityService.checkSecurityAccessIfNeeded(...)` |
 | Resolve assignee existence/assignability | `RoleActorSubjectValidator.validateSubjectExistsForAdd(...)` + `IWorkItemAuthorizationSupportService.resolveAssigneeId(...)` |
-| Resolve priority/security-level compatibility | `UpdateWorkItemConfigurationResolver` |
+| Resolve priority/security-level compatibility | `IPrioritySchemeService` + `IIssueSecurityService` |
 | Replace requested custom field values | `UpdateWorkItemCommandHandler.persistCustomFieldValues(...)` |
 | Persist outbox event | `UpdateWorkItemCommandHandler.persistUpdatedOutboxEvent(...)` |
 

@@ -9,4 +9,8 @@ public interface IIssueSecurityService {
                                      WorkItemEntity workItem,
                                      ProjectPermissionEvaluationContext actorContext,
                                      Long tenantId);
+
+    Long resolveDefaultSecurityLevelId(Long issueSecuritySchemeId, Long tenantId);
+
+    Long validateSecurityLevelId(Long issueSecuritySchemeId, Long requestedSecurityLevelId, Long tenantId);
 }

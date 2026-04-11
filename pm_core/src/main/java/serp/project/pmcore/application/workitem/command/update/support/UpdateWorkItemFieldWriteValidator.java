@@ -10,6 +10,7 @@ import serp.project.pmcore.application.workitem.command.update.internal.UpdateWo
 import serp.project.pmcore.domain.shared.constant.WorkItemFieldConstants;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
+import serp.project.pmcore.domain.shared.util.WorkItemFieldValueUtils;
 import serp.project.pmcore.domain.workitem.dto.WorkItemFieldPolicy;
 import serp.project.pmcore.domain.workitem.dto.WorkItemFieldRules;
 
@@ -50,12 +51,12 @@ public class UpdateWorkItemFieldWriteValidator {
     private void validateSystemFieldValue(String fieldRef, Object rawValue) {
         try {
             switch (fieldRef) {
-                case WorkItemFieldConstants.SUMMARY, WorkItemFieldConstants.DESCRIPTION -> asNullableString(rawValue);
+                case WorkItemFieldConstants.SUMMARY, WorkItemFieldConstants.DESCRIPTION -> WorkItemFieldValueUtils.asNullableString(rawValue);
                 case WorkItemFieldConstants.PRIORITY_ID,
                      WorkItemFieldConstants.ASSIGNEE_ID,
-                     WorkItemFieldConstants.SECURITY_LEVEL_ID -> asNullablePositiveLong(rawValue);
+                     WorkItemFieldConstants.SECURITY_LEVEL_ID -> WorkItemFieldValueUtils.asNullablePositiveLong(rawValue);
                 case WorkItemFieldConstants.DUE_DATE,
-                     WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE -> asNullableNonNegativeLong(rawValue);
+                     WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE -> WorkItemFieldValueUtils.asNullableNonNegativeLong(rawValue);
                 default -> throw new BusinessRuleViolationException(
                         DomainErrorCode.FIELD_NOT_WRITABLE_ON_UPDATE,
                         "Unsupported update system field: field=" + fieldRef
@@ -69,39 +70,4 @@ public class UpdateWorkItemFieldWriteValidator {
         }
     }
 
-    private String asNullableString(Object rawValue) {
-        if (rawValue == null) {
-            return null;
-        }
-        if (rawValue instanceof String text) {
-            return text;
-        }
-        throw new IllegalArgumentException("Expected string value");
-    }
-
-    private Long asNullablePositiveLong(Object rawValue) {
-        Long value = asNullableLong(rawValue);
-        if (value != null && value <= 0) {
-            throw new IllegalArgumentException("Expected a positive number");
-        }
-        return value;
-    }
-
-    private Long asNullableNonNegativeLong(Object rawValue) {
-        Long value = asNullableLong(rawValue);
-        if (value != null && value < 0) {
-            throw new IllegalArgumentException("Expected a non-negative number");
-        }
-        return value;
-    }
-
-    private Long asNullableLong(Object rawValue) {
-        if (rawValue == null) {
-            return null;
-        }
-        if (rawValue instanceof Number number) {
-            return number.longValue();
-        }
-        throw new IllegalArgumentException("Expected long-compatible value");
-    }
 }

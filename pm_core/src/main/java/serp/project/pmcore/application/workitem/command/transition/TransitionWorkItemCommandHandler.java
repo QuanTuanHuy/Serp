@@ -31,6 +31,7 @@ import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.shared.service.IOutboxEventService;
 import serp.project.pmcore.domain.shared.util.WorkItemFieldUtils;
+import serp.project.pmcore.domain.shared.util.WorkItemFieldValueUtils;
 import serp.project.pmcore.domain.workflow.entity.WorkflowTransitionRuleEntity;
 import serp.project.pmcore.domain.workflow.service.IWorkItemTransitionRuleEvaluator;
 import serp.project.pmcore.domain.workitem.dto.WorkItemFieldPolicy;
@@ -352,12 +353,12 @@ public class TransitionWorkItemCommandHandler
     private void validateSystemFieldValue(String fieldRef, Object rawValue) {
         try {
             switch (fieldRef) {
-                case WorkItemFieldConstants.SUMMARY, WorkItemFieldConstants.DESCRIPTION -> asNullableString(rawValue);
+                case WorkItemFieldConstants.SUMMARY, WorkItemFieldConstants.DESCRIPTION -> WorkItemFieldValueUtils.asNullableString(rawValue);
                 case WorkItemFieldConstants.PRIORITY_ID,
                      WorkItemFieldConstants.ASSIGNEE_ID,
-                     WorkItemFieldConstants.SECURITY_LEVEL_ID -> asNullablePositiveLong(rawValue);
+                     WorkItemFieldConstants.SECURITY_LEVEL_ID -> WorkItemFieldValueUtils.asNullablePositiveLong(rawValue);
                 case WorkItemFieldConstants.DUE_DATE,
-                     WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE -> asNullableNonNegativeLong(rawValue);
+                     WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE -> WorkItemFieldValueUtils.asNullableNonNegativeLong(rawValue);
                 default -> throw new BusinessRuleViolationException(
                         DomainErrorCode.TRANSITION_FIELD_INVALID,
                         "Unsupported transition system field: field=" + fieldRef
@@ -421,15 +422,15 @@ public class TransitionWorkItemCommandHandler
         Map<String, Object> effectiveSystemValues = new LinkedHashMap<>();
         effectiveSystemValues.put(WorkItemFieldConstants.SUMMARY,
                 data.hasSystemField(WorkItemFieldConstants.SUMMARY)
-                        ? asNullableString(data.getSystemField(WorkItemFieldConstants.SUMMARY))
+                        ? WorkItemFieldValueUtils.asNullableString(data.getSystemField(WorkItemFieldConstants.SUMMARY))
                         : workItem.getSummary());
         effectiveSystemValues.put(WorkItemFieldConstants.DESCRIPTION,
                 data.hasSystemField(WorkItemFieldConstants.DESCRIPTION)
-                        ? asNullableString(data.getSystemField(WorkItemFieldConstants.DESCRIPTION))
+                        ? WorkItemFieldValueUtils.asNullableString(data.getSystemField(WorkItemFieldConstants.DESCRIPTION))
                         : workItem.getDescription());
         effectiveSystemValues.put(WorkItemFieldConstants.PRIORITY_ID,
                 data.hasSystemField(WorkItemFieldConstants.PRIORITY_ID)
-                        ? asNullablePositiveLong(data.getSystemField(WorkItemFieldConstants.PRIORITY_ID))
+                        ? WorkItemFieldValueUtils.asNullablePositiveLong(data.getSystemField(WorkItemFieldConstants.PRIORITY_ID))
                         : workItem.getPriorityId());
         effectiveSystemValues.put(WorkItemFieldConstants.ASSIGNEE_ID,
                 data.hasSystemField(WorkItemFieldConstants.ASSIGNEE_ID)
@@ -437,11 +438,11 @@ public class TransitionWorkItemCommandHandler
                         : workItem.getAssigneeId());
         effectiveSystemValues.put(WorkItemFieldConstants.DUE_DATE,
                 data.hasSystemField(WorkItemFieldConstants.DUE_DATE)
-                        ? asNullableNonNegativeLong(data.getSystemField(WorkItemFieldConstants.DUE_DATE))
+                        ? WorkItemFieldValueUtils.asNullableNonNegativeLong(data.getSystemField(WorkItemFieldConstants.DUE_DATE))
                         : workItem.getDueDate());
         effectiveSystemValues.put(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE,
                 data.hasSystemField(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE)
-                        ? asNullableNonNegativeLong(data.getSystemField(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE))
+                        ? WorkItemFieldValueUtils.asNullableNonNegativeLong(data.getSystemField(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE))
                         : workItem.getTimeOriginalEstimate());
         effectiveSystemValues.put(WorkItemFieldConstants.SECURITY_LEVEL_ID,
                 data.hasSystemField(WorkItemFieldConstants.SECURITY_LEVEL_ID)
@@ -494,22 +495,22 @@ public class TransitionWorkItemCommandHandler
                                          Long resolvedAssigneeId,
                                          Long resolvedSecurityLevelId) {
         if (data.hasSystemField(WorkItemFieldConstants.SUMMARY)) {
-            workItem.setSummary(asNullableString(data.getSystemField(WorkItemFieldConstants.SUMMARY)));
+            workItem.setSummary(WorkItemFieldValueUtils.asNullableString(data.getSystemField(WorkItemFieldConstants.SUMMARY)));
         }
         if (data.hasSystemField(WorkItemFieldConstants.DESCRIPTION)) {
-            workItem.setDescription(asNullableString(data.getSystemField(WorkItemFieldConstants.DESCRIPTION)));
+            workItem.setDescription(WorkItemFieldValueUtils.asNullableString(data.getSystemField(WorkItemFieldConstants.DESCRIPTION)));
         }
         if (data.hasSystemField(WorkItemFieldConstants.PRIORITY_ID)) {
-            workItem.setPriorityId(asNullablePositiveLong(data.getSystemField(WorkItemFieldConstants.PRIORITY_ID)));
+            workItem.setPriorityId(WorkItemFieldValueUtils.asNullablePositiveLong(data.getSystemField(WorkItemFieldConstants.PRIORITY_ID)));
         }
         if (data.hasSystemField(WorkItemFieldConstants.ASSIGNEE_ID)) {
             workItem.setAssigneeId(resolvedAssigneeId);
         }
         if (data.hasSystemField(WorkItemFieldConstants.DUE_DATE)) {
-            workItem.setDueDate(asNullableNonNegativeLong(data.getSystemField(WorkItemFieldConstants.DUE_DATE)));
+            workItem.setDueDate(WorkItemFieldValueUtils.asNullableNonNegativeLong(data.getSystemField(WorkItemFieldConstants.DUE_DATE)));
         }
         if (data.hasSystemField(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE)) {
-            workItem.setTimeOriginalEstimate(asNullableNonNegativeLong(
+            workItem.setTimeOriginalEstimate(WorkItemFieldValueUtils.asNullableNonNegativeLong(
                     data.getSystemField(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE)));
         }
         if (data.hasSystemField(WorkItemFieldConstants.SECURITY_LEVEL_ID)) {
@@ -618,47 +619,4 @@ public class TransitionWorkItemCommandHandler
         outboxEventService.saveEvent(outboxEvent);
     }
 
-    private String asNullableString(Object rawValue) {
-        if (rawValue == null) {
-            return null;
-        }
-        if (rawValue instanceof String text) {
-            return text;
-        }
-        throw new IllegalArgumentException("Expected string value");
-    }
-
-    private Long asNullablePositiveLong(Object rawValue) {
-        Long value = asNullableLong(rawValue);
-        if (value != null && value <= 0) {
-            throw new IllegalArgumentException("Expected a positive number");
-        }
-        return value;
-    }
-
-    private Long asNullableNonNegativeLong(Object rawValue) {
-        Long value = asNullableLong(rawValue);
-        if (value != null && value < 0) {
-            throw new IllegalArgumentException("Expected a non-negative number");
-        }
-        return value;
-    }
-
-    private Long asNullableLong(Object rawValue) {
-        switch (rawValue) {
-            case null -> {
-                return null;
-            }
-            case Number number -> {
-                return number.longValue();
-            }
-            case String text -> {
-                if (text.isBlank()) {
-                    return null;
-                }
-                return Long.valueOf(text.trim());
-            }
-            default -> throw new IllegalArgumentException("Expected long-compatible value");
-        }
-    }
 }

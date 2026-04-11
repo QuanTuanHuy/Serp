@@ -35,6 +35,7 @@ import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationExceptio
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.shared.service.IOutboxEventService;
+import serp.project.pmcore.domain.shared.util.WorkItemFieldValueUtils;
 import serp.project.pmcore.domain.workitem.dto.WorkItemFieldPolicy;
 import serp.project.pmcore.domain.workitem.dto.WorkItemFieldRules;
 import serp.project.pmcore.domain.workitem.entity.WorkItemCustomFieldValueEntity;
@@ -192,7 +193,8 @@ public class UpdateWorkItemCommandHandler
             return null;
         }
 
-        Long requestedAssigneeId = asNullablePositiveLong(data.getSystemField(WorkItemFieldConstants.ASSIGNEE_ID));
+        Long requestedAssigneeId = WorkItemFieldValueUtils.asNullablePositiveLong(
+                data.getSystemField(WorkItemFieldConstants.ASSIGNEE_ID));
         if (requestedAssigneeId != null) {
             roleActorSubjectValidator.validateSubjectExistsForAdd(
                     ProjectRoleActorSubjectType.USER,
@@ -297,11 +299,11 @@ public class UpdateWorkItemCommandHandler
         Map<String, Object> effectiveSystemValues = new LinkedHashMap<>();
         effectiveSystemValues.put(WorkItemFieldConstants.SUMMARY,
                 data.hasSystemField(WorkItemFieldConstants.SUMMARY)
-                        ? asNullableString(data.getSystemField(WorkItemFieldConstants.SUMMARY))
+                        ? WorkItemFieldValueUtils.asNullableString(data.getSystemField(WorkItemFieldConstants.SUMMARY))
                         : workItem.getSummary());
         effectiveSystemValues.put(WorkItemFieldConstants.DESCRIPTION,
                 data.hasSystemField(WorkItemFieldConstants.DESCRIPTION)
-                        ? asNullableString(data.getSystemField(WorkItemFieldConstants.DESCRIPTION))
+                        ? WorkItemFieldValueUtils.asNullableString(data.getSystemField(WorkItemFieldConstants.DESCRIPTION))
                         : workItem.getDescription());
         effectiveSystemValues.put(WorkItemFieldConstants.PRIORITY_ID,
                 data.hasSystemField(WorkItemFieldConstants.PRIORITY_ID)
@@ -313,11 +315,11 @@ public class UpdateWorkItemCommandHandler
                         : workItem.getAssigneeId());
         effectiveSystemValues.put(WorkItemFieldConstants.DUE_DATE,
                 data.hasSystemField(WorkItemFieldConstants.DUE_DATE)
-                        ? asNullableNonNegativeLong(data.getSystemField(WorkItemFieldConstants.DUE_DATE))
+                        ? WorkItemFieldValueUtils.asNullableNonNegativeLong(data.getSystemField(WorkItemFieldConstants.DUE_DATE))
                         : workItem.getDueDate());
         effectiveSystemValues.put(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE,
                 data.hasSystemField(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE)
-                        ? asNullableNonNegativeLong(data.getSystemField(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE))
+                        ? WorkItemFieldValueUtils.asNullableNonNegativeLong(data.getSystemField(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE))
                         : workItem.getTimeOriginalEstimate());
         effectiveSystemValues.put(WorkItemFieldConstants.SECURITY_LEVEL_ID,
                 data.hasSystemField(WorkItemFieldConstants.SECURITY_LEVEL_ID)
@@ -397,10 +399,10 @@ public class UpdateWorkItemCommandHandler
                                          Long resolvedAssigneeId,
                                          Long resolvedSecurityLevelId) {
         if (data.hasSystemField(WorkItemFieldConstants.SUMMARY)) {
-            workItem.setSummary(asNullableString(data.getSystemField(WorkItemFieldConstants.SUMMARY)));
+            workItem.setSummary(WorkItemFieldValueUtils.asNullableString(data.getSystemField(WorkItemFieldConstants.SUMMARY)));
         }
         if (data.hasSystemField(WorkItemFieldConstants.DESCRIPTION)) {
-            workItem.setDescription(asNullableString(data.getSystemField(WorkItemFieldConstants.DESCRIPTION)));
+            workItem.setDescription(WorkItemFieldValueUtils.asNullableString(data.getSystemField(WorkItemFieldConstants.DESCRIPTION)));
         }
         if (data.hasSystemField(WorkItemFieldConstants.PRIORITY_ID)) {
             workItem.setPriorityId(resolvedPriorityId);
@@ -409,10 +411,11 @@ public class UpdateWorkItemCommandHandler
             workItem.setAssigneeId(resolvedAssigneeId);
         }
         if (data.hasSystemField(WorkItemFieldConstants.DUE_DATE)) {
-            workItem.setDueDate(asNullableNonNegativeLong(data.getSystemField(WorkItemFieldConstants.DUE_DATE)));
+            workItem.setDueDate(WorkItemFieldValueUtils.asNullableNonNegativeLong(data.getSystemField(WorkItemFieldConstants.DUE_DATE)));
         }
         if (data.hasSystemField(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE)) {
-            workItem.setTimeOriginalEstimate(asNullableNonNegativeLong(data.getSystemField(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE)));
+            workItem.setTimeOriginalEstimate(WorkItemFieldValueUtils.asNullableNonNegativeLong(
+                    data.getSystemField(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE)));
         }
         if (data.hasSystemField(WorkItemFieldConstants.SECURITY_LEVEL_ID)) {
             workItem.setSecurityLevelId(resolvedSecurityLevelId);
@@ -506,39 +509,4 @@ public class UpdateWorkItemCommandHandler
         outboxEventService.saveEvent(outboxEvent);
     }
 
-    private String asNullableString(Object rawValue) {
-        if (rawValue == null) {
-            return null;
-        }
-        if (rawValue instanceof String text) {
-            return text;
-        }
-        throw new IllegalArgumentException("Expected string value");
-    }
-
-    private Long asNullablePositiveLong(Object rawValue) {
-        Long value = asNullableLong(rawValue);
-        if (value != null && value <= 0) {
-            throw new IllegalArgumentException("Expected a positive number");
-        }
-        return value;
-    }
-
-    private Long asNullableNonNegativeLong(Object rawValue) {
-        Long value = asNullableLong(rawValue);
-        if (value != null && value < 0) {
-            throw new IllegalArgumentException("Expected a non-negative number");
-        }
-        return value;
-    }
-
-    private Long asNullableLong(Object rawValue) {
-        if (rawValue == null) {
-            return null;
-        }
-        if (rawValue instanceof Number number) {
-            return number.longValue();
-        }
-        throw new IllegalArgumentException("Expected long-compatible value");
-    }
 }

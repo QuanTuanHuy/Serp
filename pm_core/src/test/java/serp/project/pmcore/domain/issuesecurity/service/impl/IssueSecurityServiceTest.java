@@ -14,6 +14,7 @@ import serp.project.pmcore.domain.issuesecurity.entity.IssueSecurityLevelEntity;
 import serp.project.pmcore.domain.issuesecurity.entity.IssueSecurityLevelMemberEntity;
 import serp.project.pmcore.domain.issuesecurity.port.IIssueSecurityLevelMemberPort;
 import serp.project.pmcore.domain.issuesecurity.port.IIssueSecurityLevelPort;
+import serp.project.pmcore.domain.issuesecurity.port.IIssueSecuritySchemePort;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.entity.ProjectRoleEntity;
@@ -22,6 +23,7 @@ import serp.project.pmcore.domain.project.service.IProjectRoleService;
 import serp.project.pmcore.domain.shared.enums.ProjectRoleActorSubjectType;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
+import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 
 import java.lang.reflect.Field;
@@ -49,6 +51,8 @@ class IssueSecurityServiceTest {
     @Mock
     private IIssueSecurityLevelMemberPort issueSecurityLevelMemberPort;
     @Mock
+    private IIssueSecuritySchemePort issueSecuritySchemePort;
+    @Mock
     private IProjectRoleService projectRoleService;
     @Mock
     private IProjectRoleActorService projectRoleActorService;
@@ -62,12 +66,12 @@ class IssueSecurityServiceTest {
         setField(project, "issueSecuritySchemeId", null);
         WorkItemEntity workItem = workItem(SECURITY_LEVEL_ID);
 
-        BusinessRuleViolationException exception = assertThrows(
-                BusinessRuleViolationException.class,
+        ResourceNotFoundException exception = assertThrows(
+                ResourceNotFoundException.class,
                 () -> service.checkSecurityAccessIfNeeded(project, workItem, actorContext(USER_ID, Set.of("dev")), TENANT_ID)
         );
 
-        assertEquals(DomainErrorCode.SECURITY_LEVEL_NOT_IN_SCHEME, getField(exception, "errorCode"));
+        assertEquals(DomainErrorCode.ISSUE_SECURITY_SCHEME_NOT_FOUND, exception.getErrorCode());
     }
 
     @Test

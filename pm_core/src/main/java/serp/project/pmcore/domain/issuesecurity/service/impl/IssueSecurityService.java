@@ -12,6 +12,7 @@ import serp.project.pmcore.domain.issuesecurity.entity.IssueSecurityLevelEntity;
 import serp.project.pmcore.domain.issuesecurity.entity.IssueSecurityLevelMemberEntity;
 import serp.project.pmcore.domain.issuesecurity.port.IIssueSecurityLevelPort;
 import serp.project.pmcore.domain.issuesecurity.port.IIssueSecurityLevelMemberPort;
+import serp.project.pmcore.domain.issuesecurity.port.IIssueSecuritySchemePort;
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
@@ -21,6 +22,7 @@ import serp.project.pmcore.domain.project.service.IProjectRoleService;
 import serp.project.pmcore.domain.shared.enums.ProjectRoleActorSubjectType;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
+import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 
 import java.util.List;
@@ -36,6 +38,7 @@ public class IssueSecurityService implements IIssueSecurityService {
 
     private final IIssueSecurityLevelPort issueSecurityLevelPort;
     private final IIssueSecurityLevelMemberPort issueSecurityLevelMemberPort;
+    private final IIssueSecuritySchemePort issueSecuritySchemePort;
     private final IProjectRoleService projectRoleService;
     private final IProjectRoleActorService projectRoleActorService;
 
@@ -49,8 +52,8 @@ public class IssueSecurityService implements IIssueSecurityService {
         }
 
         if (project.getIssueSecuritySchemeId() == null) {
-            throw new BusinessRuleViolationException(
-                    DomainErrorCode.SECURITY_LEVEL_NOT_IN_SCHEME,
+            throw new ResourceNotFoundException(
+                    DomainErrorCode.ISSUE_SECURITY_SCHEME_NOT_FOUND,
                     "Work item has security level but project has no issue security scheme: projectId="
                             + project.getId() + ", workItemId=" + workItem.getId()
             );
@@ -111,6 +114,50 @@ public class IssueSecurityService implements IIssueSecurityService {
                 yield false;
             }
         };
+    }
+
+    @Override
+    public Long resolveDefaultSecurityLevelId(Long issueSecuritySchemeId, Long tenantId) {
+        if (issueSecuritySchemeId == null) {
+            throw new ResourceNotFoundException(
+                    DomainErrorCode.ISSUE_SECURITY_SCHEME_NOT_FOUND,
+                    "Issue security scheme binding is required"
+            );
+        }
+
+        return issueSecuritySchemePort
+                .getIssueSecuritySchemeById(issueSecuritySchemeId, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        DomainErrorCode.ISSUE_SECURITY_SCHEME_NOT_FOUND,
+                        "Issue security scheme not found: id=" + issueSecuritySchemeId
+                ))
+                .getDefaultLevelId();
+    }
+
+    @Override
+    public Long validateSecurityLevelId(Long issueSecuritySchemeId, Long requestedSecurityLevelId, Long tenantId) {
+        if (requestedSecurityLevelId == null) {
+            return null;
+        }
+        if (issueSecuritySchemeId == null) {
+            throw new ResourceNotFoundException(
+                    DomainErrorCode.ISSUE_SECURITY_SCHEME_NOT_FOUND,
+                    "Issue security scheme binding is required"
+            );
+        }
+
+        boolean inScheme = issueSecurityLevelPort
+                .getIssueSecurityLevelByIdAndSchemeId(requestedSecurityLevelId, issueSecuritySchemeId, tenantId)
+                .isPresent();
+        if (!inScheme) {
+            throw new BusinessRuleViolationException(
+                    DomainErrorCode.SECURITY_LEVEL_NOT_IN_SCHEME,
+                    "Security level is not allowed in issue security scheme: schemeId=" + issueSecuritySchemeId
+                            + ", securityLevelId=" + requestedSecurityLevelId
+            );
+        }
+
+        return requestedSecurityLevelId;
     }
 
     private boolean matchesProjectRole(ProjectEntity project,

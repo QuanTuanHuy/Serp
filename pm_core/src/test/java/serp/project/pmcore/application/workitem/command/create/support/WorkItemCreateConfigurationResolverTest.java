@@ -16,6 +16,7 @@ import serp.project.pmcore.domain.issuesecurity.entity.IssueSecurityLevelEntity;
 import serp.project.pmcore.domain.issuesecurity.entity.IssueSecuritySchemeEntity;
 import serp.project.pmcore.domain.issuesecurity.port.IIssueSecurityLevelPort;
 import serp.project.pmcore.domain.issuesecurity.port.IIssueSecuritySchemePort;
+import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeSchemeItemEntity;
 import serp.project.pmcore.domain.issuetype.port.IIssueTypePort;
@@ -24,6 +25,7 @@ import serp.project.pmcore.domain.priority.entity.PrioritySchemeEntity;
 import serp.project.pmcore.domain.priority.entity.PrioritySchemeItemEntity;
 import serp.project.pmcore.domain.priority.port.IPrioritySchemeItemPort;
 import serp.project.pmcore.domain.priority.port.IPrioritySchemePort;
+import serp.project.pmcore.domain.priority.service.IPrioritySchemeService;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.shared.enums.WorkflowVersionState;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
@@ -44,6 +46,8 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -82,6 +86,10 @@ class WorkItemCreateConfigurationResolverTest {
     private IIssueSecuritySchemePort issueSecuritySchemePort;
     @Mock
     private IIssueSecurityLevelPort issueSecurityLevelPort;
+    @Mock
+    private IPrioritySchemeService prioritySchemeService;
+    @Mock
+    private IIssueSecurityService issueSecurityService;
 
     private WorkItemCreateConfigurationResolver resolver;
 
@@ -95,10 +103,8 @@ class WorkItemCreateConfigurationResolverTest {
                 workflowPort,
                 workflowVersionPort,
                 workflowStepPort,
-                prioritySchemePort,
-                prioritySchemeItemPort,
-                issueSecuritySchemePort,
-                issueSecurityLevelPort
+                prioritySchemeService,
+                issueSecurityService
         );
     }
 
@@ -123,11 +129,8 @@ class WorkItemCreateConfigurationResolverTest {
 
     @Test
     void resolveSecurityLevelIdShouldApplyDefaultWhenOmitted() {
-        when(issueSecuritySchemePort.getIssueSecuritySchemeById(ISSUE_SECURITY_SCHEME_ID, TENANT_ID))
-                .thenReturn(Optional.of(IssueSecuritySchemeEntity.builder()
-                        .id(ISSUE_SECURITY_SCHEME_ID)
-                        .defaultLevelId(SECURITY_LEVEL_ID)
-                        .build()));
+        when(issueSecurityService.resolveDefaultSecurityLevelId(eq(ISSUE_SECURITY_SCHEME_ID), eq(TENANT_ID)))
+                .thenReturn(SECURITY_LEVEL_ID);
 
         Long securityLevelId = resolver.resolveSecurityLevelId(project(), null, TENANT_ID);
 
@@ -136,13 +139,11 @@ class WorkItemCreateConfigurationResolverTest {
 
     @Test
     void resolveSecurityLevelIdShouldRejectLevelOutsideScheme() {
-        when(issueSecuritySchemePort.getIssueSecuritySchemeById(ISSUE_SECURITY_SCHEME_ID, TENANT_ID))
-                .thenReturn(Optional.of(IssueSecuritySchemeEntity.builder()
-                        .id(ISSUE_SECURITY_SCHEME_ID)
-                        .defaultLevelId(SECURITY_LEVEL_ID)
-                        .build()));
-        when(issueSecurityLevelPort.getIssueSecurityLevelsBySchemeId(ISSUE_SECURITY_SCHEME_ID, TENANT_ID))
-                .thenReturn(List.of(IssueSecurityLevelEntity.builder().id(SECURITY_LEVEL_ID).build()));
+        when(issueSecurityService.validateSecurityLevelId(eq(ISSUE_SECURITY_SCHEME_ID), eq(SECURITY_LEVEL_ID + 1), eq(TENANT_ID)))
+                .thenThrow(new BusinessRuleViolationException(
+                        DomainErrorCode.SECURITY_LEVEL_NOT_IN_SCHEME,
+                        "Security level is not allowed in project scheme"
+                ));
 
         BusinessRuleViolationException exception = assertThrows(
                 BusinessRuleViolationException.class,
@@ -202,12 +203,6 @@ class WorkItemCreateConfigurationResolverTest {
     }
 
     private void stubPriority() {
-        when(prioritySchemePort.getPrioritySchemeById(PRIORITY_SCHEME_ID, TENANT_ID))
-                .thenReturn(Optional.of(PrioritySchemeEntity.builder()
-                        .id(PRIORITY_SCHEME_ID)
-                        .defaultPriorityId(PRIORITY_ID)
-                        .build()));
-        when(prioritySchemeItemPort.getPrioritySchemeItemsBySchemeId(PRIORITY_SCHEME_ID, TENANT_ID))
-                .thenReturn(List.of(PrioritySchemeItemEntity.builder().priorityId(PRIORITY_ID).build()));
+        when(prioritySchemeService.resolveDefaultPriorityId(PRIORITY_SCHEME_ID, TENANT_ID)).thenReturn(PRIORITY_ID);
     }
 }
