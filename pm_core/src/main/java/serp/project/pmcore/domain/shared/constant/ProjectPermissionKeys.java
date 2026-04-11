@@ -13,6 +13,7 @@ public class ProjectPermissionKeys {
     public static final String BROWSE_PROJECTS = "BROWSE_PROJECTS";
 
     public static final String CREATE_ISSUES = "CREATE_ISSUES";
+    public static final String EDIT_ISSUES = "EDIT_ISSUES";
     public static final String DELETE_ISSUES = "DELETE_ISSUES";
     public static final String TRANSITION_ISSUES = "TRANSITION_ISSUES";
     public static final String ASSIGN_ISSUES = "ASSIGN_ISSUES";

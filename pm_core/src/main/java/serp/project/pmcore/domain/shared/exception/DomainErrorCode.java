@@ -179,6 +179,7 @@ public enum DomainErrorCode {
     CUSTOM_FIELD_NOT_FOUND("Custom field not found"),
     CUSTOM_FIELD_TYPE_IMMUTABLE("Custom field type cannot be changed after creation"),
     FIELD_NOT_WRITABLE_ON_CREATE("Field is not writable on create"),
+    FIELD_NOT_WRITABLE_ON_UPDATE("Field is not writable on update"),
     REQUIRED_FIELDS_MISSING("Required fields are missing"),
     CUSTOM_FIELD_CONTEXT_UNRESOLVABLE("Custom field context could not be resolved"),
     CUSTOM_FIELD_VALUE_INVALID("Custom field value is invalid"),

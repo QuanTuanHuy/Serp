@@ -154,8 +154,9 @@ public class GlobalExceptionHandler {
             case SCHEME_INCOMPATIBLE,
                   WORKFLOW_VALIDATION_FAILED,
                   TRANSITION_VALIDATION_FAILED,
-                  FIELD_CANNOT_BE_REQUIRED_AND_HIDDEN,
-                 SUMMARY_FIELD_CANNOT_BE_HIDDEN -> HttpStatus.UNPROCESSABLE_ENTITY;
+                  FIELD_NOT_WRITABLE_ON_UPDATE,
+                   FIELD_CANNOT_BE_REQUIRED_AND_HIDDEN,
+                  SUMMARY_FIELD_CANNOT_BE_HIDDEN -> HttpStatus.UNPROCESSABLE_ENTITY;
 
             default -> HttpStatus.BAD_REQUEST;
         };

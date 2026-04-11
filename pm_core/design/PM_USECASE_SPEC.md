@@ -121,7 +121,7 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 | UC ID | Name | Actor | Priority | Complexity | Entity |
 |-------|------|-------|----------|------------|--------|
 | UC-PM-101 | [Create Work Item](usecases/workitem/UC-PM-101-create-work-item.md) | Authenticated Project User | High | Complex | Work Item |
-| UC-PM-102 | Update Work Item | Team Member | High | Medium | Work Item |
+| UC-PM-102 | [Update Work Item](usecases/workitem/UC-PM-102-update-work-item.md) | Team Member | High | Medium | Work Item |
 | UC-PM-103 | [Get Work Item by ID](usecases/workitem/UC-PM-103-get-work-item-by-id.md) | Team Member | High | Simple | Work Item |
 | UC-PM-104 | List Work Items with Filters | Team Member | High | Medium | Work Item |
 | UC-PM-105 | [Delete Work Item](usecases/workitem/UC-PM-105-delete-work-item.md) | Project Lead | Medium | Medium | Work Item |
@@ -1455,60 +1455,16 @@ This extracted file is now the canonical detailed reference for UC-PM-101, inclu
 
 #### UC-PM-102: Update Work Item
 
-##### Basic Information
+Detailed specification is extracted to:
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-102 |
-| **Use Case Name** | Update Work Item |
-| **Module** | PM Core |
-| **Version** | 1.0 |
-| **Last Updated** | 2026-02-18 |
-| **Priority** | High |
-| **Complexity** | Medium |
+- [UC-PM-102 - Update Work Item](usecases/workitem/UC-PM-102-update-work-item.md)
 
-##### Description
+This extracted file is now the canonical detailed reference for UC-PM-102, including:
 
-Update work item fields (summary, description, priority, assignee, due date, estimates, custom fields). Status transitions use a separate use case (UC-PM-106).
-
-##### Actors
-
-| Actor | Type | Description |
-|-------|------|-------------|
-| Team Member | Primary | Updates work item fields |
-
-##### Preconditions
-
-1. User is authenticated with valid JWT token
-2. User has permission `PM.WORK_ITEM.UPDATE`
-3. Work item exists and is not deleted
-4. Project is not archived
-
-##### Main Flow
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 1 | Team Member | Sends PUT `/api/v1/work-items/{workItemId}` with updated fields |
-| 2 | System | Validates JWT and permissions |
-| 3 | System | Fetches work item, validates it exists and belongs to tenant |
-| 4 | System | Validates project is not archived |
-| 5 | System | Validates editable fields per field configuration for EDIT screen |
-| 6 | System | If `issue_type_id` changed, validates new type is in project's scheme and re-evaluates workflow |
-| 7 | System | If `assignee_id` changed, validates user exists |
-| 8 | System | Updates work item, sets `updated_by=userId` |
-| 9 | System | Records field changes in `change_groups` / `change_items` (Module 09, deferred) |
-| 10 | System | Commits transaction |
-| 11 | System | Publishes `WORK_ITEM_UPDATED` event to `serp.pm.workitem.events` |
-| 12 | System | Returns HTTP 200 with updated work item |
-
-##### Business Rules
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-102-01 | `key` and `issue_no` are immutable | Service layer |
-| BR-PM-102-02 | `status_id` cannot be changed via update; must use transition (UC-PM-106) | Service layer |
-| BR-PM-102-03 | Cannot update work items in archived projects | Service layer |
-| BR-PM-102-04 | Hidden fields (per field configuration) cannot be updated | Service layer |
+- full use case specification
+- Jira-aligned authorization model for update-time checks (`BROWSE_PROJECTS` + `EDIT_ISSUES` + conditional field-level permissions)
+- UC-PM-102 v1 scope that excludes `issue_type_id` changes
+- implementation traceability to the Java runtime code
 
 ---
 

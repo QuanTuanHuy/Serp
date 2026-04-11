@@ -19,6 +19,9 @@ import serp.project.pmcore.application.workitem.command.create.CreateWorkItemCom
 import serp.project.pmcore.application.workitem.command.delete.DeleteWorkItemCommand;
 import serp.project.pmcore.application.workitem.command.delete.DeleteWorkItemCommandHandler;
 import serp.project.pmcore.application.workitem.command.delete.DeleteWorkItemResult;
+import serp.project.pmcore.application.workitem.command.update.UpdateWorkItemCommand;
+import serp.project.pmcore.application.workitem.command.update.UpdateWorkItemCommandHandler;
+import serp.project.pmcore.application.workitem.command.update.UpdateWorkItemResult;
 import serp.project.pmcore.application.workitem.command.transition.TransitionWorkItemCommandHandler;
 import serp.project.pmcore.application.workitem.command.transition.TransitionWorkItemStatusCommand;
 import serp.project.pmcore.application.workitem.command.transition.TransitionWorkItemStatusResult;
@@ -39,6 +42,7 @@ import serp.project.pmcore.ui.rest.shared.response.ResponseUtils;
 import serp.project.pmcore.ui.rest.workitem.dto.request.AssignWorkItemRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.request.CreateWorkItemRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.request.TransitionWorkItemStatusRequest;
+import serp.project.pmcore.ui.rest.workitem.dto.request.UpdateWorkItemRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.response.WorkItemResponse;
 
 @RestController
@@ -51,6 +55,7 @@ public class WorkItemController {
     private final AssignWorkItemCommandHandler assignWorkItemCommandHandler;
     private final CreateWorkItemCommandHandler createWorkItemCommandHandler;
     private final DeleteWorkItemCommandHandler deleteWorkItemCommandHandler;
+    private final UpdateWorkItemCommandHandler updateWorkItemCommandHandler;
     private final TransitionWorkItemCommandHandler transitionWorkItemCommandHandler;
 
     private final SearchWorkItemsQueryHandler searchWorkItemsQueryHandler;
@@ -126,6 +131,27 @@ public class WorkItemController {
         )));
 
         return ResponseEntity.status(HttpStatus.CREATED).body(responseUtils.success(response));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<GeneralResponse<UpdateWorkItemResult>> updateWorkItem(@PathVariable Long projectId,
+                                                                                @PathVariable Long id,
+                                                                                @Valid @RequestBody UpdateWorkItemRequest request) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        UpdateWorkItemResult result = updateWorkItemCommandHandler.handle(new UpdateWorkItemCommand(
+                projectId,
+                id,
+                request.toData(),
+                tenantId,
+                userId,
+                authUtils.getCurrentGroups()
+        ));
+
+        return ResponseEntity.ok(responseUtils.success(result));
     }
 
     @GetMapping("/{id}")

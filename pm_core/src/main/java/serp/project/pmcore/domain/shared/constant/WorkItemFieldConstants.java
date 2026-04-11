@@ -12,6 +12,7 @@ import java.util.Set;
 @UtilityClass
 public class WorkItemFieldConstants {
     public static final String CREATE_OPERATION_KEY = "CREATE";
+    public static final String EDIT_OPERATION_KEY = "EDIT";
     public static final String FIELD_REF_TYPE_SYSTEM = "SYSTEM";
     public static final String FIELD_REF_TYPE_CUSTOM = "CUSTOM";
 
@@ -44,6 +45,16 @@ public class WorkItemFieldConstants {
     );
 
     public static final Set<String> SUPPORTED_TRANSITION_SYSTEM_FIELDS = Set.of(
+            SUMMARY,
+            DESCRIPTION,
+            PRIORITY_ID,
+            ASSIGNEE_ID,
+            DUE_DATE,
+            TIME_ORIGINAL_ESTIMATE,
+            SECURITY_LEVEL_ID
+    );
+
+    public static final Set<String> SUPPORTED_UPDATE_SYSTEM_FIELDS = Set.of(
             SUMMARY,
             DESCRIPTION,
             PRIORITY_ID,
