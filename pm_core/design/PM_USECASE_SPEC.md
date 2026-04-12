@@ -84,11 +84,11 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 | UC-PM-005 | Delete Project | PM Admin | Medium | Medium | Project |
 | UC-PM-006 | Archive/Unarchive Project | Project Lead | Medium | Simple | Project |
 | UC-PM-007 | Update Project Scheme Bindings | PM Admin | Medium | Complex | Project |
-| UC-PM-011 | Create Project Category | PM Admin | Medium | Simple | Project Category |
-| UC-PM-012 | Update Project Category | PM Admin | Medium | Simple | Project Category |
-| UC-PM-013 | Get Project Category by ID | PM Admin | Low | Simple | Project Category |
-| UC-PM-014 | List Project Categories | PM Admin | Medium | Simple | Project Category |
-| UC-PM-015 | Delete Project Category | PM Admin | Low | Simple | Project Category |
+| UC-PM-011 | [Create Project Category](usecases/project-category/UC-PM-011-create-project-category.md) | PM Admin | Medium | Simple | Project Category |
+| UC-PM-012 | [Update Project Category](usecases/project-category/UC-PM-012-update-project-category.md) | PM Admin | Medium | Simple | Project Category |
+| UC-PM-013 | [Get Project Category by ID](usecases/project-category/UC-PM-013-get-project-category-by-id.md) | PM Admin | Low | Simple | Project Category |
+| UC-PM-014 | [List Project Categories](usecases/project-category/UC-PM-014-list-project-categories.md) | PM Admin | Medium | Simple | Project Category |
+| UC-PM-015 | [Delete Project Category](usecases/project-category/UC-PM-015-delete-project-category.md) | PM Admin | Low | Simple | Project Category |
 | UC-PM-016 | Create Project Blueprint | PM Admin | Medium | Medium | Project Blueprint |
 | UC-PM-017 | Update Project Blueprint | PM Admin | Medium | Simple | Project Blueprint |
 | UC-PM-018 | Get Project Blueprint by ID | PM Admin | Low | Simple | Project Blueprint |
@@ -1110,102 +1110,11 @@ Update the effective scheme bindings for a project (issue type scheme, workflow 
 
 #### UC-PM-011 to UC-PM-015: Project Category CRUD
 
-##### UC-PM-011: Create Project Category
-
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-011 |
-| **Use Case Name** | Create Project Category |
-| **Priority** | Medium |
-| **Complexity** | Simple |
-
-**Description**: Create a new project category for organizing projects within a tenant.
-
-**Permission**: `PM.PROJECT_CATEGORY.CREATE`
-
-**Main Flow**:
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 1 | PM Admin | Sends POST `/api/v1/project-categories` with `{ name, description }` |
-| 2 | System | Validates JWT, permissions, input data |
-| 3 | System | Checks name is unique within tenant |
-| 4 | System | Persists category, publishes `PROJECT_CATEGORY_CREATED` event |
-| 5 | System | Returns HTTP 201 with created category |
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-011-01 | Category name must be unique within tenant | Service + DB `UNIQUE(tenant_id, name)` |
-| BR-PM-011-02 | Name required, 1-255 characters | DTO validation |
-
-**Input Data**:
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| name | string | Yes | min:1, max:255, unique per tenant | Category name |
-| description | string | No | max:2000 | Description |
-
-##### UC-PM-012: Update Project Category
-
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-012 |
-| **Use Case Name** | Update Project Category |
-| **Priority** | Medium |
-| **Complexity** | Simple |
-
-**Permission**: `PM.PROJECT_CATEGORY.UPDATE`
-
-**Main Flow**: Fetch by ID -> validate -> update name/description -> publish `PROJECT_CATEGORY_UPDATED` -> return 200.
-
-**Exception**: If name conflicts with existing category -> HTTP 409.
-
-##### UC-PM-013: Get Project Category by ID
-
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-013 |
-| **Use Case Name** | Get Project Category by ID |
-| **Priority** | Low |
-| **Complexity** | Simple |
-
-**Permission**: `PM.PROJECT_CATEGORY.READ`
-
-**Main Flow**: GET `/api/v1/project-categories/{id}` -> validate JWT -> fetch with tenant_id + deleted_at IS NULL -> return 200.
-
-##### UC-PM-014: List Project Categories
-
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-014 |
-| **Use Case Name** | List Project Categories |
-| **Priority** | Medium |
-| **Complexity** | Simple |
-
-**Permission**: `PM.PROJECT_CATEGORY.READ`
-
-**Main Flow**: GET `/api/v1/project-categories` with pagination -> return paginated list filtered by tenant_id.
-
-##### UC-PM-015: Delete Project Category
-
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-015 |
-| **Use Case Name** | Delete Project Category |
-| **Priority** | Low |
-| **Complexity** | Simple |
-
-**Permission**: `PM.PROJECT_CATEGORY.DELETE`
-
-**Main Flow**: Soft-delete (set `deleted_at`) -> publish `PROJECT_CATEGORY_DELETED` event -> return 200.
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-015-01 | Cannot delete category if projects are still assigned to it | Service layer |
+- `UC-PM-011`: [Create Project Category](usecases/project-category/UC-PM-011-create-project-category.md)
+- `UC-PM-012`: [Update Project Category](usecases/project-category/UC-PM-012-update-project-category.md)
+- `UC-PM-013`: [Get Project Category by ID](usecases/project-category/UC-PM-013-get-project-category-by-id.md)
+- `UC-PM-014`: [List Project Categories](usecases/project-category/UC-PM-014-list-project-categories.md)
+- `UC-PM-015`: [Delete Project Category](usecases/project-category/UC-PM-015-delete-project-category.md)
 
 ---
 
