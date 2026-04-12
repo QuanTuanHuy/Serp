@@ -6,7 +6,8 @@
 package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.core.domain.entity.WorkItemEntity;
+
+import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.infrastructure.store.model.WorkItemModel;
 
 import java.util.Collections;
@@ -27,11 +28,13 @@ public class WorkItemMapper extends BaseMapper {
                 .key(entity.getKey())
                 .summary(entity.getSummary())
                 .description(entity.getDescription())
+                .workflowStepId(entity.getWorkflowStepId())
                 .statusId(entity.getStatusId())
                 .priorityId(entity.getPriorityId())
                 .assigneeId(entity.getAssigneeId())
                 .reporterId(entity.getReporterId())
                 .parentId(entity.getParentId())
+                .securityLevelId(entity.getSecurityLevelId())
                 .resolutionId(entity.getResolutionId())
                 .dueDate(longToLocalDateTime(entity.getDueDate()))
                 .rank(entity.getRank())
@@ -58,11 +61,13 @@ public class WorkItemMapper extends BaseMapper {
                 .key(model.getKey())
                 .summary(model.getSummary())
                 .description(model.getDescription())
+                .workflowStepId(model.getWorkflowStepId())
                 .statusId(model.getStatusId())
                 .priorityId(model.getPriorityId())
                 .assigneeId(model.getAssigneeId())
                 .reporterId(model.getReporterId())
                 .parentId(model.getParentId())
+                .securityLevelId(model.getSecurityLevelId())
                 .resolutionId(model.getResolutionId())
                 .dueDate(localDateTimeToLong(model.getDueDate()))
                 .rank(model.getRank())

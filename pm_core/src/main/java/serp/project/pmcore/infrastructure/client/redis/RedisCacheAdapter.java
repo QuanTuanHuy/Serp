@@ -6,7 +6,8 @@ import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.core.port.client.ICachePort;
+
+import serp.project.pmcore.domain.shared.port.client.ICachePort;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.nio.charset.StandardCharsets;

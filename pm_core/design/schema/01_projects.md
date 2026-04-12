@@ -1,6 +1,6 @@
-# Module 01: Projects & Configuration (JIRA-like Core)
+# Module 01: Projects & Configuration (Jira Company-Managed Core)
 
-**Design Philosophy:** `projects` acts as a stable container that binds project-owned scheme clones provisioned from blueprint/system templates. This preserves template reuse while preventing cross-project configuration side effects.
+**Design Philosophy:** `projects` is a stable company-managed container that binds effective schemes rather than assuming one universal shared mode. Template-based creation may materialize project-scoped configuration for some scheme families, while other families continue to reference shared tenant defaults. The project also carries the project-level defaults Jira needs for components and releases.
 
 ## Shared Base Columns (applies to all tables in this module)
 
@@ -42,7 +42,7 @@ Replace opaque JSON defaults with relational mapping.
 | tenant_id | BIGINT | Tenant scope |
 | blueprint_id | BIGINT | FK -> project_blueprints |
 | scheme_type | VARCHAR(50) | ISSUE_TYPE, WORKFLOW, FIELD_CONFIG, SCREEN, PERMISSION, ISSUE_SECURITY, NOTIFICATION, PRIORITY |
-| scheme_id | BIGINT | FK target depends on `scheme_type` (template source scheme, not directly shared runtime config) |
+| scheme_id | BIGINT | FK target depends on `scheme_type` (default template source or direct shared-scheme candidate used during provisioning) |
 | created_at, updated_at, created_by, updated_by, deleted_at | TIMESTAMP/BIGINT | Base audit columns |
 
 ## 1.4. `projects` (Core entity)
@@ -59,16 +59,17 @@ Replace opaque JSON defaults with relational mapping.
 | avatar_id | BIGINT | Optional avatar asset id |
 | project_category_id | BIGINT | FK -> project_categories (nullable) |
 | project_type_key | VARCHAR(50) | software, business, service_desk, etc. |
+| default_assignee_type | VARCHAR(20) | Project default assignee policy (`PROJECT_LEAD`, `UNASSIGNED`); used when component assignee is `PROJECT_DEFAULT` |
 | archived | BOOLEAN | Default false |
 | archived_at | TIMESTAMP | Archived timestamp |
-| issue_type_scheme_id | BIGINT | FK -> issue_type_schemes (Module 02, project-owned clone) |
-| workflow_scheme_id | BIGINT | FK -> workflow_schemes (Module 03, project-owned clone) |
-| field_config_scheme_id | BIGINT | FK -> field_config_schemes (Module 04, project-owned clone) |
-| issue_type_screen_scheme_id | BIGINT | FK -> issue_type_screen_schemes (Module 04, project-owned clone) |
-| issue_security_scheme_id | BIGINT | FK -> issue_security_schemes (Module 05, project-owned clone) |
-| permission_scheme_id | BIGINT | FK -> permission_schemes (Module 05, project-owned clone) |
-| notification_scheme_id | BIGINT | FK -> notification_schemes (Module 06, project-owned clone) |
-| priority_scheme_id | BIGINT | FK -> priority_schemes (Module 02, project-owned clone) |
+| issue_type_scheme_id | BIGINT | FK -> issue_type_schemes (Module 02, effective scheme binding; provisioning default varies by family) |
+| workflow_scheme_id | BIGINT | FK -> workflow_schemes (Module 03, effective scheme binding; provisioning default varies by family) |
+| field_config_scheme_id | BIGINT | FK -> field_config_schemes (Module 04, effective scheme binding; provisioning default varies by family) |
+| issue_type_screen_scheme_id | BIGINT | FK -> issue_type_screen_schemes (Module 04, effective scheme binding; provisioning default varies by family) |
+| issue_security_scheme_id | BIGINT | FK -> issue_security_schemes (Module 05, effective scheme binding; provisioning default varies by family) |
+| permission_scheme_id | BIGINT | FK -> permission_schemes (Module 05, effective scheme binding; provisioning default varies by family) |
+| notification_scheme_id | BIGINT | FK -> notification_schemes (Module 06, effective scheme binding; often a shared tenant/default scheme) |
+| priority_scheme_id | BIGINT | FK -> priority_schemes (Module 02, effective scheme binding; often a shared tenant/default scheme) |
 | created_at, updated_at, created_by, updated_by, deleted_at | TIMESTAMP/BIGINT | Base audit columns |
 
 ## 1.5. `project_components` (Components)
@@ -81,7 +82,7 @@ Replace opaque JSON defaults with relational mapping.
 | name | VARCHAR(255) | Component name |
 | description | TEXT | Description |
 | lead_user_id | BIGINT | Component lead |
-| assignee_type | VARCHAR(30) | PROJECT_DEFAULT, COMPONENT_LEAD, PROJECT_LEAD, UNASSIGNED |
+| assignee_type | VARCHAR(30) | PROJECT_DEFAULT, COMPONENT_LEAD, PROJECT_LEAD, UNASSIGNED; `PROJECT_DEFAULT` resolves via `projects.default_assignee_type` |
 | created_at, updated_at, created_by, updated_by, deleted_at | TIMESTAMP/BIGINT | Base audit columns |
 
 ## 1.6. `project_versions` (Releases / Fix versions)
@@ -93,10 +94,11 @@ Replace opaque JSON defaults with relational mapping.
 | project_id | BIGINT | FK -> projects |
 | name | VARCHAR(255) | Version name |
 | description | TEXT | Description |
-| sequence | INT | Display order |
+| sequence | INT | Display order within project |
+| driver_user_id | BIGINT | Optional release driver / owner |
 | released | BOOLEAN | Release state |
 | archived | BOOLEAN | Archive state |
-| release_date | DATE | Planned release date |
+| release_date | DATE | Planned or actual release date |
 | start_date | DATE | Planned start date |
 | created_at, updated_at, created_by, updated_by, deleted_at | TIMESTAMP/BIGINT | Base audit columns |
 
@@ -129,10 +131,11 @@ Polymorphic assignment model for future actor types.
 
 ## Project Provisioning Invariants
 
-1. On project creation, all scheme bindings should point to project-owned cloned schemes provisioned from blueprint/system template defaults.
+1. On project creation, scheme bindings should be resolved per scheme family from explicit override, blueprint default, or tenant default template/shared scheme.
 2. Updating blueprint defaults does not mutate scheme bindings of existing projects.
-3. Project scheme rebinding should use clone-and-swap in one transaction (clone candidate template, validate compatibility, update project binding columns).
-4. Directly binding multiple projects to the same mutable scheme is discouraged unless explicitly opting into shared behavior.
+3. Project scheme rebinding must validate compatibility and apply atomically in one transaction.
+4. Explicit shared configuration or explicit project-local copies should be used only when the requested behavior requires them.
+5. Component assignee resolution must always remain deterministic through `projects.default_assignee_type`.
 
 ## Suggested Constraints & Indexes
 
@@ -140,5 +143,8 @@ Polymorphic assignment model for future actor types.
 - `UNIQUE (tenant_id, name)` on `project_categories`, `project_roles`
 - `UNIQUE (tenant_id, project_id, name)` on `project_components`, `project_versions`
 - `UNIQUE (tenant_id, blueprint_id, scheme_type)` on `blueprint_scheme_defaults`
-- Composite tenant-safe FKs are recommended for all scheme bindings on `projects` (e.g., `(tenant_id, permission_scheme_id)` -> `permission_schemes(tenant_id, id)`, `(tenant_id, issue_security_scheme_id)` -> `issue_security_schemes(tenant_id, id)`)
+- `CHECK default_assignee_type IN ('PROJECT_LEAD','UNASSIGNED')` on `projects`
+- `CHECK assignee_type IN ('PROJECT_DEFAULT','COMPONENT_LEAD','PROJECT_LEAD','UNASSIGNED')` on `project_components`
+- Composite tenant-safe FKs are required for all scheme bindings on `projects` and all project-scoped child tables.
+- All UNIQUE constraints above should be implemented as partial unique indexes filtered by `deleted_at IS NULL`.
 - `INDEX (tenant_id, project_id)` on all project-scoped child tables

@@ -9,9 +9,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.data.util.Pair;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import serp.project.discuss_service.core.domain.dto.request.GetChannelsParams;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
 import serp.project.discuss_service.core.domain.enums.MemberRole;
@@ -21,9 +23,11 @@ import serp.project.discuss_service.core.service.IChannelMemberService;
 import serp.project.discuss_service.core.service.IChannelService;
 import serp.project.discuss_service.core.service.IDiscussEventPublisher;
 import serp.project.discuss_service.core.service.IPresenceService;
+import serp.project.discuss_service.core.service.IUserInfoService;
 import serp.project.discuss_service.testutil.TestDataFactory;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -49,6 +53,9 @@ class ChannelUseCaseTest {
 
     @Mock
     private IDiscussEventPublisher eventPublisher;
+
+    @Mock
+    private IUserInfoService userInfoService;
 
     @InjectMocks
     private ChannelUseCase channelUseCase;
@@ -131,19 +138,16 @@ class ChannelUseCaseTest {
     class GetOrCreateDirectChannelTests {
 
         @Test
-        @DisplayName("should get existing channel and ensure both users are members")
-        void testGetOrCreateDirectChannel_ExistingChannel_EnsuresMembers() {
+        @DisplayName("should return existing direct channel when present")
+        void testGetOrCreateDirectChannel_ExistingChannel_ReturnsExisting() {
             // Given
             ChannelEntity channel = TestDataFactory.createDirectChannel();
 
-            when(channelService.getOrCreateDirectChannel(
+            when(channelService.getDirectChannel(
                     TestDataFactory.TENANT_ID,
                     TestDataFactory.USER_ID_1,
                     TestDataFactory.USER_ID_2
-            )).thenReturn(channel);
-
-            when(memberService.isMember(channel.getId(), TestDataFactory.USER_ID_1)).thenReturn(true);
-            when(memberService.isMember(channel.getId(), TestDataFactory.USER_ID_2)).thenReturn(true);
+            )).thenReturn(Optional.of(channel));
 
             // When
             ChannelEntity result = channelUseCase.getOrCreateDirectChannel(
@@ -154,19 +158,25 @@ class ChannelUseCaseTest {
 
             // Then
             assertNotNull(result);
+            assertEquals(channel.getId(), result.getId());
+            verify(channelService).getDirectChannel(
+                    TestDataFactory.TENANT_ID,
+                    TestDataFactory.USER_ID_1,
+                    TestDataFactory.USER_ID_2
+            );
+            verify(channelService, never()).createDirectChannel(any(), any(), any());
             verify(memberService, never()).addOwner(any(), any(), any());
             verify(memberService, never()).addMember(any(), any(), any(), any());
         }
 
         @Test
-        @DisplayName("should add users as members if not already members")
-        void testGetOrCreateDirectChannel_NewChannel_AddsBothUsers() {
+        @DisplayName("should create direct channel and add both users when absent")
+        void testGetOrCreateDirectChannel_NewChannel_CreatesAndAddsMembers() {
             // Given
             ChannelEntity channel = TestDataFactory.createDirectChannel();
 
-            when(channelService.getOrCreateDirectChannel(any(), any(), any())).thenReturn(channel);
-            when(memberService.isMember(channel.getId(), TestDataFactory.USER_ID_1)).thenReturn(false);
-            when(memberService.isMember(channel.getId(), TestDataFactory.USER_ID_2)).thenReturn(false);
+            when(channelService.getDirectChannel(any(), any(), any())).thenReturn(Optional.empty());
+            when(channelService.createDirectChannel(any(), any(), any())).thenReturn(channel);
 
             // When
             channelUseCase.getOrCreateDirectChannel(
@@ -176,6 +186,16 @@ class ChannelUseCaseTest {
             );
 
             // Then
+            verify(channelService).getDirectChannel(
+                    TestDataFactory.TENANT_ID,
+                    TestDataFactory.USER_ID_1,
+                    TestDataFactory.USER_ID_2
+            );
+            verify(channelService).createDirectChannel(
+                    TestDataFactory.TENANT_ID,
+                    TestDataFactory.USER_ID_1,
+                    TestDataFactory.USER_ID_2
+            );
             verify(memberService).addOwner(channel.getId(), TestDataFactory.USER_ID_1, TestDataFactory.TENANT_ID);
             verify(memberService).addMember(channel.getId(), TestDataFactory.USER_ID_2, TestDataFactory.TENANT_ID, MemberRole.MEMBER);
         }
@@ -236,11 +256,12 @@ class ChannelUseCaseTest {
                     TestDataFactory.createRegularMember()
             );
 
+            when(memberService.isMember(channel.getId(), TestDataFactory.USER_ID_1)).thenReturn(true);
             when(channelService.getChannelByIdOrThrow(channel.getId())).thenReturn(channel);
             when(memberService.getActiveMembers(channel.getId())).thenReturn(members);
 
             // When
-            ChannelEntity result = channelUseCase.getChannelWithMembers(channel.getId());
+            ChannelEntity result = channelUseCase.getChannelWithMembers(channel.getId(), TestDataFactory.USER_ID_1);
 
             // Then
             assertNotNull(result);
@@ -255,26 +276,36 @@ class ChannelUseCaseTest {
     class GetUserChannelsTests {
 
         @Test
-        @DisplayName("should return channels where user is a member")
-        void testGetUserChannels_UserWithMemberships_ReturnsChannels() {
+        @DisplayName("should delegate filters to channelService")
+        void testGetUserChannels_WithParams_DelegatesToChannelService() {
             // Given
-            ChannelMemberEntity membership = TestDataFactory.createRegularMember();
-            List<ChannelEntity> allChannels = List.of(
+            GetChannelsParams params = GetChannelsParams.builder()
+                    .page(0)
+                    .pageSize(20)
+                    .searchQuery("team")
+                    .build();
+
+            List<ChannelEntity> channels = List.of(
                     TestDataFactory.createGroupChannel(),
                     TestDataFactory.createDirectChannel()
             );
+            Pair<Long, List<ChannelEntity>> expected = Pair.of(2L, channels);
 
-            when(memberService.getUserChannels(TestDataFactory.USER_ID_3)).thenReturn(List.of(membership));
-            when(channelService.getChannelsByTenantId(TestDataFactory.TENANT_ID)).thenReturn(allChannels);
+            when(channelService.getUserChannels(TestDataFactory.USER_ID_3, TestDataFactory.TENANT_ID, params))
+                    .thenReturn(expected);
 
             // When
-            List<ChannelEntity> result = channelUseCase.getUserChannels(
-                    TestDataFactory.USER_ID_3, TestDataFactory.TENANT_ID);
+            Pair<Long, List<ChannelEntity>> result = channelUseCase.getUserChannels(
+                    TestDataFactory.USER_ID_3,
+                    TestDataFactory.TENANT_ID,
+                    params);
 
             // Then
-            // Filter by membership channelId
-            verify(memberService).getUserChannels(TestDataFactory.USER_ID_3);
-            verify(channelService).getChannelsByTenantId(TestDataFactory.TENANT_ID);
+            assertNotNull(result);
+            assertEquals(2L, result.getFirst());
+            assertEquals(2, result.getSecond().size());
+            verify(channelService).getUserChannels(TestDataFactory.USER_ID_3, TestDataFactory.TENANT_ID, params);
+            verifyNoInteractions(memberService);
         }
     }
 

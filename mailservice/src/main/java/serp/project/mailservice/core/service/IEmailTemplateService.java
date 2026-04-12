@@ -15,6 +15,8 @@ public interface IEmailTemplateService {
 
     Optional<EmailTemplateEntity> getTemplateById(Long templateId);
 
+    Optional<EmailTemplateEntity> getTemplateByCode(Long tenantId, String code);
+
     String renderTemplate(String bodyTemplate, Map<String, Object> defaultValues, Map<String, Object> variables);
 
     void cacheTemplate(EmailTemplateEntity template);

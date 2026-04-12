@@ -58,6 +58,8 @@ public class EmailEntity extends BaseEntity {
     private Integer maxRetries;
     private String errorMessage;
 
+    private List<EmailAttachmentEntity> attachments;
+
     // ==================== Constants ====================
 
     private static final Pattern EMAIL_PATTERN = Pattern.compile(
@@ -88,10 +90,7 @@ public class EmailEntity extends BaseEntity {
     // ==================== Validation ====================
 
     public void validate() {
-        if (fromEmail == null || fromEmail.isBlank()) {
-            throw new IllegalArgumentException("From email is required");
-        }
-        if (!isValidEmailAddress(fromEmail)) {
+        if (fromEmail != null && !fromEmail.isBlank() && !isValidEmailAddress(fromEmail)) {
             throw new IllegalArgumentException("Invalid from email format: " + fromEmail);
         }
 

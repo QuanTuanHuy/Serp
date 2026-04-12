@@ -5,10 +5,11 @@ Description: Part of Serp Project - Channel list component for discuss module
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { cn } from '@/shared/utils';
 import { Input, ScrollArea, Button } from '@/shared/components/ui';
+import { useDebounce } from '@/shared/hooks';
 import {
   Search,
   Plus,
@@ -16,6 +17,7 @@ import {
   AlertCircle,
   ArrowLeft,
   MessageSquare,
+  X,
 } from 'lucide-react';
 import { ChannelItem } from './ChannelItem';
 import { ChannelGroupHeader } from './ChannelGroupHeader';
@@ -31,6 +33,14 @@ interface ChannelListProps {
 
 type ExpandedState = Record<ChannelType, boolean>;
 
+const CHANNEL_TYPES: ChannelType[] = ['DIRECT', 'GROUP', 'TOPIC'];
+
+const EMPTY_GROUPS: Record<ChannelType, Channel[]> = {
+  DIRECT: [],
+  GROUP: [],
+  TOPIC: [],
+};
+
 export const ChannelList: React.FC<ChannelListProps> = ({
   onChannelSelect,
   selectedChannelId,
@@ -45,67 +55,93 @@ export const ChannelList: React.FC<ChannelListProps> = ({
     TOPIC: true,
   });
 
-  // Fetch channels from RTK Query
+  const debouncedSearch = useDebounce(searchQuery, 300);
+  const isSearchStale = debouncedSearch !== searchQuery;
+
   const {
     data: channelsResponse,
     isLoading,
+    isFetching,
     isError,
     error,
   } = useGetChannelsQuery({
-    filters: {},
+    filters: {
+      search: debouncedSearch || undefined,
+    },
     pagination: { page: 1, limit: 100 },
   });
 
-  // Group and filter channels
+  // Group channels by type, sort by last message time (js-combine-iterations)
   const groupedChannels = useMemo(() => {
-    const channels = channelsResponse?.data?.items || [];
+    const channels = channelsResponse?.data?.items;
+    if (!channels || channels.length === 0) return EMPTY_GROUPS;
 
-    // Filter by search query
-    const filtered = channels.filter((channel: Channel) =>
-      channel.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    // Group by type
     const groups: Record<ChannelType, Channel[]> = {
       DIRECT: [],
       GROUP: [],
       TOPIC: [],
     };
 
-    filtered.forEach((channel: Channel) => {
+    for (let i = 0; i < channels.length; i++) {
+      const channel = channels[i];
       if (!channel.isArchived) {
         groups[channel.type].push(channel);
       }
-    });
+    }
 
-    // Sort by last message time (most recent first)
-    Object.keys(groups).forEach((type) => {
-      groups[type as ChannelType].sort((a, b) => {
+    // Sort each group by last message time (most recent first)
+    for (const type of CHANNEL_TYPES) {
+      groups[type].sort((a, b) => {
         const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
         const timeB = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
         return timeB - timeA;
       });
-    });
+    }
 
     return groups;
-  }, [channelsResponse, searchQuery]);
+  }, [channelsResponse]);
 
-  const toggleGroup = (type: ChannelType) => {
+  // Stable callbacks (rerender-functional-setstate)
+  const toggleGroup = useCallback((type: ChannelType) => {
     setExpandedGroups((prev) => ({
       ...prev,
       [type]: !prev[type],
     }));
-  };
+  }, []);
+
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setSearchQuery(e.target.value);
+    },
+    []
+  );
+
+  const handleClearSearch = useCallback(() => {
+    setSearchQuery('');
+  }, []);
+
+  const handleOpenCreateDialog = useCallback(() => {
+    setCreateDialogOpen(true);
+  }, []);
+
+  const handleCreateSuccess = useCallback(() => {
+    // Channels will auto-refresh via RTK Query cache invalidation
+  }, []);
 
   const totalUnread = useMemo(() => {
-    const channels = channelsResponse?.data?.items || [];
-    return channels.reduce(
-      (sum: number, channel: Channel) => sum + channel.unreadCount,
-      0
-    );
+    const channels = channelsResponse?.data?.items;
+    if (!channels || channels.length === 0) return 0;
+
+    let total = 0;
+    for (let i = 0; i < channels.length; i++) {
+      total += channels[i].unreadCount;
+    }
+    return total;
   }, [channelsResponse]);
 
-  // Loading state
+  const isSearching = !!debouncedSearch;
+
+  // Loading state (initial load only)
   if (isLoading) {
     return (
       <div
@@ -180,11 +216,11 @@ export const ChannelList: React.FC<ChannelListProps> = ({
               Discuss
             </h2>
           </Link>
-          {totalUnread > 0 && (
+          {totalUnread > 0 ? (
             <span className='px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-br from-rose-500 to-pink-500 text-white shadow-sm'>
               {totalUnread > 99 ? '99+' : totalUnread}
             </span>
-          )}
+          ) : null}
         </div>
 
         {/* Search */}
@@ -194,26 +230,41 @@ export const ChannelList: React.FC<ChannelListProps> = ({
             type='text'
             placeholder='Search channels...'
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={handleSearchChange}
             className={cn(
-              'pl-9 h-9',
+              'pl-9 pr-8 h-9',
               'bg-slate-100 dark:bg-slate-800',
               'border-transparent',
               'focus-visible:ring-violet-500',
               'placeholder:text-slate-500'
             )}
           />
+          {searchQuery ? (
+            <button
+              type='button'
+              onClick={handleClearSearch}
+              className='absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors'
+              aria-label='Clear search'
+            >
+              <X className='h-3.5 w-3.5' />
+            </button>
+          ) : null}
         </div>
       </div>
 
       {/* Channel List */}
       <ScrollArea className='flex-1'>
-        <div className='px-2 py-3 space-y-1'>
-          {(['DIRECT', 'GROUP', 'TOPIC'] as ChannelType[]).map((type) => {
+        <div
+          className={cn(
+            'px-2 py-3 space-y-1 transition-opacity duration-150',
+            (isSearchStale || isFetching) && 'opacity-70'
+          )}
+        >
+          {CHANNEL_TYPES.map((type) => {
             const channels = groupedChannels[type];
             const hasChannels = channels.length > 0;
 
-            if (!hasChannels && searchQuery) return null;
+            if (!hasChannels && isSearching) return null;
 
             return (
               <div key={type} className='space-y-1'>
@@ -224,7 +275,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                   onToggle={() => toggleGroup(type)}
                 />
 
-                {expandedGroups[type] && (
+                {expandedGroups[type] ? (
                   <div className='pl-2 space-y-0.5'>
                     {hasChannels ? (
                       channels.map((channel) => (
@@ -241,10 +292,25 @@ export const ChannelList: React.FC<ChannelListProps> = ({
                       </p>
                     )}
                   </div>
-                )}
+                ) : null}
               </div>
             );
           })}
+
+          {/* No results feedback for search */}
+          {isSearching &&
+          !isFetching &&
+          CHANNEL_TYPES.every((type) => groupedChannels[type].length === 0) ? (
+            <div className='flex flex-col items-center justify-center py-8 gap-2'>
+              <Search className='h-8 w-8 text-slate-300 dark:text-slate-600' />
+              <p className='text-sm text-slate-500 dark:text-slate-400'>
+                No channels found
+              </p>
+              <p className='text-xs text-slate-400 dark:text-slate-500'>
+                Try a different search term
+              </p>
+            </div>
+          ) : null}
         </div>
       </ScrollArea>
 
@@ -253,7 +319,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
         <Button
           variant='outline'
           size='sm'
-          onClick={() => setCreateDialogOpen(true)}
+          onClick={handleOpenCreateDialog}
           className={cn(
             'w-full',
             'bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10',
@@ -273,10 +339,7 @@ export const ChannelList: React.FC<ChannelListProps> = ({
       <CreateChannelDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
-        onSuccess={() => {
-          // Channels will auto-refresh via RTK Query cache invalidation
-          console.log('Channel created successfully');
-        }}
+        onSuccess={handleCreateSuccess}
       />
     </div>
   );

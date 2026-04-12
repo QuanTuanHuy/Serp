@@ -38,17 +38,8 @@ CREATE TABLE IF NOT EXISTS email_stats (
     CONSTRAINT uq_email_stats_dimensions UNIQUE (tenant_id, provider, email_type, status, stat_date, stat_hour)
 );
 
--- Indexes for fast aggregation queries
+-- Indexes
 CREATE INDEX idx_email_stats_tenant_id ON email_stats(tenant_id);
-CREATE INDEX idx_email_stats_stat_date ON email_stats(stat_date DESC);
-CREATE INDEX idx_email_stats_provider ON email_stats(provider);
-CREATE INDEX idx_email_stats_email_type ON email_stats(email_type);
-CREATE INDEX idx_email_stats_status ON email_stats(status);
-
--- Composite indexes for common queries
-CREATE INDEX idx_email_stats_tenant_date ON email_stats(tenant_id, stat_date DESC);
-CREATE INDEX idx_email_stats_provider_date ON email_stats(provider, stat_date DESC);
-CREATE INDEX idx_email_stats_date_hour ON email_stats(stat_date DESC, stat_hour DESC);
 
 -- Comments
 COMMENT ON TABLE email_stats IS 'Pre-aggregated email statistics for admin dashboard';

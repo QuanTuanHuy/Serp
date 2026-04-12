@@ -6,7 +6,6 @@ Description: Part of Serp Project
 package serp.project.mailservice.core.service;
 
 import serp.project.mailservice.core.domain.dto.response.ProviderHealthResponse;
-import serp.project.mailservice.core.domain.entity.EmailEntity;
 import serp.project.mailservice.core.domain.enums.EmailProvider;
 import serp.project.mailservice.core.port.client.IEmailProviderPort;
 
@@ -14,7 +13,7 @@ import java.time.Duration;
 import java.util.List;
 
 public interface IEmailProviderService {
-    IEmailProviderPort selectProvider(EmailEntity email);
+    IEmailProviderPort selectProvider(EmailProvider provider);
     
     void markProviderDown(EmailProvider provider, Duration downtime);
     

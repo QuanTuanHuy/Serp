@@ -43,6 +43,8 @@ public class WorkItemModel extends BaseModel {
     @Column(name = "description")
     private String description;
 
+    @Column(name = "workflow_step_id")
+    private Long workflowStepId;
     @Column(name = "status_id", nullable = false)
     private Long statusId;
     @Column(name = "priority_id", nullable = false)
@@ -53,6 +55,8 @@ public class WorkItemModel extends BaseModel {
     private Long reporterId;
     @Column(name = "parent_id")
     private Long parentId;
+    @Column(name = "security_level_id")
+    private Long securityLevelId;
 
     @Column(name = "due_date")
     private LocalDateTime dueDate;

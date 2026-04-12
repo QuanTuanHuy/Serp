@@ -6,7 +6,8 @@
 package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.core.domain.entity.PriorityEntity;
+
+import serp.project.pmcore.domain.priority.entity.PriorityEntity;
 import serp.project.pmcore.infrastructure.store.model.PriorityModel;
 
 import java.util.Collections;
@@ -21,6 +22,7 @@ public class PriorityMapper extends BaseMapper {
         return PriorityEntity.builder()
                 .id(model.getId())
                 .tenantId(model.getTenantId())
+                .priorityKey(model.getPriorityKey())
                 .name(model.getName())
                 .description(model.getDescription())
                 .iconUrl(model.getIconUrl())
@@ -39,6 +41,7 @@ public class PriorityMapper extends BaseMapper {
         return PriorityModel.builder()
                 .id(entity.getId())
                 .tenantId(entity.getTenantId())
+                .priorityKey(entity.getPriorityKey())
                 .name(entity.getName())
                 .description(entity.getDescription())
                 .iconUrl(entity.getIconUrl())

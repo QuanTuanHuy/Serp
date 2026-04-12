@@ -15,6 +15,7 @@ import serp.project.account.core.domain.dto.request.ChangePasswordRequest;
 import serp.project.account.core.domain.dto.request.CreateUserDto;
 import serp.project.account.core.domain.dto.request.LoginRequest;
 import serp.project.account.core.domain.dto.request.RefreshTokenRequest;
+import serp.project.account.core.domain.dto.request.ResetPasswordConfirmRequest;
 import serp.project.account.core.domain.dto.request.RevokeTokenRequest;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.usecase.AuthUseCase;
@@ -63,6 +64,18 @@ public class AuthController {
         var userId = authUtils.getCurrentUserId()
                 .orElseThrow(() -> new AppException(Constants.ErrorMessage.UNAUTHORIZED));
         var response = authUseCase.changePassword(userId, request);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @GetMapping("/reset-password/validate")
+    public ResponseEntity<?> validatePasswordResetToken(@RequestParam String token) {
+        var response = authUseCase.validatePasswordResetToken(token);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PostMapping("/reset-password/confirm")
+    public ResponseEntity<?> confirmPasswordReset(@Valid @RequestBody ResetPasswordConfirmRequest request) {
+        var response = authUseCase.confirmPasswordReset(request);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 }

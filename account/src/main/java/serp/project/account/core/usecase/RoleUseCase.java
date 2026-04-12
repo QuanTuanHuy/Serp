@@ -16,6 +16,7 @@ import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.IKeycloakRoleService;
 import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.impl.PermissionService;
+import serp.project.account.core.usecase.support.OrganizationRoleResolver;
 import serp.project.account.infrastructure.store.mapper.RoleMapper;
 import serp.project.account.kernel.utils.DataUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
@@ -30,6 +31,7 @@ public class RoleUseCase {
     private final IRoleService roleService;
     private final IKeycloakRoleService keycloakRoleService;
     private final PermissionService permissionService;
+    private final OrganizationRoleResolver organizationRoleResolver;
 
     private final ResponseUtils responseUtils;
 
@@ -91,6 +93,18 @@ public class RoleUseCase {
         } catch (Exception e) {
             log.error("Error getting all roles: {}", e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
+        }
+    }
+
+    public GeneralResponse<?> getValidRolesForOrganization(Long organizationId) {
+        try {
+            return responseUtils.success(organizationRoleResolver.getValidRolesForOrganization(organizationId));
+        } catch (AppException e) {
+            log.error("Error getting valid roles for organization {}: {}", organizationId, e.getMessage());
+            return responseUtils.error(e.getCode(), e.getMessage());
+        } catch (Exception e) {
+            log.error("Error getting valid roles for organization {}: {}", organizationId, e.getMessage());
+            return responseUtils.internalServerError(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
         }
     }
 

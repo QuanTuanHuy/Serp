@@ -12,16 +12,18 @@ import org.springframework.data.util.Pair;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import serp.project.discuss_service.core.domain.constant.RestConstants;
 import serp.project.discuss_service.core.domain.dto.GeneralResponse;
 import serp.project.discuss_service.core.domain.dto.request.*;
 import serp.project.discuss_service.core.domain.dto.response.MessageResponse;
+import serp.project.discuss_service.core.domain.dto.response.MessagesAroundResponse;
 import serp.project.discuss_service.core.domain.dto.response.PaginatedResponse;
 import serp.project.discuss_service.core.domain.dto.response.TypingStatusResponse;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
 import serp.project.discuss_service.core.exception.AppException;
 import serp.project.discuss_service.core.exception.ErrorCode;
 import serp.project.discuss_service.core.service.IAttachmentUrlService;
-import serp.project.discuss_service.core.service.IUserInfoService;
 import serp.project.discuss_service.core.usecase.MessageUseCase;
 import io.github.serp.platform.security.context.SerpAuthContext;
 import serp.project.discuss_service.kernel.utils.ResponseUtils;
@@ -32,18 +34,17 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 @RestController
-@RequestMapping("/api/v1/channels/{channelId}/messages")
+@RequestMapping(RestConstants.MESSAGES)
 @RequiredArgsConstructor
 @Slf4j
 public class MessageController {
 
     private final MessageUseCase messageUseCase;
     private final IAttachmentUrlService attachmentUrlService;
-    private final IUserInfoService userInfoService;
     private final SerpAuthContext authContext;
     private final ResponseUtils responseUtils;
-    private static final Pattern MENTIONS_JSON_PATTERN =
-            Pattern.compile("^\\s*\\[\\s*(\\d+\\s*(,\\s*\\d+\\s*)*)?]\\s*$");
+    private static final Pattern MENTIONS_JSON_PATTERN = Pattern
+            .compile("^\\s*\\[\\s*(\\d+\\s*(,\\s*\\d+\\s*)*)?]\\s*$");
 
     @PostMapping
     public ResponseEntity<GeneralResponse<MessageResponse>> sendMessage(
@@ -64,16 +65,14 @@ public class MessageController {
                     userId,
                     tenantId,
                     request.getContent(),
-                    request.getMentions()
-            );
+                    request.getMentions());
         } else {
             message = messageUseCase.sendMessage(
                     channelId,
                     userId,
                     tenantId,
                     request.getContent(),
-                    request.getMentions()
-            );
+                    request.getMentions());
         }
 
         MessageResponse response = attachmentUrlService.enrichMessageWithUrls(message);
@@ -102,12 +101,11 @@ public class MessageController {
                 tenantId,
                 content,
                 mentions,
-                files
-        );
+                files);
 
         MessageResponse response = attachmentUrlService.enrichMessageWithUrls(message);
         response.setIsSentByMe(true);
-        
+
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
@@ -120,7 +118,7 @@ public class MessageController {
         Long tenantId = authContext.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
 
-        log.info("User {} sending reply to message {} in channel {}", 
+        log.info("User {} sending reply to message {} in channel {}",
                 userId, request.getParentId(), channelId);
 
         MessageEntity message = messageUseCase.sendReply(
@@ -129,8 +127,7 @@ public class MessageController {
                 userId,
                 tenantId,
                 request.getContent(),
-                request.getMentions()
-        );
+                request.getMentions());
 
         MessageResponse response = attachmentUrlService.enrichMessageWithUrls(message);
         response.setIsSentByMe(true);
@@ -149,15 +146,7 @@ public class MessageController {
 
         Pair<Long, List<MessageEntity>> result = messageUseCase.getChannelMessages(
                 channelId, userId, page, size);
-
-        List<MessageResponse> messageResponses = result.getSecond().stream()
-                .map(msg -> {
-                    MessageResponse r = attachmentUrlService.enrichMessageWithUrls(msg);
-                    r.setIsSentByMe(msg.getSenderId().equals(userId));
-                    r = userInfoService.enrichMessageWithUserInfo(r);
-                    return r;
-                })
-                .toList();
+        List<MessageResponse> messageResponses = messageUseCase.enrichMessageResponseList(result.getSecond(), userId);
 
         PaginatedResponse<MessageResponse> paginatedResponse = PaginatedResponse.of(
                 messageResponses, page, size, result.getFirst());
@@ -178,16 +167,28 @@ public class MessageController {
         List<MessageEntity> messages = messageUseCase.getMessagesBefore(
                 channelId, userId, beforeId, limit);
 
-        List<MessageResponse> responses = messages.stream()
-                .map(msg -> {
-                    MessageResponse r = attachmentUrlService.enrichMessageWithUrls(msg);
-                    r.setIsSentByMe(msg.getSenderId().equals(userId));
-                    r = userInfoService.enrichMessageWithUserInfo(r);
-                    return r;
-                })
-                .toList();
+        return ResponseEntity.ok(responseUtils.success(messageUseCase.enrichMessageResponseList(messages, userId)));
+    }
 
-        return ResponseEntity.ok(responseUtils.success(responses));
+    @GetMapping("/around/{messageId}")
+    public ResponseEntity<GeneralResponse<MessagesAroundResponse>> getMessagesAround(
+            @PathVariable Long channelId,
+            @PathVariable Long messageId,
+            @RequestParam(defaultValue = "25") int limit) {
+        Long userId = authContext.getCurrentUserId()
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
+
+        log.debug("User {} getting messages around {} in channel {}", userId, messageId, channelId);
+
+        MessageUseCase.MessagesAroundResult result = messageUseCase.getMessagesAround(
+                channelId, userId, messageId, limit);
+
+        List<MessageResponse> responses = messageUseCase.enrichMessageResponseList(result.messages(), userId);
+
+        MessagesAroundResponse response = new MessagesAroundResponse(
+                responses, result.hasBefore(), result.hasAfter());
+
+        return ResponseEntity.ok(responseUtils.success(response));
     }
 
     @GetMapping("/{messageId}/replies")
@@ -197,25 +198,18 @@ public class MessageController {
         Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
-        log.debug("User {} getting thread replies for message {} in channel {}", 
+        log.debug("User {} getting thread replies for message {} in channel {}",
                 userId, messageId, channelId);
 
         List<MessageEntity> messages = messageUseCase.getThreadReplies(channelId, messageId, userId);
 
-        List<MessageResponse> responses = messages.stream()
-                .map(msg -> {
-                    MessageResponse r = attachmentUrlService.enrichMessageWithUrls(msg);
-                    r.setIsSentByMe(msg.getSenderId().equals(userId));
-                    r = userInfoService.enrichMessageWithUserInfo(r);
-                    return r;
-                })
-                .toList();
+        List<MessageResponse> responses = messageUseCase.enrichMessageResponseList(messages, userId);
 
         return ResponseEntity.ok(responseUtils.success(responses));
     }
 
     @GetMapping("/search")
-    public ResponseEntity<GeneralResponse<List<MessageResponse>>> searchMessages(
+    public ResponseEntity<GeneralResponse<PaginatedResponse<MessageResponse>>> searchMessages(
             @PathVariable Long channelId,
             @RequestParam String query,
             @RequestParam(defaultValue = "0") int page,
@@ -223,22 +217,17 @@ public class MessageController {
         Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
-        log.debug("User {} searching messages in channel {} with query: {}", 
+        log.debug("User {} searching messages in channel {} with query: {}",
                 userId, channelId, query);
 
-        List<MessageEntity> messages = messageUseCase.searchMessages(
-                channelId, userId, query, page, size);
+        Pair<Long, List<MessageEntity>> result = messageUseCase.searchMessages(channelId, userId, query, page, size);
 
-        List<MessageResponse> responses = messages.stream()
-                .map(msg -> {
-                    MessageResponse r = attachmentUrlService.enrichMessageWithUrls(msg);
-                    r.setIsSentByMe(msg.getSenderId().equals(userId));
-                    r = userInfoService.enrichMessageWithUserInfo(r);
-                    return r;
-                })
-                .toList();
+        List<MessageResponse> responses = messageUseCase.enrichMessageResponseList(result.getSecond(), userId);
 
-        return ResponseEntity.ok(responseUtils.success(responses));
+        PaginatedResponse<MessageResponse> paginatedResponse = PaginatedResponse.of(
+                responses, page, size, result.getFirst());
+
+        return ResponseEntity.ok(responseUtils.success(paginatedResponse));
     }
 
     @PutMapping("/{messageId}")
@@ -279,7 +268,7 @@ public class MessageController {
         Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
-        log.debug("User {} adding reaction {} to message {} in channel {}", 
+        log.debug("User {} adding reaction {} to message {} in channel {}",
                 userId, request.getEmoji(), messageId, channelId);
 
         MessageEntity message = messageUseCase.addReaction(messageId, userId, request.getEmoji());
@@ -295,7 +284,7 @@ public class MessageController {
         Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
-        log.debug("User {} removing reaction {} from message {} in channel {}", 
+        log.debug("User {} removing reaction {} from message {} in channel {}",
                 userId, emoji, messageId, channelId);
 
         MessageEntity message = messageUseCase.removeReaction(messageId, userId, emoji);
@@ -310,7 +299,7 @@ public class MessageController {
         Long userId = authContext.getCurrentUserId()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
-        log.debug("User {} marking messages as read in channel {} up to message {}", 
+        log.debug("User {} marking messages as read in channel {} up to message {}",
                 userId, channelId, messageId);
 
         messageUseCase.markAsRead(channelId, userId, messageId);
@@ -345,7 +334,7 @@ public class MessageController {
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
         Set<Long> typingUsers = messageUseCase.getTypingUsers(channelId, userId);
-        
+
         TypingStatusResponse response = TypingStatusResponse.builder()
                 .channelId(channelId)
                 .typingUserIds(typingUsers)

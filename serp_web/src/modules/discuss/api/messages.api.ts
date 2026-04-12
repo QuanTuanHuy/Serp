@@ -270,9 +270,6 @@ export const messageApi = api.injectEndpoints({
         body: { emoji },
       }),
       extraOptions: { service: 'discuss' },
-      invalidatesTags: (result, error, { channelId }) => [
-        { type: 'Message', id: `CHANNEL-${channelId}` },
-      ],
     }),
 
     /**
@@ -294,9 +291,6 @@ export const messageApi = api.injectEndpoints({
         params: { emoji: encodeURIComponent(emoji) },
       }),
       extraOptions: { service: 'discuss' },
-      invalidatesTags: (result, error, { channelId }) => [
-        { type: 'Message', id: `CHANNEL-${channelId}` },
-      ],
     }),
 
     /**
@@ -379,6 +373,31 @@ export const messageApi = api.injectEndpoints({
       }),
       providesTags: ['Message'],
     }),
+
+    /**
+     * Get messages around a specific message (for jump-to-message)
+     */
+    getMessagesAround: builder.query<
+      APIResponse<{
+        messages: Message[];
+        hasBefore: boolean;
+        hasAfter: boolean;
+      }>,
+      { channelId: string; messageId: string; limit?: number }
+    >({
+      query: ({ channelId, messageId, limit = 25 }) => ({
+        url: `/channels/${channelId}/messages/around/${messageId}`,
+        params: { limit },
+      }),
+      extraOptions: { service: 'discuss' },
+      transformResponse: (response: any) => ({
+        ...response,
+        data: {
+          ...response.data,
+          messages: response.data.messages.map(transformMessage),
+        },
+      }),
+    }),
   }),
 });
 
@@ -400,4 +419,5 @@ export const {
   useSendTypingIndicatorMutation,
   useGetTypingUsersQuery,
   useSearchMessagesQuery,
+  useLazyGetMessagesAroundQuery,
 } = messageApi;

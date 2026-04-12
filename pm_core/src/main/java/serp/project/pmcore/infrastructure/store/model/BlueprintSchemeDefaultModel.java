@@ -11,8 +11,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import serp.project.pmcore.domain.shared.enums.SchemeType;
+
 import org.hibernate.annotations.SQLRestriction;
-import serp.project.pmcore.core.domain.enums.SchemeType;
 
 @Entity
 @Table(name = "blueprint_scheme_defaults")

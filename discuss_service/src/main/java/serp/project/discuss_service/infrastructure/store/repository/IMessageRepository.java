@@ -26,6 +26,12 @@ public interface IMessageRepository extends IBaseRepository<MessageModel> {
                                             @Param("beforeId") Long beforeId,
                                             Pageable pageable);
 
+    @Query("SELECT m FROM MessageModel m WHERE m.channelId = :channelId AND m.id > :afterId " +
+           "AND m.isDeleted = false ORDER BY m.createdAt ASC")
+    List<MessageModel> findMessagesAfterId(@Param("channelId") Long channelId,
+                                           @Param("afterId") Long afterId,
+                                           Pageable pageable);
+
     List<MessageModel> findByParentIdAndIsDeletedFalseOrderByCreatedAtAsc(Long parentId);
 
     List<MessageModel> findBySenderIdAndIsDeletedFalse(Long senderId, Pageable pageable);
@@ -38,14 +44,7 @@ public interface IMessageRepository extends IBaseRepository<MessageModel> {
            "AND m.id > :afterMessageId AND m.isDeleted = false")
     long countUnreadMessages(@Param("channelId") Long channelId, @Param("afterMessageId") Long afterMessageId);
 
-    // Full-text search
-    @Query(value = "SELECT * FROM messages m WHERE m.channel_id = :channelId " +
-                   "AND m.search_vector @@ plainto_tsquery('english', :query) " +
-                   "AND m.is_deleted = false ORDER BY ts_rank(m.search_vector, plainto_tsquery('english', :query)) DESC",
-           nativeQuery = true)
-    List<MessageModel> searchMessages(@Param("channelId") Long channelId,
-                                      @Param("query") String query,
-                                      Pageable pageable);
+    List<MessageModel> findByIdIn(List<Long> ids);
 
     @Modifying
     @Query("UPDATE MessageModel m SET m.isDeleted = true, m.deletedAt = :deletedAt WHERE m.channelId = :channelId")

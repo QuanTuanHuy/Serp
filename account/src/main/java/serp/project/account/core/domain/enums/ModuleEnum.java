@@ -230,6 +230,25 @@ public enum ModuleEnum {
             "0.4.0",
             List.of("INVENTORY")),
 
+    /**
+     * TMS - First Mile Transportation Management
+     * Quản lý first-mile operations, post office và pickup planning
+     */
+    TMS(
+            "TMS",
+            "First Mile Transportation Management",
+            "serp-first-mile",
+            "Operations",
+            "truck",
+            12,
+            ModuleType.SYSTEM,
+            true,
+            false,
+            PricingModel.PER_USER,
+            ModuleStatus.ACTIVE,
+            "1.0.0",
+            List.of()),
+
     // ==================== SUPPORT & SERVICE ====================
     /**
      * HELPDESK - Customer Support
@@ -241,7 +260,7 @@ public enum ModuleEnum {
             "serp-helpdesk",
             "Support & Service",
             "headset",
-            12,
+            13,
             ModuleType.SYSTEM,
             true,
             false,
@@ -260,7 +279,7 @@ public enum ModuleEnum {
             "serp-field-service",
             "Support & Service",
             "map-marked-alt",
-            13,
+            14,
             ModuleType.SYSTEM,
             true,
             false,

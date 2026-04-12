@@ -12,7 +12,9 @@ import serp.project.account.core.port.store.IUserModuleAccessPort;
 import serp.project.account.infrastructure.store.mapper.UserModuleAccessMapper;
 import serp.project.account.infrastructure.store.repository.IUserModuleAccessRepository;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -62,6 +64,24 @@ public class UserModuleAccessAdapter implements IUserModuleAccessPort {
     @Override
     public int countActiveUsers(Long moduleId, Long organizationId) {
         return userModuleAccessRepository.countActiveUsersByModuleAndOrganization(moduleId, organizationId);
+    }
+
+    @Override
+    public Map<Long, Integer> countActiveModulesByUserIds(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+        var results = userModuleAccessRepository.countActiveModulesByUserIds(userIds);
+        var map = new HashMap<Long, Integer>();
+        for (var row : results) {
+            try {
+                Long userId = Long.parseLong(row[0].toString());
+                Integer count = Integer.parseInt(row[1].toString());
+                map.put(userId, count);
+            } catch (NumberFormatException e) {
+            }
+        }
+        return map;
     }
 
     @Override

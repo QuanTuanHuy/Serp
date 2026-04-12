@@ -192,4 +192,12 @@ export function getAvatarColor(identifier: string): string {
 }
 
 export { getIconComponent } from './getIconComponent';
+export {
+  getModuleRootPath,
+  isSameModuleCode,
+  normalizeMenuPathForModule,
+  normalizeModuleCode,
+  normalizePath,
+  toCanonicalModuleCode,
+} from './moduleCode';
 export { isMac } from './platform';

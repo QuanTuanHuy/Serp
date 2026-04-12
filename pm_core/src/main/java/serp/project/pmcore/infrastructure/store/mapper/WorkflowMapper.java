@@ -6,7 +6,8 @@
 package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.core.domain.entity.WorkflowEntity;
+
+import serp.project.pmcore.domain.workflow.entity.WorkflowEntity;
 import serp.project.pmcore.infrastructure.store.model.WorkflowModel;
 
 import java.util.Collections;
@@ -22,10 +23,12 @@ public class WorkflowMapper extends BaseMapper {
         return WorkflowModel.builder()
                 .id(entity.getId())
                 .tenantId(entity.getTenantId())
+                .workflowKey(entity.getWorkflowKey())
                 .name(entity.getName())
                 .description(entity.getDescription())
-                .versionNo(entity.getVersionNo())
-                .isActive(entity.getIsActive())
+                .currentPublishedVersionId(entity.getCurrentPublishedVersionId())
+                .draftVersionId(entity.getDraftVersionId())
+                .lifecycleState(entity.getLifecycleState())
                 .isSystem(entity.getIsSystem())
                 .createdAt(longToLocalDateTime(entity.getCreatedAt()))
                 .createdBy(entity.getCreatedBy())
@@ -41,10 +44,12 @@ public class WorkflowMapper extends BaseMapper {
         return WorkflowEntity.builder()
                 .id(model.getId())
                 .tenantId(model.getTenantId())
+                .workflowKey(model.getWorkflowKey())
                 .name(model.getName())
                 .description(model.getDescription())
-                .versionNo(model.getVersionNo())
-                .isActive(model.getIsActive())
+                .currentPublishedVersionId(model.getCurrentPublishedVersionId())
+                .draftVersionId(model.getDraftVersionId())
+                .lifecycleState(model.getLifecycleState())
                 .isSystem(model.getIsSystem())
                 .createdAt(localDateTimeToLong(model.getCreatedAt()))
                 .createdBy(model.getCreatedBy())

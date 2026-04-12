@@ -11,7 +11,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -37,5 +39,13 @@ public class AuthUtils {
                 .map(jwt -> jwt.getClaimAsString("tid"))
                 .filter(tenant -> !tenant.isEmpty())
                 .map(Long::valueOf);
+    }
+
+    public Set<String> getCurrentGroups() {
+        return getCurrentJwt()
+                .map(jwt -> jwt.getClaimAsStringList("groups"))
+                .map(List::copyOf)
+                .map(Set::copyOf)
+                .orElse(Set.of());
     }
 }

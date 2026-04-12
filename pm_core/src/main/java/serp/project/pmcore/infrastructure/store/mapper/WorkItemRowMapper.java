@@ -7,11 +7,11 @@ package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.core.domain.entity.WorkItemEntity;
+
+import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 
 @Component
 public class WorkItemRowMapper extends BaseRowMapper implements RowMapper<WorkItemEntity> {
@@ -27,13 +27,19 @@ public class WorkItemRowMapper extends BaseRowMapper implements RowMapper<WorkIt
                 .key(rs.getString("key"))
                 .summary(rs.getString("summary"))
                 .description(rs.getString("description"))
+                .workflowStepId(getNullableLong(rs, "workflow_step_id"))
                 .statusId(rs.getLong("status_id"))
                 .priorityId(rs.getLong("priority_id"))
                 .assigneeId(getNullableLong(rs, "assignee_id"))
                 .reporterId(rs.getLong("reporter_id"))
                 .parentId(getNullableLong(rs, "parent_id"))
+                .securityLevelId(getNullableLong(rs, "security_level_id"))
+                .resolutionId(getNullableLong(rs, "resolution_id"))
                 .dueDate(toEpochMilli(rs.getTimestamp("due_date")))
                 .rank(rs.getString("rank"))
+                .timeOriginalEstimate(getNullableLong(rs, "time_original_estimate"))
+                .timeRemainingEstimate(getNullableLong(rs, "time_remaining_estimate"))
+                .timeSpent(getNullableLong(rs, "time_spent"))
                 .createdAt(toEpochMilli(rs.getTimestamp("created_at")))
                 .updatedAt(toEpochMilli(rs.getTimestamp("updated_at")))
                 .createdBy(getNullableLong(rs, "created_by"))

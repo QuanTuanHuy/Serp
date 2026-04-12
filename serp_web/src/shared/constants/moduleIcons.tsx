@@ -21,12 +21,15 @@ import {
   LucideIcon,
   MessageSquare,
 } from 'lucide-react';
+import { toCanonicalModuleCode } from '@/shared/utils';
 
 export type ModuleCode =
   | 'CRM'
   | 'PURCHASE'
   | 'SALES'
   | 'LOGISTICS'
+  | 'TMS'
+  | 'FIRST_MILE'
   | 'MARKETING'
   | 'PTM'
   | 'PROJECT'
@@ -114,6 +117,16 @@ export const MODULE_ICONS: Record<ModuleCode, ModuleIconConfig> = {
     color: 'text-green-600',
     bgColor: 'bg-green-50 dark:bg-green-950',
   },
+  TMS: {
+    icon: MapPin,
+    color: 'text-cyan-600',
+    bgColor: 'bg-cyan-50 dark:bg-cyan-950',
+  },
+  FIRST_MILE: {
+    icon: MapPin,
+    color: 'text-cyan-600',
+    bgColor: 'bg-cyan-50 dark:bg-cyan-950',
+  },
 
   // Finance
   ACCOUNTING: {
@@ -168,16 +181,33 @@ export const MODULE_ICONS: Record<ModuleCode, ModuleIconConfig> = {
  * Get icon configuration for a module
  */
 export const getModuleIcon = (moduleCode: string): ModuleIconConfig | null => {
-  return MODULE_ICONS[moduleCode as ModuleCode] || null;
+  const normalizedCode = moduleCode.replace(/-/g, '_').toUpperCase();
+
+  if (toCanonicalModuleCode(normalizedCode) === 'TMS') {
+    return MODULE_ICONS.TMS;
+  }
+
+  if (normalizedCode in MODULE_ICONS) {
+    return MODULE_ICONS[normalizedCode as ModuleCode];
+  }
+
+  return null;
 };
 
 /**
  * Get module route path
  */
 export const getModuleRoute = (moduleCode: string): string => {
-  if (moduleCode === 'ADMIN') return '/admin';
-  if (moduleCode === 'SETTINGS') return '/settings';
-  if (moduleCode === 'PTM') return '/ptm/dashboard';
-  if (moduleCode === 'CRM') return '/crm/dashboard';
-  return `/${moduleCode.toLowerCase()}`;
+  const canonicalCode = toCanonicalModuleCode(moduleCode);
+
+  if (canonicalCode === 'ADMIN') return '/admin';
+  if (canonicalCode === 'SETTINGS') return '/settings';
+  if (canonicalCode === 'PTM') return '/ptm/dashboard';
+  if (canonicalCode === 'CRM') return '/crm/dashboard';
+  if (canonicalCode === 'TMS') {
+    return '/first-mile';
+  }
+
+  const normalizedCode = moduleCode.replace(/-/g, '_').toLowerCase();
+  return `/${normalizedCode.replace(/_/g, '-')}`;
 };

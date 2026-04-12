@@ -32,6 +32,7 @@ import {
   Pin,
   Search,
   MoreVertical,
+  ArrowDown,
 } from 'lucide-react';
 import { MessageList, type MessageListRef } from './MessageList';
 import { MessageInput } from './MessageInput';
@@ -43,6 +44,7 @@ import { useWebSocket } from '../context/WebSocketContext';
 import {
   useGetMessagesQuery,
   useLazyGetMessagesBeforeQuery,
+  useLazyGetMessagesAroundQuery,
   useSendMessageMutation,
   useSendMessageWithFilesMutation,
   useEditMessageMutation,
@@ -107,6 +109,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     null
   );
 
+  // Jump-to-message state (search result click)
+  const [jumpTargetId, setJumpTargetId] = useState<string | null>(null);
+  const [isJumpMode, setIsJumpMode] = useState(false);
+
   // Refs for stable references in callbacks
   const isNearBottomRef = useRef(true);
   const isInitialLoadRef = useRef(true);
@@ -126,6 +132,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   // Lazy query for loading more (cursor-based)
   const [fetchMoreMessages, { isLoading: isLoadingMore }] =
     useLazyGetMessagesBeforeQuery();
+
+  // Lazy query for jump-to-message (around endpoint)
+  const [fetchMessagesAround] = useLazyGetMessagesAroundQuery();
 
   const isLoading = isInitialLoading || isLoadingMore;
 
@@ -170,6 +179,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       setUnreadCount(0);
       setLastReadMessageId(null);
       setIsNearBottom(true);
+      setIsJumpMode(false);
+      setJumpTargetId(null);
       isInitialLoadRef.current = true;
     }
 
@@ -526,6 +537,61 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     setLastReadMessageId(null);
   }, []);
 
+  // Jump-to-message handler (called from SearchDialog)
+  const handleJumpToMessage = useCallback(
+    async (_channelId: string, messageId: string) => {
+      // Fast path: message is already rendered in the DOM
+      if (messageListRef.current?.scrollToMessage(messageId)) {
+        return;
+      }
+
+      // Slow path: fetch messages around the target
+      try {
+        const result = await fetchMessagesAround({
+          channelId: channel.id,
+          messageId,
+        }).unwrap();
+
+        setAllMessages(result.data.messages);
+        setHasMoreMessages(result.data.hasBefore);
+        setIsJumpMode(true);
+        setJumpTargetId(messageId);
+      } catch (error) {
+        console.error('[ChatWindow] Failed to jump to message:', error);
+        toast.error('Could not find message', {
+          description: 'The message may have been deleted.',
+        });
+      }
+    },
+    [fetchMessagesAround, channel.id]
+  );
+
+  // Post-render scroll after jump-to-message fetch
+  useEffect(() => {
+    if (!jumpTargetId) return;
+
+    const raf = requestAnimationFrame(() => {
+      messageListRef.current?.scrollToMessage(jumpTargetId);
+      setJumpTargetId(null);
+    });
+
+    return () => cancelAnimationFrame(raf);
+  }, [jumpTargetId, allMessages]);
+
+  // Return to latest messages from jump mode
+  const handleReturnToLatest = useCallback(() => {
+    setIsJumpMode(false);
+    setJumpTargetId(null);
+    isInitialLoadRef.current = true;
+    if (messagesResponse?.data?.items) {
+      setAllMessages(messagesResponse.data.items);
+      setHasMoreMessages(messagesResponse.data.hasNext);
+    }
+    setTimeout(() => {
+      messageListRef.current?.scrollToBottom();
+    }, 100);
+  }, [messagesResponse]);
+
   const handleEditMessage = useCallback((message: Message) => {
     setEditingMessage(message);
     setReplyingTo(null);
@@ -773,6 +839,20 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           unreadCount={unreadCount}
           onClick={scrollToBottom}
         />
+
+        {/* Jump mode: return to latest messages */}
+        {isJumpMode && (
+          <div className='absolute bottom-4 left-1/2 -translate-x-1/2 z-10'>
+            <Button
+              onClick={handleReturnToLatest}
+              size='sm'
+              className='shadow-lg gap-2'
+            >
+              <ArrowDown className='h-4 w-4' />
+              Jump to latest messages
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Typing indicator - positioned above input */}
@@ -826,22 +906,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         open={searchOpen}
         onOpenChange={setSearchOpen}
         channelId={channel.id}
-        onResultClick={(clickedChannelId, messageId) => {
-          if (clickedChannelId === channel.id) {
-            // Same channel - scroll to message
-            messageListRef.current?.scrollToMessage(messageId);
-          } else {
-            // Different channel - show notification
-            console.log('Message is in different channel:', {
-              clickedChannelId,
-              messageId,
-            });
-            // TODO: Navigate to different channel or show toast
-            alert(
-              'This message is in a different channel. Please switch channels to view it.'
-            );
-          }
-        }}
+        onResultClick={handleJumpToMessage}
       />
 
       {/* Channel Members Panel */}

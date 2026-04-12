@@ -7,11 +7,13 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.core.domain.entity.WorkflowStepEntity;
-import serp.project.pmcore.core.port.store.IWorkflowStepPort;
+
+import serp.project.pmcore.domain.workflow.entity.WorkflowStepEntity;
+import serp.project.pmcore.domain.workflow.port.IWorkflowStepPort;
 import serp.project.pmcore.infrastructure.store.mapper.WorkflowStepMapper;
 import serp.project.pmcore.infrastructure.store.repository.IWorkflowStepRepository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,15 +25,38 @@ public class WorkflowStepAdapter implements IWorkflowStepPort {
     private final WorkflowStepMapper workflowStepMapper;
 
     @Override
-    public List<WorkflowStepEntity> getWorkflowStepsByWorkflowId(Long workflowId, Long tenantId) {
+    public List<WorkflowStepEntity> createWorkflowSteps(List<WorkflowStepEntity> steps) {
+        if (steps == null || steps.isEmpty()) {
+            return new ArrayList<>();
+        }
         return workflowStepMapper.toEntities(
-                workflowStepRepository.findByWorkflowIdAndTenantIdOrSystemTenant(workflowId, tenantId)
+                workflowStepRepository.saveAll(workflowStepMapper.toModels(steps))
         );
     }
 
     @Override
-    public Optional<WorkflowStepEntity> getInitialStep(Long workflowId, Long tenantId) {
-        return workflowStepRepository.findInitialStepByWorkflowId(workflowId, tenantId)
+    public List<WorkflowStepEntity> getWorkflowStepsByWorkflowVersionId(Long workflowVersionId, Long tenantId) {
+        return workflowStepMapper.toEntities(
+                workflowStepRepository.findByWorkflowVersionIdAndTenantId(workflowVersionId, tenantId)
+        );
+    }
+
+    @Override
+    public List<WorkflowStepEntity> getWorkflowStepsByWorkflowVersionIdIncludingSystem(Long workflowVersionId, Long tenantId) {
+        return workflowStepMapper.toEntities(
+                workflowStepRepository.findByWorkflowVersionIdAndTenantIdOrSystemTenant(workflowVersionId, tenantId)
+        );
+    }
+
+    @Override
+    public Optional<WorkflowStepEntity> getInitialStepByWorkflowVersionId(Long workflowVersionId, Long tenantId) {
+        return workflowStepRepository.findInitialStepByWorkflowVersionId(workflowVersionId, tenantId)
+                .map(workflowStepMapper::toEntity);
+    }
+
+    @Override
+    public Optional<WorkflowStepEntity> getWorkflowStepById(Long id, Long tenantId) {
+        return workflowStepRepository.findByIdAndTenantId(id, tenantId)
                 .map(workflowStepMapper::toEntity);
     }
 }

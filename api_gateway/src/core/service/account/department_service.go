@@ -18,7 +18,7 @@ type IDepartmentService interface {
 	GetDepartmentById(ctx context.Context, organizationId int64, departmentId int64) (*response.BaseResponse, error)
 	UpdateDepartment(ctx context.Context, organizationId int64, departmentId int64, req any) (*response.BaseResponse, error)
 	DeleteDepartment(ctx context.Context, organizationId int64, departmentId int64) (*response.BaseResponse, error)
-	GetDepartmentTree(ctx context.Context, organizationId int64, departmentId int64) (*response.BaseResponse, error)
+	GetDepartmentTree(ctx context.Context, organizationId int64) (*response.BaseResponse, error)
 
 	AssignUserToDepartment(ctx context.Context, organizationId int64, departmentId int64, req any) (*response.BaseResponse, error)
 	BulkAssignUsersToDepartment(ctx context.Context, organizationId int64, departmentId int64, req any) (*response.BaseResponse, error)
@@ -51,8 +51,8 @@ func (d *DepartmentService) DeleteDepartment(ctx context.Context, organizationId
 	return d.deptClient.DeleteDepartment(ctx, organizationId, departmentId)
 }
 
-func (d *DepartmentService) GetDepartmentTree(ctx context.Context, organizationId int64, departmentId int64) (*response.BaseResponse, error) {
-	return d.deptClient.GetDepartmentTree(ctx, organizationId, departmentId)
+func (d *DepartmentService) GetDepartmentTree(ctx context.Context, organizationId int64) (*response.BaseResponse, error) {
+	return d.deptClient.GetDepartmentTree(ctx, organizationId)
 }
 
 func (d *DepartmentService) AssignUserToDepartment(ctx context.Context, organizationId int64, departmentId int64, req any) (*response.BaseResponse, error) {

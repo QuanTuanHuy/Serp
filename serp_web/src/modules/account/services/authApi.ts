@@ -5,13 +5,17 @@
 
 import { api } from '@/lib/store/api';
 import type {
+  ConfirmPasswordResetRequest,
+  ConfirmPasswordResetResponse,
   LoginRequest,
   RegisterRequest,
   RefreshTokenRequest,
   RevokeTokenRequest,
   AuthResponse,
   TokenResponse,
+  ValidatePasswordResetTokenResponse,
 } from '../types';
+import { createRtkTransformResponse } from '@/lib/store/api';
 
 export const authApi = api.injectEndpoints({
   endpoints: (builder) => ({
@@ -60,6 +64,29 @@ export const authApi = api.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'account/user', id: 'CURRENT_USER' }],
     }),
+
+    validatePasswordResetToken: builder.query<
+      ValidatePasswordResetTokenResponse,
+      string
+    >({
+      query: (token) => ({
+        url: `/auth/reset-password/validate?token=${encodeURIComponent(token)}`,
+        method: 'GET',
+      }),
+      transformResponse: createRtkTransformResponse(),
+    }),
+
+    confirmPasswordReset: builder.mutation<
+      ConfirmPasswordResetResponse,
+      ConfirmPasswordResetRequest
+    >({
+      query: (body) => ({
+        url: '/auth/reset-password/confirm',
+        method: 'POST',
+        body,
+      }),
+      transformResponse: createRtkTransformResponse(),
+    }),
   }),
   overrideExisting: false,
 });
@@ -70,4 +97,6 @@ export const {
   useGetTokenMutation,
   useRefreshTokenMutation,
   useRevokeTokenMutation,
+  useValidatePasswordResetTokenQuery,
+  useConfirmPasswordResetMutation,
 } = authApi;

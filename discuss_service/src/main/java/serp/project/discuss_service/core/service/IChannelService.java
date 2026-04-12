@@ -5,29 +5,36 @@
 
 package serp.project.discuss_service.core.service;
 
+import serp.project.discuss_service.core.domain.dto.request.GetChannelsParams;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.enums.ChannelType;
 
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.util.Pair;
+
 public interface IChannelService {
 
     ChannelEntity createChannel(ChannelEntity channel);
 
-    ChannelEntity getOrCreateDirectChannel(Long tenantId, Long userId1, Long userId2);
+    Optional<ChannelEntity> getDirectChannel(Long tenantId, Long userId1, Long userId2);
 
-    ChannelEntity createGroupChannel(Long tenantId, Long createdBy, String name, 
-                                     String description, boolean isPrivate);
+    ChannelEntity createDirectChannel(Long tenantId, Long userId1, Long userId2);
+
+    ChannelEntity createGroupChannel(Long tenantId, Long createdBy, String name,
+            String description, boolean isPrivate);
 
     ChannelEntity createTopicChannel(Long tenantId, Long createdBy, String name,
-                                     String entityType, Long entityId);
+            String entityType, Long entityId);
 
     Optional<ChannelEntity> getChannelById(Long id);
 
     ChannelEntity getChannelByIdOrThrow(Long id);
 
     List<ChannelEntity> getChannelsByTenantId(Long tenantId);
+
+    Pair<Long, List<ChannelEntity>> getUserChannels(Long userId, Long tenantId, GetChannelsParams params);
 
     List<ChannelEntity> getChannelsByType(Long tenantId, ChannelType type);
 

@@ -20,6 +20,8 @@ public interface EmailTemplateRepository extends JpaRepository<EmailTemplateMode
 
     Optional<EmailTemplateModel> findByTenantIdAndCode(Long tenantId, String code);
 
+    Optional<EmailTemplateModel> findByCodeAndIsGlobalTrue(String code);
+
     List<EmailTemplateModel> findByTenantId(Long tenantId, Pageable pageable);
 
     List<EmailTemplateModel> findByIsGlobalTrue();

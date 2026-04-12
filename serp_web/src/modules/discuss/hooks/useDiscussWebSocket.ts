@@ -11,8 +11,15 @@ import { Client, IMessage, StompSubscription } from '@stomp/stompjs';
 import { useAppSelector, useAppDispatch } from '@/lib/store/hooks';
 import { toast } from 'sonner';
 import { messageApi } from '../api/messages.api';
+import { channelApi } from '../api/channels.api';
 import { discussApi } from '../api/discussApi';
-import type { Message, MessageReaction, WsEvent } from '../types';
+import type {
+  Message,
+  MessageReaction,
+  WsEvent,
+  ChannelFilters,
+  PaginationParams,
+} from '../types';
 import { transformMessage } from '../api/transformers';
 
 // Helper to find cache entries for a channel - matches the one in messages.api.ts
@@ -37,6 +44,40 @@ const findMessagesCacheEntry = (
     }
   }
   return undefined;
+};
+
+const findChannelsCacheEntries = (
+  state: any
+): Array<{
+  filters?: ChannelFilters;
+  pagination: PaginationParams;
+}> => {
+  const queries = state.api?.queries;
+  if (!queries) return [];
+
+  const entries: Array<{
+    filters?: ChannelFilters;
+    pagination: PaginationParams;
+  }> = [];
+
+  for (const key of Object.keys(queries)) {
+    if (!key.startsWith('getChannels(')) {
+      continue;
+    }
+
+    const originalArgs = queries[key]?.originalArgs as
+      | { filters?: ChannelFilters; pagination?: PaginationParams }
+      | undefined;
+
+    if (originalArgs?.pagination) {
+      entries.push({
+        filters: originalArgs.filters,
+        pagination: originalArgs.pagination,
+      });
+    }
+  }
+
+  return entries;
 };
 
 export const useDiscussWebSocket = () => {
@@ -114,13 +155,14 @@ export const useDiscussWebSocket = () => {
             break;
           }
 
+          const transformedMessage = transformMessage(data.message);
+          const normalizedChannelId = String(data.channelId);
+          const currentUserId = String(state.account?.user?.profile?.id || '');
+
           // RTK Query cache update - applies to any channel
           const cacheInfo = findMessagesCacheEntry(state, data.channelId);
 
           if (cacheInfo) {
-            const transformedMessage = transformMessage(data.message);
-            const normalizedChannelId = String(data.channelId);
-
             dispatch(
               messageApi.util.updateQueryData(
                 'getMessages',
@@ -137,12 +179,89 @@ export const useDiscussWebSocket = () => {
             );
           }
 
-          // Invalidate channel list for last message preview
+          // Update cached channel list to avoid triggering /channels refetch
+          const channelCaches = findChannelsCacheEntries(state);
+          const isOwnMessage =
+            transformedMessage.isSentByMe === true ||
+            (currentUserId !== '' &&
+              transformedMessage.senderId === currentUserId);
+
+          for (const args of channelCaches) {
+            dispatch(
+              channelApi.util.updateQueryData('getChannels', args, (draft) => {
+                const channels = draft.data?.items;
+                if (!channels || channels.length === 0) {
+                  return;
+                }
+
+                const channel = channels.find(
+                  (item) => String(item.id) === normalizedChannelId
+                );
+                if (!channel) {
+                  return;
+                }
+
+                channel.lastMessageAt = transformedMessage.createdAt;
+
+                if (
+                  transformedMessage.content &&
+                  transformedMessage.content.trim().length > 0
+                ) {
+                  channel.lastMessage = transformedMessage.content;
+                } else if (transformedMessage.attachments.length > 0) {
+                  channel.lastMessage = '[Attachment]';
+                }
+
+                if (
+                  !isOwnMessage &&
+                  activeChannelId &&
+                  activeChannelId !== normalizedChannelId
+                ) {
+                  channel.unreadCount = (channel.unreadCount || 0) + 1;
+                }
+
+                channels.sort((a, b) => {
+                  const timeA = a.lastMessageAt
+                    ? new Date(a.lastMessageAt).getTime()
+                    : 0;
+                  const timeB = b.lastMessageAt
+                    ? new Date(b.lastMessageAt).getTime()
+                    : 0;
+                  return timeB - timeA;
+                });
+              })
+            );
+          }
+
           dispatch(
-            discussApi.util.invalidateTags([
-              { type: 'Channel', id: data.channelId },
-              { type: 'Channel', id: 'LIST' },
-            ])
+            channelApi.util.updateQueryData(
+              'getChannel',
+              normalizedChannelId,
+              (draft) => {
+                if (!draft.data) {
+                  return;
+                }
+
+                draft.data.lastMessageAt = transformedMessage.createdAt;
+
+                if (
+                  transformedMessage.content &&
+                  transformedMessage.content.trim().length > 0
+                ) {
+                  draft.data.lastMessage = transformedMessage.content;
+                } else if (transformedMessage.attachments.length > 0) {
+                  draft.data.lastMessage = '[Attachment]';
+                }
+
+                if (
+                  !isOwnMessage &&
+                  activeChannelId &&
+                  activeChannelId !== normalizedChannelId
+                ) {
+                  draft.data.unreadCount = (draft.data.unreadCount || 0) + 1;
+                }
+              }
+            )
           );
 
           // Callback only for the active channel
@@ -151,7 +270,7 @@ export const useDiscussWebSocket = () => {
             String(data.channelId) === activeChannelId &&
             onMessageRef.current
           ) {
-            onMessageRef.current(transformMessage(data.message));
+            onMessageRef.current(transformedMessage);
           }
           break;
         }

@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
 import serp.project.discuss_service.core.port.store.IMessagePort;
@@ -16,15 +18,45 @@ import serp.project.discuss_service.infrastructure.store.mapper.MessageMapper;
 import serp.project.discuss_service.infrastructure.store.model.MessageModel;
 import serp.project.discuss_service.infrastructure.store.repository.IMessageRepository;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
 public class MessageAdapter implements IMessagePort {
 
+    private static final String SEARCH_FROM_AND_WHERE = """
+            FROM messages m
+            WHERE m.channel_id = :channelId
+              AND m.is_deleted = false
+              AND (
+                    m.search_vector @@ websearch_to_tsquery('simple', :query)
+                    OR (m.content IS NOT NULL AND LOWER(m.content) LIKE :likeQuery ESCAPE '\\')
+                  )
+            """;
+
+    private static final String SEARCH_COUNT_QUERY = "SELECT COUNT(*) " + SEARCH_FROM_AND_WHERE;
+
+    private static final String SEARCH_DATA_QUERY = """
+            SELECT m.id
+            """ + SEARCH_FROM_AND_WHERE + """
+            ORDER BY CASE
+                        WHEN m.search_vector @@ websearch_to_tsquery('simple', :query)
+                        THEN ts_rank_cd(m.search_vector, websearch_to_tsquery('simple', :query))
+                        ELSE 0
+                     END DESC,
+                     m.created_at DESC,
+                     m.id DESC
+            LIMIT :limit OFFSET :offset
+            """;
+
     private final IMessageRepository messageRepository;
     private final MessageMapper messageMapper;
+
+    private final NamedParameterJdbcTemplate jdbcTemplate;
 
     @Override
     public MessageEntity save(MessageEntity message) {
@@ -57,6 +89,13 @@ public class MessageAdapter implements IMessagePort {
     }
 
     @Override
+    public List<MessageEntity> findAfterId(Long channelId, Long afterId, int limit) {
+        var pageable = PageRequest.of(0, limit);
+        return messageMapper.toEntityList(
+                messageRepository.findMessagesAfterId(channelId, afterId, pageable));
+    }
+
+    @Override
     public List<MessageEntity> findReplies(Long parentId) {
         return messageMapper.toEntityList(
                 messageRepository.findByParentIdAndIsDeletedFalseOrderByCreatedAtAsc(parentId));
@@ -77,10 +116,47 @@ public class MessageAdapter implements IMessagePort {
     }
 
     @Override
-    public List<MessageEntity> searchMessages(Long channelId, String query, int page, int size) {
-        var pageable = PageRequest.of(page, size);
-        return messageMapper.toEntityList(
-                messageRepository.searchMessages(channelId, query, pageable));
+    public Pair<Long, List<MessageEntity>> searchMessages(Long channelId, String query, int page, int size) {
+        long offset = (long) page * size;
+        String likeQuery = "%" + escapeLikePattern(query.toLowerCase()) + "%";
+        var params = new MapSqlParameterSource()
+                .addValue("channelId", channelId)
+                .addValue("query", query)
+                .addValue("likeQuery", likeQuery)
+                .addValue("limit", size)
+                .addValue("offset", offset);
+
+        Long total = jdbcTemplate.queryForObject(SEARCH_COUNT_QUERY, params, Long.class);
+        if (total == null || total == 0L) {
+            return Pair.of(0L, List.of());
+        }
+
+        List<Long> messageIds = jdbcTemplate.query(SEARCH_DATA_QUERY, params,
+                (rs, rowNum) -> rs.getLong("id"));
+
+        if (messageIds.isEmpty()) {
+            return Pair.of(total, List.of());
+        }
+
+        List<MessageEntity> messages = messageMapper.toEntityList(messageRepository.findByIdIn(messageIds));
+        Map<Long, MessageEntity> messagesById = new HashMap<>();
+        for (MessageEntity message : messages) {
+            messagesById.putIfAbsent(message.getId(), message);
+        }
+
+        List<MessageEntity> orderedMessages = messageIds.stream()
+                .map(messagesById::get)
+                .filter(Objects::nonNull)
+                .toList();
+
+        return Pair.of(total, orderedMessages);
+    }
+
+    private String escapeLikePattern(String value) {
+        return value
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
     }
 
     @Override

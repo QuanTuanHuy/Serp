@@ -1,13 +1,17 @@
 # Module 09: Collaboration & Audit (Comments, Attachments, History)
 
-**Design Philosophy:** Collaboration records and audit trails must be immutable enough for accountability while still supporting rich content and future channels.
+**Design Philosophy:** Collaboration records and audit trails must be immutable enough for accountability while still supporting rich content and future channels. Change history and generic audit streams should be append-only, while editable collaboration artifacts retain normal mutable metadata.
 
-## Shared Base Columns (applies to all tables in this module)
+## Shared Base Columns
+
+For mutable collaboration tables:
 
 - `tenant_id BIGINT NOT NULL`
 - `created_at TIMESTAMP`, `updated_at TIMESTAMP`
 - `created_by BIGINT`, `updated_by BIGINT`
 - `deleted_at TIMESTAMP NULL`
+
+Append-only history tables define only immutable insert-time metadata.
 
 ## 9.1. `issue_comments`
 
@@ -63,7 +67,7 @@ Normalize mentions for faster notification lookup and analytics.
 
 ## 9.5. `change_groups`
 
-Represents one logical update action that may contain multiple field changes.
+Represents one logical update action that may contain multiple field changes. Append-only after insert.
 
 | Column | Type | Description |
 |---|---|---|
@@ -72,9 +76,12 @@ Represents one logical update action that may contain multiple field changes.
 | issue_id | BIGINT | FK -> work_items |
 | author_id | BIGINT | User who changed the issue |
 | source | VARCHAR(30) | UI, API, AUTOMATION |
-| created_at, updated_at, created_by, updated_by, deleted_at | TIMESTAMP/BIGINT | Base audit columns |
+| created_at | TIMESTAMP | Insert timestamp |
+| created_by | BIGINT | Writer actor |
 
 ## 9.6. `change_items`
+
+Append-only child rows of `change_groups`.
 
 | Column | Type | Description |
 |---|---|---|
@@ -87,11 +94,12 @@ Represents one logical update action that may contain multiple field changes.
 | old_string | TEXT | Display old value |
 | new_value | TEXT | Raw new value |
 | new_string | TEXT | Display new value |
-| created_at, updated_at, created_by, updated_by, deleted_at | TIMESTAMP/BIGINT | Base audit columns |
+| created_at | TIMESTAMP | Insert timestamp |
+| created_by | BIGINT | Writer actor |
 
 ## 9.7. `audit_events`
 
-Generic, append-friendly audit stream for non-issue entities.
+Generic, append-only audit stream for non-issue entities.
 
 | Column | Type | Description |
 |---|---|---|
@@ -103,7 +111,8 @@ Generic, append-friendly audit stream for non-issue entities.
 | actor_id | BIGINT | User/service actor |
 | payload_json | JSONB | Structured event payload |
 | occurred_at | TIMESTAMP | Business event time |
-| created_at, updated_at, created_by, updated_by, deleted_at | TIMESTAMP/BIGINT | Base audit columns |
+| created_at | TIMESTAMP | Insert timestamp |
+| created_by | BIGINT | Writer actor |
 
 ## Suggested Constraints & Indexes
 
@@ -111,3 +120,6 @@ Generic, append-friendly audit stream for non-issue entities.
 - `UNIQUE (tenant_id, comment_id, mentioned_user_id)` on `comment_mentions`
 - `INDEX (tenant_id, issue_id, created_at DESC)` on `issue_comments`, `change_groups`
 - `INDEX (tenant_id, entity_type, entity_id, occurred_at DESC)` on `audit_events`
+- `change_groups`, `change_items`, and `audit_events` should not support updates or soft deletes.
+- All UNIQUE constraints above should be implemented as partial unique indexes filtered by `deleted_at IS NULL` where the table is mutable.
+- Composite tenant-safe FKs are required for all intra-module and cross-module references.

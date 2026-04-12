@@ -18,9 +18,11 @@ import serp.project.account.core.domain.dto.request.CreateOrganizationDto;
 import serp.project.account.core.domain.dto.request.CreateUserDto;
 import serp.project.account.core.domain.dto.request.LoginRequest;
 import serp.project.account.core.domain.dto.request.RefreshTokenRequest;
+import serp.project.account.core.domain.dto.request.ResetPasswordConfirmRequest;
 import serp.project.account.core.domain.dto.request.RevokeTokenRequest;
 import serp.project.account.core.domain.dto.response.RegisterUserResponse;
 import serp.project.account.core.domain.entity.OrganizationEntity;
+import serp.project.account.core.domain.entity.PasswordResetRequestEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.UserEntity;
 import serp.project.account.core.domain.enums.RoleScope;
@@ -36,12 +38,14 @@ import serp.project.account.core.service.ITokenService;
 import serp.project.account.core.service.IUserService;
 import serp.project.account.infrastructure.store.mapper.UserMapper;
 import serp.project.account.kernel.utils.CollectionUtils;
+import serp.project.account.kernel.utils.PasswordResetTokenUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -216,6 +220,54 @@ public class AuthUseCase {
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> validatePasswordResetToken(String token) {
+        try {
+            PasswordResetRequestEntity resetRequest = getValidPasswordResetRequest(token);
+            return responseUtils.success(Map.of(
+                    "valid", true,
+                    "expiresAt", resetRequest.getExpiresAt(),
+                    "userId", resetRequest.getUserId()));
+        } catch (AppException e) {
+            log.error("Validate password reset token failed: {}", e.getMessage());
+            return responseUtils.error(e.getCode(), e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error when validating password reset token", e);
+            return responseUtils.internalServerError(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> confirmPasswordReset(ResetPasswordConfirmRequest request) {
+        try {
+            PasswordResetRequestEntity resetRequest = getValidPasswordResetRequest(request.getToken());
+            UserEntity user = userService.getUserById(resetRequest.getUserId());
+            if (user == null) {
+                return responseUtils.badRequest(Constants.ErrorMessage.USER_NOT_FOUND);
+            }
+            if (!user.isActive()) {
+                return responseUtils.badRequest("Cannot reset password for inactive or suspended user");
+            }
+            if (user.getKeycloakId() == null) {
+                return responseUtils.badRequest("User does not have a Keycloak account");
+            }
+
+            keycloakUserService.resetPassword(user.getKeycloakId(), request.getNewPassword());
+
+            resetRequest.markUsed();
+            userService.updatePasswordResetRequest(resetRequest);
+            logoutAfterPasswordReset(user.getKeycloakId());
+
+            return responseUtils.success("Password reset successfully");
+        } catch (AppException e) {
+            log.error("Confirm password reset failed: {}", e.getMessage());
+            return responseUtils.error(e.getCode(), e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error when confirming password reset", e);
+            return responseUtils.internalServerError(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     private CreateUserDto buildCreateUserRequestWithoutRoles(CreateUserDto request) {
         return CreateUserDto.builder()
                 .firstName(request.getFirstName())
@@ -225,6 +277,36 @@ public class AuthUseCase {
                 .organization(request.getOrganization())
                 .roleIds(Collections.emptyList())
                 .build();
+    }
+
+    private PasswordResetRequestEntity getValidPasswordResetRequest(String token) {
+        if (token == null || token.isBlank()) {
+            throw new AppException("Password reset token is required", Constants.HttpStatusCode.BAD_REQUEST);
+        }
+
+        String tokenHash = PasswordResetTokenUtils.hashToken(token);
+        PasswordResetRequestEntity resetRequest = userService.getPasswordResetRequestByTokenHash(tokenHash)
+                .orElseThrow(() -> new AppException("Invalid password reset token", Constants.HttpStatusCode.BAD_REQUEST));
+
+        if (!resetRequest.isPending()) {
+            throw new AppException("Password reset token is no longer valid", Constants.HttpStatusCode.BAD_REQUEST);
+        }
+
+        if (resetRequest.isExpired()) {
+            resetRequest.markExpired();
+            userService.updatePasswordResetRequest(resetRequest);
+            throw new AppException("Password reset token has expired", Constants.HttpStatusCode.BAD_REQUEST);
+        }
+
+        return resetRequest;
+    }
+
+    private void logoutAfterPasswordReset(String keycloakUserId) {
+        try {
+            keycloakUserService.logoutUser(keycloakUserId);
+        } catch (Exception e) {
+            log.warn("Password was reset but session logout failed for user {}: {}", keycloakUserId, e.getMessage());
+        }
     }
 
     private UserEntity provisionUserWithOrganization(

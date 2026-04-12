@@ -27,6 +27,8 @@ public interface IIssueTypeSchemeRepository extends JpaRepository<IssueTypeSchem
 
     boolean existsByTenantIdAndName(Long tenantId, String name);
 
+    boolean existsByDefaultIssueTypeIdAndTenantId(Long defaultIssueTypeId, Long tenantId);
+
     @Modifying
     @Query("UPDATE IssueTypeSchemeModel i SET i.deletedAt = CURRENT_TIMESTAMP WHERE i.id = :id AND i.tenantId = :tenantId AND i.deletedAt IS NULL")
     void deleteByIdAndTenantId(@Param("id") Long id, @Param("tenantId") Long tenantId);

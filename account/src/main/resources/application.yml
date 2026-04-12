@@ -63,7 +63,6 @@ app:
     admin:
       email: ${ADMIN_EMAIL}
       password: ${ADMIN_PASSWORD}
-
     filter:
       publicUrls:
         - first: /api/v1/auth/login
@@ -75,6 +74,10 @@ app:
         - first: /api/v1/auth/refresh-token
           second: POST
         - first: /api/v1/auth/revoke-token
+          second: POST
+        - first: /api/v1/auth/reset-password/validate
+          second: GET
+        - first: /api/v1/auth/reset-password/confirm
           second: POST
         - first: /api/v1/permissions/**
           second: GET
@@ -96,6 +99,8 @@ app:
           second: GET
         - first: /api/v1/organizations/*/departments/*/members
           second: GET
+        - first: /api/v1/invitations/*/accept
+          second: POST
       protectedUrls:
         # ==================== SERP ADMIN ====================
         - url-pattern: /api/v1/admin/**
@@ -111,19 +116,11 @@ app:
             - SYSTEM_MODERATOR
             - ORG_USER
           permissions:
-        - url-pattern: /api/v1/organizations/*/users
+        - url-pattern: /api/v1/organizations/*/roles
           roles:
             - SUPER_ADMIN
             - SYSTEM_MODERATOR
-            - ORG_OWNER
-            - ORG_ADMIN
-          permissions:
-        - url-pattern: /api/v1/organizations/*/users/*/status
-          roles:
-            - SUPER_ADMIN
-            - SYSTEM_MODERATOR
-            - ORG_OWNER
-            - ORG_ADMIN
+            - ORG_USER
           permissions:
 
         # ==================== USER CONTROLLER ====================
@@ -310,6 +307,80 @@ app:
             - ORG_OWNER
             - ORG_ADMIN
           permissions:
+
+        # ==================== ORGANIZATION USER CONTROLLER ====================
+        - url-pattern: /api/v1/organizations/*/users
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+          permissions:
+        - url-pattern: /api/v1/organizations/*/users/*/status
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+          permissions:
+        - url-pattern: /api/v1/organizations/*/users/stats
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+          permissions:
+        - url-pattern: /api/v1/organizations/*/users/export
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+          permissions:
+        - url-pattern: /api/v1/organizations/*/users/*/detail
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+          permissions:
+        - url-pattern: /api/v1/organizations/*/users/*/roles
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+          permissions:
+        - url-pattern: /api/v1/organizations/*/users/*/type
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+          permissions:
+        - url-pattern: /api/v1/organizations/*/users/*/reset-password
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+          permissions:
+
+        # ==================== INVITATION CONTROLLER ====================
+        - url-pattern: /api/v1/organizations/*/invitations/**
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+          permissions:
+
+  password-reset:
+    frontend-reset-url: ${PASSWORD_RESET_FRONTEND_URL:http://localhost:3000/auth/reset-password}
+    expiration-minutes: ${PASSWORD_RESET_EXPIRATION_MINUTES:60}
+
+  kafka:
+    topics:
+      sync-user: ${SYNC_USER_FIRST_MILE_TOPIC:SYNC_USER}
 
 server:
   port: 8081

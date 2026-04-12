@@ -46,6 +46,10 @@ export interface UserProfile {
   avatarUrl?: string;
   timezone?: string;
   preferredLanguage?: string;
+  roles?: string[];
+  primaryDepartmentId?: number;
+  primaryDepartmentName?: string;
+  moduleAccessCount?: number;
   createdAt: string;
   updatedAt: string;
 }

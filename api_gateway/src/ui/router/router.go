@@ -70,6 +70,7 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 
 	RegisterAccountRoutes(
 		group,
+		p.GenericProxyController,
 		p.AuthController,
 		p.UserController,
 		p.RoleController,
@@ -121,6 +122,13 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 	)
 
 	RegisterLogistics2Routes(
+    group,
+		p.GenericProxyController,
+		p.JWTMiddleware,
+		p.RateLimitMiddleware,
+	)
+  
+	RegisterFirstMileRoutes(
 		group,
 		p.GenericProxyController,
 		p.JWTMiddleware,

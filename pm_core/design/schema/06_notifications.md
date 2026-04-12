@@ -1,15 +1,19 @@
 # Module 06: Notifications (Event-driven Delivery)
 
-**Design Philosophy:** Decouple event detection from delivery. PM core stores notification policies and emits delivery jobs via outbox for downstream channel services.
+**Design Philosophy:** Decouple event detection from delivery. PM core stores notification policies and emits delivery jobs via outbox for downstream channel services. Recipient modeling must cover Jira-like assignee/reporter/watcher/lead/role/custom-field rules, and final delivery must still respect browse permission and issue security visibility.
 
-Provisioning note: notification schemes are provisioned as project-owned clones from template sources; event dictionary can remain tenant-shared (see Module 00).
+Provisioning note: notification schemes are reusable across projects, and Jira ships a default notification scheme that is associated with new spaces until changed. Dedicated project-local copies remain optional; the event dictionary can stay tenant-shared (see Module 00).
 
-## Shared Base Columns (applies to all tables in this module)
+## Shared Base Columns
+
+For mutable configuration and queue tables:
 
 - `tenant_id BIGINT NOT NULL`
 - `created_at TIMESTAMP`, `updated_at TIMESTAMP`
 - `created_by BIGINT`, `updated_by BIGINT`
 - `deleted_at TIMESTAMP NULL`
+
+Append-only delivery logs are documented separately.
 
 ## 6.1. `notification_schemes`
 
@@ -57,8 +61,9 @@ Maps event -> recipient rule -> channel for a scheme.
 | tenant_id | BIGINT | Tenant scope |
 | scheme_id | BIGINT | FK -> notification_schemes |
 | event_id | BIGINT | FK -> notification_events |
-| recipient_type | VARCHAR(50) | ASSIGNEE, REPORTER, WATCHERS, PROJECT_LEAD, PROJECT_ROLE, GROUP, USER |
-| recipient_id | VARCHAR(255) | Optional subject identifier |
+| recipient_type | VARCHAR(50) | ASSIGNEE, REPORTER, WATCHERS, CURRENT_USER, PROJECT_LEAD, COMPONENT_LEAD, PROJECT_ROLE, GROUP, USER, USER_CUSTOM_FIELD_VALUE, GROUP_CUSTOM_FIELD_VALUE |
+| recipient_ref | VARCHAR(255) | Optional role/group/user identifier |
+| custom_field_id | BIGINT | FK -> custom_fields when recipient resolves from a user/group custom field |
 | channel | VARCHAR(20) | EMAIL, IN_APP, WEBHOOK |
 | template_id | BIGINT | FK -> notification_templates (nullable) |
 | is_enabled | BOOLEAN | Runtime toggle |
@@ -98,7 +103,9 @@ Immutable history for compliance and troubleshooting.
 | provider_message_id | VARCHAR(255) | External provider id |
 | status | VARCHAR(20) | SENT, FAILED, BOUNCED, OPENED |
 | detail_json | JSONB | Raw provider response |
-| created_at, updated_at, created_by, updated_by, deleted_at | TIMESTAMP/BIGINT | Base audit columns |
+| occurred_at | TIMESTAMP | Provider event time |
+| created_at | TIMESTAMP | Insert timestamp |
+| created_by | BIGINT | System actor |
 
 ## Suggested Constraints & Indexes
 
@@ -107,3 +114,9 @@ Immutable history for compliance and troubleshooting.
 - `INDEX (tenant_id, scheme_id, event_id)` on `notification_scheme_entries`
 - `UNIQUE (tenant_id, dedupe_key)` on `notification_outbox`
 - `INDEX (tenant_id, status, next_retry_at)` on `notification_outbox`
+- `CHECK recipient_type IN ('ASSIGNEE','REPORTER','WATCHERS','CURRENT_USER','PROJECT_LEAD','COMPONENT_LEAD','PROJECT_ROLE','GROUP','USER','USER_CUSTOM_FIELD_VALUE','GROUP_CUSTOM_FIELD_VALUE')` on `notification_scheme_entries`
+- `CHECK recipient_ref IS NOT NULL` for `PROJECT_ROLE/GROUP/USER`
+- `CHECK custom_field_id IS NOT NULL` for `USER_CUSTOM_FIELD_VALUE/GROUP_CUSTOM_FIELD_VALUE`
+- Notification dispatch must filter out recipients who cannot browse the project or see the specific work item security level.
+- All UNIQUE constraints above should be implemented as partial unique indexes filtered by `deleted_at IS NULL` where the table is mutable.
+- Composite tenant-safe FKs are required for all intra-module and cross-module references.

@@ -1,8 +1,8 @@
 # Module 02: Issues & Work Items (Data Structure)
 
-**Design Philosophy:** Work items remain the central entity, but extensibility is achieved through typed relational sub-structures instead of large opaque JSON blobs.
+**Design Philosophy:** Work items remain the central entity, but Jira-parity behavior is preserved by separating workflow step from status, keeping reusable dictionaries distinct from scheme bindings, and storing resolved field-context information alongside typed custom-field values.
 
-Provisioning note: scheme roots in this module are template sources that are deep-cloned into project-owned configurations during project provisioning (see Module 00).
+Provisioning note: `issue_types` and `priorities` are reusable tenant dictionaries. Projects gain access to them through `issue_type_schemes` and `priority_schemes`. Template-based provisioning may materialize project-scoped issue type schemes, while priority schemes commonly stay shared tenant defaults unless explicitly replaced (see Module 00).
 
 ## Shared Base Columns (applies to all tables in this module)
 
@@ -23,7 +23,8 @@ Provisioning note: scheme roots in this module are template sources that are dee
 | key | VARCHAR(30) | Human key (e.g. SERP-123), unique per tenant |
 | summary | VARCHAR(512) | Title |
 | description | TEXT | Markdown/JSON document |
-| status_id | BIGINT | FK -> statuses (Module 03) |
+| status_id | BIGINT | FK -> statuses (Module 03); denormalized current status for query speed |
+| workflow_step_id | BIGINT | FK -> workflow_steps (Module 03); current workflow node, required to preserve Jira step/status distinction |
 | priority_id | BIGINT | FK -> priorities |
 | resolution_id | BIGINT | FK -> resolutions (nullable) |
 | assignee_id | BIGINT | User id |
@@ -62,7 +63,7 @@ Provisioning note: scheme roots in this module are template sources that are dee
 
 ## 2.4. `work_item_sprints` (Sprint assignment history)
 
-Support moving issues across sprints while preserving historical timeline.
+Support moving issues across sprints while preserving historical timeline. Ordering inside backlog and sprint views remains driven by `work_items.rank` plus board/sprint metadata from Module 07.
 
 | Column | Type | Description |
 |---|---|---|
@@ -77,6 +78,8 @@ Support moving issues across sprints while preserving historical timeline.
 
 ## 2.5. `issue_types` (Issue type dictionary)
 
+Reusable work type dictionary for the tenant. Projects/schemes reference these rows; they are not normally cloned per project.
+
 | Column | Type | Description |
 |---|---|---|
 | id | BIGINT | PK |
@@ -85,7 +88,7 @@ Support moving issues across sprints while preserving historical timeline.
 | name | VARCHAR(255) | Display name |
 | description | TEXT | Description |
 | icon_url | VARCHAR(255) | Icon |
-| hierarchy_level | INT | 0=subtask, 1=standard, 2=epic+ |
+| hierarchy_level | INT | Tenant-global hierarchy level for company-managed parity (0=subtask, 1=standard, 2=epic+) |
 | is_system | BOOLEAN | Built-in type marker |
 | created_at, updated_at, created_by, updated_by, deleted_at | TIMESTAMP/BIGINT | Base audit columns |
 
@@ -108,10 +111,12 @@ Support moving issues across sprints while preserving historical timeline.
 | tenant_id | BIGINT | Tenant scope |
 | scheme_id | BIGINT | FK -> issue_type_schemes |
 | issue_type_id | BIGINT | FK -> issue_types |
-| sequence | INT | Display order |
+| sequence | INT | Display order within scheme |
 | created_at, updated_at, created_by, updated_by, deleted_at | TIMESTAMP/BIGINT | Base audit columns |
 
 ## 2.8. `priorities`
+
+Reusable priority dictionary for the tenant. Priority schemes choose which subset/order is available in each project.
 
 | Column | Type | Description |
 |---|---|---|
@@ -127,7 +132,7 @@ Support moving issues across sprints while preserving historical timeline.
 
 ## 2.9. `priority_schemes`
 
-Added to resolve missing FK target from `projects.priority_scheme_id`.
+Reusable scheme that associates a subset of tenant priorities with one or more projects.
 
 | Column | Type | Description |
 |---|---|---|
@@ -208,13 +213,15 @@ Replaces `work_items.custom_field_values` JSONB for better indexing and validati
 | tenant_id | BIGINT | Tenant scope |
 | work_item_id | BIGINT | FK -> work_items |
 | custom_field_id | BIGINT | FK -> custom_fields (Module 04) |
-| value_type | VARCHAR(30) | TEXT, NUMBER, DATE, DATETIME, USER, OPTION, JSON |
+| custom_field_context_id | BIGINT | FK -> system-owned `custom_field_contexts` catalog row (Module 04); resolved at write time |
+| value_type | VARCHAR(30) | TEXT, NUMBER, DATE, DATETIME, USER, GROUP, OPTION, JSON |
 | text_value | TEXT | Value for text-like fields |
 | number_value | NUMERIC(20,6) | Value for numeric fields |
 | date_value | DATE | Value for date fields |
 | datetime_value | TIMESTAMP | Value for datetime fields |
 | user_value_id | BIGINT | User reference |
-| option_value_id | BIGINT | FK -> custom_field_options (Module 04) |
+| group_value_id | VARCHAR(255) | Group reference for group-picker fields |
+| option_value_id | BIGINT | FK -> custom_field_options (Module 04, context-scoped) |
 | json_value | JSONB | Fallback for complex values |
 | sort_order | INT | Support multi-value ordering |
 | created_at, updated_at, created_by, updated_by, deleted_at | TIMESTAMP/BIGINT | Base audit columns |
@@ -222,7 +229,12 @@ Replaces `work_items.custom_field_values` JSONB for better indexing and validati
 ## Suggested Constraints & Indexes
 
 - `UNIQUE (tenant_id, project_id, issue_no)` and `UNIQUE (tenant_id, key)` on `work_items`
-- `INDEX (tenant_id, project_id, status_id, assignee_id, rank)` on `work_items`
+- `INDEX (tenant_id, project_id, status_id, workflow_step_id, assignee_id, rank)` on `work_items`
 - `UNIQUE (tenant_id, scheme_id, issue_type_id)` on `issue_type_scheme_items`
 - `UNIQUE (tenant_id, scheme_id, priority_id)` on `priority_scheme_items`
-- `INDEX (tenant_id, work_item_id, custom_field_id)` on `work_item_custom_field_values`
+- `UNIQUE (tenant_id, work_item_id, custom_field_id, custom_field_context_id, sort_order)` on `work_item_custom_field_values`
+- `INDEX (tenant_id, work_item_id, custom_field_id, custom_field_context_id)` on `work_item_custom_field_values`
+- `CHECK` that `status_id` matches `workflow_step_id.status_id` on `work_items`
+- `CHECK` that only the typed value columns allowed by `value_type` are populated on `work_item_custom_field_values`
+- All UNIQUE constraints above should be implemented as partial unique indexes filtered by `deleted_at IS NULL`.
+- Composite tenant-safe FKs are required for tenant-owned references. Links from tenant work-item data into the system-owned custom-field catalog are the explicit exception in the current phase.

@@ -24,6 +24,7 @@ export interface SettingsActionMenuItem {
   variant?: 'default' | 'destructive';
   disabled?: boolean;
   separator?: boolean;
+  className?: string;
 }
 
 export interface SettingsActionMenuProps {
@@ -60,6 +61,7 @@ export const SettingsActionMenu: React.FC<SettingsActionMenuProps> = ({
               variant={item.variant}
               className={cn(
                 'cursor-pointer',
+                item.className,
                 item.variant === 'destructive' &&
                   'focus:bg-destructive/10 focus:text-destructive'
               )}

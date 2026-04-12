@@ -36,6 +36,9 @@ func (u *UserController) GetUsers(c *gin.Context) {
 	sortDir := utils.ParseStringQuery(c, "sortDir")
 	search := utils.ParseStringQuery(c, "search")
 	status := utils.ParseStringQuery(c, "status")
+	userType := utils.ParseStringQuery(c, "userType")
+	roleId := utils.ParseInt64Query(c, "roleId")
+	departmentId := utils.ParseInt64Query(c, "departmentId")
 	organizationID := utils.ParseInt64Query(c, "organizationId")
 
 	params := &request.GetUserParams{
@@ -46,6 +49,9 @@ func (u *UserController) GetUsers(c *gin.Context) {
 		Search:         search,
 		OrganizationID: organizationID,
 		Status:         status,
+		UserType:       userType,
+		RoleId:         roleId,
+		DepartmentId:   departmentId,
 	}
 
 	res, err := u.userService.GetUsers(c.Request.Context(), params)

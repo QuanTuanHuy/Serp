@@ -8,6 +8,7 @@ package serp.project.account.core.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import serp.project.account.core.domain.constant.Constants;
@@ -15,10 +16,15 @@ import serp.project.account.core.domain.dto.request.CreateUserDto;
 import serp.project.account.core.domain.dto.request.CreateUserForOrgRequest;
 import serp.project.account.core.domain.dto.request.GetUserParams;
 import serp.project.account.core.domain.dto.response.UserProfileResponse;
+import serp.project.account.core.domain.dto.response.UserStatsResponse;
+import serp.project.account.core.domain.entity.PasswordResetRequestEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.UserEntity;
 import serp.project.account.core.domain.entity.UserRoleEntity;
+import serp.project.account.core.domain.enums.ResetPassStatus;
+import serp.project.account.core.domain.enums.UserStatus;
 import serp.project.account.core.exception.AppException;
+import serp.project.account.core.port.store.IPasswordResetRequestPort;
 import serp.project.account.core.port.store.IUserPort;
 import serp.project.account.core.port.store.IUserRolePort;
 import serp.project.account.core.service.IRoleService;
@@ -27,7 +33,11 @@ import serp.project.account.infrastructure.store.mapper.UserMapper;
 import serp.project.account.kernel.utils.CollectionUtils;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -36,6 +46,7 @@ import java.util.stream.Collectors;
 public class UserService implements IUserService {
     private final IUserPort userPort;
     private final IUserRolePort userRolePort;
+    private final IPasswordResetRequestPort passwordResetRequestPort;
 
     private final IRoleService roleService;
 
@@ -209,5 +220,80 @@ public class UserService implements IUserService {
     @Override
     public List<UserEntity> getUsersByIds(List<Long> userIds) {
         return userPort.getUsersByIds(userIds);
+    }
+
+    @Override
+    public List<UserEntity> getUsersByOrganizationIdAndIds(Long organizationId, List<Long> userIds) {
+        return userPort.getUsersByOrganizationIdAndIds(organizationId, userIds);
+    }
+
+    @Override
+    public UserStatsResponse getUserStats(Long organizationId) {
+        int total = userPort.countUsersByOrganizationId(organizationId);
+
+        Map<String, Integer> statusCounts = userPort.countUsersByStatusForOrganization(organizationId);
+        int active = statusCounts.getOrDefault(UserStatus.ACTIVE.name(), 0);
+        int inactive = statusCounts.getOrDefault(UserStatus.INACTIVE.name(), 0);
+        int suspended = statusCounts.getOrDefault(UserStatus.SUSPENDED.name(), 0);
+        int invited = statusCounts.getOrDefault(UserStatus.INVITED.name(), 0);
+
+        int adminUsers = userPort.countAdminUsersByOrganizationId(organizationId);
+
+        YearMonth currentMonth = YearMonth.now();
+        LocalDateTime startOfThisMonth = currentMonth.atDay(1).atStartOfDay();
+        LocalDateTime startOfNextMonth = currentMonth.plusMonths(1).atDay(1).atStartOfDay();
+        LocalDateTime startOfLastMonth = currentMonth.minusMonths(1).atDay(1).atStartOfDay();
+
+        int newThisMonth = userPort.countUsersByOrganizationIdAndCreatedBetween(
+                organizationId, startOfThisMonth, startOfNextMonth);
+        int newLastMonth = userPort.countUsersByOrganizationIdAndCreatedBetween(
+                organizationId, startOfLastMonth, startOfThisMonth);
+
+        return UserStatsResponse.builder()
+                .totalUsers(total)
+                .activeUsers(active)
+                .inactiveUsers(inactive)
+                .suspendedUsers(suspended)
+                .invitedUsers(invited)
+                .adminUsers(adminUsers)
+                .newUsersThisMonth(newThisMonth)
+                .newUsersLastMonth(newLastMonth)
+                .build();
+    }
+
+    @Override
+    public Optional<PasswordResetRequestEntity> getPasswordResetRequestByTokenHash(String tokenHash) {
+        return passwordResetRequestPort.getByTokenHash(tokenHash);
+    }
+
+    @Override
+    public void invalidatePendingPasswordResetByUserId(Long userId) {
+        passwordResetRequestPort.invalidatePendingByUserId(userId);
+    }
+
+    @Override
+    public PasswordResetRequestEntity createPasswordResetRequest(
+            Long userId,
+            Long organizationId,
+            String email,
+            Long requestedBy,
+            String tokenHash,
+            Long expiresAt) {
+        PasswordResetRequestEntity entity = PasswordResetRequestEntity.builder()
+                .userId(userId)
+                .organizationId(organizationId)
+                .email(email)
+                .tokenHash(tokenHash)
+                .status(ResetPassStatus.PENDING)
+                .requestedBy(requestedBy)
+                .expiresAt(expiresAt)
+                .build();
+        return passwordResetRequestPort.save(entity);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public PasswordResetRequestEntity updatePasswordResetRequest(PasswordResetRequestEntity entity) {
+        return passwordResetRequestPort.save(entity);
     }
 }

@@ -7,8 +7,9 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.core.domain.entity.WorkflowSchemeEntity;
-import serp.project.pmcore.core.port.store.IWorkflowSchemePort;
+
+import serp.project.pmcore.domain.workflow.entity.WorkflowSchemeEntity;
+import serp.project.pmcore.domain.workflow.port.IWorkflowSchemePort;
 import serp.project.pmcore.infrastructure.store.mapper.WorkflowSchemeMapper;
 import serp.project.pmcore.infrastructure.store.repository.IWorkflowSchemeRepository;
 

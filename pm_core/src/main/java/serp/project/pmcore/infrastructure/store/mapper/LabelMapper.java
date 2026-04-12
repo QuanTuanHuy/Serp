@@ -6,7 +6,8 @@
 package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.core.domain.entity.LabelEntity;
+
+import serp.project.pmcore.domain.project.entity.LabelEntity;
 import serp.project.pmcore.infrastructure.store.model.LabelModel;
 
 import java.util.Collections;

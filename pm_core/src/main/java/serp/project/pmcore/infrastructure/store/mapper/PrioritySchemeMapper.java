@@ -6,7 +6,8 @@
 package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.core.domain.entity.PrioritySchemeEntity;
+
+import serp.project.pmcore.domain.priority.entity.PrioritySchemeEntity;
 import serp.project.pmcore.infrastructure.store.model.PrioritySchemeModel;
 
 import java.util.Collections;

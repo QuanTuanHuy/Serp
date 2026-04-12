@@ -7,8 +7,9 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.core.domain.entity.IssueTypeSchemeItemEntity;
-import serp.project.pmcore.core.port.store.IIssueTypeSchemeItemPort;
+
+import serp.project.pmcore.domain.issuetype.entity.IssueTypeSchemeItemEntity;
+import serp.project.pmcore.domain.issuetype.port.IIssueTypeSchemeItemPort;
 import serp.project.pmcore.infrastructure.store.mapper.IssueTypeSchemeItemMapper;
 import serp.project.pmcore.infrastructure.store.repository.IIssueTypeSchemeItemRepository;
 
@@ -59,5 +60,10 @@ public class IssueTypeSchemeItemAdapter implements IIssueTypeSchemeItemPort {
     @Override
     public boolean existsIssueTypeInScheme(Long schemeId, Long issueTypeId, Long tenantId) {
         return issueTypeSchemeItemRepository.existsByTenantIdAndSchemeIdAndIssueTypeId(tenantId, schemeId, issueTypeId);
+    }
+
+    @Override
+    public boolean existsByIssueTypeId(Long issueTypeId, Long tenantId) {
+        return issueTypeSchemeItemRepository.existsByIssueTypeIdAndTenantId(issueTypeId, tenantId);
     }
 }

@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS emails (
     priority VARCHAR(50) NOT NULL DEFAULT 'NORMAL',
     type VARCHAR(50) NOT NULL,
     
-    from_email VARCHAR(255) NOT NULL,
+    from_email VARCHAR(255),
     from_name VARCHAR(255),
     reply_to VARCHAR(255),
     to_emails TEXT[] NOT NULL,
@@ -52,24 +52,8 @@ CREATE TABLE IF NOT EXISTS emails (
     CONSTRAINT chk_active_status CHECK (active_status IN ('ACTIVE', 'DELETED'))
 );
 
--- Indexes for performance
+-- Indexes
 CREATE INDEX idx_emails_tenant_id ON emails(tenant_id);
-CREATE INDEX idx_emails_user_id ON emails(user_id);
-CREATE INDEX idx_emails_message_id ON emails(message_id);
-CREATE INDEX idx_emails_status ON emails(status);
-CREATE INDEX idx_emails_provider ON emails(provider);
-CREATE INDEX idx_emails_type ON emails(type);
-CREATE INDEX idx_emails_created_at ON emails(created_at DESC);
-CREATE INDEX idx_emails_sent_at ON emails(sent_at DESC);
-
--- Composite indexes for common queries
-CREATE INDEX idx_emails_tenant_status ON emails(tenant_id, status);
-CREATE INDEX idx_emails_tenant_created ON emails(tenant_id, created_at DESC);
-CREATE INDEX idx_emails_status_retry ON emails(status, next_retry_at) WHERE status = 'RETRY';
-
--- JSONB indexes for metadata queries
-CREATE INDEX idx_emails_metadata ON emails USING GIN(metadata);
-CREATE INDEX idx_emails_template_variables ON emails USING GIN(template_variables);
 
 -- Comment on table
 COMMENT ON TABLE emails IS 'Stores all email records sent through the mail service';

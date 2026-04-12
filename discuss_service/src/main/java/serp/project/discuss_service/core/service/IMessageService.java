@@ -24,9 +24,11 @@ public interface IMessageService {
 
     List<MessageEntity> getMessagesBefore(Long channelId, Long beforeId, int limit);
 
+    List<MessageEntity> getMessagesAfter(Long channelId, Long afterId, int limit);
+
     List<MessageEntity> getThreadReplies(Long parentId);
 
-    List<MessageEntity> searchMessages(Long channelId, String query, int page, int size);
+    Pair<Long, List<MessageEntity>> searchMessages(Long channelId, String query, int page, int size);
 
     MessageEntity editMessage(Long messageId, String newContent, Long editorId);
 

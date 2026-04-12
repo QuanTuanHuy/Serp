@@ -38,6 +38,8 @@ export { CreateDepartmentDialog } from './components/departments/CreateDepartmen
 export { UpdateDepartmentDialog } from './components/departments/UpdateDepartmentDialog';
 export { DeleteDepartmentDialog } from './components/departments/DeleteDepartmentDialog';
 export { DepartmentDetailDialog } from './components/departments/DepartmentDetailDialog';
+export { DepartmentOrgChart } from './components/departments/DepartmentOrgChart';
+export { AddMemberDialog } from './components/departments/AddMemberDialog';
 
 // Hooks
 export { useSettingsDepartments } from './hooks/useDepartments';

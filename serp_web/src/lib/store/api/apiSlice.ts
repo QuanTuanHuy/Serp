@@ -63,6 +63,55 @@ const dynamicBaseQuery: BaseQueryFn<
   return rawBaseQuery(adjustedArgs, api, extraOptions);
 };
 
+const isRefreshTokenRequest = (args: string | FetchArgs): boolean => {
+  const url = typeof args === 'string' ? args : args.url;
+  return url.includes('/auth/refresh-token');
+};
+
+let refreshPromise: Promise<boolean> | null = null;
+
+const refreshAccessToken = async (
+  api: Parameters<typeof dynamicBaseQuery>[1],
+  extraOptions: any,
+  refreshToken: string
+): Promise<boolean> => {
+  const refreshResult = await dynamicBaseQuery(
+    {
+      url: '/auth/refresh-token',
+      method: 'POST',
+      body: { refreshToken },
+    },
+    api,
+    { ...extraOptions, service: 'account' }
+  );
+
+  if (refreshResult.data) {
+    const tokenData = refreshResult.data as any;
+
+    if (
+      tokenData.code === 200 &&
+      tokenData.status.toLowerCase() === 'success'
+    ) {
+      // Import setTokens action dynamically to avoid circular imports
+      const { setTokens } = await import('@/modules/account/store');
+
+      api.dispatch(
+        setTokens({
+          token: tokenData.data.accessToken,
+          refreshToken: tokenData.data.refreshToken,
+        })
+      );
+
+      return true;
+    }
+  }
+
+  const { clearAuth } = await import('@/modules/account/store');
+  api.dispatch(clearAuth());
+
+  return false;
+};
+
 // Base query with error handling and token refresh
 const baseQueryWithReauth: BaseQueryFn<
   string | FetchArgs,
@@ -72,48 +121,29 @@ const baseQueryWithReauth: BaseQueryFn<
   let result = await dynamicBaseQuery(args, api, extraOptions);
 
   // Handle 401 unauthorized - token refresh logic
-  if (result.error && result.error.status === 401) {
+  if (
+    result.error &&
+    result.error.status === 401 &&
+    !isRefreshTokenRequest(args)
+  ) {
     const state = api.getState() as RootState;
     const refreshToken = state.account.auth?.refreshToken;
 
     if (refreshToken) {
-      const refreshResult = await dynamicBaseQuery(
-        {
-          url: '/auth/refresh-token',
-          method: 'POST',
-          body: { refreshToken },
-        },
-        api,
-        { ...extraOptions, service: 'account' }
-      );
+      if (!refreshPromise) {
+        refreshPromise = refreshAccessToken(
+          api,
+          extraOptions,
+          refreshToken
+        ).finally(() => {
+          refreshPromise = null;
+        });
+      }
 
-      if (refreshResult.data) {
-        // Import setTokens action dynamically to avoid circular imports
-        const { setTokens } = await import('@/modules/account/store');
-        const tokenData = refreshResult.data as any;
+      const refreshSucceeded = await refreshPromise;
 
-        if (
-          tokenData.code === 200 &&
-          tokenData.status.toLowerCase() === 'success'
-        ) {
-          // Store new tokens and retry original request
-          api.dispatch(
-            setTokens({
-              token: tokenData.data.accessToken,
-              refreshToken: tokenData.data.refreshToken,
-            })
-          );
-
-          result = await dynamicBaseQuery(args, api, extraOptions);
-        } else {
-          // Refresh response indicates failure
-          const { clearAuth } = await import('@/modules/account/store');
-          api.dispatch(clearAuth());
-        }
-      } else {
-        // Refresh failed - clear auth state
-        const { clearAuth } = await import('@/modules/account/store');
-        api.dispatch(clearAuth());
+      if (refreshSucceeded) {
+        result = await dynamicBaseQuery(args, api, extraOptions);
       }
     } else {
       // No refresh token - clear auth state
@@ -159,6 +189,7 @@ export const api = createApi({
     'settings/Module',
     'settings/ModuleUsers',
     'settings/Department',
+    'settings/Invitation',
     // Subscription tags
     'subscription/Plan',
     'subscription/PlanModule',

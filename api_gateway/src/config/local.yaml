@@ -95,6 +95,9 @@ external:
     logistics2Service:
       host: localhost
       port: "9004"
+    firstMileService:
+      host: localhost
+      port: "8093"
       timeout: 15s
     crmService:
       host: localhost

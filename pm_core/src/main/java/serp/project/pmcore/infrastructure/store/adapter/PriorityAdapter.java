@@ -7,8 +7,9 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.core.domain.entity.PriorityEntity;
-import serp.project.pmcore.core.port.store.IPriorityPort;
+
+import serp.project.pmcore.domain.priority.entity.PriorityEntity;
+import serp.project.pmcore.domain.priority.port.IPriorityPort;
 import serp.project.pmcore.infrastructure.store.mapper.PriorityMapper;
 import serp.project.pmcore.infrastructure.store.repository.IPriorityRepository;
 
@@ -30,6 +31,18 @@ public class PriorityAdapter implements IPriorityPort {
     @Override
     public Optional<PriorityEntity> getPriorityById(Long id, Long tenantId) {
         return priorityRepository.findByIdAndTenantId(id, tenantId)
+                .map(priorityMapper::toEntity);
+    }
+
+    @Override
+    public Optional<PriorityEntity> getPriorityByIdIncludingSystem(Long id, Long tenantId) {
+        return priorityRepository.findByIdAndTenantIdOrSystemTenant(id, tenantId)
+                .map(priorityMapper::toEntity);
+    }
+
+    @Override
+    public Optional<PriorityEntity> getPriorityByPriorityKey(Long tenantId, String priorityKey) {
+        return priorityRepository.findFirstByTenantIdAndPriorityKeyOrderByIdAsc(tenantId, priorityKey)
                 .map(priorityMapper::toEntity);
     }
 

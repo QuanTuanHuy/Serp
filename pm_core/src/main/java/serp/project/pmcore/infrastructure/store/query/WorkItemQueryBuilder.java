@@ -8,9 +8,10 @@ package serp.project.pmcore.infrastructure.store.query;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.core.domain.dto.filter.FilterOperator;
-import serp.project.pmcore.core.domain.dto.filter.SortField;
-import serp.project.pmcore.core.domain.dto.filter.WorkItemFilterRequest;
+
+import serp.project.pmcore.domain.shared.dto.filter.FilterOperator;
+import serp.project.pmcore.domain.shared.pagination.SortSpec;
+import serp.project.pmcore.domain.workitem.dto.WorkItemSearchCriteria;
 
 import java.util.Set;
 
@@ -45,7 +46,7 @@ public class WorkItemQueryBuilder {
     private static final String BASE_COLUMNS = """
             w.id, w.tenant_id, w.project_id, w.issue_type_id,
             w.issue_no, w.key, w.summary, w.description,
-            w.status_id, w.priority_id, w.resolution_id,
+            w.workflow_step_id, w.status_id, w.priority_id, w.resolution_id,
             w.assignee_id, w.reporter_id, w.parent_id,
             w.security_level_id, w.due_date, w.rank,
             w.time_original_estimate, w.time_remaining_estimate, w.time_spent,
@@ -69,7 +70,7 @@ public class WorkItemQueryBuilder {
      * @param f        filter request (null fields are skipped)
      * @return query result with data SQL, count SQL, and named parameters
      */
-    public QueryResult build(Long tenantId, WorkItemFilterRequest f) {
+    public QueryResult build(Long tenantId, WorkItemSearchCriteria f) {
         var params = new MapSqlParameterSource("tenantId", tenantId);
         var where = new StringBuilder();
         var joins = new StringBuilder();
@@ -134,8 +135,8 @@ public class WorkItemQueryBuilder {
             base.appendRaw(where, "w.time_spent > 0");
         }
 
-        SortField sort = (f.getSort() != null) ? f.getSort()
-                : SortField.builder().field(DEFAULT_SORT).direction("ASC").build();
+        SortSpec sort = (f.getSort() != null) ? f.getSort()
+                : SortSpec.builder().field(DEFAULT_SORT).direction("ASC").build();
         String orderAndPage = base.buildOrderAndPagination(params, "w", sort,
                 f.getPage(), f.getPageSize(), ALLOWED_SORT_COLUMNS, DEFAULT_SORT);
 

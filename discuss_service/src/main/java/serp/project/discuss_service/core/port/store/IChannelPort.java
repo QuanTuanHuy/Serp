@@ -14,53 +14,26 @@ import java.util.Optional;
 
 public interface IChannelPort {
 
-    /**
-     * Save a channel (create or update)
-     */
     ChannelEntity save(ChannelEntity channel);
 
-    /**
-     * Find channel by ID
-     */
     Optional<ChannelEntity> findById(Long id);
 
-    /**
-     * Find channels by IDs
-     */
     List<ChannelEntity> findByIds(List<Long> ids);
 
-    /**
-     * Find all active channels for a tenant
-     */
     List<ChannelEntity> findByTenantId(Long tenantId);
 
-    /**
-     * Find channels by tenant with pagination
-     */
     Pair<Long, List<ChannelEntity>> findByTenantIdPaginated(Long tenantId, int page, int size);
 
-    /**
-     * Find channels by type
-     */
+    Pair<Long, List<ChannelEntity>> findUserChannelsPaginated(Long userId, Long tenantId, int page, int size,
+            ChannelType type, Boolean isArchived, String entityType, Long entityId, String searchQuery);
+
     List<ChannelEntity> findByTenantIdAndType(Long tenantId, ChannelType type);
 
-    /**
-     * Find DIRECT channel between two users
-     */
     Optional<ChannelEntity> findDirectChannel(Long tenantId, Long userId1, Long userId2);
 
-    /**
-     * Find TOPIC channel by entity
-     */
     Optional<ChannelEntity> findByEntity(Long tenantId, String entityType, Long entityId);
 
-    /**
-     * Count active channels for tenant
-     */
     long countByTenantId(Long tenantId);
 
-    /**
-     * Delete channel by ID
-     */
     void deleteById(Long id);
 }

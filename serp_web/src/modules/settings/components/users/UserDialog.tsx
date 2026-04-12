@@ -4,7 +4,7 @@
  * Description: Part of Serp Project - Settings User dialog
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,13 @@ import type {
   UpdateUserInfoRequest,
   UserProfile,
 } from '@/modules/admin/types';
-import { useSettingsUsers } from '../../hooks/useUsers';
+import {
+  useSettingsCreateUserForOrganizationMutation,
+  useUpdateOrganizationUserMutation,
+} from '../../services/users/usersApi';
+import { useGetMyOrganizationQuery } from '../../services/organizations/organizationsApi';
+import { useNotification } from '@/shared/hooks/use-notification';
+import { getErrorMessage } from '@/lib/store/api/utils';
 
 export type SettingsUserDialogMode = 'create' | 'edit';
 
@@ -34,19 +40,40 @@ export function SettingsUserDialog({
   initialUser,
   onOpenChange,
 }: SettingsUserDialogProps) {
-  const { create, update, createStatus, updateStatus } = useSettingsUsers();
+  const { success, error: showError } = useNotification();
+  const { data: org } = useGetMyOrganizationQuery();
+  const [createUser, createStatus] =
+    useSettingsCreateUserForOrganizationMutation();
+  const [updateUser, updateStatus] = useUpdateOrganizationUserMutation();
+  const [errorText, setErrorText] = useState<string | null>(null);
 
-  const isCreate = useMemo(() => mode === 'create', [mode]);
+  const isCreate = mode === 'create';
 
   const handleSubmit = async (
     payload: CreateUserForOrganizationRequest | UpdateUserInfoRequest
   ) => {
-    if (isCreate) {
-      await create(payload as CreateUserForOrganizationRequest);
-    } else if (initialUser?.id) {
-      await update(initialUser.id as number, payload as UpdateUserInfoRequest);
+    setErrorText(null);
+    try {
+      if (isCreate) {
+        if (!org?.id) return;
+        await createUser({
+          organizationId: org.id,
+          body: payload as CreateUserForOrganizationRequest,
+        }).unwrap();
+        success('User created successfully');
+      } else if (initialUser?.id) {
+        await updateUser({
+          userId: initialUser.id as number,
+          body: payload as UpdateUserInfoRequest,
+        }).unwrap();
+        success('User updated successfully');
+      }
+      onOpenChange(false);
+    } catch (e: any) {
+      const msg = getErrorMessage(e);
+      setErrorText(msg);
+      showError(msg);
     }
-    onOpenChange(false);
   };
 
   return (
@@ -60,11 +87,7 @@ export function SettingsUserDialog({
           mode={isCreate ? 'create' : 'edit'}
           initialUser={initialUser}
           submitting={createStatus.isLoading || updateStatus.isLoading}
-          errorText={
-            (createStatus.error as any)?.data?.message ||
-            (updateStatus.error as any)?.data?.message ||
-            null
-          }
+          errorText={errorText}
           onSubmit={handleSubmit}
         />
       </DialogContent>

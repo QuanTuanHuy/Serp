@@ -6,7 +6,8 @@
 package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.core.domain.entity.IssueTypeEntity;
+
+import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
 import serp.project.pmcore.infrastructure.store.model.IssueTypeModel;
 
 import java.util.Collections;
@@ -31,6 +32,7 @@ public class IssueTypeMapper extends BaseMapper {
                 .createdBy(model.getCreatedBy())
                 .updatedAt(localDateTimeToLong(model.getUpdatedAt()))
                 .updatedBy(model.getUpdatedBy())
+                .deletedAt(localDateTimeToLong(model.getDeletedAt()))
                 .build();
     }
 
@@ -49,6 +51,7 @@ public class IssueTypeMapper extends BaseMapper {
                 .createdBy(entity.getCreatedBy())
                 .updatedAt(longToLocalDateTime(entity.getUpdatedAt()))
                 .updatedBy(entity.getUpdatedBy())
+                .deletedAt(longToLocalDateTime(entity.getDeletedAt()))
                 .build();
     }
 

@@ -6,9 +6,9 @@ Description: Part of Serp Project
 package serp.project.mailservice.core.domain.dto.request;
 
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -33,18 +33,19 @@ public class SendEmailRequest {
     private List<@Email String> ccEmails;
     private List<@Email String> bccEmails;
 
-    @NotBlank(message = "Subject is required")
     private String subject;
 
     private String body;
     private Boolean isHtml;
 
     private Long templateId;
+    private String templateCode;
     private Map<String, Object> templateVariables;
 
     private EmailType type;
     private EmailPriority priority;
-    private EmailProvider provider;
+    @Builder.Default
+    private EmailProvider provider = EmailProvider.JAVA_MAIL;
     private Map<String, Object> metadata;
 
     private List<AttachmentRequest> attachments;

@@ -6,7 +6,8 @@
 package serp.project.pmcore.infrastructure.store.mapper;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.core.domain.entity.StatusEntity;
+
+import serp.project.pmcore.domain.workitem.entity.StatusEntity;
 import serp.project.pmcore.infrastructure.store.model.StatusModel;
 
 import java.util.Collections;
@@ -60,5 +61,12 @@ public class StatusMapper extends BaseMapper {
             return Collections.emptyList();
         }
         return models.stream().map(this::toEntity).toList();
+    }
+
+    public List<StatusModel> toModels(List<StatusEntity> entities) {
+        if (entities == null || entities.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return entities.stream().map(this::toModel).toList();
     }
 }

@@ -12,6 +12,9 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.exceptions.TemplateInputException;
 import org.thymeleaf.exceptions.TemplateProcessingException;
+import org.thymeleaf.spring6.SpringTemplateEngine;
+import org.thymeleaf.templatemode.TemplateMode;
+import org.thymeleaf.templateresolver.StringTemplateResolver;
 import serp.project.mailservice.core.port.client.ITemplateEnginePort;
 
 import java.util.Map;
@@ -21,7 +24,8 @@ import java.util.Map;
 @Slf4j
 public class ThymeleafTemplateAdapter implements ITemplateEnginePort {
 
-    private final TemplateEngine templateEngine;
+    private final TemplateEngine fileTemplateEngine;
+    private final TemplateEngine inlineTemplateEngine = buildInlineTemplateEngine();
 
     @Override
     public String processTemplate(String templateContent, Map<String, Object> variables) {
@@ -31,7 +35,7 @@ public class ThymeleafTemplateAdapter implements ITemplateEnginePort {
                 context.setVariables(variables);
             }
 
-            String renderedHtml = templateEngine.process(templateContent, context);
+            String renderedHtml = inlineTemplateEngine.process(templateContent, context);
 
             log.debug("Template processed successfully");
 
@@ -50,7 +54,7 @@ public class ThymeleafTemplateAdapter implements ITemplateEnginePort {
     public boolean validateTemplate(String templateContent) {
         try {
             Context context = new Context();
-            templateEngine.process(templateContent, context);
+            inlineTemplateEngine.process(templateContent, context);
 
             log.debug("Template validation successful");
             return true;
@@ -76,7 +80,7 @@ public class ThymeleafTemplateAdapter implements ITemplateEnginePort {
             }
 
             String templatePath = "email/" + templateName;
-            String renderedHtml = templateEngine.process(templatePath, context);
+            String renderedHtml = fileTemplateEngine.process(templatePath, context);
 
             log.debug("Template file rendered successfully: {}", templateName);
 
@@ -98,7 +102,7 @@ public class ThymeleafTemplateAdapter implements ITemplateEnginePort {
         try {
             String templatePath = "email/" + templateName;
             Context context = new Context();
-            templateEngine.process(templatePath, context);
+            fileTemplateEngine.process(templatePath, context);
             return true;
         } catch (TemplateInputException e) {
             log.debug("Template file does not exist: {}", templateName);
@@ -107,5 +111,16 @@ public class ThymeleafTemplateAdapter implements ITemplateEnginePort {
             log.error("Error checking template file existence: {}", e.getMessage());
             return false;
         }
+    }
+
+    private TemplateEngine buildInlineTemplateEngine() {
+        StringTemplateResolver templateResolver = new StringTemplateResolver();
+        templateResolver.setTemplateMode(TemplateMode.HTML);
+        templateResolver.setCacheable(false);
+
+        SpringTemplateEngine templateEngine = new SpringTemplateEngine();
+        templateEngine.setTemplateResolver(templateResolver);
+        templateEngine.setEnableSpringELCompiler(true);
+        return templateEngine;
     }
 }

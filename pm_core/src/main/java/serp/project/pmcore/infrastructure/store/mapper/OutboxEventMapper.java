@@ -10,7 +10,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Component;
 
-import serp.project.pmcore.core.domain.entity.OutboxEventEntity;
+import serp.project.pmcore.domain.shared.entity.OutboxEventEntity;
 import serp.project.pmcore.infrastructure.store.model.OutboxEventModel;
 
 @Component

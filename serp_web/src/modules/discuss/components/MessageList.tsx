@@ -43,7 +43,7 @@ interface MessageListProps {
 }
 
 export interface MessageListRef {
-  scrollToMessage: (messageId: string) => void;
+  scrollToMessage: (messageId: string) => boolean;
   scrollToBottom: () => void;
 }
 
@@ -174,6 +174,7 @@ export const MessageList = forwardRef<MessageListRef, MessageListProps>(
     const prevScrollHeightRef = useRef(0);
     const isFirstLoadRef = useRef(true);
     const prevMessagesLengthRef = useRef(0);
+    const lastScrollTopRef = useRef(0);
 
     // =========================================================================
     // State
@@ -236,9 +237,14 @@ export const MessageList = forwardRef<MessageListRef, MessageListProps>(
       if (!viewport) return;
 
       const { scrollTop, scrollHeight, clientHeight } = viewport;
+      const isScrollingUp = scrollTop < lastScrollTopRef.current;
 
-      // Check if near top - trigger load more
-      if (scrollTop < SCROLL_THRESHOLD_TOP && !isFirstLoadRef.current) {
+      // Trigger load more only when user scrolls upward near top
+      if (
+        isScrollingUp &&
+        scrollTop < SCROLL_THRESHOLD_TOP &&
+        !isFirstLoadRef.current
+      ) {
         handleLoadMore();
       }
 
@@ -249,6 +255,8 @@ export const MessageList = forwardRef<MessageListRef, MessageListProps>(
       if (nearBottom !== isNearBottom) {
         setIsNearBottom(nearBottom);
       }
+
+      lastScrollTopRef.current = scrollTop;
     }, [getViewport, handleLoadMore, isNearBottom]);
 
     // =========================================================================
@@ -257,15 +265,26 @@ export const MessageList = forwardRef<MessageListRef, MessageListProps>(
     useImperativeHandle(
       ref,
       () => ({
-        scrollToMessage: (messageId: string) => {
+        scrollToMessage: (messageId: string): boolean => {
           const el = messageRefs.current.get(messageId);
-          if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            el.style.backgroundColor = 'rgba(139, 92, 246, 0.2)';
-            setTimeout(() => {
-              el.style.backgroundColor = '';
-            }, 2000);
-          }
+          if (!el) return false;
+
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add(
+            'ring-2',
+            'ring-primary/40',
+            'bg-primary/10',
+            'rounded-lg'
+          );
+          setTimeout(() => {
+            el.classList.remove(
+              'ring-2',
+              'ring-primary/40',
+              'bg-primary/10',
+              'rounded-lg'
+            );
+          }, 2500);
+          return true;
         },
         scrollToBottom: () => {
           bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -281,6 +300,7 @@ export const MessageList = forwardRef<MessageListRef, MessageListProps>(
       const viewport = getViewport();
       if (!viewport) return;
 
+      lastScrollTopRef.current = viewport.scrollTop;
       viewport.addEventListener('scroll', handleScroll, { passive: true });
       return () => viewport.removeEventListener('scroll', handleScroll);
     }, [getViewport, handleScroll]);
@@ -311,6 +331,7 @@ export const MessageList = forwardRef<MessageListRef, MessageListProps>(
         lastLoadTimeRef.current = 0;
         prevScrollHeightRef.current = 0;
         prevMessagesLengthRef.current = 0;
+        lastScrollTopRef.current = 0;
         viewportRef.current = null;
       }
     }, [messages.length]);
@@ -359,8 +380,13 @@ export const MessageList = forwardRef<MessageListRef, MessageListProps>(
       const newHeight = viewport.scrollHeight;
       const heightDiff = newHeight - prevHeight;
 
-      // If height increased and we were loading (prepending older messages)
-      if (heightDiff > 0 && prevHeight > 0 && !isFirstLoadRef.current) {
+      // Preserve position only when loading older messages
+      if (
+        heightDiff > 0 &&
+        prevHeight > 0 &&
+        !isFirstLoadRef.current &&
+        isLoadingRef.current
+      ) {
         viewport.scrollTop += heightDiff;
         console.log('[MessageList] Preserved scroll position:', { heightDiff });
       }

@@ -69,6 +69,15 @@ func (u *UserClientAdapter) GetUsers(ctx context.Context, params *request.GetUse
 	if params.Status != nil {
 		queryParams["status"] = *params.Status
 	}
+	if params.UserType != nil {
+		queryParams["userType"] = *params.UserType
+	}
+	if params.RoleId != nil {
+		queryParams["roleId"] = fmt.Sprintf("%d", *params.RoleId)
+	}
+	if params.DepartmentId != nil {
+		queryParams["departmentId"] = fmt.Sprintf("%d", *params.DepartmentId)
+	}
 	if params.OrganizationID != nil {
 		queryParams["organizationId"] = fmt.Sprintf("%d", *params.OrganizationID)
 	}

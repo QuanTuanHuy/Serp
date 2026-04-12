@@ -42,6 +42,7 @@ const authSlice = createSlice({
       state.token = token;
       state.refreshToken = refreshToken;
       state.isAuthenticated = true;
+      state.isLoading = false;
       state.error = null;
     },
 
@@ -56,6 +57,8 @@ const authSlice = createSlice({
       state.token = token;
       state.refreshToken = refreshToken;
       state.isAuthenticated = true;
+      state.isLoading = false;
+      state.error = null;
     },
 
     clearAuth: (state) => {

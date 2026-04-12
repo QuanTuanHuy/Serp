@@ -5,27 +5,34 @@
 
 package serp.project.account.infrastructure.store.adapter;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.data.util.Pair;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
 import serp.project.account.core.domain.dto.request.GetUserParams;
 import serp.project.account.core.domain.entity.UserEntity;
+import serp.project.account.core.domain.enums.UserStatus;
 import serp.project.account.core.port.store.IUserPort;
+import serp.project.account.infrastructure.store.mapper.UserRowMapper;
 import serp.project.account.infrastructure.store.mapper.UserMapper;
 import serp.project.account.infrastructure.store.model.UserModel;
+import serp.project.account.infrastructure.store.query.UserQueryBuilder;
 import serp.project.account.infrastructure.store.repository.IUserRepository;
-import serp.project.account.infrastructure.store.specification.UserSpecification;
-import serp.project.account.kernel.utils.PaginationUtils;
 
 @Component
 @RequiredArgsConstructor
 public class UserAdapter implements IUserPort {
     private final IUserRepository userRepository;
     private final UserMapper userMapper;
-    private final PaginationUtils paginationUtils;
+    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+    private final UserQueryBuilder userQueryBuilder;
+    private final UserRowMapper userRowMapper;
 
     @Override
     public UserEntity save(UserEntity user) {
@@ -49,14 +56,16 @@ public class UserAdapter implements IUserPort {
 
     @Override
     public Pair<Long, List<UserEntity>> getUsers(GetUserParams params) {
-        var pageable = paginationUtils.getPageable(params);
-        var specification = UserSpecification.searchUsersWithEmailOrName(params.getSearch())
-                .and(UserSpecification.hasOrganizationId(params.getOrganizationId())
-                        .and(UserSpecification.hasStatus(params.getStatus())));
-        var page = userRepository.findAll(specification, pageable);
-
-        var users = userMapper.toEntityList(page.getContent());
-        return Pair.of(page.getTotalElements(), users);
+        var queryResult = userQueryBuilder.buildGetUsersQuery(params);
+        Long totalElements = namedParameterJdbcTemplate.queryForObject(
+                queryResult.countSql(),
+                queryResult.params(),
+                Long.class);
+        var users = namedParameterJdbcTemplate.query(
+                queryResult.dataSql(),
+                queryResult.params(),
+                userRowMapper);
+        return Pair.of(totalElements != null ? totalElements : 0L, users);
     }
 
     @Override
@@ -72,5 +81,34 @@ public class UserAdapter implements IUserPort {
     @Override
     public Integer countUsersByOrganizationId(Long organizationId) {
         return userRepository.countByPrimaryOrganizationId(organizationId);
+    }
+
+    @Override
+    public Integer countUsersByOrganizationIdAndStatus(Long organizationId, UserStatus status) {
+        return userRepository.countByPrimaryOrganizationIdAndStatus(organizationId, status);
+    }
+
+    @Override
+    public Integer countUsersByOrganizationIdAndCreatedBetween(Long organizationId, LocalDateTime from,
+            LocalDateTime to) {
+        return userRepository.countByOrganizationIdAndCreatedAtBetween(organizationId, from, to);
+    }
+
+    @Override
+    public Integer countAdminUsersByOrganizationId(Long organizationId) {
+        return userRepository.countAdminUsersByOrganizationId(organizationId);
+    }
+
+    @Override
+    public List<UserEntity> getUsersByOrganizationIdAndIds(Long organizationId, List<Long> userIds) {
+        return userMapper.toEntityList(userRepository.findByPrimaryOrganizationIdAndIdIn(organizationId, userIds));
+    }
+
+    @Override
+    public Map<String, Integer> countUsersByStatusForOrganization(Long organizationId) {
+        var counts = userRepository.countUsersByStatusForOrganization(organizationId);
+        return counts.stream().collect(Collectors.toMap(
+                c -> c[0].toString(),
+                c -> Integer.parseInt(c[1].toString())));
     }
 }

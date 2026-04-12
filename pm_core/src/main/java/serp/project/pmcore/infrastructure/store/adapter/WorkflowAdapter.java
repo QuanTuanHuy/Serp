@@ -7,8 +7,9 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.core.domain.entity.WorkflowEntity;
-import serp.project.pmcore.core.port.store.IWorkflowPort;
+
+import serp.project.pmcore.domain.workflow.entity.WorkflowEntity;
+import serp.project.pmcore.domain.workflow.port.IWorkflowPort;
 import serp.project.pmcore.infrastructure.store.mapper.WorkflowMapper;
 import serp.project.pmcore.infrastructure.store.repository.IWorkflowRepository;
 
@@ -20,6 +21,16 @@ public class WorkflowAdapter implements IWorkflowPort {
 
     private final IWorkflowRepository workflowRepository;
     private final WorkflowMapper workflowMapper;
+
+    @Override
+    public WorkflowEntity createWorkflow(WorkflowEntity workflow) {
+        return workflowMapper.toEntity(workflowRepository.save(workflowMapper.toModel(workflow)));
+    }
+
+    @Override
+    public void updateWorkflow(WorkflowEntity workflow) {
+        workflowRepository.save(workflowMapper.toModel(workflow));
+    }
 
     @Override
     public Optional<WorkflowEntity> getWorkflowById(Long id, Long tenantId) {

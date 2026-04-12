@@ -14,5 +14,7 @@ public interface IAccountServiceClient {
 
     Optional<ChannelMemberResponse.UserInfo> getUserById(Long userId);
 
+    List<ChannelMemberResponse.UserInfo> getUsersByIds(List<Long> userIds);
+
     List<ChannelMemberResponse.UserInfo> getUsersForTenant(Long tenantId, String query);
 }
