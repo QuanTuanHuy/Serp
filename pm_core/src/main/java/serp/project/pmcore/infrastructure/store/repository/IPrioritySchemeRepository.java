@@ -27,6 +27,8 @@ public interface IPrioritySchemeRepository extends JpaRepository<PrioritySchemeM
 
     boolean existsByTenantIdAndName(Long tenantId, String name);
 
+    boolean existsByDefaultPriorityIdAndTenantId(Long defaultPriorityId, Long tenantId);
+
     @Modifying
     @Query("UPDATE PrioritySchemeModel p SET p.deletedAt = CURRENT_TIMESTAMP WHERE p.id = :id AND p.tenantId = :tenantId AND p.deletedAt IS NULL")
     void deleteByIdAndTenantId(@Param("id") Long id, @Param("tenantId") Long tenantId);

@@ -135,6 +135,8 @@ public class GlobalExceptionHandler {
                  VERSION_NAME_ALREADY_EXISTS,
                  ROLE_NAME_ALREADY_EXISTS,
                  ISSUE_TYPE_KEY_ALREADY_EXISTS,
+                 PRIORITY_NAME_ALREADY_EXISTS,
+                 PRIORITY_IN_USE,
                  STATUS_KEY_ALREADY_EXISTS,
                  DUPLICATE_ISSUE_LINK,
                  DUPLICATE_PERMISSION_ENTRY,

@@ -55,6 +55,13 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
     }
 
     @Override
+    public List<WorkItemEntity> getWorkItemsByPriorityId(Long priorityId, Long tenantId) {
+        return workItemMapper.toEntities(
+                workItemRepository.findAllByTenantIdAndPriorityId(tenantId, priorityId)
+        );
+    }
+
+    @Override
     public Optional<String> getLastRankByProjectId(Long projectId, Long tenantId) {
         return workItemRepository.findFirstByTenantIdAndProjectIdOrderByRankDescIdDesc(tenantId, projectId)
                 .map(WorkItemModel::getRank);

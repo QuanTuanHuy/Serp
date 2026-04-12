@@ -10,6 +10,7 @@ public class PathConstants {
     public static final String WORKITEMS = API_BASE_PATH + "/projects/{projectId}/work-items";
     public static final String PROJECT_ROLE_ACTORS = PROJECTS + "/{projectId}/roles/{roleId}/actors";
     public static final String ISSUE_TYPES = API_BASE_PATH + "/issue-types";
+    public static final String PRIORITIES = API_BASE_PATH + "/priorities";
 
     public static final String ROLES = API_BASE_PATH + "/roles";
 }

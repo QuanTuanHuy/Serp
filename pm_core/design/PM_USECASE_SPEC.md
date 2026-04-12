@@ -145,11 +145,11 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 | UC-PM-139 | List Issue Type Schemes | PM Admin | Medium | Simple | Issue Type Scheme |
 | UC-PM-140 | Delete Issue Type Scheme | PM Admin | Low | Simple | Issue Type Scheme |
 | UC-PM-141 | Manage Issue Type Scheme Items | PM Admin | Medium | Medium | Issue Type Scheme Item |
-| UC-PM-146 | Create Priority | PM Admin | Medium | Simple | Priority |
-| UC-PM-147 | Update Priority | PM Admin | Medium | Simple | Priority |
-| UC-PM-148 | Get Priority by ID | PM Admin | Low | Simple | Priority |
-| UC-PM-149 | List Priorities | PM Admin | Medium | Simple | Priority |
-| UC-PM-150 | Delete Priority | PM Admin | Low | Simple | Priority |
+| UC-PM-146 | [Create Priority](usecases/priority/UC-PM-146-create-priority.md) | PM Admin | Medium | Simple | Priority |
+| UC-PM-147 | [Update Priority](usecases/priority/UC-PM-147-update-priority.md) | PM Admin | Medium | Simple | Priority |
+| UC-PM-148 | [Get Priority by ID](usecases/priority/UC-PM-148-get-priority-by-id.md) | PM Admin | Low | Simple | Priority |
+| UC-PM-149 | [List Priorities](usecases/priority/UC-PM-149-list-priorities.md) | PM Admin | Medium | Simple | Priority |
+| UC-PM-150 | [Delete Priority](usecases/priority/UC-PM-150-delete-priority.md) | PM Admin | Low | Simple | Priority |
 | UC-PM-151 | Create Priority Scheme | PM Admin | Medium | Simple | Priority Scheme |
 | UC-PM-152 | Update Priority Scheme | PM Admin | Medium | Simple | Priority Scheme |
 | UC-PM-153 | Get Priority Scheme by ID | PM Admin | Low | Simple | Priority Scheme |

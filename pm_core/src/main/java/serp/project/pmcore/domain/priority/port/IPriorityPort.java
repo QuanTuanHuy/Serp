@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Optional;
 
 import serp.project.pmcore.domain.priority.entity.PriorityEntity;
+import serp.project.pmcore.domain.priority.query.PriorityListCriteria;
+import serp.project.pmcore.domain.shared.pagination.PageResult;
 
 public interface IPriorityPort {
     PriorityEntity createPriority(PriorityEntity priority);
@@ -20,6 +22,10 @@ public interface IPriorityPort {
     Optional<PriorityEntity> getPriorityByPriorityKey(Long tenantId, String priorityKey);
 
     List<PriorityEntity> listPriorities(Long tenantId);
+
+    List<PriorityEntity> listPrioritiesIncludingSystem(Long tenantId);
+
+    PageResult<PriorityEntity> listPrioritiesIncludingSystem(Long tenantId, PriorityListCriteria criteria);
 
     void updatePriority(PriorityEntity priority);
 

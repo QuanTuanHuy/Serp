@@ -112,9 +112,11 @@ public enum DomainErrorCode {
 
     // Priority management
     PRIORITY_NOT_FOUND("Priority not found"),
+    PRIORITY_NAME_ALREADY_EXISTS("Priority name already exists in this tenant"),
     PRIORITY_NOT_IN_SCHEME("Priority is not valid for this project's scheme"),
     DEFAULT_PRIORITY_NOT_CONFIGURED("Default priority is not configured for this project"),
     PRIORITY_IS_SYSTEM("Cannot modify a system priority"),
+    PRIORITY_IN_USE("Cannot delete priority that has work items"),
     PRIORITY_SCHEME_NOT_FOUND("Priority scheme not found"),
     PRIORITY_SCHEME_DEFAULT_NOT_IN_ITEMS(
             "Default priority must be included in the scheme items"),

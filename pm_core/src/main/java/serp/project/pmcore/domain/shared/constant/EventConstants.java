@@ -50,4 +50,16 @@ public class EventConstants {
             public static final String ISSUE_TYPE_DELETED = "ISSUE_TYPE_DELETED";
         }
     }
+
+    @UtilityClass
+    public static class Priority {
+        public static final String TOPIC = "serp.pm.priority.events";
+        public static final String AGGREGATE = "PRIORITY";
+
+        public static class EventType {
+            public static final String PRIORITY_CREATED = "PRIORITY_CREATED";
+            public static final String PRIORITY_UPDATED = "PRIORITY_UPDATED";
+            public static final String PRIORITY_DELETED = "PRIORITY_DELETED";
+        }
+    }
 }

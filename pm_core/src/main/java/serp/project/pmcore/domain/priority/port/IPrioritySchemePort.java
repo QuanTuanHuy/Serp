@@ -26,4 +26,6 @@ public interface IPrioritySchemePort {
     void deletePriorityScheme(Long schemeId, Long tenantId);
 
     boolean existsByName(Long tenantId, String name);
+
+    boolean existsByDefaultPriorityId(Long priorityId, Long tenantId);
 }

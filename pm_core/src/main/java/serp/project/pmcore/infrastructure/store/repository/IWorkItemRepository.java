@@ -25,6 +25,8 @@ public interface IWorkItemRepository extends JpaRepository<WorkItemModel, Long> 
 
     List<WorkItemModel> findAllByTenantIdAndIssueTypeId(Long tenantId, Long issueId);
 
+    List<WorkItemModel> findAllByTenantIdAndPriorityId(Long tenantId, Long priorityId);
+
     List<WorkItemModel> findAllByTenantIdAndParentId(Long tenantId, Long parentId);
 
     Optional<WorkItemModel> findFirstByTenantIdAndProjectIdOrderByRankDescIdDesc(Long tenantId, Long projectId);
