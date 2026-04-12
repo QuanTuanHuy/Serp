@@ -13,6 +13,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @NoArgsConstructor
@@ -42,7 +43,7 @@ public class DeliverySlipEntity {
     private Long totalWeightKg;
 
     @Column(name = "total_volume_cbm")
-    private Long totalVolumeCbm;
+    private Double totalVolumeCbm;
 
     // Additional
     @Column(name = "customer_name")
@@ -74,13 +75,16 @@ public class DeliverySlipEntity {
 
     // Transient
     @Transient
+    private FacilityEntity facility;
+
+    @Transient
     private AddressEntity customerAddress;
 
     @Transient
     private AddressEntity facilityAddress;
 
     @Transient
-    private List<DeliveryItemEntity> items;
+    private List<DeliveryItemEntity> items =  new ArrayList<>();
 
     public DeliverySlipEntity(
             String id,
@@ -90,7 +94,7 @@ public class DeliverySlipEntity {
             String facilityId,
             String status,
             Long totalWeightKg,
-            Long totalVolumeCbm,
+            Double totalVolumeCbm,
             String customerName,
             String customerPhone,
             String customerAddressId,
@@ -126,10 +130,7 @@ public class DeliverySlipEntity {
         String code = "DS-" + id.substring(6, 12); // Example: DS-XXXXXX
         String status = DeliverySlipStatus.PENDING.name();
         Long totalWeightKg = items.stream().mapToLong(item -> (long) item.getWeightKg()).sum();
-        Long totalVolumeCbm = items.stream().mapToLong(item -> {
-            double volume = item.getHeightM() * item.getWidthM() * item.getLengthM();
-            return (long) volume;
-        }).sum();
+        Double totalVolumeCbm = items.stream().mapToDouble(item -> item.getHeightM() * item.getWidthM() * item.getLengthM()).sum();
         items.forEach(item -> item.setDeliverySlipId(id));
         return new DeliverySlipEntity(
                 id,
@@ -147,6 +148,12 @@ public class DeliverySlipEntity {
                 items,
                 createdByUserId,
                 tenantId);
+    }
+
+    public static DeliverySlipEntity createProxy(String id) {
+        DeliverySlipEntity proxy = new DeliverySlipEntity();
+        proxy.setId(id);
+        return proxy;
     }
 
     public void addItem(DeliveryItemEntity item) {

@@ -9,9 +9,25 @@ spring:
         jwt:
           jwk-set-uri: ${KEYCLOAK_URL}/realms/serp/protocol/openid-connect/certs
           issuer-uri: ${KEYCLOAK_URL}/realms/serp
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      group-id: ${KAFKA_GROUP_ID:spring_routing_group}
+      auto-offset-reset: earliest
 
 server:
-  port: ${SERVER_PORT:8089}
+  port: ${SERVER_PORT:9004}
+
+app:
+  kafka:
+    topic:
+      routing-request: ${KAFKA_ROUTING_REQUEST_TOPIC:routing_requests}
+      routing-response: ${KAFKA_ROUTING_RESPONSE_TOPIC:routing_results}
 
 security:
   role-prefix: ROLE_
@@ -40,7 +56,7 @@ security:
       - first: "/swagger-ui.html"
         second: GET
     protected-urls:
-      - url-pattern: /logistics/api/v1/**
+      - url-pattern: /logistics2/api/v1/**
         roles:
-          - LOGISTICS_ADMIN
-          - LOGISTICS_EMPLOYEE
+          - LOGISTICS2_MANAGER
+          - LOGISTICS2_SHIPPER

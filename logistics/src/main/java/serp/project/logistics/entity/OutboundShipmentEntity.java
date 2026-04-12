@@ -11,9 +11,12 @@ import org.springframework.util.StringUtils;
 import serp.project.logistics.constant.ShipmentStatus;
 import serp.project.logistics.dto.request.OutboundShipmentCreationForm;
 import serp.project.logistics.dto.request.OutboundShipmentUpdateForm;
+import serp.project.logistics.exception.AppErrorCode;
+import serp.project.logistics.exception.AppException;
 import serp.project.logistics.util.IdUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @NoArgsConstructor
@@ -52,7 +55,7 @@ public class OutboundShipmentEntity {
     private Long tenantId;
 
     @Transient
-    private List<OutboundShipmentItemEntity> items;
+    private List<OutboundShipmentItemEntity> items = new ArrayList<>();
 
     @Transient
     private FacilityEntity facility;
@@ -76,7 +79,7 @@ public class OutboundShipmentEntity {
 
     public static OutboundShipmentEntity create(String orderId, String facilityId, String name, Long createdByUserId, Long tenantId) {
         String id = IdUtils.generateOutboundShipmentId();
-        if (StringUtils.hasText(name)) {
+        if (!StringUtils.hasText(name)) {
             name = "Phiếu xuất " + id.substring(0, 6);
         }
         String status = ShipmentStatus.CREATED.name();
@@ -88,6 +91,9 @@ public class OutboundShipmentEntity {
     }
 
     public void update(String name) {
+        if (!this.status.equals(ShipmentStatus.CREATED.name())) {
+            throw new AppException(AppErrorCode.INVALID_SHIPMENT_STATUS);
+        }
         if(StringUtils.hasText(name)) {
             this.name = name;
         }
@@ -98,7 +104,17 @@ public class OutboundShipmentEntity {
     }
 
     public void addItem(OutboundShipmentCreationForm.ItemForm form) {
+        if (!this.status.equals(ShipmentStatus.CREATED.name())) {
+            throw new AppException(AppErrorCode.INVALID_SHIPMENT_STATUS);
+        }
         OutboundShipmentItemEntity item = OutboundShipmentItemEntity.create(form, this.id, this.tenantId);
+        this.items.add(item);
+    }
+
+    public void deleteItem(OutboundShipmentItemEntity item) {
+        if (!this.status.equals(ShipmentStatus.CREATED.name())) {
+            throw new AppException(AppErrorCode.INVALID_SHIPMENT_STATUS);
+        }
     }
 
 }

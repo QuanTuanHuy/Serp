@@ -101,6 +101,12 @@ func buildServiceRoutes(props *properties.ExternalServiceProperties) []ServiceRo
 			Target:       props.LogisticsService.BaseURL(),
 		},
 		{
+			Name:         "logistics2",
+			SourcePrefix: "/logistics2/api/v1",
+			TargetPrefix: "/logistics2/api/v1",
+			Target:       props.Logistics2Service.BaseURL(),
+		},
+		{
 			Name:         "discuss",
 			SourcePrefix: "/discuss/api/v1",
 			TargetPrefix: "/discuss/api/v1",

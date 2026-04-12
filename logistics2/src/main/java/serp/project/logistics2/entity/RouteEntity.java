@@ -4,14 +4,20 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.logistics2.constant.RouteStatus;
+import serp.project.logistics2.util.IdUtils;
+
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -30,7 +36,7 @@ public class RouteEntity {
     private String vehicleShipperId;
 
     @Column(name = "total_distance_km")
-    private Long totalDistanceKm;
+    private Float totalDistanceKm;
 
     @Column(name = "total_weight_loaded_kg")
     private Long TotalWeightLoadedKg;
@@ -39,6 +45,9 @@ public class RouteEntity {
     private Long TotalVolumeLoadedCbm;
 
     private String status;
+
+    @Column(name = "route_stop_count")
+    private int routeStopCount;
 
     @Column(name = "delivery_date")
     private LocalDate deliveryDate;
@@ -54,4 +63,40 @@ public class RouteEntity {
     @Column(name = "tenant_id")
     private Long tenantId;
 
+    @Transient
+    private List<RouteStopEntity> routeStops = new ArrayList<>();
+
+    public RouteEntity(String id, String deliveryPlanId, String vehicleShipperId, Float totalDistanceKm,
+            Long totalWeightLoadedKg, Long totalVolumeLoadedCbm, String status, int routeStopCount,
+            LocalDate deliveryDate, Long tenantId) {
+        this.id = id;
+        this.deliveryPlanId = deliveryPlanId;
+        this.vehicleShipperId = vehicleShipperId;
+        this.totalDistanceKm = totalDistanceKm;
+        TotalWeightLoadedKg = totalWeightLoadedKg;
+        TotalVolumeLoadedCbm = totalVolumeLoadedCbm;
+        this.status = status;
+        this.routeStopCount = routeStopCount;
+        this.deliveryDate = deliveryDate;
+        this.tenantId = tenantId;
+    }
+
+    public static RouteEntity create(
+            String deliveryPlanId,
+            String vehicleShipperId,
+            Float totalDistanceKm,
+            Long totalWeightLoadedKg,
+            Long totalVolumeLoadedCbm,
+            LocalDate deliveryDate,
+            Long tenantId,
+            List<RouteStopEntity> routeStops) {
+        String id = IdUtils.generateRouteId();
+        String status = RouteStatus.PENDING.name();
+        int routeStopCount = routeStops != null ? routeStops.size() : 0;
+        RouteEntity route = new RouteEntity(id, deliveryPlanId, vehicleShipperId, totalDistanceKm, totalWeightLoadedKg,
+                totalVolumeLoadedCbm, status, routeStopCount, deliveryDate, tenantId);
+        routeStops.forEach(stop -> stop.setRouteId(id));
+        route.setRouteStops(routeStops);
+        return route;
+    }
 }

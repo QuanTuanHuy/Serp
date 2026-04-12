@@ -99,4 +99,13 @@ public class InventoryItemEntity {
             this.statusId = form.getStatusId();
     }
 
+    public void deliver(int quantity) {
+        this.quantityOnHand -= quantity;
+        this.quantityCommitted -= quantity;
+        if (this.quantityOnHand < 0)
+            this.quantityOnHand = 0;
+        if (this.quantityCommitted < 0)
+            this.quantityCommitted = 0;
+    }
+
 }

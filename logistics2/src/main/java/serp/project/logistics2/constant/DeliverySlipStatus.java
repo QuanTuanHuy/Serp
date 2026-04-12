@@ -5,5 +5,5 @@ public enum DeliverySlipStatus {
     ASSIGNED,
     DELIVERING,
     DELIVERED,
-    RECALLED,
+    RECALLING,
 }

@@ -14,6 +14,7 @@ import serp.project.logistics2.dto.request.OutboundShipmentUpdateForm;
 import serp.project.logistics2.util.IdUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @NoArgsConstructor
@@ -52,7 +53,7 @@ public class OutboundShipmentEntity {
     private Long tenantId;
 
     @Transient
-    private List<OutboundShipmentItemEntity> items;
+    private List<OutboundShipmentItemEntity> items = new ArrayList<>();
 
     @Transient
     private FacilityEntity facility;
@@ -100,6 +101,7 @@ public class OutboundShipmentEntity {
 
     public void addItem(OutboundShipmentCreationForm.ItemForm form) {
         OutboundShipmentItemEntity item = OutboundShipmentItemEntity.create(form, this.id, this.tenantId);
+        this.items.add(item);
     }
 
 }

@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,22 +18,10 @@ import serp.project.logistics2.constant.OrderStatus;
 import serp.project.logistics2.constant.ShipmentStatus;
 import serp.project.logistics2.dto.request.DeliveryItemUpdateForm;
 import serp.project.logistics2.dto.request.DeliverySlipCreationForm;
-import serp.project.logistics2.entity.CustomerEntity;
-import serp.project.logistics2.entity.DeliveryItemEntity;
-import serp.project.logistics2.entity.DeliverySlipEntity;
-import serp.project.logistics2.entity.FacilityEntity;
-import serp.project.logistics2.entity.OutboundShipmentEntity;
-import serp.project.logistics2.entity.ProductEntity;
+import serp.project.logistics2.entity.*;
 import serp.project.logistics2.exception.AppErrorCode;
 import serp.project.logistics2.exception.AppException;
-import serp.project.logistics2.repository.AddressRepository;
-import serp.project.logistics2.repository.CustomerRepository;
-import serp.project.logistics2.repository.DeliveryItemRepository;
-import serp.project.logistics2.repository.DeliverySlipRepository;
-import serp.project.logistics2.repository.FacilityRepository;
-import serp.project.logistics2.repository.OrderRepository;
-import serp.project.logistics2.repository.OutboundShipmentRepository;
-import serp.project.logistics2.repository.ProductRepository;
+import serp.project.logistics2.repository.*;
 import serp.project.logistics2.util.PaginationUtils;
 
 @Slf4j
@@ -50,8 +39,22 @@ public class DeliverySlipService {
     private final FacilityRepository facilityRepository;
     private final AddressRepository addressRepository;
 
+    private final InventoryItemRepository inventoryItemRepository;
+    private final OutboundShipmentItemRepository outboundShipmentItemRepository;
+
     @Transactional(rollbackFor = Exception.class)
     public void createSlip(DeliverySlipCreationForm form, Long userId, Long tenantId) {
+        OutboundShipmentEntity shipment = shipmentRepository.findById(form.getOutboundShipmentId()).orElse(null);
+        if (shipment == null) {
+            log.info("[DeliverySlipService] Outbound shipment {} not found for tenant {}", form.getOutboundShipmentId(), tenantId);
+            throw new AppException(AppErrorCode.NOT_FOUND);
+        }
+        if (!shipment.getStatus().equals(ShipmentStatus.READY_TO_EXPORT.name())) {
+            log.info("[DeliverySlipService] Outbound shipment {} is not in a right status to create delivery slip for tenant {}",
+                    form.getOutboundShipmentId(), tenantId);
+            throw new AppException(AppErrorCode.INVALID_STATUS_TRANSITION);
+        }
+
         List<String> productIds = form.getItems().stream().map(DeliverySlipCreationForm.ItemForm::getProductId)
                 .toList();
         List<ProductEntity> products = productRepository.findByIdInAndTenantId(productIds, tenantId);
@@ -63,9 +66,21 @@ public class DeliverySlipService {
                 log.info("[DeliverySlipService] Product {} not found for tenant {}", itemForm.getProductId(), tenantId);
                 throw new AppException(AppErrorCode.NOT_FOUND);
             }
+
+            OutboundShipmentItemEntity shipmentItem = outboundShipmentItemRepository.findById(itemForm.getOutboundShipmentItemId()).orElse(null);
+            if (shipmentItem == null) {
+                log.info("[DeliverySlipService] Outbound shipment item {} not found for tenant {}", itemForm.getOutboundShipmentItemId(), tenantId);
+                throw new AppException(AppErrorCode.NOT_FOUND);
+            }
+            if (shipmentItem.getQuantityRemaining() < itemForm.getQuantity()) {
+                log.info("[DeliverySlipService] Insufficient quantity for outbound shipment item {} for tenant {}. Remaining: {}, requested: {}",
+                        itemForm.getOutboundShipmentItemId(), tenantId, shipmentItem.getQuantityRemaining(), itemForm.getQuantity());
+                throw new AppException(AppErrorCode.INSUFFICIENT_QUANTITY);
+            }
+
             return DeliveryItemEntity.create(
                     null,
-                    itemForm.getOutbountShipmentItemId(),
+                    itemForm.getOutboundShipmentItemId(),
                     itemForm.getInventoryItemId(),
                     itemForm.getQuantity(),
                     product,
@@ -100,25 +115,26 @@ public class DeliverySlipService {
                 slip.getItems().size(), slip.getId(), tenantId);
     }
 
-    public void exportSlip(String slipId, Long userId, Long tenantId) {
-        DeliverySlipEntity slip = deliverySlipRepository.findByIdAndTenantIdWithLock(slipId, tenantId)
-                .orElse(null);
-        if (slip == null) {
-            log.info("[DeliverySlipService] Delivery slip {} not found for tenant {}", slipId, tenantId);
-            throw new AppException(AppErrorCode.NOT_FOUND);
-        }
-        if (DeliverySlipStatus.valueOf(slip.getStatus()).ordinal() >= DeliverySlipStatus.DELIVERING.ordinal()) {
-            log.info("[DeliverySlipService] Delivery slip {} is not in a right status to be exported", slipId);
-            throw new AppException(AppErrorCode.INVALID_STATUS_TRANSITION);
-        }
-
+    @Transactional(rollbackFor = Exception.class)
+    public void exportSlip(String slipId, Long tenantId) {
         deliverySlipRepository.updateStatusByIdAndTenantId(DeliverySlipStatus.DELIVERING.name(), slipId, tenantId);
         log.info("[DeliverySlipService] Marked delivery slip {} as DELIVERING for tenant {}", slipId, tenantId);
-
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void deliverSlip(String slipId, Long userId, Long tenantId) {
+    public void recallSlip(String slipId, Long tenantId) {
+        deliverySlipRepository.updateStatusByIdAndTenantId(DeliverySlipStatus.RECALLING.name(), slipId, tenantId);
+        log.info("[DeliverySlipService] Marked delivery slip {} as RECALLING for tenant {}", slipId, tenantId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void returnSlip(String slipId, Long tenantId) {
+        deliverySlipRepository.updateStatusByIdAndTenantId(DeliverySlipStatus.PENDING.name(), slipId, tenantId);
+        log.info("[DeliverySlipService] Marked delivery slip {} as PENDING for tenant {}", slipId, tenantId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void deliverSlip(String slipId, Long tenantId) {
         DeliverySlipEntity slip = deliverySlipRepository.findByIdAndTenantIdWithLock(slipId, tenantId)
                 .orElse(null);
         if (slip == null) {
@@ -133,11 +149,38 @@ public class DeliverySlipService {
         deliverySlipRepository.updateStatusByIdAndTenantId(DeliverySlipStatus.DELIVERED.name(), slipId, tenantId);
         log.info("[DeliverySlipService] Marked delivery slip {} as DELIVERED for tenant {}", slipId, tenantId);
 
+        // Tru hang trong kho
+        List<DeliveryItemEntity> items = deliveryItemRepository.findByTenantIdAndDeliverySlipId(tenantId, slipId);
+        List<String> inventoryItemIds = items.stream().map(DeliveryItemEntity::getInventoryItemId).toList();
+        List<InventoryItemEntity> inventoryItems = inventoryItemRepository.findByIdInAndTenantIdWithLock(
+                inventoryItemIds,
+                tenantId);
+        Map<String, InventoryItemEntity> inventoryItemMap = inventoryItems.stream()
+                .collect(Collectors.toMap(InventoryItemEntity::getId, i -> i));
+        items.forEach(item -> {
+            InventoryItemEntity inventoryItem = inventoryItemMap.get(item.getInventoryItemId());
+            inventoryItem.deliver(item.getQuantity());
+        });
+        inventoryItemRepository.saveAll(inventoryItems);
+        log.info("[DeliverySlipService] Performed inventory item deduction for {} inventory items for tenant {}",
+                inventoryItems.size(), tenantId);
+
+        // Cap nhat trang thai phieu xuat
+        List<OutboundShipmentItemEntity> shipmentItems = outboundShipmentItemRepository.findByTenantIdAndOutboundShipmentId(
+                tenantId, slip.getOutboundShipmentId());
+        for (OutboundShipmentItemEntity shipmentItem : shipmentItems) {
+            if (shipmentItem.getQuantityRemaining() > 0) {
+                log.info("[DeliverySlipService] Shipment Item ID {} has remaining quantity {} for tenant {}", shipmentItem.getId(), shipmentItem.getQuantityRemaining(), tenantId);
+                return;
+            }
+        }
+
         long pendingSlipsCount = deliverySlipRepository
                 .countPendingSlipByOutboundShipmentId(slip.getOutboundShipmentId());
 
         if (pendingSlipsCount == 0) {
-            exportShipment(slip.getOutboundShipmentId(), userId, tenantId);
+            shipmentRepository.updateStatusByIdAndTenantId(ShipmentStatus.DELIVERED.name(), slipId, tenantId);
+            log.info("[DeliverySlipService] Marked shipment {} as DELIVERED for tenant {}", slip.getOutboundShipmentId(), tenantId);
         } else {
             log.info("[DeliverySlipService] Shipment {} has {} pending delivery slips for tenant {}",
                     slip.getOutboundShipmentId(),
@@ -179,6 +222,7 @@ public class DeliverySlipService {
         List<DeliveryItemEntity> items = deliveryItemRepository.findByTenantIdAndDeliverySlipId(tenantId, slipId);
         slip.setItems(items);
 
+        facilityRepository.findById(slip.getFacilityId()).ifPresent(slip::setFacility);
         addressRepository.findById(slip.getCustomerAddressId()).ifPresent(slip::setCustomerAddress);
         addressRepository.findById(slip.getFacilityAddressId()).ifPresent(slip::setFacilityAddress);
 
@@ -197,7 +241,7 @@ public class DeliverySlipService {
             String sortBy,
             String sortDirection) {
         Pageable pageable = PaginationUtils.createPageable(page, size, sortBy, sortDirection);
-        return deliverySlipRepository.search(
+        Page<DeliverySlipEntity> slipPage = deliverySlipRepository.search(
                 status,
                 outboundShipmentId,
                 customerId,
@@ -205,6 +249,24 @@ public class DeliverySlipService {
                 query,
                 tenantId,
                 pageable);
+        List<String> facilityIds = slipPage.getContent().stream().map(DeliverySlipEntity::getFacilityId).toList();
+        List<FacilityEntity> facilities = facilityRepository.findAllById(facilityIds);
+        Map<String, FacilityEntity> facilityMap = facilities.stream()
+                .collect(Collectors.toMap(FacilityEntity::getId, f -> f));
+        slipPage.getContent().forEach(slip -> slip.setFacility(facilityMap.get(slip.getFacilityId())));
+
+        List<String> addressIds = slipPage.getContent().stream()
+                .flatMap(slip -> Stream.of(slip.getCustomerAddressId(), slip.getFacilityAddressId()))
+                .toList();
+        List<AddressEntity> addresses = addressRepository.findAllById(addressIds);
+        Map<String, AddressEntity> addressMap = addresses.stream()
+                .collect(Collectors.toMap(AddressEntity::getId, a -> a));
+        slipPage.getContent().forEach(slip -> {
+            slip.setCustomerAddress(addressMap.get(slip.getCustomerAddressId()));
+            slip.setFacilityAddress(addressMap.get(slip.getFacilityAddressId()));
+        });
+
+        return slipPage;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -224,9 +286,20 @@ public class DeliverySlipService {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
 
+        OutboundShipmentItemEntity shipmentItem = outboundShipmentItemRepository.findById(form.getOutboundShipmentItemId()).orElse(null);
+        if (shipmentItem == null) {
+            log.info("[DeliverySlipService] Outbound shipment item {} not found for tenant {}", form.getOutboundShipmentItemId(), tenantId);
+            throw new AppException(AppErrorCode.NOT_FOUND);
+        }
+        if (shipmentItem.getQuantityRemaining() < form.getQuantity()) {
+            log.info("[DeliverySlipService] Insufficient quantity for outbound shipment item {} for tenant {}. Remaining: {}, requested: {}",
+                    form.getOutboundShipmentItemId(), tenantId, shipmentItem.getQuantityRemaining(), form.getQuantity());
+            throw new AppException(AppErrorCode.INSUFFICIENT_QUANTITY);
+        }
+
         DeliveryItemEntity item = DeliveryItemEntity.create(
                 slipId,
-                form.getOutbountShipmentItemId(),
+                form.getOutboundShipmentItemId(),
                 form.getInventoryItemId(),
                 form.getQuantity(),
                 product,
@@ -254,6 +327,19 @@ public class DeliverySlipService {
         if (slip == null) {
             log.info("[DeliverySlipService] Delivery slip {} not found for tenant {}", slipId, tenantId);
             throw new AppException(AppErrorCode.NOT_FOUND);
+        }
+
+        if (form.getQuantity() > item.getQuantity()) {
+            OutboundShipmentItemEntity shipmentItem = outboundShipmentItemRepository.findById(item.getOutboundShipmentItemId()).orElse(null);
+            if (shipmentItem == null) {
+                log.info("[DeliverySlipService] Outbound shipment item {} not found for tenant {}", item.getOutboundShipmentItemId(), tenantId);
+                throw new AppException(AppErrorCode.NOT_FOUND);
+            }
+            if (shipmentItem.getQuantityRemaining() < form.getQuantity() - item.getQuantity()) {
+                log.info("[DeliverySlipService] Insufficient quantity for outbound shipment item {} for tenant {}. Remaining: {}, requested: {}",
+                        item.getOutboundShipmentItemId(), tenantId, shipmentItem.getQuantityRemaining(), form.getQuantity() - item.getQuantity());
+                throw new AppException(AppErrorCode.INSUFFICIENT_QUANTITY);
+            }
         }
 
         slip.updateQuantity(item, form.getQuantity());
@@ -293,35 +379,6 @@ public class DeliverySlipService {
 
         deliverySlipRepository.save(slip);
         log.info("[DeliverySlipService] Updated delivery slip {} for tenant {}", slipId, tenantId);
-    }
-
-    private void exportShipment(String shipmentId, Long userId, Long tenantId) {
-        OutboundShipmentEntity shipment = shipmentRepository.findByIdAndTenantIdWithLock(shipmentId, tenantId)
-                .orElse(null);
-        if (shipment == null) {
-            log.info("[DeliverySlipService] Outbound shipment {} not found for tenant {}", shipmentId, tenantId);
-            throw new AppException(AppErrorCode.NOT_FOUND);
-        }
-        if (!ShipmentStatus.CREATED.name().equals(shipment.getStatus())) {
-            log.info("[DeliverySlipService] Outbound shipment {} is not in a right status to be exported",
-                    shipmentId);
-            throw new AppException(AppErrorCode.INVALID_STATUS_TRANSITION);
-        }
-
-        shipmentRepository.updateStatusByIdAndTenantId(ShipmentStatus.EXPORTED.name(), shipmentId, tenantId);
-        log.info("[DeliverySlipService] Marked shipment {} as EXPORTED for tenant {}", shipmentId, tenantId);
-
-        long pendingShipmentCount = shipmentRepository.countPendingShipmentByOrderId(shipment.getId());
-
-        if (pendingShipmentCount == 0) {
-            orderRepository.updateOrderStatus(shipment.getOrderId(), OrderStatus.FULLY_DELIVERED.name(), tenantId);
-            log.info("[DeliverySlipService] Marked order {} as FULLY_DELIVERED for tenant {}",
-                    shipment.getOrderId(), tenantId);
-        } else {
-            log.info("[DeliverySlipService] Order {} has {} pending shipments for tenant {}", shipment.getOrderId(),
-                    pendingShipmentCount, tenantId);
-        }
-
     }
 
 }

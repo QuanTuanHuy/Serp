@@ -1,5 +1,6 @@
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
+from config import ORTOOLS_TIME_LIMIT_SEC
 
 def solve_delivery_plan(data: dict) -> dict:
     manager = pywrapcp.RoutingIndexManager(
@@ -41,7 +42,7 @@ def solve_delivery_plan(data: dict) -> dict:
     search_parameters = pywrapcp.DefaultRoutingSearchParameters()
     search_parameters.first_solution_strategy = routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
     search_parameters.local_search_metaheuristic = routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
-    search_parameters.time_limit.seconds = 30  # Đặt 30s để response Kafka nhanh hơn
+    search_parameters.time_limit.seconds = ORTOOLS_TIME_LIMIT_SEC
 
     solution = routing.SolveWithParameters(search_parameters)
     if not solution:

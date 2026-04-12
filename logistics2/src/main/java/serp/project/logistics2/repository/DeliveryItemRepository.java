@@ -6,8 +6,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 import serp.project.logistics2.entity.DeliveryItemEntity;
-import serp.project.logistics2.entity.OutboundShipmentItemEntity;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -20,6 +18,6 @@ public interface DeliveryItemRepository extends CrudRepository<DeliveryItemEntit
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT i FROM DeliveryItemEntity i WHERE i.id = :id AND i.tenantId = :tenantId")
     Optional<DeliveryItemEntity> findByIdAndTenantIdWithLock(@Param("id") String id,
-                                                                     @Param("tenantId") Long tenantId);
+            @Param("tenantId") Long tenantId);
 
 }

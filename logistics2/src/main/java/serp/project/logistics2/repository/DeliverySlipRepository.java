@@ -46,4 +46,9 @@ public interface DeliverySlipRepository extends JpaRepository<DeliverySlipEntity
         void updateStatusByIdAndTenantId(@Param("status") String status, @Param("id") String id,
                         @Param("tenantId") Long tenantId);
 
+        @Modifying
+        @Query("UPDATE DeliverySlipEntity s SET s.status = :status WHERE s.id IN :ids AND s.tenantId = :tenantId")
+        void updateStatusByIdInAndTenantId(@Param("status") String status, @Param("ids") Iterable<String> ids,
+                        @Param("tenantId") Long tenantId);
+
 }

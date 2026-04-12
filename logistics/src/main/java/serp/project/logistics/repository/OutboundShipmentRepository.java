@@ -28,7 +28,7 @@ public interface OutboundShipmentRepository extends JpaRepository<OutboundShipme
             @Param("tenantId") Long tenantId,
             Pageable pageable);
 
-    @Query("SELECT COUNT(s) FROM OutboundShipmentEntity s WHERE s.orderId = :orderId AND s.status <> 'EXPORTED'")
+    @Query("SELECT COUNT(s) FROM OutboundShipmentEntity s WHERE s.orderId = :orderId AND s.status = 'CREATED'")
     long countPendingShipmentByOrderId(@Param("orderId") String orderId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

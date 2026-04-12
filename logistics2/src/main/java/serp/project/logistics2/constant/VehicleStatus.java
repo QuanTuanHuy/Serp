@@ -1,6 +1,6 @@
 package serp.project.logistics2.constant;
 
 public enum VehicleStatus {
-    WORKING,
+    IN_USE,
     MAINTENANCE,
 }

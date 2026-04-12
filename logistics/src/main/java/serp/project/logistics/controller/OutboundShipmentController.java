@@ -50,8 +50,8 @@ public class OutboundShipmentController {
         return ResponseEntity.ok(GeneralResponse.success("Shipment updated successfully"));
     }
 
-    @PatchMapping("/manage/{shipmentId}/export")
-    public ResponseEntity<GeneralResponse<?>> exportShipment(
+    @PatchMapping("/manage/{shipmentId}/ready")
+    public ResponseEntity<GeneralResponse<?>> readyToExportShipment(
             @PathVariable String shipmentId) {
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
@@ -59,8 +59,8 @@ public class OutboundShipmentController {
                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
         log.info("[OutboundShipmentController] Import shipment {} for userId {} and tenantId {}", shipmentId, userId,
                 tenantId);
-        shipmentService.exportShipment(shipmentId, userId, tenantId);
-        return ResponseEntity.ok(GeneralResponse.success("Shipment imported successfully"));
+        shipmentService.readyToExportShipment(shipmentId, tenantId);
+        return ResponseEntity.ok(GeneralResponse.success("Shipment ready to export"));
     }
 
     @DeleteMapping("/delete/{shipmentId}")

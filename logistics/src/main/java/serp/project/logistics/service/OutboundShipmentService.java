@@ -32,7 +32,27 @@ public class OutboundShipmentService {
     public void createShipment(OutboundShipmentCreationForm form, Long userId, Long tenantId) {
         OutboundShipmentEntity shipment = OutboundShipmentEntity.create(form, userId, tenantId);
 
+        OrderEntity order = orderRepository.findById(form.getOrderId()).orElse(null);
+        if (order == null) {
+            log.info("Order ID {} not found", form.getOrderId());
+            throw new AppException(AppErrorCode.NOT_FOUND);
+        }
+        if (!order.getStatusId().equals(OrderStatus.APPROVED.name())) {
+            log.info("Order ID {} is not approved", form.getOrderId());
+            throw new AppException(AppErrorCode.INVALID_ORDER_STATUS);
+        }
+
         for (OutboundShipmentCreationForm.ItemForm itemForm : form.getItems()) {
+            InventoryItemDetailEntity inventoryItemDetail = inventoryItemDetailRepository.findById(itemForm.getInventoryItemDetailId()).orElse(null);
+            if (inventoryItemDetail == null) {
+                log.info("Inventory item detail ID {} not found", itemForm.getInventoryItemDetailId());
+                throw new AppException(AppErrorCode.NOT_FOUND);
+            }
+            if (inventoryItemDetail.getNotYetOutboundQuantity() < itemForm.getQuantity()) {
+                log.info("Not enough quantity for inventory item detail ID {}. Available: {}, requested: {}",
+                        itemForm.getInventoryItemDetailId(), inventoryItemDetail.getNotYetOutboundQuantity(), itemForm.getQuantity());
+                throw new AppException(AppErrorCode.INSUFFICIENT_QUANTITY);
+            }
             shipment.addItem(itemForm);
         }
 
@@ -61,7 +81,7 @@ public class OutboundShipmentService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void exportShipment(String shipmentId, Long userId, Long tenantId) {
+    public void readyToExportShipment(String shipmentId, Long tenantId) {
         OutboundShipmentEntity shipment = shipmentRepository.findByIdAndTenantIdWithLock(shipmentId, tenantId).orElse(null);
         if (shipment == null) {
             log.info("[OutboundShipmentService] Outbound shipment {} not found for tenant {}", shipmentId, tenantId);
@@ -72,8 +92,17 @@ public class OutboundShipmentService {
             throw new AppException(AppErrorCode.INVALID_STATUS_TRANSITION);
         }
 
-        shipmentRepository.updateStatusByIdAndTenantId(ShipmentStatus.EXPORTED.name(), shipmentId, tenantId);
-        log.info("[OutboundShipmentService] Marked shipment {} as EXPORTED for tenant {}", shipmentId, tenantId);
+        shipmentRepository.updateStatusByIdAndTenantId(ShipmentStatus.READY_TO_EXPORT.name(), shipmentId, tenantId);
+        log.info("[OutboundShipmentService] Marked shipment {} as READY_TO_EXPORT for tenant {}", shipmentId, tenantId);
+
+        List<InventoryItemDetailEntity> inventoryItemDetails = inventoryItemDetailRepository.findByOrderIdAndTenantId(shipment.getOrderId(), tenantId);
+        for (InventoryItemDetailEntity inventoryItemDetail : inventoryItemDetails) {
+            if (inventoryItemDetail.getNotYetOutboundQuantity() > 0) {
+                log.info("[OutboundShipmentService] Inventory item detail {} has not yet ready to export quantity {}, cannot mark order {} as FULLY_DELIVERED for tenant {}",
+                        inventoryItemDetail.getId(), inventoryItemDetail.getNotYetOutboundQuantity(), shipment.getOrderId(), tenantId);
+                return;
+            }
+        }
 
         long pendingShipmentCount = shipmentRepository.countPendingShipmentByOrderId(shipment.getId());
 
@@ -81,7 +110,7 @@ public class OutboundShipmentService {
             orderRepository.updateOrderStatus(shipment.getOrderId(), OrderStatus.FULLY_DELIVERED.name(), tenantId);
             log.info("[OutboundShipmentService] Marked order {} as FULLY_DELIVERED for tenant {}", shipment.getOrderId(), tenantId);
         } else {
-            log.info("[OutboundShipmentService] Order {} has {} pending shipments for tenant {}", shipment.getOrderId(), pendingShipmentCount, tenantId);
+            log.info("[OutboundShipmentService] Order {} has {} shipments that not yet ready to export for tenant {}", shipment.getOrderId(), pendingShipmentCount, tenantId);
         }
 
     }
@@ -155,6 +184,17 @@ public class OutboundShipmentService {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
 
+        InventoryItemDetailEntity inventoryItemDetail = inventoryItemDetailRepository.findById(form.getInventoryItemDetailId()).orElse(null);
+        if (inventoryItemDetail == null) {
+            log.error("Inventory item detail ID {} not found", form.getInventoryItemDetailId());
+            throw new AppException(AppErrorCode.NOT_FOUND);
+        }
+        if (inventoryItemDetail.getNotYetOutboundQuantity() < form.getQuantity()) {
+            log.error("Not enough quantity for inventory item detail ID {}. Available: {}, requested: {}",
+                    form.getInventoryItemDetailId(), inventoryItemDetail.getNotYetOutboundQuantity(), form.getQuantity());
+            throw new AppException(AppErrorCode.INSUFFICIENT_QUANTITY);
+        }
+
         shipment.addItem(form);
         shipmentItemRepository.saveAll(shipment.getItems());
         log.info("[InventoryItemDetailService] Created shipment item for shipment {} and tenant {}", shipmentId,
@@ -169,6 +209,19 @@ public class OutboundShipmentService {
             log.info("[InventoryItemDetailService] Shipment item ID {} not found for tenant {}", itemId,
                     tenantId);
             throw new AppException(AppErrorCode.NOT_FOUND);
+        }
+
+        if (form.getQuantity() > item.getQuantity()) {
+            InventoryItemDetailEntity inventoryItemDetail = inventoryItemDetailRepository.findById(item.getInventoryItemDetailId()).orElse(null);
+            if (inventoryItemDetail == null) {
+                log.error("Inventory item detail ID {} not found", item.getInventoryItemDetailId());
+                throw new AppException(AppErrorCode.NOT_FOUND);
+            }
+            if (inventoryItemDetail.getNotYetOutboundQuantity() < form.getQuantity() - item.getQuantity()) {
+                log.error("Not enough quantity for inventory item detail ID {}. Available: {}, requested: {}",
+                        item.getInventoryItemDetailId(), inventoryItemDetail.getNotYetOutboundQuantity(), form.getQuantity() -  item.getQuantity());
+                throw new AppException(AppErrorCode.INSUFFICIENT_QUANTITY);
+            }
         }
 
         item.update(form);
@@ -190,6 +243,14 @@ public class OutboundShipmentService {
                     tenantId);
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
+
+        OutboundShipmentEntity shipment = shipmentRepository.findById(shipmentId).orElse(null);
+        if (shipment == null || !shipment.getTenantId().equals(tenantId)) {
+            log.error("[InventoryItemDetailService] Shipment ID {} not found for tenant {}", shipmentId,
+                    tenantId);
+            throw new AppException(AppErrorCode.NOT_FOUND);
+        }
+        shipment.deleteItem(item);
         shipmentItemRepository.delete(item);
     }
 

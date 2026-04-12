@@ -92,6 +92,10 @@ external:
       host: localhost
       port: "8089"
       timeout: 15s
+    logistics2Service:
+      host: localhost
+      port: "9004"
+      timeout: 15s
     crmService:
       host: localhost
       port: "8086"

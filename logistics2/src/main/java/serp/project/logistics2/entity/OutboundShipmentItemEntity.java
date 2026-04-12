@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Formula;
 import org.hibernate.annotations.UpdateTimestamp;
 import serp.project.logistics2.dto.request.OutboundShipmentCreationForm;
 import serp.project.logistics2.dto.request.OutboundShipmentItemUpdateForm;
@@ -37,6 +38,11 @@ public class OutboundShipmentItemEntity {
     private String productId;
 
     private int quantity;
+
+    @Formula("quantity - COALESCE((SELECT SUM(di.quantity) " +
+            "FROM wms2_delivery_item di " +
+            "WHERE di.outbound_shipment_item_id = id), 0)")
+    private int quantityRemaining;
 
     @CreationTimestamp
     @Column(name = "created_stamp")
