@@ -92,6 +92,9 @@ external:
       host: ${LOGISTICS_SERVICE_HOST}
       port: ${LOGISTICS_SERVICE_PORT}
       timeout: 15s
+    logistics2Service:
+      host: ${LOGISTICS2_SERVICE_HOST}
+      port: ${LOGISTICS2_SERVICE_PORT}
     firstMileService:
       host: ${FIRST_MILE_SERVICE_HOST}
       port: ${FIRST_MILE_SERVICE_PORT}
