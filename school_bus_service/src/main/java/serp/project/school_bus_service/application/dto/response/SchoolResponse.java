@@ -12,4 +12,6 @@ public class SchoolResponse extends BaseResponse {
     private String address;
     private String contactPhone;
     private String contactEmail;
+    private Double latitude;
+    private Double longitude;
 }

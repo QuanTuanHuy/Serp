@@ -12,4 +12,7 @@ public class RequestStudentResponse extends BaseResponse {
     private String studentName;
     private Long pickupPointId;
     private String pickupPointName;
+    private String pickupPointAddress;
+    private Double pickupPointLatitude;
+    private Double pickupPointLongitude;
 }

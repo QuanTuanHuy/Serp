@@ -20,4 +20,8 @@ public class SchoolUpsertRequest extends BaseCommandRequest {
     private String contactPhone;
 
     private String contactEmail;
+
+    private Double latitude;
+
+    private Double longitude;
 }

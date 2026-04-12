@@ -40,3 +40,8 @@ springdoc:
     path: /swagger-ui.html
   api-docs:
     path: /v3/api-docs
+
+map:
+  nominatim:
+    base-url: ${MAP_NOMINATIM_BASE_URL:https://nominatim.openstreetmap.org}
+    user-agent: ${MAP_NOMINATIM_USER_AGENT:SERP-SchoolBus/0.1 (local-dev)}

@@ -10,6 +10,7 @@ import {
 import { cn } from '@/shared/utils';
 import { SchoolBusHeader } from './SchoolBusHeader';
 import { SchoolBusAuthGuard } from '../SchoolBusAuthGuard';
+import { schoolBusThemeStyle, schoolBusUi } from '../../theme';
 
 interface SchoolBusLayoutProps {
   children: React.ReactNode;
@@ -21,7 +22,34 @@ const SchoolBusLayoutContent: React.FC<SchoolBusLayoutProps> = ({
   const { isCollapsed } = useSidebarContext();
 
   return (
-    <div className='flex min-h-screen bg-background'>
+    <div
+      className={cn('school-bus-shell flex min-h-screen', schoolBusUi.pageGradient)}
+      style={schoolBusThemeStyle}
+    >
+      <style>
+        {`
+          .school-bus-shell .leaflet-container {
+            z-index: 0;
+            isolation: isolate;
+          }
+
+          .school-bus-shell .leaflet-pane,
+          .school-bus-shell .leaflet-map-pane,
+          .school-bus-shell .leaflet-tile-pane,
+          .school-bus-shell .leaflet-overlay-pane,
+          .school-bus-shell .leaflet-shadow-pane,
+          .school-bus-shell .leaflet-marker-pane,
+          .school-bus-shell .leaflet-tooltip-pane,
+          .school-bus-shell .leaflet-popup-pane {
+            z-index: 1;
+          }
+
+          .school-bus-shell .leaflet-control-container {
+            position: relative;
+            z-index: 2;
+          }
+        `}
+      </style>
       <DynamicSidebar moduleCode='SCHOOL_BUS' />
       <div
         className={cn(

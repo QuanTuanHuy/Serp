@@ -3,22 +3,23 @@ package serp.project.school_bus_service.ui.controller;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import serp.project.school_bus_service.application.dto.params.TransportRequestParamsRequest;
 import serp.project.school_bus_service.application.dto.request.RejectRequest;
 import serp.project.school_bus_service.application.dto.request.TransportRequestUpsertRequest;
 import serp.project.school_bus_service.application.dto.response.GeneralResponse;
+import serp.project.school_bus_service.application.dto.response.PageResponse;
 import serp.project.school_bus_service.application.dto.response.TransportRequestDetailResponse;
 import serp.project.school_bus_service.application.dto.response.TransportRequestResponse;
 import serp.project.school_bus_service.core.service.ITransportRequestService;
 import serp.project.school_bus_service.kernel.shared.auth.AuthUtils;
 import serp.project.school_bus_service.kernel.shared.base.AbstractBaseController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/transport-requests")
@@ -33,8 +34,10 @@ public class TransportRequestController extends AbstractBaseController {
 
     @GetMapping
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.transport-request.read')")
-    public ResponseEntity<GeneralResponse<List<TransportRequestResponse>>> getTransportRequests() {
-        return ok("Fetched transport requests", transportRequestService.getTransportRequests(getCurrentTenantId()));
+    public ResponseEntity<GeneralResponse<PageResponse<TransportRequestResponse>>> getTransportRequests(
+            @ModelAttribute TransportRequestParamsRequest params) {
+        return ok("Fetched transport requests",
+                transportRequestService.getTransportRequests(params, getCurrentTenantId()));
     }
 
     @PostMapping

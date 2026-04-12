@@ -18,7 +18,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<GeneralResponse<Void>> handleAppException(AppException e) {
         AppErrorCode errorCode = e.getErrorCode();
         return ResponseEntity.status(errorCode.getStatus())
-                .body(GeneralResponse.error(errorCode.getStatus(), "FAILED", errorCode.getMessage()));
+                .body(GeneralResponse.error(errorCode.getStatus(), "FAILED", e.getMessage()));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

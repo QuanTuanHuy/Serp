@@ -1,7 +1,10 @@
 package serp.project.school_bus_service.core.service;
 
+import serp.project.school_bus_service.application.dto.params.RoutePlanParamsRequest;
 import serp.project.school_bus_service.application.dto.request.RouteAssignmentRequest;
 import serp.project.school_bus_service.application.dto.request.RoutePlanUpsertRequest;
+import serp.project.school_bus_service.application.dto.response.PageResponse;
+import serp.project.school_bus_service.application.dto.response.RouteAttendanceManifestResponse;
 import serp.project.school_bus_service.application.dto.response.RouteAssignmentResponse;
 import serp.project.school_bus_service.application.dto.response.RouteDetailResponse;
 import serp.project.school_bus_service.application.dto.response.RoutePlanResponse;
@@ -11,9 +14,11 @@ import java.util.List;
 
 public interface IRouteService {
 
-    List<RoutePlanResponse> getRoutes(Long tenantId);
+    PageResponse<RoutePlanResponse> getRoutes(RoutePlanParamsRequest params, Long tenantId);
 
     RouteDetailResponse getRoute(Long id, Long tenantId);
+
+    RouteAttendanceManifestResponse getAttendanceManifest(Long routeId, Long tenantId);
 
     List<RouteStopResponse> getRouteStops(Long routeId, Long tenantId);
 

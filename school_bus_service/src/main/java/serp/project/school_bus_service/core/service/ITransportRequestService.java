@@ -1,7 +1,9 @@
 package serp.project.school_bus_service.core.service;
 
+import serp.project.school_bus_service.application.dto.params.TransportRequestParamsRequest;
 import serp.project.school_bus_service.application.dto.request.RejectRequest;
 import serp.project.school_bus_service.application.dto.request.TransportRequestUpsertRequest;
+import serp.project.school_bus_service.application.dto.response.PageResponse;
 import serp.project.school_bus_service.application.dto.response.RequestStudentResponse;
 import serp.project.school_bus_service.application.dto.response.TransportRequestDetailResponse;
 import serp.project.school_bus_service.application.dto.response.TransportRequestResponse;
@@ -11,7 +13,7 @@ import java.util.List;
 
 public interface ITransportRequestService {
 
-    List<TransportRequestResponse> getTransportRequests(Long tenantId);
+    PageResponse<TransportRequestResponse> getTransportRequests(TransportRequestParamsRequest params, Long tenantId);
 
     TransportRequestDetailResponse getTransportRequest(Long id, Long tenantId);
 

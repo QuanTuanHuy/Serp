@@ -3,20 +3,22 @@ package serp.project.school_bus_service.ui.controller;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import serp.project.school_bus_service.application.dto.params.AttendanceParamsRequest;
+import serp.project.school_bus_service.application.dto.params.TripHistoryParamsRequest;
 import serp.project.school_bus_service.application.dto.request.AttendanceActionRequest;
 import serp.project.school_bus_service.application.dto.response.AttendanceResponse;
 import serp.project.school_bus_service.application.dto.response.GeneralResponse;
+import serp.project.school_bus_service.application.dto.response.PageResponse;
 import serp.project.school_bus_service.application.dto.response.TripHistoryResponse;
 import serp.project.school_bus_service.core.service.IAttendanceService;
 import serp.project.school_bus_service.core.service.ITripHistoryService;
 import serp.project.school_bus_service.kernel.shared.auth.AuthUtils;
 import serp.project.school_bus_service.kernel.shared.base.AbstractBaseController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping
@@ -33,8 +35,9 @@ public class AttendanceController extends AbstractBaseController {
 
     @GetMapping("/attendance")
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.attendance.read')")
-    public ResponseEntity<GeneralResponse<List<AttendanceResponse>>> getAttendance() {
-        return ok("Fetched attendance", attendanceService.getAttendance(getCurrentTenantId()));
+    public ResponseEntity<GeneralResponse<PageResponse<AttendanceResponse>>> getAttendance(
+            @ModelAttribute AttendanceParamsRequest params) {
+        return ok("Fetched attendance", attendanceService.getAttendance(params, getCurrentTenantId()));
     }
 
     @PostMapping("/attendance/check-in")
@@ -51,7 +54,8 @@ public class AttendanceController extends AbstractBaseController {
 
     @GetMapping("/trip-history")
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.trip-history.read')")
-    public ResponseEntity<GeneralResponse<List<TripHistoryResponse>>> getTripHistory() {
-        return ok("Fetched trip history", tripHistoryService.getTripHistory(getCurrentTenantId()));
+    public ResponseEntity<GeneralResponse<PageResponse<TripHistoryResponse>>> getTripHistory(
+            @ModelAttribute TripHistoryParamsRequest params) {
+        return ok("Fetched trip history", tripHistoryService.getTripHistory(params, getCurrentTenantId()));
     }
 }

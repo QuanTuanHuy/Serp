@@ -3,15 +3,19 @@ package serp.project.school_bus_service.ui.controller;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import serp.project.school_bus_service.application.dto.params.RoutePlanParamsRequest;
 import serp.project.school_bus_service.application.dto.request.RouteAssignmentRequest;
+import serp.project.school_bus_service.application.dto.response.RouteAttendanceManifestResponse;
 import serp.project.school_bus_service.application.dto.request.RoutePlanUpsertRequest;
 import serp.project.school_bus_service.application.dto.response.GeneralResponse;
+import serp.project.school_bus_service.application.dto.response.PageResponse;
 import serp.project.school_bus_service.application.dto.response.RouteAssignmentResponse;
 import serp.project.school_bus_service.application.dto.response.RouteDetailResponse;
 import serp.project.school_bus_service.application.dto.response.RoutePlanResponse;
@@ -35,8 +39,9 @@ public class RouteController extends AbstractBaseController {
 
     @GetMapping
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.read')")
-    public ResponseEntity<GeneralResponse<List<RoutePlanResponse>>> getRoutes() {
-        return ok("Fetched routes", routeService.getRoutes(getCurrentTenantId()));
+    public ResponseEntity<GeneralResponse<PageResponse<RoutePlanResponse>>> getRoutes(
+            @ModelAttribute RoutePlanParamsRequest params) {
+        return ok("Fetched routes", routeService.getRoutes(params, getCurrentTenantId()));
     }
 
     @PostMapping
@@ -49,6 +54,12 @@ public class RouteController extends AbstractBaseController {
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.read')")
     public ResponseEntity<GeneralResponse<RouteDetailResponse>> getRoute(@PathVariable Long id) {
         return ok("Fetched route", routeService.getRoute(id, getCurrentTenantId()));
+    }
+
+    @GetMapping("/{id}/attendance-manifest")
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.attendance.read')")
+    public ResponseEntity<GeneralResponse<RouteAttendanceManifestResponse>> getAttendanceManifest(@PathVariable Long id) {
+        return ok("Fetched attendance manifest", routeService.getAttendanceManifest(id, getCurrentTenantId()));
     }
 
     @PatchMapping("/{id}")

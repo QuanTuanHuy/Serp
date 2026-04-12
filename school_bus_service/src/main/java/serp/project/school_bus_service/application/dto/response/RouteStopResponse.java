@@ -12,6 +12,9 @@ public class RouteStopResponse extends BaseResponse {
     private Long routeId;
     private Long pickupPointId;
     private String pickupPointName;
+    private String pickupPointAddress;
+    private Double pickupPointLatitude;
+    private Double pickupPointLongitude;
     private Integer stopOrder;
     private Integer estimatedStudentCount;
     private LocalTime plannedArrivalTime;

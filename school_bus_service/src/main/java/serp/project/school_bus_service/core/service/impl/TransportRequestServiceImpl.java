@@ -1,11 +1,15 @@
 package serp.project.school_bus_service.core.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import serp.project.school_bus_service.application.dto.params.TransportRequestParamsRequest;
 import serp.project.school_bus_service.application.dto.request.RejectRequest;
 import serp.project.school_bus_service.application.dto.request.RequestStudentItemRequest;
 import serp.project.school_bus_service.application.dto.request.TransportRequestUpsertRequest;
+import serp.project.school_bus_service.application.dto.response.PageResponse;
 import serp.project.school_bus_service.application.dto.response.RequestStudentResponse;
 import serp.project.school_bus_service.application.dto.response.TransportRequestDetailResponse;
 import serp.project.school_bus_service.application.dto.response.TransportRequestResponse;
@@ -23,10 +27,13 @@ import serp.project.school_bus_service.kernel.shared.base.AbstractBaseService;
 import serp.project.school_bus_service.kernel.shared.base.BaseRepository;
 import serp.project.school_bus_service.kernel.shared.exception.AppErrorCode;
 import serp.project.school_bus_service.kernel.shared.exception.AppException;
+import serp.project.school_bus_service.kernel.shared.pagination.PageableUtils;
+import serp.project.school_bus_service.infrastructure.store.specification.BaseSpecification;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -45,10 +52,13 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
     }
 
     @Override
-    public List<TransportRequestResponse> getTransportRequests(Long tenantId) {
-        return transportRequestRepository.findByTenantIdAndIsDeletedFalseOrderByCreatedAtDesc(tenantId).stream()
-                .map(mapper::toTransportRequestResponse)
-                .toList();
+    public PageResponse<TransportRequestResponse> getTransportRequests(TransportRequestParamsRequest params, Long tenantId) {
+        return PageResponse.from(transportRequestRepository.findAll(
+                spec(tenantId, params == null ? null : params.getKeyword(), "parentProfile.fullName", "school.name",
+                        "requestType", "status", "notes"),
+                pageable(params, Set.of("id", "requestType", "status", "effectiveFrom", "effectiveTo", "createdAt",
+                        "updatedAt"), "createdAt")),
+                mapper::toTransportRequestResponse);
     }
 
     @Override
@@ -167,5 +177,16 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
                     : masterDataService.getPickupPoint(studentRequest.getPickupPointId(), tenantId));
             requestStudentRepository.save(requestStudent);
         }
+    }
+
+    private Specification<TransportRequestEntity> spec(Long tenantId, String keyword, String... fields) {
+        return BaseSpecification.tenantActiveWithKeyword(tenantId, keyword, fields);
+    }
+
+    private Pageable pageable(
+            serp.project.school_bus_service.application.dto.request.BaseParamsRequest params,
+            Set<String> allowedSorts,
+            String defaultSortBy) {
+        return PageableUtils.from(params, allowedSorts, defaultSortBy);
     }
 }

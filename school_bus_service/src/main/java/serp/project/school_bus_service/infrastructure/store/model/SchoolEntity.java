@@ -26,4 +26,8 @@ public class SchoolEntity extends BaseModel {
     @Column(name = "contact_email")
     private String contactEmail;
 
+    private Double latitude;
+
+    private Double longitude;
+
 }

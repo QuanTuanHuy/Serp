@@ -1,10 +1,14 @@
 package serp.project.school_bus_service.core.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import serp.project.school_bus_service.application.dto.params.AttendanceParamsRequest;
 import serp.project.school_bus_service.application.dto.request.AttendanceActionRequest;
 import serp.project.school_bus_service.application.dto.response.AttendanceResponse;
+import serp.project.school_bus_service.application.dto.response.PageResponse;
 import serp.project.school_bus_service.core.service.IAttendanceService;
 import serp.project.school_bus_service.core.service.IAuditLogService;
 import serp.project.school_bus_service.core.service.IMasterDataService;
@@ -21,9 +25,11 @@ import serp.project.school_bus_service.kernel.shared.base.AbstractBaseService;
 import serp.project.school_bus_service.kernel.shared.base.BaseRepository;
 import serp.project.school_bus_service.kernel.shared.exception.AppErrorCode;
 import serp.project.school_bus_service.kernel.shared.exception.AppException;
+import serp.project.school_bus_service.kernel.shared.pagination.PageableUtils;
+import serp.project.school_bus_service.infrastructure.store.specification.BaseSpecification;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -42,10 +48,13 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
     }
 
     @Override
-    public List<AttendanceResponse> getAttendance(Long tenantId) {
-        return attendanceRepository.findByTenantIdAndIsDeletedFalseOrderByRecordedAtDesc(tenantId).stream()
-                .map(mapper::toAttendanceResponse)
-                .toList();
+    public PageResponse<AttendanceResponse> getAttendance(AttendanceParamsRequest params, Long tenantId) {
+        return PageResponse.from(attendanceRepository.findAll(
+                spec(tenantId, params == null ? null : params.getKeyword(), "route.routeCode", "student.fullName",
+                        "attendanceType", "status", "notes"),
+                pageable(params, Set.of("id", "recordedAt", "attendanceType", "status", "createdAt", "updatedAt"),
+                        "recordedAt")),
+                mapper::toAttendanceResponse);
     }
 
     @Override
@@ -91,5 +100,16 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
         auditLogService.log(tenantId, actorId, "Attendance", saved.getId(), attendanceType.name(),
                 "Recorded " + attendanceType.name().toLowerCase());
         return mapper.toAttendanceResponse(saved);
+    }
+
+    private Specification<AttendanceEntity> spec(Long tenantId, String keyword, String... fields) {
+        return BaseSpecification.tenantActiveWithKeyword(tenantId, keyword, fields);
+    }
+
+    private Pageable pageable(
+            serp.project.school_bus_service.application.dto.request.BaseParamsRequest params,
+            Set<String> allowedSorts,
+            String defaultSortBy) {
+        return PageableUtils.from(params, allowedSorts, defaultSortBy);
     }
 }

@@ -1,5 +1,12 @@
 package serp.project.school_bus_service.core.service;
 
+import serp.project.school_bus_service.application.dto.params.AttendantProfileParamsRequest;
+import serp.project.school_bus_service.application.dto.params.BusParamsRequest;
+import serp.project.school_bus_service.application.dto.params.DriverProfileParamsRequest;
+import serp.project.school_bus_service.application.dto.params.ParentProfileParamsRequest;
+import serp.project.school_bus_service.application.dto.params.PickupPointParamsRequest;
+import serp.project.school_bus_service.application.dto.params.SchoolParamsRequest;
+import serp.project.school_bus_service.application.dto.params.StudentParamsRequest;
 import serp.project.school_bus_service.application.dto.request.BusAttendantProfileUpsertRequest;
 import serp.project.school_bus_service.application.dto.request.BusUpsertRequest;
 import serp.project.school_bus_service.application.dto.request.DriverProfileUpsertRequest;
@@ -10,6 +17,7 @@ import serp.project.school_bus_service.application.dto.request.StudentUpsertRequ
 import serp.project.school_bus_service.application.dto.response.AttendantProfileResponse;
 import serp.project.school_bus_service.application.dto.response.BusResponse;
 import serp.project.school_bus_service.application.dto.response.DriverProfileResponse;
+import serp.project.school_bus_service.application.dto.response.PageResponse;
 import serp.project.school_bus_service.application.dto.response.ParentProfileResponse;
 import serp.project.school_bus_service.application.dto.response.PickupPointResponse;
 import serp.project.school_bus_service.application.dto.response.SchoolResponse;
@@ -22,11 +30,9 @@ import serp.project.school_bus_service.infrastructure.store.model.PickupPointEnt
 import serp.project.school_bus_service.infrastructure.store.model.SchoolEntity;
 import serp.project.school_bus_service.infrastructure.store.model.StudentEntity;
 
-import java.util.List;
-
 public interface IMasterDataService {
 
-    List<SchoolResponse> getSchools(Long tenantId);
+    PageResponse<SchoolResponse> getSchools(SchoolParamsRequest params, Long tenantId);
 
     SchoolResponse getSchoolResponse(Long id, Long tenantId);
 
@@ -38,7 +44,7 @@ public interface IMasterDataService {
 
     void deleteSchool(Long id, Long tenantId, Long actorId);
 
-    List<ParentProfileResponse> getParents(Long tenantId);
+    PageResponse<ParentProfileResponse> getParents(ParentProfileParamsRequest params, Long tenantId);
 
     ParentProfileResponse getParentResponse(Long id, Long tenantId);
 
@@ -50,7 +56,7 @@ public interface IMasterDataService {
 
     void deleteParent(Long id, Long tenantId, Long actorId);
 
-    List<StudentResponse> getStudents(Long tenantId);
+    PageResponse<StudentResponse> getStudents(StudentParamsRequest params, Long tenantId);
 
     StudentResponse getStudentResponse(Long id, Long tenantId);
 
@@ -62,7 +68,7 @@ public interface IMasterDataService {
 
     void deleteStudent(Long id, Long tenantId, Long actorId);
 
-    List<BusResponse> getBuses(Long tenantId);
+    PageResponse<BusResponse> getBuses(BusParamsRequest params, Long tenantId);
 
     BusResponse getBusResponse(Long id, Long tenantId);
 
@@ -74,7 +80,7 @@ public interface IMasterDataService {
 
     void deleteBus(Long id, Long tenantId, Long actorId);
 
-    List<DriverProfileResponse> getDrivers(Long tenantId);
+    PageResponse<DriverProfileResponse> getDrivers(DriverProfileParamsRequest params, Long tenantId);
 
     DriverProfileResponse getDriverResponse(Long id, Long tenantId);
 
@@ -86,7 +92,7 @@ public interface IMasterDataService {
 
     void deleteDriver(Long id, Long tenantId, Long actorId);
 
-    List<AttendantProfileResponse> getAttendants(Long tenantId);
+    PageResponse<AttendantProfileResponse> getAttendants(AttendantProfileParamsRequest params, Long tenantId);
 
     AttendantProfileResponse getAttendantResponse(Long id, Long tenantId);
 
@@ -98,7 +104,7 @@ public interface IMasterDataService {
 
     void deleteAttendant(Long id, Long tenantId, Long actorId);
 
-    List<PickupPointResponse> getPickupPoints(Long tenantId);
+    PageResponse<PickupPointResponse> getPickupPoints(PickupPointParamsRequest params, Long tenantId);
 
     PickupPointResponse getPickupPointResponse(Long id, Long tenantId);
 

@@ -1,25 +1,42 @@
 'use client';
 
 import React from 'react';
+import { cn } from '@/shared/utils';
+import { schoolBusUi } from '../theme';
 
 interface SchoolBusSectionProps {
   title: string;
   description?: string;
   children: React.ReactNode;
+  action?: React.ReactNode;
+  className?: string;
 }
 
 export const SchoolBusSection: React.FC<SchoolBusSectionProps> = ({
   title,
   description,
   children,
+  action,
+  className,
 }) => {
   return (
-    <section className='space-y-4 rounded-2xl border bg-card p-5 shadow-sm'>
-      <div>
-        <h2 className='text-lg font-semibold'>{title}</h2>
-        {description ? (
-          <p className='text-sm text-muted-foreground'>{description}</p>
-        ) : null}
+    <section
+      className={cn(
+        'space-y-4',
+        schoolBusUi.section,
+        className
+      )}
+    >
+      <div className='flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between'>
+        <div>
+          <h2 className={cn('text-lg', schoolBusUi.heading)}>{title}</h2>
+          {description ? (
+            <p className={cn('mt-1 text-sm', schoolBusUi.mutedText)}>
+              {description}
+            </p>
+          ) : null}
+        </div>
+        {action ? <div>{action}</div> : null}
       </div>
       {children}
     </section>

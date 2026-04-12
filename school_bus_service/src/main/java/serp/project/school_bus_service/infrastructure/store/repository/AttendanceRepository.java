@@ -8,5 +8,7 @@ import java.util.List;
 public interface AttendanceRepository extends BaseRepository<AttendanceEntity, Long> {
     List<AttendanceEntity> findByTenantIdAndIsDeletedFalseOrderByRecordedAtDesc(Long tenantId);
 
+    List<AttendanceEntity> findByRouteIdAndTenantIdAndIsDeletedFalseOrderByRecordedAtDesc(Long routeId, Long tenantId);
+
     long countByTenantIdAndIsDeletedFalse(Long tenantId);
 }

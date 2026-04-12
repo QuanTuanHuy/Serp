@@ -1,8 +1,17 @@
 package serp.project.school_bus_service.core.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import serp.project.school_bus_service.application.dto.params.AttendantProfileParamsRequest;
+import serp.project.school_bus_service.application.dto.params.BusParamsRequest;
+import serp.project.school_bus_service.application.dto.params.DriverProfileParamsRequest;
+import serp.project.school_bus_service.application.dto.params.ParentProfileParamsRequest;
+import serp.project.school_bus_service.application.dto.params.PickupPointParamsRequest;
+import serp.project.school_bus_service.application.dto.params.SchoolParamsRequest;
+import serp.project.school_bus_service.application.dto.params.StudentParamsRequest;
 import serp.project.school_bus_service.application.dto.request.BusAttendantProfileUpsertRequest;
 import serp.project.school_bus_service.application.dto.request.BusUpsertRequest;
 import serp.project.school_bus_service.application.dto.request.DriverProfileUpsertRequest;
@@ -13,11 +22,13 @@ import serp.project.school_bus_service.application.dto.request.StudentUpsertRequ
 import serp.project.school_bus_service.application.dto.response.AttendantProfileResponse;
 import serp.project.school_bus_service.application.dto.response.BusResponse;
 import serp.project.school_bus_service.application.dto.response.DriverProfileResponse;
+import serp.project.school_bus_service.application.dto.response.PageResponse;
 import serp.project.school_bus_service.application.dto.response.ParentProfileResponse;
 import serp.project.school_bus_service.application.dto.response.PickupPointResponse;
 import serp.project.school_bus_service.application.dto.response.SchoolResponse;
 import serp.project.school_bus_service.application.dto.response.StudentResponse;
 import serp.project.school_bus_service.core.service.IAuditLogService;
+import serp.project.school_bus_service.core.service.ICodeGeneratorService;
 import serp.project.school_bus_service.core.service.IMasterDataService;
 import serp.project.school_bus_service.infrastructure.store.mapper.SchoolBusMapper;
 import serp.project.school_bus_service.infrastructure.store.model.BusAttendantProfileEntity;
@@ -36,8 +47,13 @@ import serp.project.school_bus_service.infrastructure.store.repository.SchoolRep
 import serp.project.school_bus_service.infrastructure.store.repository.StudentRepository;
 import serp.project.school_bus_service.kernel.shared.base.AbstractBaseService;
 import serp.project.school_bus_service.kernel.shared.base.BaseRepository;
+import serp.project.school_bus_service.kernel.shared.code.SchoolBusCode;
+import serp.project.school_bus_service.kernel.shared.exception.AppErrorCode;
+import serp.project.school_bus_service.kernel.shared.exception.AppException;
+import serp.project.school_bus_service.kernel.shared.pagination.PageableUtils;
+import serp.project.school_bus_service.infrastructure.store.specification.BaseSpecification;
 
-import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -52,6 +68,7 @@ public class MasterDataServiceImpl extends AbstractBaseService<SchoolEntity, Lon
     private final PickupPointRepository pickupPointRepository;
     private final SchoolBusMapper mapper;
     private final IAuditLogService auditLogService;
+    private final ICodeGeneratorService codeGeneratorService;
 
     @Override
     protected BaseRepository<SchoolEntity, Long> getRepository() {
@@ -59,10 +76,12 @@ public class MasterDataServiceImpl extends AbstractBaseService<SchoolEntity, Lon
     }
 
     @Override
-    public List<SchoolResponse> getSchools(Long tenantId) {
-        return schoolRepository.findByTenantIdAndIsDeletedFalseOrderByNameAsc(tenantId).stream()
-                .map(mapper::toSchoolResponse)
-                .toList();
+    public PageResponse<SchoolResponse> getSchools(SchoolParamsRequest params, Long tenantId) {
+        return PageResponse.from(schoolRepository.findAll(
+                spec(tenantId, params == null ? null : params.getKeyword(), "name", "code", "address", "contactPhone",
+                        "contactEmail"),
+                pageable(params, Set.of("id", "name", "code", "createdAt", "updatedAt"), "name")),
+                mapper::toSchoolResponse);
     }
 
     @Override
@@ -81,6 +100,7 @@ public class MasterDataServiceImpl extends AbstractBaseService<SchoolEntity, Lon
         SchoolEntity school = new SchoolEntity();
         school.markCreated(tenantId, actor(actorId));
         applySchool(school, request);
+        school.setCode(generateCode(SchoolBusCode.SCHOOL, tenantId, actorId));
         SchoolEntity saved = schoolRepository.save(school);
         auditLogService.log(tenantId, actorId, "School", saved.getId(), "CREATE", "Created school master data");
         return mapper.toSchoolResponse(saved);
@@ -105,10 +125,11 @@ public class MasterDataServiceImpl extends AbstractBaseService<SchoolEntity, Lon
     }
 
     @Override
-    public List<ParentProfileResponse> getParents(Long tenantId) {
-        return parentProfileRepository.findByTenantIdAndIsDeletedFalseOrderByFullNameAsc(tenantId).stream()
-                .map(mapper::toParentProfileResponse)
-                .toList();
+    public PageResponse<ParentProfileResponse> getParents(ParentProfileParamsRequest params, Long tenantId) {
+        return PageResponse.from(parentProfileRepository.findAll(
+                spec(tenantId, params == null ? null : params.getKeyword(), "fullName", "phone", "email", "address"),
+                pageable(params, Set.of("id", "fullName", "email", "createdAt", "updatedAt"), "fullName")),
+                mapper::toParentProfileResponse);
     }
 
     @Override
@@ -151,10 +172,12 @@ public class MasterDataServiceImpl extends AbstractBaseService<SchoolEntity, Lon
     }
 
     @Override
-    public List<StudentResponse> getStudents(Long tenantId) {
-        return studentRepository.findByTenantIdAndIsDeletedFalseOrderByFullNameAsc(tenantId).stream()
-                .map(mapper::toStudentResponse)
-                .toList();
+    public PageResponse<StudentResponse> getStudents(StudentParamsRequest params, Long tenantId) {
+        return PageResponse.from(studentRepository.findAll(
+                spec(tenantId, params == null ? null : params.getKeyword(), "fullName", "studentCode", "grade",
+                        "homeAddress", "school.name", "parentProfile.fullName", "pickupPoint.name"),
+                pageable(params, Set.of("id", "fullName", "studentCode", "grade", "createdAt", "updatedAt"), "fullName")),
+                mapper::toStudentResponse);
     }
 
     @Override
@@ -173,6 +196,7 @@ public class MasterDataServiceImpl extends AbstractBaseService<SchoolEntity, Lon
         StudentEntity student = new StudentEntity();
         student.markCreated(tenantId, actor(actorId));
         applyStudent(student, request, tenantId);
+        student.setStudentCode(generateCode(SchoolBusCode.STUDENT, tenantId, actorId));
         StudentEntity saved = studentRepository.save(student);
         auditLogService.log(tenantId, actorId, "Student", saved.getId(), "CREATE", "Created student profile");
         return mapper.toStudentResponse(saved);
@@ -197,10 +221,12 @@ public class MasterDataServiceImpl extends AbstractBaseService<SchoolEntity, Lon
     }
 
     @Override
-    public List<BusResponse> getBuses(Long tenantId) {
-        return busRepository.findByTenantIdAndIsDeletedFalseOrderByPlateNumberAsc(tenantId).stream()
-                .map(mapper::toBusResponse)
-                .toList();
+    public PageResponse<BusResponse> getBuses(BusParamsRequest params, Long tenantId) {
+        return PageResponse.from(busRepository.findAll(
+                spec(tenantId, params == null ? null : params.getKeyword(), "plateNumber", "busType", "status"),
+                pageable(params, Set.of("id", "plateNumber", "busType", "capacity", "status", "createdAt", "updatedAt"),
+                        "plateNumber")),
+                mapper::toBusResponse);
     }
 
     @Override
@@ -243,10 +269,13 @@ public class MasterDataServiceImpl extends AbstractBaseService<SchoolEntity, Lon
     }
 
     @Override
-    public List<DriverProfileResponse> getDrivers(Long tenantId) {
-        return driverProfileRepository.findByTenantIdAndIsDeletedFalseOrderByFullNameAsc(tenantId).stream()
-                .map(mapper::toDriverProfileResponse)
-                .toList();
+    public PageResponse<DriverProfileResponse> getDrivers(DriverProfileParamsRequest params, Long tenantId) {
+        return PageResponse.from(driverProfileRepository.findAll(
+                spec(tenantId, params == null ? null : params.getKeyword(), "fullName", "phone", "licenseNumber",
+                        "status"),
+                pageable(params, Set.of("id", "fullName", "licenseNumber", "status", "createdAt", "updatedAt"),
+                        "fullName")),
+                mapper::toDriverProfileResponse);
     }
 
     @Override
@@ -289,10 +318,11 @@ public class MasterDataServiceImpl extends AbstractBaseService<SchoolEntity, Lon
     }
 
     @Override
-    public List<AttendantProfileResponse> getAttendants(Long tenantId) {
-        return busAttendantProfileRepository.findByTenantIdAndIsDeletedFalseOrderByFullNameAsc(tenantId).stream()
-                .map(mapper::toAttendantProfileResponse)
-                .toList();
+    public PageResponse<AttendantProfileResponse> getAttendants(AttendantProfileParamsRequest params, Long tenantId) {
+        return PageResponse.from(busAttendantProfileRepository.findAll(
+                spec(tenantId, params == null ? null : params.getKeyword(), "fullName", "phone", "status"),
+                pageable(params, Set.of("id", "fullName", "status", "createdAt", "updatedAt"), "fullName")),
+                mapper::toAttendantProfileResponse);
     }
 
     @Override
@@ -335,10 +365,11 @@ public class MasterDataServiceImpl extends AbstractBaseService<SchoolEntity, Lon
     }
 
     @Override
-    public List<PickupPointResponse> getPickupPoints(Long tenantId) {
-        return pickupPointRepository.findByTenantIdAndIsDeletedFalseOrderByNameAsc(tenantId).stream()
-                .map(mapper::toPickupPointResponse)
-                .toList();
+    public PageResponse<PickupPointResponse> getPickupPoints(PickupPointParamsRequest params, Long tenantId) {
+        return PageResponse.from(pickupPointRepository.findAll(
+                spec(tenantId, params == null ? null : params.getKeyword(), "name", "address", "school.name"),
+                pageable(params, Set.of("id", "name", "createdAt", "updatedAt"), "name")),
+                mapper::toPickupPointResponse);
     }
 
     @Override
@@ -381,11 +412,13 @@ public class MasterDataServiceImpl extends AbstractBaseService<SchoolEntity, Lon
     }
 
     private void applySchool(SchoolEntity school, SchoolUpsertRequest request) {
+        validateCoordinatePair(request.getLatitude(), request.getLongitude(), "school");
         school.setName(request.getName());
-        school.setCode(request.getCode());
         school.setAddress(request.getAddress());
         school.setContactPhone(request.getContactPhone());
         school.setContactEmail(request.getContactEmail());
+        school.setLatitude(request.getLatitude());
+        school.setLongitude(request.getLongitude());
         school.setIsActive(request.resolveIsActive(Boolean.TRUE));
     }
 
@@ -403,7 +436,6 @@ public class MasterDataServiceImpl extends AbstractBaseService<SchoolEntity, Lon
         student.setParentProfile(getParent(request.getParentProfileId(), tenantId));
         student.setPickupPoint(request.getPickupPointId() == null ? null : getPickupPoint(request.getPickupPointId(), tenantId));
         student.setFullName(request.getFullName());
-        student.setStudentCode(request.getStudentCode());
         student.setGrade(request.getGrade());
         student.setHomeAddress(request.getHomeAddress());
         student.setIsActive(request.resolveIsActive(Boolean.TRUE));
@@ -435,6 +467,7 @@ public class MasterDataServiceImpl extends AbstractBaseService<SchoolEntity, Lon
     }
 
     private void applyPickupPoint(PickupPointEntity pickupPoint, PickupPointUpsertRequest request, Long tenantId) {
+        validateCoordinatePair(request.getLatitude(), request.getLongitude(), "pickup point");
         pickupPoint.setSchool(getSchool(request.getSchoolId(), tenantId));
         pickupPoint.setName(request.getName());
         pickupPoint.setAddress(request.getAddress());
@@ -443,5 +476,41 @@ public class MasterDataServiceImpl extends AbstractBaseService<SchoolEntity, Lon
         pickupPoint.setPickupWindowStart(request.getPickupWindowStart());
         pickupPoint.setPickupWindowEnd(request.getPickupWindowEnd());
         pickupPoint.setIsActive(request.resolveIsActive(Boolean.TRUE));
+    }
+
+    private void validateCoordinatePair(Double latitude, Double longitude, String target) {
+        if ((latitude == null) != (longitude == null)) {
+            throw new AppException(
+                    AppErrorCode.INVALID_REQUEST,
+                    String.format("Both latitude and longitude are required when pinning a %s", target));
+        }
+
+        if (latitude != null && (latitude < -90 || latitude > 90)) {
+            throw new AppException(
+                    AppErrorCode.INVALID_REQUEST,
+                    String.format("Latitude for %s must be between -90 and 90", target));
+        }
+
+        if (longitude != null && (longitude < -180 || longitude > 180)) {
+            throw new AppException(
+                    AppErrorCode.INVALID_REQUEST,
+                    String.format("Longitude for %s must be between -180 and 180", target));
+        }
+    }
+
+    private <T extends serp.project.school_bus_service.infrastructure.store.model.BaseModel> Specification<T> spec(
+            Long tenantId, String keyword, String... fields) {
+        return BaseSpecification.tenantActiveWithKeyword(tenantId, keyword, fields);
+    }
+
+    private Pageable pageable(
+            serp.project.school_bus_service.application.dto.request.BaseParamsRequest params,
+            Set<String> allowedSorts,
+            String defaultSortBy) {
+        return PageableUtils.from(params, allowedSorts, defaultSortBy);
+    }
+
+    private String generateCode(SchoolBusCode code, Long tenantId, Long actorId) {
+        return codeGeneratorService.generate(code.sequenceKey(), code.prefix(), tenantId, actorId);
     }
 }

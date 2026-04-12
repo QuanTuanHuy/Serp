@@ -6,13 +6,37 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import serp.project.school_bus_service.kernel.shared.base.BaseRepository;
 import serp.project.school_bus_service.infrastructure.store.model.RequestStudentEntity;
+import serp.project.school_bus_service.enums.RequestStatus;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface RequestStudentRepository extends BaseRepository<RequestStudentEntity, Long> {
     List<RequestStudentEntity> findByRequestIdAndTenantIdAndIsDeletedFalse(Long requestId, Long tenantId);
 
     List<RequestStudentEntity> findByStudentIdAndTenantIdAndIsDeletedFalse(Long studentId, Long tenantId);
+
+    @Query("""
+            select entity
+              from RequestStudentEntity entity
+              join fetch entity.request request
+              join fetch entity.student student
+              left join fetch entity.pickupPoint pickupPoint
+             where entity.tenantId = :tenantId
+               and entity.isDeleted = false
+               and request.tenantId = :tenantId
+               and request.isDeleted = false
+               and request.school.id = :schoolId
+               and request.status = :status
+               and :serviceDate >= request.effectiveFrom
+               and (request.effectiveTo is null or :serviceDate <= request.effectiveTo)
+             order by entity.createdAt desc, entity.id desc
+            """)
+    List<RequestStudentEntity> findApprovedManifestBySchoolAndServiceDate(
+            @Param("schoolId") Long schoolId,
+            @Param("serviceDate") LocalDate serviceDate,
+            @Param("tenantId") Long tenantId,
+            @Param("status") RequestStatus status);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional

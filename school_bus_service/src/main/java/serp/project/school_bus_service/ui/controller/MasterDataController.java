@@ -4,12 +4,20 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import serp.project.school_bus_service.application.dto.params.AttendantProfileParamsRequest;
+import serp.project.school_bus_service.application.dto.params.BusParamsRequest;
+import serp.project.school_bus_service.application.dto.params.DriverProfileParamsRequest;
+import serp.project.school_bus_service.application.dto.params.ParentProfileParamsRequest;
+import serp.project.school_bus_service.application.dto.params.PickupPointParamsRequest;
+import serp.project.school_bus_service.application.dto.params.SchoolParamsRequest;
+import serp.project.school_bus_service.application.dto.params.StudentParamsRequest;
 import serp.project.school_bus_service.application.dto.request.BusAttendantProfileUpsertRequest;
 import serp.project.school_bus_service.application.dto.request.BusUpsertRequest;
 import serp.project.school_bus_service.application.dto.request.DriverProfileUpsertRequest;
@@ -21,6 +29,7 @@ import serp.project.school_bus_service.application.dto.response.AttendantProfile
 import serp.project.school_bus_service.application.dto.response.BusResponse;
 import serp.project.school_bus_service.application.dto.response.DriverProfileResponse;
 import serp.project.school_bus_service.application.dto.response.GeneralResponse;
+import serp.project.school_bus_service.application.dto.response.PageResponse;
 import serp.project.school_bus_service.application.dto.response.ParentProfileResponse;
 import serp.project.school_bus_service.application.dto.response.PickupPointResponse;
 import serp.project.school_bus_service.application.dto.response.SchoolResponse;
@@ -28,8 +37,6 @@ import serp.project.school_bus_service.application.dto.response.StudentResponse;
 import serp.project.school_bus_service.core.service.IMasterDataService;
 import serp.project.school_bus_service.kernel.shared.auth.AuthUtils;
 import serp.project.school_bus_service.kernel.shared.base.AbstractBaseController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping
@@ -44,8 +51,9 @@ public class MasterDataController extends AbstractBaseController {
 
     @GetMapping("/schools")
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.school.read')")
-    public ResponseEntity<GeneralResponse<List<SchoolResponse>>> getSchools() {
-        return ok("Fetched schools", masterDataService.getSchools(getCurrentTenantId()));
+    public ResponseEntity<GeneralResponse<PageResponse<SchoolResponse>>> getSchools(
+            @ModelAttribute SchoolParamsRequest params) {
+        return ok("Fetched schools", masterDataService.getSchools(params, getCurrentTenantId()));
     }
 
     @PostMapping("/schools")
@@ -75,8 +83,9 @@ public class MasterDataController extends AbstractBaseController {
 
     @GetMapping("/parents")
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.parent.read')")
-    public ResponseEntity<GeneralResponse<List<ParentProfileResponse>>> getParents() {
-        return ok("Fetched parents", masterDataService.getParents(getCurrentTenantId()));
+    public ResponseEntity<GeneralResponse<PageResponse<ParentProfileResponse>>> getParents(
+            @ModelAttribute ParentProfileParamsRequest params) {
+        return ok("Fetched parents", masterDataService.getParents(params, getCurrentTenantId()));
     }
 
     @PostMapping("/parents")
@@ -107,8 +116,9 @@ public class MasterDataController extends AbstractBaseController {
 
     @GetMapping("/students")
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.student.read')")
-    public ResponseEntity<GeneralResponse<List<StudentResponse>>> getStudents() {
-        return ok("Fetched students", masterDataService.getStudents(getCurrentTenantId()));
+    public ResponseEntity<GeneralResponse<PageResponse<StudentResponse>>> getStudents(
+            @ModelAttribute StudentParamsRequest params) {
+        return ok("Fetched students", masterDataService.getStudents(params, getCurrentTenantId()));
     }
 
     @PostMapping("/students")
@@ -138,8 +148,9 @@ public class MasterDataController extends AbstractBaseController {
 
     @GetMapping("/buses")
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.bus.read')")
-    public ResponseEntity<GeneralResponse<List<BusResponse>>> getBuses() {
-        return ok("Fetched buses", masterDataService.getBuses(getCurrentTenantId()));
+    public ResponseEntity<GeneralResponse<PageResponse<BusResponse>>> getBuses(
+            @ModelAttribute BusParamsRequest params) {
+        return ok("Fetched buses", masterDataService.getBuses(params, getCurrentTenantId()));
     }
 
     @PostMapping("/buses")
@@ -169,8 +180,9 @@ public class MasterDataController extends AbstractBaseController {
 
     @GetMapping("/drivers")
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.driver.read')")
-    public ResponseEntity<GeneralResponse<List<DriverProfileResponse>>> getDrivers() {
-        return ok("Fetched drivers", masterDataService.getDrivers(getCurrentTenantId()));
+    public ResponseEntity<GeneralResponse<PageResponse<DriverProfileResponse>>> getDrivers(
+            @ModelAttribute DriverProfileParamsRequest params) {
+        return ok("Fetched drivers", masterDataService.getDrivers(params, getCurrentTenantId()));
     }
 
     @PostMapping("/drivers")
@@ -200,8 +212,9 @@ public class MasterDataController extends AbstractBaseController {
 
     @GetMapping("/attendants")
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.attendant.read')")
-    public ResponseEntity<GeneralResponse<List<AttendantProfileResponse>>> getAttendants() {
-        return ok("Fetched attendants", masterDataService.getAttendants(getCurrentTenantId()));
+    public ResponseEntity<GeneralResponse<PageResponse<AttendantProfileResponse>>> getAttendants(
+            @ModelAttribute AttendantProfileParamsRequest params) {
+        return ok("Fetched attendants", masterDataService.getAttendants(params, getCurrentTenantId()));
     }
 
     @PostMapping("/attendants")
@@ -232,8 +245,9 @@ public class MasterDataController extends AbstractBaseController {
 
     @GetMapping("/pickup-points")
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.pickup-point.read')")
-    public ResponseEntity<GeneralResponse<List<PickupPointResponse>>> getPickupPoints() {
-        return ok("Fetched pickup points", masterDataService.getPickupPoints(getCurrentTenantId()));
+    public ResponseEntity<GeneralResponse<PageResponse<PickupPointResponse>>> getPickupPoints(
+            @ModelAttribute PickupPointParamsRequest params) {
+        return ok("Fetched pickup points", masterDataService.getPickupPoints(params, getCurrentTenantId()));
     }
 
     @PostMapping("/pickup-points")

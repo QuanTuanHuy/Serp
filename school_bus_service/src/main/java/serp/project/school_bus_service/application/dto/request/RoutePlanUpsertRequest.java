@@ -16,7 +16,6 @@ public class RoutePlanUpsertRequest extends BaseCommandRequest {
     @NotNull
     private Long schoolId;
 
-    @NotBlank
     private String routeCode;
 
     @NotBlank

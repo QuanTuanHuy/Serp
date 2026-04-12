@@ -45,6 +45,8 @@ public class SchoolBusMapper extends BaseMapper {
         response.setAddress(entity.getAddress());
         response.setContactPhone(entity.getContactPhone());
         response.setContactEmail(entity.getContactEmail());
+        response.setLatitude(entity.getLatitude());
+        response.setLongitude(entity.getLongitude());
         return response;
     }
 
@@ -121,6 +123,9 @@ public class SchoolBusMapper extends BaseMapper {
         response.setStudentName(entity.getStudent().getFullName());
         response.setPickupPointId(entity.getPickupPoint() == null ? null : entity.getPickupPoint().getId());
         response.setPickupPointName(entity.getPickupPoint() == null ? null : entity.getPickupPoint().getName());
+        response.setPickupPointAddress(entity.getPickupPoint() == null ? null : entity.getPickupPoint().getAddress());
+        response.setPickupPointLatitude(entity.getPickupPoint() == null ? null : entity.getPickupPoint().getLatitude());
+        response.setPickupPointLongitude(entity.getPickupPoint() == null ? null : entity.getPickupPoint().getLongitude());
         return response;
     }
 
@@ -130,6 +135,8 @@ public class SchoolBusMapper extends BaseMapper {
         response.setParentProfileName(entity.getParentProfile().getFullName());
         response.setSchoolId(entity.getSchool().getId());
         response.setSchoolName(entity.getSchool().getName());
+        response.setSchoolLatitude(entity.getSchool().getLatitude());
+        response.setSchoolLongitude(entity.getSchool().getLongitude());
         response.setRequestType(entity.getRequestType().name());
         response.setStatus(entity.getStatus().name());
         response.setEffectiveFrom(entity.getEffectiveFrom());
@@ -153,6 +160,8 @@ public class SchoolBusMapper extends BaseMapper {
         RoutePlanResponse response = enrich(new RoutePlanResponse(), entity);
         response.setSchoolId(entity.getSchool().getId());
         response.setSchoolName(entity.getSchool().getName());
+        response.setSchoolLatitude(entity.getSchool().getLatitude());
+        response.setSchoolLongitude(entity.getSchool().getLongitude());
         response.setRouteCode(entity.getRouteCode());
         response.setRouteName(entity.getRouteName());
         response.setServiceDate(entity.getServiceDate());
@@ -171,6 +180,9 @@ public class SchoolBusMapper extends BaseMapper {
         response.setRouteId(entity.getRoute().getId());
         response.setPickupPointId(entity.getPickupPoint().getId());
         response.setPickupPointName(entity.getPickupPoint().getName());
+        response.setPickupPointAddress(entity.getPickupPoint().getAddress());
+        response.setPickupPointLatitude(entity.getPickupPoint().getLatitude());
+        response.setPickupPointLongitude(entity.getPickupPoint().getLongitude());
         response.setStopOrder(entity.getStopOrder());
         response.setEstimatedStudentCount(entity.getEstimatedStudentCount());
         response.setPlannedArrivalTime(entity.getPlannedArrivalTime());

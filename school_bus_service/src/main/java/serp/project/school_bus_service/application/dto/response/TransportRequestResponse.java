@@ -14,6 +14,8 @@ public class TransportRequestResponse extends BaseResponse {
     private String parentProfileName;
     private Long schoolId;
     private String schoolName;
+    private Double schoolLatitude;
+    private Double schoolLongitude;
     private String requestType;
     private String status;
     private LocalDate effectiveFrom;

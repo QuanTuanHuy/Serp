@@ -1,43 +1,382 @@
 'use client';
 
+import * as React from 'react';
 import {
+  CheckCircle2,
+  ClipboardCheck,
+  History,
+  LogOut,
+  Route,
+  UserRoundCheck,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/shared/components/ui';
+import {
+  useCheckInStudentMutation,
+  useCheckOutStudentMutation,
   useGetAttendanceQuery,
+  useGetRouteAttendanceManifestQuery,
+  useGetRouteByIdQuery,
+  useGetRoutesQuery,
   useGetTripHistoryQuery,
 } from '../api/schoolBusApi';
+import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
+import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
+import { SchoolBusPaginationBar } from '../components/SchoolBusPaginationBar';
+import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
 import { SchoolBusSection } from '../components/SchoolBusSection';
+import { SchoolBusScrollableTable } from '../components/SchoolBusScrollableTable';
+import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
+import { RouteMap } from '../components/map/RouteMap';
+import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
+import { schoolBusUi } from '../theme';
+import { formatDate, formatDateTime, getPageItems } from '../utils';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/shared/components/ui/table';
 
 export function SchoolBusAttendancePage() {
-  const { data: attendanceData } = useGetAttendanceQuery();
-  const { data: historyData } = useGetTripHistoryQuery();
+  const attendancePagination = useSchoolBusPagination({
+    page: 0,
+    size: 8,
+    sortBy: 'recordedAt',
+    sortDirection: 'DESC',
+  });
+  const historyPagination = useSchoolBusPagination({
+    page: 0,
+    size: 6,
+    sortBy: 'serviceDate',
+    sortDirection: 'DESC',
+  });
+  const { data: attendanceData } = useGetAttendanceQuery(
+    attendancePagination.params
+  );
+  const { data: historyData } = useGetTripHistoryQuery(historyPagination.params);
+  const { data: routesData } = useGetRoutesQuery({
+    page: 0,
+    size: 100,
+    sortBy: 'serviceDate',
+    sortDirection: 'DESC',
+  });
+  const [checkInStudent, { isLoading: checkingIn }] = useCheckInStudentMutation();
+  const [checkOutStudent, { isLoading: checkingOut }] =
+    useCheckOutStudentMutation();
+  const activeRoutes = React.useMemo(
+    () =>
+      getPageItems(routesData?.data).filter((route) =>
+        ['ASSIGNED', 'IN_PROGRESS', 'PLANNED'].includes(route.status)
+      ),
+    [routesData]
+  );
+  const [selectedRouteId, setSelectedRouteId] = React.useState<number | null>(
+    null
+  );
+
+  React.useEffect(() => {
+    if (!selectedRouteId && activeRoutes.length > 0) {
+      setSelectedRouteId(activeRoutes[0].id);
+    }
+  }, [activeRoutes, selectedRouteId]);
+
+  const { data: manifestData, isLoading: manifestLoading } =
+    useGetRouteAttendanceManifestQuery(selectedRouteId as number, {
+      skip: !selectedRouteId,
+    });
+  const { data: routeDetailData } = useGetRouteByIdQuery(selectedRouteId as number, {
+    skip: !selectedRouteId,
+  });
+
+  const attendance = getPageItems(attendanceData?.data);
+  const history = getPageItems(historyData?.data);
+  const manifest = manifestData?.data;
+
+  const checkedInCount = attendance.filter(
+    (item) => item.attendanceType === 'CHECKED_IN'
+  ).length;
+  const checkedOutCount = attendance.filter(
+    (item) => item.attendanceType === 'CHECKED_OUT'
+  ).length;
+  const completedTrips = history.filter((trip) => trip.status === 'COMPLETED').length;
+
+  const handleCheckIn = async (studentId: number) => {
+    if (!selectedRouteId) {
+      return;
+    }
+
+    try {
+      const response = await checkInStudent({
+        routeId: selectedRouteId,
+        studentId,
+      }).unwrap();
+      toast.success(response.message || 'Check-in recorded');
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to record check-in');
+    }
+  };
+
+  const handleCheckOut = async (studentId: number) => {
+    if (!selectedRouteId) {
+      return;
+    }
+
+    try {
+      const response = await checkOutStudent({
+        routeId: selectedRouteId,
+        studentId,
+      }).unwrap();
+      toast.success(response.message || 'Check-out recorded');
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to record check-out');
+    }
+  };
 
   return (
-    <div className='grid gap-6 xl:grid-cols-2'>
-      <SchoolBusSection title='Attendance Feed'>
-        <div className='space-y-3'>
-          {attendanceData?.data.map((attendance) => (
-            <div key={attendance.id} className='rounded-xl border p-4'>
-              <p className='font-medium'>
-                {attendance.student?.fullName || 'Unknown student'}
-              </p>
-              <p className='text-sm text-muted-foreground'>
-                {attendance.attendanceType} • {attendance.recordedAt}
-              </p>
+    <SchoolBusPageShell
+      title='Attendance and trip history'
+      description='Attendance is now route-driven: open a route manifest, record check-in and check-out, and review the historical trail.'
+    >
+      <div className='grid gap-4 md:grid-cols-4'>
+        <SchoolBusMetricCard
+          label='Attendance events'
+          value={attendance.length}
+          hint='All attendance records captured in the tenant'
+          icon={ClipboardCheck}
+          tone='info'
+        />
+        <SchoolBusMetricCard
+          label='Checked in'
+          value={checkedInCount}
+          hint='Students marked as boarded'
+          icon={UserRoundCheck}
+          tone='success'
+        />
+        <SchoolBusMetricCard
+          label='Checked out'
+          value={checkedOutCount}
+          hint='Students marked as dropped off'
+          icon={LogOut}
+          tone='default'
+        />
+        <SchoolBusMetricCard
+          label='Completed trips'
+          value={completedTrips}
+          hint='Trips fully closed in history'
+          icon={History}
+          tone='warning'
+        />
+      </div>
+
+      <div className='grid gap-6 xl:grid-cols-[1.15fr_0.85fr]'>
+        <SchoolBusSection
+          title='Attendance manifest'
+          description='Select an active route to open the student manifest and record attendance.'
+        >
+          {activeRoutes.length === 0 ? (
+            <SchoolBusEmptyState
+              title='No active routes available'
+              description='Create and plan routes before attendance can be recorded.'
+              icon={Route}
+            />
+          ) : (
+            <div className='space-y-4'>
+              <div className='flex flex-wrap gap-2'>
+                {activeRoutes.map((route) => (
+                  <Button
+                    key={route.id}
+                    variant={selectedRouteId === route.id ? 'default' : 'outline'}
+                    className='rounded-full'
+                    onClick={() => setSelectedRouteId(route.id)}
+                  >
+                    {route.routeCode}
+                  </Button>
+                ))}
+              </div>
+
+              {manifestLoading || !manifest ? (
+                <p className='text-sm text-muted-foreground'>
+                  Loading attendance manifest...
+                </p>
+              ) : (
+                <>
+                  {routeDetailData?.data ? (
+                    <RouteMap
+                      route={routeDetailData.data.route}
+                      stops={routeDetailData.data.stops}
+                      className='mb-4 h-[320px] w-full overflow-hidden rounded-[20px] border'
+                    />
+                  ) : null}
+
+                  <div className={schoolBusUi.interactiveCard}>
+                    <div className='flex flex-wrap items-center justify-between gap-4'>
+                      <div>
+                        <p className='font-medium'>
+                          {manifest.route.routeCode} - {manifest.route.routeName}
+                        </p>
+                        <p className='mt-1 text-sm text-muted-foreground'>
+                          {manifest.route.schoolName} -{' '}
+                          {formatDate(manifest.route.serviceDate)} -{' '}
+                          {manifest.route.shiftType}
+                        </p>
+                      </div>
+                      <SchoolBusStatusBadge status={manifest.route.status} />
+                    </div>
+                    <div className='mt-3 text-sm text-muted-foreground'>
+                      Assigned crew:{' '}
+                      {manifest.assignment
+                        ? `${manifest.assignment.driverName} / ${manifest.assignment.busPlateNumber}`
+                        : 'No assignment yet'}
+                    </div>
+                  </div>
+
+                  {manifest.students.length === 0 ? (
+                    <SchoolBusEmptyState
+                      title='No eligible students on this route'
+                      description='Only students with valid approved requests appear in the manifest.'
+                      icon={ClipboardCheck}
+                    />
+                  ) : (
+                    <SchoolBusScrollableTable>
+                      <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Student</TableHead>
+                          <TableHead>Pickup point</TableHead>
+                          <TableHead>Last event</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className='text-right'>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {manifest.students.map((student) => (
+                          <TableRow key={student.studentId}>
+                            <TableCell>{student.studentName}</TableCell>
+                            <TableCell>
+                              {student.pickupPointName || 'No pickup point'}
+                            </TableCell>
+                            <TableCell>
+                              <div className='text-sm'>
+                                <p>{student.latestAttendanceType || 'No events'}</p>
+                                <p className='text-xs text-muted-foreground'>
+                                  {formatDateTime(student.latestRecordedAt)}
+                                </p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <SchoolBusStatusBadge
+                                status={student.latestAttendanceStatus || 'PENDING'}
+                              />
+                            </TableCell>
+                            <TableCell className='text-right'>
+                              <div className='flex justify-end gap-2'>
+                                <Button
+                                  size='sm'
+                                  variant='outline'
+                                  disabled={checkingIn}
+                                  onClick={() => handleCheckIn(student.studentId)}
+                                >
+                                  {checkingIn ? 'Checking in...' : 'Check in'}
+                                </Button>
+                                <Button
+                                  size='sm'
+                                  disabled={checkingOut}
+                                  onClick={() => handleCheckOut(student.studentId)}
+                                >
+                                  {checkingOut ? 'Checking out...' : 'Check out'}
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                      </Table>
+                    </SchoolBusScrollableTable>
+                  )}
+                </>
+              )}
             </div>
-          ))}
+          )}
+        </SchoolBusSection>
+
+        <div className='space-y-6'>
+          <SchoolBusSection
+            title='Attendance feed'
+            description='Most recent route attendance activity across the tenant.'
+          >
+            {attendance.length === 0 ? (
+              <SchoolBusEmptyState
+                title='No attendance activity yet'
+                description='Attendance will appear after route operations start recording events.'
+                icon={ClipboardCheck}
+              />
+            ) : (
+              <div className='space-y-3'>
+                {attendance.map((item) => (
+                  <div key={item.id} className={schoolBusUi.interactiveCard}>
+                    <div className='flex items-start justify-between gap-4'>
+                      <div>
+                        <p className='font-medium'>{item.studentName}</p>
+                        <p className='mt-1 text-sm text-muted-foreground'>
+                          {item.routeCode}
+                        </p>
+                        <p className='mt-2 text-xs text-muted-foreground'>
+                          {formatDateTime(item.recordedAt)}
+                        </p>
+                      </div>
+                      <SchoolBusStatusBadge status={item.attendanceType} />
+                    </div>
+                  </div>
+                ))}
+                <SchoolBusPaginationBar
+                  page={attendanceData?.data}
+                  onPageChange={attendancePagination.setPage}
+                />
+              </div>
+            )}
+          </SchoolBusSection>
+
+          <SchoolBusSection
+            title='Trip history'
+            description='Closed routes with captured crew and time metadata.'
+          >
+            {history.length === 0 ? (
+              <SchoolBusEmptyState
+                title='No trip history yet'
+                description='Completed routes will show up here after dispatch closes them.'
+                icon={History}
+              />
+            ) : (
+              <div className='space-y-3'>
+                {history.map((trip) => (
+                  <div key={trip.id} className={schoolBusUi.interactiveCard}>
+                    <div className='flex items-start justify-between gap-4'>
+                      <div>
+                        <p className='font-medium'>{trip.routeCode}</p>
+                        <p className='mt-1 text-sm text-muted-foreground'>
+                          {formatDate(trip.serviceDate)}
+                        </p>
+                        <p className='mt-2 text-xs text-muted-foreground'>
+                          {trip.driverName || 'No driver'} -{' '}
+                          {trip.busPlateNumber || 'No bus'}
+                        </p>
+                      </div>
+                      <SchoolBusStatusBadge status={trip.status} />
+                    </div>
+                  </div>
+                ))}
+                <SchoolBusPaginationBar
+                  page={historyData?.data}
+                  onPageChange={historyPagination.setPage}
+                />
+              </div>
+            )}
+          </SchoolBusSection>
         </div>
-      </SchoolBusSection>
-      <SchoolBusSection title='Trip History'>
-        <div className='space-y-3'>
-          {historyData?.data.map((trip) => (
-            <div key={trip.id} className='rounded-xl border p-4'>
-              <p className='font-medium'>{trip.routeCode}</p>
-              <p className='text-sm text-muted-foreground'>
-                {trip.serviceDate} • {trip.status}
-              </p>
-            </div>
-          ))}
-        </div>
-      </SchoolBusSection>
-    </div>
+      </div>
+    </SchoolBusPageShell>
   );
 }
