@@ -40,6 +40,18 @@ public class EventConstants {
     }
 
     @UtilityClass
+    public static class Worklog {
+        public static final String TOPIC = "serp.pm.worklog.events";
+        public static final String AGGREGATE = "WORKLOG";
+
+        public static class EventType {
+            public static final String WORKLOG_CREATED = "WORKLOG_CREATED";
+            public static final String WORKLOG_UPDATED = "WORKLOG_UPDATED";
+            public static final String WORKLOG_DELETED = "WORKLOG_DELETED";
+        }
+    }
+
+    @UtilityClass
     public static class IssueType {
         public static final String TOPIC = "serp.pm.issuetype.events";
         public static final String AGGREGATE = "ISSUE_TYPE";

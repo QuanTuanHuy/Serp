@@ -148,6 +148,7 @@ public class GlobalExceptionHandler {
                  SERVICE_ACCOUNT_NOT_FOUND -> HttpStatus.NOT_FOUND;
 
             case PROJECT_PERMISSION_DENIED,
+                 WORKLOG_NOT_OWNER,
                  WORK_ITEM_SECURITY_ACCESS_DENIED,
                  TRANSITION_CONDITION_FAILED -> HttpStatus.FORBIDDEN;
 
