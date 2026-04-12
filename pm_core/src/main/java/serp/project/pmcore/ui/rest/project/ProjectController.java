@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -19,6 +20,9 @@ import org.springframework.web.bind.annotation.RestController;
 import serp.project.pmcore.application.project.command.create.CreateProjectCommand;
 import serp.project.pmcore.application.project.command.create.CreateProjectCommandHandler;
 import serp.project.pmcore.application.project.command.create.CreateProjectResult;
+import serp.project.pmcore.application.project.command.update.UpdateProjectCommand;
+import serp.project.pmcore.application.project.command.update.UpdateProjectCommandHandler;
+import serp.project.pmcore.application.project.command.update.UpdateProjectResult;
 import serp.project.pmcore.application.project.query.get.GetProjectByIdQuery;
 import serp.project.pmcore.application.project.query.get.GetProjectByIdQueryHandler;
 import serp.project.pmcore.application.project.query.get.GetProjectByKeyQuery;
@@ -33,6 +37,7 @@ import serp.project.pmcore.domain.shared.exception.AccessDeniedException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.kernel.utils.AuthUtils;
 import serp.project.pmcore.ui.rest.project.dto.request.CreateProjectRequest;
+import serp.project.pmcore.ui.rest.project.dto.request.UpdateProjectRequest;
 import serp.project.pmcore.ui.rest.shared.response.GeneralResponse;
 import serp.project.pmcore.ui.rest.shared.response.ResponseUtils;
 
@@ -44,6 +49,7 @@ public class ProjectController {
     private final AuthUtils authUtils;
     private final ResponseUtils responseUtils;
     private final CreateProjectCommandHandler createProjectCommandHandler;
+    private final UpdateProjectCommandHandler updateProjectCommandHandler;
     private final GetProjectByIdQueryHandler getProjectByIdQueryHandler;
     private final GetProjectByKeyQueryHandler getProjectByKeyQueryHandler;
     private final ListProjectsQueryHandler listProjectsQueryHandler;
@@ -80,6 +86,26 @@ public class ProjectController {
         ));
 
         return ResponseEntity.status(HttpStatus.CREATED).body(responseUtils.success(response));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<GeneralResponse<UpdateProjectResult>> updateProject(
+            @PathVariable("id") Long projectId,
+            @Valid @RequestBody UpdateProjectRequest request) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        UpdateProjectResult response = updateProjectCommandHandler.handle(new UpdateProjectCommand(
+                projectId,
+                request.toData(),
+                tenantId,
+                userId,
+                authUtils.getCurrentGroups()
+        ));
+
+        return ResponseEntity.ok(responseUtils.success(response));
     }
 
     @GetMapping("/{id}")
