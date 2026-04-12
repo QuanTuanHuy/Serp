@@ -18,8 +18,8 @@ import serp.project.pmcore.application.workitem.command.create.support.WorkItemC
 import serp.project.pmcore.application.workitem.command.create.support.CreateWorkItemFieldRulesResolver;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemDraftFactory;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemFieldWriteValidator;
-import serp.project.pmcore.domain.customfield.dto.ResolvedCustomFields;
-import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldResolver;
+import serp.project.pmcore.domain.customfield.dto.WorkItemCustomFieldMutationPlan;
+import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldMutationService;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
@@ -33,9 +33,7 @@ import serp.project.pmcore.domain.shared.enums.OutboxEventStatus;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.workitem.dto.WorkItemFieldRules;
-import serp.project.pmcore.domain.workitem.entity.WorkItemCustomFieldValueEntity;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
-import serp.project.pmcore.domain.workitem.port.IWorkItemCustomFieldValuePort;
 import serp.project.pmcore.domain.workitem.service.IWorkItemAuthorizationSupportService;
 import serp.project.pmcore.domain.workitem.service.IWorkItemService;
 import serp.project.pmcore.kernel.utils.JsonUtils;
@@ -54,12 +52,11 @@ public class CreateWorkItemCommandHandler
     private final IWorkItemService workItemService;
     private final WorkItemCreateConfigurationResolver workItemCreateConfigurationResolver;
     private final IWorkItemAuthorizationSupportService workItemAuthorizationSupportService;
-    private final IWorkItemCustomFieldResolver workItemCustomFieldResolver;
+    private final IWorkItemCustomFieldMutationService workItemCustomFieldMutationService;
     private final WorkItemCreateRequiredFieldValidator workItemCreateRequiredFieldValidator;
     private final WorkItemDraftFactory workItemDraftFactory;
     private final CreateWorkItemFieldRulesResolver createWorkItemFieldRulesResolver;
     private final WorkItemFieldWriteValidator workItemFieldWriteValidator;
-    private final IWorkItemCustomFieldValuePort workItemCustomFieldValuePort;
     private final IOutboxEventService outboxEventService;
     private final JsonUtils jsonUtils;
 
@@ -112,7 +109,7 @@ public class CreateWorkItemCommandHandler
             );
         }
 
-        ResolvedCustomFields resolvedCustomFields = workItemCustomFieldResolver.resolveCustomFields(
+        WorkItemCustomFieldMutationPlan customFieldPlan = workItemCustomFieldMutationService.planCreate(
                 resolvedConfiguration.issueType().getTypeKey(),
                 createWorkItemData.getCustomFields(),
                 toRequiredCustomFieldMap(fieldRules)
@@ -123,7 +120,7 @@ public class CreateWorkItemCommandHandler
                 assigneeId,
                 securityLevelId,
                 fieldRules,
-                resolvedCustomFields
+                customFieldPlan.missingRequiredFields()
         );
 
         long issueNo = workItemService.getNextIssueNumber(projectId, tenantId);
@@ -143,7 +140,7 @@ public class CreateWorkItemCommandHandler
         );
 
         WorkItemEntity savedWorkItem = workItemService.createWorkItem(workItem, tenantId, userId);
-        persistCustomFieldValues(savedWorkItem.getId(), resolvedCustomFields.values(), tenantId, userId);
+        workItemCustomFieldMutationService.applyPlan(savedWorkItem.getId(), tenantId, userId, customFieldPlan);
         persistCreatedOutboxEvent(savedWorkItem, tenantId, projectId);
 
         log.info("Created work item id={} key={} projectId={} tenantId={}",
@@ -156,24 +153,6 @@ public class CreateWorkItemCommandHandler
         if (Boolean.TRUE.equals(project.getIsArchived())) {
             throw new BusinessRuleViolationException(DomainErrorCode.PROJECT_ARCHIVED);
         }
-    }
-
-    private void persistCustomFieldValues(Long workItemId,
-                                          List<WorkItemCustomFieldValueEntity> values,
-                                          Long tenantId,
-                                          Long userId) {
-        if (values == null || values.isEmpty()) {
-            return;
-        }
-
-        long now = System.currentTimeMillis();
-        for (WorkItemCustomFieldValueEntity value : values) {
-            value.setWorkItemId(workItemId);
-            value.setTenantId(tenantId);
-            value.applyCreate(userId, now);
-        }
-
-        workItemCustomFieldValuePort.saveAll(values);
     }
 
     private void persistCreatedOutboxEvent(WorkItemEntity workItem,
