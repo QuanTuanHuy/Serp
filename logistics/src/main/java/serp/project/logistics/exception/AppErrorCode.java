@@ -14,6 +14,9 @@ public enum AppErrorCode {
     EXCEED_REMAINING_QUANTITY("LOGISTICS-BIZ-005", "Quantity exceeds remaining allowable amount",
             HttpStatus.BAD_REQUEST),
     DATA_INTEGRITY_VIOLATION("LOGISTICS-BIZ-006", "Data integrity violation", HttpStatus.BAD_REQUEST),
+    INSUFFICIENT_QUANTITY("LOGISTICS-BIZ-007", "Insufficient quantity available", HttpStatus.BAD_REQUEST),
+    INVALID_ORDER_STATUS("LOGISTICS-BIZ-008", "Invalid order status for this operation", HttpStatus.BAD_REQUEST),
+    INVALID_SHIPMENT_STATUS("LOGISTICS-BIZ-009", "Invalid shipment status for this operation", HttpStatus.BAD_REQUEST),
 
     UNKNOWN_ENUM_VALUE("LOGISTICS-VAL-001", "Unknown enum value provided", HttpStatus.BAD_REQUEST),
     REQUEST_VALIDATION_FAILED("LOGISTICS-VAL-002", "Request validation failed", HttpStatus.BAD_REQUEST),

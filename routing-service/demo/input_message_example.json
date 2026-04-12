@@ -1,0 +1,36 @@
+{
+  "plan_id": "PLD-20231025001",
+  "depot": {
+    "depot_id": "FAC_000001",
+    "lat": 21.028511,
+    "lng": 105.804817
+  },
+  "vehicles": [
+    {
+      "vehicle_id": "VSP_000001",
+      "max_weight": 500,
+      "max_volume": 4500
+    },
+    {
+      "vehicle_id": "VSP_000002",
+      "max_weight": 1000,
+      "max_volume": 8500
+    }
+  ],
+  "slips": [
+    {
+      "slip_id": "DSL_000001",
+      "lat": 21.031111,
+      "lng": 105.811111,
+      "weight": 50,
+      "volume": 200
+    },
+    {
+      "slip_id": "DSL_000002",
+      "lat": 21.042222,
+      "lng": 105.822222,
+      "weight": 120,
+      "volume": 500
+    }
+  ]
+}

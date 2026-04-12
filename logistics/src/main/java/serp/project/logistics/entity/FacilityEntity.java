@@ -88,6 +88,8 @@ public class FacilityEntity {
         addressForm.setDefault(true);
         addressForm.setFullAddress(form.getFullAddress());
         this.address = new AddressEntity(addressForm, tenantId);
+
+        this.currentAddressId = this.address.getId();
     }
 
     public void update(FacilityUpdateForm form) {
