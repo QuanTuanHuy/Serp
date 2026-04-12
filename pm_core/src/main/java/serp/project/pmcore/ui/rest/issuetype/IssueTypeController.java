@@ -82,9 +82,6 @@ public class IssueTypeController {
         IssueTypeView response = updateIssueTypeCommandHandler.handle(new UpdateIssueTypeCommand(
                 id,
                 request.toData(),
-                request.isTypeKeyProvided(),
-                request.isTenantIdProvided(),
-                request.isSystemProvided(),
                 tenantId,
                 userId
         ));

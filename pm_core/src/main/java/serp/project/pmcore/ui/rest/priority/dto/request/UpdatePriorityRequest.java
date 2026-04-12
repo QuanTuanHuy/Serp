@@ -6,14 +6,12 @@
 package serp.project.pmcore.ui.rest.priority.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import serp.project.pmcore.domain.priority.dto.PriorityUpdateData;
 
 @Getter
 @NoArgsConstructor
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class UpdatePriorityRequest {
 
     private String name;
@@ -26,13 +24,6 @@ public class UpdatePriorityRequest {
     private boolean colorProvided;
     private Integer sequence;
     private boolean sequenceProvided;
-
-    private String priorityKey;
-    private boolean priorityKeyProvided;
-    private Long tenantId;
-    private boolean tenantIdProvided;
-    private Boolean isSystem;
-    private boolean isSystemProvided;
 
     public void setName(String name) {
         this.name = name;
@@ -57,21 +48,6 @@ public class UpdatePriorityRequest {
     public void setSequence(Integer sequence) {
         this.sequence = sequence;
         this.sequenceProvided = true;
-    }
-
-    public void setPriorityKey(String priorityKey) {
-        this.priorityKey = priorityKey;
-        this.priorityKeyProvided = true;
-    }
-
-    public void setTenantId(Long tenantId) {
-        this.tenantId = tenantId;
-        this.tenantIdProvided = true;
-    }
-
-    public void setIsSystem(Boolean isSystem) {
-        this.isSystem = isSystem;
-        this.isSystemProvided = true;
     }
 
     @JsonIgnore

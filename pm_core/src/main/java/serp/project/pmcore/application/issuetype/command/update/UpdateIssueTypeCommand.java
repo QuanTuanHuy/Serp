@@ -12,9 +12,6 @@ import serp.project.pmcore.domain.issuetype.dto.IssueTypeUpdateData;
 public record UpdateIssueTypeCommand(
         Long issueTypeId,
         IssueTypeUpdateData data,
-        boolean typeKeyProvided,
-        boolean tenantIdProvided,
-        boolean isSystemProvided,
         Long tenantId,
         Long userId
 ) implements ICommand<IssueTypeView> {

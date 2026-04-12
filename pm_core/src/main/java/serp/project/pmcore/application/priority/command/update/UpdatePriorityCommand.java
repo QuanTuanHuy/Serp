@@ -12,9 +12,6 @@ import serp.project.pmcore.domain.priority.dto.PriorityUpdateData;
 public record UpdatePriorityCommand(
         Long priorityId,
         PriorityUpdateData data,
-        boolean priorityKeyProvided,
-        boolean tenantIdProvided,
-        boolean isSystemProvided,
         Long tenantId,
         Long userId
 ) implements ICommand<PriorityView> {

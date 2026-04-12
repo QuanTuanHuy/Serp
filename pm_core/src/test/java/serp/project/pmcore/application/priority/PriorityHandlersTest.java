@@ -106,22 +106,29 @@ class PriorityHandlersTest {
     }
 
     @Test
-    void updateHandlerShouldRejectImmutableFieldChanges() {
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> updateHandler.handle(new UpdatePriorityCommand(
-                        PRIORITY_ID,
-                        new PriorityUpdateData("High", true, null, false, null, false, null, false, null, false),
-                        true,
-                        false,
-                        false,
-                        TENANT_ID,
-                        USER_ID
-                ))
-        );
+    void updateHandlerShouldPublishUpdatedOutboxEvent() {
+        PriorityEntity updated = PriorityEntity.builder()
+                .id(PRIORITY_ID)
+                .tenantId(TENANT_ID)
+                .priorityKey("high")
+                .name("High")
+                .sequence(2)
+                .isSystem(false)
+                .build();
 
-        verify(priorityService, never()).updatePriority(any(), any(), any(), any());
-        verify(priorityOutboxPublisher, never()).publishPriorityUpdated(any(), any());
+        when(priorityService.updatePriority(any(), any(), any(), any())).thenReturn(updated);
+
+        PriorityView result = updateHandler.handle(new UpdatePriorityCommand(
+                PRIORITY_ID,
+                new PriorityUpdateData("High", true, null, false, null, false, null, false, 2, true),
+                TENANT_ID,
+                USER_ID
+        ));
+
+        verify(priorityService).updatePriority(eq(PRIORITY_ID), any(), eq(TENANT_ID), eq(USER_ID));
+        verify(priorityOutboxPublisher).publishPriorityUpdated(eq(TENANT_ID), any(PriorityEventPayload.class));
+        assertEquals(2, result.sequence());
+        assertFalse(result.readOnly());
     }
 
     @Test

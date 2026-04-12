@@ -25,7 +25,6 @@ public class UpdateIssueTypeCommandHandler implements ICommandHandler<UpdateIssu
     @Override
     @Transactional(rollbackFor = Exception.class)
     public IssueTypeView handle(UpdateIssueTypeCommand command) {
-        validateImmutableFields(command);
         IssueTypeEntity updated = issueTypeService.updateIssueType(
                 command.issueTypeId(),
                 command.data(),
@@ -37,17 +36,5 @@ public class UpdateIssueTypeCommandHandler implements ICommandHandler<UpdateIssu
                 IssueTypeEventPayload.from(updated, command.userId())
         );
         return IssueTypeView.from(updated, false);
-    }
-
-    private void validateImmutableFields(UpdateIssueTypeCommand command) {
-        if (command.typeKeyProvided()) {
-            throw new IllegalArgumentException("typeKey is immutable and cannot be updated");
-        }
-        if (command.tenantIdProvided()) {
-            throw new IllegalArgumentException("tenantId is system-controlled and cannot be updated");
-        }
-        if (command.isSystemProvided()) {
-            throw new IllegalArgumentException("isSystem is system-controlled and cannot be updated");
-        }
     }
 }

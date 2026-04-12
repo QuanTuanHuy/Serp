@@ -25,7 +25,6 @@ public class UpdatePriorityCommandHandler implements ICommandHandler<UpdatePrior
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PriorityView handle(UpdatePriorityCommand command) {
-        validateImmutableFields(command);
         PriorityEntity updated = priorityService.updatePriority(
                 command.priorityId(),
                 command.data(),
@@ -37,17 +36,5 @@ public class UpdatePriorityCommandHandler implements ICommandHandler<UpdatePrior
                 PriorityEventPayload.from(updated, command.userId())
         );
         return PriorityView.from(updated, false);
-    }
-
-    private void validateImmutableFields(UpdatePriorityCommand command) {
-        if (command.priorityKeyProvided()) {
-            throw new IllegalArgumentException("priorityKey is immutable and cannot be updated");
-        }
-        if (command.tenantIdProvided()) {
-            throw new IllegalArgumentException("tenantId is system-controlled and cannot be updated");
-        }
-        if (command.isSystemProvided()) {
-            throw new IllegalArgumentException("isSystem is system-controlled and cannot be updated");
-        }
     }
 }

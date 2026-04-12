@@ -82,9 +82,6 @@ public class PriorityController {
         PriorityView response = updatePriorityCommandHandler.handle(new UpdatePriorityCommand(
                 id,
                 request.toData(),
-                request.isPriorityKeyProvided(),
-                request.isTenantIdProvided(),
-                request.isSystemProvided(),
                 tenantId,
                 userId
         ));
