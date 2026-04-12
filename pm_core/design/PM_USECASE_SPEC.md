@@ -1,7 +1,7 @@
 # PM Core - Use Case Specification
 
-> **Version**: 1.1
-> **Date**: 2026-03-19
+> **Version**: 1.2
+> **Date**: 2026-04-12
 > **Module Code**: PM
 > **Tech Stack**: Java 21 (Spring Boot) + PostgreSQL + Kafka
 > **Soft Delete**: `deleted_at TIMESTAMP NULL`
@@ -169,11 +169,11 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 | UC-PM-176 | Create Issue Link | Team Member | High | Simple | Issue Link |
 | UC-PM-177 | Delete Issue Link | Team Member | Medium | Simple | Issue Link |
 | UC-PM-178 | List Issue Links for Work Item | Team Member | Medium | Simple | Issue Link |
-| UC-PM-181 | Create Worklog | Team Member | High | Simple | Worklog |
-| UC-PM-182 | Update Worklog | Team Member | Medium | Simple | Worklog |
-| UC-PM-183 | Delete Worklog | Team Member | Medium | Simple | Worklog |
-| UC-PM-184 | List Worklogs for Work Item | Team Member | Medium | Simple | Worklog |
-| UC-PM-185 | Get Worklog by ID | Team Member | Low | Simple | Worklog |
+| UC-PM-181 | [Create Worklog](usecases/worklog/UC-PM-181-create-worklog.md) | Team Member | High | Simple | Worklog |
+| UC-PM-182 | [Update Worklog](usecases/worklog/UC-PM-182-update-worklog.md) | Team Member | Medium | Simple | Worklog |
+| UC-PM-183 | [Delete Worklog](usecases/worklog/UC-PM-183-delete-worklog.md) | Team Member | Medium | Simple | Worklog |
+| UC-PM-184 | [List Worklogs for Work Item](usecases/worklog/UC-PM-184-list-worklogs-for-work-item.md) | Team Member | Medium | Simple | Worklog |
+| UC-PM-185 | [Get Worklog by ID](usecases/worklog/UC-PM-185-get-worklog-by-id.md) | Team Member | Low | Simple | Worklog |
 
 ### 3.3. Module 03: Workflow Engine
 
@@ -1963,62 +1963,15 @@ GET `/api/v1/work-items/{workItemId}/links` -> return both inward and outward li
 
 #### UC-PM-181 to UC-PM-185: Worklog Management
 
-##### UC-PM-181: Create Worklog
+##### Use Case Documents
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-181 |
-| **Use Case Name** | Create Worklog |
-| **Priority** | High |
-| **Complexity** | Simple |
-
-**Permission**: `PM.WORKLOG.CREATE`
-
-**Main Flow**:
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 1 | Team Member | Sends POST `/api/v1/work-items/{workItemId}/worklogs` with worklog data |
-| 2 | System | Validates JWT and permissions |
-| 3 | System | Validates work item exists |
-| 4 | System | Persists worklog with `author_id=userId` |
-| 5 | System | Updates `time_spent` on work item (increment) and recalculates `time_remaining_estimate` |
-| 6 | System | Publishes `WORKLOG_CREATED` to `serp.pm.worklog.events` |
-| 7 | System | Returns HTTP 201 |
-
-**Input Data**:
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| time_spent | int64 | Yes | min:60 (at least 1 minute in seconds) | Time logged in seconds |
-| start_date | timestamp | Yes | not in future | When work started |
-| comment | string | No | max:5000 | Work description |
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-181-01 | Logging work updates the work item's `time_spent` (sum of all worklogs) | Service layer |
-| BR-PM-181-02 | `time_remaining_estimate` is reduced by logged time (floor at 0) | Service layer |
-
-##### UC-PM-182: Update Worklog
-
-**Permission**: `PM.WORKLOG.MANAGE` (own worklogs) or `PM.WORKLOG.MANAGE_ALL`
-
-Can update `time_spent`, `start_date`, `comment`. Recalculates work item `time_spent` totals.
-
-##### UC-PM-183: Delete Worklog
-
-Soft-delete. Recalculates work item `time_spent`. Only author or admin.
-
-##### UC-PM-184: List Worklogs for Work Item
-
-GET `/api/v1/work-items/{workItemId}/worklogs` with pagination.
-
-##### UC-PM-185: Get Worklog by ID
-
-GET `/api/v1/worklogs/{worklogId}`.
-
+| UC ID | Specification |
+|-------|---------------|
+| UC-PM-181 | [Create Worklog](usecases/worklog/UC-PM-181-create-worklog.md) |
+| UC-PM-182 | [Update Worklog](usecases/worklog/UC-PM-182-update-worklog.md) |
+| UC-PM-183 | [Delete Worklog](usecases/worklog/UC-PM-183-delete-worklog.md) |
+| UC-PM-184 | [List Worklogs for Work Item](usecases/worklog/UC-PM-184-list-worklogs-for-work-item.md) |
+| UC-PM-185 | [Get Worklog by ID](usecases/worklog/UC-PM-185-get-worklog-by-id.md) |
 ---
 
 ### 5.3. Workflow Engine (Module 03)
