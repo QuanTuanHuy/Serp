@@ -122,12 +122,12 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 	)
 
 	RegisterLogistics2Routes(
-    group,
+		group,
 		p.GenericProxyController,
 		p.JWTMiddleware,
 		p.RateLimitMiddleware,
 	)
-  
+
 	RegisterFirstMileRoutes(
 		group,
 		p.GenericProxyController,
