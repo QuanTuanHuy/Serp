@@ -2,7 +2,7 @@
 
 > Comprehensive Inventory and Warehouse Management System for the SERP ERP Platform
 
-A full-featured logistics and supply chain microservice built with Spring Boot 4.0 that manages real-time inventory tracking, warehouse operations, shipment processing, and product distribution across multiple facilities. Designed for enterprise-scale operations with multi-tenant support and role-based access control.
+A full-featured logistics and supply chain microservice built with Spring Boot 4.0 that manages real-time inventory tracking, warehouse operations, shipment processing, and product distribution across multiple facilities. Designed for enterprise-scale operations with multi-tenant support and role-based access control
 
 ---
 

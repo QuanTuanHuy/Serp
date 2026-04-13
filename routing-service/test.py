@@ -36,4 +36,3 @@ input = """
 input_dict = eval(input)
 output = process_routing_request(input_dict)
 print(output)
-
