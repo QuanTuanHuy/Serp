@@ -223,6 +223,13 @@ export const api = createApi({
     'logistics/Product',
     'logistics/Shipment',
     'logistics/Supplier',
+    // Logistics2 tags
+    'logistics2/DeliveryPlan',
+    'logistics2/DeliverySlip',
+    'logistics2/OutboundShipment',
+    'logistics2/Route',
+    'logistics2/Vehicle',
+    'logistics2/VehicleShipper',
     // Sales tags
     'SalesCustomer',
     'Address',
