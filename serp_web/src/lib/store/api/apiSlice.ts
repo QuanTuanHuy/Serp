@@ -253,6 +253,7 @@ export const api = createApi({
     // TTCRS tags
     'ttcrs/Request',
     'ttcrs/Location',
+    'ttcrs/Resource',
   ],
 
   // Define endpoints in separate files for each module

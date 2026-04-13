@@ -5,8 +5,10 @@ import com.example.ttcrs.entity.LocationEntity;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.time.LocalDateTime;
+
 /**
- * DTO trả về thông tin tối thiểu của một Location cho dropdown.
+ * DTO trả về thông tin của một Location.
  */
 @Getter
 @Builder
@@ -15,6 +17,9 @@ public class LocationResponseDTO {
     private Long id;
     private String locationCode;
     private LocationType type;
+    private Double lat;
+    private Double lng;
+    private LocalDateTime createdStamp;
 
     /**
      * Chuyển đổi từ {@link LocationEntity} sang {@link LocationResponseDTO}.
@@ -25,6 +30,9 @@ public class LocationResponseDTO {
                 .id(entity.getId())
                 .locationCode(entity.getLocationCode())
                 .type(entity.getType())
+                .lat(entity.getLat())
+                .lng(entity.getLng())
+                .createdStamp(entity.getCreatedStamp())
                 .build();
     }
 }

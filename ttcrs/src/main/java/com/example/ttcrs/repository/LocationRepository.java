@@ -19,4 +19,12 @@ public interface LocationRepository extends JpaRepository<LocationEntity, Long> 
      * @return danh sách LocationEntity
      */
     List<LocationEntity> findAllByTenantId(Long tenantId);
+
+    /**
+     * Kiểm tra xem locationCode đã tồn tại chưa.
+     *
+     * @param locationCode mã location cần kiểm tra
+     * @return true nếu đã tồn tại
+     */
+    boolean existsByLocationCode(String locationCode);
 }

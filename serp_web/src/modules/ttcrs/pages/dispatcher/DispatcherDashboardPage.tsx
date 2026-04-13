@@ -10,6 +10,9 @@ import {
   MapPin,
   ChevronLeft,
   ChevronRight,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
 } from 'lucide-react';
 import { useAppSelector } from '@/shared/hooks';
 import { selectUserProfile } from '@/modules/account/store';
@@ -80,6 +83,14 @@ const STATUS_DOT: Record<RequestStatus, string> = {
 
 const PAGE_SIZE = 10;
 
+type SortableRequestField =
+  | 'id'
+  | 'customerId'
+  | 'srcLocationCode'
+  | 'destLocationCode'
+  | 'status'
+  | 'type';
+
 // -------------------------------------------------------------------------
 // Helpers
 // -------------------------------------------------------------------------
@@ -117,6 +128,24 @@ function StatusBadge({ status }: { status: RequestStatus }) {
       <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT[status])} />
       {label}
     </Badge>
+  );
+}
+
+function SortIcon({
+  field,
+  sortBy,
+  sortDirection,
+}: {
+  field: SortableRequestField;
+  sortBy: SortableRequestField;
+  sortDirection: 'asc' | 'desc';
+}) {
+  if (sortBy !== field)
+    return <ArrowUpDown className='ml-1 inline h-3 w-3 opacity-40' />;
+  return sortDirection === 'asc' ? (
+    <ArrowUp className='ml-1 inline h-3 w-3' />
+  ) : (
+    <ArrowDown className='ml-1 inline h-3 w-3' />
   );
 }
 
@@ -166,16 +195,28 @@ export function DispatcherDashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(0);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<SortableRequestField>('id');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  const handleSort = (field: SortableRequestField) => {
+    if (sortBy === field) {
+      setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(field);
+      setSortDirection('asc');
+    }
+    setPage(0);
+  };
 
   const queryParams = useMemo(
     () => ({
       ...(activeTab !== 'ALL' ? { statuses: [activeTab] } : {}),
       page,
       size: PAGE_SIZE,
-      sortBy: 'createdAt',
-      sortDirection: 'desc' as const,
+      sortBy,
+      sortDirection,
     }),
-    [activeTab, page]
+    [activeTab, page, sortBy, sortDirection]
   );
 
   const { data, isLoading, isError, isFetching } =
@@ -236,6 +277,9 @@ export function DispatcherDashboardPage() {
     setPage(0);
   };
 
+  const sortableHeadClass =
+    'cursor-pointer select-none px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors';
+
   return (
     <div className='flex min-h-screen flex-col bg-background px-12 py-6'>
       {/* ---- Page heading ---- */}
@@ -263,7 +307,7 @@ export function DispatcherDashboardPage() {
           />
         </div>
 
-        {/* Create button — shadcn Button outline variant */}
+        {/* Create Request */}
         <Button
           id='dispatcher-create-request-btn'
           variant='outline'
@@ -280,12 +324,12 @@ export function DispatcherDashboardPage() {
         {/* Status tabs — shadcn Tabs */}
         <div className='border-b border-border px-4 pt-3'>
           <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <TabsList className='h-auto gap-1 rounded-none border-0 bg-transparent p-0'>
+            <TabsList className='h-auto gap-1 rounded-none border-0 bg-transparent p-0 flex w-full'>
               {STATUS_TABS.map((tab) => (
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
-                  className='rounded-t-md rounded-b-none border border-b-0 border-transparent px-4 py-2.5 text-sm data-[state=active]:border-border data-[state=active]:bg-card data-[state=active]:shadow-none'
+                  className='flex-1 text-center rounded-t-md hover:bg-gray-100 dark:hover:bg-gray-800 rounded-b-none border border-b-0 border-transparent transition-colors px-4 py-2.5 text-sm data-[state=active]:border-border data-[state=active]:bg-gray-200 dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-none'
                 >
                   {tab.label}
                 </TabsTrigger>
@@ -310,23 +354,47 @@ export function DispatcherDashboardPage() {
                   <TableHead className='w-12 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
                     No
                   </TableHead>
-                  <TableHead className='px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
+                  <TableHead
+                    className={sortableHeadClass}
+                    onClick={() => handleSort('id')}
+                  >
                     Request ID
+                    <SortIcon field='id' sortBy={sortBy} sortDirection={sortDirection} />
                   </TableHead>
-                  <TableHead className='px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
+                  <TableHead
+                    className={sortableHeadClass}
+                    onClick={() => handleSort('customerId')}
+                  >
                     Customer
+                    <SortIcon field='customerId' sortBy={sortBy} sortDirection={sortDirection} />
                   </TableHead>
-                  <TableHead className='px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
+                  <TableHead
+                    className={sortableHeadClass}
+                    onClick={() => handleSort('srcLocationCode')}
+                  >
                     Origin
+                    <SortIcon field='srcLocationCode' sortBy={sortBy} sortDirection={sortDirection} />
                   </TableHead>
-                  <TableHead className='px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
+                  <TableHead
+                    className={sortableHeadClass}
+                    onClick={() => handleSort('destLocationCode')}
+                  >
                     Destination
+                    <SortIcon field='destLocationCode' sortBy={sortBy} sortDirection={sortDirection} />
                   </TableHead>
-                  <TableHead className='px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
+                  <TableHead
+                    className={sortableHeadClass}
+                    onClick={() => handleSort('status')}
+                  >
                     Status
+                    <SortIcon field='status' sortBy={sortBy} sortDirection={sortDirection} />
                   </TableHead>
-                  <TableHead className='px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
+                  <TableHead
+                    className={sortableHeadClass}
+                    onClick={() => handleSort('type')}
+                  >
                     Type
+                    <SortIcon field='type' sortBy={sortBy} sortDirection={sortDirection} />
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -395,7 +463,6 @@ export function DispatcherDashboardPage() {
                   )} of ${totalElements} requests`}
             </p>
             <div className='flex items-center gap-2'>
-              {/* Previous — shadcn Button size="icon" */}
               <Button
                 id='dispatcher-pagination-prev'
                 variant='outline'
@@ -415,7 +482,6 @@ export function DispatcherDashboardPage() {
                 )}
               </span>
 
-              {/* Next — shadcn Button size="icon" */}
               <Button
                 id='dispatcher-pagination-next'
                 variant='outline'

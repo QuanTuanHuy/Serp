@@ -5,9 +5,17 @@ import type {
   TtcrsRequest,
   RequestFilterParams,
   CreateRequestPayload,
+  CreateLocationPayload,
   LocationItem,
+  ContainerItem,
+  TruckItem,
+  TrailerItem,
+  DriverItem,
+  CreateContainerPayload,
+  CreateTruckPayload,
+  CreateTrailerPayload,
+  CreateDriverPayload,
 } from '../types';
-import { create } from 'domain';
 
 export const ttcrsApi = api.injectEndpoints({
   endpoints: (builder) => ({
@@ -90,12 +98,12 @@ export const ttcrsApi = api.injectEndpoints({
       providesTags: [{ type: 'ttcrs/Location', id: 'LIST' }],
     }),
 
-    // -------------------------------------------------------------------------  
+    // -------------------------------------------------------------------------
     // POST /ttcrs/api/v1/dispatcher/locations
     // -------------------------------------------------------------------------
     createDispatcherLocation: builder.mutation<
       TtcrsApiResponse<LocationItem>,
-      { name: string; code: string; type: string }
+      CreateLocationPayload
     >({
       query: (body) => ({
         url: '/dispatcher/locations',
@@ -105,6 +113,70 @@ export const ttcrsApi = api.injectEndpoints({
       extraOptions: { service: 'ttcrs' },
       invalidatesTags: [{ type: 'ttcrs/Location', id: 'LIST' }],
     }),
+
+    // -------------------------------------------------------------------------
+    // GET /ttcrs/api/v1/dispatcher/resources/containers
+    // -------------------------------------------------------------------------
+    getDispatcherContainers: builder.query<TtcrsApiResponse<ContainerItem[]>, void>({
+      query: () => ({ url: '/dispatcher/resources/containers', method: 'GET' }),
+      extraOptions: { service: 'ttcrs' },
+      providesTags: [{ type: 'ttcrs/Resource', id: 'CONTAINERS' }],
+    }),
+
+    // POST /ttcrs/api/v1/dispatcher/resources/containers
+    createDispatcherContainer: builder.mutation<TtcrsApiResponse<ContainerItem>, CreateContainerPayload>({
+      query: (body) => ({ url: '/dispatcher/resources/containers', method: 'POST', body }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: [{ type: 'ttcrs/Resource', id: 'CONTAINERS' }],
+    }),
+
+    // -------------------------------------------------------------------------
+    // GET /ttcrs/api/v1/dispatcher/resources/trucks
+    // -------------------------------------------------------------------------
+    getDispatcherTrucks: builder.query<TtcrsApiResponse<TruckItem[]>, void>({
+      query: () => ({ url: '/dispatcher/resources/trucks', method: 'GET' }),
+      extraOptions: { service: 'ttcrs' },
+      providesTags: [{ type: 'ttcrs/Resource', id: 'TRUCKS' }],
+    }),
+
+    // POST /ttcrs/api/v1/dispatcher/resources/trucks
+    createDispatcherTruck: builder.mutation<TtcrsApiResponse<TruckItem>, CreateTruckPayload>({
+      query: (body) => ({ url: '/dispatcher/resources/trucks', method: 'POST', body }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: [{ type: 'ttcrs/Resource', id: 'TRUCKS' }],
+    }),
+
+    // -------------------------------------------------------------------------
+    // GET /ttcrs/api/v1/dispatcher/resources/trailers
+    // -------------------------------------------------------------------------
+    getDispatcherTrailers: builder.query<TtcrsApiResponse<TrailerItem[]>, void>({
+      query: () => ({ url: '/dispatcher/resources/trailers', method: 'GET' }),
+      extraOptions: { service: 'ttcrs' },
+      providesTags: [{ type: 'ttcrs/Resource', id: 'TRAILERS' }],
+    }),
+
+    // POST /ttcrs/api/v1/dispatcher/resources/trailers
+    createDispatcherTrailer: builder.mutation<TtcrsApiResponse<TrailerItem>, CreateTrailerPayload>({
+      query: (body) => ({ url: '/dispatcher/resources/trailers', method: 'POST', body }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: [{ type: 'ttcrs/Resource', id: 'TRAILERS' }],
+    }),
+
+    // -------------------------------------------------------------------------
+    // GET /ttcrs/api/v1/dispatcher/resources/drivers
+    // -------------------------------------------------------------------------
+    getDispatcherDrivers: builder.query<TtcrsApiResponse<DriverItem[]>, void>({
+      query: () => ({ url: '/dispatcher/resources/drivers', method: 'GET' }),
+      extraOptions: { service: 'ttcrs' },
+      providesTags: [{ type: 'ttcrs/Resource', id: 'DRIVERS' }],
+    }),
+
+    // POST /ttcrs/api/v1/dispatcher/resources/drivers
+    createDispatcherDriver: builder.mutation<TtcrsApiResponse<DriverItem>, CreateDriverPayload>({
+      query: (body) => ({ url: '/dispatcher/resources/drivers', method: 'POST', body }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: [{ type: 'ttcrs/Resource', id: 'DRIVERS' }],
+    }),
   }),
 });
 
@@ -113,4 +185,12 @@ export const {
   useCreateDispatcherRequestsMutation,
   useGetDispatcherLocationsQuery,
   useCreateDispatcherLocationMutation,
+  useGetDispatcherContainersQuery,
+  useCreateDispatcherContainerMutation,
+  useGetDispatcherTrucksQuery,
+  useCreateDispatcherTruckMutation,
+  useGetDispatcherTrailersQuery,
+  useCreateDispatcherTrailerMutation,
+  useGetDispatcherDriversQuery,
+  useCreateDispatcherDriverMutation,
 } = ttcrsApi;
