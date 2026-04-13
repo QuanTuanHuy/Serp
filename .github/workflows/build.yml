@@ -84,7 +84,7 @@ jobs:
             "routing": "${{ steps.changes.outputs.routing }}",
             "sales": "${{ steps.changes.outputs.sales }}",
             "notification": "${{ steps.changes.outputs.notification }}",
-            "discuss-service": "${{ steps.changes.outputs.discuss-service }}",
+            "discuss-service": "${{ steps.changes.outputs.discuss-service }}"
           }' > changes.json
 
       - name: Upload changes artifact

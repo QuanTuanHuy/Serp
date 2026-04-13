@@ -2,7 +2,7 @@
 
 > End-to-End Sales Order Management and Customer Relationship System for the SERP ERP Platform
 
-A comprehensive sales management microservice built with Spring Boot 4.0 that handles the complete sales cycle from customer acquisition to order fulfillment. Manages customer relationships, product catalogs, sales orders, inventory coordination, and multi-facility operations with enterprise-grade security and multi-tenant architecture.
+A comprehensive sales management microservice built with Spring Boot 4.0 that handles the complete sales cycle from customer acquisition to order fulfillment. Manages customer relationships, product catalogs, sales orders, inventory coordination, and multi-facility operations with enterprise-grade security and multi-tenant architecture
 
 ---
 

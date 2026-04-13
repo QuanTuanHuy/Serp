@@ -1,6 +1,6 @@
 # API Gateway
 
-Central entry point for the SERP ERP system. Routes requests to backend microservices with JWT authentication, CORS, and circuit breaker resilience.
+Central entry point for the SERP ERP system. Routes requests to backend microservices with JWT authentication, CORS, and circuit breaker resilience
 
 **Port:** `8080` | **Go:** 1.25+ | **Framework:** Gin + Uber FX
 
