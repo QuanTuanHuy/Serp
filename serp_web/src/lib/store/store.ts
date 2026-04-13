@@ -28,6 +28,7 @@ import { ptmReducer } from '@/modules/ptm';
 import { salesReducer } from '@/modules/sales/store';
 import { purchaseReducer } from '@/modules/purchase/store';
 import { logisticsReducer } from '@/modules/logistics/store';
+import { logistics2Reducer } from '@/modules/logistics2/store';
 import { notificationReducer } from '@/modules/notifications';
 
 // reducer
@@ -77,6 +78,7 @@ const rootReducer = combineReducers({
   sales: salesReducer,
   purchase: purchaseReducer,
   logistics: logisticsReducer,
+  logistics2: logistics2Reducer,
   notifications: notificationReducer,
 });
 

@@ -28,6 +28,7 @@ export type ModuleCode =
   | 'PURCHASE'
   | 'SALES'
   | 'LOGISTICS'
+  | 'LOGISTICS2'
   | 'TMS'
   | 'FIRST_MILE'
   | 'MARKETING'
@@ -116,6 +117,11 @@ export const MODULE_ICONS: Record<ModuleCode, ModuleIconConfig> = {
     icon: MapPin,
     color: 'text-green-600',
     bgColor: 'bg-green-50 dark:bg-green-950',
+  },
+  LOGISTICS2: {
+    icon: MapPin,
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-50 dark:bg-emerald-950',
   },
   TMS: {
     icon: MapPin,
