@@ -21,6 +21,10 @@ export type ProductStatus = 'ACTIVE' | 'INACTIVE';
 export type SaleChannel = 'ONLINE' | 'PARTNER' | 'RETAIL';
 export type ShipmentType = 'INBOUND' | 'OUTBOUND';
 export type ShipmentStatus = 'CREATED' | 'IMPORTED' | 'EXPORTED';
+export type OutboundShipmentStatus =
+  | 'CREATED'
+  | 'READY_TO_EXPORT'
+  | 'DELIVERED';
 export type SupplierStatus = 'ACTIVE' | 'INACTIVE';
 
 export interface PaginationParams {
@@ -198,6 +202,7 @@ export interface InventoryItemDetail {
   tenantId: number;
   statusId: InventoryItemStatus;
   inventoryItem: InventoryItem;
+  notYetOutboundQuantity?: number;
 }
 
 export interface InventoryItemCreationForm {
@@ -411,6 +416,63 @@ export interface ShipmentFilters {
   shipmentTypeId?: ShipmentType;
   toCustomerId?: string;
   fromSupplierId?: string;
+  orderId?: string;
+}
+
+// Outbound shipment (WMS2) types
+export interface OutboundShipmentItem {
+  id: string;
+  outboundShipmentId: string;
+  inventoryItemDetailId: string;
+  inventoryItemId: string;
+  productId: string;
+  quantity: number;
+  createdStamp: string;
+  lastUpdatedStamp: string;
+  tenantId: number;
+  product?: Product;
+}
+
+export interface OutboundShipment {
+  id: string;
+  orderId: string;
+  facilityId: string;
+  name: string;
+  status: OutboundShipmentStatus;
+  createdByUserId: number;
+  createdStamp: string;
+  lastUpdatedStamp: string;
+  tenantId: number;
+  items?: OutboundShipmentItem[];
+  facility?: Facility;
+}
+
+export interface OutboundShipmentItemForm {
+  inventoryItemDetailId: string;
+  inventoryItemId: string;
+  productId: string;
+  quantity: number;
+}
+
+export interface OutboundShipmentCreationForm {
+  orderId: string;
+  facilityId: string;
+  name?: string;
+  items: OutboundShipmentItemForm[];
+}
+
+export interface OutboundShipmentItemUpdateForm {
+  quantity: number;
+}
+
+export interface OutboundShipmentUpdateForm {
+  name?: string;
+}
+
+export interface OutboundShipmentFilters {
+  query?: string;
+  status?: OutboundShipmentStatus;
+  facilityId?: string;
   orderId?: string;
 }
 

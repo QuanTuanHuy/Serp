@@ -222,6 +222,7 @@ export const api = createApi({
     'logistics/Order',
     'logistics/Product',
     'logistics/Shipment',
+    'logistics/OutboundShipment',
     'logistics/Supplier',
     // Logistics2 tags
     'logistics2/DeliveryPlan',
