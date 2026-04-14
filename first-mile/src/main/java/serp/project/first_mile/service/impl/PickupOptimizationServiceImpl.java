@@ -32,7 +32,7 @@ import serp.project.first_mile.enums.TripStatus;
 import serp.project.first_mile.enums.VehicleStatus;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
-import serp.project.first_mile.kernel.utils.AuthUtils;
+import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
 import serp.project.first_mile.repository.OrderRepository;
 import serp.project.first_mile.repository.PostOfficeRepository;
 import serp.project.first_mile.repository.PostOfficeStaffAssignmentRepository;
@@ -65,9 +65,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PickupOptimizationServiceImpl implements PickupOptimizationService {
-
-    private static final String ROLE_TMS_ADMIN = "TMS_ADMIN";
-    private static final String ROLE_TMS_POSTOFFICER_MANAGER = "TMS_POSTOFFICER_MANAGER";
 
     private static final int DEFAULT_ORDER_LIMIT = 300;
     private static final double DEFAULT_AVERAGE_SPEED_KMPH = 25.0;
@@ -128,7 +125,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
     private final TripRepository tripRepository;
     private final TripOrderRepository tripOrderRepository;
     private final PickupOptimizationEngine pickupOptimizationEngine;
-    private final AuthUtils authUtils;
+    private final FirstMileAccessUtils firstMileAccessUtils;
 
     @Value("${distance-matrix.batch-size:20}")
     private Integer distanceMatrixBatchSize;
@@ -1598,22 +1595,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             return;
         }
 
-        Long currentUserId = authUtils.getCurrentUserId().orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
-        String managerCode = buildStaffCode(currentUserId, PostOfficeStaffRole.MANAGER);
-
-        PostOfficeStaff managerStaff = postOfficeStaffRepository.findByCodeAndTenantId(managerCode, tenantId)
-                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
-
-        boolean hasAssignment = postOfficeStaffAssignmentRepository.existsActiveAssignmentByStaffIdAndPostOfficeIdAndTenantId(
-                managerStaff.getId(),
-                postOfficeId,
-                tenantId,
-                LocalDate.now()
-        );
-
-        if (!hasAssignment) {
-            throw new AppException(ErrorCode.UNAUTHORIZED);
-        }
+        firstMileAccessUtils.ensureCurrentManagerAssignedToPostOfficeOrThrow(postOfficeId, tenantId);
     }
 
     private List<OrderStatus> resolveCandidateStatuses(Collection<OrderStatus> requestedStatuses) {
@@ -1734,23 +1716,11 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
     }
 
     private Long getCurrentTenantIdOrThrow() {
-        return authUtils.getCurrentTenantId().orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
+        return firstMileAccessUtils.getCurrentTenantIdOrThrow();
     }
 
     private boolean isManagerScopedAccess() {
-        return isPostOfficerManager() && !isAdmin();
-    }
-
-    private boolean isAdmin() {
-        return authUtils.hasAnyRole(ROLE_TMS_ADMIN);
-    }
-
-    private boolean isPostOfficerManager() {
-        return authUtils.hasAnyRole(ROLE_TMS_POSTOFFICER_MANAGER);
-    }
-
-    private String buildStaffCode(Long userId, PostOfficeStaffRole role) {
-        return "USR_" + userId + "_" + role.name();
+        return firstMileAccessUtils.isManagerScopedAccess();
     }
 
     private boolean isValidCoordinate(double latitude, double longitude) {

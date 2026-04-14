@@ -31,4 +31,19 @@ public interface TripOrderRepository extends JpaRepository<TripOrder, Long> {
             @Param("statuses") Collection<TripStatus> statuses,
             @Param("excludeTripId") Long excludeTripId
     );
+
+        @Query("""
+            select (count(to) > 0)
+            from TripOrder to
+            where to.tenantId = :tenantId
+            and to.orderId = :orderId
+            and to.trip.courierStaffId = :courierStaffId
+            and to.trip.status in :statuses
+            """)
+        boolean existsByTenantIdAndOrderIdAndCourierStaffIdAndTripStatusIn(
+            @Param("tenantId") Long tenantId,
+            @Param("orderId") Long orderId,
+            @Param("courierStaffId") Long courierStaffId,
+            @Param("statuses") Collection<TripStatus> statuses
+        );
 }

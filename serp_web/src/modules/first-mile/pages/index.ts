@@ -6,3 +6,5 @@
 export * from './post-offices';
 export * from './product-types';
 export * from './import-history';
+export * from './vehicles';
+export * from './orders';
