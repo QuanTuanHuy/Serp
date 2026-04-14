@@ -37,7 +37,7 @@ export type PostOfficeStatus =
   | 'INACTIVE'
   | 'MAINTENANCE'
   | 'SUSPENDED';
-export type ImportType = 'ORDER' | 'POST_OFFICE';
+export type ImportType = 'ORDER' | 'POST_OFFICE' | 'VEHICLE';
 export type ImportHistoryStatus =
   | 'PENDING'
   | 'PROCESSING'
@@ -71,6 +71,162 @@ export interface PostOffice {
   createdBy?: string;
   updatedBy?: string;
   tenantId?: number;
+}
+
+export type VehicleStatus =
+  | 'ACTIVE'
+  | 'INACTIVE'
+  | 'MAINTENANCE'
+  | 'IN_USE'
+  | 'FULL';
+
+export type VehicleType = 'BIKE' | 'TRUCK';
+
+export interface Vehicle {
+  id: number;
+  licensePlate: string;
+  maxWeight?: number;
+  maxVolume?: number;
+  imageUrl?: string;
+  postOfficeId?: number;
+  postOfficeCode?: string;
+  postOfficeName?: string;
+  postOfficeStaffId?: number;
+  status: VehicleStatus;
+  vehicleType: VehicleType;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
+  tenantId?: number;
+}
+
+export interface CreateVehicleRequest {
+  license_plate: string;
+  max_weight?: number;
+  max_volume?: number;
+  post_office_id?: number;
+  post_office_staff_id?: number;
+  status: VehicleStatus;
+  vehicle_type: VehicleType;
+}
+
+export type UpdateVehicleRequest = CreateVehicleRequest;
+
+export interface VehicleImportItem {
+  license_plate?: string;
+  max_weight?: number;
+  max_volume?: number;
+  post_office_id?: number;
+  post_office_code?: string;
+  post_office_name?: string;
+  post_office_staff_id?: number;
+  post_office_staff_code?: string;
+  post_office_staff_name?: string;
+  vehicle_type?: VehicleType;
+  status?: VehicleStatus;
+  source_rows?: number[];
+}
+
+export type FirstMileOrderStatus =
+  | 'CREATED'
+  | 'ASSIGNED_TO_PICKUP'
+  | 'PICKING_UP'
+  | 'PICKUP_FAILED'
+  | 'PICKED_UP'
+  | 'AT_ORIGIN_POST_OFFICE'
+  | 'CANCELLED'
+  | 'LOST_OR_DAMAGED';
+
+export type FirstMileDeliveryRequestTime =
+  | 'FULL_DAY'
+  | 'MORNING'
+  | 'AFTERNOON'
+  | 'SUNDAY'
+  | 'HOLIDAY'
+  | 'BUSINESS_HOURS';
+
+export type FirstMileOrderType = 'EXPRESS_ORDER' | 'STANDARD_ORDER';
+
+export type FirstMileFeePayer = 'SENDER' | 'RECEIVER';
+
+export type FirstMilePaymentStatus = 'UNPAID' | 'PAID';
+
+export type FirstMileOrderProductCategory =
+  | 'HIGH_VALUE'
+  | 'FRAGILE'
+  | 'SOLID'
+  | 'OVERSIZED'
+  | 'LIQUID'
+  | 'MAGNETIC_BATTERY';
+
+export interface FirstMileOrderProductItem {
+  id?: number;
+  name?: string;
+  value?: number;
+  quantity?: number;
+  weight?: number;
+  productTypeId?: number;
+  productTypeCode?: string;
+  productTypeName?: string;
+}
+
+export interface FirstMileOrderDetail {
+  id: number;
+  orderCode: string;
+  customerOrderCode?: string;
+  status: FirstMileOrderStatus;
+  isConfirm?: boolean;
+  senderName?: string;
+  senderPhone?: string;
+  senderProvinceCode?: string;
+  senderWardCode?: string;
+  senderAddressDetail?: string;
+  senderLatitude?: number;
+  senderLongitude?: number;
+  receiverName?: string;
+  receiverPhone?: string;
+  receiverProvinceCode?: string;
+  receiverWardCode?: string;
+  receiverAddressDetail?: string;
+  receiverLatitude?: number;
+  receiverLongitude?: number;
+  pickupTimeStart?: string;
+  pickupTimeEnd?: string;
+  deliveryRequestTime?: FirstMileDeliveryRequestTime;
+  orderProductCategory?: FirstMileOrderProductCategory;
+  orderType?: FirstMileOrderType;
+  feePayer?: FirstMileFeePayer;
+  paymentStatus?: FirstMilePaymentStatus;
+  codAmount?: number;
+  totalWeight?: number;
+  totalValue?: number;
+  totalVolume?: number;
+  originPostOfficeCode?: string;
+  destinationPostOfficeCode?: string;
+  note?: string;
+  products?: FirstMileOrderProductItem[];
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
+  tenantId?: number;
+}
+
+export interface FirstMileOrderListFilters {
+  keyword?: string;
+  orderCode?: string;
+  customerOrderCode?: string;
+  senderPhone?: string;
+  receiverPhone?: string;
+  originPostOfficeCode?: string;
+  destinationPostOfficeCode?: string;
+  status?: FirstMileOrderStatus;
+  isConfirm?: boolean;
+  createdFrom?: string;
+  createdTo?: string;
+  pickupFrom?: string;
+  pickupTo?: string;
 }
 
 export interface PostOfficeListFilters {

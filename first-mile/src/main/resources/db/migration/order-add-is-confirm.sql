@@ -1,2 +1,6 @@
 ALTER TABLE orders
     ADD COLUMN IF NOT EXISTS is_confirm BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE orders
+    ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP default null;
+ALTER TABLE orders
+    ADD COLUMN IF NOT EXISTS cancel_reason TEXT default null;

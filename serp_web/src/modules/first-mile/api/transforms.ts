@@ -35,7 +35,20 @@ export const unwrapFirstMileResultOrRaw = <T>(
 export const unwrapFirstMilePageResult = <T>(
   response: FirstMileApiResponse<FirstMilePageResponse<T>>
 ): FirstMilePaginatedData<T> => {
-  const pageData = response?.result;
+  return unwrapFirstMilePageResultOrRaw(response);
+};
+
+export const unwrapFirstMilePageResultOrRaw = <T>(
+  response:
+    | FirstMileApiResponse<FirstMilePageResponse<T>>
+    | FirstMilePageResponse<T>
+): FirstMilePaginatedData<T> => {
+  const wrappedResponse = response as FirstMileApiResponse<
+    FirstMilePageResponse<T>
+  >;
+  const pageData = wrappedResponse?.result
+    ? wrappedResponse.result
+    : (response as FirstMilePageResponse<T>);
 
   if (!pageData) {
     return {

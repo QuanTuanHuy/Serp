@@ -139,6 +139,12 @@ public class Order extends AbstractAudit{
     @Column(name = "note")
     private String note;
 
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
+
+    @Column(name = "cancel_reason")
+    private String cancelReason;
+
     public void addProduct(Product product) {
         if (products == null) {
             products = new ArrayList<>();

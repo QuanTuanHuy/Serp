@@ -22,7 +22,8 @@ import serp.project.first_mile.enums.PostOfficeStaffRole;
 import serp.project.first_mile.enums.PostOfficeStaffStatus;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
-import serp.project.first_mile.kernel.utils.AuthUtils;
+import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
+import serp.project.first_mile.kernel.utils.ImageContentTypeUtils;
 import serp.project.first_mile.mapper.PostOfficeStaffMapper;
 import serp.project.first_mile.repository.PostOfficeRepository;
 import serp.project.first_mile.repository.PostOfficeStaffAssignmentRepository;
@@ -40,15 +41,13 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class PostOfficeStaffServiceImpl implements PostOfficeStaffService {
-    private static final String ROLE_TMS_ADMIN = "TMS_ADMIN";
-    private static final String ROLE_TMS_POSTOFFICER_MANAGER = "TMS_POSTOFFICER_MANAGER";
     private static final String STORAGE_SERVICE_NAME = "first-mile";
 
     private final PostOfficeStaffRepository postOfficeStaffRepository;
     private final PostOfficeRepository postOfficeRepository;
     private final PostOfficeStaffAssignmentRepository postOfficeStaffAssignmentRepository;
     private final FileStorageService fileStorageService;
-    private final AuthUtils authUtils;
+    private final FirstMileAccessUtils firstMileAccessUtils;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -323,21 +322,7 @@ public class PostOfficeStaffServiceImpl implements PostOfficeStaffService {
     }
 
     private Set<Long> getManagedPostOfficeIdsOrThrow(Long tenantId) {
-        Long currentUserId = authUtils.getCurrentUserId().orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
-        String managerCode = buildStaffCode(currentUserId, PostOfficeStaffRole.MANAGER);
-
-        PostOfficeStaff managerStaff = postOfficeStaffRepository.findByCodeAndTenantId(managerCode, tenantId)
-                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
-
-        return postOfficeStaffAssignmentRepository.findActivePostOfficeIdsByStaffIdAndTenantId(
-                managerStaff.getId(),
-                tenantId,
-                LocalDate.now()
-        );
-    }
-
-    private String buildStaffCode(Long userId, PostOfficeStaffRole role) {
-        return "USR_" + userId + "_" + role.name();
+        return firstMileAccessUtils.getManagedPostOfficeIdsOrThrow(tenantId);
     }
 
     private void validateStaffRoleForAvatar(PostOfficeStaff staff) {
@@ -356,7 +341,7 @@ public class PostOfficeStaffServiceImpl implements PostOfficeStaffService {
             throw new AppException(ErrorCode.FILE_UPLOAD_EMPTY);
         }
 
-        String contentType = normalizeImageContentType(file.getContentType());
+        String contentType = ImageContentTypeUtils.normalizeImageContentType(file.getContentType());
 
         try {
             return fileStorageService.upload(FileUploadRequest.builder()
@@ -366,7 +351,7 @@ public class PostOfficeStaffServiceImpl implements PostOfficeStaffService {
                     .serviceName(STORAGE_SERVICE_NAME)
                     .folder(folder)
                     .tenantId(tenantId)
-                    .uploaderId(authUtils.getCurrentUserId().orElse(null))
+                    .uploaderId(firstMileAccessUtils.getCurrentUserIdOrNull())
                     .publicFile(true)
                     .build());
         } catch (IOException exception) {
@@ -374,31 +359,12 @@ public class PostOfficeStaffServiceImpl implements PostOfficeStaffService {
         }
     }
 
-    private String normalizeImageContentType(String contentType) {
-        String normalized = contentType == null
-                ? ""
-                : contentType.trim().toLowerCase(Locale.ROOT);
-
-        if (!normalized.startsWith("image/")) {
-            throw new AppException(ErrorCode.FILE_IMAGE_TYPE_INVALID);
-        }
-        return normalized;
-    }
-
     private Long getCurrentTenantIdOrThrow() {
-        return authUtils.getCurrentTenantId().orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
+        return firstMileAccessUtils.getCurrentTenantIdOrThrow();
     }
 
     private boolean isManagerScopedAccess() {
-        return isPostOfficerManager() && !isAdmin();
-    }
-
-    private boolean isAdmin() {
-        return authUtils.hasAnyRole(ROLE_TMS_ADMIN);
-    }
-
-    private boolean isPostOfficerManager() {
-        return authUtils.hasAnyRole(ROLE_TMS_POSTOFFICER_MANAGER);
+        return firstMileAccessUtils.isManagerScopedAccess();
     }
 
     private Integer normalizeNonNegative(Integer value) {
