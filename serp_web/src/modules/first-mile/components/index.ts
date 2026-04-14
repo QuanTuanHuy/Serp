@@ -5,3 +5,4 @@
 
 export * from './layout';
 export * from './FirstMileAuthGuard';
+export * from './CoordinatePickerMap';
