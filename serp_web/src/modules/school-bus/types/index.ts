@@ -54,6 +54,20 @@ export interface SchoolBusParent extends SchoolBusBaseRecord {
   address?: string | null;
 }
 
+export interface SchoolBusAccountUser {
+  id: number;
+  keycloakId?: string | null;
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  phoneNumber?: string | null;
+  organizationId?: number | null;
+  organizationName?: string | null;
+  userType?: string | null;
+  status?: string | null;
+  roles?: string[];
+}
+
 export interface SchoolBusStudent extends SchoolBusBaseRecord {
   schoolId: number;
   schoolName: string;
@@ -72,6 +86,12 @@ export interface SchoolBusBus extends SchoolBusBaseRecord {
   busType?: string | null;
   capacity: number;
   status: string;
+}
+
+export interface SchoolBusBusType {
+  code: string;
+  value: number;
+  description: string;
 }
 
 export interface SchoolBusDriver extends SchoolBusBaseRecord {
@@ -98,6 +118,15 @@ export interface SchoolBusPickupPoint extends SchoolBusBaseRecord {
   longitude?: number | null;
   pickupWindowStart?: string | null;
   pickupWindowEnd?: string | null;
+}
+
+export interface SchoolBusDepot extends SchoolBusBaseRecord {
+  name: string;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  contactPhone?: string | null;
+  description?: string | null;
 }
 
 export interface SchoolBusRequestStudent extends SchoolBusBaseRecord {
@@ -138,6 +167,19 @@ export interface SchoolBusRoute extends SchoolBusBaseRecord {
   schoolName: string;
   schoolLatitude?: number | null;
   schoolLongitude?: number | null;
+  routeDirection: 'OUTBOUND' | 'RETURN';
+  startLocationType: 'SCHOOL' | 'DEPOT';
+  startLocationId: number;
+  startLocationName: string;
+  startLocationAddress?: string | null;
+  startLocationLatitude?: number | null;
+  startLocationLongitude?: number | null;
+  endLocationType: 'SCHOOL' | 'DEPOT';
+  endLocationId: number;
+  endLocationName: string;
+  endLocationAddress?: string | null;
+  endLocationLatitude?: number | null;
+  endLocationLongitude?: number | null;
   routeCode: string;
   routeName: string;
   serviceDate: string;
@@ -157,6 +199,7 @@ export interface SchoolBusRouteStop extends SchoolBusBaseRecord {
   pickupPointAddress?: string | null;
   pickupPointLatitude?: number | null;
   pickupPointLongitude?: number | null;
+  stopType?: 'PICKUP' | 'DROPOFF';
   stopOrder: number;
   estimatedStudentCount?: number | null;
   plannedArrivalTime?: string | null;
@@ -309,6 +352,16 @@ export interface SchoolBusPickupPointUpsertRequest {
   isActive?: boolean;
 }
 
+export interface SchoolBusDepotUpsertRequest {
+  name: string;
+  address?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  contactPhone?: string;
+  description?: string;
+  isActive?: boolean;
+}
+
 export interface SchoolBusTransportRequestStudentInput {
   studentId: number;
   pickupPointId?: number | null;
@@ -333,6 +386,13 @@ export interface SchoolBusRejectRequest {
 
 export interface SchoolBusRouteUpsertRequest {
   schoolId: number;
+  routeDirection: 'OUTBOUND' | 'RETURN';
+  startLocationType: 'SCHOOL' | 'DEPOT';
+  startSchoolId?: number | null;
+  startDepotId?: number | null;
+  endLocationType: 'SCHOOL' | 'DEPOT';
+  endSchoolId?: number | null;
+  endDepotId?: number | null;
   routeName: string;
   serviceDate: string;
   shiftType: string;

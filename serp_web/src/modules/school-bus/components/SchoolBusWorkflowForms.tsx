@@ -11,6 +11,7 @@ import {
   Button,
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -23,11 +24,17 @@ import {
   SelectValue,
   Textarea,
 } from '@/shared/components/ui';
-import { REQUEST_TYPE_OPTIONS, SHIFT_TYPE_OPTIONS } from '../constants';
+import {
+  REQUEST_TYPE_OPTIONS,
+  ROUTE_DIRECTION_OPTIONS,
+  ROUTE_LOCATION_TYPE_OPTIONS,
+  SHIFT_TYPE_OPTIONS,
+} from '../constants';
 import { schoolBusUi } from '../theme';
 import type {
   SchoolBusAttendant,
   SchoolBusBus,
+  SchoolBusDepot,
   SchoolBusDriver,
   SchoolBusPickupPoint,
   SchoolBusParent,
@@ -41,6 +48,8 @@ import type {
   SchoolBusTransportRequestUpsertRequest,
 } from '../types';
 import { OperationsMap } from './map/OperationsMap';
+import { SchoolBusMapLegend } from './map/SchoolBusMapLegend';
+import { SchoolBusMapWorkspace } from './map/SchoolBusMapWorkspace';
 import { SchoolBusFormDialog } from './SchoolBusFormDialog';
 
 const transportRequestSchema = z.object({
@@ -63,6 +72,11 @@ const transportRequestSchema = z.object({
 
 const routeSchema = z.object({
   schoolId: z.coerce.number().min(1, 'School is required'),
+  routeDirection: z.enum(['OUTBOUND', 'RETURN']),
+  startLocationType: z.enum(['SCHOOL', 'DEPOT']),
+  startDepotId: z.string().optional(),
+  endLocationType: z.enum(['SCHOOL', 'DEPOT']),
+  endDepotId: z.string().optional(),
   routeName: z.string().min(1, 'Route name is required'),
   serviceDate: z.string().min(1, 'Service date is required'),
   shiftType: z.string().min(1, 'Shift type is required'),
@@ -167,9 +181,15 @@ export function TransportRequestForm({
     [pickupPoints, schoolId]
   );
   const selectedPickupPointId = form.watch(`students.${activeStudentIndex}.pickupPointId`);
+  const activeStudentId = form.watch(`students.${activeStudentIndex}.studentId`);
   const selectedSchool = React.useMemo(
     () => schools.find((school) => school.id === Number(schoolId)),
     [schoolId, schools]
+  );
+  const activeStudent = React.useMemo(
+    () =>
+      filteredStudents.find((student) => student.id === Number(activeStudentId)),
+    [activeStudentId, filteredStudents]
   );
 
   return (
@@ -321,21 +341,50 @@ export function TransportRequestForm({
                 Select a student row, then click a pickup marker on the map to bind that pickup point.
               </p>
             </div>
-            <OperationsMap
-              schools={selectedSchool ? [selectedSchool] : []}
-              pickupPoints={filteredPickupPoints}
-              selectedSchoolId={selectedSchool?.id}
-              selectedPickupPointId={
-                selectedPickupPointId ? Number(selectedPickupPointId) : null
+            <SchoolBusMapWorkspace
+              defaultPreset='map-focus'
+              mapHeightClassName='h-[380px]'
+              map={
+                <OperationsMap
+                  schools={selectedSchool ? [selectedSchool] : []}
+                  pickupPoints={filteredPickupPoints}
+                  selectedSchoolId={selectedSchool?.id}
+                  selectedPickupPointId={
+                    selectedPickupPointId ? Number(selectedPickupPointId) : null
+                  }
+                  onPickupPointSelect={(pickupPointId) =>
+                    form.setValue(
+                      `students.${activeStudentIndex}.pickupPointId`,
+                      String(pickupPointId),
+                      { shouldDirty: true }
+                    )
+                  }
+                  className='h-full w-full'
+                />
               }
-              onPickupPointSelect={(pickupPointId) =>
-                form.setValue(
-                  `students.${activeStudentIndex}.pickupPointId`,
-                  String(pickupPointId),
-                  { shouldDirty: true }
-                )
+              legend={<SchoolBusMapLegend />}
+              panel={
+                <div className='space-y-3'>
+                  <p className='text-sm font-semibold text-slate-950'>
+                    Active row context
+                  </p>
+                  <p className='text-xs text-slate-500'>
+                    Student:{' '}
+                    {activeStudent?.fullName || 'Select student in the active row'}
+                  </p>
+                  <p className='text-xs text-slate-500'>
+                    Pickup:{' '}
+                    {selectedPickupPointId
+                      ? filteredPickupPoints.find(
+                          (point) => point.id === Number(selectedPickupPointId)
+                        )?.name || 'Unknown'
+                      : 'Not selected'}
+                  </p>
+                  <p className='text-xs text-slate-500'>
+                    Available points: {filteredPickupPoints.length}
+                  </p>
+                </div>
               }
-              className='h-[360px] w-full overflow-hidden rounded-[20px] border'
             />
 
             {!selectedSchool?.latitude || !selectedSchool?.longitude ? (
@@ -373,6 +422,7 @@ export function TransportRequestForm({
 interface RoutePlanFormProps {
   initialData?: SchoolBusRoute | null;
   schools: SchoolBusSchool[];
+  depots: SchoolBusDepot[];
   onSubmit: (values: SchoolBusRouteUpsertRequest) => Promise<void>;
   isLoading?: boolean;
   onCancel?: () => void;
@@ -382,6 +432,7 @@ interface RoutePlanFormProps {
 export function RoutePlanForm({
   initialData,
   schools,
+  depots,
   onSubmit,
   isLoading = false,
   onCancel,
@@ -391,6 +442,17 @@ export function RoutePlanForm({
     resolver: zodResolver(routeSchema) as any,
     defaultValues: {
       schoolId: initialData?.schoolId ?? schools[0]?.id ?? 0,
+      routeDirection: initialData?.routeDirection || 'OUTBOUND',
+      startLocationType: initialData?.startLocationType || 'SCHOOL',
+      startDepotId:
+        initialData?.startLocationType === 'DEPOT'
+          ? String(initialData.startLocationId)
+          : '',
+      endLocationType: initialData?.endLocationType || 'SCHOOL',
+      endDepotId:
+        initialData?.endLocationType === 'DEPOT'
+          ? String(initialData.endLocationId)
+          : '',
       routeName: initialData?.routeName || '',
       serviceDate: initialData?.serviceDate || '',
       shiftType: initialData?.shiftType || SHIFT_TYPE_OPTIONS[0].value,
@@ -402,6 +464,17 @@ export function RoutePlanForm({
   React.useEffect(() => {
     form.reset({
       schoolId: initialData?.schoolId ?? schools[0]?.id ?? 0,
+      routeDirection: initialData?.routeDirection || 'OUTBOUND',
+      startLocationType: initialData?.startLocationType || 'SCHOOL',
+      startDepotId:
+        initialData?.startLocationType === 'DEPOT'
+          ? String(initialData.startLocationId)
+          : '',
+      endLocationType: initialData?.endLocationType || 'SCHOOL',
+      endDepotId:
+        initialData?.endLocationType === 'DEPOT'
+          ? String(initialData.endLocationId)
+          : '',
       routeName: initialData?.routeName || '',
       serviceDate: initialData?.serviceDate || '',
       shiftType: initialData?.shiftType || SHIFT_TYPE_OPTIONS[0].value,
@@ -410,12 +483,43 @@ export function RoutePlanForm({
     });
   }, [form, initialData, schools]);
 
+  const schoolId = Number(form.watch('schoolId') || 0);
+  const routeDirection = form.watch('routeDirection');
+  const startLocationType = form.watch('startLocationType');
+  const endLocationType = form.watch('endLocationType');
+
+  React.useEffect(() => {
+    if (routeDirection === 'OUTBOUND') {
+      form.setValue('endLocationType', 'SCHOOL', { shouldDirty: true });
+      form.setValue('endDepotId', '', { shouldDirty: true });
+      return;
+    }
+
+    form.setValue('startLocationType', 'SCHOOL', { shouldDirty: true });
+    form.setValue('startDepotId', '', { shouldDirty: true });
+  }, [form, routeDirection]);
+
   return (
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(async (values) =>
           onSubmit({
             schoolId: values.schoolId,
+            routeDirection: values.routeDirection,
+            startLocationType: values.startLocationType,
+            startSchoolId:
+              values.startLocationType === 'SCHOOL' ? values.schoolId : null,
+            startDepotId:
+              values.startLocationType === 'DEPOT' && values.startDepotId
+                ? Number(values.startDepotId)
+                : null,
+            endLocationType: values.endLocationType,
+            endSchoolId:
+              values.endLocationType === 'SCHOOL' ? values.schoolId : null,
+            endDepotId:
+              values.endLocationType === 'DEPOT' && values.endDepotId
+                ? Number(values.endDepotId)
+                : null,
             routeName: values.routeName,
             serviceDate: values.serviceDate,
             shiftType: values.shiftType,
@@ -447,6 +551,15 @@ export function RoutePlanForm({
           />
           <SelectField
             form={form}
+            name='routeDirection'
+            label='Route direction'
+            options={ROUTE_DIRECTION_OPTIONS.map((option) => ({
+              value: option.value,
+              label: option.label,
+            }))}
+          />
+          <SelectField
+            form={form}
             name='shiftType'
             label='Shift type'
             options={SHIFT_TYPE_OPTIONS.map((option) => ({
@@ -454,6 +567,84 @@ export function RoutePlanForm({
               label: option.label,
             }))}
           />
+        </div>
+
+        <div className={schoolBusUi.subtlePanel}>
+          <div className='mb-4'>
+            <p className='text-sm font-semibold text-slate-950'>
+              Fixed start and end points
+            </p>
+            <p className='mt-1 text-xs text-slate-500'>
+              Routes must explicitly model where the bus starts and where it ends.
+            </p>
+          </div>
+          <div className='grid gap-4 md:grid-cols-2'>
+            <SelectField
+              form={form}
+              name='startLocationType'
+              label='Start location'
+              disabled={routeDirection === 'RETURN'}
+              options={ROUTE_LOCATION_TYPE_OPTIONS.map((option) => ({
+                value: option.value,
+                label: option.label,
+              }))}
+            />
+            {startLocationType === 'DEPOT' ? (
+              <SelectField
+                form={form}
+                name='startDepotId'
+                label='Start depot'
+                options={depots.map((depot) => ({
+                  value: String(depot.id),
+                  label: depot.name,
+                }))}
+              />
+            ) : (
+              <ReadOnlyField
+                label='Start school'
+                value={
+                  schools.find((school) => school.id === schoolId)?.name ||
+                  'Select a school'
+                }
+              />
+            )}
+
+            <SelectField
+              form={form}
+              name='endLocationType'
+              label='End location'
+              disabled={routeDirection === 'OUTBOUND'}
+              options={ROUTE_LOCATION_TYPE_OPTIONS.map((option) => ({
+                value: option.value,
+                label: option.label,
+              }))}
+            />
+            {endLocationType === 'DEPOT' ? (
+              <SelectField
+                form={form}
+                name='endDepotId'
+                label='End depot'
+                options={depots.map((depot) => ({
+                  value: String(depot.id),
+                  label: depot.name,
+                }))}
+              />
+            ) : (
+              <ReadOnlyField
+                label='End school'
+                value={
+                  schools.find((school) => school.id === schoolId)?.name ||
+                  'Select a school'
+                }
+              />
+            )}
+          </div>
+          {depots.length === 0 &&
+          (startLocationType === 'DEPOT' || endLocationType === 'DEPOT') ? (
+            <p className='mt-3 text-xs font-medium text-amber-700'>
+              No depots available. Create a depot from Schools / Depots before saving this route.
+            </p>
+          ) : null}
         </div>
 
         <FormField
@@ -733,6 +924,9 @@ function SelectField({
   allowEmpty = false,
   emptyLabel = 'None',
   emptyValue = '__none__',
+  disabled = false,
+  description,
+  placeholder,
 }: {
   form: any;
   name: string;
@@ -741,6 +935,9 @@ function SelectField({
   allowEmpty?: boolean;
   emptyLabel?: string;
   emptyValue?: string;
+  disabled?: boolean;
+  description?: string;
+  placeholder?: string;
 }) {
   return (
     <FormField
@@ -754,10 +951,13 @@ function SelectField({
               field.onChange(value === emptyValue ? '' : value)
             }
             value={String(field.value ?? (allowEmpty ? emptyValue : ''))}
+            disabled={disabled}
           >
             <FormControl>
               <SelectTrigger>
-                <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+                <SelectValue
+                  placeholder={placeholder || `Select ${label.toLowerCase()}`}
+                />
               </SelectTrigger>
             </FormControl>
             <SelectContent>
@@ -771,6 +971,9 @@ function SelectField({
               ))}
             </SelectContent>
           </Select>
+          {description ? (
+            <FormDescription>{description}</FormDescription>
+          ) : null}
           <FormMessage />
         </FormItem>
       )}

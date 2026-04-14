@@ -28,7 +28,7 @@ export function SchoolBusFormDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className='max-h-[90vh] overflow-y-auto rounded-[28px] border-slate-200 bg-white text-slate-950 shadow-[0_30px_90px_rgba(15,23,42,0.18)] sm:max-w-2xl'
+        className='max-h-[90vh] w-[calc(100vw-2rem)] overflow-y-auto rounded-[28px] border-slate-200 bg-white p-6 text-slate-950 shadow-[0_30px_90px_rgba(15,23,42,0.18)] sm:max-w-4xl sm:p-8 lg:max-w-5xl'
         style={schoolBusThemeStyle}
       >
         <DialogHeader>

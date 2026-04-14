@@ -28,6 +28,8 @@ import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
 import { SchoolBusSection } from '../components/SchoolBusSection';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
 import { RouteMap } from '../components/map/RouteMap';
+import { SchoolBusMapLegend } from '../components/map/SchoolBusMapLegend';
+import { SchoolBusMapWorkspace } from '../components/map/SchoolBusMapWorkspace';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import { schoolBusUi } from '../theme';
 import { formatDate, formatDateTime, getPageItems } from '../utils';
@@ -71,6 +73,12 @@ export function SchoolBusDispatchPage() {
     selectedRouteId as number,
     { skip: !selectedRouteId }
   );
+  const selectedRouteMissingCoordinates =
+    selectedRouteDetail?.data.stops.filter(
+      (stop) =>
+        typeof stop.pickupPointLatitude !== 'number' ||
+        typeof stop.pickupPointLongitude !== 'number'
+    ).length || 0;
 
   React.useEffect(() => {
     if (!selectedRouteId && prioritizedRoutes.length > 0) {
@@ -189,9 +197,14 @@ export function SchoolBusDispatchPage() {
                     </div>
                     <p className='text-sm text-muted-foreground'>
                       {route.schoolName} - {formatDate(route.serviceDate)} -{' '}
-                      {route.shiftType}
+                      {route.shiftType} -{' '}
+                      {route.routeDirection === 'RETURN' ? 'Chieu ve' : 'Chieu di'}
                     </p>
                     <div className='flex flex-wrap gap-4 text-xs text-muted-foreground'>
+                      <span>
+                        Start: {route.startLocationName || 'Not set'}
+                      </span>
+                      <span>End: {route.endLocationName || 'Not set'}</span>
                       <span>
                         Planned distance: {route.plannedDistanceKm ?? 0} km
                       </span>
@@ -258,12 +271,45 @@ export function SchoolBusDispatchPage() {
 
         <SchoolBusSection
           title='Route preview map'
-          description='Selected route rendered with school hub, stops, and stop-order polyline.'
+          description='Selected route rendered with fixed start, stops, fixed end, and stop-order polyline.'
         >
           {selectedRouteDetail?.data ? (
-            <RouteMap
-              route={selectedRouteDetail.data.route}
-              stops={selectedRouteDetail.data.stops}
+            <SchoolBusMapWorkspace
+              defaultPreset='map-focus'
+              map={
+                <RouteMap
+                  route={selectedRouteDetail.data.route}
+                  stops={selectedRouteDetail.data.stops}
+                  assignment={selectedRouteDetail.data.assignment}
+                  className='h-full w-full'
+                />
+              }
+              legend={<SchoolBusMapLegend />}
+              panel={
+                <div className='space-y-3'>
+                  <p className='text-sm font-semibold text-slate-950'>
+                    Preview context
+                  </p>
+                  <p className='text-xs text-slate-500'>
+                    Start: {selectedRouteDetail.data.route.startLocationName}
+                  </p>
+                  <p className='text-xs text-slate-500'>
+                    End: {selectedRouteDetail.data.route.endLocationName}
+                  </p>
+                  <p className='text-xs text-slate-500'>
+                    Stops: {selectedRouteDetail.data.stops.length}
+                  </p>
+                  {selectedRouteMissingCoordinates > 0 ? (
+                    <p className='rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700'>
+                      {selectedRouteMissingCoordinates} stop(s) missing coordinates.
+                      Route line renders only plotted segments.
+                    </p>
+                  ) : null}
+                  <p className='text-xs text-slate-500'>
+                    Status: {selectedRouteDetail.data.route.status}
+                  </p>
+                </div>
+              }
             />
           ) : (
             <SchoolBusEmptyState

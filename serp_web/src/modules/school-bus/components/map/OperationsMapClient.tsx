@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { CircleMarker, Popup, useMap } from 'react-leaflet';
+import { Marker, Popup, useMap } from 'react-leaflet';
 import { latLngBounds } from 'leaflet';
 import { LeafletMapShell } from '@/shared/components/map/LeafletMapShell';
 import { cn } from '@/shared/utils';
@@ -10,26 +10,37 @@ import {
   SCHOOL_BUS_MAP_DEFAULT_ZOOM,
   SCHOOL_BUS_MAP_DETAIL_ZOOM,
 } from '../../constants';
-import { schoolBusBrand, schoolBusUi } from '../../theme';
-import type { SchoolBusPickupPoint, SchoolBusSchool } from '../../types';
+import { schoolBusUi } from '../../theme';
+import type {
+  SchoolBusDepot,
+  SchoolBusPickupPoint,
+  SchoolBusSchool,
+} from '../../types';
+import { createSchoolBusMarkerIcon } from './mapIcons';
 
 interface OperationsMapClientProps {
   schools?: SchoolBusSchool[];
   pickupPoints?: SchoolBusPickupPoint[];
+  depots?: SchoolBusDepot[];
   selectedSchoolId?: number | null;
   selectedPickupPointId?: number | null;
+  selectedDepotId?: number | null;
   onSchoolSelect?: (id: number) => void;
   onPickupPointSelect?: (id: number) => void;
+  onDepotSelect?: (id: number) => void;
   className?: string;
 }
 
 export default function OperationsMapClient({
   schools = [],
   pickupPoints = [],
+  depots = [],
   selectedSchoolId,
   selectedPickupPointId,
+  selectedDepotId,
   onSchoolSelect,
   onPickupPointSelect,
+  onDepotSelect,
   className,
 }: OperationsMapClientProps) {
   return (
@@ -44,8 +55,10 @@ export default function OperationsMapClient({
       <OperationsViewport
         schools={schools}
         pickupPoints={pickupPoints}
+        depots={depots}
         selectedSchoolId={selectedSchoolId}
         selectedPickupPointId={selectedPickupPointId}
+        selectedDepotId={selectedDepotId}
       />
 
       {schools
@@ -55,17 +68,11 @@ export default function OperationsMapClient({
             typeof school.longitude === 'number'
         )
         .map((school) => {
-          const selected = school.id === selectedSchoolId;
           return (
-            <CircleMarker
+            <Marker
               key={`school-${school.id}`}
-              center={[school.latitude as number, school.longitude as number]}
-              radius={selected ? 12 : 10}
-              pathOptions={{
-                color: selected ? schoolBusBrand.roseDark : schoolBusBrand.rose,
-                fillColor: selected ? schoolBusBrand.rose : '#fb7185',
-                fillOpacity: 0.85,
-              }}
+              position={[school.latitude as number, school.longitude as number]}
+              icon={createSchoolBusMarkerIcon('school')}
               eventHandlers={{
                 click: () => onSchoolSelect?.(school.id),
               }}
@@ -78,7 +85,7 @@ export default function OperationsMapClient({
                   </p>
                 </div>
               </Popup>
-            </CircleMarker>
+            </Marker>
           );
         })}
 
@@ -89,20 +96,14 @@ export default function OperationsMapClient({
             typeof pickupPoint.longitude === 'number'
         )
         .map((pickupPoint) => {
-          const selected = pickupPoint.id === selectedPickupPointId;
           return (
-            <CircleMarker
+            <Marker
               key={`pickup-${pickupPoint.id}`}
-              center={[
+              position={[
                 pickupPoint.latitude as number,
                 pickupPoint.longitude as number,
               ]}
-              radius={selected ? 10 : 8}
-              pathOptions={{
-                color: selected ? schoolBusBrand.roseDark : schoolBusBrand.sky,
-                fillColor: selected ? schoolBusBrand.rose : '#7dd3fc',
-                fillOpacity: 0.85,
-              }}
+              icon={createSchoolBusMarkerIcon('pickup')}
               eventHandlers={{
                 click: () => onPickupPointSelect?.(pickupPoint.id),
               }}
@@ -115,7 +116,36 @@ export default function OperationsMapClient({
                   </p>
                 </div>
               </Popup>
-            </CircleMarker>
+            </Marker>
+          );
+        })}
+
+      {depots
+        .filter(
+          (depot) =>
+            typeof depot.latitude === 'number' &&
+            typeof depot.longitude === 'number'
+        )
+        .map((depot) => {
+          return (
+            <Marker
+              key={`depot-${depot.id}`}
+              position={[depot.latitude as number, depot.longitude as number]}
+              icon={createSchoolBusMarkerIcon('depot')}
+              eventHandlers={{
+                click: () => onDepotSelect?.(depot.id),
+              }}
+            >
+              <Popup>
+                <div className='space-y-1'>
+                  <p className='font-medium text-slate-950'>{depot.name}</p>
+                  <p className='text-xs text-slate-500'>
+                    {depot.address || 'No address'}
+                  </p>
+                  <p className='text-xs font-medium text-amber-700'>Depot</p>
+                </div>
+              </Popup>
+            </Marker>
           );
         })}
     </LeafletMapShell>
@@ -125,17 +155,36 @@ export default function OperationsMapClient({
 function OperationsViewport({
   schools,
   pickupPoints,
+  depots,
   selectedSchoolId,
   selectedPickupPointId,
+  selectedDepotId,
 }: {
   schools: SchoolBusSchool[];
   pickupPoints: SchoolBusPickupPoint[];
+  depots: SchoolBusDepot[];
   selectedSchoolId?: number | null;
   selectedPickupPointId?: number | null;
+  selectedDepotId?: number | null;
 }) {
   const map = useMap();
 
   React.useEffect(() => {
+    const selectedDepot = depots.find(
+      (depot) =>
+        depot.id === selectedDepotId &&
+        typeof depot.latitude === 'number' &&
+        typeof depot.longitude === 'number'
+    );
+
+    if (selectedDepot) {
+      map.setView(
+        [selectedDepot.latitude as number, selectedDepot.longitude as number],
+        SCHOOL_BUS_MAP_DETAIL_ZOOM
+      );
+      return;
+    }
+
     const selectedPickup = pickupPoints.find(
       (pickupPoint) =>
         pickupPoint.id === selectedPickupPointId &&
@@ -184,6 +233,13 @@ function OperationsViewport({
           pickupPoint.latitude as number,
           pickupPoint.longitude as number,
         ] as [number, number]),
+      ...depots
+        .filter(
+          (depot) =>
+            typeof depot.latitude === 'number' &&
+            typeof depot.longitude === 'number'
+        )
+        .map((depot) => [depot.latitude as number, depot.longitude as number] as [number, number]),
     ];
 
     if (coordinates.length === 0) {
@@ -200,7 +256,7 @@ function OperationsViewport({
     }
 
     map.fitBounds(latLngBounds(coordinates), { padding: [32, 32] });
-  }, [map, pickupPoints, schools, selectedPickupPointId, selectedSchoolId]);
+  }, [depots, map, pickupPoints, schools, selectedDepotId, selectedPickupPointId, selectedSchoolId]);
 
   return null;
 }

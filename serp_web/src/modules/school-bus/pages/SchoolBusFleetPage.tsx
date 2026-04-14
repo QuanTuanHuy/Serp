@@ -10,7 +10,10 @@ import {
   UserRound,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAppSelector } from '@/lib/store';
+import { selectUserProfile } from '@/modules/account/store';
 import { Button } from '@/shared/components/ui';
+import { useGetSchoolBusModuleUsersQuery } from '../api/schoolBusAccountApi';
 import {
   useCreateAttendantMutation,
   useCreateBusMutation,
@@ -19,6 +22,7 @@ import {
   useDeleteBusMutation,
   useDeleteDriverMutation,
   useGetAttendantsQuery,
+  useGetBusTypesQuery,
   useGetBusesQuery,
   useGetDriversQuery,
   useUpdateAttendantMutation,
@@ -35,11 +39,13 @@ import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
 import { SchoolBusPaginationBar } from '../components/SchoolBusPaginationBar';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
-import { SchoolBusSection } from '../components/SchoolBusSection';
 import { SchoolBusScrollableTable } from '../components/SchoolBusScrollableTable';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
+import { SchoolBusTableTabs } from '../components/SchoolBusTableTabs';
+import { SCHOOL_BUS_ACCOUNT_MODULE_ID } from '../constants';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import type {
+  SchoolBusAccountUser,
   SchoolBusAttendant,
   SchoolBusBus,
   SchoolBusDriver,
@@ -61,6 +67,8 @@ type FleetDeleteTarget =
   | null;
 
 export function SchoolBusFleetPage() {
+  const currentUser = useAppSelector(selectUserProfile);
+  const organizationId = currentUser?.organizationId;
   const busPagination = useSchoolBusPagination({
     page: 0,
     size: 10,
@@ -84,6 +92,38 @@ export function SchoolBusFleetPage() {
   const { data: attendantsData } = useGetAttendantsQuery(
     attendantPagination.params
   );
+  const [busDialogOpen, setBusDialogOpen] = React.useState(false);
+  const [driverDialogOpen, setDriverDialogOpen] = React.useState(false);
+  const [attendantDialogOpen, setAttendantDialogOpen] = React.useState(false);
+  const accountUserDialogOpen = driverDialogOpen || attendantDialogOpen;
+  const { data: accountUsersData, isFetching: loadingAccountUsers } =
+    useGetSchoolBusModuleUsersQuery(
+      {
+        organizationId: organizationId || 0,
+        moduleId: SCHOOL_BUS_ACCOUNT_MODULE_ID,
+      },
+      { skip: !accountUserDialogOpen || !organizationId }
+    );
+  const { data: driverOptionsData } = useGetDriversQuery(
+    {
+      page: 0,
+      size: 100,
+      sortBy: 'fullName',
+      sortDirection: 'ASC',
+    },
+    { skip: !driverDialogOpen }
+  );
+  const { data: attendantOptionsData } = useGetAttendantsQuery(
+    {
+      page: 0,
+      size: 100,
+      sortBy: 'fullName',
+      sortDirection: 'ASC',
+    },
+    { skip: !attendantDialogOpen }
+  );
+  const { data: busTypesData, isFetching: loadingBusTypes } =
+    useGetBusTypesQuery(undefined, { skip: !busDialogOpen });
   const [createBus, { isLoading: creatingBus }] = useCreateBusMutation();
   const [updateBus, { isLoading: updatingBus }] = useUpdateBusMutation();
   const [deleteBus, { isLoading: deletingBus }] = useDeleteBusMutation();
@@ -100,20 +140,41 @@ export function SchoolBusFleetPage() {
   const buses = getPageItems(busesData?.data);
   const drivers = getPageItems(driversData?.data);
   const attendants = getPageItems(attendantsData?.data);
+  const driverOptions = getPageItems(driverOptionsData?.data);
+  const attendantOptions = getPageItems(attendantOptionsData?.data);
+  const accountUsers = accountUsersData?.data || [];
+  const busTypes = busTypesData?.data || [];
   const activeDrivers = drivers.filter((driver) => driver.isActive !== false).length;
   const activeAttendants = attendants.filter(
     (attendant) => attendant.isActive !== false
   ).length;
 
-  const [busDialogOpen, setBusDialogOpen] = React.useState(false);
-  const [driverDialogOpen, setDriverDialogOpen] = React.useState(false);
-  const [attendantDialogOpen, setAttendantDialogOpen] = React.useState(false);
   const [editingBus, setEditingBus] = React.useState<SchoolBusBus | null>(null);
   const [editingDriver, setEditingDriver] =
     React.useState<SchoolBusDriver | null>(null);
   const [editingAttendant, setEditingAttendant] =
     React.useState<SchoolBusAttendant | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<FleetDeleteTarget>(null);
+
+  const driverDialogUsers = React.useMemo(
+    () =>
+      buildAvailableCrewAccountUsers({
+        users: accountUsers,
+        crewProfiles: driverOptions,
+        editingProfile: editingDriver,
+      }),
+    [accountUsers, driverOptions, editingDriver]
+  );
+
+  const attendantDialogUsers = React.useMemo(
+    () =>
+      buildAvailableCrewAccountUsers({
+        users: accountUsers,
+        crewProfiles: attendantOptions,
+        editingProfile: editingAttendant,
+      }),
+    [accountUsers, attendantOptions, editingAttendant]
+  );
 
   const handleSaveBus = async (values: any) => {
     try {
@@ -175,6 +236,239 @@ export function SchoolBusFleetPage() {
       toast.error(error?.data?.message || 'Delete failed');
     }
   };
+
+  const busesTabContent = (
+    <div className='space-y-4'>
+      <div>
+        <h3 className='text-base font-semibold text-slate-950'>Buses</h3>
+        <p className='mt-1 text-sm text-slate-500'>
+          Fleet assets available for route assignment.
+        </p>
+      </div>
+      {buses.length === 0 ? (
+        <SchoolBusEmptyState
+          title='No buses registered'
+          description='Add the first bus to make assignment possible.'
+          icon={BusFront}
+          className='min-h-[220px]'
+        />
+      ) : (
+        <SchoolBusScrollableTable
+          footer={
+            <SchoolBusPaginationBar
+              page={busesData?.data}
+              onPageChange={busPagination.setPage}
+            />
+          }
+        >
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Plate</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Capacity</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className='text-right'>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {buses.map((bus) => (
+                <TableRow key={bus.id}>
+                  <TableCell className='font-medium'>{bus.plateNumber}</TableCell>
+                  <TableCell>{bus.busType || 'Standard'}</TableCell>
+                  <TableCell>{bus.capacity}</TableCell>
+                  <TableCell>
+                    <SchoolBusStatusBadge status={bus.status} />
+                  </TableCell>
+                  <TableCell className='text-right'>
+                    <div className='flex justify-end gap-2'>
+                      <Button
+                        size='icon'
+                        variant='outline'
+                        onClick={() => {
+                          setEditingBus(bus);
+                          setBusDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className='h-4 w-4' />
+                      </Button>
+                      <Button
+                        size='icon'
+                        variant='outline'
+                        onClick={() => setDeleteTarget({ type: 'bus', entity: bus })}
+                      >
+                        <Trash2 className='h-4 w-4' />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </SchoolBusScrollableTable>
+      )}
+    </div>
+  );
+
+  const driversTabContent = (
+    <div className='space-y-4'>
+      <div>
+        <h3 className='text-base font-semibold text-slate-950'>Drivers</h3>
+        <p className='mt-1 text-sm text-slate-500'>
+          Driver availability and licensing visibility for dispatch.
+        </p>
+      </div>
+      {drivers.length === 0 ? (
+        <SchoolBusEmptyState
+          title='No drivers onboarded'
+          description='Create driver profiles to support route assignment.'
+          icon={UserRound}
+          className='min-h-[220px]'
+        />
+      ) : (
+        <SchoolBusScrollableTable
+          footer={
+            <SchoolBusPaginationBar
+              page={driversData?.data}
+              onPageChange={driverPagination.setPage}
+            />
+          }
+        >
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Driver</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>License</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className='text-right'>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {drivers.map((driver) => (
+                <TableRow key={driver.id}>
+                  <TableCell className='font-medium'>{driver.fullName}</TableCell>
+                  <TableCell>{driver.phone || 'No phone'}</TableCell>
+                  <TableCell>{driver.licenseNumber || 'No license'}</TableCell>
+                  <TableCell>
+                    <SchoolBusStatusBadge
+                      status={driver.isActive === false ? 'INACTIVE' : driver.status}
+                    />
+                  </TableCell>
+                  <TableCell className='text-right'>
+                    <div className='flex justify-end gap-2'>
+                      <Button
+                        size='icon'
+                        variant='outline'
+                        onClick={() => {
+                          setEditingDriver(driver);
+                          setDriverDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className='h-4 w-4' />
+                      </Button>
+                      <Button
+                        size='icon'
+                        variant='outline'
+                        onClick={() =>
+                          setDeleteTarget({
+                            type: 'driver',
+                            entity: driver,
+                          })
+                        }
+                      >
+                        <Trash2 className='h-4 w-4' />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </SchoolBusScrollableTable>
+      )}
+    </div>
+  );
+
+  const attendantsTabContent = (
+    <div className='space-y-4'>
+      <div>
+        <h3 className='text-base font-semibold text-slate-950'>Attendants</h3>
+        <p className='mt-1 text-sm text-slate-500'>
+          Support crew available for attendance and supervision.
+        </p>
+      </div>
+      {attendants.length === 0 ? (
+        <SchoolBusEmptyState
+          title='No attendants onboarded'
+          description='Create attendant profiles to support attendance operations.'
+          icon={ShieldCheck}
+          className='min-h-[220px]'
+        />
+      ) : (
+        <SchoolBusScrollableTable
+          footer={
+            <SchoolBusPaginationBar
+              page={attendantsData?.data}
+              onPageChange={attendantPagination.setPage}
+            />
+          }
+        >
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Attendant</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className='text-right'>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {attendants.map((attendant) => (
+                <TableRow key={attendant.id}>
+                  <TableCell className='font-medium'>{attendant.fullName}</TableCell>
+                  <TableCell>{attendant.phone || 'No phone'}</TableCell>
+                  <TableCell>
+                    <SchoolBusStatusBadge
+                      status={
+                        attendant.isActive === false ? 'INACTIVE' : attendant.status
+                      }
+                    />
+                  </TableCell>
+                  <TableCell className='text-right'>
+                    <div className='flex justify-end gap-2'>
+                      <Button
+                        size='icon'
+                        variant='outline'
+                        onClick={() => {
+                          setEditingAttendant(attendant);
+                          setAttendantDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className='h-4 w-4' />
+                      </Button>
+                      <Button
+                        size='icon'
+                        variant='outline'
+                        onClick={() =>
+                          setDeleteTarget({
+                            type: 'attendant',
+                            entity: attendant,
+                          })
+                        }
+                      >
+                        <Trash2 className='h-4 w-4' />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </SchoolBusScrollableTable>
+      )}
+    </div>
+  );
 
   return (
     <>
@@ -242,237 +536,29 @@ export function SchoolBusFleetPage() {
           />
         </div>
 
-        <div className='grid gap-6 xl:grid-cols-3'>
-          <SchoolBusSection
-            title='Buses'
-            description='Fleet assets available for route assignment.'
-          >
-            {buses.length === 0 ? (
-              <SchoolBusEmptyState
-                title='No buses registered'
-                description='Add the first bus to make assignment possible.'
-                icon={BusFront}
-                className='min-h-[220px]'
-              />
-            ) : (
-              <SchoolBusScrollableTable
-                footer={
-                  <SchoolBusPaginationBar
-                    page={busesData?.data}
-                    onPageChange={busPagination.setPage}
-                  />
-                }
-              >
-                <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Plate</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Capacity</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className='text-right'>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {buses.map((bus) => (
-                    <TableRow key={bus.id}>
-                      <TableCell className='font-medium'>{bus.plateNumber}</TableCell>
-                      <TableCell>{bus.busType || 'Standard'}</TableCell>
-                      <TableCell>{bus.capacity}</TableCell>
-                      <TableCell>
-                        <SchoolBusStatusBadge status={bus.status} />
-                      </TableCell>
-                      <TableCell className='text-right'>
-                        <div className='flex justify-end gap-2'>
-                          <Button
-                            size='icon'
-                            variant='outline'
-                            onClick={() => {
-                              setEditingBus(bus);
-                              setBusDialogOpen(true);
-                            }}
-                          >
-                            <Pencil className='h-4 w-4' />
-                          </Button>
-                          <Button
-                            size='icon'
-                            variant='outline'
-                            onClick={() => setDeleteTarget({ type: 'bus', entity: bus })}
-                          >
-                            <Trash2 className='h-4 w-4' />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-                </Table>
-              </SchoolBusScrollableTable>
-            )}
-          </SchoolBusSection>
-
-          <SchoolBusSection
-            title='Drivers'
-            description='Driver availability and licensing visibility for dispatch.'
-          >
-            {drivers.length === 0 ? (
-              <SchoolBusEmptyState
-                title='No drivers onboarded'
-                description='Create driver profiles to support route assignment.'
-                icon={UserRound}
-                className='min-h-[220px]'
-              />
-            ) : (
-              <SchoolBusScrollableTable
-                footer={
-                  <SchoolBusPaginationBar
-                    page={driversData?.data}
-                    onPageChange={driverPagination.setPage}
-                  />
-                }
-              >
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Driver</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>License</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className='text-right'>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {drivers.map((driver) => (
-                      <TableRow key={driver.id}>
-                        <TableCell className='font-medium'>
-                          {driver.fullName}
-                        </TableCell>
-                        <TableCell>{driver.phone || 'No phone'}</TableCell>
-                        <TableCell>
-                          {driver.licenseNumber || 'No license'}
-                        </TableCell>
-                        <TableCell>
-                          <SchoolBusStatusBadge
-                            status={
-                              driver.isActive === false
-                                ? 'INACTIVE'
-                                : driver.status
-                            }
-                          />
-                        </TableCell>
-                        <TableCell className='text-right'>
-                          <div className='flex justify-end gap-2'>
-                            <Button
-                              size='icon'
-                              variant='outline'
-                              onClick={() => {
-                                setEditingDriver(driver);
-                                setDriverDialogOpen(true);
-                              }}
-                            >
-                              <Pencil className='h-4 w-4' />
-                            </Button>
-                            <Button
-                              size='icon'
-                              variant='outline'
-                              onClick={() =>
-                                setDeleteTarget({
-                                  type: 'driver',
-                                  entity: driver,
-                                })
-                              }
-                            >
-                              <Trash2 className='h-4 w-4' />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </SchoolBusScrollableTable>
-            )}
-          </SchoolBusSection>
-
-          <SchoolBusSection
-            title='Attendants'
-            description='Support crew available for attendance and supervision.'
-          >
-            {attendants.length === 0 ? (
-              <SchoolBusEmptyState
-                title='No attendants onboarded'
-                description='Create attendant profiles to support attendance operations.'
-                icon={ShieldCheck}
-                className='min-h-[220px]'
-              />
-            ) : (
-              <SchoolBusScrollableTable
-                footer={
-                  <SchoolBusPaginationBar
-                    page={attendantsData?.data}
-                    onPageChange={attendantPagination.setPage}
-                  />
-                }
-              >
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Attendant</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className='text-right'>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {attendants.map((attendant) => (
-                      <TableRow key={attendant.id}>
-                        <TableCell className='font-medium'>
-                          {attendant.fullName}
-                        </TableCell>
-                        <TableCell>{attendant.phone || 'No phone'}</TableCell>
-                        <TableCell>
-                          <SchoolBusStatusBadge
-                            status={
-                              attendant.isActive === false
-                                ? 'INACTIVE'
-                                : attendant.status
-                            }
-                          />
-                        </TableCell>
-                        <TableCell className='text-right'>
-                          <div className='flex justify-end gap-2'>
-                            <Button
-                              size='icon'
-                              variant='outline'
-                              onClick={() => {
-                                setEditingAttendant(attendant);
-                                setAttendantDialogOpen(true);
-                              }}
-                            >
-                              <Pencil className='h-4 w-4' />
-                            </Button>
-                            <Button
-                              size='icon'
-                              variant='outline'
-                              onClick={() =>
-                                setDeleteTarget({
-                                  type: 'attendant',
-                                  entity: attendant,
-                                })
-                              }
-                            >
-                              <Trash2 className='h-4 w-4' />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </SchoolBusScrollableTable>
-            )}
-          </SchoolBusSection>
-        </div>
+        <SchoolBusTableTabs
+          defaultValue='buses'
+          tabs={[
+            {
+              value: 'buses',
+              label: 'Buses',
+              count: buses.length,
+              content: busesTabContent,
+            },
+            {
+              value: 'drivers',
+              label: 'Drivers',
+              count: drivers.length,
+              content: driversTabContent,
+            },
+            {
+              value: 'attendants',
+              label: 'Attendants',
+              count: attendants.length,
+              content: attendantsTabContent,
+            },
+          ]}
+        />
       </SchoolBusPageShell>
 
       <BusFormDialog
@@ -484,6 +570,8 @@ export function SchoolBusFleetPage() {
           }
         }}
         initialData={editingBus}
+        busTypes={busTypes}
+        isLoadingBusTypes={loadingBusTypes}
         isLoading={creatingBus || updatingBus}
         onSubmit={handleSaveBus}
       />
@@ -497,6 +585,8 @@ export function SchoolBusFleetPage() {
           }
         }}
         initialData={editingDriver}
+        accountUsers={driverDialogUsers}
+        isLoadingAccountUsers={loadingAccountUsers}
         isLoading={creatingDriver || updatingDriver}
         onSubmit={handleSaveDriver}
       />
@@ -510,6 +600,8 @@ export function SchoolBusFleetPage() {
           }
         }}
         initialData={editingAttendant}
+        accountUsers={attendantDialogUsers}
+        isLoadingAccountUsers={loadingAccountUsers}
         isLoading={creatingAttendant || updatingAttendant}
         onSubmit={handleSaveAttendant}
       />
@@ -534,4 +626,45 @@ export function SchoolBusFleetPage() {
       />
     </>
   );
+}
+
+function buildAvailableCrewAccountUsers<TProfile extends { id: number; userId: number; isActive?: boolean | null }>({
+  users,
+  crewProfiles,
+  editingProfile,
+}: {
+  users: SchoolBusAccountUser[];
+  crewProfiles: TProfile[];
+  editingProfile: TProfile | null;
+}) {
+  const linkedUserIds = new Set(
+    crewProfiles
+      .filter((profile) => profile.id !== editingProfile?.id)
+      .filter((profile) => profile.isActive !== false)
+      .map((profile) => profile.userId)
+  );
+
+  const availableUsers = users.filter(
+    (user) => !linkedUserIds.has(user.id) || user.id === editingProfile?.userId
+  );
+
+  if (
+    editingProfile &&
+    !availableUsers.some((user) => user.id === editingProfile.userId)
+  ) {
+    return [
+      {
+        id: editingProfile.userId,
+        email: `user-${editingProfile.userId}@unknown.local`,
+        firstName: `Account user #${editingProfile.userId}`,
+        lastName: '',
+        phoneNumber: null,
+        status: editingProfile.isActive === false ? 'INACTIVE' : 'ACTIVE',
+        userType: 'EXTERNAL',
+      },
+      ...availableUsers,
+    ];
+  }
+
+  return availableUsers;
 }

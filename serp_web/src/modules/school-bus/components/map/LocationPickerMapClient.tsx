@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { CircleMarker, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import { Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import { latLngBounds } from 'leaflet';
 import { toast } from 'sonner';
 import { LeafletMapShell } from '@/shared/components/map/LeafletMapShell';
@@ -12,9 +12,12 @@ import {
   SCHOOL_BUS_MAP_DEFAULT_ZOOM,
   SCHOOL_BUS_MAP_DETAIL_ZOOM,
 } from '../../constants';
-import { schoolBusBrand, schoolBusUi } from '../../theme';
+import { schoolBusUi } from '../../theme';
 import type { SchoolBusMapLocation } from '../../types';
 import { NominatimSearchBox } from './NominatimSearchBox';
+import { SchoolBusMapLegend } from './SchoolBusMapLegend';
+import { SchoolBusMapWorkspace } from './SchoolBusMapWorkspace';
+import { createSchoolBusMarkerIcon } from './mapIcons';
 
 interface LocationValue {
   latitude?: number | null;
@@ -27,7 +30,7 @@ interface ReferenceMarker {
   address?: string | null;
   latitude?: number | null;
   longitude?: number | null;
-  type: 'school' | 'pickup';
+  type: 'school' | 'pickup' | 'depot';
 }
 
 interface LocationPickerMapClientProps {
@@ -55,7 +58,10 @@ export default function LocationPickerMapClient({
     onChange({ latitude, longitude });
 
     try {
-      const response = await reverseLocation({ lat: latitude, lng: longitude }).unwrap();
+      const response = await reverseLocation({
+        lat: latitude,
+        lng: longitude,
+      }).unwrap();
       if (response.data.displayName && onAddressResolved) {
         onAddressResolved(response.data.displayName);
       }
@@ -91,73 +97,97 @@ export default function LocationPickerMapClient({
         </p>
       </div>
 
-      <NominatimSearchBox onSelect={handleSearchSelect} />
-
-      <LeafletMapShell
-        center={
-          selectedLocation || [
-            SCHOOL_BUS_MAP_DEFAULT_CENTER.lat,
-            SCHOOL_BUS_MAP_DEFAULT_CENTER.lng,
-          ]
-        }
-        zoom={selectedLocation ? SCHOOL_BUS_MAP_DETAIL_ZOOM : SCHOOL_BUS_MAP_DEFAULT_ZOOM}
-        className={cn('h-[320px] w-full', schoolBusUi.mapFrame)}
-      >
-        <LocationPickerViewport
-          selectedLocation={selectedLocation}
-          referenceMarkers={referenceMarkers}
-        />
-        <LocationPickerEvents onLocationChange={handleLocationChange} />
-
-        {referenceMarkers
-          .filter(
-            (marker) =>
-              typeof marker.latitude === 'number' &&
-              typeof marker.longitude === 'number'
-          )
-          .map((marker) => (
-            <CircleMarker
-              key={marker.id}
-              center={[marker.latitude as number, marker.longitude as number]}
-              radius={marker.type === 'school' ? 10 : 8}
-              pathOptions={{
-                color:
-                  marker.type === 'school'
-                    ? schoolBusBrand.roseDark
-                    : schoolBusBrand.sky,
-                fillColor:
-                  marker.type === 'school'
-                    ? schoolBusBrand.rose
-                    : '#7dd3fc',
-                fillOpacity: 0.75,
-              }}
-            >
-              <Popup>
-                <div className='space-y-1'>
-                  <p className='font-medium text-slate-950'>{marker.name}</p>
-                  <p className='text-xs text-slate-500'>
-                    {marker.address || 'No address'}
-                  </p>
-                </div>
-              </Popup>
-            </CircleMarker>
-          ))}
-
-        {selectedLocation ? (
-          <Marker
-            position={selectedLocation}
-            draggable
-            eventHandlers={{
-              dragend: (event) => {
-                const next = event.target.getLatLng();
-                handleLocationChange(next.lat, next.lng);
-              },
-            }}
+      <SchoolBusMapWorkspace
+        defaultPreset='map-focus'
+        allowFullscreen={false}
+        mapHeightClassName='h-[360px]'
+        map={
+          <LeafletMapShell
+            center={
+              selectedLocation || [
+                SCHOOL_BUS_MAP_DEFAULT_CENTER.lat,
+                SCHOOL_BUS_MAP_DEFAULT_CENTER.lng,
+              ]
+            }
+            zoom={
+              selectedLocation
+                ? SCHOOL_BUS_MAP_DETAIL_ZOOM
+                : SCHOOL_BUS_MAP_DEFAULT_ZOOM
+            }
+            className={cn('h-full w-full', schoolBusUi.mapFrame)}
           >
-            <Popup>Selected location</Popup>
-          </Marker>
-        ) : null}
-      </LeafletMapShell>
+            <LocationPickerViewport
+              selectedLocation={selectedLocation}
+              referenceMarkers={referenceMarkers}
+            />
+            <LocationPickerEvents onLocationChange={handleLocationChange} />
+
+            {referenceMarkers
+              .filter(
+                (marker) =>
+                  typeof marker.latitude === 'number' &&
+                  typeof marker.longitude === 'number'
+              )
+              .map((marker) => (
+                <Marker
+                  key={marker.id}
+                  position={[marker.latitude as number, marker.longitude as number]}
+                  icon={createSchoolBusMarkerIcon(
+                    marker.type === 'school'
+                      ? 'school'
+                      : marker.type === 'depot'
+                        ? 'depot'
+                        : 'pickup'
+                  )}
+                >
+                  <Popup>
+                    <div className='space-y-1'>
+                      <p className='font-medium text-slate-950'>{marker.name}</p>
+                      <p className='text-xs text-slate-500'>
+                        {marker.address || 'No address'}
+                      </p>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+
+            {selectedLocation ? (
+              <Marker
+                position={selectedLocation}
+                draggable
+                icon={createSchoolBusMarkerIcon('start')}
+                eventHandlers={{
+                  dragend: (event) => {
+                    const next = event.target.getLatLng();
+                    handleLocationChange(next.lat, next.lng);
+                  },
+                }}
+              >
+                <Popup>Selected location</Popup>
+              </Marker>
+            ) : null}
+          </LeafletMapShell>
+        }
+        legend={<SchoolBusMapLegend />}
+        panel={
+          <div className='space-y-3'>
+            <p className='text-sm font-semibold text-slate-950'>
+              OpenStreetMap search
+            </p>
+            <NominatimSearchBox onSelect={handleSearchSelect} />
+            <div className='rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600'>
+              <p>
+                Latitude:{' '}
+                {selectedLocation ? selectedLocation[0].toFixed(6) : 'Not set'}
+              </p>
+              <p>
+                Longitude:{' '}
+                {selectedLocation ? selectedLocation[1].toFixed(6) : 'Not set'}
+              </p>
+            </div>
+          </div>
+        }
+      />
     </div>
   );
 }
@@ -197,7 +227,13 @@ function LocationPickerViewport({
           typeof marker.latitude === 'number' &&
           typeof marker.longitude === 'number'
       )
-      .map((marker) => [marker.latitude as number, marker.longitude as number] as [number, number]);
+      .map(
+        (marker) =>
+          [marker.latitude as number, marker.longitude as number] as [
+            number,
+            number,
+          ]
+      );
 
     if (coordinates.length === 0) {
       map.setView(

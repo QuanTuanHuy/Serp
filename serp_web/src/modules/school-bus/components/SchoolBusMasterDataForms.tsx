@@ -8,6 +8,7 @@ import {
   Button,
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -24,9 +25,13 @@ import { BUS_STATUS_OPTIONS, PROFILE_STATUS_OPTIONS } from '../constants';
 import { schoolBusUi } from '../theme';
 import type {
   SchoolBusAttendant,
+  SchoolBusAccountUser,
   SchoolBusAttendantUpsertRequest,
   SchoolBusBus,
+  SchoolBusBusType,
   SchoolBusBusUpsertRequest,
+  SchoolBusDepot,
+  SchoolBusDepotUpsertRequest,
   SchoolBusDriver,
   SchoolBusDriverUpsertRequest,
   SchoolBusParent,
@@ -60,6 +65,16 @@ const pickupPointSchema = z.object({
   longitude: z.string().optional(),
   pickupWindowStart: z.string().optional(),
   pickupWindowEnd: z.string().optional(),
+  isActive: z.boolean().default(true),
+});
+
+const depotSchema = z.object({
+  name: z.string().min(1, 'Depot name is required'),
+  address: z.string().optional(),
+  latitude: z.string().optional(),
+  longitude: z.string().optional(),
+  contactPhone: z.string().optional(),
+  description: z.string().optional(),
   isActive: z.boolean().default(true),
 });
 
@@ -109,6 +124,7 @@ const attendantSchema = z.object({
 
 type SchoolFormValues = z.infer<typeof schoolSchema>;
 type PickupPointFormValues = z.infer<typeof pickupPointSchema>;
+type DepotFormValues = z.infer<typeof depotSchema>;
 type ParentFormValues = z.infer<typeof parentSchema>;
 type StudentFormValues = z.infer<typeof studentSchema>;
 type BusFormValues = z.infer<typeof busSchema>;
@@ -367,8 +383,105 @@ export function PickupPointFormDialog({
   );
 }
 
+interface DepotFormDialogProps extends BaseDialogProps {
+  initialData?: SchoolBusDepot | null;
+  onSubmit: (values: SchoolBusDepotUpsertRequest) => Promise<void>;
+}
+
+export function DepotFormDialog({
+  open,
+  onOpenChange,
+  initialData,
+  onSubmit,
+  isLoading = false,
+}: DepotFormDialogProps) {
+  const form = useForm<DepotFormValues>({
+    resolver: zodResolver(depotSchema) as any,
+    defaultValues: {
+      name: initialData?.name || '',
+      address: initialData?.address || '',
+      latitude: toCoordinateString(initialData?.latitude),
+      longitude: toCoordinateString(initialData?.longitude),
+      contactPhone: initialData?.contactPhone || '',
+      description: initialData?.description || '',
+      isActive: initialData?.isActive ?? true,
+    },
+  });
+
+  React.useEffect(() => {
+    form.reset({
+      name: initialData?.name || '',
+      address: initialData?.address || '',
+      latitude: toCoordinateString(initialData?.latitude),
+      longitude: toCoordinateString(initialData?.longitude),
+      contactPhone: initialData?.contactPhone || '',
+      description: initialData?.description || '',
+      isActive: initialData?.isActive ?? true,
+    });
+  }, [form, initialData]);
+
+  return (
+    <SchoolBusFormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={initialData ? 'Edit depot' : 'Create depot'}
+      description='Register a fixed bus yard used as a route start or end point.'
+    >
+      <SimpleForm
+        form={form}
+        isLoading={isLoading}
+        onCancel={() => onOpenChange(false)}
+        onSubmit={async (values) =>
+          onSubmit({
+            name: values.name,
+            address: values.address || undefined,
+            latitude: values.latitude ? Number(values.latitude) : null,
+            longitude: values.longitude ? Number(values.longitude) : null,
+            contactPhone: values.contactPhone || undefined,
+            description: values.description || undefined,
+            isActive: values.isActive,
+          })
+        }
+      >
+        <TextField form={form} name='name' label='Depot name' />
+        <TextField form={form} name='contactPhone' label='Contact phone' />
+        <TextareaField form={form} name='address' label='Address' />
+        <TextField form={form} name='latitude' label='Latitude' />
+        <TextField form={form} name='longitude' label='Longitude' />
+        <TextareaField form={form} name='description' label='Description' />
+        <div className='md:col-span-2'>
+          <LocationPickerMap
+            value={{
+              latitude: form.watch('latitude')
+                ? Number(form.watch('latitude'))
+                : null,
+              longitude: form.watch('longitude')
+                ? Number(form.watch('longitude'))
+                : null,
+            }}
+            onChange={({ latitude, longitude }) => {
+              form.setValue('latitude', latitude.toFixed(6), {
+                shouldDirty: true,
+              });
+              form.setValue('longitude', longitude.toFixed(6), {
+                shouldDirty: true,
+              });
+            }}
+            onAddressResolved={(address) =>
+              form.setValue('address', address, { shouldDirty: true })
+            }
+            title='Depot location'
+          />
+        </div>
+      </SimpleForm>
+    </SchoolBusFormDialog>
+  );
+}
+
 interface ParentFormDialogProps extends BaseDialogProps {
   initialData?: SchoolBusParent | null;
+  accountUsers: SchoolBusAccountUser[];
+  isLoadingAccountUsers?: boolean;
   onSubmit: (values: SchoolBusParentUpsertRequest) => Promise<void>;
 }
 
@@ -376,6 +489,8 @@ export function ParentFormDialog({
   open,
   onOpenChange,
   initialData,
+  accountUsers,
+  isLoadingAccountUsers = false,
   onSubmit,
   isLoading = false,
 }: ParentFormDialogProps) {
@@ -402,6 +517,38 @@ export function ParentFormDialog({
     });
   }, [form, initialData]);
 
+  const isEditMode = Boolean(initialData);
+  const selectedUserId = Number(form.watch('userId') || 0);
+  const selectedUser = accountUsers.find((user) => user.id === selectedUserId);
+
+  const handleAccountUserChange = (value: string) => {
+    const userId = Number(value);
+    const user = accountUsers.find((candidate) => candidate.id === userId);
+
+    form.setValue('userId', userId, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+
+    if (!user || isEditMode) {
+      return;
+    }
+
+    const fullName = getAccountUserFullName(user);
+    if (fullName) {
+      form.setValue('fullName', fullName, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+    if (user.email) {
+      form.setValue('email', user.email, { shouldDirty: true });
+    }
+    if (user.phoneNumber) {
+      form.setValue('phone', user.phoneNumber, { shouldDirty: true });
+    }
+  };
+
   return (
     <SchoolBusFormDialog
       open={open}
@@ -415,7 +562,30 @@ export function ParentFormDialog({
         onCancel={() => onOpenChange(false)}
         onSubmit={onSubmit}
       >
-        <TextField form={form} name='userId' label='Account user ID' type='number' />
+        <SelectField
+          form={form}
+          name='userId'
+          label='Account user'
+          className='md:col-span-2'
+          disabled={isLoadingAccountUsers || isEditMode || accountUsers.length === 0}
+          description={
+            isEditMode
+              ? 'Account user is locked after the profile is linked.'
+              : accountUsers.length === 0
+                ? 'No School Bus account users available. Create and grant module access in Account first.'
+                : selectedUser
+                  ? `Selected #${selectedUser.id} - ${selectedUser.email}`
+                  : 'Select an account user already granted School Bus access.'
+          }
+          placeholder={
+            isLoadingAccountUsers ? 'Loading account users...' : 'Select account user'
+          }
+          options={accountUsers.map((user) => ({
+            value: String(user.id),
+            label: getAccountUserOptionLabel(user),
+          }))}
+          onChange={handleAccountUserChange}
+        />
         <TextField form={form} name='fullName' label='Full name' />
         <TextField form={form} name='phone' label='Phone' />
         <TextField form={form} name='email' label='Email' />
@@ -423,6 +593,15 @@ export function ParentFormDialog({
       </SimpleForm>
     </SchoolBusFormDialog>
   );
+}
+
+function getAccountUserFullName(user: SchoolBusAccountUser) {
+  return [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
+}
+
+function getAccountUserOptionLabel(user: SchoolBusAccountUser) {
+  const fullName = getAccountUserFullName(user) || user.email || `User #${user.id}`;
+  return `${fullName} - ${user.email} - #${user.id}`;
 }
 
 interface StudentFormDialogProps extends BaseDialogProps {
@@ -539,6 +718,8 @@ export function StudentFormDialog({
 
 interface BusFormDialogProps extends BaseDialogProps {
   initialData?: SchoolBusBus | null;
+  busTypes: SchoolBusBusType[];
+  isLoadingBusTypes?: boolean;
   onSubmit: (values: SchoolBusBusUpsertRequest) => Promise<void>;
 }
 
@@ -546,29 +727,96 @@ export function BusFormDialog({
   open,
   onOpenChange,
   initialData,
+  busTypes,
+  isLoadingBusTypes = false,
   onSubmit,
   isLoading = false,
 }: BusFormDialogProps) {
+  const defaultBusType = initialData?.busType || busTypes[0]?.code || '';
+  const defaultBusTypeMeta = busTypes.find(
+    (busType) => busType.code === defaultBusType
+  );
   const form = useForm<BusFormValues>({
     resolver: zodResolver(busSchema) as any,
     defaultValues: {
       plateNumber: initialData?.plateNumber || '',
-      busType: initialData?.busType || '',
-      capacity: initialData?.capacity ?? 1,
+      busType: defaultBusType,
+      capacity:
+        initialData?.capacity ??
+        (defaultBusTypeMeta?.value && defaultBusTypeMeta.value > 0
+          ? defaultBusTypeMeta.value
+          : 1),
       status: initialData?.status || BUS_STATUS_OPTIONS[0].value,
       isActive: initialData?.isActive ?? true,
     },
   });
 
   React.useEffect(() => {
+    const nextBusType = initialData?.busType || busTypes[0]?.code || '';
+    const nextBusTypeMeta = busTypes.find(
+      (busType) => busType.code === nextBusType
+    );
     form.reset({
       plateNumber: initialData?.plateNumber || '',
-      busType: initialData?.busType || '',
-      capacity: initialData?.capacity ?? 1,
+      busType: nextBusType,
+      capacity:
+        initialData?.capacity ??
+        (nextBusTypeMeta?.value && nextBusTypeMeta.value > 0
+          ? nextBusTypeMeta.value
+          : 1),
       status: initialData?.status || BUS_STATUS_OPTIONS[0].value,
       isActive: initialData?.isActive ?? true,
     });
-  }, [form, initialData]);
+  }, [form, initialData, busTypes]);
+
+  const busTypeOptions = React.useMemo(() => {
+    if (
+      initialData?.busType &&
+      !busTypes.some((busType) => busType.code === initialData.busType)
+    ) {
+      return [
+        {
+          code: initialData.busType,
+          value: initialData.capacity,
+          description: `${initialData.busType} (legacy)`,
+        },
+        ...busTypes,
+      ];
+    }
+
+    return busTypes;
+  }, [busTypes, initialData]);
+
+  const selectedBusTypeCode = form.watch('busType');
+  const selectedBusType = busTypeOptions.find(
+    (busType) => busType.code === selectedBusTypeCode
+  );
+  const isCustomBusType =
+    selectedBusTypeCode === 'CUSTOM_BUS' || !selectedBusType;
+
+  const handleBusTypeChange = (value: string) => {
+    const busType = busTypeOptions.find((option) => option.code === value);
+
+    form.setValue('busType', value, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+
+    if (busType?.value && busType.value > 0) {
+      form.setValue('capacity', busType.value, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+      return;
+    }
+
+    if (!form.getValues('capacity') || Number(form.getValues('capacity')) < 1) {
+      form.setValue('capacity', 1, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  };
 
   return (
     <SchoolBusFormDialog
@@ -584,8 +832,37 @@ export function BusFormDialog({
         onSubmit={onSubmit}
       >
         <TextField form={form} name='plateNumber' label='Plate number' />
-        <TextField form={form} name='busType' label='Bus type' />
-        <TextField form={form} name='capacity' label='Capacity' type='number' />
+        <SelectField
+          form={form}
+          name='busType'
+          label='Bus type'
+          disabled={isLoadingBusTypes || busTypeOptions.length === 0}
+          description={
+            busTypeOptions.length === 0
+              ? 'No bus types available from backend.'
+              : selectedBusType
+                ? `${selectedBusType.description} - capacity ${selectedBusType.value || 'custom'}`
+                : 'Select a bus type.'
+          }
+          placeholder={isLoadingBusTypes ? 'Loading bus types...' : 'Select bus type'}
+          options={busTypeOptions.map((busType) => ({
+            value: busType.code,
+            label: `${busType.description} (${busType.code})`,
+          }))}
+          onChange={handleBusTypeChange}
+        />
+        <TextField
+          form={form}
+          name='capacity'
+          label='Capacity'
+          type='number'
+          disabled={!isCustomBusType}
+          description={
+            isCustomBusType
+              ? 'Custom bus capacity can be edited.'
+              : 'Capacity is auto-filled from the selected bus type.'
+          }
+        />
         <SelectField
           form={form}
           name='status'
@@ -602,6 +879,8 @@ export function BusFormDialog({
 
 interface DriverFormDialogProps extends BaseDialogProps {
   initialData?: SchoolBusDriver | null;
+  accountUsers: SchoolBusAccountUser[];
+  isLoadingAccountUsers?: boolean;
   onSubmit: (values: SchoolBusDriverUpsertRequest) => Promise<void>;
 }
 
@@ -609,6 +888,8 @@ export function DriverFormDialog({
   open,
   onOpenChange,
   initialData,
+  accountUsers,
+  isLoadingAccountUsers = false,
   onSubmit,
   isLoading = false,
 }: DriverFormDialogProps) {
@@ -635,6 +916,35 @@ export function DriverFormDialog({
     });
   }, [form, initialData]);
 
+  const isEditMode = Boolean(initialData);
+  const selectedUserId = Number(form.watch('userId') || 0);
+  const selectedUser = accountUsers.find((user) => user.id === selectedUserId);
+
+  const handleAccountUserChange = (value: string) => {
+    const userId = Number(value);
+    const user = accountUsers.find((candidate) => candidate.id === userId);
+
+    form.setValue('userId', userId, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+
+    if (!user || isEditMode) {
+      return;
+    }
+
+    const fullName = getAccountUserFullName(user);
+    if (fullName) {
+      form.setValue('fullName', fullName, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+    if (user.phoneNumber) {
+      form.setValue('phone', user.phoneNumber, { shouldDirty: true });
+    }
+  };
+
   return (
     <SchoolBusFormDialog
       open={open}
@@ -648,7 +958,30 @@ export function DriverFormDialog({
         onCancel={() => onOpenChange(false)}
         onSubmit={onSubmit}
       >
-        <TextField form={form} name='userId' label='Account user ID' type='number' />
+        <SelectField
+          form={form}
+          name='userId'
+          label='Account user'
+          className='md:col-span-2'
+          disabled={isLoadingAccountUsers || isEditMode || accountUsers.length === 0}
+          description={
+            isEditMode
+              ? 'Account user is locked after the driver profile is linked.'
+              : accountUsers.length === 0
+                ? 'No School Bus account users available. Create and grant module access in Account first.'
+                : selectedUser
+                  ? `Selected #${selectedUser.id} - ${selectedUser.email}`
+                  : 'Select an account user already granted School Bus access.'
+          }
+          placeholder={
+            isLoadingAccountUsers ? 'Loading account users...' : 'Select account user'
+          }
+          options={accountUsers.map((user) => ({
+            value: String(user.id),
+            label: getAccountUserOptionLabel(user),
+          }))}
+          onChange={handleAccountUserChange}
+        />
         <TextField form={form} name='fullName' label='Full name' />
         <TextField form={form} name='phone' label='Phone' />
         <TextField form={form} name='licenseNumber' label='License number' />
@@ -668,6 +1001,8 @@ export function DriverFormDialog({
 
 interface AttendantFormDialogProps extends BaseDialogProps {
   initialData?: SchoolBusAttendant | null;
+  accountUsers: SchoolBusAccountUser[];
+  isLoadingAccountUsers?: boolean;
   onSubmit: (values: SchoolBusAttendantUpsertRequest) => Promise<void>;
 }
 
@@ -675,6 +1010,8 @@ export function AttendantFormDialog({
   open,
   onOpenChange,
   initialData,
+  accountUsers,
+  isLoadingAccountUsers = false,
   onSubmit,
   isLoading = false,
 }: AttendantFormDialogProps) {
@@ -699,6 +1036,35 @@ export function AttendantFormDialog({
     });
   }, [form, initialData]);
 
+  const isEditMode = Boolean(initialData);
+  const selectedUserId = Number(form.watch('userId') || 0);
+  const selectedUser = accountUsers.find((user) => user.id === selectedUserId);
+
+  const handleAccountUserChange = (value: string) => {
+    const userId = Number(value);
+    const user = accountUsers.find((candidate) => candidate.id === userId);
+
+    form.setValue('userId', userId, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+
+    if (!user || isEditMode) {
+      return;
+    }
+
+    const fullName = getAccountUserFullName(user);
+    if (fullName) {
+      form.setValue('fullName', fullName, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+    if (user.phoneNumber) {
+      form.setValue('phone', user.phoneNumber, { shouldDirty: true });
+    }
+  };
+
   return (
     <SchoolBusFormDialog
       open={open}
@@ -712,7 +1078,30 @@ export function AttendantFormDialog({
         onCancel={() => onOpenChange(false)}
         onSubmit={onSubmit}
       >
-        <TextField form={form} name='userId' label='Account user ID' type='number' />
+        <SelectField
+          form={form}
+          name='userId'
+          label='Account user'
+          className='md:col-span-2'
+          disabled={isLoadingAccountUsers || isEditMode || accountUsers.length === 0}
+          description={
+            isEditMode
+              ? 'Account user is locked after the attendant profile is linked.'
+              : accountUsers.length === 0
+                ? 'No School Bus account users available. Create and grant module access in Account first.'
+                : selectedUser
+                  ? `Selected #${selectedUser.id} - ${selectedUser.email}`
+                  : 'Select an account user already granted School Bus access.'
+          }
+          placeholder={
+            isLoadingAccountUsers ? 'Loading account users...' : 'Select account user'
+          }
+          options={accountUsers.map((user) => ({
+            value: String(user.id),
+            label: getAccountUserOptionLabel(user),
+          }))}
+          onChange={handleAccountUserChange}
+        />
         <TextField form={form} name='fullName' label='Full name' />
         <TextField form={form} name='phone' label='Phone' />
         <SelectField
@@ -782,7 +1171,9 @@ function TextField({
   name,
   label,
   type = 'text',
-}: FieldProps & { type?: string }) {
+  disabled = false,
+  description,
+}: FieldProps & { type?: string; disabled?: boolean; description?: string }) {
   return (
     <FormField
       control={form.control}
@@ -791,8 +1182,16 @@ function TextField({
         <FormItem>
           <FormLabel>{label}</FormLabel>
           <FormControl>
-            <Input {...field} type={type} value={(field.value as string) ?? ''} />
+            <Input
+              {...field}
+              type={type}
+              value={(field.value as string) ?? ''}
+              disabled={disabled}
+            />
           </FormControl>
+          {description ? (
+            <FormDescription>{description}</FormDescription>
+          ) : null}
           <FormMessage />
         </FormItem>
       )}
@@ -841,41 +1240,67 @@ function SelectField({
   allowEmpty = false,
   emptyLabel = 'None',
   emptyValue = '__none__',
+  disabled = false,
+  description,
+  placeholder,
+  onChange,
+  className,
 }: FieldProps & {
   options: Array<{ value: string; label: string }>;
   allowEmpty?: boolean;
   emptyLabel?: string;
   emptyValue?: string;
+  disabled?: boolean;
+  description?: string;
+  placeholder?: string;
+  onChange?: (value: string) => void;
+  className?: string;
 }) {
   return (
     <FormField
       control={form.control}
       name={name as any}
       render={({ field }) => (
-        <FormItem>
+        <FormItem className={className}>
           <FormLabel>{label}</FormLabel>
           <Select
             onValueChange={(value) =>
-              field.onChange(value === emptyValue ? '' : value)
+              onChange
+                ? onChange(value === emptyValue ? '' : value)
+                : field.onChange(value === emptyValue ? '' : value)
             }
             value={String(field.value ?? (allowEmpty ? emptyValue : ''))}
+            disabled={disabled}
           >
             <FormControl>
-              <SelectTrigger>
-                <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+              <SelectTrigger className='h-11 w-full min-w-0 max-w-full rounded-xl border-slate-200 bg-white px-3 text-left shadow-sm [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:max-w-[calc(100%-1.75rem)] [&_[data-slot=select-value]]:truncate'>
+                <SelectValue
+                  placeholder={placeholder || `Select ${label.toLowerCase()}`}
+                />
               </SelectTrigger>
             </FormControl>
-            <SelectContent>
+            <SelectContent className='z-[120] max-h-72 w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)] max-w-[min(860px,calc(100vw-2rem))] overflow-x-hidden rounded-xl border-slate-200 bg-white'>
               {allowEmpty ? (
-                <SelectItem value={emptyValue}>{emptyLabel}</SelectItem>
+                <SelectItem value={emptyValue} className='max-w-full pr-10'>
+                  <span className='block max-w-full truncate'>{emptyLabel}</span>
+                </SelectItem>
               ) : null}
               {options.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                  className='max-w-full pr-10'
+                >
+                  <span className='block max-w-full truncate'>
+                    {option.label}
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {description ? (
+            <FormDescription>{description}</FormDescription>
+          ) : null}
           <FormMessage />
         </FormItem>
       )}

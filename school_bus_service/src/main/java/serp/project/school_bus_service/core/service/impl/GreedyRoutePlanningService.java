@@ -3,6 +3,8 @@ package serp.project.school_bus_service.core.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import serp.project.school_bus_service.enums.RequestStatus;
+import serp.project.school_bus_service.enums.RouteDirection;
+import serp.project.school_bus_service.enums.RouteStopType;
 import serp.project.school_bus_service.infrastructure.store.model.PickupPointEntity;
 import serp.project.school_bus_service.infrastructure.store.model.RequestStudentEntity;
 import serp.project.school_bus_service.infrastructure.store.model.RoutePlanEntity;
@@ -75,6 +77,9 @@ public class GreedyRoutePlanningService implements RoutePlanningService {
             stop.markCreated(tenantId, "SYSTEM");
             stop.setRoute(route);
             stop.setPickupPoint(aggregate.getPickupPoint());
+            stop.setStopType(route.getRouteDirection() == RouteDirection.RETURN
+                    ? RouteStopType.DROPOFF
+                    : RouteStopType.PICKUP);
             stop.setStopOrder(order++);
             stop.setEstimatedStudentCount(aggregate.getStudentCount());
             stop.setPlannedArrivalTime(nextArrival);

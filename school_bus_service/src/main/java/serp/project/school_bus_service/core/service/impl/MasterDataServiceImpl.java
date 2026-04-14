@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.school_bus_service.application.dto.params.AttendantProfileParamsRequest;
 import serp.project.school_bus_service.application.dto.params.BusParamsRequest;
+import serp.project.school_bus_service.application.dto.params.DepotParamsRequest;
 import serp.project.school_bus_service.application.dto.params.DriverProfileParamsRequest;
 import serp.project.school_bus_service.application.dto.params.ParentProfileParamsRequest;
 import serp.project.school_bus_service.application.dto.params.PickupPointParamsRequest;
@@ -14,6 +15,7 @@ import serp.project.school_bus_service.application.dto.params.SchoolParamsReques
 import serp.project.school_bus_service.application.dto.params.StudentParamsRequest;
 import serp.project.school_bus_service.application.dto.request.BusAttendantProfileUpsertRequest;
 import serp.project.school_bus_service.application.dto.request.BusUpsertRequest;
+import serp.project.school_bus_service.application.dto.request.DepotUpsertRequest;
 import serp.project.school_bus_service.application.dto.request.DriverProfileUpsertRequest;
 import serp.project.school_bus_service.application.dto.request.ParentProfileUpsertRequest;
 import serp.project.school_bus_service.application.dto.request.PickupPointUpsertRequest;
@@ -21,6 +23,7 @@ import serp.project.school_bus_service.application.dto.request.SchoolUpsertReque
 import serp.project.school_bus_service.application.dto.request.StudentUpsertRequest;
 import serp.project.school_bus_service.application.dto.response.AttendantProfileResponse;
 import serp.project.school_bus_service.application.dto.response.BusResponse;
+import serp.project.school_bus_service.application.dto.response.DepotResponse;
 import serp.project.school_bus_service.application.dto.response.DriverProfileResponse;
 import serp.project.school_bus_service.application.dto.response.PageResponse;
 import serp.project.school_bus_service.application.dto.response.ParentProfileResponse;
@@ -33,6 +36,7 @@ import serp.project.school_bus_service.core.service.IMasterDataService;
 import serp.project.school_bus_service.infrastructure.store.mapper.SchoolBusMapper;
 import serp.project.school_bus_service.infrastructure.store.model.BusAttendantProfileEntity;
 import serp.project.school_bus_service.infrastructure.store.model.BusEntity;
+import serp.project.school_bus_service.infrastructure.store.model.DepotEntity;
 import serp.project.school_bus_service.infrastructure.store.model.DriverProfileEntity;
 import serp.project.school_bus_service.infrastructure.store.model.ParentProfileEntity;
 import serp.project.school_bus_service.infrastructure.store.model.PickupPointEntity;
@@ -40,6 +44,7 @@ import serp.project.school_bus_service.infrastructure.store.model.SchoolEntity;
 import serp.project.school_bus_service.infrastructure.store.model.StudentEntity;
 import serp.project.school_bus_service.infrastructure.store.repository.BusAttendantProfileRepository;
 import serp.project.school_bus_service.infrastructure.store.repository.BusRepository;
+import serp.project.school_bus_service.infrastructure.store.repository.DepotRepository;
 import serp.project.school_bus_service.infrastructure.store.repository.DriverProfileRepository;
 import serp.project.school_bus_service.infrastructure.store.repository.ParentProfileRepository;
 import serp.project.school_bus_service.infrastructure.store.repository.PickupPointRepository;
@@ -66,6 +71,7 @@ public class MasterDataServiceImpl extends AbstractBaseService<SchoolEntity, Lon
     private final DriverProfileRepository driverProfileRepository;
     private final BusAttendantProfileRepository busAttendantProfileRepository;
     private final PickupPointRepository pickupPointRepository;
+    private final DepotRepository depotRepository;
     private final SchoolBusMapper mapper;
     private final IAuditLogService auditLogService;
     private final ICodeGeneratorService codeGeneratorService;
@@ -411,6 +417,54 @@ public class MasterDataServiceImpl extends AbstractBaseService<SchoolEntity, Lon
         auditLogService.log(tenantId, actorId, "PickupPoint", id, "SOFT_DELETE", "Soft deleted pickup point");
     }
 
+    @Override
+    public PageResponse<DepotResponse> getDepots(DepotParamsRequest params, Long tenantId) {
+        return PageResponse.from(depotRepository.findAll(
+                spec(tenantId, params == null ? null : params.getKeyword(), "name", "address", "contactPhone",
+                        "description"),
+                pageable(params, Set.of("id", "name", "createdAt", "updatedAt"), "name")),
+                mapper::toDepotResponse);
+    }
+
+    @Override
+    public DepotResponse getDepotResponse(Long id, Long tenantId) {
+        return mapper.toDepotResponse(getDepot(id, tenantId));
+    }
+
+    @Override
+    public DepotEntity getDepot(Long id, Long tenantId) {
+        return findById(depotRepository, id, tenantId);
+    }
+
+    @Override
+    @Transactional
+    public DepotResponse createDepot(DepotUpsertRequest request, Long tenantId, Long actorId) {
+        DepotEntity depot = new DepotEntity();
+        depot.markCreated(tenantId, actor(actorId));
+        applyDepot(depot, request);
+        DepotEntity saved = depotRepository.save(depot);
+        auditLogService.log(tenantId, actorId, "Depot", saved.getId(), "CREATE", "Created depot");
+        return mapper.toDepotResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public DepotResponse updateDepot(Long id, DepotUpsertRequest request, Long tenantId, Long actorId) {
+        DepotEntity depot = getDepot(id, tenantId);
+        depot.markUpdated(actor(actorId));
+        applyDepot(depot, request);
+        DepotEntity saved = depotRepository.save(depot);
+        auditLogService.log(tenantId, actorId, "Depot", saved.getId(), "UPDATE", "Updated depot");
+        return mapper.toDepotResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public void deleteDepot(Long id, Long tenantId, Long actorId) {
+        softDeleteById(depotRepository, id, tenantId, actorId);
+        auditLogService.log(tenantId, actorId, "Depot", id, "SOFT_DELETE", "Soft deleted depot");
+    }
+
     private void applySchool(SchoolEntity school, SchoolUpsertRequest request) {
         validateCoordinatePair(request.getLatitude(), request.getLongitude(), "school");
         school.setName(request.getName());
@@ -476,6 +530,17 @@ public class MasterDataServiceImpl extends AbstractBaseService<SchoolEntity, Lon
         pickupPoint.setPickupWindowStart(request.getPickupWindowStart());
         pickupPoint.setPickupWindowEnd(request.getPickupWindowEnd());
         pickupPoint.setIsActive(request.resolveIsActive(Boolean.TRUE));
+    }
+
+    private void applyDepot(DepotEntity depot, DepotUpsertRequest request) {
+        validateCoordinatePair(request.getLatitude(), request.getLongitude(), "depot");
+        depot.setName(request.getName());
+        depot.setAddress(request.getAddress());
+        depot.setLatitude(request.getLatitude());
+        depot.setLongitude(request.getLongitude());
+        depot.setContactPhone(request.getContactPhone());
+        depot.setDescription(request.getDescription());
+        depot.setIsActive(request.resolveIsActive(Boolean.TRUE));
     }
 
     private void validateCoordinatePair(Double latitude, Double longitude, String target) {

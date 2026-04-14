@@ -15,7 +15,9 @@ import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
 import { SchoolBusSection } from '../components/SchoolBusSection';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
+import { SchoolBusMapLegend } from '../components/map/SchoolBusMapLegend';
 import { OperationsMap } from '../components/map/OperationsMap';
+import { SchoolBusMapWorkspace } from '../components/map/SchoolBusMapWorkspace';
 import { schoolBusUi } from '../theme';
 import { formatDate, formatDateTime } from '../utils';
 import {
@@ -169,33 +171,68 @@ export function SchoolBusRequestDetailPage({
           title='Request map'
           description='Dispatcher review context for the school hub and all pickup points included in this request.'
         >
-          <OperationsMap
-            schools={[
-              {
-                id: request.schoolId,
-                name: request.schoolName,
-                latitude: request.schoolLatitude,
-                longitude: request.schoolLongitude,
-                address: undefined,
-              },
-            ]}
-            pickupPoints={detail.students
-              .filter(
-                (student) =>
-                  student.pickupPointId &&
-                  typeof student.pickupPointLatitude === 'number' &&
-                  typeof student.pickupPointLongitude === 'number'
-              )
-              .map((student) => ({
-                id: student.pickupPointId as number,
-                schoolId: request.schoolId,
-                schoolName: request.schoolName,
-                name: student.pickupPointName || 'Pickup point',
-                address: student.pickupPointAddress || 'No address',
-                latitude: student.pickupPointLatitude,
-                longitude: student.pickupPointLongitude,
-              }))}
-            selectedSchoolId={request.schoolId}
+          <SchoolBusMapWorkspace
+            defaultPreset='map-focus'
+            map={
+              <OperationsMap
+                schools={[
+                  {
+                    id: request.schoolId,
+                    name: request.schoolName,
+                    latitude: request.schoolLatitude,
+                    longitude: request.schoolLongitude,
+                    address: undefined,
+                  },
+                ]}
+                pickupPoints={detail.students
+                  .filter(
+                    (student) =>
+                      student.pickupPointId &&
+                      typeof student.pickupPointLatitude === 'number' &&
+                      typeof student.pickupPointLongitude === 'number'
+                  )
+                  .map((student) => ({
+                    id: student.pickupPointId as number,
+                    schoolId: request.schoolId,
+                    schoolName: request.schoolName,
+                    name: student.pickupPointName || 'Pickup point',
+                    address: student.pickupPointAddress || 'No address',
+                    latitude: student.pickupPointLatitude,
+                    longitude: student.pickupPointLongitude,
+                  }))}
+                selectedSchoolId={request.schoolId}
+                className='h-full w-full'
+              />
+            }
+            legend={<SchoolBusMapLegend />}
+            panel={
+              <div className='space-y-3'>
+                <p className='text-sm font-semibold text-slate-950'>
+                  Requested stop context
+                </p>
+                <p className='text-xs text-slate-500'>
+                  Request type: {request.requestType}
+                </p>
+                <p className='text-xs text-slate-500'>
+                  Students: {detail.students.length}
+                </p>
+                <div className='max-h-[320px] space-y-2 overflow-auto pr-1'>
+                  {detail.students.map((student) => (
+                    <div
+                      key={student.id}
+                      className='rounded-xl border border-slate-200 bg-white p-2'
+                    >
+                      <p className='text-xs font-semibold text-slate-900'>
+                        {student.studentName}
+                      </p>
+                      <p className='text-xs text-slate-500'>
+                        {student.pickupPointName || 'No pickup point'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            }
           />
         </SchoolBusSection>
       </SchoolBusPageShell>

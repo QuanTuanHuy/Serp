@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { CircleMarker, Polyline, Popup, useMap } from 'react-leaflet';
+import { Marker, Polyline, Popup, useMap } from 'react-leaflet';
 import { latLngBounds } from 'leaflet';
 import { LeafletMapShell } from '@/shared/components/map/LeafletMapShell';
 import { cn } from '@/shared/utils';
@@ -11,17 +11,24 @@ import {
   SCHOOL_BUS_MAP_DETAIL_ZOOM,
 } from '../../constants';
 import { schoolBusBrand, schoolBusUi } from '../../theme';
-import type { SchoolBusRoute, SchoolBusRouteStop } from '../../types';
+import type {
+  SchoolBusRoute,
+  SchoolBusRouteAssignment,
+  SchoolBusRouteStop,
+} from '../../types';
+import { createDirectionArrowIcon, createSchoolBusMarkerIcon } from './mapIcons';
 
 interface RouteMapClientProps {
-  route: Pick<SchoolBusRoute, 'schoolName' | 'schoolLatitude' | 'schoolLongitude'>;
+  route: SchoolBusRoute;
   stops: SchoolBusRouteStop[];
+  assignment?: SchoolBusRouteAssignment | null;
   className?: string;
 }
 
 export default function RouteMapClient({
   route,
   stops,
+  assignment,
   className,
 }: RouteMapClientProps) {
   const plottedStops = stops
@@ -32,16 +39,57 @@ export default function RouteMapClient({
     )
     .sort((left, right) => left.stopOrder - right.stopOrder);
 
+  const startCoordinate =
+    typeof route.startLocationLatitude === 'number' &&
+    typeof route.startLocationLongitude === 'number'
+      ? ([route.startLocationLatitude, route.startLocationLongitude] as [
+          number,
+          number,
+        ])
+      : null;
+  const endCoordinate =
+    typeof route.endLocationLatitude === 'number' &&
+    typeof route.endLocationLongitude === 'number'
+      ? ([route.endLocationLatitude, route.endLocationLongitude] as [
+          number,
+          number,
+        ])
+      : null;
   const lineCoordinates = [
-    ...(typeof route.schoolLatitude === 'number' &&
-    typeof route.schoolLongitude === 'number'
-      ? ([[route.schoolLatitude, route.schoolLongitude]] as [number, number][])
-      : []),
+    ...(startCoordinate ? [startCoordinate] : []),
     ...plottedStops.map((stop) => [
       stop.pickupPointLatitude as number,
       stop.pickupPointLongitude as number,
     ] as [number, number]),
+    ...(endCoordinate ? [endCoordinate] : []),
   ];
+  const routeColor =
+    route.routeDirection === 'RETURN'
+      ? schoolBusBrand.emerald
+      : schoolBusBrand.rose;
+  const isReturn = route.routeDirection === 'RETURN';
+  const arrowSegments = lineCoordinates
+    .map((point, index) => ({ point, index }))
+    .slice(1)
+    .map(({ point, index }) => {
+      const prev = lineCoordinates[index - 1];
+      const midLat = (prev[0] + point[0]) / 2;
+      const midLng = (prev[1] + point[1]) / 2;
+      const angle =
+        (Math.atan2(point[0] - prev[0], point[1] - prev[1]) * 180) / Math.PI +
+        90;
+      return {
+        id: `${index}-${midLat}-${midLng}`,
+        position: [midLat, midLng] as [number, number],
+        angle,
+      };
+    });
+  const busPosition = startCoordinate
+    ? ([startCoordinate[0] + 0.00022, startCoordinate[1] + 0.00022] as [
+        number,
+        number,
+      ])
+    : null;
 
   return (
     <LeafletMapShell
@@ -54,59 +102,109 @@ export default function RouteMapClient({
     >
       <RouteViewport coordinates={lineCoordinates} />
 
-      {typeof route.schoolLatitude === 'number' &&
-      typeof route.schoolLongitude === 'number' ? (
-        <CircleMarker
-          center={[route.schoolLatitude, route.schoolLongitude]}
-          radius={11}
-          pathOptions={{
-            color: schoolBusBrand.roseDark,
-            fillColor: schoolBusBrand.rose,
-            fillOpacity: 0.85,
-          }}
+      {startCoordinate ? (
+        <Marker
+          position={startCoordinate}
+          icon={createSchoolBusMarkerIcon(
+            route.startLocationType === 'DEPOT' ? 'depot' : 'start',
+            30
+          )}
         >
           <Popup>
             <div className='space-y-1'>
-              <p className='font-medium text-slate-950'>{route.schoolName}</p>
-              <p className='text-xs text-slate-500'>School hub</p>
+              <p className='font-medium text-slate-950'>
+                {route.startLocationName}
+              </p>
+              <p className='text-xs text-slate-500'>
+                Start - {route.startLocationType}
+              </p>
             </div>
           </Popup>
-        </CircleMarker>
+        </Marker>
+      ) : null}
+
+      {endCoordinate ? (
+        <Marker
+          position={endCoordinate}
+          icon={createSchoolBusMarkerIcon(
+            route.endLocationType === 'DEPOT' ? 'depot' : 'end',
+            30
+          )}
+        >
+          <Popup>
+            <div className='space-y-1'>
+              <p className='font-medium text-slate-950'>
+                {route.endLocationName}
+              </p>
+              <p className='text-xs text-slate-500'>
+                End - {route.endLocationType}
+              </p>
+            </div>
+          </Popup>
+        </Marker>
       ) : null}
 
       {plottedStops.map((stop) => (
-        <CircleMarker
+        <Marker
           key={stop.id}
-          center={[
+          position={[
             stop.pickupPointLatitude as number,
             stop.pickupPointLongitude as number,
           ]}
-          radius={8}
-          pathOptions={{
-            color: schoolBusBrand.sky,
-            fillColor: '#7dd3fc',
-            fillOpacity: 0.85,
-          }}
+          icon={createSchoolBusMarkerIcon(
+            stop.stopType === 'DROPOFF' ? 'dropoff' : 'pickup'
+          )}
         >
           <Popup>
             <div className='space-y-1'>
               <p className='font-medium text-slate-950'>
                 {stop.stopOrder}. {stop.pickupPointName}
               </p>
+              <p className='text-xs font-medium text-sky-700'>
+                {stop.stopType === 'DROPOFF' ? 'Drop-off stop' : 'Pickup stop'}
+              </p>
               <p className='text-xs text-slate-500'>
                 {stop.pickupPointAddress || 'No address'}
               </p>
             </div>
           </Popup>
-        </CircleMarker>
+        </Marker>
       ))}
+
+      {assignment && busPosition ? (
+        <Marker position={busPosition} icon={createSchoolBusMarkerIcon('bus', 26)}>
+          <Popup>
+            <div className='space-y-1'>
+              <p className='font-medium text-slate-950'>
+                Bus {assignment.busPlateNumber}
+              </p>
+              <p className='text-xs text-slate-500'>
+                Driver: {assignment.driverName}
+              </p>
+            </div>
+          </Popup>
+        </Marker>
+      ) : null}
 
       {lineCoordinates.length >= 2 ? (
         <Polyline
           positions={lineCoordinates}
-          pathOptions={{ color: schoolBusBrand.rose, weight: 4 }}
+          pathOptions={{
+            color: routeColor,
+            weight: 4,
+            dashArray: isReturn ? '10 14' : undefined,
+          }}
         />
       ) : null}
+
+      {arrowSegments.map((arrow) => (
+        <Marker
+          key={arrow.id}
+          position={arrow.position}
+          icon={createDirectionArrowIcon(routeColor, arrow.angle)}
+          interactive={false}
+        />
+      ))}
     </LeafletMapShell>
   );
 }

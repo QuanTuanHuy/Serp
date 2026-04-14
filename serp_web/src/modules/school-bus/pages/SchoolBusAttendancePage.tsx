@@ -28,6 +28,8 @@ import { SchoolBusSection } from '../components/SchoolBusSection';
 import { SchoolBusScrollableTable } from '../components/SchoolBusScrollableTable';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
 import { RouteMap } from '../components/map/RouteMap';
+import { SchoolBusMapLegend } from '../components/map/SchoolBusMapLegend';
+import { SchoolBusMapWorkspace } from '../components/map/SchoolBusMapWorkspace';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import { schoolBusUi } from '../theme';
 import { formatDate, formatDateTime, getPageItems } from '../utils';
@@ -90,6 +92,13 @@ export function SchoolBusAttendancePage() {
   const { data: routeDetailData } = useGetRouteByIdQuery(selectedRouteId as number, {
     skip: !selectedRouteId,
   });
+  const selectedRouteDetail = routeDetailData?.data;
+  const selectedRouteMissingCoordinates =
+    selectedRouteDetail?.stops.filter(
+      (stop) =>
+        typeof stop.pickupPointLatitude !== 'number' ||
+        typeof stop.pickupPointLongitude !== 'number'
+    ).length || 0;
 
   const attendance = getPageItems(attendanceData?.data);
   const history = getPageItems(historyData?.data);
@@ -203,11 +212,49 @@ export function SchoolBusAttendancePage() {
                 </p>
               ) : (
                 <>
-                  {routeDetailData?.data ? (
-                    <RouteMap
-                      route={routeDetailData.data.route}
-                      stops={routeDetailData.data.stops}
-                      className='mb-4 h-[320px] w-full overflow-hidden rounded-[20px] border'
+                  {selectedRouteDetail ? (
+                    <SchoolBusMapWorkspace
+                      defaultPreset='map-focus'
+                      mapHeightClassName='h-[400px]'
+                      map={
+                        <RouteMap
+                          route={selectedRouteDetail.route}
+                          stops={selectedRouteDetail.stops}
+                          assignment={selectedRouteDetail.assignment}
+                          className='h-full w-full'
+                        />
+                      }
+                      legend={<SchoolBusMapLegend />}
+                      panel={
+                        <div className='space-y-3'>
+                          <p className='text-sm font-semibold text-slate-950'>
+                            Route context
+                          </p>
+                          <p className='text-xs text-slate-500'>
+                            Start:{' '}
+                            {selectedRouteDetail.route.startLocationName || 'Not set'}
+                          </p>
+                          <p className='text-xs text-slate-500'>
+                            End:{' '}
+                            {selectedRouteDetail.route.endLocationName || 'Not set'}
+                          </p>
+                          <p className='text-xs text-slate-500'>
+                            Stops: {selectedRouteDetail.stops.length}
+                          </p>
+                          <p className='text-xs text-slate-500'>
+                            Direction:{' '}
+                            {selectedRouteDetail.route.routeDirection === 'RETURN'
+                              ? 'Chieu ve'
+                              : 'Chieu di'}
+                          </p>
+                          {selectedRouteMissingCoordinates > 0 ? (
+                            <p className='rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700'>
+                              {selectedRouteMissingCoordinates} stop(s) missing coordinates.
+                              Map renders available segments only.
+                            </p>
+                          ) : null}
+                        </div>
+                      }
                     />
                   ) : null}
 
@@ -220,7 +267,10 @@ export function SchoolBusAttendancePage() {
                         <p className='mt-1 text-sm text-muted-foreground'>
                           {manifest.route.schoolName} -{' '}
                           {formatDate(manifest.route.serviceDate)} -{' '}
-                          {manifest.route.shiftType}
+                          {manifest.route.shiftType} -{' '}
+                          {manifest.route.routeDirection === 'RETURN'
+                            ? 'Chieu ve'
+                            : 'Chieu di'}
                         </p>
                       </div>
                       <SchoolBusStatusBadge status={manifest.route.status} />
@@ -245,7 +295,11 @@ export function SchoolBusAttendancePage() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Student</TableHead>
-                          <TableHead>Pickup point</TableHead>
+                          <TableHead>
+                            {manifest.route.routeDirection === 'RETURN'
+                              ? 'Drop-off point'
+                              : 'Pickup point'}
+                          </TableHead>
                           <TableHead>Last event</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead className='text-right'>Actions</TableHead>

@@ -3,6 +3,8 @@
 import * as React from 'react';
 import { Contact, Mail, Pencil, Phone, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAppSelector } from '@/lib/store';
+import { selectUserProfile } from '@/modules/account/store';
 import { Button } from '@/shared/components/ui';
 import {
   useCreateParentMutation,
@@ -10,6 +12,7 @@ import {
   useGetParentsQuery,
   useUpdateParentMutation,
 } from '../api/schoolBusApi';
+import { useGetSchoolBusModuleUsersQuery } from '../api/schoolBusAccountApi';
 import { SchoolBusDeleteDialog } from '../components/SchoolBusDeleteDialog';
 import { ParentFormDialog } from '../components/SchoolBusMasterDataForms';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
@@ -19,8 +22,9 @@ import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
 import { SchoolBusSection } from '../components/SchoolBusSection';
 import { SchoolBusScrollableTable } from '../components/SchoolBusScrollableTable';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
+import { SCHOOL_BUS_ACCOUNT_MODULE_ID } from '../constants';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
-import type { SchoolBusParent } from '../types';
+import type { SchoolBusAccountUser, SchoolBusParent } from '../types';
 import { getPageItems } from '../utils';
 import {
   Table,
@@ -32,23 +36,53 @@ import {
 } from '@/shared/components/ui/table';
 
 export function SchoolBusParentsPage() {
+  const currentUser = useAppSelector(selectUserProfile);
+  const organizationId = currentUser?.organizationId;
   const pagination = useSchoolBusPagination({
     page: 0,
     size: 10,
     sortBy: 'fullName',
     sortDirection: 'ASC',
   });
-  const { data, isLoading } = useGetParentsQuery(pagination.params);
-  const [createParent, { isLoading: creating }] = useCreateParentMutation();
-  const [updateParent, { isLoading: updating }] = useUpdateParentMutation();
-  const [deleteParent, { isLoading: deleting }] = useDeleteParentMutation();
-  const parents = getPageItems(data?.data);
-
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingParent, setEditingParent] =
     React.useState<SchoolBusParent | null>(null);
   const [deletingParent, setDeletingParent] =
     React.useState<SchoolBusParent | null>(null);
+  const { data, isLoading } = useGetParentsQuery(pagination.params);
+  const { data: parentOptionsData } = useGetParentsQuery(
+    {
+      page: 0,
+      size: 100,
+      sortBy: 'fullName',
+      sortDirection: 'ASC',
+    },
+    { skip: !dialogOpen }
+  );
+  const { data: accountUsersData, isFetching: loadingAccountUsers } =
+    useGetSchoolBusModuleUsersQuery(
+      {
+        organizationId: organizationId || 0,
+        moduleId: SCHOOL_BUS_ACCOUNT_MODULE_ID,
+      },
+      { skip: !dialogOpen || !organizationId }
+    );
+  const [createParent, { isLoading: creating }] = useCreateParentMutation();
+  const [updateParent, { isLoading: updating }] = useUpdateParentMutation();
+  const [deleteParent, { isLoading: deleting }] = useDeleteParentMutation();
+  const parents = getPageItems(data?.data);
+  const parentOptions = getPageItems(parentOptionsData?.data);
+  const accountUsers = accountUsersData?.data || [];
+
+  const parentDialogUsers = React.useMemo(
+    () =>
+      buildAvailableParentAccountUsers({
+        users: accountUsers,
+        parentProfiles: parentOptions,
+        editingParent,
+      }),
+    [accountUsers, parentOptions, editingParent]
+  );
 
   const handleSave = async (values: any) => {
     try {
@@ -141,64 +175,64 @@ export function SchoolBusParentsPage() {
               }
             >
               <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Parent</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Address</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className='text-right'>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {parents.map((parent) => (
-                  <TableRow key={parent.id}>
-                    <TableCell>
-                      <div>
-                        <p className='font-medium'>{parent.fullName}</p>
-                        <p className='text-xs text-muted-foreground'>
-                          Account user #{parent.userId}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p>{parent.phone || 'No phone'}</p>
-                        <p className='text-xs text-muted-foreground'>
-                          {parent.email || 'No email'}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>{parent.address || 'No address'}</TableCell>
-                    <TableCell>
-                      <SchoolBusStatusBadge
-                        status={parent.isActive ? 'ACTIVE' : 'INACTIVE'}
-                      />
-                    </TableCell>
-                    <TableCell className='text-right'>
-                      <div className='flex justify-end gap-2'>
-                        <Button
-                          size='icon'
-                          variant='outline'
-                          onClick={() => {
-                            setEditingParent(parent);
-                            setDialogOpen(true);
-                          }}
-                        >
-                          <Pencil className='h-4 w-4' />
-                        </Button>
-                        <Button
-                          size='icon'
-                          variant='outline'
-                          onClick={() => setDeletingParent(parent)}
-                        >
-                          <Trash2 className='h-4 w-4' />
-                        </Button>
-                      </div>
-                    </TableCell>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Parent</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Address</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className='text-right'>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
+                </TableHeader>
+                <TableBody>
+                  {parents.map((parent) => (
+                    <TableRow key={parent.id}>
+                      <TableCell>
+                        <div>
+                          <p className='font-medium'>{parent.fullName}</p>
+                          <p className='text-xs text-muted-foreground'>
+                            Account user #{parent.userId}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p>{parent.phone || 'No phone'}</p>
+                          <p className='text-xs text-muted-foreground'>
+                            {parent.email || 'No email'}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>{parent.address || 'No address'}</TableCell>
+                      <TableCell>
+                        <SchoolBusStatusBadge
+                          status={parent.isActive ? 'ACTIVE' : 'INACTIVE'}
+                        />
+                      </TableCell>
+                      <TableCell className='text-right'>
+                        <div className='flex justify-end gap-2'>
+                          <Button
+                            size='icon'
+                            variant='outline'
+                            onClick={() => {
+                              setEditingParent(parent);
+                              setDialogOpen(true);
+                            }}
+                          >
+                            <Pencil className='h-4 w-4' />
+                          </Button>
+                          <Button
+                            size='icon'
+                            variant='outline'
+                            onClick={() => setDeletingParent(parent)}
+                          >
+                            <Trash2 className='h-4 w-4' />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
               </Table>
             </SchoolBusScrollableTable>
           )}
@@ -214,6 +248,8 @@ export function SchoolBusParentsPage() {
           }
         }}
         initialData={editingParent}
+        accountUsers={parentDialogUsers}
+        isLoadingAccountUsers={loadingAccountUsers}
         isLoading={creating || updating}
         onSubmit={handleSave}
       />
@@ -232,4 +268,46 @@ export function SchoolBusParentsPage() {
       />
     </>
   );
+}
+
+function buildAvailableParentAccountUsers({
+  users,
+  parentProfiles,
+  editingParent,
+}: {
+  users: SchoolBusAccountUser[];
+  parentProfiles: SchoolBusParent[];
+  editingParent: SchoolBusParent | null;
+}) {
+  const linkedUserIds = new Set(
+    parentProfiles
+      .filter((parent) => parent.id !== editingParent?.id)
+      .filter((parent) => parent.isActive !== false)
+      .map((parent) => parent.userId)
+  );
+
+  const availableUsers = users.filter(
+    (user) => !linkedUserIds.has(user.id) || user.id === editingParent?.userId
+  );
+
+  if (
+    editingParent &&
+    !availableUsers.some((user) => user.id === editingParent.userId)
+  ) {
+    return [
+      {
+        id: editingParent.userId,
+        email:
+          editingParent.email || `user-${editingParent.userId}@unknown.local`,
+        firstName: editingParent.fullName,
+        lastName: '',
+        phoneNumber: editingParent.phone || null,
+        status: editingParent.isActive === false ? 'INACTIVE' : 'ACTIVE',
+        userType: 'EXTERNAL',
+      },
+      ...availableUsers,
+    ];
+  }
+
+  return availableUsers;
 }

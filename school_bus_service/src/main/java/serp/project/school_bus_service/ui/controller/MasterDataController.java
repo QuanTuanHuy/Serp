@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import serp.project.school_bus_service.application.dto.params.AttendantProfileParamsRequest;
 import serp.project.school_bus_service.application.dto.params.BusParamsRequest;
+import serp.project.school_bus_service.application.dto.params.DepotParamsRequest;
 import serp.project.school_bus_service.application.dto.params.DriverProfileParamsRequest;
 import serp.project.school_bus_service.application.dto.params.ParentProfileParamsRequest;
 import serp.project.school_bus_service.application.dto.params.PickupPointParamsRequest;
@@ -20,6 +21,7 @@ import serp.project.school_bus_service.application.dto.params.SchoolParamsReques
 import serp.project.school_bus_service.application.dto.params.StudentParamsRequest;
 import serp.project.school_bus_service.application.dto.request.BusAttendantProfileUpsertRequest;
 import serp.project.school_bus_service.application.dto.request.BusUpsertRequest;
+import serp.project.school_bus_service.application.dto.request.DepotUpsertRequest;
 import serp.project.school_bus_service.application.dto.request.DriverProfileUpsertRequest;
 import serp.project.school_bus_service.application.dto.request.ParentProfileUpsertRequest;
 import serp.project.school_bus_service.application.dto.request.PickupPointUpsertRequest;
@@ -27,6 +29,8 @@ import serp.project.school_bus_service.application.dto.request.SchoolUpsertReque
 import serp.project.school_bus_service.application.dto.request.StudentUpsertRequest;
 import serp.project.school_bus_service.application.dto.response.AttendantProfileResponse;
 import serp.project.school_bus_service.application.dto.response.BusResponse;
+import serp.project.school_bus_service.application.dto.response.BusTypeResponse;
+import serp.project.school_bus_service.application.dto.response.DepotResponse;
 import serp.project.school_bus_service.application.dto.response.DriverProfileResponse;
 import serp.project.school_bus_service.application.dto.response.GeneralResponse;
 import serp.project.school_bus_service.application.dto.response.PageResponse;
@@ -35,8 +39,12 @@ import serp.project.school_bus_service.application.dto.response.PickupPointRespo
 import serp.project.school_bus_service.application.dto.response.SchoolResponse;
 import serp.project.school_bus_service.application.dto.response.StudentResponse;
 import serp.project.school_bus_service.core.service.IMasterDataService;
+import serp.project.school_bus_service.enums.BusTypeEnum;
 import serp.project.school_bus_service.kernel.shared.auth.AuthUtils;
 import serp.project.school_bus_service.kernel.shared.base.AbstractBaseController;
+
+import java.util.Arrays;
+import java.util.List;
 
 @RestController
 @RequestMapping
@@ -178,6 +186,18 @@ public class MasterDataController extends AbstractBaseController {
         return ok("Deleted bus");
     }
 
+    @GetMapping("/bus-types")
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.bus.read')")
+    public ResponseEntity<GeneralResponse<List<BusTypeResponse>>> getBusTypes() {
+        List<BusTypeResponse> busTypes = Arrays.stream(BusTypeEnum.values())
+                .map(busType -> new BusTypeResponse(
+                        busType.name(),
+                        busType.getValue(),
+                        busType.getDescription()))
+                .toList();
+        return ok("Fetched bus types", busTypes);
+    }
+
     @GetMapping("/drivers")
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.driver.read')")
     public ResponseEntity<GeneralResponse<PageResponse<DriverProfileResponse>>> getDrivers(
@@ -273,5 +293,38 @@ public class MasterDataController extends AbstractBaseController {
     public ResponseEntity<GeneralResponse<Void>> deletePickupPoint(@PathVariable Long id) {
         masterDataService.deletePickupPoint(id, getCurrentTenantId(), getCurrentUserId());
         return ok("Deleted pickup point");
+    }
+
+    @GetMapping("/depots")
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.depot.read')")
+    public ResponseEntity<GeneralResponse<PageResponse<DepotResponse>>> getDepots(
+            @ModelAttribute DepotParamsRequest params) {
+        return ok("Fetched depots", masterDataService.getDepots(params, getCurrentTenantId()));
+    }
+
+    @PostMapping("/depots")
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.depot.write')")
+    public ResponseEntity<GeneralResponse<DepotResponse>> createDepot(@Valid @RequestBody DepotUpsertRequest request) {
+        return created("Created depot", masterDataService.createDepot(request, getCurrentTenantId(), getCurrentUserId()));
+    }
+
+    @GetMapping("/depots/{id}")
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.depot.read')")
+    public ResponseEntity<GeneralResponse<DepotResponse>> getDepot(@PathVariable Long id) {
+        return ok("Fetched depot", masterDataService.getDepotResponse(id, getCurrentTenantId()));
+    }
+
+    @PatchMapping("/depots/{id}")
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.depot.write')")
+    public ResponseEntity<GeneralResponse<DepotResponse>> updateDepot(@PathVariable Long id,
+            @Valid @RequestBody DepotUpsertRequest request) {
+        return ok("Updated depot", masterDataService.updateDepot(id, request, getCurrentTenantId(), getCurrentUserId()));
+    }
+
+    @DeleteMapping("/depots/{id}")
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.depot.delete')")
+    public ResponseEntity<GeneralResponse<Void>> deleteDepot(@PathVariable Long id) {
+        masterDataService.deleteDepot(id, getCurrentTenantId(), getCurrentUserId());
+        return ok("Deleted depot");
     }
 }

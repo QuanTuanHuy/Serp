@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 import serp.project.school_bus_service.application.dto.response.AttendanceResponse;
 import serp.project.school_bus_service.application.dto.response.AttendantProfileResponse;
 import serp.project.school_bus_service.application.dto.response.BusResponse;
+import serp.project.school_bus_service.application.dto.response.DepotResponse;
 import serp.project.school_bus_service.application.dto.response.DriverProfileResponse;
 import serp.project.school_bus_service.application.dto.response.ParentProfileResponse;
 import serp.project.school_bus_service.application.dto.response.PickupPointResponse;
@@ -20,6 +21,7 @@ import serp.project.school_bus_service.application.dto.response.TripHistoryRespo
 import serp.project.school_bus_service.infrastructure.store.model.AttendanceEntity;
 import serp.project.school_bus_service.infrastructure.store.model.BusAttendantProfileEntity;
 import serp.project.school_bus_service.infrastructure.store.model.BusEntity;
+import serp.project.school_bus_service.infrastructure.store.model.DepotEntity;
 import serp.project.school_bus_service.infrastructure.store.model.DriverProfileEntity;
 import serp.project.school_bus_service.infrastructure.store.model.ParentProfileEntity;
 import serp.project.school_bus_service.infrastructure.store.model.PickupPointEntity;
@@ -116,6 +118,17 @@ public class SchoolBusMapper extends BaseMapper {
         return response;
     }
 
+    public DepotResponse toDepotResponse(DepotEntity entity) {
+        DepotResponse response = enrich(new DepotResponse(), entity);
+        response.setName(entity.getName());
+        response.setAddress(entity.getAddress());
+        response.setLatitude(entity.getLatitude());
+        response.setLongitude(entity.getLongitude());
+        response.setContactPhone(entity.getContactPhone());
+        response.setDescription(entity.getDescription());
+        return response;
+    }
+
     public RequestStudentResponse toRequestStudentResponse(RequestStudentEntity entity) {
         RequestStudentResponse response = enrich(new RequestStudentResponse(), entity);
         response.setRequestId(entity.getRequest().getId());
@@ -162,6 +175,11 @@ public class SchoolBusMapper extends BaseMapper {
         response.setSchoolName(entity.getSchool().getName());
         response.setSchoolLatitude(entity.getSchool().getLatitude());
         response.setSchoolLongitude(entity.getSchool().getLongitude());
+        response.setRouteDirection(entity.getRouteDirection().name());
+        response.setStartLocationType(entity.getStartLocationType().name());
+        applyStartLocation(response, entity);
+        response.setEndLocationType(entity.getEndLocationType().name());
+        applyEndLocation(response, entity);
         response.setRouteCode(entity.getRouteCode());
         response.setRouteName(entity.getRouteName());
         response.setServiceDate(entity.getServiceDate());
@@ -183,6 +201,7 @@ public class SchoolBusMapper extends BaseMapper {
         response.setPickupPointAddress(entity.getPickupPoint().getAddress());
         response.setPickupPointLatitude(entity.getPickupPoint().getLatitude());
         response.setPickupPointLongitude(entity.getPickupPoint().getLongitude());
+        response.setStopType(entity.getStopType().name());
         response.setStopOrder(entity.getStopOrder());
         response.setEstimatedStudentCount(entity.getEstimatedStudentCount());
         response.setPlannedArrivalTime(entity.getPlannedArrivalTime());
@@ -244,5 +263,43 @@ public class SchoolBusMapper extends BaseMapper {
         response.setAttendantId(entity.getAttendant() == null ? null : entity.getAttendant().getId());
         response.setAttendantName(entity.getAttendant() == null ? null : entity.getAttendant().getFullName());
         return response;
+    }
+
+    private void applyStartLocation(RoutePlanResponse response, RoutePlanEntity entity) {
+        if (entity.getStartSchool() != null) {
+            response.setStartLocationId(entity.getStartSchool().getId());
+            response.setStartLocationName(entity.getStartSchool().getName());
+            response.setStartLocationAddress(entity.getStartSchool().getAddress());
+            response.setStartLocationLatitude(entity.getStartSchool().getLatitude());
+            response.setStartLocationLongitude(entity.getStartSchool().getLongitude());
+            return;
+        }
+
+        if (entity.getStartDepot() != null) {
+            response.setStartLocationId(entity.getStartDepot().getId());
+            response.setStartLocationName(entity.getStartDepot().getName());
+            response.setStartLocationAddress(entity.getStartDepot().getAddress());
+            response.setStartLocationLatitude(entity.getStartDepot().getLatitude());
+            response.setStartLocationLongitude(entity.getStartDepot().getLongitude());
+        }
+    }
+
+    private void applyEndLocation(RoutePlanResponse response, RoutePlanEntity entity) {
+        if (entity.getEndSchool() != null) {
+            response.setEndLocationId(entity.getEndSchool().getId());
+            response.setEndLocationName(entity.getEndSchool().getName());
+            response.setEndLocationAddress(entity.getEndSchool().getAddress());
+            response.setEndLocationLatitude(entity.getEndSchool().getLatitude());
+            response.setEndLocationLongitude(entity.getEndSchool().getLongitude());
+            return;
+        }
+
+        if (entity.getEndDepot() != null) {
+            response.setEndLocationId(entity.getEndDepot().getId());
+            response.setEndLocationName(entity.getEndDepot().getName());
+            response.setEndLocationAddress(entity.getEndDepot().getAddress());
+            response.setEndLocationLatitude(entity.getEndDepot().getLatitude());
+            response.setEndLocationLongitude(entity.getEndDepot().getLongitude());
+        }
     }
 }

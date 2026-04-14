@@ -19,6 +19,23 @@ public class RoutePlanUpsertRequest extends BaseCommandRequest {
     private String routeCode;
 
     @NotBlank
+    private String routeDirection;
+
+    @NotBlank
+    private String startLocationType;
+
+    private Long startSchoolId;
+
+    private Long startDepotId;
+
+    @NotBlank
+    private String endLocationType;
+
+    private Long endSchoolId;
+
+    private Long endDepotId;
+
+    @NotBlank
     private String routeName;
 
     @NotNull

@@ -13,7 +13,10 @@ import type {
   SchoolBusAttendant,
   SchoolBusAttendantUpsertRequest,
   SchoolBusBus,
+  SchoolBusBusType,
   SchoolBusBusUpsertRequest,
+  SchoolBusDepot,
+  SchoolBusDepotUpsertRequest,
   SchoolBusDriver,
   SchoolBusDriverUpsertRequest,
   SchoolBusParent,
@@ -81,6 +84,11 @@ export const schoolBusApi = api.injectEndpoints({
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<OperationalReport>(),
       providesTags: [{ type: 'schoolBus/Report', id: 'SUMMARY' }],
+    }),
+    getBusTypes: builder.query<ApiResponse<SchoolBusBusType[]>, void>({
+      query: () => ({ url: '/bus-types', method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusBusType[]>(),
     }),
 
     getSchools: builder.query<
@@ -545,6 +553,72 @@ export const schoolBusApi = api.injectEndpoints({
       ],
     }),
 
+    getDepots: builder.query<
+      ApiResponse<PagedResponse<SchoolBusDepot>>,
+      SchoolBusListParams | void
+    >({
+      query: (params) => listQuery('/depots', params),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<PagedResponse<SchoolBusDepot>>(),
+      providesTags: (result) =>
+        result?.data
+          ? [
+              ...result.data.items.map(({ id }) => ({
+                type: 'schoolBus/Depot' as const,
+                id,
+              })),
+              { type: 'schoolBus/Depot', id: 'LIST' },
+            ]
+          : [{ type: 'schoolBus/Depot', id: 'LIST' }],
+    }),
+    getDepotById: builder.query<ApiResponse<SchoolBusDepot>, number>({
+      query: (id) => ({ url: `/depots/${id}`, method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusDepot>(),
+      providesTags: (_result, _error, id) => [
+        { type: 'schoolBus/Depot', id },
+      ],
+    }),
+    createDepot: builder.mutation<
+      ApiResponse<SchoolBusDepot>,
+      SchoolBusDepotUpsertRequest
+    >({
+      query: (body) => ({ url: '/depots', method: 'POST', body }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusDepot>(),
+      invalidatesTags: [
+        { type: 'schoolBus/Depot', id: 'LIST' },
+        { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
+      ],
+    }),
+    updateDepot: builder.mutation<
+      ApiResponse<SchoolBusDepot>,
+      { id: number; body: SchoolBusDepotUpsertRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/depots/${id}`,
+        method: 'PATCH',
+        body,
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusDepot>(),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'schoolBus/Depot', id: 'LIST' },
+        { type: 'schoolBus/Depot', id },
+        { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
+      ],
+    }),
+    deleteDepot: builder.mutation<ApiResponse<void>, number>({
+      query: (id) => ({ url: `/depots/${id}`, method: 'DELETE' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<void>(),
+      invalidatesTags: (_result, _error, id) => [
+        { type: 'schoolBus/Depot', id: 'LIST' },
+        { type: 'schoolBus/Depot', id },
+        { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
+      ],
+    }),
+
     getTransportRequests: builder.query<
       ApiResponse<PagedResponse<SchoolBusTransportRequest>>,
       SchoolBusListParams | void
@@ -847,6 +921,7 @@ export const {
   useLazyReverseMapLocationQuery,
   useGetSchoolBusSummaryQuery,
   useGetSchoolBusReportQuery,
+  useGetBusTypesQuery,
   useGetSchoolsQuery,
   useGetSchoolByIdQuery,
   useCreateSchoolMutation,
@@ -882,6 +957,11 @@ export const {
   useCreatePickupPointMutation,
   useUpdatePickupPointMutation,
   useDeletePickupPointMutation,
+  useGetDepotsQuery,
+  useGetDepotByIdQuery,
+  useCreateDepotMutation,
+  useUpdateDepotMutation,
+  useDeleteDepotMutation,
   useGetTransportRequestsQuery,
   useGetTransportRequestByIdQuery,
   useCreateTransportRequestMutation,

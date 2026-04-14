@@ -2,6 +2,7 @@ package serp.project.school_bus_service.core.service;
 
 import serp.project.school_bus_service.application.dto.params.AttendantProfileParamsRequest;
 import serp.project.school_bus_service.application.dto.params.BusParamsRequest;
+import serp.project.school_bus_service.application.dto.params.DepotParamsRequest;
 import serp.project.school_bus_service.application.dto.params.DriverProfileParamsRequest;
 import serp.project.school_bus_service.application.dto.params.ParentProfileParamsRequest;
 import serp.project.school_bus_service.application.dto.params.PickupPointParamsRequest;
@@ -9,6 +10,7 @@ import serp.project.school_bus_service.application.dto.params.SchoolParamsReques
 import serp.project.school_bus_service.application.dto.params.StudentParamsRequest;
 import serp.project.school_bus_service.application.dto.request.BusAttendantProfileUpsertRequest;
 import serp.project.school_bus_service.application.dto.request.BusUpsertRequest;
+import serp.project.school_bus_service.application.dto.request.DepotUpsertRequest;
 import serp.project.school_bus_service.application.dto.request.DriverProfileUpsertRequest;
 import serp.project.school_bus_service.application.dto.request.ParentProfileUpsertRequest;
 import serp.project.school_bus_service.application.dto.request.PickupPointUpsertRequest;
@@ -16,6 +18,7 @@ import serp.project.school_bus_service.application.dto.request.SchoolUpsertReque
 import serp.project.school_bus_service.application.dto.request.StudentUpsertRequest;
 import serp.project.school_bus_service.application.dto.response.AttendantProfileResponse;
 import serp.project.school_bus_service.application.dto.response.BusResponse;
+import serp.project.school_bus_service.application.dto.response.DepotResponse;
 import serp.project.school_bus_service.application.dto.response.DriverProfileResponse;
 import serp.project.school_bus_service.application.dto.response.PageResponse;
 import serp.project.school_bus_service.application.dto.response.ParentProfileResponse;
@@ -24,6 +27,7 @@ import serp.project.school_bus_service.application.dto.response.SchoolResponse;
 import serp.project.school_bus_service.application.dto.response.StudentResponse;
 import serp.project.school_bus_service.infrastructure.store.model.BusAttendantProfileEntity;
 import serp.project.school_bus_service.infrastructure.store.model.BusEntity;
+import serp.project.school_bus_service.infrastructure.store.model.DepotEntity;
 import serp.project.school_bus_service.infrastructure.store.model.DriverProfileEntity;
 import serp.project.school_bus_service.infrastructure.store.model.ParentProfileEntity;
 import serp.project.school_bus_service.infrastructure.store.model.PickupPointEntity;
@@ -115,4 +119,16 @@ public interface IMasterDataService {
     PickupPointResponse updatePickupPoint(Long id, PickupPointUpsertRequest request, Long tenantId, Long actorId);
 
     void deletePickupPoint(Long id, Long tenantId, Long actorId);
+
+    PageResponse<DepotResponse> getDepots(DepotParamsRequest params, Long tenantId);
+
+    DepotResponse getDepotResponse(Long id, Long tenantId);
+
+    DepotEntity getDepot(Long id, Long tenantId);
+
+    DepotResponse createDepot(DepotUpsertRequest request, Long tenantId, Long actorId);
+
+    DepotResponse updateDepot(Long id, DepotUpsertRequest request, Long tenantId, Long actorId);
+
+    void deleteDepot(Long id, Long tenantId, Long actorId);
 }

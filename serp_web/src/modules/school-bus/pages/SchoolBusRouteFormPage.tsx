@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   useCreateRouteMutation,
+  useGetDepotsQuery,
   useGetRouteByIdQuery,
   useGetSchoolsQuery,
   useUpdateRouteMutation,
@@ -26,6 +27,10 @@ export function SchoolBusRouteFormPage({ routeId }: SchoolBusRouteFormPageProps)
     { skip: !routeId }
   );
   const { data: schoolsData } = useGetSchoolsQuery({
+    ...SCHOOL_BUS_OPTION_QUERY,
+    sortBy: 'name',
+  });
+  const { data: depotsData } = useGetDepotsQuery({
     ...SCHOOL_BUS_OPTION_QUERY,
     sortBy: 'name',
   });
@@ -63,6 +68,7 @@ export function SchoolBusRouteFormPage({ routeId }: SchoolBusRouteFormPageProps)
       <RoutePlanForm
         initialData={routeData?.data?.route}
         schools={getPageItems(schoolsData?.data)}
+        depots={getPageItems(depotsData?.data)}
         isLoading={creating || updating}
         submitLabel={isEditMode ? 'Update route' : 'Create route'}
         onCancel={() =>

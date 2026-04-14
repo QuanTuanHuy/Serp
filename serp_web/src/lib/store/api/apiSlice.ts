@@ -231,6 +231,7 @@ export const api = createApi({
     'schoolBus/Driver',
     'schoolBus/Attendant',
     'schoolBus/PickupPoint',
+    'schoolBus/Depot',
     'schoolBus/TransportRequest',
     'schoolBus/Route',
     'schoolBus/Attendance',

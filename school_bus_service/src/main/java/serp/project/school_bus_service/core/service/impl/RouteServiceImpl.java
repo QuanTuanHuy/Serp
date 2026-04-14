@@ -20,12 +20,16 @@ import serp.project.school_bus_service.core.service.IAuditLogService;
 import serp.project.school_bus_service.core.service.ICodeGeneratorService;
 import serp.project.school_bus_service.core.service.IMasterDataService;
 import serp.project.school_bus_service.core.service.IRouteService;
+import serp.project.school_bus_service.enums.RouteDirection;
+import serp.project.school_bus_service.enums.RouteLocationType;
 import serp.project.school_bus_service.infrastructure.store.mapper.SchoolBusMapper;
+import serp.project.school_bus_service.infrastructure.store.model.DepotEntity;
 import serp.project.school_bus_service.infrastructure.store.model.AttendanceEntity;
 import serp.project.school_bus_service.infrastructure.store.model.RequestStudentEntity;
 import serp.project.school_bus_service.infrastructure.store.model.RouteAssignmentEntity;
 import serp.project.school_bus_service.infrastructure.store.model.RoutePlanEntity;
 import serp.project.school_bus_service.infrastructure.store.model.RouteStopEntity;
+import serp.project.school_bus_service.infrastructure.store.model.SchoolEntity;
 import serp.project.school_bus_service.infrastructure.store.model.TripHistoryEntity;
 import serp.project.school_bus_service.enums.RouteStatus;
 import serp.project.school_bus_service.enums.ShiftType;
@@ -75,9 +79,9 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     public PageResponse<RoutePlanResponse> getRoutes(RoutePlanParamsRequest params, Long tenantId) {
         return PageResponse.from(routePlanRepository.findAll(
                 spec(tenantId, params == null ? null : params.getKeyword(), "routeCode", "routeName", "status",
-                        "shiftType", "school.name"),
+                        "shiftType", "routeDirection", "school.name"),
                 pageable(params, Set.of("id", "routeCode", "routeName", "serviceDate", "status", "createdAt",
-                        "updatedAt"), "serviceDate")),
+                        "updatedAt", "routeDirection"), "serviceDate")),
                 mapper::toRoutePlanResponse);
     }
 
@@ -269,12 +273,98 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     }
 
     private void applyRoute(RoutePlanEntity route, RoutePlanUpsertRequest request, Long tenantId) {
-        route.setSchool(masterDataService.getSchool(request.getSchoolId(), tenantId));
+        SchoolEntity school = masterDataService.getSchool(request.getSchoolId(), tenantId);
+        RouteDirection direction = parseEnum(RouteDirection.class, request.getRouteDirection(), "route direction");
+        RouteLocationType startType = parseEnum(RouteLocationType.class, request.getStartLocationType(), "start location type");
+        RouteLocationType endType = parseEnum(RouteLocationType.class, request.getEndLocationType(), "end location type");
+
+        validateRouteLocationRule(direction, startType, endType);
+
+        route.setSchool(school);
+        route.setRouteDirection(direction);
+        applyStartLocation(route, school, startType, request, tenantId);
+        applyEndLocation(route, school, endType, request, tenantId);
         route.setRouteName(request.getRouteName());
         route.setServiceDate(request.getServiceDate());
-        route.setShiftType(ShiftType.valueOf(request.getShiftType().toUpperCase()));
+        route.setShiftType(parseEnum(ShiftType.class, request.getShiftType(), "shift type"));
         route.setPlanningNotes(request.getPlanningNotes());
         route.setIsActive(request.resolveIsActive(Boolean.TRUE));
+    }
+
+    private void validateRouteLocationRule(RouteDirection direction, RouteLocationType startType,
+            RouteLocationType endType) {
+        if (direction == RouteDirection.OUTBOUND && endType != RouteLocationType.SCHOOL) {
+            throw new AppException(
+                    AppErrorCode.INVALID_REQUEST,
+                    "Outbound routes must end at the school");
+        }
+        if (direction == RouteDirection.RETURN && startType != RouteLocationType.SCHOOL) {
+            throw new AppException(
+                    AppErrorCode.INVALID_REQUEST,
+                    "Return routes must start at the school");
+        }
+    }
+
+    private void applyStartLocation(RoutePlanEntity route, SchoolEntity school, RouteLocationType startType,
+            RoutePlanUpsertRequest request, Long tenantId) {
+        route.setStartLocationType(startType);
+        if (startType == RouteLocationType.SCHOOL) {
+            validateSameSchool(request.getStartSchoolId(), school.getId(), "start school");
+            route.setStartSchool(school);
+            route.setStartDepot(null);
+            return;
+        }
+
+        DepotEntity depot = getRequiredDepot(request.getStartDepotId(), tenantId, "start depot");
+        route.setStartSchool(null);
+        route.setStartDepot(depot);
+    }
+
+    private void applyEndLocation(RoutePlanEntity route, SchoolEntity school, RouteLocationType endType,
+            RoutePlanUpsertRequest request, Long tenantId) {
+        route.setEndLocationType(endType);
+        if (endType == RouteLocationType.SCHOOL) {
+            validateSameSchool(request.getEndSchoolId(), school.getId(), "end school");
+            route.setEndSchool(school);
+            route.setEndDepot(null);
+            return;
+        }
+
+        DepotEntity depot = getRequiredDepot(request.getEndDepotId(), tenantId, "end depot");
+        route.setEndSchool(null);
+        route.setEndDepot(depot);
+    }
+
+    private DepotEntity getRequiredDepot(Long depotId, Long tenantId, String fieldName) {
+        if (depotId == null) {
+            throw new AppException(
+                    AppErrorCode.INVALID_REQUEST,
+                    String.format("%s is required when location type is DEPOT", fieldName));
+        }
+        return masterDataService.getDepot(depotId, tenantId);
+    }
+
+    private void validateSameSchool(Long requestedSchoolId, Long routeSchoolId, String fieldName) {
+        if (requestedSchoolId == null) {
+            throw new AppException(
+                    AppErrorCode.INVALID_REQUEST,
+                    String.format("%s is required when location type is SCHOOL", fieldName));
+        }
+        if (!routeSchoolId.equals(requestedSchoolId)) {
+            throw new AppException(
+                    AppErrorCode.INVALID_REQUEST,
+                    String.format("%s must match the route school in v1", fieldName));
+        }
+    }
+
+    private <E extends Enum<E>> E parseEnum(Class<E> enumType, String value, String fieldName) {
+        try {
+            return Enum.valueOf(enumType, value == null ? "" : value.toUpperCase());
+        } catch (IllegalArgumentException exception) {
+            throw new AppException(
+                    AppErrorCode.INVALID_REQUEST,
+                    String.format("Invalid %s: %s", fieldName, value));
+        }
     }
 
     private void validateAssignmentConflict(Long routeId, LocalDate serviceDate, RouteAssignmentRequest request, Long tenantId) {
