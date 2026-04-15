@@ -11,7 +11,7 @@ import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.enums.ImportType;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
-import serp.project.first_mile.mapper.LocationMapper;
+import serp.project.first_mile.kernel.utils.ImportHistoryResponseUtils;
 import serp.project.first_mile.repository.ImportHistoryRepository;
 import serp.project.first_mile.service.ImportHistoryService;
 
@@ -24,23 +24,7 @@ public class ImportHistoryServiceImpl implements ImportHistoryService {
     public ImportHistoryResponse getImportHistory(Long importHistoryId, Long tenantId) {
         ImportHistory importHistory = importHistoryRepository.findByIdAndTenantId(importHistoryId, tenantId)
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST));
-        return toImportHistoryResponse(importHistory);
-    }
-
-    private ImportHistoryResponse toImportHistoryResponse(ImportHistory importHistory) {
-        return ImportHistoryResponse.builder()
-                .id(importHistory.getId())
-                .fileId(importHistory.getFileId())
-                .fileName(importHistory.getFileName())
-                .status(importHistory.getStatus())
-                .totalRecords(importHistory.getTotalRecords())
-                .successRecords(importHistory.getSuccessRecords())
-                .failedRecords(importHistory.getFailedRecords())
-                .errorMessage(importHistory.getErrorMessage())
-                .startedAt(importHistory.getStartedAt())
-                .finishedAt(importHistory.getFinishedAt())
-                .type(importHistory.getType())
-                .build();
+        return ImportHistoryResponseUtils.toResponse(importHistory, true);
     }
 
     @Override
@@ -50,7 +34,7 @@ public class ImportHistoryServiceImpl implements ImportHistoryService {
         var importHistoryPage = (type == null
             ? importHistoryRepository.findAllByTenantId(tenantId, pageable)
             : importHistoryRepository.findAllByTenantIdAndType(tenantId, type, pageable))
-                .map(this::toImportHistoryResponse);
+            .map(importHistory -> ImportHistoryResponseUtils.toResponse(importHistory, true));
         return PageResponse.<ImportHistoryResponse>builder()
                 .items(importHistoryPage.getContent())
                 .page(importHistoryPage.getNumber())

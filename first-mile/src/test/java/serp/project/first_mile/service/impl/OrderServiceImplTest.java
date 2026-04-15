@@ -5,6 +5,7 @@ Description: Part of Serp Project
 
 package serp.project.first_mile.service.impl;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.locationtech.jts.geom.Coordinate;
@@ -16,17 +17,29 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.first_mile.domain.Order;
 import serp.project.first_mile.domain.PostOffice;
+import serp.project.first_mile.dto.request.CancelOrderRequest;
+import serp.project.first_mile.dto.request.UpdateOrderRequest;
 import serp.project.first_mile.dto.response.OrderConfirmationResponse;
+import serp.project.first_mile.dto.response.OrderDetailResponse;
+import serp.project.first_mile.enums.DeliveryRequestTime;
+import serp.project.first_mile.enums.FeePayer;
 import serp.project.first_mile.enums.OrderStatus;
+import serp.project.first_mile.enums.OrderType;
 import serp.project.first_mile.enums.PostOfficeStatus;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
+import serp.project.first_mile.kernel.utils.AuthUtils;
 import serp.project.first_mile.repository.OrderRepository;
 import serp.project.first_mile.repository.PostOfficeRepository;
+import serp.project.first_mile.repository.PostOfficeStaffAssignmentRepository;
+import serp.project.first_mile.repository.PostOfficeStaffRepository;
+import serp.project.first_mile.repository.ProductTypeRepository;
+import serp.project.first_mile.repository.TripOrderRepository;
 import serp.project.first_mile.service.OrderExcelService;
 import serp.project.first_mile.service.OrderImportExcelService;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -56,8 +69,31 @@ class OrderServiceImplTest {
     @Mock
     private PostOfficeRepository postOfficeRepository;
 
+    @Mock
+    private ProductTypeRepository productTypeRepository;
+
+    @Mock
+    private AuthUtils authUtils;
+
+    @Mock
+    private PostOfficeStaffRepository postOfficeStaffRepository;
+
+    @Mock
+    private PostOfficeStaffAssignmentRepository postOfficeStaffAssignmentRepository;
+
+    @Mock
+    private TripOrderRepository tripOrderRepository;
+
     @InjectMocks
     private OrderServiceImpl orderService;
+
+    @BeforeEach
+    void setUp() {
+        when(authUtils.hasAnyRole("TMS_ADMIN")).thenReturn(true);
+        when(authUtils.hasAnyRole("TMS_CUSTOMER")).thenReturn(false);
+        when(authUtils.hasAnyRole("TMS_POSTOFFICER_MANAGER")).thenReturn(false);
+        when(authUtils.hasAnyRole("TMS_POSTOFFICER")).thenReturn(false);
+    }
 
     @Test
     void confirmOrderShouldAssignBestPostOfficeAndIncreaseLoad() {
@@ -199,6 +235,114 @@ class OrderServiceImplTest {
                 any(LocalDate.class)
         );
         verify(postOfficeRepository, never()).save(any(PostOffice.class));
+    }
+
+    @Test
+    void updateOrderShouldThrowWhenStatusIsNotCreated() {
+        Long tenantId = 1L;
+        Long orderId = 103L;
+
+        Order order = new Order();
+        order.setId(orderId);
+        order.setStatus(OrderStatus.ASSIGNED_TO_PICKUP);
+
+        when(orderRepository.findByIdAndTenantIdForUpdate(orderId, tenantId)).thenReturn(Optional.of(order));
+
+        AppException exception = assertThrows(
+                AppException.class,
+                () -> orderService.updateOrder(orderId, buildValidUpdateRequest(), tenantId)
+        );
+
+        assertEquals(ErrorCode.ORDER_NOT_EDITABLE, exception.getErrorCode());
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    void cancelOrderShouldThrowWhenStatusIsNotCreated() {
+        Long tenantId = 1L;
+        Long orderId = 104L;
+
+        Order order = new Order();
+        order.setId(orderId);
+        order.setStatus(OrderStatus.PICKUP_FAILED);
+
+        when(orderRepository.findByIdAndTenantIdForUpdate(orderId, tenantId)).thenReturn(Optional.of(order));
+
+        AppException exception = assertThrows(
+                AppException.class,
+            () -> orderService.cancelOrder(orderId, tenantId, new CancelOrderRequest())
+        );
+
+        assertEquals(ErrorCode.ORDER_NOT_EDITABLE, exception.getErrorCode());
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    void cancelOrderShouldSetStatusCancelledWhenOrderIsCreated() {
+        Long tenantId = 1L;
+        Long orderId = 105L;
+
+        Order order = new Order();
+        order.setId(orderId);
+        order.setOrderCode("FM000105");
+        order.setCustomerOrderCode("CUS000105");
+        order.setStatus(OrderStatus.CREATED);
+        order.setIsConfirm(false);
+
+        when(orderRepository.findByIdAndTenantIdForUpdate(orderId, tenantId)).thenReturn(Optional.of(order));
+        when(orderRepository.save(order)).thenReturn(order);
+
+        OrderDetailResponse response = orderService.cancelOrder(orderId, tenantId, new CancelOrderRequest("test"));
+
+        assertEquals(OrderStatus.CANCELLED, order.getStatus());
+        assertEquals(OrderStatus.CANCELLED, response.status());
+        verify(orderRepository).save(order);
+    }
+
+    @Test
+    void getOrderByIdShouldThrowUnauthorizedWhenCustomerAccessesOtherOrder() {
+        Long tenantId = 1L;
+        Long orderId = 106L;
+
+        Order order = new Order();
+        order.setId(orderId);
+        order.setCreatedBy("999");
+
+        when(authUtils.hasAnyRole("TMS_ADMIN")).thenReturn(false);
+        when(authUtils.hasAnyRole("TMS_CUSTOMER")).thenReturn(true);
+        when(authUtils.getCurrentUserId()).thenReturn(Optional.of(1000L));
+        when(orderRepository.findByIdAndTenantId(orderId, tenantId)).thenReturn(Optional.of(order));
+
+        AppException exception = assertThrows(
+                AppException.class,
+                () -> orderService.getOrderById(orderId, tenantId)
+        );
+
+        assertEquals(ErrorCode.UNAUTHORIZED, exception.getErrorCode());
+    }
+
+    private UpdateOrderRequest buildValidUpdateRequest() {
+        UpdateOrderRequest request = new UpdateOrderRequest();
+        request.setCustomerOrderCode("CUS-UPD-001");
+        request.setSenderName("Sender");
+        request.setSenderPhone("0900000000");
+        request.setSenderProvinceCode("79");
+        request.setSenderWardCode("26734");
+        request.setSenderAddressDetail("Sender address");
+        request.setSenderLatitude(10.7769);
+        request.setSenderLongitude(106.7009);
+        request.setReceiverName("Receiver");
+        request.setReceiverPhone("0911111111");
+        request.setReceiverProvinceCode("79");
+        request.setReceiverWardCode("26749");
+        request.setReceiverAddressDetail("Receiver address");
+        request.setReceiverLatitude(10.7821);
+        request.setReceiverLongitude(106.6936);
+        request.setDeliveryRequestTime(DeliveryRequestTime.FULL_DAY);
+        request.setOrderType(OrderType.STANDARD_ORDER);
+        request.setFeePayer(FeePayer.SENDER);
+        request.setProducts(List.of());
+        return request;
     }
 
     private Point point(double latitude, double longitude) {
