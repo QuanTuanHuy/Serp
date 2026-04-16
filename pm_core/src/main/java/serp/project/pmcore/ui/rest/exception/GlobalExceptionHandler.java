@@ -135,6 +135,7 @@ public class GlobalExceptionHandler {
                  COMPONENT_NAME_ALREADY_EXISTS,
                  VERSION_NAME_ALREADY_EXISTS,
                  ROLE_NAME_ALREADY_EXISTS,
+                 ROLE_IN_USE_BY_PERMISSION,
                  ISSUE_TYPE_KEY_ALREADY_EXISTS,
                  PRIORITY_NAME_ALREADY_EXISTS,
                  PRIORITY_IN_USE,
@@ -153,7 +154,8 @@ public class GlobalExceptionHandler {
                  WORK_ITEM_SECURITY_ACCESS_DENIED,
                  TRANSITION_CONDITION_FAILED -> HttpStatus.FORBIDDEN;
 
-            case PROJECT_ARCHIVED -> HttpStatus.CONFLICT;
+            case PROJECT_ARCHIVED,
+                 ROLE_IS_SYSTEM -> HttpStatus.CONFLICT;
 
             case SCHEME_INCOMPATIBLE,
                   WORKFLOW_VALIDATION_FAILED,

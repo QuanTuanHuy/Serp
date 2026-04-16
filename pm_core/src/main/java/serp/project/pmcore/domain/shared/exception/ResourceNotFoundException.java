@@ -90,6 +90,11 @@ public class ResourceNotFoundException extends DomainException {
                 "Category not found: id=" + id);
     }
 
+    public static ResourceNotFoundException role(Long id) {
+        return new ResourceNotFoundException(DomainErrorCode.ROLE_NOT_FOUND,
+                "Project role not found: id=" + id);
+    }
+
     public static ResourceNotFoundException worklog(Long id) {
         return new ResourceNotFoundException(DomainErrorCode.WORKLOG_NOT_FOUND,
                 "Worklog not found: id=" + id);
