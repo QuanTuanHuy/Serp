@@ -17,6 +17,8 @@ public interface IProjectReadPort {
 
     boolean existsByKeyAndTenantId(String key, Long tenantId);
 
+    boolean existsActiveProjectByCategoryId(Long categoryId, Long tenantId);
+
     PageResult<ProjectEntity> getProjects(Long tenantId, String search,
                                           Long categoryId, String projectTypeKey,
                                           Boolean archived, int page, int size,

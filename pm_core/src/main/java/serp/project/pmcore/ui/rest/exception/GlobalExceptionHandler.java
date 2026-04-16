@@ -131,6 +131,7 @@ public class GlobalExceptionHandler {
         return switch (code) {
             case PROJECT_KEY_ALREADY_EXISTS,
                  CATEGORY_NAME_ALREADY_EXISTS,
+                 CATEGORY_IN_USE,
                  COMPONENT_NAME_ALREADY_EXISTS,
                  VERSION_NAME_ALREADY_EXISTS,
                  ROLE_NAME_ALREADY_EXISTS,

@@ -25,6 +25,10 @@ public interface IProjectRepository extends JpaRepository<ProjectModel, Long> {
 
     boolean existsByKeyAndTenantId(String key, Long tenantId);
 
+    @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM ProjectModel p " +
+            "WHERE p.projectCategoryId = :categoryId AND p.tenantId = :tenantId AND p.deletedAt IS NULL")
+    boolean existsActiveProjectByCategoryId(@Param("categoryId") Long categoryId, @Param("tenantId") Long tenantId);
+
     Page<ProjectModel> findAllByTenantId(Long tenantId, Pageable pageable);
 
     @Query(value = """

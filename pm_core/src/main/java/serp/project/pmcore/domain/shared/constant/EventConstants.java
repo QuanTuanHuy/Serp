@@ -25,6 +25,18 @@ public class EventConstants {
     }
 
     @UtilityClass
+    public static class ProjectCategory {
+        public static final String TOPIC = "serp.pm.project-category.events";
+        public static final String AGGREGATE = "PROJECT_CATEGORY";
+
+        public static class EventType {
+            public static final String PROJECT_CATEGORY_CREATED = "PROJECT_CATEGORY_CREATED";
+            public static final String PROJECT_CATEGORY_UPDATED = "PROJECT_CATEGORY_UPDATED";
+            public static final String PROJECT_CATEGORY_DELETED = "PROJECT_CATEGORY_DELETED";
+        }
+    }
+
+    @UtilityClass
     public static class WorkItem {
         public static final String TOPIC = "serp.pm.workitem.events";
         public static final String AGGREGATE = "WORK_ITEM";

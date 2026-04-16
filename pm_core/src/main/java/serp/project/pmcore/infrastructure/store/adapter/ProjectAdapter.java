@@ -55,6 +55,11 @@ public class ProjectAdapter implements IProjectReadPort, IProjectWritePort {
     }
 
     @Override
+    public boolean existsActiveProjectByCategoryId(Long categoryId, Long tenantId) {
+        return projectRepository.existsActiveProjectByCategoryId(categoryId, tenantId);
+    }
+
+    @Override
     public PageResult<ProjectEntity> getProjects(Long tenantId, String search,
                                                  Long categoryId, String projectTypeKey,
                                                  Boolean archived, int page, int size,
