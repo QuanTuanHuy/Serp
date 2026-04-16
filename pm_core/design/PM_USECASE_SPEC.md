@@ -107,11 +107,11 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 | UC-PM-035 | Delete Project Version | Project Lead | Low | Simple | Project Version |
 | UC-PM-036 | Release Project Version | Project Lead | High | Medium | Project Version |
 | UC-PM-037 | Archive Project Version | Project Lead | Low | Simple | Project Version |
-| UC-PM-041 | Create Project Role | PM Admin | Medium | Simple | Project Role |
-| UC-PM-042 | Update Project Role | PM Admin | Medium | Simple | Project Role |
-| UC-PM-043 | Get Project Role by ID | PM Admin | Low | Simple | Project Role |
-| UC-PM-044 | List Project Roles | PM Admin | Medium | Simple | Project Role |
-| UC-PM-045 | Delete Project Role | PM Admin | Low | Simple | Project Role |
+| UC-PM-041 | [Create Project Role](usecases/project-role/UC-PM-041-create-project-role.md) | PM Admin | Medium | Simple | Project Role |
+| UC-PM-042 | [Update Project Role](usecases/project-role/UC-PM-042-update-project-role.md) | PM Admin | Medium | Simple | Project Role |
+| UC-PM-043 | [Get Project Role by ID](usecases/project-role/UC-PM-043-get-project-role-by-id.md) | PM Admin | Low | Simple | Project Role |
+| UC-PM-044 | [List Project Roles](usecases/project-role/UC-PM-044-list-project-roles.md) | PM Admin | Medium | Simple | Project Role |
+| UC-PM-045 | [Delete Project Role](usecases/project-role/UC-PM-045-delete-project-role.md) | PM Admin | Low | Simple | Project Role |
 | UC-PM-046 | Add Project Role Actor | Project Lead | High | Simple | Project Role Actor |
 | UC-PM-047 | Remove Project Role Actor | Project Lead | Medium | Simple | Project Role Actor |
 | UC-PM-048 | List Project Role Actors | Project Lead | Medium | Simple | Project Role Actor |
@@ -1346,36 +1346,20 @@ Simple toggle: set `archived=true` or `archived=false`. Publish `VERSION_ARCHIVE
 
 #### UC-PM-041 to UC-PM-048: Project Role Management
 
-##### UC-PM-041: Create Project Role
+Detailed specifications are extracted to:
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-041 |
-| **Use Case Name** | Create Project Role |
-| **Priority** | Medium |
-| **Complexity** | Simple |
+- [UC-PM-041 - Create Project Role](usecases/project-role/UC-PM-041-create-project-role.md)
+- [UC-PM-042 - Update Project Role](usecases/project-role/UC-PM-042-update-project-role.md)
+- [UC-PM-043 - Get Project Role by ID](usecases/project-role/UC-PM-043-get-project-role-by-id.md)
+- [UC-PM-044 - List Project Roles](usecases/project-role/UC-PM-044-list-project-roles.md)
+- [UC-PM-045 - Delete Project Role](usecases/project-role/UC-PM-045-delete-project-role.md)
 
-**Description**: Create a new project role (e.g., "Developer", "QA Lead", "Scrum Master"). Roles are global per tenant and can be assigned per project.
+These extracted files are now the canonical detailed references for project-role catalog CRUD, including:
 
-**Permission**: `PM.ROLE.CREATE`
-
-**Input Data**:
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| name | string | Yes | min:1, max:255, unique per tenant | Role name |
-| description | string | No | max:2000 | Description |
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-041-01 | Role name unique per tenant | DB `UNIQUE(tenant_id, name)` |
-| BR-PM-041-02 | `is_system=false` for API-created roles | Service layer |
-
-##### UC-PM-042 to UC-PM-045: Role Update, Get, List, Delete
-
-Standard CRUD. Cannot delete system roles. Cannot delete if role is used in permission schemes.
+- tenant-scoped PM Admin authorization model
+- tenant-owned versus system-owned role behavior
+- soft-delete and read-only constraints
+- permission-scheme usage guardrails for delete
 
 ##### UC-PM-046: Add Project Role Actor
 
