@@ -89,11 +89,11 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 | UC-PM-013 | [Get Project Category by ID](usecases/project-category/UC-PM-013-get-project-category-by-id.md) | PM Admin | Low | Simple | Project Category |
 | UC-PM-014 | [List Project Categories](usecases/project-category/UC-PM-014-list-project-categories.md) | PM Admin | Medium | Simple | Project Category |
 | UC-PM-015 | [Delete Project Category](usecases/project-category/UC-PM-015-delete-project-category.md) | PM Admin | Low | Simple | Project Category |
-| UC-PM-016 | Create Project Blueprint | PM Admin | Medium | Medium | Project Blueprint |
-| UC-PM-017 | Update Project Blueprint | PM Admin | Medium | Simple | Project Blueprint |
-| UC-PM-018 | Get Project Blueprint by ID | PM Admin | Low | Simple | Project Blueprint |
-| UC-PM-019 | List Project Blueprints | PM Admin | Medium | Simple | Project Blueprint |
-| UC-PM-020 | Delete Project Blueprint | PM Admin | Low | Simple | Project Blueprint |
+| UC-PM-016 | [Create Project Blueprint](usecases/project-blueprint/UC-PM-016-create-project-blueprint.md) | PM Admin | Medium | Medium | Project Blueprint |
+| UC-PM-017 | [Update Project Blueprint](usecases/project-blueprint/UC-PM-017-update-project-blueprint.md) | PM Admin | Medium | Simple | Project Blueprint |
+| UC-PM-018 | [Get Project Blueprint by ID](usecases/project-blueprint/UC-PM-018-get-project-blueprint-by-id.md) | PM Admin | Low | Simple | Project Blueprint |
+| UC-PM-019 | [List Project Blueprints](usecases/project-blueprint/UC-PM-019-list-project-blueprints.md) | PM Admin | Medium | Simple | Project Blueprint |
+| UC-PM-020 | [Delete Project Blueprint](usecases/project-blueprint/UC-PM-020-delete-project-blueprint.md) | PM Admin | Low | Simple | Project Blueprint |
 | UC-PM-021 | Manage Blueprint Scheme Defaults | PM Admin | Medium | Medium | Blueprint Scheme Defaults |
 | UC-PM-026 | Create Project Component | Project Lead | High | Simple | Project Component |
 | UC-PM-027 | Update Project Component | Project Lead | Medium | Simple | Project Component |
@@ -1120,54 +1120,20 @@ Update the effective scheme bindings for a project (issue type scheme, workflow 
 
 #### UC-PM-016 to UC-PM-021: Project Blueprint Management
 
-##### UC-PM-016: Create Project Blueprint
+Detailed specifications are extracted to:
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-016 |
-| **Use Case Name** | Create Project Blueprint |
-| **Priority** | Medium |
-| **Complexity** | Medium |
+- [UC-PM-016 - Create Project Blueprint](usecases/project-blueprint/UC-PM-016-create-project-blueprint.md)
+- [UC-PM-017 - Update Project Blueprint](usecases/project-blueprint/UC-PM-017-update-project-blueprint.md)
+- [UC-PM-018 - Get Project Blueprint by ID](usecases/project-blueprint/UC-PM-018-get-project-blueprint-by-id.md)
+- [UC-PM-019 - List Project Blueprints](usecases/project-blueprint/UC-PM-019-list-project-blueprints.md)
+- [UC-PM-020 - Delete Project Blueprint](usecases/project-blueprint/UC-PM-020-delete-project-blueprint.md)
 
-**Description**: Create a project template (blueprint) that pre-configures scheme defaults for new projects.
+These extracted files are now the canonical detailed references for project blueprint CRUD, including:
 
-**Permission**: `PM.BLUEPRINT.CREATE`
-
-**Main Flow**:
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 1 | PM Admin | Sends POST `/api/v1/project-blueprints` with blueprint data |
-| 2 | System | Validates JWT, permissions, input |
-| 3 | System | Validates `project_type_key` is valid |
-| 4 | System | Persists blueprint |
-| 5 | System | Publishes `BLUEPRINT_CREATED` event to `serp.pm.blueprint.events` |
-| 6 | System | Returns HTTP 201 |
-
-**Input Data**:
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| name | string | Yes | min:1, max:255 | Blueprint name |
-| description | string | No | max:2000 | Description |
-| project_type_key | string | Yes | software, business, service_desk | Project type |
-| avatar_url | string | No | valid URL | Icon URL |
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-016-01 | Only PM Admin can create tenant-defined blueprints; `is_system=false` | Service layer |
-| BR-PM-016-02 | System blueprints (`is_system=true`) cannot be created via API | Service layer |
-
-##### UC-PM-017 to UC-PM-020: Blueprint Update, Get, List, Delete
-
-Standard CRUD pattern. Permission: `PM.BLUEPRINT.MANAGE`.
-
-- **UC-PM-017**: Update blueprint metadata (name, description, avatar_url). Cannot modify `is_system` blueprints.
-- **UC-PM-018**: Get by ID with scheme defaults expanded.
-- **UC-PM-019**: List blueprints with filters (project_type_key, is_system).
-- **UC-PM-020**: Soft-delete. Cannot delete system blueprints. Existing projects are not affected because blueprint schemes are only used as provisioning templates.
+- tenant-scoped PM Admin authorization model
+- tenant-owned versus system-owned blueprint behavior
+- `project_type_key` immutability after create
+- `UC-PM-018` scheme-default expansion and `UC-PM-019` metadata-only listing
 
 ##### UC-PM-021: Manage Blueprint Scheme Defaults
 
