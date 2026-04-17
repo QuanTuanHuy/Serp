@@ -16,6 +16,7 @@ import {
   Package2,
   PanelLeftClose,
   PanelLeftOpen,
+  Route,
   Truck,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
@@ -47,7 +48,6 @@ const NAV_SECTIONS: NavSection[] = [
         name: 'Requests',
         href: '/ttcrs/dispatcher/requests',
         icon: FileText,
-        exact: true,
       },
       {
         name: 'Locations',
@@ -61,21 +61,16 @@ const NAV_SECTIONS: NavSection[] = [
       },
     ],
   },
-  // ── Add future sections below ─────────────────────────────────────────────
-  // {
-  //   heading: 'Fleet',
-  //   items: [
-  //     { name: 'Trucks',    href: '/ttcrs/dispatcher/trucks',    icon: Truck },
-  //     { name: 'Trailers',  href: '/ttcrs/dispatcher/trailers',  icon: Container },
-  //     { name: 'Drivers',   href: '/ttcrs/dispatcher/drivers',   icon: Users },
-  //   ],
-  // },
-  // {
-  //   heading: 'Planning',
-  //   items: [
-  //     { name: 'Transport Plans', href: '/ttcrs/dispatcher/plans', icon: Route },
-  //   ],
-  // },
+  {
+    heading: 'Planning',
+    items: [
+      {
+        name: 'Transport Plans',
+        href: '/ttcrs/dispatcher/plans/create',
+        icon: Route,
+      },
+    ],
+  },
 ];
 
 // ---------------------------------------------------------------------------

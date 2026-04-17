@@ -1,11 +1,11 @@
 package com.example.ttcrs.controller;
 
-import com.example.ttcrs.dto.request.driver.CreateDriverDTO;
-import com.example.ttcrs.dto.request.driver.UpdateDriverDTO;
 import com.example.ttcrs.dto.request.resource.CreateContainerDTO;
+import com.example.ttcrs.dto.request.resource.CreateDriverDTO;
 import com.example.ttcrs.dto.request.resource.CreateTrailerDTO;
 import com.example.ttcrs.dto.request.resource.CreateTruckDTO;
 import com.example.ttcrs.dto.request.resource.UpdateContainerDTO;
+import com.example.ttcrs.dto.request.resource.UpdateDriverDTO;
 import com.example.ttcrs.dto.request.resource.UpdateTrailerDTO;
 import com.example.ttcrs.dto.request.resource.UpdateTruckDTO;
 import com.example.ttcrs.dto.response.ApiResponse;

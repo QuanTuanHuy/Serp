@@ -1,8 +1,11 @@
 package com.example.ttcrs.service;
 
 import com.example.ttcrs.constant.RequestStatus;
-import com.example.ttcrs.dto.request.CreateRequestDTO;
-import com.example.ttcrs.dto.request.RequestFilterDTO;
+import com.example.ttcrs.dto.request.request.CreateRequestDTO;
+import com.example.ttcrs.dto.request.request.RequestFilterDTO;
+import com.example.ttcrs.dto.request.request.UpdateRequestDTO;
+import com.example.ttcrs.dto.request.request.UpdateRequestsStatusDTO;
+import com.example.ttcrs.dto.request.transportplan.CreateTransportPlanInputDTO;
 import com.example.ttcrs.dto.response.PageResponse;
 import com.example.ttcrs.dto.response.RequestResponseDTO;
 import com.example.ttcrs.entity.RequestEntity;
@@ -32,6 +35,7 @@ public class RequestService {
 
     private final RequestRepository requestRepository;
     private final AuthUtils authUtils;
+    private final AlgorithmService algorithmService;
 
     // =========================================================================
     // Public methods
@@ -128,6 +132,191 @@ public class RequestService {
         return saved.stream()
                 .map(RequestResponseDTO::fromEntity)
                 .toList();
+    }
+
+    /**
+     * Cập nhật hàng loạt trạng thái cho nhiều Request (dành cho Dispatcher).
+     *
+     * <p>Dùng trong luồng tạo Transport Plan:
+     * <ul>
+     *   <li>"Next" (Step 1 → 2): cập nhật sang {@code PLANNED}.</li>
+     *   <li>"Back" (Step 2 → 1): hoàn trả về {@code PENDING}.</li>
+     * </ul>
+     *
+     * <p>Chỉ cập nhật các request thuộc đúng tenant hiện tại.
+     * Các ID không tồn tại hoặc thuộc tenant khác sẽ bị bỏ qua.
+     *
+     * @param dto danh sách request ID và trạng thái mới
+     * @return danh sách DTO của các request đã được cập nhật
+     */
+    @Transactional
+    public List<RequestResponseDTO> updateRequestsStatus(UpdateRequestsStatusDTO dto) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Không thể xác định tenant từ token."
+                ));
+
+        log.info("Updating status of {} requests to {} for tenantId={}",
+                dto.getRequestIds().size(), dto.getStatus(), tenantId);
+
+        List<RequestEntity> requests = requestRepository.findAllById(dto.getRequestIds());
+
+        // Chỉ cập nhật các request thuộc đúng tenant
+        List<RequestEntity> owned = requests.stream()
+                .filter(r -> r.getTenantId().equals(tenantId))
+                .toList();
+
+        owned.forEach(r -> r.setStatus(dto.getStatus()));
+        List<RequestEntity> saved = requestRepository.saveAll(owned);
+
+        return saved.stream()
+                .map(RequestResponseDTO::fromEntity)
+                .toList();
+    }
+
+    /**
+     * Creates a transport plan in a single atomic transaction.
+     *
+     * <p>This is the "Create Plan" final-submit handler. Everything runs inside
+     * one {@code @Transactional} boundary so that either the entire operation
+     * succeeds or the whole thing rolls back — no partial state is persisted.
+     *
+     * <p>Current behaviour (algorithm not yet integrated):
+     * <ol>
+     *   <li>Validates that all supplied request IDs belong to the current tenant
+     *       and are in {@code PLANNED} status.</li>
+     *   <li>Logs the full plan input (requestIds, depot codes, resource IDs) so
+     *       the algorithm can pick it up in a later phase.</li>
+     * </ol>
+     *
+     * <p>When the routing algorithm is added, its invocation (and any resulting
+     * DB writes for {@code transport_plans} rows) must be placed inside this
+     * same method so they stay within the transaction.
+     *
+     * @param dto the complete plan input from the dispatcher
+     * @throws IllegalStateException if the tenant cannot be resolved from the token
+     * @throws IllegalArgumentException if any supplied request ID is not PLANNED
+     *                                  or does not belong to this tenant
+     */
+    /**
+     * Creates a transport plan in a single atomic transaction.
+     *
+     * <p>Validates all requests, then delegates to {@link AlgorithmService}
+     * to build the routing input, run the solver, and return the JSON result.
+     *
+     * <p>The algorithm runs outside the DB transaction (via
+     * {@code Propagation.NOT_SUPPORTED}) to avoid holding a DB connection for
+     * the full 60-second solver window. Validation still happens inside this
+     * method before the algorithm is invoked.
+     *
+     * @param dto the complete plan input from the dispatcher
+     * @return Gson-serialised {@link com.example.ttcrs.algorithm.models.output.TruckMoocContainerOutputJson}
+     */
+    @Transactional
+    public String createTransportPlanInput(CreateTransportPlanInputDTO dto) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Cannot resolve tenant from token."));
+
+        log.info("Creating transport plan for tenantId={}, requestIds={}, " +
+                        "truckIds={}, trailerIds={}, containerIds={}",
+                tenantId,
+                dto.getRequestIds(),
+                dto.getTruckIds(),
+                dto.getTrailerIds(),
+                dto.getContainerIds());
+
+        // Validate: all supplied requests must belong to this tenant and be PLANNED
+        List<RequestEntity> requests = requestRepository.findAllById(dto.getRequestIds());
+
+        List<RequestEntity> invalid = requests.stream()
+                .filter(r -> !r.getTenantId().equals(tenantId)
+                        || r.getStatus() != RequestStatus.PLANNED)
+                .toList();
+
+        if (!invalid.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Some requests are not in PLANNED status or do not belong to this tenant: "
+                            + invalid.stream().map(r -> r.getId().toString()).toList());
+        }
+
+        log.info("Validation passed for tenantId={}. Invoking routing algorithm...", tenantId);
+        return algorithmService.executeAlgorithm(dto, tenantId);
+    }
+
+    /**
+     * Cập nhật một Request theo ID.
+     * Chỉ được phép cập nhật khi request đang ở trạng thái PENDING.
+     *
+     * @param id  ID của request cần cập nhật
+     * @param dto các trường cần thay đổi (null = giữ nguyên)
+     * @return {@link RequestResponseDTO} sau khi cập nhật
+     * @throws IllegalArgumentException nếu không tìm thấy, không thuộc tenant, hoặc không ở trạng thái PENDING
+     */
+    @Transactional
+    public RequestResponseDTO updateRequest(Long id, UpdateRequestDTO dto) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Không thể xác định tenant từ token."
+                ));
+
+        RequestEntity entity = requestRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Request not found: " + id));
+
+        if (!entity.getTenantId().equals(tenantId)) {
+            throw new IllegalArgumentException("Request not found: " + id);
+        }
+        if (entity.getStatus() != RequestStatus.PENDING) {
+            throw new IllegalArgumentException(
+                    "Chỉ có thể cập nhật request ở trạng thái PENDING. Current status: " + entity.getStatus());
+        }
+
+        log.info("Updating request id={}, tenantId={}", id, tenantId);
+
+        if (dto.getSrcLocationCode()  != null && !dto.getSrcLocationCode().isBlank())
+            entity.setSrcLocationCode(dto.getSrcLocationCode());
+        if (dto.getDestLocationCode() != null && !dto.getDestLocationCode().isBlank())
+            entity.setDestLocationCode(dto.getDestLocationCode());
+        if (dto.getEarlyAtSrc()       != null) entity.setEarlyAtSrc(dto.getEarlyAtSrc());
+        if (dto.getLateAtSrc()        != null) entity.setLateAtSrc(dto.getLateAtSrc());
+        if (dto.getEarlyAtDest()      != null) entity.setEarlyAtDest(dto.getEarlyAtDest());
+        if (dto.getLateAtDest()       != null) entity.setLateAtDest(dto.getLateAtDest());
+        if (dto.getWeight()           != null) entity.setWeight(dto.getWeight());
+        if (dto.getContainerSize()    != null) entity.setContainerSize(dto.getContainerSize());
+        if (dto.getDropTrailerRequired() != null) entity.setDropTrailerRequired(dto.getDropTrailerRequired());
+        if (dto.getReason()           != null) entity.setReason(dto.getReason());
+
+        return RequestResponseDTO.fromEntity(requestRepository.save(entity));
+    }
+
+    /**
+     * Xoá mềm một Request theo ID (đặt isDeleted = true).
+     * Chỉ được phép xoá khi request đang ở trạng thái PENDING.
+     *
+     * @param id ID của request cần xoá
+     * @throws IllegalArgumentException nếu không tìm thấy, không thuộc tenant, hoặc không ở trạng thái PENDING
+     */
+    @Transactional
+    public void deleteRequest(Long id) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Không thể xác định tenant từ token."
+                ));
+
+        RequestEntity entity = requestRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Request not found: " + id));
+
+        if (!entity.getTenantId().equals(tenantId)) {
+            throw new IllegalArgumentException("Request not found: " + id);
+        }
+        if (entity.getStatus() != RequestStatus.PENDING) {
+            throw new IllegalArgumentException(
+                    "Chỉ có thể xoá request ở trạng thái PENDING. Current status: " + entity.getStatus());
+        }
+
+        log.info("Soft-deleting request id={}, tenantId={}", id, tenantId);
+        entity.setIsDeleted(true);
+        requestRepository.save(entity);
     }
 
     // =========================================================================
