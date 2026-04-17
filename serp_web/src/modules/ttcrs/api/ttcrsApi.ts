@@ -5,7 +5,12 @@ import type {
   TtcrsRequest,
   RequestFilterParams,
   CreateRequestPayload,
+  UpdateRequestPayload,
+  UpdateRequestsStatusPayload,
+  CreateTransportPlanInputPayload,
+  TransportPlanResult,
   CreateLocationPayload,
+  UpdateLocationPayload,
   LocationItem,
   ContainerItem,
   TruckItem,
@@ -15,6 +20,10 @@ import type {
   CreateTruckPayload,
   CreateTrailerPayload,
   CreateDriverPayload,
+  UpdateContainerPayload,
+  UpdateTruckPayload,
+  UpdateTrailerPayload,
+  UpdateDriverPayload,
 } from '../types';
 
 export const ttcrsApi = api.injectEndpoints({
@@ -76,6 +85,38 @@ export const ttcrsApi = api.injectEndpoints({
     >({
       query: (body) => ({
         url: '/dispatcher/requests',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: [{ type: 'ttcrs/Request', id: 'LIST' }],
+    }),
+
+    // -------------------------------------------------------------------------
+    // PATCH /ttcrs/api/v1/dispatcher/requests/status
+    // -------------------------------------------------------------------------
+    updateDispatcherRequestsStatus: builder.mutation<
+      TtcrsApiResponse<TtcrsRequest[]>,
+      UpdateRequestsStatusPayload
+    >({
+      query: (body) => ({
+        url: '/dispatcher/requests/status',
+        method: 'PATCH',
+        body,
+      }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: [{ type: 'ttcrs/Request', id: 'LIST' }],
+    }),
+
+    // -------------------------------------------------------------------------
+    // POST /ttcrs/api/v1/dispatcher/requests/transport-plan
+    // -------------------------------------------------------------------------
+    createDispatcherTransportPlan: builder.mutation<
+      TtcrsApiResponse<TransportPlanResult>,
+      CreateTransportPlanInputPayload
+    >({
+      query: (body) => ({
+        url: '/dispatcher/requests/transport-plan',
         method: 'POST',
         body,
       }),
@@ -177,20 +218,163 @@ export const ttcrsApi = api.injectEndpoints({
       extraOptions: { service: 'ttcrs' },
       invalidatesTags: [{ type: 'ttcrs/Resource', id: 'DRIVERS' }],
     }),
+
+    // -------------------------------------------------------------------------
+    // PUT /ttcrs/api/v1/dispatcher/requests/{id}
+    // -------------------------------------------------------------------------
+    updateDispatcherRequest: builder.mutation<
+      TtcrsApiResponse<TtcrsRequest>,
+      { id: number; body: UpdateRequestPayload }
+    >({
+      query: ({ id, body }) => ({
+        url: `/dispatcher/requests/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: (_r, _e, arg) => [
+        { type: 'ttcrs/Request', id: arg.id },
+        { type: 'ttcrs/Request', id: 'LIST' },
+      ],
+    }),
+
+    // -------------------------------------------------------------------------
+    // PUT /ttcrs/api/v1/dispatcher/locations/{id}
+    // -------------------------------------------------------------------------
+    updateDispatcherLocation: builder.mutation<
+      TtcrsApiResponse<LocationItem>,
+      { id: number; body: UpdateLocationPayload }
+    >({
+      query: ({ id, body }) => ({
+        url: `/dispatcher/locations/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: [{ type: 'ttcrs/Location', id: 'LIST' }],
+    }),
+
+    // DELETE /ttcrs/api/v1/dispatcher/locations/{id}
+    deleteDispatcherLocation: builder.mutation<void, number>({
+      query: (id) => ({ url: `/dispatcher/locations/${id}`, method: 'DELETE' }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: [{ type: 'ttcrs/Location', id: 'LIST' }],
+    }),
+
+    // -------------------------------------------------------------------------
+    // Containers update / delete
+    // -------------------------------------------------------------------------
+    updateDispatcherContainer: builder.mutation<
+      TtcrsApiResponse<ContainerItem>,
+      { id: number; body: UpdateContainerPayload }
+    >({
+      query: ({ id, body }) => ({
+        url: `/dispatcher/resources/containers/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: [{ type: 'ttcrs/Resource', id: 'CONTAINERS' }],
+    }),
+
+    deleteDispatcherContainer: builder.mutation<void, number>({
+      query: (id) => ({ url: `/dispatcher/resources/containers/${id}`, method: 'DELETE' }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: [{ type: 'ttcrs/Resource', id: 'CONTAINERS' }],
+    }),
+
+    // -------------------------------------------------------------------------
+    // Trucks update / delete
+    // -------------------------------------------------------------------------
+    updateDispatcherTruck: builder.mutation<
+      TtcrsApiResponse<TruckItem>,
+      { id: number; body: UpdateTruckPayload }
+    >({
+      query: ({ id, body }) => ({
+        url: `/dispatcher/resources/trucks/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: [{ type: 'ttcrs/Resource', id: 'TRUCKS' }],
+    }),
+
+    deleteDispatcherTruck: builder.mutation<void, number>({
+      query: (id) => ({ url: `/dispatcher/resources/trucks/${id}`, method: 'DELETE' }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: [{ type: 'ttcrs/Resource', id: 'TRUCKS' }],
+    }),
+
+    // -------------------------------------------------------------------------
+    // Trailers update / delete
+    // -------------------------------------------------------------------------
+    updateDispatcherTrailer: builder.mutation<
+      TtcrsApiResponse<TrailerItem>,
+      { id: number; body: UpdateTrailerPayload }
+    >({
+      query: ({ id, body }) => ({
+        url: `/dispatcher/resources/trailers/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: [{ type: 'ttcrs/Resource', id: 'TRAILERS' }],
+    }),
+
+    deleteDispatcherTrailer: builder.mutation<void, number>({
+      query: (id) => ({ url: `/dispatcher/resources/trailers/${id}`, method: 'DELETE' }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: [{ type: 'ttcrs/Resource', id: 'TRAILERS' }],
+    }),
+
+    // -------------------------------------------------------------------------
+    // Drivers update / delete
+    // -------------------------------------------------------------------------
+    updateDispatcherDriver: builder.mutation<
+      TtcrsApiResponse<DriverItem>,
+      { id: number; body: UpdateDriverPayload }
+    >({
+      query: ({ id, body }) => ({
+        url: `/dispatcher/resources/drivers/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: [{ type: 'ttcrs/Resource', id: 'DRIVERS' }],
+    }),
+
+    deleteDispatcherDriver: builder.mutation<void, number>({
+      query: (id) => ({ url: `/dispatcher/resources/drivers/${id}`, method: 'DELETE' }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: [{ type: 'ttcrs/Resource', id: 'DRIVERS' }],
+    }),
   }),
 });
 
 export const {
   useGetDispatcherRequestsQuery,
   useCreateDispatcherRequestsMutation,
+  useUpdateDispatcherRequestsStatusMutation,
+  useUpdateDispatcherRequestMutation,
+  useCreateDispatcherTransportPlanMutation,
   useGetDispatcherLocationsQuery,
   useCreateDispatcherLocationMutation,
+  useUpdateDispatcherLocationMutation,
+  useDeleteDispatcherLocationMutation,
   useGetDispatcherContainersQuery,
   useCreateDispatcherContainerMutation,
+  useUpdateDispatcherContainerMutation,
+  useDeleteDispatcherContainerMutation,
   useGetDispatcherTrucksQuery,
   useCreateDispatcherTruckMutation,
+  useUpdateDispatcherTruckMutation,
+  useDeleteDispatcherTruckMutation,
   useGetDispatcherTrailersQuery,
   useCreateDispatcherTrailerMutation,
+  useUpdateDispatcherTrailerMutation,
+  useDeleteDispatcherTrailerMutation,
   useGetDispatcherDriversQuery,
   useCreateDispatcherDriverMutation,
+  useUpdateDispatcherDriverMutation,
+  useDeleteDispatcherDriverMutation,
 } = ttcrsApi;

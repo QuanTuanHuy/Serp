@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Search,
   Plus,
+  Route,
   Loader2,
   AlertCircle,
   Package,
@@ -13,6 +15,7 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
+  RotateCcw,
 } from 'lucide-react';
 import { useAppSelector } from '@/shared/hooks';
 import { selectUserProfile } from '@/modules/account/store';
@@ -23,6 +26,7 @@ import {
   Button,
   Card,
   CardContent,
+  Checkbox,
   Input,
   Skeleton,
   Tabs,
@@ -36,8 +40,12 @@ import {
   TableRow,
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
-import { useGetDispatcherRequestsQuery } from '../../api/ttcrsApi';
-import { CreateRequestDialog } from '../../components';
+import { toast } from 'sonner';
+import {
+  useGetDispatcherRequestsQuery,
+  useUpdateDispatcherRequestsStatusMutation,
+} from '../../api/ttcrsApi';
+import { CreateRequestDialog, RequestDetailSheet } from '../../components';
 import type { RequestStatus, RequestType, TtcrsRequest } from '../../types';
 
 // -------------------------------------------------------------------------
@@ -149,10 +157,10 @@ function SortIcon({
   );
 }
 
-function SkeletonRow() {
+function SkeletonRow({ cols }: { cols: number }) {
   return (
     <TableRow>
-      {[...Array(7)].map((_, i) => (
+      {[...Array(cols)].map((_, i) => (
         <TableCell key={i}>
           <Skeleton className='h-4 w-full' />
         </TableCell>
@@ -161,10 +169,10 @@ function SkeletonRow() {
   );
 }
 
-function EmptyState({ tab }: { tab: string }) {
+function EmptyState({ tab, cols }: { tab: string; cols: number }) {
   return (
     <TableRow>
-      <TableCell colSpan={7}>
+      <TableCell colSpan={cols}>
         <div className='flex flex-col items-center justify-center gap-3 py-16 text-center'>
           <Package className='h-12 w-12 text-muted-foreground/40' />
           <p className='text-sm font-medium text-muted-foreground'>
@@ -188,6 +196,7 @@ function EmptyState({ tab }: { tab: string }) {
 export function DispatcherDashboardPage() {
   const user = useAppSelector(selectUserProfile);
   const organizationId = user?.organizationId;
+  const router = useRouter();
 
   const isDispatcher = user?.roles?.includes('TTCRS_DISPATCHER') ?? false;
 
@@ -195,8 +204,14 @@ export function DispatcherDashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(0);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<TtcrsRequest | null>(null);
   const [sortBy, setSortBy] = useState<SortableRequestField>('id');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  // Multi-select for PLANNED → PENDING revert
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [updateStatus, { isLoading: isReverting }] =
+    useUpdateDispatcherRequestsStatusMutation();
 
   const handleSort = (field: SortableRequestField) => {
     if (sortBy === field) {
@@ -275,6 +290,50 @@ export function DispatcherDashboardPage() {
   const handleTabChange = (tab: string) => {
     setActiveTab(tab as RequestStatus | 'ALL');
     setPage(0);
+    setSelectedIds(new Set());
+  };
+
+  const isPlannedTab = activeTab === 'PLANNED';
+  // Total columns: checkbox col only on PLANNED tab
+  const colCount = isPlannedTab ? 8 : 7;
+
+  const toggleRow = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    const pageIds = filteredItems.map((r) => r.id);
+    const allSelected = pageIds.every((id) => selectedIds.has(id));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allSelected) {
+        pageIds.forEach((id) => next.delete(id));
+      } else {
+        pageIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const handleRevertToPending = async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      await updateStatus({
+        requestIds: Array.from(selectedIds),
+        status: 'PENDING',
+      }).unwrap();
+      toast.success(
+        `${selectedIds.size} request${selectedIds.size > 1 ? 's' : ''} reverted to Pending.`
+      );
+      setSelectedIds(new Set());
+    } catch {
+      toast.error('Failed to revert requests. Please try again.');
+    }
   };
 
   const sortableHeadClass =
@@ -307,16 +366,48 @@ export function DispatcherDashboardPage() {
           />
         </div>
 
-        {/* Create Request */}
-        <Button
-          id='dispatcher-create-request-btn'
-          variant='outline'
-          size='sm'
-          onClick={() => setIsCreateOpen(true)}
-        >
-          <Plus className='h-4 w-4' />
-          Create a new request
-        </Button>
+        {/* Action buttons */}
+        <div className='flex items-center gap-2'>
+          {/* Revert to Pending — only visible on PLANNED tab with selection */}
+          {isPlannedTab && selectedIds.size > 0 && (
+            <Button
+              id='dispatcher-revert-to-pending-btn'
+              variant='outline'
+              size='sm'
+              onClick={handleRevertToPending}
+              disabled={isReverting}
+              className='border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950'
+            >
+              {isReverting ? (
+                <Loader2 className='h-4 w-4 animate-spin' />
+              ) : (
+                <RotateCcw className='h-4 w-4' />
+              )}
+              Revert to Pending
+              <span className='ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-bold text-amber-700 dark:bg-amber-900 dark:text-amber-300'>
+                {selectedIds.size}
+              </span>
+            </Button>
+          )}
+          <Button
+            id='dispatcher-create-transport-plan-btn'
+            variant='outline'
+            size='sm'
+            onClick={() => router.push('/ttcrs/dispatcher/plans/create')}
+          >
+            <Route className='h-4 w-4' />
+            Create Transport Plan
+          </Button>
+          <Button
+            id='dispatcher-create-request-btn'
+            variant='outline'
+            size='sm'
+            onClick={() => setIsCreateOpen(true)}
+          >
+            <Plus className='h-4 w-4' />
+            Create a new request
+          </Button>
+        </div>
       </div>
 
       {/* ---- Main card — shadcn Card ---- */}
@@ -351,6 +442,18 @@ export function DispatcherDashboardPage() {
             <Table>
               <TableHeader>
                 <TableRow className='bg-muted/20 hover:bg-muted/20'>
+                  {isPlannedTab && (
+                    <TableHead className='w-10 px-4 py-3'>
+                      <Checkbox
+                        checked={
+                          filteredItems.length > 0 &&
+                          filteredItems.every((r) => selectedIds.has(r.id))
+                        }
+                        onCheckedChange={toggleAll}
+                        disabled={isLoading || isFetching || filteredItems.length === 0}
+                      />
+                    </TableHead>
+                  )}
                   <TableHead className='w-12 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
                     No
                   </TableHead>
@@ -400,15 +503,32 @@ export function DispatcherDashboardPage() {
               </TableHeader>
               <TableBody>
                 {isLoading || isFetching ? (
-                  [...Array(6)].map((_, i) => <SkeletonRow key={i} />)
+                  [...Array(6)].map((_, i) => <SkeletonRow key={i} cols={colCount} />)
                 ) : filteredItems.length === 0 ? (
-                  <EmptyState tab={activeTab} />
+                  <EmptyState tab={activeTab} cols={colCount} />
                 ) : (
                   filteredItems.map((req, idx) => (
                     <TableRow
                       key={req.id}
                       id={`dispatcher-request-row-${req.id}`}
+                      className={cn(
+                        'cursor-pointer hover:bg-muted/50 transition-colors',
+                        isPlannedTab && selectedIds.has(req.id) && 'bg-amber-50 dark:bg-amber-950/20'
+                      )}
+                      onClick={() => setSelectedRequest(req)}
                     >
+                      {isPlannedTab && (
+                        <TableCell
+                          className='px-4 py-3'
+                          onClick={(e) => { e.stopPropagation(); toggleRow(req.id); }}
+                        >
+                          <Checkbox
+                            checked={selectedIds.has(req.id)}
+                            onCheckedChange={() => toggleRow(req.id)}
+                            disabled={isReverting}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell className='px-4 py-3 text-muted-foreground'>
                         {page * PAGE_SIZE + idx + 1}
                       </TableCell>
@@ -507,6 +627,18 @@ export function DispatcherDashboardPage() {
           setPage(0);
           setActiveTab('PENDING');
         }}
+      />
+
+      {/* ---- Request Detail Sheet ---- */}
+      <RequestDetailSheet
+        request={selectedRequest}
+        open={selectedRequest !== null}
+        onClose={() => setSelectedRequest(null)}
+        customerName={
+          selectedRequest?.customerId
+            ? customerMap.get(selectedRequest.customerId)
+            : undefined
+        }
       />
     </div>
   );

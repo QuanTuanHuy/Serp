@@ -144,6 +144,18 @@ export { Skeleton } from './skeleton';
 // ScrollArea Component
 export { ScrollArea, ScrollBar } from './scroll-area';
 
+// Sheet Components
+export {
+  Sheet,
+  SheetTrigger,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetFooter,
+  SheetTitle,
+  SheetDescription,
+} from './sheet';
+
 // Table Components
 export {
   Table,

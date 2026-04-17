@@ -40,7 +40,7 @@ import {
   useGetDispatcherTrailersQuery,
   useGetDispatcherDriversQuery,
 } from '../../api/ttcrsApi';
-import { CreateResourceDialog } from '../../components';
+import { CreateResourceDialog, ResourceDetailSheet } from '../../components';
 import type {
   ResourceKind,
   ResourceRow,
@@ -248,6 +248,7 @@ export function ResourcesPage() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [page, setPage] = useState(0);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [selectedResource, setSelectedResource] = useState<ResourceRow | null>(null);
 
   const skip = !isDispatcher;
   const { data: containersData, isLoading: loadingContainers, isError: errorContainers } =
@@ -461,7 +462,12 @@ export function ResourcesPage() {
                   <EmptyState colSpan={colCount} />
                 ) : (
                   pagedRows.map((row, idx) => (
-                    <TableRow key={`${row.kind}-${row.id}`} id={`resource-row-${row.kind}-${row.id}`}>
+                    <TableRow
+                      key={`${row.kind}-${row.id}`}
+                      id={`resource-row-${row.kind}-${row.id}`}
+                      className='cursor-pointer hover:bg-muted/50 transition-colors'
+                      onClick={() => setSelectedResource(row)}
+                    >
                       <TableCell className='px-4 py-3 text-muted-foreground'>
                         {page * PAGE_SIZE + idx + 1}
                       </TableCell>
@@ -548,6 +554,13 @@ export function ResourcesPage() {
         onClose={() => setIsCreateOpen(false)}
         onSuccess={() => setIsCreateOpen(false)}
         defaultKind={defaultKind}
+      />
+
+      {/* ---- Resource Detail Sheet ---- */}
+      <ResourceDetailSheet
+        resource={selectedResource}
+        open={selectedResource !== null}
+        onClose={() => setSelectedResource(null)}
       />
     </div>
   );

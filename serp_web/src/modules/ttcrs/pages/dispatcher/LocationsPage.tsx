@@ -35,7 +35,7 @@ import {
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { useGetDispatcherLocationsQuery } from '../../api/ttcrsApi';
-import { CreateLocationDialog } from '../../components';
+import { CreateLocationDialog, LocationDetailSheet } from '../../components';
 import type { LocationItem, LocationType } from '../../types';
 
 // -------------------------------------------------------------------------
@@ -146,6 +146,7 @@ export function LocationsPage() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<LocationItem | null>(null);
   const [activeTypeTab, setActiveTypeTab] = useState<LocationType | 'ALL'>('ALL');
   const [sortBy, setSortBy] = useState<SortableLocationField>('locationCode');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -335,6 +336,8 @@ export function LocationsPage() {
                     <TableRow
                       key={loc.id}
                       id={`location-row-${loc.id}`}
+                      className='cursor-pointer hover:bg-muted/50 transition-colors'
+                      onClick={() => setSelectedLocation(loc)}
                     >
                       <TableCell className='px-4 py-3 text-muted-foreground'>
                         {page * LOCATION_PAGE_SIZE + idx + 1}
@@ -415,6 +418,13 @@ export function LocationsPage() {
         open={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         onSuccess={() => setIsCreateOpen(false)}
+      />
+
+      {/* ---- Location Detail Sheet ---- */}
+      <LocationDetailSheet
+        location={selectedLocation}
+        open={selectedLocation !== null}
+        onClose={() => setSelectedLocation(null)}
       />
     </div>
   );

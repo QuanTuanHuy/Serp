@@ -18,6 +18,8 @@ interface MapPickerProps {
   lng: number | null;
   /** Called when the user clicks the map to pick a new coordinate */
   onPick: (lat: number, lng: number) => void;
+  /** When true the map is view-only; clicks don't move the pin */
+  readonly?: boolean;
 }
 
 const LEAFLET_CSS_ID = 'leaflet-css';
@@ -34,7 +36,7 @@ const DEFAULT_ZOOM = 6;
  * No npm package installation is required — Leaflet is loaded from
  * https://unpkg.com/leaflet@1.9.4 the first time this component mounts.
  */
-export function MapPicker({ lat, lng, onPick }: MapPickerProps) {
+export function MapPicker({ lat, lng, onPick, readonly }: MapPickerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapRef = useRef<any>(null);
@@ -42,6 +44,9 @@ export function MapPicker({ lat, lng, onPick }: MapPickerProps) {
   const markerRef = useRef<any>(null);
   // Stable ref so the Leaflet click handler always calls the latest `onPick`
   const onPickRef = useRef(onPick);
+  // Capture the initial lat/lng at mount time so Step 2 can place the pin
+  const initialLatRef = useRef(lat);
+  const initialLngRef = useRef(lng);
   const [leafletReady, setLeafletReady] = useState(false);
 
   // Keep the stable ref up-to-date
@@ -105,7 +110,14 @@ export function MapPicker({ lat, lng, onPick }: MapPickerProps) {
         'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
     });
 
-    const map = L.map(containerRef.current).setView(DEFAULT_CENTER, DEFAULT_ZOOM);
+    const initLat = initialLatRef.current;
+    const initLng = initialLngRef.current;
+    const hasInitialPin = initLat !== null && initLng !== null;
+
+    const map = L.map(containerRef.current).setView(
+      hasInitialPin ? [initLat, initLng] : DEFAULT_CENTER,
+      hasInitialPin ? 13 : DEFAULT_ZOOM,
+    );
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution:
@@ -113,18 +125,25 @@ export function MapPicker({ lat, lng, onPick }: MapPickerProps) {
       maxZoom: 19,
     }).addTo(map);
 
-    map.on('click', (e: any) => {
-      const pickedLat = parseFloat(e.latlng.lat.toFixed(6));
-      const pickedLng = parseFloat(e.latlng.lng.toFixed(6));
+    // Place the initial marker if coordinates were provided on mount
+    if (hasInitialPin) {
+      markerRef.current = L.marker([initLat, initLng]).addTo(map);
+    }
 
-      if (markerRef.current) {
-        markerRef.current.setLatLng([pickedLat, pickedLng]);
-      } else {
-        markerRef.current = L.marker([pickedLat, pickedLng]).addTo(map);
-      }
+    if (!readonly) {
+      map.on('click', (e: any) => {
+        const pickedLat = parseFloat(e.latlng.lat.toFixed(6));
+        const pickedLng = parseFloat(e.latlng.lng.toFixed(6));
 
-      onPickRef.current(pickedLat, pickedLng);
-    });
+        if (markerRef.current) {
+          markerRef.current.setLatLng([pickedLat, pickedLng]);
+        } else {
+          markerRef.current = L.marker([pickedLat, pickedLng]).addTo(map);
+        }
+
+        onPickRef.current(pickedLat, pickedLng);
+      });
+    }
 
     mapRef.current = map;
 

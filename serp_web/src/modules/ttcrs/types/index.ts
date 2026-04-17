@@ -161,6 +161,85 @@ export interface DriverItem {
   createdStamp: string | null;
 }
 
+// -------------------------------------------------------------------------
+// Update requests status (batch)
+// -------------------------------------------------------------------------
+
+export interface UpdateRequestsStatusPayload {
+  requestIds: number[];
+  status: RequestStatus;
+}
+
+// -------------------------------------------------------------------------
+// Create transport plan input (Step 2 final submit)
+// -------------------------------------------------------------------------
+
+/**
+ * Maps one resource (by DB id) to the depot codes it is allowed to return to.
+ * Mirrors ResourceReturnDepotDTO on the backend.
+ */
+export interface ResourceReturnDepotConfig {
+  resourceId: number;
+  returnDepotCodes: string[];
+}
+
+export interface CreateTransportPlanInputPayload {
+  /** IDs of the PLANNED requests to include. */
+  requestIds: number[];
+  /** Per-container return depot configuration. */
+  containerReturnDepots: ResourceReturnDepotConfig[];
+  /** Per-trailer return depot configuration. */
+  trailerReturnDepots: ResourceReturnDepotConfig[];
+  /** Per-truck return depot configuration. */
+  truckReturnDepots: ResourceReturnDepotConfig[];
+  /** IDs of trucks made available for this plan. */
+  truckIds: number[];
+  /** IDs of trailers made available for this plan. */
+  trailerIds: number[];
+  /** IDs of containers made available for this plan. */
+  containerIds: number[];
+}
+
+// -------------------------------------------------------------------------
+// Transport Plan Result (algorithm output)
+// -------------------------------------------------------------------------
+
+export interface AlgorithmRouteElement {
+  locationCode: string;
+  action: string;
+  arrivalTime: string;
+  departureTime: string;
+  travelTime: number;
+}
+
+export interface AlgorithmTruck {
+  code: string;
+  depotTruckCode: string;
+}
+
+export interface AlgorithmTruckRoute {
+  truck: AlgorithmTruck;
+  nbStops: number;
+  travelTime: number;
+  nodes: AlgorithmRouteElement[];
+}
+
+export interface AlgorithmStatistics {
+  totalRequests: number;
+  totalRejectedRequests: number;
+  totalDistance: number;
+  numberTrucks: number;
+}
+
+export interface TransportPlanResult {
+  truckRoutes: AlgorithmTruckRoute[];
+  unscheduledExEmptyRequests: unknown[];
+  unscheduledExLadenRequests: unknown[];
+  unscheduledImEmptyRequests: unknown[];
+  unscheduledImLadenRequests: unknown[];
+  statisticInformation: AlgorithmStatistics;
+}
+
 // Normalized row used by the Resources page
 export interface ResourceRow {
   id: number;
@@ -193,4 +272,47 @@ export interface CreateTrailerPayload {
 
 export interface CreateDriverPayload {
   name: string;
+}
+
+// -------------------------------------------------------------------------
+// Update payloads
+// -------------------------------------------------------------------------
+
+export interface UpdateRequestPayload {
+  srcLocationCode?: string;
+  destLocationCode?: string;
+  earlyAtSrc?: string | null;
+  lateAtSrc?: string | null;
+  earlyAtDest?: string | null;
+  lateAtDest?: string | null;
+  weight?: number | null;
+  containerSize?: ContainerSize | null;
+  dropTrailerRequired?: boolean;
+  reason?: string | null;
+}
+
+export interface UpdateLocationPayload {
+  type?: LocationType;
+  lat?: number;
+  lng?: number;
+}
+
+export interface UpdateContainerPayload {
+  status?: VehicleStatus;
+  currentLocationCode?: string;
+}
+
+export interface UpdateTruckPayload {
+  status?: VehicleStatus;
+  currentLocationCode?: string;
+}
+
+export interface UpdateTrailerPayload {
+  status?: VehicleStatus;
+  currentLocationCode?: string;
+}
+
+export interface UpdateDriverPayload {
+  name?: string;
+  status?: DriverStatus;
 }
