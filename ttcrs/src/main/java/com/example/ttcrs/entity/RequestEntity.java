@@ -9,6 +9,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
@@ -21,6 +22,7 @@ import java.time.LocalDateTime;
 @Table(name = "requests", indexes = {
         @Index(name = "requests_transport_plan_id_index", columnList = "transport_plan_id")
 })
+@SQLRestriction("is_deleted = false")
 public class RequestEntity {
 
     @Id
@@ -95,4 +97,8 @@ public class RequestEntity {
     @UpdateTimestamp
     @Column(name = "last_updated_stamp")
     private LocalDateTime lastUpdatedStamp;
+
+    @Column(name = "is_deleted", nullable = false)
+    @Builder.Default
+    private Boolean isDeleted = false;
 }

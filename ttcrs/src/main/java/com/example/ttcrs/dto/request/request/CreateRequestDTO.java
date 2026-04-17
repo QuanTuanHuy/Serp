@@ -1,4 +1,4 @@
-package com.example.ttcrs.dto.request;
+package com.example.ttcrs.dto.request.request;
 
 import com.example.ttcrs.constant.RequestType;
 import jakarta.validation.constraints.Max;

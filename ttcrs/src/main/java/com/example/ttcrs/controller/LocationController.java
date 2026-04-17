@@ -1,6 +1,7 @@
 package com.example.ttcrs.controller;
 
-import com.example.ttcrs.dto.request.CreateLocationDTO;
+import com.example.ttcrs.dto.request.location.CreateLocationDTO;
+import com.example.ttcrs.dto.request.location.UpdateLocationDTO;
 import com.example.ttcrs.dto.response.ApiResponse;
 import com.example.ttcrs.dto.response.LocationResponseDTO;
 import com.example.ttcrs.service.LocationService;
@@ -9,8 +10,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -70,6 +74,44 @@ public class LocationController {
             return ResponseEntity
                     .status(HttpStatus.CONFLICT)
                     .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    /**
+     * Cập nhật một Location theo ID.
+     *
+     * @param id  ID của location cần cập nhật
+     * @param dto các trường cần thay đổi
+     * @return {@code 200 OK} với location đã cập nhật, hoặc {@code 404 Not Found}
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<LocationResponseDTO>> updateLocation(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateLocationDTO dto
+    ) {
+        log.info("PUT /ttcrs/api/v1/dispatcher/locations/{}", id);
+        try {
+            LocationResponseDTO updated = locationService.updateLocation(id, dto);
+            return ResponseEntity.ok(ApiResponse.ok("Location updated successfully", updated));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    /**
+     * Xoá mềm một Location theo ID.
+     *
+     * @param id ID của location cần xoá
+     * @return {@code 204 No Content} nếu thành công, hoặc {@code 404 Not Found}
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteLocation(@PathVariable Long id) {
+        log.info("DELETE /ttcrs/api/v1/dispatcher/locations/{}", id);
+        try {
+            locationService.deleteLocation(id);
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
         }
     }
 }

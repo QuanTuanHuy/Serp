@@ -1,9 +1,13 @@
 package com.example.ttcrs.service;
 
-import com.example.ttcrs.dto.request.CreateContainerDTO;
-import com.example.ttcrs.dto.request.CreateDriverDTO;
-import com.example.ttcrs.dto.request.CreateTrailerDTO;
-import com.example.ttcrs.dto.request.CreateTruckDTO;
+import com.example.ttcrs.dto.request.resource.CreateContainerDTO;
+import com.example.ttcrs.dto.request.resource.CreateDriverDTO;
+import com.example.ttcrs.dto.request.resource.CreateTrailerDTO;
+import com.example.ttcrs.dto.request.resource.CreateTruckDTO;
+import com.example.ttcrs.dto.request.resource.UpdateContainerDTO;
+import com.example.ttcrs.dto.request.resource.UpdateDriverDTO;
+import com.example.ttcrs.dto.request.resource.UpdateTrailerDTO;
+import com.example.ttcrs.dto.request.resource.UpdateTruckDTO;
 import com.example.ttcrs.dto.response.ContainerResponseDTO;
 import com.example.ttcrs.dto.response.DriverResponseDTO;
 import com.example.ttcrs.dto.response.TrailerResponseDTO;
@@ -67,6 +71,33 @@ public class ResourceService {
         return ContainerResponseDTO.fromEntity(containerRepository.save(entity));
     }
 
+    @Transactional
+    public ContainerResponseDTO updateContainer(Long id, UpdateContainerDTO dto) {
+        Long tenantId = resolveTenantId();
+        ContainerEntity entity = containerRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Container not found: " + id));
+        if (!entity.getTenantId().equals(tenantId)) {
+            throw new IllegalArgumentException("Container not found: " + id);
+        }
+        log.info("Updating container id={}, tenantId={}", id, tenantId);
+        if (dto.getStatus()              != null) entity.setStatus(dto.getStatus());
+        if (dto.getCurrentLocationCode() != null) entity.setCurrentLocationCode(dto.getCurrentLocationCode());
+        return ContainerResponseDTO.fromEntity(containerRepository.save(entity));
+    }
+
+    @Transactional
+    public void deleteContainer(Long id) {
+        Long tenantId = resolveTenantId();
+        ContainerEntity entity = containerRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Container not found: " + id));
+        if (!entity.getTenantId().equals(tenantId)) {
+            throw new IllegalArgumentException("Container not found: " + id);
+        }
+        log.info("Soft-deleting container id={}, tenantId={}", id, tenantId);
+        entity.setIsDeleted(true);
+        containerRepository.save(entity);
+    }
+
     // ── Trucks ────────────────────────────────────────────────────────────
 
     public List<TruckResponseDTO> getTrucks() {
@@ -90,6 +121,33 @@ public class ResourceService {
                 .currentLocationCode(dto.getCurrentLocationCode())
                 .build();
         return TruckResponseDTO.fromEntity(truckRepository.save(entity));
+    }
+
+    @Transactional
+    public TruckResponseDTO updateTruck(Long id, UpdateTruckDTO dto) {
+        Long tenantId = resolveTenantId();
+        TruckEntity entity = truckRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Truck not found: " + id));
+        if (!entity.getTenantId().equals(tenantId)) {
+            throw new IllegalArgumentException("Truck not found: " + id);
+        }
+        log.info("Updating truck id={}, tenantId={}", id, tenantId);
+        if (dto.getStatus()              != null) entity.setStatus(dto.getStatus());
+        if (dto.getCurrentLocationCode() != null) entity.setCurrentLocationCode(dto.getCurrentLocationCode());
+        return TruckResponseDTO.fromEntity(truckRepository.save(entity));
+    }
+
+    @Transactional
+    public void deleteTruck(Long id) {
+        Long tenantId = resolveTenantId();
+        TruckEntity entity = truckRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Truck not found: " + id));
+        if (!entity.getTenantId().equals(tenantId)) {
+            throw new IllegalArgumentException("Truck not found: " + id);
+        }
+        log.info("Soft-deleting truck id={}, tenantId={}", id, tenantId);
+        entity.setIsDeleted(true);
+        truckRepository.save(entity);
     }
 
     // ── Trailers ──────────────────────────────────────────────────────────
@@ -117,6 +175,33 @@ public class ResourceService {
         return TrailerResponseDTO.fromEntity(trailerRepository.save(entity));
     }
 
+    @Transactional
+    public TrailerResponseDTO updateTrailer(Long id, UpdateTrailerDTO dto) {
+        Long tenantId = resolveTenantId();
+        TrailerEntity entity = trailerRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Trailer not found: " + id));
+        if (!entity.getTenantId().equals(tenantId)) {
+            throw new IllegalArgumentException("Trailer not found: " + id);
+        }
+        log.info("Updating trailer id={}, tenantId={}", id, tenantId);
+        if (dto.getStatus()              != null) entity.setStatus(dto.getStatus());
+        if (dto.getCurrentLocationCode() != null) entity.setCurrentLocationCode(dto.getCurrentLocationCode());
+        return TrailerResponseDTO.fromEntity(trailerRepository.save(entity));
+    }
+
+    @Transactional
+    public void deleteTrailer(Long id) {
+        Long tenantId = resolveTenantId();
+        TrailerEntity entity = trailerRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Trailer not found: " + id));
+        if (!entity.getTenantId().equals(tenantId)) {
+            throw new IllegalArgumentException("Trailer not found: " + id);
+        }
+        log.info("Soft-deleting trailer id={}, tenantId={}", id, tenantId);
+        entity.setIsDeleted(true);
+        trailerRepository.save(entity);
+    }
+
     // ── Drivers ───────────────────────────────────────────────────────────
 
     public List<DriverResponseDTO> getDrivers() {
@@ -135,5 +220,32 @@ public class ResourceService {
                 .name(dto.getName().trim())
                 .build();
         return DriverResponseDTO.fromEntity(driverRepository.save(entity));
+    }
+
+    @Transactional
+    public DriverResponseDTO updateDriver(Long id, UpdateDriverDTO dto) {
+        Long tenantId = resolveTenantId();
+        DriverEntity entity = driverRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Driver not found: " + id));
+        if (!entity.getTenantId().equals(tenantId)) {
+            throw new IllegalArgumentException("Driver not found: " + id);
+        }
+        log.info("Updating driver id={}, tenantId={}", id, tenantId);
+        if (dto.getName()   != null && !dto.getName().isBlank()) entity.setName(dto.getName().trim());
+        if (dto.getStatus() != null) entity.setStatus(dto.getStatus());
+        return DriverResponseDTO.fromEntity(driverRepository.save(entity));
+    }
+
+    @Transactional
+    public void deleteDriver(Long id) {
+        Long tenantId = resolveTenantId();
+        DriverEntity entity = driverRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Driver not found: " + id));
+        if (!entity.getTenantId().equals(tenantId)) {
+            throw new IllegalArgumentException("Driver not found: " + id);
+        }
+        log.info("Soft-deleting driver id={}, tenantId={}", id, tenantId);
+        entity.setIsDeleted(true);
+        driverRepository.save(entity);
     }
 }

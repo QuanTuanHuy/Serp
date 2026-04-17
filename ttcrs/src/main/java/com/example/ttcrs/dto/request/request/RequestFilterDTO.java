@@ -1,4 +1,4 @@
-package com.example.ttcrs.dto.request;
+package com.example.ttcrs.dto.request.request;
 
 import com.example.ttcrs.constant.RequestStatus;
 import com.example.ttcrs.constant.RequestType;

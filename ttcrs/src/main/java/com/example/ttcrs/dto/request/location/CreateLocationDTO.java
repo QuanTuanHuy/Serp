@@ -1,4 +1,4 @@
-package com.example.ttcrs.dto.request;
+package com.example.ttcrs.dto.request.location;
 
 import com.example.ttcrs.constant.LocationType;
 import jakarta.validation.constraints.DecimalMax;

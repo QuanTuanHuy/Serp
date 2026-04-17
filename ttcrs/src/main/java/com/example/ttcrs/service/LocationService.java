@@ -1,6 +1,7 @@
 package com.example.ttcrs.service;
 
-import com.example.ttcrs.dto.request.CreateLocationDTO;
+import com.example.ttcrs.dto.request.location.CreateLocationDTO;
+import com.example.ttcrs.dto.request.location.UpdateLocationDTO;
 import com.example.ttcrs.dto.response.LocationResponseDTO;
 import com.example.ttcrs.entity.LocationEntity;
 import com.example.ttcrs.repository.LocationRepository;
@@ -82,5 +83,62 @@ public class LocationService {
 
         LocationEntity saved = locationRepository.save(entity);
         return LocationResponseDTO.fromEntity(saved);
+    }
+
+    /**
+     * Cập nhật một Location theo ID.
+     * Chỉ cho phép cập nhật type, lat, lng (không đổi locationCode vì là key tham chiếu).
+     *
+     * @param id  ID của location cần cập nhật
+     * @param dto các trường cần thay đổi (null = giữ nguyên)
+     * @return {@link LocationResponseDTO} sau khi cập nhật
+     * @throws IllegalArgumentException nếu không tìm thấy hoặc không thuộc tenant hiện tại
+     */
+    @Transactional
+    public LocationResponseDTO updateLocation(Long id, UpdateLocationDTO dto) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Không thể xác định tenant từ token. Vui lòng kiểm tra lại JWT."
+                ));
+
+        LocationEntity entity = locationRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Location not found: " + id));
+
+        if (!entity.getTenantId().equals(tenantId)) {
+            throw new IllegalArgumentException("Location not found: " + id);
+        }
+
+        log.info("Updating location id={}, tenantId={}", id, tenantId);
+
+        if (dto.getType() != null)  entity.setType(dto.getType());
+        if (dto.getLat()  != null)  entity.setLat(dto.getLat());
+        if (dto.getLng()  != null)  entity.setLng(dto.getLng());
+
+        return LocationResponseDTO.fromEntity(locationRepository.save(entity));
+    }
+
+    /**
+     * Xoá mềm một Location theo ID (đặt isDeleted = true).
+     *
+     * @param id ID của location cần xoá
+     * @throws IllegalArgumentException nếu không tìm thấy hoặc không thuộc tenant hiện tại
+     */
+    @Transactional
+    public void deleteLocation(Long id) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Không thể xác định tenant từ token. Vui lòng kiểm tra lại JWT."
+                ));
+
+        LocationEntity entity = locationRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Location not found: " + id));
+
+        if (!entity.getTenantId().equals(tenantId)) {
+            throw new IllegalArgumentException("Location not found: " + id);
+        }
+
+        log.info("Soft-deleting location id={}, tenantId={}", id, tenantId);
+        entity.setIsDeleted(true);
+        locationRepository.save(entity);
     }
 }

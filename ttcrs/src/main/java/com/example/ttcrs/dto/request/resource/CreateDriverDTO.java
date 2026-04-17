@@ -1,4 +1,4 @@
-package com.example.ttcrs.dto.request;
+package com.example.ttcrs.dto.request.resource;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

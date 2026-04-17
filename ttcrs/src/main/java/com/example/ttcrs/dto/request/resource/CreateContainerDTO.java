@@ -1,4 +1,4 @@
-package com.example.ttcrs.dto.request;
+package com.example.ttcrs.dto.request.resource;
 
 import com.example.ttcrs.constant.ContainerSize;
 import jakarta.validation.constraints.NotBlank;

@@ -1,4 +1,4 @@
-package com.example.ttcrs.dto.request;
+package com.example.ttcrs.dto.request.resource;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -7,7 +7,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class CreateTrailerDTO {
+public class CreateTruckDTO {
 
     @NotBlank(message = "code không được để trống")
     @Size(max = 50, message = "code không được vượt quá 50 ký tự")
