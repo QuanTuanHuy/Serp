@@ -124,4 +124,90 @@ class ProjectServiceTest {
 
         assertEquals(DomainErrorCode.PROJECT_ARCHIVED, exception.getErrorCode());
     }
+
+    @Test
+    void archiveProjectShouldSetArchivedStateAndTimestamp() {
+        ProjectEntity existing = ProjectEntity.builder()
+                .id(PROJECT_ID)
+                .tenantId(TENANT_ID)
+                .key("SERP")
+                .name("SERP Platform")
+                .isArchived(false)
+                .build();
+
+        when(projectReadPort.getProjectById(PROJECT_ID, TENANT_ID)).thenReturn(Optional.of(existing));
+        when(projectWritePort.saveProject(existing)).thenReturn(existing);
+
+        ProjectEntity archived = service.archiveProject(PROJECT_ID, TENANT_ID, USER_ID);
+
+        verify(projectWritePort).saveProject(existing);
+        assertEquals(true, archived.getIsArchived());
+        assertNotNull(archived.getArchivedAt());
+        assertEquals(USER_ID, archived.getUpdatedBy());
+        assertNotNull(archived.getUpdatedAt());
+    }
+
+    @Test
+    void archiveProjectShouldRejectAlreadyArchivedProject() {
+        ProjectEntity existing = ProjectEntity.builder()
+                .id(PROJECT_ID)
+                .tenantId(TENANT_ID)
+                .key("SERP")
+                .name("SERP Platform")
+                .isArchived(true)
+                .archivedAt(100L)
+                .build();
+
+        when(projectReadPort.getProjectById(PROJECT_ID, TENANT_ID)).thenReturn(Optional.of(existing));
+
+        BusinessRuleViolationException exception = assertThrows(
+                BusinessRuleViolationException.class,
+                () -> service.archiveProject(PROJECT_ID, TENANT_ID, USER_ID)
+        );
+
+        assertEquals(DomainErrorCode.PROJECT_ALREADY_ARCHIVED, exception.getErrorCode());
+    }
+
+    @Test
+    void unarchiveProjectShouldClearArchivedStateAndTimestamp() {
+        ProjectEntity existing = ProjectEntity.builder()
+                .id(PROJECT_ID)
+                .tenantId(TENANT_ID)
+                .key("SERP")
+                .name("SERP Platform")
+                .isArchived(true)
+                .archivedAt(100L)
+                .build();
+
+        when(projectReadPort.getProjectById(PROJECT_ID, TENANT_ID)).thenReturn(Optional.of(existing));
+        when(projectWritePort.saveProject(existing)).thenReturn(existing);
+
+        ProjectEntity unarchived = service.unarchiveProject(PROJECT_ID, TENANT_ID, USER_ID);
+
+        verify(projectWritePort).saveProject(existing);
+        assertEquals(false, unarchived.getIsArchived());
+        assertNull(unarchived.getArchivedAt());
+        assertEquals(USER_ID, unarchived.getUpdatedBy());
+        assertNotNull(unarchived.getUpdatedAt());
+    }
+
+    @Test
+    void unarchiveProjectShouldRejectWhenProjectIsNotArchived() {
+        ProjectEntity existing = ProjectEntity.builder()
+                .id(PROJECT_ID)
+                .tenantId(TENANT_ID)
+                .key("SERP")
+                .name("SERP Platform")
+                .isArchived(false)
+                .build();
+
+        when(projectReadPort.getProjectById(PROJECT_ID, TENANT_ID)).thenReturn(Optional.of(existing));
+
+        BusinessRuleViolationException exception = assertThrows(
+                BusinessRuleViolationException.class,
+                () -> service.unarchiveProject(PROJECT_ID, TENANT_ID, USER_ID)
+        );
+
+        assertEquals(DomainErrorCode.PROJECT_NOT_ARCHIVED, exception.getErrorCode());
+    }
 }

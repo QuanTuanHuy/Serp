@@ -20,6 +20,10 @@ import org.springframework.web.bind.annotation.RestController;
 import serp.project.pmcore.application.project.command.create.CreateProjectCommand;
 import serp.project.pmcore.application.project.command.create.CreateProjectCommandHandler;
 import serp.project.pmcore.application.project.command.create.CreateProjectResult;
+import serp.project.pmcore.application.project.command.archive.ArchiveProjectCommand;
+import serp.project.pmcore.application.project.command.archive.ArchiveProjectCommandHandler;
+import serp.project.pmcore.application.project.command.unarchive.UnarchiveProjectCommand;
+import serp.project.pmcore.application.project.command.unarchive.UnarchiveProjectCommandHandler;
 import serp.project.pmcore.application.project.command.update.UpdateProjectCommand;
 import serp.project.pmcore.application.project.command.update.UpdateProjectCommandHandler;
 import serp.project.pmcore.application.project.command.update.UpdateProjectResult;
@@ -49,6 +53,8 @@ public class ProjectController {
     private final AuthUtils authUtils;
     private final ResponseUtils responseUtils;
     private final CreateProjectCommandHandler createProjectCommandHandler;
+    private final ArchiveProjectCommandHandler archiveProjectCommandHandler;
+    private final UnarchiveProjectCommandHandler unarchiveProjectCommandHandler;
     private final UpdateProjectCommandHandler updateProjectCommandHandler;
     private final GetProjectByIdQueryHandler getProjectByIdQueryHandler;
     private final GetProjectByKeyQueryHandler getProjectByKeyQueryHandler;
@@ -100,6 +106,42 @@ public class ProjectController {
         UpdateProjectResult response = updateProjectCommandHandler.handle(new UpdateProjectCommand(
                 projectId,
                 request.toData(),
+                tenantId,
+                userId,
+                authUtils.getCurrentGroups()
+        ));
+
+        return ResponseEntity.ok(responseUtils.success(response));
+    }
+
+    @PostMapping("/{id}/archive")
+    public ResponseEntity<GeneralResponse<UpdateProjectResult>> archiveProject(
+            @PathVariable("id") Long projectId) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        UpdateProjectResult response = archiveProjectCommandHandler.handle(new ArchiveProjectCommand(
+                projectId,
+                tenantId,
+                userId,
+                authUtils.getCurrentGroups()
+        ));
+
+        return ResponseEntity.ok(responseUtils.success(response));
+    }
+
+    @PostMapping("/{id}/unarchive")
+    public ResponseEntity<GeneralResponse<UpdateProjectResult>> unarchiveProject(
+            @PathVariable("id") Long projectId) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        UpdateProjectResult response = unarchiveProjectCommandHandler.handle(new UnarchiveProjectCommand(
+                projectId,
                 tenantId,
                 userId,
                 authUtils.getCurrentGroups()

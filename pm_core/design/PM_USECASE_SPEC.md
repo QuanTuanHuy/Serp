@@ -1,7 +1,7 @@
 # PM Core - Use Case Specification
 
-> **Version**: 1.2
-> **Date**: 2026-04-12
+> **Version**: 1.3
+> **Date**: 2026-04-18
 > **Module Code**: PM
 > **Tech Stack**: Java 21 (Spring Boot) + PostgreSQL + Kafka
 > **Soft Delete**: `deleted_at TIMESTAMP NULL`
@@ -82,7 +82,7 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 | UC-PM-003 | Get Project by ID | Team Member | High | Simple | Project |
 | UC-PM-004 | List Projects with Filters | Team Member | High | Simple | Project |
 | UC-PM-005 | Delete Project | PM Admin | Medium | Medium | Project |
-| UC-PM-006 | Archive/Unarchive Project | Project Lead | Medium | Simple | Project |
+| UC-PM-006 | [Archive/Unarchive Project](usecases/project/UC-PM-006-archive-unarchive-project.md) | Project Lead | Medium | Simple | Project |
 | UC-PM-007 | Update Project Scheme Bindings | PM Admin | Medium | Complex | Project |
 | UC-PM-011 | [Create Project Category](usecases/project-category/UC-PM-011-create-project-category.md) | PM Admin | Medium | Simple | Project Category |
 | UC-PM-012 | [Update Project Category](usecases/project-category/UC-PM-012-update-project-category.md) | PM Admin | Medium | Simple | Project Category |
@@ -975,52 +975,16 @@ Soft-delete a project by setting `deleted_at` timestamp. This operation does not
 
 #### UC-PM-006: Archive/Unarchive Project
 
-##### Basic Information
+Detailed specification is extracted to:
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-006 |
-| **Use Case Name** | Archive/Unarchive Project |
-| **Module** | PM Core |
-| **Version** | 1.0 |
-| **Last Updated** | 2026-02-18 |
-| **Priority** | Medium |
-| **Complexity** | Simple |
+- [UC-PM-006 - Archive/Unarchive Project](usecases/project/UC-PM-006-archive-unarchive-project.md)
 
-##### Description
+This extracted file is now the canonical detailed reference for UC-PM-006, including:
 
-Toggle the archive state of a project. Archived projects are visible but read-only (no new work items, no modifications to existing items).
-
-##### Actors
-
-| Actor | Type | Description |
-|-------|------|-------------|
-| Project Lead | Primary | Archives/unarchives projects they lead |
-
-##### Preconditions
-
-1. User is authenticated with valid JWT token
-2. User has permission `PM.PROJECT.UPDATE`
-3. Project exists and is not soft-deleted
-
-##### Main Flow
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 1 | Project Lead | Sends POST `/api/v1/projects/{projectId}/archive` or `/unarchive` |
-| 2 | System | Validates JWT and permissions |
-| 3 | System | Fetches project, validates it exists |
-| 4 | System | For archive: sets `archived=true`, `archived_at=NOW()` |
-| 5 | System | For unarchive: sets `archived=false`, clears `archived_at` |
-| 6 | System | Publishes `PROJECT_ARCHIVED` or `PROJECT_UNARCHIVED` event |
-| 7 | System | Returns HTTP 200 with updated project |
-
-##### Business Rules
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-006-01 | Cannot archive an already archived project (idempotent check) | Service layer |
-| BR-PM-006-02 | Archived projects reject all write operations on child entities | Service layer |
+- Jira-aligned authorization model for `ADMINISTER_PROJECTS`
+- archive and unarchive state transitions
+- `PROJECT_ALREADY_ARCHIVED` and `PROJECT_NOT_ARCHIVED` guardrails
+- current implementation scope that updates state without Kafka/outbox publishing
 
 ---
 
