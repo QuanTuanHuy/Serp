@@ -17,6 +17,7 @@ public class PathConstants {
     public static final String PRIORITIES = API_BASE_PATH + "/priorities";
     public static final String PRIORITY_SCHEMES = API_BASE_PATH + "/priority-schemes";
     public static final String STATUS_CATEGORIES = API_BASE_PATH + "/status-categories";
+    public static final String STATUSES = API_BASE_PATH + "/statuses";
 
     public static final String ROLES = API_BASE_PATH + "/roles";
 }

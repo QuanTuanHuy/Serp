@@ -62,6 +62,11 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
     }
 
     @Override
+    public boolean existsActiveWorkItemByStatusId(Long statusId, Long tenantId) {
+        return workItemRepository.existsByTenantIdAndStatusId(tenantId, statusId);
+    }
+
+    @Override
     public List<Long> getActiveIssueTypeIdsInUseByProjectIds(Long tenantId, List<Long> projectIds, List<Long> issueTypeIds) {
         if (projectIds == null || projectIds.isEmpty() || issueTypeIds == null || issueTypeIds.isEmpty()) {
             return List.of();

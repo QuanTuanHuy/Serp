@@ -59,4 +59,9 @@ public class WorkflowStepAdapter implements IWorkflowStepPort {
         return workflowStepRepository.findByIdAndTenantId(id, tenantId)
                 .map(workflowStepMapper::toEntity);
     }
+
+    @Override
+    public boolean existsByStatusIdIncludingSystem(Long statusId, Long tenantId) {
+        return workflowStepRepository.existsByStatusIdAndTenantIdOrSystemTenant(statusId, tenantId);
+    }
 }

@@ -21,4 +21,6 @@ public interface IWorkflowStepPort {
     Optional<WorkflowStepEntity> getInitialStepByWorkflowVersionId(Long workflowVersionId, Long tenantId);
 
     Optional<WorkflowStepEntity> getWorkflowStepById(Long id, Long tenantId);
+
+    boolean existsByStatusIdIncludingSystem(Long statusId, Long tenantId);
 }
