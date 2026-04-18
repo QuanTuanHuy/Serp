@@ -20,6 +20,7 @@ import serp.project.pmcore.domain.blueprint.query.ProjectBlueprintListCriteria;
 import serp.project.pmcore.domain.shared.enums.SchemeType;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
+import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
 
 import java.util.List;
@@ -109,7 +110,7 @@ class ProjectBlueprintServiceTest {
                 .createdBy(USER_ID)
                 .build();
 
-        when(projectBlueprintPort.getBlueprintByIdIncludingSystem(BLUEPRINT_ID, TENANT_ID)).thenReturn(Optional.of(existing));
+        when(projectBlueprintPort.getBlueprintById(BLUEPRINT_ID, TENANT_ID)).thenReturn(Optional.of(existing));
         when(projectBlueprintPort.existsByNameAndTenantId("Business Template", TENANT_ID)).thenReturn(false);
         when(projectBlueprintPort.saveBlueprint(existing)).thenReturn(existing);
 
@@ -152,23 +153,16 @@ class ProjectBlueprintServiceTest {
     }
 
     @Test
-    void deleteBlueprintShouldRejectSystemBlueprint() {
-        ProjectBlueprintEntity existing = ProjectBlueprintEntity.builder()
-                .id(BLUEPRINT_ID)
-                .tenantId(0L)
-                .name("System Template")
-                .typeKey("software")
-                .isSystem(true)
-                .build();
+    void deleteBlueprintShouldRejectBlueprintOutsideTenantScope() {
 
-        when(projectBlueprintPort.getBlueprintByIdIncludingSystem(BLUEPRINT_ID, TENANT_ID)).thenReturn(Optional.of(existing));
+        when(projectBlueprintPort.getBlueprintById(BLUEPRINT_ID, TENANT_ID)).thenReturn(Optional.empty());
 
-        BusinessRuleViolationException exception = assertThrows(
-                BusinessRuleViolationException.class,
+        ResourceNotFoundException exception = assertThrows(
+                ResourceNotFoundException.class,
                 () -> service.deleteBlueprint(BLUEPRINT_ID, TENANT_ID, USER_ID)
         );
 
-        assertEquals(DomainErrorCode.BLUEPRINT_IS_SYSTEM, exception.getErrorCode());
+        assertEquals(DomainErrorCode.BLUEPRINT_NOT_FOUND, exception.getErrorCode());
         verify(projectBlueprintPort, never()).saveBlueprint(any(ProjectBlueprintEntity.class));
     }
 }

@@ -25,7 +25,7 @@
 
 ### Description
 
-Soft-delete a tenant-owned project blueprint that is no longer needed. Delete is limited to the current tenant's own blueprint catalog; system-owned blueprints remain visible through read APIs but are read-only and cannot be deleted through tenant APIs. Existing projects are not affected because blueprints are provisioning templates, not active runtime bindings.
+Soft-delete a tenant-owned project blueprint that is no longer needed. Delete is limited to the current tenant's own blueprint catalog; system-owned blueprints remain visible through read APIs but are outside the delete scope of this endpoint. Existing projects are not affected because blueprints are provisioning templates, not active runtime bindings.
 
 ### Actors
 
@@ -46,7 +46,7 @@ Soft-delete a tenant-owned project blueprint that is no longer needed. Delete is
 2. User belongs to an active tenant
 3. Caller has tenant-scoped PM Admin authority for blueprint administration
 4. Target blueprint exists, is not soft-deleted, and belongs to the current tenant
-5. Target blueprint is not a system-owned read-only row
+5. Target blueprint belongs to the current tenant write scope
 
 ### Postconditions
 
@@ -70,11 +70,10 @@ Soft-delete a tenant-owned project blueprint that is no longer needed. Delete is
 | 2 | System | Validates JWT and extracts `userId` and `tenantId` |
 | 3 | System | Validates caller has tenant-scoped PM Admin authority |
 | 4 | System | Loads blueprint by `id=blueprintId`, `tenant_id=tenantId`, `deleted_at IS NULL` |
-| 5 | System | Validates the blueprint is not a system-owned read-only row |
-| 6 | System | Begins database transaction |
-| 7 | System | Soft-deletes the blueprint and sets delete audit fields |
-| 8 | System | Commits transaction |
-| 9 | System | Returns HTTP 200 with deletion confirmation |
+| 5 | System | Begins database transaction |
+| 6 | System | Soft-deletes the blueprint and sets delete audit fields |
+| 7 | System | Commits transaction |
+| 8 | System | Returns HTTP 200 with deletion confirmation |
 
 ### Exception Flows
 
@@ -86,15 +85,7 @@ Soft-delete a tenant-owned project blueprint that is no longer needed. Delete is
 |------|-------------|--------|
 | 4.E1 | System | Returns HTTP 404 with error: `BLUEPRINT_NOT_FOUND` |
 
-#### EF-2: System Blueprint Delete Rejected
-
-**Triggered at**: Main Flow Step 5
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 5.E1 | System | Returns HTTP 409 with error: `BLUEPRINT_IS_SYSTEM` |
-
-#### EF-3: Tenant Admin Permission Denied
+#### EF-2: Tenant Admin Permission Denied
 
 **Triggered at**: Main Flow Step 3
 
@@ -107,7 +98,7 @@ Soft-delete a tenant-owned project blueprint that is no longer needed. Delete is
 | Rule ID | Description | Enforcement |
 |---------|-------------|-------------|
 | BR-PM-020-01 | Tenant callers may delete only blueprints owned by their own tenant | Authorization + Repository layer |
-| BR-PM-020-02 | System-owned blueprints are visible through read APIs but are read-only and cannot be deleted through tenant APIs | Service layer |
+| BR-PM-020-02 | System-owned blueprints are visible through read APIs but are outside the delete scope of UC-PM-020 and therefore are not resolved by tenant-owned delete lookup | Service layer + Repository layer |
 | BR-PM-020-03 | Delete operation is soft delete only; data is excluded from active reads by `deleted_at IS NULL` | Service layer + Repository layer |
 | BR-PM-020-04 | Deleting a blueprint does not affect already-created projects because blueprints are provisioning templates only | Domain rule |
 
