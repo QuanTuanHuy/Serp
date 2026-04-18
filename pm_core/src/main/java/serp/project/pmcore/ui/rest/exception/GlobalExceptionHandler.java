@@ -132,6 +132,7 @@ public class GlobalExceptionHandler {
             case PROJECT_KEY_ALREADY_EXISTS,
                  CATEGORY_NAME_ALREADY_EXISTS,
                  CATEGORY_IN_USE,
+                 BLUEPRINT_NAME_ALREADY_EXISTS,
                  COMPONENT_NAME_ALREADY_EXISTS,
                  VERSION_NAME_ALREADY_EXISTS,
                  ROLE_NAME_ALREADY_EXISTS,
@@ -155,6 +156,7 @@ public class GlobalExceptionHandler {
                  TRANSITION_CONDITION_FAILED -> HttpStatus.FORBIDDEN;
 
             case PROJECT_ARCHIVED,
+                 BLUEPRINT_IS_SYSTEM,
                  ROLE_IS_SYSTEM -> HttpStatus.CONFLICT;
 
             case SCHEME_INCOMPATIBLE,

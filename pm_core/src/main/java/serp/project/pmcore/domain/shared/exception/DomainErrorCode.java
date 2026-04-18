@@ -59,6 +59,7 @@ public enum DomainErrorCode {
     CATEGORY_NAME_ALREADY_EXISTS("Category name already exists in this tenant"),
     CATEGORY_IN_USE("Cannot delete category that has projects assigned"),
     BLUEPRINT_NOT_FOUND("Project blueprint not found"),
+    BLUEPRINT_NAME_ALREADY_EXISTS("Blueprint name already exists in this tenant"),
     BLUEPRINT_IS_SYSTEM("Cannot modify a system blueprint"),
 
     // Project configuration catalogs
