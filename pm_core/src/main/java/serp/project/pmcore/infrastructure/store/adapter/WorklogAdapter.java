@@ -18,6 +18,7 @@ import serp.project.pmcore.domain.worklog.query.WorklogListCriteria;
 import serp.project.pmcore.infrastructure.store.mapper.WorklogMapper;
 import serp.project.pmcore.infrastructure.store.model.WorklogModel;
 import serp.project.pmcore.infrastructure.store.repository.IWorklogRepository;
+import serp.project.pmcore.infrastructure.store.support.PageableUtils;
 
 import java.util.Optional;
 
@@ -41,7 +42,7 @@ public class WorklogAdapter implements IWorklogPort {
 
     @Override
     public PageResult<WorklogEntity> listWorklogs(Long tenantId, WorklogListCriteria criteria) {
-        Pageable pageable = PageRequest.of(resolvePage(criteria), resolvePageSize(criteria), resolveSort(criteria));
+        Pageable pageable = PageableUtils.of(criteria, resolveSort(criteria));
         Page<WorklogModel> result = worklogRepository.findAllByWorkItemIdWithFilters(
                 tenantId,
                 criteria.getWorkItemId(),
@@ -57,28 +58,8 @@ public class WorklogAdapter implements IWorklogPort {
         return total == null ? 0L : total;
     }
 
-    private int resolvePage(WorklogListCriteria criteria) {
-        int page = criteria.getPage();
-        if (page < 0) {
-            throw new IllegalArgumentException("page must be greater than or equal to 0");
-        }
-        return page;
-    }
-
-    private int resolvePageSize(WorklogListCriteria criteria) {
-        int pageSize = criteria.getPageSize();
-        if (pageSize < 1 || pageSize > 100) {
-            throw new IllegalArgumentException("pageSize must be between 1 and 100");
-        }
-        return pageSize;
-    }
-
     private Sort resolveSort(WorklogListCriteria criteria) {
-        Sort.Direction direction = switch (criteria.getSortDirection().toUpperCase()) {
-            case "ASC" -> Sort.Direction.ASC;
-            case "DESC" -> Sort.Direction.DESC;
-            default -> throw new IllegalArgumentException("sortDirection must be ASC or DESC");
-        };
+        Sort.Direction direction = PageableUtils.resolveDirection(criteria.getSortDirection());
 
         return switch (criteria.getSortBy().toLowerCase()) {
             case "start_date" -> Sort.by(

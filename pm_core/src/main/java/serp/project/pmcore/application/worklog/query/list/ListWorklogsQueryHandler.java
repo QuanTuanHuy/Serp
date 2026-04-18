@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.shared.cqrs.query.IQueryHandler;
+import serp.project.pmcore.application.shared.pagination.PageViews;
 import serp.project.pmcore.application.worklog.WorklogListPageView;
 import serp.project.pmcore.application.worklog.WorklogValidator;
 import serp.project.pmcore.application.worklog.WorklogView;
@@ -62,16 +63,13 @@ public class ListWorklogsQueryHandler implements IQueryHandler<ListWorklogsQuery
 
         WorklogListCriteria criteria = query.toCriteria();
         PageResult<WorklogEntity> result = worklogService.listWorklogs(query.tenantId(), criteria);
-        int pageSize = criteria.getPageSize();
-        int currentPage = criteria.getPage();
-        int totalPages = pageSize <= 0 ? 0 : (int) Math.ceil((double) result.total() / pageSize);
 
         return new WorklogListPageView(
                 result.items().stream().map(WorklogView::from).toList(),
                 result.total(),
-                totalPages,
-                currentPage,
-                pageSize,
+                PageViews.totalPages(result.total(), criteria.getPageSize()),
+                criteria.getPage(),
+                criteria.getPageSize(),
                 workItem.getId(),
                 workItem.getTimeSpent(),
                 workItem.getTimeRemainingEstimate()

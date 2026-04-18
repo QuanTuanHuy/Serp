@@ -19,6 +19,7 @@ import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.infrastructure.store.mapper.PriorityMapper;
 import serp.project.pmcore.infrastructure.store.model.PriorityModel;
 import serp.project.pmcore.infrastructure.store.repository.IPriorityRepository;
+import serp.project.pmcore.infrastructure.store.support.PageableUtils;
 
 import java.util.List;
 import java.util.Optional;
@@ -65,7 +66,7 @@ public class PriorityAdapter implements IPriorityPort {
 
     @Override
     public PageResult<PriorityEntity> listPrioritiesIncludingSystem(Long tenantId, PriorityListCriteria criteria) {
-        Pageable pageable = PageRequest.of(resolvePage(criteria), resolvePageSize(criteria), resolveSort(criteria));
+        Pageable pageable = PageableUtils.of(criteria, resolveSort(criteria));
         Page<PriorityModel> result = priorityRepository.findAllVisibleWithFilters(
                 tenantId,
                 criteria.getSearch(),
@@ -90,31 +91,9 @@ public class PriorityAdapter implements IPriorityPort {
         return priorityRepository.existsByTenantIdAndNameIgnoreCase(tenantId, name);
     }
 
-    private int resolvePage(PriorityListCriteria criteria) {
-        int page = criteria.getPage();
-        if (page < 0) {
-            throw new IllegalArgumentException("page must be greater than or equal to 0");
-        }
-        return page;
-    }
-
-    private int resolvePageSize(PriorityListCriteria criteria) {
-        int pageSize = criteria.getPageSize();
-        if (pageSize < 1 || pageSize > 100) {
-            throw new IllegalArgumentException("pageSize must be between 1 and 100");
-        }
-        return pageSize;
-    }
-
     private Sort resolveSort(PriorityListCriteria criteria) {
         String sortBy = criteria.getSortBy().toLowerCase();
-        String sortDirection = criteria.getSortDirection().toUpperCase();
-
-        Sort.Direction direction = switch (sortDirection) {
-            case "ASC" -> Sort.Direction.ASC;
-            case "DESC" -> Sort.Direction.DESC;
-            default -> throw new IllegalArgumentException("sortDirection must be ASC or DESC");
-        };
+        Sort.Direction direction = PageableUtils.resolveDirection(criteria.getSortDirection());
 
         return switch (sortBy) {
             case "sequence" -> Sort.by(
