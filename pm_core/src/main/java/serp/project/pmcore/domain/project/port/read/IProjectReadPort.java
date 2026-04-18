@@ -8,6 +8,7 @@ package serp.project.pmcore.domain.project.port.read;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface IProjectReadPort {
@@ -18,6 +19,10 @@ public interface IProjectReadPort {
     boolean existsByKeyAndTenantId(String key, Long tenantId);
 
     boolean existsActiveProjectByCategoryId(Long categoryId, Long tenantId);
+
+    boolean existsActiveProjectByIssueTypeSchemeId(Long issueTypeSchemeId, Long tenantId);
+
+    List<Long> getActiveProjectIdsByIssueTypeSchemeId(Long issueTypeSchemeId, Long tenantId);
 
     PageResult<ProjectEntity> getProjects(Long tenantId, String search,
                                           Long categoryId, String projectTypeKey,

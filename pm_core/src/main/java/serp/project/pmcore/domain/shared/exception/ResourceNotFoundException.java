@@ -50,6 +50,11 @@ public class ResourceNotFoundException extends DomainException {
                 "Issue type not found: id=" + id);
     }
 
+    public static ResourceNotFoundException issueTypeScheme(Long id) {
+        return new ResourceNotFoundException(DomainErrorCode.ISSUE_TYPE_SCHEME_NOT_FOUND,
+                "Issue type scheme not found: id=" + id);
+    }
+
     public static ResourceNotFoundException priority(Long id) {
         return new ResourceNotFoundException(DomainErrorCode.PRIORITY_NOT_FOUND,
                 "Priority not found: id=" + id);

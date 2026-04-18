@@ -46,8 +46,7 @@ Replace the ordered list of issue types assigned to a tenant-owned issue type sc
 1. User is authenticated with valid JWT token
 2. User belongs to an active tenant
 3. Caller has tenant-scoped PM Admin authority for issue type scheme administration
-4. Target scheme is visible to the tenant
-5. The target scheme is tenant-owned and not soft-deleted
+4. Target scheme exists, is not soft-deleted, and belongs to the current tenant
 6. Every requested `issue_type_id` is visible to the tenant
 7. The requested item list is non-empty and contains no duplicate `issue_type_id` values
 8. The scheme's `default_issue_type_id` is included in the resulting item list
@@ -74,45 +73,44 @@ Replace the ordered list of issue types assigned to a tenant-owned issue type sc
 | 1 | PM Admin | Sends `PUT /api/v1/issue-type-schemes/{schemeId}/items` with an ordered list of `issue_type_id` values |
 | 2 | System | Validates JWT and extracts `userId` and `tenantId` |
 | 3 | System | Validates caller has tenant-scoped PM Admin authority |
-| 4 | System | Loads scheme by `id=schemeId` if it belongs to the tenant or is a visible system-owned row |
-| 5 | System | Rejects write access to a system-owned read-only scheme |
-| 6 | System | Validates request list is non-empty and contains no duplicate `issue_type_id` values |
-| 7 | System | Validates every requested `issue_type_id` resolves to a tenant-visible issue type |
-| 8 | System | Validates the scheme's `default_issue_type_id` is included in the resulting list |
-| 9 | System | Compares the current item set with the requested item set and identifies removed issue types |
-| 10 | System | If the scheme is used by active projects, validates removed issue types do not have active work items in those projects |
-| 11 | System | Begins database transaction |
-| 12 | System | Soft-deletes or removes existing active scheme items for the scheme |
-| 13 | System | Inserts the new ordered item set with `sequence` starting from `1` |
-| 14 | System | Updates scheme audit fields |
-| 15 | System | Commits transaction |
-| 16 | System | Returns HTTP 200 with the updated ordered item list |
+| 4 | System | Loads scheme by `id=schemeId`, `tenant_id=tenantId`, `deleted_at IS NULL` |
+| 5 | System | Validates request list is non-empty and contains no duplicate `issue_type_id` values |
+| 6 | System | Validates every requested `issue_type_id` resolves to a tenant-visible issue type |
+| 7 | System | Validates the scheme's `default_issue_type_id` is included in the resulting list |
+| 8 | System | Compares the current item set with the requested item set and identifies removed issue types |
+| 9 | System | If the scheme is used by active projects, validates removed issue types do not have active work items in those projects |
+| 10 | System | Begins database transaction |
+| 11 | System | Soft-deletes or removes existing active scheme items for the scheme |
+| 12 | System | Inserts the new ordered item set with `sequence` starting from `1` |
+| 13 | System | Updates scheme audit fields |
+| 14 | System | Commits transaction |
+| 15 | System | Returns HTTP 200 with the updated ordered item list |
 
 ### Alternative Flows
 
 #### AF-1: Reorder Only
 
-**Branches from**: Main Flow Step 9  
+**Branches from**: Main Flow Step 8  
 **Condition**: Requested item set matches the current item membership and changes only the order
 
 | Step | Actor/System | Action |
 |------|-------------|--------|
-| 9.1 | System | Detects there are no added or removed issue types |
-| 13.1 | System | Persists updated `sequence` values only |
+| 8.1 | System | Detects there are no added or removed issue types |
+| 12.1 | System | Persists updated `sequence` values only |
 
-**Rejoins**: Main Flow Step 14
+**Rejoins**: Main Flow Step 13
 
 #### AF-2: Add New Issue Types Without Removals
 
-**Branches from**: Main Flow Step 9  
+**Branches from**: Main Flow Step 8  
 **Condition**: Requested list adds one or more new issue types and removes none
 
 | Step | Actor/System | Action |
 |------|-------------|--------|
-| 9.1 | System | Detects the removed-item set is empty |
-| 10.1 | System | Skips work-item removal guard validation |
+| 8.1 | System | Detects the removed-item set is empty |
+| 9.1 | System | Skips work-item removal guard validation |
 
-**Rejoins**: Main Flow Step 11
+**Rejoins**: Main Flow Step 10
 
 ### Exception Flows
 
@@ -124,47 +122,39 @@ Replace the ordered list of issue types assigned to a tenant-owned issue type sc
 |------|-------------|--------|
 | 4.E1 | System | Returns HTTP 404 with error: `ISSUE_TYPE_SCHEME_NOT_FOUND` |
 
-#### EF-2: System-Owned Scheme Is Read-Only
+#### EF-2: Invalid Item List
 
 **Triggered at**: Main Flow Step 5
 
 | Step | Actor/System | Action |
 |------|-------------|--------|
-| 5.E1 | System | Returns HTTP 409 with error: `ISSUE_TYPE_SCHEME_IS_SYSTEM` |
+| 5.E1 | System | Returns HTTP 400 with validation error for empty or duplicate item list |
 
-#### EF-3: Invalid Item List
+#### EF-3: Referenced Issue Type Not Found in Visible Scope
 
 **Triggered at**: Main Flow Step 6
 
 | Step | Actor/System | Action |
 |------|-------------|--------|
-| 6.E1 | System | Returns HTTP 400 with validation error for empty or duplicate item list |
+| 6.E1 | System | Returns HTTP 404 with error: `ISSUE_TYPE_NOT_FOUND` |
 
-#### EF-4: Referenced Issue Type Not Found in Visible Scope
+#### EF-4: Default Issue Type Missing From Resulting Items
 
 **Triggered at**: Main Flow Step 7
 
 | Step | Actor/System | Action |
 |------|-------------|--------|
-| 7.E1 | System | Returns HTTP 404 with error: `ISSUE_TYPE_NOT_FOUND` |
+| 7.E1 | System | Returns HTTP 422 with error: `ISSUE_TYPE_SCHEME_DEFAULT_NOT_IN_ITEMS` |
 
-#### EF-5: Default Issue Type Missing From Resulting Items
+#### EF-5: Removed Issue Type Still In Use
 
-**Triggered at**: Main Flow Step 8
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 8.E1 | System | Returns HTTP 422 with error: `ISSUE_TYPE_SCHEME_DEFAULT_NOT_IN_ITEMS` |
-
-#### EF-6: Removed Issue Type Still In Use
-
-**Triggered at**: Main Flow Step 10
+**Triggered at**: Main Flow Step 9
 
 | Step | Actor/System | Action |
 |------|-------------|--------|
-| 10.E1 | System | Returns HTTP 409 with error: `ISSUE_TYPE_SCHEME_IN_USE` |
+| 9.E1 | System | Returns HTTP 409 with error: `ISSUE_TYPE_SCHEME_IN_USE` |
 
-#### EF-7: Tenant Admin Permission Denied
+#### EF-6: Tenant Admin Permission Denied
 
 **Triggered at**: Main Flow Step 3
 
@@ -177,7 +167,7 @@ Replace the ordered list of issue types assigned to a tenant-owned issue type sc
 | Rule ID | Description | Enforcement |
 |---------|-------------|-------------|
 | BR-PM-141-01 | Tenant callers may manage items only for issue type schemes owned by their own tenant | Authorization + Repository layer |
-| BR-PM-141-02 | System-owned issue type schemes are visible through read APIs but are read-only and cannot be modified through tenant APIs | Service layer |
+| BR-PM-141-02 | Write lookup for manage-items is tenant-only; system-owned schemes remain visible only through read APIs and are not addressable through tenant write paths | Service layer |
 | BR-PM-141-03 | The scheme's `default_issue_type_id` must always be included in the active item list | Service layer |
 | BR-PM-141-04 | Item replacement is transactional: the active item set is replaced atomically, not incrementally | UseCase layer |
 | BR-PM-141-05 | Resulting item order is defined solely by request order and persisted via `sequence` starting at `1` | Service layer |

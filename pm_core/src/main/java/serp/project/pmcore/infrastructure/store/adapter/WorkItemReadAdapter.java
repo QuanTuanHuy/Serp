@@ -62,6 +62,14 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
     }
 
     @Override
+    public boolean existsActiveWorkItemByProjectIdsAndIssueTypeId(Long tenantId, List<Long> projectIds, Long issueTypeId) {
+        if (projectIds == null || projectIds.isEmpty()) {
+            return false;
+        }
+        return workItemRepository.existsActiveByTenantIdAndProjectIdInAndIssueTypeId(tenantId, projectIds, issueTypeId);
+    }
+
+    @Override
     public Optional<String> getLastRankByProjectId(Long projectId, Long tenantId) {
         return workItemRepository.findFirstByTenantIdAndProjectIdOrderByRankDescIdDesc(tenantId, projectId)
                 .map(WorkItemModel::getRank);

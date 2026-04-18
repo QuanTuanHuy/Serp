@@ -107,9 +107,12 @@ public enum DomainErrorCode {
     ISSUE_TYPE_IS_SYSTEM("Cannot modify a system issue type"),
     ISSUE_TYPE_IN_USE("Cannot delete issue type that has work items"),
     ISSUE_TYPE_SCHEME_NOT_FOUND("Issue type scheme not found"),
+    ISSUE_TYPE_SCHEME_NAME_ALREADY_EXISTS("Issue type scheme name already exists in this tenant"),
+    ISSUE_TYPE_SCHEME_IS_SYSTEM("Cannot modify a system issue type scheme"),
     ISSUE_TYPE_SCHEME_DEFAULT_NOT_IN_ITEMS(
             "Default issue type must be included in the scheme items"),
     ISSUE_TYPE_SCHEME_IN_USE("Cannot remove issue type from scheme: work items of this type exist"),
+    ISSUE_TYPE_SCHEME_BOUND_TO_PROJECT("Cannot delete issue type scheme that is assigned to active projects"),
 
     // Priority management
     PRIORITY_NOT_FOUND("Priority not found"),

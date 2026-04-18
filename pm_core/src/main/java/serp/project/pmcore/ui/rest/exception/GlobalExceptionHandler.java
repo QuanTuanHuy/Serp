@@ -138,6 +138,9 @@ public class GlobalExceptionHandler {
                  ROLE_NAME_ALREADY_EXISTS,
                  ROLE_IN_USE_BY_PERMISSION,
                  ISSUE_TYPE_KEY_ALREADY_EXISTS,
+                 ISSUE_TYPE_SCHEME_NAME_ALREADY_EXISTS,
+                 ISSUE_TYPE_SCHEME_IN_USE,
+                 ISSUE_TYPE_SCHEME_BOUND_TO_PROJECT,
                  PRIORITY_NAME_ALREADY_EXISTS,
                  PRIORITY_IN_USE,
                  STATUS_KEY_ALREADY_EXISTS,
@@ -157,12 +160,14 @@ public class GlobalExceptionHandler {
 
             case PROJECT_ARCHIVED,
                  BLUEPRINT_IS_SYSTEM,
-                 ROLE_IS_SYSTEM -> HttpStatus.CONFLICT;
+                 ROLE_IS_SYSTEM,
+                 ISSUE_TYPE_SCHEME_IS_SYSTEM -> HttpStatus.CONFLICT;
 
             case SCHEME_INCOMPATIBLE,
-                  WORKFLOW_VALIDATION_FAILED,
-                  TRANSITION_VALIDATION_FAILED,
-                  FIELD_NOT_WRITABLE_ON_UPDATE,
+                  ISSUE_TYPE_SCHEME_DEFAULT_NOT_IN_ITEMS,
+                   WORKFLOW_VALIDATION_FAILED,
+                   TRANSITION_VALIDATION_FAILED,
+                   FIELD_NOT_WRITABLE_ON_UPDATE,
                    FIELD_CANNOT_BE_REQUIRED_AND_HIDDEN,
                   SUMMARY_FIELD_CANNOT_BE_HIDDEN -> HttpStatus.UNPROCESSABLE_ENTITY;
 

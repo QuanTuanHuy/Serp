@@ -22,6 +22,8 @@ public interface IWorkItemReadPort {
 
     List<WorkItemEntity> getWorkItemsByPriorityId(Long priorityId, Long tenantId);
 
+    boolean existsActiveWorkItemByProjectIdsAndIssueTypeId(Long tenantId, List<Long> projectIds, Long issueTypeId);
+
     Optional<String> getLastRankByProjectId(Long projectId, Long tenantId);
 
     PageResult<WorkItemEntity> searchWorkItems(Long tenantId, WorkItemSearchCriteria criteria);

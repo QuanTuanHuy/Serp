@@ -60,6 +60,16 @@ public class ProjectAdapter implements IProjectReadPort, IProjectWritePort {
     }
 
     @Override
+    public boolean existsActiveProjectByIssueTypeSchemeId(Long issueTypeSchemeId, Long tenantId) {
+        return projectRepository.existsActiveProjectByIssueTypeSchemeId(issueTypeSchemeId, tenantId);
+    }
+
+    @Override
+    public List<Long> getActiveProjectIdsByIssueTypeSchemeId(Long issueTypeSchemeId, Long tenantId) {
+        return projectRepository.findActiveProjectIdsByIssueTypeSchemeId(issueTypeSchemeId, tenantId);
+    }
+
+    @Override
     public PageResult<ProjectEntity> getProjects(Long tenantId, String search,
                                                  Long categoryId, String projectTypeKey,
                                                  Boolean archived, int page, int size,

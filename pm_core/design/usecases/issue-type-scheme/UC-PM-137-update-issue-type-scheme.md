@@ -45,8 +45,7 @@ Update mutable metadata of a tenant-owned issue type scheme. The caller may upda
 1. User is authenticated with valid JWT token
 2. User belongs to an active tenant
 3. Caller has tenant-scoped PM Admin authority for issue type scheme administration
-4. Target scheme is visible to the tenant
-5. The target scheme is tenant-owned and not soft-deleted
+4. Target scheme exists, is not soft-deleted, and belongs to the current tenant
 
 ### Postconditions
 
@@ -70,41 +69,40 @@ Update mutable metadata of a tenant-owned issue type scheme. The caller may upda
 | 1 | PM Admin | Sends `PUT /api/v1/issue-type-schemes/{schemeId}` with mutable field updates |
 | 2 | System | Validates JWT and extracts `userId` and `tenantId` |
 | 3 | System | Validates caller has tenant-scoped PM Admin authority |
-| 4 | System | Loads scheme by `id=schemeId` if it belongs to the tenant or is a visible system-owned row |
-| 5 | System | Rejects write access to a system-owned read-only scheme |
-| 6 | System | Validates input payload |
-| 7 | System | If `name` is provided, validates uniqueness among active tenant-owned schemes in the same tenant |
-| 8 | System | If `default_issue_type_id` is provided, validates the issue type is tenant-visible |
-| 9 | System | If current scheme already has items, validates the resulting `default_issue_type_id` remains included in those items |
-| 10 | System | Begins database transaction |
-| 11 | System | Applies allowed updates and sets `updated_by=userId` |
-| 12 | System | Commits transaction |
-| 13 | System | Returns HTTP 200 with updated scheme |
+| 4 | System | Loads scheme by `id=schemeId`, `tenant_id=tenantId`, `deleted_at IS NULL` |
+| 5 | System | Validates input payload |
+| 6 | System | If `name` is provided, validates uniqueness among active tenant-owned schemes in the same tenant |
+| 7 | System | If `default_issue_type_id` is provided, validates the issue type is tenant-visible |
+| 8 | System | If current scheme already has items, validates the resulting `default_issue_type_id` remains included in those items |
+| 9 | System | Begins database transaction |
+| 10 | System | Applies allowed updates and sets `updated_by=userId` |
+| 11 | System | Commits transaction |
+| 12 | System | Returns HTTP 200 with updated scheme |
 
 ### Alternative Flows
 
 #### AF-1: Partial Metadata Update
 
-**Branches from**: Main Flow Step 6-11  
+**Branches from**: Main Flow Step 5-10  
 **Condition**: Request updates only a subset of mutable fields
 
 | Step | Actor/System | Action |
 |------|-------------|--------|
-| 6.1 | System | Treats omitted mutable fields as unchanged |
-| 11.1 | System | Persists only supplied mutable values |
+| 5.1 | System | Treats omitted mutable fields as unchanged |
+| 10.1 | System | Persists only supplied mutable values |
 
-**Rejoins**: Main Flow Step 12
+**Rejoins**: Main Flow Step 11
 
 #### AF-2: Clear Description
 
-**Branches from**: Main Flow Step 11  
+**Branches from**: Main Flow Step 10  
 **Condition**: Request explicitly sends `null` for `description`
 
 | Step | Actor/System | Action |
 |------|-------------|--------|
-| 11.1 | System | Clears the `description` column to `NULL` |
+| 10.1 | System | Clears the `description` column to `NULL` |
 
-**Rejoins**: Main Flow Step 12
+**Rejoins**: Main Flow Step 11
 
 ### Exception Flows
 
@@ -116,47 +114,39 @@ Update mutable metadata of a tenant-owned issue type scheme. The caller may upda
 |------|-------------|--------|
 | 4.E1 | System | Returns HTTP 404 with error: `ISSUE_TYPE_SCHEME_NOT_FOUND` |
 
-#### EF-2: System-Owned Scheme Is Read-Only
-
-**Triggered at**: Main Flow Step 5
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 5.E1 | System | Returns HTTP 409 with error: `ISSUE_TYPE_SCHEME_IS_SYSTEM` |
-
-#### EF-3: Duplicate Scheme Name
-
-**Triggered at**: Main Flow Step 7
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 7.E1 | System | Returns HTTP 409 with error: `ISSUE_TYPE_SCHEME_NAME_ALREADY_EXISTS` |
-
-#### EF-4: Default Issue Type Not Found in Visible Scope
-
-**Triggered at**: Main Flow Step 8
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 8.E1 | System | Returns HTTP 404 with error: `ISSUE_TYPE_NOT_FOUND` |
-
-#### EF-5: Default Issue Type Not Included in Existing Items
-
-**Triggered at**: Main Flow Step 9
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 9.E1 | System | Returns HTTP 422 with error: `ISSUE_TYPE_SCHEME_DEFAULT_NOT_IN_ITEMS` |
-
-#### EF-6: Validation Error
+#### EF-2: Duplicate Scheme Name
 
 **Triggered at**: Main Flow Step 6
 
 | Step | Actor/System | Action |
 |------|-------------|--------|
-| 6.E1 | System | Returns HTTP 400 with validation details |
+| 6.E1 | System | Returns HTTP 409 with error: `ISSUE_TYPE_SCHEME_NAME_ALREADY_EXISTS` |
 
-#### EF-7: Tenant Admin Permission Denied
+#### EF-3: Default Issue Type Not Found in Visible Scope
+
+**Triggered at**: Main Flow Step 7
+
+| Step | Actor/System | Action |
+|------|-------------|--------|
+| 7.E1 | System | Returns HTTP 404 with error: `ISSUE_TYPE_NOT_FOUND` |
+
+#### EF-4: Default Issue Type Not Included in Existing Items
+
+**Triggered at**: Main Flow Step 8
+
+| Step | Actor/System | Action |
+|------|-------------|--------|
+| 8.E1 | System | Returns HTTP 422 with error: `ISSUE_TYPE_SCHEME_DEFAULT_NOT_IN_ITEMS` |
+
+#### EF-5: Validation Error
+
+**Triggered at**: Main Flow Step 5
+
+| Step | Actor/System | Action |
+|------|-------------|--------|
+| 5.E1 | System | Returns HTTP 400 with validation details |
+
+#### EF-6: Tenant Admin Permission Denied
 
 **Triggered at**: Main Flow Step 3
 
@@ -169,7 +159,7 @@ Update mutable metadata of a tenant-owned issue type scheme. The caller may upda
 | Rule ID | Description | Enforcement |
 |---------|-------------|-------------|
 | BR-PM-137-01 | Tenant callers may update only issue type schemes owned by their own tenant | Authorization + Repository layer |
-| BR-PM-137-02 | System-owned issue type schemes are visible through read APIs but are read-only and cannot be updated through tenant APIs | Service layer |
+| BR-PM-137-02 | Write lookup for update is tenant-only; system-owned schemes remain visible only through read APIs and are not addressable through tenant write paths | Service layer |
 | BR-PM-137-03 | `tenant_id` is system-controlled and cannot be updated by API clients | Service layer |
 | BR-PM-137-04 | Scheme name must remain unique among active tenant-owned issue type schemes in the same tenant | Service layer + DB constraint |
 | BR-PM-137-05 | If `default_issue_type_id` is changed, it must resolve to a tenant-visible issue type | Service layer |

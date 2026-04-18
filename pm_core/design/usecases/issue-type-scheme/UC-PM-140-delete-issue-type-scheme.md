@@ -46,8 +46,7 @@ Soft-delete a tenant-owned issue type scheme that is no longer bound to active p
 1. User is authenticated with valid JWT token
 2. User belongs to an active tenant
 3. Caller has tenant-scoped PM Admin authority for issue type scheme administration
-4. Target scheme is visible to the tenant
-5. The target scheme is tenant-owned, not soft-deleted, and not bound to any active project
+4. Target scheme exists, is not soft-deleted, belongs to the current tenant, and is not bound to any active project
 
 ### Postconditions
 
@@ -70,13 +69,12 @@ Soft-delete a tenant-owned issue type scheme that is no longer bound to active p
 | 1 | PM Admin | Sends `DELETE /api/v1/issue-type-schemes/{schemeId}` |
 | 2 | System | Validates JWT and extracts `userId` and `tenantId` |
 | 3 | System | Validates caller has tenant-scoped PM Admin authority |
-| 4 | System | Loads scheme by `id=schemeId` if it belongs to the tenant or is a visible system-owned row |
-| 5 | System | Rejects write access to a system-owned read-only scheme |
-| 6 | System | Validates no active project currently binds to the scheme |
-| 7 | System | Begins database transaction |
-| 8 | System | Soft-deletes the scheme and sets delete audit fields |
-| 9 | System | Commits transaction |
-| 10 | System | Returns HTTP 200 with deletion confirmation |
+| 4 | System | Loads scheme by `id=schemeId`, `tenant_id=tenantId`, `deleted_at IS NULL` |
+| 5 | System | Validates no active project currently binds to the scheme |
+| 6 | System | Begins database transaction |
+| 7 | System | Soft-deletes the scheme and sets delete audit fields |
+| 8 | System | Commits transaction |
+| 9 | System | Returns HTTP 200 with deletion confirmation |
 
 ### Exception Flows
 
@@ -88,23 +86,15 @@ Soft-delete a tenant-owned issue type scheme that is no longer bound to active p
 |------|-------------|--------|
 | 4.E1 | System | Returns HTTP 404 with error: `ISSUE_TYPE_SCHEME_NOT_FOUND` |
 
-#### EF-2: System-Owned Scheme Is Read-Only
+#### EF-2: Scheme Is Still Bound to Active Projects
 
 **Triggered at**: Main Flow Step 5
 
 | Step | Actor/System | Action |
 |------|-------------|--------|
-| 5.E1 | System | Returns HTTP 409 with error: `ISSUE_TYPE_SCHEME_IS_SYSTEM` |
+| 5.E1 | System | Returns HTTP 409 with error: `ISSUE_TYPE_SCHEME_BOUND_TO_PROJECT` |
 
-#### EF-3: Scheme Is Still Bound to Active Projects
-
-**Triggered at**: Main Flow Step 6
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 6.E1 | System | Returns HTTP 409 with error: `ISSUE_TYPE_SCHEME_BOUND_TO_PROJECT` |
-
-#### EF-4: Tenant Admin Permission Denied
+#### EF-3: Tenant Admin Permission Denied
 
 **Triggered at**: Main Flow Step 3
 
@@ -117,7 +107,7 @@ Soft-delete a tenant-owned issue type scheme that is no longer bound to active p
 | Rule ID | Description | Enforcement |
 |---------|-------------|-------------|
 | BR-PM-140-01 | Tenant callers may delete only issue type schemes owned by their own tenant | Authorization + Repository layer |
-| BR-PM-140-02 | System-owned issue type schemes are visible through read APIs but are read-only and cannot be deleted through tenant APIs | Service layer |
+| BR-PM-140-02 | Write lookup for delete is tenant-only; system-owned schemes remain visible only through read APIs and are not addressable through tenant write paths | Service layer |
 | BR-PM-140-03 | Delete operation is soft delete only; deleted rows are excluded from active reads by `deleted_at IS NULL` | Service layer + Repository layer |
 | BR-PM-140-04 | Delete must be rejected when any active project still binds to the scheme | Service layer |
 | BR-PM-140-05 | Deleting a scheme does not delete issue type dictionary rows | Service layer |
