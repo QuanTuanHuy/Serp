@@ -12,6 +12,7 @@ import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationExceptio
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
+import serp.project.pmcore.domain.shared.util.TextNormalizationUtils;
 import serp.project.pmcore.domain.workitem.dto.StatusCategoryUpdateData;
 import serp.project.pmcore.domain.workitem.entity.StatusCategoryEntity;
 import serp.project.pmcore.domain.workitem.port.IStatusCategoryPort;
@@ -33,16 +34,24 @@ public class StatusCategoryService implements IStatusCategoryService {
 
     @Override
     public StatusCategoryEntity createStatusCategory(StatusCategoryEntity statusCategory, Long tenantId, Long userId) {
-        String key = normalizeRequiredText(statusCategory.getKey(), "key", KEY_MAX_LENGTH);
+        String key = TextNormalizationUtils.normalizeRequiredText(statusCategory.getKey(), "key", KEY_MAX_LENGTH);
         if (statusCategoryPort.existsByKey(tenantId, key)) {
             log.warn("Status category key already exists: key={}, tenantId={}", key, tenantId);
             throw new BusinessRuleViolationException(DomainErrorCode.STATUS_CATEGORY_KEY_ALREADY_EXISTS);
         }
 
         statusCategory.setTenantId(tenantId);
-        statusCategory.setName(normalizeRequiredText(statusCategory.getName(), "name", NAME_MAX_LENGTH));
+        statusCategory.setName(TextNormalizationUtils.normalizeRequiredText(
+                statusCategory.getName(),
+                "name",
+                NAME_MAX_LENGTH
+        ));
         statusCategory.setKey(key);
-        statusCategory.setColor(normalizeOptionalText(statusCategory.getColor(), "color", COLOR_MAX_LENGTH));
+        statusCategory.setColor(TextNormalizationUtils.normalizeOptionalText(
+                statusCategory.getColor(),
+                "color",
+                COLOR_MAX_LENGTH
+        ));
         statusCategory.setIsSystem(false);
         statusCategory.setDeletedAt(null);
         statusCategory.applyCreate(userId, System.currentTimeMillis());
@@ -81,11 +90,11 @@ public class StatusCategoryService implements IStatusCategoryService {
         StatusCategoryEntity existing = getStatusCategoryById(statusCategoryId, tenantId);
 
         if (data.nameProvided()) {
-            existing.setName(normalizeRequiredText(data.name(), "name", NAME_MAX_LENGTH));
+            existing.setName(TextNormalizationUtils.normalizeRequiredText(data.name(), "name", NAME_MAX_LENGTH));
         }
 
         if (data.keyProvided()) {
-            String newKey = normalizeRequiredText(data.key(), "key", KEY_MAX_LENGTH);
+            String newKey = TextNormalizationUtils.normalizeRequiredText(data.key(), "key", KEY_MAX_LENGTH);
             if (!newKey.equalsIgnoreCase(existing.getKey()) && statusCategoryPort.existsByKey(tenantId, newKey)) {
                 log.warn("Status category key already exists: key={}, tenantId={}", newKey, tenantId);
                 throw new BusinessRuleViolationException(DomainErrorCode.STATUS_CATEGORY_KEY_ALREADY_EXISTS);
@@ -94,7 +103,7 @@ public class StatusCategoryService implements IStatusCategoryService {
         }
 
         if (data.colorProvided()) {
-            existing.setColor(normalizeOptionalText(data.color(), "color", COLOR_MAX_LENGTH));
+            existing.setColor(TextNormalizationUtils.normalizeOptionalText(data.color(), "color", COLOR_MAX_LENGTH));
         }
 
         existing.applyUpdate(userId, System.currentTimeMillis());
@@ -116,33 +125,4 @@ public class StatusCategoryService implements IStatusCategoryService {
         return existing;
     }
 
-    private String normalizeRequiredText(String value, String fieldName, int maxLength) {
-        if (value == null) {
-            throw new IllegalArgumentException(fieldName + " is required");
-        }
-
-        String trimmed = value.trim();
-        if (trimmed.isEmpty()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-        if (trimmed.length() > maxLength) {
-            throw new IllegalArgumentException(fieldName + " must be at most " + maxLength + " characters");
-        }
-        return trimmed;
-    }
-
-    private String normalizeOptionalText(String value, String fieldName, int maxLength) {
-        if (value == null) {
-            return null;
-        }
-
-        String trimmed = value.trim();
-        if (trimmed.isEmpty()) {
-            return null;
-        }
-        if (trimmed.length() > maxLength) {
-            throw new IllegalArgumentException(fieldName + " must be at most " + maxLength + " characters");
-        }
-        return trimmed;
-    }
 }

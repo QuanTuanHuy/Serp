@@ -23,6 +23,7 @@ import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.DomainValidationException;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
+import serp.project.pmcore.domain.shared.util.TextNormalizationUtils;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 
 import java.util.ArrayList;
@@ -47,7 +48,7 @@ public class PrioritySchemeService implements IPrioritySchemeService {
 
     @Override
     public PrioritySchemeEntity createPriorityScheme(PrioritySchemeEntity scheme, Long tenantId, Long userId) {
-        String name = normalizeRequiredText(scheme.getName(), "name", 255);
+        String name = TextNormalizationUtils.normalizeRequiredText(scheme.getName(), "name", 255);
         if (prioritySchemePort.existsByName(tenantId, name)) {
             log.warn("[PrioritySchemeService] Priority Scheme with name {} already exists", name);
             throw new BusinessRuleViolationException(DomainErrorCode.PRIORITY_SCHEME_NAME_ALREADY_EXISTS);
@@ -58,7 +59,7 @@ public class PrioritySchemeService implements IPrioritySchemeService {
 
         scheme.setTenantId(tenantId);
         scheme.setName(name);
-        scheme.setDescription(normalizeOptionalText(scheme.getDescription(), 2000, "description"));
+        scheme.setDescription(TextNormalizationUtils.normalizeOptionalText(scheme.getDescription(), 2000, "description"));
         scheme.setDefaultPriorityId(defaultPriorityId);
         scheme.setDeletedAt(null);
         scheme.setItems(List.of());
@@ -98,7 +99,7 @@ public class PrioritySchemeService implements IPrioritySchemeService {
         PrioritySchemeEntity existing = getPrioritySchemeById(prioritySchemeId, tenantId);
 
         if (data.nameProvided()) {
-            String newName = normalizeRequiredText(data.name(), "name", 255);
+            String newName = TextNormalizationUtils.normalizeRequiredText(data.name(), "name", 255);
             if (!newName.equalsIgnoreCase(existing.getName()) && prioritySchemePort.existsByName(tenantId, newName)) {
                 log.warn("[PrioritySchemeService] Priority Scheme with name {} already exists", newName);
                 throw new BusinessRuleViolationException(DomainErrorCode.PRIORITY_SCHEME_NAME_ALREADY_EXISTS);
@@ -107,7 +108,7 @@ public class PrioritySchemeService implements IPrioritySchemeService {
         }
 
         if (data.descriptionProvided()) {
-            existing.setDescription(normalizeOptionalText(data.description(), 2000, "description"));
+            existing.setDescription(TextNormalizationUtils.normalizeOptionalText(data.description(), 2000, "description"));
         }
 
         if (data.defaultPriorityIdProvided()) {
@@ -289,33 +290,4 @@ public class PrioritySchemeService implements IPrioritySchemeService {
         }
     }
 
-    private String normalizeRequiredText(String value, String fieldName, int maxLength) {
-        if (value == null) {
-            throw new IllegalArgumentException(fieldName + " is required");
-        }
-
-        String trimmed = value.trim();
-        if (trimmed.isEmpty()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-        if (trimmed.length() > maxLength) {
-            throw new IllegalArgumentException(fieldName + " must be at most " + maxLength + " characters");
-        }
-        return trimmed;
-    }
-
-    private String normalizeOptionalText(String value, int maxLength, String fieldName) {
-        if (value == null) {
-            return null;
-        }
-
-        String trimmed = value.trim();
-        if (trimmed.isEmpty()) {
-            return null;
-        }
-        if (trimmed.length() > maxLength) {
-            throw new IllegalArgumentException(fieldName + " must be at most " + maxLength + " characters");
-        }
-        return trimmed;
-    }
 }

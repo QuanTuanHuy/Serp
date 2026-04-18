@@ -27,6 +27,7 @@ import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationExceptio
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
+import serp.project.pmcore.domain.shared.util.TextNormalizationUtils;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 
 @Service
@@ -44,7 +45,11 @@ public class PriorityService implements IPriorityService {
 
     @Override
     public PriorityEntity createPriority(PriorityEntity priority, Long tenantId, Long userId) {
-        String name = normalizeRequiredText(priority.getName(), "name", PRIORITY_NAME_MAX_LENGTH);
+        String name = TextNormalizationUtils.normalizeRequiredText(
+                priority.getName(),
+                "name",
+                PRIORITY_NAME_MAX_LENGTH
+        );
         if (priorityPort.existsByName(tenantId, name)) {
             log.warn("Priority name already exists: name={}, tenantId={}", name, tenantId);
             throw new BusinessRuleViolationException(DomainErrorCode.PRIORITY_NAME_ALREADY_EXISTS);
@@ -53,7 +58,11 @@ public class PriorityService implements IPriorityService {
         priority.setTenantId(tenantId);
         priority.setPriorityKey(generatePriorityKey(name, tenantId));
         priority.setName(name);
-        priority.setDescription(normalizeOptionalText(priority.getDescription(), 2000, "description"));
+        priority.setDescription(TextNormalizationUtils.normalizeOptionalText(
+                priority.getDescription(),
+                2000,
+                "description"
+        ));
         priority.setIconUrl(normalizeOptionalUrl(priority.getIconUrl()));
         priority.setColor(normalizeOptionalColor(priority.getColor()));
         priority.setSequence(validateSequence(priority.getSequence()));
@@ -122,7 +131,11 @@ public class PriorityService implements IPriorityService {
         }
 
         if (data.nameProvided()) {
-            String newName = normalizeRequiredText(data.name(), "name", PRIORITY_NAME_MAX_LENGTH);
+            String newName = TextNormalizationUtils.normalizeRequiredText(
+                    data.name(),
+                    "name",
+                    PRIORITY_NAME_MAX_LENGTH
+            );
             if (!newName.equalsIgnoreCase(existing.getName()) && priorityPort.existsByName(tenantId, newName)) {
                 log.error("Priority name already exists: name={}, tenantId={}", newName, tenantId);
                 throw new BusinessRuleViolationException(DomainErrorCode.PRIORITY_NAME_ALREADY_EXISTS);
@@ -130,7 +143,11 @@ public class PriorityService implements IPriorityService {
             existing.setName(newName);
         }
         if (data.descriptionProvided()) {
-            existing.setDescription(normalizeOptionalText(data.description(), 2000, "description"));
+            existing.setDescription(TextNormalizationUtils.normalizeOptionalText(
+                    data.description(),
+                    2000,
+                    "description"
+            ));
         }
         if (data.iconUrlProvided()) {
             existing.setIconUrl(normalizeOptionalUrl(data.iconUrl()));
@@ -189,36 +206,6 @@ public class PriorityService implements IPriorityService {
         }
 
         return candidate;
-    }
-
-    private String normalizeRequiredText(String value, String fieldName, int maxLength) {
-        if (value == null) {
-            throw new IllegalArgumentException(fieldName + " is required");
-        }
-
-        String trimmed = value.trim();
-        if (trimmed.isEmpty()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-        if (trimmed.length() > maxLength) {
-            throw new IllegalArgumentException(fieldName + " must be at most " + maxLength + " characters");
-        }
-        return trimmed;
-    }
-
-    private String normalizeOptionalText(String value, int maxLength, String fieldName) {
-        if (value == null) {
-            return null;
-        }
-
-        String trimmed = value.trim();
-        if (trimmed.isEmpty()) {
-            return null;
-        }
-        if (trimmed.length() > maxLength) {
-            throw new IllegalArgumentException(fieldName + " must be at most " + maxLength + " characters");
-        }
-        return trimmed;
     }
 
     private String normalizeOptionalUrl(String value) {

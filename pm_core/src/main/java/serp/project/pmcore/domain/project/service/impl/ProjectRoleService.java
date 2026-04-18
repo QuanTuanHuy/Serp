@@ -19,6 +19,7 @@ import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationExceptio
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
+import serp.project.pmcore.domain.shared.util.TextNormalizationUtils;
 
 import java.util.List;
 import java.util.Optional;
@@ -36,7 +37,7 @@ public class ProjectRoleService implements IProjectRoleService {
 
     @Override
     public ProjectRoleEntity createProjectRole(ProjectRoleEntity role, Long tenantId, Long userId) {
-        String name = normalizeRequiredText(role.getName(), "name", ROLE_NAME_MAX_LENGTH);
+        String name = TextNormalizationUtils.normalizeRequiredText(role.getName(), "name", ROLE_NAME_MAX_LENGTH);
         if (projectRolePort.existsByNameAndTenantId(name, tenantId)) {
             log.warn("Project role name already exists: name={}, tenantId={}", name, tenantId);
             throw new BusinessRuleViolationException(DomainErrorCode.ROLE_NAME_ALREADY_EXISTS);
@@ -44,7 +45,11 @@ public class ProjectRoleService implements IProjectRoleService {
 
         role.setTenantId(tenantId);
         role.setName(name);
-        role.setDescription(normalizeOptionalText(role.getDescription(), ROLE_DESCRIPTION_MAX_LENGTH, "description"));
+        role.setDescription(TextNormalizationUtils.normalizeOptionalText(
+                role.getDescription(),
+                ROLE_DESCRIPTION_MAX_LENGTH,
+                "description"
+        ));
         role.setIsSystem(false);
         role.setDeletedAt(null);
         role.applyCreate(userId, System.currentTimeMillis());
@@ -84,7 +89,7 @@ public class ProjectRoleService implements IProjectRoleService {
         ensureWritable(existing);
 
         if (data.nameProvided()) {
-            String newName = normalizeRequiredText(data.name(), "name", ROLE_NAME_MAX_LENGTH);
+            String newName = TextNormalizationUtils.normalizeRequiredText(data.name(), "name", ROLE_NAME_MAX_LENGTH);
             if (!newName.equalsIgnoreCase(existing.getName())
                     && projectRolePort.existsByNameAndTenantId(newName, tenantId)) {
                 throw new BusinessRuleViolationException(DomainErrorCode.ROLE_NAME_ALREADY_EXISTS);
@@ -93,7 +98,11 @@ public class ProjectRoleService implements IProjectRoleService {
         }
 
         if (data.descriptionProvided()) {
-            existing.setDescription(normalizeOptionalText(data.description(), ROLE_DESCRIPTION_MAX_LENGTH, "description"));
+            existing.setDescription(TextNormalizationUtils.normalizeOptionalText(
+                    data.description(),
+                    ROLE_DESCRIPTION_MAX_LENGTH,
+                    "description"
+            ));
         }
 
         existing.applyUpdate(userId, System.currentTimeMillis());
@@ -120,33 +129,4 @@ public class ProjectRoleService implements IProjectRoleService {
         }
     }
 
-    private String normalizeRequiredText(String value, String fieldName, int maxLength) {
-        if (value == null) {
-            throw new IllegalArgumentException(fieldName + " is required");
-        }
-
-        String trimmed = value.trim();
-        if (trimmed.isEmpty()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-        if (trimmed.length() > maxLength) {
-            throw new IllegalArgumentException(fieldName + " must be at most " + maxLength + " characters");
-        }
-        return trimmed;
-    }
-
-    private String normalizeOptionalText(String value, int maxLength, String fieldName) {
-        if (value == null) {
-            return null;
-        }
-
-        String trimmed = value.trim();
-        if (trimmed.isEmpty()) {
-            return null;
-        }
-        if (trimmed.length() > maxLength) {
-            throw new IllegalArgumentException(fieldName + " must be at most " + maxLength + " characters");
-        }
-        return trimmed;
-    }
 }

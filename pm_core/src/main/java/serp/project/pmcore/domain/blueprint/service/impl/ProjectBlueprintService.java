@@ -20,6 +20,7 @@ import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationExceptio
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
+import serp.project.pmcore.domain.shared.util.TextNormalizationUtils;
 
 import java.util.List;
 import java.util.Optional;
@@ -40,7 +41,11 @@ public class ProjectBlueprintService implements IProjectBlueprintService {
 
     @Override
     public ProjectBlueprintEntity createBlueprint(ProjectBlueprintEntity blueprint, Long tenantId, Long userId) {
-        String name = normalizeRequiredText(blueprint.getName(), "name", BLUEPRINT_NAME_MAX_LENGTH);
+        String name = TextNormalizationUtils.normalizeRequiredText(
+                blueprint.getName(),
+                "name",
+                BLUEPRINT_NAME_MAX_LENGTH
+        );
         if (projectBlueprintPort.existsByNameAndTenantId(name, tenantId)) {
             log.warn("Project blueprint name already exists: name={}, tenantId={}", name, tenantId);
             throw new BusinessRuleViolationException(DomainErrorCode.BLUEPRINT_NAME_ALREADY_EXISTS);
@@ -49,9 +54,17 @@ public class ProjectBlueprintService implements IProjectBlueprintService {
         String typeKey = normalizeProjectType(blueprint.getTypeKey());
         blueprint.setTenantId(tenantId);
         blueprint.setName(name);
-        blueprint.setDescription(normalizeOptionalText(blueprint.getDescription(), BLUEPRINT_DESCRIPTION_MAX_LENGTH, "description"));
+        blueprint.setDescription(TextNormalizationUtils.normalizeOptionalText(
+                blueprint.getDescription(),
+                BLUEPRINT_DESCRIPTION_MAX_LENGTH,
+                "description"
+        ));
         blueprint.setTypeKey(typeKey);
-        blueprint.setAvatarUrl(normalizeOptionalText(blueprint.getAvatarUrl(), BLUEPRINT_AVATAR_URL_MAX_LENGTH, "avatarUrl"));
+        blueprint.setAvatarUrl(TextNormalizationUtils.normalizeOptionalText(
+                blueprint.getAvatarUrl(),
+                BLUEPRINT_AVATAR_URL_MAX_LENGTH,
+                "avatarUrl"
+        ));
         blueprint.setIsSystem(false);
         blueprint.setDeletedAt(null);
         blueprint.applyCreate(userId, System.currentTimeMillis());
@@ -94,7 +107,11 @@ public class ProjectBlueprintService implements IProjectBlueprintService {
         ensureWritable(existing);
 
         if (data.nameProvided()) {
-            String newName = normalizeRequiredText(data.name(), "name", BLUEPRINT_NAME_MAX_LENGTH);
+            String newName = TextNormalizationUtils.normalizeRequiredText(
+                    data.name(),
+                    "name",
+                    BLUEPRINT_NAME_MAX_LENGTH
+            );
             if (!newName.equalsIgnoreCase(existing.getName())
                     && projectBlueprintPort.existsByNameAndTenantId(newName, tenantId)) {
                 throw new BusinessRuleViolationException(DomainErrorCode.BLUEPRINT_NAME_ALREADY_EXISTS);
@@ -103,11 +120,19 @@ public class ProjectBlueprintService implements IProjectBlueprintService {
         }
 
         if (data.descriptionProvided()) {
-            existing.setDescription(normalizeOptionalText(data.description(), BLUEPRINT_DESCRIPTION_MAX_LENGTH, "description"));
+            existing.setDescription(TextNormalizationUtils.normalizeOptionalText(
+                    data.description(),
+                    BLUEPRINT_DESCRIPTION_MAX_LENGTH,
+                    "description"
+            ));
         }
 
         if (data.avatarUrlProvided()) {
-            existing.setAvatarUrl(normalizeOptionalText(data.avatarUrl(), BLUEPRINT_AVATAR_URL_MAX_LENGTH, "avatarUrl"));
+            existing.setAvatarUrl(TextNormalizationUtils.normalizeOptionalText(
+                    data.avatarUrl(),
+                    BLUEPRINT_AVATAR_URL_MAX_LENGTH,
+                    "avatarUrl"
+            ));
         }
 
         existing.applyUpdate(userId, System.currentTimeMillis());
@@ -132,38 +157,11 @@ public class ProjectBlueprintService implements IProjectBlueprintService {
     }
 
     private String normalizeProjectType(String value) {
-        String trimmed = normalizeRequiredText(value, "projectTypeKey", 50);
+        String trimmed = TextNormalizationUtils.normalizeRequiredText(value, "projectTypeKey", 50);
         if (!VALID_PROJECT_TYPES.contains(trimmed)) {
             throw new BusinessRuleViolationException(DomainErrorCode.PROJECT_TYPE_INVALID);
         }
         return trimmed;
     }
 
-    private String normalizeRequiredText(String value, String fieldName, int maxLength) {
-        if (value == null) {
-            throw new IllegalArgumentException(fieldName + " is required");
-        }
-        String trimmed = value.trim();
-        if (trimmed.isEmpty()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-        if (trimmed.length() > maxLength) {
-            throw new IllegalArgumentException(fieldName + " must be at most " + maxLength + " characters");
-        }
-        return trimmed;
-    }
-
-    private String normalizeOptionalText(String value, int maxLength, String fieldName) {
-        if (value == null) {
-            return null;
-        }
-        String trimmed = value.trim();
-        if (trimmed.isEmpty()) {
-            return null;
-        }
-        if (trimmed.length() > maxLength) {
-            throw new IllegalArgumentException(fieldName + " must be at most " + maxLength + " characters");
-        }
-        return trimmed;
-    }
 }

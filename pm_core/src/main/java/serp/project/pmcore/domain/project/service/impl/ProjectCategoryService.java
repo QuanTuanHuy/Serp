@@ -18,6 +18,7 @@ import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationExceptio
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
+import serp.project.pmcore.domain.shared.util.TextNormalizationUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -32,7 +33,11 @@ public class ProjectCategoryService implements IProjectCategoryService {
 
     @Override
     public ProjectCategoryEntity createCategory(ProjectCategoryEntity category, Long tenantId, Long userId) {
-        String name = normalizeRequiredText(category.getName(), "name", CATEGORY_NAME_MAX_LENGTH);
+        String name = TextNormalizationUtils.normalizeRequiredText(
+                category.getName(),
+                "name",
+                CATEGORY_NAME_MAX_LENGTH
+        );
         if (projectCategoryPort.existsByNameAndTenantId(name, tenantId)) {
             log.warn("Project category name already exists: name={}, tenantId={}", name, tenantId);
             throw new BusinessRuleViolationException(DomainErrorCode.CATEGORY_NAME_ALREADY_EXISTS);
@@ -40,7 +45,11 @@ public class ProjectCategoryService implements IProjectCategoryService {
 
         category.setTenantId(tenantId);
         category.setName(name);
-        category.setDescription(normalizeOptionalText(category.getDescription(), CATEGORY_DESCRIPTION_MAX_LENGTH, "description"));
+        category.setDescription(TextNormalizationUtils.normalizeOptionalText(
+                category.getDescription(),
+                CATEGORY_DESCRIPTION_MAX_LENGTH,
+                "description"
+        ));
         category.setIsSystem(false);
         category.setDeletedAt(null);
         category.applyCreate(userId, System.currentTimeMillis());
@@ -70,7 +79,11 @@ public class ProjectCategoryService implements IProjectCategoryService {
         ProjectCategoryEntity existing = getCategoryById(categoryId, tenantId);
 
         if (data.nameProvided()) {
-            String newName = normalizeRequiredText(data.name(), "name", CATEGORY_NAME_MAX_LENGTH);
+            String newName = TextNormalizationUtils.normalizeRequiredText(
+                    data.name(),
+                    "name",
+                    CATEGORY_NAME_MAX_LENGTH
+            );
             if (!newName.equalsIgnoreCase(existing.getName())
                     && projectCategoryPort.existsByNameAndTenantId(newName, tenantId)) {
                 throw new BusinessRuleViolationException(DomainErrorCode.CATEGORY_NAME_ALREADY_EXISTS);
@@ -79,7 +92,11 @@ public class ProjectCategoryService implements IProjectCategoryService {
         }
 
         if (data.descriptionProvided()) {
-            existing.setDescription(normalizeOptionalText(data.description(), CATEGORY_DESCRIPTION_MAX_LENGTH, "description"));
+            existing.setDescription(TextNormalizationUtils.normalizeOptionalText(
+                    data.description(),
+                    CATEGORY_DESCRIPTION_MAX_LENGTH,
+                    "description"
+            ));
         }
 
         existing.applyUpdate(userId, System.currentTimeMillis());
@@ -101,33 +118,4 @@ public class ProjectCategoryService implements IProjectCategoryService {
         return existing;
     }
 
-    private String normalizeRequiredText(String value, String fieldName, int maxLength) {
-        if (value == null) {
-            throw new IllegalArgumentException(fieldName + " is required");
-        }
-
-        String trimmed = value.trim();
-        if (trimmed.isEmpty()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-        if (trimmed.length() > maxLength) {
-            throw new IllegalArgumentException(fieldName + " must be at most " + maxLength + " characters");
-        }
-        return trimmed;
-    }
-
-    private String normalizeOptionalText(String value, int maxLength, String fieldName) {
-        if (value == null) {
-            return null;
-        }
-
-        String trimmed = value.trim();
-        if (trimmed.isEmpty()) {
-            return null;
-        }
-        if (trimmed.length() > maxLength) {
-            throw new IllegalArgumentException(fieldName + " must be at most " + maxLength + " characters");
-        }
-        return trimmed;
-    }
 }

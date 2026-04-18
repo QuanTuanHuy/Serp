@@ -24,6 +24,7 @@ import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationExceptio
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
+import serp.project.pmcore.domain.shared.util.TextNormalizationUtils;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 
 import java.util.ArrayList;
@@ -48,7 +49,7 @@ public class IssueTypeSchemeService implements IIssueTypeSchemeService {
 
     @Override
     public IssueTypeSchemeEntity createIssueTypeScheme(IssueTypeSchemeEntity scheme, Long tenantId, Long userId) {
-        String name = normalizeRequiredText(scheme.getName(), "name", 255);
+        String name = TextNormalizationUtils.normalizeRequiredText(scheme.getName(), "name", 255);
         if (issueTypeSchemePort.existsByName(tenantId, name)) {
             throw new BusinessRuleViolationException(DomainErrorCode.ISSUE_TYPE_SCHEME_NAME_ALREADY_EXISTS);
         }
@@ -58,7 +59,7 @@ public class IssueTypeSchemeService implements IIssueTypeSchemeService {
 
         scheme.setTenantId(tenantId);
         scheme.setName(name);
-        scheme.setDescription(normalizeOptionalText(scheme.getDescription(), 2000, "description"));
+        scheme.setDescription(TextNormalizationUtils.normalizeOptionalText(scheme.getDescription(), 2000, "description"));
         scheme.setDefaultIssueTypeId(defaultIssueTypeId);
         scheme.setDeletedAt(null);
         scheme.setItems(List.of());
@@ -98,7 +99,7 @@ public class IssueTypeSchemeService implements IIssueTypeSchemeService {
         IssueTypeSchemeEntity existing = getIssueTypeSchemeById(schemeId, tenantId);
 
         if (data.nameProvided()) {
-            String newName = normalizeRequiredText(data.name(), "name", 255);
+            String newName = TextNormalizationUtils.normalizeRequiredText(data.name(), "name", 255);
             if (!newName.equalsIgnoreCase(existing.getName())
                     && issueTypeSchemePort.existsByName(tenantId, newName)) {
                 throw new BusinessRuleViolationException(DomainErrorCode.ISSUE_TYPE_SCHEME_NAME_ALREADY_EXISTS);
@@ -107,7 +108,7 @@ public class IssueTypeSchemeService implements IIssueTypeSchemeService {
         }
 
         if (data.descriptionProvided()) {
-            existing.setDescription(normalizeOptionalText(data.description(), 2000, "description"));
+            existing.setDescription(TextNormalizationUtils.normalizeOptionalText(data.description(), 2000, "description"));
         }
 
         if (data.defaultIssueTypeIdProvided()) {
@@ -261,36 +262,6 @@ public class IssueTypeSchemeService implements IIssueTypeSchemeService {
                 throw ResourceNotFoundException.issueType(issueTypeId);
             }
         }
-    }
-
-    private String normalizeRequiredText(String value, String fieldName, int maxLength) {
-        if (value == null) {
-            throw new IllegalArgumentException(fieldName + " is required");
-        }
-
-        String trimmed = value.trim();
-        if (trimmed.isEmpty()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-        if (trimmed.length() > maxLength) {
-            throw new IllegalArgumentException(fieldName + " must be at most " + maxLength + " characters");
-        }
-        return trimmed;
-    }
-
-    private String normalizeOptionalText(String value, int maxLength, String fieldName) {
-        if (value == null) {
-            return null;
-        }
-
-        String trimmed = value.trim();
-        if (trimmed.isEmpty()) {
-            return null;
-        }
-        if (trimmed.length() > maxLength) {
-            throw new IllegalArgumentException(fieldName + " must be at most " + maxLength + " characters");
-        }
-        return trimmed;
     }
 
 }

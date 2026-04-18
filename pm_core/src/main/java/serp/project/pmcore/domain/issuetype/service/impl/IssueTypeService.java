@@ -28,6 +28,7 @@ import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
+import serp.project.pmcore.domain.shared.util.TextNormalizationUtils;
 import serp.project.pmcore.domain.workflow.port.IWorkflowSchemeItemPort;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 
@@ -46,7 +47,7 @@ public class IssueTypeService implements IIssueTypeService {
 
     @Override
     public IssueTypeEntity createIssueType(IssueTypeEntity issueType, Long tenantId, Long userId) {
-        String typeKey = normalizeRequiredText(issueType.getTypeKey(), "typeKey", 100);
+        String typeKey = TextNormalizationUtils.normalizeRequiredText(issueType.getTypeKey(), "typeKey", 100);
         if (issueTypePort.existsByTypeKey(tenantId, typeKey)) {
             log.warn(String.format("Issue type key already exists: typeKey=%s, tenantId=%s", typeKey, tenantId));
             throw new BusinessRuleViolationException(DomainErrorCode.ISSUE_TYPE_KEY_ALREADY_EXISTS);
@@ -54,8 +55,12 @@ public class IssueTypeService implements IIssueTypeService {
 
         issueType.setTenantId(tenantId);
         issueType.setTypeKey(typeKey);
-        issueType.setName(normalizeRequiredText(issueType.getName(), "name", 255));
-        issueType.setDescription(normalizeOptionalText(issueType.getDescription(), 2000));
+        issueType.setName(TextNormalizationUtils.normalizeRequiredText(issueType.getName(), "name", 255));
+        issueType.setDescription(TextNormalizationUtils.normalizeOptionalText(
+                issueType.getDescription(),
+                "description",
+                2000
+        ));
         issueType.setIconUrl(normalizeOptionalUrl(issueType.getIconUrl()));
         issueType.setHierarchyLevel(validateHierarchyLevel(issueType.getHierarchyLevel()));
         issueType.setSystem(false);
@@ -125,10 +130,14 @@ public class IssueTypeService implements IIssueTypeService {
         }
 
         if (data.nameProvided()) {
-            existing.setName(normalizeRequiredText(data.name(), "name", 255));
+            existing.setName(TextNormalizationUtils.normalizeRequiredText(data.name(), "name", 255));
         }
         if (data.descriptionProvided()) {
-            existing.setDescription(normalizeOptionalText(data.description(), 2000));
+            existing.setDescription(TextNormalizationUtils.normalizeOptionalText(
+                    data.description(),
+                    "description",
+                    2000
+            ));
         }
         if (data.iconUrlProvided()) {
             existing.setIconUrl(normalizeOptionalUrl(data.iconUrl()));
@@ -169,36 +178,6 @@ public class IssueTypeService implements IIssueTypeService {
                 || issueTypeScreenSchemeItemPort.existsByIssueTypeId(issueTypeId, tenantId)
                 || fieldConfigSchemeItemPort.existsByIssueTypeId(issueTypeId, tenantId)
                 || workflowSchemeItemPort.existsByIssueTypeId(issueTypeId, tenantId);
-    }
-
-    private String normalizeRequiredText(String value, String fieldName, int maxLength) {
-        if (value == null) {
-            throw new IllegalArgumentException(fieldName + " is required");
-        }
-
-        String trimmed = value.trim();
-        if (trimmed.isEmpty()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-        if (trimmed.length() > maxLength) {
-            throw new IllegalArgumentException(fieldName + " must be at most " + maxLength + " characters");
-        }
-        return trimmed;
-    }
-
-    private String normalizeOptionalText(String value, int maxLength) {
-        if (value == null) {
-            return null;
-        }
-
-        String trimmed = value.trim();
-        if (trimmed.isEmpty()) {
-            return null;
-        }
-        if (trimmed.length() > maxLength) {
-            throw new IllegalArgumentException("description must be at most " + maxLength + " characters");
-        }
-        return trimmed;
     }
 
     private String normalizeOptionalUrl(String value) {
