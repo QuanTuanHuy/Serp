@@ -139,12 +139,12 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 | UC-PM-133 | [Get Issue Type by ID](usecases/issue-type/UC-PM-133-get-issue-type-by-id.md) | PM Admin | Low | Simple | Issue Type |
 | UC-PM-134 | [List Issue Types](usecases/issue-type/UC-PM-134-list-issue-types.md) | PM Admin | Medium | Simple | Issue Type |
 | UC-PM-135 | [Delete Issue Type](usecases/issue-type/UC-PM-135-delete-issue-type.md) | PM Admin | Low | Simple | Issue Type |
-| UC-PM-136 | Create Issue Type Scheme | PM Admin | Medium | Simple | Issue Type Scheme |
-| UC-PM-137 | Update Issue Type Scheme | PM Admin | Medium | Simple | Issue Type Scheme |
-| UC-PM-138 | Get Issue Type Scheme by ID | PM Admin | Low | Simple | Issue Type Scheme |
-| UC-PM-139 | List Issue Type Schemes | PM Admin | Medium | Simple | Issue Type Scheme |
-| UC-PM-140 | Delete Issue Type Scheme | PM Admin | Low | Simple | Issue Type Scheme |
-| UC-PM-141 | Manage Issue Type Scheme Items | PM Admin | Medium | Medium | Issue Type Scheme Item |
+| UC-PM-136 | [Create Issue Type Scheme](usecases/issue-type-scheme/UC-PM-136-create-issue-type-scheme.md) | PM Admin | Medium | Simple | Issue Type Scheme |
+| UC-PM-137 | [Update Issue Type Scheme](usecases/issue-type-scheme/UC-PM-137-update-issue-type-scheme.md) | PM Admin | Medium | Simple | Issue Type Scheme |
+| UC-PM-138 | [Get Issue Type Scheme by ID](usecases/issue-type-scheme/UC-PM-138-get-issue-type-scheme-by-id.md) | PM Admin | Low | Simple | Issue Type Scheme |
+| UC-PM-139 | [List Issue Type Schemes](usecases/issue-type-scheme/UC-PM-139-list-issue-type-schemes.md) | PM Admin | Medium | Simple | Issue Type Scheme |
+| UC-PM-140 | [Delete Issue Type Scheme](usecases/issue-type-scheme/UC-PM-140-delete-issue-type-scheme.md) | PM Admin | Low | Simple | Issue Type Scheme |
+| UC-PM-141 | [Manage Issue Type Scheme Items](usecases/issue-type-scheme/UC-PM-141-manage-issue-type-scheme-items.md) | PM Admin | Medium | Medium | Issue Type Scheme Item |
 | UC-PM-146 | [Create Priority](usecases/priority/UC-PM-146-create-priority.md) | PM Admin | Medium | Simple | Priority |
 | UC-PM-147 | [Update Priority](usecases/priority/UC-PM-147-update-priority.md) | PM Admin | Medium | Simple | Priority |
 | UC-PM-148 | [Get Priority by ID](usecases/priority/UC-PM-148-get-priority-by-id.md) | PM Admin | Low | Simple | Priority |
@@ -1700,58 +1700,22 @@ Issue type management is tenant-scoped administration behavior:
 
 #### UC-PM-136 to UC-PM-141: Issue Type Scheme Management
 
-##### UC-PM-136: Create Issue Type Scheme
+Detailed specifications are extracted to separate files:
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-136 |
-| **Use Case Name** | Create Issue Type Scheme |
-| **Priority** | Medium |
-| **Complexity** | Simple |
+- [UC-PM-136 - Create Issue Type Scheme](usecases/issue-type-scheme/UC-PM-136-create-issue-type-scheme.md)
+- [UC-PM-137 - Update Issue Type Scheme](usecases/issue-type-scheme/UC-PM-137-update-issue-type-scheme.md)
+- [UC-PM-138 - Get Issue Type Scheme by ID](usecases/issue-type-scheme/UC-PM-138-get-issue-type-scheme-by-id.md)
+- [UC-PM-139 - List Issue Type Schemes](usecases/issue-type-scheme/UC-PM-139-list-issue-type-schemes.md)
+- [UC-PM-140 - Delete Issue Type Scheme](usecases/issue-type-scheme/UC-PM-140-delete-issue-type-scheme.md)
+- [UC-PM-141 - Manage Issue Type Scheme Items](usecases/issue-type-scheme/UC-PM-141-manage-issue-type-scheme-items.md)
 
-**Permission**: `PM.ISSUE_TYPE_SCHEME.CREATE`
+Issue type scheme management is tenant-scoped administration behavior:
 
-**Input Data**:
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| name | string | Yes | min:1, max:255 | Scheme name |
-| description | string | No | max:2000 | Description |
-| default_issue_type_id | int64 | Yes | must exist | Default issue type |
-
-##### UC-PM-137 to UC-PM-140: Scheme Update, Get, List, Delete
-
-Standard CRUD.
-
-##### UC-PM-141: Manage Issue Type Scheme Items
-
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-141 |
-| **Use Case Name** | Manage Issue Type Scheme Items |
-| **Priority** | Medium |
-| **Complexity** | Medium |
-
-**Description**: Add, remove, or reorder issue types within a scheme.
-
-**Permission**: `PM.ISSUE_TYPE_SCHEME.MANAGE`
-
-**Main Flow**:
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 1 | PM Admin | Sends PUT `/api/v1/issue-type-schemes/{schemeId}/items` with ordered list of issue type IDs |
-| 2 | System | Validates all issue types exist |
-| 3 | System | Validates default issue type is in the list |
-| 4 | System | Replaces all scheme items within transaction (delete old, insert new with sequence) |
-| 5 | System | Returns HTTP 200 |
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-141-01 | Scheme's `default_issue_type_id` must always be in the items list | UseCase layer |
-| BR-PM-141-02 | Cannot remove an issue type from scheme if projects using this scheme have work items of that type | UseCase layer (warning/flag) |
+- Read APIs may return both tenant-owned issue type schemes and system-owned issue type schemes visible to that tenant
+- System-owned issue type schemes are read-only from tenant APIs
+- Tenant callers may create, update, delete, and manage items only for schemes owned by their own tenant
+- `tenant_id` for write operations is always resolved from JWT context and never accepted from the request payload
+- Scheme item membership and ordering are managed canonically by `UC-PM-141`
 
 ---
 
