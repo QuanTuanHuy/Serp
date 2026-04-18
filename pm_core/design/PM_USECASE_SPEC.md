@@ -1861,6 +1861,10 @@ GET `/api/v1/work-items/{workItemId}/links` -> return both inward and outward li
 
 ### 5.3. Workflow Engine (Module 03)
 
+Implementation backlog reference:
+
+- [Module 03 Workflow Engine Backlog](usecases/module-03-workflow-engine-backlog.md)
+
 ---
 
 #### UC-PM-201 to UC-PM-205: Status Category CRUD
