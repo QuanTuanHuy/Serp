@@ -60,6 +60,11 @@ public class ResourceNotFoundException extends DomainException {
                 "Priority not found: id=" + id);
     }
 
+    public static ResourceNotFoundException priorityScheme(Long id) {
+        return new ResourceNotFoundException(DomainErrorCode.PRIORITY_SCHEME_NOT_FOUND,
+                "Priority scheme not found: id=" + id);
+    }
+
     public static ResourceNotFoundException status(Long id) {
         return new ResourceNotFoundException(DomainErrorCode.STATUS_NOT_FOUND,
                 "Status not found: id=" + id);

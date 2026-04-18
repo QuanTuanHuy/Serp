@@ -32,6 +32,11 @@ public interface IWorkItemRepository extends JpaRepository<WorkItemModel, Long> 
                                                          @Param("projectIds") List<Long> projectIds,
                                                          @Param("issueTypeIds") List<Long> issueTypeIds);
 
+    @Query("SELECT DISTINCT w.priorityId FROM WorkItemModel w WHERE w.tenantId = :tenantId AND w.projectId IN :projectIds AND w.priorityId IN :priorityIds AND w.deletedAt IS NULL")
+    List<Long> findDistinctPriorityIdsInUseByProjectIds(@Param("tenantId") Long tenantId,
+                                                        @Param("projectIds") List<Long> projectIds,
+                                                        @Param("priorityIds") List<Long> priorityIds);
+
     List<WorkItemModel> findAllByTenantIdAndParentId(Long tenantId, Long parentId);
 
     Optional<WorkItemModel> findFirstByTenantIdAndProjectIdOrderByRankDescIdDesc(Long tenantId, Long projectId);

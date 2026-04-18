@@ -6,7 +6,12 @@
 package serp.project.pmcore.domain.priority.service.impl;
 
 import java.net.URI;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -75,6 +80,33 @@ public class PriorityService implements IPriorityService {
                     log.error("Visible priority not found: id={}, tenantId={}", priorityId, tenantId);
                     return ResourceNotFoundException.priority(priorityId);
                 });
+    }
+
+    @Override
+    public List<PriorityEntity> getVisiblePrioritiesByIds(List<Long> priorityIds, Long tenantId) {
+        if (priorityIds == null || priorityIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> normalizedIds = priorityIds.stream()
+                .filter(id -> id != null && id > 0)
+                .distinct()
+                .toList();
+        if (normalizedIds.size() != new LinkedHashSet<>(priorityIds).size()) {
+            throw new IllegalArgumentException("priorityIds must contain only positive distinct values");
+        }
+
+        List<PriorityEntity> priorities = priorityPort.getPrioritiesByIdsIncludingSystem(normalizedIds, tenantId);
+        Map<Long, PriorityEntity> prioritiesById = priorities.stream()
+                .collect(Collectors.toMap(PriorityEntity::getId, Function.identity()));
+
+        for (Long priorityId : normalizedIds) {
+            if (!prioritiesById.containsKey(priorityId)) {
+                throw ResourceNotFoundException.priority(priorityId);
+            }
+        }
+
+        return normalizedIds.stream().map(prioritiesById::get).toList();
     }
 
     @Override

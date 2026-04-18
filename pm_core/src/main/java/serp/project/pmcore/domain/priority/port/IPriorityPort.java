@@ -25,6 +25,8 @@ public interface IPriorityPort {
 
     List<PriorityEntity> listPrioritiesIncludingSystem(Long tenantId);
 
+    List<PriorityEntity> getPrioritiesByIdsIncludingSystem(List<Long> priorityIds, Long tenantId);
+
     PageResult<PriorityEntity> listPrioritiesIncludingSystem(Long tenantId, PriorityListCriteria criteria);
 
     void updatePriority(PriorityEntity priority);

@@ -70,6 +70,16 @@ public class ProjectAdapter implements IProjectReadPort, IProjectWritePort {
     }
 
     @Override
+    public boolean existsActiveProjectByPrioritySchemeId(Long prioritySchemeId, Long tenantId) {
+        return projectRepository.existsActiveProjectByPrioritySchemeId(prioritySchemeId, tenantId);
+    }
+
+    @Override
+    public List<Long> getActiveProjectIdsByPrioritySchemeId(Long prioritySchemeId, Long tenantId) {
+        return projectRepository.findActiveProjectIdsByPrioritySchemeId(prioritySchemeId, tenantId);
+    }
+
+    @Override
     public PageResult<ProjectEntity> getProjects(Long tenantId, String search,
                                                  Long categoryId, String projectTypeKey,
                                                  Boolean archived, int page, int size,

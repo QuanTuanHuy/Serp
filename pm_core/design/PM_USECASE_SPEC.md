@@ -150,12 +150,12 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 | UC-PM-148 | [Get Priority by ID](usecases/priority/UC-PM-148-get-priority-by-id.md) | PM Admin | Low | Simple | Priority |
 | UC-PM-149 | [List Priorities](usecases/priority/UC-PM-149-list-priorities.md) | PM Admin | Medium | Simple | Priority |
 | UC-PM-150 | [Delete Priority](usecases/priority/UC-PM-150-delete-priority.md) | PM Admin | Low | Simple | Priority |
-| UC-PM-151 | Create Priority Scheme | PM Admin | Medium | Simple | Priority Scheme |
-| UC-PM-152 | Update Priority Scheme | PM Admin | Medium | Simple | Priority Scheme |
-| UC-PM-153 | Get Priority Scheme by ID | PM Admin | Low | Simple | Priority Scheme |
-| UC-PM-154 | List Priority Schemes | PM Admin | Medium | Simple | Priority Scheme |
-| UC-PM-155 | Delete Priority Scheme | PM Admin | Low | Simple | Priority Scheme |
-| UC-PM-156 | Manage Priority Scheme Items | PM Admin | Medium | Medium | Priority Scheme Item |
+| UC-PM-151 | [Create Priority Scheme](usecases/priority-scheme/UC-PM-151-create-priority-scheme.md) | PM Admin | Medium | Simple | Priority Scheme |
+| UC-PM-152 | [Update Priority Scheme](usecases/priority-scheme/UC-PM-152-update-priority-scheme.md) | PM Admin | Medium | Simple | Priority Scheme |
+| UC-PM-153 | [Get Priority Scheme by ID](usecases/priority-scheme/UC-PM-153-get-priority-scheme-by-id.md) | PM Admin | Low | Simple | Priority Scheme |
+| UC-PM-154 | [List Priority Schemes](usecases/priority-scheme/UC-PM-154-list-priority-schemes.md) | PM Admin | Medium | Simple | Priority Scheme |
+| UC-PM-155 | [Delete Priority Scheme](usecases/priority-scheme/UC-PM-155-delete-priority-scheme.md) | PM Admin | Low | Simple | Priority Scheme |
+| UC-PM-156 | [Manage Priority Scheme Items](usecases/priority-scheme/UC-PM-156-manage-priority-scheme-items.md) | PM Admin | Medium | Medium | Priority Scheme Item |
 | UC-PM-161 | Create Resolution | PM Admin | Medium | Simple | Resolution |
 | UC-PM-162 | Update Resolution | PM Admin | Medium | Simple | Resolution |
 | UC-PM-163 | Get Resolution by ID | PM Admin | Low | Simple | Resolution |
@@ -1741,11 +1741,28 @@ Standard CRUD. System priorities cannot be deleted.
 
 ##### UC-PM-151 to UC-PM-155: Priority Scheme CRUD
 
-Same pattern as Issue Type Scheme. Includes `default_priority_id`.
+Detailed specifications are extracted to separate files:
+
+- [UC-PM-151 - Create Priority Scheme](usecases/priority-scheme/UC-PM-151-create-priority-scheme.md)
+- [UC-PM-152 - Update Priority Scheme](usecases/priority-scheme/UC-PM-152-update-priority-scheme.md)
+- [UC-PM-153 - Get Priority Scheme by ID](usecases/priority-scheme/UC-PM-153-get-priority-scheme-by-id.md)
+- [UC-PM-154 - List Priority Schemes](usecases/priority-scheme/UC-PM-154-list-priority-schemes.md)
+- [UC-PM-155 - Delete Priority Scheme](usecases/priority-scheme/UC-PM-155-delete-priority-scheme.md)
 
 ##### UC-PM-156: Manage Priority Scheme Items
 
-Same pattern as UC-PM-141. Manages ordered list of priorities within a scheme.
+Detailed specification is extracted to a separate file:
+
+- [UC-PM-156 - Manage Priority Scheme Items](usecases/priority-scheme/UC-PM-156-manage-priority-scheme-items.md)
+
+Priority scheme management is tenant-scoped administration behavior:
+
+- Read APIs may return both tenant-owned priority schemes and system-owned priority schemes visible to that tenant
+- System-owned priority schemes are read-only from tenant APIs
+- Tenant callers may create, update, delete, and manage items only for schemes owned by their own tenant
+- `tenant_id` for write operations is always resolved from JWT context and never accepted from the request payload
+- Scheme item membership and ordering are managed canonically by `UC-PM-156`
+- No Kafka/outbox publication is performed for priority scheme write paths in this scope
 
 ---
 

@@ -32,6 +32,10 @@ public interface IPriorityRepository extends JpaRepository<PriorityModel, Long> 
     @Query("SELECT p FROM PriorityModel p WHERE p.tenantId = :tenantId OR p.tenantId = 0 ORDER BY CASE WHEN p.tenantId = :tenantId THEN 0 ELSE 1 END, p.sequence ASC, p.name ASC, p.id ASC")
     List<PriorityModel> findAllByTenantIdOrSystemTenant(@Param("tenantId") Long tenantId);
 
+    @Query("SELECT p FROM PriorityModel p WHERE p.id IN :priorityIds AND (p.tenantId = :tenantId OR p.tenantId = 0)")
+    List<PriorityModel> findAllByIdInAndTenantIdOrSystemTenant(@Param("priorityIds") List<Long> priorityIds,
+                                                               @Param("tenantId") Long tenantId);
+
     @Query(value = """
             SELECT p
             FROM PriorityModel p

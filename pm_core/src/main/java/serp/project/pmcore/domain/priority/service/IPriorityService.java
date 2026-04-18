@@ -5,6 +5,8 @@
 
 package serp.project.pmcore.domain.priority.service;
 
+import java.util.List;
+
 import serp.project.pmcore.domain.priority.dto.PriorityUpdateData;
 import serp.project.pmcore.domain.priority.entity.PriorityEntity;
 import serp.project.pmcore.domain.priority.query.PriorityListCriteria;
@@ -16,6 +18,8 @@ public interface IPriorityService {
     PriorityEntity getPriorityById(Long priorityId, Long tenantId);
 
     PriorityEntity getVisiblePriorityById(Long priorityId, Long tenantId);
+
+    List<PriorityEntity> getVisiblePrioritiesByIds(List<Long> priorityIds, Long tenantId);
 
     PageResult<PriorityEntity> listVisiblePriorities(Long tenantId, PriorityListCriteria criteria);
 

@@ -7,7 +7,6 @@ package serp.project.pmcore.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
@@ -62,6 +61,16 @@ public class PriorityAdapter implements IPriorityPort {
     @Override
     public List<PriorityEntity> listPrioritiesIncludingSystem(Long tenantId) {
         return priorityMapper.toEntities(priorityRepository.findAllByTenantIdOrSystemTenant(tenantId));
+    }
+
+    @Override
+    public List<PriorityEntity> getPrioritiesByIdsIncludingSystem(List<Long> priorityIds, Long tenantId) {
+        if (priorityIds == null || priorityIds.isEmpty()) {
+            return List.of();
+        }
+        return priorityMapper.toEntities(
+                priorityRepository.findAllByIdInAndTenantIdOrSystemTenant(priorityIds, tenantId)
+        );
     }
 
     @Override

@@ -24,6 +24,10 @@ public interface IProjectReadPort {
 
     List<Long> getActiveProjectIdsByIssueTypeSchemeId(Long issueTypeSchemeId, Long tenantId);
 
+    boolean existsActiveProjectByPrioritySchemeId(Long prioritySchemeId, Long tenantId);
+
+    List<Long> getActiveProjectIdsByPrioritySchemeId(Long prioritySchemeId, Long tenantId);
+
     PageResult<ProjectEntity> getProjects(Long tenantId, String search,
                                           Long categoryId, String projectTypeKey,
                                           Boolean archived, int page, int size,

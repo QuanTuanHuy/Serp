@@ -122,8 +122,11 @@ public enum DomainErrorCode {
     PRIORITY_IS_SYSTEM("Cannot modify a system priority"),
     PRIORITY_IN_USE("Cannot delete priority that has work items"),
     PRIORITY_SCHEME_NOT_FOUND("Priority scheme not found"),
+    PRIORITY_SCHEME_NAME_ALREADY_EXISTS("Priority scheme name already exists in this tenant"),
     PRIORITY_SCHEME_DEFAULT_NOT_IN_ITEMS(
             "Default priority must be included in the scheme items"),
+    PRIORITY_SCHEME_IN_USE("Cannot remove priority from scheme: work items of this priority exist"),
+    PRIORITY_SCHEME_BOUND_TO_PROJECT("Cannot delete priority scheme that is assigned to active projects"),
 
     // Resolution rules
     RESOLUTION_NOT_FOUND("Resolution not found"),
