@@ -58,4 +58,9 @@ public class StatusAdapter implements IStatusPort {
         List<StatusModel> models = statusMapper.toModels(statuses);
         return statusMapper.toEntities(statusRepository.saveAll(models));
     }
+
+    @Override
+    public boolean existsByCategoryId(Long categoryId, Long tenantId) {
+        return statusRepository.existsByCategoryIdAndTenantId(categoryId, tenantId);
+    }
 }

@@ -179,6 +179,7 @@ public enum DomainErrorCode {
     STATUS_CATEGORY_NOT_FOUND("Status category not found"),
     STATUS_CATEGORY_KEY_ALREADY_EXISTS("Status category key already exists in this tenant"),
     STATUS_CATEGORY_IS_SYSTEM("Cannot modify a system status category"),
+    STATUS_CATEGORY_IN_USE("Cannot delete status category that is assigned to statuses"),
 
     // ----------------------------------------------------------------
     // Fields, Screens & Issue Presentation

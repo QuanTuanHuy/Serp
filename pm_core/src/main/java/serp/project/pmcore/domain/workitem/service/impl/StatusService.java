@@ -79,4 +79,16 @@ public class StatusService implements IStatusService {
                     );
                 });
     }
+
+    @Override
+    public StatusCategoryEntity getStatusCategoryByIdIncludingSystem(Long id, Long tenantId) {
+        return statusCategoryPort.getStatusCategoryByIdIncludingSystem(id, tenantId)
+                .orElseThrow(() -> {
+                    log.error("Visible status category not found: id={}, tenantId={}", id, tenantId);
+                    return new ResourceNotFoundException(
+                            DomainErrorCode.STATUS_CATEGORY_NOT_FOUND,
+                            String.format("Status category not found: id=%s, tenantId=%s", id, tenantId)
+                    );
+                });
+    }
 }

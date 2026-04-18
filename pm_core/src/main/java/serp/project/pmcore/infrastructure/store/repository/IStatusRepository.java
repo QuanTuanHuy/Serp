@@ -25,4 +25,6 @@ public interface IStatusRepository extends JpaRepository<StatusModel, Long> {
     Optional<StatusModel> findFirstByTenantIdAndStatusKeyOrderByIdAsc(Long tenantId, String statusKey);
 
     List<StatusModel> findAllByTenantId(Long tenantId);
+
+    boolean existsByCategoryIdAndTenantId(Long categoryId, Long tenantId);
 }

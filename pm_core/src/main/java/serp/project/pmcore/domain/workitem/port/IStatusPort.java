@@ -22,4 +22,6 @@ public interface IStatusPort {
     StatusEntity createStatus(StatusEntity status);
 
     List<StatusEntity> createStatuses(List<StatusEntity> statuses);
+
+    boolean existsByCategoryId(Long categoryId, Long tenantId);
 }

@@ -23,4 +23,5 @@ public class StatusCategoryEntity extends BaseEntity {
     private String key;
     private String color;
     private Boolean isSystem;
+    private Long deletedAt;
 }

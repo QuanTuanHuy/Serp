@@ -19,4 +19,6 @@ public interface IStatusService {
     StatusEntity getStatusById(Long id, Long tenantId);
 
     StatusCategoryEntity getStatusCategoryById(Long id, Long tenantId);
+
+    StatusCategoryEntity getStatusCategoryByIdIncludingSystem(Long id, Long tenantId);
 }

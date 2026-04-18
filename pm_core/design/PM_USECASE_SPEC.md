@@ -179,11 +179,11 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 
 | UC ID | Name | Actor | Priority | Complexity | Entity |
 |-------|------|-------|----------|------------|--------|
-| UC-PM-201 | Create Status Category | PM Admin | Medium | Simple | Status Category |
-| UC-PM-202 | Update Status Category | PM Admin | Low | Simple | Status Category |
-| UC-PM-203 | Get Status Category by ID | PM Admin | Low | Simple | Status Category |
-| UC-PM-204 | List Status Categories | PM Admin | Medium | Simple | Status Category |
-| UC-PM-205 | Delete Status Category | PM Admin | Low | Simple | Status Category |
+| UC-PM-201 | [Create Status Category](usecases/status-category/UC-PM-201-create-status-category.md) | PM Admin | Medium | Simple | Status Category |
+| UC-PM-202 | [Update Status Category](usecases/status-category/UC-PM-202-update-status-category.md) | PM Admin | Low | Simple | Status Category |
+| UC-PM-203 | [Get Status Category by ID](usecases/status-category/UC-PM-203-get-status-category-by-id.md) | PM Admin | Low | Simple | Status Category |
+| UC-PM-204 | [List Status Categories](usecases/status-category/UC-PM-204-list-status-categories.md) | PM Admin | Medium | Simple | Status Category |
+| UC-PM-205 | [Delete Status Category](usecases/status-category/UC-PM-205-delete-status-category.md) | PM Admin | Low | Simple | Status Category |
 | UC-PM-211 | Create Status | PM Admin | High | Simple | Status |
 | UC-PM-212 | Update Status | PM Admin | Medium | Simple | Status |
 | UC-PM-213 | Get Status by ID | PM Admin | Low | Simple | Status |
@@ -1865,35 +1865,21 @@ GET `/api/v1/work-items/{workItemId}/links` -> return both inward and outward li
 
 #### UC-PM-201 to UC-PM-205: Status Category CRUD
 
-##### UC-PM-201: Create Status Category
+Detailed specifications are extracted to separate files:
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-201 |
-| **Use Case Name** | Create Status Category |
-| **Priority** | Medium |
-| **Complexity** | Simple |
+- [UC-PM-201 - Create Status Category](usecases/status-category/UC-PM-201-create-status-category.md)
+- [UC-PM-202 - Update Status Category](usecases/status-category/UC-PM-202-update-status-category.md)
+- [UC-PM-203 - Get Status Category by ID](usecases/status-category/UC-PM-203-get-status-category-by-id.md)
+- [UC-PM-204 - List Status Categories](usecases/status-category/UC-PM-204-list-status-categories.md)
+- [UC-PM-205 - Delete Status Category](usecases/status-category/UC-PM-205-delete-status-category.md)
 
-**Permission**: `PM.STATUS_CATEGORY.CREATE`
+Status category management is tenant-scoped administration behavior:
 
-**Input Data**:
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| name | string | Yes | min:1, max:50 | Category name (To Do, In Progress, Done) |
-| key | string | Yes | min:1, max:50, unique per tenant | Stable key (new, indeterminate, done) |
-| color_name | string | No | max:50 | Display color name |
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-201-01 | System status categories cannot be created via API | Service layer |
-| BR-PM-201-02 | Key must be unique per tenant | DB `UNIQUE(tenant_id, key)` |
-
-##### UC-PM-202 to UC-PM-205: Status Category Update, Get, List, Delete
-
-Standard CRUD. System categories cannot be deleted.
+- Read APIs may return both tenant-owned status categories and system-owned status categories visible to that tenant
+- System-owned status categories are read-only from tenant APIs
+- Tenant callers may create, update, and delete only status categories owned by their own tenant
+- `tenant_id` for write operations is always resolved from JWT context and never accepted from the request payload
+- No Kafka/outbox publication is performed for status-category write paths in this scope
 
 ---
 

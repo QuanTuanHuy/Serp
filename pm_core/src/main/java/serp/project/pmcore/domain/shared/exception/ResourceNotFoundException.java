@@ -70,6 +70,11 @@ public class ResourceNotFoundException extends DomainException {
                 "Status not found: id=" + id);
     }
 
+    public static ResourceNotFoundException statusCategory(Long id) {
+        return new ResourceNotFoundException(DomainErrorCode.STATUS_CATEGORY_NOT_FOUND,
+                "Status category not found: id=" + id);
+    }
+
     public static ResourceNotFoundException sprint(Long id) {
         return new ResourceNotFoundException(DomainErrorCode.SPRINT_NOT_FOUND,
                 "Sprint not found: id=" + id);
