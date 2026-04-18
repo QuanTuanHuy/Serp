@@ -62,11 +62,11 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
     }
 
     @Override
-    public boolean existsActiveWorkItemByProjectIdsAndIssueTypeId(Long tenantId, List<Long> projectIds, Long issueTypeId) {
-        if (projectIds == null || projectIds.isEmpty()) {
-            return false;
+    public List<Long> getActiveIssueTypeIdsInUseByProjectIds(Long tenantId, List<Long> projectIds, List<Long> issueTypeIds) {
+        if (projectIds == null || projectIds.isEmpty() || issueTypeIds == null || issueTypeIds.isEmpty()) {
+            return List.of();
         }
-        return workItemRepository.existsActiveByTenantIdAndProjectIdInAndIssueTypeId(tenantId, projectIds, issueTypeId);
+        return workItemRepository.findDistinctIssueTypeIdsInUseByProjectIds(tenantId, projectIds, issueTypeIds);
     }
 
     @Override

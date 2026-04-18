@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import serp.project.pmcore.domain.issuetype.dto.IssueTypeSchemeUpdateData;
+import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeSchemeEntity;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeSchemeItemEntity;
 import serp.project.pmcore.domain.issuetype.port.IIssueTypePort;
@@ -28,8 +29,11 @@ import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -144,9 +148,7 @@ public class IssueTypeSchemeService implements IIssueTypeSchemeService {
         IssueTypeSchemeEntity existing = getIssueTypeSchemeById(schemeId, tenantId);
 
         List<Long> normalizedIssueTypeIds = normalizeIssueTypeIds(issueTypeIds);
-        for (Long issueTypeId : normalizedIssueTypeIds) {
-            requireVisibleIssueTypeId(issueTypeId, tenantId);
-        }
+        requireVisibleIssueTypeIds(normalizedIssueTypeIds, tenantId);
         if (normalizedIssueTypeIds.stream().noneMatch(id -> Objects.equals(id, existing.getDefaultIssueTypeId()))) {
             throw new BusinessRuleViolationException(DomainErrorCode.ISSUE_TYPE_SCHEME_DEFAULT_NOT_IN_ITEMS);
         }
@@ -234,13 +236,29 @@ public class IssueTypeSchemeService implements IIssueTypeSchemeService {
             return;
         }
 
-        for (Long removedIssueTypeId : removedIssueTypeIds) {
-            if (workItemReadPort.existsActiveWorkItemByProjectIdsAndIssueTypeId(tenantId, projectIds, removedIssueTypeId)) {
-                throw new BusinessRuleViolationException(
-                        DomainErrorCode.ISSUE_TYPE_SCHEME_IN_USE,
-                        "Cannot remove issue type from scheme because active work items still reference it: issueTypeId="
-                                + removedIssueTypeId
-                );
+        List<Long> inUseIssueTypeIds = workItemReadPort.getActiveIssueTypeIdsInUseByProjectIds(
+                tenantId,
+                projectIds,
+                List.copyOf(removedIssueTypeIds)
+        );
+        if (!inUseIssueTypeIds.isEmpty()) {
+            Long issueTypeId = inUseIssueTypeIds.getFirst();
+            throw new BusinessRuleViolationException(
+                    DomainErrorCode.ISSUE_TYPE_SCHEME_IN_USE,
+                    "Cannot remove issue type from scheme because active work items still reference it: issueTypeId="
+                            + issueTypeId
+            );
+        }
+    }
+
+    private void requireVisibleIssueTypeIds(List<Long> issueTypeIds, Long tenantId) {
+        List<IssueTypeEntity> visibleIssueTypes = issueTypePort.getIssueTypesByIdsIncludingSystem(issueTypeIds, tenantId);
+        Map<Long, IssueTypeEntity> issueTypesById = visibleIssueTypes.stream()
+                .collect(Collectors.toMap(IssueTypeEntity::getId, Function.identity()));
+
+        for (Long issueTypeId : issueTypeIds) {
+            if (!issueTypesById.containsKey(issueTypeId)) {
+                throw ResourceNotFoundException.issueType(issueTypeId);
             }
         }
     }

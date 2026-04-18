@@ -6,6 +6,11 @@
 package serp.project.pmcore.domain.issuetype.service.impl;
 
 import java.net.URI;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -76,6 +81,35 @@ public class IssueTypeService implements IIssueTypeService {
                     log.warn("Issue type not found in visible scope: id={}, tenantId={}", issueTypeId, tenantId);
                     return ResourceNotFoundException.issueType(issueTypeId);
                 });
+    }
+
+    @Override
+    public List<IssueTypeEntity> getVisibleIssueTypesByIds(List<Long> issueTypeIds, Long tenantId) {
+        if (issueTypeIds == null || issueTypeIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> normalizedIds = issueTypeIds.stream()
+                .filter(id -> id != null && id > 0)
+                .distinct()
+                .toList();
+        if (normalizedIds.size() != new LinkedHashSet<>(issueTypeIds).size()) {
+            throw new IllegalArgumentException("issueTypeIds must contain only positive distinct values");
+        }
+
+        List<IssueTypeEntity> issueTypes = issueTypePort.getIssueTypesByIdsIncludingSystem(normalizedIds, tenantId);
+        Map<Long, IssueTypeEntity> issueTypesById = issueTypes.stream()
+                .collect(Collectors.toMap(IssueTypeEntity::getId, Function.identity()));
+
+        for (Long issueTypeId : normalizedIds) {
+            if (!issueTypesById.containsKey(issueTypeId)) {
+                throw ResourceNotFoundException.issueType(issueTypeId);
+            }
+        }
+
+        return normalizedIds.stream()
+                .map(issueTypesById::get)
+                .toList();
     }
 
     @Override

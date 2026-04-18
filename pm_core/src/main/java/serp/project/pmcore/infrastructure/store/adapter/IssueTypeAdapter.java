@@ -72,6 +72,16 @@ public class IssueTypeAdapter implements IIssueTypePort {
     }
 
     @Override
+    public List<IssueTypeEntity> getIssueTypesByIdsIncludingSystem(List<Long> issueTypeIds, Long tenantId) {
+        if (issueTypeIds == null || issueTypeIds.isEmpty()) {
+            return List.of();
+        }
+        return issueTypeMapper.toEntities(
+                issueTypeRepository.findAllByIdInAndTenantIdOrSystemTenant(issueTypeIds, tenantId)
+        );
+    }
+
+    @Override
     public PageResult<IssueTypeEntity> listIssueTypesIncludingSystem(Long tenantId, IssueTypeListCriteria criteria) {
         Pageable pageable = PageRequest.of(resolvePage(criteria), resolvePageSize(criteria), resolveSort(criteria));
         Page<IssueTypeModel> result = issueTypeRepository.findAllVisibleWithFilters(

@@ -27,11 +27,10 @@ public interface IWorkItemRepository extends JpaRepository<WorkItemModel, Long> 
 
     List<WorkItemModel> findAllByTenantIdAndPriorityId(Long tenantId, Long priorityId);
 
-    @Query("SELECT CASE WHEN COUNT(w) > 0 THEN true ELSE false END FROM WorkItemModel w " +
-            "WHERE w.tenantId = :tenantId AND w.issueTypeId = :issueTypeId AND w.projectId IN :projectIds AND w.deletedAt IS NULL")
-    boolean existsActiveByTenantIdAndProjectIdInAndIssueTypeId(@Param("tenantId") Long tenantId,
-                                                               @Param("projectIds") List<Long> projectIds,
-                                                               @Param("issueTypeId") Long issueTypeId);
+    @Query("SELECT DISTINCT w.issueTypeId FROM WorkItemModel w WHERE w.tenantId = :tenantId AND w.projectId IN :projectIds AND w.issueTypeId IN :issueTypeIds AND w.deletedAt IS NULL")
+    List<Long> findDistinctIssueTypeIdsInUseByProjectIds(@Param("tenantId") Long tenantId,
+                                                         @Param("projectIds") List<Long> projectIds,
+                                                         @Param("issueTypeIds") List<Long> issueTypeIds);
 
     List<WorkItemModel> findAllByTenantIdAndParentId(Long tenantId, Long parentId);
 

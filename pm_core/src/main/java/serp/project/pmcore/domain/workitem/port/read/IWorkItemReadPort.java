@@ -22,7 +22,7 @@ public interface IWorkItemReadPort {
 
     List<WorkItemEntity> getWorkItemsByPriorityId(Long priorityId, Long tenantId);
 
-    boolean existsActiveWorkItemByProjectIdsAndIssueTypeId(Long tenantId, List<Long> projectIds, Long issueTypeId);
+    List<Long> getActiveIssueTypeIdsInUseByProjectIds(Long tenantId, List<Long> projectIds, List<Long> issueTypeIds);
 
     Optional<String> getLastRankByProjectId(Long projectId, Long tenantId);
 

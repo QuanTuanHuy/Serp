@@ -117,7 +117,7 @@ class IssueTypeSchemeHandlersTest {
         IssueTypeSchemeEntity systemScheme = scheme(true);
         systemScheme.setItems(List.of(item(1L, ISSUE_TYPE_ID, 1)));
         when(issueTypeSchemeService.getVisibleIssueTypeSchemeDetailById(SCHEME_ID, TENANT_ID)).thenReturn(systemScheme);
-        when(issueTypeService.getVisibleIssueTypeById(ISSUE_TYPE_ID, TENANT_ID)).thenReturn(issueType());
+        when(issueTypeService.getVisibleIssueTypesByIds(List.of(ISSUE_TYPE_ID), TENANT_ID)).thenReturn(List.of(issueType()));
 
         IssueTypeSchemeDetailView result = getHandler.handle(new GetIssueTypeSchemeByIdQuery(SCHEME_ID, TENANT_ID));
 
@@ -155,7 +155,7 @@ class IssueTypeSchemeHandlersTest {
         updated.setItems(List.of(item(1L, ISSUE_TYPE_ID, 1)));
         when(issueTypeSchemeService.replaceIssueTypeSchemeItems(SCHEME_ID, List.of(ISSUE_TYPE_ID), TENANT_ID, USER_ID))
                 .thenReturn(updated);
-        when(issueTypeService.getVisibleIssueTypeById(ISSUE_TYPE_ID, TENANT_ID)).thenReturn(issueType());
+        when(issueTypeService.getVisibleIssueTypesByIds(List.of(ISSUE_TYPE_ID), TENANT_ID)).thenReturn(List.of(issueType()));
 
         IssueTypeSchemeDetailView result = manageItemsHandler.handle(new ManageIssueTypeSchemeItemsCommand(
                 SCHEME_ID,

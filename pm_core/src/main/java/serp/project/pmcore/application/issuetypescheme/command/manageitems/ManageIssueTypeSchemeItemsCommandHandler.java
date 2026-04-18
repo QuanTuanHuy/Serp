@@ -11,12 +11,13 @@ import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.issuetypescheme.IssueTypeSchemeDetailView;
 import serp.project.pmcore.application.issuetypescheme.IssueTypeSchemeIssueTypeView;
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
-import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeSchemeEntity;
+import serp.project.pmcore.domain.issuetype.entity.IssueTypeSchemeItemEntity;
 import serp.project.pmcore.domain.issuetype.service.IIssueTypeSchemeService;
 import serp.project.pmcore.domain.issuetype.service.IIssueTypeService;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -43,10 +44,13 @@ public class ManageIssueTypeSchemeItemsCommandHandler implements ICommandHandler
         if (scheme.getItems() == null) {
             return issueTypesById;
         }
-        scheme.getItems().forEach(item -> {
-            IssueTypeEntity issueType = issueTypeService.getVisibleIssueTypeById(item.getIssueTypeId(), tenantId);
-            issueTypesById.put(item.getIssueTypeId(), IssueTypeSchemeIssueTypeView.from(issueType));
-        });
+
+        List<Long> issueTypeIds = scheme.getItems().stream()
+                .map(IssueTypeSchemeItemEntity::getIssueTypeId)
+                .distinct()
+                .toList();
+        issueTypeService.getVisibleIssueTypesByIds(issueTypeIds, tenantId)
+                .forEach(issueType -> issueTypesById.put(issueType.getId(), IssueTypeSchemeIssueTypeView.from(issueType)));
         return issueTypesById;
     }
 }

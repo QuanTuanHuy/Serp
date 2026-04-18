@@ -209,15 +209,16 @@ class IssueTypeSchemeServiceTest {
 
         when(issueTypeSchemePort.getIssueTypeSchemeById(SCHEME_ID, TENANT_ID))
                 .thenReturn(Optional.of(existing));
-        when(issueTypePort.getIssueTypeByIdIncludingSystem(ISSUE_TYPE_ID, TENANT_ID))
-                .thenReturn(Optional.of(IssueTypeEntity.builder().id(ISSUE_TYPE_ID).tenantId(TENANT_ID).build()));
+        when(issueTypePort.getIssueTypesByIdsIncludingSystem(List.of(ISSUE_TYPE_ID), TENANT_ID))
+                .thenReturn(List.of(IssueTypeEntity.builder().id(ISSUE_TYPE_ID).tenantId(TENANT_ID).build()));
         when(issueTypeSchemeItemPort.getIssueTypeSchemeItemsBySchemeId(SCHEME_ID, TENANT_ID))
                 .thenReturn(List.of(
                         IssueTypeSchemeItemEntity.builder().issueTypeId(ISSUE_TYPE_ID).sequence(1).build(),
                         IssueTypeSchemeItemEntity.builder().issueTypeId(99L).sequence(2).build()
                 ));
         when(projectReadPort.getActiveProjectIdsByIssueTypeSchemeId(SCHEME_ID, TENANT_ID)).thenReturn(List.of(1000L));
-        when(workItemReadPort.existsActiveWorkItemByProjectIdsAndIssueTypeId(TENANT_ID, List.of(1000L), 99L)).thenReturn(true);
+        when(workItemReadPort.getActiveIssueTypeIdsInUseByProjectIds(TENANT_ID, List.of(1000L), List.of(99L)))
+                .thenReturn(List.of(99L));
 
         BusinessRuleViolationException exception = assertThrows(
                 BusinessRuleViolationException.class,
@@ -241,10 +242,11 @@ class IssueTypeSchemeServiceTest {
 
         when(issueTypeSchemePort.getIssueTypeSchemeById(SCHEME_ID, TENANT_ID))
                 .thenReturn(Optional.of(existing));
-        when(issueTypePort.getIssueTypeByIdIncludingSystem(ISSUE_TYPE_ID, TENANT_ID))
-                .thenReturn(Optional.of(IssueTypeEntity.builder().id(ISSUE_TYPE_ID).tenantId(TENANT_ID).build()));
-        when(issueTypePort.getIssueTypeByIdIncludingSystem(12L, TENANT_ID))
-                .thenReturn(Optional.of(IssueTypeEntity.builder().id(12L).tenantId(TENANT_ID).build()));
+        when(issueTypePort.getIssueTypesByIdsIncludingSystem(List.of(ISSUE_TYPE_ID, 12L), TENANT_ID))
+                .thenReturn(List.of(
+                        IssueTypeEntity.builder().id(ISSUE_TYPE_ID).tenantId(TENANT_ID).build(),
+                        IssueTypeEntity.builder().id(12L).tenantId(TENANT_ID).build()
+                ));
         when(issueTypeSchemeItemPort.getIssueTypeSchemeItemsBySchemeId(SCHEME_ID, TENANT_ID)).thenReturn(List.of());
         when(issueTypeSchemeItemPort.createIssueTypeSchemeItems(any())).thenReturn(List.of(first, second));
 
