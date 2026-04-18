@@ -184,11 +184,11 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 | UC-PM-203 | [Get Status Category by ID](usecases/status-category/UC-PM-203-get-status-category-by-id.md) | PM Admin | Low | Simple | Status Category |
 | UC-PM-204 | [List Status Categories](usecases/status-category/UC-PM-204-list-status-categories.md) | PM Admin | Medium | Simple | Status Category |
 | UC-PM-205 | [Delete Status Category](usecases/status-category/UC-PM-205-delete-status-category.md) | PM Admin | Low | Simple | Status Category |
-| UC-PM-211 | Create Status | PM Admin | High | Simple | Status |
-| UC-PM-212 | Update Status | PM Admin | Medium | Simple | Status |
-| UC-PM-213 | Get Status by ID | PM Admin | Low | Simple | Status |
-| UC-PM-214 | List Statuses | PM Admin | Medium | Simple | Status |
-| UC-PM-215 | Delete Status | PM Admin | Low | Medium | Status |
+| UC-PM-211 | [Create Status](usecases/status/UC-PM-211-create-status.md) | PM Admin | High | Simple | Status |
+| UC-PM-212 | [Update Status](usecases/status/UC-PM-212-update-status.md) | PM Admin | Medium | Simple | Status |
+| UC-PM-213 | [Get Status by ID](usecases/status/UC-PM-213-get-status-by-id.md) | PM Admin | Low | Simple | Status |
+| UC-PM-214 | [List Statuses](usecases/status/UC-PM-214-list-statuses.md) | PM Admin | Medium | Simple | Status |
+| UC-PM-215 | [Delete Status](usecases/status/UC-PM-215-delete-status.md) | PM Admin | Low | Medium | Status |
 | UC-PM-221 | Create Workflow | PM Admin | High | Medium | Workflow |
 | UC-PM-222 | Update Workflow | PM Admin | High | Medium | Workflow |
 | UC-PM-223 | Get Workflow by ID | PM Admin | Medium | Simple | Workflow |
@@ -1885,46 +1885,21 @@ Status category management is tenant-scoped administration behavior:
 
 #### UC-PM-211 to UC-PM-215: Status CRUD
 
-##### UC-PM-211: Create Status
+Detailed specifications are extracted to separate files:
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-211 |
-| **Use Case Name** | Create Status |
-| **Priority** | High |
-| **Complexity** | Simple |
+- [UC-PM-211 - Create Status](usecases/status/UC-PM-211-create-status.md)
+- [UC-PM-212 - Update Status](usecases/status/UC-PM-212-update-status.md)
+- [UC-PM-213 - Get Status by ID](usecases/status/UC-PM-213-get-status-by-id.md)
+- [UC-PM-214 - List Statuses](usecases/status/UC-PM-214-list-statuses.md)
+- [UC-PM-215 - Delete Status](usecases/status/UC-PM-215-delete-status.md)
 
-**Permission**: `PM.STATUS.CREATE`
+Status management is tenant-scoped administration behavior:
 
-**Input Data**:
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| status_key | string | Yes | min:1, max:100, unique per tenant | Stable key |
-| name | string | Yes | min:1, max:255 | Display name |
-| description | string | No | max:2000 | Description |
-| icon_url | string | No | valid URL | Icon |
-| status_category_id | int64 | Yes | must exist | Parent category |
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-211-01 | `status_key` unique per tenant | DB `UNIQUE(tenant_id, status_key)` |
-| BR-PM-211-02 | Every status must belong to a status category | DTO validation |
-
-##### UC-PM-212 to UC-PM-214: Status Update, Get, List
-
-Standard CRUD. System statuses cannot have their `status_key` changed.
-
-##### UC-PM-215: Delete Status
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-215-01 | Cannot delete a status that is used in any workflow step | Service layer |
-| BR-PM-215-02 | Cannot delete a status if any work item currently has this status | Service layer |
+- Read APIs may return both tenant-owned statuses and system-owned statuses visible to that tenant
+- System-owned statuses are read-only from tenant APIs
+- Tenant callers may create, update, and delete only statuses owned by their own tenant
+- `tenant_id` for write operations is always resolved from JWT context and never accepted from the request payload
+- No Kafka/outbox publication is performed for status write paths in this scope
 
 ---
 
