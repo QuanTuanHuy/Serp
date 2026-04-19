@@ -17,6 +17,7 @@ import serp.project.pmcore.domain.customfield.entity.CustomFieldContextDefaultVa
 import serp.project.pmcore.domain.customfield.entity.CustomFieldContextEntity;
 import serp.project.pmcore.domain.customfield.entity.CustomFieldEntity;
 import serp.project.pmcore.domain.customfield.entity.CustomFieldOptionEntity;
+import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldMutationService;
 import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldResolver;
 import serp.project.pmcore.domain.customfield.service.handler.DateCustomFieldValueHandler;
 import serp.project.pmcore.domain.customfield.service.handler.DateTimeCustomFieldValueHandler;
@@ -28,6 +29,7 @@ import serp.project.pmcore.domain.customfield.service.handler.SelectCustomFieldV
 import serp.project.pmcore.domain.customfield.service.handler.TextCustomFieldValueHandler;
 import serp.project.pmcore.domain.customfield.service.handler.UserCustomFieldValueHandler;
 import serp.project.pmcore.domain.customfield.service.impl.WorkItemCustomFieldResolver;
+import serp.project.pmcore.domain.customfield.service.impl.WorkItemCustomFieldMutationService;
 import serp.project.pmcore.domain.customfield.port.ICustomFieldContextDefaultValuePort;
 import serp.project.pmcore.domain.customfield.port.ICustomFieldContextPort;
 import serp.project.pmcore.domain.customfield.port.ICustomFieldOptionPort;
@@ -228,7 +230,7 @@ class CreateWorkItemCommandHandlerTest {
                         issueSecurityService
                 ),
                 new WorkItemAuthorizationSupportService(projectPermissionEvaluationService),
-                buildCustomFieldResolver(),
+                buildCustomFieldMutationService(),
                 new WorkItemCreateRequiredFieldValidator(),
                 new WorkItemDraftFactory(),
                 new CreateWorkItemFieldRulesResolver(
@@ -236,7 +238,6 @@ class CreateWorkItemCommandHandlerTest {
                         workItemFieldResolver
                 ),
                 new WorkItemFieldWriteValidator(),
-                workItemCustomFieldValuePort,
                 outboxEventService,
                 jsonUtils
         );
@@ -620,6 +621,14 @@ class CreateWorkItemCommandHandlerTest {
                         new MultiSelectCustomFieldValueHandler(),
                         new JsonCustomFieldValueHandler(jsonUtils)
                 )
+        );
+    }
+
+    private IWorkItemCustomFieldMutationService buildCustomFieldMutationService() {
+        return new WorkItemCustomFieldMutationService(
+                customFieldPort,
+                workItemCustomFieldValuePort,
+                buildCustomFieldResolver()
         );
     }
 

@@ -199,7 +199,7 @@ public class TransitionConfigurationResolver {
         }
 
         try {
-            return statusService.getStatusCategoryById(categoryId, tenantId);
+            return statusService.getStatusCategoryByIdIncludingSystem(categoryId, tenantId);
         } catch (ResourceNotFoundException ex) {
             throw new DomainValidationException(
                     DomainErrorCode.WORK_ITEM_WORKFLOW_STATE_INVALID,

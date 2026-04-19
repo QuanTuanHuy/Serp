@@ -35,9 +35,19 @@ public class WorkflowStepAdapter implements IWorkflowStepPort {
     }
 
     @Override
+    public List<WorkflowStepEntity> updateWorkflowSteps(List<WorkflowStepEntity> steps) {
+        if (steps == null || steps.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return workflowStepMapper.toEntities(
+                workflowStepRepository.saveAll(workflowStepMapper.toModels(steps))
+        );
+    }
+
+    @Override
     public List<WorkflowStepEntity> getWorkflowStepsByWorkflowVersionId(Long workflowVersionId, Long tenantId) {
         return workflowStepMapper.toEntities(
-                workflowStepRepository.findByWorkflowVersionIdAndTenantId(workflowVersionId, tenantId)
+                workflowStepRepository.findByWorkflowVersionIdAndTenantIdOrderByStepOrderAscIdAsc(workflowVersionId, tenantId)
         );
     }
 
@@ -58,5 +68,10 @@ public class WorkflowStepAdapter implements IWorkflowStepPort {
     public Optional<WorkflowStepEntity> getWorkflowStepById(Long id, Long tenantId) {
         return workflowStepRepository.findByIdAndTenantId(id, tenantId)
                 .map(workflowStepMapper::toEntity);
+    }
+
+    @Override
+    public boolean existsByStatusIdIncludingSystem(Long statusId, Long tenantId) {
+        return workflowStepRepository.existsByStatusIdAndTenantIdOrSystemTenant(statusId, tenantId);
     }
 }

@@ -36,6 +36,10 @@ public interface IIssueTypeRepository extends JpaRepository<IssueTypeModel, Long
     @Query("SELECT i FROM IssueTypeModel i WHERE i.tenantId = :tenantId OR i.tenantId = 0 ORDER BY CASE WHEN i.tenantId = :tenantId THEN 0 ELSE 1 END, i.hierarchyLevel ASC, i.name ASC, i.id ASC")
     List<IssueTypeModel> findAllByTenantIdOrSystemTenant(@Param("tenantId") Long tenantId);
 
+    @Query("SELECT i FROM IssueTypeModel i WHERE i.id IN :issueTypeIds AND (i.tenantId = :tenantId OR i.tenantId = 0)")
+    List<IssueTypeModel> findAllByIdInAndTenantIdOrSystemTenant(@Param("issueTypeIds") List<Long> issueTypeIds,
+                                                                @Param("tenantId") Long tenantId);
+
     @Query(value = """
             SELECT i
             FROM IssueTypeModel i

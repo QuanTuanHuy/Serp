@@ -16,10 +16,8 @@ import serp.project.pmcore.application.workitem.command.update.internal.UpdateWo
 import serp.project.pmcore.application.workitem.command.update.support.UpdateWorkItemConfigurationResolver;
 import serp.project.pmcore.application.workitem.command.update.support.UpdateWorkItemFieldRulesResolver;
 import serp.project.pmcore.application.workitem.command.update.support.UpdateWorkItemFieldWriteValidator;
-import serp.project.pmcore.domain.customfield.dto.ResolvedCustomFields;
-import serp.project.pmcore.domain.customfield.entity.CustomFieldEntity;
-import serp.project.pmcore.domain.customfield.port.ICustomFieldPort;
-import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldResolver;
+import serp.project.pmcore.domain.customfield.dto.WorkItemCustomFieldMutationPlan;
+import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldMutationService;
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
 import serp.project.pmcore.domain.issuetype.port.IIssueTypePort;
@@ -36,9 +34,7 @@ import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.service.IOutboxEventService;
 import serp.project.pmcore.domain.workitem.dto.WorkItemFieldPolicy;
 import serp.project.pmcore.domain.workitem.dto.WorkItemFieldRules;
-import serp.project.pmcore.domain.workitem.entity.WorkItemCustomFieldValueEntity;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
-import serp.project.pmcore.domain.workitem.port.IWorkItemCustomFieldValuePort;
 import serp.project.pmcore.domain.workitem.service.IWorkItemAuthorizationSupportService;
 import serp.project.pmcore.domain.workitem.service.IWorkItemService;
 import serp.project.pmcore.kernel.utils.JsonUtils;
@@ -51,7 +47,6 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -81,13 +76,9 @@ class UpdateWorkItemCommandHandlerTest {
     @Mock
     private UpdateWorkItemConfigurationResolver updateWorkItemConfigurationResolver;
     @Mock
-    private IWorkItemCustomFieldResolver workItemCustomFieldResolver;
-    @Mock
-    private ICustomFieldPort customFieldPort;
+    private IWorkItemCustomFieldMutationService workItemCustomFieldMutationService;
     @Mock
     private IIssueTypePort issueTypePort;
-    @Mock
-    private IWorkItemCustomFieldValuePort workItemCustomFieldValuePort;
     @Mock
     private IOutboxEventService outboxEventService;
     @Mock
@@ -107,10 +98,8 @@ class UpdateWorkItemCommandHandlerTest {
                 updateWorkItemFieldRulesResolver,
                 new UpdateWorkItemFieldWriteValidator(),
                 updateWorkItemConfigurationResolver,
-                workItemCustomFieldResolver,
-                customFieldPort,
+                workItemCustomFieldMutationService,
                 issueTypePort,
-                workItemCustomFieldValuePort,
                 outboxEventService,
                 jsonUtils
         );
@@ -149,7 +138,13 @@ class UpdateWorkItemCommandHandlerTest {
                 .thenReturn(workItem.getPriorityId());
         when(updateWorkItemConfigurationResolver.resolveSecurityLevelId(PROJECT_ID, project.getIssueSecuritySchemeId(), workItem.getSecurityLevelId(), command.data(), TENANT_ID))
                 .thenReturn(workItem.getSecurityLevelId());
-        when(workItemCustomFieldValuePort.getActiveValuesByWorkItemId(WORK_ITEM_ID, TENANT_ID)).thenReturn(List.of());
+        when(issueTypePort.getIssueTypeById(ISSUE_TYPE_ID, TENANT_ID)).thenReturn(Optional.of(IssueTypeEntity.builder()
+                .id(ISSUE_TYPE_ID)
+                .typeKey("task")
+                .name("Task")
+                .build()));
+        when(workItemCustomFieldMutationService.planUpdate(eq("task"), eq(WORK_ITEM_ID), eq(TENANT_ID), eq(command.data().customFields()), any()))
+                .thenReturn(WorkItemCustomFieldMutationPlan.empty());
         when(workItemService.updateWorkItem(workItem, USER_ID)).thenAnswer(invocation -> {
             workItem.setUpdatedAt(1_710_000_000_000L);
             workItem.setUpdatedBy(USER_ID);
@@ -201,7 +196,13 @@ class UpdateWorkItemCommandHandlerTest {
                 .thenReturn(workItem.getPriorityId());
         when(updateWorkItemConfigurationResolver.resolveSecurityLevelId(PROJECT_ID, project.getIssueSecuritySchemeId(), workItem.getSecurityLevelId(), command.data(), TENANT_ID))
                 .thenReturn(workItem.getSecurityLevelId());
-        when(workItemCustomFieldValuePort.getActiveValuesByWorkItemId(WORK_ITEM_ID, TENANT_ID)).thenReturn(List.of());
+        when(issueTypePort.getIssueTypeById(ISSUE_TYPE_ID, TENANT_ID)).thenReturn(Optional.of(IssueTypeEntity.builder()
+                .id(ISSUE_TYPE_ID)
+                .typeKey("task")
+                .name("Task")
+                .build()));
+        when(workItemCustomFieldMutationService.planUpdate(eq("task"), eq(WORK_ITEM_ID), eq(TENANT_ID), eq(command.data().customFields()), any()))
+                .thenReturn(WorkItemCustomFieldMutationPlan.empty());
         when(workItemService.updateWorkItem(workItem, USER_ID)).thenAnswer(invocation -> {
             workItem.setUpdatedAt(1_710_000_000_000L);
             workItem.setUpdatedBy(USER_ID);
@@ -234,26 +235,6 @@ class UpdateWorkItemCommandHandlerTest {
                 .reporterUserId(workItem.getReporterId())
                 .assigneeUserId(workItem.getAssigneeId())
                 .build();
-        CustomFieldEntity customField = CustomFieldEntity.builder()
-                .id(500L)
-                .fieldKey("cf_text")
-                .typeKey("text")
-                .build();
-        WorkItemCustomFieldValueEntity existingValue = WorkItemCustomFieldValueEntity.builder()
-                .id(900L)
-                .customFieldId(500L)
-                .workItemId(WORK_ITEM_ID)
-                .tenantId(TENANT_ID)
-                .textValue("Old custom value")
-                .build();
-        WorkItemCustomFieldValueEntity resolvedValue = WorkItemCustomFieldValueEntity.builder()
-                .customFieldId(500L)
-                .customFieldContextId(501L)
-                .valueType("TEXT")
-                .textValue("Updated custom value")
-                .sortOrder(0)
-                .build();
-
         when(projectService.getProjectById(PROJECT_ID, TENANT_ID)).thenReturn(project);
         when(workItemService.getWorkItemById(WORK_ITEM_ID, TENANT_ID)).thenReturn(workItem);
         when(workItemAuthorizationSupportService.buildActorContext(USER_ID, Set.of(), workItem.getReporterId(), workItem.getAssigneeId()))
@@ -267,15 +248,13 @@ class UpdateWorkItemCommandHandlerTest {
                 .thenReturn(workItem.getPriorityId());
         when(updateWorkItemConfigurationResolver.resolveSecurityLevelId(PROJECT_ID, project.getIssueSecuritySchemeId(), workItem.getSecurityLevelId(), command.data(), TENANT_ID))
                 .thenReturn(workItem.getSecurityLevelId());
-        when(workItemCustomFieldValuePort.getActiveValuesByWorkItemId(WORK_ITEM_ID, TENANT_ID)).thenReturn(List.of(existingValue));
-        when(customFieldPort.getCustomFieldsByFieldKeys(any())).thenReturn(List.of(customField));
         when(issueTypePort.getIssueTypeById(ISSUE_TYPE_ID, TENANT_ID)).thenReturn(Optional.of(IssueTypeEntity.builder()
                 .id(ISSUE_TYPE_ID)
                 .typeKey("task")
                 .name("Task")
                 .build()));
-        when(workItemCustomFieldResolver.resolveCustomFields(eq("task"), any(), any()))
-                .thenReturn(new ResolvedCustomFields(List.of(resolvedValue), List.of()));
+        when(workItemCustomFieldMutationService.planUpdate(eq("task"), eq(WORK_ITEM_ID), eq(TENANT_ID), eq(command.data().customFields()), any()))
+                .thenReturn(new WorkItemCustomFieldMutationPlan(List.of(), List.of(), List.of(500L), List.of("cf_text")));
         when(workItemService.updateWorkItem(workItem, USER_ID)).thenAnswer(invocation -> {
             workItem.setUpdatedAt(1_710_000_000_000L);
             workItem.setUpdatedBy(USER_ID);
@@ -286,8 +265,7 @@ class UpdateWorkItemCommandHandlerTest {
         UpdateWorkItemResult result = handler.handle(command);
 
         assertEquals(List.of("cf_text"), result.changedFields());
-        verify(workItemCustomFieldValuePort).softDeleteByWorkItemIdAndCustomFieldIds(eq(WORK_ITEM_ID), anyCollection(), eq(USER_ID), any());
-        verify(workItemCustomFieldValuePort).saveAll(any());
+        verify(workItemCustomFieldMutationService).applyPlan(eq(WORK_ITEM_ID), eq(TENANT_ID), eq(USER_ID), any());
     }
 
     @Test

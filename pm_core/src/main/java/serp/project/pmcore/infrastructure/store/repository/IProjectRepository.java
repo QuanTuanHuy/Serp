@@ -14,6 +14,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import serp.project.pmcore.infrastructure.store.model.ProjectModel;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -24,6 +25,28 @@ public interface IProjectRepository extends JpaRepository<ProjectModel, Long> {
     Optional<ProjectModel> findByKeyAndTenantId(String key, Long tenantId);
 
     boolean existsByKeyAndTenantId(String key, Long tenantId);
+
+    @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM ProjectModel p " +
+            "WHERE p.projectCategoryId = :categoryId AND p.tenantId = :tenantId AND p.deletedAt IS NULL")
+    boolean existsActiveProjectByCategoryId(@Param("categoryId") Long categoryId, @Param("tenantId") Long tenantId);
+
+    @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM ProjectModel p " +
+            "WHERE p.issueTypeSchemeId = :issueTypeSchemeId AND p.tenantId = :tenantId AND p.deletedAt IS NULL")
+    boolean existsActiveProjectByIssueTypeSchemeId(@Param("issueTypeSchemeId") Long issueTypeSchemeId,
+                                                   @Param("tenantId") Long tenantId);
+
+    @Query("SELECT p.id FROM ProjectModel p WHERE p.issueTypeSchemeId = :issueTypeSchemeId AND p.tenantId = :tenantId AND p.deletedAt IS NULL")
+    List<Long> findActiveProjectIdsByIssueTypeSchemeId(@Param("issueTypeSchemeId") Long issueTypeSchemeId,
+                                                       @Param("tenantId") Long tenantId);
+
+    @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM ProjectModel p " +
+            "WHERE p.prioritySchemeId = :prioritySchemeId AND p.tenantId = :tenantId AND p.deletedAt IS NULL")
+    boolean existsActiveProjectByPrioritySchemeId(@Param("prioritySchemeId") Long prioritySchemeId,
+                                                  @Param("tenantId") Long tenantId);
+
+    @Query("SELECT p.id FROM ProjectModel p WHERE p.prioritySchemeId = :prioritySchemeId AND p.tenantId = :tenantId AND p.deletedAt IS NULL")
+    List<Long> findActiveProjectIdsByPrioritySchemeId(@Param("prioritySchemeId") Long prioritySchemeId,
+                                                      @Param("tenantId") Long tenantId);
 
     Page<ProjectModel> findAllByTenantId(Long tenantId, Pageable pageable);
 

@@ -25,6 +25,30 @@ public class EventConstants {
     }
 
     @UtilityClass
+    public static class ProjectCategory {
+        public static final String TOPIC = "serp.pm.project-category.events";
+        public static final String AGGREGATE = "PROJECT_CATEGORY";
+
+        public static class EventType {
+            public static final String PROJECT_CATEGORY_CREATED = "PROJECT_CATEGORY_CREATED";
+            public static final String PROJECT_CATEGORY_UPDATED = "PROJECT_CATEGORY_UPDATED";
+            public static final String PROJECT_CATEGORY_DELETED = "PROJECT_CATEGORY_DELETED";
+        }
+    }
+
+    @UtilityClass
+    public static class ProjectRole {
+        public static final String TOPIC = "serp.pm.project-role.events";
+        public static final String AGGREGATE = "PROJECT_ROLE";
+
+        public static class EventType {
+            public static final String PROJECT_ROLE_CREATED = "PROJECT_ROLE_CREATED";
+            public static final String PROJECT_ROLE_UPDATED = "PROJECT_ROLE_UPDATED";
+            public static final String PROJECT_ROLE_DELETED = "PROJECT_ROLE_DELETED";
+        }
+    }
+
+    @UtilityClass
     public static class WorkItem {
         public static final String TOPIC = "serp.pm.workitem.events";
         public static final String AGGREGATE = "WORK_ITEM";
@@ -40,6 +64,18 @@ public class EventConstants {
     }
 
     @UtilityClass
+    public static class Worklog {
+        public static final String TOPIC = "serp.pm.worklog.events";
+        public static final String AGGREGATE = "WORKLOG";
+
+        public static class EventType {
+            public static final String WORKLOG_CREATED = "WORKLOG_CREATED";
+            public static final String WORKLOG_UPDATED = "WORKLOG_UPDATED";
+            public static final String WORKLOG_DELETED = "WORKLOG_DELETED";
+        }
+    }
+
+    @UtilityClass
     public static class IssueType {
         public static final String TOPIC = "serp.pm.issuetype.events";
         public static final String AGGREGATE = "ISSUE_TYPE";
@@ -48,6 +84,18 @@ public class EventConstants {
             public static final String ISSUE_TYPE_CREATED = "ISSUE_TYPE_CREATED";
             public static final String ISSUE_TYPE_UPDATED = "ISSUE_TYPE_UPDATED";
             public static final String ISSUE_TYPE_DELETED = "ISSUE_TYPE_DELETED";
+        }
+    }
+
+    @UtilityClass
+    public static class Priority {
+        public static final String TOPIC = "serp.pm.priority.events";
+        public static final String AGGREGATE = "PRIORITY";
+
+        public static class EventType {
+            public static final String PRIORITY_CREATED = "PRIORITY_CREATED";
+            public static final String PRIORITY_UPDATED = "PRIORITY_UPDATED";
+            public static final String PRIORITY_DELETED = "PRIORITY_DELETED";
         }
     }
 }

@@ -107,22 +107,29 @@ class IssueTypeHandlersTest {
     }
 
     @Test
-    void updateHandlerShouldRejectImmutableFieldChanges() {
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> updateHandler.handle(new UpdateIssueTypeCommand(
-                        ISSUE_TYPE_ID,
-                        new IssueTypeUpdateData("Task", true, null, false, null, false, null, false),
-                        true,
-                        false,
-                        false,
-                        TENANT_ID,
-                        USER_ID
-                ))
-        );
+    void updateHandlerShouldPublishUpdatedOutboxEvent() {
+        IssueTypeEntity updated = IssueTypeEntity.builder()
+                .id(ISSUE_TYPE_ID)
+                .tenantId(TENANT_ID)
+                .typeKey("task")
+                .name("Task")
+                .hierarchyLevel(2)
+                .isSystem(false)
+                .build();
 
-        verify(issueTypeService, never()).updateIssueType(any(), any(), any(), any());
-        verify(issueTypeOutboxPublisher, never()).publishIssueTypeUpdated(any(), any());
+        when(issueTypeService.updateIssueType(any(), any(), any(), any())).thenReturn(updated);
+
+        IssueTypeView result = updateHandler.handle(new UpdateIssueTypeCommand(
+                ISSUE_TYPE_ID,
+                new IssueTypeUpdateData("Task", true, null, false, null, false, 2, true),
+                TENANT_ID,
+                USER_ID
+        ));
+
+        verify(issueTypeService).updateIssueType(eq(ISSUE_TYPE_ID), any(), eq(TENANT_ID), eq(USER_ID));
+        verify(issueTypeOutboxPublisher).publishIssueTypeUpdated(eq(TENANT_ID), any(IssueTypeEventPayload.class));
+        assertEquals(2, result.hierarchyLevel());
+        assertFalse(result.readOnly());
     }
 
     @Test

@@ -20,4 +20,6 @@ public interface IPermissionSchemeEntryRepository extends JpaRepository<Permissi
                                                                                  @Param("tenantId") Long tenantId);
 
     List<PermissionSchemeEntryModel> findAllBySchemeIdAndTenantId(Long schemeId, Long tenantId);
+
+    boolean existsByTenantIdAndGranteeTypeAndGranteeRef(Long tenantId, String granteeType, String granteeRef);
 }

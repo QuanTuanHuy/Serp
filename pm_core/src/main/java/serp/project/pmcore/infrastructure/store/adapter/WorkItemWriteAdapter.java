@@ -65,15 +65,15 @@ public class WorkItemWriteAdapter implements IWorkItemWritePort {
 //               AND deleted_at IS NULL
 //            """;
 //
-//    private static final String SOFT_DELETE_WORKLOGS_SQL = """
-//            UPDATE worklogs
-//               SET deleted_at = :deletedAt,
-//                   updated_at = :deletedAt,
-//                   updated_by = :userId
-//             WHERE tenant_id = :tenantId
-//               AND work_item_id IN (:workItemIds)
-//               AND deleted_at IS NULL
-//            """;
+    private static final String SOFT_DELETE_WORKLOGS_SQL = """
+            UPDATE worklogs
+               SET deleted_at = :deletedAt,
+                   updated_at = :deletedAt,
+                   updated_by = :userId
+             WHERE tenant_id = :tenantId
+               AND work_item_id IN (:workItemIds)
+               AND deleted_at IS NULL
+            """;
 //
 //    private static final String SOFT_DELETE_CUSTOM_FIELD_VALUES_SQL = """
 //            UPDATE work_item_custom_field_values
@@ -132,14 +132,13 @@ public class WorkItemWriteAdapter implements IWorkItemWritePort {
 //        int deletedComponentCount = jdbcTemplate.update(SOFT_DELETE_WORK_ITEM_COMPONENTS_SQL, params);
 //        int deletedFixVersionCount = jdbcTemplate.update(SOFT_DELETE_WORK_ITEM_FIX_VERSIONS_SQL, params);
 //        int deletedSprintCount = jdbcTemplate.update(SOFT_DELETE_WORK_ITEM_SPRINTS_SQL, params);
-//        int deletedWorklogCount = jdbcTemplate.update(SOFT_DELETE_WORKLOGS_SQL, params);
+        int deletedWorklogCount = jdbcTemplate.update(SOFT_DELETE_WORKLOGS_SQL, params);
 //        int deletedCustomFieldValueCount = jdbcTemplate.update(SOFT_DELETE_CUSTOM_FIELD_VALUES_SQL, params);
 //        int deletedLinkCount = jdbcTemplate.update(SOFT_DELETE_ISSUE_LINKS_SQL, params);
 
         return WorkItemDeleteExecutionResult.builder()
                 .deletedWorkItemCount(deletedWorkItemCount)
-                .deletedRelationCount(0
-                )
+                .deletedRelationCount(deletedWorklogCount)
                 .deletedLinkCount(0)
                 .build();
     }
