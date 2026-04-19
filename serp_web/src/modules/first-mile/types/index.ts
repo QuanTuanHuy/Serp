@@ -73,6 +73,31 @@ export interface PostOffice {
   tenantId?: number;
 }
 
+export type PostOfficeStaffRole = 'COURIER' | 'MANAGER';
+
+export type PostOfficeStaffStatus = 'ACTIVE' | 'INACTIVE' | 'ON_LEAVE';
+
+export interface PostOfficeStaff {
+  id: number;
+  code?: string;
+  fullName?: string;
+  phoneNumber?: string;
+  email?: string;
+  avatarUrl?: string;
+  role?: PostOfficeStaffRole;
+  status?: PostOfficeStaffStatus;
+  hireDate?: string;
+  maxDailyStops?: number;
+  maxDailyParcels?: number;
+  notes?: string;
+  userId?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
+  tenantId?: number;
+}
+
 export type VehicleStatus =
   | 'ACTIVE'
   | 'INACTIVE'

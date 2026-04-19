@@ -34,8 +34,11 @@ import serp.project.first_mile.service.PostOfficeStaffService;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -48,6 +51,59 @@ public class PostOfficeStaffServiceImpl implements PostOfficeStaffService {
     private final PostOfficeStaffAssignmentRepository postOfficeStaffAssignmentRepository;
     private final FileStorageService fileStorageService;
     private final FirstMileAccessUtils firstMileAccessUtils;
+
+    @Override
+    @Transactional(readOnly = true)
+    public PostOfficeStaffResponse getPostOfficeStaffById(Long id) {
+        Long tenantId = getCurrentTenantIdOrThrow();
+        PostOfficeStaff staff = getPostOfficeStaffByIdAndTenantOrThrow(id, tenantId);
+
+        if (isManagerScopedAccess()) {
+            Set<Long> managedPostOfficeIds = getManagedPostOfficeIdsOrThrow(tenantId);
+            validateManagerCanAccessStaff(staff.getId(), tenantId, managedPostOfficeIds);
+        }
+
+        return PostOfficeStaffMapper.toResponse(staff);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PostOfficeStaffResponse> getActiveCouriersByPostOffice(Long postOfficeId) {
+        Long tenantId = getCurrentTenantIdOrThrow();
+        getPostOfficeByIdAndTenantOrThrow(postOfficeId, tenantId);
+
+        if (isManagerScopedAccess()) {
+            Set<Long> managedPostOfficeIds = getManagedPostOfficeIdsOrThrow(tenantId);
+            validateManagerCanAccessPostOffice(postOfficeId, managedPostOfficeIds);
+        }
+
+        LocalDate today = LocalDate.now();
+        List<PostOfficeStaffAssignment> assignments =
+                postOfficeStaffAssignmentRepository.findActiveAssignmentsByPostOfficeIdAndTenantIdAndStaffRoleAndStaffStatus(
+                        postOfficeId,
+                        tenantId,
+                        today,
+                        PostOfficeStaffRole.COURIER,
+                        PostOfficeStaffStatus.ACTIVE
+                );
+
+        Map<Long, PostOfficeStaffResponse> uniqueCouriers = new LinkedHashMap<>();
+        for (PostOfficeStaffAssignment assignment : assignments) {
+            PostOfficeStaff staff = assignment.getStaff();
+            if (staff == null || staff.getId() == null) {
+                continue;
+            }
+
+            uniqueCouriers.putIfAbsent(staff.getId(), PostOfficeStaffMapper.toResponse(staff));
+        }
+
+        return uniqueCouriers.values().stream()
+                .sorted(Comparator.comparing(
+                        PostOfficeStaffResponse::fullName,
+                        Comparator.nullsLast(String::compareToIgnoreCase)
+                ))
+                .toList();
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)

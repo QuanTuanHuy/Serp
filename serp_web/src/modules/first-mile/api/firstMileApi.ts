@@ -24,6 +24,7 @@ import type {
   OrderImportItem,
   PostOffice,
   PostOfficeGeocodeBatchResponse,
+  PostOfficeStaff,
   PostOfficeImportItem,
   PostOfficeListFilters,
   PickupAssignmentResponse,
@@ -531,6 +532,24 @@ export const firstMileApi = api.injectEndpoints({
       transformResponse: unwrapFirstMileResultOrRaw<OrderConfirmationResponse>,
     }),
 
+    getActiveCouriersByPostOffice: builder.query<PostOfficeStaff[], number>({
+      query: (postOfficeId) => ({
+        url: `/post-office-staffs/post-offices/${postOfficeId}/couriers`,
+        method: 'GET',
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<PostOfficeStaff[]>,
+    }),
+
+    getPostOfficeStaffById: builder.query<PostOfficeStaff, number>({
+      query: (id) => ({
+        url: `/post-office-staffs/${id}`,
+        method: 'GET',
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<PostOfficeStaff>,
+    }),
+
     optimizePickupPlan: builder.mutation<
       PickupOptimizationResponse,
       OptimizePickupPlanRequest
@@ -644,6 +663,8 @@ export const {
   useUpdateOrderMutation,
   useCancelOrderMutation,
   useConfirmOrderMutation,
+  useGetActiveCouriersByPostOfficeQuery,
+  useGetPostOfficeStaffByIdQuery,
   useOptimizePickupPlanMutation,
   useAutoAssignPickupPlanMutation,
   useManualAssignPickupOrdersMutation,

@@ -6,47 +6,11 @@
 'use client';
 
 import React from 'react';
-import { getErrorMessage, useAppSelector } from '@/lib/store';
-import {
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Textarea,
-} from '@/shared/components/ui';
+import { getErrorMessage, useAppDispatch, useAppSelector } from '@/lib/store';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { useNotification } from '@/shared/hooks';
 import {
-  CheckCircle2,
-  Download,
-  Eye,
-  FileUp,
-  Loader2,
-  Pencil,
-  Plus,
-  RefreshCw,
-  Search,
-  Shield,
-  Trash2,
-  XCircle,
-} from 'lucide-react';
-import {
+  firstMileApi,
   useCancelOrderMutation,
   useConfirmOrderMutation,
   useCreateOrderMutation,
@@ -60,431 +24,58 @@ import {
   useUpdateOrderMutation,
   useValidateOrderImportMutation,
 } from '../../api';
-import { CoordinatePickerMap } from '../../components';
 import type {
   CancelOrderRequest,
   CreateOrderRequest,
-  FirstMileDeliveryRequestTime,
-  FirstMileFeePayer,
   FirstMileOrderDetail,
+  FirstMileOrderStatus,
   ImportHistory,
   OrderImportItem,
-  FirstMileOrderProductItem,
-  FirstMileOrderProductCategory,
-  FirstMileOrderStatus,
-  FirstMileOrderType,
-  ValidateImportFileResponse,
-  UpdateOrderRequest,
   Province,
-  Ward,
+  UpdateOrderRequest,
+  ValidateImportFileResponse,
 } from '../../types';
-
-const PAGE_SIZE = 20;
-const IMPORT_PREVIEW_LIMIT = 5;
-
-type OrderAccessScope =
-  | 'ADMIN_ALL'
-  | 'MANAGER_POST_OFFICE'
-  | 'COURIER_ASSIGNED'
-  | 'CUSTOMER_CREATED'
-  | 'NO_ACCESS';
-type LocationTarget = 'sender' | 'receiver';
-type OrderFormMode = 'create' | 'edit';
-
-type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
-type OrderStatusFilter = 'ALL' | FirstMileOrderStatus;
-
-const ORDER_STATUS_OPTIONS: FirstMileOrderStatus[] = [
-  'CREATED',
-  'ASSIGNED_TO_PICKUP',
-  'PICKING_UP',
-  'PICKUP_FAILED',
-  'PICKED_UP',
-  'AT_ORIGIN_POST_OFFICE',
-  'CANCELLED',
-  'LOST_OR_DAMAGED',
-];
-
-const normalizeLocationCode = (value?: string): string => value?.trim() ?? '';
-
-const buildWardSelectOptions = (
-  wards: Ward[] | undefined,
-  selectedWardCode: string,
-  provinceCode: string
-): Ward[] => {
-  const options = [...(wards ?? [])];
-
-  if (
-    selectedWardCode &&
-    !options.some(
-      (ward) => normalizeLocationCode(ward.wardCode) === selectedWardCode
-    )
-  ) {
-    options.unshift({
-      wardCode: selectedWardCode,
-      name: selectedWardCode,
-      provinceCode,
-    });
-  }
-
-  return options;
-};
-
-interface CreateOrderFormState {
-  customerOrderCode: string;
-  senderName: string;
-  senderPhone: string;
-  senderProvinceCode: string;
-  senderWardCode: string;
-  senderAddressDetail: string;
-  senderLatitude: string;
-  senderLongitude: string;
-  receiverName: string;
-  receiverPhone: string;
-  receiverProvinceCode: string;
-  receiverWardCode: string;
-  receiverAddressDetail: string;
-  receiverLatitude: string;
-  receiverLongitude: string;
-  pickupTimeStart: string;
-  pickupTimeEnd: string;
-  deliveryRequestTime: FirstMileDeliveryRequestTime;
-  orderProductCategory: 'NONE' | FirstMileOrderProductCategory;
-  orderType: FirstMileOrderType;
-  feePayer: FirstMileFeePayer;
-  isCod: 'true' | 'false';
-  dimensionLengthCm: string;
-  dimensionWidthCm: string;
-  dimensionHeightCm: string;
-  totalVolumeM3: string;
-  note: string;
-}
-
-const DEFAULT_CREATE_ORDER_FORM: CreateOrderFormState = {
-  customerOrderCode: '',
-  senderName: '',
-  senderPhone: '',
-  senderProvinceCode: '',
-  senderWardCode: '',
-  senderAddressDetail: '',
-  senderLatitude: '',
-  senderLongitude: '',
-  receiverName: '',
-  receiverPhone: '',
-  receiverProvinceCode: '',
-  receiverWardCode: '',
-  receiverAddressDetail: '',
-  receiverLatitude: '',
-  receiverLongitude: '',
-  pickupTimeStart: '',
-  pickupTimeEnd: '',
-  deliveryRequestTime: 'BUSINESS_HOURS',
-  orderProductCategory: 'NONE',
-  orderType: 'STANDARD_ORDER',
-  feePayer: 'SENDER',
-  isCod: 'false',
-  dimensionLengthCm: '',
-  dimensionWidthCm: '',
-  dimensionHeightCm: '',
-  totalVolumeM3: '',
-  note: '',
-};
-
-const DELIVERY_REQUEST_TIME_OPTIONS: Array<{
-  value: FirstMileDeliveryRequestTime;
-  label: string;
-}> = [
-  { value: 'BUSINESS_HOURS', label: 'Business hours' },
-  { value: 'FULL_DAY', label: 'Full day' },
-  { value: 'MORNING', label: 'Morning' },
-  { value: 'AFTERNOON', label: 'Afternoon' },
-  { value: 'SUNDAY', label: 'Sunday' },
-  { value: 'HOLIDAY', label: 'Holiday' },
-];
-
-const ORDER_TYPE_OPTIONS: Array<{ value: FirstMileOrderType; label: string }> =
-  [
-    { value: 'STANDARD_ORDER', label: 'Standard' },
-    { value: 'EXPRESS_ORDER', label: 'Express' },
-  ];
-
-const FEE_PAYER_OPTIONS: Array<{ value: FirstMileFeePayer; label: string }> = [
-  { value: 'SENDER', label: 'Sender' },
-  { value: 'RECEIVER', label: 'Receiver' },
-];
-
-const ORDER_PRODUCT_CATEGORY_OPTIONS: Array<{
-  value: FirstMileOrderProductCategory;
-  label: string;
-}> = [
-  { value: 'SOLID', label: 'Solid' },
-  { value: 'FRAGILE', label: 'Fragile' },
-  { value: 'HIGH_VALUE', label: 'High value' },
-  { value: 'OVERSIZED', label: 'Oversized' },
-  { value: 'LIQUID', label: 'Liquid' },
-  { value: 'MAGNETIC_BATTERY', label: 'Magnetic battery' },
-];
-
-const resolveOrderAccessScope = (roles: string[]): OrderAccessScope => {
-  if (roles.includes('TMS_ADMIN')) {
-    return 'ADMIN_ALL';
-  }
-
-  if (roles.includes('TMS_POSTOFFICER_MANAGER')) {
-    return 'MANAGER_POST_OFFICE';
-  }
-
-  if (roles.includes('TMS_POSTOFFICER')) {
-    return 'COURIER_ASSIGNED';
-  }
-
-  if (roles.includes('TMS_CUSTOMER')) {
-    return 'CUSTOMER_CREATED';
-  }
-
-  return 'NO_ACCESS';
-};
-
-const getScopeBadgeLabel = (scope: OrderAccessScope): string => {
-  switch (scope) {
-    case 'ADMIN_ALL':
-      return 'TMS admin';
-    case 'MANAGER_POST_OFFICE':
-      return 'Post office manager';
-    case 'COURIER_ASSIGNED':
-      return 'Courier';
-    case 'CUSTOMER_CREATED':
-      return 'Customer';
-    default:
-      return 'No access';
-  }
-};
-
-const getScopeDescription = (scope: OrderAccessScope): string => {
-  switch (scope) {
-    case 'ADMIN_ALL':
-      return 'You can view all orders in the system.';
-    case 'MANAGER_POST_OFFICE':
-      return 'You can view orders assigned to the post office you manage.';
-    case 'COURIER_ASSIGNED':
-      return 'You can view orders assigned to you.';
-    case 'CUSTOMER_CREATED':
-      return 'You can only view orders created by you.';
-    default:
-      return 'Your current account does not have permission to access the order list.';
-  }
-};
-
-const formatStatusLabel = (status: FirstMileOrderStatus): string =>
-  status.replaceAll('_', ' ');
-
-const getStatusBadgeVariant = (status: FirstMileOrderStatus): BadgeVariant => {
-  switch (status) {
-    case 'CREATED':
-    case 'ASSIGNED_TO_PICKUP':
-      return 'secondary';
-    case 'PICKING_UP':
-    case 'PICKED_UP':
-    case 'AT_ORIGIN_POST_OFFICE':
-      return 'default';
-    case 'PICKUP_FAILED':
-      return 'outline';
-    case 'CANCELLED':
-    case 'LOST_OR_DAMAGED':
-      return 'destructive';
-    default:
-      return 'outline';
-  }
-};
-
-const formatDateTime = (value?: string): string => {
-  if (!value) {
-    return '--';
-  }
-
-  const parsedDate = new Date(value);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return value;
-  }
-
-  return parsedDate.toLocaleString('en-US');
-};
-
-const buildOrderAddressLabel = (
-  name?: string,
-  phone?: string,
-  addressDetail?: string
-): string => {
-  const mainLabel = [name, phone].filter(Boolean).join(' - ');
-  if (!mainLabel && !addressDetail) {
-    return '--';
-  }
-
-  if (!addressDetail) {
-    return mainLabel;
-  }
-
-  return `${mainLabel || '--'} | ${addressDetail}`;
-};
-
-const buildPostOfficeAssignmentLabel = (
-  order: FirstMileOrderDetail
-): string => {
-  const origin = order.originPostOfficeCode || '--';
-  const destination = order.destinationPostOfficeCode || '--';
-  return `${origin} -> ${destination}`;
-};
-
-const parseOptionalNumberInput = (value: string): number | undefined => {
-  const trimmedValue = value.trim();
-  if (!trimmedValue) {
-    return undefined;
-  }
-
-  const parsedValue = Number(trimmedValue);
-  if (!Number.isFinite(parsedValue)) {
-    return undefined;
-  }
-
-  return parsedValue;
-};
-
-const parseRequiredNumberInput = (value: string): number | null => {
-  const parsedValue = parseOptionalNumberInput(value);
-  return parsedValue === undefined ? null : parsedValue;
-};
-
-const toDateTimeLocalValue = (value?: string): string => {
-  if (!value) {
-    return '';
-  }
-
-  const parsedDate = new Date(value);
-  if (!Number.isNaN(parsedDate.getTime())) {
-    const timezoneOffsetInMs = parsedDate.getTimezoneOffset() * 60 * 1000;
-    return new Date(parsedDate.getTime() - timezoneOffsetInMs)
-      .toISOString()
-      .slice(0, 16);
-  }
-
-  return value.slice(0, 16);
-};
-
-const isDraftOrder = (order: FirstMileOrderDetail): boolean => {
-  return order.status === 'CREATED' && !order.isConfirm;
-};
-
-const mapOrderToFormState = (
-  order: FirstMileOrderDetail
-): CreateOrderFormState => {
-  return {
-    customerOrderCode: order.customerOrderCode || '',
-    senderName: order.senderName || '',
-    senderPhone: order.senderPhone || '',
-    senderProvinceCode: order.senderProvinceCode || '',
-    senderWardCode: order.senderWardCode || '',
-    senderAddressDetail: order.senderAddressDetail || '',
-    senderLatitude:
-      order.senderLatitude === undefined || order.senderLatitude === null
-        ? ''
-        : String(order.senderLatitude),
-    senderLongitude:
-      order.senderLongitude === undefined || order.senderLongitude === null
-        ? ''
-        : String(order.senderLongitude),
-    receiverName: order.receiverName || '',
-    receiverPhone: order.receiverPhone || '',
-    receiverProvinceCode: order.receiverProvinceCode || '',
-    receiverWardCode: order.receiverWardCode || '',
-    receiverAddressDetail: order.receiverAddressDetail || '',
-    receiverLatitude:
-      order.receiverLatitude === undefined || order.receiverLatitude === null
-        ? ''
-        : String(order.receiverLatitude),
-    receiverLongitude:
-      order.receiverLongitude === undefined || order.receiverLongitude === null
-        ? ''
-        : String(order.receiverLongitude),
-    pickupTimeStart: toDateTimeLocalValue(order.pickupTimeStart),
-    pickupTimeEnd: toDateTimeLocalValue(order.pickupTimeEnd),
-    deliveryRequestTime: order.deliveryRequestTime || 'BUSINESS_HOURS',
-    orderProductCategory: order.orderProductCategory || 'NONE',
-    orderType: order.orderType || 'STANDARD_ORDER',
-    feePayer: order.feePayer || 'SENDER',
-    isCod:
-      order.codAmount !== undefined &&
-      order.codAmount !== null &&
-      order.codAmount > 0
-        ? 'true'
-        : 'false',
-    dimensionLengthCm: '',
-    dimensionWidthCm: '',
-    dimensionHeightCm: '',
-    totalVolumeM3:
-      order.totalVolume === undefined || order.totalVolume === null
-        ? ''
-        : String(order.totalVolume),
-    note: order.note || '',
-  };
-};
-
-const mapOrderProductsToRequest = (
-  products: FirstMileOrderProductItem[] | undefined
-): CreateOrderRequest['products'] => {
-  if (!products || products.length === 0) {
-    return [];
-  }
-
-  return products
-    .filter(
-      (product) =>
-        product.name &&
-        product.productTypeId !== undefined &&
-        product.value !== undefined &&
-        product.quantity !== undefined &&
-        product.weight !== undefined
-    )
-    .map((product) => ({
-      name: product.name as string,
-      product_type_id: product.productTypeId as number,
-      value: Math.round(product.value as number),
-      quantity: product.quantity as number,
-      weight_gram: product.weight as number,
-    }));
-};
-
-const isConfirmableStatus = (status: FirstMileOrderStatus): boolean => {
-  return status === 'CREATED' || status === 'PICKUP_FAILED';
-};
-
-const formatOrderImportProductsPreview = (
-  products?: OrderImportItem['products']
-): string => {
-  if (!products || products.length === 0) {
-    return '-';
-  }
-
-  const previewText = products
-    .slice(0, 2)
-    .map((product) => {
-      const productName = product.name?.trim() || '-';
-      const quantity =
-        product.quantity === undefined || product.quantity === null
-          ? '-'
-          : String(product.quantity);
-      const productType =
-        product.product_type_code || product.product_type_name;
-
-      return productType
-        ? `${productName} x${quantity} (${productType})`
-        : `${productName} x${quantity}`;
-    })
-    .join('; ');
-
-  return products.length > 2 ? `${previewText}; ...` : previewText;
-};
+import {
+  OrderAccessScopeCard,
+  OrderCancelDialog,
+  OrderDetailDialog,
+  OrderFiltersCard,
+  OrderFormDialog,
+  OrderImportCard,
+  OrderPageHeader,
+  OrderResultsCard,
+} from './components';
+import {
+  buildOrderAddressLabel,
+  buildPostOfficeAssignmentLabel,
+  buildWardSelectOptions,
+  DEFAULT_CREATE_ORDER_FORM,
+  formatDateTime,
+  formatOrderImportProductsPreview,
+  formatStatusLabel,
+  getProvinceNameByCode,
+  getScopeBadgeLabel,
+  getScopeDescription,
+  getStatusBadgeVariant,
+  IMPORT_PREVIEW_LIMIT,
+  isConfirmableStatus,
+  isDraftOrder,
+  mapOrderProductsToRequest,
+  mapOrderToFormState,
+  normalizeLocationCode,
+  ORDER_STATUS_OPTIONS,
+  PAGE_SIZE,
+  parseOptionalNumberInput,
+  parseRequiredNumberInput,
+  resolveOrderAccessScope,
+  type CreateOrderFormState,
+  type LocationTarget,
+  type OrderFormMode,
+  type OrderStatusFilter,
+} from './orderPageModels';
 
 export const OrderListPage: React.FC = () => {
+  const dispatch = useAppDispatch();
   const profile = useAppSelector((state) => state.account.user.profile);
   const roles = profile?.roles ?? [];
   const notification = useNotification();
@@ -532,6 +123,22 @@ export const OrderListPage: React.FC = () => {
     React.useState<ValidateImportFileResponse<OrderImportItem> | null>(null);
   const [lastImportJob, setLastImportJob] =
     React.useState<ImportHistory | null>(null);
+  const [wardNamesByProvinceCode, setWardNamesByProvinceCode] = React.useState<
+    Record<string, Record<string, string>>
+  >({});
+
+  const updateCreateFormField = React.useCallback(
+    <K extends keyof CreateOrderFormState>(
+      field: K,
+      value: CreateOrderFormState[K]
+    ) => {
+      setCreateForm((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
+    },
+    []
+  );
 
   const selectedSenderProvinceCode = React.useMemo(
     () => normalizeLocationCode(createForm.senderProvinceCode),
@@ -624,20 +231,132 @@ export const OrderListPage: React.FC = () => {
     [receiverWardsData, selectedReceiverWardCode, selectedReceiverProvinceCode]
   );
 
-  const provinceNameByCode = React.useMemo(() => {
-    return provinceSelectOptions.reduce<Record<string, string>>(
-      (accumulator, province) => {
-        const provinceCode = normalizeLocationCode(province.provinceCode);
+  const provinceNameByCode = React.useMemo(
+    () => getProvinceNameByCode(provinceSelectOptions),
+    [provinceSelectOptions]
+  );
 
-        if (provinceCode) {
-          accumulator[provinceCode] = province.name;
-        }
-
-        return accumulator;
-      },
-      {}
+  const detailProvinceCodes = React.useMemo(() => {
+    const senderProvinceCode = normalizeLocationCode(
+      detailOrder?.senderProvinceCode
     );
-  }, [provinceSelectOptions]);
+    const receiverProvinceCode = normalizeLocationCode(
+      detailOrder?.receiverProvinceCode
+    );
+
+    return Array.from(
+      new Set(
+        [senderProvinceCode, receiverProvinceCode].filter(
+          (provinceCode): provinceCode is string => Boolean(provinceCode)
+        )
+      )
+    );
+  }, [detailOrder?.receiverProvinceCode, detailOrder?.senderProvinceCode]);
+
+  React.useEffect(() => {
+    const missingProvinceCodes = detailProvinceCodes.filter(
+      (provinceCode) => !(provinceCode in wardNamesByProvinceCode)
+    );
+
+    if (missingProvinceCodes.length === 0) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const fetchMissingWardNames = async () => {
+      await Promise.all(
+        missingProvinceCodes.map(async (provinceCode) => {
+          try {
+            const wardPage = await dispatch(
+              firstMileApi.endpoints.getWardsByProvinceCode.initiate(
+                {
+                  provinceCode,
+                  page: 0,
+                  size: 1000,
+                },
+                {
+                  subscribe: false,
+                }
+              )
+            ).unwrap();
+
+            if (isCancelled) {
+              return;
+            }
+
+            const wardNameByCode = wardPage.items.reduce<
+              Record<string, string>
+            >((accumulator, ward) => {
+              const wardCode = normalizeLocationCode(ward.wardCode);
+
+              if (wardCode) {
+                accumulator[wardCode] = ward.name;
+              }
+
+              return accumulator;
+            }, {});
+
+            setWardNamesByProvinceCode((prev) => ({
+              ...prev,
+              [provinceCode]: wardNameByCode,
+            }));
+          } catch {
+            if (isCancelled) {
+              return;
+            }
+
+            setWardNamesByProvinceCode((prev) => ({
+              ...prev,
+              [provinceCode]: {},
+            }));
+          }
+        })
+      );
+    };
+
+    void fetchMissingWardNames();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [detailProvinceCodes, dispatch, wardNamesByProvinceCode]);
+
+  const getProvinceLabel = React.useCallback(
+    (provinceCode?: string) => {
+      const normalizedProvinceCode = normalizeLocationCode(provinceCode);
+
+      if (!normalizedProvinceCode) {
+        return '--';
+      }
+
+      return (
+        provinceNameByCode[normalizedProvinceCode] || normalizedProvinceCode
+      );
+    },
+    [provinceNameByCode]
+  );
+
+  const getWardLabel = React.useCallback(
+    (provinceCode?: string, wardCode?: string) => {
+      const normalizedWardCode = normalizeLocationCode(wardCode);
+
+      if (!normalizedWardCode) {
+        return '--';
+      }
+
+      const normalizedProvinceCode = normalizeLocationCode(provinceCode);
+
+      if (!normalizedProvinceCode) {
+        return normalizedWardCode;
+      }
+
+      const wardNameByCode = wardNamesByProvinceCode[normalizedProvinceCode];
+
+      return wardNameByCode?.[normalizedWardCode] || normalizedWardCode;
+    },
+    [wardNamesByProvinceCode]
+  );
 
   const [createOrder, { isLoading: isCreatingOrder }] =
     useCreateOrderMutation();
@@ -1301,1297 +1020,148 @@ export const OrderListPage: React.FC = () => {
 
   return (
     <div className='space-y-6'>
-      <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
-        <div className='flex flex-col gap-2'>
-          <h1 className='text-2xl font-bold tracking-tight'>Orders</h1>
-          <p className='text-muted-foreground'>
-            Track first-mile orders based on your role and access scope.
-          </p>
-        </div>
+      <OrderPageHeader
+        canMutateOrders={canMutateOrders}
+        onCreateOrder={handleOpenCreateDialog}
+      />
 
-        {canMutateOrders ? (
-          <Button onClick={handleOpenCreateDialog}>
-            <Plus className='mr-2 h-4 w-4' />
-            New Order
-          </Button>
-        ) : null}
-      </div>
+      <OrderAccessScopeCard
+        canViewOrders={canViewOrders}
+        badgeLabel={getScopeBadgeLabel(accessScope)}
+        description={getScopeDescription(accessScope)}
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className='flex items-center gap-2'>
-            <Shield className='h-5 w-5' />
-            Access Scope
-          </CardTitle>
-          <CardDescription>
-            The system automatically limits visible orders by your current role.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className='space-y-2'>
-          <Badge
-            variant={canViewOrders ? 'secondary' : 'destructive'}
-            className='w-fit'
-          >
-            {getScopeBadgeLabel(accessScope)}
-          </Badge>
-          <p className='text-sm text-muted-foreground'>
-            {getScopeDescription(accessScope)}
-          </p>
-        </CardContent>
-      </Card>
+      <OrderFiltersCard
+        canViewOrders={canViewOrders}
+        keywordInput={keywordInput}
+        statusInput={statusInput}
+        statusOptions={ORDER_STATUS_OPTIONS}
+        isFetching={isFetching}
+        onKeywordInputChange={setKeywordInput}
+        onStatusInputChange={setStatusInput}
+        onApplyFilters={handleApplyFilters}
+        onRefresh={() => {
+          void refetch();
+        }}
+        formatStatusLabel={formatStatusLabel}
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Search & Filters</CardTitle>
-          <CardDescription>
-            Search by order code, customer order code, sender, or receiver
-            name/phone.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form
-            onSubmit={handleApplyFilters}
-            className='flex flex-col gap-3 md:flex-row md:items-center'
-          >
-            <div className='relative flex-1'>
-              <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-              <Input
-                className='pl-10'
-                value={keywordInput}
-                onChange={(event) => setKeywordInput(event.target.value)}
-                placeholder='Search orders...'
-                disabled={!canViewOrders}
-              />
-            </div>
+      <OrderImportCard
+        canMutateOrders={canMutateOrders}
+        isImportFlowBusy={isImportFlowBusy}
+        isExportingTemplate={isExportingTemplate}
+        isValidatingImport={isValidatingImport}
+        isImportingOrders={isImportingOrders}
+        importFileInputKey={importFileInputKey}
+        selectedImportFile={selectedImportFile}
+        validateImportResult={validateImportResult}
+        validatedPreviewItems={validatedPreviewItems}
+        importPreviewLimit={IMPORT_PREVIEW_LIMIT}
+        lastImportJob={lastImportJob}
+        onDownloadTemplate={() => {
+          void handleDownloadTemplate();
+        }}
+        onSelectImportFile={handleSelectImportFile}
+        onValidateImportFile={() => {
+          void handleValidateImportFile();
+        }}
+        onImportFile={() => {
+          void handleImportFile();
+        }}
+        formatProductsPreview={formatOrderImportProductsPreview}
+      />
 
-            <Select
-              value={statusInput}
-              onValueChange={(value) =>
-                setStatusInput(value as OrderStatusFilter)
-              }
-              disabled={!canViewOrders}
-            >
-              <SelectTrigger className='w-full md:w-[220px]'>
-                <SelectValue placeholder='Filter by status' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='ALL'>All statuses</SelectItem>
-                {ORDER_STATUS_OPTIONS.map((statusOption) => (
-                  <SelectItem key={statusOption} value={statusOption}>
-                    {formatStatusLabel(statusOption)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      <OrderResultsCard
+        canViewOrders={canViewOrders}
+        canMutateOrders={canMutateOrders}
+        data={data}
+        isLoading={isLoading}
+        isFetching={isFetching}
+        loadingOrderActionId={loadingOrderActionId}
+        confirmingOrderId={confirmingOrderId}
+        onViewDetail={(orderId) => {
+          void handleOpenOrderDetail(orderId);
+        }}
+        onEdit={(order) => {
+          void handleOpenEditOrder(order);
+        }}
+        onRequestCancel={handleRequestCancelOrder}
+        onRequestDelete={handleRequestDeleteOrder}
+        onConfirm={(order) => {
+          void handleConfirmOrder(order);
+        }}
+        onPreviousPage={() => setPage((prev) => Math.max(prev - 1, 0))}
+        onNextPage={() => setPage((prev) => prev + 1)}
+        formatStatusLabel={formatStatusLabel}
+        getStatusBadgeVariant={getStatusBadgeVariant}
+        isDraftOrder={isDraftOrder}
+        isConfirmableStatus={isConfirmableStatus}
+        buildOrderAddressLabel={buildOrderAddressLabel}
+        buildPostOfficeAssignmentLabel={buildPostOfficeAssignmentLabel}
+        formatDateTime={formatDateTime}
+      />
 
-            <Button type='submit' disabled={!canViewOrders}>
-              Apply
-            </Button>
-            <Button
-              type='button'
-              variant='outline'
-              onClick={() => refetch()}
-              disabled={!canViewOrders || isFetching}
-            >
-              <RefreshCw className='mr-2 h-4 w-4' />
-              Refresh
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+      <OrderFormDialog
+        open={isCreateDialogOpen}
+        orderFormMode={orderFormMode}
+        isSubmittingOrder={isSubmittingOrder}
+        createForm={createForm}
+        selectedSenderProvinceCode={selectedSenderProvinceCode}
+        selectedSenderWardCode={selectedSenderWardCode}
+        selectedReceiverProvinceCode={selectedReceiverProvinceCode}
+        selectedReceiverWardCode={selectedReceiverWardCode}
+        provinceSelectOptions={provinceSelectOptions}
+        senderWardSelectOptions={senderWardSelectOptions}
+        receiverWardSelectOptions={receiverWardSelectOptions}
+        isFetchingSenderWards={isFetchingSenderWards}
+        isFetchingReceiverWards={isFetchingReceiverWards}
+        geocodingTarget={geocodingTarget}
+        onOpenChange={setIsCreateDialogOpen}
+        onSubmit={handleCreateOrder}
+        onFormChange={updateCreateFormField}
+        onGeocodeFromAddress={(target) => {
+          void handleGeocodeFromAddress(target);
+        }}
+        onMapCoordinateChange={handleMapCoordinateChange}
+        normalizeLocationCode={normalizeLocationCode}
+        parseOptionalNumberInput={parseOptionalNumberInput}
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Excel Import</CardTitle>
-          <CardDescription>
-            Download template, validate the completed file, then import orders.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className='space-y-4'>
-          <div className='flex flex-col gap-2 lg:flex-row lg:items-center'>
-            <Button
-              type='button'
-              variant='outline'
-              onClick={handleDownloadTemplate}
-              disabled={!canMutateOrders || isImportFlowBusy}
-            >
-              {isExportingTemplate ? (
-                <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-              ) : (
-                <Download className='h-4 w-4 mr-2' />
-              )}
-              Download template
-            </Button>
-
-            <Input
-              key={importFileInputKey}
-              type='file'
-              accept='.xlsx,.xls'
-              onChange={handleSelectImportFile}
-              disabled={!canMutateOrders || isImportFlowBusy}
-              className='lg:max-w-sm'
-            />
-
-            <Button
-              type='button'
-              variant='outline'
-              onClick={handleValidateImportFile}
-              disabled={
-                !canMutateOrders || !selectedImportFile || isImportFlowBusy
-              }
-            >
-              {isValidatingImport && (
-                <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-              )}
-              Validate file
-            </Button>
-
-            <Button
-              type='button'
-              onClick={handleImportFile}
-              disabled={
-                !canMutateOrders ||
-                !selectedImportFile ||
-                !validateImportResult?.is_success ||
-                isImportFlowBusy
-              }
-            >
-              {isImportingOrders ? (
-                <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-              ) : (
-                <FileUp className='h-4 w-4 mr-2' />
-              )}
-              Import file
-            </Button>
-          </div>
-
-          {!canMutateOrders && (
-            <p className='text-xs text-muted-foreground'>
-              Import actions require TMS_ADMIN or TMS_CUSTOMER permission.
-            </p>
-          )}
-
-          {selectedImportFile && (
-            <p className='text-sm text-muted-foreground'>
-              Selected file: {selectedImportFile.name}
-            </p>
-          )}
-
-          {validateImportResult && (
-            <div className='rounded-lg border p-3 space-y-3'>
-              <div className='flex flex-wrap items-center gap-x-4 gap-y-1'>
-                <p className='text-sm font-medium'>
-                  Validation:{' '}
-                  {validateImportResult.is_success ? 'Success' : 'Failed'}
-                </p>
-                <p className='text-xs text-muted-foreground'>
-                  File ID: {validateImportResult.file_id}
-                </p>
-                <p className='text-xs text-muted-foreground'>
-                  Parsed rows: {validateImportResult.data.length}
-                </p>
-              </div>
-
-              {validateImportResult.error_message && (
-                <pre className='whitespace-pre-wrap rounded-md bg-muted p-2 text-xs text-destructive'>
-                  {validateImportResult.error_message}
-                </pre>
-              )}
-
-              {validatedPreviewItems.length > 0 && (
-                <div className='space-y-2'>
-                  <p className='text-xs text-muted-foreground'>
-                    Preview {validatedPreviewItems.length}/
-                    {validateImportResult.data.length} validated order(s)
-                  </p>
-
-                  <div className='grid gap-2 sm:grid-cols-2'>
-                    {validatedPreviewItems.map((item, index) => (
-                      <div
-                        key={`${item.customer_order_code || 'order'}-${index}`}
-                        className='rounded-md border p-2 text-xs space-y-1'
-                      >
-                        <p className='font-medium'>
-                          {item.customer_order_code || '-'} |{' '}
-                          {item.order_type || '-'} | {item.fee_payer || '-'}
-                        </p>
-                        <p className='text-muted-foreground'>
-                          Sender:{' '}
-                          {item.sender_name
-                            ? `${item.sender_name}${item.sender_phone ? ` (${item.sender_phone})` : ''}`
-                            : '-'}
-                        </p>
-                        <p className='text-muted-foreground'>
-                          Receiver:{' '}
-                          {item.receiver_name
-                            ? `${item.receiver_name}${item.receiver_phone ? ` (${item.receiver_phone})` : ''}`
-                            : '-'}
-                        </p>
-                        <p className='text-muted-foreground'>
-                          COD: {item.is_cod ? 'Yes' : 'No'} | Products:{' '}
-                          {item.products?.length ?? 0}
-                        </p>
-                        <p className='text-muted-foreground'>
-                          Product preview:{' '}
-                          {formatOrderImportProductsPreview(item.products)}
-                        </p>
-                        <p className='text-muted-foreground'>
-                          Source rows:{' '}
-                          {item.source_rows?.length
-                            ? item.source_rows.join(', ')
-                            : '-'}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-
-                  {validateImportResult.data.length > IMPORT_PREVIEW_LIMIT && (
-                    <p className='text-xs text-muted-foreground'>
-                      Showing only the first {IMPORT_PREVIEW_LIMIT} order(s).
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {lastImportJob && (
-            <div className='rounded-lg border p-3 space-y-1'>
-              <p className='text-sm font-medium'>Latest import job</p>
-              <p className='text-xs text-muted-foreground'>
-                #{lastImportJob.id} - {lastImportJob.file_name}
-              </p>
-              <p className='text-xs text-muted-foreground'>
-                Status: {lastImportJob.status} | Success/Failed:{' '}
-                {lastImportJob.success_records}/{lastImportJob.failed_records}
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Results ({data?.totalItems ?? 0})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {!canViewOrders ? (
-            <p className='text-muted-foreground'>
-              You do not have permission to access order data.
-            </p>
-          ) : isLoading ? (
-            <div className='flex items-center gap-2 text-muted-foreground'>
-              <Loader2 className='h-4 w-4 animate-spin' />
-              Loading orders...
-            </div>
-          ) : data && data.items.length > 0 ? (
-            <div className='space-y-3'>
-              {data.items.map((order) => (
-                <div
-                  key={order.id}
-                  className='rounded-lg border p-3 flex flex-col gap-2'
-                >
-                  <div className='flex flex-wrap items-center justify-between gap-2'>
-                    <div>
-                      <p className='font-medium'>{order.orderCode}</p>
-                      <p className='text-xs text-muted-foreground'>
-                        Customer order: {order.customerOrderCode || '--'}
-                      </p>
-                    </div>
-                    <div className='flex items-center gap-2'>
-                      <Badge variant={getStatusBadgeVariant(order.status)}>
-                        {formatStatusLabel(order.status)}
-                      </Badge>
-                      <Badge variant='outline'>
-                        {order.isConfirm ? 'Confirmed' : 'Pending confirm'}
-                      </Badge>
-                      <Button
-                        size='sm'
-                        variant='outline'
-                        onClick={() => void handleOpenOrderDetail(order.id)}
-                        disabled={loadingOrderActionId === order.id}
-                      >
-                        {loadingOrderActionId === order.id ? (
-                          <Loader2 className='mr-2 h-3.5 w-3.5 animate-spin' />
-                        ) : (
-                          <Eye className='mr-2 h-3.5 w-3.5' />
-                        )}
-                        Details
-                      </Button>
-                      {canMutateOrders && isDraftOrder(order) ? (
-                        <>
-                          <Button
-                            size='sm'
-                            variant='outline'
-                            onClick={() => void handleOpenEditOrder(order)}
-                            disabled={loadingOrderActionId === order.id}
-                          >
-                            <Pencil className='mr-2 h-3.5 w-3.5' />
-                            Edit
-                          </Button>
-                          <Button
-                            size='sm'
-                            variant='outline'
-                            onClick={() => handleRequestCancelOrder(order)}
-                          >
-                            <XCircle className='mr-2 h-3.5 w-3.5' />
-                            Cancel
-                          </Button>
-                          <Button
-                            size='sm'
-                            variant='destructive'
-                            onClick={() => handleRequestDeleteOrder(order)}
-                          >
-                            <Trash2 className='mr-2 h-3.5 w-3.5' />
-                            Delete
-                          </Button>
-                          {isConfirmableStatus(order.status) ? (
-                            <Button
-                              size='sm'
-                              variant='outline'
-                              onClick={() => void handleConfirmOrder(order)}
-                              disabled={confirmingOrderId === order.id}
-                            >
-                              {confirmingOrderId === order.id ? (
-                                <Loader2 className='mr-2 h-3.5 w-3.5 animate-spin' />
-                              ) : (
-                                <CheckCircle2 className='mr-2 h-3.5 w-3.5' />
-                              )}
-                              Confirm
-                            </Button>
-                          ) : null}
-                        </>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <p className='text-xs text-muted-foreground'>
-                    Sender:{' '}
-                    {buildOrderAddressLabel(
-                      order.senderName,
-                      order.senderPhone,
-                      order.senderAddressDetail
-                    )}
-                  </p>
-                  <p className='text-xs text-muted-foreground'>
-                    Receiver:{' '}
-                    {buildOrderAddressLabel(
-                      order.receiverName,
-                      order.receiverPhone,
-                      order.receiverAddressDetail
-                    )}
-                  </p>
-                  <p className='text-xs text-muted-foreground'>
-                    Assigned post office:{' '}
-                    {buildPostOfficeAssignmentLabel(order)}
-                  </p>
-                  <p className='text-xs text-muted-foreground'>
-                    Pickup window: {formatDateTime(order.pickupTimeStart)} -{' '}
-                    {formatDateTime(order.pickupTimeEnd)}
-                  </p>
-                  <p className='text-xs text-muted-foreground'>
-                    Created by: {order.createdBy || '--'} | Updated:{' '}
-                    {formatDateTime(order.updatedAt)}
-                  </p>
-                </div>
-              ))}
-
-              <div className='flex items-center justify-between pt-2'>
-                <Button
-                  variant='outline'
-                  onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
-                  disabled={!data.hasPrevious || isFetching}
-                >
-                  Previous
-                </Button>
-                <span className='text-sm text-muted-foreground'>
-                  Page {data.currentPage + 1} / {Math.max(data.totalPages, 1)}
-                </span>
-                <Button
-                  variant='outline'
-                  onClick={() => setPage((prev) => prev + 1)}
-                  disabled={!data.hasNext || isFetching}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <p className='text-muted-foreground'>No orders found.</p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-4xl'>
-          <DialogHeader>
-            <DialogTitle>
-              {orderFormMode === 'create' ? 'Create Order' : 'Edit Order'}
-            </DialogTitle>
-            <DialogDescription>
-              {orderFormMode === 'create'
-                ? 'Create a first-mile order as customer or admin. Required fields follow backend validation rules.'
-                : 'Update an existing first-mile order. Only newly created and unconfirmed orders can be edited.'}
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleCreateOrder} className='space-y-5'>
-            <div className='grid gap-4 md:grid-cols-2'>
-              <div className='space-y-2'>
-                <Label htmlFor='customerOrderCode'>Customer order code *</Label>
-                <Input
-                  id='customerOrderCode'
-                  value={createForm.customerOrderCode}
-                  onChange={(event) =>
-                    setCreateForm((prev) => ({
-                      ...prev,
-                      customerOrderCode: event.target.value,
-                    }))
-                  }
-                  placeholder='CUS-ORDER-001'
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='note'>Note</Label>
-                <Textarea
-                  id='note'
-                  value={createForm.note}
-                  onChange={(event) =>
-                    setCreateForm((prev) => ({
-                      ...prev,
-                      note: event.target.value,
-                    }))
-                  }
-                  placeholder='Optional note for pickup/delivery'
-                  rows={2}
-                />
-              </div>
-            </div>
-
-            <div className='space-y-3 rounded-md border p-3'>
-              <h3 className='text-sm font-semibold'>Sender information</h3>
-              <div className='grid gap-3 md:grid-cols-2'>
-                <div className='space-y-2'>
-                  <Label htmlFor='senderName'>Sender name *</Label>
-                  <Input
-                    id='senderName'
-                    value={createForm.senderName}
-                    onChange={(event) =>
-                      setCreateForm((prev) => ({
-                        ...prev,
-                        senderName: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className='space-y-2'>
-                  <Label htmlFor='senderPhone'>Sender phone *</Label>
-                  <Input
-                    id='senderPhone'
-                    value={createForm.senderPhone}
-                    onChange={(event) =>
-                      setCreateForm((prev) => ({
-                        ...prev,
-                        senderPhone: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className='space-y-2'>
-                  <Label htmlFor='senderProvinceCode'>Sender province *</Label>
-                  <Select
-                    value={selectedSenderProvinceCode || undefined}
-                    onValueChange={(value) =>
-                      setCreateForm((prev) => ({
-                        ...prev,
-                        senderProvinceCode: value,
-                        senderWardCode: '',
-                      }))
-                    }
-                  >
-                    <SelectTrigger id='senderProvinceCode'>
-                      <SelectValue placeholder='Select province' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {provinceSelectOptions.map((province) => {
-                        const provinceCode = normalizeLocationCode(
-                          province.provinceCode
-                        );
-
-                        if (!provinceCode) {
-                          return null;
-                        }
-
-                        return (
-                          <SelectItem key={provinceCode} value={provinceCode}>
-                            {province.name} ({provinceCode})
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className='space-y-2'>
-                  <Label htmlFor='senderWardCode'>Sender ward *</Label>
-                  <Select
-                    value={selectedSenderWardCode || undefined}
-                    onValueChange={(value) =>
-                      setCreateForm((prev) => ({
-                        ...prev,
-                        senderWardCode: value,
-                      }))
-                    }
-                    disabled={!selectedSenderProvinceCode}
-                  >
-                    <SelectTrigger id='senderWardCode'>
-                      <SelectValue
-                        placeholder={
-                          selectedSenderProvinceCode
-                            ? 'Select ward'
-                            : 'Select province first'
-                        }
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selectedSenderProvinceCode && isFetchingSenderWards ? (
-                        <p className='px-2 py-1.5 text-sm text-muted-foreground'>
-                          Loading wards...
-                        </p>
-                      ) : senderWardSelectOptions.length > 0 ? (
-                        senderWardSelectOptions.map((ward) => {
-                          const wardCode = normalizeLocationCode(ward.wardCode);
-
-                          if (!wardCode) {
-                            return null;
-                          }
-
-                          return (
-                            <SelectItem key={wardCode} value={wardCode}>
-                              {ward.name} ({wardCode})
-                            </SelectItem>
-                          );
-                        })
-                      ) : (
-                        <p className='px-2 py-1.5 text-sm text-muted-foreground'>
-                          No wards available.
-                        </p>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className='space-y-2 md:col-span-2'>
-                  <Label htmlFor='senderAddressDetail'>Sender address *</Label>
-                  <Input
-                    id='senderAddressDetail'
-                    value={createForm.senderAddressDetail}
-                    onChange={(event) =>
-                      setCreateForm((prev) => ({
-                        ...prev,
-                        senderAddressDetail: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className='space-y-2 md:col-span-2'>
-                  <Label>Sender coordinates *</Label>
-                  <div className='grid gap-2 md:grid-cols-2'>
-                    <Input
-                      value={createForm.senderLatitude}
-                      placeholder='Latitude'
-                      readOnly
-                    />
-                    <Input
-                      value={createForm.senderLongitude}
-                      placeholder='Longitude'
-                      readOnly
-                    />
-                  </div>
-                  <div className='flex flex-wrap gap-2'>
-                    <Button
-                      type='button'
-                      variant='outline'
-                      onClick={() => void handleGeocodeFromAddress('sender')}
-                      disabled={geocodingTarget === 'sender'}
-                    >
-                      {geocodingTarget === 'sender' ? (
-                        <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                      ) : null}
-                      Geocode from address
-                    </Button>
-                  </div>
-                  <CoordinatePickerMap
-                    latitude={parseOptionalNumberInput(
-                      createForm.senderLatitude
-                    )}
-                    longitude={parseOptionalNumberInput(
-                      createForm.senderLongitude
-                    )}
-                    onChange={(latitude, longitude) =>
-                      handleMapCoordinateChange('sender', latitude, longitude)
-                    }
-                    className='h-56'
-                  />
-                  <p className='text-xs text-muted-foreground'>
-                    Click on the map to pick sender coordinates.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className='space-y-3 rounded-md border p-3'>
-              <h3 className='text-sm font-semibold'>Receiver information</h3>
-              <div className='grid gap-3 md:grid-cols-2'>
-                <div className='space-y-2'>
-                  <Label htmlFor='receiverName'>Receiver name *</Label>
-                  <Input
-                    id='receiverName'
-                    value={createForm.receiverName}
-                    onChange={(event) =>
-                      setCreateForm((prev) => ({
-                        ...prev,
-                        receiverName: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className='space-y-2'>
-                  <Label htmlFor='receiverPhone'>Receiver phone *</Label>
-                  <Input
-                    id='receiverPhone'
-                    value={createForm.receiverPhone}
-                    onChange={(event) =>
-                      setCreateForm((prev) => ({
-                        ...prev,
-                        receiverPhone: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className='space-y-2'>
-                  <Label htmlFor='receiverProvinceCode'>
-                    Receiver province *
-                  </Label>
-                  <Select
-                    value={selectedReceiverProvinceCode || undefined}
-                    onValueChange={(value) =>
-                      setCreateForm((prev) => ({
-                        ...prev,
-                        receiverProvinceCode: value,
-                        receiverWardCode: '',
-                      }))
-                    }
-                  >
-                    <SelectTrigger id='receiverProvinceCode'>
-                      <SelectValue placeholder='Select province' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {provinceSelectOptions.map((province) => {
-                        const provinceCode = normalizeLocationCode(
-                          province.provinceCode
-                        );
-
-                        if (!provinceCode) {
-                          return null;
-                        }
-
-                        return (
-                          <SelectItem key={provinceCode} value={provinceCode}>
-                            {province.name} ({provinceCode})
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className='space-y-2'>
-                  <Label htmlFor='receiverWardCode'>Receiver ward *</Label>
-                  <Select
-                    value={selectedReceiverWardCode || undefined}
-                    onValueChange={(value) =>
-                      setCreateForm((prev) => ({
-                        ...prev,
-                        receiverWardCode: value,
-                      }))
-                    }
-                    disabled={!selectedReceiverProvinceCode}
-                  >
-                    <SelectTrigger id='receiverWardCode'>
-                      <SelectValue
-                        placeholder={
-                          selectedReceiverProvinceCode
-                            ? 'Select ward'
-                            : 'Select province first'
-                        }
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selectedReceiverProvinceCode &&
-                      isFetchingReceiverWards ? (
-                        <p className='px-2 py-1.5 text-sm text-muted-foreground'>
-                          Loading wards...
-                        </p>
-                      ) : receiverWardSelectOptions.length > 0 ? (
-                        receiverWardSelectOptions.map((ward) => {
-                          const wardCode = normalizeLocationCode(ward.wardCode);
-
-                          if (!wardCode) {
-                            return null;
-                          }
-
-                          return (
-                            <SelectItem key={wardCode} value={wardCode}>
-                              {ward.name} ({wardCode})
-                            </SelectItem>
-                          );
-                        })
-                      ) : (
-                        <p className='px-2 py-1.5 text-sm text-muted-foreground'>
-                          No wards available.
-                        </p>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className='space-y-2 md:col-span-2'>
-                  <Label htmlFor='receiverAddressDetail'>
-                    Receiver address *
-                  </Label>
-                  <Input
-                    id='receiverAddressDetail'
-                    value={createForm.receiverAddressDetail}
-                    onChange={(event) =>
-                      setCreateForm((prev) => ({
-                        ...prev,
-                        receiverAddressDetail: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className='space-y-2 md:col-span-2'>
-                  <Label>Receiver coordinates *</Label>
-                  <div className='grid gap-2 md:grid-cols-2'>
-                    <Input
-                      value={createForm.receiverLatitude}
-                      placeholder='Latitude'
-                      readOnly
-                    />
-                    <Input
-                      value={createForm.receiverLongitude}
-                      placeholder='Longitude'
-                      readOnly
-                    />
-                  </div>
-                  <div className='flex flex-wrap gap-2'>
-                    <Button
-                      type='button'
-                      variant='outline'
-                      onClick={() => void handleGeocodeFromAddress('receiver')}
-                      disabled={geocodingTarget === 'receiver'}
-                    >
-                      {geocodingTarget === 'receiver' ? (
-                        <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                      ) : null}
-                      Geocode from address
-                    </Button>
-                  </div>
-                  <CoordinatePickerMap
-                    latitude={parseOptionalNumberInput(
-                      createForm.receiverLatitude
-                    )}
-                    longitude={parseOptionalNumberInput(
-                      createForm.receiverLongitude
-                    )}
-                    onChange={(latitude, longitude) =>
-                      handleMapCoordinateChange('receiver', latitude, longitude)
-                    }
-                    className='h-56'
-                  />
-                  <p className='text-xs text-muted-foreground'>
-                    Click on the map to pick receiver coordinates.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className='space-y-3 rounded-md border p-3'>
-              <h3 className='text-sm font-semibold'>Order options</h3>
-              <div className='grid gap-3 md:grid-cols-2'>
-                <div className='space-y-2'>
-                  <Label>Delivery request time *</Label>
-                  <Select
-                    value={createForm.deliveryRequestTime}
-                    onValueChange={(value) =>
-                      setCreateForm((prev) => ({
-                        ...prev,
-                        deliveryRequestTime:
-                          value as FirstMileDeliveryRequestTime,
-                      }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DELIVERY_REQUEST_TIME_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className='space-y-2'>
-                  <Label>Order type *</Label>
-                  <Select
-                    value={createForm.orderType}
-                    onValueChange={(value) =>
-                      setCreateForm((prev) => ({
-                        ...prev,
-                        orderType: value as FirstMileOrderType,
-                      }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ORDER_TYPE_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className='space-y-2'>
-                  <Label>Fee payer *</Label>
-                  <Select
-                    value={createForm.feePayer}
-                    onValueChange={(value) =>
-                      setCreateForm((prev) => ({
-                        ...prev,
-                        feePayer: value as FirstMileFeePayer,
-                      }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {FEE_PAYER_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className='space-y-2'>
-                  <Label>COD</Label>
-                  <Select
-                    value={createForm.isCod}
-                    onValueChange={(value) =>
-                      setCreateForm((prev) => ({
-                        ...prev,
-                        isCod: value as 'true' | 'false',
-                      }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='false'>No COD</SelectItem>
-                      <SelectItem value='true'>COD</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className='space-y-2 md:col-span-2'>
-                  <Label>Product category</Label>
-                  <Select
-                    value={createForm.orderProductCategory}
-                    onValueChange={(value) =>
-                      setCreateForm((prev) => ({
-                        ...prev,
-                        orderProductCategory:
-                          value as CreateOrderFormState['orderProductCategory'],
-                      }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder='Select category (optional)' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='NONE'>No category</SelectItem>
-                      {ORDER_PRODUCT_CATEGORY_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-
-            <div className='space-y-3 rounded-md border p-3'>
-              <h3 className='text-sm font-semibold'>Pickup and dimensions</h3>
-              <div className='grid gap-3 md:grid-cols-2'>
-                <div className='space-y-2'>
-                  <Label htmlFor='pickupTimeStart'>Pickup start</Label>
-                  <Input
-                    id='pickupTimeStart'
-                    type='datetime-local'
-                    value={createForm.pickupTimeStart}
-                    onChange={(event) =>
-                      setCreateForm((prev) => ({
-                        ...prev,
-                        pickupTimeStart: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className='space-y-2'>
-                  <Label htmlFor='pickupTimeEnd'>Pickup end</Label>
-                  <Input
-                    id='pickupTimeEnd'
-                    type='datetime-local'
-                    value={createForm.pickupTimeEnd}
-                    onChange={(event) =>
-                      setCreateForm((prev) => ({
-                        ...prev,
-                        pickupTimeEnd: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className='space-y-2'>
-                  <Label htmlFor='dimensionLengthCm'>Length (cm)</Label>
-                  <Input
-                    id='dimensionLengthCm'
-                    type='number'
-                    step='any'
-                    value={createForm.dimensionLengthCm}
-                    onChange={(event) =>
-                      setCreateForm((prev) => ({
-                        ...prev,
-                        dimensionLengthCm: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className='space-y-2'>
-                  <Label htmlFor='dimensionWidthCm'>Width (cm)</Label>
-                  <Input
-                    id='dimensionWidthCm'
-                    type='number'
-                    step='any'
-                    value={createForm.dimensionWidthCm}
-                    onChange={(event) =>
-                      setCreateForm((prev) => ({
-                        ...prev,
-                        dimensionWidthCm: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className='space-y-2'>
-                  <Label htmlFor='dimensionHeightCm'>Height (cm)</Label>
-                  <Input
-                    id='dimensionHeightCm'
-                    type='number'
-                    step='any'
-                    value={createForm.dimensionHeightCm}
-                    onChange={(event) =>
-                      setCreateForm((prev) => ({
-                        ...prev,
-                        dimensionHeightCm: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className='space-y-2'>
-                  <Label htmlFor='totalVolumeM3'>Total volume (m3)</Label>
-                  <Input
-                    id='totalVolumeM3'
-                    type='number'
-                    step='any'
-                    value={createForm.totalVolumeM3}
-                    onChange={(event) =>
-                      setCreateForm((prev) => ({
-                        ...prev,
-                        totalVolumeM3: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button
-                type='button'
-                variant='outline'
-                onClick={() => setIsCreateDialogOpen(false)}
-                disabled={isSubmittingOrder}
-              >
-                Cancel
-              </Button>
-              <Button type='submit' disabled={isSubmittingOrder}>
-                {isSubmittingOrder ? (
-                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                ) : null}
-                {orderFormMode === 'create' ? 'Create order' : 'Update order'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
+      <OrderDetailDialog
         open={isDetailDialogOpen}
+        detailOrder={detailOrder}
         onOpenChange={(open) => {
           setIsDetailDialogOpen(open);
           if (!open) {
             setDetailOrder(null);
           }
         }}
-      >
-        <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-3xl'>
-          <DialogHeader>
-            <DialogTitle>Order Details</DialogTitle>
-            <DialogDescription>
-              View full information of a first-mile order.
-            </DialogDescription>
-          </DialogHeader>
+        formatStatusLabel={formatStatusLabel}
+        buildOrderAddressLabel={buildOrderAddressLabel}
+        getProvinceLabel={getProvinceLabel}
+        getWardLabel={getWardLabel}
+        formatDateTime={formatDateTime}
+      />
 
-          {!detailOrder ? (
-            <div className='flex items-center gap-2 text-muted-foreground'>
-              <Loader2 className='h-4 w-4 animate-spin' />
-              Loading order details...
-            </div>
-          ) : (
-            <div className='space-y-4 text-sm'>
-              <div className='grid gap-3 md:grid-cols-2'>
-                <div>
-                  <p className='text-muted-foreground'>Order code</p>
-                  <p className='font-medium'>{detailOrder.orderCode}</p>
-                </div>
-                <div>
-                  <p className='text-muted-foreground'>Customer order code</p>
-                  <p className='font-medium'>
-                    {detailOrder.customerOrderCode || '--'}
-                  </p>
-                </div>
-                <div>
-                  <p className='text-muted-foreground'>Status</p>
-                  <p className='font-medium'>
-                    {formatStatusLabel(detailOrder.status)}
-                  </p>
-                </div>
-                <div>
-                  <p className='text-muted-foreground'>Confirmation</p>
-                  <p className='font-medium'>
-                    {detailOrder.isConfirm ? 'Confirmed' : 'Pending confirm'}
-                  </p>
-                </div>
-              </div>
-
-              <div className='space-y-2 rounded-md border p-3'>
-                <p className='font-semibold'>Sender</p>
-                <p>
-                  {buildOrderAddressLabel(
-                    detailOrder.senderName,
-                    detailOrder.senderPhone,
-                    detailOrder.senderAddressDetail
-                  )}
-                </p>
-                <p className='text-muted-foreground'>
-                  {detailOrder.senderProvinceCode || '--'} /{' '}
-                  {detailOrder.senderWardCode || '--'}
-                </p>
-                <p className='text-muted-foreground'>
-                  Coordinates: {detailOrder.senderLatitude ?? '--'},
-                  {detailOrder.senderLongitude ?? '--'}
-                </p>
-              </div>
-
-              <div className='space-y-2 rounded-md border p-3'>
-                <p className='font-semibold'>Receiver</p>
-                <p>
-                  {buildOrderAddressLabel(
-                    detailOrder.receiverName,
-                    detailOrder.receiverPhone,
-                    detailOrder.receiverAddressDetail
-                  )}
-                </p>
-                <p className='text-muted-foreground'>
-                  {detailOrder.receiverProvinceCode || '--'} /{' '}
-                  {detailOrder.receiverWardCode || '--'}
-                </p>
-                <p className='text-muted-foreground'>
-                  Coordinates: {detailOrder.receiverLatitude ?? '--'},
-                  {detailOrder.receiverLongitude ?? '--'}
-                </p>
-              </div>
-
-              <div className='grid gap-3 md:grid-cols-2'>
-                <div>
-                  <p className='text-muted-foreground'>Pickup start</p>
-                  <p className='font-medium'>
-                    {formatDateTime(detailOrder.pickupTimeStart)}
-                  </p>
-                </div>
-                <div>
-                  <p className='text-muted-foreground'>Pickup end</p>
-                  <p className='font-medium'>
-                    {formatDateTime(detailOrder.pickupTimeEnd)}
-                  </p>
-                </div>
-                <div>
-                  <p className='text-muted-foreground'>Delivery request time</p>
-                  <p className='font-medium'>
-                    {detailOrder.deliveryRequestTime || '--'}
-                  </p>
-                </div>
-                <div>
-                  <p className='text-muted-foreground'>Order type</p>
-                  <p className='font-medium'>{detailOrder.orderType || '--'}</p>
-                </div>
-                <div>
-                  <p className='text-muted-foreground'>Fee payer</p>
-                  <p className='font-medium'>{detailOrder.feePayer || '--'}</p>
-                </div>
-                <div>
-                  <p className='text-muted-foreground'>Payment status</p>
-                  <p className='font-medium'>
-                    {detailOrder.paymentStatus || '--'}
-                  </p>
-                </div>
-                <div>
-                  <p className='text-muted-foreground'>Total weight</p>
-                  <p className='font-medium'>
-                    {detailOrder.totalWeight ?? '--'}
-                  </p>
-                </div>
-                <div>
-                  <p className='text-muted-foreground'>Total value</p>
-                  <p className='font-medium'>
-                    {detailOrder.totalValue ?? '--'}
-                  </p>
-                </div>
-                <div>
-                  <p className='text-muted-foreground'>Total volume</p>
-                  <p className='font-medium'>
-                    {detailOrder.totalVolume ?? '--'}
-                  </p>
-                </div>
-                <div>
-                  <p className='text-muted-foreground'>COD amount</p>
-                  <p className='font-medium'>{detailOrder.codAmount ?? '--'}</p>
-                </div>
-              </div>
-
-              <div className='space-y-2'>
-                <p className='text-muted-foreground'>Products</p>
-                {detailOrder.products && detailOrder.products.length > 0 ? (
-                  <div className='space-y-2'>
-                    {detailOrder.products.map((product, index) => (
-                      <div
-                        key={`${detailOrder.id}-${product.id ?? index}`}
-                        className='rounded-md border p-2'
-                      >
-                        <p className='font-medium'>{product.name || '--'}</p>
-                        <p className='text-xs text-muted-foreground'>
-                          Qty: {product.quantity ?? '--'} | Weight:{' '}
-                          {product.weight ?? '--'}g | Value:{' '}
-                          {product.value ?? '--'}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className='text-muted-foreground'>No product details.</p>
-                )}
-              </div>
-
-              {detailOrder.note ? (
-                <div>
-                  <p className='text-muted-foreground'>Note</p>
-                  <p>{detailOrder.note}</p>
-                </div>
-              ) : null}
-
-              <div className='text-xs text-muted-foreground'>
-                Created: {formatDateTime(detailOrder.createdAt)} | Updated:{' '}
-                {formatDateTime(detailOrder.updatedAt)} | Updated by:{' '}
-                {detailOrder.updatedBy || '--'}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={Boolean(cancelTarget)}
+      <OrderCancelDialog
+        cancelTarget={cancelTarget}
+        cancelReason={cancelReason}
+        isCancellingOrder={isCancellingOrder}
         onOpenChange={(open) => {
           if (!open) {
             setCancelTarget(null);
             setCancelReason('');
           }
         }}
-      >
-        <DialogContent className='sm:max-w-lg'>
-          <DialogHeader>
-            <DialogTitle>Cancel Order</DialogTitle>
-            <DialogDescription>
-              Cancel order {cancelTarget?.orderCode}. Provide a reason if
-              needed.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className='space-y-2'>
-            <Label htmlFor='cancelReason'>Cancel reason</Label>
-            <Textarea
-              id='cancelReason'
-              value={cancelReason}
-              onChange={(event) => setCancelReason(event.target.value)}
-              placeholder='Optional reason for cancellation'
-              rows={3}
-            />
-          </div>
-
-          <DialogFooter>
-            <Button
-              type='button'
-              variant='outline'
-              onClick={() => {
-                setCancelTarget(null);
-                setCancelReason('');
-              }}
-              disabled={isCancellingOrder}
-            >
-              Keep order
-            </Button>
-            <Button
-              type='button'
-              variant='destructive'
-              onClick={() => void handleCancelOrder()}
-              disabled={isCancellingOrder}
-            >
-              {isCancellingOrder ? (
-                <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-              ) : null}
-              Confirm cancel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onCancelReasonChange={setCancelReason}
+        onKeepOrder={() => {
+          setCancelTarget(null);
+          setCancelReason('');
+        }}
+        onConfirmCancel={() => {
+          void handleCancelOrder();
+        }}
+      />
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
@@ -2608,7 +1178,9 @@ export const OrderListPage: React.FC = () => {
         }
         confirmText='Delete order'
         cancelText='Keep order'
-        onConfirm={() => void handleDeleteOrder()}
+        onConfirm={() => {
+          void handleDeleteOrder();
+        }}
         onCancel={() => setDeleteTarget(null)}
         isLoading={isCancellingOrder}
         variant='destructive'

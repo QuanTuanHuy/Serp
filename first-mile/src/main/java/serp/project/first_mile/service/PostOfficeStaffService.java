@@ -6,7 +6,13 @@ import serp.project.first_mile.dto.request.UpdatePostOfficeStaffRequest;
 import serp.project.first_mile.dto.response.PostOfficeStaffAssignmentResponse;
 import serp.project.first_mile.dto.response.PostOfficeStaffResponse;
 
+import java.util.List;
+
 public interface PostOfficeStaffService {
+
+	PostOfficeStaffResponse getPostOfficeStaffById(Long id);
+
+	List<PostOfficeStaffResponse> getActiveCouriersByPostOffice(Long postOfficeId);
 
 	PostOfficeStaffResponse updatePostOfficeStaff(Long id, UpdatePostOfficeStaffRequest request);
 
