@@ -168,7 +168,8 @@ public class GlobalExceptionHandler {
             case PROJECT_ARCHIVED,
                  BLUEPRINT_IS_SYSTEM,
                  ROLE_IS_SYSTEM,
-                 ISSUE_TYPE_SCHEME_IS_SYSTEM -> HttpStatus.CONFLICT;
+                 ISSUE_TYPE_SCHEME_IS_SYSTEM,
+                 WORKFLOW_DRAFT_NOT_FOUND -> HttpStatus.CONFLICT;
 
             case SCHEME_INCOMPATIBLE,
                   ISSUE_TYPE_SCHEME_DEFAULT_NOT_IN_ITEMS,

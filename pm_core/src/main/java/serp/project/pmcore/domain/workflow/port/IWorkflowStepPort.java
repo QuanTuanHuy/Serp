@@ -14,6 +14,8 @@ public interface IWorkflowStepPort {
 
     List<WorkflowStepEntity> createWorkflowSteps(List<WorkflowStepEntity> steps);
 
+    List<WorkflowStepEntity> updateWorkflowSteps(List<WorkflowStepEntity> steps);
+
     List<WorkflowStepEntity> getWorkflowStepsByWorkflowVersionId(Long workflowVersionId, Long tenantId);
 
     List<WorkflowStepEntity> getWorkflowStepsByWorkflowVersionIdIncludingSystem(Long workflowVersionId, Long tenantId);

@@ -152,6 +152,7 @@ public enum DomainErrorCode {
     WORKFLOW_IN_USE("Cannot delete workflow that is referenced by a workflow scheme"),
     WORKFLOW_NOT_ACTIVE("Workflow has not been published/activated"),
     WORKFLOW_ALREADY_ACTIVE("Workflow is already active — create a new draft to edit"),
+    WORKFLOW_DRAFT_NOT_FOUND("Workflow has no editable draft version"),
     CLONE_WORKFLOW_FAILED("Failed to clone workflow"),
 
     // Workflow structure validation

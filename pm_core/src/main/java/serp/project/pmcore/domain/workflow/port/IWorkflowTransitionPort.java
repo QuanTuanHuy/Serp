@@ -13,6 +13,8 @@ import serp.project.pmcore.domain.workflow.entity.WorkflowTransitionEntity;
 public interface IWorkflowTransitionPort {
     List<WorkflowTransitionEntity> createWorkflowTransitions(List<WorkflowTransitionEntity> transitions);
 
+    List<WorkflowTransitionEntity> updateWorkflowTransitions(List<WorkflowTransitionEntity> transitions);
+
     List<WorkflowTransitionEntity> getWorkflowTransitionsByWorkflowVersionId(Long workflowVersionId, Long tenantId);
 
     List<WorkflowTransitionEntity> getWorkflowTransitionsByWorkflowVersionIdIncludingSystem(Long workflowVersionId, Long tenantId);

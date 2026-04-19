@@ -7,10 +7,15 @@ package serp.project.pmcore.domain.workflow.service.impl;
 
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.enums.WorkflowLifecycleState;
 import serp.project.pmcore.domain.shared.enums.WorkflowVersionState;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
@@ -19,6 +24,8 @@ import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.domain.shared.util.TextNormalizationUtils;
 import serp.project.pmcore.domain.workflow.entity.WorkflowSchemeEntity;
 import serp.project.pmcore.domain.workflow.entity.WorkflowSchemeItemEntity;
+import serp.project.pmcore.domain.workflow.entity.WorkflowTransitionEntity;
+import serp.project.pmcore.domain.workflow.entity.WorkflowTransitionRuleEntity;
 import serp.project.pmcore.domain.workflow.entity.WorkflowVersionEntity;
 import serp.project.pmcore.domain.workflow.port.IWorkflowSchemeItemPort;
 import serp.project.pmcore.domain.workflow.port.IWorkflowSchemePort;
@@ -27,8 +34,12 @@ import serp.project.pmcore.domain.workflow.entity.WorkflowEntity;
 import serp.project.pmcore.domain.workflow.entity.WorkflowStepEntity;
 import serp.project.pmcore.domain.workflow.port.IWorkflowPort;
 import serp.project.pmcore.domain.workflow.port.IWorkflowStepPort;
+import serp.project.pmcore.domain.workflow.port.IWorkflowTransitionPort;
+import serp.project.pmcore.domain.workflow.port.IWorkflowTransitionRulePort;
 import serp.project.pmcore.domain.workflow.port.IWorkflowVersionPort;
 import serp.project.pmcore.domain.workflow.query.WorkflowListCriteria;
+import serp.project.pmcore.domain.workitem.entity.StatusEntity;
+import serp.project.pmcore.domain.workitem.service.IStatusService;
 
 @Service
 @RequiredArgsConstructor
@@ -44,6 +55,9 @@ public class WorkflowService implements IWorkflowService {
     private final IWorkflowPort workflowPort;
     private final IWorkflowVersionPort workflowVersionPort;
     private final IWorkflowStepPort workflowStepPort;
+    private final IWorkflowTransitionPort workflowTransitionPort;
+    private final IWorkflowTransitionRulePort workflowTransitionRulePort;
+    private final IStatusService statusService;
 
     @Override
     public WorkflowEntity createWorkflow(WorkflowEntity workflow, Long tenantId, Long userId) {
@@ -102,6 +116,94 @@ public class WorkflowService implements IWorkflowService {
     @Override
     public PageResult<WorkflowEntity> listVisibleWorkflows(Long tenantId, WorkflowListCriteria criteria) {
         return workflowPort.listWorkflowsIncludingSystem(tenantId, criteria);
+    }
+
+    @Override
+    public WorkflowStepEntity addWorkflowStep(Long workflowId,
+                                              Long statusId,
+                                              Boolean isInitial,
+                                              Boolean isTerminal,
+                                              Long tenantId,
+                                              Long userId) {
+        WorkflowEntity workflow = getEditableWorkflow(workflowId, tenantId);
+        Long draftVersionId = requireDraftVersionId(workflow);
+        List<WorkflowStepEntity> existingSteps = workflowStepPort.getWorkflowStepsByWorkflowVersionId(draftVersionId, tenantId);
+        StatusEntity status = statusService.getVisibleStatusById(statusId, tenantId);
+
+        boolean duplicateStatus = existingSteps.stream()
+                .anyMatch(step -> statusId.equals(step.getStatusId()));
+        if (duplicateStatus) {
+            throw new BusinessRuleViolationException(DomainErrorCode.WORKFLOW_STEP_DUPLICATE_STATUS);
+        }
+
+        if (Boolean.TRUE.equals(isInitial)) {
+            boolean hasInitialStep = existingSteps.stream().anyMatch(step -> Boolean.TRUE.equals(step.getIsInitial()));
+            if (hasInitialStep) {
+                throw new BusinessRuleViolationException(DomainErrorCode.WORKFLOW_MULTIPLE_INITIAL_STEPS);
+            }
+        }
+
+        long now = System.currentTimeMillis();
+        WorkflowStepEntity step = WorkflowStepEntity.builder()
+                .tenantId(tenantId)
+                .workflowVersionId(draftVersionId)
+                .stepKey(status.getStatusKey())
+                .name(status.getName())
+                .statusId(status.getId())
+                .stepOrder(existingSteps.size() + 1)
+                .isInitial(Boolean.TRUE.equals(isInitial))
+                .isTerminal(Boolean.TRUE.equals(isTerminal))
+                .deletedAt(null)
+                .build();
+        step.applyCreate(userId, now);
+
+        return workflowStepPort.createWorkflowSteps(List.of(step)).getFirst();
+    }
+
+    @Override
+    public WorkflowStepEntity removeWorkflowStep(Long workflowId,
+                                                 Long stepId,
+                                                 Long tenantId,
+                                                 Long userId) {
+        WorkflowEntity workflow = getEditableWorkflow(workflowId, tenantId);
+        Long draftVersionId = requireDraftVersionId(workflow);
+        WorkflowStepEntity step = workflowStepPort.getWorkflowStepById(stepId, tenantId)
+                .filter(existing -> draftVersionId.equals(existing.getWorkflowVersionId()))
+                .orElseThrow(() -> ResourceNotFoundException.workflowStepById(stepId));
+
+        long now = System.currentTimeMillis();
+        cleanupTransitionsForStep(draftVersionId, stepId, tenantId, userId, now);
+
+        step.setDeletedAt(now);
+        step.applyUpdate(userId, now);
+        workflowStepPort.updateWorkflowSteps(List.of(step));
+        return step;
+    }
+
+    @Override
+    public List<WorkflowStepEntity> reorderWorkflowSteps(Long workflowId,
+                                                         List<Long> stepIds,
+                                                         Long tenantId,
+                                                         Long userId) {
+        WorkflowEntity workflow = getEditableWorkflow(workflowId, tenantId);
+        Long draftVersionId = requireDraftVersionId(workflow);
+        List<WorkflowStepEntity> existingSteps = workflowStepPort.getWorkflowStepsByWorkflowVersionId(draftVersionId, tenantId);
+        validateReorderInput(existingSteps, stepIds);
+
+        List<WorkflowStepEntity> reordered = new ArrayList<>();
+        long now = System.currentTimeMillis();
+        for (int index = 0; index < stepIds.size(); index++) {
+            Long stepId = stepIds.get(index);
+            WorkflowStepEntity step = existingSteps.stream()
+                    .filter(candidate -> stepId.equals(candidate.getId()))
+                    .findFirst()
+                    .orElseThrow(() -> ResourceNotFoundException.workflowStepById(stepId));
+            step.setStepOrder(index + 1);
+            step.applyUpdate(userId, now);
+            reordered.add(step);
+        }
+
+        return workflowStepPort.updateWorkflowSteps(reordered);
     }
 
     @Override
@@ -189,6 +291,76 @@ public class WorkflowService implements IWorkflowService {
 
     private String trimToMaxLength(String value, int maxLength) {
         return value.length() <= maxLength ? value : value.substring(0, maxLength);
+    }
+
+    private WorkflowEntity getEditableWorkflow(Long workflowId, Long tenantId) {
+        return workflowPort.getWorkflowById(workflowId, tenantId)
+                .orElseThrow(() -> ResourceNotFoundException.workflow(workflowId));
+    }
+
+    private Long requireDraftVersionId(WorkflowEntity workflow) {
+        if (workflow.getDraftVersionId() == null) {
+            throw new BusinessRuleViolationException(
+                    DomainErrorCode.WORKFLOW_DRAFT_NOT_FOUND,
+                    "Workflow has no editable draft version: id=" + workflow.getId()
+            );
+        }
+        return workflow.getDraftVersionId();
+    }
+
+    private void cleanupTransitionsForStep(Long workflowVersionId,
+                                           Long stepId,
+                                           Long tenantId,
+                                           Long userId,
+                                           long now) {
+        List<WorkflowTransitionEntity> relatedTransitions = workflowTransitionPort
+                .getWorkflowTransitionsByWorkflowVersionId(workflowVersionId, tenantId)
+                .stream()
+                .filter(transition -> stepId.equals(transition.getFromStepId()) || stepId.equals(transition.getToStepId()))
+                .toList();
+
+        if (relatedTransitions.isEmpty()) {
+            return;
+        }
+
+        List<WorkflowTransitionRuleEntity> rulesToDelete = new ArrayList<>();
+        for (WorkflowTransitionEntity transition : relatedTransitions) {
+            List<WorkflowTransitionRuleEntity> rules = workflowTransitionRulePort
+                    .getWorkflowTransitionRulesByTransitionId(transition.getId(), tenantId)
+                    .stream()
+                    .toList();
+            for (WorkflowTransitionRuleEntity rule : rules) {
+                rule.setDeletedAt(now);
+                rule.applyUpdate(userId, now);
+                rulesToDelete.add(rule);
+            }
+
+            transition.setDeletedAt(now);
+            transition.applyUpdate(userId, now);
+        }
+
+        if (!rulesToDelete.isEmpty()) {
+            workflowTransitionRulePort.updateWorkflowTransitionRules(rulesToDelete);
+        }
+        workflowTransitionPort.updateWorkflowTransitions(relatedTransitions);
+    }
+
+    private void validateReorderInput(List<WorkflowStepEntity> existingSteps, List<Long> stepIds) {
+        if (stepIds == null || stepIds.isEmpty()) {
+            throw new IllegalArgumentException("stepIds must not be empty");
+        }
+
+        Set<Long> distinctIds = new LinkedHashSet<>(stepIds);
+        if (distinctIds.size() != stepIds.size()) {
+            throw new IllegalArgumentException("stepIds must contain distinct values");
+        }
+
+        Set<Long> existingIds = existingSteps.stream()
+                .map(WorkflowStepEntity::getId)
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        if (!distinctIds.equals(existingIds)) {
+            throw new IllegalArgumentException("stepIds must match the current workflow steps exactly");
+        }
     }
 
 }

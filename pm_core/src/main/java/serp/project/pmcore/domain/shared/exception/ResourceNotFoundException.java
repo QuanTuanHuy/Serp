@@ -45,6 +45,11 @@ public class ResourceNotFoundException extends DomainException {
                 "Initial step not found for workflow: id=" + workflowId);
     }
 
+    public static ResourceNotFoundException workflowStepById(Long id) {
+        return new ResourceNotFoundException(DomainErrorCode.WORKFLOW_STEP_NOT_FOUND,
+                "Workflow step not found: id=" + id);
+    }
+
     public static ResourceNotFoundException issueType(Long id) {
         return new ResourceNotFoundException(DomainErrorCode.ISSUE_TYPE_NOT_FOUND,
                 "Issue type not found: id=" + id);
