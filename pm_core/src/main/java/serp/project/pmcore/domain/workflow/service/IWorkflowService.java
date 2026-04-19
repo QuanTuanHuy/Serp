@@ -8,6 +8,7 @@ package serp.project.pmcore.domain.workflow.service;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.domain.workflow.entity.WorkflowEntity;
 import serp.project.pmcore.domain.workflow.entity.WorkflowStepEntity;
+import serp.project.pmcore.domain.workflow.entity.WorkflowTransitionEntity;
 import serp.project.pmcore.domain.workflow.query.WorkflowListCriteria;
 
 import java.util.List;
@@ -36,6 +37,32 @@ public interface IWorkflowService {
                                                   List<Long> stepIds,
                                                   Long tenantId,
                                                   Long userId);
+
+    WorkflowTransitionEntity addWorkflowTransition(Long workflowId,
+                                                   String name,
+                                                   Long fromStepId,
+                                                   Long toStepId,
+                                                   Long screenId,
+                                                   Integer sequence,
+                                                   Long tenantId,
+                                                   Long userId);
+
+    WorkflowTransitionEntity updateWorkflowTransition(Long workflowId,
+                                                      Long transitionId,
+                                                      String name,
+                                                      Long screenId,
+                                                      Integer sequence,
+                                                      Long tenantId,
+                                                      Long userId);
+
+    WorkflowTransitionEntity removeWorkflowTransition(Long workflowId,
+                                                      Long transitionId,
+                                                      Long tenantId,
+                                                      Long userId);
+
+    List<WorkflowTransitionEntity> listWorkflowTransitions(Long workflowId,
+                                                           Long fromStepId,
+                                                           Long tenantId);
 
     WorkflowEntity resolveWorkflow(Long workflowSchemeId,
                                    Long issueTypeId,

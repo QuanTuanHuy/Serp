@@ -11,10 +11,12 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import serp.project.pmcore.domain.screen.port.IScreenPort;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.enums.WorkflowLifecycleState;
 import serp.project.pmcore.domain.shared.enums.WorkflowVersionState;
@@ -49,6 +51,7 @@ public class WorkflowService implements IWorkflowService {
     private static final int WORKFLOW_NAME_MAX_LENGTH = 255;
     private static final int WORKFLOW_DESCRIPTION_MAX_LENGTH = 2000;
     private static final int WORKFLOW_KEY_MAX_LENGTH = 100;
+    private static final int WORKFLOW_TRANSITION_NAME_MAX_LENGTH = 255;
 
     private final IWorkflowSchemePort workflowSchemePort;
     private final IWorkflowSchemeItemPort workflowSchemeItemPort;
@@ -57,6 +60,7 @@ public class WorkflowService implements IWorkflowService {
     private final IWorkflowStepPort workflowStepPort;
     private final IWorkflowTransitionPort workflowTransitionPort;
     private final IWorkflowTransitionRulePort workflowTransitionRulePort;
+    private final IScreenPort screenPort;
     private final IStatusService statusService;
 
     @Override
@@ -207,6 +211,113 @@ public class WorkflowService implements IWorkflowService {
     }
 
     @Override
+    public WorkflowTransitionEntity addWorkflowTransition(Long workflowId,
+                                                          String name,
+                                                          Long fromStepId,
+                                                          Long toStepId,
+                                                          Long screenId,
+                                                          Integer sequence,
+                                                          Long tenantId,
+                                                          Long userId) {
+        WorkflowEntity workflow = getEditableWorkflow(workflowId, tenantId);
+        Long draftVersionId = requireDraftVersionId(workflow);
+        List<WorkflowStepEntity> draftSteps = workflowStepPort.getWorkflowStepsByWorkflowVersionId(draftVersionId, tenantId);
+        String normalizedName = TextNormalizationUtils.normalizeRequiredText(
+                name,
+                "name",
+                WORKFLOW_TRANSITION_NAME_MAX_LENGTH
+        );
+
+        if (toStepId == null) {
+            throw new IllegalArgumentException("toStepId is required");
+        }
+        if (fromStepId != null) {
+            requireStepInDraft(draftSteps, fromStepId);
+        }
+        requireStepInDraft(draftSteps, toStepId);
+        validateTransitionScreen(screenId, tenantId);
+
+        long now = System.currentTimeMillis();
+        WorkflowTransitionEntity transition = WorkflowTransitionEntity.builder()
+                .tenantId(tenantId)
+                .workflowVersionId(draftVersionId)
+                .name(normalizedName)
+                .fromStepId(fromStepId)
+                .toStepId(toStepId)
+                .screenId(screenId)
+                .sequence(resolveTransitionSequence(sequence, draftVersionId, tenantId))
+                .deletedAt(null)
+                .build();
+        transition.applyCreate(userId, now);
+
+        return workflowTransitionPort.createWorkflowTransitions(List.of(transition)).getFirst();
+    }
+
+    @Override
+    public WorkflowTransitionEntity updateWorkflowTransition(Long workflowId,
+                                                             Long transitionId,
+                                                             String name,
+                                                             Long screenId,
+                                                             Integer sequence,
+                                                             Long tenantId,
+                                                             Long userId) {
+        WorkflowEntity workflow = getEditableWorkflow(workflowId, tenantId);
+        Long draftVersionId = requireDraftVersionId(workflow);
+        WorkflowTransitionEntity transition = workflowTransitionPort
+                .getWorkflowTransitionByIdAndWorkflowVersionId(transitionId, draftVersionId, tenantId)
+                .orElseThrow(() -> ResourceNotFoundException.workflowTransitionById(transitionId));
+
+        transition.setName(TextNormalizationUtils.normalizeRequiredText(
+                name,
+                "name",
+                WORKFLOW_TRANSITION_NAME_MAX_LENGTH
+        ));
+        validateTransitionScreen(screenId, tenantId);
+        transition.setScreenId(screenId);
+        if (sequence != null) {
+            transition.setSequence(validateTransitionSequence(sequence));
+        }
+
+        long now = System.currentTimeMillis();
+        transition.applyUpdate(userId, now);
+        return workflowTransitionPort.updateWorkflowTransitions(List.of(transition)).getFirst();
+    }
+
+    @Override
+    public WorkflowTransitionEntity removeWorkflowTransition(Long workflowId,
+                                                             Long transitionId,
+                                                             Long tenantId,
+                                                             Long userId) {
+        WorkflowEntity workflow = getEditableWorkflow(workflowId, tenantId);
+        Long draftVersionId = requireDraftVersionId(workflow);
+        WorkflowTransitionEntity transition = workflowTransitionPort
+                .getWorkflowTransitionByIdAndWorkflowVersionId(transitionId, draftVersionId, tenantId)
+                .orElseThrow(() -> ResourceNotFoundException.workflowTransitionById(transitionId));
+
+        long now = System.currentTimeMillis();
+        softDeleteTransitionRules(List.of(transition), tenantId, userId, now);
+        transition.setDeletedAt(now);
+        transition.applyUpdate(userId, now);
+        workflowTransitionPort.updateWorkflowTransitions(List.of(transition));
+        return transition;
+    }
+
+    @Override
+    public List<WorkflowTransitionEntity> listWorkflowTransitions(Long workflowId,
+                                                                  Long fromStepId,
+                                                                  Long tenantId) {
+        WorkflowEntity workflow = getEditableWorkflow(workflowId, tenantId);
+        Long draftVersionId = requireDraftVersionId(workflow);
+        if (fromStepId == null) {
+            return workflowTransitionPort.getWorkflowTransitionsByWorkflowVersionId(draftVersionId, tenantId);
+        }
+
+        List<WorkflowStepEntity> draftSteps = workflowStepPort.getWorkflowStepsByWorkflowVersionId(draftVersionId, tenantId);
+        requireStepInDraft(draftSteps, fromStepId);
+        return workflowTransitionPort.getWorkflowTransitionsByWorkflowVersionIdAndFromStepId(draftVersionId, fromStepId, tenantId);
+    }
+
+    @Override
     public WorkflowEntity resolveWorkflow(Long workflowSchemeId, Long issueTypeId, Long tenantId) {
         if (workflowSchemeId == null) {
             log.error("[WorkflowService] Workflow scheme id is null");
@@ -323,8 +434,58 @@ public class WorkflowService implements IWorkflowService {
             return;
         }
 
-        List<WorkflowTransitionRuleEntity> rulesToDelete = new ArrayList<>();
         for (WorkflowTransitionEntity transition : relatedTransitions) {
+            transition.setDeletedAt(now);
+            transition.applyUpdate(userId, now);
+        }
+
+        softDeleteTransitionRules(relatedTransitions, tenantId, userId, now);
+        workflowTransitionPort.updateWorkflowTransitions(relatedTransitions);
+    }
+
+    private WorkflowStepEntity requireStepInDraft(List<WorkflowStepEntity> draftSteps, Long stepId) {
+        return draftSteps.stream()
+                .filter(step -> Objects.equals(step.getId(), stepId))
+                .findFirst()
+                .orElseThrow(() -> ResourceNotFoundException.workflowStepById(stepId));
+    }
+
+    private void validateTransitionScreen(Long screenId, Long tenantId) {
+        if (screenId == null) {
+            return;
+        }
+
+        screenPort.getScreenById(screenId, tenantId)
+                .orElseThrow(() -> ResourceNotFoundException.screen(screenId));
+    }
+
+    private Integer resolveTransitionSequence(Integer sequence, Long workflowVersionId, Long tenantId) {
+        if (sequence != null) {
+            return validateTransitionSequence(sequence);
+        }
+
+        List<WorkflowTransitionEntity> existingTransitions = workflowTransitionPort
+                .getWorkflowTransitionsByWorkflowVersionId(workflowVersionId, tenantId);
+        return existingTransitions.stream()
+                .map(WorkflowTransitionEntity::getSequence)
+                .filter(Objects::nonNull)
+                .max(Integer::compareTo)
+                .orElse(0) + 1;
+    }
+
+    private Integer validateTransitionSequence(Integer sequence) {
+        if (sequence < 0) {
+            throw new IllegalArgumentException("sequence must be greater than or equal to 0");
+        }
+        return sequence;
+    }
+
+    private void softDeleteTransitionRules(List<WorkflowTransitionEntity> transitions,
+                                           Long tenantId,
+                                           Long userId,
+                                           long now) {
+        List<WorkflowTransitionRuleEntity> rulesToDelete = new ArrayList<>();
+        for (WorkflowTransitionEntity transition : transitions) {
             List<WorkflowTransitionRuleEntity> rules = workflowTransitionRulePort
                     .getWorkflowTransitionRulesByTransitionId(transition.getId(), tenantId)
                     .stream()
@@ -334,15 +495,11 @@ public class WorkflowService implements IWorkflowService {
                 rule.applyUpdate(userId, now);
                 rulesToDelete.add(rule);
             }
-
-            transition.setDeletedAt(now);
-            transition.applyUpdate(userId, now);
         }
 
         if (!rulesToDelete.isEmpty()) {
             workflowTransitionRulePort.updateWorkflowTransitionRules(rulesToDelete);
         }
-        workflowTransitionPort.updateWorkflowTransitions(relatedTransitions);
     }
 
     private void validateReorderInput(List<WorkflowStepEntity> existingSteps, List<Long> stepIds) {

@@ -50,6 +50,16 @@ public class ResourceNotFoundException extends DomainException {
                 "Workflow step not found: id=" + id);
     }
 
+    public static ResourceNotFoundException workflowTransitionById(Long id) {
+        return new ResourceNotFoundException(DomainErrorCode.TRANSITION_NOT_FOUND,
+                "Workflow transition not found: id=" + id);
+    }
+
+    public static ResourceNotFoundException screen(Long id) {
+        return new ResourceNotFoundException(DomainErrorCode.SCREEN_NOT_FOUND,
+                "Screen not found: id=" + id);
+    }
+
     public static ResourceNotFoundException issueType(Long id) {
         return new ResourceNotFoundException(DomainErrorCode.ISSUE_TYPE_NOT_FOUND,
                 "Issue type not found: id=" + id);

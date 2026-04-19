@@ -16,6 +16,7 @@ import serp.project.pmcore.domain.shared.enums.WorkflowVersionState;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
+import serp.project.pmcore.domain.screen.port.IScreenPort;
 import serp.project.pmcore.domain.workflow.entity.WorkflowEntity;
 import serp.project.pmcore.domain.workflow.entity.WorkflowStepEntity;
 import serp.project.pmcore.domain.workflow.entity.WorkflowTransitionEntity;
@@ -71,6 +72,8 @@ class WorkflowServiceTest {
     @Mock
     private IWorkflowTransitionRulePort workflowTransitionRulePort;
     @Mock
+    private IScreenPort screenPort;
+    @Mock
     private IStatusService statusService;
 
     private WorkflowService service;
@@ -85,6 +88,7 @@ class WorkflowServiceTest {
                 workflowStepPort,
                 workflowTransitionPort,
                 workflowTransitionRulePort,
+                screenPort,
                 statusService
         );
     }
@@ -320,5 +324,182 @@ class WorkflowServiceTest {
         assertEquals(1, reordered.get(0).getStepOrder());
         assertEquals(100L, reordered.get(1).getId());
         assertEquals(2, reordered.get(1).getStepOrder());
+    }
+
+    @Test
+    void addWorkflowTransitionShouldAllowGlobalTransitionAndAutoSequence() {
+        WorkflowEntity workflow = WorkflowEntity.builder()
+                .id(WORKFLOW_ID)
+                .tenantId(TENANT_ID)
+                .draftVersionId(DRAFT_VERSION_ID)
+                .build();
+        WorkflowStepEntity targetStep = WorkflowStepEntity.builder()
+                .id(101L)
+                .tenantId(TENANT_ID)
+                .workflowVersionId(DRAFT_VERSION_ID)
+                .build();
+
+        when(workflowPort.getWorkflowById(WORKFLOW_ID, TENANT_ID)).thenReturn(Optional.of(workflow));
+        when(workflowStepPort.getWorkflowStepsByWorkflowVersionId(DRAFT_VERSION_ID, TENANT_ID))
+                .thenReturn(List.of(targetStep));
+        when(workflowTransitionPort.getWorkflowTransitionsByWorkflowVersionId(DRAFT_VERSION_ID, TENANT_ID))
+                .thenReturn(List.of(WorkflowTransitionEntity.builder().id(201L).sequence(1).build()));
+        when(workflowTransitionPort.createWorkflowTransitions(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        WorkflowTransitionEntity created = service.addWorkflowTransition(
+                WORKFLOW_ID,
+                "Approve",
+                null,
+                101L,
+                null,
+                null,
+                TENANT_ID,
+                USER_ID
+        );
+
+        ArgumentCaptor<List<WorkflowTransitionEntity>> captor = ArgumentCaptor.forClass(List.class);
+        verify(workflowTransitionPort).createWorkflowTransitions(captor.capture());
+        WorkflowTransitionEntity persisted = captor.getValue().getFirst();
+        assertEquals("Approve", persisted.getName());
+        assertEquals(DRAFT_VERSION_ID, persisted.getWorkflowVersionId());
+        assertEquals(101L, persisted.getToStepId());
+        assertEquals(2, persisted.getSequence());
+        assertEquals(null, persisted.getFromStepId());
+        assertEquals(2, created.getSequence());
+    }
+
+    @Test
+    void addWorkflowTransitionShouldRejectCrossVersionStepReference() {
+        WorkflowEntity workflow = WorkflowEntity.builder()
+                .id(WORKFLOW_ID)
+                .tenantId(TENANT_ID)
+                .draftVersionId(DRAFT_VERSION_ID)
+                .build();
+        WorkflowStepEntity onlyDraftStep = WorkflowStepEntity.builder()
+                .id(101L)
+                .tenantId(TENANT_ID)
+                .workflowVersionId(DRAFT_VERSION_ID)
+                .build();
+
+        when(workflowPort.getWorkflowById(WORKFLOW_ID, TENANT_ID)).thenReturn(Optional.of(workflow));
+        when(workflowStepPort.getWorkflowStepsByWorkflowVersionId(DRAFT_VERSION_ID, TENANT_ID))
+                .thenReturn(List.of(onlyDraftStep));
+
+        var exception = assertThrows(
+                serp.project.pmcore.domain.shared.exception.ResourceNotFoundException.class,
+                () -> service.addWorkflowTransition(
+                        WORKFLOW_ID,
+                        "Approve",
+                        999L,
+                        101L,
+                        null,
+                        0,
+                        TENANT_ID,
+                        USER_ID
+                )
+        );
+
+        assertEquals(DomainErrorCode.WORKFLOW_STEP_NOT_FOUND, exception.getErrorCode());
+        verify(workflowTransitionPort, never()).createWorkflowTransitions(any());
+    }
+
+    @Test
+    void updateWorkflowTransitionShouldUpdateEditableDraftTransition() {
+        WorkflowEntity workflow = WorkflowEntity.builder()
+                .id(WORKFLOW_ID)
+                .tenantId(TENANT_ID)
+                .draftVersionId(DRAFT_VERSION_ID)
+                .build();
+        WorkflowTransitionEntity transition = WorkflowTransitionEntity.builder()
+                .id(300L)
+                .tenantId(TENANT_ID)
+                .workflowVersionId(DRAFT_VERSION_ID)
+                .name("Old")
+                .screenId(400L)
+                .sequence(1)
+                .build();
+
+        when(workflowPort.getWorkflowById(WORKFLOW_ID, TENANT_ID)).thenReturn(Optional.of(workflow));
+        when(workflowTransitionPort.getWorkflowTransitionByIdAndWorkflowVersionId(300L, DRAFT_VERSION_ID, TENANT_ID))
+                .thenReturn(Optional.of(transition));
+        when(screenPort.getScreenById(401L, TENANT_ID)).thenReturn(Optional.of(serp.project.pmcore.domain.screen.entity.ScreenEntity.builder().id(401L).build()));
+        when(workflowTransitionPort.updateWorkflowTransitions(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        WorkflowTransitionEntity updated = service.updateWorkflowTransition(
+                WORKFLOW_ID,
+                300L,
+                "Ready for QA",
+                401L,
+                5,
+                TENANT_ID,
+                USER_ID
+        );
+
+        assertEquals("Ready for QA", updated.getName());
+        assertEquals(401L, updated.getScreenId());
+        assertEquals(5, updated.getSequence());
+        verify(workflowTransitionPort).updateWorkflowTransitions(any());
+    }
+
+    @Test
+    void removeWorkflowTransitionShouldSoftDeleteTransitionAndRules() {
+        WorkflowEntity workflow = WorkflowEntity.builder()
+                .id(WORKFLOW_ID)
+                .tenantId(TENANT_ID)
+                .draftVersionId(DRAFT_VERSION_ID)
+                .build();
+        WorkflowTransitionEntity transition = WorkflowTransitionEntity.builder()
+                .id(400L)
+                .tenantId(TENANT_ID)
+                .workflowVersionId(DRAFT_VERSION_ID)
+                .build();
+        WorkflowTransitionRuleEntity rule = WorkflowTransitionRuleEntity.builder()
+                .id(500L)
+                .tenantId(TENANT_ID)
+                .transitionId(400L)
+                .build();
+
+        when(workflowPort.getWorkflowById(WORKFLOW_ID, TENANT_ID)).thenReturn(Optional.of(workflow));
+        when(workflowTransitionPort.getWorkflowTransitionByIdAndWorkflowVersionId(400L, DRAFT_VERSION_ID, TENANT_ID))
+                .thenReturn(Optional.of(transition));
+        when(workflowTransitionRulePort.getWorkflowTransitionRulesByTransitionId(400L, TENANT_ID))
+                .thenReturn(List.of(rule));
+        when(workflowTransitionRulePort.updateWorkflowTransitionRules(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(workflowTransitionPort.updateWorkflowTransitions(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        WorkflowTransitionEntity deleted = service.removeWorkflowTransition(WORKFLOW_ID, 400L, TENANT_ID, USER_ID);
+
+        assertNotNull(deleted.getDeletedAt());
+        verify(workflowTransitionRulePort).updateWorkflowTransitionRules(any());
+        verify(workflowTransitionPort).updateWorkflowTransitions(any());
+    }
+
+    @Test
+    void listWorkflowTransitionsShouldFilterByFromStepId() {
+        WorkflowEntity workflow = WorkflowEntity.builder()
+                .id(WORKFLOW_ID)
+                .tenantId(TENANT_ID)
+                .draftVersionId(DRAFT_VERSION_ID)
+                .build();
+        WorkflowStepEntity step = WorkflowStepEntity.builder()
+                .id(600L)
+                .tenantId(TENANT_ID)
+                .workflowVersionId(DRAFT_VERSION_ID)
+                .build();
+        WorkflowTransitionEntity transition = WorkflowTransitionEntity.builder()
+                .id(700L)
+                .fromStepId(600L)
+                .toStepId(601L)
+                .build();
+
+        when(workflowPort.getWorkflowById(WORKFLOW_ID, TENANT_ID)).thenReturn(Optional.of(workflow));
+        when(workflowStepPort.getWorkflowStepsByWorkflowVersionId(DRAFT_VERSION_ID, TENANT_ID)).thenReturn(List.of(step));
+        when(workflowTransitionPort.getWorkflowTransitionsByWorkflowVersionIdAndFromStepId(DRAFT_VERSION_ID, 600L, TENANT_ID))
+                .thenReturn(List.of(transition));
+
+        List<WorkflowTransitionEntity> result = service.listWorkflowTransitions(WORKFLOW_ID, 600L, TENANT_ID);
+
+        assertEquals(1, result.size());
+        assertEquals(700L, result.getFirst().getId());
     }
 }
