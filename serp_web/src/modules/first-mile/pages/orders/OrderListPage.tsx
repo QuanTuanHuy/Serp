@@ -6,162 +6,79 @@
 'use client';
 
 import React from 'react';
-import { useAppSelector } from '@/lib/store';
+import { getErrorMessage, useAppDispatch, useAppSelector } from '@/lib/store';
+import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
+import { useNotification } from '@/shared/hooks';
 import {
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/components/ui';
-import { Loader2, RefreshCw, Search, Shield } from 'lucide-react';
-import { useGetOrdersQuery } from '../../api';
-import type { FirstMileOrderDetail, FirstMileOrderStatus } from '../../types';
-
-const PAGE_SIZE = 20;
-
-type OrderAccessScope =
-  | 'ADMIN_ALL'
-  | 'MANAGER_POST_OFFICE'
-  | 'COURIER_ASSIGNED'
-  | 'CUSTOMER_CREATED'
-  | 'NO_ACCESS';
-
-type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
-type OrderStatusFilter = 'ALL' | FirstMileOrderStatus;
-
-const ORDER_STATUS_OPTIONS: FirstMileOrderStatus[] = [
-  'CREATED',
-  'ASSIGNED_TO_PICKUP',
-  'PICKING_UP',
-  'PICKUP_FAILED',
-  'PICKED_UP',
-  'AT_ORIGIN_POST_OFFICE',
-  'CANCELLED',
-  'LOST_OR_DAMAGED',
-];
-
-const resolveOrderAccessScope = (roles: string[]): OrderAccessScope => {
-  if (roles.includes('TMS_ADMIN')) {
-    return 'ADMIN_ALL';
-  }
-
-  if (roles.includes('TMS_POSTOFFICER_MANAGER')) {
-    return 'MANAGER_POST_OFFICE';
-  }
-
-  if (roles.includes('TMS_POSTOFFICER')) {
-    return 'COURIER_ASSIGNED';
-  }
-
-  if (roles.includes('TMS_CUSTOMER')) {
-    return 'CUSTOMER_CREATED';
-  }
-
-  return 'NO_ACCESS';
-};
-
-const getScopeBadgeLabel = (scope: OrderAccessScope): string => {
-  switch (scope) {
-    case 'ADMIN_ALL':
-      return 'TMS admin';
-    case 'MANAGER_POST_OFFICE':
-      return 'Post office manager';
-    case 'COURIER_ASSIGNED':
-      return 'Courier';
-    case 'CUSTOMER_CREATED':
-      return 'Customer';
-    default:
-      return 'No access';
-  }
-};
-
-const getScopeDescription = (scope: OrderAccessScope): string => {
-  switch (scope) {
-    case 'ADMIN_ALL':
-      return 'You can view all orders in the system.';
-    case 'MANAGER_POST_OFFICE':
-      return 'You can view orders assigned to the post office you manage.';
-    case 'COURIER_ASSIGNED':
-      return 'You can view orders assigned to you.';
-    case 'CUSTOMER_CREATED':
-      return 'You can only view orders created by you.';
-    default:
-      return 'Your current account does not have permission to access the order list.';
-  }
-};
-
-const formatStatusLabel = (status: FirstMileOrderStatus): string =>
-  status.replaceAll('_', ' ');
-
-const getStatusBadgeVariant = (status: FirstMileOrderStatus): BadgeVariant => {
-  switch (status) {
-    case 'CREATED':
-    case 'ASSIGNED_TO_PICKUP':
-      return 'secondary';
-    case 'PICKING_UP':
-    case 'PICKED_UP':
-    case 'AT_ORIGIN_POST_OFFICE':
-      return 'default';
-    case 'PICKUP_FAILED':
-      return 'outline';
-    case 'CANCELLED':
-    case 'LOST_OR_DAMAGED':
-      return 'destructive';
-    default:
-      return 'outline';
-  }
-};
-
-const formatDateTime = (value?: string): string => {
-  if (!value) {
-    return '--';
-  }
-
-  const parsedDate = new Date(value);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return value;
-  }
-
-  return parsedDate.toLocaleString('en-US');
-};
-
-const buildOrderAddressLabel = (
-  name?: string,
-  phone?: string,
-  addressDetail?: string
-): string => {
-  const mainLabel = [name, phone].filter(Boolean).join(' - ');
-  if (!mainLabel && !addressDetail) {
-    return '--';
-  }
-
-  if (!addressDetail) {
-    return mainLabel;
-  }
-
-  return `${mainLabel || '--'} | ${addressDetail}`;
-};
-
-const buildPostOfficeAssignmentLabel = (
-  order: FirstMileOrderDetail
-): string => {
-  const origin = order.originPostOfficeCode || '--';
-  const destination = order.destinationPostOfficeCode || '--';
-  return `${origin} -> ${destination}`;
-};
+  firstMileApi,
+  useCancelOrderMutation,
+  useConfirmOrderMutation,
+  useCreateOrderMutation,
+  useGeocodeAddressMutation,
+  useImportOrdersMutation,
+  useLazyExportOrderTemplateQuery,
+  useLazyGetOrderByIdQuery,
+  useGetOrdersQuery,
+  useGetProvincesQuery,
+  useGetWardsByProvinceCodeQuery,
+  useUpdateOrderMutation,
+  useValidateOrderImportMutation,
+} from '../../api';
+import type {
+  CancelOrderRequest,
+  CreateOrderRequest,
+  FirstMileOrderDetail,
+  FirstMileOrderStatus,
+  ImportHistory,
+  OrderImportItem,
+  Province,
+  UpdateOrderRequest,
+  ValidateImportFileResponse,
+} from '../../types';
+import {
+  OrderAccessScopeCard,
+  OrderCancelDialog,
+  OrderDetailDialog,
+  OrderFiltersCard,
+  OrderFormDialog,
+  OrderImportCard,
+  OrderPageHeader,
+  OrderResultsCard,
+} from './components';
+import {
+  buildOrderAddressLabel,
+  buildPostOfficeAssignmentLabel,
+  buildWardSelectOptions,
+  DEFAULT_CREATE_ORDER_FORM,
+  formatDateTime,
+  formatOrderImportProductsPreview,
+  formatStatusLabel,
+  getProvinceNameByCode,
+  getScopeBadgeLabel,
+  getScopeDescription,
+  getStatusBadgeVariant,
+  IMPORT_PREVIEW_LIMIT,
+  isConfirmableStatus,
+  isDraftOrder,
+  mapOrderProductsToRequest,
+  mapOrderToFormState,
+  normalizeLocationCode,
+  ORDER_STATUS_OPTIONS,
+  PAGE_SIZE,
+  parseOptionalNumberInput,
+  parseRequiredNumberInput,
+  resolveOrderAccessScope,
+  type CreateOrderFormState,
+  type LocationTarget,
+  type OrderFormMode,
+  type OrderStatusFilter,
+} from './orderPageModels';
 
 export const OrderListPage: React.FC = () => {
+  const dispatch = useAppDispatch();
   const profile = useAppSelector((state) => state.account.user.profile);
   const roles = profile?.roles ?? [];
+  const notification = useNotification();
 
   const [page, setPage] = React.useState(0);
   const [keywordInput, setKeywordInput] = React.useState('');
@@ -171,12 +88,82 @@ export const OrderListPage: React.FC = () => {
   const [status, setStatus] = React.useState<FirstMileOrderStatus | undefined>(
     undefined
   );
+  const [orderFormMode, setOrderFormMode] =
+    React.useState<OrderFormMode>('create');
+  const [editingOrderId, setEditingOrderId] = React.useState<number | null>(
+    null
+  );
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
+  const [createForm, setCreateForm] = React.useState<CreateOrderFormState>({
+    ...DEFAULT_CREATE_ORDER_FORM,
+  });
+  const [orderProducts, setOrderProducts] = React.useState<
+    CreateOrderRequest['products']
+  >([]);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = React.useState(false);
+  const [detailOrder, setDetailOrder] =
+    React.useState<FirstMileOrderDetail | null>(null);
+  const [cancelTarget, setCancelTarget] =
+    React.useState<FirstMileOrderDetail | null>(null);
+  const [cancelReason, setCancelReason] = React.useState('');
+  const [deleteTarget, setDeleteTarget] =
+    React.useState<FirstMileOrderDetail | null>(null);
+  const [loadingOrderActionId, setLoadingOrderActionId] = React.useState<
+    number | null
+  >(null);
+  const [confirmingOrderId, setConfirmingOrderId] = React.useState<
+    number | null
+  >(null);
+  const [geocodingTarget, setGeocodingTarget] =
+    React.useState<LocationTarget | null>(null);
+  const [selectedImportFile, setSelectedImportFile] =
+    React.useState<File | null>(null);
+  const [importFileInputKey, setImportFileInputKey] = React.useState(0);
+  const [validateImportResult, setValidateImportResult] =
+    React.useState<ValidateImportFileResponse<OrderImportItem> | null>(null);
+  const [lastImportJob, setLastImportJob] =
+    React.useState<ImportHistory | null>(null);
+  const [wardNamesByProvinceCode, setWardNamesByProvinceCode] = React.useState<
+    Record<string, Record<string, string>>
+  >({});
+
+  const updateCreateFormField = React.useCallback(
+    <K extends keyof CreateOrderFormState>(
+      field: K,
+      value: CreateOrderFormState[K]
+    ) => {
+      setCreateForm((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
+    },
+    []
+  );
+
+  const selectedSenderProvinceCode = React.useMemo(
+    () => normalizeLocationCode(createForm.senderProvinceCode),
+    [createForm.senderProvinceCode]
+  );
+  const selectedSenderWardCode = React.useMemo(
+    () => normalizeLocationCode(createForm.senderWardCode),
+    [createForm.senderWardCode]
+  );
+  const selectedReceiverProvinceCode = React.useMemo(
+    () => normalizeLocationCode(createForm.receiverProvinceCode),
+    [createForm.receiverProvinceCode]
+  );
+  const selectedReceiverWardCode = React.useMemo(
+    () => normalizeLocationCode(createForm.receiverWardCode),
+    [createForm.receiverWardCode]
+  );
 
   const accessScope = React.useMemo(
     () => resolveOrderAccessScope(roles),
     [roles]
   );
   const canViewOrders = accessScope !== 'NO_ACCESS';
+  const canMutateOrders =
+    accessScope === 'ADMIN_ALL' || accessScope === 'CUSTOMER_CREATED';
 
   const { data, isLoading, isFetching, refetch } = useGetOrdersQuery(
     {
@@ -190,6 +177,212 @@ export const OrderListPage: React.FC = () => {
     }
   );
 
+  const { data: provincesData } = useGetProvincesQuery({
+    page: 0,
+    size: 200,
+  });
+
+  const { data: senderWardsData, isFetching: isFetchingSenderWards } =
+    useGetWardsByProvinceCodeQuery(
+      {
+        provinceCode: selectedSenderProvinceCode,
+        page: 0,
+        size: 1000,
+      },
+      {
+        skip: !selectedSenderProvinceCode,
+      }
+    );
+
+  const { data: receiverWardsData, isFetching: isFetchingReceiverWards } =
+    useGetWardsByProvinceCodeQuery(
+      {
+        provinceCode: selectedReceiverProvinceCode,
+        page: 0,
+        size: 1000,
+      },
+      {
+        skip: !selectedReceiverProvinceCode,
+      }
+    );
+
+  const provinceSelectOptions = React.useMemo<Province[]>(
+    () => provincesData?.items ?? [],
+    [provincesData]
+  );
+
+  const senderWardSelectOptions = React.useMemo(
+    () =>
+      buildWardSelectOptions(
+        senderWardsData?.items,
+        selectedSenderWardCode,
+        selectedSenderProvinceCode
+      ),
+    [senderWardsData, selectedSenderWardCode, selectedSenderProvinceCode]
+  );
+
+  const receiverWardSelectOptions = React.useMemo(
+    () =>
+      buildWardSelectOptions(
+        receiverWardsData?.items,
+        selectedReceiverWardCode,
+        selectedReceiverProvinceCode
+      ),
+    [receiverWardsData, selectedReceiverWardCode, selectedReceiverProvinceCode]
+  );
+
+  const provinceNameByCode = React.useMemo(
+    () => getProvinceNameByCode(provinceSelectOptions),
+    [provinceSelectOptions]
+  );
+
+  const detailProvinceCodes = React.useMemo(() => {
+    const senderProvinceCode = normalizeLocationCode(
+      detailOrder?.senderProvinceCode
+    );
+    const receiverProvinceCode = normalizeLocationCode(
+      detailOrder?.receiverProvinceCode
+    );
+
+    return Array.from(
+      new Set(
+        [senderProvinceCode, receiverProvinceCode].filter(
+          (provinceCode): provinceCode is string => Boolean(provinceCode)
+        )
+      )
+    );
+  }, [detailOrder?.receiverProvinceCode, detailOrder?.senderProvinceCode]);
+
+  React.useEffect(() => {
+    const missingProvinceCodes = detailProvinceCodes.filter(
+      (provinceCode) => !(provinceCode in wardNamesByProvinceCode)
+    );
+
+    if (missingProvinceCodes.length === 0) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const fetchMissingWardNames = async () => {
+      await Promise.all(
+        missingProvinceCodes.map(async (provinceCode) => {
+          try {
+            const wardPage = await dispatch(
+              firstMileApi.endpoints.getWardsByProvinceCode.initiate(
+                {
+                  provinceCode,
+                  page: 0,
+                  size: 1000,
+                },
+                {
+                  subscribe: false,
+                }
+              )
+            ).unwrap();
+
+            if (isCancelled) {
+              return;
+            }
+
+            const wardNameByCode = wardPage.items.reduce<
+              Record<string, string>
+            >((accumulator, ward) => {
+              const wardCode = normalizeLocationCode(ward.wardCode);
+
+              if (wardCode) {
+                accumulator[wardCode] = ward.name;
+              }
+
+              return accumulator;
+            }, {});
+
+            setWardNamesByProvinceCode((prev) => ({
+              ...prev,
+              [provinceCode]: wardNameByCode,
+            }));
+          } catch {
+            if (isCancelled) {
+              return;
+            }
+
+            setWardNamesByProvinceCode((prev) => ({
+              ...prev,
+              [provinceCode]: {},
+            }));
+          }
+        })
+      );
+    };
+
+    void fetchMissingWardNames();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [detailProvinceCodes, dispatch, wardNamesByProvinceCode]);
+
+  const getProvinceLabel = React.useCallback(
+    (provinceCode?: string) => {
+      const normalizedProvinceCode = normalizeLocationCode(provinceCode);
+
+      if (!normalizedProvinceCode) {
+        return '--';
+      }
+
+      return (
+        provinceNameByCode[normalizedProvinceCode] || normalizedProvinceCode
+      );
+    },
+    [provinceNameByCode]
+  );
+
+  const getWardLabel = React.useCallback(
+    (provinceCode?: string, wardCode?: string) => {
+      const normalizedWardCode = normalizeLocationCode(wardCode);
+
+      if (!normalizedWardCode) {
+        return '--';
+      }
+
+      const normalizedProvinceCode = normalizeLocationCode(provinceCode);
+
+      if (!normalizedProvinceCode) {
+        return normalizedWardCode;
+      }
+
+      const wardNameByCode = wardNamesByProvinceCode[normalizedProvinceCode];
+
+      return wardNameByCode?.[normalizedWardCode] || normalizedWardCode;
+    },
+    [wardNamesByProvinceCode]
+  );
+
+  const [createOrder, { isLoading: isCreatingOrder }] =
+    useCreateOrderMutation();
+  const [updateOrder, { isLoading: isUpdatingOrder }] =
+    useUpdateOrderMutation();
+  const [cancelOrder, { isLoading: isCancellingOrder }] =
+    useCancelOrderMutation();
+  const [confirmOrder] = useConfirmOrderMutation();
+  const [geocodeAddress] = useGeocodeAddressMutation();
+  const [loadOrderById] = useLazyGetOrderByIdQuery();
+  const [triggerExportOrderTemplate, { isFetching: isExportingTemplate }] =
+    useLazyExportOrderTemplateQuery();
+  const [validateOrderImport, { isLoading: isValidatingImport }] =
+    useValidateOrderImportMutation();
+  const [importOrderFile, { isLoading: isImportingOrders }] =
+    useImportOrdersMutation();
+
+  const isSubmittingOrder = isCreatingOrder || isUpdatingOrder;
+  const isImportFlowBusy =
+    isExportingTemplate || isValidatingImport || isImportingOrders;
+
+  const validatedPreviewItems = React.useMemo(
+    () => validateImportResult?.data?.slice(0, IMPORT_PREVIEW_LIMIT) ?? [],
+    [validateImportResult]
+  );
+
   const handleApplyFilters = (event: React.FormEvent) => {
     event.preventDefault();
     setPage(0);
@@ -197,192 +390,801 @@ export const OrderListPage: React.FC = () => {
     setStatus(statusInput === 'ALL' ? undefined : statusInput);
   };
 
+  const handleOpenCreateDialog = () => {
+    if (!canMutateOrders) {
+      notification.error(
+        'Only TMS_ADMIN or TMS_CUSTOMER can create first-mile orders.'
+      );
+      return;
+    }
+
+    setOrderFormMode('create');
+    setEditingOrderId(null);
+    setCreateForm({ ...DEFAULT_CREATE_ORDER_FORM });
+    setOrderProducts([]);
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleMapCoordinateChange = React.useCallback(
+    (target: LocationTarget, latitude: number, longitude: number) => {
+      const latitudeValue = latitude.toFixed(6);
+      const longitudeValue = longitude.toFixed(6);
+
+      setCreateForm((prev) => {
+        if (target === 'sender') {
+          return {
+            ...prev,
+            senderLatitude: latitudeValue,
+            senderLongitude: longitudeValue,
+          };
+        }
+
+        return {
+          ...prev,
+          receiverLatitude: latitudeValue,
+          receiverLongitude: longitudeValue,
+        };
+      });
+    },
+    []
+  );
+
+  const handleGeocodeFromAddress = async (target: LocationTarget) => {
+    const isSender = target === 'sender';
+
+    const provinceCode = isSender
+      ? selectedSenderProvinceCode
+      : selectedReceiverProvinceCode;
+    const wardCode = isSender
+      ? selectedSenderWardCode
+      : selectedReceiverWardCode;
+    const addressDetail = isSender
+      ? createForm.senderAddressDetail.trim()
+      : createForm.receiverAddressDetail.trim();
+    const wardOptions = isSender
+      ? senderWardSelectOptions
+      : receiverWardSelectOptions;
+
+    if (!provinceCode) {
+      notification.error('Please select a province before geocoding.');
+      return;
+    }
+
+    if (!wardCode) {
+      notification.error('Please select a ward before geocoding.');
+      return;
+    }
+
+    if (!addressDetail) {
+      notification.error('Please enter address detail before geocoding.');
+      return;
+    }
+
+    const provinceName = provinceNameByCode[provinceCode] || provinceCode;
+    const wardName =
+      wardOptions.find(
+        (ward) => normalizeLocationCode(ward.wardCode) === wardCode
+      )?.name || wardCode;
+    const fullAddress = [addressDetail, wardName, provinceName, 'Vietnam']
+      .filter(Boolean)
+      .join(', ');
+
+    setGeocodingTarget(target);
+
+    try {
+      const geocodeResult = await geocodeAddress({
+        address: fullAddress,
+      }).unwrap();
+
+      handleMapCoordinateChange(
+        target,
+        geocodeResult.latitude,
+        geocodeResult.longitude
+      );
+
+      notification.success('Coordinates updated from address.', {
+        description: `${geocodeResult.latitude.toFixed(6)}, ${geocodeResult.longitude.toFixed(6)}`,
+      });
+    } catch (error) {
+      notification.error('Failed to geocode address.', {
+        description: getErrorMessage(error),
+      });
+    } finally {
+      setGeocodingTarget(null);
+    }
+  };
+
+  const refreshOrdersAfterMutation = React.useCallback(() => {
+    if ((data?.items.length ?? 0) === 1 && page > 0) {
+      setPage((prev) => Math.max(prev - 1, 0));
+      return;
+    }
+
+    void refetch();
+  }, [data?.items.length, page, refetch]);
+
+  const loadOrderDetail = React.useCallback(
+    async (orderId: number): Promise<FirstMileOrderDetail | null> => {
+      try {
+        const orderDetailResult = await loadOrderById(orderId).unwrap();
+        return orderDetailResult;
+      } catch (error) {
+        notification.error('Failed to load order detail.', {
+          description: getErrorMessage(error),
+        });
+        return null;
+      }
+    },
+    [loadOrderById, notification]
+  );
+
+  const handleOpenOrderDetail = async (orderId: number) => {
+    setLoadingOrderActionId(orderId);
+    setIsDetailDialogOpen(true);
+    setDetailOrder(null);
+
+    const orderDetailResult = await loadOrderDetail(orderId);
+    if (orderDetailResult) {
+      setDetailOrder(orderDetailResult);
+    } else {
+      setIsDetailDialogOpen(false);
+    }
+
+    setLoadingOrderActionId(null);
+  };
+
+  const handleOpenEditOrder = async (order: FirstMileOrderDetail) => {
+    if (!canMutateOrders) {
+      notification.error(
+        'Only TMS_ADMIN or TMS_CUSTOMER can update first-mile orders.'
+      );
+      return;
+    }
+
+    if (!isDraftOrder(order)) {
+      notification.error(
+        'Only newly created and unconfirmed orders can be edited.'
+      );
+      return;
+    }
+
+    setLoadingOrderActionId(order.id);
+    const orderDetailResult = await loadOrderDetail(order.id);
+    setLoadingOrderActionId(null);
+
+    if (!orderDetailResult) {
+      return;
+    }
+
+    setOrderFormMode('edit');
+    setEditingOrderId(orderDetailResult.id);
+    setCreateForm(mapOrderToFormState(orderDetailResult));
+    setOrderProducts(mapOrderProductsToRequest(orderDetailResult.products));
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleRequestCancelOrder = (order: FirstMileOrderDetail) => {
+    if (!canMutateOrders) {
+      notification.error(
+        'Only TMS_ADMIN or TMS_CUSTOMER can cancel first-mile orders.'
+      );
+      return;
+    }
+
+    if (!isDraftOrder(order)) {
+      notification.error(
+        'Only newly created and unconfirmed orders can be cancelled.'
+      );
+      return;
+    }
+
+    setCancelReason('');
+    setCancelTarget(order);
+  };
+
+  const handleCancelOrder = async () => {
+    if (!cancelTarget) {
+      return;
+    }
+
+    const body: CancelOrderRequest = {
+      ...(cancelReason.trim() ? { cancel_reason: cancelReason.trim() } : {}),
+    };
+
+    try {
+      await cancelOrder({
+        id: cancelTarget.id,
+        body,
+      }).unwrap();
+
+      notification.success('Order cancelled successfully.');
+      setCancelTarget(null);
+      setCancelReason('');
+      refreshOrdersAfterMutation();
+    } catch (error) {
+      notification.error('Failed to cancel order.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleRequestDeleteOrder = (order: FirstMileOrderDetail) => {
+    if (!canMutateOrders) {
+      notification.error(
+        'Only TMS_ADMIN or TMS_CUSTOMER can delete first-mile orders.'
+      );
+      return;
+    }
+
+    if (!isDraftOrder(order)) {
+      notification.error(
+        'Only newly created and unconfirmed orders can be deleted.'
+      );
+      return;
+    }
+
+    setDeleteTarget(order);
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!deleteTarget) {
+      return;
+    }
+
+    try {
+      await cancelOrder({
+        id: deleteTarget.id,
+        body: {
+          cancel_reason: 'Deleted by user from frontend order list.',
+        },
+      }).unwrap();
+
+      notification.success('Order deleted successfully.', {
+        description: 'Backend currently maps delete action to cancel status.',
+      });
+      setDeleteTarget(null);
+      refreshOrdersAfterMutation();
+    } catch (error) {
+      notification.error('Failed to delete order.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const buildCreateOrderPayload = (): CreateOrderRequest | null => {
+    const requiredFields: Array<{ value: string; label: string }> = [
+      {
+        value: createForm.customerOrderCode,
+        label: 'Customer order code',
+      },
+      { value: createForm.senderName, label: 'Sender name' },
+      { value: createForm.senderPhone, label: 'Sender phone' },
+      {
+        value: createForm.senderProvinceCode,
+        label: 'Sender province code',
+      },
+      { value: createForm.senderWardCode, label: 'Sender ward code' },
+      {
+        value: createForm.senderAddressDetail,
+        label: 'Sender address detail',
+      },
+      { value: createForm.receiverName, label: 'Receiver name' },
+      { value: createForm.receiverPhone, label: 'Receiver phone' },
+      {
+        value: createForm.receiverProvinceCode,
+        label: 'Receiver province code',
+      },
+      { value: createForm.receiverWardCode, label: 'Receiver ward code' },
+      {
+        value: createForm.receiverAddressDetail,
+        label: 'Receiver address detail',
+      },
+    ];
+
+    const missingField = requiredFields.find((field) => !field.value.trim());
+    if (missingField) {
+      notification.error(`${missingField.label} is required.`);
+      return null;
+    }
+
+    const senderLatitude = parseRequiredNumberInput(createForm.senderLatitude);
+    const senderLongitude = parseRequiredNumberInput(
+      createForm.senderLongitude
+    );
+    const receiverLatitude = parseRequiredNumberInput(
+      createForm.receiverLatitude
+    );
+    const receiverLongitude = parseRequiredNumberInput(
+      createForm.receiverLongitude
+    );
+
+    if (
+      senderLatitude === null ||
+      senderLongitude === null ||
+      receiverLatitude === null ||
+      receiverLongitude === null
+    ) {
+      notification.error('Sender and receiver coordinates must be valid.');
+      return null;
+    }
+
+    if (
+      senderLatitude < -90 ||
+      senderLatitude > 90 ||
+      receiverLatitude < -90 ||
+      receiverLatitude > 90 ||
+      senderLongitude < -180 ||
+      senderLongitude > 180 ||
+      receiverLongitude < -180 ||
+      receiverLongitude > 180
+    ) {
+      notification.error(
+        'Latitude must be in [-90, 90] and longitude must be in [-180, 180].'
+      );
+      return null;
+    }
+
+    const dimensionLengthCm = parseOptionalNumberInput(
+      createForm.dimensionLengthCm
+    );
+    const dimensionWidthCm = parseOptionalNumberInput(
+      createForm.dimensionWidthCm
+    );
+    const dimensionHeightCm = parseOptionalNumberInput(
+      createForm.dimensionHeightCm
+    );
+    const totalVolumeM3 = parseOptionalNumberInput(createForm.totalVolumeM3);
+
+    const hasInvalidOptionalNumericField =
+      (createForm.dimensionLengthCm.trim() &&
+        dimensionLengthCm === undefined) ||
+      (createForm.dimensionWidthCm.trim() && dimensionWidthCm === undefined) ||
+      (createForm.dimensionHeightCm.trim() &&
+        dimensionHeightCm === undefined) ||
+      (createForm.totalVolumeM3.trim() && totalVolumeM3 === undefined);
+
+    if (hasInvalidOptionalNumericField) {
+      notification.error('Dimension and volume values must be valid numbers.');
+      return null;
+    }
+
+    return {
+      customer_order_code: createForm.customerOrderCode.trim(),
+      sender_name: createForm.senderName.trim(),
+      sender_phone: createForm.senderPhone.trim(),
+      sender_province_code: createForm.senderProvinceCode.trim(),
+      sender_ward_code: createForm.senderWardCode.trim(),
+      sender_address_detail: createForm.senderAddressDetail.trim(),
+      sender_latitude: senderLatitude,
+      sender_longitude: senderLongitude,
+      receiver_name: createForm.receiverName.trim(),
+      receiver_phone: createForm.receiverPhone.trim(),
+      receiver_province_code: createForm.receiverProvinceCode.trim(),
+      receiver_ward_code: createForm.receiverWardCode.trim(),
+      receiver_address_detail: createForm.receiverAddressDetail.trim(),
+      receiver_latitude: receiverLatitude,
+      receiver_longitude: receiverLongitude,
+      ...(createForm.pickupTimeStart
+        ? { pickup_time_start: createForm.pickupTimeStart }
+        : {}),
+      ...(createForm.pickupTimeEnd
+        ? { pickup_time_end: createForm.pickupTimeEnd }
+        : {}),
+      delivery_request_time: createForm.deliveryRequestTime,
+      ...(createForm.orderProductCategory !== 'NONE'
+        ? { order_product_category: createForm.orderProductCategory }
+        : {}),
+      order_type: createForm.orderType,
+      fee_payer: createForm.feePayer,
+      is_cod: createForm.isCod === 'true',
+      ...(dimensionLengthCm !== undefined
+        ? { dimension_length_cm: dimensionLengthCm }
+        : {}),
+      ...(dimensionWidthCm !== undefined
+        ? { dimension_width_cm: dimensionWidthCm }
+        : {}),
+      ...(dimensionHeightCm !== undefined
+        ? { dimension_height_cm: dimensionHeightCm }
+        : {}),
+      ...(totalVolumeM3 !== undefined
+        ? { total_volume_m3: totalVolumeM3 }
+        : {}),
+      ...(createForm.note.trim() ? { note: createForm.note.trim() } : {}),
+      products: orderProducts ?? [],
+    };
+  };
+
+  const handleCreateOrder = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!canMutateOrders) {
+      notification.error(
+        'Only TMS_ADMIN or TMS_CUSTOMER can create first-mile orders.'
+      );
+      return;
+    }
+
+    const payload = buildCreateOrderPayload();
+    if (!payload) {
+      return;
+    }
+
+    try {
+      if (orderFormMode === 'create') {
+        const createdOrder = await createOrder(payload).unwrap();
+
+        notification.success('Order created successfully.', {
+          description: `Order code: ${createdOrder.orderCode}`,
+        });
+      } else {
+        if (editingOrderId === null) {
+          notification.error('Missing order id for update.');
+          return;
+        }
+
+        await updateOrder({
+          id: editingOrderId,
+          body: payload as UpdateOrderRequest,
+        }).unwrap();
+
+        notification.success('Order updated successfully.');
+      }
+
+      setIsCreateDialogOpen(false);
+      setOrderFormMode('create');
+      setEditingOrderId(null);
+      setCreateForm({ ...DEFAULT_CREATE_ORDER_FORM });
+      setOrderProducts([]);
+
+      if (orderFormMode === 'create' && page !== 0) {
+        setPage(0);
+      } else {
+        refreshOrdersAfterMutation();
+      }
+    } catch (error) {
+      notification.error(
+        orderFormMode === 'create'
+          ? 'Failed to create order.'
+          : 'Failed to update order.',
+        {
+          description: getErrorMessage(error),
+        }
+      );
+    }
+  };
+
+  const handleConfirmOrder = async (order: FirstMileOrderDetail) => {
+    if (!canMutateOrders) {
+      notification.error(
+        'Only TMS_ADMIN or TMS_CUSTOMER can confirm first-mile orders.'
+      );
+      return;
+    }
+
+    setConfirmingOrderId(order.id);
+
+    try {
+      const confirmationResult = await confirmOrder(order.id).unwrap();
+      const originPostOffice = confirmationResult.originPostOffice;
+
+      notification.success(
+        confirmationResult.alreadyConfirmed
+          ? 'Order was already confirmed.'
+          : 'Order confirmed successfully.',
+        originPostOffice
+          ? {
+              description: `Origin post office: ${originPostOffice.code} - ${originPostOffice.name}`,
+            }
+          : undefined
+      );
+
+      void refetch();
+    } catch (error) {
+      notification.error('Failed to confirm order.', {
+        description: getErrorMessage(error),
+      });
+    } finally {
+      setConfirmingOrderId(null);
+    }
+  };
+
+  const resetImportFileSelection = React.useCallback(() => {
+    setSelectedImportFile(null);
+    setValidateImportResult(null);
+    setImportFileInputKey((prev) => prev + 1);
+  }, []);
+
+  const handleSelectImportFile = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0] ?? null;
+    setSelectedImportFile(file);
+    setValidateImportResult(null);
+    setLastImportJob(null);
+  };
+
+  const buildImportFormData = () => {
+    if (!selectedImportFile) {
+      return null;
+    }
+
+    const formData = new FormData();
+    formData.append('file', selectedImportFile);
+    return formData;
+  };
+
+  const handleDownloadTemplate = async () => {
+    if (!canMutateOrders) {
+      notification.error(
+        'Only TMS_ADMIN or TMS_CUSTOMER can download order templates.'
+      );
+      return;
+    }
+
+    try {
+      const blob = await triggerExportOrderTemplate(undefined).unwrap();
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+
+      link.href = downloadUrl;
+      link.download = 'order_template.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(downloadUrl);
+
+      notification.success('Order template downloaded successfully.');
+    } catch (error) {
+      notification.error('Failed to download order template.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleValidateImportFile = async () => {
+    if (!canMutateOrders) {
+      notification.error(
+        'Only TMS_ADMIN or TMS_CUSTOMER can validate order imports.'
+      );
+      return;
+    }
+
+    const formData = buildImportFormData();
+    if (!formData) {
+      notification.error('Please select an Excel file first.');
+      return;
+    }
+
+    try {
+      const result = await validateOrderImport(formData).unwrap();
+      setValidateImportResult(result);
+
+      if (result.is_success) {
+        notification.success('File validated successfully.', {
+          description: `${result.data.length} order(s) are ready to import.`,
+        });
+      } else {
+        notification.error('Validation completed with errors.', {
+          description:
+            result.error_message ||
+            'Please fix the Excel data before importing.',
+        });
+      }
+    } catch (error) {
+      notification.error('Failed to validate order import file.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleImportFile = async () => {
+    if (!canMutateOrders) {
+      notification.error('Only TMS_ADMIN or TMS_CUSTOMER can import orders.');
+      return;
+    }
+
+    if (!validateImportResult) {
+      notification.error('Please validate the selected file before importing.');
+      return;
+    }
+
+    if (!validateImportResult.is_success) {
+      notification.error(
+        'Validation has errors. Please fix them before import.'
+      );
+      return;
+    }
+
+    const formData = buildImportFormData();
+    if (!formData) {
+      notification.error('Please select an Excel file first.');
+      return;
+    }
+
+    try {
+      const importResult = await importOrderFile(formData).unwrap();
+      setLastImportJob(importResult);
+      resetImportFileSelection();
+
+      notification.success('Order import job created.', {
+        description: `Job #${importResult.id} is ${importResult.status}.`,
+      });
+
+      void refetch();
+    } catch (error) {
+      notification.error('Failed to import order file.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
   return (
     <div className='space-y-6'>
-      <div className='flex flex-col gap-2'>
-        <h1 className='text-2xl font-bold tracking-tight'>Orders</h1>
-        <p className='text-muted-foreground'>
-          Track first-mile orders based on your role and access scope.
-        </p>
-      </div>
+      <OrderPageHeader
+        canMutateOrders={canMutateOrders}
+        onCreateOrder={handleOpenCreateDialog}
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className='flex items-center gap-2'>
-            <Shield className='h-5 w-5' />
-            Access Scope
-          </CardTitle>
-          <CardDescription>
-            The system automatically limits visible orders by your current role.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className='space-y-2'>
-          <Badge
-            variant={canViewOrders ? 'secondary' : 'destructive'}
-            className='w-fit'
-          >
-            {getScopeBadgeLabel(accessScope)}
-          </Badge>
-          <p className='text-sm text-muted-foreground'>
-            {getScopeDescription(accessScope)}
-          </p>
-        </CardContent>
-      </Card>
+      <OrderAccessScopeCard
+        canViewOrders={canViewOrders}
+        badgeLabel={getScopeBadgeLabel(accessScope)}
+        description={getScopeDescription(accessScope)}
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Search & Filters</CardTitle>
-          <CardDescription>
-            Search by order code, customer order code, sender, or receiver
-            name/phone.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form
-            onSubmit={handleApplyFilters}
-            className='flex flex-col gap-3 md:flex-row md:items-center'
-          >
-            <div className='relative flex-1'>
-              <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-              <Input
-                className='pl-10'
-                value={keywordInput}
-                onChange={(event) => setKeywordInput(event.target.value)}
-                placeholder='Search orders...'
-                disabled={!canViewOrders}
-              />
-            </div>
+      <OrderFiltersCard
+        canViewOrders={canViewOrders}
+        keywordInput={keywordInput}
+        statusInput={statusInput}
+        statusOptions={ORDER_STATUS_OPTIONS}
+        isFetching={isFetching}
+        onKeywordInputChange={setKeywordInput}
+        onStatusInputChange={setStatusInput}
+        onApplyFilters={handleApplyFilters}
+        onRefresh={() => {
+          void refetch();
+        }}
+        formatStatusLabel={formatStatusLabel}
+      />
 
-            <Select
-              value={statusInput}
-              onValueChange={(value) =>
-                setStatusInput(value as OrderStatusFilter)
-              }
-              disabled={!canViewOrders}
-            >
-              <SelectTrigger className='w-full md:w-[220px]'>
-                <SelectValue placeholder='Filter by status' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='ALL'>All statuses</SelectItem>
-                {ORDER_STATUS_OPTIONS.map((statusOption) => (
-                  <SelectItem key={statusOption} value={statusOption}>
-                    {formatStatusLabel(statusOption)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      <OrderImportCard
+        canMutateOrders={canMutateOrders}
+        isImportFlowBusy={isImportFlowBusy}
+        isExportingTemplate={isExportingTemplate}
+        isValidatingImport={isValidatingImport}
+        isImportingOrders={isImportingOrders}
+        importFileInputKey={importFileInputKey}
+        selectedImportFile={selectedImportFile}
+        validateImportResult={validateImportResult}
+        validatedPreviewItems={validatedPreviewItems}
+        importPreviewLimit={IMPORT_PREVIEW_LIMIT}
+        lastImportJob={lastImportJob}
+        onDownloadTemplate={() => {
+          void handleDownloadTemplate();
+        }}
+        onSelectImportFile={handleSelectImportFile}
+        onValidateImportFile={() => {
+          void handleValidateImportFile();
+        }}
+        onImportFile={() => {
+          void handleImportFile();
+        }}
+        formatProductsPreview={formatOrderImportProductsPreview}
+      />
 
-            <Button type='submit' disabled={!canViewOrders}>
-              Apply
-            </Button>
-            <Button
-              type='button'
-              variant='outline'
-              onClick={() => refetch()}
-              disabled={!canViewOrders || isFetching}
-            >
-              <RefreshCw className='mr-2 h-4 w-4' />
-              Refresh
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+      <OrderResultsCard
+        canViewOrders={canViewOrders}
+        canMutateOrders={canMutateOrders}
+        data={data}
+        isLoading={isLoading}
+        isFetching={isFetching}
+        loadingOrderActionId={loadingOrderActionId}
+        confirmingOrderId={confirmingOrderId}
+        onViewDetail={(orderId) => {
+          void handleOpenOrderDetail(orderId);
+        }}
+        onEdit={(order) => {
+          void handleOpenEditOrder(order);
+        }}
+        onRequestCancel={handleRequestCancelOrder}
+        onRequestDelete={handleRequestDeleteOrder}
+        onConfirm={(order) => {
+          void handleConfirmOrder(order);
+        }}
+        onPreviousPage={() => setPage((prev) => Math.max(prev - 1, 0))}
+        onNextPage={() => setPage((prev) => prev + 1)}
+        formatStatusLabel={formatStatusLabel}
+        getStatusBadgeVariant={getStatusBadgeVariant}
+        isDraftOrder={isDraftOrder}
+        isConfirmableStatus={isConfirmableStatus}
+        buildOrderAddressLabel={buildOrderAddressLabel}
+        buildPostOfficeAssignmentLabel={buildPostOfficeAssignmentLabel}
+        formatDateTime={formatDateTime}
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Results ({data?.totalItems ?? 0})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {!canViewOrders ? (
-            <p className='text-muted-foreground'>
-              You do not have permission to access order data.
-            </p>
-          ) : isLoading ? (
-            <div className='flex items-center gap-2 text-muted-foreground'>
-              <Loader2 className='h-4 w-4 animate-spin' />
-              Loading orders...
-            </div>
-          ) : data && data.items.length > 0 ? (
-            <div className='space-y-3'>
-              {data.items.map((order) => (
-                <div
-                  key={order.id}
-                  className='rounded-lg border p-3 flex flex-col gap-2'
-                >
-                  <div className='flex flex-wrap items-center justify-between gap-2'>
-                    <div>
-                      <p className='font-medium'>{order.orderCode}</p>
-                      <p className='text-xs text-muted-foreground'>
-                        Customer order: {order.customerOrderCode || '--'}
-                      </p>
-                    </div>
-                    <div className='flex items-center gap-2'>
-                      <Badge variant={getStatusBadgeVariant(order.status)}>
-                        {formatStatusLabel(order.status)}
-                      </Badge>
-                      <Badge variant='outline'>
-                        {order.isConfirm ? 'Confirmed' : 'Pending confirm'}
-                      </Badge>
-                    </div>
-                  </div>
+      <OrderFormDialog
+        open={isCreateDialogOpen}
+        orderFormMode={orderFormMode}
+        isSubmittingOrder={isSubmittingOrder}
+        createForm={createForm}
+        selectedSenderProvinceCode={selectedSenderProvinceCode}
+        selectedSenderWardCode={selectedSenderWardCode}
+        selectedReceiverProvinceCode={selectedReceiverProvinceCode}
+        selectedReceiverWardCode={selectedReceiverWardCode}
+        provinceSelectOptions={provinceSelectOptions}
+        senderWardSelectOptions={senderWardSelectOptions}
+        receiverWardSelectOptions={receiverWardSelectOptions}
+        isFetchingSenderWards={isFetchingSenderWards}
+        isFetchingReceiverWards={isFetchingReceiverWards}
+        geocodingTarget={geocodingTarget}
+        onOpenChange={setIsCreateDialogOpen}
+        onSubmit={handleCreateOrder}
+        onFormChange={updateCreateFormField}
+        onGeocodeFromAddress={(target) => {
+          void handleGeocodeFromAddress(target);
+        }}
+        onMapCoordinateChange={handleMapCoordinateChange}
+        normalizeLocationCode={normalizeLocationCode}
+        parseOptionalNumberInput={parseOptionalNumberInput}
+      />
 
-                  <p className='text-xs text-muted-foreground'>
-                    Sender:{' '}
-                    {buildOrderAddressLabel(
-                      order.senderName,
-                      order.senderPhone,
-                      order.senderAddressDetail
-                    )}
-                  </p>
-                  <p className='text-xs text-muted-foreground'>
-                    Receiver:{' '}
-                    {buildOrderAddressLabel(
-                      order.receiverName,
-                      order.receiverPhone,
-                      order.receiverAddressDetail
-                    )}
-                  </p>
-                  <p className='text-xs text-muted-foreground'>
-                    Assigned post office:{' '}
-                    {buildPostOfficeAssignmentLabel(order)}
-                  </p>
-                  <p className='text-xs text-muted-foreground'>
-                    Pickup window: {formatDateTime(order.pickupTimeStart)} -{' '}
-                    {formatDateTime(order.pickupTimeEnd)}
-                  </p>
-                  <p className='text-xs text-muted-foreground'>
-                    Created by: {order.createdBy || '--'} | Updated:{' '}
-                    {formatDateTime(order.updatedAt)}
-                  </p>
-                </div>
-              ))}
+      <OrderDetailDialog
+        open={isDetailDialogOpen}
+        detailOrder={detailOrder}
+        onOpenChange={(open) => {
+          setIsDetailDialogOpen(open);
+          if (!open) {
+            setDetailOrder(null);
+          }
+        }}
+        formatStatusLabel={formatStatusLabel}
+        buildOrderAddressLabel={buildOrderAddressLabel}
+        getProvinceLabel={getProvinceLabel}
+        getWardLabel={getWardLabel}
+        formatDateTime={formatDateTime}
+      />
 
-              <div className='flex items-center justify-between pt-2'>
-                <Button
-                  variant='outline'
-                  onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
-                  disabled={!data.hasPrevious || isFetching}
-                >
-                  Previous
-                </Button>
-                <span className='text-sm text-muted-foreground'>
-                  Page {data.currentPage + 1} / {Math.max(data.totalPages, 1)}
-                </span>
-                <Button
-                  variant='outline'
-                  onClick={() => setPage((prev) => prev + 1)}
-                  disabled={!data.hasNext || isFetching}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <p className='text-muted-foreground'>No orders found.</p>
-          )}
-        </CardContent>
-      </Card>
+      <OrderCancelDialog
+        cancelTarget={cancelTarget}
+        cancelReason={cancelReason}
+        isCancellingOrder={isCancellingOrder}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCancelTarget(null);
+            setCancelReason('');
+          }
+        }}
+        onCancelReasonChange={setCancelReason}
+        onKeepOrder={() => {
+          setCancelTarget(null);
+          setCancelReason('');
+        }}
+        onConfirmCancel={() => {
+          void handleCancelOrder();
+        }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null);
+          }
+        }}
+        title='Delete Order'
+        description={
+          deleteTarget
+            ? `Delete order ${deleteTarget.orderCode}? This action will be mapped to cancel status because backend does not expose hard-delete API.`
+            : 'Delete this order?'
+        }
+        confirmText='Delete order'
+        cancelText='Keep order'
+        onConfirm={() => {
+          void handleDeleteOrder();
+        }}
+        onCancel={() => setDeleteTarget(null)}
+        isLoading={isCancellingOrder}
+        variant='destructive'
+      />
     </div>
   );
 };

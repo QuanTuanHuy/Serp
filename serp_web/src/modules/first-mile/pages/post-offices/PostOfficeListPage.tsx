@@ -15,6 +15,11 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
   Input,
   Label,
   Select,
@@ -36,6 +41,7 @@ import {
   useUpdatePostOfficeMutation,
   useValidatePostOfficeImportMutation,
 } from '../../api';
+import { CoordinatePickerMap } from '../../components';
 import type {
   ImportHistory,
   PostOffice,
@@ -155,6 +161,9 @@ export const PostOfficeListPage: React.FC = () => {
   const [editingId, setEditingId] = React.useState<number | null>(null);
   const [formValues, setFormValues] = React.useState<PostOfficeFormState>(
     DEFAULT_POST_OFFICE_FORM
+  );
+  const [detailTarget, setDetailTarget] = React.useState<PostOffice | null>(
+    null
   );
   const [deleteTarget, setDeleteTarget] = React.useState<PostOffice | null>(
     null
@@ -583,6 +592,10 @@ export const PostOfficeListPage: React.FC = () => {
     }
 
     setDeleteTarget(postOffice);
+  };
+
+  const handleOpenDetail = (postOffice: PostOffice) => {
+    setDetailTarget(postOffice);
   };
 
   const handleDeletePostOffice = async () => {
@@ -1015,6 +1028,7 @@ export const PostOfficeListPage: React.FC = () => {
           isSaving={isSaving}
           isDeleting={isDeleting}
           onViewModeChange={setViewMode}
+          onViewDetails={handleOpenDetail}
           onEdit={handleOpenEditDialog}
           onDelete={handleRequestDelete}
           onPreviousPage={() => setPage((prev) => Math.max(prev - 1, 0))}
@@ -1039,6 +1053,114 @@ export const PostOfficeListPage: React.FC = () => {
         onSubmit={handleSubmitForm}
         updateFormField={updateFormField}
       />
+
+      <Dialog
+        open={Boolean(detailTarget)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDetailTarget(null);
+          }
+        }}
+      >
+        <DialogContent className='sm:max-w-3xl max-h-[90vh] overflow-y-auto'>
+          <DialogHeader>
+            <DialogTitle>Post Office Details</DialogTitle>
+            <DialogDescription>
+              Detailed information and map location of selected post office.
+            </DialogDescription>
+          </DialogHeader>
+
+          {detailTarget ? (
+            <div className='space-y-4'>
+              <div className='grid gap-3 md:grid-cols-2 text-sm'>
+                <div>
+                  <p className='text-muted-foreground'>Code</p>
+                  <p className='font-medium'>{detailTarget.code}</p>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>Name</p>
+                  <p className='font-medium'>{detailTarget.name}</p>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>Status</p>
+                  <Badge variant={getStatusBadgeVariant(detailTarget.status)}>
+                    {detailTarget.status}
+                  </Badge>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>Phone</p>
+                  <p className='font-medium'>
+                    {detailTarget.phoneNumber || '--'}
+                  </p>
+                </div>
+                <div className='md:col-span-2'>
+                  <p className='text-muted-foreground'>Address</p>
+                  <p className='font-medium'>{detailTarget.addressDetail}</p>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>Province / Ward</p>
+                  <p className='font-medium'>
+                    {getProvinceLabel(detailTarget.provinceCode)} /{' '}
+                    {getWardLabel(
+                      detailTarget.provinceCode,
+                      detailTarget.wardCode
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>Service radius (m)</p>
+                  <p className='font-medium'>{detailTarget.serviceRadiusM}</p>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>Daily capacity</p>
+                  <p className='font-medium'>
+                    {detailTarget.dailyCapacity ?? '--'}
+                  </p>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>Current load</p>
+                  <p className='font-medium'>
+                    {detailTarget.currentLoad ?? '--'}
+                  </p>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>Priority</p>
+                  <p className='font-medium'>{detailTarget.priority ?? '--'}</p>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>Coordinates</p>
+                  <p className='font-medium'>
+                    {detailTarget.latitude ?? '--'},{' '}
+                    {detailTarget.longitude ?? '--'}
+                  </p>
+                </div>
+              </div>
+
+              <div className='space-y-2'>
+                <p className='text-sm font-medium'>Map</p>
+                {detailTarget.latitude !== undefined &&
+                detailTarget.latitude !== null &&
+                detailTarget.longitude !== undefined &&
+                detailTarget.longitude !== null ? (
+                  <CoordinatePickerMap
+                    latitude={detailTarget.latitude}
+                    longitude={detailTarget.longitude}
+                    disabled
+                    className='h-72'
+                    onChange={() => {
+                      // Read-only map in detail mode.
+                    }}
+                  />
+                ) : (
+                  <p className='text-sm text-muted-foreground'>
+                    This post office does not have geocoded coordinates yet.
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}

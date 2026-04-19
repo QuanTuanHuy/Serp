@@ -6,47 +6,15 @@
 'use client';
 
 import React from 'react';
-import { getErrorMessage, useAppSelector } from '@/lib/store';
-import {
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/components/ui';
+import { getErrorMessage, useAppDispatch, useAppSelector } from '@/lib/store';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { useNotification } from '@/shared/hooks';
 import {
-  Download,
-  Eye,
-  FileUp,
-  Loader2,
-  Pencil,
-  Plus,
-  RefreshCw,
-  Search,
-  Shield,
-  ShieldAlert,
-  Trash2,
-} from 'lucide-react';
-import {
+  firstMileApi,
   useCreateVehicleMutation,
   useDeleteVehicleMutation,
+  useGetActiveCouriersByPostOfficeQuery,
+  useGetPostOfficesQuery,
   useGetVehicleByIdQuery,
   useGetVehiclesQuery,
   useImportVehiclesMutation,
@@ -55,270 +23,36 @@ import {
   useValidateVehicleImportMutation,
 } from '../../api';
 import type {
-  CreateVehicleRequest,
   ImportHistory,
+  PostOfficeStaff,
   ValidateImportFileResponse,
   Vehicle,
   VehicleImportItem,
-  VehicleStatus,
-  VehicleType,
 } from '../../types';
-
-const PAGE_SIZE = 20;
-const IMPORT_PREVIEW_LIMIT = 5;
-
-type VehicleAccessScope =
-  | 'ADMIN_ALL'
-  | 'MANAGER_POST_OFFICES'
-  | 'COURIER_READ_ONLY'
-  | 'NO_ACCESS';
-
-type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
-type VehicleFormMode = 'create' | 'edit';
-
-interface VehicleFormState {
-  licensePlate: string;
-  maxWeight: string;
-  maxVolume: string;
-  postOfficeId: string;
-  postOfficeStaffId: string;
-  status: VehicleStatus;
-  vehicleType: VehicleType;
-}
-
-const VEHICLE_STATUS_OPTIONS: Array<{ value: VehicleStatus; label: string }> = [
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'IN_USE', label: 'In use' },
-  { value: 'FULL', label: 'Full' },
-  { value: 'MAINTENANCE', label: 'Maintenance' },
-  { value: 'INACTIVE', label: 'Inactive' },
-];
-
-const VEHICLE_TYPE_OPTIONS: Array<{ value: VehicleType; label: string }> = [
-  { value: 'BIKE', label: 'Bike' },
-  { value: 'TRUCK', label: 'Truck' },
-];
-
-const DEFAULT_VEHICLE_FORM: VehicleFormState = {
-  licensePlate: '',
-  maxWeight: '',
-  maxVolume: '',
-  postOfficeId: '',
-  postOfficeStaffId: '',
-  status: 'ACTIVE',
-  vehicleType: 'BIKE',
-};
-
-const resolveVehicleAccessScope = (roles: string[]): VehicleAccessScope => {
-  if (roles.includes('TMS_ADMIN')) {
-    return 'ADMIN_ALL';
-  }
-
-  if (roles.includes('TMS_POSTOFFICER_MANAGER')) {
-    return 'MANAGER_POST_OFFICES';
-  }
-
-  if (roles.includes('TMS_POSTOFFICER')) {
-    return 'COURIER_READ_ONLY';
-  }
-
-  return 'NO_ACCESS';
-};
-
-const getScopeBadgeLabel = (scope: VehicleAccessScope): string => {
-  switch (scope) {
-    case 'ADMIN_ALL':
-      return 'TMS admin';
-    case 'MANAGER_POST_OFFICES':
-      return 'Post office manager';
-    case 'COURIER_READ_ONLY':
-      return 'Courier';
-    default:
-      return 'No access';
-  }
-};
-
-const getScopeDescription = (scope: VehicleAccessScope): string => {
-  switch (scope) {
-    case 'ADMIN_ALL':
-      return 'You can view all vehicles in the system.';
-    case 'MANAGER_POST_OFFICES':
-      return 'You can view vehicles belonging to the post offices you manage.';
-    case 'COURIER_READ_ONLY':
-      return 'You can view vehicles but cannot create, update, delete, or import.';
-    default:
-      return 'Your current account does not have permission to access the vehicle list.';
-  }
-};
-
-const getStatusBadgeVariant = (status: VehicleStatus): BadgeVariant => {
-  switch (status) {
-    case 'ACTIVE':
-      return 'default';
-    case 'IN_USE':
-    case 'FULL':
-      return 'secondary';
-    case 'MAINTENANCE':
-      return 'outline';
-    case 'INACTIVE':
-      return 'destructive';
-    default:
-      return 'outline';
-  }
-};
-
-const formatStatusLabel = (status: VehicleStatus): string =>
-  status.replaceAll('_', ' ');
-
-const formatVehicleType = (vehicleType: VehicleType): string =>
-  vehicleType === 'TRUCK' ? 'Truck' : 'Bike';
-
-const formatDateTime = (value?: string): string => {
-  if (!value) {
-    return '--';
-  }
-
-  const parsedDate = new Date(value);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return value;
-  }
-
-  return parsedDate.toLocaleString('en-US');
-};
-
-const formatOptionalNumber = (value?: number): string => {
-  if (value === undefined || value === null) {
-    return '--';
-  }
-
-  return String(value);
-};
-
-const buildPostOfficeLabel = (vehicle: Vehicle): string => {
-  if (!vehicle.postOfficeCode) {
-    return 'Not assigned';
-  }
-
-  if (!vehicle.postOfficeName) {
-    return vehicle.postOfficeCode;
-  }
-
-  return `${vehicle.postOfficeCode} - ${vehicle.postOfficeName}`;
-};
-
-const parseOptionalNumber = (value: string): number | undefined => {
-  const trimmedValue = value.trim();
-  if (!trimmedValue) {
-    return undefined;
-  }
-
-  const parsedValue = Number(trimmedValue);
-  if (!Number.isFinite(parsedValue)) {
-    return undefined;
-  }
-
-  return parsedValue;
-};
-
-const parseOptionalPositiveInteger = (value: string): number | undefined => {
-  const trimmedValue = value.trim();
-  if (!trimmedValue) {
-    return undefined;
-  }
-
-  const parsedValue = Number(trimmedValue);
-  if (!Number.isInteger(parsedValue) || parsedValue <= 0) {
-    return undefined;
-  }
-
-  return parsedValue;
-};
-
-const mapVehicleToFormState = (vehicle: Vehicle): VehicleFormState => {
-  return {
-    licensePlate: vehicle.licensePlate || '',
-    maxWeight:
-      vehicle.maxWeight === undefined || vehicle.maxWeight === null
-        ? ''
-        : String(vehicle.maxWeight),
-    maxVolume:
-      vehicle.maxVolume === undefined || vehicle.maxVolume === null
-        ? ''
-        : String(vehicle.maxVolume),
-    postOfficeId:
-      vehicle.postOfficeId === undefined || vehicle.postOfficeId === null
-        ? ''
-        : String(vehicle.postOfficeId),
-    postOfficeStaffId:
-      vehicle.postOfficeStaffId === undefined ||
-      vehicle.postOfficeStaffId === null
-        ? ''
-        : String(vehicle.postOfficeStaffId),
-    status: vehicle.status || 'ACTIVE',
-    vehicleType: vehicle.vehicleType || 'BIKE',
-  };
-};
-
-const validateVehicleForm = (values: VehicleFormState): string | null => {
-  if (!values.licensePlate.trim()) {
-    return 'License plate is required.';
-  }
-
-  if (values.maxWeight.trim()) {
-    const parsedWeight = parseOptionalNumber(values.maxWeight);
-    if (parsedWeight === undefined || parsedWeight <= 0) {
-      return 'Max weight must be a number greater than 0.';
-    }
-  }
-
-  if (values.maxVolume.trim()) {
-    const parsedVolume = parseOptionalNumber(values.maxVolume);
-    if (parsedVolume === undefined || parsedVolume <= 0) {
-      return 'Max volume must be a number greater than 0.';
-    }
-  }
-
-  if (
-    values.postOfficeId.trim() &&
-    parseOptionalPositiveInteger(values.postOfficeId) === undefined
-  ) {
-    return 'Post office ID must be a positive integer.';
-  }
-
-  if (
-    values.postOfficeStaffId.trim() &&
-    parseOptionalPositiveInteger(values.postOfficeStaffId) === undefined
-  ) {
-    return 'Courier staff ID must be a positive integer.';
-  }
-
-  return null;
-};
-
-const buildVehicleRequest = (
-  values: VehicleFormState
-): CreateVehicleRequest => {
-  const maxWeight = parseOptionalNumber(values.maxWeight);
-  const maxVolume = parseOptionalNumber(values.maxVolume);
-  const postOfficeId = parseOptionalPositiveInteger(values.postOfficeId);
-  const postOfficeStaffId = parseOptionalPositiveInteger(
-    values.postOfficeStaffId
-  );
-
-  return {
-    license_plate: values.licensePlate.trim(),
-    status: values.status,
-    vehicle_type: values.vehicleType,
-    ...(maxWeight !== undefined ? { max_weight: maxWeight } : {}),
-    ...(maxVolume !== undefined ? { max_volume: maxVolume } : {}),
-    ...(postOfficeId !== undefined ? { post_office_id: postOfficeId } : {}),
-    ...(postOfficeStaffId !== undefined
-      ? { post_office_staff_id: postOfficeStaffId }
-      : {}),
-  };
-};
+import {
+  VehicleAccessScopeCard,
+  VehicleDetailDialog,
+  VehicleFormDialog,
+  VehicleImportCard,
+  VehiclePageHeader,
+  VehicleResultsCard,
+  VehicleSearchCard,
+} from './components';
+import {
+  buildVehicleRequest,
+  DEFAULT_VEHICLE_FORM,
+  IMPORT_PREVIEW_LIMIT,
+  mapVehicleToFormState,
+  PAGE_SIZE,
+  parseOptionalPositiveInteger,
+  resolveVehicleAccessScope,
+  validateVehicleForm,
+  type VehicleFormMode,
+  type VehicleFormState,
+} from './vehiclePageModels';
 
 export const VehicleListPage: React.FC = () => {
+  const dispatch = useAppDispatch();
   const notification = useNotification();
   const profile = useAppSelector((state) => state.account.user.profile);
   const roles = profile?.roles ?? [];
@@ -345,6 +79,10 @@ export const VehicleListPage: React.FC = () => {
     React.useState<ValidateImportFileResponse<VehicleImportItem> | null>(null);
   const [lastImportJob, setLastImportJob] =
     React.useState<ImportHistory | null>(null);
+  const [courierById, setCourierById] = React.useState<
+    Record<number, PostOfficeStaff>
+  >({});
+  const failedCourierIdRef = React.useRef<Set<number>>(new Set());
 
   const accessScope = React.useMemo(
     () => resolveVehicleAccessScope(roles),
@@ -354,6 +92,11 @@ export const VehicleListPage: React.FC = () => {
   const canViewVehicles = accessScope !== 'NO_ACCESS';
   const canManageVehicles =
     accessScope === 'ADMIN_ALL' || accessScope === 'MANAGER_POST_OFFICES';
+
+  const selectedPostOfficeNumericId = React.useMemo(
+    () => parseOptionalPositiveInteger(formValues.postOfficeId),
+    [formValues.postOfficeId]
+  );
 
   const { data, isLoading, isFetching, refetch } = useGetVehiclesQuery(
     {
@@ -372,6 +115,27 @@ export const VehicleListPage: React.FC = () => {
         !canViewVehicles || !isDetailDialogOpen || selectedVehicleId === null,
     });
 
+  const { data: postOfficesData, isFetching: isFetchingPostOffices } =
+    useGetPostOfficesQuery(
+      {
+        page: 0,
+        size: 500,
+      },
+      {
+        skip: !canManageVehicles,
+      }
+    );
+
+  const {
+    data: couriersByPostOfficeData,
+    isFetching: isFetchingCouriersByPostOffice,
+  } = useGetActiveCouriersByPostOfficeQuery(selectedPostOfficeNumericId ?? 0, {
+    skip:
+      !canManageVehicles ||
+      !isFormDialogOpen ||
+      selectedPostOfficeNumericId === undefined,
+  });
+
   const [createVehicle, { isLoading: isCreating }] = useCreateVehicleMutation();
   const [updateVehicle, { isLoading: isUpdating }] = useUpdateVehicleMutation();
   const [deleteVehicle, { isLoading: isDeleting }] = useDeleteVehicleMutation();
@@ -389,6 +153,216 @@ export const VehicleListPage: React.FC = () => {
   const validatedPreviewItems = React.useMemo(
     () => validateImportResult?.data?.slice(0, IMPORT_PREVIEW_LIMIT) ?? [],
     [validateImportResult]
+  );
+
+  const formatCourierOptionLabel = React.useCallback(
+    (courier: PostOfficeStaff & { id: number }) => {
+      const courierCode = courier.code?.trim();
+      const courierFullName = courier.fullName?.trim();
+
+      if (courierCode && courierFullName) {
+        return `${courierCode} - ${courierFullName}`;
+      }
+
+      if (courierFullName) {
+        return courierFullName;
+      }
+
+      if (courierCode) {
+        return courierCode;
+      }
+
+      return `Courier #${courier.id}`;
+    },
+    []
+  );
+
+  const postOfficeOptions = React.useMemo(() => {
+    const options = (postOfficesData?.items ?? []).map((postOffice) => {
+      const postOfficeCode = postOffice.code?.trim();
+      const postOfficeName = postOffice.name?.trim();
+
+      return {
+        value: String(postOffice.id),
+        label:
+          postOfficeCode && postOfficeName
+            ? `${postOfficeCode} - ${postOfficeName}`
+            : postOfficeCode ||
+              postOfficeName ||
+              `Post office #${postOffice.id}`,
+      };
+    });
+
+    if (
+      selectedPostOfficeNumericId &&
+      !options.some(
+        (option) => option.value === String(selectedPostOfficeNumericId)
+      )
+    ) {
+      options.unshift({
+        value: String(selectedPostOfficeNumericId),
+        label: `Post office #${selectedPostOfficeNumericId}`,
+      });
+    }
+
+    return options;
+  }, [postOfficesData, selectedPostOfficeNumericId]);
+
+  const courierOptions = React.useMemo(() => {
+    const options = (couriersByPostOfficeData ?? [])
+      .filter(
+        (
+          courier
+        ): courier is PostOfficeStaff & {
+          id: number;
+        } => Number.isInteger(courier.id) && courier.id > 0
+      )
+      .map((courier) => ({
+        value: String(courier.id),
+        label: formatCourierOptionLabel(courier),
+      }))
+      .sort((a, b) =>
+        a.label.localeCompare(b.label, 'en-US', {
+          sensitivity: 'base',
+        })
+      );
+
+    const selectedCourierStaffId = parseOptionalPositiveInteger(
+      formValues.postOfficeStaffId
+    );
+
+    if (
+      selectedCourierStaffId &&
+      !options.some((option) => option.value === String(selectedCourierStaffId))
+    ) {
+      const selectedCourier = courierById[selectedCourierStaffId];
+
+      options.unshift({
+        value: String(selectedCourierStaffId),
+        label:
+          selectedCourier && Number.isInteger(selectedCourier.id)
+            ? formatCourierOptionLabel(
+                selectedCourier as PostOfficeStaff & { id: number }
+              )
+            : `Courier #${selectedCourierStaffId}`,
+      });
+    }
+
+    return options;
+  }, [
+    courierById,
+    couriersByPostOfficeData,
+    formValues.postOfficeStaffId,
+    formatCourierOptionLabel,
+  ]);
+
+  const courierIdsToResolve = React.useMemo(() => {
+    const ids = new Set<number>();
+
+    for (const vehicle of data?.items ?? []) {
+      if (
+        Number.isInteger(vehicle.postOfficeStaffId) &&
+        (vehicle.postOfficeStaffId as number) > 0
+      ) {
+        ids.add(vehicle.postOfficeStaffId as number);
+      }
+    }
+
+    if (
+      Number.isInteger(vehicleDetail?.postOfficeStaffId) &&
+      (vehicleDetail?.postOfficeStaffId as number) > 0
+    ) {
+      ids.add(vehicleDetail?.postOfficeStaffId as number);
+    }
+
+    return Array.from(ids);
+  }, [data?.items, vehicleDetail?.postOfficeStaffId]);
+
+  React.useEffect(() => {
+    const missingCourierIds = courierIdsToResolve.filter((id) => {
+      return !courierById[id] && !failedCourierIdRef.current.has(id);
+    });
+
+    if (missingCourierIds.length === 0) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const fetchCourierDetails = async () => {
+      await Promise.all(
+        missingCourierIds.map(async (courierId) => {
+          try {
+            const courier = await dispatch(
+              firstMileApi.endpoints.getPostOfficeStaffById.initiate(
+                courierId,
+                {
+                  subscribe: false,
+                }
+              )
+            ).unwrap();
+
+            if (
+              isCancelled ||
+              !Number.isInteger(courier.id) ||
+              courier.id <= 0
+            ) {
+              return;
+            }
+
+            setCourierById((prev) => {
+              if (prev[courier.id]) {
+                return prev;
+              }
+
+              return {
+                ...prev,
+                [courier.id]: courier,
+              };
+            });
+          } catch {
+            if (isCancelled) {
+              return;
+            }
+
+            failedCourierIdRef.current.add(courierId);
+          }
+        })
+      );
+    };
+
+    void fetchCourierDetails();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [courierById, courierIdsToResolve, dispatch]);
+
+  const resolveCourierLabel = React.useCallback(
+    (postOfficeStaffId?: number): string => {
+      const courierId = postOfficeStaffId ?? 0;
+
+      if (!Number.isInteger(courierId) || courierId <= 0) {
+        return 'Not assigned';
+      }
+
+      const courier = courierById[courierId];
+
+      if (!courier) {
+        if (failedCourierIdRef.current.has(courierId)) {
+          return `Courier #${courierId}`;
+        }
+
+        return 'Loading courier...';
+      }
+
+      return formatCourierOptionLabel(
+        courier as PostOfficeStaff & {
+          id: number;
+        }
+      );
+    },
+    [courierById, formatCourierOptionLabel]
   );
 
   const updateFormField = React.useCallback(
@@ -501,7 +475,7 @@ export const VehicleListPage: React.FC = () => {
       !formValues.postOfficeStaffId.trim()
     ) {
       notification.error(
-        'For manager role, either post office ID or courier staff ID is required.'
+        'For manager role, either post office or courier staff is required.'
       );
       return;
     }
@@ -717,632 +691,88 @@ export const VehicleListPage: React.FC = () => {
   return (
     <>
       <div className='space-y-6'>
-        <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
-          <div className='flex flex-col gap-2'>
-            <h1 className='text-2xl font-bold tracking-tight'>Vehicles</h1>
-            <p className='text-muted-foreground'>
-              Track, inspect, and manage first-mile vehicles based on backend
-              permissions.
-            </p>
-          </div>
+        <VehiclePageHeader
+          canManageVehicles={canManageVehicles}
+          onCreateVehicle={handleOpenCreateDialog}
+        />
 
-          {canManageVehicles ? (
-            <Button onClick={handleOpenCreateDialog}>
-              <Plus className='h-4 w-4 mr-2' />
-              New Vehicle
-            </Button>
-          ) : (
-            <Badge variant='outline' className='gap-1'>
-              <ShieldAlert className='h-3.5 w-3.5' />
-              View only (write actions require admin or manager role)
-            </Badge>
-          )}
-        </div>
+        <VehicleAccessScopeCard
+          accessScope={accessScope}
+          canViewVehicles={canViewVehicles}
+        />
 
-        <Card>
-          <CardHeader>
-            <CardTitle className='flex items-center gap-2'>
-              <Shield className='h-5 w-5' />
-              Access Scope
-            </CardTitle>
-            <CardDescription>
-              Vehicle visibility and actions are aligned with backend role
-              authorization.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className='space-y-2'>
-            <Badge
-              variant={canViewVehicles ? 'secondary' : 'destructive'}
-              className='w-fit'
-            >
-              {getScopeBadgeLabel(accessScope)}
-            </Badge>
-            <p className='text-sm text-muted-foreground'>
-              {getScopeDescription(accessScope)}
-            </p>
-          </CardContent>
-        </Card>
+        <VehicleSearchCard
+          canViewVehicles={canViewVehicles}
+          keywordInput={keywordInput}
+          isFetching={isFetching}
+          onKeywordInputChange={setKeywordInput}
+          onSubmit={handleSearch}
+          onRefresh={() => {
+            void refetch();
+          }}
+        />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Search</CardTitle>
-            <CardDescription>
-              Search vehicles by license plate inside your permitted data scope.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form
-              onSubmit={handleSearch}
-              className='flex flex-col gap-2 md:flex-row'
-            >
-              <div className='relative flex-1'>
-                <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                <Input
-                  className='pl-10'
-                  value={keywordInput}
-                  onChange={(event) => setKeywordInput(event.target.value)}
-                  placeholder='Search vehicle by license plate...'
-                  disabled={!canViewVehicles}
-                />
-              </div>
-              <Button type='submit' disabled={!canViewVehicles}>
-                Apply
-              </Button>
-              <Button
-                type='button'
-                variant='outline'
-                onClick={() => refetch()}
-                disabled={!canViewVehicles || isFetching}
-              >
-                <RefreshCw className='mr-2 h-4 w-4' />
-                Refresh
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+        <VehicleImportCard
+          canManageVehicles={canManageVehicles}
+          isImportFlowBusy={isImportFlowBusy}
+          isExportingTemplate={isExportingTemplate}
+          isValidatingImport={isValidatingImport}
+          isImportingVehicles={isImportingVehicles}
+          importFileInputKey={importFileInputKey}
+          selectedImportFile={selectedImportFile}
+          validateImportResult={validateImportResult}
+          validatedPreviewItems={validatedPreviewItems}
+          lastImportJob={lastImportJob}
+          onDownloadTemplate={handleDownloadTemplate}
+          onSelectImportFile={handleSelectImportFile}
+          onValidateFile={handleValidateImportFile}
+          onImportFile={handleImportFile}
+        />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Excel Import</CardTitle>
-            <CardDescription>
-              Download template, validate the completed file, then import
-              vehicles.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className='space-y-4'>
-            <div className='flex flex-col gap-2 lg:flex-row lg:items-center'>
-              <Button
-                type='button'
-                variant='outline'
-                onClick={handleDownloadTemplate}
-                disabled={!canManageVehicles || isImportFlowBusy}
-              >
-                {isExportingTemplate ? (
-                  <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                ) : (
-                  <Download className='h-4 w-4 mr-2' />
-                )}
-                Download template
-              </Button>
-
-              <Input
-                key={importFileInputKey}
-                type='file'
-                accept='.xlsx,.xls'
-                onChange={handleSelectImportFile}
-                disabled={!canManageVehicles || isImportFlowBusy}
-                className='lg:max-w-sm'
-              />
-
-              <Button
-                type='button'
-                variant='outline'
-                onClick={handleValidateImportFile}
-                disabled={
-                  !canManageVehicles || !selectedImportFile || isImportFlowBusy
-                }
-              >
-                {isValidatingImport && (
-                  <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                )}
-                Validate file
-              </Button>
-
-              <Button
-                type='button'
-                onClick={handleImportFile}
-                disabled={
-                  !canManageVehicles ||
-                  !selectedImportFile ||
-                  !validateImportResult?.is_success ||
-                  isImportFlowBusy
-                }
-              >
-                {isImportingVehicles ? (
-                  <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                ) : (
-                  <FileUp className='h-4 w-4 mr-2' />
-                )}
-                Import file
-              </Button>
-            </div>
-
-            {!canManageVehicles && (
-              <p className='text-xs text-muted-foreground'>
-                Import actions require TMS_ADMIN or TMS_POSTOFFICER_MANAGER
-                permission.
-              </p>
-            )}
-
-            {selectedImportFile && (
-              <p className='text-sm text-muted-foreground'>
-                Selected file: {selectedImportFile.name}
-              </p>
-            )}
-
-            {validateImportResult && (
-              <div className='rounded-lg border p-3 space-y-3'>
-                <div className='flex flex-wrap items-center gap-x-4 gap-y-1'>
-                  <p className='text-sm font-medium'>
-                    Validation:{' '}
-                    {validateImportResult.is_success ? 'Success' : 'Failed'}
-                  </p>
-                  <p className='text-xs text-muted-foreground'>
-                    File ID: {validateImportResult.file_id}
-                  </p>
-                  <p className='text-xs text-muted-foreground'>
-                    Parsed rows: {validateImportResult.data.length}
-                  </p>
-                </div>
-
-                {validateImportResult.error_message && (
-                  <pre className='whitespace-pre-wrap rounded-md bg-muted p-2 text-xs text-destructive'>
-                    {validateImportResult.error_message}
-                  </pre>
-                )}
-
-                {validatedPreviewItems.length > 0 && (
-                  <div className='space-y-2'>
-                    <p className='text-xs text-muted-foreground'>
-                      Preview {validatedPreviewItems.length}/
-                      {validateImportResult.data.length} validated row(s)
-                    </p>
-
-                    <div className='grid gap-2 sm:grid-cols-2'>
-                      {validatedPreviewItems.map((item, index) => (
-                        <div
-                          key={`${item.license_plate || 'vehicle'}-${index}`}
-                          className='rounded-md border p-2 text-xs space-y-1'
-                        >
-                          <p className='font-medium'>
-                            {(item.license_plate || '-').trim()} |{' '}
-                            {item.vehicle_type || '-'} | {item.status || '-'}
-                          </p>
-                          <p className='text-muted-foreground'>
-                            Post office:{' '}
-                            {item.post_office_code
-                              ? `${item.post_office_code}${item.post_office_name ? ` - ${item.post_office_name}` : ''}`
-                              : '-'}
-                          </p>
-                          <p className='text-muted-foreground'>
-                            Courier:{' '}
-                            {item.post_office_staff_code
-                              ? `${item.post_office_staff_code}${item.post_office_staff_name ? ` - ${item.post_office_staff_name}` : ''}`
-                              : '-'}
-                          </p>
-                          <p className='text-muted-foreground'>
-                            Source rows:{' '}
-                            {item.source_rows?.length
-                              ? item.source_rows.join(', ')
-                              : '-'}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {validateImportResult.data.length >
-                      IMPORT_PREVIEW_LIMIT && (
-                      <p className='text-xs text-muted-foreground'>
-                        Showing only the first {IMPORT_PREVIEW_LIMIT} row(s).
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {lastImportJob && (
-              <div className='rounded-lg border p-3 space-y-1'>
-                <p className='text-sm font-medium'>Latest import job</p>
-                <p className='text-xs text-muted-foreground'>
-                  #{lastImportJob.id} - {lastImportJob.file_name}
-                </p>
-                <p className='text-xs text-muted-foreground'>
-                  Status: {lastImportJob.status} | Success/Failed:{' '}
-                  {lastImportJob.success_records}/{lastImportJob.failed_records}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Results ({data?.totalItems ?? 0})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {!canViewVehicles ? (
-              <p className='text-muted-foreground'>
-                You do not have permission to access vehicle data.
-              </p>
-            ) : isLoading ? (
-              <div className='flex items-center gap-2 text-muted-foreground'>
-                <Loader2 className='h-4 w-4 animate-spin' />
-                Loading vehicles...
-              </div>
-            ) : data && data.items.length > 0 ? (
-              <div className='space-y-3'>
-                {data.items.map((vehicle) => (
-                  <div
-                    key={vehicle.id}
-                    className='rounded-lg border p-3 flex flex-col gap-2 md:flex-row md:items-start md:justify-between'
-                  >
-                    <div className='space-y-1'>
-                      <p className='font-medium'>{vehicle.licensePlate}</p>
-                      <p className='text-xs text-muted-foreground'>
-                        Type: {formatVehicleType(vehicle.vehicleType)}
-                      </p>
-                      <p className='text-xs text-muted-foreground'>
-                        Post office: {buildPostOfficeLabel(vehicle)}
-                      </p>
-                      <p className='text-xs text-muted-foreground'>
-                        Courier staff ID:{' '}
-                        {vehicle.postOfficeStaffId ?? 'Not assigned'}
-                      </p>
-                      <p className='text-xs text-muted-foreground'>
-                        Capacity: {formatOptionalNumber(vehicle.maxWeight)} kg |{' '}
-                        {formatOptionalNumber(vehicle.maxVolume)} m3
-                      </p>
-                    </div>
-
-                    <div className='flex items-center gap-2 flex-wrap md:justify-end'>
-                      <Badge variant='outline'>
-                        {formatVehicleType(vehicle.vehicleType)}
-                      </Badge>
-                      <Badge variant={getStatusBadgeVariant(vehicle.status)}>
-                        {formatStatusLabel(vehicle.status)}
-                      </Badge>
-                      <Button
-                        type='button'
-                        variant='outline'
-                        size='sm'
-                        onClick={() => handleOpenDetails(vehicle.id)}
-                      >
-                        <Eye className='h-4 w-4 mr-1' />
-                        Details
-                      </Button>
-                      {canManageVehicles && (
-                        <>
-                          <Button
-                            type='button'
-                            variant='outline'
-                            size='sm'
-                            onClick={() => handleOpenEditDialog(vehicle)}
-                            disabled={isSaving || isDeleting}
-                          >
-                            <Pencil className='h-4 w-4 mr-1' />
-                            Edit
-                          </Button>
-                          <Button
-                            type='button'
-                            variant='destructive'
-                            size='sm'
-                            onClick={() => handleRequestDelete(vehicle)}
-                            disabled={isSaving || isDeleting}
-                          >
-                            <Trash2 className='h-4 w-4 mr-1' />
-                            Delete
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ))}
-
-                <div className='flex items-center justify-between pt-2'>
-                  <Button
-                    variant='outline'
-                    onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
-                    disabled={!data.hasPrevious || isFetching}
-                  >
-                    Previous
-                  </Button>
-                  <span className='text-sm text-muted-foreground'>
-                    Page {data.currentPage + 1} / {Math.max(data.totalPages, 1)}
-                  </span>
-                  <Button
-                    variant='outline'
-                    onClick={() => setPage((prev) => prev + 1)}
-                    disabled={!data.hasNext || isFetching}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <p className='text-muted-foreground'>No vehicles found.</p>
-            )}
-          </CardContent>
-        </Card>
+        <VehicleResultsCard
+          canViewVehicles={canViewVehicles}
+          canManageVehicles={canManageVehicles}
+          data={data}
+          isLoading={isLoading}
+          isFetching={isFetching}
+          isSaving={isSaving}
+          isDeleting={isDeleting}
+          onViewDetails={handleOpenDetails}
+          onEdit={handleOpenEditDialog}
+          onDelete={handleRequestDelete}
+          onPreviousPage={() => {
+            setPage((prev) => Math.max(prev - 1, 0));
+          }}
+          onNextPage={() => {
+            setPage((prev) => prev + 1);
+          }}
+          resolveCourierLabel={resolveCourierLabel}
+        />
       </div>
 
-      <Dialog
+      <VehicleDetailDialog
         open={isDetailDialogOpen}
+        canManageVehicles={canManageVehicles}
+        isFetchingVehicleDetail={isFetchingVehicleDetail}
+        vehicleDetail={vehicleDetail}
         onOpenChange={handleDetailDialogOpenChange}
-      >
-        <DialogContent className='sm:max-w-2xl'>
-          <DialogHeader>
-            <DialogTitle>Vehicle details</DialogTitle>
-            <DialogDescription>
-              Review complete vehicle information and audit fields.
-            </DialogDescription>
-          </DialogHeader>
+        onEditFromDetails={handleEditFromDetails}
+        resolveCourierLabel={resolveCourierLabel}
+      />
 
-          {isFetchingVehicleDetail ? (
-            <div className='flex items-center gap-2 text-muted-foreground'>
-              <Loader2 className='h-4 w-4 animate-spin' />
-              Loading vehicle details...
-            </div>
-          ) : vehicleDetail ? (
-            <div className='grid gap-3 sm:grid-cols-2 text-sm'>
-              <div>
-                <p className='text-muted-foreground'>Vehicle ID</p>
-                <p className='font-medium'>{vehicleDetail.id}</p>
-              </div>
-              <div>
-                <p className='text-muted-foreground'>License plate</p>
-                <p className='font-medium'>{vehicleDetail.licensePlate}</p>
-              </div>
-              <div>
-                <p className='text-muted-foreground'>Status</p>
-                <p className='font-medium'>
-                  {formatStatusLabel(vehicleDetail.status)}
-                </p>
-              </div>
-              <div>
-                <p className='text-muted-foreground'>Vehicle type</p>
-                <p className='font-medium'>
-                  {formatVehicleType(vehicleDetail.vehicleType)}
-                </p>
-              </div>
-              <div>
-                <p className='text-muted-foreground'>Max weight (kg)</p>
-                <p className='font-medium'>
-                  {formatOptionalNumber(vehicleDetail.maxWeight)}
-                </p>
-              </div>
-              <div>
-                <p className='text-muted-foreground'>Max volume (m3)</p>
-                <p className='font-medium'>
-                  {formatOptionalNumber(vehicleDetail.maxVolume)}
-                </p>
-              </div>
-              <div>
-                <p className='text-muted-foreground'>Post office</p>
-                <p className='font-medium'>
-                  {buildPostOfficeLabel(vehicleDetail)}
-                </p>
-              </div>
-              <div>
-                <p className='text-muted-foreground'>Courier staff ID</p>
-                <p className='font-medium'>
-                  {vehicleDetail.postOfficeStaffId ?? 'Not assigned'}
-                </p>
-              </div>
-              <div>
-                <p className='text-muted-foreground'>Created by</p>
-                <p className='font-medium'>{vehicleDetail.createdBy || '--'}</p>
-              </div>
-              <div>
-                <p className='text-muted-foreground'>Updated by</p>
-                <p className='font-medium'>{vehicleDetail.updatedBy || '--'}</p>
-              </div>
-              <div>
-                <p className='text-muted-foreground'>Created at</p>
-                <p className='font-medium'>
-                  {formatDateTime(vehicleDetail.createdAt)}
-                </p>
-              </div>
-              <div>
-                <p className='text-muted-foreground'>Updated at</p>
-                <p className='font-medium'>
-                  {formatDateTime(vehicleDetail.updatedAt)}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <p className='text-sm text-muted-foreground'>
-              Vehicle details are unavailable.
-            </p>
-          )}
-
-          <DialogFooter>
-            <Button
-              type='button'
-              variant='outline'
-              onClick={() => handleDetailDialogOpenChange(false)}
-            >
-              Close
-            </Button>
-            {canManageVehicles && vehicleDetail && (
-              <Button type='button' onClick={handleEditFromDetails}>
-                <Pencil className='h-4 w-4 mr-2' />
-                Edit vehicle
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isFormDialogOpen} onOpenChange={handleFormDialogOpenChange}>
-        <DialogContent className='sm:max-w-2xl'>
-          <DialogHeader>
-            <DialogTitle>
-              {formMode === 'create' ? 'Create vehicle' : 'Update vehicle'}
-            </DialogTitle>
-            <DialogDescription>
-              Fill in required fields to{' '}
-              {formMode === 'create' ? 'create a new' : 'update the'} vehicle.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleSubmitForm} className='space-y-4'>
-            <div className='grid gap-4 sm:grid-cols-2'>
-              <div className='space-y-2'>
-                <Label htmlFor='vehicle-license-plate'>License plate *</Label>
-                <Input
-                  id='vehicle-license-plate'
-                  value={formValues.licensePlate}
-                  onChange={(event) =>
-                    updateFormField('licensePlate', event.target.value)
-                  }
-                  disabled={isSaving}
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='vehicle-status'>Status *</Label>
-                <Select
-                  value={formValues.status}
-                  onValueChange={(value) =>
-                    updateFormField('status', value as VehicleStatus)
-                  }
-                  disabled={isSaving}
-                >
-                  <SelectTrigger id='vehicle-status' className='w-full'>
-                    <SelectValue placeholder='Select status' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {VEHICLE_STATUS_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='vehicle-type'>Vehicle type *</Label>
-                <Select
-                  value={formValues.vehicleType}
-                  onValueChange={(value) =>
-                    updateFormField('vehicleType', value as VehicleType)
-                  }
-                  disabled={isSaving}
-                >
-                  <SelectTrigger id='vehicle-type' className='w-full'>
-                    <SelectValue placeholder='Select type' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {VEHICLE_TYPE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='vehicle-max-weight'>Max weight (kg)</Label>
-                <Input
-                  id='vehicle-max-weight'
-                  type='number'
-                  min={0}
-                  step='any'
-                  value={formValues.maxWeight}
-                  onChange={(event) =>
-                    updateFormField('maxWeight', event.target.value)
-                  }
-                  disabled={isSaving}
-                  placeholder='e.g. 150'
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='vehicle-max-volume'>Max volume (m3)</Label>
-                <Input
-                  id='vehicle-max-volume'
-                  type='number'
-                  min={0}
-                  step='any'
-                  value={formValues.maxVolume}
-                  onChange={(event) =>
-                    updateFormField('maxVolume', event.target.value)
-                  }
-                  disabled={isSaving}
-                  placeholder='e.g. 3.2'
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='vehicle-post-office-id'>Post office ID</Label>
-                <Input
-                  id='vehicle-post-office-id'
-                  type='number'
-                  min={1}
-                  step={1}
-                  value={formValues.postOfficeId}
-                  onChange={(event) =>
-                    updateFormField('postOfficeId', event.target.value)
-                  }
-                  disabled={isSaving}
-                  placeholder='e.g. 12'
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='vehicle-post-office-staff-id'>
-                  Courier staff ID
-                </Label>
-                <Input
-                  id='vehicle-post-office-staff-id'
-                  type='number'
-                  min={1}
-                  step={1}
-                  value={formValues.postOfficeStaffId}
-                  onChange={(event) =>
-                    updateFormField('postOfficeStaffId', event.target.value)
-                  }
-                  disabled={isSaving}
-                  placeholder='e.g. 108'
-                />
-              </div>
-            </div>
-
-            <p className='text-xs text-muted-foreground'>
-              For manager role, backend only accepts post office and courier IDs
-              within your managed scope.
-            </p>
-
-            <DialogFooter>
-              <Button
-                type='button'
-                variant='outline'
-                onClick={() => handleFormDialogOpenChange(false)}
-                disabled={isSaving}
-              >
-                Cancel
-              </Button>
-              <Button type='submit' disabled={isSaving}>
-                {isSaving && <Loader2 className='h-4 w-4 mr-2 animate-spin' />}
-                {formMode === 'create' ? 'Create' : 'Save changes'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <VehicleFormDialog
+        open={isFormDialogOpen}
+        formMode={formMode}
+        formValues={formValues}
+        isSaving={isSaving}
+        postOfficeOptions={postOfficeOptions}
+        courierOptions={courierOptions}
+        isLoadingPostOffices={isFetchingPostOffices}
+        isLoadingCouriers={isFetchingCouriersByPostOffice}
+        onOpenChange={handleFormDialogOpenChange}
+        onSubmit={handleSubmitForm}
+        onUpdateField={updateFormField}
+      />
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}

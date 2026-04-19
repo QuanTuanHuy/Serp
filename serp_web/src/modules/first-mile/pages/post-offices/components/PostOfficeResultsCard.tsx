@@ -13,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/shared/components/ui';
-import { LayoutGrid, List, Loader2, Pencil, Trash2 } from 'lucide-react';
+import { Eye, LayoutGrid, List, Loader2, Pencil, Trash2 } from 'lucide-react';
 import type {
   FirstMilePaginatedData,
   PostOffice,
@@ -30,6 +30,7 @@ interface PostOfficeResultsCardProps {
   isSaving: boolean;
   isDeleting: boolean;
   onViewModeChange: (mode: PostOfficeViewMode) => void;
+  onViewDetails: (postOffice: PostOffice) => void;
   onEdit: (postOffice: PostOffice) => void;
   onDelete: (postOffice: PostOffice) => void;
   onPreviousPage: () => void;
@@ -50,6 +51,7 @@ export const PostOfficeResultsCard: React.FC<PostOfficeResultsCardProps> = ({
   isSaving,
   isDeleting,
   onViewModeChange,
+  onViewDetails,
   onEdit,
   onDelete,
   onPreviousPage,
@@ -150,30 +152,43 @@ export const PostOfficeResultsCard: React.FC<PostOfficeResultsCardProps> = ({
                           </div>
                         </div>
 
-                        {isTmsAdmin && (
-                          <div className='flex items-center gap-2 self-end sm:self-start'>
-                            <Button
-                              type='button'
-                              variant='outline'
-                              size='sm'
-                              onClick={() => onEdit(item)}
-                              disabled={isSaving || isDeleting}
-                            >
-                              <Pencil className='h-4 w-4 mr-1' />
-                              Edit
-                            </Button>
-                            <Button
-                              type='button'
-                              variant='destructive'
-                              size='sm'
-                              onClick={() => onDelete(item)}
-                              disabled={isSaving || isDeleting}
-                            >
-                              <Trash2 className='h-4 w-4 mr-1' />
-                              Delete
-                            </Button>
-                          </div>
-                        )}
+                        <div className='flex items-center gap-2 self-end sm:self-start'>
+                          <Button
+                            type='button'
+                            variant='outline'
+                            size='sm'
+                            onClick={() => onViewDetails(item)}
+                            disabled={isSaving || isDeleting}
+                          >
+                            <Eye className='h-4 w-4 mr-1' />
+                            View
+                          </Button>
+
+                          {isTmsAdmin ? (
+                            <>
+                              <Button
+                                type='button'
+                                variant='outline'
+                                size='sm'
+                                onClick={() => onEdit(item)}
+                                disabled={isSaving || isDeleting}
+                              >
+                                <Pencil className='h-4 w-4 mr-1' />
+                                Edit
+                              </Button>
+                              <Button
+                                type='button'
+                                variant='destructive'
+                                size='sm'
+                                onClick={() => onDelete(item)}
+                                disabled={isSaving || isDeleting}
+                              >
+                                <Trash2 className='h-4 w-4 mr-1' />
+                                Delete
+                              </Button>
+                            </>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
                   );
@@ -232,32 +247,46 @@ export const PostOfficeResultsCard: React.FC<PostOfficeResultsCardProps> = ({
                           )}
                       </div>
 
-                      {isTmsAdmin && (
-                        <div className='flex items-center gap-2 p-3 pt-0'>
-                          <Button
-                            type='button'
-                            variant='outline'
-                            size='sm'
-                            onClick={() => onEdit(item)}
-                            disabled={isSaving || isDeleting}
-                            className='flex-1'
-                          >
-                            <Pencil className='h-4 w-4 mr-1' />
-                            Edit
-                          </Button>
-                          <Button
-                            type='button'
-                            variant='destructive'
-                            size='sm'
-                            onClick={() => onDelete(item)}
-                            disabled={isSaving || isDeleting}
-                            className='flex-1'
-                          >
-                            <Trash2 className='h-4 w-4 mr-1' />
-                            Delete
-                          </Button>
-                        </div>
-                      )}
+                      <div className='flex items-center gap-2 p-3 pt-0'>
+                        <Button
+                          type='button'
+                          variant='outline'
+                          size='sm'
+                          onClick={() => onViewDetails(item)}
+                          disabled={isSaving || isDeleting}
+                          className={isTmsAdmin ? '' : 'flex-1'}
+                        >
+                          <Eye className='h-4 w-4 mr-1' />
+                          View
+                        </Button>
+
+                        {isTmsAdmin ? (
+                          <>
+                            <Button
+                              type='button'
+                              variant='outline'
+                              size='sm'
+                              onClick={() => onEdit(item)}
+                              disabled={isSaving || isDeleting}
+                              className='flex-1'
+                            >
+                              <Pencil className='h-4 w-4 mr-1' />
+                              Edit
+                            </Button>
+                            <Button
+                              type='button'
+                              variant='destructive'
+                              size='sm'
+                              onClick={() => onDelete(item)}
+                              disabled={isSaving || isDeleting}
+                              className='flex-1'
+                            >
+                              <Trash2 className='h-4 w-4 mr-1' />
+                              Delete
+                            </Button>
+                          </>
+                        ) : null}
+                      </div>
                     </div>
                   );
                 })}

@@ -73,6 +73,31 @@ export interface PostOffice {
   tenantId?: number;
 }
 
+export type PostOfficeStaffRole = 'COURIER' | 'MANAGER';
+
+export type PostOfficeStaffStatus = 'ACTIVE' | 'INACTIVE' | 'ON_LEAVE';
+
+export interface PostOfficeStaff {
+  id: number;
+  code?: string;
+  fullName?: string;
+  phoneNumber?: string;
+  email?: string;
+  avatarUrl?: string;
+  role?: PostOfficeStaffRole;
+  status?: PostOfficeStaffStatus;
+  hireDate?: string;
+  maxDailyStops?: number;
+  maxDailyParcels?: number;
+  notes?: string;
+  userId?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
+  tenantId?: number;
+}
+
 export type VehicleStatus =
   | 'ACTIVE'
   | 'INACTIVE'
@@ -227,6 +252,254 @@ export interface FirstMileOrderListFilters {
   createdTo?: string;
   pickupFrom?: string;
   pickupTo?: string;
+}
+
+export interface CreateOrderProductItemRequest {
+  name: string;
+  value: number;
+  quantity: number;
+  weight_gram: number;
+  product_type_id: number;
+}
+
+export interface CreateOrderRequest {
+  customer_order_code: string;
+  sender_name: string;
+  sender_phone: string;
+  sender_province_code: string;
+  sender_ward_code: string;
+  sender_address_detail: string;
+  sender_latitude: number;
+  sender_longitude: number;
+  receiver_name: string;
+  receiver_phone: string;
+  receiver_province_code: string;
+  receiver_ward_code: string;
+  receiver_address_detail: string;
+  receiver_latitude: number;
+  receiver_longitude: number;
+  pickup_time_start?: string;
+  pickup_time_end?: string;
+  delivery_request_time: FirstMileDeliveryRequestTime;
+  order_product_category?: FirstMileOrderProductCategory;
+  order_type: FirstMileOrderType;
+  fee_payer: FirstMileFeePayer;
+  is_cod?: boolean;
+  dimension_length_cm?: number;
+  dimension_width_cm?: number;
+  dimension_height_cm?: number;
+  total_volume_m3?: number;
+  note?: string;
+  products?: CreateOrderProductItemRequest[];
+}
+
+export type UpdateOrderRequest = CreateOrderRequest;
+
+export interface CancelOrderRequest {
+  cancel_reason?: string;
+}
+
+export interface OrderConfirmationOriginPostOffice {
+  id: number;
+  code: string;
+  name: string;
+  currentLoad?: number;
+  dailyCapacity?: number;
+}
+
+export interface OrderConfirmationResponse {
+  orderId: number;
+  orderCode: string;
+  customerOrderCode?: string;
+  status: FirstMileOrderStatus;
+  alreadyConfirmed: boolean;
+  originPostOffice?: OrderConfirmationOriginPostOffice | null;
+}
+
+export type PickupShift = 'MORNING' | 'AFTERNOON' | 'EVENING';
+
+export interface OptimizePickupPlanRequest {
+  post_office_id: number;
+  planning_start_time?: string;
+  planning_end_time?: string;
+  courier_ids?: number[];
+  candidate_statuses?: FirstMileOrderStatus[];
+  vehicle?: string;
+  order_limit?: number;
+  average_speed_kmph?: number;
+  service_minutes_per_stop?: number;
+  max_iterations?: number;
+  max_runtime_millis?: number;
+  destroy_rate?: number;
+  initial_temperature?: number;
+  cooling_rate?: number;
+  allow_lateness?: boolean;
+  enforce_planning_end?: boolean;
+  enforce_capacity?: boolean;
+  distance_weight?: number;
+  lateness_weight?: number;
+  unassigned_penalty?: number;
+  used_route_penalty?: number;
+}
+
+export interface AutoAssignPickupPlanRequest {
+  post_office_id: number;
+  shift: PickupShift;
+  trip_date?: string;
+  planning_start_time?: string;
+  planning_end_time?: string;
+  courier_ids?: number[];
+  candidate_statuses?: FirstMileOrderStatus[];
+  vehicle?: string;
+  order_limit?: number;
+  average_speed_kmph?: number;
+  service_minutes_per_stop?: number;
+  max_iterations?: number;
+  max_runtime_millis?: number;
+  destroy_rate?: number;
+  initial_temperature?: number;
+  cooling_rate?: number;
+  allow_lateness?: boolean;
+  enforce_planning_end?: boolean;
+  enforce_capacity?: boolean;
+  distance_weight?: number;
+  lateness_weight?: number;
+  unassigned_penalty?: number;
+  used_route_penalty?: number;
+}
+
+export interface ManualAssignPickupOrdersRequest {
+  post_office_id: number;
+  courier_staff_id: number;
+  order_ids: number[];
+  shift: PickupShift;
+  trip_date?: string;
+  planning_start_time?: string;
+  planning_end_time?: string;
+  vehicle?: string;
+  average_speed_kmph?: number;
+  service_minutes_per_stop?: number;
+  allow_lateness?: boolean;
+  enforce_planning_end?: boolean;
+  enforce_capacity?: boolean;
+}
+
+export interface PickupOptimizationStop {
+  sequence: number;
+  orderId: number;
+  orderCode?: string;
+  customerOrderCode?: string;
+  senderName?: string;
+  senderPhone?: string;
+  latitude?: number;
+  longitude?: number;
+  pickupTimeStart?: string;
+  pickupTimeEnd?: string;
+  arrivalTime?: string;
+  startServiceTime?: string;
+  departureTime?: string;
+  distanceFromPreviousKm?: number;
+  travelMinutes?: number;
+  latenessMinutes?: number;
+}
+
+export interface PickupOptimizationRoute {
+  courierStaffId?: number;
+  courierCode?: string;
+  courierName?: string;
+  vehicleId?: number;
+  vehicleLicensePlate?: string;
+  vehicleMaxWeight?: number;
+  vehicleMaxVolume?: number;
+  totalStops?: number;
+  totalWeight?: number;
+  totalVolume?: number;
+  totalDistanceKm?: number;
+  totalTravelMinutes?: number;
+  totalServiceMinutes?: number;
+  totalLatenessMinutes?: number;
+  startTime?: string;
+  endTime?: string;
+  stops?: PickupOptimizationStop[];
+}
+
+export interface PickupOptimizationUnassignedOrder {
+  orderId: number;
+  orderCode?: string;
+  customerOrderCode?: string;
+  reason?: string;
+}
+
+export interface PickupOptimizationResponse {
+  postOfficeId: number;
+  postOfficeCode?: string;
+  postOfficeName?: string;
+  planningStartTime?: string;
+  planningEndTime?: string;
+  totalOrders?: number;
+  assignedOrders?: number;
+  unassignedOrders?: number;
+  totalDistanceKm?: number;
+  totalTravelMinutes?: number;
+  totalServiceMinutes?: number;
+  totalLatenessMinutes?: number;
+  objectiveScore?: number;
+  totalRoutes?: number;
+  usedRoutes?: number;
+  routes?: PickupOptimizationRoute[];
+  unassignedOrderDetails?: PickupOptimizationUnassignedOrder[];
+}
+
+export interface PickupAssignedStop {
+  sequence: number;
+  orderId: number;
+  orderCode?: string;
+  customerOrderCode?: string;
+  plannedArrivalTime?: string;
+  plannedStartServiceTime?: string;
+  plannedDepartureTime?: string;
+  distanceFromPreviousKm?: number;
+  travelMinutes?: number;
+  latenessMinutes?: number;
+}
+
+export interface PickupAssignedTrip {
+  tripId?: number;
+  tripCode?: string;
+  courierStaffId?: number;
+  courierCode?: string;
+  courierName?: string;
+  vehicleId?: number;
+  vehicleLicensePlate?: string;
+  totalStops?: number;
+  totalDistanceKm?: number;
+  totalTravelMinutes?: number;
+  totalServiceMinutes?: number;
+  totalLatenessMinutes?: number;
+  plannedStartTime?: string;
+  plannedEndTime?: string;
+  stops?: PickupAssignedStop[];
+}
+
+export interface PickupAssignmentUnassignedOrder {
+  orderId: number;
+  orderCode?: string;
+  customerOrderCode?: string;
+  reason?: string;
+}
+
+export interface PickupAssignmentResponse {
+  postOfficeId: number;
+  postOfficeCode?: string;
+  postOfficeName?: string;
+  shift: PickupShift;
+  tripDate?: string;
+  totalRequestedOrders?: number;
+  assignedOrders?: number;
+  unassignedOrders?: number;
+  createdTrips?: number;
+  trips?: PickupAssignedTrip[];
+  unassignedOrderDetails?: PickupAssignmentUnassignedOrder[];
 }
 
 export interface PostOfficeListFilters {
