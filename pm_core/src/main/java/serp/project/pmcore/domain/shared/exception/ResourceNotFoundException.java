@@ -45,9 +45,29 @@ public class ResourceNotFoundException extends DomainException {
                 "Initial step not found for workflow: id=" + workflowId);
     }
 
+    public static ResourceNotFoundException workflowStepById(Long id) {
+        return new ResourceNotFoundException(DomainErrorCode.WORKFLOW_STEP_NOT_FOUND,
+                "Workflow step not found: id=" + id);
+    }
+
+    public static ResourceNotFoundException workflowTransitionById(Long id) {
+        return new ResourceNotFoundException(DomainErrorCode.TRANSITION_NOT_FOUND,
+                "Workflow transition not found: id=" + id);
+    }
+
+    public static ResourceNotFoundException screen(Long id) {
+        return new ResourceNotFoundException(DomainErrorCode.SCREEN_NOT_FOUND,
+                "Screen not found: id=" + id);
+    }
+
     public static ResourceNotFoundException issueType(Long id) {
         return new ResourceNotFoundException(DomainErrorCode.ISSUE_TYPE_NOT_FOUND,
                 "Issue type not found: id=" + id);
+    }
+
+    public static ResourceNotFoundException issueTypeScheme(Long id) {
+        return new ResourceNotFoundException(DomainErrorCode.ISSUE_TYPE_SCHEME_NOT_FOUND,
+                "Issue type scheme not found: id=" + id);
     }
 
     public static ResourceNotFoundException priority(Long id) {
@@ -55,9 +75,19 @@ public class ResourceNotFoundException extends DomainException {
                 "Priority not found: id=" + id);
     }
 
+    public static ResourceNotFoundException priorityScheme(Long id) {
+        return new ResourceNotFoundException(DomainErrorCode.PRIORITY_SCHEME_NOT_FOUND,
+                "Priority scheme not found: id=" + id);
+    }
+
     public static ResourceNotFoundException status(Long id) {
         return new ResourceNotFoundException(DomainErrorCode.STATUS_NOT_FOUND,
                 "Status not found: id=" + id);
+    }
+
+    public static ResourceNotFoundException statusCategory(Long id) {
+        return new ResourceNotFoundException(DomainErrorCode.STATUS_CATEGORY_NOT_FOUND,
+                "Status category not found: id=" + id);
     }
 
     public static ResourceNotFoundException sprint(Long id) {
@@ -88,6 +118,11 @@ public class ResourceNotFoundException extends DomainException {
     public static ResourceNotFoundException category(Long id) {
         return new ResourceNotFoundException(DomainErrorCode.CATEGORY_NOT_FOUND,
                 "Category not found: id=" + id);
+    }
+
+    public static ResourceNotFoundException role(Long id) {
+        return new ResourceNotFoundException(DomainErrorCode.ROLE_NOT_FOUND,
+                "Project role not found: id=" + id);
     }
 
     public static ResourceNotFoundException worklog(Long id) {

@@ -8,7 +8,6 @@ package serp.project.pmcore.application.workitem.command.create.support;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import serp.project.pmcore.domain.customfield.dto.ResolvedCustomFields;
 import serp.project.pmcore.domain.shared.constant.WorkItemFieldConstants;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
@@ -57,7 +56,7 @@ class WorkItemCreateRequiredFieldValidatorTest {
                 null,
                 null,
                 rules,
-                ResolvedCustomFields.empty()
+                List.of()
         ));
     }
 
@@ -88,7 +87,7 @@ class WorkItemCreateRequiredFieldValidatorTest {
                         null,
                         null,
                         rules,
-                        ResolvedCustomFields.empty()
+                        List.of()
                 )
         );
 
@@ -108,7 +107,7 @@ class WorkItemCreateRequiredFieldValidatorTest {
                         null,
                         null,
                         WorkItemFieldRules.empty(),
-                        new ResolvedCustomFields(List.of(), List.of("customfield_10001"))
+                        List.of("customfield_10001")
                 )
         );
 

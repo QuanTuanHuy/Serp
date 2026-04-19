@@ -27,6 +27,8 @@ public interface IIssueTypePort {
 
     List<IssueTypeEntity> listIssueTypesIncludingSystem(Long tenantId);
 
+    List<IssueTypeEntity> getIssueTypesByIdsIncludingSystem(List<Long> issueTypeIds, Long tenantId);
+
     PageResult<IssueTypeEntity> listIssueTypesIncludingSystem(Long tenantId, IssueTypeListCriteria criteria);
 
     void updateIssueType(IssueTypeEntity issueType);

@@ -5,6 +5,8 @@
 
 package serp.project.pmcore.infrastructure.store.repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -24,6 +26,25 @@ public interface IProjectCategoryRepository extends JpaRepository<ProjectCategor
     Optional<ProjectCategoryModel> findByIdAndTenantIdOrSystemTenant(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
     List<ProjectCategoryModel> findAllByTenantIdOrderByCreatedAtDesc(Long tenantId);
+
+    @Query(value = """
+    SELECT *
+    FROM project_categories c
+    WHERE c.tenant_id = :tenantId
+      AND c.deleted_at IS NULL
+      AND (:search IS NULL OR c.name ILIKE CONCAT('%', :search, '%'))
+    """,
+            countQuery = """
+    SELECT COUNT(*)
+    FROM project_categories c
+    WHERE c.tenant_id = :tenantId
+      AND c.deleted_at IS NULL
+      AND (:search IS NULL OR c.name ILIKE CONCAT('%', :search, '%'))
+    """,
+            nativeQuery = true)
+    Page<ProjectCategoryModel> findAllWithFilters(@Param("tenantId") Long tenantId,
+                                                  @Param("search") String search,
+                                                  Pageable pageable);
 
     boolean existsByTenantIdAndName(Long tenantId, String name);
 

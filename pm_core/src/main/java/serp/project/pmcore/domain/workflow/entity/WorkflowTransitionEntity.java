@@ -27,6 +27,7 @@ public class WorkflowTransitionEntity extends BaseEntity {
     private Long toStepId;
     private Long screenId;
     private Integer sequence;
+    private Long deletedAt;
 
     private List<WorkflowTransitionRuleEntity> rules;
 }

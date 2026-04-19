@@ -27,6 +27,7 @@ public class ProjectBlueprintEntity extends BaseEntity {
     private String typeKey;
     private String avatarUrl;
     private Boolean isSystem;
+    private Long deletedAt;
 
     public boolean isSystem() {
         return Objects.equals(tenantId, TenantConstants.SYSTEM_TENANT_ID) && Boolean.TRUE.equals(isSystem);

@@ -31,6 +31,7 @@ public class ProjectCategoryMapper extends BaseMapper {
                 .createdBy(model.getCreatedBy())
                 .updatedAt(localDateTimeToLong(model.getUpdatedAt()))
                 .updatedBy(model.getUpdatedBy())
+                .deletedAt(localDateTimeToLong(model.getDeletedAt()))
                 .build();
     }
 
@@ -48,6 +49,7 @@ public class ProjectCategoryMapper extends BaseMapper {
                 .createdBy(entity.getCreatedBy())
                 .updatedAt(longToLocalDateTime(entity.getUpdatedAt()))
                 .updatedBy(entity.getUpdatedBy())
+                .deletedAt(longToLocalDateTime(entity.getDeletedAt()))
                 .build();
     }
 

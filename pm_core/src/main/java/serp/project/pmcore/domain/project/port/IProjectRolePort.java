@@ -5,6 +5,9 @@
 
 package serp.project.pmcore.domain.project.port;
 
+import serp.project.pmcore.domain.project.query.ProjectRoleListCriteria;
+import serp.project.pmcore.domain.shared.pagination.PageResult;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -22,4 +25,8 @@ public interface IProjectRolePort {
     List<ProjectRoleEntity> getProjectRolesByNameIncludingSystem(String name, Long tenantId);
 
     List<ProjectRoleEntity> getProjectRolesIncludingSystem(Long tenantId);
+
+    PageResult<ProjectRoleEntity> getProjectRolesIncludingSystem(Long tenantId, ProjectRoleListCriteria criteria);
+
+    boolean existsByNameAndTenantId(String name, Long tenantId);
 }

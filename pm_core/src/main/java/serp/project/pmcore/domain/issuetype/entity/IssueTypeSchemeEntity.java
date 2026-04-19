@@ -24,6 +24,11 @@ public class IssueTypeSchemeEntity extends BaseEntity {
     private String name;
     private String description;
     private Long defaultIssueTypeId;
+    private Long deletedAt;
 
     private List<IssueTypeSchemeItemEntity> items;
+
+    public boolean isSystem() {
+        return tenantId != null && tenantId == 0L;
+    }
 }

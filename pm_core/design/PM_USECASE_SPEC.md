@@ -1,7 +1,7 @@
 # PM Core - Use Case Specification
 
-> **Version**: 1.1
-> **Date**: 2026-03-19
+> **Version**: 1.3
+> **Date**: 2026-04-18
 > **Module Code**: PM
 > **Tech Stack**: Java 21 (Spring Boot) + PostgreSQL + Kafka
 > **Soft Delete**: `deleted_at TIMESTAMP NULL`
@@ -78,22 +78,22 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 | UC ID | Name | Actor | Priority | Complexity | Entity |
 |-------|------|-------|----------|------------|--------|
 | UC-PM-001 | Create Project | Project Lead | High | Complex | Project |
-| UC-PM-002 | Update Project | Project Lead | High | Medium | Project |
+| UC-PM-002 | [Update Project](usecases/project/UC-PM-002-update-project.md) | Project Lead | High | Medium | Project |
 | UC-PM-003 | Get Project by ID | Team Member | High | Simple | Project |
 | UC-PM-004 | List Projects with Filters | Team Member | High | Simple | Project |
 | UC-PM-005 | Delete Project | PM Admin | Medium | Medium | Project |
-| UC-PM-006 | Archive/Unarchive Project | Project Lead | Medium | Simple | Project |
+| UC-PM-006 | [Archive/Unarchive Project](usecases/project/UC-PM-006-archive-unarchive-project.md) | Project Lead | Medium | Simple | Project |
 | UC-PM-007 | Update Project Scheme Bindings | PM Admin | Medium | Complex | Project |
-| UC-PM-011 | Create Project Category | PM Admin | Medium | Simple | Project Category |
-| UC-PM-012 | Update Project Category | PM Admin | Medium | Simple | Project Category |
-| UC-PM-013 | Get Project Category by ID | PM Admin | Low | Simple | Project Category |
-| UC-PM-014 | List Project Categories | PM Admin | Medium | Simple | Project Category |
-| UC-PM-015 | Delete Project Category | PM Admin | Low | Simple | Project Category |
-| UC-PM-016 | Create Project Blueprint | PM Admin | Medium | Medium | Project Blueprint |
-| UC-PM-017 | Update Project Blueprint | PM Admin | Medium | Simple | Project Blueprint |
-| UC-PM-018 | Get Project Blueprint by ID | PM Admin | Low | Simple | Project Blueprint |
-| UC-PM-019 | List Project Blueprints | PM Admin | Medium | Simple | Project Blueprint |
-| UC-PM-020 | Delete Project Blueprint | PM Admin | Low | Simple | Project Blueprint |
+| UC-PM-011 | [Create Project Category](usecases/project-category/UC-PM-011-create-project-category.md) | PM Admin | Medium | Simple | Project Category |
+| UC-PM-012 | [Update Project Category](usecases/project-category/UC-PM-012-update-project-category.md) | PM Admin | Medium | Simple | Project Category |
+| UC-PM-013 | [Get Project Category by ID](usecases/project-category/UC-PM-013-get-project-category-by-id.md) | PM Admin | Low | Simple | Project Category |
+| UC-PM-014 | [List Project Categories](usecases/project-category/UC-PM-014-list-project-categories.md) | PM Admin | Medium | Simple | Project Category |
+| UC-PM-015 | [Delete Project Category](usecases/project-category/UC-PM-015-delete-project-category.md) | PM Admin | Low | Simple | Project Category |
+| UC-PM-016 | [Create Project Blueprint](usecases/project-blueprint/UC-PM-016-create-project-blueprint.md) | PM Admin | Medium | Medium | Project Blueprint |
+| UC-PM-017 | [Update Project Blueprint](usecases/project-blueprint/UC-PM-017-update-project-blueprint.md) | PM Admin | Medium | Simple | Project Blueprint |
+| UC-PM-018 | [Get Project Blueprint by ID](usecases/project-blueprint/UC-PM-018-get-project-blueprint-by-id.md) | PM Admin | Low | Simple | Project Blueprint |
+| UC-PM-019 | [List Project Blueprints](usecases/project-blueprint/UC-PM-019-list-project-blueprints.md) | PM Admin | Medium | Simple | Project Blueprint |
+| UC-PM-020 | [Delete Project Blueprint](usecases/project-blueprint/UC-PM-020-delete-project-blueprint.md) | PM Admin | Low | Simple | Project Blueprint |
 | UC-PM-021 | Manage Blueprint Scheme Defaults | PM Admin | Medium | Medium | Blueprint Scheme Defaults |
 | UC-PM-026 | Create Project Component | Project Lead | High | Simple | Project Component |
 | UC-PM-027 | Update Project Component | Project Lead | Medium | Simple | Project Component |
@@ -107,11 +107,11 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 | UC-PM-035 | Delete Project Version | Project Lead | Low | Simple | Project Version |
 | UC-PM-036 | Release Project Version | Project Lead | High | Medium | Project Version |
 | UC-PM-037 | Archive Project Version | Project Lead | Low | Simple | Project Version |
-| UC-PM-041 | Create Project Role | PM Admin | Medium | Simple | Project Role |
-| UC-PM-042 | Update Project Role | PM Admin | Medium | Simple | Project Role |
-| UC-PM-043 | Get Project Role by ID | PM Admin | Low | Simple | Project Role |
-| UC-PM-044 | List Project Roles | PM Admin | Medium | Simple | Project Role |
-| UC-PM-045 | Delete Project Role | PM Admin | Low | Simple | Project Role |
+| UC-PM-041 | [Create Project Role](usecases/project-role/UC-PM-041-create-project-role.md) | PM Admin | Medium | Simple | Project Role |
+| UC-PM-042 | [Update Project Role](usecases/project-role/UC-PM-042-update-project-role.md) | PM Admin | Medium | Simple | Project Role |
+| UC-PM-043 | [Get Project Role by ID](usecases/project-role/UC-PM-043-get-project-role-by-id.md) | PM Admin | Low | Simple | Project Role |
+| UC-PM-044 | [List Project Roles](usecases/project-role/UC-PM-044-list-project-roles.md) | PM Admin | Medium | Simple | Project Role |
+| UC-PM-045 | [Delete Project Role](usecases/project-role/UC-PM-045-delete-project-role.md) | PM Admin | Low | Simple | Project Role |
 | UC-PM-046 | Add Project Role Actor | Project Lead | High | Simple | Project Role Actor |
 | UC-PM-047 | Remove Project Role Actor | Project Lead | Medium | Simple | Project Role Actor |
 | UC-PM-048 | List Project Role Actors | Project Lead | Medium | Simple | Project Role Actor |
@@ -139,23 +139,23 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 | UC-PM-133 | [Get Issue Type by ID](usecases/issue-type/UC-PM-133-get-issue-type-by-id.md) | PM Admin | Low | Simple | Issue Type |
 | UC-PM-134 | [List Issue Types](usecases/issue-type/UC-PM-134-list-issue-types.md) | PM Admin | Medium | Simple | Issue Type |
 | UC-PM-135 | [Delete Issue Type](usecases/issue-type/UC-PM-135-delete-issue-type.md) | PM Admin | Low | Simple | Issue Type |
-| UC-PM-136 | Create Issue Type Scheme | PM Admin | Medium | Simple | Issue Type Scheme |
-| UC-PM-137 | Update Issue Type Scheme | PM Admin | Medium | Simple | Issue Type Scheme |
-| UC-PM-138 | Get Issue Type Scheme by ID | PM Admin | Low | Simple | Issue Type Scheme |
-| UC-PM-139 | List Issue Type Schemes | PM Admin | Medium | Simple | Issue Type Scheme |
-| UC-PM-140 | Delete Issue Type Scheme | PM Admin | Low | Simple | Issue Type Scheme |
-| UC-PM-141 | Manage Issue Type Scheme Items | PM Admin | Medium | Medium | Issue Type Scheme Item |
-| UC-PM-146 | Create Priority | PM Admin | Medium | Simple | Priority |
-| UC-PM-147 | Update Priority | PM Admin | Medium | Simple | Priority |
-| UC-PM-148 | Get Priority by ID | PM Admin | Low | Simple | Priority |
-| UC-PM-149 | List Priorities | PM Admin | Medium | Simple | Priority |
-| UC-PM-150 | Delete Priority | PM Admin | Low | Simple | Priority |
-| UC-PM-151 | Create Priority Scheme | PM Admin | Medium | Simple | Priority Scheme |
-| UC-PM-152 | Update Priority Scheme | PM Admin | Medium | Simple | Priority Scheme |
-| UC-PM-153 | Get Priority Scheme by ID | PM Admin | Low | Simple | Priority Scheme |
-| UC-PM-154 | List Priority Schemes | PM Admin | Medium | Simple | Priority Scheme |
-| UC-PM-155 | Delete Priority Scheme | PM Admin | Low | Simple | Priority Scheme |
-| UC-PM-156 | Manage Priority Scheme Items | PM Admin | Medium | Medium | Priority Scheme Item |
+| UC-PM-136 | [Create Issue Type Scheme](usecases/issue-type-scheme/UC-PM-136-create-issue-type-scheme.md) | PM Admin | Medium | Simple | Issue Type Scheme |
+| UC-PM-137 | [Update Issue Type Scheme](usecases/issue-type-scheme/UC-PM-137-update-issue-type-scheme.md) | PM Admin | Medium | Simple | Issue Type Scheme |
+| UC-PM-138 | [Get Issue Type Scheme by ID](usecases/issue-type-scheme/UC-PM-138-get-issue-type-scheme-by-id.md) | PM Admin | Low | Simple | Issue Type Scheme |
+| UC-PM-139 | [List Issue Type Schemes](usecases/issue-type-scheme/UC-PM-139-list-issue-type-schemes.md) | PM Admin | Medium | Simple | Issue Type Scheme |
+| UC-PM-140 | [Delete Issue Type Scheme](usecases/issue-type-scheme/UC-PM-140-delete-issue-type-scheme.md) | PM Admin | Low | Simple | Issue Type Scheme |
+| UC-PM-141 | [Manage Issue Type Scheme Items](usecases/issue-type-scheme/UC-PM-141-manage-issue-type-scheme-items.md) | PM Admin | Medium | Medium | Issue Type Scheme Item |
+| UC-PM-146 | [Create Priority](usecases/priority/UC-PM-146-create-priority.md) | PM Admin | Medium | Simple | Priority |
+| UC-PM-147 | [Update Priority](usecases/priority/UC-PM-147-update-priority.md) | PM Admin | Medium | Simple | Priority |
+| UC-PM-148 | [Get Priority by ID](usecases/priority/UC-PM-148-get-priority-by-id.md) | PM Admin | Low | Simple | Priority |
+| UC-PM-149 | [List Priorities](usecases/priority/UC-PM-149-list-priorities.md) | PM Admin | Medium | Simple | Priority |
+| UC-PM-150 | [Delete Priority](usecases/priority/UC-PM-150-delete-priority.md) | PM Admin | Low | Simple | Priority |
+| UC-PM-151 | [Create Priority Scheme](usecases/priority-scheme/UC-PM-151-create-priority-scheme.md) | PM Admin | Medium | Simple | Priority Scheme |
+| UC-PM-152 | [Update Priority Scheme](usecases/priority-scheme/UC-PM-152-update-priority-scheme.md) | PM Admin | Medium | Simple | Priority Scheme |
+| UC-PM-153 | [Get Priority Scheme by ID](usecases/priority-scheme/UC-PM-153-get-priority-scheme-by-id.md) | PM Admin | Low | Simple | Priority Scheme |
+| UC-PM-154 | [List Priority Schemes](usecases/priority-scheme/UC-PM-154-list-priority-schemes.md) | PM Admin | Medium | Simple | Priority Scheme |
+| UC-PM-155 | [Delete Priority Scheme](usecases/priority-scheme/UC-PM-155-delete-priority-scheme.md) | PM Admin | Low | Simple | Priority Scheme |
+| UC-PM-156 | [Manage Priority Scheme Items](usecases/priority-scheme/UC-PM-156-manage-priority-scheme-items.md) | PM Admin | Medium | Medium | Priority Scheme Item |
 | UC-PM-161 | Create Resolution | PM Admin | Medium | Simple | Resolution |
 | UC-PM-162 | Update Resolution | PM Admin | Medium | Simple | Resolution |
 | UC-PM-163 | Get Resolution by ID | PM Admin | Low | Simple | Resolution |
@@ -169,26 +169,26 @@ PM Core is a JIRA-like project management module that provides comprehensive wor
 | UC-PM-176 | Create Issue Link | Team Member | High | Simple | Issue Link |
 | UC-PM-177 | Delete Issue Link | Team Member | Medium | Simple | Issue Link |
 | UC-PM-178 | List Issue Links for Work Item | Team Member | Medium | Simple | Issue Link |
-| UC-PM-181 | Create Worklog | Team Member | High | Simple | Worklog |
-| UC-PM-182 | Update Worklog | Team Member | Medium | Simple | Worklog |
-| UC-PM-183 | Delete Worklog | Team Member | Medium | Simple | Worklog |
-| UC-PM-184 | List Worklogs for Work Item | Team Member | Medium | Simple | Worklog |
-| UC-PM-185 | Get Worklog by ID | Team Member | Low | Simple | Worklog |
+| UC-PM-181 | [Create Worklog](usecases/worklog/UC-PM-181-create-worklog.md) | Team Member | High | Simple | Worklog |
+| UC-PM-182 | [Update Worklog](usecases/worklog/UC-PM-182-update-worklog.md) | Team Member | Medium | Simple | Worklog |
+| UC-PM-183 | [Delete Worklog](usecases/worklog/UC-PM-183-delete-worklog.md) | Team Member | Medium | Simple | Worklog |
+| UC-PM-184 | [List Worklogs for Work Item](usecases/worklog/UC-PM-184-list-worklogs-for-work-item.md) | Team Member | Medium | Simple | Worklog |
+| UC-PM-185 | [Get Worklog by ID](usecases/worklog/UC-PM-185-get-worklog-by-id.md) | Team Member | Low | Simple | Worklog |
 
 ### 3.3. Module 03: Workflow Engine
 
 | UC ID | Name | Actor | Priority | Complexity | Entity |
 |-------|------|-------|----------|------------|--------|
-| UC-PM-201 | Create Status Category | PM Admin | Medium | Simple | Status Category |
-| UC-PM-202 | Update Status Category | PM Admin | Low | Simple | Status Category |
-| UC-PM-203 | Get Status Category by ID | PM Admin | Low | Simple | Status Category |
-| UC-PM-204 | List Status Categories | PM Admin | Medium | Simple | Status Category |
-| UC-PM-205 | Delete Status Category | PM Admin | Low | Simple | Status Category |
-| UC-PM-211 | Create Status | PM Admin | High | Simple | Status |
-| UC-PM-212 | Update Status | PM Admin | Medium | Simple | Status |
-| UC-PM-213 | Get Status by ID | PM Admin | Low | Simple | Status |
-| UC-PM-214 | List Statuses | PM Admin | Medium | Simple | Status |
-| UC-PM-215 | Delete Status | PM Admin | Low | Medium | Status |
+| UC-PM-201 | [Create Status Category](usecases/status-category/UC-PM-201-create-status-category.md) | PM Admin | Medium | Simple | Status Category |
+| UC-PM-202 | [Update Status Category](usecases/status-category/UC-PM-202-update-status-category.md) | PM Admin | Low | Simple | Status Category |
+| UC-PM-203 | [Get Status Category by ID](usecases/status-category/UC-PM-203-get-status-category-by-id.md) | PM Admin | Low | Simple | Status Category |
+| UC-PM-204 | [List Status Categories](usecases/status-category/UC-PM-204-list-status-categories.md) | PM Admin | Medium | Simple | Status Category |
+| UC-PM-205 | [Delete Status Category](usecases/status-category/UC-PM-205-delete-status-category.md) | PM Admin | Low | Simple | Status Category |
+| UC-PM-211 | [Create Status](usecases/status/UC-PM-211-create-status.md) | PM Admin | High | Simple | Status |
+| UC-PM-212 | [Update Status](usecases/status/UC-PM-212-update-status.md) | PM Admin | Medium | Simple | Status |
+| UC-PM-213 | [Get Status by ID](usecases/status/UC-PM-213-get-status-by-id.md) | PM Admin | Low | Simple | Status |
+| UC-PM-214 | [List Statuses](usecases/status/UC-PM-214-list-statuses.md) | PM Admin | Medium | Simple | Status |
+| UC-PM-215 | [Delete Status](usecases/status/UC-PM-215-delete-status.md) | PM Admin | Low | Medium | Status |
 | UC-PM-221 | Create Workflow | PM Admin | High | Medium | Workflow |
 | UC-PM-222 | Update Workflow | PM Admin | High | Medium | Workflow |
 | UC-PM-223 | Get Workflow by ID | PM Admin | Medium | Simple | Workflow |
@@ -604,83 +604,163 @@ Allow a Project Lead to create a new project, optionally based on a blueprint te
 | **Use Case ID** | UC-PM-002 |
 | **Use Case Name** | Update Project |
 | **Module** | PM Core |
-| **Version** | 1.0 |
-| **Last Updated** | 2026-02-18 |
+| **Version** | 1.1 |
+| **Last Updated** | 2026-04-12 |
 | **Priority** | High |
 | **Complexity** | Medium |
 
 ##### Description
 
-Allow a Project Lead or PM Admin to update project metadata such as name, description, lead, category, and URL. Scheme bindings are updated via a separate use case (UC-PM-007).
+Update mutable project metadata for an existing project within tenant scope. UC-PM-002 supports partial updates for `name`, `key`, `description`, `lead_user_id`, `project_category_id`, `url`, and `avatar_id`. Scheme bindings, archive state, and `project_type_key` are explicitly out of scope and are handled by separate use cases.
 
 ##### Actors
 
 | Actor | Type | Description |
 |-------|------|-------------|
-| Project Lead | Primary | Updates project they lead |
-| PM Admin | Secondary | Can update any project |
+| Project Lead | Primary | Updates a project they can administer |
+| PM Admin | Secondary | May update project metadata when they satisfy project-scoped administration rules |
+| System | System | Validates tenant scope, project administration permission, mutable fields, external references, persists update, and writes outbox event |
+
+##### Authorization (Jira Project Permissions)
+
+- This use case uses Jira-style project authorization, not legacy `PM.PROJECT.UPDATE`
+- Caller must be authenticated in the current tenant scope
+- Caller must satisfy `ADMINISTER_PROJECTS` for the target project
+- Permission resolution is grant-only through the project's `permission_scheme_id` and may resolve via `PROJECT_ROLE`, `GROUP`, `USER`, `PROJECT_LEAD`, `REPORTER`, and `ASSIGNEE`
 
 ##### Preconditions
 
 1. User is authenticated with valid JWT token
-2. User has permission `PM.PROJECT.UPDATE`
-3. Project exists and is not soft-deleted
+2. User belongs to an active tenant
+3. Target project exists in tenant scope and is not soft-deleted
+4. Caller satisfies `ADMINISTER_PROJECTS` for the target project
+5. Target project is not archived
 
 ##### Postconditions
 
 ###### Success Postconditions
-1. Project record updated in database
-2. Kafka event `PROJECT_UPDATED` published to topic `serp.pm.project.events`
-3. `updated_at`, `updated_by` fields updated
+1. Requested mutable project fields are updated on the project row
+2. `updated_at` and `updated_by` are updated
+3. A `PROJECT_UPDATED` outbox record is persisted in the same transaction for Kafka publication to `serp.pm.project.events`
+4. Response returns the updated project payload
 
 ###### Failure Postconditions
-1. No changes committed
-2. Error response returned
+1. No partial update is committed
+2. No outbox event is committed
+3. Existing project data remains unchanged
+4. Error response is returned with validation, authorization, or lookup details
 
 ##### Main Flow
 
 | Step | Actor/System | Action |
 |------|-------------|--------|
-| 1 | Project Lead | Sends PUT `/api/v1/projects/{projectId}` with updated fields |
-| 2 | System | Validates JWT and extracts `userId`, `tenantId` |
-| 3 | System | Checks user has `PM.PROJECT.UPDATE` permission |
-| 4 | System | Fetches project by ID, validates it exists and belongs to tenant |
-| 5 | System | Validates input data |
-| 6 | System | If `key` changed, validates new key is unique within tenant |
-| 7 | System | If `lead_user_id` changed, validates user exists via Account Service |
-| 8 | System | If `project_category_id` changed, validates category exists in tenant |
-| 9 | System | Updates project entity, sets `updated_by=userId` |
-| 10 | System | Persists changes within transaction |
-| 11 | System | Publishes `PROJECT_UPDATED` event to Kafka |
-| 12 | System | Returns HTTP 200 with updated project |
+| 1 | Project Lead | Sends `PUT /api/v1/projects/{projectId}` with partial metadata updates |
+| 2 | System | Validates JWT and extracts `userId`, `tenantId`, and group memberships |
+| 3 | System | Loads project by `projectId`, validates it exists in tenant scope and is not archived |
+| 4 | System | Evaluates `ADMINISTER_PROJECTS` for the caller on the target project |
+| 5 | System | Validates request payload and rejects immutable field updates |
+| 6 | System | If `key` is supplied and changed, validates format and uniqueness within tenant scope |
+| 7 | System | If `lead_user_id` is supplied and changed, validates the user exists via Account service |
+| 8 | System | If `project_category_id` is supplied and non-null, validates the category exists in tenant scope |
+| 9 | System | Applies requested metadata changes, including explicit clearing of nullable fields when `null` is supplied |
+| 10 | System | Persists the project update and `PROJECT_UPDATED` outbox event in one transaction |
+| 11 | System | Returns HTTP 200 with updated project payload |
+
+##### Alternative Flows
+
+###### AF-1: Partial Metadata Update
+
+**Branches from**: Main Flow Step 5-9
+**Condition**: Request updates only a subset of mutable fields
+
+| Step | Actor/System | Action |
+|------|-------------|--------|
+| 5.1 | System | Treats omitted mutable fields as unchanged |
+| 9.1 | System | Persists only supplied mutable values |
+
+**Rejoins**: Main Flow Step 10
+
+###### AF-2: Clear Optional Metadata
+
+**Branches from**: Main Flow Step 9
+**Condition**: Request explicitly sends `null` for `description`, `project_category_id`, `url`, or `avatar_id`
+
+| Step | Actor/System | Action |
+|------|-------------|--------|
+| 9.1 | System | Clears the corresponding persisted value to `NULL` |
+
+**Rejoins**: Main Flow Step 10
 
 ##### Exception Flows
 
 ###### EF-1: Project Not Found
 
-**Triggered at**: Main Flow Step 4
-**Condition**: Project does not exist or is soft-deleted
+**Triggered at**: Main Flow Step 3
 
 | Step | Actor/System | Action |
 |------|-------------|--------|
-| 4.E1 | System | Returns HTTP 404 with error: `PROJECT_NOT_FOUND` |
+| 3.E1 | System | Returns HTTP 404 with error: `PROJECT_NOT_FOUND` |
 
-###### EF-2: Duplicate Key on Update
+###### EF-2: Project Archived
+
+**Triggered at**: Main Flow Step 3
+
+| Step | Actor/System | Action |
+|------|-------------|--------|
+| 3.E1 | System | Returns HTTP 409 with error: `PROJECT_ARCHIVED` |
+
+###### EF-3: Project Permission Denied
+
+**Triggered at**: Main Flow Step 4
+
+| Step | Actor/System | Action |
+|------|-------------|--------|
+| 4.E1 | System | Returns HTTP 403 with error: `PROJECT_PERMISSION_DENIED` and missing permission detail `ADMINISTER_PROJECTS` |
+
+###### EF-4: Duplicate Project Key
 
 **Triggered at**: Main Flow Step 6
-**Condition**: New key conflicts with existing project in tenant
 
 | Step | Actor/System | Action |
 |------|-------------|--------|
 | 6.E1 | System | Returns HTTP 409 with error: `PROJECT_KEY_ALREADY_EXISTS` |
 
+###### EF-5: Lead User Not Found
+
+**Triggered at**: Main Flow Step 7
+
+| Step | Actor/System | Action |
+|------|-------------|--------|
+| 7.E1 | System | Returns HTTP 404 with error: `USER_NOT_FOUND` |
+
+###### EF-6: Category Not Found
+
+**Triggered at**: Main Flow Step 8
+
+| Step | Actor/System | Action |
+|------|-------------|--------|
+| 8.E1 | System | Returns HTTP 404 with error: `CATEGORY_NOT_FOUND` |
+
+###### EF-7: Immutable Field Update Rejected
+
+**Triggered at**: Main Flow Step 5
+
+| Step | Actor/System | Action |
+|------|-------------|--------|
+| 5.E1 | System | Returns HTTP 400 with validation details for immutable or unsupported fields |
+
 ##### Business Rules
 
 | Rule ID | Description | Enforcement |
 |---------|-------------|-------------|
-| BR-PM-002-01 | Cannot update an archived project (must unarchive first) | Service layer |
-| BR-PM-002-02 | Project key change is allowed but must remain unique | Service layer + DB |
-| BR-PM-002-03 | All queries must filter by tenantId | Repository layer |
+| BR-PM-002-01 | Updating project metadata requires `ADMINISTER_PROJECTS` in the target project | Authorization layer |
+| BR-PM-002-02 | Archived projects cannot be updated through UC-PM-002 | Service layer |
+| BR-PM-002-03 | `key` may be changed, but when changed it must remain unique within tenant scope and satisfy the canonical project-key format | Service layer + DB constraint |
+| BR-PM-002-04 | `project_type_key`, scheme-binding fields, archive flags, and tenant ownership are immutable in UC-PM-002 | UseCase layer |
+| BR-PM-002-05 | Optional metadata fields explicitly supplied as `null` are cleared; omitted fields remain unchanged | UseCase + Service layer |
+| BR-PM-002-06 | If `lead_user_id` is changed, the target user must exist in Account service before commit | UseCase layer |
+| BR-PM-002-07 | If `project_category_id` is supplied and non-null, the category must exist in the same tenant scope | UseCase layer |
+| BR-PM-002-08 | Domain events use the outbox pattern: `PROJECT_UPDATED` is stored in the same transaction as the project update and published asynchronously after commit | UseCase layer |
 
 ##### Data Requirements
 
@@ -688,13 +768,14 @@ Allow a Project Lead or PM Admin to update project metadata such as name, descri
 
 | Field | Type | Required | Validation | Description |
 |-------|------|----------|------------|-------------|
-| name | string | No | min:1, max:255 | Project name |
-| key | string | No | regex: `^[A-Z][A-Z0-9]{1,9}$` | Project key |
-| description | string | No | max:10000 | Description |
-| lead_user_id | int64 | No | must exist | Project lead |
-| project_category_id | int64 | No | must exist or null | Category |
-| url | string | No | valid URL, max:255 | External URL |
-| avatar_id | int64 | No | valid asset ID | Avatar |
+| projectId | int64 | Yes | min:1 | Project identifier from path |
+| name | string | No | min:1, max:255 | Updated project name |
+| key | string | No | regex: `^[A-Z][A-Z0-9]{1,9}$`; unique in tenant when changed | Updated project key |
+| description | string | No | max:10000; `null` clears value | Updated project description |
+| lead_user_id | int64 | No | target user must exist | Updated project lead |
+| project_category_id | int64 | No | category must exist in tenant when non-null; `null` clears value | Updated category |
+| url | string | No | valid URL, max:255; `null` clears value | Updated external URL |
+| avatar_id | int64 | No | valid asset ID; `null` clears value | Updated avatar |
 
 ###### Output Data
 
@@ -894,52 +975,16 @@ Soft-delete a project by setting `deleted_at` timestamp. This operation does not
 
 #### UC-PM-006: Archive/Unarchive Project
 
-##### Basic Information
+Detailed specification is extracted to:
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-006 |
-| **Use Case Name** | Archive/Unarchive Project |
-| **Module** | PM Core |
-| **Version** | 1.0 |
-| **Last Updated** | 2026-02-18 |
-| **Priority** | Medium |
-| **Complexity** | Simple |
+- [UC-PM-006 - Archive/Unarchive Project](usecases/project/UC-PM-006-archive-unarchive-project.md)
 
-##### Description
+This extracted file is now the canonical detailed reference for UC-PM-006, including:
 
-Toggle the archive state of a project. Archived projects are visible but read-only (no new work items, no modifications to existing items).
-
-##### Actors
-
-| Actor | Type | Description |
-|-------|------|-------------|
-| Project Lead | Primary | Archives/unarchives projects they lead |
-
-##### Preconditions
-
-1. User is authenticated with valid JWT token
-2. User has permission `PM.PROJECT.UPDATE`
-3. Project exists and is not soft-deleted
-
-##### Main Flow
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 1 | Project Lead | Sends POST `/api/v1/projects/{projectId}/archive` or `/unarchive` |
-| 2 | System | Validates JWT and permissions |
-| 3 | System | Fetches project, validates it exists |
-| 4 | System | For archive: sets `archived=true`, `archived_at=NOW()` |
-| 5 | System | For unarchive: sets `archived=false`, clears `archived_at` |
-| 6 | System | Publishes `PROJECT_ARCHIVED` or `PROJECT_UNARCHIVED` event |
-| 7 | System | Returns HTTP 200 with updated project |
-
-##### Business Rules
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-006-01 | Cannot archive an already archived project (idempotent check) | Service layer |
-| BR-PM-006-02 | Archived projects reject all write operations on child entities | Service layer |
+- Jira-aligned authorization model for `ADMINISTER_PROJECTS`
+- archive and unarchive state transitions
+- `PROJECT_ALREADY_ARCHIVED` and `PROJECT_NOT_ARCHIVED` guardrails
+- current implementation scope that updates state without Kafka/outbox publishing
 
 ---
 
@@ -1029,155 +1074,30 @@ Update the effective scheme bindings for a project (issue type scheme, workflow 
 
 #### UC-PM-011 to UC-PM-015: Project Category CRUD
 
-##### UC-PM-011: Create Project Category
-
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-011 |
-| **Use Case Name** | Create Project Category |
-| **Priority** | Medium |
-| **Complexity** | Simple |
-
-**Description**: Create a new project category for organizing projects within a tenant.
-
-**Permission**: `PM.PROJECT_CATEGORY.CREATE`
-
-**Main Flow**:
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 1 | PM Admin | Sends POST `/api/v1/project-categories` with `{ name, description }` |
-| 2 | System | Validates JWT, permissions, input data |
-| 3 | System | Checks name is unique within tenant |
-| 4 | System | Persists category, publishes `PROJECT_CATEGORY_CREATED` event |
-| 5 | System | Returns HTTP 201 with created category |
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-011-01 | Category name must be unique within tenant | Service + DB `UNIQUE(tenant_id, name)` |
-| BR-PM-011-02 | Name required, 1-255 characters | DTO validation |
-
-**Input Data**:
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| name | string | Yes | min:1, max:255, unique per tenant | Category name |
-| description | string | No | max:2000 | Description |
-
-##### UC-PM-012: Update Project Category
-
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-012 |
-| **Use Case Name** | Update Project Category |
-| **Priority** | Medium |
-| **Complexity** | Simple |
-
-**Permission**: `PM.PROJECT_CATEGORY.UPDATE`
-
-**Main Flow**: Fetch by ID -> validate -> update name/description -> publish `PROJECT_CATEGORY_UPDATED` -> return 200.
-
-**Exception**: If name conflicts with existing category -> HTTP 409.
-
-##### UC-PM-013: Get Project Category by ID
-
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-013 |
-| **Use Case Name** | Get Project Category by ID |
-| **Priority** | Low |
-| **Complexity** | Simple |
-
-**Permission**: `PM.PROJECT_CATEGORY.READ`
-
-**Main Flow**: GET `/api/v1/project-categories/{id}` -> validate JWT -> fetch with tenant_id + deleted_at IS NULL -> return 200.
-
-##### UC-PM-014: List Project Categories
-
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-014 |
-| **Use Case Name** | List Project Categories |
-| **Priority** | Medium |
-| **Complexity** | Simple |
-
-**Permission**: `PM.PROJECT_CATEGORY.READ`
-
-**Main Flow**: GET `/api/v1/project-categories` with pagination -> return paginated list filtered by tenant_id.
-
-##### UC-PM-015: Delete Project Category
-
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-015 |
-| **Use Case Name** | Delete Project Category |
-| **Priority** | Low |
-| **Complexity** | Simple |
-
-**Permission**: `PM.PROJECT_CATEGORY.DELETE`
-
-**Main Flow**: Soft-delete (set `deleted_at`) -> publish `PROJECT_CATEGORY_DELETED` event -> return 200.
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-015-01 | Cannot delete category if projects are still assigned to it | Service layer |
+- `UC-PM-011`: [Create Project Category](usecases/project-category/UC-PM-011-create-project-category.md)
+- `UC-PM-012`: [Update Project Category](usecases/project-category/UC-PM-012-update-project-category.md)
+- `UC-PM-013`: [Get Project Category by ID](usecases/project-category/UC-PM-013-get-project-category-by-id.md)
+- `UC-PM-014`: [List Project Categories](usecases/project-category/UC-PM-014-list-project-categories.md)
+- `UC-PM-015`: [Delete Project Category](usecases/project-category/UC-PM-015-delete-project-category.md)
 
 ---
 
 #### UC-PM-016 to UC-PM-021: Project Blueprint Management
 
-##### UC-PM-016: Create Project Blueprint
+Detailed specifications are extracted to:
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-016 |
-| **Use Case Name** | Create Project Blueprint |
-| **Priority** | Medium |
-| **Complexity** | Medium |
+- [UC-PM-016 - Create Project Blueprint](usecases/project-blueprint/UC-PM-016-create-project-blueprint.md)
+- [UC-PM-017 - Update Project Blueprint](usecases/project-blueprint/UC-PM-017-update-project-blueprint.md)
+- [UC-PM-018 - Get Project Blueprint by ID](usecases/project-blueprint/UC-PM-018-get-project-blueprint-by-id.md)
+- [UC-PM-019 - List Project Blueprints](usecases/project-blueprint/UC-PM-019-list-project-blueprints.md)
+- [UC-PM-020 - Delete Project Blueprint](usecases/project-blueprint/UC-PM-020-delete-project-blueprint.md)
 
-**Description**: Create a project template (blueprint) that pre-configures scheme defaults for new projects.
+These extracted files are now the canonical detailed references for project blueprint CRUD, including:
 
-**Permission**: `PM.BLUEPRINT.CREATE`
-
-**Main Flow**:
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 1 | PM Admin | Sends POST `/api/v1/project-blueprints` with blueprint data |
-| 2 | System | Validates JWT, permissions, input |
-| 3 | System | Validates `project_type_key` is valid |
-| 4 | System | Persists blueprint |
-| 5 | System | Publishes `BLUEPRINT_CREATED` event to `serp.pm.blueprint.events` |
-| 6 | System | Returns HTTP 201 |
-
-**Input Data**:
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| name | string | Yes | min:1, max:255 | Blueprint name |
-| description | string | No | max:2000 | Description |
-| project_type_key | string | Yes | software, business, service_desk | Project type |
-| avatar_url | string | No | valid URL | Icon URL |
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-016-01 | Only PM Admin can create tenant-defined blueprints; `is_system=false` | Service layer |
-| BR-PM-016-02 | System blueprints (`is_system=true`) cannot be created via API | Service layer |
-
-##### UC-PM-017 to UC-PM-020: Blueprint Update, Get, List, Delete
-
-Standard CRUD pattern. Permission: `PM.BLUEPRINT.MANAGE`.
-
-- **UC-PM-017**: Update blueprint metadata (name, description, avatar_url). Cannot modify `is_system` blueprints.
-- **UC-PM-018**: Get by ID with scheme defaults expanded.
-- **UC-PM-019**: List blueprints with filters (project_type_key, is_system).
-- **UC-PM-020**: Soft-delete. Cannot delete system blueprints. Existing projects are not affected because blueprint schemes are only used as provisioning templates.
+- tenant-scoped PM Admin authorization model
+- tenant-owned versus system-owned blueprint behavior
+- `project_type_key` immutability after create
+- `UC-PM-018` scheme-default expansion and `UC-PM-019` metadata-only listing
 
 ##### UC-PM-021: Manage Blueprint Scheme Defaults
 
@@ -1356,36 +1276,20 @@ Simple toggle: set `archived=true` or `archived=false`. Publish `VERSION_ARCHIVE
 
 #### UC-PM-041 to UC-PM-048: Project Role Management
 
-##### UC-PM-041: Create Project Role
+Detailed specifications are extracted to:
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-041 |
-| **Use Case Name** | Create Project Role |
-| **Priority** | Medium |
-| **Complexity** | Simple |
+- [UC-PM-041 - Create Project Role](usecases/project-role/UC-PM-041-create-project-role.md)
+- [UC-PM-042 - Update Project Role](usecases/project-role/UC-PM-042-update-project-role.md)
+- [UC-PM-043 - Get Project Role by ID](usecases/project-role/UC-PM-043-get-project-role-by-id.md)
+- [UC-PM-044 - List Project Roles](usecases/project-role/UC-PM-044-list-project-roles.md)
+- [UC-PM-045 - Delete Project Role](usecases/project-role/UC-PM-045-delete-project-role.md)
 
-**Description**: Create a new project role (e.g., "Developer", "QA Lead", "Scrum Master"). Roles are global per tenant and can be assigned per project.
+These extracted files are now the canonical detailed references for project-role catalog CRUD, including:
 
-**Permission**: `PM.ROLE.CREATE`
-
-**Input Data**:
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| name | string | Yes | min:1, max:255, unique per tenant | Role name |
-| description | string | No | max:2000 | Description |
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-041-01 | Role name unique per tenant | DB `UNIQUE(tenant_id, name)` |
-| BR-PM-041-02 | `is_system=false` for API-created roles | Service layer |
-
-##### UC-PM-042 to UC-PM-045: Role Update, Get, List, Delete
-
-Standard CRUD. Cannot delete system roles. Cannot delete if role is used in permission schemes.
+- tenant-scoped PM Admin authorization model
+- tenant-owned versus system-owned role behavior
+- soft-delete and read-only constraints
+- permission-scheme usage guardrails for delete
 
 ##### UC-PM-046: Add Project Role Actor
 
@@ -1796,58 +1700,22 @@ Issue type management is tenant-scoped administration behavior:
 
 #### UC-PM-136 to UC-PM-141: Issue Type Scheme Management
 
-##### UC-PM-136: Create Issue Type Scheme
+Detailed specifications are extracted to separate files:
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-136 |
-| **Use Case Name** | Create Issue Type Scheme |
-| **Priority** | Medium |
-| **Complexity** | Simple |
+- [UC-PM-136 - Create Issue Type Scheme](usecases/issue-type-scheme/UC-PM-136-create-issue-type-scheme.md)
+- [UC-PM-137 - Update Issue Type Scheme](usecases/issue-type-scheme/UC-PM-137-update-issue-type-scheme.md)
+- [UC-PM-138 - Get Issue Type Scheme by ID](usecases/issue-type-scheme/UC-PM-138-get-issue-type-scheme-by-id.md)
+- [UC-PM-139 - List Issue Type Schemes](usecases/issue-type-scheme/UC-PM-139-list-issue-type-schemes.md)
+- [UC-PM-140 - Delete Issue Type Scheme](usecases/issue-type-scheme/UC-PM-140-delete-issue-type-scheme.md)
+- [UC-PM-141 - Manage Issue Type Scheme Items](usecases/issue-type-scheme/UC-PM-141-manage-issue-type-scheme-items.md)
 
-**Permission**: `PM.ISSUE_TYPE_SCHEME.CREATE`
+Issue type scheme management is tenant-scoped administration behavior:
 
-**Input Data**:
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| name | string | Yes | min:1, max:255 | Scheme name |
-| description | string | No | max:2000 | Description |
-| default_issue_type_id | int64 | Yes | must exist | Default issue type |
-
-##### UC-PM-137 to UC-PM-140: Scheme Update, Get, List, Delete
-
-Standard CRUD.
-
-##### UC-PM-141: Manage Issue Type Scheme Items
-
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-141 |
-| **Use Case Name** | Manage Issue Type Scheme Items |
-| **Priority** | Medium |
-| **Complexity** | Medium |
-
-**Description**: Add, remove, or reorder issue types within a scheme.
-
-**Permission**: `PM.ISSUE_TYPE_SCHEME.MANAGE`
-
-**Main Flow**:
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 1 | PM Admin | Sends PUT `/api/v1/issue-type-schemes/{schemeId}/items` with ordered list of issue type IDs |
-| 2 | System | Validates all issue types exist |
-| 3 | System | Validates default issue type is in the list |
-| 4 | System | Replaces all scheme items within transaction (delete old, insert new with sequence) |
-| 5 | System | Returns HTTP 200 |
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-141-01 | Scheme's `default_issue_type_id` must always be in the items list | UseCase layer |
-| BR-PM-141-02 | Cannot remove an issue type from scheme if projects using this scheme have work items of that type | UseCase layer (warning/flag) |
+- Read APIs may return both tenant-owned issue type schemes and system-owned issue type schemes visible to that tenant
+- System-owned issue type schemes are read-only from tenant APIs
+- Tenant callers may create, update, delete, and manage items only for schemes owned by their own tenant
+- `tenant_id` for write operations is always resolved from JWT context and never accepted from the request payload
+- Scheme item membership and ordering are managed canonically by `UC-PM-141`
 
 ---
 
@@ -1873,11 +1741,28 @@ Standard CRUD. System priorities cannot be deleted.
 
 ##### UC-PM-151 to UC-PM-155: Priority Scheme CRUD
 
-Same pattern as Issue Type Scheme. Includes `default_priority_id`.
+Detailed specifications are extracted to separate files:
+
+- [UC-PM-151 - Create Priority Scheme](usecases/priority-scheme/UC-PM-151-create-priority-scheme.md)
+- [UC-PM-152 - Update Priority Scheme](usecases/priority-scheme/UC-PM-152-update-priority-scheme.md)
+- [UC-PM-153 - Get Priority Scheme by ID](usecases/priority-scheme/UC-PM-153-get-priority-scheme-by-id.md)
+- [UC-PM-154 - List Priority Schemes](usecases/priority-scheme/UC-PM-154-list-priority-schemes.md)
+- [UC-PM-155 - Delete Priority Scheme](usecases/priority-scheme/UC-PM-155-delete-priority-scheme.md)
 
 ##### UC-PM-156: Manage Priority Scheme Items
 
-Same pattern as UC-PM-141. Manages ordered list of priorities within a scheme.
+Detailed specification is extracted to a separate file:
+
+- [UC-PM-156 - Manage Priority Scheme Items](usecases/priority-scheme/UC-PM-156-manage-priority-scheme-items.md)
+
+Priority scheme management is tenant-scoped administration behavior:
+
+- Read APIs may return both tenant-owned priority schemes and system-owned priority schemes visible to that tenant
+- System-owned priority schemes are read-only from tenant APIs
+- Tenant callers may create, update, delete, and manage items only for schemes owned by their own tenant
+- `tenant_id` for write operations is always resolved from JWT context and never accepted from the request payload
+- Scheme item membership and ordering are managed canonically by `UC-PM-156`
+- No Kafka/outbox publication is performed for priority scheme write paths in this scope
 
 ---
 
@@ -1963,144 +1848,62 @@ GET `/api/v1/work-items/{workItemId}/links` -> return both inward and outward li
 
 #### UC-PM-181 to UC-PM-185: Worklog Management
 
-##### UC-PM-181: Create Worklog
+##### Use Case Documents
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-181 |
-| **Use Case Name** | Create Worklog |
-| **Priority** | High |
-| **Complexity** | Simple |
-
-**Permission**: `PM.WORKLOG.CREATE`
-
-**Main Flow**:
-
-| Step | Actor/System | Action |
-|------|-------------|--------|
-| 1 | Team Member | Sends POST `/api/v1/work-items/{workItemId}/worklogs` with worklog data |
-| 2 | System | Validates JWT and permissions |
-| 3 | System | Validates work item exists |
-| 4 | System | Persists worklog with `author_id=userId` |
-| 5 | System | Updates `time_spent` on work item (increment) and recalculates `time_remaining_estimate` |
-| 6 | System | Publishes `WORKLOG_CREATED` to `serp.pm.worklog.events` |
-| 7 | System | Returns HTTP 201 |
-
-**Input Data**:
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| time_spent | int64 | Yes | min:60 (at least 1 minute in seconds) | Time logged in seconds |
-| start_date | timestamp | Yes | not in future | When work started |
-| comment | string | No | max:5000 | Work description |
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-181-01 | Logging work updates the work item's `time_spent` (sum of all worklogs) | Service layer |
-| BR-PM-181-02 | `time_remaining_estimate` is reduced by logged time (floor at 0) | Service layer |
-
-##### UC-PM-182: Update Worklog
-
-**Permission**: `PM.WORKLOG.MANAGE` (own worklogs) or `PM.WORKLOG.MANAGE_ALL`
-
-Can update `time_spent`, `start_date`, `comment`. Recalculates work item `time_spent` totals.
-
-##### UC-PM-183: Delete Worklog
-
-Soft-delete. Recalculates work item `time_spent`. Only author or admin.
-
-##### UC-PM-184: List Worklogs for Work Item
-
-GET `/api/v1/work-items/{workItemId}/worklogs` with pagination.
-
-##### UC-PM-185: Get Worklog by ID
-
-GET `/api/v1/worklogs/{worklogId}`.
-
+| UC ID | Specification |
+|-------|---------------|
+| UC-PM-181 | [Create Worklog](usecases/worklog/UC-PM-181-create-worklog.md) |
+| UC-PM-182 | [Update Worklog](usecases/worklog/UC-PM-182-update-worklog.md) |
+| UC-PM-183 | [Delete Worklog](usecases/worklog/UC-PM-183-delete-worklog.md) |
+| UC-PM-184 | [List Worklogs for Work Item](usecases/worklog/UC-PM-184-list-worklogs-for-work-item.md) |
+| UC-PM-185 | [Get Worklog by ID](usecases/worklog/UC-PM-185-get-worklog-by-id.md) |
 ---
 
 ### 5.3. Workflow Engine (Module 03)
+
+Implementation backlog reference:
+
+- [Module 03 Workflow Engine Backlog](usecases/module-03-workflow-engine-backlog.md)
 
 ---
 
 #### UC-PM-201 to UC-PM-205: Status Category CRUD
 
-##### UC-PM-201: Create Status Category
+Detailed specifications are extracted to separate files:
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-201 |
-| **Use Case Name** | Create Status Category |
-| **Priority** | Medium |
-| **Complexity** | Simple |
+- [UC-PM-201 - Create Status Category](usecases/status-category/UC-PM-201-create-status-category.md)
+- [UC-PM-202 - Update Status Category](usecases/status-category/UC-PM-202-update-status-category.md)
+- [UC-PM-203 - Get Status Category by ID](usecases/status-category/UC-PM-203-get-status-category-by-id.md)
+- [UC-PM-204 - List Status Categories](usecases/status-category/UC-PM-204-list-status-categories.md)
+- [UC-PM-205 - Delete Status Category](usecases/status-category/UC-PM-205-delete-status-category.md)
 
-**Permission**: `PM.STATUS_CATEGORY.CREATE`
+Status category management is tenant-scoped administration behavior:
 
-**Input Data**:
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| name | string | Yes | min:1, max:50 | Category name (To Do, In Progress, Done) |
-| key | string | Yes | min:1, max:50, unique per tenant | Stable key (new, indeterminate, done) |
-| color_name | string | No | max:50 | Display color name |
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-201-01 | System status categories cannot be created via API | Service layer |
-| BR-PM-201-02 | Key must be unique per tenant | DB `UNIQUE(tenant_id, key)` |
-
-##### UC-PM-202 to UC-PM-205: Status Category Update, Get, List, Delete
-
-Standard CRUD. System categories cannot be deleted.
+- Read APIs may return both tenant-owned status categories and system-owned status categories visible to that tenant
+- System-owned status categories are read-only from tenant APIs
+- Tenant callers may create, update, and delete only status categories owned by their own tenant
+- `tenant_id` for write operations is always resolved from JWT context and never accepted from the request payload
+- No Kafka/outbox publication is performed for status-category write paths in this scope
 
 ---
 
 #### UC-PM-211 to UC-PM-215: Status CRUD
 
-##### UC-PM-211: Create Status
+Detailed specifications are extracted to separate files:
 
-| Field | Value |
-|-------|-------|
-| **Use Case ID** | UC-PM-211 |
-| **Use Case Name** | Create Status |
-| **Priority** | High |
-| **Complexity** | Simple |
+- [UC-PM-211 - Create Status](usecases/status/UC-PM-211-create-status.md)
+- [UC-PM-212 - Update Status](usecases/status/UC-PM-212-update-status.md)
+- [UC-PM-213 - Get Status by ID](usecases/status/UC-PM-213-get-status-by-id.md)
+- [UC-PM-214 - List Statuses](usecases/status/UC-PM-214-list-statuses.md)
+- [UC-PM-215 - Delete Status](usecases/status/UC-PM-215-delete-status.md)
 
-**Permission**: `PM.STATUS.CREATE`
+Status management is tenant-scoped administration behavior:
 
-**Input Data**:
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| status_key | string | Yes | min:1, max:100, unique per tenant | Stable key |
-| name | string | Yes | min:1, max:255 | Display name |
-| description | string | No | max:2000 | Description |
-| icon_url | string | No | valid URL | Icon |
-| status_category_id | int64 | Yes | must exist | Parent category |
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-211-01 | `status_key` unique per tenant | DB `UNIQUE(tenant_id, status_key)` |
-| BR-PM-211-02 | Every status must belong to a status category | DTO validation |
-
-##### UC-PM-212 to UC-PM-214: Status Update, Get, List
-
-Standard CRUD. System statuses cannot have their `status_key` changed.
-
-##### UC-PM-215: Delete Status
-
-**Business Rules**:
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-PM-215-01 | Cannot delete a status that is used in any workflow step | Service layer |
-| BR-PM-215-02 | Cannot delete a status if any work item currently has this status | Service layer |
+- Read APIs may return both tenant-owned statuses and system-owned statuses visible to that tenant
+- System-owned statuses are read-only from tenant APIs
+- Tenant callers may create, update, and delete only statuses owned by their own tenant
+- `tenant_id` for write operations is always resolved from JWT context and never accepted from the request payload
+- No Kafka/outbox publication is performed for status write paths in this scope
 
 ---
 
