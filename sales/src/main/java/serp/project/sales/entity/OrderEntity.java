@@ -111,7 +111,7 @@ public class OrderEntity {
     public OrderEntity(OrderCreationForm form, Long userId, Long tenantId) {
         String orderId = IdUtils.generateOrderId();
         this.id = orderId;
-        this.orderTypeId = OrderType.SALE.name();
+        this.orderTypeId = OrderType.SALES.name();
         this.toCustomerId = form.getToCustomerId();
         this.createdByUserId = userId;
         this.orderDate = LocalDate.now();

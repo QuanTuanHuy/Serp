@@ -46,13 +46,13 @@ import {
 import { cn } from '@/shared/utils';
 import {
   useGetOrderQuery,
-  useGetSupplierQuery,
-  useGetShipmentsQuery,
+  useGetOutboundShipmentsQuery,
   useGetCustomerQuery,
 } from '../../api/logisticsApi';
 import { UserProfile, useGetUsersQuery } from '@/modules/admin';
 import { ShipmentCard } from '../../components/cards/ShipmentCard';
-import type { Shipment } from '../../types';
+import type { OutboundShipment, Shipment } from '../../types';
+import { OutboundShipmentCard } from '../../components/cards/OutboundShipmentCard';
 
 interface OrderDetailPageProps {
   orderId: string;
@@ -118,28 +118,28 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
   const { data: orderResponse, isLoading, isError } = useGetOrderQuery(orderId);
   const order = orderResponse?.data;
 
-  // Fetch shipments related to this order
+  // Keep hooks execution order stable across renders.
   const {
     data: shipmentsResponse,
     isLoading: isLoadingShipments,
     error: shipmentsError,
-  } = useGetShipmentsQuery(
+  } = useGetOutboundShipmentsQuery(
     {
       filters: { orderId: orderId },
       pagination: { page: 0, size: 100 },
     },
-    { skip: !orderId }
+    {
+      skip: !order,
+    }
   );
 
   const shipments = shipmentsResponse?.data?.items || [];
 
-  // Fetch supplier data
-  const supplierId = order?.fromSupplierId || '';
-  const { data: supplierResponse } = useGetSupplierQuery(supplierId, {
-    skip: !supplierId,
+  const customerId = order?.toCustomerId || '';
+  const { data: customersResponse } = useGetCustomerQuery(customerId, {
+    skip: !customerId,
   });
-
-  const supplier = supplierResponse?.data;
+  const customer = customersResponse?.data;
 
   // Collect unique user IDs from order
   const userIds = [
@@ -161,12 +161,6 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
   const userMap = new Map(
     usersResponse?.data?.items?.map((user) => [user.id, user]) || []
   );
-
-  const statusConfig = order
-    ? STATUS_CONFIG[order.statusId as keyof typeof STATUS_CONFIG] ||
-      STATUS_CONFIG.CREATED
-    : STATUS_CONFIG.CREATED;
-  const StatusIcon = statusConfig.icon;
 
   if (isLoading) {
     return (
@@ -190,7 +184,7 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
           <p className='text-muted-foreground mb-4'>
             Đơn hàng không tồn tại hoặc đã bị xóa.
           </p>
-          <Button onClick={() => router.push('/logistics/purchase-orders')}>
+          <Button onClick={() => router.push('/logistics/sale-orders')}>
             <ArrowLeft className='h-4 w-4 mr-2' />
             Quay lại danh sách
           </Button>
@@ -198,6 +192,12 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
       </Card>
     );
   }
+
+  const statusConfig = order
+    ? STATUS_CONFIG[order.statusId as keyof typeof STATUS_CONFIG] ||
+      STATUS_CONFIG.CREATED
+    : STATUS_CONFIG.CREATED;
+  const StatusIcon = statusConfig.icon;
 
   return (
     <div className='space-y-6'>
@@ -207,7 +207,7 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
           <Button
             variant='ghost'
             size='icon'
-            onClick={() => router.push('/logistics/purchase-orders')}
+            onClick={() => router.push('/logistics/sale-orders')}
           >
             <ArrowLeft className='h-4 w-4' />
           </Button>
@@ -248,47 +248,42 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
           <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
             {/* Left Column - Order Details */}
             <div className='lg:col-span-2 space-y-6'>
-              {/* Supplier Information */}
+              {/* Customer Information */}
               <Card>
                 <CardHeader>
                   <div className='flex items-center gap-2'>
-                    <Building2 className='h-5 w-5 text-primary' />
-                    <h3 className='font-semibold'>Nhà cung cấp</h3>
+                    <User className='h-5 w-5 text-primary' />
+                    <h3 className='font-semibold'>Khách hàng</h3>
                   </div>
                 </CardHeader>
                 <CardContent className='space-y-4'>
-                  {supplier ? (
+                  {customer ? (
                     <>
-                      <div>
-                        <Label className='text-muted-foreground'>
-                          Tên nhà cung cấp
-                        </Label>
-                        <p className='font-medium'>{supplier.name}</p>
-                      </div>
-                      {supplier.email && (
+                      <p className='font-medium'>{customer.name}</p>
+                      {customer.email && (
                         <div className='flex items-center gap-2'>
                           <Mail className='h-4 w-4 text-muted-foreground' />
-                          <span>{supplier.email}</span>
+                          <span>{customer.email}</span>
                         </div>
                       )}
-                      {supplier.phone && (
+                      {customer.phone && (
                         <div className='flex items-center gap-2'>
                           <Phone className='h-4 w-4 text-muted-foreground' />
-                          <span>{supplier.phone}</span>
+                          <span>{customer.phone}</span>
                         </div>
                       )}
-                      {supplier.address?.fullAddress && (
+                      {customer.address?.fullAddress && (
                         <div className='flex items-start gap-2'>
                           <MapPin className='h-4 w-4 text-muted-foreground mt-1' />
                           <span className='text-sm'>
-                            {supplier.address.fullAddress}
+                            {customer.address.fullAddress}
                           </span>
                         </div>
                       )}
                     </>
                   ) : (
                     <p className='text-muted-foreground'>
-                      Không có thông tin nhà cung cấp
+                      Không có thông tin khách hàng
                     </p>
                   )}
                 </CardContent>
@@ -585,7 +580,7 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
             <Card className='border-destructive/50 bg-destructive/5'>
               <CardContent className='p-6 text-center'>
                 <p className='text-destructive'>
-                  Đã xảy ra lỗi khi tải phiếu nhập. Vui lòng thử lại sau.
+                  Đã xảy ra lỗi khi tải phiếu xuất kho. Vui lòng thử lại sau.
                 </p>
               </CardContent>
             </Card>
@@ -597,31 +592,35 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
               <div className='flex items-center justify-between'>
                 <div>
                   <h3 className='text-lg font-semibold'>
-                    Danh sách phiếu nhập
+                    Danh sách phiếu xuất kho
                   </h3>
                   <p className='text-sm text-muted-foreground'>
-                    {shipments.length} phiếu nhập
+                    {shipments.length} phiếu xuất kho
                   </p>
                 </div>
                 <Button
                   onClick={() =>
-                    router.push(`/logistics/shipments/new?orderId=${orderId}`)
+                    router.push(
+                      `/logistics/outbound-shipments/new?orderId=${orderId}`
+                    )
                   }
                 >
                   <Truck className='h-4 w-4 mr-2' />
-                  Tạo phiếu nhập mới
+                  Tạo phiếu xuất mới
                 </Button>
               </div>
 
               <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                {shipments.map((shipment: Shipment) => (
-                  <ShipmentCard
+                {shipments.map((shipment: OutboundShipment) => (
+                  <OutboundShipmentCard
                     key={shipment.id}
                     shipment={shipment}
                     order={order}
-                    supplier={supplier}
+                    customer={customer}
                     onClick={() =>
-                      router.push(`/logistics/shipments/${shipment.id}`)
+                      router.push(
+                        `/logistics/outbound-shipments/${shipment.id}`
+                      )
                     }
                   />
                 ))}
@@ -640,18 +639,20 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
                     <Truck className='w-10 h-10 text-muted-foreground' />
                   </div>
                   <h3 className='text-lg font-semibold mb-2'>
-                    Chưa có phiếu nhập nào
+                    Chưa có phiếu xuất kho nào
                   </h3>
                   <p className='text-muted-foreground mb-6 max-w-sm mx-auto'>
-                    Tạo phiếu nhập đầu tiên ngay bây giờ.
+                    Tạo phiếu xuất kho đầu tiên ngay bây giờ.
                   </p>
                   <Button
                     onClick={() =>
-                      router.push(`/logistics/shipments/new?orderId=${orderId}`)
+                      router.push(
+                        `/logistics/outbound-shipments/new?orderId=${orderId}`
+                      )
                     }
                   >
                     <Truck className='h-4 w-4 mr-2' />
-                    Tạo phiếu nhập đầu tiên
+                    Tạo phiếu xuất kho đầu tiên
                   </Button>
                 </CardContent>
               </Card>
@@ -667,10 +668,10 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
                     <Truck className='w-10 h-10 text-muted-foreground' />
                   </div>
                   <h3 className='text-lg font-semibold mb-2'>
-                    Chưa có phiếu nhập
+                    Chưa có phiếu xuất kho nào
                   </h3>
                   <p className='text-muted-foreground mb-6 max-w-sm mx-auto'>
-                    Cần phê duyệt đơn hàng trước khi tạo phiếu nhập.
+                    Cần phê duyệt đơn hàng trước khi tạo phiếu xuất kho.
                   </p>
                 </CardContent>
               </Card>

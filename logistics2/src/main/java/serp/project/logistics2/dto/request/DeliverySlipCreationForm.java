@@ -13,9 +13,6 @@ public class DeliverySlipCreationForm {
     @NotBlank(message = "Outbound shipment ID is required")
     private String outboundShipmentId;
 
-    @NotBlank(message = "Customer ID is required")
-    private String customerId;
-
     @NotBlank(message = "Facility ID is required")
     private String facilityId;
 

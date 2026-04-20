@@ -436,6 +436,7 @@ export interface OutboundShipmentItem {
 export interface OutboundShipment {
   id: string;
   orderId: string;
+  customerId?: string;
   facilityId: string;
   name: string;
   status: OutboundShipmentStatus;
@@ -449,8 +450,6 @@ export interface OutboundShipment {
 
 export interface OutboundShipmentItemForm {
   inventoryItemDetailId: string;
-  inventoryItemId: string;
-  productId: string;
   quantity: number;
 }
 

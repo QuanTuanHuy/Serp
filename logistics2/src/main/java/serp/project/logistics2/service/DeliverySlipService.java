@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import serp.project.logistics2.constant.DeliverySlipStatus;
-import serp.project.logistics2.constant.OrderStatus;
 import serp.project.logistics2.constant.ShipmentStatus;
 import serp.project.logistics2.dto.request.DeliveryItemUpdateForm;
 import serp.project.logistics2.dto.request.DeliverySlipCreationForm;
@@ -87,9 +86,9 @@ public class DeliverySlipService {
                     tenantId);
         }).toList();
 
-        CustomerEntity customer = customerRepository.findByIdAndTenantId(form.getCustomerId(), tenantId).orElse(null);
+        CustomerEntity customer = customerRepository.findByIdAndTenantId(shipment.getCustomerId(), tenantId).orElse(null);
         if (customer == null) {
-            log.info("[DeliverySlipService] Customer {} not found for tenant {}", form.getCustomerId(), tenantId);
+            log.info("[DeliverySlipService] Customer {} not found for tenant {}", shipment.getCustomerId(), tenantId);
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
 

@@ -71,27 +71,16 @@ public class OutboundShipmentItemEntity {
     }
 
     public static OutboundShipmentItemEntity create(
-            String outboundShipmentId,
-            String inventoryItemDetailId,
-            String inventoryItemId,
-            String productId,
+            InventoryItemDetailEntity  inventoryItemDetail,
             int quantity,
             Long tenantId
     ) {
         String id = IdUtils.generateOutboundShipmentItemId();
-        return new OutboundShipmentItemEntity(id, outboundShipmentId, inventoryItemDetailId, inventoryItemId, productId, quantity, tenantId);
-    }
-
-    public static OutboundShipmentItemEntity create(OutboundShipmentCreationForm.ItemForm form, String shipmentId, Long tenantId) {
-        return OutboundShipmentItemEntity.create(shipmentId, form.getInventoryItemDetailId(), form.getInventoryItemId(), form.getProductId(), form.getQuantity(), tenantId);
+        return new OutboundShipmentItemEntity(id, null, inventoryItemDetail.getId(), inventoryItemDetail.getInventoryItemId(), inventoryItemDetail.getProductId(), quantity, tenantId);
     }
 
     public void update(int quantity) {
         this.quantity = quantity;
-    }
-
-    public void update(OutboundShipmentItemUpdateForm form) {
-        this.update(form.getQuantity());
     }
 
 }

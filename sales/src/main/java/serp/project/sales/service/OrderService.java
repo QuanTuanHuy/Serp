@@ -250,7 +250,7 @@ public class OrderService {
                 return orderRepository.findAll(
                                 OrderSpecification.satisfy(
                                                 query,
-                                                OrderType.SALE.name(),
+                                                OrderType.SALES.name(),
                                                 null,
                                                 toCustomerId,
                                                 saleChannelId,
