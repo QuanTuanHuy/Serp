@@ -1,6 +1,22 @@
-import { Button, Card, CardContent, Badge } from '@/shared/components/ui';
 import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+} from '@/shared/components/ui';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/shared/components/ui/dropdown-menu';
+import {
+  AlertCircle,
+  Calendar,
   Clock,
+  ExternalLink,
+  MoreVertical,
   Truck,
   User,
   ArrowDownToLine,
@@ -9,6 +25,7 @@ import {
   ReceiptText,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
+import { formatDateVN } from '@/shared/utils/format';
 import { Customer, Order, Shipment, Supplier } from '../../types';
 
 const statusStyles = {
@@ -18,6 +35,7 @@ const statusStyles = {
     text: 'text-blue-700 dark:text-blue-400',
     dot: 'bg-blue-500',
     icon: Clock,
+    accent: '#3b82f6',
   },
   IMPORTED: {
     label: 'Đã nhập kho',
@@ -25,6 +43,7 @@ const statusStyles = {
     text: 'text-purple-700 dark:text-purple-400',
     dot: 'bg-purple-500',
     icon: ArrowDownToLine,
+    accent: '#a855f7',
   },
   EXPORTED: {
     label: 'Đã xuất kho',
@@ -32,6 +51,7 @@ const statusStyles = {
     text: 'text-purple-700 dark:text-purple-400',
     dot: 'bg-purple-500',
     icon: ArrowUpFromLine,
+    accent: '#8b5cf6',
   },
 };
 
@@ -50,23 +70,20 @@ const typeStyles = {
   },
 };
 
-const formatDate = (dateString?: string) => {
-  if (!dateString) return 'N/A';
-  return new Date(dateString).toLocaleDateString('vi-VN');
-};
-
 export const ShipmentCard = ({
   shipment,
   order,
   customer,
   supplier,
   onClick,
+  viewMode = 'grid',
 }: {
   shipment: Shipment;
   order?: Order;
   customer?: Customer;
   supplier?: Supplier;
   onClick?: () => void;
+  viewMode?: 'grid' | 'list';
 }) => {
   const status =
     statusStyles[shipment.statusId as keyof typeof statusStyles] ||
@@ -77,103 +94,223 @@ export const ShipmentCard = ({
   const StatusIcon = status.icon;
   const TypeIcon = type.icon;
 
+  const shipmentTitle =
+    shipment.shipmentName || `Phiếu #${shipment.id?.slice(0, 8) || 'N/A'}`;
+  const shortId = shipment.id ? `${shipment.id.slice(0, 10)}...` : 'N/A';
+  const orderLabel = order?.orderName || `${shipment.orderId.slice(0, 8)}...`;
+
+  const partyLabel =
+    shipment.shipmentTypeId === 'INBOUND'
+      ? supplier?.name ||
+        (shipment.fromSupplierId
+          ? `${shipment.fromSupplierId.slice(0, 8)}...`
+          : 'N/A')
+      : customer?.name ||
+        (shipment.toCustomerId
+          ? `${shipment.toCustomerId.slice(0, 8)}...`
+          : 'N/A');
+
+  const deliveryLabel = shipment.expectedDeliveryDate
+    ? `Dự kiến giao ${formatDateVN(shipment.expectedDeliveryDate)}`
+    : `Tạo ngày ${formatDateVN(shipment.createdStamp)}`;
+
+  const deadlineMs = shipment.expectedDeliveryDate
+    ? new Date(shipment.expectedDeliveryDate).getTime()
+    : null;
+  const isOverdue =
+    !!deadlineMs && deadlineMs < Date.now() && shipment.statusId === 'CREATED';
+
+  const handleOpenDetails = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onClick?.();
+  };
+
+  if (viewMode === 'list') {
+    return (
+      <Card
+        className={cn(
+          'group relative overflow-hidden cursor-pointer transition-colors',
+          'hover:bg-muted/40 hover:border-primary/40',
+          isOverdue && 'border-red-300 dark:border-red-800'
+        )}
+        onClick={onClick}
+      >
+        <div className='overflow-x-auto'>
+          <div className='grid min-w-[900px] grid-cols-[3fr_2.5fr_2.5fr_2fr] items-center gap-4 p-4'>
+            <p className='text-sm font-semibold truncate'>{shipmentTitle}</p>
+
+            <p className='text-sm text-muted-foreground truncate'>
+              Đơn hàng: {orderLabel}
+            </p>
+
+            <p className='text-sm text-muted-foreground truncate'>
+              {shipment.shipmentTypeId === 'INBOUND'
+                ? `NCC: ${partyLabel}`
+                : `Khách hàng: ${partyLabel}`}
+            </p>
+
+            <p
+              className={cn(
+                'text-sm truncate',
+                isOverdue
+                  ? 'text-red-600 dark:text-red-400 font-medium'
+                  : 'text-muted-foreground'
+              )}
+            >
+              {deliveryLabel}
+            </p>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <Card
       className={cn(
-        'group relative overflow-hidden',
-        'hover:shadow-lg hover:border-primary/20 transition-all duration-200 cursor-pointer'
+        'group relative overflow-hidden cursor-pointer transition-all',
+        'hover:shadow-xl hover:scale-[1.02] hover:border-primary/50',
+        'active:scale-[0.98]',
+        isOverdue &&
+          'border-red-300 dark:border-red-800 shadow-red-100 dark:shadow-red-900/20'
       )}
       onClick={onClick}
     >
-      <div className='relative h-2 bg-gradient-to-r from-primary/60 via-primary/40 to-primary/20' />
+      <div
+        className='absolute top-0 left-0 w-full h-1 transition-all group-hover:h-1.5'
+        style={{ backgroundColor: status.accent }}
+      />
 
-      <CardContent className='p-5'>
-        <div className='flex items-start justify-between mb-4'>
-          <div className='flex-1 min-w-0'>
-            <div className='flex items-center gap-2 mb-2'>
-              <div className='flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 text-primary'>
-                <Truck className='h-5 w-5' />
+      <CardHeader className='pb-3'>
+        <div className='flex items-start justify-between gap-2'>
+          <div className='flex items-start gap-3 flex-1 min-w-0'>
+            <div
+              className='w-1 h-12 rounded-full flex-shrink-0'
+              style={{ backgroundColor: status.accent }}
+            />
+
+            <div className='flex-1 min-w-0'>
+              <h3 className='font-semibold text-base leading-tight mb-1 truncate'>
+                {shipmentTitle}
+              </h3>
+              <p className='text-xs text-muted-foreground truncate'>
+                ID: {shortId}
+              </p>
+            </div>
+          </div>
+
+          <div className='flex items-center gap-1 flex-shrink-0'>
+            <Button
+              variant='ghost'
+              size='icon'
+              className='h-8 w-8'
+              onClick={handleOpenDetails}
+            >
+              <ExternalLink className='h-4 w-4' />
+            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button variant='ghost' size='icon' className='h-8 w-8'>
+                  <MoreVertical className='h-4 w-4' />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end'>
+                <DropdownMenuItem onClick={handleOpenDetails}>
+                  <ExternalLink className='mr-2 h-4 w-4' />
+                  Xem chi tiết
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        <Badge
+          variant='secondary'
+          className={cn('w-fit gap-1', status.bg, status.text)}
+        >
+          <StatusIcon className='h-3 w-3' />
+          <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
+          {status.label}
+        </Badge>
+      </CardHeader>
+
+      <CardContent className='space-y-4 pt-6'>
+        <div className='flex items-center gap-4'>
+          <div className='relative flex-shrink-0'>
+            <div
+              className='h-16 w-16 rounded-full border-4 flex items-center justify-center'
+              style={{ borderColor: `${status.accent}55` }}
+            >
+              <Truck className='h-7 w-7' style={{ color: status.accent }} />
+            </div>
+          </div>
+
+          <div className='flex-1 grid grid-cols-2 gap-2 text-xs'>
+            <div className='space-y-1'>
+              <div className='flex items-center gap-1 text-muted-foreground'>
+                <Box className='h-3 w-3' />
+                <span>Đơn hàng</span>
               </div>
-              <div className='flex-1 min-w-0'>
-                <h3 className='font-semibold text-foreground truncate'>
-                  {shipment.shipmentName ||
-                    `Phiếu #${shipment.id?.slice(0, 8)}...`}
-                </h3>
-                <p className='text-xs text-muted-foreground'>
-                  ID: {shipment.id?.slice(0, 10) || 'N/A'}...
-                </p>
-              </div>
+              <p className='text-sm font-semibold truncate'>{orderLabel}</p>
             </div>
 
-            <div className='flex items-center gap-2 mb-2'>
-              <Badge
-                variant='outline'
-                className={cn('gap-1', type.bg, type.text)}
-              >
-                <TypeIcon className='h-3 w-3' />
-                {type.label}
-              </Badge>
-              <Badge
-                variant='secondary'
-                className={cn('gap-1', status.bg, status.text)}
-              >
-                <StatusIcon className='h-3 w-3' />
-                <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
-                {status.label}
-              </Badge>
+            <div className='space-y-1'>
+              <div className='flex items-center gap-1 text-muted-foreground'>
+                <User className='h-3 w-3' />
+                <span>
+                  {shipment.shipmentTypeId === 'INBOUND'
+                    ? 'Nhà cung cấp'
+                    : 'Khách hàng'}
+                </span>
+              </div>
+              <p className='text-sm font-semibold truncate'>{partyLabel}</p>
+            </div>
+
+            <div className='space-y-1'>
+              <div className='flex items-center gap-1 text-muted-foreground'>
+                <ReceiptText className='h-3 w-3' />
+                <span>Loại phiếu</span>
+              </div>
+              <p className='text-sm font-semibold truncate'>{type.label}</p>
+            </div>
+
+            <div className='space-y-1'>
+              <div className='flex items-center gap-1 text-muted-foreground'>
+                <Calendar className='h-3 w-3' />
+                <span>Ngày tạo</span>
+              </div>
+              <p className='text-sm font-semibold'>
+                {formatDateVN(shipment.createdStamp)}
+              </p>
             </div>
           </div>
         </div>
 
-        <div className='space-y-2 mb-4'>
-          {order !== undefined && (
-            <div className='flex items-center gap-2 text-sm'>
-              <Box className='h-4 w-4 text-muted-foreground shrink-0' />
-              <span className='text-muted-foreground'>
-                Đơn hàng: {order.orderName || order.id.slice(0, 8) + '...'}
-              </span>
-            </div>
-          )}
-
-          {supplier !== undefined && (
-            <div className='flex items-center gap-2 text-sm'>
-              <User className='h-4 w-4 text-muted-foreground shrink-0' />
-              <span className='text-muted-foreground'>
-                NCC: {supplier.name}
-              </span>
-            </div>
-          )}
-
-          {customer !== undefined && (
-            <div className='flex items-center gap-2 text-sm'>
-              <User className='h-4 w-4 text-muted-foreground shrink-0' />
-              <span className='text-muted-foreground'>
-                Khách hàng: {customer.name}
-              </span>
-            </div>
-          )}
-        </div>
-
-        <div className='flex items-center justify-between pt-3 border-t'>
-          <div>
-            <p className='text-xs text-muted-foreground'>Ngày giao</p>
-            <p className='text-lg font-bold text-foreground'>
-              {shipment.expectedDeliveryDate
-                ? formatDate(shipment.expectedDeliveryDate)
-                : formatDate(shipment.createdStamp)}
-            </p>
+        <div className='flex items-center justify-between gap-2'>
+          <div
+            className={cn(
+              'flex items-center gap-1.5 text-xs',
+              isOverdue
+                ? 'text-red-600 dark:text-red-400 font-medium'
+                : 'text-muted-foreground'
+            )}
+          >
+            {isOverdue ? (
+              <AlertCircle className='h-3.5 w-3.5' />
+            ) : (
+              <Calendar className='h-3.5 w-3.5' />
+            )}
+            <span>{deliveryLabel}</span>
           </div>
 
           <Button
             variant='ghost'
             size='sm'
             className='opacity-0 group-hover:opacity-100 transition-opacity'
-            onClick={(e) => {
-              e.stopPropagation();
-              onClick?.();
-            }}
+            onClick={handleOpenDetails}
           >
-            Xem chi tiết →
+            Xem chi tiết
           </Button>
         </div>
       </CardContent>

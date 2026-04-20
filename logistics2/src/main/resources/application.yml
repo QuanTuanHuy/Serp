@@ -10,7 +10,7 @@ spring:
           jwk-set-uri: ${KEYCLOAK_URL}/realms/serp/protocol/openid-connect/certs
           issuer-uri: ${KEYCLOAK_URL}/realms/serp
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:openerp:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer

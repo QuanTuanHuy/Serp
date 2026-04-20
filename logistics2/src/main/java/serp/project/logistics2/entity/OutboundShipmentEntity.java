@@ -31,6 +31,9 @@ public class OutboundShipmentEntity {
     @Column(name = "order_id")
     private String orderId;
 
+    @Column(name = "customer_id")
+    private String customerId;
+
     @Column(name = "facility_id")
     private String facilityId;
 
@@ -61,6 +64,7 @@ public class OutboundShipmentEntity {
     public OutboundShipmentEntity(
             String id,
             String orderId,
+            String customerId,
             String facilityId,
             String name,
             String status,
@@ -68,6 +72,7 @@ public class OutboundShipmentEntity {
             Long tenantId) {
         this.id = id;
         this.orderId = orderId;
+        this.customerId = customerId;
         this.facilityId = facilityId;
         this.name = name;
         this.status = status;
@@ -75,18 +80,14 @@ public class OutboundShipmentEntity {
         this.tenantId = tenantId;
     }
 
-    public static OutboundShipmentEntity create(String orderId, String facilityId, String name, Long createdByUserId,
+    public static OutboundShipmentEntity create(OrderEntity order, String facilityId, String name, Long createdByUserId,
             Long tenantId) {
         String id = IdUtils.generateOutboundShipmentId();
         if (StringUtils.hasText(name)) {
             name = "Phiếu xuất " + id.substring(0, 6);
         }
         String status = ShipmentStatus.CREATED.name();
-        return new OutboundShipmentEntity(id, orderId, facilityId, name, status, createdByUserId, tenantId);
-    }
-
-    public static OutboundShipmentEntity create(OutboundShipmentCreationForm form, Long userId, Long tenantId) {
-        return OutboundShipmentEntity.create(form.getOrderId(), form.getFacilityId(), form.getName(), userId, tenantId);
+        return new OutboundShipmentEntity(id, order.getId(), order.getToCustomerId(), facilityId, name, status, createdByUserId, tenantId);
     }
 
     public void update(String name) {

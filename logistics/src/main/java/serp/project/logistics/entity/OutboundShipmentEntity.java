@@ -33,6 +33,9 @@ public class OutboundShipmentEntity {
     @Column(name = "order_id")
     private String orderId;
 
+    @Column(name = "customer_id")
+    private String customerId;
+
     @Column(name = "facility_id")
     private String facilityId;
 
@@ -63,6 +66,7 @@ public class OutboundShipmentEntity {
     public OutboundShipmentEntity(
             String id,
             String orderId,
+            String customerId,
             String facilityId,
             String name,
             String status,
@@ -70,6 +74,7 @@ public class OutboundShipmentEntity {
             Long tenantId) {
         this.id = id;
         this.orderId = orderId;
+        this.customerId = customerId;
         this.facilityId = facilityId;
         this.name = name;
         this.status = status;
@@ -77,17 +82,15 @@ public class OutboundShipmentEntity {
         this.tenantId = tenantId;
     }
 
-    public static OutboundShipmentEntity create(String orderId, String facilityId, String name, Long createdByUserId, Long tenantId) {
+    public static OutboundShipmentEntity create(OrderEntity order, String facilityId, String name, Long createdByUserId, Long tenantId, List<OutboundShipmentItemEntity> items) {
         String id = IdUtils.generateOutboundShipmentId();
         if (!StringUtils.hasText(name)) {
             name = "Phiếu xuất " + id.substring(0, 6);
         }
         String status = ShipmentStatus.CREATED.name();
-        return new OutboundShipmentEntity(id, orderId, facilityId, name, status, createdByUserId, tenantId);
-    }
-
-    public static OutboundShipmentEntity create(OutboundShipmentCreationForm form, Long userId, Long tenantId) {
-        return OutboundShipmentEntity.create(form.getOrderId(), form.getFacilityId(), form.getName(), userId, tenantId);
+        OutboundShipmentEntity shipment = new OutboundShipmentEntity(id, order.getId(), order.getToCustomerId(), facilityId, name, status, createdByUserId, tenantId);
+        items.forEach(shipment::addItem);
+        return shipment;
     }
 
     public void update(String name) {
@@ -99,15 +102,11 @@ public class OutboundShipmentEntity {
         }
     }
 
-    public void update(OutboundShipmentUpdateForm form) {
-        this.update(form.getName());
-    }
-
-    public void addItem(OutboundShipmentCreationForm.ItemForm form) {
+    public void addItem(OutboundShipmentItemEntity item) {
         if (!this.status.equals(ShipmentStatus.CREATED.name())) {
             throw new AppException(AppErrorCode.INVALID_SHIPMENT_STATUS);
         }
-        OutboundShipmentItemEntity item = OutboundShipmentItemEntity.create(form, this.id, this.tenantId);
+        item.setOutboundShipmentId(this.id);
         this.items.add(item);
     }
 

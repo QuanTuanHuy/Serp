@@ -1,10 +1,3 @@
-/**
- * Order List Page - Logistics Module
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - Purchase order management with modern UI
- */
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -32,8 +25,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import {
+  useGetCustomersQuery,
   useGetOrdersQuery,
-  useGetSuppliersQuery,
 } from '../../api/logisticsApi';
 import { useAppDispatch, useAppSelector } from '@/lib/store';
 import { setOrderPagination, setOrderFilters } from '../../store';
@@ -42,7 +35,6 @@ import {
   selectOrderFilters,
 } from '../../store/selectors';
 import type {
-  Supplier,
   Order,
   OrderStatus,
   SaleChannel,
@@ -70,8 +62,8 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | ''>(
     (filters.statusId as OrderStatus) || ''
   );
-  const [supplierFilter, setSupplierFilter] = useState(
-    filters.fromSupplierId || ''
+  const [customerFilter, setCustomerFilter] = useState(
+    filters.toCustomerId || ''
   );
   const [saleChannelFilter, setSaleChannelFilter] = useState<SaleChannel | ''>(
     (filters.saleChannelId as SaleChannel) || ''
@@ -96,7 +88,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
     {
       filters: {
         ...filters,
-        orderTypeId: 'PURCHASE',
+        orderTypeId: 'SALES',
         toCustomerId: undefined,
       },
       pagination: {
@@ -111,20 +103,20 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
 
   const orders = data?.data?.items || [];
 
-  // Fetch suppliers
-  const { data: suppliersResponse } = useGetSuppliersQuery({
+  // Fetch customers
+  const { data: customersResponse } = useGetCustomersQuery({
     filters: {},
     pagination: { page: 0, size: 100 },
   });
 
-  // Create supplier map for quick lookup
-  const supplierMap = useMemo(() => {
+  // Create customer map for quick lookup
+  const customerMap = useMemo(() => {
     const map = new Map();
-    suppliersResponse?.data?.items?.forEach((supplier) => {
-      map.set(supplier.id, supplier);
+    customersResponse?.data?.items?.forEach((customer) => {
+      map.set(customer.id, customer);
     });
     return map;
-  }, [suppliersResponse]);
+  }, [customersResponse]);
 
   const totalItems = data?.data?.totalItems || 0;
   const totalPages = data?.data?.totalPages || 0;
@@ -134,7 +126,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
     overrides?: Partial<{
       query: string;
       statusId: OrderStatus | '';
-      fromSupplierId: string;
+      toCustomerId: string;
       saleChannelId: SaleChannel | '';
       orderDateAfter: string;
       orderDateBefore: string;
@@ -144,7 +136,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
   ): OrderFilters => {
     const query = overrides?.query ?? searchQuery;
     const statusId = overrides?.statusId ?? statusFilter;
-    const fromSupplierId = overrides?.fromSupplierId ?? supplierFilter;
+    const toCustomerId = overrides?.toCustomerId ?? customerFilter;
     const saleChannelId = overrides?.saleChannelId ?? saleChannelFilter;
     const nextOrderDateAfter = overrides?.orderDateAfter ?? orderDateAfter;
     const nextOrderDateBefore = overrides?.orderDateBefore ?? orderDateBefore;
@@ -154,8 +146,8 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
     return {
       query: query || undefined,
       statusId: statusId || undefined,
-      orderTypeId: 'PURCHASE',
-      fromSupplierId: fromSupplierId || undefined,
+      orderTypeId: 'SALES',
+      toCustomerId: toCustomerId || undefined,
       saleChannelId: saleChannelId || undefined,
       orderDateAfter: nextOrderDateAfter || undefined,
       orderDateBefore: nextOrderDateBefore || undefined,
@@ -184,13 +176,13 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
   };
 
   const handleViewOrder = (orderId: string) => {
-    router.push(`/logistics/purchase-orders/${orderId}`);
+    router.push(`/logistics/sale-orders/${orderId}`);
   };
 
   const clearFilters = () => {
     setSearchQuery('');
     setStatusFilter('');
-    setSupplierFilter('');
+    setCustomerFilter('');
     setSaleChannelFilter('');
     setOrderDateAfter('');
     setOrderDateBefore('');
@@ -201,7 +193,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
   const hasActiveFilters =
     !!searchQuery ||
     !!statusFilter ||
-    !!supplierFilter ||
+    !!customerFilter ||
     !!saleChannelFilter ||
     !!orderDateAfter ||
     !!orderDateBefore ||
@@ -211,7 +203,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
   const activeFilterCount =
     (searchQuery ? 1 : 0) +
     (statusFilter ? 1 : 0) +
-    (supplierFilter ? 1 : 0) +
+    (customerFilter ? 1 : 0) +
     (saleChannelFilter ? 1 : 0) +
     (orderDateAfter ? 1 : 0) +
     (orderDateBefore ? 1 : 0) +
@@ -258,9 +250,9 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
       {/* Page Header */}
       <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
         <div>
-          <h1 className='text-2xl font-bold tracking-tight'>Đơn mua hàng</h1>
+          <h1 className='text-2xl font-bold tracking-tight'>Đơn bán hàng</h1>
           <p className='text-muted-foreground'>
-            Quản lý đơn mua hàng từ nhà cung cấp
+            Quản lý đơn bán hàng đến các đại lý
           </p>
         </div>
       </div>
@@ -414,14 +406,14 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
                   Nhà cung cấp
                 </label>
                 <select
-                  value={supplierFilter}
-                  onChange={(e) => setSupplierFilter(e.target.value)}
+                  value={customerFilter}
+                  onChange={(e) => setCustomerFilter(e.target.value)}
                   className='w-full px-3 py-2 border rounded-lg bg-background'
                 >
-                  <option value=''>Tất cả nhà cung cấp</option>
-                  {(suppliersResponse?.data?.items || []).map((supplier) => (
-                    <option key={supplier.id} value={supplier.id}>
-                      {supplier.name}
+                  <option value=''>Tất cả khách hàng</option>
+                  {(customersResponse?.data?.items || []).map((customer) => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.name}
                     </option>
                   ))}
                 </select>
@@ -574,7 +566,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
               key={order.id}
               order={order}
               onClick={() => handleViewOrder(order.id)}
-              supplier={supplierMap.get(order.fromSupplierId)}
+              customer={customerMap.get(order.toCustomerId)}
               viewMode={viewMode}
             />
           ))}

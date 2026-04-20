@@ -305,19 +305,17 @@ export const OutboundShipmentDetailPage: React.FC<
 
     const payload: OutboundShipmentItemForm = {
       inventoryItemDetailId: detail.inventoryItemDetailId,
-      inventoryItemId: detail.inventoryItemId,
-      productId: detail.productId,
       quantity: addQuantity,
     };
 
     try {
       await addItem({ shipmentId: shipment.id, data: payload }).unwrap();
-      toast.success('Đã thêm dòng hàng vào phiếu xuất');
+      toast.success('Đã thêm mặt hàng vào phiếu xuất');
       setShowAddItemDialog(false);
       setSelectedDetailId('');
       setAddQuantity(1);
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Không thể thêm dòng hàng');
+      toast.error(error?.data?.message || 'Không thể thêm mặt hàng');
     }
   };
 
@@ -339,11 +337,11 @@ export const OutboundShipmentDetailPage: React.FC<
         itemId: selectedItem.id,
         data: { quantity: editQuantity },
       }).unwrap();
-      toast.success('Đã cập nhật dòng hàng');
+      toast.success('Đã cập nhật mặt hàng');
       setShowEditItemDialog(false);
       setSelectedItem(null);
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Không thể cập nhật dòng hàng');
+      toast.error(error?.data?.message || 'Không thể cập nhật mặt hàng');
     }
   };
 
@@ -355,11 +353,11 @@ export const OutboundShipmentDetailPage: React.FC<
         shipmentId: shipment.id,
         itemId: selectedItem.id,
       }).unwrap();
-      toast.success('Đã xóa dòng hàng');
+      toast.success('Đã xóa mặt hàng');
       setShowDeleteItemDialog(false);
       setSelectedItem(null);
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Không thể xóa dòng hàng');
+      toast.error(error?.data?.message || 'Không thể xóa mặt hàng');
     }
   };
 
@@ -504,11 +502,11 @@ export const OutboundShipmentDetailPage: React.FC<
           <Card>
             <CardHeader>
               <div className='flex items-center justify-between'>
-                <h3 className='font-semibold'>Danh sách dòng hàng</h3>
+                <h3 className='font-semibold'>Danh sách mặt hàng</h3>
                 {shipment.status === 'CREATED' && (
                   <Button size='sm' onClick={openAddItemDialog}>
                     <Plus className='mr-2 h-4 w-4' />
-                    Thêm dòng hàng
+                    Thêm mặt hàng
                   </Button>
                 )}
               </div>
@@ -518,8 +516,6 @@ export const OutboundShipmentDetailPage: React.FC<
                 <div className='space-y-3'>
                   {(shipment.items || []).map((item) => {
                     const detail = detailMap.get(item.inventoryItemDetailId);
-                    const maxQuantity =
-                      item.quantity + (detail?.maxQuantity || 0);
 
                     return (
                       <div
@@ -531,12 +527,7 @@ export const OutboundShipmentDetailPage: React.FC<
                             {productMap.get(item.productId) || item.productId}
                           </p>
                           <p className='text-sm text-muted-foreground'>
-                            Detail: {item.inventoryItemDetailId} • Inventory:{' '}
-                            {item.inventoryItemId}
-                          </p>
-                          <p className='text-sm text-muted-foreground'>
-                            Số lượng: {item.quantity} (Tối đa sửa: {maxQuantity}
-                            )
+                            Số lượng: {item.quantity}
                           </p>
                         </div>
 
@@ -565,7 +556,7 @@ export const OutboundShipmentDetailPage: React.FC<
                 </div>
               ) : (
                 <div className='rounded-lg border border-dashed py-12 text-center text-muted-foreground'>
-                  Chưa có dòng hàng trong phiếu xuất
+                  Chưa có mặt hàng trong phiếu xuất
                 </div>
               )}
             </CardContent>
@@ -578,7 +569,7 @@ export const OutboundShipmentDetailPage: React.FC<
           </CardHeader>
           <CardContent className='space-y-3 text-sm'>
             <div className='flex items-center justify-between'>
-              <span className='text-muted-foreground'>Số dòng hàng</span>
+              <span className='text-muted-foreground'>Số mặt hàng</span>
               <span className='font-medium'>{shipment.items?.length || 0}</span>
             </div>
             <div className='flex items-center justify-between'>
@@ -621,7 +612,7 @@ export const OutboundShipmentDetailPage: React.FC<
       <Dialog open={showAddItemDialog} onOpenChange={setShowAddItemDialog}>
         <DialogContent className='sm:max-w-[620px]'>
           <DialogHeader>
-            <DialogTitle>Thêm dòng hàng</DialogTitle>
+            <DialogTitle>Thêm mặt hàng</DialogTitle>
             <DialogDescription>
               Chọn dòng tồn kho đã allocate từ đơn hàng để thêm vào phiếu xuất.
             </DialogDescription>
@@ -671,7 +662,7 @@ export const OutboundShipmentDetailPage: React.FC<
               Hủy
             </Button>
             <Button onClick={handleAddItem} disabled={isAddItemLoading}>
-              {isAddItemLoading ? 'Đang thêm...' : 'Thêm dòng hàng'}
+              {isAddItemLoading ? 'Đang thêm...' : 'Thêm mặt hàng'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -682,7 +673,7 @@ export const OutboundShipmentDetailPage: React.FC<
           <DialogHeader>
             <DialogTitle>Cập nhật số lượng</DialogTitle>
             <DialogDescription>
-              Điều chỉnh số lượng cho dòng hàng đã chọn.
+              Điều chỉnh số lượng cho mặt hàng đã chọn.
             </DialogDescription>
           </DialogHeader>
 
@@ -726,9 +717,9 @@ export const OutboundShipmentDetailPage: React.FC<
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Xóa dòng hàng</AlertDialogTitle>
+            <AlertDialogTitle>Xóa mặt hàng</AlertDialogTitle>
             <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa dòng hàng này khỏi phiếu xuất?
+              Bạn có chắc chắn muốn xóa mặt hàng này khỏi phiếu xuất?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -740,7 +731,7 @@ export const OutboundShipmentDetailPage: React.FC<
               disabled={isDeleteItemLoading}
               className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
             >
-              {isDeleteItemLoading ? 'Đang xóa...' : 'Xóa dòng hàng'}
+              {isDeleteItemLoading ? 'Đang xóa...' : 'Xóa mặt hàng'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
