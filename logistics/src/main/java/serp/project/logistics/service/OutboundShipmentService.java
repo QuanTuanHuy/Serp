@@ -15,6 +15,7 @@ import serp.project.logistics.exception.AppException;
 import serp.project.logistics.repository.*;
 import serp.project.logistics.util.PaginationUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -30,8 +31,6 @@ public class OutboundShipmentService {
 
     @Transactional(rollbackFor = Exception.class)
     public void createShipment(OutboundShipmentCreationForm form, Long userId, Long tenantId) {
-        OutboundShipmentEntity shipment = OutboundShipmentEntity.create(form, userId, tenantId);
-
         OrderEntity order = orderRepository.findById(form.getOrderId()).orElse(null);
         if (order == null) {
             log.info("Order ID {} not found", form.getOrderId());
@@ -42,6 +41,7 @@ public class OutboundShipmentService {
             throw new AppException(AppErrorCode.INVALID_ORDER_STATUS);
         }
 
+        List<OutboundShipmentItemEntity> shipmentItems = new ArrayList<>();
         for (OutboundShipmentCreationForm.ItemForm itemForm : form.getItems()) {
             InventoryItemDetailEntity inventoryItemDetail = inventoryItemDetailRepository.findById(itemForm.getInventoryItemDetailId()).orElse(null);
             if (inventoryItemDetail == null) {
@@ -53,8 +53,11 @@ public class OutboundShipmentService {
                         itemForm.getInventoryItemDetailId(), inventoryItemDetail.getNotYetOutboundQuantity(), itemForm.getQuantity());
                 throw new AppException(AppErrorCode.INSUFFICIENT_QUANTITY);
             }
-            shipment.addItem(itemForm);
+            OutboundShipmentItemEntity shipmentItem = OutboundShipmentItemEntity.create(inventoryItemDetail, itemForm.getQuantity(), tenantId);
+            shipmentItems.add(shipmentItem);
         }
+
+        OutboundShipmentEntity shipment = OutboundShipmentEntity.create(order, form.getFacilityId(), form.getName(), userId, tenantId, shipmentItems);
 
         shipmentRepository.save(shipment);
         log.info("[OutboundShipmentService] Created outbound shipment {} for order {} and tenant {}", shipment.getId(),
@@ -74,7 +77,7 @@ public class OutboundShipmentService {
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
 
-        shipment.update(form);
+        shipment.update(form.getName());
 
         shipmentRepository.save(shipment);
         log.info("[OutboundShipmentService] Updated outbound shipment {} for tenant {}", shipmentId, tenantId);
@@ -194,8 +197,9 @@ public class OutboundShipmentService {
                     form.getInventoryItemDetailId(), inventoryItemDetail.getNotYetOutboundQuantity(), form.getQuantity());
             throw new AppException(AppErrorCode.INSUFFICIENT_QUANTITY);
         }
+        OutboundShipmentItemEntity shipmentItem = OutboundShipmentItemEntity.create(inventoryItemDetail, form.getQuantity(), tenantId);
 
-        shipment.addItem(form);
+        shipment.addItem(shipmentItem);
         shipmentItemRepository.saveAll(shipment.getItems());
         log.info("[InventoryItemDetailService] Created shipment item for shipment {} and tenant {}", shipmentId,
                 tenantId);
@@ -224,7 +228,7 @@ public class OutboundShipmentService {
             }
         }
 
-        item.update(form);
+        item.update(form.getQuantity());
 
         shipmentItemRepository.save(item);
         log.info("[InventoryItemDetailService] Shipment Item ID {} updated for tenant {}", itemId,

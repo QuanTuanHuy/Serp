@@ -5,6 +5,9 @@
 
 import { api } from '@/lib/store/api';
 import type {
+  AutoAssignPickupPlanRequest,
+  CancelOrderRequest,
+  CreateOrderRequest,
   CreateVehicleRequest,
   CreatePostOfficeRequest,
   CreateProductTypeRequest,
@@ -15,13 +18,20 @@ import type {
   GeocodeAddressResponse,
   ImportHistory,
   ImportType,
+  ManualAssignPickupOrdersRequest,
+  OptimizePickupPlanRequest,
+  OrderConfirmationResponse,
   OrderImportItem,
   PostOffice,
   PostOfficeGeocodeBatchResponse,
+  PostOfficeStaff,
   PostOfficeImportItem,
   PostOfficeListFilters,
+  PickupAssignmentResponse,
+  PickupOptimizationResponse,
   ProductType,
   Province,
+  UpdateOrderRequest,
   UpdatePostOfficeRequest,
   UpdateProductTypeRequest,
   ValidateImportFileResponse,
@@ -468,6 +478,117 @@ export const firstMileApi = api.injectEndpoints({
       transformResponse: unwrapFirstMilePageResultOrRaw<FirstMileOrderDetail>,
     }),
 
+    getOrderById: builder.query<FirstMileOrderDetail, number>({
+      query: (orderId) => ({
+        url: `/orders/${orderId}`,
+        method: 'GET',
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<FirstMileOrderDetail>,
+    }),
+
+    createOrder: builder.mutation<FirstMileOrderDetail, CreateOrderRequest>({
+      query: (body) => ({
+        url: '/orders',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<FirstMileOrderDetail>,
+    }),
+
+    updateOrder: builder.mutation<
+      FirstMileOrderDetail,
+      { id: number; body: UpdateOrderRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/orders/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<FirstMileOrderDetail>,
+    }),
+
+    cancelOrder: builder.mutation<
+      FirstMileOrderDetail,
+      { id: number; body: CancelOrderRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/orders/${id}/cancel`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<FirstMileOrderDetail>,
+    }),
+
+    confirmOrder: builder.mutation<OrderConfirmationResponse, number>({
+      query: (orderId) => ({
+        url: `/orders/${orderId}/confirm`,
+        method: 'POST',
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<OrderConfirmationResponse>,
+    }),
+
+    getActiveCouriersByPostOffice: builder.query<PostOfficeStaff[], number>({
+      query: (postOfficeId) => ({
+        url: `/post-office-staffs/post-offices/${postOfficeId}/couriers`,
+        method: 'GET',
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<PostOfficeStaff[]>,
+    }),
+
+    getPostOfficeStaffById: builder.query<PostOfficeStaff, number>({
+      query: (id) => ({
+        url: `/post-office-staffs/${id}`,
+        method: 'GET',
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<PostOfficeStaff>,
+    }),
+
+    optimizePickupPlan: builder.mutation<
+      PickupOptimizationResponse,
+      OptimizePickupPlanRequest
+    >({
+      query: (body) => ({
+        url: '/pickup-optimization/plan',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<PickupOptimizationResponse>,
+    }),
+
+    autoAssignPickupPlan: builder.mutation<
+      PickupAssignmentResponse,
+      AutoAssignPickupPlanRequest
+    >({
+      query: (body) => ({
+        url: '/pickup-optimization/auto-assign',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<PickupAssignmentResponse>,
+    }),
+
+    manualAssignPickupOrders: builder.mutation<
+      PickupAssignmentResponse,
+      ManualAssignPickupOrdersRequest
+    >({
+      query: (body) => ({
+        url: '/pickup-optimization/manual-assign',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<PickupAssignmentResponse>,
+    }),
+
     exportOrderTemplate: builder.query<Blob, void>({
       query: () => ({
         url: '/orders/template',
@@ -536,6 +657,17 @@ export const {
   useLazyGetWardsByProvinceCodeQuery,
   useGeocodeAddressMutation,
   useGetOrdersQuery,
+  useGetOrderByIdQuery,
+  useLazyGetOrderByIdQuery,
+  useCreateOrderMutation,
+  useUpdateOrderMutation,
+  useCancelOrderMutation,
+  useConfirmOrderMutation,
+  useGetActiveCouriersByPostOfficeQuery,
+  useGetPostOfficeStaffByIdQuery,
+  useOptimizePickupPlanMutation,
+  useAutoAssignPickupPlanMutation,
+  useManualAssignPickupOrdersMutation,
   useLazyExportOrderTemplateQuery,
   useValidateOrderImportMutation,
   useImportOrdersMutation,

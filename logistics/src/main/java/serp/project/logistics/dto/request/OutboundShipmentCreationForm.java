@@ -26,12 +26,6 @@ public class OutboundShipmentCreationForm {
         @NotBlank(message = "Inventory Item Detail ID cannot be empty")
         String inventoryItemDetailId;
 
-        @NotBlank(message = "Inventory Item ID cannot be empty")
-        String inventoryItemId;
-
-        @NotBlank(message = "Product ID cannot be empty")
-        String productId;
-
         @Min(value = 1, message = "Quantity must be at least 1")
         int quantity;
     }

@@ -20,6 +20,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
+  FileText,
+  Grid3X3,
+  List,
+  Package,
   Plus,
   Search,
   SlidersHorizontal,
@@ -28,17 +32,21 @@ import {
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import {
+  useGetCustomersQuery,
   useGetFacilitiesQuery,
   useGetOrdersQuery,
   useGetOutboundShipmentsQuery,
 } from '../../api/logisticsApi';
 import type {
+  Customer,
+  Order,
   OutboundShipment,
   OutboundShipmentFilters,
   OutboundShipmentStatus,
   PaginationParams,
 } from '../../types';
 import { OutboundShipmentCard } from '../../components/cards/OutboundShipmentCard';
+import { StatsCard } from '../../components/cards/StatsCard';
 
 interface OutboundShipmentListPageProps {
   className?: string;
@@ -66,6 +74,7 @@ export const OutboundShipmentListPage: React.FC<
 
   const [searchValue, setSearchValue] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const { data, isLoading, error, refetch } = useGetOutboundShipmentsQuery({
     filters,
@@ -82,26 +91,31 @@ export const OutboundShipmentListPage: React.FC<
     pagination: { page: 0, size: 100 },
   });
 
-  const { data: facilitiesResponse } = useGetFacilitiesQuery({
+  const { data: customersResponse } = useGetCustomersQuery({
     filters: {},
     pagination: { page: 0, size: 100 },
   });
 
   const orderMap = useMemo(() => {
-    const map = new Map<string, string>();
+    const map = new Map<string, Order>();
     ordersResponse?.data?.items?.forEach((order) => {
-      map.set(order.id, order.orderName || order.id);
+      map.set(order.id, order);
     });
     return map;
   }, [ordersResponse]);
 
-  const facilityMap = useMemo(() => {
-    const map = new Map<string, string>();
-    facilitiesResponse?.data?.items?.forEach((facility) => {
-      map.set(facility.id, facility.name);
+  const customerMap = useMemo(() => {
+    const map = new Map<string, Customer>();
+    customersResponse?.data?.items?.forEach((customer) => {
+      map.set(customer.id, customer);
     });
     return map;
-  }, [facilitiesResponse]);
+  }, [customersResponse]);
+
+  const { data: facilitiesResponse } = useGetFacilitiesQuery({
+    filters: {},
+    pagination: { page: 0, size: 100 },
+  });
 
   const stats = useMemo(() => {
     const created = shipments.filter(
@@ -148,54 +162,35 @@ export const OutboundShipmentListPage: React.FC<
       <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
         <div>
           <h1 className='text-2xl font-bold tracking-tight'>Phiếu xuất kho</h1>
-          <p className='text-muted-foreground'>
-            Quản lý outbound shipment tách biệt với shipment cũ
-          </p>
+          <p className='text-muted-foreground'>Quản lý phiếu xuất kho</p>
         </div>
 
-        <div className='flex items-center gap-2'>
-          <Button variant='outline' onClick={() => refetch()}>
-            Làm mới
-          </Button>
-          <Button
-            onClick={() => router.push('/logistics/outbound-shipments/new')}
-          >
-            <Plus className='mr-2 h-4 w-4' />
-            Tạo phiếu xuất
-          </Button>
-        </div>
+        <Button variant='outline' onClick={() => refetch()}>
+          Làm mới
+        </Button>
       </div>
 
       <div className='grid grid-cols-1 gap-4 sm:grid-cols-3'>
-        <Card>
-          <CardContent className='flex items-center justify-between p-4'>
-            <div>
-              <p className='text-sm text-muted-foreground'>Nháp</p>
-              <p className='text-2xl font-semibold'>{stats.created}</p>
-            </div>
-            <Badge className='bg-blue-100 text-blue-700'>CREATED</Badge>
-          </CardContent>
-        </Card>
+        <StatsCard
+          title='Phiếu nháp'
+          value={stats.created}
+          icon={FileText}
+          variant='primary'
+        />
 
-        <Card>
-          <CardContent className='flex items-center justify-between p-4'>
-            <div>
-              <p className='text-sm text-muted-foreground'>Sẵn sàng xuất</p>
-              <p className='text-2xl font-semibold'>{stats.ready}</p>
-            </div>
-            <Badge className='bg-amber-100 text-amber-700'>READY</Badge>
-          </CardContent>
-        </Card>
+        <StatsCard
+          title='Sẵn sàng xuất'
+          value={stats.ready}
+          icon={Truck}
+          variant='success'
+        />
 
-        <Card>
-          <CardContent className='flex items-center justify-between p-4'>
-            <div>
-              <p className='text-sm text-muted-foreground'>Đã giao</p>
-              <p className='text-2xl font-semibold'>{stats.delivered}</p>
-            </div>
-            <Badge className='bg-emerald-100 text-emerald-700'>DELIVERED</Badge>
-          </CardContent>
-        </Card>
+        <StatsCard
+          title='Đã giao'
+          value={stats.delivered}
+          icon={Package}
+          variant='danger'
+        />
       </div>
 
       <div className='flex flex-col gap-3 sm:flex-row'>
@@ -243,6 +238,33 @@ export const OutboundShipmentListPage: React.FC<
             <span className='h-2 w-2 rounded-full bg-primary' />
           )}
         </Button>
+
+        <div className='flex rounded-lg border bg-muted p-1'>
+          <button
+            type='button'
+            onClick={() => setViewMode('grid')}
+            className={cn(
+              'flex items-center justify-center h-8 w-8 rounded-md transition-colors',
+              viewMode === 'grid'
+                ? 'bg-background shadow-sm'
+                : 'hover:bg-background/50'
+            )}
+          >
+            <Grid3X3 className='h-4 w-4' />
+          </button>
+          <button
+            type='button'
+            onClick={() => setViewMode('list')}
+            className={cn(
+              'flex items-center justify-center h-8 w-8 rounded-md transition-colors',
+              viewMode === 'list'
+                ? 'bg-background shadow-sm'
+                : 'hover:bg-background/50'
+            )}
+          >
+            <List className='h-4 w-4' />
+          </button>
+        </div>
       </div>
 
       {showFilters && (
@@ -319,7 +341,14 @@ export const OutboundShipmentListPage: React.FC<
       )}
 
       {isLoading && (
-        <div className='grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3'>
+        <div
+          className={cn(
+            'gap-4',
+            viewMode === 'grid'
+              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+              : 'flex flex-col'
+          )}
+        >
           {Array.from({ length: 6 }).map((_, index) => (
             <Card key={index} className='animate-pulse'>
               <CardContent className='p-5'>
@@ -335,13 +364,25 @@ export const OutboundShipmentListPage: React.FC<
       )}
 
       {!isLoading && shipments.length > 0 && (
-        <div className='grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3'>
+        <div
+          className={cn(
+            'gap-4',
+            viewMode === 'grid'
+              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+              : 'flex flex-col'
+          )}
+        >
           {shipments.map((shipment: OutboundShipment) => (
             <OutboundShipmentCard
               key={shipment.id}
               shipment={shipment}
-              orderName={orderMap.get(shipment.orderId)}
-              facilityName={facilityMap.get(shipment.facilityId)}
+              viewMode={viewMode}
+              order={orderMap.get(shipment.orderId)}
+              customer={
+                shipment.customerId
+                  ? customerMap.get(shipment.customerId)
+                  : undefined
+              }
               onClick={() =>
                 router.push(`/logistics/outbound-shipments/${shipment.id}`)
               }
@@ -379,9 +420,8 @@ export const OutboundShipmentListPage: React.FC<
           <p className='text-sm text-muted-foreground'>
             Hiển thị {currentPage * (pagination.size || 10) + 1} đến{' '}
             {Math.min((currentPage + 1) * (pagination.size || 10), totalItems)}{' '}
-            trong tổng số {totalItems} phiếu xuất
+            trong tổng số {totalItems} phiếu nhập
           </p>
-
           <div className='flex items-center gap-2'>
             <Button
               variant='outline'
@@ -392,7 +432,25 @@ export const OutboundShipmentListPage: React.FC<
               <ChevronLeft className='h-4 w-4' />
               Trước
             </Button>
-
+            <div className='flex items-center gap-1'>
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                const pageNum = i;
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
+                    className={cn(
+                      'h-8 w-8 rounded-md text-sm font-medium transition-colors',
+                      currentPage === pageNum
+                        ? 'bg-primary text-primary-foreground'
+                        : 'hover:bg-muted'
+                    )}
+                  >
+                    {pageNum + 1}
+                  </button>
+                );
+              })}
+            </div>
             <Button
               variant='outline'
               size='sm'
@@ -403,13 +461,6 @@ export const OutboundShipmentListPage: React.FC<
               <ChevronRight className='h-4 w-4' />
             </Button>
           </div>
-        </div>
-      )}
-
-      {!hasActiveFilters && totalItems > 0 && (
-        <div className='flex items-center gap-2 text-sm text-muted-foreground'>
-          <Clock3 className='h-4 w-4' />
-          Dữ liệu được sắp xếp theo thời gian tạo mới nhất.
         </div>
       )}
     </div>

@@ -141,7 +141,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
 
         Point location = postOffice.getLocation();
         if (location == null) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw invalidRequest("Selected post office has no geocoded location (latitude/longitude). Please geocode the post office before planning.");
         }
 
         validateManagerScope(postOffice.getId(), tenantId);
@@ -160,7 +160,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 config.planningEndTime().toLocalTime()
         );
         if (couriers.isEmpty()) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw invalidRequest("No active courier assignment is available for the selected post office and planning window.");
         }
 
         List<Vehicle> activeVehicles = vehicleRepository.findByTenantIdAndPostOffice_IdAndStatusIn(
@@ -171,7 +171,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
 
         List<RouteState> initialRoutes = initializeRoutes(couriers, activeVehicles, depotLatitude, depotLongitude);
         if (initialRoutes.isEmpty()) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw invalidRequest("No usable route can be initialized. Ensure active vehicles exist and can be mapped to selected couriers.");
         }
 
         List<OrderStatus> statuses = resolveCandidateStatuses(request.getCandidateStatuses());
@@ -218,7 +218,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         );
         Point location = postOffice.getLocation();
         if (location == null) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw invalidRequest("Selected post office has no geocoded location (latitude/longitude). Please geocode the post office before auto assign.");
         }
 
         AlgorithmConfig config = buildConfig(request, shiftPlanningWindow);
@@ -234,7 +234,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 shiftPlanningWindow.planningEndTime().toLocalTime()
         );
         if (couriers.isEmpty()) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw invalidRequest("No active courier assignment is available for the selected post office and shift window.");
         }
 
         List<Vehicle> activeVehicles = vehicleRepository.findByTenantIdAndPostOffice_IdAndStatusIn(
@@ -245,7 +245,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
 
         List<RouteState> routes = initializeRoutes(couriers, activeVehicles, depotLatitude, depotLongitude);
         if (routes.isEmpty()) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw invalidRequest("No usable route can be initialized for auto assign. Ensure active vehicles exist and can be mapped to selected couriers.");
         }
 
         Map<Long, Trip> existingTripByCourier = loadReplannableTripsByCourier(
@@ -305,7 +305,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
 
         SolutionEvaluation solutionEvaluation = evaluateSolution(solution, runtimeConfig);
         if (pickupOptimizationEngine.isInfeasible(solutionEvaluation)) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw invalidRequest("Auto assign produced an infeasible solution. Please review planning window, constraints, and selected resources.");
         }
 
         AssignmentPersistResult persistResult = persistAssignments(
@@ -349,7 +349,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         );
         Point location = postOffice.getLocation();
         if (location == null) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw invalidRequest("Selected post office has no geocoded location (latitude/longitude). Please geocode the post office before manual assign.");
         }
 
         PostOfficeStaff courier = postOfficeStaffRepository.findByIdAndTenantId(request.getCourierStaffId(), tenantId)
@@ -385,7 +385,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 location.getX()
         );
         if (routes.isEmpty()) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw invalidRequest("No usable route can be initialized for manual assign. Ensure the selected courier has an available active vehicle.");
         }
 
         Map<Long, Trip> existingTripByCourier = loadReplannableTripsByCourier(
@@ -958,11 +958,11 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 excludeTripId
         );
         if (courierConflict) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw invalidRequest("Courier already has another active trip in the same shift and trip date.");
         }
 
         if (route.vehicleId() == null) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw invalidRequest("Route has no assigned vehicle. A valid active vehicle is required for assignment.");
         }
 
         boolean vehicleConflict = tripRepository.existsActiveTripByVehicleAndShift(
@@ -974,7 +974,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 excludeTripId
         );
         if (vehicleConflict) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw invalidRequest("Vehicle already has another active trip in the same shift and trip date.");
         }
     }
 
@@ -1040,7 +1040,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         }
 
         if (normalizedOrderIds.isEmpty()) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw invalidRequest("order_ids must contain at least one positive order id.");
         }
 
         return normalizedOrderIds;
@@ -1064,12 +1064,12 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 : planningEndTime;
 
         if (effectivePlanningEndTime.isBefore(effectivePlanningStartTime)) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw invalidRequest("planning_end_time must be after or equal to planning_start_time.");
         }
 
         if (!effectivePlanningStartTime.toLocalDate().equals(effectiveTripDate)
                 || !effectivePlanningEndTime.toLocalDate().equals(effectiveTripDate)) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw invalidRequest("planning_start_time and planning_end_time must be on the same date as trip_date.");
         }
 
         return new ShiftPlanningWindow(
@@ -1209,20 +1209,20 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             LocalDateTime planningEndTime
     ) {
         if (postOffice == null || !postOffice.isActive()) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw invalidRequest("Selected post office is not active for dispatch planning.");
         }
 
         LocalTime workingStartTime = postOffice.getWorkingStartTime();
         LocalTime workingEndTime = postOffice.getWorkingEndTime();
         if (workingStartTime == null || workingEndTime == null || !workingEndTime.isAfter(workingStartTime)) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw invalidRequest("Post office working hours are not configured correctly.");
         }
 
         LocalTime planningStartLocalTime = planningStartTime.toLocalTime();
         LocalTime planningEndLocalTime = planningEndTime.toLocalTime();
         if (!isWithinTimeRange(planningStartLocalTime, workingStartTime, workingEndTime)
                 || !isWithinTimeRange(planningEndLocalTime, workingStartTime, workingEndTime)) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw invalidRequest("Planning window is outside configured post office working hours.");
         }
     }
 
@@ -1535,7 +1535,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 : request.getPlanningEndTime();
 
         if (planningEndTime.isBefore(planningStartTime)) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw invalidRequest("planning_end_time must be after or equal to planning_start_time.");
         }
 
         int orderLimit = resolvePositiveInt(request.getOrderLimit(), DEFAULT_ORDER_LIMIT);
@@ -1721,6 +1721,10 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
 
     private boolean isManagerScopedAccess() {
         return firstMileAccessUtils.isManagerScopedAccess();
+    }
+
+    private AppException invalidRequest(String detail) {
+        return new AppException(ErrorCode.INVALID_REQUEST, detail);
     }
 
     private boolean isValidCoordinate(double latitude, double longitude) {

@@ -4,7 +4,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
+import serp.project.logistics.constant.OrderType;
 import serp.project.logistics.entity.*;
+import serp.project.logistics.exception.AppErrorCode;
+import serp.project.logistics.exception.AppException;
 import serp.project.logistics.repository.*;
 import serp.project.logistics.repository.specification.OrderSpecification;
 import serp.project.logistics.util.PaginationUtils;
@@ -74,6 +77,9 @@ public class OrderService {
             log.info("[OrderService] Order {} not found for tenant {} or does not belong to tenant",
                     orderId, tenantId);
             return null;
+        } if (order.getOrderTypeId().equals(OrderType.SALES.name())) {
+            log.info("[OrderService] Order {} is not a sales order", orderId);
+            throw new AppException(AppErrorCode.NOT_FOUND);
         }
 
         List<OrderItemEntity> orderItems = orderItemRepository.findByTenantIdAndOrderId(tenantId, orderId);

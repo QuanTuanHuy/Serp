@@ -1,107 +1,296 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Outbound Shipment card
-*/
-
-import { Badge, Button, Card, CardContent } from '@/shared/components/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+} from '@/shared/components/ui';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/shared/components/ui/dropdown-menu';
+import {
+  AlertCircle,
+  Calendar,
+  Clock,
+  ExternalLink,
+  MoreVertical,
+  Truck,
+  User,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  Box,
+  ReceiptText,
+} from 'lucide-react';
 import { cn } from '@/shared/utils';
-import { CheckCircle2, Clock3, Package, Truck } from 'lucide-react';
-import type { OutboundShipment } from '../../types';
+import { formatDateVN } from '@/shared/utils/format';
+import {
+  Customer,
+  Order,
+  OutboundShipment,
+  Shipment,
+  Supplier,
+} from '../../types';
 
 const statusStyles = {
   CREATED: {
     label: 'Nháp',
     bg: 'bg-blue-100 dark:bg-blue-900/30',
     text: 'text-blue-700 dark:text-blue-400',
-    icon: Clock3,
+    dot: 'bg-blue-500',
+    icon: Clock,
+    accent: '#3b82f6',
   },
-  READY_TO_EXPORT: {
-    label: 'Sẵn sàng xuất',
-    bg: 'bg-amber-100 dark:bg-amber-900/30',
-    text: 'text-amber-700 dark:text-amber-400',
-    icon: Truck,
+  IMPORTED: {
+    label: 'Đã nhập kho',
+    bg: 'bg-purple-100 dark:bg-purple-900/30',
+    text: 'text-purple-700 dark:text-purple-400',
+    dot: 'bg-purple-500',
+    icon: ArrowDownToLine,
+    accent: '#a855f7',
   },
-  DELIVERED: {
-    label: 'Đã giao',
-    bg: 'bg-emerald-100 dark:bg-emerald-900/30',
-    text: 'text-emerald-700 dark:text-emerald-400',
-    icon: CheckCircle2,
+  EXPORTED: {
+    label: 'Đã xuất kho',
+    bg: 'bg-purple-100 dark:bg-purple-900/30',
+    text: 'text-purple-700 dark:text-purple-400',
+    dot: 'bg-purple-500',
+    icon: ArrowUpFromLine,
+    accent: '#8b5cf6',
   },
 };
 
-const formatDate = (dateString?: string) => {
-  if (!dateString) return 'N/A';
-  return new Date(dateString).toLocaleDateString('vi-VN');
+const typeStyles = {
+  INBOUND: {
+    label: 'Phiếu nhập',
+    bg: 'bg-green-100 dark:bg-green-900/30',
+    text: 'text-green-700 dark:text-green-400',
+    icon: ReceiptText,
+  },
+  OUTBOUND: {
+    label: 'Phiếu xuất',
+    bg: 'bg-orange-100 dark:bg-orange-900/30',
+    text: 'text-orange-700 dark:text-orange-400',
+    icon: ReceiptText,
+  },
 };
 
-interface OutboundShipmentCardProps {
-  shipment: OutboundShipment;
-  orderName?: string;
-  facilityName?: string;
-  onClick?: () => void;
-}
-
-export const OutboundShipmentCard: React.FC<OutboundShipmentCardProps> = ({
+export const OutboundShipmentCard = ({
   shipment,
-  orderName,
-  facilityName,
+  order,
+  customer,
   onClick,
+  viewMode = 'grid',
+}: {
+  shipment: OutboundShipment;
+  order?: Order;
+  customer?: Customer;
+  supplier?: Supplier;
+  onClick?: () => void;
+  viewMode?: 'grid' | 'list';
 }) => {
   const status =
     statusStyles[shipment.status as keyof typeof statusStyles] ||
     statusStyles.CREATED;
   const StatusIcon = status.icon;
 
+  const shipmentTitle =
+    shipment.name || `Phiếu #${shipment.id?.slice(0, 8) || 'N/A'}`;
+  const shortId = shipment.id ? `${shipment.id.slice(0, 10)}...` : 'N/A';
+  const orderLabel = order?.orderName || `${shipment.orderId.slice(0, 8)}...`;
+
+  const partyLabel =
+    customer?.name ||
+    (shipment.customerId ? `${shipment.customerId.slice(0, 8)}...` : 'N/A');
+
+  const deliveryLabel = `Tạo ngày ${formatDateVN(shipment.createdStamp)}`;
+
+  const isOverdue = shipment.status === 'CREATED';
+
+  const handleOpenDetails = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onClick?.();
+  };
+
+  if (viewMode === 'list') {
+    return (
+      <Card
+        className={cn(
+          'group relative overflow-hidden cursor-pointer transition-colors',
+          'hover:bg-muted/40 hover:border-primary/40',
+          isOverdue && 'border-red-300 dark:border-red-800'
+        )}
+        onClick={onClick}
+      >
+        <div className='overflow-x-auto'>
+          <div className='grid min-w-[900px] grid-cols-[3fr_2.5fr_2.5fr_2fr] items-center gap-4 p-4'>
+            <p className='text-sm font-semibold truncate'>{shipmentTitle}</p>
+
+            <p className='text-sm text-muted-foreground truncate'>
+              Đơn hàng: {orderLabel}
+            </p>
+
+            <p className='text-sm text-muted-foreground truncate'>
+              Khách hàng: {partyLabel}
+            </p>
+
+            <p
+              className={cn(
+                'text-sm truncate',
+                isOverdue
+                  ? 'text-red-600 dark:text-red-400 font-medium'
+                  : 'text-muted-foreground'
+              )}
+            >
+              {deliveryLabel}
+            </p>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <Card
-      className='group cursor-pointer overflow-hidden transition-all duration-200 hover:border-primary/30 hover:shadow-md'
+      className={cn(
+        'group relative overflow-hidden cursor-pointer transition-all',
+        'hover:shadow-xl hover:scale-[1.02] hover:border-primary/50',
+        'active:scale-[0.98]',
+        isOverdue &&
+          'border-red-300 dark:border-red-800 shadow-red-100 dark:shadow-red-900/20'
+      )}
       onClick={onClick}
     >
-      <div className='h-1.5 bg-gradient-to-r from-primary/60 via-primary/30 to-primary/5' />
+      <div
+        className='absolute top-0 left-0 w-full h-1 transition-all group-hover:h-1.5'
+        style={{ backgroundColor: status.accent }}
+      />
 
-      <CardContent className='space-y-4 p-5'>
-        <div className='flex items-start justify-between gap-3'>
-          <div className='min-w-0 flex-1'>
-            <div className='mb-2 flex items-center gap-2'>
-              <div className='flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary'>
-                <Package className='h-5 w-5' />
-              </div>
-              <div className='min-w-0'>
-                <h3 className='truncate font-semibold text-foreground'>
-                  {shipment.name || `Phiếu xuất #${shipment.id.slice(0, 8)}...`}
-                </h3>
-                <p className='text-xs text-muted-foreground'>
-                  ID: {shipment.id.slice(0, 10)}...
-                </p>
-              </div>
+      <CardHeader className='pb-3'>
+        <div className='flex items-start justify-between gap-2'>
+          <div className='flex items-start gap-3 flex-1 min-w-0'>
+            <div
+              className='w-1 h-12 rounded-full flex-shrink-0'
+              style={{ backgroundColor: status.accent }}
+            />
+
+            <div className='flex-1 min-w-0'>
+              <h3 className='font-semibold text-base leading-tight mb-1 truncate'>
+                {shipmentTitle}
+              </h3>
+              <p className='text-xs text-muted-foreground truncate'>
+                ID: {shortId}
+              </p>
             </div>
+          </div>
 
-            <Badge
-              variant='secondary'
-              className={cn('gap-1', status.bg, status.text)}
+          <div className='flex items-center gap-1 flex-shrink-0'>
+            <Button
+              variant='ghost'
+              size='icon'
+              className='h-8 w-8'
+              onClick={handleOpenDetails}
             >
-              <StatusIcon className='h-3 w-3' />
-              {status.label}
-            </Badge>
+              <ExternalLink className='h-4 w-4' />
+            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button variant='ghost' size='icon' className='h-8 w-8'>
+                  <MoreVertical className='h-4 w-4' />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end'>
+                <DropdownMenuItem onClick={handleOpenDetails}>
+                  <ExternalLink className='mr-2 h-4 w-4' />
+                  Xem chi tiết
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
-        <div className='space-y-1 text-sm text-muted-foreground'>
-          <p>Đơn hàng: {orderName || shipment.orderId}</p>
-          <p>Kho xuất: {facilityName || shipment.facilityId}</p>
-          <p>Ngày tạo: {formatDate(shipment.createdStamp)}</p>
-          <p>Số dòng hàng: {shipment.items?.length || 0}</p>
+        <Badge
+          variant='secondary'
+          className={cn('w-fit gap-1', status.bg, status.text)}
+        >
+          <StatusIcon className='h-3 w-3' />
+          <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
+          {status.label}
+        </Badge>
+      </CardHeader>
+
+      <CardContent className='space-y-4 pt-6'>
+        <div className='flex items-center gap-4'>
+          <div className='relative flex-shrink-0'>
+            <div
+              className='h-16 w-16 rounded-full border-4 flex items-center justify-center'
+              style={{ borderColor: `${status.accent}55` }}
+            >
+              <Truck className='h-7 w-7' style={{ color: status.accent }} />
+            </div>
+          </div>
+
+          <div className='flex-1 grid grid-cols-2 gap-2 text-xs'>
+            <div className='space-y-1'>
+              <div className='flex items-center gap-1 text-muted-foreground'>
+                <Box className='h-3 w-3' />
+                <span>Đơn hàng</span>
+              </div>
+              <p className='text-sm font-semibold truncate'>{orderLabel}</p>
+            </div>
+
+            <div className='space-y-1'>
+              <div className='flex items-center gap-1 text-muted-foreground'>
+                <User className='h-3 w-3' />
+                <span>Khách hàng</span>
+              </div>
+              <p className='text-sm font-semibold truncate'>{partyLabel}</p>
+            </div>
+
+            <div className='space-y-1'>
+              <div className='flex items-center gap-1 text-muted-foreground'>
+                <ReceiptText className='h-3 w-3' />
+                <span>Loại phiếu</span>
+              </div>
+              <p className='text-sm font-semibold truncate'>Phiếu giao</p>
+            </div>
+
+            <div className='space-y-1'>
+              <div className='flex items-center gap-1 text-muted-foreground'>
+                <Calendar className='h-3 w-3' />
+                <span>Ngày tạo</span>
+              </div>
+              <p className='text-sm font-semibold'>
+                {formatDateVN(shipment.createdStamp)}
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className='flex justify-end border-t pt-3'>
+        <div className='flex items-center justify-between gap-2'>
+          <div
+            className={cn(
+              'flex items-center gap-1.5 text-xs',
+              isOverdue
+                ? 'text-red-600 dark:text-red-400 font-medium'
+                : 'text-muted-foreground'
+            )}
+          >
+            {isOverdue ? (
+              <AlertCircle className='h-3.5 w-3.5' />
+            ) : (
+              <Calendar className='h-3.5 w-3.5' />
+            )}
+            <span>{deliveryLabel}</span>
+          </div>
+
           <Button
             variant='ghost'
             size='sm'
-            className='opacity-0 transition-opacity group-hover:opacity-100'
-            onClick={(event) => {
-              event.stopPropagation();
-              onClick?.();
-            }}
+            className='opacity-0 group-hover:opacity-100 transition-opacity'
+            onClick={handleOpenDetails}
           >
             Xem chi tiết
           </Button>
