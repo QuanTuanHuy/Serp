@@ -1,5 +1,5 @@
 /**
- * Author: GitHub Copilot
+ * Author: Nguyen The Anh
  * Description: Part of Serp Project - First-mile pickup tracking page
  */
 
@@ -188,7 +188,7 @@ export const PickupPage: React.FC = () => {
   const [tripDate, setTripDate] = React.useState(getTodayDateInputValue);
   const [selectedPostOfficeId, setSelectedPostOfficeId] = React.useState('');
   const [selectedCourierStaffId, setSelectedCourierStaffId] =
-    React.useState('');
+    React.useState('all');
   const [selectedOrderId, setSelectedOrderId] = React.useState<
     number | undefined
   >(undefined);
@@ -275,7 +275,7 @@ export const PickupPage: React.FC = () => {
   }, [couriersData]);
 
   React.useEffect(() => {
-    setSelectedCourierStaffId('');
+    setSelectedCourierStaffId('all');
   }, [selectedPostOfficeId]);
 
   const selectedCourierNumericId = React.useMemo(
@@ -540,7 +540,7 @@ export const PickupPage: React.FC = () => {
                         <SelectValue placeholder='All couriers in post office' />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value=''>All couriers</SelectItem>
+                        <SelectItem value='all'>All couriers</SelectItem>
                         {courierOptions.map((courier) => (
                           <SelectItem
                             key={courier.id}
