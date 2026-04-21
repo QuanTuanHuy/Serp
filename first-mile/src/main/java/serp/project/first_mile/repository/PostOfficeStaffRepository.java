@@ -11,6 +11,7 @@ import serp.project.first_mile.domain.PostOfficeStaff;
 import serp.project.first_mile.enums.PostOfficeStaffRole;
 import serp.project.first_mile.enums.PostOfficeStaffStatus;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,4 +30,6 @@ public interface PostOfficeStaffRepository extends JpaRepository<PostOfficeStaff
             PostOfficeStaffRole role,
             PostOfficeStaffStatus status
     );
+
+    List<PostOfficeStaff> findByTenantIdAndIdIn(Long tenantId, Collection<Long> ids);
 }
