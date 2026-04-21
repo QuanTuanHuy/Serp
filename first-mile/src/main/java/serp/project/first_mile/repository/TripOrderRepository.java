@@ -1,5 +1,7 @@
 package serp.project.first_mile.repository;
 
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -9,11 +11,20 @@ import serp.project.first_mile.enums.TripStatus;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface TripOrderRepository extends JpaRepository<TripOrder, Long> {
 
     List<TripOrder> findByTrip_IdOrderBySequenceNoAsc(Long tripId);
+
+        @Lock(LockModeType.PESSIMISTIC_WRITE)
+        Optional<TripOrder> findFirstByTenantIdAndOrderIdAndTrip_CourierStaffIdAndTrip_StatusInOrderByTrip_IdDesc(
+            Long tenantId,
+            Long orderId,
+            Long courierStaffId,
+            Collection<TripStatus> statuses
+        );
 
     void deleteByTrip_Id(Long tripId);
 

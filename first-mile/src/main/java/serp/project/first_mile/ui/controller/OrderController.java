@@ -19,6 +19,7 @@ import serp.project.first_mile.dto.request.UpdateOrderRequest;
 import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.OrderConfirmationResponse;
 import serp.project.first_mile.dto.response.OrderDetailResponse;
+import serp.project.first_mile.dto.response.PickupCheckinResponse;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
 import serp.project.first_mile.enums.OrderStatus;
 import serp.project.first_mile.exception.AppException;
@@ -172,5 +173,20 @@ public class OrderController {
         );
         log.info("REST request to cancel Order {} for tenant {}", orderId, tenantId);
         return orderService.cancelOrder(orderId, tenantId, request);
+    }
+
+    @PostMapping(value = "/{orderId}/pickup-checkin", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('TMS_POSTOFFICER')")
+    public PickupCheckinResponse pickupCheckinOrder(
+            @PathVariable Long orderId,
+            @RequestParam("latitude") Double latitude,
+            @RequestParam("longitude") Double longitude,
+            @RequestParam("photo") MultipartFile photo
+    ) {
+        Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
+                () -> new AppException(ErrorCode.UNAUTHORIZED)
+        );
+        log.info("REST request to pickup-checkin Order {} for tenant {}", orderId, tenantId);
+        return orderService.checkInPickupOrder(orderId, latitude, longitude, photo, tenantId);
     }
 }

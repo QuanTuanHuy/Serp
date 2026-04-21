@@ -16,8 +16,6 @@ export type DispatcherAccessScope =
   | 'MANAGER_SCOPED'
   | 'NO_ACCESS';
 
-export type BooleanMode = 'default' | 'true' | 'false';
-
 export type RoutingVehicleOption =
   | 'DEFAULT'
   | 'CAR'
@@ -26,24 +24,20 @@ export type RoutingVehicleOption =
   | 'TRUCK'
   | 'HD';
 
+export type DispatchOptimizationGoalOption =
+  | 'BALANCED'
+  | 'ON_TIME_PRIORITY'
+  | 'COST_EFFICIENCY'
+  | 'MAX_ASSIGNMENT';
+
+export type DispatchOptimizationEffortOption = 'FAST' | 'STANDARD' | 'THOROUGH';
+
 export type DispatchActionType = 'preview' | 'auto' | 'manual' | null;
 
-export interface AdvancedDispatchSettings {
+export interface BusinessDispatchSettings {
   vehicle?: string;
-  average_speed_kmph?: number;
-  service_minutes_per_stop?: number;
-  max_iterations?: number;
-  max_runtime_millis?: number;
-  destroy_rate?: number;
-  initial_temperature?: number;
-  cooling_rate?: number;
-  allow_lateness?: boolean;
-  enforce_planning_end?: boolean;
-  enforce_capacity?: boolean;
-  distance_weight?: number;
-  lateness_weight?: number;
-  unassigned_penalty?: number;
-  used_route_penalty?: number;
+  optimization_goal: DispatchOptimizationGoalOption;
+  optimization_effort: DispatchOptimizationEffortOption;
 }
 
 export interface SuggestedCourier {
@@ -57,40 +51,16 @@ export interface DispatchCourierOption {
   fullName: string;
 }
 
-export interface DispatchSetupAdvancedValues {
+export interface DispatchSetupBusinessValues {
   vehicleOption: RoutingVehicleOption;
-  averageSpeedInput: string;
-  serviceMinutesPerStopInput: string;
-  maxIterationsInput: string;
-  maxRuntimeMillisInput: string;
-  destroyRateInput: string;
-  initialTemperatureInput: string;
-  coolingRateInput: string;
-  distanceWeightInput: string;
-  latenessWeightInput: string;
-  unassignedPenaltyInput: string;
-  usedRoutePenaltyInput: string;
-  allowLatenessMode: BooleanMode;
-  enforcePlanningEndMode: BooleanMode;
-  enforceCapacityMode: BooleanMode;
+  optimizationGoal: DispatchOptimizationGoalOption;
+  optimizationEffort: DispatchOptimizationEffortOption;
 }
 
-export interface DispatchSetupAdvancedHandlers {
+export interface DispatchSetupBusinessHandlers {
   onVehicleOptionChange: (value: RoutingVehicleOption) => void;
-  onAverageSpeedInputChange: (value: string) => void;
-  onServiceMinutesPerStopInputChange: (value: string) => void;
-  onMaxIterationsInputChange: (value: string) => void;
-  onMaxRuntimeMillisInputChange: (value: string) => void;
-  onDestroyRateInputChange: (value: string) => void;
-  onInitialTemperatureInputChange: (value: string) => void;
-  onCoolingRateInputChange: (value: string) => void;
-  onDistanceWeightInputChange: (value: string) => void;
-  onLatenessWeightInputChange: (value: string) => void;
-  onUnassignedPenaltyInputChange: (value: string) => void;
-  onUsedRoutePenaltyInputChange: (value: string) => void;
-  onAllowLatenessModeChange: (value: BooleanMode) => void;
-  onEnforcePlanningEndModeChange: (value: BooleanMode) => void;
-  onEnforceCapacityModeChange: (value: BooleanMode) => void;
+  onOptimizationGoalChange: (value: DispatchOptimizationGoalOption) => void;
+  onOptimizationEffortChange: (value: DispatchOptimizationEffortOption) => void;
 }
 
 export interface DispatchSetupCardProps {
@@ -109,8 +79,8 @@ export interface DispatchSetupCardProps {
   selectedAutoCourierIds: number[];
   onToggleAutoCourier: (courierId: number, checked: boolean) => void;
   onClearAutoCourierSelection: () => void;
-  advancedValues: DispatchSetupAdvancedValues;
-  advancedHandlers: DispatchSetupAdvancedHandlers;
+  businessValues: DispatchSetupBusinessValues;
+  businessHandlers: DispatchSetupBusinessHandlers;
   onPreviewPlan: () => void;
   onAutoAssign: () => void;
   onRefreshCandidateOrders: () => void;

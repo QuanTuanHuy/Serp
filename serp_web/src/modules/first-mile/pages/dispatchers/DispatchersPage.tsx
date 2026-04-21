@@ -15,11 +15,12 @@ import {
   DispatchSetupCard,
   ManualDispatchCard,
   PlanPreviewCard,
-  type AdvancedDispatchSettings,
-  type BooleanMode,
+  type BusinessDispatchSettings,
   type DispatchCourierOption,
-  type DispatchSetupAdvancedHandlers,
-  type DispatchSetupAdvancedValues,
+  type DispatchOptimizationEffortOption,
+  type DispatchOptimizationGoalOption,
+  type DispatchSetupBusinessHandlers,
+  type DispatchSetupBusinessValues,
   type DispatcherAccessScope,
   type RoutingVehicleOption,
   type SuggestedCourier,
@@ -173,42 +174,6 @@ const parseOptionalPositiveInteger = (value: string): number | undefined => {
   return parsedValue;
 };
 
-const parseOptionalPositiveNumber = (value: string): number | undefined => {
-  const trimmedValue = value.trim();
-  if (!trimmedValue) {
-    return undefined;
-  }
-
-  const parsedValue = Number(trimmedValue);
-  if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
-    return undefined;
-  }
-
-  return parsedValue;
-};
-
-const parseOptionalNonNegativeNumber = (value: string): number | undefined => {
-  const trimmedValue = value.trim();
-  if (!trimmedValue) {
-    return undefined;
-  }
-
-  const parsedValue = Number(trimmedValue);
-  if (!Number.isFinite(parsedValue) || parsedValue < 0) {
-    return undefined;
-  }
-
-  return parsedValue;
-};
-
-const resolveOptionalBoolean = (mode: BooleanMode): boolean | undefined => {
-  if (mode === 'default') {
-    return undefined;
-  }
-
-  return mode === 'true';
-};
-
 const isCandidateOrderStatus = (status: FirstMileOrderStatus): boolean => {
   return CANDIDATE_ORDER_STATUSES.includes(status);
 };
@@ -284,26 +249,10 @@ export const DispatchersPage: React.FC = () => {
   const [orderLimitInput, setOrderLimitInput] = React.useState('');
   const [vehicleOption, setVehicleOption] =
     React.useState<RoutingVehicleOption>('DEFAULT');
-  const [averageSpeedInput, setAverageSpeedInput] = React.useState('');
-  const [serviceMinutesPerStopInput, setServiceMinutesPerStopInput] =
-    React.useState('');
-  const [maxIterationsInput, setMaxIterationsInput] = React.useState('');
-  const [maxRuntimeMillisInput, setMaxRuntimeMillisInput] = React.useState('');
-  const [destroyRateInput, setDestroyRateInput] = React.useState('');
-  const [initialTemperatureInput, setInitialTemperatureInput] =
-    React.useState('');
-  const [coolingRateInput, setCoolingRateInput] = React.useState('');
-  const [distanceWeightInput, setDistanceWeightInput] = React.useState('');
-  const [latenessWeightInput, setLatenessWeightInput] = React.useState('');
-  const [unassignedPenaltyInput, setUnassignedPenaltyInput] =
-    React.useState('');
-  const [usedRoutePenaltyInput, setUsedRoutePenaltyInput] = React.useState('');
-  const [allowLatenessMode, setAllowLatenessMode] =
-    React.useState<BooleanMode>('default');
-  const [enforcePlanningEndMode, setEnforcePlanningEndMode] =
-    React.useState<BooleanMode>('default');
-  const [enforceCapacityMode, setEnforceCapacityMode] =
-    React.useState<BooleanMode>('default');
+  const [optimizationGoal, setOptimizationGoal] =
+    React.useState<DispatchOptimizationGoalOption>('BALANCED');
+  const [optimizationEffort, setOptimizationEffort] =
+    React.useState<DispatchOptimizationEffortOption>('STANDARD');
 
   const [selectedOrderIds, setSelectedOrderIds] = React.useState<number[]>([]);
   const [optimizationResult, setOptimizationResult] =
@@ -524,277 +473,18 @@ export const DispatchersPage: React.FC = () => {
     return parsedOrderLimit;
   }, [notification, orderLimitInput]);
 
-  const buildAdvancedDispatchSettings = React.useCallback(() => {
-    const parseIntegerField = (
-      value: string,
-      label: string,
-      minValue: number
-    ): number | null | undefined => {
-      if (!value.trim()) {
-        return undefined;
-      }
-
-      const parsedValue = parseOptionalPositiveInteger(value);
-      if (parsedValue === undefined || parsedValue < minValue) {
-        notification.error(`${label} must be an integer >= ${minValue}.`);
-        return null;
-      }
-
-      return parsedValue;
+  const buildBusinessDispatchSettings = React.useCallback(() => {
+    const settings: BusinessDispatchSettings = {
+      optimization_goal: optimizationGoal,
+      optimization_effort: optimizationEffort,
     };
-
-    const parsePositiveNumberField = (
-      value: string,
-      label: string,
-      minValue: number,
-      allowEqual = true
-    ): number | null | undefined => {
-      if (!value.trim()) {
-        return undefined;
-      }
-
-      const parsedValue = parseOptionalPositiveNumber(value);
-      if (parsedValue === undefined) {
-        notification.error(`${label} must be a valid positive number.`);
-        return null;
-      }
-
-      const isValid = allowEqual
-        ? parsedValue >= minValue
-        : parsedValue > minValue;
-      if (!isValid) {
-        notification.error(
-          `${label} must be ${allowEqual ? '>=' : '>'} ${minValue}.`
-        );
-        return null;
-      }
-
-      return parsedValue;
-    };
-
-    const parseNonNegativeField = (
-      value: string,
-      label: string
-    ): number | null | undefined => {
-      if (!value.trim()) {
-        return undefined;
-      }
-
-      const parsedValue = parseOptionalNonNegativeNumber(value);
-      if (parsedValue === undefined) {
-        notification.error(`${label} must be a number >= 0.`);
-        return null;
-      }
-
-      return parsedValue;
-    };
-
-    const parseRangeField = (
-      value: string,
-      label: string,
-      minValue: number,
-      maxValue: number
-    ): number | null | undefined => {
-      if (!value.trim()) {
-        return undefined;
-      }
-
-      const parsedValue = parseOptionalPositiveNumber(value);
-      if (
-        parsedValue === undefined ||
-        parsedValue < minValue ||
-        parsedValue > maxValue
-      ) {
-        notification.error(
-          `${label} must be between ${minValue} and ${maxValue}.`
-        );
-        return null;
-      }
-
-      return parsedValue;
-    };
-
-    const averageSpeedKmph = parsePositiveNumberField(
-      averageSpeedInput,
-      'Average speed (km/h)',
-      1
-    );
-    if (averageSpeedKmph === null) {
-      return null;
-    }
-
-    const serviceMinutesPerStop = parseIntegerField(
-      serviceMinutesPerStopInput,
-      'Service minutes per stop',
-      1
-    );
-    if (serviceMinutesPerStop === null) {
-      return null;
-    }
-
-    const maxIterations = parseIntegerField(
-      maxIterationsInput,
-      'Max iterations',
-      1
-    );
-    if (maxIterations === null) {
-      return null;
-    }
-
-    const maxRuntimeMillis = parseIntegerField(
-      maxRuntimeMillisInput,
-      'Max runtime (ms)',
-      100
-    );
-    if (maxRuntimeMillis === null) {
-      return null;
-    }
-
-    const destroyRate = parseRangeField(
-      destroyRateInput,
-      'Destroy rate',
-      0.01,
-      0.9
-    );
-    if (destroyRate === null) {
-      return null;
-    }
-
-    const initialTemperature = parsePositiveNumberField(
-      initialTemperatureInput,
-      'Initial temperature',
-      0.0001
-    );
-    if (initialTemperature === null) {
-      return null;
-    }
-
-    const coolingRate = parseRangeField(
-      coolingRateInput,
-      'Cooling rate',
-      0.8,
-      0.9999
-    );
-    if (coolingRate === null) {
-      return null;
-    }
-
-    const distanceWeight = parseNonNegativeField(
-      distanceWeightInput,
-      'Distance weight'
-    );
-    if (distanceWeight === null) {
-      return null;
-    }
-
-    const latenessWeight = parseNonNegativeField(
-      latenessWeightInput,
-      'Lateness weight'
-    );
-    if (latenessWeight === null) {
-      return null;
-    }
-
-    const unassignedPenalty = parseNonNegativeField(
-      unassignedPenaltyInput,
-      'Unassigned penalty'
-    );
-    if (unassignedPenalty === null) {
-      return null;
-    }
-
-    const usedRoutePenalty = parseNonNegativeField(
-      usedRoutePenaltyInput,
-      'Used route penalty'
-    );
-    if (usedRoutePenalty === null) {
-      return null;
-    }
-
-    const settings: AdvancedDispatchSettings = {};
 
     if (vehicleOption !== 'DEFAULT') {
       settings.vehicle = vehicleOption;
     }
 
-    if (averageSpeedKmph !== undefined) {
-      settings.average_speed_kmph = averageSpeedKmph;
-    }
-
-    if (serviceMinutesPerStop !== undefined) {
-      settings.service_minutes_per_stop = serviceMinutesPerStop;
-    }
-
-    if (maxIterations !== undefined) {
-      settings.max_iterations = maxIterations;
-    }
-
-    if (maxRuntimeMillis !== undefined) {
-      settings.max_runtime_millis = maxRuntimeMillis;
-    }
-
-    if (destroyRate !== undefined) {
-      settings.destroy_rate = destroyRate;
-    }
-
-    if (initialTemperature !== undefined) {
-      settings.initial_temperature = initialTemperature;
-    }
-
-    if (coolingRate !== undefined) {
-      settings.cooling_rate = coolingRate;
-    }
-
-    const allowLateness = resolveOptionalBoolean(allowLatenessMode);
-    if (allowLateness !== undefined) {
-      settings.allow_lateness = allowLateness;
-    }
-
-    const enforcePlanningEnd = resolveOptionalBoolean(enforcePlanningEndMode);
-    if (enforcePlanningEnd !== undefined) {
-      settings.enforce_planning_end = enforcePlanningEnd;
-    }
-
-    const enforceCapacity = resolveOptionalBoolean(enforceCapacityMode);
-    if (enforceCapacity !== undefined) {
-      settings.enforce_capacity = enforceCapacity;
-    }
-
-    if (distanceWeight !== undefined) {
-      settings.distance_weight = distanceWeight;
-    }
-
-    if (latenessWeight !== undefined) {
-      settings.lateness_weight = latenessWeight;
-    }
-
-    if (unassignedPenalty !== undefined) {
-      settings.unassigned_penalty = unassignedPenalty;
-    }
-
-    if (usedRoutePenalty !== undefined) {
-      settings.used_route_penalty = usedRoutePenalty;
-    }
-
     return settings;
-  }, [
-    allowLatenessMode,
-    averageSpeedInput,
-    coolingRateInput,
-    destroyRateInput,
-    distanceWeightInput,
-    enforceCapacityMode,
-    enforcePlanningEndMode,
-    initialTemperatureInput,
-    latenessWeightInput,
-    maxIterationsInput,
-    maxRuntimeMillisInput,
-    notification,
-    serviceMinutesPerStopInput,
-    unassignedPenaltyInput,
-    usedRoutePenaltyInput,
-    vehicleOption,
-  ]);
+  }, [optimizationEffort, optimizationGoal, vehicleOption]);
 
   const handleApplyOrderFilters = (event: React.FormEvent) => {
     event.preventDefault();
@@ -851,10 +541,7 @@ export const DispatchersPage: React.FC = () => {
       return;
     }
 
-    const advancedSettings = buildAdvancedDispatchSettings();
-    if (!advancedSettings) {
-      return;
-    }
+    const businessSettings = buildBusinessDispatchSettings();
 
     const payload: OptimizePickupPlanRequest = {
       post_office_id: context.postOfficeId,
@@ -863,7 +550,7 @@ export const DispatchersPage: React.FC = () => {
       candidate_statuses: CANDIDATE_ORDER_STATUSES,
       ...(parsedCourierIds.length ? { courier_ids: parsedCourierIds } : {}),
       ...(parsedOrderLimit ? { order_limit: parsedOrderLimit } : {}),
-      ...advancedSettings,
+      ...businessSettings,
     };
 
     setActiveAction('preview');
@@ -896,10 +583,7 @@ export const DispatchersPage: React.FC = () => {
       return;
     }
 
-    const advancedSettings = buildAdvancedDispatchSettings();
-    if (!advancedSettings) {
-      return;
-    }
+    const businessSettings = buildBusinessDispatchSettings();
 
     const payload: AutoAssignPickupPlanRequest = {
       post_office_id: context.postOfficeId,
@@ -910,7 +594,7 @@ export const DispatchersPage: React.FC = () => {
       candidate_statuses: CANDIDATE_ORDER_STATUSES,
       ...(parsedCourierIds.length ? { courier_ids: parsedCourierIds } : {}),
       ...(parsedOrderLimit ? { order_limit: parsedOrderLimit } : {}),
-      ...advancedSettings,
+      ...businessSettings,
     };
 
     setActiveAction('auto');
@@ -961,10 +645,7 @@ export const DispatchersPage: React.FC = () => {
       return;
     }
 
-    const advancedSettings = buildAdvancedDispatchSettings();
-    if (!advancedSettings) {
-      return;
-    }
+    const businessSettings = buildBusinessDispatchSettings();
 
     const payload: ManualAssignPickupOrdersRequest = {
       post_office_id: context.postOfficeId,
@@ -974,28 +655,11 @@ export const DispatchersPage: React.FC = () => {
       trip_date: tripDate,
       planning_start_time: context.shiftWindow.planningStartTime,
       planning_end_time: context.shiftWindow.planningEndTime,
-      ...(advancedSettings.vehicle
-        ? { vehicle: advancedSettings.vehicle }
+      ...(businessSettings.vehicle
+        ? { vehicle: businessSettings.vehicle }
         : {}),
-      ...(advancedSettings.average_speed_kmph !== undefined
-        ? { average_speed_kmph: advancedSettings.average_speed_kmph }
-        : {}),
-      ...(advancedSettings.service_minutes_per_stop !== undefined
-        ? {
-            service_minutes_per_stop: advancedSettings.service_minutes_per_stop,
-          }
-        : {}),
-      ...(advancedSettings.allow_lateness !== undefined
-        ? { allow_lateness: advancedSettings.allow_lateness }
-        : {}),
-      ...(advancedSettings.enforce_planning_end !== undefined
-        ? {
-            enforce_planning_end: advancedSettings.enforce_planning_end,
-          }
-        : {}),
-      ...(advancedSettings.enforce_capacity !== undefined
-        ? { enforce_capacity: advancedSettings.enforce_capacity }
-        : {}),
+      optimization_goal: businessSettings.optimization_goal,
+      optimization_effort: businessSettings.optimization_effort,
     };
 
     setActiveAction('manual');
@@ -1018,40 +682,16 @@ export const DispatchersPage: React.FC = () => {
     }
   };
 
-  const advancedValues: DispatchSetupAdvancedValues = {
+  const businessValues: DispatchSetupBusinessValues = {
     vehicleOption,
-    averageSpeedInput,
-    serviceMinutesPerStopInput,
-    maxIterationsInput,
-    maxRuntimeMillisInput,
-    destroyRateInput,
-    initialTemperatureInput,
-    coolingRateInput,
-    distanceWeightInput,
-    latenessWeightInput,
-    unassignedPenaltyInput,
-    usedRoutePenaltyInput,
-    allowLatenessMode,
-    enforcePlanningEndMode,
-    enforceCapacityMode,
+    optimizationGoal,
+    optimizationEffort,
   };
 
-  const advancedHandlers: DispatchSetupAdvancedHandlers = {
+  const businessHandlers: DispatchSetupBusinessHandlers = {
     onVehicleOptionChange: setVehicleOption,
-    onAverageSpeedInputChange: setAverageSpeedInput,
-    onServiceMinutesPerStopInputChange: setServiceMinutesPerStopInput,
-    onMaxIterationsInputChange: setMaxIterationsInput,
-    onMaxRuntimeMillisInputChange: setMaxRuntimeMillisInput,
-    onDestroyRateInputChange: setDestroyRateInput,
-    onInitialTemperatureInputChange: setInitialTemperatureInput,
-    onCoolingRateInputChange: setCoolingRateInput,
-    onDistanceWeightInputChange: setDistanceWeightInput,
-    onLatenessWeightInputChange: setLatenessWeightInput,
-    onUnassignedPenaltyInputChange: setUnassignedPenaltyInput,
-    onUsedRoutePenaltyInputChange: setUsedRoutePenaltyInput,
-    onAllowLatenessModeChange: setAllowLatenessMode,
-    onEnforcePlanningEndModeChange: setEnforcePlanningEndMode,
-    onEnforceCapacityModeChange: setEnforceCapacityMode,
+    onOptimizationGoalChange: setOptimizationGoal,
+    onOptimizationEffortChange: setOptimizationEffort,
   };
 
   return (
@@ -1092,8 +732,8 @@ export const DispatchersPage: React.FC = () => {
             selectedAutoCourierIds={selectedAutoCourierIds}
             onToggleAutoCourier={handleToggleAutoCourier}
             onClearAutoCourierSelection={() => setSelectedAutoCourierIds([])}
-            advancedValues={advancedValues}
-            advancedHandlers={advancedHandlers}
+            businessValues={businessValues}
+            businessHandlers={businessHandlers}
             onPreviewPlan={() => void handlePreviewPlan()}
             onAutoAssign={() => void handleAutoAssign()}
             onRefreshCandidateOrders={() => void refetchOrders()}

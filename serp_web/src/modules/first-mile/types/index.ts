@@ -318,6 +318,14 @@ export interface OrderConfirmationResponse {
 
 export type PickupShift = 'MORNING' | 'AFTERNOON' | 'EVENING';
 
+export type PickupOptimizationGoal =
+  | 'BALANCED'
+  | 'ON_TIME_PRIORITY'
+  | 'COST_EFFICIENCY'
+  | 'MAX_ASSIGNMENT';
+
+export type PickupOptimizationEffort = 'FAST' | 'STANDARD' | 'THOROUGH';
+
 export interface OptimizePickupPlanRequest {
   post_office_id: number;
   planning_start_time?: string;
@@ -326,6 +334,8 @@ export interface OptimizePickupPlanRequest {
   candidate_statuses?: FirstMileOrderStatus[];
   vehicle?: string;
   order_limit?: number;
+  optimization_goal?: PickupOptimizationGoal;
+  optimization_effort?: PickupOptimizationEffort;
   average_speed_kmph?: number;
   service_minutes_per_stop?: number;
   max_iterations?: number;
@@ -352,6 +362,8 @@ export interface AutoAssignPickupPlanRequest {
   candidate_statuses?: FirstMileOrderStatus[];
   vehicle?: string;
   order_limit?: number;
+  optimization_goal?: PickupOptimizationGoal;
+  optimization_effort?: PickupOptimizationEffort;
   average_speed_kmph?: number;
   service_minutes_per_stop?: number;
   max_iterations?: number;
@@ -377,6 +389,8 @@ export interface ManualAssignPickupOrdersRequest {
   planning_start_time?: string;
   planning_end_time?: string;
   vehicle?: string;
+  optimization_goal?: PickupOptimizationGoal;
+  optimization_effort?: PickupOptimizationEffort;
   average_speed_kmph?: number;
   service_minutes_per_stop?: number;
   allow_lateness?: boolean;

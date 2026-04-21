@@ -13,6 +13,7 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -25,17 +26,22 @@ import serp.project.first_mile.domain.Dimension;
 import serp.project.first_mile.domain.Order;
 import serp.project.first_mile.domain.PostOffice;
 import serp.project.first_mile.domain.PostOfficeStaff;
+import serp.project.first_mile.domain.PickupCheckin;
 import serp.project.first_mile.domain.Product;
 import serp.project.first_mile.domain.ProductType;
+import serp.project.first_mile.domain.Trip;
+import serp.project.first_mile.dto.request.FileUploadRequest;
 import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.CancelOrderRequest;
 import serp.project.first_mile.dto.request.CreateOrderRequest;
 import serp.project.first_mile.dto.request.OrderFilterRequest;
 import serp.project.first_mile.dto.request.OrderImportDTO;
 import serp.project.first_mile.dto.request.UpdateOrderRequest;
+import serp.project.first_mile.dto.response.FileUploadResponse;
 import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.OrderConfirmationResponse;
 import serp.project.first_mile.dto.response.OrderDetailResponse;
+import serp.project.first_mile.dto.response.PickupCheckinResponse;
 import serp.project.first_mile.dto.response.ProductTypeTemplateDTO;
 import serp.project.first_mile.dto.response.ProvinceExcelTemplateDTO;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
@@ -45,15 +51,18 @@ import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.kernel.utils.ExcelTemplateUtils;
 import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
+import serp.project.first_mile.kernel.utils.ImageContentTypeUtils;
 import serp.project.first_mile.kernel.utils.PostOfficeStaffCodeUtils;
 import serp.project.first_mile.mapper.OrderMapper;
 import serp.project.first_mile.repository.OrderRepository;
+import serp.project.first_mile.repository.PickupCheckinRepository;
 import serp.project.first_mile.repository.PostOfficeRepository;
 import serp.project.first_mile.repository.PostOfficeStaffAssignmentRepository;
 import serp.project.first_mile.repository.PostOfficeStaffRepository;
 import serp.project.first_mile.repository.ProductTypeRepository;
 import serp.project.first_mile.repository.TripOrderRepository;
 import serp.project.first_mile.repository.specification.OrderSpecification;
+import serp.project.first_mile.service.FileStorageService;
 import serp.project.first_mile.service.OrderExcelService;
 import serp.project.first_mile.service.OrderImportExcelService;
 import serp.project.first_mile.service.OrderService;
@@ -69,8 +78,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -93,15 +102,26 @@ public class OrderServiceImpl implements OrderService {
     private static final DateTimeFormatter ORDER_CODE_DATE_FORMATTER = DateTimeFormatter.BASIC_ISO_DATE;
     private static final int ORDER_CODE_SEQUENCE_LENGTH = 4;
     private static final Object ORDER_CODE_LOCK = new Object();
+    private static final double DEFAULT_PICKUP_CHECKIN_RADIUS_METERS = 100.0;
+    private static final double EARTH_RADIUS_METERS = 6_371_000.0;
+    private static final String STORAGE_SERVICE_NAME = "first-mile";
+    private static final String PICKUP_CHECKIN_IMAGE_FOLDER = "orders/pickup-checkin";
     private static final Set<OrderStatus> CONFIRMABLE_ORDER_STATUSES = Set.of(
             OrderStatus.CREATED,
             OrderStatus.PICKUP_FAILED
     );
     private static final Set<OrderStatus> EDITABLE_ORDER_STATUSES = Set.of(OrderStatus.CREATED);
+    private static final Set<OrderStatus> PICKUP_CHECKIN_ORDER_STATUSES = Set.of(
+            OrderStatus.ASSIGNED_TO_PICKUP,
+            OrderStatus.PICKING_UP
+    );
     private static final List<TripStatus> COURIER_VISIBLE_TRIP_STATUSES = List.of(
             TripStatus.PLANNED,
             TripStatus.IN_PROGRESS
     );
+
+    @Value("${pickup.checkin.radius-meters:100}")
+    private Double pickupCheckinRadiusMeters;
 
     private final OrderExcelService orderExcelService;
     private final OrderImportExcelService orderImportExcelService;
@@ -112,6 +132,8 @@ public class OrderServiceImpl implements OrderService {
     private final PostOfficeStaffRepository postOfficeStaffRepository;
     private final PostOfficeStaffAssignmentRepository postOfficeStaffAssignmentRepository;
     private final TripOrderRepository tripOrderRepository;
+    private final PickupCheckinRepository pickupCheckinRepository;
+    private final FileStorageService fileStorageService;
 
     @Override
     public byte[] exportTemplate(Long tenantId) {
@@ -260,6 +282,107 @@ public class OrderServiceImpl implements OrderService {
 
         Order cancelledOrder = orderRepository.save(order);
         return OrderMapper.toOrderDetailResponse(cancelledOrder);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PickupCheckinResponse checkInPickupOrder(
+            Long orderId,
+            Double checkinLatitude,
+            Double checkinLongitude,
+            MultipartFile photo,
+            Long tenantId
+    ) {
+        if (orderId == null || orderId <= 0 || checkinLatitude == null || checkinLongitude == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (!isValidCoordinate(checkinLatitude, checkinLongitude)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (photo == null || photo.isEmpty()) {
+            throw new AppException(ErrorCode.FILE_UPLOAD_EMPTY);
+        }
+
+        Long courierStaffId = firstMileAccessUtils.resolveCurrentStaffIdByRoleOrThrow(
+                tenantId,
+                PostOfficeStaffRole.COURIER
+        );
+
+        Order order = orderRepository.findByIdAndTenantIdForUpdate(orderId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        if (order.getStatus() == null || !PICKUP_CHECKIN_ORDER_STATUSES.contains(order.getStatus())) {
+            throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE);
+        }
+
+        var tripOrder = tripOrderRepository
+                .findFirstByTenantIdAndOrderIdAndTrip_CourierStaffIdAndTrip_StatusInOrderByTrip_IdDesc(
+                        tenantId,
+                        orderId,
+                        courierStaffId,
+                        COURIER_VISIBLE_TRIP_STATUSES
+                )
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
+
+        if (tripOrder.getId() == null || tripOrder.getTrip() == null || tripOrder.getTrip().getId() == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        Point pickupLocation = order.getSenderLocation();
+        if (pickupLocation == null || !isValidCoordinate(pickupLocation.getY(), pickupLocation.getX())) {
+            throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE);
+        }
+
+        double allowedRadiusMeters = resolvePickupCheckinRadiusMeters();
+        double distanceMeters = calculateDistanceMeters(
+                checkinLatitude,
+                checkinLongitude,
+                pickupLocation.getY(),
+                pickupLocation.getX()
+        );
+
+        if (distanceMeters > allowedRadiusMeters) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    String.format(
+                            Locale.ROOT,
+                            "Check-in location is outside allowed radius %.2f m (actual %.2f m).",
+                            allowedRadiusMeters,
+                            distanceMeters
+                    )
+            );
+        }
+
+        String contentType = ImageContentTypeUtils.normalizeImageContentType(photo.getContentType());
+        FileUploadResponse uploadResponse = uploadPickupCheckinPhoto(photo, contentType, tenantId);
+
+        PickupCheckin pickupCheckin = pickupCheckinRepository
+                .findByTenantIdAndTripOrderId(tenantId, tripOrder.getId())
+                .orElseGet(PickupCheckin::new);
+
+        pickupCheckin.setTenantId(tenantId);
+        pickupCheckin.setTripOrderId(tripOrder.getId());
+        pickupCheckin.setOrderId(order.getId());
+        pickupCheckin.setTripId(tripOrder.getTrip().getId());
+        pickupCheckin.setCourierStaffId(courierStaffId);
+        pickupCheckin.setCheckinTime(LocalDateTime.now());
+        pickupCheckin.setCheckinLocation(toPoint(checkinLatitude, checkinLongitude));
+        pickupCheckin.setDistanceM(round3(distanceMeters));
+        pickupCheckin.setAllowedRadiusM(round3(allowedRadiusMeters));
+        pickupCheckin.setPhotoUrl(uploadResponse.getUrl());
+
+        PickupCheckin savedCheckin = pickupCheckinRepository.save(pickupCheckin);
+
+        if (TripStatus.PLANNED.equals(tripOrder.getTrip().getStatus())) {
+            tripOrder.getTrip().setStatus(TripStatus.IN_PROGRESS);
+        }
+
+        order.setStatus(OrderStatus.PICKING_UP);
+        Order savedOrder = orderRepository.save(order);
+
+        return toPickupCheckinResponse(savedOrder, tripOrder.getTrip(), savedCheckin, pickupLocation);
     }
 
     @Override
@@ -710,6 +833,90 @@ public class OrderServiceImpl implements OrderService {
 
     private String formatOrderCode(String orderCodePrefix, int sequence) {
         return String.format(Locale.ROOT, "%s%0" + ORDER_CODE_SEQUENCE_LENGTH + "d", orderCodePrefix, sequence);
+    }
+
+    private double resolvePickupCheckinRadiusMeters() {
+        Double configuredRadius = pickupCheckinRadiusMeters;
+        if (configuredRadius == null
+                || Double.isNaN(configuredRadius)
+                || Double.isInfinite(configuredRadius)
+                || configuredRadius <= 0D) {
+            return DEFAULT_PICKUP_CHECKIN_RADIUS_METERS;
+        }
+        return configuredRadius;
+    }
+
+    private double calculateDistanceMeters(
+            double fromLatitude,
+            double fromLongitude,
+            double toLatitude,
+            double toLongitude
+    ) {
+        double latitudeDeltaRadians = Math.toRadians(toLatitude - fromLatitude);
+        double longitudeDeltaRadians = Math.toRadians(toLongitude - fromLongitude);
+
+        double fromLatitudeRadians = Math.toRadians(fromLatitude);
+        double toLatitudeRadians = Math.toRadians(toLatitude);
+
+        double haversineComponent = Math.sin(latitudeDeltaRadians / 2) * Math.sin(latitudeDeltaRadians / 2)
+                + Math.cos(fromLatitudeRadians) * Math.cos(toLatitudeRadians)
+                * Math.sin(longitudeDeltaRadians / 2) * Math.sin(longitudeDeltaRadians / 2);
+
+        double normalizedHaversineComponent = Math.max(0D, Math.min(1D, haversineComponent));
+        double centralAngle = 2 * Math.atan2(
+                Math.sqrt(normalizedHaversineComponent),
+                Math.sqrt(1D - normalizedHaversineComponent)
+        );
+
+        return EARTH_RADIUS_METERS * centralAngle;
+    }
+
+    private FileUploadResponse uploadPickupCheckinPhoto(MultipartFile photo, String contentType, Long tenantId) {
+        try {
+            return fileStorageService.upload(FileUploadRequest.builder()
+                    .content(photo.getBytes())
+                    .originalFileName(photo.getOriginalFilename())
+                    .contentType(contentType)
+                    .serviceName(STORAGE_SERVICE_NAME)
+                    .folder(PICKUP_CHECKIN_IMAGE_FOLDER)
+                    .tenantId(tenantId)
+                    .uploaderId(firstMileAccessUtils.getCurrentUserIdOrNull())
+                    .publicFile(true)
+                    .build());
+        } catch (IOException exception) {
+            throw new AppException(ErrorCode.FILE_UPLOAD_FAILED);
+        }
+    }
+
+    private PickupCheckinResponse toPickupCheckinResponse(
+            Order order,
+            Trip trip,
+            PickupCheckin pickupCheckin,
+            Point pickupLocation
+    ) {
+        Point checkinLocation = pickupCheckin == null ? null : pickupCheckin.getCheckinLocation();
+
+        return new PickupCheckinResponse(
+                pickupCheckin == null ? null : pickupCheckin.getId(),
+                order == null ? null : order.getId(),
+                order == null ? null : order.getOrderCode(),
+                order == null ? null : order.getStatus(),
+                trip == null ? null : trip.getId(),
+                trip == null ? null : trip.getTripCode(),
+                pickupCheckin == null ? null : pickupCheckin.getCourierStaffId(),
+                pickupCheckin == null ? null : pickupCheckin.getCheckinTime(),
+                pickupCheckin == null ? null : pickupCheckin.getPhotoUrl(),
+                checkinLocation == null ? null : round3(checkinLocation.getY()),
+                checkinLocation == null ? null : round3(checkinLocation.getX()),
+                pickupLocation == null ? null : round3(pickupLocation.getY()),
+                pickupLocation == null ? null : round3(pickupLocation.getX()),
+                pickupCheckin == null ? null : pickupCheckin.getDistanceM(),
+                pickupCheckin == null ? null : pickupCheckin.getAllowedRadiusM()
+        );
+    }
+
+    private double round3(double value) {
+        return Math.round(value * 1000.0) / 1000.0;
     }
 
     private Point toPoint(Double latitude, Double longitude) {

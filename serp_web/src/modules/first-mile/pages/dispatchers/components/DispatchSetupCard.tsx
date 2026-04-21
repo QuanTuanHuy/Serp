@@ -23,7 +23,8 @@ import {
 import { CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
 import type { PickupShift } from '../../../types';
 import type {
-  BooleanMode,
+  DispatchOptimizationEffortOption,
+  DispatchOptimizationGoalOption,
   DispatchSetupCardProps,
   RoutingVehicleOption,
 } from './types';
@@ -46,10 +47,23 @@ const ROUTING_VEHICLE_OPTIONS: Array<{
   { value: 'HD', label: 'Heavy-duty' },
 ];
 
-const BOOLEAN_MODE_OPTIONS: Array<{ value: BooleanMode; label: string }> = [
-  { value: 'default', label: 'Use backend default' },
-  { value: 'true', label: 'Enabled' },
-  { value: 'false', label: 'Disabled' },
+const OPTIMIZATION_GOAL_OPTIONS: Array<{
+  value: DispatchOptimizationGoalOption;
+  label: string;
+}> = [
+  { value: 'BALANCED', label: 'Balanced' },
+  { value: 'ON_TIME_PRIORITY', label: 'Prioritize on-time pickup' },
+  { value: 'COST_EFFICIENCY', label: 'Reduce travel cost' },
+  { value: 'MAX_ASSIGNMENT', label: 'Maximize assigned orders' },
+];
+
+const OPTIMIZATION_EFFORT_OPTIONS: Array<{
+  value: DispatchOptimizationEffortOption;
+  label: string;
+}> = [
+  { value: 'FAST', label: 'Fast response' },
+  { value: 'STANDARD', label: 'Standard' },
+  { value: 'THOROUGH', label: 'Highest quality' },
 ];
 
 export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
@@ -68,8 +82,8 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
   selectedAutoCourierIds,
   onToggleAutoCourier,
   onClearAutoCourierSelection,
-  advancedValues,
-  advancedHandlers,
+  businessValues,
+  businessHandlers,
   onPreviewPlan,
   onAutoAssign,
   onRefreshCandidateOrders,
@@ -84,7 +98,7 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
       <CardHeader>
         <CardTitle>Dispatch Setup</CardTitle>
         <CardDescription>
-          Configure post office, shift, and optimizer options before
+          Configure post office, shift, and business strategy before
           dispatching.
         </CardDescription>
       </CardHeader>
@@ -205,24 +219,22 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
 
           <div className='space-y-3 rounded-md border p-4 md:col-span-2 xl:col-span-4'>
             <div className='space-y-1'>
-              <p className='text-sm font-semibold'>
-                Advanced optimizer settings
-              </p>
+              <p className='text-sm font-semibold'>Dispatch strategy</p>
               <p className='text-xs text-muted-foreground'>
-                Fine-tune route quality and speed. Leave input blank or choose
-                &quot;Use backend default&quot; to keep standard behavior.
+                Backend handles all algorithm parameters. Choose only business
+                intent here.
               </p>
             </div>
 
-            <div className='grid gap-3 md:grid-cols-2 xl:grid-cols-4'>
+            <div className='grid gap-3 md:grid-cols-2 xl:grid-cols-3'>
               <div className='space-y-2'>
                 <Label htmlFor='dispatch-vehicle-profile'>
                   Vehicle profile
                 </Label>
                 <Select
-                  value={advancedValues.vehicleOption}
+                  value={businessValues.vehicleOption}
                   onValueChange={(value) =>
-                    advancedHandlers.onVehicleOptionChange(
+                    businessHandlers.onVehicleOptionChange(
                       value as RoutingVehicleOption
                     )
                   }
@@ -239,226 +251,27 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
                   </SelectContent>
                 </Select>
                 <p className='text-xs text-muted-foreground'>
-                  Controls travel profile assumptions of the optimizer.
+                  Optional. Leave as backend default in most scenarios.
                 </p>
               </div>
 
               <div className='space-y-2'>
-                <Label htmlFor='dispatch-average-speed'>
-                  Average speed (km/h)
+                <Label htmlFor='dispatch-optimization-goal'>
+                  Planning objective
                 </Label>
-                <Input
-                  id='dispatch-average-speed'
-                  value={advancedValues.averageSpeedInput}
-                  onChange={(event) =>
-                    advancedHandlers.onAverageSpeedInputChange(
-                      event.target.value
-                    )
-                  }
-                  placeholder='Default 25'
-                />
-                <p className='text-xs text-muted-foreground'>
-                  Higher speed reduces estimated travel time.
-                </p>
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='dispatch-service-minutes'>
-                  Service minutes per stop
-                </Label>
-                <Input
-                  id='dispatch-service-minutes'
-                  value={advancedValues.serviceMinutesPerStopInput}
-                  onChange={(event) =>
-                    advancedHandlers.onServiceMinutesPerStopInputChange(
-                      event.target.value
-                    )
-                  }
-                  placeholder='Default 8'
-                />
-                <p className='text-xs text-muted-foreground'>
-                  Time spent at each pickup point.
-                </p>
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='dispatch-max-iterations'>Max iterations</Label>
-                <Input
-                  id='dispatch-max-iterations'
-                  value={advancedValues.maxIterationsInput}
-                  onChange={(event) =>
-                    advancedHandlers.onMaxIterationsInputChange(
-                      event.target.value
-                    )
-                  }
-                  placeholder='Default 300'
-                />
-                <p className='text-xs text-muted-foreground'>
-                  More iterations can improve quality but may run longer.
-                </p>
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='dispatch-max-runtime'>Max runtime (ms)</Label>
-                <Input
-                  id='dispatch-max-runtime'
-                  value={advancedValues.maxRuntimeMillisInput}
-                  onChange={(event) =>
-                    advancedHandlers.onMaxRuntimeMillisInputChange(
-                      event.target.value
-                    )
-                  }
-                  placeholder='Default 1500'
-                />
-                <p className='text-xs text-muted-foreground'>
-                  Hard cap for optimization compute time.
-                </p>
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='dispatch-destroy-rate'>Destroy rate</Label>
-                <Input
-                  id='dispatch-destroy-rate'
-                  value={advancedValues.destroyRateInput}
-                  onChange={(event) =>
-                    advancedHandlers.onDestroyRateInputChange(
-                      event.target.value
-                    )
-                  }
-                  placeholder='0.01 - 0.90, default 0.20'
-                />
-                <p className='text-xs text-muted-foreground'>
-                  Percentage of route rebuilt each ALNS step.
-                </p>
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='dispatch-initial-temperature'>
-                  Initial temperature
-                </Label>
-                <Input
-                  id='dispatch-initial-temperature'
-                  value={advancedValues.initialTemperatureInput}
-                  onChange={(event) =>
-                    advancedHandlers.onInitialTemperatureInputChange(
-                      event.target.value
-                    )
-                  }
-                  placeholder='Default 50'
-                />
-                <p className='text-xs text-muted-foreground'>
-                  Exploration level at start of the search.
-                </p>
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='dispatch-cooling-rate'>Cooling rate</Label>
-                <Input
-                  id='dispatch-cooling-rate'
-                  value={advancedValues.coolingRateInput}
-                  onChange={(event) =>
-                    advancedHandlers.onCoolingRateInputChange(
-                      event.target.value
-                    )
-                  }
-                  placeholder='0.80 - 0.9999, default 0.995'
-                />
-                <p className='text-xs text-muted-foreground'>
-                  How fast the search becomes less exploratory.
-                </p>
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='dispatch-distance-weight'>
-                  Distance weight
-                </Label>
-                <Input
-                  id='dispatch-distance-weight'
-                  value={advancedValues.distanceWeightInput}
-                  onChange={(event) =>
-                    advancedHandlers.onDistanceWeightInputChange(
-                      event.target.value
-                    )
-                  }
-                  placeholder='Default 1.0'
-                />
-                <p className='text-xs text-muted-foreground'>
-                  Increases priority of shorter routes.
-                </p>
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='dispatch-lateness-weight'>
-                  Lateness weight
-                </Label>
-                <Input
-                  id='dispatch-lateness-weight'
-                  value={advancedValues.latenessWeightInput}
-                  onChange={(event) =>
-                    advancedHandlers.onLatenessWeightInputChange(
-                      event.target.value
-                    )
-                  }
-                  placeholder='Default 0.5'
-                />
-                <p className='text-xs text-muted-foreground'>
-                  Penalizes arriving later than requested windows.
-                </p>
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='dispatch-unassigned-penalty'>
-                  Unassigned penalty
-                </Label>
-                <Input
-                  id='dispatch-unassigned-penalty'
-                  value={advancedValues.unassignedPenaltyInput}
-                  onChange={(event) =>
-                    advancedHandlers.onUnassignedPenaltyInputChange(
-                      event.target.value
-                    )
-                  }
-                  placeholder='Default 500'
-                />
-                <p className='text-xs text-muted-foreground'>
-                  Higher value forces assigning more orders.
-                </p>
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='dispatch-used-route-penalty'>
-                  Used route penalty
-                </Label>
-                <Input
-                  id='dispatch-used-route-penalty'
-                  value={advancedValues.usedRoutePenaltyInput}
-                  onChange={(event) =>
-                    advancedHandlers.onUsedRoutePenaltyInputChange(
-                      event.target.value
-                    )
-                  }
-                  placeholder='Default 3.0'
-                />
-                <p className='text-xs text-muted-foreground'>
-                  Discourages creating too many active routes.
-                </p>
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='dispatch-allow-lateness'>Allow lateness</Label>
                 <Select
-                  value={advancedValues.allowLatenessMode}
+                  value={businessValues.optimizationGoal}
                   onValueChange={(value) =>
-                    advancedHandlers.onAllowLatenessModeChange(
-                      value as BooleanMode
+                    businessHandlers.onOptimizationGoalChange(
+                      value as DispatchOptimizationGoalOption
                     )
                   }
                 >
-                  <SelectTrigger id='dispatch-allow-lateness'>
+                  <SelectTrigger id='dispatch-optimization-goal'>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {BOOLEAN_MODE_OPTIONS.map((option) => (
+                    {OPTIMIZATION_GOAL_OPTIONS.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
@@ -466,27 +279,27 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
                   </SelectContent>
                 </Select>
                 <p className='text-xs text-muted-foreground'>
-                  If disabled, optimizer avoids late arrivals.
+                  Define business priority: on-time, cost, or assignment rate.
                 </p>
               </div>
 
               <div className='space-y-2'>
-                <Label htmlFor='dispatch-enforce-planning-end'>
-                  Enforce planning end
+                <Label htmlFor='dispatch-optimization-effort'>
+                  Optimization effort
                 </Label>
                 <Select
-                  value={advancedValues.enforcePlanningEndMode}
+                  value={businessValues.optimizationEffort}
                   onValueChange={(value) =>
-                    advancedHandlers.onEnforcePlanningEndModeChange(
-                      value as BooleanMode
+                    businessHandlers.onOptimizationEffortChange(
+                      value as DispatchOptimizationEffortOption
                     )
                   }
                 >
-                  <SelectTrigger id='dispatch-enforce-planning-end'>
+                  <SelectTrigger id='dispatch-optimization-effort'>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {BOOLEAN_MODE_OPTIONS.map((option) => (
+                    {OPTIMIZATION_EFFORT_OPTIONS.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
@@ -494,35 +307,8 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
                   </SelectContent>
                 </Select>
                 <p className='text-xs text-muted-foreground'>
-                  If enabled, stops must finish within planning window.
-                </p>
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='dispatch-enforce-capacity'>
-                  Enforce capacity
-                </Label>
-                <Select
-                  value={advancedValues.enforceCapacityMode}
-                  onValueChange={(value) =>
-                    advancedHandlers.onEnforceCapacityModeChange(
-                      value as BooleanMode
-                    )
-                  }
-                >
-                  <SelectTrigger id='dispatch-enforce-capacity'>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {BOOLEAN_MODE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className='text-xs text-muted-foreground'>
-                  If enabled, route load cannot exceed vehicle capacity.
+                  Fast is suitable for high traffic time, thorough is suitable
+                  when route quality is more important.
                 </p>
               </div>
             </div>
