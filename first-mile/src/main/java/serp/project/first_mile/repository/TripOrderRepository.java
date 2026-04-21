@@ -18,6 +18,18 @@ public interface TripOrderRepository extends JpaRepository<TripOrder, Long> {
 
     List<TripOrder> findByTrip_IdOrderBySequenceNoAsc(Long tripId);
 
+    @Query("""
+            select to
+            from TripOrder to
+            where to.tenantId = :tenantId
+                and to.trip.id in :tripIds
+            order by to.trip.id asc, to.sequenceNo asc
+            """)
+    List<TripOrder> findByTenantIdAndTripIdInOrderByTripIdAscSequenceNoAsc(
+            @Param("tenantId") Long tenantId,
+            @Param("tripIds") Collection<Long> tripIds
+    );
+
         @Lock(LockModeType.PESSIMISTIC_WRITE)
         Optional<TripOrder> findFirstByTenantIdAndOrderIdAndTrip_CourierStaffIdAndTrip_StatusInOrderByTrip_IdDesc(
             Long tenantId,

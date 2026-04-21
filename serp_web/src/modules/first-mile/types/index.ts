@@ -516,6 +516,105 @@ export interface PickupAssignmentResponse {
   unassignedOrderDetails?: PickupAssignmentUnassignedOrder[];
 }
 
+export type PickupTrackingActorScope =
+  | 'ADMIN_ALL'
+  | 'MANAGER_SCOPED'
+  | 'COURIER_SELF';
+
+export type PickupTripStatus =
+  | 'PLANNED'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'CANCELLED';
+
+export interface PickupTrackingTrip {
+  tripId: number;
+  tripCode?: string;
+  tripStatus?: PickupTripStatus;
+  shift?: PickupShift;
+  postOfficeId?: number;
+  postOfficeCode?: string;
+  postOfficeName?: string;
+  courierStaffId?: number;
+  courierCode?: string;
+  courierName?: string;
+  plannedStartTime?: string;
+  plannedEndTime?: string;
+  totalOrders?: number;
+  checkedInOrders?: number;
+  pendingCheckinOrders?: number;
+}
+
+export interface PickupTrackingOrder {
+  tripOrderId: number;
+  tripId?: number;
+  tripCode?: string;
+  tripStatus?: PickupTripStatus;
+  sequenceNo?: number;
+  orderId: number;
+  orderCode?: string;
+  customerOrderCode?: string;
+  orderStatus?: FirstMileOrderStatus;
+  senderName?: string;
+  senderPhone?: string;
+  senderAddressDetail?: string;
+  senderLatitude?: number;
+  senderLongitude?: number;
+  pickupTimeStart?: string;
+  pickupTimeEnd?: string;
+  plannedArrivalTime?: string;
+  plannedStartServiceTime?: string;
+  plannedDepartureTime?: string;
+  courierStaffId?: number;
+  courierCode?: string;
+  courierName?: string;
+  postOfficeId?: number;
+  postOfficeCode?: string;
+  postOfficeName?: string;
+  checkedIn?: boolean;
+  checkinId?: number;
+  checkinTime?: string;
+  checkinLatitude?: number;
+  checkinLongitude?: number;
+  checkinPhotoUrl?: string;
+  checkinDistanceM?: number;
+  allowedRadiusM?: number;
+}
+
+export interface PickupTrackingOverviewResponse {
+  tripDate: string;
+  actorScope: PickupTrackingActorScope;
+  selectedPostOfficeId?: number;
+  selectedCourierStaffId?: number;
+  totalTrips?: number;
+  totalOrders?: number;
+  checkedInOrders?: number;
+  pendingCheckinOrders?: number;
+  pickingUpOrders?: number;
+  pickedUpOrders?: number;
+  pickupFailedOrders?: number;
+  trips?: PickupTrackingTrip[];
+  orders?: PickupTrackingOrder[];
+}
+
+export interface PickupCheckinResponse {
+  id?: number;
+  orderId?: number;
+  orderCode?: string;
+  orderStatus?: FirstMileOrderStatus;
+  tripId?: number;
+  tripCode?: string;
+  courierStaffId?: number;
+  checkinTime?: string;
+  photoUrl?: string;
+  checkinLatitude?: number;
+  checkinLongitude?: number;
+  pickupLatitude?: number;
+  pickupLongitude?: number;
+  distanceM?: number;
+  allowedRadiusM?: number;
+}
+
 export interface PostOfficeListFilters {
   keyword?: string;
   code?: string;
