@@ -10,6 +10,7 @@ import serp.project.first_mile.dto.request.UpdateOrderRequest;
 import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.OrderConfirmationResponse;
 import serp.project.first_mile.dto.response.OrderDetailResponse;
+import serp.project.first_mile.dto.response.PickupCheckinResponse;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
 
 public interface OrderService {
@@ -30,4 +31,12 @@ public interface OrderService {
 	OrderDetailResponse updateOrder(Long orderId, UpdateOrderRequest request, Long tenantId);
 
 	OrderDetailResponse cancelOrder(Long orderId, Long tenantId, CancelOrderRequest request);
+
+	PickupCheckinResponse checkInPickupOrder(
+			Long orderId,
+			Double checkinLatitude,
+			Double checkinLongitude,
+			MultipartFile photo,
+			Long tenantId
+	);
 }

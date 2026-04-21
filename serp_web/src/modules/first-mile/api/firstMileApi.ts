@@ -28,6 +28,8 @@ import type {
   PostOfficeImportItem,
   PostOfficeListFilters,
   PickupAssignmentResponse,
+  PickupCheckinResponse,
+  PickupTrackingOverviewResponse,
   PickupOptimizationResponse,
   ProductType,
   Province,
@@ -589,6 +591,37 @@ export const firstMileApi = api.injectEndpoints({
       transformResponse: unwrapFirstMileResultOrRaw<PickupAssignmentResponse>,
     }),
 
+    getPickupTrackingOverview: builder.query<
+      PickupTrackingOverviewResponse,
+      { tripDate?: string; postOfficeId?: number; courierStaffId?: number }
+    >({
+      query: ({ tripDate, postOfficeId, courierStaffId }) => ({
+        url: '/pickup-tracking/overview',
+        method: 'GET',
+        params: {
+          ...(tripDate ? { trip_date: tripDate } : {}),
+          ...(postOfficeId ? { post_office_id: postOfficeId } : {}),
+          ...(courierStaffId ? { courier_staff_id: courierStaffId } : {}),
+        },
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse:
+        unwrapFirstMileResultOrRaw<PickupTrackingOverviewResponse>,
+    }),
+
+    pickupCheckinOrder: builder.mutation<
+      PickupCheckinResponse,
+      { orderId: number; formData: FormData }
+    >({
+      query: ({ orderId, formData }) => ({
+        url: `/orders/${orderId}/pickup-checkin`,
+        method: 'POST',
+        body: formData,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<PickupCheckinResponse>,
+    }),
+
     exportOrderTemplate: builder.query<Blob, void>({
       query: () => ({
         url: '/orders/template',
@@ -668,6 +701,8 @@ export const {
   useOptimizePickupPlanMutation,
   useAutoAssignPickupPlanMutation,
   useManualAssignPickupOrdersMutation,
+  useGetPickupTrackingOverviewQuery,
+  usePickupCheckinOrderMutation,
   useLazyExportOrderTemplateQuery,
   useValidateOrderImportMutation,
   useImportOrdersMutation,

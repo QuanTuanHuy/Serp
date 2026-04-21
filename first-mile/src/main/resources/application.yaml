@@ -38,6 +38,7 @@ spring:
         - classpath:db/migration/post-office-staff.sql
         - classpath:db/migration/vehicle.sql
         - classpath:db/migration/trip.sql
+        - classpath:db/migration/pickup-checkin.sql
         - classpath:db/migration/kafka-dlq-message.sql
   messages:
     basename: i18n/messages

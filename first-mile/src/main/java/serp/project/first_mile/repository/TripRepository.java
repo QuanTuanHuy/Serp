@@ -35,6 +35,12 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
             Collection<TripStatus> statuses
     );
 
+    List<Trip> findByTenantIdAndTripDateAndStatusInOrderByPlannedStartTimeAscIdAsc(
+            Long tenantId,
+            LocalDate tripDate,
+            Collection<TripStatus> statuses
+    );
+
     @Query("""
             select (count(t) > 0)
             from Trip t

@@ -26,6 +26,8 @@ import serp.project.first_mile.dto.response.PickupOptimizationResponse;
 import serp.project.first_mile.enums.OrderStatus;
 import serp.project.first_mile.enums.PostOfficeStaffRole;
 import serp.project.first_mile.enums.PostOfficeStaffStatus;
+import serp.project.first_mile.enums.PickupOptimizationEffort;
+import serp.project.first_mile.enums.PickupOptimizationGoal;
 import serp.project.first_mile.enums.PickupShift;
 import serp.project.first_mile.enums.RoutingVehicle;
 import serp.project.first_mile.enums.TripStatus;
@@ -74,6 +76,19 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
     private static final double DEFAULT_DESTROY_RATE = 0.20;
     private static final double DEFAULT_INITIAL_TEMPERATURE = 50.0;
     private static final double DEFAULT_COOLING_RATE = 0.995;
+
+    private static final int FAST_MAX_ITERATIONS = 120;
+    private static final long FAST_MAX_RUNTIME_MILLIS = 800L;
+    private static final double FAST_DESTROY_RATE = 0.15;
+    private static final double FAST_INITIAL_TEMPERATURE = 35.0;
+    private static final double FAST_COOLING_RATE = 0.985;
+
+    private static final int THOROUGH_MAX_ITERATIONS = 650;
+    private static final long THOROUGH_MAX_RUNTIME_MILLIS = 4000L;
+    private static final double THOROUGH_DESTROY_RATE = 0.25;
+    private static final double THOROUGH_INITIAL_TEMPERATURE = 65.0;
+    private static final double THOROUGH_COOLING_RATE = 0.997;
+
     private static final boolean DEFAULT_ALLOW_LATENESS = true;
     private static final boolean DEFAULT_ENFORCE_PLANNING_END = false;
     private static final boolean DEFAULT_AUTO_ALLOW_LATENESS = false;
@@ -1096,30 +1111,74 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
     }
 
     private AlgorithmConfig buildConfig(AutoAssignPickupPlanRequest request, ShiftPlanningWindow shiftPlanningWindow) {
+        GoalPreset goalPreset = resolveGoalPreset(request.getOptimizationGoal());
+        EffortPreset effortPreset = resolveEffortPreset(request.getOptimizationEffort());
+
         int orderLimit = resolvePositiveInt(request.getOrderLimit(), DEFAULT_ORDER_LIMIT);
         double averageSpeedKmph = resolvePositiveDouble(request.getAverageSpeedKmph(), DEFAULT_AVERAGE_SPEED_KMPH);
         int serviceMinutesPerStop = resolvePositiveInt(request.getServiceMinutesPerStop(), DEFAULT_SERVICE_MINUTES_PER_STOP);
-        int maxIterations = resolvePositiveInt(request.getMaxIterations(), DEFAULT_MAX_ITERATIONS);
-        long maxRuntimeMillis = resolvePositiveLong(request.getMaxRuntimeMillis(), DEFAULT_MAX_RUNTIME_MILLIS);
+        int maxIterations = resolvePositiveInt(
+            request.getMaxIterations(),
+            resolvePositiveInt(effortPreset.maxIterations(), DEFAULT_MAX_ITERATIONS)
+        );
+        long maxRuntimeMillis = resolvePositiveLong(
+            request.getMaxRuntimeMillis(),
+            resolvePositiveLong(effortPreset.maxRuntimeMillis(), DEFAULT_MAX_RUNTIME_MILLIS)
+        );
 
-        double destroyRate = clamp(resolvePositiveDouble(request.getDestroyRate(), DEFAULT_DESTROY_RATE), 0.01, 0.90);
-        double initialTemperature = resolvePositiveDouble(request.getInitialTemperature(), DEFAULT_INITIAL_TEMPERATURE);
-        double coolingRate = clamp(resolvePositiveDouble(request.getCoolingRate(), DEFAULT_COOLING_RATE), 0.80, 0.9999);
+        double destroyRate = clamp(
+            resolvePositiveDouble(
+                request.getDestroyRate(),
+                resolvePositiveDouble(effortPreset.destroyRate(), DEFAULT_DESTROY_RATE)
+            ),
+            0.01,
+            0.90
+        );
+        double initialTemperature = resolvePositiveDouble(
+            request.getInitialTemperature(),
+            resolvePositiveDouble(effortPreset.initialTemperature(), DEFAULT_INITIAL_TEMPERATURE)
+        );
+        double coolingRate = clamp(
+            resolvePositiveDouble(
+                request.getCoolingRate(),
+                resolvePositiveDouble(effortPreset.coolingRate(), DEFAULT_COOLING_RATE)
+            ),
+            0.80,
+            0.9999
+        );
 
-        boolean allowLateness = request.getAllowLateness() == null
-                ? DEFAULT_AUTO_ALLOW_LATENESS
-                : request.getAllowLateness();
-        boolean enforcePlanningEnd = request.getEnforcePlanningEnd() == null
-                ? DEFAULT_AUTO_ENFORCE_PLANNING_END
-                : request.getEnforcePlanningEnd();
-        boolean enforceCapacity = request.getEnforceCapacity() == null
-                ? DEFAULT_ENFORCE_CAPACITY
-                : request.getEnforceCapacity();
+        boolean allowLateness = resolveBoolean(
+            request.getAllowLateness(),
+            goalPreset.allowLateness(),
+            DEFAULT_AUTO_ALLOW_LATENESS
+        );
+        boolean enforcePlanningEnd = resolveBoolean(
+            request.getEnforcePlanningEnd(),
+            goalPreset.enforcePlanningEnd(),
+            DEFAULT_AUTO_ENFORCE_PLANNING_END
+        );
+        boolean enforceCapacity = resolveBoolean(
+            request.getEnforceCapacity(),
+            goalPreset.enforceCapacity(),
+            DEFAULT_ENFORCE_CAPACITY
+        );
 
-        double distanceWeight = resolveNonNegativeDouble(request.getDistanceWeight(), DEFAULT_DISTANCE_WEIGHT);
-        double latenessWeight = resolveNonNegativeDouble(request.getLatenessWeight(), DEFAULT_LATENESS_WEIGHT);
-        double unassignedPenalty = resolveNonNegativeDouble(request.getUnassignedPenalty(), DEFAULT_UNASSIGNED_PENALTY);
-        double usedRoutePenalty = resolveNonNegativeDouble(request.getUsedRoutePenalty(), DEFAULT_USED_ROUTE_PENALTY);
+        double distanceWeight = resolveNonNegativeDouble(
+            request.getDistanceWeight(),
+            resolveNonNegativeDouble(goalPreset.distanceWeight(), DEFAULT_DISTANCE_WEIGHT)
+        );
+        double latenessWeight = resolveNonNegativeDouble(
+            request.getLatenessWeight(),
+            resolveNonNegativeDouble(goalPreset.latenessWeight(), DEFAULT_LATENESS_WEIGHT)
+        );
+        double unassignedPenalty = resolveNonNegativeDouble(
+            request.getUnassignedPenalty(),
+            resolveNonNegativeDouble(goalPreset.unassignedPenalty(), DEFAULT_UNASSIGNED_PENALTY)
+        );
+        double usedRoutePenalty = resolveNonNegativeDouble(
+            request.getUsedRoutePenalty(),
+            resolveNonNegativeDouble(goalPreset.usedRoutePenalty(), DEFAULT_USED_ROUTE_PENALTY)
+        );
         RoutingVehicle routingVehicle = RoutingVehicle.fromValue(request.getVehicle());
         int matrixBatchSize = resolvePositiveInt(distanceMatrixBatchSize, DEFAULT_DISTANCE_MATRIX_BATCH_SIZE);
         int matrixMaxNodes = resolvePositiveInt(distanceMatrixMaxNodes, DEFAULT_DISTANCE_MATRIX_MAX_NODES);
@@ -1151,15 +1210,58 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
     }
 
     private AlgorithmConfig buildConfig(ManualAssignPickupOrdersRequest request, ShiftPlanningWindow shiftPlanningWindow) {
+        GoalPreset goalPreset = resolveGoalPreset(request.getOptimizationGoal());
+        EffortPreset effortPreset = resolveEffortPreset(request.getOptimizationEffort());
+
         double averageSpeedKmph = resolvePositiveDouble(request.getAverageSpeedKmph(), DEFAULT_AVERAGE_SPEED_KMPH);
         int serviceMinutesPerStop = resolvePositiveInt(request.getServiceMinutesPerStop(), DEFAULT_SERVICE_MINUTES_PER_STOP);
-        boolean allowLateness = request.getAllowLateness() == null ? DEFAULT_ALLOW_LATENESS : request.getAllowLateness();
-        boolean enforcePlanningEnd = request.getEnforcePlanningEnd() == null
-                ? DEFAULT_ENFORCE_PLANNING_END
-                : request.getEnforcePlanningEnd();
-        boolean enforceCapacity = request.getEnforceCapacity() == null
-                ? DEFAULT_ENFORCE_CAPACITY
-                : request.getEnforceCapacity();
+        int maxIterations = resolvePositiveInt(effortPreset.maxIterations(), DEFAULT_MAX_ITERATIONS);
+        long maxRuntimeMillis = resolvePositiveLong(effortPreset.maxRuntimeMillis(), DEFAULT_MAX_RUNTIME_MILLIS);
+        double destroyRate = clamp(
+                resolvePositiveDouble(effortPreset.destroyRate(), DEFAULT_DESTROY_RATE),
+                0.01,
+                0.90
+        );
+        double initialTemperature = resolvePositiveDouble(
+                effortPreset.initialTemperature(),
+                DEFAULT_INITIAL_TEMPERATURE
+        );
+        double coolingRate = clamp(
+                resolvePositiveDouble(effortPreset.coolingRate(), DEFAULT_COOLING_RATE),
+                0.80,
+                0.9999
+        );
+        boolean allowLateness = resolveBoolean(
+                request.getAllowLateness(),
+                goalPreset.allowLateness(),
+                DEFAULT_ALLOW_LATENESS
+        );
+        boolean enforcePlanningEnd = resolveBoolean(
+                request.getEnforcePlanningEnd(),
+                goalPreset.enforcePlanningEnd(),
+                DEFAULT_ENFORCE_PLANNING_END
+        );
+        boolean enforceCapacity = resolveBoolean(
+                request.getEnforceCapacity(),
+                goalPreset.enforceCapacity(),
+                DEFAULT_ENFORCE_CAPACITY
+        );
+        double distanceWeight = resolveNonNegativeDouble(
+                goalPreset.distanceWeight(),
+                DEFAULT_DISTANCE_WEIGHT
+        );
+        double latenessWeight = resolveNonNegativeDouble(
+                goalPreset.latenessWeight(),
+                DEFAULT_LATENESS_WEIGHT
+        );
+        double unassignedPenalty = resolveNonNegativeDouble(
+                goalPreset.unassignedPenalty(),
+                DEFAULT_UNASSIGNED_PENALTY
+        );
+        double usedRoutePenalty = resolveNonNegativeDouble(
+                goalPreset.usedRoutePenalty(),
+                DEFAULT_USED_ROUTE_PENALTY
+        );
         int matrixBatchSize = resolvePositiveInt(distanceMatrixBatchSize, DEFAULT_DISTANCE_MATRIX_BATCH_SIZE);
         int matrixMaxNodes = resolvePositiveInt(distanceMatrixMaxNodes, DEFAULT_DISTANCE_MATRIX_MAX_NODES);
 
@@ -1170,18 +1272,18 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 DEFAULT_ORDER_LIMIT,
                 averageSpeedKmph,
                 serviceMinutesPerStop,
-                DEFAULT_MAX_ITERATIONS,
-                DEFAULT_MAX_RUNTIME_MILLIS,
-                DEFAULT_DESTROY_RATE,
-                DEFAULT_INITIAL_TEMPERATURE,
-                DEFAULT_COOLING_RATE,
+                maxIterations,
+                maxRuntimeMillis,
+                destroyRate,
+                initialTemperature,
+                coolingRate,
                 allowLateness,
                 enforcePlanningEnd,
                 enforceCapacity,
-                DEFAULT_DISTANCE_WEIGHT,
-                DEFAULT_LATENESS_WEIGHT,
-                DEFAULT_UNASSIGNED_PENALTY,
-                DEFAULT_USED_ROUTE_PENALTY,
+                distanceWeight,
+                latenessWeight,
+                unassignedPenalty,
+                usedRoutePenalty,
                 RoutingVehicle.fromValue(request.getVehicle()),
                 matrixBatchSize,
                 matrixMaxNodes,
@@ -1526,6 +1628,9 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
     }
 
     private AlgorithmConfig buildConfig(OptimizePickupPlanRequest request) {
+        GoalPreset goalPreset = resolveGoalPreset(request.getOptimizationGoal());
+        EffortPreset effortPreset = resolveEffortPreset(request.getOptimizationEffort());
+
         LocalDateTime planningStartTime = request.getPlanningStartTime() == null
                 ? LocalDateTime.now()
                 : request.getPlanningStartTime();
@@ -1541,25 +1646,68 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         int orderLimit = resolvePositiveInt(request.getOrderLimit(), DEFAULT_ORDER_LIMIT);
         double averageSpeedKmph = resolvePositiveDouble(request.getAverageSpeedKmph(), DEFAULT_AVERAGE_SPEED_KMPH);
         int serviceMinutesPerStop = resolvePositiveInt(request.getServiceMinutesPerStop(), DEFAULT_SERVICE_MINUTES_PER_STOP);
-        int maxIterations = resolvePositiveInt(request.getMaxIterations(), DEFAULT_MAX_ITERATIONS);
-        long maxRuntimeMillis = resolvePositiveLong(request.getMaxRuntimeMillis(), DEFAULT_MAX_RUNTIME_MILLIS);
+        int maxIterations = resolvePositiveInt(
+            request.getMaxIterations(),
+            resolvePositiveInt(effortPreset.maxIterations(), DEFAULT_MAX_ITERATIONS)
+        );
+        long maxRuntimeMillis = resolvePositiveLong(
+            request.getMaxRuntimeMillis(),
+            resolvePositiveLong(effortPreset.maxRuntimeMillis(), DEFAULT_MAX_RUNTIME_MILLIS)
+        );
 
-        double destroyRate = clamp(resolvePositiveDouble(request.getDestroyRate(), DEFAULT_DESTROY_RATE), 0.01, 0.90);
-        double initialTemperature = resolvePositiveDouble(request.getInitialTemperature(), DEFAULT_INITIAL_TEMPERATURE);
-        double coolingRate = clamp(resolvePositiveDouble(request.getCoolingRate(), DEFAULT_COOLING_RATE), 0.80, 0.9999);
+        double destroyRate = clamp(
+            resolvePositiveDouble(
+                request.getDestroyRate(),
+                resolvePositiveDouble(effortPreset.destroyRate(), DEFAULT_DESTROY_RATE)
+            ),
+            0.01,
+            0.90
+        );
+        double initialTemperature = resolvePositiveDouble(
+            request.getInitialTemperature(),
+            resolvePositiveDouble(effortPreset.initialTemperature(), DEFAULT_INITIAL_TEMPERATURE)
+        );
+        double coolingRate = clamp(
+            resolvePositiveDouble(
+                request.getCoolingRate(),
+                resolvePositiveDouble(effortPreset.coolingRate(), DEFAULT_COOLING_RATE)
+            ),
+            0.80,
+            0.9999
+        );
 
-        boolean allowLateness = request.getAllowLateness() == null ? DEFAULT_ALLOW_LATENESS : request.getAllowLateness();
-        boolean enforcePlanningEnd = request.getEnforcePlanningEnd() == null
-                ? DEFAULT_ENFORCE_PLANNING_END
-                : request.getEnforcePlanningEnd();
-        boolean enforceCapacity = request.getEnforceCapacity() == null
-                ? DEFAULT_ENFORCE_CAPACITY
-                : request.getEnforceCapacity();
+        boolean allowLateness = resolveBoolean(
+            request.getAllowLateness(),
+            goalPreset.allowLateness(),
+            DEFAULT_ALLOW_LATENESS
+        );
+        boolean enforcePlanningEnd = resolveBoolean(
+            request.getEnforcePlanningEnd(),
+            goalPreset.enforcePlanningEnd(),
+            DEFAULT_ENFORCE_PLANNING_END
+        );
+        boolean enforceCapacity = resolveBoolean(
+            request.getEnforceCapacity(),
+            goalPreset.enforceCapacity(),
+            DEFAULT_ENFORCE_CAPACITY
+        );
 
-        double distanceWeight = resolveNonNegativeDouble(request.getDistanceWeight(), DEFAULT_DISTANCE_WEIGHT);
-        double latenessWeight = resolveNonNegativeDouble(request.getLatenessWeight(), DEFAULT_LATENESS_WEIGHT);
-        double unassignedPenalty = resolveNonNegativeDouble(request.getUnassignedPenalty(), DEFAULT_UNASSIGNED_PENALTY);
-        double usedRoutePenalty = resolveNonNegativeDouble(request.getUsedRoutePenalty(), DEFAULT_USED_ROUTE_PENALTY);
+        double distanceWeight = resolveNonNegativeDouble(
+            request.getDistanceWeight(),
+            resolveNonNegativeDouble(goalPreset.distanceWeight(), DEFAULT_DISTANCE_WEIGHT)
+        );
+        double latenessWeight = resolveNonNegativeDouble(
+            request.getLatenessWeight(),
+            resolveNonNegativeDouble(goalPreset.latenessWeight(), DEFAULT_LATENESS_WEIGHT)
+        );
+        double unassignedPenalty = resolveNonNegativeDouble(
+            request.getUnassignedPenalty(),
+            resolveNonNegativeDouble(goalPreset.unassignedPenalty(), DEFAULT_UNASSIGNED_PENALTY)
+        );
+        double usedRoutePenalty = resolveNonNegativeDouble(
+            request.getUsedRoutePenalty(),
+            resolveNonNegativeDouble(goalPreset.usedRoutePenalty(), DEFAULT_USED_ROUTE_PENALTY)
+        );
         RoutingVehicle routingVehicle = RoutingVehicle.fromValue(request.getVehicle());
         int matrixBatchSize = resolvePositiveInt(distanceMatrixBatchSize, DEFAULT_DISTANCE_MATRIX_BATCH_SIZE);
         int matrixMaxNodes = resolvePositiveInt(distanceMatrixMaxNodes, DEFAULT_DISTANCE_MATRIX_MAX_NODES);
@@ -1727,6 +1875,91 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         return new AppException(ErrorCode.INVALID_REQUEST, detail);
     }
 
+    private GoalPreset resolveGoalPreset(PickupOptimizationGoal optimizationGoal) {
+        PickupOptimizationGoal effectiveGoal = optimizationGoal == null
+                ? PickupOptimizationGoal.BALANCED
+                : optimizationGoal;
+
+        return switch (effectiveGoal) {
+            case BALANCED -> new GoalPreset(
+                    null,
+                    null,
+                    null,
+                    DEFAULT_DISTANCE_WEIGHT,
+                    DEFAULT_LATENESS_WEIGHT,
+                    DEFAULT_UNASSIGNED_PENALTY,
+                    DEFAULT_USED_ROUTE_PENALTY
+            );
+            case ON_TIME_PRIORITY -> new GoalPreset(
+                    false,
+                    true,
+                    true,
+                    0.9,
+                    2.2,
+                    450.0,
+                    3.5
+            );
+            case COST_EFFICIENCY -> new GoalPreset(
+                    false,
+                    true,
+                    true,
+                    2.0,
+                    0.2,
+                    350.0,
+                    5.0
+            );
+            case MAX_ASSIGNMENT -> new GoalPreset(
+                    true,
+                    false,
+                    true,
+                    0.7,
+                    0.1,
+                    900.0,
+                    1.2
+            );
+        };
+    }
+
+    private EffortPreset resolveEffortPreset(PickupOptimizationEffort optimizationEffort) {
+        PickupOptimizationEffort effectiveEffort = optimizationEffort == null
+                ? PickupOptimizationEffort.STANDARD
+                : optimizationEffort;
+
+        return switch (effectiveEffort) {
+            case FAST -> new EffortPreset(
+                    FAST_MAX_ITERATIONS,
+                    FAST_MAX_RUNTIME_MILLIS,
+                    FAST_DESTROY_RATE,
+                    FAST_INITIAL_TEMPERATURE,
+                    FAST_COOLING_RATE
+            );
+            case STANDARD -> new EffortPreset(
+                    DEFAULT_MAX_ITERATIONS,
+                    DEFAULT_MAX_RUNTIME_MILLIS,
+                    DEFAULT_DESTROY_RATE,
+                    DEFAULT_INITIAL_TEMPERATURE,
+                    DEFAULT_COOLING_RATE
+            );
+            case THOROUGH -> new EffortPreset(
+                    THOROUGH_MAX_ITERATIONS,
+                    THOROUGH_MAX_RUNTIME_MILLIS,
+                    THOROUGH_DESTROY_RATE,
+                    THOROUGH_INITIAL_TEMPERATURE,
+                    THOROUGH_COOLING_RATE
+            );
+        };
+    }
+
+    private boolean resolveBoolean(Boolean explicitValue, Boolean presetValue, boolean defaultValue) {
+        if (explicitValue != null) {
+            return explicitValue;
+        }
+        if (presetValue != null) {
+            return presetValue;
+        }
+        return defaultValue;
+    }
+
     private boolean isValidCoordinate(double latitude, double longitude) {
         return latitude >= -90.0 && latitude <= 90.0
                 && longitude >= -180.0 && longitude <= 180.0;
@@ -1780,6 +2013,26 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
 
     private double round3(double value) {
         return Math.round(value * 1000.0) / 1000.0;
+    }
+
+    private record GoalPreset(
+            Boolean allowLateness,
+            Boolean enforcePlanningEnd,
+            Boolean enforceCapacity,
+            Double distanceWeight,
+            Double latenessWeight,
+            Double unassignedPenalty,
+            Double usedRoutePenalty
+    ) {
+    }
+
+    private record EffortPreset(
+            Integer maxIterations,
+            Long maxRuntimeMillis,
+            Double destroyRate,
+            Double initialTemperature,
+            Double coolingRate
+    ) {
     }
 
 }

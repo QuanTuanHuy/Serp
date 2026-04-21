@@ -1,5 +1,5 @@
 /**
- * Author: GitHub Copilot
+ * Author: Nguyen The Anh
  * Description: Part of Serp Project - Dispatcher candidate order item
  */
 
