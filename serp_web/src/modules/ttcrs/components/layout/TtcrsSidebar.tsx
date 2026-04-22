@@ -65,9 +65,9 @@ const NAV_SECTIONS: NavSection[] = [
     heading: 'Planning',
     items: [
       {
-        name: 'Transport Plans',
-        href: '/ttcrs/dispatcher/plans/create',
-        icon: Route,
+        name: 'Truck Routes',
+        href: '/ttcrs/dispatcher/routes',
+        icon: Truck,
       },
     ],
   },

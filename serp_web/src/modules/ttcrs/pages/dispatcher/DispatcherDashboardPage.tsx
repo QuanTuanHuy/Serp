@@ -208,7 +208,7 @@ export function DispatcherDashboardPage() {
   const [sortBy, setSortBy] = useState<SortableRequestField>('id');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
-  // Multi-select for PLANNED → PENDING revert
+  // Multi-select for status revert actions
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [updateStatus, { isLoading: isReverting }] =
     useUpdateDispatcherRequestsStatusMutation();
@@ -294,8 +294,9 @@ export function DispatcherDashboardPage() {
   };
 
   const isPlannedTab = activeTab === 'PLANNED';
-  // Total columns: checkbox col only on PLANNED tab
-  const colCount = isPlannedTab ? 8 : 7;
+  const isInProgressTab = activeTab === 'IN_PROGRESS';
+  const showCheckbox = isPlannedTab || isInProgressTab;
+  const colCount = showCheckbox ? 8 : 7;
 
   const toggleRow = (id: number) => {
     setSelectedIds((prev) => {
@@ -336,6 +337,22 @@ export function DispatcherDashboardPage() {
     }
   };
 
+  const handleRevertToPlanned = async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      await updateStatus({
+        requestIds: Array.from(selectedIds),
+        status: 'PLANNED',
+      }).unwrap();
+      toast.success(
+        `${selectedIds.size} request${selectedIds.size > 1 ? 's' : ''} reverted to Planned.`
+      );
+      setSelectedIds(new Set());
+    } catch {
+      toast.error('Failed to revert requests. Please try again.');
+    }
+  };
+
   const sortableHeadClass =
     'cursor-pointer select-none px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors';
 
@@ -368,7 +385,7 @@ export function DispatcherDashboardPage() {
 
         {/* Action buttons */}
         <div className='flex items-center gap-2'>
-          {/* Revert to Pending — only visible on PLANNED tab with selection */}
+          {/* Revert to Pending — PLANNED tab */}
           {isPlannedTab && selectedIds.size > 0 && (
             <Button
               id='dispatcher-revert-to-pending-btn'
@@ -385,6 +402,27 @@ export function DispatcherDashboardPage() {
               )}
               Revert to Pending
               <span className='ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-bold text-amber-700 dark:bg-amber-900 dark:text-amber-300'>
+                {selectedIds.size}
+              </span>
+            </Button>
+          )}
+          {/* Revert to Planned — IN_PROGRESS tab */}
+          {isInProgressTab && selectedIds.size > 0 && (
+            <Button
+              id='dispatcher-revert-to-planned-btn'
+              variant='outline'
+              size='sm'
+              onClick={handleRevertToPlanned}
+              disabled={isReverting}
+              className='border-blue-300 text-blue-700 hover:bg-blue-50 hover:text-blue-800 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-950'
+            >
+              {isReverting ? (
+                <Loader2 className='h-4 w-4 animate-spin' />
+              ) : (
+                <RotateCcw className='h-4 w-4' />
+              )}
+              Revert to Planned
+              <span className='ml-1 rounded-full bg-blue-100 px-1.5 py-0.5 text-xs font-bold text-blue-700 dark:bg-blue-900 dark:text-blue-300'>
                 {selectedIds.size}
               </span>
             </Button>
@@ -442,7 +480,7 @@ export function DispatcherDashboardPage() {
             <Table>
               <TableHeader>
                 <TableRow className='bg-muted/20 hover:bg-muted/20'>
-                  {isPlannedTab && (
+                  {showCheckbox && (
                     <TableHead className='w-10 px-4 py-3'>
                       <Checkbox
                         checked={
@@ -513,11 +551,12 @@ export function DispatcherDashboardPage() {
                       id={`dispatcher-request-row-${req.id}`}
                       className={cn(
                         'cursor-pointer hover:bg-muted/50 transition-colors',
-                        isPlannedTab && selectedIds.has(req.id) && 'bg-amber-50 dark:bg-amber-950/20'
+                        isPlannedTab && selectedIds.has(req.id) && 'bg-amber-50 dark:bg-amber-950/20',
+                        isInProgressTab && selectedIds.has(req.id) && 'bg-blue-50 dark:bg-blue-950/20'
                       )}
                       onClick={() => setSelectedRequest(req)}
                     >
-                      {isPlannedTab && (
+                      {showCheckbox && (
                         <TableCell
                           className='px-4 py-3'
                           onClick={(e) => { e.stopPropagation(); toggleRow(req.id); }}

@@ -210,6 +210,7 @@ export interface AlgorithmRouteElement {
   arrivalTime: string;
   departureTime: string;
   travelTime: number;
+  requestId: number | null;
 }
 
 export interface AlgorithmTruck {
@@ -238,6 +239,76 @@ export interface TransportPlanResult {
   unscheduledImEmptyRequests: unknown[];
   unscheduledImLadenRequests: unknown[];
   statisticInformation: AlgorithmStatistics;
+}
+
+// -------------------------------------------------------------------------
+// Save transport plan (Step 3 Finish)
+// -------------------------------------------------------------------------
+
+export interface SaveTransportPlanStopPayload {
+  sequence: number;
+  locationCode: string;
+  action: string;
+  plannedArrival: string;
+  requestId: number | null;
+}
+
+export interface SaveTransportPlanItemPayload {
+  truckCode: string;
+  driverName: string | null;
+  stops: SaveTransportPlanStopPayload[];
+}
+
+export interface SaveTransportPlanPayload {
+  plans: SaveTransportPlanItemPayload[];
+}
+
+export type TransportPlanStatus = 'CREATED' | 'EXECUTING' | 'COMPLETED' | 'CANCELLED';
+
+export type StopAction =
+  | 'DEPOT_START'
+  | 'DEPOT_END'
+  | 'PICKUP_TRAILER'
+  | 'DROP_TRAILER'
+  | 'PICKUP_CONTAINER'
+  | 'DELIVERY_CONTAINER';
+
+export interface TransportPlanSavedItem {
+  id: number;
+  truckId: number;
+  truckCode: string;
+  driverId: number | null;
+  driverName: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  status: TransportPlanStatus;
+  stopCount: number;
+}
+
+// Re-used for the list view
+export type TransportPlanListItem = TransportPlanSavedItem;
+
+export interface TransportPlanStopDetail {
+  id: number;
+  sequence: number;
+  locationCode: string;
+  action: StopAction;
+  plannedArrivalTime: string | null;
+  actualArrivalTime: string | null;
+  requestId: number | null;
+}
+
+export interface TransportPlanDetail {
+  id: number;
+  truckId: number;
+  truckCode: string;
+  driverId: number | null;
+  driverName: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  status: TransportPlanStatus;
+  createdStamp: string | null;
+  stops: TransportPlanStopDetail[];
 }
 
 // Normalized row used by the Resources page

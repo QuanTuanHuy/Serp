@@ -255,18 +255,7 @@ public class AlgorithmService {
                 })
                 .toArray(Mooc[]::new);
 
-        String nowStr      = LocalDateTime.now().format(DT_FMT);
         String tomorrowStr = LocalDateTime.of(9999, 12, 31, 23, 59, 59).format(DT_FMT);
-
-        Truck[] truckArr = trucks.stream()
-                .map(t -> {
-                    String depot = t.getCurrentLocationCode() != null ? t.getCurrentLocationCode() : "";
-                    return new Truck(0, t.getCode(), 0.0, 0, "", "", depot, depot,
-                            nowStr, tomorrowStr, "",
-                            truckReturnMap.getOrDefault(t.getId(), new String[0]),
-                            new Intervals[0]);
-                })
-                .toArray(Truck[]::new);
 
         // ------------------------------------------------------------------ //
         // E. Compute OSRM distance matrix
@@ -297,7 +286,69 @@ public class AlgorithmService {
         }
 
         // ------------------------------------------------------------------ //
-        // F. ConfigParam
+        // F. Build truck array — start time derived backwards from earliest request
+        // ------------------------------------------------------------------ //
+
+        // Earliest earlyAtSrc across all selected requests
+        LocalDateTime minEarlyAtSrc = requests.stream()
+                .map(req -> req.getEarlyAtSrc() != null ? req.getEarlyAtSrc() : defaultEarly)
+                .min(Comparator.naturalOrder())
+                .orElse(defaultEarly);
+
+        // Source location of that earliest request (reference "first stop")
+        String minEarlySrcCode = requests.stream()
+                .filter(req -> req.getEarlyAtSrc() != null)
+                .min(Comparator.comparing(RequestEntity::getEarlyAtSrc))
+                .map(RequestEntity::getSrcLocationCode)
+                .orElse(null);
+
+        // Travel-time lookup built from the OSRM matrix
+        Map<String, Map<String, Double>> travelLookup = new HashMap<>();
+        for (DistanceElement de : distanceElements) {
+            travelLookup.computeIfAbsent(de.getSrcCode(), k -> new HashMap<>())
+                        .put(de.getDestCode(), de.getTravelTime());
+        }
+
+        Truck[] truckArr = trucks.stream()
+                .map(t -> {
+                    String depot = t.getCurrentLocationCode() != null ? t.getCurrentLocationCode() : "";
+
+                    // Walk backwards from minEarlyAtSrc:
+                    //   minEarlyAtSrc − travel(nearestTrailerDepot → firstSrcLoc)
+                    //                 − travel(truckDepot → nearestTrailerDepot)
+                    long backwardSeconds = 0;
+
+                    if (minEarlySrcCode != null && !trailerDepotCodes.isEmpty()) {
+                        String nearestTrailerDepot = trailerDepotCodes.stream()
+                                .min(Comparator.comparingDouble(td ->
+                                        travelLookup.getOrDefault(depot, Map.of())
+                                                    .getOrDefault(td, Double.MAX_VALUE / 2)))
+                                .orElse(null);
+                        if (nearestTrailerDepot != null) {
+                            backwardSeconds += travelLookup.getOrDefault(depot, Map.of())
+                                    .getOrDefault(nearestTrailerDepot, 0.0).longValue();
+                            backwardSeconds += travelLookup.getOrDefault(nearestTrailerDepot, Map.of())
+                                    .getOrDefault(minEarlySrcCode, 0.0).longValue();
+                        }
+                    } else if (minEarlySrcCode != null && !depot.isEmpty()) {
+                        // No trailer depot: truck goes directly to first stop
+                        backwardSeconds += travelLookup.getOrDefault(depot, Map.of())
+                                .getOrDefault(minEarlySrcCode, 0.0).longValue();
+                    }
+
+                    LocalDateTime startTime = minEarlyAtSrc.minusSeconds(backwardSeconds);
+                    log.debug("Truck {} startWorkingTime = {} (minEarlyAtSrc={}, backwardSec={})",
+                            t.getCode(), startTime.format(DT_FMT), minEarlyAtSrc.format(DT_FMT), backwardSeconds);
+
+                    return new Truck(0, t.getCode(), 0.0, 0, "", "", depot, depot,
+                            startTime.format(DT_FMT), tomorrowStr, "",
+                            truckReturnMap.getOrDefault(t.getId(), new String[0]),
+                            new Intervals[0]);
+                })
+                .toArray(Truck[]::new);
+
+        // ------------------------------------------------------------------ //
+        // G. ConfigParam
         // ------------------------------------------------------------------ //
         ConfigParam params = new ConfigParam(
                 30, 30, 0, 0, null,
@@ -352,16 +403,39 @@ public class AlgorithmService {
         }
 
         // ------------------------------------------------------------------ //
-        // I. Run solver
+        // I. Run solver → post-process → serialize
         // ------------------------------------------------------------------ //
-        return runSolver(input);
+
+        // Build mapping: algorithm internal id (reqIdx) → DB entity id
+        Map<Long, Long> algoId2DbId = new HashMap<>();
+        for (int i = 0; i < requests.size(); i++) {
+            algoId2DbId.put((long) i, requests.get(i).getId());
+        }
+
+        TruckMoocContainerOutputJson result = runSolver(input);
+        recalculateDepotTimings(result, travelLookup);
+        remapRequestIds(result, algoId2DbId);
+
+        Gson gson = new Gson();
+        String json = gson.toJson(result);
+
+        try {
+            Path debugOutputPath = Path.of(DEBUG_OUTPUT_PATH);
+            Files.createDirectories(debugOutputPath.getParent());
+            Files.writeString(debugOutputPath, json);
+            log.info("Debug output JSON written to: {}", debugOutputPath.toAbsolutePath());
+        } catch (Exception e) {
+            log.warn("Could not write debug output JSON: {}", e.getMessage());
+        }
+
+        return json;
     }
 
     // =========================================================================
     // Private helpers
     // =========================================================================
 
-    private String runSolver(ContainerTruckMoocInput input) {
+    private TruckMoocContainerOutputJson runSolver(ContainerTruckMoocInput input) {
         Gson gson = new Gson();
         Path tmpIn  = null;
         Path tmpOut = null;
@@ -393,11 +467,10 @@ public class AlgorithmService {
             solver.shaw1st = 0.5;
             solver.shaw2nd = 0.2;
             solver.	shaw3rd = 0.1;
-    
+
             solver.temperature = 200;
             solver.cooling_rate = 0.9995;
             solver.nTabu = 5;
-
 
             solver.setInitializationStrategy(new FPIUSInit());
             solver.initializeSolution();
@@ -406,19 +479,8 @@ public class AlgorithmService {
             solver.optimizeSolution(tmpOut.toString());
 
             TruckMoocContainerOutputJson result = solver.createFormatedSolution();
-            String json = gson.toJson(result);
-
-            try {
-                Path debugOutputPath = Path.of(DEBUG_OUTPUT_PATH);
-                Files.createDirectories(debugOutputPath.getParent());
-                Files.writeString(debugOutputPath, json);
-                log.info("Debug output JSON written to: {}", debugOutputPath.toAbsolutePath());
-            } catch (Exception e) {
-                log.warn("Could not write debug output JSON: {}", e.getMessage());
-            }
-
-            log.info("Algorithm completed. Result JSON length={}", json.length());
-            return json;
+            log.info("Algorithm completed. Truck routes={}", result.getTruckRoutes() != null ? result.getTruckRoutes().length : 0);
+            return result;
 
         } catch (Exception e) {
             log.error("Algorithm execution failed", e);
@@ -525,6 +587,100 @@ public class AlgorithmService {
                         com.example.ttcrs.dto.request.resource.ResourceReturnDepotDTO::getResourceId,
                         c -> c.getReturnDepotCodes().toArray(new String[0]),
                         (a, b) -> a));
+    }
+
+    /**
+     * After the solver determines the exact route for each truck, recalculate
+     * the START_TRUCK departure time and PICKUP_MOOC arrival/departure time by
+     * walking backwards from the actual first operational stop:
+     *
+     *   moocArrival  = firstOpArrival − travel(moocDepot  → firstOpStop)
+     *   truckDepart  = moocArrival    − travel(truckDepot → moocDepot)
+     *
+     * This corrects any error in the initial estimate (which assumed the nearest
+     * trailer depot and the globally earliest request source).
+     */
+    private void recalculateDepotTimings(TruckMoocContainerOutputJson result,
+                                          Map<String, Map<String, Double>> travelLookup) {
+        if (result.getTruckRoutes() == null) return;
+
+        for (com.example.ttcrs.algorithm.models.routing.TruckRoute route : result.getTruckRoutes()) {
+            com.example.ttcrs.algorithm.models.routing.RouteElement[] nodes = route.getNodes();
+            if (nodes == null || nodes.length < 3) continue;
+
+            int moocPickupIdx = -1;
+            int firstOpIdx    = -1;
+
+            for (int i = 0; i < nodes.length; i++) {
+                String action = nodes[i].getAction();
+                if (TruckContainerSolver.START_MOOC.equals(action)) {
+                    moocPickupIdx = i;
+                } else if (firstOpIdx == -1 && !isDepotAction(action)) {
+                    firstOpIdx = i;
+                }
+            }
+
+            if (moocPickupIdx < 0 || firstOpIdx < 0) continue;
+
+            String truckDepotCode = nodes[0].getLocationCode();
+            String moocDepotCode  = nodes[moocPickupIdx].getLocationCode();
+            String firstOpCode    = nodes[firstOpIdx].getLocationCode();
+
+            LocalDateTime firstOpArrival = parseOrNull(nodes[firstOpIdx].getArrivalTime());
+            if (firstOpArrival == null) continue;
+
+            double moocToFirstOp = travelLookup.getOrDefault(moocDepotCode, Map.of())
+                                               .getOrDefault(firstOpCode, 0.0);
+            double truckToMooc   = travelLookup.getOrDefault(truckDepotCode, Map.of())
+                                               .getOrDefault(moocDepotCode, 0.0);
+
+            LocalDateTime moocArrival = firstOpArrival.minusSeconds((long) moocToFirstOp);
+            LocalDateTime truckDepart = moocArrival.minusSeconds((long) truckToMooc);
+
+            nodes[0].setArrivalTime(truckDepart.format(DT_FMT));
+            nodes[0].setDepartureTime(truckDepart.format(DT_FMT));
+            nodes[moocPickupIdx].setArrivalTime(moocArrival.format(DT_FMT));
+            nodes[moocPickupIdx].setDepartureTime(moocArrival.format(DT_FMT));
+
+            String truckCode = route.getTruck() != null ? route.getTruck().getCode() : "?";
+            log.debug("Post-process {}: truckDepot={} departs={}, moocDepot={} arrives={}",
+                    truckCode, truckDepotCode, truckDepart.format(DT_FMT),
+                    moocDepotCode, moocArrival.format(DT_FMT));
+        }
+    }
+
+    /**
+     * Replaces the algorithm-internal request IDs (reqIdx) stored in each
+     * RouteElement with the actual DB entity IDs, using the mapping built
+     * before the solver runs.
+     */
+    private void remapRequestIds(TruckMoocContainerOutputJson result, Map<Long, Long> algoId2DbId) {
+        if (result.getTruckRoutes() == null) return;
+        for (com.example.ttcrs.algorithm.models.routing.TruckRoute route : result.getTruckRoutes()) {
+            com.example.ttcrs.algorithm.models.routing.RouteElement[] nodes = route.getNodes();
+            if (nodes == null) continue;
+            for (com.example.ttcrs.algorithm.models.routing.RouteElement node : nodes) {
+                if (node.getRequestId() != null) {
+                    node.setRequestId(algoId2DbId.get(node.getRequestId()));
+                }
+            }
+        }
+    }
+
+    private boolean isDepotAction(String action) {
+        return TruckContainerSolver.START_TRUCK.equals(action)
+            || TruckContainerSolver.END_TRUCK.equals(action)
+            || TruckContainerSolver.START_MOOC.equals(action)
+            || TruckContainerSolver.END_MOOC.equals(action);
+    }
+
+    private LocalDateTime parseOrNull(String dt) {
+        if (dt == null || dt.isEmpty()) return null;
+        try {
+            return LocalDateTime.parse(dt, DT_FMT);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private void silentDelete(Path path) {

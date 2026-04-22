@@ -9,6 +9,10 @@ import type {
   UpdateRequestsStatusPayload,
   CreateTransportPlanInputPayload,
   TransportPlanResult,
+  SaveTransportPlanPayload,
+  TransportPlanSavedItem,
+  TransportPlanListItem,
+  TransportPlanDetail,
   CreateLocationPayload,
   UpdateLocationPayload,
   LocationItem,
@@ -348,6 +352,30 @@ export const ttcrsApi = api.injectEndpoints({
       extraOptions: { service: 'ttcrs' },
       invalidatesTags: [{ type: 'ttcrs/Resource', id: 'DRIVERS' }],
     }),
+
+    // GET /ttcrs/api/v1/dispatcher/transport-plans
+    getTransportPlans: builder.query<TtcrsApiResponse<TransportPlanListItem[]>, void>({
+      query: () => ({ url: '/dispatcher/transport-plans', method: 'GET' }),
+      extraOptions: { service: 'ttcrs' },
+      providesTags: [{ type: 'ttcrs/Request', id: 'TRANSPORT_PLANS' }],
+    }),
+
+    // GET /ttcrs/api/v1/dispatcher/transport-plans/{id}
+    getTransportPlanDetail: builder.query<TtcrsApiResponse<TransportPlanDetail>, number>({
+      query: (id) => ({ url: `/dispatcher/transport-plans/${id}`, method: 'GET' }),
+      extraOptions: { service: 'ttcrs' },
+      providesTags: (_, __, id) => [{ type: 'ttcrs/Request', id: `TRANSPORT_PLAN_${id}` }],
+    }),
+
+    // POST /ttcrs/api/v1/dispatcher/transport-plans
+    saveTransportPlans: builder.mutation<
+      TtcrsApiResponse<TransportPlanSavedItem[]>,
+      SaveTransportPlanPayload
+    >({
+      query: (body) => ({ url: '/dispatcher/transport-plans', method: 'POST', body }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: [{ type: 'ttcrs/Request', id: 'LIST' }],
+    }),
   }),
 });
 
@@ -377,4 +405,7 @@ export const {
   useCreateDispatcherDriverMutation,
   useUpdateDispatcherDriverMutation,
   useDeleteDispatcherDriverMutation,
+  useSaveTransportPlansMutation,
+  useGetTransportPlansQuery,
+  useGetTransportPlanDetailQuery,
 } = ttcrsApi;

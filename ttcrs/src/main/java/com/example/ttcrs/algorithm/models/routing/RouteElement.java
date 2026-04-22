@@ -7,8 +7,8 @@ public class RouteElement {
 	private String arrivalTime;
 	private String departureTime;
 	private int travelTime;
-	
-	
+	private Long requestId;  // null for depot/mooc stops; DB entity ID for operational stops
+
 	public RouteElement(String locationCode, String action,
 			String arrivalTime, String departureTime, int travelTime){
 		super();
@@ -17,6 +17,12 @@ public class RouteElement {
 		this.arrivalTime = arrivalTime;
 		this.departureTime = departureTime;
 		this.travelTime = travelTime;
+	}
+
+	public RouteElement(String locationCode, String action,
+			String arrivalTime, String departureTime, int travelTime, Long requestId){
+		this(locationCode, action, arrivalTime, departureTime, travelTime);
+		this.requestId = requestId;
 	}
 	public RouteElement() {
 		super();
@@ -53,6 +59,12 @@ public class RouteElement {
 	}
 	public void setTravelTime(int travelTime) {
 		this.travelTime = travelTime;
+	}
+	public Long getRequestId() {
+		return requestId;
+	}
+	public void setRequestId(Long requestId) {
+		this.requestId = requestId;
 	}
 }
 

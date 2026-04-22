@@ -166,7 +166,13 @@ public class RequestService {
                 .filter(r -> r.getTenantId().equals(tenantId))
                 .toList();
 
-        owned.forEach(r -> r.setStatus(dto.getStatus()));
+        owned.forEach(r -> {
+            r.setStatus(dto.getStatus());
+            // When reverting to PLANNED, detach from any transport plan
+            if (dto.getStatus() == RequestStatus.PLANNED) {
+                r.setTransportPlanId(null);
+            }
+        });
         List<RequestEntity> saved = requestRepository.saveAll(owned);
 
         return saved.stream()

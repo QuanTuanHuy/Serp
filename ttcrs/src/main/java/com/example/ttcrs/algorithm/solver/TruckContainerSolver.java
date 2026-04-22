@@ -314,21 +314,22 @@ public class TruckContainerSolver {
 			RouteElement[] nodes = new RouteElement[nb];
 
 			for(Point p = st; p != XR
-					.getTerminatingPointOfRoute(r); p = XR.next(p)) {			
+					.getTerminatingPointOfRoute(r); p = XR.next(p)) {
 
 				nodes[g] = new RouteElement(p.getLocationCode(), point2Type.get(p),
 						DateTimeUtils.unixTimeStamp2DateTime((long)(eat.getEarliestArrivalTime(p))),
-						DateTimeUtils.unixTimeStamp2DateTime((long)(eat.getEarliestArrivalTime(p) + serviceDuration.get(p))), 
-						(int)awm.getWeight(p, XR.next(p)));
+						DateTimeUtils.unixTimeStamp2DateTime((long)(eat.getEarliestArrivalTime(p) + serviceDuration.get(p))),
+						(int)awm.getWeight(p, XR.next(p)),
+						resolveAlgoRequestId(p));
 				g++;
 			}
-			
-			
 
 			nodes[g] = new RouteElement(XR.getTerminatingPointOfRoute(r).getLocationCode(),
 					point2Type.get(XR.getTerminatingPointOfRoute(r)),
 					DateTimeUtils.unixTimeStamp2DateTime((long)eat.getEarliestArrivalTime(en)),
-					DateTimeUtils.unixTimeStamp2DateTime((long)(eat.getEarliestArrivalTime(en) + serviceDuration.get(en))), 0);
+					DateTimeUtils.unixTimeStamp2DateTime((long)(eat.getEarliestArrivalTime(en) + serviceDuration.get(en))),
+					0,
+					resolveAlgoRequestId(en));
 			
 			TruckRoute br = new TruckRoute(truck, nb, (int)objective.getValue(), nodes);
 			brArr.add(br);
@@ -390,10 +391,25 @@ public class TruckContainerSolver {
 		StatisticInformation statisticInformation = new StatisticInformation(
 				this.nRequest,totalRejectReqs, objective.getValue(), nbTrucks);
 		
-		return new TruckMoocContainerOutputJson(truckRoutes, 
+		return new TruckMoocContainerOutputJson(truckRoutes,
 				ee, el, ie, il, statisticInformation);
 	}
-	
+
+	/**
+	 * Returns the algorithm-internal request id (= reqIdx from AlgorithmService)
+	 * for a given point, or null if the point is a depot/mooc/container stop.
+	 * AlgorithmService will remap these to actual DB entity IDs after solving.
+	 */
+	private Long resolveAlgoRequestId(Point p) {
+		Integer groupId = point2Group.get(p);
+		if (groupId == null) return null;
+		if (group2EE.containsKey(groupId)) return (long) group2EE.get(groupId).getId();
+		if (group2EL.containsKey(groupId)) return (long) group2EL.get(groupId).getId();
+		if (group2IE.containsKey(groupId)) return (long) group2IE.get(groupId).getId();
+		if (group2IL.containsKey(groupId)) return (long) group2IL.get(groupId).getId();
+		return null;
+	}
+
     public static void main(String[] args){
 		int[] nbReq = new int[]{8};
 		for(int k = 0; k < 1; k++){
