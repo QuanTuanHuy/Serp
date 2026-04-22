@@ -20,7 +20,8 @@ export type Logistics2ActiveModule =
   | 'outbound-shipments'
   | 'routes'
   | 'vehicles'
-  | 'vehicle-shippers';
+  | 'vehicle-shippers'
+  | 'vehicle-registration';
 
 interface ListViewState<TFilters extends object> {
   filters: TFilters;

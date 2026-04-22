@@ -28,6 +28,7 @@ import type {
   UpdateVehicleRequest,
   Vehicle,
   VehicleFilters,
+  VehicleUsageFilters,
   VehicleShipper,
   VehicleShipperFilters,
 } from '../types';
@@ -384,6 +385,28 @@ export const logistics2Api = api.injectEndpoints({
           : [{ type: 'logistics2/Vehicle', id: 'LIST' }],
     }),
 
+    getVehiclesForUsage: builder.query<
+      GeneralResponse<PageResponse<Vehicle>>,
+      ListQueryParams<VehicleUsageFilters> | void
+    >({
+      query: (args) => ({
+        url: '/vehicles/search-for-usage',
+        method: 'GET',
+        params: buildListParams(args?.filters, args?.pagination),
+      }),
+      extraOptions: LOGISTICS2_SERVICE,
+      providesTags: (result) =>
+        result?.data?.items
+          ? [
+              ...result.data.items.map(({ id }) => ({
+                type: 'logistics2/Vehicle' as const,
+                id,
+              })),
+              { type: 'logistics2/Vehicle', id: 'LIST' },
+            ]
+          : [{ type: 'logistics2/Vehicle', id: 'LIST' }],
+    }),
+
     getVehicleDetail: builder.query<GeneralResponse<Vehicle>, string>({
       query: (vehicleId) => ({
         url: `/vehicles/search/${vehicleId}`,
@@ -489,11 +512,21 @@ export const logistics2Api = api.injectEndpoints({
       GeneralResponse<null>,
       AssignVehicleShipperRequest
     >({
-      query: (data) => ({
-        url: '/vehicle-shippers/assign',
-        method: 'POST',
-        body: data,
-      }),
+      query: ({ vehicleId, workingDate, workingDay }) => {
+        const normalizedWorkingDate = workingDate || workingDay;
+
+        return {
+          url: '/vehicle-shippers/assign',
+          method: 'POST',
+          body: {
+            vehicleId,
+            ...(normalizedWorkingDate
+              ? { workingDate: normalizedWorkingDate }
+              : {}),
+            ...(workingDay ? { workingDay } : {}),
+          },
+        };
+      },
       extraOptions: LOGISTICS2_SERVICE,
       invalidatesTags: [{ type: 'logistics2/VehicleShipper', id: 'LIST' }],
     }),
@@ -550,6 +583,7 @@ export const {
   useCompleteRouteStopMutation,
   useAbortRouteStopMutation,
   useGetVehiclesQuery,
+  useGetVehiclesForUsageQuery,
   useGetVehicleDetailQuery,
   useCreateVehicleMutation,
   useUpdateVehicleMutation,

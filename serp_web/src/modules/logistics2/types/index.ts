@@ -360,7 +360,8 @@ export interface UpdateVehicleRequest {
 
 export interface AssignVehicleShipperRequest {
   vehicleId: string;
-  workingDate: string;
+  workingDate?: string;
+  workingDay?: string;
 }
 
 // Query filter types
@@ -397,6 +398,12 @@ export interface VehicleFilters {
   query?: string;
   vehicleType?: VehicleType;
   vehicleStatus?: VehicleStatus;
+}
+
+export interface VehicleUsageFilters {
+  query?: string;
+  vehicleType?: VehicleType;
+  workingDate?: string;
 }
 
 export interface VehicleShipperFilters {
