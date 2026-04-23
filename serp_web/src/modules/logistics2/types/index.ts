@@ -53,6 +53,7 @@ export type ShipmentStatus =
   | 'IMPORTED'
   | 'READY_TO_EXPORT'
   | 'DELIVERED';
+export type OutboundShipmentStatus = ShipmentStatus;
 export type SupplierStatus = 'ACTIVE' | 'INACTIVE';
 
 export type PlanOptimizationStatus =
@@ -145,6 +146,104 @@ export interface Customer {
   address?: Address;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  createdStamp?: string;
+  lastUpdatedStamp?: string;
+  tenantId?: number;
+}
+
+export interface InventoryItem {
+  id: string;
+  productId: string;
+  quantityOnHand: number;
+  quantityReserved: number;
+  quantityCommitted: number;
+  facilityId: string;
+  lotId?: string;
+  expirationDate?: string;
+  manufacturingDate?: string;
+  statusId?: InventoryItemStatus;
+  receivedDate?: string;
+  createdStamp?: string;
+  lastUpdatedStamp?: string;
+  tenantId?: number;
+}
+
+export interface InventoryItemDetail {
+  id: string;
+  productId: string;
+  inventoryItemId: string;
+  quantity: number;
+  notYetOutboundQuantity?: number;
+  shipmentId?: string;
+  orderItemId: string;
+  note?: string;
+  lotId?: string;
+  expirationDate?: string;
+  manufacturingDate?: string;
+  facilityId: string;
+  unit: string;
+  price: number;
+  createdStamp?: string;
+  lastUpdatedStamp?: string;
+  tenantId?: number;
+  inventoryItem?: InventoryItem;
+}
+
+export interface SaleOrderItem {
+  id: string;
+  orderId: string;
+  orderItemSeqId: number;
+  productId: string;
+  quantity: number;
+  quantityRemaining: number;
+  amount: number;
+  statusId: OrderItemStatus;
+  createdStamp?: string;
+  lastUpdatedStamp?: string;
+  price: number;
+  tax?: number;
+  discount?: number;
+  unit?: string;
+  tenantId?: number;
+  product?: Product;
+  allocatedInventoryItems?: InventoryItemDetail[];
+}
+
+export interface SaleOrder {
+  id: string;
+  orderTypeId: OrderType;
+  fromSupplierId?: string;
+  toCustomerId?: string;
+  createdByUserId?: number;
+  createdStamp?: string;
+  orderDate?: string;
+  statusId: OrderStatus;
+  lastUpdatedStamp?: string;
+  deliveryBeforeDate?: string;
+  deliveryAfterDate?: string;
+  note?: string;
+  orderName?: string;
+  priority?: number;
+  deliveryAddressId?: string;
+  deliveryPhone?: string;
+  saleChannelId?: SaleChannel;
+  deliveryFullAddress?: string;
+  totalQuantity?: number;
+  totalAmount?: number;
+  costs?: string;
+  userApprovedId?: number;
+  userCancelledId?: number;
+  cancellationNote?: string;
+  tenantId?: number;
+  items?: SaleOrderItem[];
+}
+
+export type Order = SaleOrder;
+export type OrderItem = SaleOrderItem;
+
 // Main logistics2 entities
 export interface DeliveryItem {
   id: string;
@@ -223,6 +322,7 @@ export interface OutboundShipmentItem {
   lastUpdatedStamp?: string;
   tenantId?: number;
   product?: Product;
+  inventoryItem?: InventoryItem;
 }
 
 export interface OutboundShipment {
@@ -360,10 +460,50 @@ export interface UpdateVehicleRequest {
 
 export interface AssignVehicleShipperRequest {
   vehicleId: string;
-  workingDate: string;
+  workingDate?: string;
+  workingDay?: string;
 }
 
 // Query filter types
+export interface CategoryFilters {
+  query?: string;
+  statusId?: string;
+}
+
+export interface CustomerFilters {
+  query?: string;
+  statusId?: string;
+}
+
+export interface FacilityFilters {
+  query?: string;
+  statusId?: FacilityStatus;
+}
+
+export interface InventoryItemFilters {
+  query?: string;
+  productId?: string;
+  facilityId?: string;
+  expirationDateFrom?: string;
+  expirationDateTo?: string;
+  manufacturingDateFrom?: string;
+  manufacturingDateTo?: string;
+  statusId?: InventoryItemStatus;
+}
+
+export interface SaleOrderFilters {
+  query?: string;
+  statusId?: OrderStatus;
+  orderTypeId?: OrderType;
+  toCustomerId?: string;
+  fromSupplierId?: string;
+  saleChannelId?: SaleChannel;
+  orderDateAfter?: string;
+  orderDateBefore?: string;
+  deliveryBefore?: string;
+  deliveryAfter?: string;
+}
+
 export interface DeliveryPlanFilters {
   query?: string;
   facilityId?: string;
@@ -397,6 +537,12 @@ export interface VehicleFilters {
   query?: string;
   vehicleType?: VehicleType;
   vehicleStatus?: VehicleStatus;
+}
+
+export interface VehicleUsageFilters {
+  query?: string;
+  vehicleType?: VehicleType;
+  workingDate?: string;
 }
 
 export interface VehicleShipperFilters {

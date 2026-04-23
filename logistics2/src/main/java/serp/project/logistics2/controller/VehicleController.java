@@ -26,6 +26,8 @@ import serp.project.logistics2.exception.AppException;
 import serp.project.logistics2.service.VehicleService;
 import serp.project.logistics2.util.AuthUtils;
 
+import java.time.LocalDate;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/logistics2/api/v1/vehicles")
@@ -106,4 +108,24 @@ public class VehicleController {
                                 size, sortBy, sortDirection);
                 return ResponseEntity.ok(GeneralResponse.success("Tìm kiếm phương tiện thành công", PageResponse.of(vehicles)));
         }
+
+    @GetMapping("/search-for-usage")
+    public ResponseEntity<GeneralResponse<PageResponse<VehicleEntity>>> searchVehiclesForUsage(
+            @Min(0) @RequestParam(required = false, defaultValue = "0") int page,
+            @RequestParam(required = false, defaultValue = "10") int size,
+            @RequestParam(required = false, defaultValue = "createdStamp") String sortBy,
+            @RequestParam(required = false, defaultValue = "desc") String sortDirection,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String vehicleType,
+            @RequestParam(required = false) LocalDate workingDate) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
+        log.info(
+                "[VehicleController] Search vehicles by tenant id {}, query {}, vehicleType {}, workingDate {}, page {}, size {}, sortBy {}, sortDirection {}",
+                tenantId, query, vehicleType, workingDate, page, size, sortBy, sortDirection);
+        Page<VehicleEntity> vehicles = vehicleService.searchVehiclesForUsage(query, vehicleType, workingDate,
+                tenantId, page,
+                size, sortBy, sortDirection);
+        return ResponseEntity.ok(GeneralResponse.success("Tìm kiếm phương tiện để sử dụng thành công", PageResponse.of(vehicles)));
+    }
 }
