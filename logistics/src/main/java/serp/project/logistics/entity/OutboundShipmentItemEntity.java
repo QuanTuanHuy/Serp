@@ -52,6 +52,9 @@ public class OutboundShipmentItemEntity {
     @Transient
     private ProductEntity product;
 
+    @Transient
+    private InventoryItemEntity inventoryItem;
+
     public OutboundShipmentItemEntity(
             String id,
             String outboundShipmentId,

@@ -20,7 +20,11 @@ export type OrderType = 'PURCHASE' | 'SALES';
 export type ProductStatus = 'ACTIVE' | 'INACTIVE';
 export type SaleChannel = 'ONLINE' | 'PARTNER' | 'RETAIL';
 export type ShipmentType = 'INBOUND' | 'OUTBOUND';
-export type ShipmentStatus = 'CREATED' | 'IMPORTED' | 'EXPORTED';
+export type ShipmentStatus =
+  | 'CREATED'
+  | 'IMPORTED'
+  | 'READY_TO_EXPORT'
+  | 'DELIVERED';
 export type OutboundShipmentStatus =
   | 'CREATED'
   | 'READY_TO_EXPORT'
@@ -431,6 +435,7 @@ export interface OutboundShipmentItem {
   lastUpdatedStamp: string;
   tenantId: number;
   product?: Product;
+  inventoryItem?: InventoryItem;
 }
 
 export interface OutboundShipment {
