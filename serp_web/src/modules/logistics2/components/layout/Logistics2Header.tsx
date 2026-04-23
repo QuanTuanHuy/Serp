@@ -33,6 +33,7 @@ const PATH_LABELS: Record<string, string> = {
   routes: 'Routes',
   vehicles: 'Vehicles',
   'vehicle-shippers': 'Vehicle Shippers',
+  'vehicle-registration': 'Vehicle Registration',
 };
 
 export const Logistics2Header: React.FC<Logistics2HeaderProps> = ({

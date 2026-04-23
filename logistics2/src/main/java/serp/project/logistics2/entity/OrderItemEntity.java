@@ -17,6 +17,8 @@ import org.hibernate.annotations.Formula;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -73,6 +75,9 @@ public class OrderItemEntity {
 
     @Transient
     private ProductEntity product;
+
+    @Transient
+    private List<InventoryItemDetailEntity> allocatedInventoryItems = new ArrayList<>();
 
     public void addDeliveredQuantity(int quantity) {
         if (this.quantityRemaining < quantity) {

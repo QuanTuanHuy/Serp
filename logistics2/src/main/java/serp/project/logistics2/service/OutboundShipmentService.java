@@ -20,6 +20,8 @@ public class OutboundShipmentService {
     private final OutboundShipmentRepository shipmentRepository;
     private final OutboundShipmentItemRepository shipmentItemRepository;
     private final FacilityRepository facilityRepository;
+    private final ProductRepository productRepository;
+    private final InventoryItemRepository inventoryItemRepository;
 
     public OutboundShipmentEntity getShipment(String shipmentId, Long tenantId) {
         OutboundShipmentEntity shipment = shipmentRepository.findById(shipmentId).orElse(null);
@@ -29,6 +31,13 @@ public class OutboundShipmentService {
         }
 
         List<OutboundShipmentItemEntity> items = shipmentItemRepository.findByTenantIdAndOutboundShipmentId(tenantId, shipmentId);
+        for (OutboundShipmentItemEntity item : items) {
+            ProductEntity product = productRepository.findById(item.getProductId()).orElse(null);
+            item.setProduct(product);
+
+            InventoryItemEntity inventoryItem = inventoryItemRepository.findById(item.getInventoryItemId()).orElse(null);
+            item.setInventoryItem(inventoryItem);
+        }
         shipment.setItems(items);
 
         FacilityEntity facility = facilityRepository.findById(shipment.getFacilityId()).orElse(null);

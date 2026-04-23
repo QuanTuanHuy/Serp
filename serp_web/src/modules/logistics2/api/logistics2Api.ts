@@ -5,16 +5,25 @@ Description: Part of Serp Project - Logistics2 API endpoints
 
 import { api } from '@/lib/store/api';
 import type {
+  Address,
   AddDeliverySlipItemRequest,
   AssignVehicleShipperRequest,
+  Category,
+  CategoryFilters,
   CreateDeliveryPlanRequest,
   CreateDeliverySlipRequest,
   CreateVehicleRequest,
+  Customer,
+  CustomerFilters,
   DeliveryPlan,
   DeliveryPlanFilters,
   DeliverySlip,
   DeliverySlipFilters,
+  Facility,
+  FacilityFilters,
   GeneralResponse,
+  InventoryItem,
+  InventoryItemFilters,
   ListQueryParams,
   OutboundShipment,
   OutboundShipmentFilters,
@@ -23,11 +32,14 @@ import type {
   RemoveDeliverySlipItemRequest,
   Route,
   RouteFilters,
+  SaleOrder,
+  SaleOrderFilters,
   UpdateDeliveryPlanRequest,
   UpdateDeliverySlipItemRequest,
   UpdateVehicleRequest,
   Vehicle,
   VehicleFilters,
+  VehicleUsageFilters,
   VehicleShipper,
   VehicleShipperFilters,
 } from '../types';
@@ -51,6 +63,131 @@ const buildListParams = <TFilters extends object>(
 
 export const logistics2Api = api.injectEndpoints({
   endpoints: (builder) => ({
+    // Address endpoints
+    getAddressesByEntityId: builder.query<GeneralResponse<Address[]>, string>({
+      query: (entityId) => ({
+        url: `/address/search/by-entity/${entityId}`,
+        method: 'GET',
+      }),
+      extraOptions: LOGISTICS2_SERVICE,
+    }),
+
+    getAddressDetail: builder.query<GeneralResponse<Address>, string>({
+      query: (addressId) => ({
+        url: `/address/search/${addressId}`,
+        method: 'GET',
+      }),
+      extraOptions: LOGISTICS2_SERVICE,
+    }),
+
+    // Category endpoints
+    getCategories: builder.query<
+      GeneralResponse<PageResponse<Category>>,
+      ListQueryParams<CategoryFilters> | void
+    >({
+      query: (args) => ({
+        url: '/category/search',
+        method: 'GET',
+        params: buildListParams(args?.filters, args?.pagination),
+      }),
+      extraOptions: LOGISTICS2_SERVICE,
+    }),
+
+    getCategoryDetail: builder.query<GeneralResponse<Category>, string>({
+      query: (categoryId) => ({
+        url: `/category/search/${categoryId}`,
+        method: 'GET',
+      }),
+      extraOptions: LOGISTICS2_SERVICE,
+    }),
+
+    // Customer endpoints
+    getCustomers: builder.query<
+      GeneralResponse<PageResponse<Customer>>,
+      ListQueryParams<CustomerFilters> | void
+    >({
+      query: (args) => ({
+        url: '/customer/search',
+        method: 'GET',
+        params: buildListParams(args?.filters, args?.pagination),
+      }),
+      extraOptions: LOGISTICS2_SERVICE,
+    }),
+
+    getCustomerDetail: builder.query<GeneralResponse<Customer>, string>({
+      query: (customerId) => ({
+        url: `/customer/search/${customerId}`,
+        method: 'GET',
+      }),
+      extraOptions: LOGISTICS2_SERVICE,
+    }),
+
+    // Facility endpoints
+    getFacilities: builder.query<
+      GeneralResponse<PageResponse<Facility>>,
+      ListQueryParams<FacilityFilters> | void
+    >({
+      query: (args) => ({
+        url: '/facility/search',
+        method: 'GET',
+        params: buildListParams(args?.filters, args?.pagination),
+      }),
+      extraOptions: LOGISTICS2_SERVICE,
+    }),
+
+    getFacilityDetail: builder.query<GeneralResponse<Facility>, string>({
+      query: (facilityId) => ({
+        url: `/facility/search/${facilityId}`,
+        method: 'GET',
+      }),
+      extraOptions: LOGISTICS2_SERVICE,
+    }),
+
+    // Inventory item endpoints
+    getInventoryItems: builder.query<
+      GeneralResponse<PageResponse<InventoryItem>>,
+      ListQueryParams<InventoryItemFilters> | void
+    >({
+      query: (args) => ({
+        url: '/inventory-item/search',
+        method: 'GET',
+        params: buildListParams(args?.filters, args?.pagination),
+      }),
+      extraOptions: LOGISTICS2_SERVICE,
+    }),
+
+    getInventoryItemDetail: builder.query<
+      GeneralResponse<InventoryItem>,
+      string
+    >({
+      query: (inventoryItemId) => ({
+        url: `/inventory-item/search/${inventoryItemId}`,
+        method: 'GET',
+      }),
+      extraOptions: LOGISTICS2_SERVICE,
+    }),
+
+    // Sale order endpoints
+    getSaleOrders: builder.query<
+      GeneralResponse<PageResponse<SaleOrder>>,
+      ListQueryParams<SaleOrderFilters> | void
+    >({
+      query: (args) => ({
+        url: '/sale-order/search',
+        method: 'GET',
+        params: buildListParams(args?.filters, args?.pagination),
+      }),
+      extraOptions: LOGISTICS2_SERVICE,
+    }),
+
+    getSaleOrderDetail: builder.query<GeneralResponse<SaleOrder>, string>({
+      query: (orderId) => ({
+        url: `/sale-order/search/${orderId}`,
+        method: 'GET',
+      }),
+      extraOptions: LOGISTICS2_SERVICE,
+    }),
+
     // Delivery plan endpoints
     getDeliveryPlans: builder.query<
       GeneralResponse<PageResponse<DeliveryPlan>>,
@@ -384,6 +521,28 @@ export const logistics2Api = api.injectEndpoints({
           : [{ type: 'logistics2/Vehicle', id: 'LIST' }],
     }),
 
+    getVehiclesForUsage: builder.query<
+      GeneralResponse<PageResponse<Vehicle>>,
+      ListQueryParams<VehicleUsageFilters> | void
+    >({
+      query: (args) => ({
+        url: '/vehicles/search-for-usage',
+        method: 'GET',
+        params: buildListParams(args?.filters, args?.pagination),
+      }),
+      extraOptions: LOGISTICS2_SERVICE,
+      providesTags: (result) =>
+        result?.data?.items
+          ? [
+              ...result.data.items.map(({ id }) => ({
+                type: 'logistics2/Vehicle' as const,
+                id,
+              })),
+              { type: 'logistics2/Vehicle', id: 'LIST' },
+            ]
+          : [{ type: 'logistics2/Vehicle', id: 'LIST' }],
+    }),
+
     getVehicleDetail: builder.query<GeneralResponse<Vehicle>, string>({
       query: (vehicleId) => ({
         url: `/vehicles/search/${vehicleId}`,
@@ -489,11 +648,21 @@ export const logistics2Api = api.injectEndpoints({
       GeneralResponse<null>,
       AssignVehicleShipperRequest
     >({
-      query: (data) => ({
-        url: '/vehicle-shippers/assign',
-        method: 'POST',
-        body: data,
-      }),
+      query: ({ vehicleId, workingDate, workingDay }) => {
+        const normalizedWorkingDate = workingDate || workingDay;
+
+        return {
+          url: '/vehicle-shippers/assign',
+          method: 'POST',
+          body: {
+            vehicleId,
+            ...(normalizedWorkingDate
+              ? { workingDate: normalizedWorkingDate }
+              : {}),
+            ...(workingDay ? { workingDay } : {}),
+          },
+        };
+      },
       extraOptions: LOGISTICS2_SERVICE,
       invalidatesTags: [{ type: 'logistics2/VehicleShipper', id: 'LIST' }],
     }),
@@ -528,6 +697,18 @@ export const logistics2Api = api.injectEndpoints({
 });
 
 export const {
+  useGetAddressesByEntityIdQuery,
+  useGetAddressDetailQuery,
+  useGetCategoriesQuery,
+  useGetCategoryDetailQuery,
+  useGetCustomersQuery,
+  useGetCustomerDetailQuery,
+  useGetFacilitiesQuery,
+  useGetFacilityDetailQuery,
+  useGetInventoryItemsQuery,
+  useGetInventoryItemDetailQuery,
+  useGetSaleOrdersQuery,
+  useGetSaleOrderDetailQuery,
   useGetDeliveryPlansQuery,
   useGetDeliveryPlanDetailQuery,
   useCreateDeliveryPlanMutation,
@@ -550,6 +731,7 @@ export const {
   useCompleteRouteStopMutation,
   useAbortRouteStopMutation,
   useGetVehiclesQuery,
+  useGetVehiclesForUsageQuery,
   useGetVehicleDetailQuery,
   useCreateVehicleMutation,
   useUpdateVehicleMutation,
@@ -561,3 +743,6 @@ export const {
   useRequestCancelVehicleShipperMutation,
   useCancelVehicleShipperMutation,
 } = logistics2Api;
+
+export const useGetOrdersQuery = useGetSaleOrdersQuery;
+export const useGetOrderDetailQuery = useGetSaleOrderDetailQuery;
