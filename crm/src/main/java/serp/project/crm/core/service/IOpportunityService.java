@@ -40,14 +40,20 @@ public interface IOpportunityService {
 
     BigDecimal getEstimatedValueByStage(OpportunityStage stage, Long tenantId);
 
-    OpportunityEntity changeStage(Long id, OpportunityStage newStage, Long tenantId);
+    OpportunityEntity changeStage(Long id, OpportunityStage newStage, Long updatedBy, Long tenantId);
 
-    OpportunityEntity closeAsWon(Long id, Long tenantId);
+    OpportunityEntity closeAsWon(Long id, BigDecimal actualValue, String notes, Long updatedBy, Long tenantId);
 
-    OpportunityEntity closeAsLost(Long id, String lostReason, Long tenantId);
+    OpportunityEntity closeAsLost(Long id, String lostReason, Long updatedBy, Long tenantId);
+
+    OpportunityEntity assignOpportunity(Long id, Long assignedTo, Long updatedBy, Long tenantId);
+
+    OpportunityEntity reopenOpportunity(Long id, OpportunityStage stage, String reopenReason, Long updatedBy, Long tenantId);
 
     void deleteOpportunity(Long id, Long tenantId);
 
     Pair<List<OpportunityEntity>, Long> filterOpportunities(OpportunityFilterRequest filter, Long tenantId,
             PageRequest pageRequest);
+
+    List<OpportunityEntity> filterAllOpportunities(OpportunityFilterRequest filter, Long tenantId);
 }

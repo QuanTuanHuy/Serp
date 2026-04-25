@@ -23,7 +23,7 @@ public interface IAccountService {
     AccountEntity deactivateAccount(Long id, Long userId, Long tenantId);
     AccountEntity updateCreditLimit(Long id, BigDecimal creditLimit, Long userId, Long tenantId);
     void deleteAccount(Long id, Long tenantId);
-    void updateAccountRevenue(Long accountId, Long tenantId, BigDecimal revenue, boolean isWon);
+    void updateAccountRevenue(Long accountId, Long tenantId, BigDecimal revenue, boolean isWon, Long updatedBy);
 
     Optional<AccountEntity> getAccountById(Long id, Long tenantId);
     Optional<AccountEntity> getAccountByEmail(String email, Long tenantId);

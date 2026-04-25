@@ -49,5 +49,7 @@ public interface IOpportunityPort {
 
     Pair<List<OpportunityEntity>, Long> filter(OpportunityFilterRequest filter, PageRequest pageRequest, Long tenantId);
 
+    List<OpportunityEntity> filterAll(OpportunityFilterRequest filter, Long tenantId);
+
     boolean existsByAccountIdAndName(Long accountId, String name, Long tenantId);
 }

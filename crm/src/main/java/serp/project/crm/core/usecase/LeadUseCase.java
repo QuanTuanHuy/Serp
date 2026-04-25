@@ -136,6 +136,10 @@ public class LeadUseCase {
                 return responseUtils.badRequest("Conversion must create or link an account, or create an opportunity");
             }
 
+            if (createOpportunity && !createAccount && request.getExistingAccountId() == null) {
+                return responseUtils.badRequest("Account is required when creating opportunity from lead");
+            }
+
             if (createOpportunity) {
                 var opportunityData = request.getOpportunityData();
                 boolean hasOpportunityAmount = opportunityData != null && opportunityData.getAmount() != null

@@ -51,6 +51,9 @@ public class OpportunityModel extends BaseModel {
     @Column(name = "estimated_value", nullable = false, precision = 15, scale = 2)
     private BigDecimal estimatedValue;
 
+    @Column(name = "actual_value", precision = 15, scale = 2)
+    private BigDecimal actualValue;
+
     @Column(name = "probability")
     private Integer probability;
 
@@ -68,4 +71,7 @@ public class OpportunityModel extends BaseModel {
 
     @Column(name = "loss_reason", columnDefinition = "TEXT")
     private String lossReason;
+
+    @Column(name = "reopen_reason", columnDefinition = "TEXT")
+    private String reopenReason;
 }

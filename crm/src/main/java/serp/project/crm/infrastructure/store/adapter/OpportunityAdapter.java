@@ -149,6 +149,14 @@ public class OpportunityAdapter implements IOpportunityPort {
     }
 
     @Override
+    public List<OpportunityEntity> filterAll(OpportunityFilterRequest filter, Long tenantId) {
+        Specification<OpportunityModel> spec = OpportunitySpecification.build(filter, tenantId);
+        return opportunityRepository.findAll(spec).stream()
+                .map(opportunityMapper::toEntity)
+                .toList();
+    }
+
+    @Override
     public boolean existsByAccountIdAndName(Long accountId, String name, Long tenantId) {
         return opportunityRepository.existsByTenantIdAndAccountIdAndName(tenantId, accountId, name);
     }

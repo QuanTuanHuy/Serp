@@ -207,14 +207,14 @@ public class AccountService implements IAccountService {
     }
 
     @Transactional
-    public void updateAccountRevenue(Long accountId, Long tenantId, BigDecimal revenue, boolean isWon) {
+    public void updateAccountRevenue(Long accountId, Long tenantId, BigDecimal revenue, boolean isWon, Long updatedBy) {
 
         AccountEntity account = accountPort.findById(accountId, tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.ACCOUNT_NOT_FOUND));
 
-        account.recordOpportunityResult(isWon, revenue != null ? revenue : BigDecimal.ZERO, tenantId);
+        account.recordOpportunityResult(isWon, revenue != null ? revenue : BigDecimal.ZERO, updatedBy);
         if (isWon) {
-            account.promoteToCustomer(tenantId);
+            account.promoteToCustomer(updatedBy);
         }
 
         accountPort.save(account);

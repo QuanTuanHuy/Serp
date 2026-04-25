@@ -32,12 +32,14 @@ public class OpportunityResponse {
     
     private OpportunityStage stage;
     private BigDecimal estimatedValue;
+    private BigDecimal actualValue;
     private Integer probability;
     private LocalDate expectedCloseDate;
     private LocalDate actualCloseDate;
     private Long assignedTo;
     private String notes;
     private String lossReason;
+    private String reopenReason;
     
     // Metadata
     private Long tenantId;

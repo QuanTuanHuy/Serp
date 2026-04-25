@@ -14,13 +14,21 @@ import serp.project.crm.core.domain.constant.ErrorMessage;
 import serp.project.crm.core.domain.dto.GeneralResponse;
 import serp.project.crm.core.domain.dto.PageRequest;
 import serp.project.crm.core.domain.dto.PageResponse;
+import serp.project.crm.core.domain.dto.request.AssignOpportunityRequest;
+import serp.project.crm.core.domain.dto.request.ChangeOpportunityStageRequest;
+import serp.project.crm.core.domain.dto.request.CloseOpportunityLostRequest;
+import serp.project.crm.core.domain.dto.request.CloseOpportunityWonRequest;
 import serp.project.crm.core.domain.dto.request.CreateOpportunityRequest;
 import serp.project.crm.core.domain.dto.request.OpportunityFilterRequest;
+import serp.project.crm.core.domain.dto.request.PipelineFilterRequest;
+import serp.project.crm.core.domain.dto.request.ReopenOpportunityRequest;
 import serp.project.crm.core.domain.dto.request.UpdateOpportunityRequest;
 import serp.project.crm.core.domain.dto.response.OpportunityResponse;
+import serp.project.crm.core.domain.dto.response.PipelineResponse;
+import serp.project.crm.core.domain.dto.response.PipelineStageResponse;
+import serp.project.crm.core.domain.dto.response.PipelineSummaryResponse;
 import serp.project.crm.core.domain.entity.AccountEntity;
 import serp.project.crm.core.domain.entity.OpportunityEntity;
-import serp.project.crm.core.domain.entity.TeamMemberEntity;
 import serp.project.crm.core.domain.enums.OpportunityStage;
 import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.mapper.OpportunityDtoMapper;
@@ -30,6 +38,9 @@ import serp.project.crm.core.service.ITeamMemberService;
 import serp.project.crm.kernel.utils.ResponseUtils;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -52,16 +63,16 @@ public class OpportunityUseCase {
             if (!account.isActive()) {
                 throw new AppException(ErrorMessage.ACCOUNT_INACTIVE);
             }
-            TeamMemberEntity member = teamMemberService.getTeamMemberByUserId(userId, tenantId)
+            teamMemberService.getTeamMemberByUserId(userId, tenantId)
                     .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND));
             if (opportunityService.existByAccountIdAndName(account.getId(), request.getName(), tenantId)) {
                 throw new AppException(ErrorMessage.OPPORTUNITY_ALREADY_EXISTS);
             }
-            if (request.getAssignedTo() != null && !member.getId().equals(request.getAssignedTo())) {
-                teamMemberService.getTeamMemberById(request.getAssignedTo(), tenantId)
+            if (request.getAssignedTo() != null && !userId.equals(request.getAssignedTo())) {
+                teamMemberService.getTeamMemberByUserId(request.getAssignedTo(), tenantId)
                         .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND));
             } else {
-                request.setAssignedTo(member.getId());
+                request.setAssignedTo(userId);
             }
 
             OpportunityEntity opportunity = opportunityDtoMapper.toEntity(request);
@@ -99,13 +110,27 @@ public class OpportunityUseCase {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public GeneralResponse<?> changeOpportunityStage(Long id, OpportunityStage newStage, Long tenantId) {
+    public GeneralResponse<?> changeOpportunityStage(Long id, ChangeOpportunityStageRequest request, Long userId,
+            Long tenantId) {
         try {
-            OpportunityEntity opportunity = opportunityService.changeStage(id, newStage, tenantId);
+            OpportunityEntity opportunity;
+            if (OpportunityStage.CLOSED_WON.equals(request.getStage())) {
+                opportunity = opportunityService.closeAsWon(id, null, request.getNotes(), userId, tenantId);
+                if (opportunity.getAccountId() != null) {
+                    accountService.updateAccountRevenue(opportunity.getAccountId(), tenantId,
+                            opportunity.getActualValue(), true, userId);
+                }
+            } else if (OpportunityStage.CLOSED_LOST.equals(request.getStage())) {
+                opportunity = opportunityService.closeAsLost(id, request.getLossReason(), userId, tenantId);
+                accountService.updateAccountRevenue(opportunity.getAccountId(), tenantId, BigDecimal.ZERO, false,
+                        userId);
+            } else {
+                opportunity = opportunityService.changeStage(id, request.getStage(), userId, tenantId);
+            }
             OpportunityResponse response = opportunityDtoMapper.toResponse(opportunity);
 
             log.info("Opportunity stage changed successfully: {}", id);
-            return responseUtils.success(response, "Opportunity stage changed successfully");
+            return responseUtils.success(response, "Stage updated successfully");
 
         } catch (AppException e) {
             log.error("Error changing opportunity stage: {}", e.getMessage());
@@ -117,16 +142,20 @@ public class OpportunityUseCase {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public GeneralResponse<?> closeOpportunityAsWon(Long id, Long tenantId) {
+    public GeneralResponse<?> closeOpportunityAsWon(Long id, CloseOpportunityWonRequest request, Long userId,
+            Long tenantId) {
         try {
-            OpportunityEntity opportunity = opportunityService.closeAsWon(id, tenantId);
+            CloseOpportunityWonRequest safeRequest = request != null ? request : CloseOpportunityWonRequest.builder().build();
+            OpportunityEntity opportunity = opportunityService.closeAsWon(id, safeRequest.getActualValue(),
+                    safeRequest.getNotes(), userId, tenantId);
 
             if (opportunity.getAccountId() != null && opportunity.getEstimatedValue() != null) {
                 accountService.updateAccountRevenue(
                     opportunity.getAccountId(),
                     tenantId,
-                    opportunity.getEstimatedValue(),
-                    true);
+                    opportunity.getActualValue(),
+                    true,
+                    userId);
             }
 
             OpportunityResponse response = opportunityDtoMapper.toResponse(opportunity);
@@ -143,16 +172,19 @@ public class OpportunityUseCase {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public GeneralResponse<?> closeOpportunityAsLost(Long id, String lostReason, Long tenantId) {
+    public GeneralResponse<?> closeOpportunityAsLost(Long id, CloseOpportunityLostRequest request, Long userId,
+            Long tenantId) {
         try {
-            OpportunityEntity opportunity = opportunityService.closeAsLost(id, lostReason, tenantId);
+            OpportunityEntity opportunity = opportunityService.closeAsLost(id, request.getLossReason(), userId,
+                    tenantId);
 
             if (opportunity.getAccountId() != null) {
                 accountService.updateAccountRevenue(
                     opportunity.getAccountId(),
                     tenantId,
                     BigDecimal.ZERO,
-                    false);
+                    false,
+                    userId);
             }
 
 
@@ -167,6 +199,22 @@ public class OpportunityUseCase {
             log.error("Unexpected error closing opportunity as lost: {}", e.getMessage(), e);
             throw e;
         }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> assignOpportunity(Long id, AssignOpportunityRequest request, Long userId, Long tenantId) {
+        OpportunityEntity opportunity = opportunityService.assignOpportunity(id, request.getAssignedTo(), userId,
+                tenantId);
+        OpportunityResponse response = opportunityDtoMapper.toResponse(opportunity);
+        return responseUtils.success(response, "Opportunity assigned successfully");
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> reopenOpportunity(Long id, ReopenOpportunityRequest request, Long userId, Long tenantId) {
+        OpportunityEntity opportunity = opportunityService.reopenOpportunity(id, request.getStage(),
+                request.getReopenReason(), userId, tenantId);
+        OpportunityResponse response = opportunityDtoMapper.toResponse(opportunity);
+        return responseUtils.success(response, "Opportunity reopened successfully");
     }
 
     @Transactional(readOnly = true)
@@ -246,5 +294,77 @@ public class OpportunityUseCase {
             log.error("Error filtering opportunities: {}", e.getMessage(), e);
             return responseUtils.internalServerError("Failed to filter opportunities");
         }
+    }
+
+    @Transactional(readOnly = true)
+    public GeneralResponse<?> getPipeline(PipelineFilterRequest request, Long tenantId) {
+        PipelineFilterRequest safeRequest = request != null ? request : PipelineFilterRequest.builder().build();
+        OpportunityFilterRequest filter = OpportunityFilterRequest.builder()
+                .accountId(safeRequest.getAccountId())
+                .assignedTo(safeRequest.getAssignedTo())
+                .expectedCloseDateFrom(safeRequest.getFromDate())
+                .expectedCloseDateTo(safeRequest.getToDate())
+                .build();
+        List<OpportunityEntity> opportunities = opportunityService.filterAllOpportunities(filter, tenantId).stream()
+                .filter(opportunity -> opportunity.getStage() != null && opportunity.getStage().isActive())
+                .sorted(Comparator.comparing(OpportunityEntity::getExpectedCloseDate,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
+                .toList();
+
+        List<PipelineStageResponse> stages = new ArrayList<>();
+        BigDecimal totalPipelineValue = BigDecimal.ZERO;
+        BigDecimal weightedPipelineValue = BigDecimal.ZERO;
+        int totalOpportunities = 0;
+
+        for (OpportunityStage stage : OpportunityStage.values()) {
+            if (!stage.isActive()) {
+                continue;
+            }
+            List<OpportunityEntity> stageOpportunities = opportunities.stream()
+                    .filter(opportunity -> stage.equals(opportunity.getStage()))
+                    .toList();
+            BigDecimal totalValue = stageOpportunities.stream()
+                    .map(OpportunityUseCase::estimatedValueOrZero)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal weightedValue = stageOpportunities.stream()
+                    .map(OpportunityUseCase::weightedValue)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            totalPipelineValue = totalPipelineValue.add(totalValue);
+            weightedPipelineValue = weightedPipelineValue.add(weightedValue);
+            totalOpportunities += stageOpportunities.size();
+
+            stages.add(PipelineStageResponse.builder()
+                    .stage(stage)
+                    .count(stageOpportunities.size())
+                    .totalValue(totalValue)
+                    .weightedValue(weightedValue)
+                    .opportunities(stageOpportunities.stream().map(opportunityDtoMapper::toResponse).toList())
+                    .build());
+        }
+
+        BigDecimal averageDealSize = totalOpportunities == 0 ? BigDecimal.ZERO
+                : totalPipelineValue.divide(BigDecimal.valueOf(totalOpportunities), 2, RoundingMode.HALF_UP);
+        PipelineSummaryResponse summary = PipelineSummaryResponse.builder()
+                .totalOpportunities(totalOpportunities)
+                .totalPipelineValue(totalPipelineValue)
+                .weightedPipelineValue(weightedPipelineValue)
+                .averageDealSize(averageDealSize)
+                .build();
+        PipelineResponse response = PipelineResponse.builder()
+                .stages(stages)
+                .summary(summary)
+                .build();
+        return responseUtils.success(response);
+    }
+
+    private static BigDecimal estimatedValueOrZero(OpportunityEntity opportunity) {
+        return opportunity.getEstimatedValue() != null ? opportunity.getEstimatedValue() : BigDecimal.ZERO;
+    }
+
+    private static BigDecimal weightedValue(OpportunityEntity opportunity) {
+        BigDecimal estimatedValue = estimatedValueOrZero(opportunity);
+        BigDecimal probability = BigDecimal.valueOf(opportunity.getProbability() != null ? opportunity.getProbability() : 0);
+        return estimatedValue.multiply(probability).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
     }
 }

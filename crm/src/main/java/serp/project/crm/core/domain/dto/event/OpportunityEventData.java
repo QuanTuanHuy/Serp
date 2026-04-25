@@ -28,12 +28,14 @@ public class OpportunityEventData {
     private String stage;
     private String previousStage;
     private BigDecimal estimatedValue;
+    private BigDecimal actualValue;
     private Integer probability;
     private LocalDate expectedCloseDate;
     private LocalDate actualCloseDate;
     private Long assignedTo;
     private String notes;
     private String lossReason;
+    private String reopenReason;
     private Long createdBy;
     private Long createdAt;
     private Long updatedBy;
