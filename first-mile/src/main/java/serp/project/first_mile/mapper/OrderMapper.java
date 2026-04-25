@@ -9,6 +9,7 @@ import serp.project.first_mile.dto.request.CreateOrderRequest;
 import serp.project.first_mile.dto.request.UpdateOrderRequest;
 import serp.project.first_mile.dto.response.OrderConfirmationResponse;
 import serp.project.first_mile.dto.response.OrderDetailResponse;
+import serp.project.first_mile.enums.OrderPickupMethod;
 import serp.project.first_mile.service.dto.ManualOrderPayload;
 import serp.project.first_mile.service.dto.ManualOrderProductPayload;
 
@@ -48,6 +49,7 @@ public final class OrderMapper {
                 order.getPickupTimeStart(),
                 order.getPickupTimeEnd(),
                 order.getDeliveryRequestTime(),
+                order.getPickupMethod() == null ? OrderPickupMethod.COURIER_PICKUP : order.getPickupMethod(),
                 order.getOrderProductCategory(),
                 order.getOrderType(),
                 order.getFeePayer(),
@@ -144,6 +146,7 @@ public final class OrderMapper {
                 request.getPickupTimeStart(),
                 request.getPickupTimeEnd(),
                 request.getDeliveryRequestTime(),
+                request.getPickupMethod(),
                 request.getOrderProductCategory(),
                 request.getOrderType(),
                 request.getFeePayer(),
@@ -183,6 +186,7 @@ public final class OrderMapper {
                 request.getPickupTimeStart(),
                 request.getPickupTimeEnd(),
                 request.getDeliveryRequestTime(),
+                request.getPickupMethod(),
                 request.getOrderProductCategory(),
                 request.getOrderType(),
                 request.getFeePayer(),

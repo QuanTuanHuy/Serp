@@ -8,6 +8,8 @@ export * from './OrderCancelDialog';
 export * from './OrderDetailDialog';
 export * from './OrderFiltersCard';
 export * from './OrderFormDialog';
+export * from './OrderDropOffManagerConfirmCard';
+export * from './OrderDropOffSuggestionsDialog';
 export * from './OrderImportCard';
 export * from './OrderPageHeader';
 export * from './OrderRoutePreviewMap';

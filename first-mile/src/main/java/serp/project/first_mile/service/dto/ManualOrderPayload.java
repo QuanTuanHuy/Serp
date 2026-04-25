@@ -3,6 +3,7 @@ package serp.project.first_mile.service.dto;
 import serp.project.first_mile.enums.DeliveryRequestTime;
 import serp.project.first_mile.enums.FeePayer;
 import serp.project.first_mile.enums.OrderProductCategory;
+import serp.project.first_mile.enums.OrderPickupMethod;
 import serp.project.first_mile.enums.OrderType;
 
 import java.time.LocalDateTime;
@@ -27,6 +28,7 @@ public record ManualOrderPayload(
         LocalDateTime pickupTimeStart,
         LocalDateTime pickupTimeEnd,
         DeliveryRequestTime deliveryRequestTime,
+        OrderPickupMethod pickupMethod,
         OrderProductCategory orderProductCategory,
         OrderType orderType,
         FeePayer feePayer,
