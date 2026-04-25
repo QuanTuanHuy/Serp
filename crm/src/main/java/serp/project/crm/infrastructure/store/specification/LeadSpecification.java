@@ -100,7 +100,7 @@ public final class LeadSpecification {
         }
 
         if (Boolean.TRUE.equals(safeFilter.getConvertedOnly())) {
-            spec = spec.and(BaseSpecification.isNotNull("convertedCustomerId"));
+            spec = spec.and(BaseSpecification.isNotNull("convertedAccountId"));
         }
 
         return spec;

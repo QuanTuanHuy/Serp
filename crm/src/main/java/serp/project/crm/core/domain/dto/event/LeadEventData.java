@@ -43,6 +43,6 @@ public class LeadEventData {
     private Long updatedAt;
 
     // Additional data for conversion events
-    private Long convertedToCustomerId;
+    private Long convertedToAccountId;
     private Long convertedToOpportunityId;
 }

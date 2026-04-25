@@ -28,7 +28,7 @@ public interface IActivityService {
     Pair<List<ActivityEntity>, Long> getActivitiesByAssignee(Long userId, Long tenantId, PageRequest pageRequest);
 
     Pair<List<ActivityEntity>, Long> getActivitiesByLead(Long leadId, Long tenantId, PageRequest pageRequest);
-    Pair<List<ActivityEntity>, Long> getActivitiesByCustomer(Long customerId, Long tenantId,
+    Pair<List<ActivityEntity>, Long> getActivitiesByAccount(Long accountId, Long tenantId,
             PageRequest pageRequest);
     Pair<List<ActivityEntity>, Long> getActivitiesByOpportunity(Long opportunityId, Long tenantId,
             PageRequest pageRequest);

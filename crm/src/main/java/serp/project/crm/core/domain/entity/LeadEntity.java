@@ -48,7 +48,7 @@ public class LeadEntity extends BaseEntity {
     private String notes;
 
     private Long convertedOpportunityId;
-    private Long convertedCustomerId;
+    private Long convertedAccountId;
 
     private static final Map<LeadStatus, Set<LeadStatus>> ALLOWED_STATUS_TRANSITIONS = Map.of(
             LeadStatus.NEW, Set.of(LeadStatus.CONTACTED, LeadStatus.NURTURING, LeadStatus.QUALIFIED,
@@ -113,14 +113,14 @@ public class LeadEntity extends BaseEntity {
         this.setUpdatedBy(convertedBy);
     }
 
-    public void markAsConverted(Long convertedBy, Long opportunityId, Long customerId) {
+    public void markAsConverted(Long convertedBy, Long opportunityId, Long accountId) {
         if (!canBeConverted()) {
             throw new IllegalStateException(
                     "Lead cannot be converted. Ensure it is qualified and has a valid estimated value.");
         }
         this.leadStatus = LeadStatus.CONVERTED;
         this.convertedOpportunityId = opportunityId;
-        this.convertedCustomerId = customerId;
+        this.convertedAccountId = accountId;
         this.setUpdatedBy(convertedBy);
     }
 

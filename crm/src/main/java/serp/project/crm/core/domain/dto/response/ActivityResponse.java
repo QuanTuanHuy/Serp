@@ -31,7 +31,7 @@ public class ActivityResponse {
     private String location;
     
     private Long relatedToLeadId;
-    private Long relatedToCustomerId;
+    private Long relatedToAccountId;
     private Long relatedToOpportunityId;
     private Long relatedToContactId;
     

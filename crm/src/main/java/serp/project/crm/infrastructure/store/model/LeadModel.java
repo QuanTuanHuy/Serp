@@ -94,6 +94,6 @@ public class LeadModel extends BaseModel {
     @Column(name = "converted_opportunity_id")
     private Long convertedOpportunityId;
 
-    @Column(name = "converted_customer_id")
-    private Long convertedCustomerId;
+    @Column(name = "converted_account_id")
+    private Long convertedAccountId;
 }

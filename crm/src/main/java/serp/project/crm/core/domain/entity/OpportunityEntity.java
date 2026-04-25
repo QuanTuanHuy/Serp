@@ -25,7 +25,7 @@ public class OpportunityEntity extends BaseEntity {
     private String description;
 
     private Long leadId;
-    private Long customerId;
+    private Long accountId;
 
     private OpportunityStage stage;
     private BigDecimal estimatedValue;
@@ -36,7 +36,7 @@ public class OpportunityEntity extends BaseEntity {
     private String notes;
     private String lossReason;
 
-    private CustomerEntity customer;
+    private AccountEntity account;
 
     // Stage management
     public boolean isWon() {

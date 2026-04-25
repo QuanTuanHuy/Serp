@@ -20,7 +20,7 @@ import serp.project.crm.core.domain.enums.ActivityType;
 import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.port.store.IActivityPort;
 import serp.project.crm.core.port.store.IContactPort;
-import serp.project.crm.core.port.store.ICustomerPort;
+import serp.project.crm.core.port.store.IAccountPort;
 import serp.project.crm.core.port.store.ILeadPort;
 import serp.project.crm.core.port.store.IOpportunityPort;
 import serp.project.crm.core.port.store.ITeamMemberPort;
@@ -41,7 +41,7 @@ public class ActivityService implements IActivityService {
     private final IActivityPort activityPort;
     private final ILeadPort leadPort;
     private final IOpportunityPort opportunityPort;
-    private final ICustomerPort customerPort;
+    private final IAccountPort AccountPort;
     private final ITeamMemberPort teamMemberPort;
 
     private final IContactPort contactPort;
@@ -125,10 +125,10 @@ public class ActivityService implements IActivityService {
 
     @Override
     @Transactional(readOnly = true)
-    public Pair<List<ActivityEntity>, Long> getActivitiesByCustomer(Long customerId, Long tenantId,
+    public Pair<List<ActivityEntity>, Long> getActivitiesByAccount(Long accountId, Long tenantId,
             PageRequest pageRequest) {
         pageRequest.validate();
-        return activityPort.findByCustomerId(customerId, tenantId, pageRequest);
+        return activityPort.findByAccountId(accountId, tenantId, pageRequest);
     }
 
     @Override
@@ -236,9 +236,9 @@ public class ActivityService implements IActivityService {
                 && opportunityPort.findById(activity.getOpportunityId(), tenantId).isEmpty()) {
             throw new AppException(ErrorMessage.OPPORTUNITY_NOT_FOUND);
         }
-        if (activity.getCustomerId() != null
-                && customerPort.findById(activity.getCustomerId(), tenantId).isEmpty()) {
-            throw new AppException(ErrorMessage.CUSTOMER_NOT_FOUND);
+        if (activity.getAccountId() != null
+                && AccountPort.findById(activity.getAccountId(), tenantId).isEmpty()) {
+            throw new AppException(ErrorMessage.ACCOUNT_NOT_FOUND);
         }
         if (activity.getContactId() != null
                 && contactPort.findById(activity.getContactId(), tenantId).isEmpty()) {

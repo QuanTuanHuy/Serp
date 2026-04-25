@@ -28,7 +28,7 @@ public class OpportunityResponse {
     private String description;
     
     private Long leadId;
-    private Long customerId;
+    private Long accountId;
     
     private OpportunityStage stage;
     private BigDecimal estimatedValue;

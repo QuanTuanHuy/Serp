@@ -50,7 +50,7 @@ public class LeadResponse {
     private String notes;
 
     private Long convertedOpportunityId;
-    private Long convertedCustomerId;
+    private Long convertedAccountId;
 
     // Metadata
     private Long tenantId;

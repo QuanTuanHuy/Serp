@@ -52,8 +52,8 @@ public class OpportunityService implements IOpportunityService {
         OpportunityEntity existing = opportunityPort.findById(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.OPPORTUNITY_NOT_FOUND));
         if (updates.getName() != null && !updates.getName().equals(existing.getName())) {
-            if (opportunityPort.existsByCustomerIdAndName(
-                    existing.getCustomerId(), updates.getName(), tenantId)) {
+            if (opportunityPort.existsByAccountIdAndName(
+                    existing.getAccountId(), updates.getName(), tenantId)) {
                 throw new AppException(ErrorMessage.OPPORTUNITY_ALREADY_EXISTS);
             }
         }
@@ -90,10 +90,10 @@ public class OpportunityService implements IOpportunityService {
 
     @Override
     @Transactional(readOnly = true)
-    public Pair<List<OpportunityEntity>, Long> getOpportunitiesByCustomer(Long customerId, Long tenantId,
+    public Pair<List<OpportunityEntity>, Long> getOpportunitiesByAccount(Long accountId, Long tenantId,
             PageRequest pageRequest) {
         pageRequest.validate();
-        return opportunityPort.findByCustomerId(customerId, tenantId, pageRequest);
+        return opportunityPort.findByAccountId(accountId, tenantId, pageRequest);
     }
 
     @Override
@@ -126,8 +126,8 @@ public class OpportunityService implements IOpportunityService {
 
     @Override
     @Transactional(readOnly = true)
-    public boolean existByCustomerIdAndName(Long customerId, String name, Long tenantId) {
-        return opportunityPort.existsByCustomerIdAndName(customerId, name, tenantId);
+    public boolean existByAccountIdAndName(Long accountId, String name, Long tenantId) {
+        return opportunityPort.existsByAccountIdAndName(accountId, name, tenantId);
     }
 
     @Override

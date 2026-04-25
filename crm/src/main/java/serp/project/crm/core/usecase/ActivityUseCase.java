@@ -185,9 +185,9 @@ public class ActivityUseCase {
     }
 
     @Transactional(readOnly = true)
-    public GeneralResponse<?> getActivitiesByCustomer(Long customerId, Long tenantId, PageRequest pageRequest) {
+    public GeneralResponse<?> getActivitiesByAccount(Long accountId, Long tenantId, PageRequest pageRequest) {
         try {
-            var result = activityService.getActivitiesByCustomer(customerId, tenantId, pageRequest);
+            var result = activityService.getActivitiesByAccount(accountId, tenantId, pageRequest);
             List<ActivityResponse> activityResponses = result.getFirst().stream()
                     .map(activityDtoMapper::toResponse)
                     .toList();
@@ -197,8 +197,8 @@ public class ActivityUseCase {
             return responseUtils.success(pageResponse);
 
         } catch (Exception e) {
-            log.error("[ActivityUseCase] Error fetching activities by customer {}: {}", customerId, e.getMessage());
-            return responseUtils.internalServerError("Failed to fetch activities by customer");
+            log.error("[ActivityUseCase] Error fetching activities by Account {}: {}", accountId, e.getMessage());
+            return responseUtils.internalServerError("Failed to fetch activities by Account");
         }
     }
 

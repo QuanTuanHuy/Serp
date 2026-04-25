@@ -23,7 +23,7 @@ public interface IOpportunityPort {
 
     Pair<List<OpportunityEntity>, Long> findAll(Long tenantId, PageRequest pageRequest);
 
-    Pair<List<OpportunityEntity>, Long> findByCustomerId(Long customerId, Long tenantId, PageRequest pageRequest);
+    Pair<List<OpportunityEntity>, Long> findByAccountId(Long accountId, Long tenantId, PageRequest pageRequest);
 
     List<OpportunityEntity> findByLeadId(Long leadId, Long tenantId);
 
@@ -39,7 +39,7 @@ public interface IOpportunityPort {
 
     List<OpportunityEntity> findByExpectedCloseDateBetween(Long startDate, Long endDate, Long tenantId);
 
-    List<OpportunityEntity> findWonOpportunitiesByCustomerId(Long customerId, Long tenantId);
+    List<OpportunityEntity> findWonOpportunitiesByAccountId(Long accountId, Long tenantId);
 
     List<OpportunityEntity> findTopByEstimatedValue(Long tenantId, int limit);
 
@@ -49,5 +49,5 @@ public interface IOpportunityPort {
 
     Pair<List<OpportunityEntity>, Long> filter(OpportunityFilterRequest filter, PageRequest pageRequest, Long tenantId);
 
-    boolean existsByCustomerIdAndName(Long customerId, String name, Long tenantId);
+    boolean existsByAccountIdAndName(Long accountId, String name, Long tenantId);
 }

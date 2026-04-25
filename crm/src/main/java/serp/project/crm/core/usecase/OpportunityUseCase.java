@@ -18,13 +18,13 @@ import serp.project.crm.core.domain.dto.request.CreateOpportunityRequest;
 import serp.project.crm.core.domain.dto.request.OpportunityFilterRequest;
 import serp.project.crm.core.domain.dto.request.UpdateOpportunityRequest;
 import serp.project.crm.core.domain.dto.response.OpportunityResponse;
-import serp.project.crm.core.domain.entity.CustomerEntity;
+import serp.project.crm.core.domain.entity.AccountEntity;
 import serp.project.crm.core.domain.entity.OpportunityEntity;
 import serp.project.crm.core.domain.entity.TeamMemberEntity;
 import serp.project.crm.core.domain.enums.OpportunityStage;
 import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.mapper.OpportunityDtoMapper;
-import serp.project.crm.core.service.ICustomerService;
+import serp.project.crm.core.service.IAccountService;
 import serp.project.crm.core.service.IOpportunityService;
 import serp.project.crm.core.service.ITeamMemberService;
 import serp.project.crm.kernel.utils.ResponseUtils;
@@ -38,7 +38,7 @@ import java.util.List;
 public class OpportunityUseCase {
 
     private final IOpportunityService opportunityService;
-    private final ICustomerService customerService;
+    private final IAccountService accountService;
     private final ITeamMemberService teamMemberService;
 
     private final OpportunityDtoMapper opportunityDtoMapper;
@@ -47,11 +47,14 @@ public class OpportunityUseCase {
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> createOpportunity(CreateOpportunityRequest request, Long userId, Long tenantId) {
         try {
-            CustomerEntity customer = customerService.getCustomerById(request.getCustomerId(), tenantId)
-                    .orElseThrow(() -> new AppException(ErrorMessage.CUSTOMER_NOT_FOUND));
+            AccountEntity account = accountService.getAccountById(request.getAccountId(), tenantId)
+                    .orElseThrow(() -> new AppException(ErrorMessage.ACCOUNT_NOT_FOUND));
+            if (!account.isActive()) {
+                throw new AppException(ErrorMessage.ACCOUNT_INACTIVE);
+            }
             TeamMemberEntity member = teamMemberService.getTeamMemberByUserId(userId, tenantId)
                     .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND));
-            if (opportunityService.existByCustomerIdAndName(customer.getId(), request.getName(), tenantId)) {
+            if (opportunityService.existByAccountIdAndName(account.getId(), request.getName(), tenantId)) {
                 throw new AppException(ErrorMessage.OPPORTUNITY_ALREADY_EXISTS);
             }
             if (request.getAssignedTo() != null && !member.getId().equals(request.getAssignedTo())) {
@@ -118,9 +121,9 @@ public class OpportunityUseCase {
         try {
             OpportunityEntity opportunity = opportunityService.closeAsWon(id, tenantId);
 
-            if (opportunity.getCustomerId() != null && opportunity.getEstimatedValue() != null) {
-                customerService.updateCustomerRevenue(
-                    opportunity.getCustomerId(),
+            if (opportunity.getAccountId() != null && opportunity.getEstimatedValue() != null) {
+                accountService.updateAccountRevenue(
+                    opportunity.getAccountId(),
                     tenantId,
                     opportunity.getEstimatedValue(),
                     true);
@@ -144,9 +147,9 @@ public class OpportunityUseCase {
         try {
             OpportunityEntity opportunity = opportunityService.closeAsLost(id, lostReason, tenantId);
 
-            if (opportunity.getCustomerId() != null) {
-                customerService.updateCustomerRevenue(
-                    opportunity.getCustomerId(),
+            if (opportunity.getAccountId() != null) {
+                accountService.updateAccountRevenue(
+                    opportunity.getAccountId(),
                     tenantId,
                     BigDecimal.ZERO,
                     false);

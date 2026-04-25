@@ -18,7 +18,7 @@ import java.time.LocalDate;
 @Entity
 @Table(name = "opportunities", indexes = {
         @Index(name = "idx_opportunities_tenant_id", columnList = "tenant_id"),
-        @Index(name = "idx_opportunities_customer_id", columnList = "customer_id"),
+        @Index(name = "idx_opportunities_account_id", columnList = "account_id"),
         @Index(name = "idx_opportunities_lead_id", columnList = "lead_id"),
         @Index(name = "idx_opportunities_stage", columnList = "stage"),
         @Index(name = "idx_opportunities_assigned_to", columnList = "assigned_to")
@@ -42,8 +42,8 @@ public class OpportunityModel extends BaseModel {
     @Column(name = "lead_id")
     private Long leadId;
 
-    @Column(name = "customer_id", nullable = false)
-    private Long customerId;
+    @Column(name = "account_id", nullable = false)
+    private Long accountId;
 
     @Column(name = "stage", nullable = false, length = 50)
     private String stage;

@@ -21,7 +21,7 @@ public class ActivityEventData {
     private Long tenantId;
     private Long leadId;
     private Long contactId;
-    private Long customerId;
+    private Long accountId;
     private Long opportunityId;
     private String activityType;
     private String subject;

@@ -24,7 +24,7 @@ public class ContactEntity extends BaseEntity {
     private String phone;
     private String jobPosition;
 
-    private Long customerId;
+    private Long accountId;
     private Boolean isPrimary;
 
     private AddressEntity address;

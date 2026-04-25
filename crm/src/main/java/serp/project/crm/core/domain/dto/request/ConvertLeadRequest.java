@@ -30,8 +30,8 @@ public class ConvertLeadRequest {
     @Size(max = 1000, message = "Opportunity description must not exceed 1000 characters")
     private String opportunityDescription;
 
-    @NotNull(message = "Create new customer flag is required")
-    private Boolean createNewCustomer;
+    @NotNull(message = "Create new account flag is required")
+    private Boolean createNewAccount;
 
-    private Long existingCustomerId;
+    private Long existingAccountId;
 }

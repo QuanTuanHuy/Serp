@@ -23,8 +23,8 @@ public class OpportunityEventData {
     private String name;
     private String description;
     private Long leadId;
-    private Long customerId;
-    private String customerName;
+    private Long accountId;
+    private String accountName;
     private String stage;
     private String previousStage;
     private BigDecimal estimatedValue;

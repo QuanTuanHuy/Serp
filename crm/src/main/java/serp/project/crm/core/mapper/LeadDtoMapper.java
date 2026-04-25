@@ -14,7 +14,7 @@ import serp.project.crm.core.domain.dto.response.LeadConversionResponse;
 import serp.project.crm.core.domain.dto.response.LeadResponse;
 import serp.project.crm.core.domain.entity.AddressEntity;
 import serp.project.crm.core.domain.entity.ContactEntity;
-import serp.project.crm.core.domain.entity.CustomerEntity;
+import serp.project.crm.core.domain.entity.AccountEntity;
 import serp.project.crm.core.domain.entity.LeadEntity;
 import serp.project.crm.core.domain.entity.OpportunityEntity;
 import serp.project.crm.core.domain.enums.ActiveStatus;
@@ -138,12 +138,12 @@ public class LeadDtoMapper {
 
     // ========== Conversion Mappers ==========
 
-    public CustomerEntity toCustomerEntity(LeadEntity lead) {
+    public AccountEntity toAccountEntity(LeadEntity lead) {
         if (lead == null) {
             return null;
         }
 
-        return CustomerEntity.builder()
+        return AccountEntity.builder()
                 .name(lead.getCompany())
                 .industry(lead.getIndustry())
                 .companySize(lead.getCompanySize())
@@ -155,13 +155,13 @@ public class LeadDtoMapper {
                 .build();
     }
 
-    public ContactEntity toContactEntity(LeadEntity lead, Long customerId) {
+    public ContactEntity toContactEntity(LeadEntity lead, Long accountId) {
         if (lead == null) {
             return null;
         }
 
         return ContactEntity.builder()
-                .customerId(customerId)
+                .accountId(accountId)
                 .name(lead.getName())
                 .email(lead.getEmail())
                 .phone(lead.getPhone())
@@ -172,7 +172,7 @@ public class LeadDtoMapper {
                 .build();
     }
 
-    public OpportunityEntity toOpportunityEntity(LeadEntity lead, Long customerId, ConvertLeadRequest request) {
+    public OpportunityEntity toOpportunityEntity(LeadEntity lead, Long accountId, ConvertLeadRequest request) {
         if (lead == null) {
             return null;
         }
@@ -182,7 +182,7 @@ public class LeadDtoMapper {
                         : lead.getCompany() + " - " + lead.getName())
                 .description(request.getOpportunityDescription())
                 .leadId(lead.getId())
-                .customerId(customerId)
+                .accountId(accountId)
                 .stage(OpportunityStage.PROSPECTING)
                 .estimatedValue(request.getOpportunityAmount() != null ? request.getOpportunityAmount()
                         : lead.getEstimatedValue())
@@ -190,11 +190,11 @@ public class LeadDtoMapper {
                 .build();
     }
 
-    public LeadConversionResponse toConversionResponse(Long leadId, Long customerId, Long opportunityId,
+    public LeadConversionResponse toConversionResponse(Long leadId, Long accountId, Long opportunityId,
             Long contactId) {
         return LeadConversionResponse.builder()
                 .leadId(leadId)
-                .customerId(customerId)
+                .accountId(accountId)
                 .opportunityId(opportunityId)
                 .contactId(contactId)
                 .message("Lead converted successfully")

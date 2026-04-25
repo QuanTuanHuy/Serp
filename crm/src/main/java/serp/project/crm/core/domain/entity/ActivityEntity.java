@@ -24,7 +24,7 @@ import serp.project.crm.core.domain.enums.TaskPriority;
 public class ActivityEntity extends BaseEntity {
     private Long leadId;
     private Long contactId;
-    private Long customerId;
+    private Long accountId;
     private Long opportunityId;
 
     private ActivityType activityType;
@@ -45,7 +45,7 @@ public class ActivityEntity extends BaseEntity {
     private List<String> attachments;
 
     public boolean hasAnyLink() {
-        return leadId != null || contactId != null || customerId != null || opportunityId != null;
+        return leadId != null || contactId != null || accountId != null || opportunityId != null;
     }
 
     public boolean isTask() {

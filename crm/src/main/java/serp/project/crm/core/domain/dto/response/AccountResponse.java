@@ -10,6 +10,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import serp.project.crm.core.domain.enums.ActiveStatus;
+import serp.project.crm.core.domain.enums.AccountType;
 
 import java.math.BigDecimal;
 
@@ -20,7 +21,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 @Data
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class CustomerResponse {
+public class AccountResponse {
     private Long id;
     
     private String name;
@@ -36,6 +37,7 @@ public class CustomerResponse {
     private BigDecimal creditLimit;
     private String paymentTerms;
     private ActiveStatus activeStatus;
+    private AccountType accountType;
     
     private BigDecimal totalRevenue;
     private Integer totalOpportunities;

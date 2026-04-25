@@ -23,11 +23,11 @@ public interface IOpportunityService {
 
     Optional<OpportunityEntity> getOpportunityById(Long id, Long tenantId);
 
-    boolean existByCustomerIdAndName(Long customerId, String name, Long tenantId);
+    boolean existByAccountIdAndName(Long accountId, String name, Long tenantId);
 
     Pair<List<OpportunityEntity>, Long> getAllOpportunities(Long tenantId, PageRequest pageRequest);
 
-    Pair<List<OpportunityEntity>, Long> getOpportunitiesByCustomer(Long customerId, Long tenantId,
+    Pair<List<OpportunityEntity>, Long> getOpportunitiesByAccount(Long accountId, Long tenantId,
             PageRequest pageRequest);
 
     Pair<List<OpportunityEntity>, Long> getOpportunitiesByStage(OpportunityStage stage, Long tenantId,

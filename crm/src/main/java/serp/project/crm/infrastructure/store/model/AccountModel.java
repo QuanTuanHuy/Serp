@@ -15,17 +15,17 @@ import lombok.experimental.SuperBuilder;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "customers", indexes = {
-        @Index(name = "idx_customers_tenant_id", columnList = "tenant_id"),
-        @Index(name = "idx_customers_email", columnList = "email"),
-        @Index(name = "idx_customers_name", columnList = "name")
+@Table(name = "accounts", indexes = {
+        @Index(name = "idx_accounts_tenant_id", columnList = "tenant_id"),
+        @Index(name = "idx_accounts_email", columnList = "email"),
+        @Index(name = "idx_accounts_name", columnList = "name")
 })
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
 @Setter
 @SuperBuilder
-public class CustomerModel extends BaseModel {
+public class AccountModel extends BaseModel {
 
     @Column(name = "tenant_id", nullable = false)
     private Long tenantId;
@@ -48,8 +48,8 @@ public class CustomerModel extends BaseModel {
     @Column(name = "company_size", length = 50)
     private String companySize;
 
-    @Column(name = "parent_customer_id")
-    private Long parentCustomerId;
+    @Column(name = "parent_account_id")
+    private Long parentAccountId;
 
     @Column(name = "tax_id", length = 50)
     private String taxId;
@@ -68,6 +68,9 @@ public class CustomerModel extends BaseModel {
 
     @Column(name = "active_status", nullable = false, length = 20)
     private String activeStatus;
+
+    @Column(name = "account_type", nullable = false, length = 20)
+    private String accountType;
 
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;

@@ -22,7 +22,7 @@ import serp.project.crm.core.domain.dto.request.UpdateLeadRequest;
 import serp.project.crm.core.domain.dto.response.LeadConversionResponse;
 import serp.project.crm.core.domain.dto.response.LeadResponse;
 import serp.project.crm.core.domain.entity.ContactEntity;
-import serp.project.crm.core.domain.entity.CustomerEntity;
+import serp.project.crm.core.domain.entity.AccountEntity;
 import serp.project.crm.core.domain.entity.LeadEntity;
 import serp.project.crm.core.domain.entity.OpportunityEntity;
 import serp.project.crm.core.exception.AppException;
@@ -38,7 +38,7 @@ import java.util.List;
 public class LeadUseCase {
 
     private final ILeadService leadService;
-    private final ICustomerService customerService;
+    private final IAccountService accountService;
     private final IOpportunityService opportunityService;
     private final IContactService contactService;
 
@@ -114,35 +114,35 @@ public class LeadUseCase {
                 return responseUtils.badRequest(ErrorMessage.LEAD_CANNOT_BE_CONVERTED);
             }
 
-            Long customerId;
-            if (Boolean.TRUE.equals(request.getCreateNewCustomer())) {
-                CustomerEntity customer = leadDtoMapper.toCustomerEntity(lead);
+            Long accountId;
+            if (Boolean.TRUE.equals(request.getCreateNewAccount())) {
+                AccountEntity account = leadDtoMapper.toAccountEntity(lead);
 
-                CustomerEntity createdCustomer = customerService.createCustomer(customer, tenantId);
-                customerId = createdCustomer.getId();
-                log.info("Created new customer ID: {} from lead", customerId);
+                AccountEntity createdAccount = accountService.createAccount(account, tenantId);
+                accountId = createdAccount.getId();
+                log.info("Created new Account ID: {} from lead", accountId);
             } else {
-                customerId = request.getExistingCustomerId();
-                if (customerId == null) {
+                accountId = request.getExistingAccountId();
+                if (accountId == null) {
                     return responseUtils
-                            .badRequest("Either createNewCustomer must be true or existingCustomerId must be provided");
+                            .badRequest("Either createNewAccount must be true or existingAccountId must be provided");
                 }
-                customerService.getCustomerById(customerId, tenantId)
-                        .orElseThrow(() -> new AppException(ErrorMessage.CUSTOMER_NOT_FOUND));
-                log.info("Using existing customer ID: {}", customerId);
+                accountService.getAccountById(accountId, tenantId)
+                        .orElseThrow(() -> new AppException(ErrorMessage.ACCOUNT_NOT_FOUND));
+                log.info("Using existing Account ID: {}", accountId);
             }
 
-            ContactEntity contact = leadDtoMapper.toContactEntity(lead, customerId);
+            ContactEntity contact = leadDtoMapper.toContactEntity(lead, accountId);
             ContactEntity createdContact = contactService.createContact(contact, tenantId, tenantId); // TODO: fix userId
             log.info("Created contact ID: {} from lead", createdContact.getId());
 
-            OpportunityEntity opportunity = leadDtoMapper.toOpportunityEntity(lead, customerId, request);
+            OpportunityEntity opportunity = leadDtoMapper.toOpportunityEntity(lead, accountId, request);
             OpportunityEntity createdOpportunity = opportunityService.createOpportunity(opportunity, tenantId);
 
-            leadService.convertLead(request.getLeadId(), customerId, createdOpportunity.getId(), tenantId);
+            leadService.convertLead(request.getLeadId(), accountId, createdOpportunity.getId(), tenantId);
 
             LeadConversionResponse response = leadDtoMapper.toConversionResponse(
-                    request.getLeadId(), customerId, createdOpportunity.getId(), createdContact.getId());
+                    request.getLeadId(), accountId, createdOpportunity.getId(), createdContact.getId());
 
             log.info("Lead conversion completed successfully");
             return responseUtils.success(response, "Lead converted successfully");
