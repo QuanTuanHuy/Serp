@@ -8,6 +8,7 @@ package serp.project.first_mile.dto.response;
 import serp.project.first_mile.enums.DeliveryRequestTime;
 import serp.project.first_mile.enums.FeePayer;
 import serp.project.first_mile.enums.OrderProductCategory;
+import serp.project.first_mile.enums.OrderPickupMethod;
 import serp.project.first_mile.enums.OrderStatus;
 import serp.project.first_mile.enums.OrderType;
 import serp.project.first_mile.enums.PaymentStatus;
@@ -38,6 +39,7 @@ public record OrderDetailResponse(
         LocalDateTime pickupTimeStart,
         LocalDateTime pickupTimeEnd,
         DeliveryRequestTime deliveryRequestTime,
+        OrderPickupMethod pickupMethod,
         OrderProductCategory orderProductCategory,
         OrderType orderType,
         FeePayer feePayer,

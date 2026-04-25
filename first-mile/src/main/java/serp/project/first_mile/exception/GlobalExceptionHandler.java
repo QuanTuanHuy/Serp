@@ -8,8 +8,11 @@ import serp.project.first_mile.dto.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import java.time.OffsetDateTime;
 import java.util.Map;
@@ -106,6 +109,68 @@ public class GlobalExceptionHandler {
                 );
 
         ApiResponse<Void> apiResponse = buildErrorResponse(errorCode, localizedMessage, detail, request);
+
+        return ResponseEntity.badRequest().body(apiResponse);
+    }
+
+    @ExceptionHandler(value = MissingServletRequestParameterException.class)
+    ResponseEntity<ApiResponse<Void>> handlingMissingServletRequestParameterException(
+            MissingServletRequestParameterException exception,
+            HttpServletRequest request
+    ) {
+        ErrorCode errorCode = ErrorCode.INVALID_REQUEST;
+        String detail = String.format("Missing required request parameter '%s'.", exception.getParameterName());
+
+        ApiResponse<Void> apiResponse = buildErrorResponse(
+                errorCode,
+                messageService.getMessage(errorCode.getMessageKey()),
+                detail,
+                request
+        );
+
+        return ResponseEntity.badRequest().body(apiResponse);
+    }
+
+    @ExceptionHandler(value = MissingServletRequestPartException.class)
+    ResponseEntity<ApiResponse<Void>> handlingMissingServletRequestPartException(
+            MissingServletRequestPartException exception,
+            HttpServletRequest request
+    ) {
+        ErrorCode errorCode = ErrorCode.INVALID_REQUEST;
+        String detail = String.format("Missing required request part '%s'.", exception.getRequestPartName());
+
+        ApiResponse<Void> apiResponse = buildErrorResponse(
+                errorCode,
+                messageService.getMessage(errorCode.getMessageKey()),
+                detail,
+                request
+        );
+
+        return ResponseEntity.badRequest().body(apiResponse);
+    }
+
+    @ExceptionHandler(value = MethodArgumentTypeMismatchException.class)
+    ResponseEntity<ApiResponse<Void>> handlingMethodArgumentTypeMismatchException(
+            MethodArgumentTypeMismatchException exception,
+            HttpServletRequest request
+    ) {
+        ErrorCode errorCode = ErrorCode.INVALID_REQUEST;
+        String requiredType = exception.getRequiredType() == null
+                ? "unknown"
+                : exception.getRequiredType().getSimpleName();
+        String detail = String.format(
+                "Request parameter '%s' has invalid value '%s'; expected type '%s'.",
+                exception.getName(),
+                exception.getValue(),
+                requiredType
+        );
+
+        ApiResponse<Void> apiResponse = buildErrorResponse(
+                errorCode,
+                messageService.getMessage(errorCode.getMessageKey()),
+                detail,
+                request
+        );
 
         return ResponseEntity.badRequest().body(apiResponse);
     }

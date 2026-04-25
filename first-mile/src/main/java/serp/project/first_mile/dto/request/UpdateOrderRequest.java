@@ -18,6 +18,7 @@ import lombok.NoArgsConstructor;
 import serp.project.first_mile.enums.DeliveryRequestTime;
 import serp.project.first_mile.enums.FeePayer;
 import serp.project.first_mile.enums.OrderProductCategory;
+import serp.project.first_mile.enums.OrderPickupMethod;
 import serp.project.first_mile.enums.OrderType;
 
 import java.time.LocalDateTime;
@@ -106,6 +107,9 @@ public class UpdateOrderRequest {
     @JsonProperty("delivery_request_time")
     @NotNull
     private DeliveryRequestTime deliveryRequestTime;
+
+    @JsonProperty("pickup_method")
+    private OrderPickupMethod pickupMethod;
 
     @JsonProperty("order_product_category")
     private OrderProductCategory orderProductCategory;

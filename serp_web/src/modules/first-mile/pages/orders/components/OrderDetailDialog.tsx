@@ -23,6 +23,9 @@ interface OrderDetailDialogProps {
   detailOrder: FirstMileOrderDetail | null;
   onOpenChange: (open: boolean) => void;
   formatStatusLabel: (status: FirstMileOrderStatus) => string;
+  formatPickupMethodLabel: (
+    pickupMethod?: FirstMileOrderDetail['pickupMethod']
+  ) => string;
   buildOrderAddressLabel: (
     name?: string,
     phone?: string,
@@ -38,6 +41,7 @@ export const OrderDetailDialog: React.FC<OrderDetailDialogProps> = ({
   detailOrder,
   onOpenChange,
   formatStatusLabel,
+  formatPickupMethodLabel,
   buildOrderAddressLabel,
   getProvinceLabel,
   getWardLabel,
@@ -98,6 +102,12 @@ export const OrderDetailDialog: React.FC<OrderDetailDialogProps> = ({
                 <p className='text-muted-foreground'>Confirmation</p>
                 <p className='font-medium'>
                   {detailOrder.isConfirm ? 'Confirmed' : 'Pending confirm'}
+                </p>
+              </div>
+              <div>
+                <p className='text-muted-foreground'>Pickup method</p>
+                <p className='font-medium'>
+                  {formatPickupMethodLabel(detailOrder.pickupMethod)}
                 </p>
               </div>
             </div>
