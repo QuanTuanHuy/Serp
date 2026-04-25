@@ -4,12 +4,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
-import serp.project.logistics.entity.OrderEntity;
-import serp.project.logistics.entity.OrderItemEntity;
-import serp.project.logistics.entity.ProductEntity;
-import serp.project.logistics.repository.OrderItemRepository;
-import serp.project.logistics.repository.OrderRepository;
-import serp.project.logistics.repository.ProductRepository;
+import serp.project.logistics.constant.OrderType;
+import serp.project.logistics.entity.*;
+import serp.project.logistics.exception.AppErrorCode;
+import serp.project.logistics.exception.AppException;
+import serp.project.logistics.repository.*;
 import serp.project.logistics.repository.specification.OrderSpecification;
 import serp.project.logistics.util.PaginationUtils;
 
@@ -26,6 +25,9 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final OrderItemRepository orderItemRepository;
+
+    private final InventoryItemRepository inventoryItemRepository;
+    private final InventoryItemDetailRepository inventoryItemDetailRepository;
 
     public Page<OrderEntity> findOrders(
             String query,
@@ -66,6 +68,39 @@ public class OrderService {
             return null;
         }
         return orderEntity;
+    }
+
+    public OrderEntity getSaleOrder(String orderId, Long tenantId) {
+        log.info("[OrderService] Getting order {} for tenant {}", orderId, tenantId);
+        OrderEntity order = orderRepository.findById(orderId).orElse(null);
+        if (order == null || !order.getTenantId().equals(tenantId)) {
+            log.info("[OrderService] Order {} not found for tenant {} or does not belong to tenant",
+                    orderId, tenantId);
+            return null;
+        } if (order.getOrderTypeId().equals(OrderType.SALES.name())) {
+            log.info("[OrderService] Order {} is not a sales order", orderId);
+            throw new AppException(AppErrorCode.NOT_FOUND);
+        }
+
+        List<OrderItemEntity> orderItems = orderItemRepository.findByTenantIdAndOrderId(tenantId, orderId);
+        order.setItems(orderItems);
+
+        order.getItems().forEach(item -> {
+            List<InventoryItemDetailEntity> allocatedItems = inventoryItemDetailRepository
+                    .findByTenantIdAndOrderItemId(tenantId, item.getId());
+            item.setAllocatedInventoryItems(allocatedItems);
+            item.getAllocatedInventoryItems().forEach(detail -> {
+                InventoryItemEntity inventoryItem = inventoryItemRepository
+                        .findById(detail.getInventoryItemId())
+                        .orElse(null);
+                detail.setInventoryItem(inventoryItem);
+            });
+
+            ProductEntity product = productRepository.findById(item.getProductId())
+                    .orElse(null);
+            item.setProduct(product);
+        });
+        return order;
     }
 
     public List<OrderItemEntity> findByOrderId(String orderId, Long tenantId) {

@@ -14,28 +14,20 @@ import {
   Card,
   CardContent,
   Input,
-  Badge,
+  Skeleton,
 } from '@/shared/components/ui';
 import {
   Search,
-  Plus,
   SlidersHorizontal,
   ShoppingCart,
-  Package,
-  Clock,
   CheckCircle2,
-  XCircle,
   DollarSign,
   X,
   ChevronLeft,
   ChevronRight,
-  Calendar,
-  User,
   Grid3X3,
   List,
-  Truck,
   FileText,
-  TrendingUp,
   PackageCheck,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
@@ -49,296 +41,81 @@ import {
   selectOrderPagination,
   selectOrderFilters,
 } from '../../store/selectors';
-import type { Supplier, Order, OrderStatus } from '../../types';
+import type {
+  Supplier,
+  Order,
+  OrderStatus,
+  SaleChannel,
+  OrderFilters,
+} from '../../types';
+import { formatCurrency } from '@/shared/utils/format';
+import { StatsCard } from '../../components/cards/StatsCard';
+import { OrderCard } from '../../components/cards/OrderCard';
 
 interface OrderListPageProps {
   className?: string;
 }
 
-const statusStyles = {
-  CREATED: {
-    label: 'Đã tạo',
-    bg: 'bg-blue-100 dark:bg-blue-900/30',
-    text: 'text-blue-700 dark:text-blue-400',
-    dot: 'bg-blue-500',
-    icon: Clock,
-  },
-  APPROVED: {
-    label: 'Đã duyệt',
-    bg: 'bg-emerald-100 dark:bg-emerald-900/30',
-    text: 'text-emerald-700 dark:text-emerald-400',
-    dot: 'bg-emerald-500',
-    icon: CheckCircle2,
-  },
-  CANCELLED: {
-    label: 'Đã hủy',
-    bg: 'bg-rose-100 dark:bg-rose-900/30',
-    text: 'text-rose-700 dark:text-rose-400',
-    dot: 'bg-rose-500',
-    icon: XCircle,
-  },
-  FULLY_DELIVERED: {
-    label: 'Đã giao hàng',
-    bg: 'bg-purple-100 dark:bg-purple-900/30',
-    text: 'text-purple-700 dark:text-purple-400',
-    dot: 'bg-purple-500',
-    icon: Package,
-  },
-};
-
-const formatCurrency = (value?: number) => {
-  if (!value) return 'đ0';
-  if (value >= 1000000) return `đ${(value / 1000000).toFixed(1)}M`;
-  if (value >= 1000) return `đ${(value / 1000).toFixed(1)}K`;
-  if (value >= 1000000000) return `đ${(value / 1000000000).toFixed(1)}B`;
-  return `đ${value.toLocaleString()}`;
-};
-
-const formatDate = (dateString?: string) => {
-  if (!dateString) return 'N/A';
-  return new Date(dateString).toLocaleDateString('vi-VN');
-};
-
-const StatsCard = ({
-  title,
-  value,
-  icon: Icon,
-  variant = 'default',
-}: {
-  title: string;
-  value: number | string;
-  icon: any;
-  variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
-}) => {
-  const variantStyles = {
-    default: {
-      card: 'bg-card hover:bg-card/90 border-border',
-      icon: 'bg-muted text-muted-foreground',
-      iconRing: '',
-    },
-    primary: {
-      card: 'bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-200/50 dark:border-blue-800/30',
-      icon: 'bg-blue-500 text-white shadow-blue-500/25',
-      iconRing: 'ring-4 ring-blue-500/10',
-    },
-    success: {
-      card: 'bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 border-emerald-200/50 dark:border-emerald-800/30',
-      icon: 'bg-emerald-500 text-white shadow-emerald-500/25',
-      iconRing: 'ring-4 ring-emerald-500/10',
-    },
-    warning: {
-      card: 'bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-950/30 dark:to-amber-900/20 border-amber-200/50 dark:border-amber-800/30',
-      icon: 'bg-amber-500 text-white shadow-amber-500/25',
-      iconRing: 'ring-4 ring-amber-500/10',
-    },
-    danger: {
-      card: 'bg-gradient-to-br from-rose-50 to-rose-100/50 dark:from-rose-950/30 dark:to-rose-900/20 border-rose-200/50 dark:border-rose-800/30',
-      icon: 'bg-rose-500 text-white shadow-rose-500/25',
-      iconRing: 'ring-4 ring-rose-500/10',
-    },
-  };
-
-  const styles = variantStyles[variant];
-
-  return (
-    <Card
-      className={cn(
-        'group relative overflow-hidden p-5 shadow-sm transition-all duration-200 hover:shadow-md cursor-pointer',
-        styles.card
-      )}
-    >
-      {/* Background Pattern */}
-      <div className='absolute inset-0 opacity-5 dark:opacity-10'>
-        <svg
-          className='absolute -right-8 -top-8 h-32 w-32 text-current'
-          viewBox='0 0 100 100'
-        >
-          <circle
-            cx='50'
-            cy='50'
-            r='40'
-            fill='currentColor'
-            fillOpacity='0.3'
-          />
-        </svg>
-      </div>
-
-      <div className='relative flex items-start justify-between gap-4'>
-        <div className='space-y-1 min-w-0 flex-1'>
-          <p className='text-sm font-medium text-muted-foreground truncate'>
-            {title}
-          </p>
-          <p className='text-2xl font-bold tracking-tight truncate'>{value}</p>
-        </div>
-
-        <div
-          className={cn(
-            'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl shadow-lg transition-transform duration-200 group-hover:scale-105',
-            styles.icon,
-            styles.iconRing
-          )}
-        >
-          <Icon className='h-6 w-6' />
-        </div>
-      </div>
-    </Card>
-  );
-};
-
-// Order Card component
-const OrderCard = ({
-  order,
-  onClick,
-  supplier,
-}: {
-  order: Order;
-  onClick?: () => void;
-  supplier?: Supplier;
-}) => {
-  const status =
-    statusStyles[order.statusId as keyof typeof statusStyles] ||
-    statusStyles.CREATED;
-  const StatusIcon = status.icon;
-
-  return (
-    <Card
-      className={cn(
-        'group relative overflow-hidden',
-        'hover:shadow-lg hover:border-primary/20 transition-all duration-200 cursor-pointer'
-      )}
-      onClick={onClick}
-    >
-      {/* Header with gradient accent */}
-      <div className='relative h-2 bg-gradient-to-r from-primary/60 via-primary/40 to-primary/20' />
-
-      <CardContent className='p-5'>
-        {/* Header */}
-        <div className='flex items-start justify-between mb-4'>
-          <div className='flex-1 min-w-0'>
-            <div className='flex items-center gap-2 mb-2'>
-              <div className='flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 text-primary'>
-                <ShoppingCart className='h-5 w-5' />
-              </div>
-              <div className='flex-1 min-w-0'>
-                <h3 className='font-semibold text-foreground truncate'>
-                  {order.orderName || `Đơn hàng #${order.id?.slice(0, 8)}...`}
-                </h3>
-                <p className='text-xs text-muted-foreground'>
-                  ID: {order.id?.slice(0, 10) || 'N/A'}...
-                </p>
-              </div>
-            </div>
-
-            <Badge
-              variant='secondary'
-              className={cn('gap-1', status.bg, status.text)}
-            >
-              <StatusIcon className='h-3 w-3' />
-              <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
-              {status.label}
-            </Badge>
-          </div>
-        </div>
-
-        {/* Order Info */}
-        <div className='space-y-2 mb-4'>
-          <div className='flex items-center gap-2 text-sm'>
-            <Calendar className='h-4 w-4 text-muted-foreground shrink-0' />
-            <span className='text-muted-foreground'>
-              Ngày đặt: {formatDate(order.orderDate)}
-            </span>
-          </div>
-
-          {order.deliveryBeforeDate && (
-            <div className='flex items-center gap-2 text-sm'>
-              <Truck className='h-4 w-4 text-muted-foreground shrink-0' />
-              <span className='text-muted-foreground'>
-                Giao trước: {formatDate(order.deliveryBeforeDate)}
-              </span>
-            </div>
-          )}
-
-          {order.fromSupplierId && (
-            <div className='flex items-center gap-2 text-sm'>
-              <User className='h-4 w-4 text-muted-foreground shrink-0' />
-              <span className='truncate text-muted-foreground'>
-                NCC:{' '}
-                {supplier?.name || order.fromSupplierId.slice(0, 8) + '...'}
-              </span>
-            </div>
-          )}
-
-          {order.priority && (
-            <div className='flex items-center gap-2 text-sm'>
-              <TrendingUp className='h-4 w-4 text-muted-foreground shrink-0' />
-              <span className='text-muted-foreground'>
-                Ưu tiên: {order.priority}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Footer - Total */}
-        <div className='flex items-center justify-between pt-3 border-t'>
-          <div>
-            <p className='text-xs text-muted-foreground'>Tổng thành tiền</p>
-            <p className='text-lg font-bold text-foreground'>
-              {formatCurrency(order.totalAmount)}
-            </p>
-          </div>
-
-          <Button
-            variant='ghost'
-            size='sm'
-            className='opacity-0 group-hover:opacity-100 transition-opacity'
-            onClick={(e) => {
-              e.stopPropagation();
-              onClick?.();
-            }}
-          >
-            Xem chi tiết →
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
 export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
+  const SEARCH_PAGE_SIZE = 9;
+
   const router = useRouter();
   const dispatch = useAppDispatch();
 
   const pagination = useAppSelector(selectOrderPagination);
   const filters = useAppSelector(selectOrderFilters);
 
-  const { data, isLoading, error } = useGetOrdersQuery({
-    filters: { ...filters, orderTypeId: 'PURCHASE' },
-    pagination,
-  });
-
   // Local state
   const [searchQuery, setSearchQuery] = useState(filters.query || '');
-  const [statusFilter, setStatusFilter] = useState<OrderStatus | ''>('');
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | ''>(
+    (filters.statusId as OrderStatus) || ''
+  );
+  const [supplierFilter, setSupplierFilter] = useState(
+    filters.fromSupplierId || ''
+  );
+  const [saleChannelFilter, setSaleChannelFilter] = useState<SaleChannel | ''>(
+    (filters.saleChannelId as SaleChannel) || ''
+  );
+  const [orderDateAfter, setOrderDateAfter] = useState(
+    filters.orderDateAfter || ''
+  );
+  const [orderDateBefore, setOrderDateBefore] = useState(
+    filters.orderDateBefore || ''
+  );
+  const [deliveryAfter, setDeliveryAfter] = useState(
+    filters.deliveryAfter || ''
+  );
+  const [deliveryBefore, setDeliveryBefore] = useState(
+    filters.deliveryBefore || ''
+  );
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [hasSearched, setHasSearched] = useState(true);
+
+  const { data, isLoading, error } = useGetOrdersQuery(
+    {
+      filters: {
+        ...filters,
+        orderTypeId: 'PURCHASE',
+        toCustomerId: undefined,
+      },
+      pagination: {
+        ...pagination,
+        size: SEARCH_PAGE_SIZE,
+      },
+    },
+    {
+      skip: !hasSearched,
+    }
+  );
 
   const orders = data?.data?.items || [];
 
-  // Collect unique supplier IDs
-  const supplierIds = useMemo(() => {
-    return Array.from(
-      new Set(orders.map((o: Order) => o.fromSupplierId).filter(Boolean))
-    );
-  }, [orders]);
-
   // Fetch suppliers
-  const { data: suppliersResponse } = useGetSuppliersQuery(
-    {
-      filters: {},
-      pagination: { page: 0, size: 100 },
-    },
-    { skip: supplierIds.length === 0 }
-  );
+  const { data: suppliersResponse } = useGetSuppliersQuery({
+    filters: {},
+    pagination: { page: 0, size: 100 },
+  });
 
   // Create supplier map for quick lookup
   const supplierMap = useMemo(() => {
@@ -353,14 +130,57 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
   const totalPages = data?.data?.totalPages || 0;
   const currentPage = data?.data?.currentPage || 0;
 
+  const buildOrderFilters = (
+    overrides?: Partial<{
+      query: string;
+      statusId: OrderStatus | '';
+      fromSupplierId: string;
+      saleChannelId: SaleChannel | '';
+      orderDateAfter: string;
+      orderDateBefore: string;
+      deliveryAfter: string;
+      deliveryBefore: string;
+    }>
+  ): OrderFilters => {
+    const query = overrides?.query ?? searchQuery;
+    const statusId = overrides?.statusId ?? statusFilter;
+    const fromSupplierId = overrides?.fromSupplierId ?? supplierFilter;
+    const saleChannelId = overrides?.saleChannelId ?? saleChannelFilter;
+    const nextOrderDateAfter = overrides?.orderDateAfter ?? orderDateAfter;
+    const nextOrderDateBefore = overrides?.orderDateBefore ?? orderDateBefore;
+    const nextDeliveryAfter = overrides?.deliveryAfter ?? deliveryAfter;
+    const nextDeliveryBefore = overrides?.deliveryBefore ?? deliveryBefore;
+
+    return {
+      query: query || undefined,
+      statusId: statusId || undefined,
+      orderTypeId: 'PURCHASE',
+      fromSupplierId: fromSupplierId || undefined,
+      saleChannelId: saleChannelId || undefined,
+      orderDateAfter: nextOrderDateAfter || undefined,
+      orderDateBefore: nextOrderDateBefore || undefined,
+      deliveryAfter: nextDeliveryAfter || undefined,
+      deliveryBefore: nextDeliveryBefore || undefined,
+    };
+  };
+
   // Handle actions
   const handleSearch = () => {
-    dispatch(setOrderFilters({ ...filters, query: searchQuery }));
-    dispatch(setOrderPagination({ ...pagination, page: 0 }));
+    dispatch(setOrderFilters(buildOrderFilters()));
+    dispatch(
+      setOrderPagination({ ...pagination, page: 0, size: SEARCH_PAGE_SIZE })
+    );
+    setHasSearched(true);
   };
 
   const handlePageChange = (newPage: number) => {
-    dispatch(setOrderPagination({ ...pagination, page: newPage }));
+    dispatch(
+      setOrderPagination({
+        ...pagination,
+        page: newPage,
+        size: SEARCH_PAGE_SIZE,
+      })
+    );
   };
 
   const handleViewOrder = (orderId: string) => {
@@ -370,11 +190,35 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
   const clearFilters = () => {
     setSearchQuery('');
     setStatusFilter('');
-    dispatch(setOrderFilters({}));
-    dispatch(setOrderPagination({ ...pagination, page: 0 }));
+    setSupplierFilter('');
+    setSaleChannelFilter('');
+    setOrderDateAfter('');
+    setOrderDateBefore('');
+    setDeliveryAfter('');
+    setDeliveryBefore('');
   };
 
-  const hasActiveFilters = searchQuery || statusFilter;
+  const hasActiveFilters =
+    !!searchQuery ||
+    !!statusFilter ||
+    !!supplierFilter ||
+    !!saleChannelFilter ||
+    !!orderDateAfter ||
+    !!orderDateBefore ||
+    !!deliveryAfter ||
+    !!deliveryBefore;
+
+  const activeFilterCount =
+    (searchQuery ? 1 : 0) +
+    (statusFilter ? 1 : 0) +
+    (supplierFilter ? 1 : 0) +
+    (saleChannelFilter ? 1 : 0) +
+    (orderDateAfter ? 1 : 0) +
+    (orderDateBefore ? 1 : 0) +
+    (deliveryAfter ? 1 : 0) +
+    (deliveryBefore ? 1 : 0);
+
+  const shouldShowResults = hasSearched;
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -392,14 +236,31 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
     };
   }, [totalItems, orders]);
 
+  if (isLoading) {
+    return (
+      <div className={className}>
+        <div className='flex items-center justify-between mb-6'>
+          <Skeleton className='h-10 w-48' />
+          <Skeleton className='h-10 w-32' />
+        </div>
+        <Skeleton className='h-12 w-full mb-4' />
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className='h-64 w-full' />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn('space-y-6', className)}>
       {/* Page Header */}
       <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
         <div>
-          <h1 className='text-2xl font-bold tracking-tight'>Đơn đặt hàng</h1>
+          <h1 className='text-2xl font-bold tracking-tight'>Đơn mua hàng</h1>
           <p className='text-muted-foreground'>
-            Quản lý đơn đặt hàng từ nhà cung cấp
+            Quản lý đơn mua hàng từ nhà cung cấp
           </p>
         </div>
       </div>
@@ -441,14 +302,13 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
             placeholder='Tìm kiếm đơn hàng, NCC...'
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             className='pl-10 pr-10'
           />
           {searchQuery && (
             <button
               onClick={() => {
-                setSearchQuery('');
-                handleSearch();
+                const nextQuery = '';
+                setSearchQuery(nextQuery);
               }}
               className='absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground'
             >
@@ -457,7 +317,11 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
           )}
         </div>
 
-        <Button onClick={handleSearch} variant='secondary'>
+        <Button
+          onClick={handleSearch}
+          variant='secondary'
+          className='transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.98]'
+        >
           <Search className='h-4 w-4 mr-2' />
           Tìm kiếm
         </Button>
@@ -506,7 +370,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
       {showFilters && (
         <Card>
           <CardContent className='p-4'>
-            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
               <div>
                 <label className='text-sm font-medium mb-1.5 block'>
                   Trạng thái đơn hàng
@@ -516,40 +380,146 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
                   onChange={(e) => {
                     const value = e.target.value as OrderStatus | '';
                     setStatusFilter(value);
-                    dispatch(
-                      setOrderFilters({
-                        ...filters,
-                        statusId: value || undefined,
-                      })
-                    );
                   }}
                   className='w-full px-3 py-2 border rounded-lg bg-background'
                 >
                   <option value=''>Tất cả trạng thái</option>
-                  <option value='CREATED'>Nháp</option>
+                  <option value='CREATED'>Đã tạo</option>
                   <option value='APPROVED'>Đã duyệt</option>
                   <option value='CANCELLED'>Đã hủy</option>
                   <option value='FULLY_DELIVERED'>Đã giao hàng</option>
                 </select>
               </div>
+
+              <div>
+                <label className='text-sm font-medium mb-1.5 block'>
+                  Kênh bán
+                </label>
+                <select
+                  value={saleChannelFilter}
+                  onChange={(e) =>
+                    setSaleChannelFilter(e.target.value as SaleChannel | '')
+                  }
+                  className='w-full px-3 py-2 border rounded-lg bg-background'
+                >
+                  <option value=''>Tất cả kênh</option>
+                  <option value='ONLINE'>Online</option>
+                  <option value='PARTNER'>Partner</option>
+                  <option value='RETAIL'>Retail</option>
+                </select>
+              </div>
+
+              <div>
+                <label className='text-sm font-medium mb-1.5 block'>
+                  Nhà cung cấp
+                </label>
+                <select
+                  value={supplierFilter}
+                  onChange={(e) => setSupplierFilter(e.target.value)}
+                  className='w-full px-3 py-2 border rounded-lg bg-background'
+                >
+                  <option value=''>Tất cả nhà cung cấp</option>
+                  {(suppliersResponse?.data?.items || []).map((supplier) => (
+                    <option key={supplier.id} value={supplier.id}>
+                      {supplier.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className='text-sm font-medium mb-1.5 block'>
+                  Ngày đặt
+                </label>
+                <div className='grid grid-cols-2 gap-2'>
+                  <div>
+                    <p className='mb-1 text-xs text-muted-foreground'>
+                      Từ ngày
+                    </p>
+                    <Input
+                      type='date'
+                      value={orderDateAfter}
+                      onChange={(e) => setOrderDateAfter(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <p className='mb-1 text-xs text-muted-foreground'>
+                      Đến ngày
+                    </p>
+                    <Input
+                      type='date'
+                      value={orderDateBefore}
+                      onChange={(e) => setOrderDateBefore(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className='text-sm font-medium mb-1.5 block'>
+                  Ngày giao
+                </label>
+                <div className='grid grid-cols-2 gap-2'>
+                  <div>
+                    <p className='mb-1 text-xs text-muted-foreground'>
+                      Từ ngày
+                    </p>
+                    <Input
+                      type='date'
+                      value={deliveryAfter}
+                      onChange={(e) => setDeliveryAfter(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <p className='mb-1 text-xs text-muted-foreground'>
+                      Đến ngày
+                    </p>
+                    <Input
+                      type='date'
+                      value={deliveryBefore}
+                      onChange={(e) => setDeliveryBefore(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {hasActiveFilters && (
-              <div className='mt-4 pt-4 border-t flex items-center justify-between'>
-                <p className='text-sm text-muted-foreground'>
-                  Đã tìm thấy {totalItems} kết quả phù hợp
-                </p>
+            <div className='mt-4 pt-4 border-t flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
+              <p className='text-sm text-muted-foreground'>
+                Đã tìm thấy {totalItems} kết quả phù hợp
+              </p>
+              {hasActiveFilters && (
                 <Button variant='ghost' size='sm' onClick={clearFilters}>
                   Xóa tất cả bộ lọc
                 </Button>
+              )}
+            </div>
+
+            {hasActiveFilters && (
+              <div className='mt-2'>
+                <p className='text-sm text-muted-foreground'>
+                  Đang bật {activeFilterCount} bộ lọc
+                </p>
               </div>
             )}
           </CardContent>
         </Card>
       )}
 
+      {!shouldShowResults && (
+        <Card>
+          <CardContent className='py-10 text-center'>
+            <p className='text-sm text-muted-foreground'>
+              Bấm Tìm kiếm để tải dữ liệu đơn hàng.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Error State */}
-      {error && (
+      {shouldShowResults && error && (
         <Card className='border-destructive/50 bg-destructive/5'>
           <CardContent className='p-4'>
             <p className='text-destructive'>
@@ -560,7 +530,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
       )}
 
       {/* Loading State */}
-      {isLoading && (
+      {shouldShowResults && isLoading && (
         <div
           className={cn(
             'gap-4',
@@ -590,7 +560,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
       )}
 
       {/* Order Grid/List */}
-      {!isLoading && orders.length > 0 && (
+      {shouldShowResults && !isLoading && orders.length > 0 && (
         <div
           className={cn(
             'gap-4',
@@ -605,13 +575,14 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
               order={order}
               onClick={() => handleViewOrder(order.id)}
               supplier={supplierMap.get(order.fromSupplierId)}
+              viewMode={viewMode}
             />
           ))}
         </div>
       )}
 
       {/* Empty State */}
-      {!isLoading && orders.length === 0 && !error && (
+      {shouldShowResults && !isLoading && orders.length === 0 && !error && (
         <Card>
           <CardContent className='py-16 text-center'>
             <div className='mx-auto w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4'>
@@ -635,12 +606,12 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
       )}
 
       {/* Pagination */}
-      {totalItems > (pagination.size || 10) && (
+      {shouldShowResults && totalItems > SEARCH_PAGE_SIZE && (
         <div className='flex items-center justify-between pt-4'>
           <p className='text-sm text-muted-foreground'>
-            Hiển thị {currentPage * (pagination.size || 10) + 1} đến{' '}
-            {Math.min((currentPage + 1) * (pagination.size || 10), totalItems)}{' '}
-            trong tổng số {totalItems} đơn hàng
+            Hiển thị {currentPage * SEARCH_PAGE_SIZE + 1} đến{' '}
+            {Math.min((currentPage + 1) * SEARCH_PAGE_SIZE, totalItems)} trong
+            tổng số {totalItems} đơn hàng
           </p>
           <div className='flex items-center gap-2'>
             <Button

@@ -19,6 +19,7 @@ public record PostOfficeResponse(
         String wardCode,
         String addressDetail,
         String phoneNumber,
+        String imageUrl,
         LocalDate operationalStartDate,
         LocalDate operationalEndDate,
         LocalTime workingStartTime,

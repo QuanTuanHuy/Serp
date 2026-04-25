@@ -21,6 +21,7 @@ import serp.project.account.core.service.IKeycloakUserService;
 import serp.project.account.core.service.IOrganizationService;
 import serp.project.account.core.service.IUserService;
 import serp.project.account.core.usecase.support.OrganizationRoleResolver;
+import serp.project.account.core.usecase.support.UserSyncPublisher;
 import serp.project.account.infrastructure.store.mapper.UserMapper;
 import serp.project.account.kernel.utils.CollectionUtils;
 
@@ -30,12 +31,14 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class UserProvisioningCoordinator {
+
     private final IUserService userService;
     private final IKeycloakUserService keycloakUserService;
     private final IOrganizationService organizationService;
     private final ICombineRoleService combineRoleService;
     private final OrganizationRoleResolver organizationRoleResolver;
     private final UserMapper userMapper;
+    private final UserSyncPublisher userSyncPublisher;
 
     @Transactional(rollbackFor = Exception.class)
     public UserEntity createOrganizationUser(OrganizationEntity organization, CreateUserForOrgRequest request) {
@@ -58,6 +61,7 @@ public class UserProvisioningCoordinator {
 
             combineRoleService.assignRolesToUser(user, roles);
             assignOrganizationRoles(organization.getId(), user.getId(), roles);
+            userSyncPublisher.publishUserSync(organization.getId(), user.getId());
             return user;
         } catch (Exception e) {
             cleanupKeycloakUser(keycloakUserId);

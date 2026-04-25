@@ -80,6 +80,10 @@ public class Order extends AbstractAudit{
     @Column(name = "status")
     private OrderStatus status;
 
+    @Column(name = "is_confirm")
+    @Builder.Default
+    private Boolean isConfirm = false;
+
     @Column(name = "total_weight")
     private Double totalWeight;
 
@@ -94,6 +98,7 @@ public class Order extends AbstractAudit{
     private Double totalVolume;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<Product> products = new ArrayList<>();
 
     @Column(name = "pickup_attempts")
@@ -134,12 +139,24 @@ public class Order extends AbstractAudit{
     @Column(name = "note")
     private String note;
 
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
+
+    @Column(name = "cancel_reason")
+    private String cancelReason;
+
     public void addProduct(Product product) {
+        if (products == null) {
+            products = new ArrayList<>();
+        }
         products.add(product);
         product.setOrder(this);
     }
 
     public void removeProduct(Product product) {
+        if (products == null) {
+            return;
+        }
         products.remove(product);
         product.setOrder(null);
     }

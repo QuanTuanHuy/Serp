@@ -9,6 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Formula;
 import serp.project.logistics.constant.InventoryItemStatus;
 import serp.project.logistics.dto.request.InventoryItemCreationForm;
 import serp.project.logistics.dto.request.InventoryItemDetailUpdateForm;
@@ -40,6 +41,11 @@ public class InventoryItemDetailEntity {
     private String inventoryItemId;
 
     private int quantity;
+
+    @Formula("quantity - COALESCE((SELECT SUM(osi.quantity) " +
+            "FROM wms2_outbound_shipment_item osi " +
+            "WHERE osi.inventory_item_detail_id = id), 0)")
+    private int notYetOutboundQuantity;
 
     @Column(name = "shipment_id")
     private String shipmentId;

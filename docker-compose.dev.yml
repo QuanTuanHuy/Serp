@@ -10,7 +10,7 @@ services:
       - serp-network
 
   serp-postgre-db:
-    image: postgres:latest
+    image: postgis/postgis:17-3.5-alpine
     container_name: serp-postgre-db
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-serp}
@@ -50,7 +50,21 @@ services:
       - kafka_data:/tmp/kraft-combined-logs
     networks:
       - serp-network
-  
+
+  serp-kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: serp-kafka-ui
+    ports:
+      - "8098:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: serp-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: serp-kafka:29092
+      DYNAMIC_CONFIG_ENABLED: "true"
+    depends_on:
+      - serp-kafka
+    networks:
+      - serp-network
+
   serp-minio:
     image: minio/minio:latest
     container_name: serp-minio

@@ -11,6 +11,12 @@ import {
   useGetMenuDisplaysByModuleAndUserQuery,
   useGetMyModulesQuery,
 } from '@/modules/account/services';
+import {
+  getModuleRootPath,
+  isSameModuleCode,
+  normalizeMenuPathForModule,
+  normalizePath,
+} from '@/shared/utils';
 
 interface RouteGuardResult {
   hasAccess: boolean;
@@ -47,13 +53,20 @@ interface RouteGuardResult {
  */
 export const useModuleRouteGuard = (moduleCode: string): RouteGuardResult => {
   const pathname = usePathname();
-  const moduleRootPath = `/${moduleCode.toLowerCase()}`;
+  const moduleRootPath = useMemo(
+    () => getModuleRootPath(moduleCode),
+    [moduleCode]
+  );
+  const currentPath = useMemo(
+    () => normalizeMenuPathForModule(pathname, moduleCode),
+    [pathname, moduleCode]
+  );
 
   const { data: userModules, isLoading: modulesLoading } =
     useGetMyModulesQuery();
 
   const currentModule = useMemo(() => {
-    return userModules?.find((m) => m.moduleCode === moduleCode);
+    return userModules?.find((m) => isSameModuleCode(m.moduleCode, moduleCode));
   }, [userModules, moduleCode]);
 
   const {
@@ -69,16 +82,12 @@ export const useModuleRouteGuard = (moduleCode: string): RouteGuardResult => {
       return false;
     }
 
-    const normalizePath = (path: string) => {
-      return path.replace(/\/+$/, ''); // Remove trailing slashes
-    };
-
-    const currentPath = normalizePath(pathname);
+    const normalizedModuleRootPath = normalizePath(moduleRootPath);
 
     const hasMatch = menuDisplays.some((menu) => {
       if (!menu.path) return false;
 
-      const menuPath = normalizePath(menu.path);
+      const menuPath = normalizeMenuPathForModule(menu.path, moduleCode);
 
       if (currentPath === menuPath) return true;
 
@@ -94,16 +103,21 @@ export const useModuleRouteGuard = (moduleCode: string): RouteGuardResult => {
 
     // Allow module root path (e.g., /sales) if user has any accessible child path
     // (e.g., /sales/dashboard). This prevents root redirects from being blocked.
-    if (currentPath === normalizePath(moduleRootPath)) {
+    if (currentPath === normalizedModuleRootPath) {
       return menuDisplays.some((menu) => {
         if (!menu.path) return false;
-        const menuPath = normalizePath(menu.path);
-        return menuPath.startsWith(normalizePath(moduleRootPath) + '/');
+        const menuPath = normalizeMenuPathForModule(menu.path, moduleCode);
+
+        if (menuPath === normalizedModuleRootPath) {
+          return true;
+        }
+
+        return menuPath.startsWith(normalizedModuleRootPath + '/');
       });
     }
 
     return false;
-  }, [menuDisplays, pathname, moduleRootPath]);
+  }, [currentPath, menuDisplays, moduleCode, moduleRootPath]);
 
   const isLoading = modulesLoading || menusLoading;
 

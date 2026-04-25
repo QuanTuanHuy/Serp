@@ -68,6 +68,14 @@ public class IdUtils {
         return generateIdWithPrefix("SHP");
     }
 
+    public static String generateOutboundShipmentId() {
+        return generateIdWithPrefix("OBS");
+    }
+
+    public static String generateOutboundShipmentItemId() {
+        return generateIdWithPrefix("OSI");
+    }
+
     public static String generateIdWithPrefix(String prefix) {
         String uuid = UUID.randomUUID().toString().replace("-", "").toUpperCase();
         return prefix + uuid;

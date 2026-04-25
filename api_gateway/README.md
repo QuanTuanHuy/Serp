@@ -1,6 +1,6 @@
 # API Gateway
 
-Central entry point for the SERP ERP system. Routes requests to backend microservices with JWT authentication, CORS, and circuit breaker resilience.
+Central entry point for the SERP ERP system. Routes requests to backend microservices with JWT authentication, CORS, and circuit breaker resilience
 
 **Port:** `8080` | **Go:** 1.25+ | **Framework:** Gin + Uber FX
 
@@ -21,17 +21,18 @@ go run src/main.go
 
 ## Service Routing
 
-| Service | Port | Route Prefix | Description |
-|---------|------|--------------|-------------|
-| Account | 8081 | `/api/v1/auth`, `/api/v1/users` | Auth, users, orgs |
-| CRM | 8086 | `/crm/api/v1/*` | Leads, customers, contacts |
-| PTM Task | 8083 | `/ptm/api/v1/projects`, `/tasks`, `/notes` | Projects & tasks |
-| PTM Schedule | 8084 | `/ptm/api/v1/schedule-*` | Scheduling & calendar |
-| Purchase | 8088 | `/purchase/api/v1/*` | Procurement |
-| Logistics | 8089 | `/logistics/api/v1/*` | Warehouse & inventory |
-| Notification | 8090 | `/notification/api/v1/*` | Alerts & notifications |
-| Sales | 8090 | `/sales/api/v1/*` | Sales orders |
-| Discuss | 8092 | `/discuss/api/v1/*` | Team messaging |
+| Service      | Port | Route Prefix                               | Description                |
+| ------------ | ---- | ------------------------------------------ | -------------------------- |
+| Account      | 8081 | `/api/v1/auth`, `/api/v1/users`            | Auth, users, orgs          |
+| CRM          | 8086 | `/crm/api/v1/*`                            | Leads, customers, contacts |
+| PTM Task     | 8083 | `/ptm/api/v1/projects`, `/tasks`, `/notes` | Projects & tasks           |
+| PTM Schedule | 8084 | `/ptm/api/v1/schedule-*`                   | Scheduling & calendar      |
+| Purchase     | 8088 | `/purchase/api/v1/*`                       | Procurement                |
+| Logistics    | 8089 | `/logistics/api/v1/*`                      | Warehouse & inventory      |
+| Logistics2   | 9004 | `/logistics2/api/v1/*`                     | Warehouse & inventory (v2) |
+| Notification | 8090 | `/notification/api/v1/*`                   | Alerts & notifications     |
+| Sales        | 8090 | `/sales/api/v1/*`                          | Sales orders               |
+| Discuss      | 8092 | `/discuss/api/v1/*`                        | Team messaging             |
 
 ## Configuration
 
@@ -51,6 +52,7 @@ ACCOUNT_SERVICE_PORT=8081
 ### YAML Config (`src/config/local.yaml`)
 
 Key sections:
+
 - `app.keycloak` - JWT validation settings
 - `app.cors` - Allowed origins, methods, headers
 - `external.services` - Backend service addresses and timeouts
