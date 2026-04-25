@@ -11,6 +11,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Component;
 import serp.project.crm.core.domain.entity.ActivityEntity;
+import serp.project.crm.core.domain.enums.ActivityOutcome;
 import serp.project.crm.core.domain.enums.ActivityStatus;
 import serp.project.crm.core.domain.enums.ActivityType;
 import serp.project.crm.core.domain.enums.TaskPriority;
@@ -44,6 +45,8 @@ public class ActivityMapper extends BaseMapper {
                 .durationMinutes(model.getDurationMinutes())
                 .priority(stringToEnum(model.getPriority(), TaskPriority.class))
                 .progressPercent(model.getProgressPercent())
+                .outcome(stringToEnum(model.getOutcome(), ActivityOutcome.class))
+                .notes(model.getNotes())
                 .attachments(parseJsonToList(model.getAttachments()))
                 .createdAt(toTimestamp(model.getCreatedAt()))
                 .updatedAt(toTimestamp(model.getUpdatedAt()))
@@ -76,6 +79,8 @@ public class ActivityMapper extends BaseMapper {
                 .durationMinutes(entity.getDurationMinutes())
                 .priority(enumToString(entity.getPriority()))
                 .progressPercent(entity.getProgressPercent())
+                .outcome(enumToString(entity.getOutcome()))
+                .notes(entity.getNotes())
                 .attachments(serializeListToJson(entity.getAttachments()))
                 .createdAt(toLocalDateTime(entity.getCreatedAt()))
                 .updatedAt(toLocalDateTime(entity.getUpdatedAt()))

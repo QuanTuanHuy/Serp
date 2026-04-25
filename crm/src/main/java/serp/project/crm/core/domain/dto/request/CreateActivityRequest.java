@@ -5,11 +5,14 @@
 
 package serp.project.crm.core.domain.dto.request;
 
+import java.util.List;
+
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.crm.core.domain.enums.ActivityOutcome;
 import serp.project.crm.core.domain.enums.ActivityStatus;
 import serp.project.crm.core.domain.enums.ActivityType;
 import serp.project.crm.core.domain.enums.TaskPriority;
@@ -34,14 +37,13 @@ public class CreateActivityRequest {
     @Size(max = 255, message = "Location must not exceed 255 characters")
     private String location;
 
-    private Long relatedToLeadId;
-    private Long relatedToAccountId;
-    private Long relatedToOpportunityId;
-    private Long relatedToContactId;
+    private Long leadId;
+    private Long accountId;
+    private Long opportunityId;
+    private Long contactId;
 
     private Long assignedTo;
 
-    @NotNull(message = "Activity date is required")
     private Long activityDate;
 
     private Long dueDate;
@@ -58,4 +60,8 @@ public class CreateActivityRequest {
 
     @Size(max = 1000, message = "Notes must not exceed 1000 characters")
     private String notes;
+
+    private ActivityOutcome outcome;
+
+    private List<String> attachments;
 }

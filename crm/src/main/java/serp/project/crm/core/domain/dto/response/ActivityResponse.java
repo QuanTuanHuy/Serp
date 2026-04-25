@@ -11,9 +11,12 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.crm.core.domain.enums.ActivityOutcome;
 import serp.project.crm.core.domain.enums.ActivityStatus;
 import serp.project.crm.core.domain.enums.ActivityType;
 import serp.project.crm.core.domain.enums.TaskPriority;
+
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -30,10 +33,10 @@ public class ActivityResponse {
     private ActivityStatus status;
     private String location;
     
-    private Long relatedToLeadId;
-    private Long relatedToAccountId;
-    private Long relatedToOpportunityId;
-    private Long relatedToContactId;
+    private Long leadId;
+    private Long accountId;
+    private Long opportunityId;
+    private Long contactId;
     
     private Long assignedTo;
     private Long activityDate;
@@ -43,6 +46,9 @@ public class ActivityResponse {
     
     private TaskPriority priority;
     private Integer progressPercent;
+    private ActivityOutcome outcome;
+    private String notes;
+    private List<String> attachments;
     
     // Metadata
     private Long tenantId;

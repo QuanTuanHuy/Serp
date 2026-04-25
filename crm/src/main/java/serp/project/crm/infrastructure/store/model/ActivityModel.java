@@ -80,6 +80,12 @@ public class ActivityModel extends BaseModel {
     @Column(name = "progress_percent")
     private Integer progressPercent;
 
+    @Column(name = "outcome", length = 50)
+    private String outcome;
+
+    @Column(name = "notes", columnDefinition = "TEXT")
+    private String notes;
+
     @Column(name = "attachments", columnDefinition = "TEXT")
     private String attachments;
 }
