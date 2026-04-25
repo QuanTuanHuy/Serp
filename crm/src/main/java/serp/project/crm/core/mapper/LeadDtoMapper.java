@@ -50,7 +50,8 @@ public class LeadDtoMapper {
                 .leadSource(request.getLeadSource())
                 .assignedTo(request.getAssignedTo())
                 .estimatedValue(request.getEstimatedValue())
-                .expectedCloseDate(request.getExpectedCloseDate())
+                .leadScore(request.getLeadScore())
+                .followUpDate(request.getFollowUpDate())
                 .notes(request.getNotes())
                 .build();
     }
@@ -87,8 +88,8 @@ public class LeadDtoMapper {
                 .leadStatus(request.getLeadStatus())
                 .assignedTo(request.getAssignedTo())
                 .estimatedValue(request.getEstimatedValue())
-                .probability(request.getProbability())
-                .expectedCloseDate(request.getExpectedCloseDate())
+                .leadScore(request.getLeadScore())
+                .followUpDate(request.getFollowUpDate())
                 .notes(request.getNotes())
                 .build();
     }
@@ -124,10 +125,11 @@ public class LeadDtoMapper {
                 .leadStatus(entity.getLeadStatus())
                 .assignedTo(entity.getAssignedTo())
                 .estimatedValue(entity.getEstimatedValue())
-                .probability(entity.getProbability())
-                .expectedCloseDate(entity.getExpectedCloseDate())
+                .leadScore(entity.getLeadScore())
+                .followUpDate(entity.getFollowUpDate())
                 .notes(entity.getNotes())
                 .convertedOpportunityId(entity.getConvertedOpportunityId())
+                .convertedAccountId(entity.getConvertedAccountId())
                 .tenantId(entity.getTenantId())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
@@ -139,18 +141,24 @@ public class LeadDtoMapper {
     // ========== Conversion Mappers ==========
 
     public AccountEntity toAccountEntity(LeadEntity lead) {
+        return toAccountEntity(lead, null);
+    }
+
+    public AccountEntity toAccountEntity(LeadEntity lead, ConvertLeadRequest.AccountData accountData) {
         if (lead == null) {
             return null;
         }
 
         return AccountEntity.builder()
-                .name(lead.getCompany())
+                .name(accountData != null && accountData.getName() != null ? accountData.getName() : lead.getCompany())
                 .industry(lead.getIndustry())
                 .companySize(lead.getCompanySize())
                 .website(lead.getWebsite())
                 .phone(lead.getPhone())
                 .email(lead.getEmail())
                 .address(lead.getAddress())
+                .creditLimit(accountData != null ? accountData.getCreditLimit() : null)
+                .notes(accountData != null ? accountData.getNotes() : null)
                 .activeStatus(ActiveStatus.ACTIVE)
                 .build();
     }
@@ -177,16 +185,20 @@ public class LeadDtoMapper {
             return null;
         }
 
+        ConvertLeadRequest.OpportunityData opportunityData = request.getOpportunityData();
+
         return OpportunityEntity.builder()
-                .name(request.getOpportunityName() != null ? request.getOpportunityName()
+                .name(opportunityData != null && opportunityData.getName() != null ? opportunityData.getName()
                         : lead.getCompany() + " - " + lead.getName())
-                .description(request.getOpportunityDescription())
+                .description(opportunityData != null ? opportunityData.getNotes() : null)
                 .leadId(lead.getId())
                 .accountId(accountId)
                 .stage(OpportunityStage.PROSPECTING)
-                .estimatedValue(request.getOpportunityAmount() != null ? request.getOpportunityAmount()
+                .estimatedValue(opportunityData != null && opportunityData.getAmount() != null ? opportunityData.getAmount()
                         : lead.getEstimatedValue())
-                .expectedCloseDate(lead.getExpectedCloseDate())
+                .expectedCloseDate(opportunityData != null && opportunityData.getExpectedCloseDate() != null
+                        ? opportunityData.getExpectedCloseDate()
+                        : lead.getFollowUpDate())
                 .build();
     }
 

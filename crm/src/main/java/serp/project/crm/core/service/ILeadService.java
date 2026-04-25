@@ -44,11 +44,13 @@ public interface ILeadService {
 
     List<LeadEntity> getLeadsByCloseDateRange(LocalDate startDate, LocalDate endDate, Long tenantId);
 
-    LeadEntity assignLead(Long leadId, Long userId, Long tenantId);
+    LeadEntity assignLead(Long leadId, Long assignedTo, Long assignedBy, Long tenantId);
 
-    LeadEntity qualifyLead(Long id, Long tenantId);
+    LeadEntity qualifyLead(Long id, String notes, Long userId, Long tenantId);
 
-    LeadEntity convertLead(Long id, Long accountId, Long opportunityId, Long tenantId);
+    LeadEntity disqualifyLead(Long id, String notes, Long userId, Long tenantId);
+
+    LeadEntity convertLead(Long id, Long accountId, Long opportunityId, Long convertedBy, Long tenantId);
 
     void deleteLead(Long id, Long tenantId);
 }
