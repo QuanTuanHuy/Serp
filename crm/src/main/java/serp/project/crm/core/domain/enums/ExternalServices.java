@@ -13,8 +13,8 @@ import java.util.stream.Stream;
 @Getter
 public enum ExternalServices {
     PTM("Personal Task Management", "serp-ptm"),
-    CRM("Customer Relationship Management", "serp-crm"),
-    ACCOUNT("Serp Account Service", "serp-account"),
+    CRM("Account Relationship Management", "serp-crm"),
+    Account("Serp Account Service", "serp-account"),
     ;
 
     private final String name;

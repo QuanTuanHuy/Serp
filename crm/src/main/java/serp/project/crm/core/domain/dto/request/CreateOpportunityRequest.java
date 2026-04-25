@@ -27,13 +27,14 @@ public class CreateOpportunityRequest {
     @Size(max = 1000, message = "Description must not exceed 1000 characters")
     private String description;
 
-    @NotNull(message = "Customer ID is required")
-    private Long customerId;
+    @NotNull(message = "Account ID is required")
+    private Long accountId;
+
+    private Long leadId;
 
     private OpportunityStage stage;
 
-    @NotNull(message = "Estimated value is required")
-    @DecimalMin(value = "0.0", inclusive = false, message = "Estimated value must be greater than 0")
+    @DecimalMin(value = "0.0", inclusive = true, message = "Estimated value must be greater than or equal to 0")
     private BigDecimal estimatedValue;
 
     @Future(message = "Expected close date must be in the future")

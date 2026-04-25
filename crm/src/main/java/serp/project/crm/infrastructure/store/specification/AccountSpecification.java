@@ -12,20 +12,20 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.domain.Specification;
 
-import serp.project.crm.core.domain.dto.request.CustomerFilterRequest;
-import serp.project.crm.infrastructure.store.model.CustomerModel;
+import serp.project.crm.core.domain.dto.request.AccountFilterRequest;
+import serp.project.crm.infrastructure.store.model.AccountModel;
 
-public final class CustomerSpecification {
+public final class AccountSpecification {
 
-    private CustomerSpecification() {
+    private AccountSpecification() {
     }
 
-    public static Specification<CustomerModel> build(CustomerFilterRequest filter, Long tenantId) {
-        CustomerFilterRequest safeFilter = Optional.ofNullable(filter)
-                .orElseGet(CustomerFilterRequest::new);
+    public static Specification<AccountModel> build(AccountFilterRequest filter, Long tenantId) {
+        AccountFilterRequest safeFilter = Optional.ofNullable(filter)
+                .orElseGet(AccountFilterRequest::new);
         safeFilter.normalize();
 
-        Specification<CustomerModel> spec = BaseSpecification.equal("tenantId", tenantId);
+        Specification<AccountModel> spec = BaseSpecification.equal("tenantId", tenantId);
 
         if (safeFilter.hasKeyword()) {
             spec = spec.and(keywordContains(safeFilter.getKeyword()));
@@ -39,6 +39,10 @@ public final class CustomerSpecification {
             spec = spec.and(BaseSpecification.in("activeStatus", statuses));
         }
 
+        if (safeFilter.getAccountType() != null) {
+            spec = spec.and(BaseSpecification.equal("accountType", safeFilter.getAccountType().name()));
+        }
+
         if (safeFilter.getIndustries() != null && !safeFilter.getIndustries().isEmpty()) {
             spec = spec.and(BaseSpecification.in("industry", safeFilter.getIndustries()));
         }
@@ -48,9 +52,9 @@ public final class CustomerSpecification {
         }
 
         if (Boolean.TRUE.equals(safeFilter.getNoParentOnly())) {
-            spec = spec.and(BaseSpecification.isNull("parentCustomerId"));
-        } else if (safeFilter.getParentCustomerId() != null) {
-            spec = spec.and(BaseSpecification.equal("parentCustomerId", safeFilter.getParentCustomerId()));
+            spec = spec.and(BaseSpecification.isNull("parentAccountId"));
+        } else if (safeFilter.getParentAccountId() != null) {
+            spec = spec.and(BaseSpecification.equal("parentAccountId", safeFilter.getParentAccountId()));
         }
 
         if (safeFilter.getCreditLimitMin() != null || safeFilter.getCreditLimitMax() != null) {
@@ -97,13 +101,13 @@ public final class CustomerSpecification {
         return spec;
     }
 
-    private static Specification<CustomerModel> keywordContains(String keyword) {
+    private static Specification<AccountModel> keywordContains(String keyword) {
         String lowered = keyword == null ? "" : keyword.trim().toLowerCase();
         if (lowered.isEmpty()) {
             return BaseSpecification.alwaysTrue();
         }
 
-        List<Specification<CustomerModel>> parts = new ArrayList<>();
+        List<Specification<AccountModel>> parts = new ArrayList<>();
         parts.add((root, query, cb) -> cb.like(cb.lower(root.get("name")), pattern(lowered)));
         parts.add((root, query, cb) -> cb.like(cb.lower(root.get("email")), pattern(lowered)));
         parts.add((root, query, cb) -> cb.like(cb.lower(root.get("phone")), pattern(lowered)));
@@ -111,8 +115,8 @@ public final class CustomerSpecification {
         parts.add((root, query, cb) -> cb.like(cb.lower(root.get("taxId")), pattern(lowered)));
         parts.add((root, query, cb) -> cb.like(cb.lower(root.get("notes")), pattern(lowered)));
 
-        Specification<CustomerModel> combined = BaseSpecification.alwaysFalse();
-        for (Specification<CustomerModel> part : parts) {
+        Specification<AccountModel> combined = BaseSpecification.alwaysFalse();
+        for (Specification<AccountModel> part : parts) {
             combined = combined.or(part);
         }
         return combined;

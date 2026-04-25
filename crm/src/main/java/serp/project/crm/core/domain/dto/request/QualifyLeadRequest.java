@@ -17,7 +17,13 @@ import lombok.NoArgsConstructor;
 @Builder
 public class QualifyLeadRequest {
     private Long leadId;
-    
+
+    @NotBlank(message = "Qualification notes are required")
     @Size(max = 1000, message = "Qualification notes must not exceed 1000 characters")
-    private String qualificationNotes;
+    private String notes;
+
+    private Boolean budgetConfirmed;
+    private Boolean hasAuthority;
+    private Boolean needIdentified;
+    private Boolean timelineEstablished;
 }

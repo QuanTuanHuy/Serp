@@ -12,6 +12,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import serp.project.crm.core.domain.enums.ActivityOutcome;
 import serp.project.crm.core.domain.enums.ActivityStatus;
 import serp.project.crm.core.domain.enums.ActivityType;
 import serp.project.crm.core.domain.enums.TaskPriority;
@@ -24,7 +25,7 @@ import serp.project.crm.core.domain.enums.TaskPriority;
 public class ActivityEntity extends BaseEntity {
     private Long leadId;
     private Long contactId;
-    private Long customerId;
+    private Long accountId;
     private Long opportunityId;
 
     private ActivityType activityType;
@@ -32,7 +33,7 @@ public class ActivityEntity extends BaseEntity {
     private String description;
     private ActivityStatus status;
     private String location;
-    private Long assignedTo; // MemberId
+    private Long assignedTo;
 
     private Long activityDate; // Unix timestamp
     private Long dueDate;
@@ -41,11 +42,13 @@ public class ActivityEntity extends BaseEntity {
     private Integer durationMinutes;
     private TaskPriority priority;
     private Integer progressPercent;
+    private ActivityOutcome outcome;
+    private String notes;
 
     private List<String> attachments;
 
     public boolean hasAnyLink() {
-        return leadId != null || contactId != null || customerId != null || opportunityId != null;
+        return leadId != null || contactId != null || accountId != null || opportunityId != null;
     }
 
     public boolean isTask() {
@@ -84,10 +87,22 @@ public class ActivityEntity extends BaseEntity {
         return System.currentTimeMillis() > dueDate;
     }
 
-    public void markAsCompleted(Long completedBy) {
+    public void markAsCompleted(ActivityOutcome outcome, String notes, Long completedBy) {
+        if (isCompleted()) {
+            throw new IllegalStateException("Activity is already completed");
+        }
+        if (isCancelled()) {
+            throw new IllegalStateException("Cannot complete a cancelled activity");
+        }
         this.status = ActivityStatus.COMPLETED;
         this.setUpdatedBy(completedBy);
         this.progressPercent = 100;
+        if (outcome != null) {
+            this.outcome = outcome;
+        }
+        if (notes != null) {
+            this.notes = notes;
+        }
     }
 
     public void markAsCancelled(Long cancelledBy) {
@@ -137,14 +152,23 @@ public class ActivityEntity extends BaseEntity {
             this.priority = updates.getPriority();
         if (updates.getProgressPercent() != null)
             this.progressPercent = updates.getProgressPercent();
+        if (updates.getOutcome() != null)
+            this.outcome = updates.getOutcome();
+        if (updates.getNotes() != null)
+            this.notes = updates.getNotes();
+        if (updates.getAttachments() != null)
+            this.attachments = updates.getAttachments();
     }
 
     public void setDefaults() {
         if (this.status == null) {
             this.status = ActivityStatus.PLANNED;
         }
-        if (this.progressPercent == null) {
+        if (isTask() && this.progressPercent == null) {
             this.progressPercent = 0;
+        }
+        if (!isTask()) {
+            this.progressPercent = null;
         }
         if (this.priority == null) {
             this.priority = TaskPriority.MEDIUM;

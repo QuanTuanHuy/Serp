@@ -45,12 +45,12 @@ public class LeadResponse {
     private LeadStatus leadStatus;
     private Long assignedTo;
     private BigDecimal estimatedValue;
-    private Integer probability;
-    private LocalDate expectedCloseDate;
+    private Integer leadScore;
+    private LocalDate followUpDate;
     private String notes;
 
     private Long convertedOpportunityId;
-    private Long convertedCustomerId;
+    private Long convertedAccountId;
 
     // Metadata
     private Long tenantId;

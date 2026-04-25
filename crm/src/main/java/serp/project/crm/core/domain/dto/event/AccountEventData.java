@@ -17,8 +17,8 @@ import java.math.BigDecimal;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CustomerEventData {
-    private Long customerId;
+public class AccountEventData {
+    private Long accountId;
     private Long tenantId;
     private String name;
     private String email;
@@ -26,7 +26,7 @@ public class CustomerEventData {
     private String website;
     private String industry;
     private String companySize;
-    private Long parentCustomerId;
+    private Long parentAccountId;
     private String taxId;
     private BigDecimal creditLimit;
     private Integer totalOpportunities;

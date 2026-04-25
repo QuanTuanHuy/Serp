@@ -23,13 +23,16 @@ public class ErrorMessage {
     
     // ==================== CRM SPECIFIC ERROR MESSAGES ====================
     
-    // Customer errors
-    public static final String CUSTOMER_NOT_FOUND = "Customer not found";
-    public static final String CUSTOMER_ALREADY_EXISTS = "Customer with this email already exists";
-    public static final String CUSTOMER_INACTIVE = "Customer is inactive";
-    public static final String CUSTOMER_HAS_ACTIVE_OPPORTUNITIES = "Cannot delete customer with active opportunities";
-    public static final String CUSTOMER_CANNOT_BE_OWN_PARENT = "Customer cannot be its own parent";
-    public static final String CANNOT_DELETE_CUSTOMER_WITH_CHILDREN = "Cannot delete customer with child customers";
+    // Account errors
+    public static final String ACCOUNT_NOT_FOUND = "Account not found";
+    public static final String ACCOUNT_ALREADY_EXISTS = "Account with this email already exists";
+    public static final String ACCOUNT_INACTIVE = "Account is inactive";
+    public static final String ACCOUNT_ALREADY_ACTIVE = "Account is already active";
+    public static final String ACCOUNT_ALREADY_INACTIVE = "Account is already inactive";
+    public static final String ACCOUNT_HAS_ACTIVE_OPPORTUNITIES = "Cannot delete Account with active opportunities";
+    public static final String ACCOUNT_CANNOT_BE_OWN_PARENT = "Account cannot be its own parent";
+    public static final String CANNOT_DELETE_ACCOUNT_WITH_CHILDREN = "Cannot delete Account with child Accounts";
+    public static final String CREDIT_LIMIT_NEGATIVE = "Credit limit cannot be negative";
     
     // Lead errors
     public static final String LEAD_NOT_FOUND = "Lead not found";
@@ -48,15 +51,15 @@ public class ErrorMessage {
     public static final String OPPORTUNITY_INVALID_STAGE = "Invalid opportunity stage";
     public static final String OPPORTUNITY_INVALID_STAGE_TRANSITION = "Cannot transition to this stage from current stage";
     public static final String OPPORTUNITY_MISSING_REQUIRED_FIELDS = "Missing required fields for opportunity";
-    public static final String OPPORTUNITY_ALREADY_EXISTS = "Opportunity with this name already exists for the customer";
+    public static final String OPPORTUNITY_ALREADY_EXISTS = "Opportunity with this name already exists for the Account";
     public static final String CANNOT_DELETE_WON_OPPORTUNITY = "Cannot delete an opportunity that has been won";
     
     // Contact errors
     public static final String CONTACT_NOT_FOUND = "Contact not found";
-    public static final String CONTACT_ALREADY_EXISTS = "Contact with this email already exists for this customer";
-    public static final String CONTACT_CUSTOMER_REQUIRED = "Customer ID is required for contact";
-    public static final String CONTACT_ALREADY_PRIMARY = "A primary contact already exists for this customer";
-    public static final String CONTACT_CANNOT_BE_PRIMARY = "Contact cannot be set as primary without a customer";
+    public static final String CONTACT_ALREADY_EXISTS = "Contact with this email already exists for this Account";
+    public static final String CONTACT_ACCOUNT_REQUIRED = "Account ID is required for contact";
+    public static final String CONTACT_ALREADY_PRIMARY = "A primary contact already exists for this Account";
+    public static final String CONTACT_CANNOT_BE_PRIMARY = "Contact cannot be set as primary without an Account";
     
     // Activity errors
     public static final String ACTIVITY_DUE_DATE_PAST = "Due date cannot be in the past";
@@ -64,7 +67,7 @@ public class ErrorMessage {
     public static final String ACTIVITY_ALREADY_COMPLETED = "Activity is already completed";
     public static final String ACTIVITY_ALREADY_CANCELLED = "Activity is already cancelled";
     public static final String ACTIVITY_INVALID_STATUS = "Invalid activity status";
-    public static final String ACTIVITY_MISSING_ENTITY_REFERENCE = "Activity must be linked to at least one of lead, contact, customer, or opportunity";
+    public static final String ACTIVITY_MISSING_ENTITY_REFERENCE = "Activity must be linked to at least one of lead, contact, Account, or opportunity";
     public static final String ACTIVITY_TYPE_REQUIRED = "Activity type is required";
     public static final String ACTIVITY_SUBJECT_REQUIRED = "Activity subject is required";
     public static final String ACTIVITY_PROGRESS_INVALID = "Activity progressPercent must be between 0 and 100";

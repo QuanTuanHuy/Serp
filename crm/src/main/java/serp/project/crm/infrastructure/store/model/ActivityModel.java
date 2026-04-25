@@ -19,7 +19,7 @@ import lombok.experimental.SuperBuilder;
         @Index(name = "idx_activities_activity_type", columnList = "activity_type"),
         @Index(name = "idx_activities_due_date", columnList = "due_date"),
         @Index(name = "idx_activities_lead_id", columnList = "lead_id"),
-        @Index(name = "idx_activities_customer_id", columnList = "customer_id"),
+        @Index(name = "idx_activities_account_id", columnList = "account_id"),
         @Index(name = "idx_activities_opportunity_id", columnList = "opportunity_id")
 })
 @NoArgsConstructor
@@ -38,8 +38,8 @@ public class ActivityModel extends BaseModel {
     @Column(name = "contact_id")
     private Long contactId;
 
-    @Column(name = "customer_id")
-    private Long customerId;
+    @Column(name = "account_id")
+    private Long accountId;
 
     @Column(name = "opportunity_id")
     private Long opportunityId;
@@ -79,6 +79,12 @@ public class ActivityModel extends BaseModel {
 
     @Column(name = "progress_percent")
     private Integer progressPercent;
+
+    @Column(name = "outcome", length = 50)
+    private String outcome;
+
+    @Column(name = "notes", columnDefinition = "TEXT")
+    private String notes;
 
     @Column(name = "attachments", columnDefinition = "TEXT")
     private String attachments;

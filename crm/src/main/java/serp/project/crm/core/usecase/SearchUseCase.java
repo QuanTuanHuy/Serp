@@ -14,21 +14,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.crm.core.domain.dto.GeneralResponse;
 import serp.project.crm.core.domain.dto.PageRequest;
-import serp.project.crm.core.domain.dto.request.CustomerFilterRequest;
+import serp.project.crm.core.domain.dto.request.AccountFilterRequest;
 import serp.project.crm.core.domain.dto.request.LeadFilterRequest;
 import serp.project.crm.core.domain.dto.request.OpportunityFilterRequest;
-import serp.project.crm.core.domain.dto.response.CustomerResponse;
+import serp.project.crm.core.domain.dto.response.AccountResponse;
 import serp.project.crm.core.domain.dto.response.GlobalSearchResponse;
 import serp.project.crm.core.domain.dto.response.GlobalSearchResponse.GlobalSearchSection;
 import serp.project.crm.core.domain.dto.response.LeadResponse;
 import serp.project.crm.core.domain.dto.response.OpportunityResponse;
-import serp.project.crm.core.domain.entity.CustomerEntity;
+import serp.project.crm.core.domain.entity.AccountEntity;
 import serp.project.crm.core.domain.entity.LeadEntity;
 import serp.project.crm.core.domain.entity.OpportunityEntity;
-import serp.project.crm.core.mapper.CustomerDtoMapper;
+import serp.project.crm.core.mapper.AccountDtoMapper;
 import serp.project.crm.core.mapper.LeadDtoMapper;
 import serp.project.crm.core.mapper.OpportunityDtoMapper;
-import serp.project.crm.core.service.ICustomerService;
+import serp.project.crm.core.service.IAccountService;
 import serp.project.crm.core.service.ILeadService;
 import serp.project.crm.core.service.IOpportunityService;
 import serp.project.crm.kernel.utils.ResponseUtils;
@@ -43,11 +43,11 @@ public class SearchUseCase {
 
     private final ILeadService leadService;
     private final IOpportunityService opportunityService;
-    private final ICustomerService customerService;
+    private final IAccountService AccountService;
 
     private final LeadDtoMapper leadDtoMapper;
     private final OpportunityDtoMapper opportunityDtoMapper;
-    private final CustomerDtoMapper customerDtoMapper;
+    private final AccountDtoMapper AccountDtoMapper;
 
     private final ResponseUtils responseUtils;
 
@@ -63,12 +63,12 @@ public class SearchUseCase {
 
             GlobalSearchSection<LeadResponse> leadSection = searchLeads(keyword, tenantId, pageSize);
             GlobalSearchSection<OpportunityResponse> opportunitySection = searchOpportunities(keyword, tenantId, pageSize);
-            GlobalSearchSection<CustomerResponse> customerSection = searchCustomers(keyword, tenantId, pageSize);
+            GlobalSearchSection<AccountResponse> accountSection = searchAccounts(keyword, tenantId, pageSize);
 
             GlobalSearchResponse response = GlobalSearchResponse.builder()
                     .leads(leadSection)
                     .opportunities(opportunitySection)
-                    .customers(customerSection)
+                    .accounts(accountSection)
                     .build();
 
             return responseUtils.success(response, "Global search executed successfully");
@@ -112,18 +112,18 @@ public class SearchUseCase {
                 .build();
     }
 
-    private GlobalSearchSection<CustomerResponse> searchCustomers(String keyword, Long tenantId, int size) {
-        CustomerFilterRequest filter = CustomerFilterRequest.builder()
+    private GlobalSearchSection<AccountResponse> searchAccounts(String keyword, Long tenantId, int size) {
+        AccountFilterRequest filter = AccountFilterRequest.builder()
                 .keyword(keyword)
                 .page(1)
                 .size(size)
                 .build();
         PageRequest pageRequest = filter.toPageRequest();
-        Pair<List<CustomerEntity>, Long> result = customerService.filterCustomers(filter, tenantId, pageRequest);
-        List<CustomerResponse> items = result.getFirst().stream()
-                .map(customerDtoMapper::toResponse)
+        Pair<List<AccountEntity>, Long> result = AccountService.filterAccounts(filter, tenantId, pageRequest);
+        List<AccountResponse> items = result.getFirst().stream()
+                .map(AccountDtoMapper::toResponse)
                 .toList();
-        return GlobalSearchSection.<CustomerResponse>builder()
+        return GlobalSearchSection.<AccountResponse>builder()
                 .items(items)
                 .total(result.getSecond())
                 .build();

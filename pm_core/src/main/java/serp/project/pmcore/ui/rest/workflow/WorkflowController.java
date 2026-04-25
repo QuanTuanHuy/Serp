@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import serp.project.pmcore.application.shared.pagination.PageView;
 import serp.project.pmcore.application.workflow.WorkflowView;
+import serp.project.pmcore.application.workflow.WorkflowValidationView;
 import serp.project.pmcore.application.workflow.WorkflowStepView;
 import serp.project.pmcore.application.workflow.WorkflowTransitionView;
 import serp.project.pmcore.application.workflow.command.addstep.AddWorkflowStepCommand;
@@ -28,6 +29,8 @@ import serp.project.pmcore.application.workflow.command.addtransition.AddWorkflo
 import serp.project.pmcore.application.workflow.command.addtransition.AddWorkflowTransitionCommandHandler;
 import serp.project.pmcore.application.workflow.command.create.CreateWorkflowCommand;
 import serp.project.pmcore.application.workflow.command.create.CreateWorkflowCommandHandler;
+import serp.project.pmcore.application.workflow.command.publish.PublishWorkflowCommand;
+import serp.project.pmcore.application.workflow.command.publish.PublishWorkflowCommandHandler;
 import serp.project.pmcore.application.workflow.command.reordersteps.ReorderWorkflowStepsCommand;
 import serp.project.pmcore.application.workflow.command.reordersteps.ReorderWorkflowStepsCommandHandler;
 import serp.project.pmcore.application.workflow.command.removetransition.DeleteWorkflowTransitionResult;
@@ -44,6 +47,8 @@ import serp.project.pmcore.application.workflow.query.list.ListWorkflowsQuery;
 import serp.project.pmcore.application.workflow.query.list.ListWorkflowsQueryHandler;
 import serp.project.pmcore.application.workflow.query.listtransitions.ListWorkflowTransitionsQuery;
 import serp.project.pmcore.application.workflow.query.listtransitions.ListWorkflowTransitionsQueryHandler;
+import serp.project.pmcore.application.workflow.query.validate.ValidateWorkflowQuery;
+import serp.project.pmcore.application.workflow.query.validate.ValidateWorkflowQueryHandler;
 import serp.project.pmcore.domain.shared.exception.AccessDeniedException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.kernel.utils.AuthUtils;
@@ -75,6 +80,8 @@ public class WorkflowController {
     private final UpdateWorkflowTransitionCommandHandler updateWorkflowTransitionCommandHandler;
     private final RemoveWorkflowTransitionCommandHandler removeWorkflowTransitionCommandHandler;
     private final ListWorkflowTransitionsQueryHandler listWorkflowTransitionsQueryHandler;
+    private final ValidateWorkflowQueryHandler validateWorkflowQueryHandler;
+    private final PublishWorkflowCommandHandler publishWorkflowCommandHandler;
 
     @PostMapping
     public ResponseEntity<GeneralResponse<WorkflowView>> createWorkflow(
@@ -244,6 +251,25 @@ public class WorkflowController {
         List<WorkflowTransitionView> response = listWorkflowTransitionsQueryHandler.handle(
                 new ListWorkflowTransitionsQuery(workflowId, fromStepId, tenantId)
         );
+        return ResponseEntity.ok(responseUtils.success(response));
+    }
+
+    @PostMapping("/{workflowId}/validate")
+    public ResponseEntity<GeneralResponse<WorkflowValidationView>> validateWorkflow(@PathVariable Long workflowId) {
+        Long tenantId = requireCurrentTenantId();
+        WorkflowValidationView response = validateWorkflowQueryHandler.handle(new ValidateWorkflowQuery(workflowId, tenantId));
+        return ResponseEntity.ok(responseUtils.success(response));
+    }
+
+    @PostMapping("/{workflowId}/publish")
+    public ResponseEntity<GeneralResponse<WorkflowView>> publishWorkflow(@PathVariable Long workflowId) {
+        Long userId = requireCurrentUserId();
+        Long tenantId = requireCurrentTenantId();
+        WorkflowView response = publishWorkflowCommandHandler.handle(new PublishWorkflowCommand(
+                workflowId,
+                tenantId,
+                userId
+        ));
         return ResponseEntity.ok(responseUtils.success(response));
     }
 

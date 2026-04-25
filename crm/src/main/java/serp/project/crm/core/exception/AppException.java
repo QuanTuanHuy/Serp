@@ -30,6 +30,13 @@ public class AppException extends RuntimeException {
             case ErrorMessage.UNAUTHORIZED -> Constants.HttpStatusCode.UNAUTHORIZED;
             case ErrorMessage.FORBIDDEN -> Constants.HttpStatusCode.FORBIDDEN;
             case ErrorMessage.NOT_FOUND -> Constants.HttpStatusCode.NOT_FOUND;
+            case ErrorMessage.ACCOUNT_NOT_FOUND,
+                    ErrorMessage.CONTACT_NOT_FOUND,
+                    ErrorMessage.LEAD_NOT_FOUND,
+                    ErrorMessage.OPPORTUNITY_NOT_FOUND,
+                    ErrorMessage.ACTIVITY_NOT_FOUND,
+                    ErrorMessage.TEAM_NOT_FOUND,
+                    ErrorMessage.TEAM_MEMBER_NOT_FOUND -> Constants.HttpStatusCode.NOT_FOUND;
             case ErrorMessage.INTERNAL_SERVER_ERROR -> Constants.HttpStatusCode.INTERNAL_SERVER_ERROR;
             default -> Constants.HttpStatusCode.BAD_REQUEST;
         };

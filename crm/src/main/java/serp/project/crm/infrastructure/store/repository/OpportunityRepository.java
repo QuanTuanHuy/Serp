@@ -28,7 +28,7 @@ public interface OpportunityRepository
 
     Page<OpportunityModel> findByTenantIdAndStage(Long tenantId, String stage, Pageable pageable);
 
-    Page<OpportunityModel> findByTenantIdAndCustomerId(Long tenantId, Long customerId, Pageable pageable);
+    Page<OpportunityModel> findByTenantIdAndAccountId(Long tenantId, Long accountId, Pageable pageable);
 
     List<OpportunityModel> findByTenantIdAndLeadId(Long tenantId, Long leadId);
 
@@ -45,7 +45,7 @@ public interface OpportunityRepository
 
     long countByTenantIdAndStage(Long tenantId, String stage);
 
-    long countByTenantIdAndCustomerId(Long tenantId, Long customerId);
+    long countByTenantIdAndAccountId(Long tenantId, Long accountId);
 
     long countByTenantIdAndAssignedTo(Long tenantId, Long assignedTo);
 
@@ -57,5 +57,5 @@ public interface OpportunityRepository
     BigDecimal sumEstimatedValueByTenantIdAndStage(@Param("tenantId") Long tenantId,
             @Param("stage") String stage);
 
-    boolean existsByTenantIdAndCustomerIdAndName(Long tenantId, Long customerId, String name);
+    boolean existsByTenantIdAndAccountIdAndName(Long tenantId, Long accountId, String name);
 }

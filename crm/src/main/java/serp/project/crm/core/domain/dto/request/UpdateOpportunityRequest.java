@@ -28,12 +28,8 @@ public class UpdateOpportunityRequest {
     
     private OpportunityStage stage;
     
-    @DecimalMin(value = "0.0", inclusive = false, message = "Estimated value must be greater than 0")
+    @DecimalMin(value = "0.0", inclusive = true, message = "Estimated value must be greater than or equal to 0")
     private BigDecimal estimatedValue;
-    
-    @Min(value = 0, message = "Probability must be at least 0")
-    @Max(value = 100, message = "Probability must not exceed 100")
-    private Integer probability;
     
     @Future(message = "Expected close date must be in the future")
     private LocalDate expectedCloseDate;

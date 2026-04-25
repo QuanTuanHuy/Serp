@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class LeadConversionResponse {
     private Long leadId;
-    private Long customerId;
+    private Long accountId;
     private Long opportunityId;
     private Long contactId;
     private String message;

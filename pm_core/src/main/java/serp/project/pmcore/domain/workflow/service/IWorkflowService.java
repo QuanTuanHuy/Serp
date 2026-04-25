@@ -6,6 +6,7 @@
 package serp.project.pmcore.domain.workflow.service;
 
 import serp.project.pmcore.domain.shared.pagination.PageResult;
+import serp.project.pmcore.domain.workflow.dto.WorkflowValidationResult;
 import serp.project.pmcore.domain.workflow.entity.WorkflowEntity;
 import serp.project.pmcore.domain.workflow.entity.WorkflowStepEntity;
 import serp.project.pmcore.domain.workflow.entity.WorkflowTransitionEntity;
@@ -63,6 +64,10 @@ public interface IWorkflowService {
     List<WorkflowTransitionEntity> listWorkflowTransitions(Long workflowId,
                                                            Long fromStepId,
                                                            Long tenantId);
+
+    WorkflowValidationResult validateWorkflow(Long workflowId, Long tenantId);
+
+    WorkflowEntity publishWorkflow(Long workflowId, Long tenantId, Long userId);
 
     WorkflowEntity resolveWorkflow(Long workflowSchemeId,
                                    Long issueTypeId,

@@ -20,7 +20,7 @@ public class GlobalSearchResponse {
 
     private GlobalSearchSection<LeadResponse> leads;
     private GlobalSearchSection<OpportunityResponse> opportunities;
-    private GlobalSearchSection<CustomerResponse> customers;
+    private GlobalSearchSection<AccountResponse> accounts;
 
     @Data
     @NoArgsConstructor

@@ -15,19 +15,21 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import serp.project.crm.core.domain.enums.ActiveStatus;
+import serp.project.crm.core.domain.enums.AccountType;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-public class CustomerFilterRequest extends BaseFilterRequest {
+public class AccountFilterRequest extends BaseFilterRequest {
 
     private String keyword;
     private List<ActiveStatus> statuses;
+    private AccountType accountType;
     private List<String> industries;
     private List<String> companySizes;
-    private Long parentCustomerId;
+    private Long parentAccountId;
     private Boolean noParentOnly;
 
     private BigDecimal creditLimitMin;
