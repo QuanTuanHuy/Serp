@@ -34,8 +34,8 @@ public class LeadEventData {
     private String leadStatus;
     private Long assignedTo;
     private BigDecimal estimatedValue;
-    private Integer probability;
-    private LocalDate expectedCloseDate;
+    private Integer leadScore;
+    private LocalDate followUpDate;
     private String notes;
     private Long createdBy;
     private Long createdAt;
@@ -43,6 +43,6 @@ public class LeadEventData {
     private Long updatedAt;
 
     // Additional data for conversion events
-    private Long convertedToCustomerId;
+    private Long convertedToAccountId;
     private Long convertedToOpportunityId;
 }

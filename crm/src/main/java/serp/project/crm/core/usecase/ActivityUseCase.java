@@ -14,6 +14,7 @@ import serp.project.crm.core.domain.constant.ErrorMessage;
 import serp.project.crm.core.domain.dto.GeneralResponse;
 import serp.project.crm.core.domain.dto.PageRequest;
 import serp.project.crm.core.domain.dto.PageResponse;
+import serp.project.crm.core.domain.dto.request.CompleteActivityRequest;
 import serp.project.crm.core.domain.dto.request.CreateActivityRequest;
 import serp.project.crm.core.domain.dto.request.UpdateActivityRequest;
 import serp.project.crm.core.domain.dto.response.ActivityResponse;
@@ -54,10 +55,10 @@ public class ActivityUseCase {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public GeneralResponse<?> updateActivity(Long id, UpdateActivityRequest request, Long tenantId) {
+    public GeneralResponse<?> updateActivity(Long id, UpdateActivityRequest request, Long userId, Long tenantId) {
         try {
             ActivityEntity updates = activityDtoMapper.toEntity(request);
-            ActivityEntity updatedActivity = activityService.updateActivity(id, updates, tenantId);
+            ActivityEntity updatedActivity = activityService.updateActivity(id, updates, userId, tenantId);
             ActivityResponse response = activityDtoMapper.toResponse(updatedActivity);
 
             log.info("[ActivityUseCase] Activity updated successfully: {}", id);
@@ -73,9 +74,11 @@ public class ActivityUseCase {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public GeneralResponse<?> completeActivity(Long id, Long tenantId) {
+    public GeneralResponse<?> completeActivity(Long id, CompleteActivityRequest request, Long userId, Long tenantId) {
         try {
-            ActivityEntity activity = activityService.completeActivity(id, tenantId);
+            CompleteActivityRequest safeRequest = request != null ? request : CompleteActivityRequest.builder().build();
+            ActivityEntity activity = activityService.completeActivity(id, safeRequest.getOutcome(), safeRequest.getNotes(),
+                    userId, tenantId);
             ActivityResponse response = activityDtoMapper.toResponse(activity);
 
             log.info("[ActivityUseCase] Activity completed successfully: {}", id);
@@ -91,9 +94,9 @@ public class ActivityUseCase {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public GeneralResponse<?> cancelActivity(Long id, Long tenantId) {
+    public GeneralResponse<?> cancelActivity(Long id, Long userId, Long tenantId) {
         try {
-            ActivityEntity activity = activityService.cancelActivity(id, tenantId);
+            ActivityEntity activity = activityService.cancelActivity(id, userId, tenantId);
             ActivityResponse response = activityDtoMapper.toResponse(activity);
 
             log.info("[ActivityUseCase] Activity cancelled successfully: {}", id);
@@ -185,9 +188,9 @@ public class ActivityUseCase {
     }
 
     @Transactional(readOnly = true)
-    public GeneralResponse<?> getActivitiesByCustomer(Long customerId, Long tenantId, PageRequest pageRequest) {
+    public GeneralResponse<?> getActivitiesByAccount(Long accountId, Long tenantId, PageRequest pageRequest) {
         try {
-            var result = activityService.getActivitiesByCustomer(customerId, tenantId, pageRequest);
+            var result = activityService.getActivitiesByAccount(accountId, tenantId, pageRequest);
             List<ActivityResponse> activityResponses = result.getFirst().stream()
                     .map(activityDtoMapper::toResponse)
                     .toList();
@@ -197,8 +200,8 @@ public class ActivityUseCase {
             return responseUtils.success(pageResponse);
 
         } catch (Exception e) {
-            log.error("[ActivityUseCase] Error fetching activities by customer {}: {}", customerId, e.getMessage());
-            return responseUtils.internalServerError("Failed to fetch activities by customer");
+            log.error("[ActivityUseCase] Error fetching activities by Account {}: {}", accountId, e.getMessage());
+            return responseUtils.internalServerError("Failed to fetch activities by Account");
         }
     }
 

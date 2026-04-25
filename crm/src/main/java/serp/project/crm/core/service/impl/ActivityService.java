@@ -15,12 +15,13 @@ import serp.project.crm.core.domain.constant.Constants;
 import serp.project.crm.core.domain.constant.ErrorMessage;
 import serp.project.crm.core.domain.dto.PageRequest;
 import serp.project.crm.core.domain.entity.ActivityEntity;
+import serp.project.crm.core.domain.enums.ActivityOutcome;
 import serp.project.crm.core.domain.enums.ActivityStatus;
 import serp.project.crm.core.domain.enums.ActivityType;
 import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.port.store.IActivityPort;
 import serp.project.crm.core.port.store.IContactPort;
-import serp.project.crm.core.port.store.ICustomerPort;
+import serp.project.crm.core.port.store.IAccountPort;
 import serp.project.crm.core.port.store.ILeadPort;
 import serp.project.crm.core.port.store.IOpportunityPort;
 import serp.project.crm.core.port.store.ITeamMemberPort;
@@ -41,7 +42,7 @@ public class ActivityService implements IActivityService {
     private final IActivityPort activityPort;
     private final ILeadPort leadPort;
     private final IOpportunityPort opportunityPort;
-    private final ICustomerPort customerPort;
+    private final IAccountPort AccountPort;
     private final ITeamMemberPort teamMemberPort;
 
     private final IContactPort contactPort;
@@ -50,9 +51,12 @@ public class ActivityService implements IActivityService {
     @Transactional
     public ActivityEntity createActivity(ActivityEntity activity, Long userId, Long tenantId) {
         activity.setTenantId(tenantId);
+        activity.setCreatedBy(userId);
+        activity.setUpdatedBy(userId);
         activity.setDefaults();
         applyTypeDefaults(activity);
         applyAssignDefault(activity, userId);
+        normalizeTypeSpecificFields(activity);
         validateBusinessRules(activity, tenantId);
 
         ActivityEntity saved = activityPort.save(activity);
@@ -64,12 +68,18 @@ public class ActivityService implements IActivityService {
 
     @Override
     @Transactional
-    public ActivityEntity updateActivity(Long id, ActivityEntity updates, Long tenantId) {
+    public ActivityEntity updateActivity(Long id, ActivityEntity updates, Long userId, Long tenantId) {
         ActivityEntity existing = activityPort.findById(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.ACTIVITY_NOT_FOUND));
 
-        existing.updateFrom(updates);
+        updates.setUpdatedBy(userId);
+        try {
+            existing.updateFrom(updates);
+        } catch (IllegalStateException e) {
+            throw new AppException(e.getMessage());
+        }
         applyTypeDefaults(existing);
+        normalizeTypeSpecificFields(existing);
         validateBusinessRules(existing, tenantId);
 
         ActivityEntity updated = activityPort.save(existing);
@@ -125,10 +135,10 @@ public class ActivityService implements IActivityService {
 
     @Override
     @Transactional(readOnly = true)
-    public Pair<List<ActivityEntity>, Long> getActivitiesByCustomer(Long customerId, Long tenantId,
+    public Pair<List<ActivityEntity>, Long> getActivitiesByAccount(Long accountId, Long tenantId,
             PageRequest pageRequest) {
         pageRequest.validate();
-        return activityPort.findByCustomerId(customerId, tenantId, pageRequest);
+        return activityPort.findByAccountId(accountId, tenantId, pageRequest);
     }
 
     @Override
@@ -171,7 +181,7 @@ public class ActivityService implements IActivityService {
 
     @Override
     @Transactional
-    public ActivityEntity completeActivity(Long id, Long tenantId) {
+    public ActivityEntity completeActivity(Long id, ActivityOutcome outcome, String notes, Long userId, Long tenantId) {
         ActivityEntity activity = activityPort.findById(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.ACTIVITY_NOT_FOUND));
 
@@ -182,7 +192,13 @@ public class ActivityService implements IActivityService {
             throw new AppException(ErrorMessage.ACTIVITY_ALREADY_CANCELLED);
         }
 
-        activity.markAsCompleted(tenantId);
+        validateOutcomeForType(activity.getActivityType(), outcome, true);
+
+        try {
+            activity.markAsCompleted(outcome, notes, userId);
+        } catch (IllegalStateException e) {
+            throw new AppException(e.getMessage());
+        }
 
         ActivityEntity completed = activityPort.save(activity);
 
@@ -193,7 +209,7 @@ public class ActivityService implements IActivityService {
 
     @Override
     @Transactional
-    public ActivityEntity cancelActivity(Long id, Long tenantId) {
+    public ActivityEntity cancelActivity(Long id, Long userId, Long tenantId) {
         ActivityEntity activity = activityPort.findById(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.ACTIVITY_NOT_FOUND));
 
@@ -205,7 +221,7 @@ public class ActivityService implements IActivityService {
             return activity;
         }
 
-        activity.markAsCancelled(tenantId);
+        activity.markAsCancelled(userId);
 
         ActivityEntity cancelled = activityPort.save(activity);
 
@@ -236,9 +252,9 @@ public class ActivityService implements IActivityService {
                 && opportunityPort.findById(activity.getOpportunityId(), tenantId).isEmpty()) {
             throw new AppException(ErrorMessage.OPPORTUNITY_NOT_FOUND);
         }
-        if (activity.getCustomerId() != null
-                && customerPort.findById(activity.getCustomerId(), tenantId).isEmpty()) {
-            throw new AppException(ErrorMessage.CUSTOMER_NOT_FOUND);
+        if (activity.getAccountId() != null
+                && AccountPort.findById(activity.getAccountId(), tenantId).isEmpty()) {
+            throw new AppException(ErrorMessage.ACCOUNT_NOT_FOUND);
         }
         if (activity.getContactId() != null
                 && contactPort.findById(activity.getContactId(), tenantId).isEmpty()) {
@@ -257,10 +273,15 @@ public class ActivityService implements IActivityService {
 
     private void applyAssignDefault(ActivityEntity activity, Long userId) {
         if (activity.getAssignedTo() == null) {
-            var member = teamMemberPort.findByUserId(userId, activity.getTenantId()).orElse(null);
-            if (member != null) {
-                activity.setAssignedTo(member.getId());
-            }
+            activity.setAssignedTo(userId);
+        }
+    }
+
+    private void normalizeTypeSpecificFields(ActivityEntity activity) {
+        if (!activity.isTask()) {
+            activity.setProgressPercent(null);
+        } else if (activity.getProgressPercent() == null) {
+            activity.setProgressPercent(0);
         }
     }
 
@@ -285,22 +306,53 @@ public class ActivityService implements IActivityService {
             throw new AppException(ErrorMessage.ACTIVITY_DURATION_INVALID);
         }
 
+        validateAssignedUser(activity, tenantId);
+
         if (activity.isTask() && activity.getDueDate() == null) {
             throw new AppException(ErrorMessage.ACTIVITY_DUE_DATE_REQUIRED_FOR_TASK);
         }
 
         long now = System.currentTimeMillis();
-        if (activity.getDueDate() != null && activity.getDueDate() < now) {
-            throw new AppException(ErrorMessage.ACTIVITY_DUE_DATE_PAST);
-        }
-
-        if (activity.isMeeting()
-                || activity.isCall()
+        if ((activity.isMeeting() || activity.isCall())
                 && activity.getActivityDate() != null && activity.getActivityDate() < now) {
             log.warn("Activity date is in the past for {} activity {}", activity.getActivityType(), activity.getId());
         }
 
+        validateOutcomeForType(activity.getActivityType(), activity.getOutcome(), false);
+
         validateRelations(activity, tenantId);
+    }
+
+    private void validateAssignedUser(ActivityEntity activity, Long tenantId) {
+        if (activity.getAssignedTo() != null && teamMemberPort.findByUserId(activity.getAssignedTo(), tenantId).isEmpty()) {
+            throw new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND);
+        }
+    }
+
+    private void validateOutcomeForType(ActivityType activityType, ActivityOutcome outcome, boolean required) {
+        if (ActivityType.CALL.equals(activityType)) {
+            if (outcome == null && required) {
+                throw new AppException("Outcome is required when completing a call activity");
+            }
+            if (outcome != null && !outcome.isCallOutcome()) {
+                throw new AppException("Invalid outcome for call activity");
+            }
+            return;
+        }
+
+        if (ActivityType.MEETING.equals(activityType)) {
+            if (outcome == null && required) {
+                throw new AppException("Outcome is required when completing a meeting activity");
+            }
+            if (outcome != null && !outcome.isMeetingOutcome()) {
+                throw new AppException("Invalid outcome for meeting activity");
+            }
+            return;
+        }
+
+        if (outcome != null) {
+            throw new AppException("Outcome is only supported for call or meeting activities");
+        }
     }
 
 

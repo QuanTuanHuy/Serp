@@ -22,7 +22,6 @@ public class CreateContactRequest {
     @Size(max = 255, message = "Name must not exceed 255 characters")
     private String name;
 
-    @NotBlank(message = "Email is required")
     @Email(message = "Email must be valid")
     @Size(max = 255, message = "Email must not exceed 255 characters")
     private String email;
@@ -33,8 +32,7 @@ public class CreateContactRequest {
     @Size(max = 100, message = "Job position must not exceed 100 characters")
     private String jobPosition;
 
-    @NotNull(message = "Customer ID is required")
-    private Long customerId;
+    private Long accountId;
 
     private Boolean isPrimary;
 
@@ -53,7 +51,6 @@ public class CreateContactRequest {
     @Size(max = 100, message = "Country must not exceed 100 characters")
     private String country;
 
-    @NotNull(message = "Contact type is required")
     private ContactType contactType;
 
     private ActiveStatus activeStatus;

@@ -86,10 +86,6 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 
 	RegisterCrmRoutes(
 		group,
-		p.LeadController,
-		p.OpportunityController,
-		p.CustomerController,
-		p.ContactController,
 		p.GenericProxyController,
 		p.JWTMiddleware,
 		p.RateLimitMiddleware,

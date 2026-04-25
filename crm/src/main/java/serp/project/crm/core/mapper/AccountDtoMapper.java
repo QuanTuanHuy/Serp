@@ -6,17 +6,17 @@
 package serp.project.crm.core.mapper;
 
 import org.springframework.stereotype.Component;
-import serp.project.crm.core.domain.dto.request.CreateCustomerRequest;
-import serp.project.crm.core.domain.dto.request.UpdateCustomerRequest;
+import serp.project.crm.core.domain.dto.request.CreateAccountRequest;
+import serp.project.crm.core.domain.dto.request.UpdateAccountRequest;
 import serp.project.crm.core.domain.dto.response.AddressResponse;
-import serp.project.crm.core.domain.dto.response.CustomerResponse;
+import serp.project.crm.core.domain.dto.response.AccountResponse;
 import serp.project.crm.core.domain.entity.AddressEntity;
-import serp.project.crm.core.domain.entity.CustomerEntity;
+import serp.project.crm.core.domain.entity.AccountEntity;
 
 @Component
-public class CustomerDtoMapper {
+public class AccountDtoMapper {
 
-    public CustomerEntity toEntity(CreateCustomerRequest request) {
+    public AccountEntity toEntity(CreateAccountRequest request) {
         if (request == null) {
             return null;
         }
@@ -29,7 +29,7 @@ public class CustomerDtoMapper {
                 .country(request.getCountry())
                 .build();
 
-        return CustomerEntity.builder()
+        return AccountEntity.builder()
                 .name(request.getName())
                 .industry(request.getIndustry())
                 .companySize(request.getCompanySize())
@@ -39,12 +39,11 @@ public class CustomerDtoMapper {
                 .address(address)
                 .taxId(request.getTaxId())
                 .creditLimit(request.getCreditLimit())
-                .activeStatus(request.getActiveStatus())
                 .notes(request.getNotes())
                 .build();
     }
 
-    public CustomerEntity toEntity(UpdateCustomerRequest request) {
+    public AccountEntity toEntity(UpdateAccountRequest request) {
         if (request == null) {
             return null;
         }
@@ -62,7 +61,7 @@ public class CustomerDtoMapper {
                     .build();
         }
 
-        return CustomerEntity.builder()
+        return AccountEntity.builder()
                 .name(request.getName())
                 .industry(request.getIndustry())
                 .companySize(request.getCompanySize())
@@ -71,13 +70,11 @@ public class CustomerDtoMapper {
                 .email(request.getEmail())
                 .address(address)
                 .taxId(request.getTaxId())
-                .creditLimit(request.getCreditLimit())
-                .activeStatus(request.getActiveStatus())
                 .notes(request.getNotes())
                 .build();
     }
 
-    public CustomerResponse toResponse(CustomerEntity entity) {
+    public AccountResponse toResponse(AccountEntity entity) {
         if (entity == null) {
             return null;
         }
@@ -93,7 +90,7 @@ public class CustomerDtoMapper {
                     .build();
         }
 
-        return CustomerResponse.builder()
+        return AccountResponse.builder()
                 .id(entity.getId())
                 .name(entity.getName())
                 .industry(entity.getIndustry())
@@ -105,6 +102,7 @@ public class CustomerDtoMapper {
                 .taxId(entity.getTaxId())
                 .creditLimit(entity.getCreditLimit())
                 .activeStatus(entity.getActiveStatus())
+                .accountType(entity.getAccountType())
                 .totalRevenue(entity.getTotalRevenue())
                 .totalOpportunities(entity.getTotalOpportunities())
                 .wonOpportunities(entity.getWonOpportunities())

@@ -42,21 +42,23 @@ public class LeadEntity extends BaseEntity {
 
     private Long assignedTo;
     private BigDecimal estimatedValue;
-    private Integer probability;
+    private Integer leadScore;
 
-    private LocalDate expectedCloseDate;
+    private LocalDate followUpDate;
     private String notes;
 
     private Long convertedOpportunityId;
-    private Long convertedCustomerId;
+    private Long convertedAccountId;
 
     private static final Map<LeadStatus, Set<LeadStatus>> ALLOWED_STATUS_TRANSITIONS = Map.of(
             LeadStatus.NEW, Set.of(LeadStatus.CONTACTED, LeadStatus.NURTURING, LeadStatus.QUALIFIED,
                     LeadStatus.DISQUALIFIED),
-            LeadStatus.CONTACTED, Set.of(LeadStatus.NURTURING, LeadStatus.QUALIFIED, LeadStatus.DISQUALIFIED),
-            LeadStatus.NURTURING, Set.of(LeadStatus.QUALIFIED, LeadStatus.DISQUALIFIED),
-            LeadStatus.QUALIFIED, Set.of(LeadStatus.CONVERTED, LeadStatus.DISQUALIFIED),
-            LeadStatus.DISQUALIFIED, Set.of(),
+            LeadStatus.CONTACTED, Set.of(LeadStatus.NEW, LeadStatus.NURTURING, LeadStatus.QUALIFIED,
+                    LeadStatus.DISQUALIFIED),
+            LeadStatus.NURTURING, Set.of(LeadStatus.NEW, LeadStatus.CONTACTED, LeadStatus.QUALIFIED,
+                    LeadStatus.DISQUALIFIED),
+            LeadStatus.QUALIFIED, Set.of(LeadStatus.CONVERTED),
+            LeadStatus.DISQUALIFIED, Set.of(LeadStatus.NEW),
             LeadStatus.CONVERTED, Set.of());
 
     // Lead qualification
@@ -72,8 +74,14 @@ public class LeadEntity extends BaseEntity {
     }
 
     public void qualify(Long qualifiedBy, String notes) {
-        if (isQualified()) {
+        if (LeadStatus.QUALIFIED.equals(this.leadStatus)) {
             throw new IllegalStateException("Lead is already qualified or converted.");
+        }
+        if (LeadStatus.CONVERTED.equals(this.leadStatus)) {
+            throw new IllegalStateException("Lead is already converted.");
+        }
+        if (LeadStatus.DISQUALIFIED.equals(this.leadStatus)) {
+            throw new IllegalStateException("Cannot qualify a disqualified lead.");
         }
         this.leadStatus = LeadStatus.QUALIFIED;
         this.notes = notes;
@@ -90,11 +98,11 @@ public class LeadEntity extends BaseEntity {
     }
 
     // Lead scoring
-    public void updateProbability(Integer probability, Long updatedBy) {
-        if (probability < 0 || probability > 100) {
-            throw new IllegalArgumentException("Probability must be between 0 and 100.");
+    public void updateLeadScore(Integer leadScore, Long updatedBy) {
+        if (leadScore < 0 || leadScore > 100) {
+            throw new IllegalArgumentException("Lead score must be between 0 and 100.");
         }
-        this.probability = probability;
+        this.leadScore = leadScore;
         this.setUpdatedBy(updatedBy);
     }
 
@@ -105,29 +113,27 @@ public class LeadEntity extends BaseEntity {
     }
 
     public void markAsConverted(Long convertedBy) {
-        if (!canBeConverted()) {
-            throw new IllegalStateException(
-                    "Lead cannot be converted. Ensure it is qualified and has a valid estimated value.");
+        if (!LeadStatus.QUALIFIED.equals(this.leadStatus)) {
+            throw new IllegalStateException("Lead cannot be converted unless it is qualified.");
         }
         this.leadStatus = LeadStatus.CONVERTED;
         this.setUpdatedBy(convertedBy);
     }
 
-    public void markAsConverted(Long convertedBy, Long opportunityId, Long customerId) {
-        if (!canBeConverted()) {
-            throw new IllegalStateException(
-                    "Lead cannot be converted. Ensure it is qualified and has a valid estimated value.");
+    public void markAsConverted(Long convertedBy, Long opportunityId, Long accountId) {
+        if (!LeadStatus.QUALIFIED.equals(this.leadStatus)) {
+            throw new IllegalStateException("Lead cannot be converted unless it is qualified.");
         }
         this.leadStatus = LeadStatus.CONVERTED;
         this.convertedOpportunityId = opportunityId;
-        this.convertedCustomerId = customerId;
+        this.convertedAccountId = accountId;
         this.setUpdatedBy(convertedBy);
     }
 
     // Helper method
     public boolean isOverdue() {
-        return expectedCloseDate != null &&
-                expectedCloseDate.isBefore(LocalDate.now()) &&
+        return followUpDate != null &&
+                followUpDate.isBefore(LocalDate.now()) &&
                 !isQualified();
     }
 
@@ -160,10 +166,10 @@ public class LeadEntity extends BaseEntity {
             this.address = updates.getAddress();
         if (updates.getNotes() != null)
             this.notes = updates.getNotes();
-        if (updates.getExpectedCloseDate() != null)
-            this.expectedCloseDate = updates.getExpectedCloseDate();
-        if (updates.getProbability() != null)
-            this.probability = updates.getProbability();
+        if (updates.getFollowUpDate() != null)
+            this.followUpDate = updates.getFollowUpDate();
+        if (updates.getLeadScore() != null)
+            this.leadScore = updates.getLeadScore();
     }
 
     public void updateStatus(LeadStatus newStatus, Long updatedBy, String notes) {
@@ -203,8 +209,11 @@ public class LeadEntity extends BaseEntity {
         if (this.leadStatus == null) {
             this.leadStatus = LeadStatus.NEW;
         }
-        if (this.probability == null) {
-            this.probability = 0;
+        if (this.leadScore == null) {
+            this.leadScore = 0;
+        }
+        if (this.leadSource == null) {
+            this.leadSource = LeadSource.WEBSITE;
         }
     }
 }

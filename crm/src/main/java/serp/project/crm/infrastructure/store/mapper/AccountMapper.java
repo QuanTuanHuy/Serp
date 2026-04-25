@@ -10,20 +10,21 @@ import lombok.RequiredArgsConstructor;
 import java.util.List;
 
 import org.springframework.stereotype.Component;
-import serp.project.crm.core.domain.entity.CustomerEntity;
+import serp.project.crm.core.domain.entity.AccountEntity;
 import serp.project.crm.core.domain.enums.ActiveStatus;
-import serp.project.crm.infrastructure.store.model.CustomerModel;
+import serp.project.crm.core.domain.enums.AccountType;
+import serp.project.crm.infrastructure.store.model.AccountModel;
 
 @Component
 @RequiredArgsConstructor
-public class CustomerMapper extends BaseMapper {
+public class AccountMapper extends BaseMapper {
 
-    public CustomerEntity toEntity(CustomerModel model) {
+    public AccountEntity toEntity(AccountModel model) {
         if (model == null) {
             return null;
         }
 
-        return CustomerEntity.builder()
+        return AccountEntity.builder()
                 .id(model.getId())
                 .tenantId(model.getTenantId())
                 .name(model.getName())
@@ -32,13 +33,14 @@ public class CustomerMapper extends BaseMapper {
                 .website(model.getWebsite())
                 .industry(model.getIndustry())
                 .companySize(model.getCompanySize())
-                .parentCustomerId(model.getParentCustomerId())
+                .parentAccountId(model.getParentAccountId())
                 .taxId(model.getTaxId())
                 .creditLimit(model.getCreditLimit())
                 .totalOpportunities(model.getTotalOpportunities())
                 .wonOpportunities(model.getWonOpportunities())
                 .totalRevenue(model.getTotalRevenue())
                 .activeStatus(stringToEnum(model.getActiveStatus(), ActiveStatus.class))
+                .accountType(stringToEnum(model.getAccountType(), AccountType.class))
                 .notes(model.getNotes())
                 .address(buildAddress(
                         model.getAddressStreet(),
@@ -53,12 +55,12 @@ public class CustomerMapper extends BaseMapper {
                 .build();
     }
 
-    public CustomerModel toModel(CustomerEntity entity) {
+    public AccountModel toModel(AccountEntity entity) {
         if (entity == null) {
             return null;
         }
 
-        return CustomerModel.builder()
+        return AccountModel.builder()
                 .id(entity.getId())
                 .tenantId(entity.getTenantId())
                 .name(entity.getName())
@@ -67,13 +69,14 @@ public class CustomerMapper extends BaseMapper {
                 .website(entity.getWebsite())
                 .industry(entity.getIndustry())
                 .companySize(entity.getCompanySize())
-                .parentCustomerId(entity.getParentCustomerId())
+                .parentAccountId(entity.getParentAccountId())
                 .taxId(entity.getTaxId())
                 .creditLimit(entity.getCreditLimit())
                 .totalOpportunities(entity.getTotalOpportunities())
                 .wonOpportunities(entity.getWonOpportunities())
                 .totalRevenue(entity.getTotalRevenue())
                 .activeStatus(enumToString(entity.getActiveStatus()))
+                .accountType(enumToString(entity.getAccountType()))
                 .notes(entity.getNotes())
                 .addressStreet(entity.getAddress() != null ? entity.getAddress().getStreet() : null)
                 .addressCity(entity.getAddress() != null ? entity.getAddress().getCity() : null)
@@ -87,7 +90,7 @@ public class CustomerMapper extends BaseMapper {
                 .build();
     }
 
-    public List<CustomerEntity> toEntityList(List<CustomerModel> models) {
+    public List<AccountEntity> toEntityList(List<AccountModel> models) {
         if (models == null) {
             return null;
         }

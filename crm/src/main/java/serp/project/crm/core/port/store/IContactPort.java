@@ -26,16 +26,16 @@ public interface IContactPort {
 
     Pair<List<ContactEntity>, Long> searchByKeyword(String keyword, Long tenantId, PageRequest pageRequest);
 
-    List<ContactEntity> findByCustomerId(Long customerId, Long tenantId);
+    List<ContactEntity> findByAccountId(Long accountId, Long tenantId);
 
-    Optional<ContactEntity> findPrimaryContact(Long customerId, Long tenantId);
+    Optional<ContactEntity> findPrimaryContact(Long accountId, Long tenantId);
 
     Pair<List<ContactEntity>, Long> findByContactType(ContactType contactType, Long tenantId, PageRequest pageRequest);
 
     Pair<List<ContactEntity>, Long> findByActiveStatus(ActiveStatus activeStatus, Long tenantId,
             PageRequest pageRequest);
 
-    Long countByCustomerId(Long customerId, Long tenantId);
+    Long countByAccountId(Long accountId, Long tenantId);
 
     Boolean existsByEmail(String email, Long tenantId);
 

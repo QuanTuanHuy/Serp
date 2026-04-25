@@ -15,6 +15,7 @@ import serp.project.pmcore.domain.shared.enums.WorkflowLifecycleState;
 import serp.project.pmcore.domain.shared.enums.WorkflowVersionState;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
+import serp.project.pmcore.domain.workflow.dto.WorkflowValidationResult;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.domain.screen.port.IScreenPort;
 import serp.project.pmcore.domain.workflow.entity.WorkflowEntity;
@@ -30,6 +31,7 @@ import serp.project.pmcore.domain.workflow.port.IWorkflowTransitionPort;
 import serp.project.pmcore.domain.workflow.port.IWorkflowTransitionRulePort;
 import serp.project.pmcore.domain.workflow.port.IWorkflowVersionPort;
 import serp.project.pmcore.domain.workflow.query.WorkflowListCriteria;
+import serp.project.pmcore.domain.workflow.validator.WorkflowDraftValidator;
 import serp.project.pmcore.domain.workitem.entity.StatusEntity;
 import serp.project.pmcore.domain.workitem.service.IStatusService;
 
@@ -74,6 +76,8 @@ class WorkflowServiceTest {
     @Mock
     private IScreenPort screenPort;
     @Mock
+    private WorkflowDraftValidator workflowDraftValidator;
+    @Mock
     private IStatusService statusService;
 
     private WorkflowService service;
@@ -89,6 +93,7 @@ class WorkflowServiceTest {
                 workflowTransitionPort,
                 workflowTransitionRulePort,
                 screenPort,
+                workflowDraftValidator,
                 statusService
         );
     }
@@ -501,5 +506,74 @@ class WorkflowServiceTest {
 
         assertEquals(1, result.size());
         assertEquals(700L, result.getFirst().getId());
+    }
+
+    @Test
+    void publishWorkflowShouldPromoteDraftAndArchiveCurrentPublishedVersion() {
+        WorkflowEntity workflow = WorkflowEntity.builder()
+                .id(WORKFLOW_ID)
+                .tenantId(TENANT_ID)
+                .draftVersionId(DRAFT_VERSION_ID)
+                .currentPublishedVersionId(90L)
+                .lifecycleState(WorkflowLifecycleState.INACTIVE)
+                .build();
+        WorkflowVersionEntity draftVersion = WorkflowVersionEntity.builder()
+                .id(DRAFT_VERSION_ID)
+                .tenantId(TENANT_ID)
+                .workflowId(WORKFLOW_ID)
+                .versionState(WorkflowVersionState.DRAFT)
+                .build();
+        WorkflowVersionEntity currentPublishedVersion = WorkflowVersionEntity.builder()
+                .id(90L)
+                .tenantId(TENANT_ID)
+                .workflowId(WORKFLOW_ID)
+                .versionState(WorkflowVersionState.PUBLISHED)
+                .build();
+
+        when(workflowPort.getWorkflowById(WORKFLOW_ID, TENANT_ID)).thenReturn(Optional.of(workflow));
+        when(workflowDraftValidator.validateDraft(DRAFT_VERSION_ID, TENANT_ID))
+                .thenReturn(new WorkflowValidationResult(List.of(), List.of()));
+        when(workflowVersionPort.getWorkflowVersionById(DRAFT_VERSION_ID, TENANT_ID)).thenReturn(Optional.of(draftVersion));
+        when(workflowVersionPort.getWorkflowVersionById(90L, TENANT_ID)).thenReturn(Optional.of(currentPublishedVersion));
+
+        WorkflowEntity published = service.publishWorkflow(WORKFLOW_ID, TENANT_ID, USER_ID);
+
+        assertEquals(DRAFT_VERSION_ID, published.getCurrentPublishedVersionId());
+        assertEquals(null, published.getDraftVersionId());
+        assertEquals(WorkflowLifecycleState.ACTIVE, published.getLifecycleState());
+        assertEquals(WorkflowVersionState.PUBLISHED, draftVersion.getVersionState());
+        assertEquals(WorkflowVersionState.ARCHIVED, currentPublishedVersion.getVersionState());
+        verify(workflowVersionPort).updateWorkflowVersion(currentPublishedVersion);
+        verify(workflowVersionPort).updateWorkflowVersion(draftVersion);
+        verify(workflowPort).updateWorkflow(workflow);
+    }
+
+    @Test
+    void publishWorkflowShouldRejectInvalidDraft() {
+        WorkflowEntity workflow = WorkflowEntity.builder()
+                .id(WORKFLOW_ID)
+                .tenantId(TENANT_ID)
+                .draftVersionId(DRAFT_VERSION_ID)
+                .build();
+
+        when(workflowPort.getWorkflowById(WORKFLOW_ID, TENANT_ID)).thenReturn(Optional.of(workflow));
+        when(workflowDraftValidator.validateDraft(DRAFT_VERSION_ID, TENANT_ID))
+                .thenReturn(new WorkflowValidationResult(
+                        List.of(new serp.project.pmcore.domain.workflow.dto.WorkflowValidationFinding(
+                                "V-001",
+                                serp.project.pmcore.domain.workflow.dto.WorkflowValidationSeverity.ERROR,
+                                "Missing initial step"
+                        )),
+                        List.of()
+                ));
+
+        var exception = assertThrows(
+                serp.project.pmcore.domain.shared.exception.DomainValidationException.class,
+                () -> service.publishWorkflow(WORKFLOW_ID, TENANT_ID, USER_ID)
+        );
+
+        assertEquals(DomainErrorCode.WORKFLOW_VALIDATION_FAILED, exception.getErrorCode());
+        verify(workflowVersionPort, never()).updateWorkflowVersion(any());
+        verify(workflowPort, never()).updateWorkflow(any());
     }
 }

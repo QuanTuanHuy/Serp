@@ -11,8 +11,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import serp.project.crm.core.domain.dto.PageRequest;
+import serp.project.crm.core.domain.dto.request.AssignLeadRequest;
+import serp.project.crm.core.domain.dto.request.BulkAssignLeadRequest;
 import serp.project.crm.core.domain.dto.request.ConvertLeadRequest;
 import serp.project.crm.core.domain.dto.request.CreateLeadRequest;
+import serp.project.crm.core.domain.dto.request.DisqualifyLeadRequest;
 import serp.project.crm.core.domain.dto.request.LeadFilterRequest;
 import serp.project.crm.core.domain.dto.request.QualifyLeadRequest;
 import serp.project.crm.core.domain.dto.request.UpdateLeadRequest;
@@ -41,7 +44,7 @@ public class LeadController {
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
-    @PatchMapping("/{id}")
+    @PutMapping("/{id}")
     public ResponseEntity<?> updateLead(
             @PathVariable Long id,
             @Valid @RequestBody UpdateLeadRequest request) {
@@ -84,19 +87,14 @@ public class LeadController {
 
     @GetMapping
     public ResponseEntity<?> getAllLeads(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "20") Integer size) {
+            @ModelAttribute LeadFilterRequest request) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
         if (tenantId == null) {
             return null;
         }
 
-        PageRequest pageRequest = PageRequest.builder()
-                .page(page)
-                .size(size)
-                .build();
-
-        var response = leadUseCase.getAllLeads(tenantId, pageRequest);
+        LeadFilterRequest safeRequest = request != null ? request : LeadFilterRequest.builder().build();
+        var response = leadUseCase.filterLeads(safeRequest, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
@@ -117,13 +115,28 @@ public class LeadController {
     public ResponseEntity<?> qualifyLead(
             @PathVariable Long id,
             @Valid @RequestBody QualifyLeadRequest request) {
+        Long userId = authUtils.getCurrentUserId().orElse(null);
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
-        if (tenantId == null) {
+        if (userId == null || tenantId == null) {
             return null;
         }
 
         request.setLeadId(id);
-        var response = leadUseCase.qualifyLead(request, tenantId);
+        var response = leadUseCase.qualifyLead(request, userId, tenantId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PostMapping("/{id}/disqualify")
+    public ResponseEntity<?> disqualifyLead(
+            @PathVariable Long id,
+            @Valid @RequestBody DisqualifyLeadRequest request) {
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        if (userId == null || tenantId == null) {
+            return null;
+        }
+
+        var response = leadUseCase.disqualifyLead(id, request, userId, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
@@ -131,13 +144,40 @@ public class LeadController {
     public ResponseEntity<?> convertLead(
             @PathVariable Long id,
             @Valid @RequestBody ConvertLeadRequest request) {
+        Long userId = authUtils.getCurrentUserId().orElse(null);
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
-        if (tenantId == null) {
+        if (userId == null || tenantId == null) {
             return null;
         }
 
         request.setLeadId(id);
-        var response = leadUseCase.convertLead(request, tenantId);
+        var response = leadUseCase.convertLead(request, userId, tenantId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PutMapping("/{id}/assign")
+    public ResponseEntity<?> assignLead(
+            @PathVariable Long id,
+            @Valid @RequestBody AssignLeadRequest request) {
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        if (userId == null || tenantId == null) {
+            return null;
+        }
+
+        var response = leadUseCase.assignLead(id, request, userId, tenantId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PutMapping("/bulk-assign")
+    public ResponseEntity<?> bulkAssignLeads(@Valid @RequestBody BulkAssignLeadRequest request) {
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        if (userId == null || tenantId == null) {
+            return null;
+        }
+
+        var response = leadUseCase.bulkAssignLeads(request, userId, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 

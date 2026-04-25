@@ -35,11 +35,11 @@ public class LeadFilterRequest extends BaseFilterRequest {
     private BigDecimal estimatedValueMin;
     private BigDecimal estimatedValueMax;
 
-    private Integer probabilityMin;
-    private Integer probabilityMax;
+    private Integer leadScoreMin;
+    private Integer leadScoreMax;
 
-    private LocalDate expectedCloseDateFrom;
-    private LocalDate expectedCloseDateTo;
+    private LocalDate followUpDateFrom;
+    private LocalDate followUpDateTo;
 
     private LocalDateTime createdFrom;
     private LocalDateTime createdTo;

@@ -18,12 +18,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import serp.project.pmcore.domain.screen.port.IScreenPort;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
+import serp.project.pmcore.domain.shared.exception.DomainValidationException;
 import serp.project.pmcore.domain.shared.enums.WorkflowLifecycleState;
 import serp.project.pmcore.domain.shared.enums.WorkflowVersionState;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.domain.shared.util.TextNormalizationUtils;
+import serp.project.pmcore.domain.workflow.dto.WorkflowValidationResult;
 import serp.project.pmcore.domain.workflow.entity.WorkflowSchemeEntity;
 import serp.project.pmcore.domain.workflow.entity.WorkflowSchemeItemEntity;
 import serp.project.pmcore.domain.workflow.entity.WorkflowTransitionEntity;
@@ -40,6 +42,7 @@ import serp.project.pmcore.domain.workflow.port.IWorkflowTransitionPort;
 import serp.project.pmcore.domain.workflow.port.IWorkflowTransitionRulePort;
 import serp.project.pmcore.domain.workflow.port.IWorkflowVersionPort;
 import serp.project.pmcore.domain.workflow.query.WorkflowListCriteria;
+import serp.project.pmcore.domain.workflow.validator.WorkflowDraftValidator;
 import serp.project.pmcore.domain.workitem.entity.StatusEntity;
 import serp.project.pmcore.domain.workitem.service.IStatusService;
 
@@ -61,6 +64,7 @@ public class WorkflowService implements IWorkflowService {
     private final IWorkflowTransitionPort workflowTransitionPort;
     private final IWorkflowTransitionRulePort workflowTransitionRulePort;
     private final IScreenPort screenPort;
+    private final WorkflowDraftValidator workflowDraftValidator;
     private final IStatusService statusService;
 
     @Override
@@ -318,6 +322,55 @@ public class WorkflowService implements IWorkflowService {
     }
 
     @Override
+    public WorkflowValidationResult validateWorkflow(Long workflowId, Long tenantId) {
+        WorkflowEntity workflow = getEditableWorkflow(workflowId, tenantId);
+        return workflowDraftValidator.validateDraft(requireDraftVersionId(workflow), tenantId);
+    }
+
+    @Override
+    public WorkflowEntity publishWorkflow(Long workflowId, Long tenantId, Long userId) {
+        WorkflowEntity workflow = getEditableWorkflow(workflowId, tenantId);
+        Long draftVersionId = requireDraftVersionId(workflow);
+        WorkflowValidationResult validationResult = workflowDraftValidator.validateDraft(draftVersionId, tenantId);
+        if (!validationResult.isValid()) {
+            throw DomainValidationException.workflowValidation(
+                    validationResult.errors().stream()
+                            .map(error -> error.ruleKey() + ": " + error.message())
+                            .toList()
+            );
+        }
+
+        WorkflowVersionEntity draftVersion = requireDraftWorkflowVersion(draftVersionId, tenantId);
+        long now = System.currentTimeMillis();
+
+        if (workflow.getCurrentPublishedVersionId() != null
+                && !Objects.equals(workflow.getCurrentPublishedVersionId(), draftVersionId)) {
+            WorkflowVersionEntity currentPublishedVersion = workflowVersionPort
+                    .getWorkflowVersionById(workflow.getCurrentPublishedVersionId(), tenantId)
+                    .orElseThrow(() -> new DomainValidationException(
+                            DomainErrorCode.WORKFLOW_NOT_ACTIVE,
+                            "Current published workflow version not found: id=" + workflow.getCurrentPublishedVersionId()
+                    ));
+            currentPublishedVersion.setVersionState(WorkflowVersionState.ARCHIVED);
+            currentPublishedVersion.applyUpdate(userId, now);
+            workflowVersionPort.updateWorkflowVersion(currentPublishedVersion);
+        }
+
+        draftVersion.setVersionState(WorkflowVersionState.PUBLISHED);
+        draftVersion.setPublishedAt(now);
+        draftVersion.setPublishedBy(userId);
+        draftVersion.applyUpdate(userId, now);
+        workflowVersionPort.updateWorkflowVersion(draftVersion);
+
+        workflow.setCurrentPublishedVersionId(draftVersion.getId());
+        workflow.setDraftVersionId(null);
+        workflow.setLifecycleState(WorkflowLifecycleState.ACTIVE);
+        workflow.applyUpdate(userId, now);
+        workflowPort.updateWorkflow(workflow);
+        return workflow;
+    }
+
+    @Override
     public WorkflowEntity resolveWorkflow(Long workflowSchemeId, Long issueTypeId, Long tenantId) {
         if (workflowSchemeId == null) {
             log.error("[WorkflowService] Workflow scheme id is null");
@@ -417,6 +470,21 @@ public class WorkflowService implements IWorkflowService {
             );
         }
         return workflow.getDraftVersionId();
+    }
+
+    private WorkflowVersionEntity requireDraftWorkflowVersion(Long draftVersionId, Long tenantId) {
+        WorkflowVersionEntity draftVersion = workflowVersionPort.getWorkflowVersionById(draftVersionId, tenantId)
+                .orElseThrow(() -> new BusinessRuleViolationException(
+                        DomainErrorCode.WORKFLOW_DRAFT_NOT_FOUND,
+                        "Workflow draft version not found: id=" + draftVersionId
+                ));
+        if (!WorkflowVersionState.DRAFT.equals(draftVersion.getVersionState())) {
+            throw new BusinessRuleViolationException(
+                    DomainErrorCode.WORKFLOW_DRAFT_NOT_FOUND,
+                    "Workflow draft version is not editable: id=" + draftVersionId
+            );
+        }
+        return draftVersion;
     }
 
     private void cleanupTransitionsForStep(Long workflowVersionId,

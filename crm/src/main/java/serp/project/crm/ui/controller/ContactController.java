@@ -25,9 +25,21 @@ public class ContactController {
     private final ContactUseCase contactUseCase;
     private final AuthUtils authUtils;
 
-    @PostMapping("/customers/{customerId}/contacts")
+    @PostMapping("/contacts")
+    public ResponseEntity<?> createContact(@Valid @RequestBody CreateContactRequest request) {
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        if (tenantId == null || userId == null) {
+            return null;
+        }
+
+        var response = contactUseCase.createContact(request, userId, tenantId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PostMapping("/accounts/{accountId}/contacts")
     public ResponseEntity<?> createContact(
-            @PathVariable Long customerId,
+            @PathVariable Long accountId,
             @Valid @RequestBody CreateContactRequest request) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
         Long userId = authUtils.getCurrentUserId().orElse(null);
@@ -35,15 +47,14 @@ public class ContactController {
             return null;
         }
 
-        log.info("POST /api/v1/customers/{}/contacts - Creating contact for tenant: {}", customerId, tenantId);
-        request.setCustomerId(customerId);
+        log.info("POST /api/v1/accounts/{}/contacts - Creating contact for tenant: {}", accountId, tenantId);
+        request.setAccountId(accountId);
         var response = contactUseCase.createContact(request, userId, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
-    @PatchMapping("/customers/{customerId}/contacts/{id}")
+    @PutMapping("/contacts/{id}")
     public ResponseEntity<?> updateContact(
-            @PathVariable Long customerId,
             @PathVariable Long id,
             @Valid @RequestBody UpdateContactRequest request) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
@@ -51,49 +62,71 @@ public class ContactController {
         if (tenantId == null || userId == null) {
             return null;
         }
-        log.info("PATCH /api/v1/customers/{}/contacts/{} - Updating contact for tenant: {}", customerId, id, tenantId);
+        log.info("PUT /api/v1/contacts/{} - Updating contact for tenant: {}", id, tenantId);
         var response = contactUseCase.updateContact(id, request, userId, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
-    @GetMapping("/customers/{customerId}/contacts/{id}")
+    @GetMapping("/contacts/{id}")
     public ResponseEntity<?> getContactById(
-            @PathVariable Long customerId,
             @PathVariable Long id) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
         if (tenantId == null) {
             return null;
         }
 
-        log.info("GET /api/v1/customers/{}/contacts/{} - Fetching contact for tenant: {}", customerId, id, tenantId);
+        log.info("GET /api/v1/contacts/{} - Fetching contact for tenant: {}", id, tenantId);
         var response = contactUseCase.getContactById(id, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
-    @GetMapping("/customers/{customerId}/contacts")
-    public ResponseEntity<?> getAllContactsByCustomer(
-            @PathVariable Long customerId) {
+    @GetMapping("/accounts/{accountId}/contacts")
+    public ResponseEntity<?> getAllContactsByAccount(
+            @PathVariable Long accountId) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
         if (tenantId == null) {
             return null;
         }
 
-        log.info("GET /api/v1/customers/{}/contacts - Fetching all contacts for tenant: {}", customerId, tenantId);
+        log.info("GET /api/v1/accounts/{}/contacts - Fetching all contacts for tenant: {}", accountId, tenantId);
 
-        var response = contactUseCase.getContactsByCustomerId(customerId, tenantId);
+        var response = contactUseCase.getContactsByAccountId(accountId, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
-    @DeleteMapping("/customers/{customerId}/contacts/{id}")
+    @PutMapping("/contacts/{id}/set-primary")
+    public ResponseEntity<?> setPrimaryContact(@PathVariable Long id) {
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        if (tenantId == null || userId == null) {
+            return null;
+        }
+
+        var response = contactUseCase.setPrimaryContact(id, userId, tenantId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PutMapping("/contacts/{id}/deactivate")
+    public ResponseEntity<?> deactivateContact(@PathVariable Long id) {
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        if (tenantId == null || userId == null) {
+            return null;
+        }
+
+        var response = contactUseCase.deactivateContact(id, userId, tenantId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @DeleteMapping("/contacts/{id}")
     public ResponseEntity<?> deleteContact(
-            @PathVariable Long customerId,
             @PathVariable Long id) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
         if (tenantId == null) {
             return null;
         }
 
-        log.info("DELETE /api/v1/customers/{}/contacts/{} - Deleting contact for tenant: {}", customerId, id, tenantId);
+        log.info("DELETE /api/v1/contacts/{} - Deleting contact for tenant: {}", id, tenantId);
         var response = contactUseCase.deleteContact(id, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }

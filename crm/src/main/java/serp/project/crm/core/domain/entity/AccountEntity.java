@@ -14,13 +14,14 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import serp.project.crm.core.domain.enums.ActiveStatus;
+import serp.project.crm.core.domain.enums.AccountType;
 
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
 @Setter
 @SuperBuilder
-public class CustomerEntity extends BaseEntity {
+public class AccountEntity extends BaseEntity {
     private String name;
 
     private String phone;
@@ -29,7 +30,7 @@ public class CustomerEntity extends BaseEntity {
     private String industry;
     private String companySize;
 
-    private Long parentCustomerId;
+    private Long parentAccountId;
 
     private String taxId;
     private BigDecimal creditLimit;
@@ -39,6 +40,7 @@ public class CustomerEntity extends BaseEntity {
     private BigDecimal totalRevenue;
 
     private ActiveStatus activeStatus;
+    private AccountType accountType;
     private String notes;
 
     private AddressEntity address;
@@ -52,7 +54,7 @@ public class CustomerEntity extends BaseEntity {
 
     public void activate(Long activatedBy) {
         if (isActive()) {
-            throw new IllegalStateException("Customer is already active.");
+            throw new IllegalStateException("Account is already active.");
         }
         this.activeStatus = ActiveStatus.ACTIVE;
         this.setUpdatedBy(activatedBy);
@@ -60,7 +62,7 @@ public class CustomerEntity extends BaseEntity {
 
     public void deactivate(Long deactivatedBy) {
         if (!isActive()) {
-            throw new IllegalStateException("Customer is already inactive.");
+            throw new IllegalStateException("Account is already inactive.");
         }
         this.activeStatus = ActiveStatus.INACTIVE;
         this.setUpdatedBy(deactivatedBy);
@@ -85,7 +87,7 @@ public class CustomerEntity extends BaseEntity {
         this.setUpdatedBy(updatedBy);
     }
 
-    public void updateFrom(CustomerEntity updates) {
+    public void updateFrom(AccountEntity updates) {
         if (updates.getName() != null)
             this.name = updates.getName();
         if (updates.getPhone() != null)
@@ -100,21 +102,20 @@ public class CustomerEntity extends BaseEntity {
             this.companySize = updates.getCompanySize();
         if (updates.getTaxId() != null)
             this.taxId = updates.getTaxId();
-        if (updates.getCreditLimit() != null)
-            this.creditLimit = updates.getCreditLimit();
-        if (updates.getActiveStatus() != null)
-            this.activeStatus = updates.getActiveStatus();
         if (updates.getAddress() != null)
             this.address = updates.getAddress();
         if (updates.getNotes() != null)
             this.notes = updates.getNotes();
-        if (updates.getParentCustomerId() != null)
-            this.parentCustomerId = updates.getParentCustomerId();
+        if (updates.getParentAccountId() != null)
+            this.parentAccountId = updates.getParentAccountId();
     }
 
     public void setDefaults() {
         if (this.activeStatus == null) {
             this.activeStatus = ActiveStatus.ACTIVE;
+        }
+        if (this.accountType == null) {
+            this.accountType = AccountType.PROSPECT;
         }
         if (this.totalRevenue == null) {
             this.totalRevenue = BigDecimal.ZERO;
@@ -125,6 +126,11 @@ public class CustomerEntity extends BaseEntity {
         if (this.wonOpportunities == null) {
             this.wonOpportunities = 0;
         }
+    }
+
+    public void promoteToCustomer(Long updatedBy) {
+        this.accountType = AccountType.CUSTOMER;
+        this.setUpdatedBy(updatedBy);
     }
 
 }

@@ -25,18 +25,20 @@ public class OpportunityEntity extends BaseEntity {
     private String description;
 
     private Long leadId;
-    private Long customerId;
+    private Long accountId;
 
     private OpportunityStage stage;
     private BigDecimal estimatedValue;
+    private BigDecimal actualValue;
     private Integer probability;
     private LocalDate expectedCloseDate;
     private LocalDate actualCloseDate;
     private Long assignedTo;
     private String notes;
     private String lossReason;
+    private String reopenReason;
 
-    private CustomerEntity customer;
+    private AccountEntity account;
 
     // Stage management
     public boolean isWon() {
@@ -52,29 +54,19 @@ public class OpportunityEntity extends BaseEntity {
     }
 
     public boolean canAdvanceStage(OpportunityStage newStage) {
-        if (isClosed()) {
+        if (newStage == null || newStage.equals(this.stage)) {
             return false;
         }
 
-        switch (stage) {
-            case PROSPECTING:
-                return OpportunityStage.QUALIFICATION.equals(newStage) ||
-                        OpportunityStage.CLOSED_LOST.equals(newStage);
-            case QUALIFICATION:
-                return OpportunityStage.PROPOSAL.equals(newStage) ||
-                        OpportunityStage.PROSPECTING.equals(newStage) ||
-                        OpportunityStage.CLOSED_LOST.equals(newStage);
-            case PROPOSAL:
-                return OpportunityStage.NEGOTIATION.equals(newStage) ||
-                        OpportunityStage.QUALIFICATION.equals(newStage) ||
-                        OpportunityStage.CLOSED_LOST.equals(newStage);
-            case NEGOTIATION:
-                return OpportunityStage.CLOSED_WON.equals(newStage) ||
-                        OpportunityStage.PROPOSAL.equals(newStage) ||
-                        OpportunityStage.CLOSED_LOST.equals(newStage);
-            default:
-                return false;
+        if (isWon()) {
+            return false;
         }
+
+        if (isLost()) {
+            return newStage.isActive();
+        }
+
+        return newStage.isActive() || newStage.isClosed();
     }
 
     public void advanceToStage(OpportunityStage newStage, Long updatedBy) {
@@ -132,32 +124,69 @@ public class OpportunityEntity extends BaseEntity {
         if (updates.getStage() != null && !updates.getStage().equals(this.stage)) {
             advanceToStage(updates.getStage(), updates.getUpdatedBy());
         }
-        if (updates.getProbability() != null)
-            this.probability = updates.getProbability();
     }
 
-    public void closeAsWon() {
+    public void closeAsWon(BigDecimal actualValue, String notes, Long updatedBy) {
         if (this.isClosed()) {
             throw new IllegalStateException("Opportunity already closed");
         }
         this.stage = OpportunityStage.CLOSED_WON;
         this.probability = 100;
         this.actualCloseDate = LocalDate.now();
+        this.actualValue = actualValue != null ? actualValue : this.estimatedValue;
+        if (notes != null) {
+            this.notes = notes;
+        }
+        this.setUpdatedBy(updatedBy);
     }
 
-    public void closeAsLost(String reason) {
+    public void closeAsLost(String reason, Long updatedBy) {
         if (this.isClosed()) {
             throw new IllegalStateException("Opportunity already closed");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("Loss reason is required");
         }
         this.stage = OpportunityStage.CLOSED_LOST;
         this.probability = 0;
         this.actualCloseDate = LocalDate.now();
         this.lossReason = reason;
+        this.setUpdatedBy(updatedBy);
+    }
+
+    public void assignTo(Long assignedTo, Long updatedBy) {
+        if (isClosed()) {
+            throw new IllegalStateException("Cannot assign closed opportunities");
+        }
+        this.assignedTo = assignedTo;
+        this.setUpdatedBy(updatedBy);
+    }
+
+    public void reopen(OpportunityStage targetStage, String reason, Long updatedBy) {
+        if (!isLost()) {
+            throw new IllegalStateException("Only closed lost opportunities can be reopened");
+        }
+        if (targetStage == null || !targetStage.isActive()) {
+            throw new IllegalArgumentException("Reopen target stage must be an active stage");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("Reopen reason is required when reopening a closed lost opportunity");
+        }
+        this.stage = targetStage;
+        updateProbabilityForStage(targetStage);
+        this.actualCloseDate = null;
+        this.lossReason = null;
+        this.actualValue = null;
+        this.reopenReason = reason;
+        this.setUpdatedBy(updatedBy);
     }
 
     public void setDefaults() {
         if (this.stage == null) {
             this.stage = OpportunityStage.PROSPECTING;
+        }
+        if (this.estimatedValue == null) {
+            this.estimatedValue = BigDecimal.ZERO;
         }
         if (this.probability == null) {
             updateProbabilityForStage(this.stage);

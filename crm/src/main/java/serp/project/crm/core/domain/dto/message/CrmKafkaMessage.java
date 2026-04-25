@@ -34,13 +34,13 @@ public class CrmKafkaMessage {
 
     /**
      * Entity ID (for tracking and debugging)
-     * Examples: customerId, leadId, opportunityId
+     * Examples: accountId, leadId, opportunityId
      */
     private String entityId;
 
     /**
      * Entity type
-     * Examples: "CUSTOMER", "LEAD", "OPPORTUNITY"
+     * Examples: "Account", "LEAD", "OPPORTUNITY"
      */
     private String entityType;
 

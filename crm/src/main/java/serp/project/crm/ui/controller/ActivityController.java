@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import serp.project.crm.core.domain.dto.PageRequest;
+import serp.project.crm.core.domain.dto.request.CompleteActivityRequest;
 import serp.project.crm.core.domain.dto.request.CreateActivityRequest;
 import serp.project.crm.core.domain.dto.request.UpdateActivityRequest;
 import serp.project.crm.core.usecase.ActivityUseCase;
@@ -41,10 +42,11 @@ public class ActivityController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateActivityRequest request) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
-        if (tenantId == null) {
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        if (tenantId == null || userId == null) {
             return null;
         }
-        var response = activityUseCase.updateActivity(id, request, tenantId);
+        var response = activityUseCase.updateActivity(id, request, userId, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
@@ -76,25 +78,29 @@ public class ActivityController {
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
-    @PostMapping("/{id}/complete")
-    public ResponseEntity<?> completeActivity(@PathVariable Long id) {
+    @PutMapping("/{id}/complete")
+    public ResponseEntity<?> completeActivity(
+            @PathVariable Long id,
+            @Valid @RequestBody(required = false) CompleteActivityRequest request) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
-        if (tenantId == null) {
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        if (tenantId == null || userId == null) {
             return null;
         }
 
-        var response = activityUseCase.completeActivity(id, tenantId);
+        var response = activityUseCase.completeActivity(id, request, userId, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
-    @PostMapping("/{id}/cancel")
+    @PutMapping("/{id}/cancel")
     public ResponseEntity<?> cancelActivity(@PathVariable Long id) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
-        if (tenantId == null) {
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        if (tenantId == null || userId == null) {
             return null;
         }
 
-        var response = activityUseCase.cancelActivity(id, tenantId);
+        var response = activityUseCase.cancelActivity(id, userId, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
