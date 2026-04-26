@@ -200,9 +200,11 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
   variant = 'default',
 }) => {
   const stage = stageStyles[opportunity.stage] || stageStyles.PROSPECTING;
-  const type = typeStyles[opportunity.type] || typeStyles.NEW_BUSINESS;
+  const type =
+    typeStyles[opportunity.type || 'NEW_BUSINESS'] || typeStyles.NEW_BUSINESS;
   const StageIcon = stage.icon;
   const closeDateInfo = getDaysUntil(opportunity.expectedCloseDate);
+  const probability = opportunity.probability ?? 0;
 
   // Pipeline card variant (for Kanban/Pipeline view)
   if (variant === 'pipeline') {
@@ -231,7 +233,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
         </p>
 
         {/* Probability */}
-        <ProbabilityBar probability={opportunity.probability} />
+        <ProbabilityBar probability={probability} />
 
         {/* Footer */}
         <div className='flex items-center justify-between mt-3 pt-2 border-t'>
@@ -285,7 +287,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
             {formatCurrency(opportunity.value)}
           </p>
           <p className='text-xs text-muted-foreground'>
-            {opportunity.probability}%
+            {probability}%
           </p>
         </div>
       </Card>
@@ -395,7 +397,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
 
         {/* Probability */}
         <div className='mb-4'>
-          <ProbabilityBar probability={opportunity.probability} />
+          <ProbabilityBar probability={probability} />
         </div>
 
         {/* Value */}
@@ -410,9 +412,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
             <div className='text-right'>
               <p className='text-xs text-muted-foreground'>Weighted</p>
               <p className='text-lg font-semibold text-muted-foreground'>
-                {formatCurrency(
-                  (opportunity.value * opportunity.probability) / 100
-                )}
+                {formatCurrency((opportunity.value * probability) / 100)}
               </p>
             </div>
           </div>

@@ -5,6 +5,7 @@ import type {
   Customer,
   Lead,
   Opportunity,
+  OpportunityStage,
   Activity,
   CRMMetrics,
   PipelineMetrics,
@@ -63,6 +64,34 @@ export type OpportunitiesResponse = APIResponse<PaginatedResponse<Opportunity>>;
 export type CreateOpportunityResponse = APIResponse<Opportunity>;
 export type UpdateOpportunityResponse = APIResponse<Opportunity>;
 export type DeleteOpportunityResponse = APIResponse<{ deleted: boolean }>;
+
+export interface OpportunityPipelineStage {
+  stage: OpportunityStage;
+  count: number;
+  totalValue: number;
+  weightedValue: number;
+  opportunities: Opportunity[];
+}
+
+export interface OpportunityPipelineSummary {
+  totalOpportunities: number;
+  totalPipelineValue: number;
+  weightedPipelineValue: number;
+  averageDealSize: number;
+}
+
+export interface OpportunityPipeline {
+  stages: OpportunityPipelineStage[];
+  summary: OpportunityPipelineSummary;
+}
+
+export type OpportunityPipelineResponse = APIResponse<OpportunityPipeline>;
+export type OpportunityActivitiesResponse = APIResponse<PaginatedResponse<Activity>>;
+export type ChangeOpportunityStageResponse = APIResponse<Opportunity>;
+export type CloseOpportunityWonResponse = APIResponse<Opportunity>;
+export type CloseOpportunityLostResponse = APIResponse<Opportunity>;
+export type AssignOpportunityResponse = APIResponse<Opportunity>;
+export type ReopenOpportunityResponse = APIResponse<Opportunity>;
 
 export type ActivityResponse = APIResponse<Activity>;
 export type ActivitiesResponse = APIResponse<PaginatedResponse<Activity>>;

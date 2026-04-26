@@ -117,16 +117,20 @@ export type OpportunityType = 'NEW_BUSINESS' | 'EXISTING_BUSINESS' | 'RENEWAL';
 
 export interface Opportunity extends BaseEntity {
   name: string;
-  customerId: string;
-  customerName: string;
+  accountId?: string;
+  leadId?: string;
+  customerId?: string;
+  customerName?: string;
   stage: OpportunityStage;
-  type: OpportunityType;
+  type?: OpportunityType;
+  estimatedValue?: number;
   value: number;
-  probability: number; // 0-100
+  actualValue?: number;
+  probability?: number; // 0-100
   expectedCloseDate: string;
   actualCloseDate?: string;
-  assignedTo: string;
-  assignedToName: string;
+  assignedTo?: string;
+  assignedToName?: string;
   description?: string;
   tags: string[];
   products: OpportunityProduct[];
@@ -135,6 +139,7 @@ export interface Opportunity extends BaseEntity {
   nextAction?: string;
   nextActionDate?: string;
   lostReason?: string;
+  reopenReason?: string;
   customFields: Record<string, any>;
 }
 
@@ -272,18 +277,23 @@ export interface LeadFilters {
 export interface OpportunityFilters {
   search?: string;
   stage?: OpportunityStage[];
-  type?: OpportunityType[];
+  leadId?: string[];
   assignedTo?: string[];
   customerId?: string[];
-  tags?: string[];
+  unassignedOnly?: boolean;
   expectedCloseDateFrom?: string;
   expectedCloseDateTo?: string;
+  actualCloseDateFrom?: string;
+  actualCloseDateTo?: string;
   minValue?: number;
   maxValue?: number;
   probability?: {
     min: number;
     max: number;
   };
+  createdDateFrom?: string;
+  createdDateTo?: string;
+  hasNotes?: boolean;
 }
 
 export interface ActivityFilters {
@@ -369,11 +379,49 @@ export type CreateLeadRequest = {
 };
 export type UpdateLeadRequest = Partial<CreateLeadRequest>;
 
-export type CreateOpportunityRequest = Omit<
-  Opportunity,
-  'id' | 'createdAt' | 'updatedAt' | 'customerName' | 'assignedToName'
->;
-export type UpdateOpportunityRequest = Partial<CreateOpportunityRequest>;
+export interface CreateOpportunityRequest {
+  name: string;
+  description?: string;
+  accountId: string;
+  leadId?: string;
+  stage?: OpportunityStage;
+  estimatedValue?: number;
+  expectedCloseDate?: string;
+  assignedTo?: string;
+  notes?: string;
+  type?: OpportunityType;
+  value?: number;
+  customerId?: string;
+  customerName?: string;
+  assignedToName?: string;
+  tags?: string[];
+  products?: OpportunityProduct[];
+  competitors?: string[];
+  nextAction?: string;
+  nextActionDate?: string;
+  customFields?: Record<string, any>;
+}
+
+export interface UpdateOpportunityRequest {
+  name?: string;
+  description?: string;
+  stage?: OpportunityStage;
+  estimatedValue?: number;
+  expectedCloseDate?: string;
+  assignedTo?: string;
+  notes?: string;
+  type?: OpportunityType;
+  value?: number;
+  customerId?: string;
+  customerName?: string;
+  assignedToName?: string;
+  tags?: string[];
+  products?: OpportunityProduct[];
+  competitors?: string[];
+  nextAction?: string;
+  nextActionDate?: string;
+  customFields?: Record<string, any>;
+}
 
 export type CreateActivityRequest = Omit<
   Activity,
