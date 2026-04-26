@@ -28,7 +28,7 @@ export const EditCustomerPage: React.FC<EditCustomerPageProps> = ({
 }) => {
   const { data, isLoading: isFetching } = useGetAccountQuery(customerId);
   const [updateAccount, { isLoading: isUpdating }] = useUpdateAccountMutation();
-  const customer = data?.data;
+  const account = data?.data;
 
   const handleSubmit = async (
     data: CreateAccountRequest | UpdateAccountRequest
@@ -44,8 +44,8 @@ export const EditCustomerPage: React.FC<EditCustomerPageProps> = ({
     }
   };
 
-  // Error state - customer not found
-  if (!isFetching && !customer) {
+  // Error state - account not found
+  if (!isFetching && !account) {
     return (
       <div className={cn('p-6', className)}>
         <Card className='border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/50'>
@@ -79,7 +79,7 @@ export const EditCustomerPage: React.FC<EditCustomerPageProps> = ({
               Edit Account
             </h1>
             <p className='text-muted-foreground'>
-              Update {customer?.name}'s information
+              Update {account?.name}'s information
             </p>
           </div>
         </div>
@@ -88,7 +88,7 @@ export const EditCustomerPage: React.FC<EditCustomerPageProps> = ({
       {/* Form */}
       <div className='max lg:max-w-4xl xl:max-w-5xl mx-auto'>
         <AccountForm
-          customer={customer}
+          customer={account}
           onSubmit={handleSubmit}
           onCancel={onCancel}
           isLoading={isFetching || isUpdating}

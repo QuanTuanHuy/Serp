@@ -12,7 +12,7 @@ import type { CreateAccountRequest } from '../../types';
 
 interface CreateCustomerPageProps {
   className?: string;
-  onSuccess?: (customerId: string) => void;
+  onSuccess?: (accountId: string) => void;
   onCancel?: () => void;
 }
 
