@@ -130,7 +130,10 @@ export const ContactForm: React.FC<ContactFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className={cn('space-y-4', className)}>
+    <form
+      onSubmit={handleSubmit}
+      className={cn('space-y-4 overflow-y-auto max-h-[70vh] pr-1', className)}
+    >
       {/* Name */}
       <div className='space-y-2'>
         <Label htmlFor='name' className='flex items-center gap-2'>
@@ -180,7 +183,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
       </div>
 
       {/* Job Position & Type */}
-      <div className='grid grid-cols-2 gap-4'>
+      <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
         <div className='space-y-2'>
           <Label htmlFor='jobPosition' className='flex items-center gap-2'>
             <Briefcase className='h-4 w-4 text-muted-foreground' />
@@ -331,7 +334,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
       </div>
 
       {/* Primary Contact Toggle */}
-      <div className='flex items-center justify-between p-3 bg-muted rounded-lg'>
+      <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-3 bg-muted rounded-lg'>
         <div>
           <Label htmlFor='isPrimary' className='cursor-pointer'>
             Primary Contact

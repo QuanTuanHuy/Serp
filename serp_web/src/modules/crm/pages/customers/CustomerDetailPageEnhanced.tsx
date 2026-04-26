@@ -7,6 +7,7 @@ Description: Part of Serp Project - Enhanced Customer Detail Page with mock data
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { getErrorMessage } from '@/lib/store/api';
 import {
   Card,
   CardContent,
@@ -68,6 +69,7 @@ import {
   Download,
   Upload,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/shared/utils';
 import { ContactList } from '../../components/contacts';
 import type { ContactFormData } from '../../components/contacts';
@@ -378,61 +380,98 @@ export const CustomerDetailPageEnhanced: React.FC<
   };
 
   const handleDelete = () => {
-    deleteAccount(customerId);
-    router.push('/crm/accounts');
+    deleteAccount(customerId)
+      .unwrap()
+      .then(() => {
+        toast.success('Delete account successfully');
+        router.push('/crm/accounts');
+      })
+      .catch((error) => {
+        toast.error('Failed to delete account', {
+          description: getErrorMessage(error),
+        });
+      });
   };
 
   const handleAddContact = async (data: ContactFormData) => {
-    await createContact({
-      accountId: customerId,
-      data: {
-        name: data.name.trim(),
-        email: data.email,
-        phone: data.phone,
-        jobPosition: data.jobPosition,
-        isPrimary: data.isPrimary,
-        street: data.street,
-        city: data.city,
-        state: data.state,
-        zipCode: data.zipCode,
-        country: data.country,
-        contactType: data.contactType,
-        activeStatus: data.activeStatus,
-        linkedInUrl: data.linkedInUrl,
-        twitterHandle: data.twitterHandle,
-        notes: data.notes,
-      },
-    }).unwrap();
+    try {
+      await createContact({
+        accountId: customerId,
+        data: {
+          name: data.name.trim(),
+          email: data.email,
+          phone: data.phone,
+          jobPosition: data.jobPosition,
+          isPrimary: data.isPrimary,
+          street: data.street,
+          city: data.city,
+          state: data.state,
+          zipCode: data.zipCode,
+          country: data.country,
+          contactType: data.contactType,
+          activeStatus: data.activeStatus,
+          linkedInUrl: data.linkedInUrl,
+          twitterHandle: data.twitterHandle,
+          notes: data.notes,
+        },
+      }).unwrap();
+      toast.success('Create contact successfully');
+    } catch (error) {
+      toast.error('Failed to create contact', {
+        description: getErrorMessage(error),
+      });
+    }
   };
 
   const handleEditContact = async (contact: Contact, data: ContactFormData) => {
-    await updateContact({
-      id: contact.id,
-      data: {
-        name: data.name.trim(),
-        email: data.email,
-        phone: data.phone,
-        jobPosition: data.jobPosition,
-        street: data.street,
-        city: data.city,
-        state: data.state,
-        zipCode: data.zipCode,
-        country: data.country,
-        contactType: data.contactType,
-        activeStatus: data.activeStatus,
-        linkedInUrl: data.linkedInUrl,
-        twitterHandle: data.twitterHandle,
-        notes: data.notes,
-      },
-    }).unwrap();
+    try {
+      await updateContact({
+        id: contact.id,
+        data: {
+          name: data.name.trim(),
+          email: data.email,
+          phone: data.phone,
+          jobPosition: data.jobPosition,
+          street: data.street,
+          city: data.city,
+          state: data.state,
+          zipCode: data.zipCode,
+          country: data.country,
+          contactType: data.contactType,
+          activeStatus: data.activeStatus,
+          linkedInUrl: data.linkedInUrl,
+          twitterHandle: data.twitterHandle,
+          notes: data.notes,
+        },
+      }).unwrap();
+      toast.success('Update contact successfully');
+    } catch (error) {
+      toast.error('Failed to update contact', {
+        description: getErrorMessage(error),
+      });
+    }
   };
 
   const handleDeleteContact = async (contact: Contact) => {
-    await deleteContact(contact.id).unwrap();
+    try {
+      await deleteContact(contact.id).unwrap();
+      toast.success('Delete contact successfully');
+    } catch (error) {
+      toast.error('Failed to delete contact', {
+        description: getErrorMessage(error),
+      });
+    }
   };
 
   const handleSetPrimaryContact = async (contact: Contact) => {
-    await setPrimaryContact(contact.id).unwrap();
+    try {
+      await setPrimaryContact(contact.id).unwrap();
+      toast.success('Primary contact updated successfully');
+    } catch (error) {
+      toast.error('Failed to update primary contact', {
+        description: getErrorMessage(error),
+      });
+    }
   };
 
   const formatCurrency = (value: number) => {

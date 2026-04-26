@@ -4,8 +4,10 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { getErrorMessage } from '@/lib/store/api';
 import { useDebounce } from '@/shared/hooks/use-debounce';
 import { Button, Card, CardContent, Input } from '@/shared/components/ui';
+import { toast } from 'sonner';
 import {
   Search,
   Plus,
@@ -104,8 +106,15 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
   const handleCreateCustomer = async (
     data: CreateAccountRequest | Partial<CreateAccountRequest>
   ) => {
-    await createAccount(data as CreateAccountRequest).unwrap();
-    setShowCreateForm(false);
+    try {
+      await createAccount(data as CreateAccountRequest).unwrap();
+      toast.success('Create account successfully');
+      setShowCreateForm(false);
+    } catch (error) {
+      toast.error('Failed to create account', {
+        description: getErrorMessage(error),
+      });
+    }
   };
 
   const handleQuickAddCustomer = async (data: {
@@ -123,28 +132,35 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
     website?: string;
     notes?: string;
   }) => {
-    await createAccount({
-      isActive: true,
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      companySize: data.companySize,
-      notes: data.notes,
-      address: data.address || '',
-      city: data.city || '',
-      state: data.state || '',
-      zipCode: data.zipCode || '',
-      country: data.country || '',
-      website: data.website || '',
-      customerType: data.customerType,
-      status: data.status,
-      paymentTerms: '',
-      creditLimit: undefined,
-      tags: [],
-      customFields: {},
-      totalValue: 0,
-    } as CreateAccountRequest).unwrap();
-    setShowQuickAdd(false);
+    try {
+      await createAccount({
+        isActive: true,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        companySize: data.companySize,
+        notes: data.notes,
+        address: data.address || '',
+        city: data.city || '',
+        state: data.state || '',
+        zipCode: data.zipCode || '',
+        country: data.country || '',
+        website: data.website || '',
+        customerType: data.customerType,
+        status: data.status,
+        paymentTerms: '',
+        creditLimit: undefined,
+        tags: [],
+        customFields: {},
+        totalValue: 0,
+      } as CreateAccountRequest).unwrap();
+      toast.success('Create account successfully');
+      setShowQuickAdd(false);
+    } catch (error) {
+      toast.error('Failed to create account', {
+        description: getErrorMessage(error),
+      });
+    }
   };
 
   const handleEditCustomer = (customer: Account) => {
@@ -155,12 +171,26 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
     data: CreateAccountRequest | UpdateAccountRequest
   ) => {
     if (!editingCustomer) return;
-    await updateAccount({ id: editingCustomer.id, data }).unwrap();
-    setEditingCustomer(null);
+    try {
+      await updateAccount({ id: editingCustomer.id, data }).unwrap();
+      toast.success('Update account successfully');
+      setEditingCustomer(null);
+    } catch (error) {
+      toast.error('Failed to update account', {
+        description: getErrorMessage(error),
+      });
+    }
   };
 
   const handleDeleteCustomer = async (customerId: string) => {
-    await deleteAccount(customerId).unwrap();
+    try {
+      await deleteAccount(customerId).unwrap();
+      toast.success('Delete account successfully');
+    } catch (error) {
+      toast.error('Failed to delete account', {
+        description: getErrorMessage(error),
+      });
+    }
   };
 
   const handleViewCustomer = (customerId: string) => {

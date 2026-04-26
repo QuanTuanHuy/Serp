@@ -2,8 +2,10 @@
 
 'use client';
 
+import { getErrorMessage } from '@/lib/store/api';
 import { Button, Card, CardContent } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
+import { toast } from 'sonner';
 import { AccountForm } from '../../components/forms';
 import {
   useGetAccountQuery,
@@ -31,8 +33,15 @@ export const EditCustomerPage: React.FC<EditCustomerPageProps> = ({
   const handleSubmit = async (
     data: CreateAccountRequest | UpdateAccountRequest
   ) => {
-    await updateAccount({ id: customerId, data }).unwrap();
-    onSuccess?.();
+    try {
+      await updateAccount({ id: customerId, data }).unwrap();
+      toast.success('Update account successfully');
+      onSuccess?.();
+    } catch (error) {
+      toast.error('Failed to update account', {
+        description: getErrorMessage(error),
+      });
+    }
   };
 
   // Error state - customer not found

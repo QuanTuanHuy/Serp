@@ -2,8 +2,10 @@
 
 'use client';
 
+import { getErrorMessage } from '@/lib/store/api';
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
+import { toast } from 'sonner';
 import { AccountForm } from '../../components/forms';
 import { useCreateAccountMutation } from '../../api/crmApi';
 import type { CreateAccountRequest } from '../../types';
@@ -26,9 +28,12 @@ export const CreateCustomerPage: React.FC<CreateCustomerPageProps> = ({
   ) => {
     try {
       const result = await createAccount(data as CreateAccountRequest).unwrap();
+      toast.success('Create account successfully');
       onSuccess?.(result.data.id);
     } catch (error) {
-      console.error('Failed to create account:', error);
+      toast.error('Failed to create account', {
+        description: getErrorMessage(error),
+      });
     }
   };
 
