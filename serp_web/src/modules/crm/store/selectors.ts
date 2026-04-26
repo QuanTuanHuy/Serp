@@ -456,7 +456,7 @@ export const selectSearchResults = createSelector(
     const filteredOpportunities = opportunities.filter(
       (o: Opportunity) =>
         o.name.toLowerCase().includes(term) ||
-        o.customerName.toLowerCase().includes(term)
+        (o.customerName && o.customerName.toLowerCase().includes(term))
     );
 
     const filteredActivities = activities.filter(

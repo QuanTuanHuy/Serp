@@ -329,7 +329,7 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
   const stageConfig = PIPELINE_STAGES.find(
     (s) => s.stage === opportunity.stage
   );
-  const typeConfig = OPPORTUNITY_TYPES[opportunity.type];
+  const typeConfig = OPPORTUNITY_TYPES[opportunity.type || 'NEW_BUSINESS'];
   const currentStageIndex = PIPELINE_STAGES.findIndex(
     (s) => s.stage === opportunity.stage
   );
@@ -337,7 +337,7 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
     opportunity.stage === 'CLOSED_WON' || opportunity.stage === 'CLOSED_LOST';
 
   // Calculate weighted value
-  const weightedValue = (opportunity.value * opportunity.probability) / 100;
+  const weightedValue = (opportunity.value * (opportunity.probability ?? 0)) / 100;
 
   // Calculate days in pipeline
   const daysInPipeline = Math.floor(
@@ -626,7 +626,7 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
               <div>
                 <p className='text-sm text-muted-foreground'>Probability</p>
                 <p className='text-2xl font-bold text-purple-700 dark:text-purple-300'>
-                  {opportunity.probability}%
+                  {opportunity.probability ?? 0}%
                 </p>
               </div>
               <div className='p-3 bg-purple-500/20 rounded-full'>
@@ -719,13 +719,13 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
                       <p className='font-medium flex items-center gap-2'>
                         <Avatar className='w-5 h-5'>
                           <AvatarFallback className='text-xs'>
-                            {opportunity.assignedToName
+                            {(opportunity.assignedToName || 'Unassigned')
                               .split(' ')
                               .map((n) => n[0])
                               .join('')}
                           </AvatarFallback>
                         </Avatar>
-                        {opportunity.assignedToName}
+                        {opportunity.assignedToName || 'Unassigned'}
                       </p>
                     </div>
                     <div>
