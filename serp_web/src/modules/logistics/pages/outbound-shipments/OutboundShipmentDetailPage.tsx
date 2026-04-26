@@ -266,7 +266,7 @@ export const OutboundShipmentDetailPage: React.FC<
     setIsProcessing(true);
     try {
       await readyToExport({ shipmentId: shipment.id }).unwrap();
-      toast.success('Đã chuyển phiếu sang trạng thái READY_TO_EXPORT');
+      toast.success('Đã chuyển phiếu sang trạng thái sẵn sàng giao');
     } catch (error: any) {
       toast.error(error?.data?.message || 'Không thể chuyển trạng thái phiếu');
     } finally {
@@ -436,7 +436,7 @@ export const OutboundShipmentDetailPage: React.FC<
               ) : (
                 <>
                   <Truck className='mr-2 h-4 w-4' />
-                  Ready To Export
+                  Xuất kho
                 </>
               )}
             </Button>

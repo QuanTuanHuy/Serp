@@ -66,6 +66,9 @@ public class RouteEntity {
     @Transient
     private List<RouteStopEntity> routeStops = new ArrayList<>();
 
+    @Transient
+    private VehicleShipperEntity vehicleShipper;
+
     public RouteEntity(String id, String deliveryPlanId, String vehicleShipperId, Float totalDistanceKm,
             Long totalWeightLoadedKg, Long totalVolumeLoadedCbm, String status, int routeStopCount,
             LocalDate deliveryDate, Long tenantId) {

@@ -41,7 +41,7 @@ const STATUS_OPTIONS: Array<{ value: OutboundShipmentStatus; label: string }> =
   [
     { value: 'CREATED', label: 'Nháp' },
     { value: 'READY_TO_EXPORT', label: 'Sẵn sàng xuất' },
-    { value: 'DELIVERED', label: 'Đã giao' },
+    { value: 'DELIVERED', label: 'Đã xuất' },
   ];
 
 export const OutboundShipmentListPage: React.FC<
