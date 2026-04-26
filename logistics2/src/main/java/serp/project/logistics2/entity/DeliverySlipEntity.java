@@ -129,8 +129,8 @@ public class DeliverySlipEntity {
         String id = IdUtils.generateDeliverySlipId();
         String code = "DS-" + id.substring(6, 12); // Example: DS-XXXXXX
         String status = DeliverySlipStatus.PENDING.name();
-        Long totalWeightKg = items.stream().mapToLong(item -> (long) item.getWeightKg()).sum();
-        Double totalVolumeCbm = items.stream().mapToDouble(item -> item.getHeightM() * item.getWidthM() * item.getLengthM()).sum();
+        Long totalWeightKg = items.stream().mapToLong(item -> (long) item.getWeightKg() * item.getQuantity()).sum();
+        Double totalVolumeCbm = items.stream().mapToDouble(item -> (item.getHeightM() * item.getWidthM() * item.getLengthM()) * item.getQuantity()).sum();
         items.forEach(item -> item.setDeliverySlipId(id));
         return new DeliverySlipEntity(
                 id,
@@ -163,9 +163,9 @@ public class DeliverySlipEntity {
 
         item.setDeliverySlipId(id);
         this.items.add(item);
-        this.totalWeightKg += (long) item.getWeightKg();
+        this.totalWeightKg += (long) item.getWeightKg() *  item.getQuantity();
         double volume = item.getHeightM() * item.getWidthM() * item.getLengthM();
-        this.totalVolumeCbm += (long) volume;
+        this.totalVolumeCbm += volume * item.getQuantity();
     }
 
     public void removeItem(DeliveryItemEntity item) {
@@ -173,9 +173,9 @@ public class DeliverySlipEntity {
             throw new AppException(AppErrorCode.DELIVERY_SLIP_ALREADY_ASSIGNED);
         }
 
-        this.totalWeightKg -= (long) item.getWeightKg();
+        this.totalWeightKg -= (long) item.getWeightKg() * item.getQuantity();
         double volume = item.getHeightM() * item.getWidthM() * item.getLengthM();
-        this.totalVolumeCbm -= (long) volume;
+        this.totalVolumeCbm -= volume * item.getQuantity();
         this.items.remove(item);
     }
 
@@ -189,7 +189,7 @@ public class DeliverySlipEntity {
         int quantityDiff = newQuantity - oldQuantity;
         this.totalWeightKg += (long) (item.getWeightKg() * quantityDiff);
         double volumeDiff = (item.getHeightM() * item.getWidthM() * item.getLengthM()) * quantityDiff;
-        this.totalVolumeCbm += (long) volumeDiff;
+        this.totalVolumeCbm += volumeDiff;
     }
 
     @Override

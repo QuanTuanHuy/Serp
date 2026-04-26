@@ -24,75 +24,82 @@ import {
   Box,
   ReceiptText,
   TruckIcon,
+  NotepadText,
+  Undo2Icon,
+  WeightIcon,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import { formatDateVN } from '@/shared/utils/format';
-import {
-  Customer,
-  Order,
-  OutboundShipment,
-  Shipment,
-  Supplier,
-} from '../../types';
+import { Customer, DeliverySlip, Order, OutboundShipment } from '../../types';
 
 const statusStyles = {
-  CREATED: {
-    label: 'Nháp',
+  PENDING: {
+    label: 'Đang chờ xử lý',
+    bg: 'bg-slate-100 dark:bg-slate-900/30',
+    text: 'text-slate-700 dark:text-slate-400',
+    dot: 'bg-slate-500',
+    icon: Clock,
+    accent: '#64748B',
+  },
+  ASSIGNED: {
+    label: 'Đã lên kế hoạch giao',
     bg: 'bg-blue-100 dark:bg-blue-900/30',
     text: 'text-blue-700 dark:text-blue-400',
     dot: 'bg-blue-500',
-    icon: Clock,
+    icon: NotepadText,
     accent: '#3b82f6',
   },
-  READY_TO_EXPORT: {
-    label: 'Sẵn sàng xuất',
-    bg: 'bg-yellow-100 dark:bg-yellow-900/30',
-    text: 'text-yellow-700 dark:text-yellow-400',
-    dot: 'bg-yellow-500',
+  DELIVERING: {
+    label: 'Đang giao',
+    bg: 'bg-amber-100 dark:bg-amber-900/30',
+    text: 'text-amber-700 dark:text-amber-400',
+    dot: 'bg-amber-500',
     icon: TruckIcon,
     accent: '#e3a149',
   },
   DELIVERED: {
-    label: 'Đã xuất',
+    label: 'Đã giao',
     bg: 'bg-purple-100 dark:bg-purple-900/30',
     text: 'text-purple-700 dark:text-purple-400',
     dot: 'bg-purple-500',
     icon: ArrowUpFromLine,
     accent: '#8b5cf6',
   },
+  RECALLING: {
+    label: 'Đang thu hồi',
+    bg: 'bg-rose-100 dark:bg-rose-900/30',
+    text: 'text-rose-700 dark:text-rose-400',
+    dot: 'bg-yellow-500',
+    icon: Undo2Icon,
+    accent: '#f43f5e',
+  },
 };
 
-export const OutboundShipmentCard = ({
-  shipment,
-  order,
-  customer,
+export const DeliverySlipCard = ({
+  slip,
   onClick,
   viewMode = 'grid',
 }: {
-  shipment: OutboundShipment;
-  order?: Order;
-  customer?: Customer;
-  supplier?: Supplier;
+  slip: DeliverySlip;
   onClick?: () => void;
   viewMode?: 'grid' | 'list';
 }) => {
   const status =
-    statusStyles[shipment.status as keyof typeof statusStyles] ||
-    statusStyles.CREATED;
+    statusStyles[slip.status as keyof typeof statusStyles] ||
+    statusStyles.PENDING;
   const StatusIcon = status.icon;
 
-  const shipmentTitle =
-    shipment.name || `Phiếu #${shipment.id?.slice(0, 8) || 'N/A'}`;
-  const shortId = shipment.id ? `${shipment.id.slice(0, 10)}...` : 'N/A';
-  const orderLabel = order?.orderName || `${shipment.orderId.slice(0, 8)}...`;
+  const slipTitle =
+    slip.code || `Phiếu giao ID #${slip.id?.slice(0, 8) || 'N/A'}`;
+  const shortId = slip.id ? `${slip.id.slice(0, 10)}...` : 'N/A';
 
-  const partyLabel =
-    customer?.name ||
-    (shipment.customerId ? `${shipment.customerId.slice(0, 8)}...` : 'N/A');
+  const partyLabel = slip.customerName || 'N/A';
 
-  const deliveryLabel = `Tạo ngày ${formatDateVN(shipment.createdStamp)}`;
+  const facilityLabel = slip.facility?.name || 'N/A';
 
-  const isOverdue = shipment.status === 'CREATED';
+  const deliveryLabel = `Tạo ngày ${formatDateVN(slip.createdStamp)}`;
+
+  const isOverdue = slip.status === 'PENDING';
 
   const handleOpenDetails = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -110,8 +117,8 @@ export const OutboundShipmentCard = ({
         onClick={onClick}
       >
         <div className='overflow-x-auto'>
-          <div className='grid min-w-[900px] grid-cols-[2.5fr_2fr_2.5fr_3fr_2fr] items-center gap-4 p-4'>
-            <p className='text-sm font-semibold truncate'>{shipmentTitle}</p>
+          <div className='grid min-w-[900px] grid-cols-[2.5fr_3fr_0.5fr_0.5fr_3fr_2fr_2fr] items-center gap-4 p-4'>
+            <p className='text-sm font-semibold truncate'>{slipTitle}</p>
 
             <Badge
               variant='secondary'
@@ -123,11 +130,19 @@ export const OutboundShipmentCard = ({
             </Badge>
 
             <p className='text-sm text-muted-foreground truncate'>
-              {orderLabel}
+              {slip.totalVolumeCbm}m³
+            </p>
+
+            <p className='text-sm text-muted-foreground truncate'>
+              {slip.totalWeightKg}kg
             </p>
 
             <p className='text-sm text-muted-foreground truncate'>
               {partyLabel}
+            </p>
+
+            <p className='text-sm text-muted-foreground truncate'>
+              {facilityLabel}
             </p>
 
             <p
@@ -172,7 +187,7 @@ export const OutboundShipmentCard = ({
 
             <div className='flex-1 min-w-0'>
               <h3 className='font-semibold text-base leading-tight mb-1 truncate'>
-                {shipmentTitle}
+                {slipTitle}
               </h3>
               <p className='text-xs text-muted-foreground truncate'>
                 ID: {shortId}
@@ -231,9 +246,9 @@ export const OutboundShipmentCard = ({
             <div className='space-y-1'>
               <div className='flex items-center gap-1 text-muted-foreground'>
                 <Box className='h-3 w-3' />
-                <span>Đơn hàng</span>
+                <span>Kho giao</span>
               </div>
-              <p className='text-sm font-semibold truncate'>{orderLabel}</p>
+              <p className='text-sm font-semibold truncate'>{facilityLabel}</p>
             </div>
 
             <div className='space-y-1'>
@@ -246,20 +261,20 @@ export const OutboundShipmentCard = ({
 
             <div className='space-y-1'>
               <div className='flex items-center gap-1 text-muted-foreground'>
-                <ReceiptText className='h-3 w-3' />
-                <span>Loại phiếu</span>
+                <Box className='h-3 w-3' />
+                <span>Thể tích</span>
               </div>
-              <p className='text-sm font-semibold truncate'>Phiếu giao</p>
+              <p className='text-sm font-semibold truncate'>
+                {slip.totalVolumeCbm} m³
+              </p>
             </div>
 
             <div className='space-y-1'>
               <div className='flex items-center gap-1 text-muted-foreground'>
-                <Calendar className='h-3 w-3' />
-                <span>Ngày tạo</span>
+                <WeightIcon className='h-3 w-3' />
+                <span>Khối lượng</span>
               </div>
-              <p className='text-sm font-semibold'>
-                {formatDateVN(shipment.createdStamp)}
-              </p>
+              <p className='text-sm font-semibold'>{slip.totalWeightKg} kg</p>
             </div>
           </div>
         </div>

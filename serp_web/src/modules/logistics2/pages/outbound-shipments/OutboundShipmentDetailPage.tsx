@@ -26,21 +26,22 @@ import {
   ArrowLeft,
   CheckCircle2,
   Clock3,
-  ExternalLink,
+  Grid3X3,
+  List,
   Package,
   PanelsTopLeft,
+  Plus,
   Truck,
-  User,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import {
   useGetDeliverySlipsQuery,
-  useGetFacilityDetailQuery,
   useGetOrderDetailQuery,
   useGetOutboundShipmentDetailQuery,
 } from '../../api/logistics2Api';
-import type { DeliverySlipStatus } from '../../types';
+import type { DeliverySlip } from '../../types';
 import { useGetUsersQuery } from '@/modules/admin/services/users/usersApi';
+import { DeliverySlipCard } from '../../components/cards/DeliverySlipCard';
 
 interface OutboundShipmentDetailPageProps {
   shipmentId: string;
@@ -63,41 +64,10 @@ const STATUS_CONFIG = {
     icon: Truck,
   },
   DELIVERED: {
-    label: 'Đã giao',
+    label: 'Đã xuất kho',
     color: 'text-emerald-700 dark:text-emerald-400',
     bgColor: 'bg-emerald-100 dark:bg-emerald-900/30',
     icon: CheckCircle2,
-  },
-};
-
-const DELIVERY_SLIP_STATUS_CONFIG: Record<
-  DeliverySlipStatus,
-  { label: string; color: string; bgColor: string }
-> = {
-  PENDING: {
-    label: 'Chờ xử lý',
-    color: 'text-slate-700 dark:text-slate-300',
-    bgColor: 'bg-slate-100 dark:bg-slate-900/40',
-  },
-  ASSIGNED: {
-    label: 'Đã lên kế hoạch giao',
-    color: 'text-blue-700 dark:text-blue-300',
-    bgColor: 'bg-blue-100 dark:bg-blue-900/40',
-  },
-  DELIVERING: {
-    label: 'Đang giao',
-    color: 'text-amber-700 dark:text-amber-300',
-    bgColor: 'bg-amber-100 dark:bg-amber-900/40',
-  },
-  DELIVERED: {
-    label: 'Đã giao',
-    color: 'text-emerald-700 dark:text-emerald-300',
-    bgColor: 'bg-emerald-100 dark:bg-emerald-900/40',
-  },
-  RECALLING: {
-    label: 'Đang thu hồi',
-    color: 'text-rose-700 dark:text-rose-300',
-    bgColor: 'bg-rose-100 dark:bg-rose-900/40',
   },
 };
 
@@ -127,6 +97,7 @@ export const OutboundShipmentDetailPage: React.FC<
 > = ({ shipmentId, initialTab = 'overview' }) => {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<DetailTab>(initialTab);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const {
     data: shipmentResponse,
@@ -192,6 +163,8 @@ export const OutboundShipmentDetailPage: React.FC<
   const deliveredSlips = deliverySlips.filter(
     (slip) => slip.status === 'DELIVERED'
   ).length;
+
+  const canCreateDeliverySlip = shipment?.status === 'READY_TO_EXPORT';
 
   const totalItemQuantity = (shipment?.items || []).reduce(
     (sum, item) => sum + item.quantity,
@@ -373,7 +346,7 @@ export const OutboundShipmentDetailPage: React.FC<
                           </p>
                         </div>
 
-                        <div className='grid grid-cols-2 gap-3 text-sm md:grid-cols-3'>
+                        <div className='grid grid-cols-5 gap-3 text-sm md:grid-cols-5'>
                           <div>
                             <Label className='text-muted-foreground'>
                               Số lượng xuất
@@ -384,7 +357,7 @@ export const OutboundShipmentDetailPage: React.FC<
                           </div>
                           <div>
                             <Label className='text-muted-foreground'>
-                              Còn lại chưa giao
+                              Chưa tạo phiếu giao
                             </Label>
                             <p className='font-medium'>
                               {formatNumber(item.quantityRemaining || 0)}
@@ -392,10 +365,28 @@ export const OutboundShipmentDetailPage: React.FC<
                           </div>
                           <div>
                             <Label className='text-muted-foreground'>
-                              Mã kho
+                              Lô hàng
                             </Label>
                             <p className='font-medium'>
-                              {item.inventoryItemId}
+                              {item.inventoryItem?.lotId || 'N/A'}
+                            </p>
+                          </div>
+                          <div>
+                            <Label className='text-muted-foreground'>
+                              Ngày sản xuất
+                            </Label>
+                            <p className='font-medium'>
+                              {formatDate(
+                                item.inventoryItem?.manufacturingDate
+                              )}
+                            </p>
+                          </div>
+                          <div>
+                            <Label className='text-muted-foreground'>
+                              Hạn sử dụng
+                            </Label>
+                            <p className='font-medium'>
+                              {formatDate(item.inventoryItem?.expirationDate)}
                             </p>
                           </div>
                         </div>
@@ -413,6 +404,60 @@ export const OutboundShipmentDetailPage: React.FC<
         </TabsContent>
 
         <TabsContent value='delivery-slips' className='mt-6 space-y-6'>
+          <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+            <div>
+              <h3 className='text-lg font-semibold'>Danh sách đơn giao hàng</h3>
+              <p className='text-sm text-muted-foreground'>
+                {canCreateDeliverySlip
+                  ? `${deliverySlips.length} đơn giao hàng thuộc phiếu xuất này`
+                  : 'Chỉ có thể tạo đơn giao hàng khi phiếu xuất ở trạng thái READY_TO_EXPORT.'}
+              </p>
+            </div>
+
+            <div className='flex items-center gap-2'>
+              <Button
+                onClick={() =>
+                  router.push(
+                    `/logistics2/outbound-shipments/${shipment.id}/delivery-slips/create`
+                  )
+                }
+                disabled={!canCreateDeliverySlip}
+              >
+                <Plus className='mr-2 h-4 w-4' />
+                Tạo đơn giao hàng
+              </Button>
+
+              {deliverySlips.length > 0 && (
+                <div className='flex rounded-lg border bg-muted p-1'>
+                  <button
+                    type='button'
+                    onClick={() => setViewMode('grid')}
+                    className={cn(
+                      'flex items-center justify-center h-8 w-8 rounded-md transition-colors',
+                      viewMode === 'grid'
+                        ? 'bg-background shadow-sm'
+                        : 'hover:bg-background/50'
+                    )}
+                  >
+                    <Grid3X3 className='h-4 w-4' />
+                  </button>
+                  <button
+                    type='button'
+                    onClick={() => setViewMode('list')}
+                    className={cn(
+                      'flex items-center justify-center h-8 w-8 rounded-md transition-colors',
+                      viewMode === 'list'
+                        ? 'bg-background shadow-sm'
+                        : 'hover:bg-background/50'
+                    )}
+                  >
+                    <List className='h-4 w-4' />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
           {isLoadingDeliverySlips && (
             <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
               {Array.from({ length: 4 }).map((_, index) => (
@@ -441,105 +486,24 @@ export const OutboundShipmentDetailPage: React.FC<
             !deliverySlipsError &&
             deliverySlips.length > 0 && (
               <div className='space-y-4'>
-                <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
-                  <div>
-                    <h3 className='text-lg font-semibold'>
-                      Danh sách đơn giao hàng
-                    </h3>
-                    <p className='text-sm text-muted-foreground'>
-                      {deliverySlips.length} đơn giao hàng thuộc phiếu xuất này
-                    </p>
-                  </div>
-
-                  <Button
-                    variant='outline'
-                    onClick={() =>
-                      router.push(
-                        `/logistics2/delivery-slips?outboundShipmentId=${shipment.id}`
-                      )
-                    }
-                  >
-                    <ExternalLink className='mr-2 h-4 w-4' />
-                    Mở trang Delivery Slip
-                  </Button>
-                </div>
-
-                <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
-                  {deliverySlips.map((slip) => {
-                    const slipStatus = DELIVERY_SLIP_STATUS_CONFIG[slip.status];
-
-                    return (
-                      <Card key={slip.id}>
-                        <CardContent className='space-y-4 p-5'>
-                          <div className='flex items-start justify-between gap-3'>
-                            <div>
-                              <p className='text-base font-semibold'>
-                                {slip.code}
-                              </p>
-                              <p className='text-xs text-muted-foreground'>
-                                ID: {slip.id}
-                              </p>
-                            </div>
-                            <Badge
-                              variant='secondary'
-                              className={cn('gap-1.5', slipStatus.bgColor)}
-                            >
-                              <span className={slipStatus.color}>
-                                {slipStatus.label}
-                              </span>
-                            </Badge>
-                          </div>
-
-                          <div className='grid grid-cols-2 gap-3 text-sm'>
-                            <div>
-                              <Label className='text-muted-foreground'>
-                                Khách hàng
-                              </Label>
-                              <p className='font-medium'>
-                                {slip.customerName || slip.customerId}
-                              </p>
-                            </div>
-                            <div>
-                              <Label className='text-muted-foreground'>
-                                Kho giao
-                              </Label>
-                              <p className='font-medium'>
-                                {slip.facility?.name || slip.facilityId}
-                              </p>
-                            </div>
-                            <div>
-                              <Label className='text-muted-foreground'>
-                                Số mặt hàng
-                              </Label>
-                              <p className='font-medium'>
-                                {slip.items?.length || 0}
-                              </p>
-                            </div>
-                            <div>
-                              <Label className='text-muted-foreground'>
-                                Khối lượng
-                              </Label>
-                              <p className='font-medium'>
-                                {formatNumber(slip.totalWeightKg)} kg
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className='flex items-center justify-between text-xs text-muted-foreground'>
-                            <div className='flex items-center gap-1.5'>
-                              <User className='h-3.5 w-3.5' />
-                              <span>
-                                {slip.customerPhone || 'Không có SĐT'}
-                              </span>
-                            </div>
-                            <span>
-                              Tạo lúc: {formatDate(slip.createdStamp)}
-                            </span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+                <div
+                  className={cn(
+                    'gap-4',
+                    viewMode === 'grid'
+                      ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+                      : 'flex flex-col'
+                  )}
+                >
+                  {deliverySlips.map((slip: DeliverySlip) => (
+                    <DeliverySlipCard
+                      key={slip.id}
+                      slip={slip}
+                      viewMode={viewMode}
+                      onClick={() =>
+                        router.push(`/logistics2/delivery-slips/${slip.id}`)
+                      }
+                    />
+                  ))}
                 </div>
               </div>
             )}

@@ -31,4 +31,14 @@ public interface RouteRepository extends JpaRepository<RouteEntity, String> {
             @Param("tenantId") String tenantId,
             Pageable pageable);
 
+    @Query("SELECT r FROM RouteEntity r " +
+            "WHERE r.tenantId = :tenantId " +
+            "AND (:deliverySlipId IS NULL OR EXISTS (" +
+            "       SELECT 1 FROM RouteStopEntity rs " +
+            "       WHERE rs.routeId = r.id AND rs.deliverySlipId = :deliverySlipId" +
+            "))")
+    Page<RouteEntity> search(
+            @Param("deliverySlipId") String deliverySlipId,
+            @Param("tenantId") String tenantId,
+            Pageable pageable);
 }

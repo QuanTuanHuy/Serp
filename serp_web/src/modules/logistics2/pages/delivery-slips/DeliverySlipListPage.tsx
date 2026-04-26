@@ -47,6 +47,7 @@ import type {
 } from '../../types';
 import { StatsCard } from '../../components/cards/StatsCard';
 import { setActiveModule } from '../../store';
+import { DeliverySlipCard } from '../../components/cards/DeliverySlipCard';
 
 interface DeliverySlipListPageProps {
   className?: string;
@@ -162,39 +163,10 @@ export const DeliverySlipListPage: React.FC<DeliverySlipListPageProps> = ({
     pagination: { page: 0, size: 200 },
   });
 
-  const { data: customersResponse } = useGetCustomersQuery({
-    filters: {},
-    pagination: { page: 0, size: 200 },
-  });
-
   const { data: facilitiesResponse } = useGetFacilitiesQuery({
     filters: {},
     pagination: { page: 0, size: 200 },
   });
-
-  const shipmentMap = useMemo(() => {
-    const map = new Map<string, OutboundShipment>();
-    shipmentsResponse?.data?.items?.forEach((shipment) => {
-      map.set(shipment.id, shipment);
-    });
-    return map;
-  }, [shipmentsResponse]);
-
-  const customerMap = useMemo(() => {
-    const map = new Map<string, Customer>();
-    customersResponse?.data?.items?.forEach((customer) => {
-      map.set(customer.id, customer);
-    });
-    return map;
-  }, [customersResponse]);
-
-  const facilityMap = useMemo(() => {
-    const map = new Map<string, Facility>();
-    facilitiesResponse?.data?.items?.forEach((facility) => {
-      map.set(facility.id, facility);
-    });
-    return map;
-  }, [facilitiesResponse]);
 
   const stats = useMemo(() => {
     const pending = slips.filter((item) => item.status === 'PENDING').length;
@@ -235,156 +207,6 @@ export const DeliverySlipListPage: React.FC<DeliverySlipListPageProps> = ({
     setSearchValue('');
     setFilters({});
     setPagination((prev) => ({ ...prev, page: 0 }));
-  };
-
-  const getDisplayData = (slip: DeliverySlip) => {
-    const shipment = shipmentMap.get(slip.outboundShipmentId);
-    const customer = customerMap.get(slip.customerId);
-    const facility = facilityMap.get(slip.facilityId);
-
-    return {
-      shipmentName: shipment?.name || slip.outboundShipmentId,
-      customerName: slip.customerName || customer?.name || slip.customerId,
-      facilityName: facility?.name || slip.facility?.name || slip.facilityId,
-      itemCount: slip.items?.length || 0,
-    };
-  };
-
-  const renderGridCard = (slip: DeliverySlip) => {
-    const status = STATUS_CONFIG[slip.status];
-    const display = getDisplayData(slip);
-
-    return (
-      <Card
-        key={slip.id}
-        className='group cursor-default overflow-hidden transition-all hover:border-primary/40 hover:shadow-md'
-      >
-        <CardContent className='space-y-4 p-5'>
-          <div className='flex items-start justify-between gap-3'>
-            <div>
-              <p className='text-base font-semibold'>{slip.code}</p>
-              <p className='text-xs text-muted-foreground'>ID: {slip.id}</p>
-            </div>
-            <Badge variant='secondary' className={status.badgeClass}>
-              {status.label}
-            </Badge>
-          </div>
-
-          <div className='grid grid-cols-2 gap-3 text-sm'>
-            <div>
-              <p className='mb-1 text-muted-foreground'>Khách hàng</p>
-              <p className='truncate font-medium'>{display.customerName}</p>
-            </div>
-            <div>
-              <p className='mb-1 text-muted-foreground'>Kho giao</p>
-              <p className='truncate font-medium'>{display.facilityName}</p>
-            </div>
-            <div>
-              <p className='mb-1 text-muted-foreground'>Phiếu xuất</p>
-              <p className='truncate font-medium'>{display.shipmentName}</p>
-            </div>
-            <div>
-              <p className='mb-1 text-muted-foreground'>Số mặt hàng</p>
-              <p className='font-medium'>{display.itemCount}</p>
-            </div>
-          </div>
-
-          <div className='grid grid-cols-2 gap-3 text-sm'>
-            <div>
-              <p className='mb-1 text-muted-foreground'>Tổng khối lượng</p>
-              <p className='font-medium'>
-                {formatNumber(slip.totalWeightKg)} kg
-              </p>
-            </div>
-            <div>
-              <p className='mb-1 text-muted-foreground'>Tổng thể tích</p>
-              <p className='font-medium'>
-                {formatNumber(slip.totalVolumeCbm)} cbm
-              </p>
-            </div>
-          </div>
-
-          <div className='flex items-center justify-between border-t pt-3 text-xs text-muted-foreground'>
-            <div className='flex items-center gap-1.5'>
-              <Calendar className='h-3.5 w-3.5' />
-              <span>{formatDate(slip.createdStamp)}</span>
-            </div>
-            <Button
-              variant='ghost'
-              size='sm'
-              onClick={() =>
-                router.push(
-                  `/logistics2/outbound-shipments/${slip.outboundShipmentId}/delivery-slips`
-                )
-              }
-            >
-              <ExternalLink className='mr-1.5 h-3.5 w-3.5' />
-              Xem phieu xuat
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  const renderListRow = (slip: DeliverySlip) => {
-    const status = STATUS_CONFIG[slip.status];
-    const display = getDisplayData(slip);
-
-    return (
-      <Card
-        key={slip.id}
-        className='cursor-default overflow-hidden transition-colors hover:bg-muted/40'
-      >
-        <div className='overflow-x-auto'>
-          <div className='grid min-w-[980px] grid-cols-[1.5fr_1.5fr_1.5fr_1fr_1fr_1fr] items-center gap-4 p-4'>
-            <div>
-              <p className='font-semibold'>{slip.code}</p>
-              <p className='text-xs text-muted-foreground'>ID: {slip.id}</p>
-            </div>
-
-            <div className='text-sm'>
-              <p className='text-muted-foreground'>Khách hàng</p>
-              <p className='truncate font-medium'>{display.customerName}</p>
-            </div>
-
-            <div className='text-sm'>
-              <p className='text-muted-foreground'>Phiếu xuất</p>
-              <p className='truncate font-medium'>{display.shipmentName}</p>
-            </div>
-
-            <div className='text-sm'>
-              <p className='text-muted-foreground'>Số mặt hàng</p>
-              <p className='font-medium'>{display.itemCount}</p>
-            </div>
-
-            <div className='text-sm'>
-              <p className='text-muted-foreground'>Tổng khối lượng</p>
-              <p className='font-medium'>
-                {formatNumber(slip.totalWeightKg)} kg
-              </p>
-            </div>
-
-            <div className='flex items-center justify-between gap-2'>
-              <Badge variant='secondary' className={status.badgeClass}>
-                {status.label}
-              </Badge>
-              <Button
-                variant='ghost'
-                size='icon'
-                onClick={() =>
-                  router.push(
-                    `/logistics2/outbound-shipments/${slip.outboundShipmentId}/delivery-slips`
-                  )
-                }
-              >
-                <ExternalLink className='h-4 w-4' />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </Card>
-    );
   };
 
   return (
@@ -627,9 +449,16 @@ export const DeliverySlipListPage: React.FC<DeliverySlipListPageProps> = ({
               : 'flex flex-col'
           )}
         >
-          {slips.map((slip) =>
-            viewMode === 'grid' ? renderGridCard(slip) : renderListRow(slip)
-          )}
+          {slips.map((slip: DeliverySlip) => (
+            <DeliverySlipCard
+              key={slip.id}
+              slip={slip}
+              viewMode={viewMode}
+              onClick={() =>
+                router.push(`/logistics2/delivery-slips/${slip.id}`)
+              }
+            />
+          ))}
         </div>
       )}
 
