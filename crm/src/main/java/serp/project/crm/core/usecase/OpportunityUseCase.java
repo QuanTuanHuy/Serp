@@ -63,8 +63,8 @@ public class OpportunityUseCase {
             if (!account.isActive()) {
                 throw new AppException(ErrorMessage.ACCOUNT_INACTIVE);
             }
-            teamMemberService.getTeamMemberByUserId(userId, tenantId)
-                    .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND));
+            // teamMemberService.getTeamMemberByUserId(userId, tenantId)
+            //         .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND));
             if (opportunityService.existByAccountIdAndName(account.getId(), request.getName(), tenantId)) {
                 throw new AppException(ErrorMessage.OPPORTUNITY_ALREADY_EXISTS);
             }
