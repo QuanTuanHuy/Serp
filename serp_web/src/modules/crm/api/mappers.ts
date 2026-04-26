@@ -6,6 +6,7 @@ import type {
   CreateAccountRequest,
   CreateLeadRequest,
   UpdateAccountRequest,
+  UpdateLeadRequest,
   CustomerFilters,
   Lead,
   LeadFilters,
@@ -371,12 +372,14 @@ export const mapAccountFormToBackendPayload = (
   };
 };
 
-export const mapLeadFormToBackendPayload = (data: CreateLeadRequest) => ({
+export const mapLeadFormToBackendPayload = (
+  data: CreateLeadRequest | UpdateLeadRequest
+) => ({
   company: data.company || undefined,
   industry: data.industry || undefined,
   companySize: data.companySize || undefined,
   website: data.website || undefined,
-  name: data.name,
+  name: data.name || undefined,
   email: data.email || undefined,
   phone: data.phone || undefined,
   jobTitle: data.jobTitle || undefined,
@@ -385,7 +388,7 @@ export const mapLeadFormToBackendPayload = (data: CreateLeadRequest) => ({
   state: data.state || undefined,
   postalCode: data.postalCode || undefined,
   country: data.country || undefined,
-  leadSource: data.leadSource || 'WEBSITE',
+  leadSource: data.leadSource || undefined,
   assignedTo:
     data.assignedTo && data.assignedTo.trim() !== ''
       ? Number(data.assignedTo)
