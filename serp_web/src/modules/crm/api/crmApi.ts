@@ -11,8 +11,13 @@ import {
   mapLeadFiltersToSearchRequest,
   mapLeadFormToBackendPayload,
   mapLeadListResponse,
+  mapOpportunityFiltersToSearchRequest,
+  mapOpportunityFormToBackendPayload,
+  mapOpportunityListResponse,
+  mapOpportunityPipelineResponse,
   mapSingleAccountResponse,
   mapSingleLeadResponse,
+  mapSingleOpportunityResponse,
 } from './mappers';
 import type {
   Account,
@@ -396,11 +401,12 @@ export const crmApi = api.injectEndpoints({
       { filters?: OpportunityFilters; pagination: PaginationParams }
     >({
       query: ({ filters = {}, pagination }) => ({
-        url: '/opportunities',
-        method: 'GET',
-        params: { ...filters, ...pagination },
+        url: '/opportunities/search',
+        method: 'POST',
+        body: mapOpportunityFiltersToSearchRequest(filters, pagination),
       }),
       extraOptions: { service: 'crm' },
+      transformResponse: mapOpportunityListResponse,
       providesTags: (result) =>
         result?.data?.data
           ? [
@@ -419,7 +425,66 @@ export const crmApi = api.injectEndpoints({
         method: 'GET',
       }),
       extraOptions: { service: 'crm' },
+      transformResponse: mapSingleOpportunityResponse,
       providesTags: (result, error, id) => [{ type: 'Opportunity', id }],
+    }),
+
+    getOpportunityActivities: builder.query<
+      APIResponse<PaginatedResponse<Activity>>,
+      { opportunityId: string; page?: number; size?: number }
+    >({
+      query: ({ opportunityId, page = 1, size = 20 }) => ({
+        url: `/opportunities/${opportunityId}/activities`,
+        method: 'GET',
+        params: { page, size },
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapActivityListResponse,
+      providesTags: (result, error, { opportunityId }) => [
+        { type: 'Activity', id: `${opportunityId}-OPPORTUNITY` },
+      ],
+    }),
+
+    getOpportunityPipeline: builder.query<
+      APIResponse<{
+        stages: Array<{
+          stage: Opportunity['stage'];
+          count: number;
+          totalValue: number;
+          weightedValue: number;
+          opportunities: Opportunity[];
+        }>;
+        summary: {
+          totalOpportunities: number;
+          totalPipelineValue: number;
+          weightedPipelineValue: number;
+          averageDealSize: number;
+        };
+      }>,
+      {
+        assignedTo?: string;
+        accountId?: string;
+        fromDate?: string;
+        toDate?: string;
+      }
+    >({
+      query: ({ assignedTo, accountId, fromDate, toDate } = {}) => ({
+        url: '/opportunities/pipeline',
+        method: 'GET',
+        params: {
+          assignedTo:
+            assignedTo && assignedTo.trim() !== ''
+              ? Number(assignedTo)
+              : undefined,
+          accountId:
+            accountId && accountId.trim() !== '' ? Number(accountId) : undefined,
+          fromDate: fromDate || undefined,
+          toDate: toDate || undefined,
+        },
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapOpportunityPipelineResponse,
+      providesTags: [{ type: 'Opportunity', id: 'PIPELINE' }],
     }),
 
     createOpportunity: builder.mutation<
@@ -429,9 +494,10 @@ export const crmApi = api.injectEndpoints({
       query: (data) => ({
         url: '/opportunities',
         method: 'POST',
-        body: data,
+        body: mapOpportunityFormToBackendPayload(data),
       }),
       extraOptions: { service: 'crm' },
+      transformResponse: mapSingleOpportunityResponse,
       invalidatesTags: [{ type: 'Opportunity', id: 'LIST' }],
     }),
 
@@ -442,12 +508,113 @@ export const crmApi = api.injectEndpoints({
       query: ({ id, data }) => ({
         url: `/opportunities/${id}`,
         method: 'PUT',
-        body: data,
+        body: mapOpportunityFormToBackendPayload(data),
       }),
       extraOptions: { service: 'crm' },
+      transformResponse: mapSingleOpportunityResponse,
       invalidatesTags: (result, error, { id }) => [
         { type: 'Opportunity', id },
         { type: 'Opportunity', id: 'LIST' },
+      ],
+    }),
+
+    changeOpportunityStage: builder.mutation<
+      APIResponse<Opportunity>,
+      {
+        id: string;
+        data: {
+          stage: Opportunity['stage'];
+          lossReason?: string;
+          notes?: string;
+        };
+      }
+    >({
+      query: ({ id, data }) => ({
+        url: `/opportunities/${id}/stage`,
+        method: 'PUT',
+        body: data,
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapSingleOpportunityResponse,
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Opportunity', id },
+        { type: 'Opportunity', id: 'LIST' },
+        { type: 'Opportunity', id: 'PIPELINE' },
+      ],
+    }),
+
+    closeOpportunityWon: builder.mutation<
+      APIResponse<Opportunity>,
+      { id: string; data?: { actualValue?: number; notes?: string } }
+    >({
+      query: ({ id, data }) => ({
+        url: `/opportunities/${id}/close-won`,
+        method: 'PUT',
+        body: data,
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapSingleOpportunityResponse,
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Opportunity', id },
+        { type: 'Opportunity', id: 'LIST' },
+        { type: 'Opportunity', id: 'PIPELINE' },
+      ],
+    }),
+
+    closeOpportunityLost: builder.mutation<
+      APIResponse<Opportunity>,
+      { id: string; data: { lossReason: string } }
+    >({
+      query: ({ id, data }) => ({
+        url: `/opportunities/${id}/close-lost`,
+        method: 'PUT',
+        body: data,
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapSingleOpportunityResponse,
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Opportunity', id },
+        { type: 'Opportunity', id: 'LIST' },
+        { type: 'Opportunity', id: 'PIPELINE' },
+      ],
+    }),
+
+    assignOpportunity: builder.mutation<
+      APIResponse<Opportunity>,
+      { id: string; data: { assignedTo: number } }
+    >({
+      query: ({ id, data }) => ({
+        url: `/opportunities/${id}/assign`,
+        method: 'PUT',
+        body: data,
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapSingleOpportunityResponse,
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Opportunity', id },
+        { type: 'Opportunity', id: 'LIST' },
+        { type: 'Opportunity', id: 'PIPELINE' },
+      ],
+    }),
+
+    reopenOpportunity: builder.mutation<
+      APIResponse<Opportunity>,
+      {
+        id: string;
+        data: { stage: Opportunity['stage']; reopenReason: string };
+      }
+    >({
+      query: ({ id, data }) => ({
+        url: `/opportunities/${id}/reopen`,
+        method: 'PUT',
+        body: data,
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapSingleOpportunityResponse,
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Opportunity', id },
+        { type: 'Opportunity', id: 'LIST' },
+        { type: 'Opportunity', id: 'PIPELINE' },
       ],
     }),
 
@@ -463,6 +630,7 @@ export const crmApi = api.injectEndpoints({
       invalidatesTags: (result, error, id) => [
         { type: 'Opportunity', id },
         { type: 'Opportunity', id: 'LIST' },
+        { type: 'Opportunity', id: 'PIPELINE' },
       ],
     }),
 
@@ -610,19 +778,6 @@ export const crmApi = api.injectEndpoints({
       invalidatesTags: [{ type: 'Lead', id: 'LIST' }],
     }),
 
-    bulkDeleteOpportunities: builder.mutation<
-      APIResponse<BulkOperationResult>,
-      string[]
-    >({
-      query: (ids) => ({
-        url: '/opportunities/bulk-delete',
-        method: 'POST',
-        body: { ids },
-      }),
-      extraOptions: { service: 'crm' },
-      invalidatesTags: [{ type: 'Opportunity', id: 'LIST' }],
-    }),
-
     bulkDeleteActivities: builder.mutation<
       APIResponse<BulkOperationResult>,
       string[]
@@ -670,8 +825,15 @@ export const {
   // Opportunity hooks
   useGetOpportunitiesQuery,
   useGetOpportunityQuery,
+  useGetOpportunityActivitiesQuery,
+  useGetOpportunityPipelineQuery,
   useCreateOpportunityMutation,
   useUpdateOpportunityMutation,
+  useChangeOpportunityStageMutation,
+  useCloseOpportunityWonMutation,
+  useCloseOpportunityLostMutation,
+  useAssignOpportunityMutation,
+  useReopenOpportunityMutation,
   useDeleteOpportunityMutation,
 
   // Activity hooks
@@ -690,7 +852,6 @@ export const {
   // Bulk operation hooks
   useBulkDeleteCustomersMutation,
   useBulkDeleteLeadsMutation,
-  useBulkDeleteOpportunitiesMutation,
   useBulkDeleteActivitiesMutation,
 } = crmApi;
 

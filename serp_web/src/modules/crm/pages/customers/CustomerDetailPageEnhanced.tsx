@@ -329,12 +329,12 @@ export const CustomerDetailPageEnhanced: React.FC<
         <Card>
           <CardContent className='py-16 text-center'>
             <AlertCircle className='w-12 h-12 mx-auto mb-4 text-muted-foreground' />
-            <h2 className='text-xl font-semibold mb-2'>Customer Not Found</h2>
+            <h2 className='text-xl font-semibold mb-2'>Account Not Found</h2>
             <p className='text-muted-foreground mb-4'>
-              The customer you're looking for doesn't exist or has been deleted.
+              The account you're looking for doesn't exist or has been deleted.
             </p>
             <Button onClick={() => router.push('/crm/accounts')}>
-              Back to Customers
+              Back to Accounts
             </Button>
           </CardContent>
         </Card>
@@ -621,7 +621,7 @@ export const CustomerDetailPageEnhanced: React.FC<
                 onClick={() => setIsDeleteDialogOpen(true)}
               >
                 <Trash2 className='w-4 h-4 mr-2' />
-                Delete Customer
+                Delete Account
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -718,16 +718,16 @@ export const CustomerDetailPageEnhanced: React.FC<
           <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
             {/* Main Info */}
             <div className='lg:col-span-2 space-y-6'>
-              {/* Customer Information */}
+              {/* Account Information */}
               <Card>
                 <CardHeader>
-                  <h3 className='font-semibold'>Customer Information</h3>
+                  <h3 className='font-semibold'>Account Information</h3>
                 </CardHeader>
                 <CardContent>
                   <div className='grid grid-cols-2 gap-4'>
                     <div>
                       <label className='text-sm font-medium text-muted-foreground'>
-                        Customer Type
+                        Account Type
                       </label>
                       <p className='font-medium capitalize'>
                         {customer.customerType.toLowerCase()}
@@ -816,7 +816,7 @@ export const CustomerDetailPageEnhanced: React.FC<
                     )}
                     <div>
                       <label className='text-sm font-medium text-muted-foreground'>
-                        Customer Since
+                        Account Since
                       </label>
                       <p className='font-medium'>
                         {formatDate(customer.createdAt)}
@@ -914,7 +914,7 @@ export const CustomerDetailPageEnhanced: React.FC<
                 <CardContent className='space-y-2'>
                   <Button variant='outline' className='w-full justify-start'>
                     <Phone className='w-4 h-4 mr-2' />
-                    Call Customer
+                    Call Account
                   </Button>
                   <Button variant='outline' className='w-full justify-start'>
                     <Mail className='w-4 h-4 mr-2' />
@@ -1282,7 +1282,7 @@ export const CustomerDetailPageEnhanced: React.FC<
           <DialogHeader>
             <DialogTitle>Add Note</DialogTitle>
             <DialogDescription>
-              Add a note about this customer for future reference.
+              Add a note about this account for future reference.
             </DialogDescription>
           </DialogHeader>
           <div className='py-4'>
@@ -1311,9 +1311,9 @@ export const CustomerDetailPageEnhanced: React.FC<
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Customer</DialogTitle>
+            <DialogTitle>Delete Account</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this customer? This action cannot
+              Are you sure you want to delete this account? This action cannot
               be undone and will also delete all related data.
             </DialogDescription>
           </DialogHeader>
@@ -1348,7 +1348,7 @@ export const CustomerDetailPageEnhanced: React.FC<
               Cancel
             </Button>
             <Button variant='destructive' onClick={handleDelete}>
-              Delete Customer
+              Delete Account
             </Button>
           </DialogFooter>
         </DialogContent>

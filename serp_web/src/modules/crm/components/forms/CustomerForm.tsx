@@ -176,7 +176,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
     <Card className={cn('w-full', className)}>
       <CardHeader className='pb-4'>
         <CardTitle className='text-xl'>
-          {isEditing ? 'Edit Customer' : 'Create Customer'}
+          {isEditing ? 'Edit Account' : 'Create Account'}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -195,7 +195,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
                   {...register('name')}
                   className={cn(errors.name && 'border-destructive')}
                   disabled={isLoading}
-                  placeholder='Enter customer name'
+                  placeholder='Enter account name'
                 />
                 {errors.name && (
                   <p className='text-sm text-destructive'>
@@ -390,7 +390,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
                 {...register('notes')}
                 rows={3}
                 disabled={isLoading}
-                placeholder='Add any additional notes about this customer...'
+                placeholder='Add any additional notes about this account...'
               />
             </div>
 
@@ -443,7 +443,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
                 ? 'Saving...'
                 : isEditing
                   ? 'Update Customer'
-                  : 'Create Customer'}
+                  : 'Create Account'}
             </Button>
           </div>
         </form>
