@@ -102,15 +102,12 @@ public class LeadUseCase {
             log.info("Lead qualified successfully: {}", request.getLeadId());
             return responseUtils.success(response, "Lead qualified successfully");
 
-        } catch (IllegalArgumentException e) {
-            log.error("Validation error qualifying lead: {}", e.getMessage());
-            return responseUtils.badRequest(e.getMessage());
-        } catch (IllegalStateException e) {
-            log.error("State error qualifying lead: {}", e.getMessage());
-            return responseUtils.badRequest(e.getMessage());
+        } catch (AppException e) {
+            log.error("Error qualifying lead: {}", e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Unexpected error qualifying lead: {}", e.getMessage(), e);
-            return responseUtils.internalServerError("Failed to qualify lead");
+            throw e;
         }
     }
 
@@ -200,7 +197,7 @@ public class LeadUseCase {
             throw e;
         } catch (Exception e) {
             log.error("Unexpected error converting lead: {}", e.getMessage(), e);
-            return responseUtils.internalServerError("Failed to convert lead");
+            throw e;
         }
     }
 
@@ -293,12 +290,12 @@ public class LeadUseCase {
             log.info("Lead deleted successfully: {}", id);
             return responseUtils.status("Lead deleted successfully");
 
-        } catch (IllegalArgumentException e) {
-            log.error("Validation error deleting lead: {}", e.getMessage());
-            return responseUtils.badRequest(e.getMessage());
+        } catch (AppException e) {
+            log.error("Error deleting lead: {}", e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Unexpected error deleting lead: {}", e.getMessage(), e);
-            return responseUtils.internalServerError("Failed to delete lead");
+            throw e;
         }
     }
 
