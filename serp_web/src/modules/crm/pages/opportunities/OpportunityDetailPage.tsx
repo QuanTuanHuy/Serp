@@ -456,7 +456,7 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
               )}
               <DropdownMenuItem disabled>
                 <MessageSquare className='mr-2 h-4 w-4' />
-                Notes are read-only
+                Notes are currently read-only
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem disabled>
@@ -654,7 +654,7 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
                     </div>
                     <div>
                       <label className='text-sm font-medium text-muted-foreground'>Lead ID</label>
-                      <p className='font-medium'>{opportunity?.leadId || 'Not linked'}</p>
+                      <p className='font-medium'>{opportunity?.leadId || 'No linked lead'}</p>
                     </div>
                     <div>
                       <label className='text-sm font-medium text-muted-foreground'>Days in Pipeline</label>

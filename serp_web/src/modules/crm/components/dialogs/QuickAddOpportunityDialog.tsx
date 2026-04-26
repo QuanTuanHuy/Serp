@@ -273,7 +273,7 @@ export const QuickAddOpportunityDialog: React.FC<
                 id='assignedTo'
                 value={formData.assignedTo || ''}
                 onChange={(e) => handleChange('assignedTo', e.target.value)}
-                placeholder='Optional user ID'
+                placeholder='Optional assignee user ID'
                 disabled={isLoading}
               />
             </div>

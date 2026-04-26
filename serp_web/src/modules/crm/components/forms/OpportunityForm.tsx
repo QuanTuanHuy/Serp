@@ -265,7 +265,7 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
                 <Input
                   id='assignedTo'
                   {...register('assignedTo')}
-                  placeholder='Optional user ID'
+                  placeholder='Optional assignee user ID'
                   disabled={isLoading}
                 />
               </div>
