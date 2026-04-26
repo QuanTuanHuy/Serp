@@ -37,17 +37,40 @@ const customerSchema = z.object({
   email: z.string().email('Invalid email address'),
   phone: z.string().optional(),
   address: z.string().optional(),
-  customerType: z.enum(['INDIVIDUAL', 'COMPANY']),
-  status: z.enum(['ACTIVE', 'INACTIVE', 'POTENTIAL', 'BLOCKED']),
-  companyName: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zipCode: z.string().optional(),
+  country: z.string().optional(),
+  customerType: z.enum(['PROSPECT', 'CUSTOMER']),
+  status: z.enum(['ACTIVE', 'INACTIVE']),
+  companySize: z.string().optional(),
   taxNumber: z.string().optional(),
   website: z.string().url('Invalid website URL').optional().or(z.literal('')),
+  paymentTerms: z.string().optional(),
+  creditLimit: z.coerce.number().min(0).optional(),
   notes: z.string().optional(),
-  assignedSalesRep: z.string().optional(),
   tags: z.array(z.string()),
 });
 
-type CustomerFormData = z.infer<typeof customerSchema>;
+interface CustomerFormData {
+  name: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
+  customerType: CustomerType;
+  status: CustomerStatus;
+  companySize?: string;
+  taxNumber?: string;
+  website?: string;
+  paymentTerms?: string;
+  creditLimit?: number;
+  notes?: string;
+  tags: string[];
+}
 
 interface CustomerFormProps {
   customer?: Customer;
@@ -68,28 +91,26 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
 }) => {
   const isEditing = !!customer;
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors, isSubmitting },
-    setValue,
-    getValues,
-  } = useForm<CustomerFormData>({
-    resolver: zodResolver(customerSchema),
+  const customerForm = useForm<CustomerFormData>({
+    resolver: zodResolver(customerSchema) as any,
     defaultValues: customer
       ? {
           name: customer.name,
           email: customer.email,
           phone: customer.phone || '',
           address: customer.address || '',
+          city: customer.customFields.city || '',
+          state: customer.customFields.state || '',
+          zipCode: customer.customFields.zipCode || '',
+          country: customer.customFields.country || '',
           customerType: customer.customerType,
           status: customer.status,
-          companyName: customer.companyName || '',
+          companySize: customer.customFields.companySize || '',
           taxNumber: customer.taxNumber || '',
           website: customer.website || '',
+          paymentTerms: customer.customFields.paymentTerms || '',
+          creditLimit: customer.customFields.creditLimit || undefined,
           notes: customer.notes || '',
-          assignedSalesRep: customer.assignedSalesRep || '',
           tags: customer.tags || [],
         }
       : {
@@ -97,21 +118,35 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
           email: '',
           phone: '',
           address: '',
-          customerType: 'INDIVIDUAL' as CustomerType,
-          status: 'POTENTIAL' as CustomerStatus,
-          companyName: '',
+          city: '',
+          state: '',
+          zipCode: '',
+          country: '',
+          customerType: 'PROSPECT' as CustomerType,
+          status: 'ACTIVE' as CustomerStatus,
+          companySize: '',
           taxNumber: '',
           website: '',
+          paymentTerms: '',
+          creditLimit: undefined,
           notes: '',
-          assignedSalesRep: '',
           tags: [],
         },
   });
 
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitting },
+    setValue,
+    getValues,
+  } = customerForm;
+
   const customerType = watch('customerType');
 
   // Handle form submission
-  const onFormSubmit = handleSubmit(async (data: CustomerFormData) => {
+  const onFormSubmit = handleSubmit(async (data) => {
     try {
       await onSubmit(data);
     } catch (error) {
@@ -197,7 +232,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
               </div>
 
               <div className='space-y-2'>
-                <Label htmlFor='customerType'>Customer Type *</Label>
+                <Label htmlFor='customerType'>Account Type *</Label>
                 <Select
                   value={watch('customerType')}
                   onValueChange={(value) =>
@@ -209,8 +244,8 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
                     <SelectValue placeholder='Select type' />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value='INDIVIDUAL'>Individual</SelectItem>
-                    <SelectItem value='COMPANY'>Company</SelectItem>
+                    <SelectItem value='PROSPECT'>Prospect</SelectItem>
+                    <SelectItem value='CUSTOMER'>Customer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -228,51 +263,65 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
                     <SelectValue placeholder='Select status' />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value='POTENTIAL'>Potential</SelectItem>
                     <SelectItem value='ACTIVE'>Active</SelectItem>
                     <SelectItem value='INACTIVE'>Inactive</SelectItem>
-                    <SelectItem value='BLOCKED'>Blocked</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+            </div>
 
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div className='space-y-2'>
-                <Label htmlFor='assignedSalesRep'>Assigned Sales Rep</Label>
+                <Label htmlFor='address'>Street</Label>
                 <Input
-                  id='assignedSalesRep'
-                  {...register('assignedSalesRep')}
+                  id='address'
+                  {...register('address')}
                   disabled={isLoading}
-                  placeholder='Sales representative name'
+                  placeholder='Street address'
+                />
+              </div>
+              <div className='space-y-2'>
+                <Label htmlFor='city'>City</Label>
+                <Input id='city' {...register('city')} disabled={isLoading} />
+              </div>
+              <div className='space-y-2'>
+                <Label htmlFor='state'>State</Label>
+                <Input id='state' {...register('state')} disabled={isLoading} />
+              </div>
+              <div className='space-y-2'>
+                <Label htmlFor='zipCode'>Zip Code</Label>
+                <Input
+                  id='zipCode'
+                  {...register('zipCode')}
+                  disabled={isLoading}
+                />
+              </div>
+              <div className='space-y-2 md:col-span-2'>
+                <Label htmlFor='country'>Country</Label>
+                <Input
+                  id='country'
+                  {...register('country')}
+                  disabled={isLoading}
                 />
               </div>
             </div>
-
-            <div className='space-y-2'>
-              <Label htmlFor='address'>Address</Label>
-              <Input
-                id='address'
-                {...register('address')}
-                disabled={isLoading}
-                placeholder='Enter full address'
-              />
-            </div>
           </div>
 
-          {/* Company Information */}
-          {customerType === 'COMPANY' && (
+          {/* Account Information */}
+          {customerType === 'CUSTOMER' && (
             <div className='space-y-4'>
               <h3 className='text-base font-medium text-foreground'>
-                Company Information
+                Account Information
               </h3>
 
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                 <div className='space-y-2'>
-                  <Label htmlFor='companyName'>Company Name</Label>
+                  <Label htmlFor='companySize'>Company Size</Label>
                   <Input
-                    id='companyName'
-                    {...register('companyName')}
+                    id='companySize'
+                    {...register('companySize')}
                     disabled={isLoading}
-                    placeholder='Enter company name'
+                    placeholder='e.g. 100-500 employees'
                   />
                 </div>
 
@@ -283,6 +332,28 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
                     {...register('taxNumber')}
                     disabled={isLoading}
                     placeholder='Tax identification number'
+                  />
+                </div>
+
+                <div className='space-y-2'>
+                  <Label htmlFor='paymentTerms'>Payment Terms</Label>
+                  <Input
+                    id='paymentTerms'
+                    {...register('paymentTerms')}
+                    disabled={isLoading}
+                    placeholder='Net 30, COD, etc.'
+                  />
+                </div>
+
+                <div className='space-y-2'>
+                  <Label htmlFor='creditLimit'>Credit Limit</Label>
+                  <Input
+                    id='creditLimit'
+                    type='number'
+                    {...register('creditLimit', { valueAsNumber: true })}
+                    className={cn(errors.creditLimit && 'border-destructive')}
+                    disabled={isLoading}
+                    placeholder='0'
                   />
                 </div>
 

@@ -57,24 +57,14 @@ const statusStyles: Record<
     text: 'text-slate-600 dark:text-slate-400',
     dot: 'bg-slate-400',
   },
-  POTENTIAL: {
-    bg: 'bg-blue-100 dark:bg-blue-900/30',
-    text: 'text-blue-700 dark:text-blue-400',
-    dot: 'bg-blue-500',
-  },
-  BLOCKED: {
-    bg: 'bg-rose-100 dark:bg-rose-900/30',
-    text: 'text-rose-700 dark:text-rose-400',
-    dot: 'bg-rose-500',
-  },
 };
 
 const typeStyles: Record<
   CustomerType,
   { icon: typeof Building2; label: string }
 > = {
-  INDIVIDUAL: { icon: Star, label: 'Individual' },
-  COMPANY: { icon: Building2, label: 'Company' },
+  PROSPECT: { icon: Star, label: 'Prospect' },
+  CUSTOMER: { icon: Building2, label: 'Customer' },
 };
 
 const formatCurrency = (value: number): string => {
@@ -103,7 +93,7 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({
   variant = 'default',
 }) => {
   const status = statusStyles[customer.status] || statusStyles.ACTIVE;
-  const type = typeStyles[customer.customerType] || typeStyles.INDIVIDUAL;
+  const type = typeStyles[customer.customerType] || typeStyles.PROSPECT;
   const TypeIcon = type.icon;
 
   if (variant === 'compact') {

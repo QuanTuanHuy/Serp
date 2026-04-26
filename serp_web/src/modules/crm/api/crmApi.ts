@@ -1,15 +1,32 @@
 // CRM API Endpoints (authors: QuanTuanHuy, Description: Part of Serp Project)
 
 import { api } from '@/lib/store/api';
+import {
+  mapAccountFormToBackendPayload,
+  mapAccountListResponse,
+  mapActivityListResponse,
+  mapContactListResponse,
+  mapCustomerFiltersToAccountSearch,
+  mapLeadConversionResponse,
+  mapLeadFiltersToSearchRequest,
+  mapLeadFormToBackendPayload,
+  mapLeadListResponse,
+  mapSingleAccountResponse,
+  mapSingleLeadResponse,
+} from './mappers';
 import type {
+  Account,
   Customer,
+  Contact,
   Lead,
   Opportunity,
   Activity,
+  CreateAccountRequest,
   CreateCustomerRequest,
   CreateLeadRequest,
   CreateOpportunityRequest,
   CreateActivityRequest,
+  UpdateAccountRequest,
   UpdateCustomerRequest,
   UpdateLeadRequest,
   UpdateOpportunityRequest,
@@ -37,11 +54,12 @@ export const crmApi = api.injectEndpoints({
       { filters?: CustomerFilters; pagination: PaginationParams }
     >({
       query: ({ filters = {}, pagination }) => ({
-        url: '/customers',
-        method: 'GET',
-        params: { ...filters, ...pagination },
+        url: '/accounts/search',
+        method: 'POST',
+        body: mapCustomerFiltersToAccountSearch(filters, pagination),
       }),
       extraOptions: { service: 'crm' },
+      transformResponse: mapAccountListResponse,
       providesTags: (result) =>
         result?.data?.data
           ? [
@@ -56,10 +74,11 @@ export const crmApi = api.injectEndpoints({
 
     getCustomer: builder.query<APIResponse<Customer>, string>({
       query: (id) => ({
-        url: `/customers/${id}`,
+        url: `/accounts/${id}`,
         method: 'GET',
       }),
       extraOptions: { service: 'crm' },
+      transformResponse: mapSingleAccountResponse,
       providesTags: (result, error, id) => [{ type: 'Customer', id }],
     }),
 
@@ -68,11 +87,12 @@ export const crmApi = api.injectEndpoints({
       CreateCustomerRequest
     >({
       query: (data) => ({
-        url: '/customers',
+        url: '/accounts',
         method: 'POST',
-        body: data,
+        body: mapAccountFormToBackendPayload(data),
       }),
       extraOptions: { service: 'crm' },
+      transformResponse: mapSingleAccountResponse,
       invalidatesTags: [{ type: 'Customer', id: 'LIST' }],
     }),
 
@@ -81,11 +101,12 @@ export const crmApi = api.injectEndpoints({
       { id: string; data: UpdateCustomerRequest }
     >({
       query: ({ id, data }) => ({
-        url: `/customers/${id}`,
+        url: `/accounts/${id}`,
         method: 'PUT',
-        body: data,
+        body: mapAccountFormToBackendPayload(data),
       }),
       extraOptions: { service: 'crm' },
+      transformResponse: mapSingleAccountResponse,
       invalidatesTags: (result, error, { id }) => [
         { type: 'Customer', id },
         { type: 'Customer', id: 'LIST' },
@@ -95,7 +116,7 @@ export const crmApi = api.injectEndpoints({
     deleteCustomer: builder.mutation<APIResponse<{ deleted: boolean }>, string>(
       {
         query: (id) => ({
-          url: `/customers/${id}`,
+          url: `/accounts/${id}`,
           method: 'DELETE',
         }),
         extraOptions: { service: 'crm' },
@@ -106,17 +127,94 @@ export const crmApi = api.injectEndpoints({
       }
     ),
 
+    getAccountContacts: builder.query<APIResponse<Contact[]>, string>({
+      query: (accountId) => ({
+        url: `/accounts/${accountId}/contacts`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapContactListResponse,
+      providesTags: (result, error, accountId) => [
+        { type: 'Customer', id: `${accountId}-CONTACTS` },
+      ],
+    }),
+
+    createAccountContact: builder.mutation<
+      APIResponse<Contact>,
+      { accountId: string; data: Record<string, unknown> }
+    >({
+      query: ({ accountId, data }) => ({
+        url: `/accounts/${accountId}/contacts`,
+        method: 'POST',
+        body: data,
+      }),
+      extraOptions: { service: 'crm' },
+      invalidatesTags: (result, error, { accountId }) => [
+        { type: 'Customer', id: `${accountId}-CONTACTS` },
+      ],
+    }),
+
+    updateContact: builder.mutation<APIResponse<Contact>, { id: string; data: Record<string, unknown> }>({
+      query: ({ id, data }) => ({
+        url: `/contacts/${id}`,
+        method: 'PUT',
+        body: data,
+      }),
+      extraOptions: { service: 'crm' },
+    }),
+
+    deleteContact: builder.mutation<APIResponse<{ deleted: boolean }>, string>({
+      query: (id) => ({
+        url: `/contacts/${id}`,
+        method: 'DELETE',
+      }),
+      extraOptions: { service: 'crm' },
+    }),
+
+    setPrimaryContact: builder.mutation<APIResponse<Contact>, string>({
+      query: (id) => ({
+        url: `/contacts/${id}/set-primary`,
+        method: 'PUT',
+      }),
+      extraOptions: { service: 'crm' },
+    }),
+
+    deactivateContact: builder.mutation<APIResponse<Contact>, string>({
+      query: (id) => ({
+        url: `/contacts/${id}/deactivate`,
+        method: 'PUT',
+      }),
+      extraOptions: { service: 'crm' },
+    }),
+
+    getAccountActivities: builder.query<
+      APIResponse<PaginatedResponse<Activity>>,
+      { accountId: string; page?: number; size?: number }
+    >({
+      query: ({ accountId, page = 1, size = 20 }) => ({
+        url: `/accounts/${accountId}/activities`,
+        method: 'GET',
+        params: { page, size },
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapActivityListResponse,
+      providesTags: (result, error, { accountId }) => [
+        { type: 'Activity', id: `${accountId}-ACCOUNT` },
+      ],
+    }),
+
     // Lead endpoints
     getLeads: builder.query<
       APIResponse<PaginatedResponse<Lead>>,
       { filters?: LeadFilters; pagination: PaginationParams }
     >({
       query: ({ filters = {}, pagination }) => ({
-        url: '/leads',
-        method: 'GET',
-        params: { ...filters, ...pagination },
+        url: '/leads/search',
+        method: 'POST',
+        body: mapLeadFiltersToSearchRequest(filters, pagination),
       }),
       extraOptions: { service: 'crm' },
+      transformResponse: mapLeadListResponse,
       providesTags: (result) =>
         result?.data?.data
           ? [
@@ -135,16 +233,34 @@ export const crmApi = api.injectEndpoints({
         method: 'GET',
       }),
       extraOptions: { service: 'crm' },
+      transformResponse: mapSingleLeadResponse,
       providesTags: (result, error, id) => [{ type: 'Lead', id }],
+    }),
+
+    getLeadActivities: builder.query<
+      APIResponse<PaginatedResponse<Activity>>,
+      { leadId: string; page?: number; size?: number }
+    >({
+      query: ({ leadId, page = 1, size = 20 }) => ({
+        url: `/leads/${leadId}/activities`,
+        method: 'GET',
+        params: { page, size },
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapActivityListResponse,
+      providesTags: (result, error, { leadId }) => [
+        { type: 'Activity', id: `${leadId}-LEAD` },
+      ],
     }),
 
     createLead: builder.mutation<APIResponse<Lead>, CreateLeadRequest>({
       query: (data) => ({
         url: '/leads',
         method: 'POST',
-        body: data,
+        body: mapLeadFormToBackendPayload(data),
       }),
       extraOptions: { service: 'crm' },
+      transformResponse: mapSingleLeadResponse,
       invalidatesTags: [{ type: 'Lead', id: 'LIST' }],
     }),
 
@@ -155,9 +271,10 @@ export const crmApi = api.injectEndpoints({
       query: ({ id, data }) => ({
         url: `/leads/${id}`,
         method: 'PUT',
-        body: data,
+        body: mapLeadFormToBackendPayload(data),
       }),
       extraOptions: { service: 'crm' },
+      transformResponse: mapSingleLeadResponse,
       invalidatesTags: (result, error, { id }) => [
         { type: 'Lead', id },
         { type: 'Lead', id: 'LIST' },
@@ -177,20 +294,100 @@ export const crmApi = api.injectEndpoints({
     }),
 
     convertLead: builder.mutation<
-      APIResponse<{ customer: Customer; opportunity?: Opportunity }>,
-      { id: string; opportunityData?: CreateOpportunityRequest }
+      APIResponse<{
+        leadId: string;
+        accountId?: string;
+        opportunityId?: string;
+        contactId?: string;
+        message?: string;
+      }>,
+      { id: string; data: Record<string, unknown> }
     >({
-      query: ({ id, opportunityData }) => ({
+      query: ({ id, data }) => ({
         url: `/leads/${id}/convert`,
         method: 'POST',
-        body: { opportunityData },
+        body: data,
       }),
       extraOptions: { service: 'crm' },
+      transformResponse: mapLeadConversionResponse,
       invalidatesTags: [
         { type: 'Lead', id: 'LIST' },
         { type: 'Customer', id: 'LIST' },
         { type: 'Opportunity', id: 'LIST' },
       ],
+    }),
+
+    qualifyLead: builder.mutation<
+      APIResponse<Lead>,
+      {
+        id: string;
+        data: {
+          notes: string;
+          budgetConfirmed?: boolean;
+          hasAuthority?: boolean;
+          needIdentified?: boolean;
+          timelineEstablished?: boolean;
+        };
+      }
+    >({
+      query: ({ id, data }) => ({
+        url: `/leads/${id}/qualify`,
+        method: 'POST',
+        body: data,
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapSingleLeadResponse,
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Lead', id },
+        { type: 'Lead', id: 'LIST' },
+      ],
+    }),
+
+    disqualifyLead: builder.mutation<
+      APIResponse<Lead>,
+      { id: string; data: { notes: string } }
+    >({
+      query: ({ id, data }) => ({
+        url: `/leads/${id}/disqualify`,
+        method: 'POST',
+        body: data,
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapSingleLeadResponse,
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Lead', id },
+        { type: 'Lead', id: 'LIST' },
+      ],
+    }),
+
+    assignLead: builder.mutation<
+      APIResponse<Lead>,
+      { id: string; data: { assignedTo: number; notes?: string } }
+    >({
+      query: ({ id, data }) => ({
+        url: `/leads/${id}/assign`,
+        method: 'PUT',
+        body: data,
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapSingleLeadResponse,
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Lead', id },
+        { type: 'Lead', id: 'LIST' },
+      ],
+    }),
+
+    bulkAssignLeads: builder.mutation<
+      APIResponse<{ assignedCount: number; assignedTo: number }>,
+      { leadIds: number[]; assignedTo: number; notes?: string }
+    >({
+      query: (data) => ({
+        url: '/leads/bulk-assign',
+        method: 'PUT',
+        body: data,
+      }),
+      extraOptions: { service: 'crm' },
+      invalidatesTags: [{ type: 'Lead', id: 'LIST' }],
     }),
 
     // Opportunity endpoints
@@ -449,14 +646,26 @@ export const {
   useCreateCustomerMutation,
   useUpdateCustomerMutation,
   useDeleteCustomerMutation,
+  useGetAccountContactsQuery,
+  useCreateAccountContactMutation,
+  useUpdateContactMutation,
+  useDeleteContactMutation,
+  useSetPrimaryContactMutation,
+  useDeactivateContactMutation,
+  useGetAccountActivitiesQuery,
 
   // Lead hooks
   useGetLeadsQuery,
   useGetLeadQuery,
+  useGetLeadActivitiesQuery,
   useCreateLeadMutation,
   useUpdateLeadMutation,
   useDeleteLeadMutation,
   useConvertLeadMutation,
+  useQualifyLeadMutation,
+  useDisqualifyLeadMutation,
+  useAssignLeadMutation,
+  useBulkAssignLeadsMutation,
 
   // Opportunity hooks
   useGetOpportunitiesQuery,
@@ -484,3 +693,9 @@ export const {
   useBulkDeleteOpportunitiesMutation,
   useBulkDeleteActivitiesMutation,
 } = crmApi;
+
+export const useGetAccountsQuery = useGetCustomersQuery;
+export const useGetAccountQuery = useGetCustomerQuery;
+export const useCreateAccountMutation = useCreateCustomerMutation;
+export const useUpdateAccountMutation = useUpdateCustomerMutation;
+export const useDeleteAccountMutation = useDeleteCustomerMutation;

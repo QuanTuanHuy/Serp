@@ -1,6 +1,7 @@
 // API Response Types (authors: QuanTuanHuy, Description: Part of Serp Project)
 
 import type {
+  Account,
   Customer,
   Lead,
   Opportunity,
@@ -10,6 +11,7 @@ import type {
   SalesMetrics,
   LeadSourceMetrics,
   PaginatedResponse,
+  Account as LeadConvertedAccount,
 } from './index';
 
 // Standard API Response wrapper
@@ -37,13 +39,22 @@ export type CreateCustomerResponse = APIResponse<Customer>;
 export type UpdateCustomerResponse = APIResponse<Customer>;
 export type DeleteCustomerResponse = APIResponse<{ deleted: boolean }>;
 
+export type AccountResponse = APIResponse<Account>;
+export type AccountsResponse = APIResponse<PaginatedResponse<Account>>;
+export type CreateAccountResponse = APIResponse<Account>;
+export type UpdateAccountResponse = APIResponse<Account>;
+export type DeleteAccountResponse = APIResponse<{ deleted: boolean }>;
+
 export type LeadResponse = APIResponse<Lead>;
 export type LeadsResponse = APIResponse<PaginatedResponse<Lead>>;
 export type CreateLeadResponse = APIResponse<Lead>;
 export type UpdateLeadResponse = APIResponse<Lead>;
 export type ConvertLeadResponse = APIResponse<{
-  customer: Customer;
-  opportunity?: Opportunity;
+  leadId: string;
+  accountId?: string;
+  opportunityId?: string;
+  contactId?: string;
+  message?: string;
 }>;
 export type DeleteLeadResponse = APIResponse<{ deleted: boolean }>;
 
