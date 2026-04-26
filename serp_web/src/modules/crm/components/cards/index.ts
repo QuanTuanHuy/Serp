@@ -6,6 +6,8 @@
 
 export { CustomerCard } from './CustomerCard';
 export type { CustomerCardProps } from './CustomerCard';
+export { CustomerCard as AccountCard } from './CustomerCard';
+export type { CustomerCardProps as AccountCardProps } from './CustomerCard';
 
 export { LeadCard } from './LeadCard';
 export type { LeadCardProps } from './LeadCard';
