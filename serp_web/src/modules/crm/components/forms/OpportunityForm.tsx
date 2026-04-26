@@ -2,6 +2,7 @@
 
 'use client';
 
+import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,26 +15,25 @@ import {
   CardHeader,
   CardTitle,
   Textarea,
-  Badge,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui';
-import { X } from 'lucide-react';
 import { cn } from '@/shared/utils';
+import { useGetAccountsQuery, useGetLeadsQuery } from '../../api/crmApi';
 import type {
+  CreateOpportunityRequest,
   Opportunity,
   OpportunityStage,
-  OpportunityType,
+  UpdateOpportunityRequest,
 } from '../../types';
 
-// Validation schema
 const opportunitySchema = z.object({
-  name: z.string().min(1, 'Name is required').max(255, 'Name is too long'),
-  customerId: z.string().min(1, 'Customer is required'),
-  customerName: z.string().min(1, 'Customer name is required'),
+  name: z.string().trim().min(1, 'Opportunity name is required.').max(255, 'Name is too long.'),
+  accountId: z.string().trim().min(1, 'Account is required.'),
+  leadId: z.string().trim().optional(),
   stage: z.enum([
     'PROSPECTING',
     'QUALIFICATION',
@@ -42,36 +42,36 @@ const opportunitySchema = z.object({
     'CLOSED_WON',
     'CLOSED_LOST',
   ]),
-  type: z.enum(['NEW_BUSINESS', 'EXISTING_BUSINESS', 'RENEWAL']),
-  value: z.number().min(0, 'Value must be positive'),
-  probability: z.number().min(0).max(100, 'Probability must be 0-100'),
-  expectedCloseDate: z.string().min(1, 'Expected close date is required'),
-  assignedTo: z.string().optional(),
-  assignedToName: z.string().optional(),
-  description: z.string().optional(),
-  notes: z.string().optional(),
-  nextAction: z.string().optional(),
-  nextActionDate: z.string().optional(),
-  tags: z.array(z.string()),
+  estimatedValue: z.number().min(0, 'Estimated value must be greater than or equal to 0.'),
+  expectedCloseDate: z.string().min(1, 'Expected close date is required.'),
+  assignedTo: z.string().trim().optional(),
+  description: z.string().max(1000, 'Description must not exceed 1000 characters.').optional(),
+  notes: z.string().max(1000, 'Notes must not exceed 1000 characters.').optional(),
 });
 
 type OpportunityFormData = z.infer<typeof opportunitySchema>;
 
 interface OpportunityFormProps {
   opportunity?: Opportunity;
-  onSubmit: (data: OpportunityFormData) => Promise<void>;
+  onSubmit: (
+    data: CreateOpportunityRequest | UpdateOpportunityRequest
+  ) => Promise<void>;
   onCancel?: () => void;
   isLoading?: boolean;
   className?: string;
 }
 
-// Mock customers for select
-const MOCK_CUSTOMERS = [
-  { id: 'cust-001', name: 'ABC Corporation' },
-  { id: 'cust-002', name: 'XYZ Enterprises' },
-  { id: 'cust-003', name: 'Tech Solutions Inc' },
-  { id: 'cust-004', name: 'Global Trading Co' },
-];
+const defaultValues: OpportunityFormData = {
+  name: '',
+  accountId: '',
+  leadId: '',
+  stage: 'PROSPECTING',
+  estimatedValue: 0,
+  expectedCloseDate: '',
+  assignedTo: '',
+  description: '',
+  notes: '',
+};
 
 export const OpportunityForm: React.FC<OpportunityFormProps> = ({
   opportunity,
@@ -81,6 +81,21 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
   className,
 }) => {
   const isEditing = !!opportunity;
+  const { data: accountsResponse, isLoading: isAccountsLoading } =
+    useGetAccountsQuery({
+      filters: {},
+      pagination: { page: 1, limit: 100, sortBy: 'name', sortOrder: 'asc' },
+    });
+  const { data: leadsResponse, isLoading: isLeadsLoading } = useGetLeadsQuery({
+    filters: {},
+    pagination: { page: 1, limit: 100, sortBy: 'name', sortOrder: 'asc' },
+  });
+
+  const accounts = useMemo(
+    () => accountsResponse?.data?.data || [],
+    [accountsResponse]
+  );
+  const leads = useMemo(() => leadsResponse?.data?.data || [], [leadsResponse]);
 
   const {
     register,
@@ -88,99 +103,54 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
     watch,
     formState: { errors, isSubmitting },
     setValue,
-    getValues,
   } = useForm<OpportunityFormData>({
     resolver: zodResolver(opportunitySchema),
     defaultValues: opportunity
       ? {
           name: opportunity.name,
-          customerId: opportunity.customerId,
-          customerName: opportunity.customerName,
+          accountId: opportunity.accountId || opportunity.customerId || '',
+          leadId: opportunity.leadId || '',
           stage: opportunity.stage,
-          type: opportunity.type,
-          value: opportunity.value,
-          probability: opportunity.probability,
+          estimatedValue: opportunity.estimatedValue ?? opportunity.value ?? 0,
           expectedCloseDate: opportunity.expectedCloseDate.split('T')[0],
           assignedTo: opportunity.assignedTo || '',
-          assignedToName: opportunity.assignedToName || '',
           description: opportunity.description || '',
           notes: opportunity.notes || '',
-          nextAction: opportunity.nextAction || '',
-          nextActionDate: opportunity.nextActionDate?.split('T')[0] || '',
-          tags: opportunity.tags || [],
         }
-      : {
-          name: '',
-          customerId: '',
-          customerName: '',
-          stage: 'PROSPECTING' as OpportunityStage,
-          type: 'NEW_BUSINESS' as OpportunityType,
-          value: 0,
-          probability: 10,
-          expectedCloseDate: '',
-          assignedTo: '',
-          assignedToName: '',
-          description: '',
-          notes: '',
-          nextAction: '',
-          nextActionDate: '',
-          tags: [],
-        },
+      : defaultValues,
   });
 
-  // Handle form submission
-  const onFormSubmit = handleSubmit(async (data: OpportunityFormData) => {
-    try {
-      await onSubmit(data);
-    } catch (error) {
-      console.error('Form submission error:', error);
-    }
+  const watchedStage = watch('stage');
+  const estimatedValue = watch('estimatedValue') || 0;
+
+  const stageProbability: Record<OpportunityStage, number> = {
+    PROSPECTING: 10,
+    QUALIFICATION: 25,
+    PROPOSAL: 50,
+    NEGOTIATION: 75,
+    CLOSED_WON: 100,
+    CLOSED_LOST: 0,
+  };
+
+  const computedProbability = stageProbability[watchedStage];
+  const weightedValue = (estimatedValue * computedProbability) / 100;
+
+  const onFormSubmit = handleSubmit(async (data) => {
+    await onSubmit({
+      name: data.name,
+      accountId: data.accountId,
+      leadId: data.leadId?.trim() ? data.leadId.trim() : undefined,
+      stage: data.stage,
+      estimatedValue: data.estimatedValue,
+      expectedCloseDate: data.expectedCloseDate,
+      assignedTo: data.assignedTo?.trim() ? data.assignedTo.trim() : undefined,
+      description: data.description?.trim() || undefined,
+      notes: data.notes?.trim() || undefined,
+    });
   });
-
-  // Handle tag management
-  const handleTagAdd = (tag: string) => {
-    if (tag.trim()) {
-      const currentTags = getValues('tags');
-      if (!currentTags.includes(tag.trim())) {
-        setValue('tags', [...currentTags, tag.trim()]);
-      }
-    }
-  };
-
-  const handleTagRemove = (tagToRemove: string) => {
-    const currentTags = getValues('tags');
-    setValue(
-      'tags',
-      currentTags.filter((tag) => tag !== tagToRemove)
-    );
-  };
-
-  // Handle customer selection
-  const handleCustomerChange = (customerId: string) => {
-    const customer = MOCK_CUSTOMERS.find((c) => c.id === customerId);
-    if (customer) {
-      setValue('customerId', customer.id);
-      setValue('customerName', customer.name);
-    }
-  };
-
-  // Update probability based on stage
-  const handleStageChange = (stage: OpportunityStage) => {
-    setValue('stage', stage);
-    // Auto-update probability based on stage
-    const probabilities: Record<OpportunityStage, number> = {
-      PROSPECTING: 10,
-      QUALIFICATION: 25,
-      PROPOSAL: 50,
-      NEGOTIATION: 75,
-      CLOSED_WON: 100,
-      CLOSED_LOST: 0,
-    };
-    setValue('probability', probabilities[stage]);
-  };
 
   return (
-    <Card className={cn('w-full max-w-2xl mx-auto', className)}>
+    <Card className={cn('w-full max-w-4xl', className)}>
       <CardHeader>
         <CardTitle className='text-xl'>
           {isEditing ? 'Edit Opportunity' : 'Create Opportunity'}
@@ -188,7 +158,6 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
       </CardHeader>
       <CardContent>
         <form onSubmit={onFormSubmit} className='space-y-6'>
-          {/* Basic Information */}
           <div className='space-y-4'>
             <CardTitle className='text-lg'>Basic Information</CardTitle>
 
@@ -202,65 +171,68 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
                 disabled={isLoading}
               />
               {errors.name && (
-                <p className='text-sm text-destructive'>
-                  {errors.name.message}
-                </p>
+                <p className='text-sm text-destructive'>{errors.name.message}</p>
               )}
             </div>
 
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div className='space-y-2'>
-                <Label>Customer *</Label>
+                <Label>Account *</Label>
                 <Select
-                  value={watch('customerId')}
-                  onValueChange={handleCustomerChange}
-                  disabled={isLoading}
+                  value={watch('accountId')}
+                  onValueChange={(value) => setValue('accountId', value)}
+                  disabled={isLoading || isAccountsLoading}
                 >
                   <SelectTrigger
-                    className={errors.customerId ? 'border-destructive' : ''}
+                    className={errors.accountId ? 'border-destructive' : ''}
                   >
-                    <SelectValue placeholder='Select customer' />
+                    <SelectValue
+                      placeholder={
+                        isAccountsLoading ? 'Loading accounts...' : 'Select account'
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    {MOCK_CUSTOMERS.map((customer) => (
-                      <SelectItem key={customer.id} value={customer.id}>
-                        {customer.name}
+                    {accounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.customerId && (
+                {errors.accountId && (
                   <p className='text-sm text-destructive'>
-                    {errors.customerId.message}
+                    {errors.accountId.message}
                   </p>
                 )}
               </div>
 
               <div className='space-y-2'>
-                <Label>Type *</Label>
+                <Label>Lead</Label>
                 <Select
-                  value={watch('type')}
-                  onValueChange={(value) =>
-                    setValue('type', value as OpportunityType)
-                  }
-                  disabled={isLoading}
+                  value={watch('leadId') || ''}
+                  onValueChange={(value) => setValue('leadId', value)}
+                  disabled={isLoading || isLeadsLoading}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder='Select type' />
+                    <SelectValue
+                      placeholder={
+                        isLeadsLoading ? 'Loading leads...' : 'Select lead (optional)'
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value='NEW_BUSINESS'>New Business</SelectItem>
-                    <SelectItem value='EXISTING_BUSINESS'>
-                      Existing Business
-                    </SelectItem>
-                    <SelectItem value='RENEWAL'>Renewal</SelectItem>
+                    {leads.map((lead) => (
+                      <SelectItem key={lead.id} value={lead.id}>
+                        {lead.name || lead.email || `Lead #${lead.id}`}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
           </div>
 
-          {/* Pipeline Information */}
           <div className='space-y-4'>
             <CardTitle className='text-lg'>Pipeline Information</CardTitle>
 
@@ -269,7 +241,9 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
                 <Label>Stage *</Label>
                 <Select
                   value={watch('stage')}
-                  onValueChange={handleStageChange}
+                  onValueChange={(value) =>
+                    setValue('stage', value as OpportunityStage)
+                  }
                   disabled={isLoading}
                 >
                   <SelectTrigger>
@@ -287,37 +261,29 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
               </div>
 
               <div className='space-y-2'>
-                <Label htmlFor='probability'>Probability (%) *</Label>
+                <Label htmlFor='assignedTo'>Assigned To</Label>
                 <Input
-                  id='probability'
-                  type='number'
-                  min={0}
-                  max={100}
-                  {...register('probability', { valueAsNumber: true })}
-                  className={errors.probability ? 'border-destructive' : ''}
+                  id='assignedTo'
+                  {...register('assignedTo')}
+                  placeholder='Optional user ID'
                   disabled={isLoading}
                 />
-                {errors.probability && (
-                  <p className='text-sm text-destructive'>
-                    {errors.probability.message}
-                  </p>
-                )}
               </div>
 
               <div className='space-y-2'>
-                <Label htmlFor='value'>Value ($) *</Label>
+                <Label htmlFor='estimatedValue'>Estimated Value *</Label>
                 <Input
-                  id='value'
+                  id='estimatedValue'
                   type='number'
                   min={0}
-                  {...register('value', { valueAsNumber: true })}
+                  {...register('estimatedValue', { valueAsNumber: true })}
                   placeholder='0'
-                  className={errors.value ? 'border-destructive' : ''}
+                  className={errors.estimatedValue ? 'border-destructive' : ''}
                   disabled={isLoading}
                 />
-                {errors.value && (
+                {errors.estimatedValue && (
                   <p className='text-sm text-destructive'>
-                    {errors.value.message}
+                    {errors.estimatedValue.message}
                   </p>
                 )}
               </div>
@@ -340,36 +306,21 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
                 )}
               </div>
             </div>
-          </div>
 
-          {/* Next Action */}
-          <div className='space-y-4'>
-            <CardTitle className='text-lg'>Next Action</CardTitle>
-
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-              <div className='space-y-2'>
-                <Label htmlFor='nextAction'>Next Action</Label>
-                <Input
-                  id='nextAction'
-                  {...register('nextAction')}
-                  placeholder='e.g., Follow up call'
-                  disabled={isLoading}
-                />
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4 rounded-lg border bg-muted/30 p-4'>
+              <div>
+                <p className='text-sm text-muted-foreground'>Probability</p>
+                <p className='text-xl font-semibold'>{computedProbability}%</p>
               </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='nextActionDate'>Next Action Date</Label>
-                <Input
-                  id='nextActionDate'
-                  type='date'
-                  {...register('nextActionDate')}
-                  disabled={isLoading}
-                />
+              <div>
+                <p className='text-sm text-muted-foreground'>Weighted Value</p>
+                <p className='text-xl font-semibold'>
+                  ${weightedValue.toLocaleString()}
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Additional Information */}
           <div className='space-y-4'>
             <CardTitle className='text-lg'>Additional Information</CardTitle>
 
@@ -378,10 +329,15 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
               <Textarea
                 id='description'
                 {...register('description')}
-                rows={3}
+                rows={4}
                 placeholder='Enter opportunity description...'
                 disabled={isLoading}
               />
+              {errors.description && (
+                <p className='text-sm text-destructive'>
+                  {errors.description.message}
+                </p>
+              )}
             </div>
 
             <div className='space-y-2'>
@@ -389,49 +345,16 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
               <Textarea
                 id='notes'
                 {...register('notes')}
-                rows={2}
+                rows={3}
                 placeholder='Enter any additional notes...'
                 disabled={isLoading}
               />
-            </div>
-
-            {/* Tags */}
-            <div className='space-y-2'>
-              <Label>Tags</Label>
-              <div className='flex flex-wrap gap-2'>
-                {watch('tags').map((tag, index) => (
-                  <Badge
-                    key={index}
-                    variant='secondary'
-                    className='flex items-center gap-1'
-                  >
-                    {tag}
-                    <button
-                      type='button'
-                      onClick={() => handleTagRemove(tag)}
-                      className='hover:text-destructive'
-                      disabled={isLoading}
-                    >
-                      <X className='h-3 w-3' />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-              <Input
-                placeholder='Add tag and press Enter'
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleTagAdd(e.currentTarget.value);
-                    e.currentTarget.value = '';
-                  }
-                }}
-                disabled={isLoading}
-              />
+              {errors.notes && (
+                <p className='text-sm text-destructive'>{errors.notes.message}</p>
+              )}
             </div>
           </div>
 
-          {/* Actions */}
           <div className='flex justify-end space-x-3 pt-6 border-t'>
             {onCancel && (
               <Button
