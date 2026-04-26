@@ -12,8 +12,8 @@ export interface BaseEntity {
 }
 
 // Customer related types
-export type CustomerType = 'INDIVIDUAL' | 'COMPANY';
-export type CustomerStatus = 'ACTIVE' | 'INACTIVE' | 'POTENTIAL' | 'BLOCKED';
+export type CustomerType = 'PROSPECT' | 'CUSTOMER';
+export type CustomerStatus = 'ACTIVE' | 'INACTIVE';
 
 export interface Customer extends BaseEntity {
   name: string;
@@ -32,6 +32,10 @@ export interface Customer extends BaseEntity {
   totalValue: number;
   lastContactDate?: string;
 }
+
+export type AccountType = CustomerType;
+export type AccountStatus = CustomerStatus;
+export type Account = Customer;
 
 // Lead related types
 export type LeadSource =
@@ -155,6 +159,8 @@ export interface Activity extends BaseEntity {
   customFields: Record<string, any>;
 }
 
+export type Contact = import('../components/contacts/ContactCard').Contact;
+
 // Analytics & Dashboard types
 export interface CRMMetrics {
   totalCustomers: number;
@@ -206,6 +212,8 @@ export interface CustomerFilters {
   minValue?: number;
   maxValue?: number;
 }
+
+export type AccountFilters = CustomerFilters;
 
 export interface LeadFilters {
   search?: string;
@@ -276,8 +284,19 @@ export interface PaginatedResponse<T> {
 export type CreateCustomerRequest = Omit<
   Customer,
   'id' | 'createdAt' | 'updatedAt' | 'totalValue' | 'lastContactDate'
->;
+> & {
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
+  companySize?: string;
+  paymentTerms?: string;
+  creditLimit?: number;
+};
 export type UpdateCustomerRequest = Partial<CreateCustomerRequest>;
+
+export type CreateAccountRequest = CreateCustomerRequest;
+export type UpdateAccountRequest = UpdateCustomerRequest;
 
 export type CreateLeadRequest = Omit<
   Lead,

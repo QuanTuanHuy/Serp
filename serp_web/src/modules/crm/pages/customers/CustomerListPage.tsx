@@ -18,14 +18,24 @@ import {
   X,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
-import { CustomerCard } from '../../components/cards';
-import { CustomerForm } from '../../components/forms';
+import { AccountCard } from '../../components/cards';
+import { AccountForm } from '../../components/forms';
 import { StatsCard } from '../../components/dashboard';
 import { ExportDropdown } from '../../components/shared';
-import { QuickAddCustomerDialog } from '../../components/dialogs';
+import { QuickAddAccountDialog } from '../../components/dialogs';
 import { CUSTOMER_EXPORT_COLUMNS } from '../../utils/export';
-import { MOCK_CUSTOMERS } from '../../mocks';
-import type { Customer, CustomerFilters, CustomerStatus } from '../../types';
+import {
+  useCreateAccountMutation,
+  useDeleteAccountMutation,
+  useGetAccountsQuery,
+  useUpdateAccountMutation,
+} from '../../api/crmApi';
+import type {
+  Account,
+  AccountStatus,
+  CreateAccountRequest,
+  UpdateAccountRequest,
+} from '../../types';
 
 interface CustomerListPageProps {
   className?: string;
@@ -38,8 +48,8 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
 
   // State management
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<CustomerStatus | ''>('');
-  const [typeFilter, setTypeFilter] = useState<'INDIVIDUAL' | 'COMPANY' | ''>(
+  const [statusFilter, setStatusFilter] = useState<AccountStatus | ''>('');
+  const [typeFilter, setTypeFilter] = useState<'PROSPECT' | 'CUSTOMER' | ''>(
     ''
   );
   const [sortBy, setSortBy] = useState<'name' | 'createdAt' | 'totalValue'>(
@@ -48,105 +58,111 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [editingCustomer, setEditingCustomer] = useState<Account | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
 
   const pageSize = 12;
+  const [createAccount] = useCreateAccountMutation();
+  const [updateAccount] = useUpdateAccountMutation();
+  const [deleteAccount] = useDeleteAccountMutation();
+  const { data, isLoading, error } = useGetAccountsQuery({
+    filters: {
+      search: searchQuery || undefined,
+      status: statusFilter ? [statusFilter] : undefined,
+      type: typeFilter ? [typeFilter] : undefined,
+    },
+    pagination: {
+      page: currentPage,
+      limit: pageSize,
+      sortBy,
+      sortOrder,
+    },
+  });
 
-  // Filter and sort mock data
-  const filteredCustomers = useMemo(() => {
-    let result = [...MOCK_CUSTOMERS];
-
-    // Apply search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(
-        (c) =>
-          c.name.toLowerCase().includes(query) ||
-          c.email.toLowerCase().includes(query) ||
-          c.companyName?.toLowerCase().includes(query)
-      );
-    }
-
-    // Apply status filter
-    if (statusFilter) {
-      result = result.filter((c) => c.status === statusFilter);
-    }
-
-    // Apply type filter
-    if (typeFilter) {
-      result = result.filter((c) => c.customerType === typeFilter);
-    }
-
-    // Apply sorting
-    result.sort((a, b) => {
-      let comparison = 0;
-      if (sortBy === 'name') {
-        comparison = a.name.localeCompare(b.name);
-      } else if (sortBy === 'createdAt') {
-        comparison =
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      } else if (sortBy === 'totalValue') {
-        comparison = a.totalValue - b.totalValue;
-      }
-      return sortOrder === 'asc' ? comparison : -comparison;
-    });
-
-    return result;
-  }, [searchQuery, statusFilter, typeFilter, sortBy, sortOrder]);
-
-  // Pagination
-  const total = filteredCustomers.length;
-  const totalPages = Math.ceil(total / pageSize);
-  const customers = filteredCustomers.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
-  const isLoading = false;
-  const error = null;
+  const customers = data?.data?.data || [];
+  const total = data?.data?.pagination?.total || 0;
+  const totalPages = data?.data?.pagination?.totalPages || 1;
 
   // Calculate stats
   const stats = useMemo(() => {
     return {
       total,
-      active: MOCK_CUSTOMERS.filter((c) => c.status === 'ACTIVE').length,
-      companies: MOCK_CUSTOMERS.filter((c) => c.customerType === 'COMPANY')
-        .length,
-      totalValue: MOCK_CUSTOMERS.reduce(
+      active: customers.filter((c) => c.status === 'ACTIVE').length,
+      companies: customers.filter((c) => c.customerType === 'CUSTOMER').length,
+      totalValue: customers.reduce(
         (sum, c) => sum + (c.totalValue || 0),
         0
       ),
     };
-  }, [total]);
+  }, [customers, total]);
 
   // Handle actions
-  const handleCreateCustomer = async (data: any) => {
-    console.log('Creating customer:', data);
+  const handleCreateCustomer = async (
+    data: CreateAccountRequest | Partial<CreateAccountRequest>
+  ) => {
+    await createAccount(data as CreateAccountRequest).unwrap();
     setShowCreateForm(false);
   };
 
-  const handleQuickAddCustomer = async (data: any) => {
-    console.log('Quick adding customer:', data);
+  const handleQuickAddCustomer = async (data: {
+    name: string;
+    email: string;
+    phone?: string;
+    companySize?: string;
+    customerType: 'PROSPECT' | 'CUSTOMER';
+    status: 'ACTIVE' | 'INACTIVE';
+    address?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
+    website?: string;
+    notes?: string;
+  }) => {
+    await createAccount({
+      isActive: true,
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      companySize: data.companySize,
+      notes: data.notes,
+      address: data.address || '',
+      city: data.city || '',
+      state: data.state || '',
+      zipCode: data.zipCode || '',
+      country: data.country || '',
+      website: data.website || '',
+      customerType: data.customerType,
+      status: data.status,
+      paymentTerms: '',
+      creditLimit: undefined,
+      tags: [],
+      customFields: {},
+      totalValue: 0,
+    } as CreateAccountRequest).unwrap();
     setShowQuickAdd(false);
   };
 
-  const handleEditCustomer = (customer: Customer) => {
+  const handleEditCustomer = (customer: Account) => {
     setEditingCustomer(customer);
   };
 
-  const handleUpdateCustomer = async (data: any) => {
-    console.log('Updating customer:', data);
+  const handleUpdateCustomer = async (
+    data: CreateAccountRequest | UpdateAccountRequest
+  ) => {
+    if (!editingCustomer) return;
+    await updateAccount({ id: editingCustomer.id, data }).unwrap();
     setEditingCustomer(null);
   };
 
   const handleDeleteCustomer = async (customerId: string) => {
-    console.log('Deleting customer:', customerId);
+    await deleteAccount(customerId).unwrap();
   };
 
   const handleViewCustomer = (customerId: string) => {
-    router.push(`/crm/customers/${customerId}`);
+    router.push(`/crm/accounts/${customerId}`);
   };
 
   const clearFilters = () => {
@@ -162,7 +178,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
   if (showCreateForm || editingCustomer) {
     return (
       <div className={cn('', className)}>
-        <CustomerForm
+        <AccountForm
           customer={editingCustomer || undefined}
           onSubmit={
             editingCustomer ? handleUpdateCustomer : handleCreateCustomer
@@ -188,7 +204,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
         </div>
         <div className='flex items-center gap-2'>
           <ExportDropdown
-            data={filteredCustomers}
+            data={customers}
             columns={CUSTOMER_EXPORT_COLUMNS}
             filename='customers'
             onExportComplete={(format, count) => {
@@ -197,7 +213,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
           />
           <Button onClick={() => setShowQuickAdd(true)} className='gap-2'>
             <Plus className='h-4 w-4' />
-            Add Customer
+            Add Account
           </Button>
         </div>
       </div>
@@ -306,7 +322,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
                 <select
                   value={statusFilter}
                   onChange={(e) => {
-                    setStatusFilter(e.target.value as CustomerStatus | '');
+                     setStatusFilter(e.target.value as AccountStatus | '');
                     setCurrentPage(1);
                   }}
                   className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
@@ -314,8 +330,6 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
                   <option value=''>All Statuses</option>
                   <option value='ACTIVE'>Active</option>
                   <option value='INACTIVE'>Inactive</option>
-                  <option value='POTENTIAL'>Potential</option>
-                  <option value='BLOCKED'>Blocked</option>
                 </select>
               </div>
 
@@ -324,16 +338,14 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
                 <select
                   value={typeFilter}
                   onChange={(e) => {
-                    setTypeFilter(
-                      e.target.value as 'INDIVIDUAL' | 'COMPANY' | ''
-                    );
+                     setTypeFilter(e.target.value as 'PROSPECT' | 'CUSTOMER' | '');
                     setCurrentPage(1);
                   }}
                   className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
                 >
                   <option value=''>All Types</option>
-                  <option value='INDIVIDUAL'>Individual</option>
-                  <option value='COMPANY'>Company</option>
+                  <option value='PROSPECT'>Prospect</option>
+                  <option value='CUSTOMER'>Customer</option>
                 </select>
               </div>
 
@@ -427,7 +439,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
           )}
         >
           {customers.map((customer) => (
-            <CustomerCard
+             <AccountCard
               key={customer.id}
               customer={customer}
               variant={viewMode === 'list' ? 'compact' : 'default'}
@@ -461,7 +473,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
             ) : (
               <Button onClick={() => setShowCreateForm(true)}>
                 <Plus className='h-4 w-4 mr-2' />
-                Add First Customer
+                Add First Account
               </Button>
             )}
           </CardContent>
@@ -518,7 +530,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
       )}
 
       {/* Quick Add Dialog */}
-      <QuickAddCustomerDialog
+      <QuickAddAccountDialog
         open={showQuickAdd}
         onOpenChange={setShowQuickAdd}
         onSubmit={handleQuickAddCustomer}

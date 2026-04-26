@@ -69,13 +69,24 @@ import {
   Upload,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
+import { ContactList } from '../../components/contacts';
+import type { ContactFormData } from '../../components/contacts';
 import {
-  MOCK_CUSTOMERS,
+  useCreateAccountContactMutation,
+  useDeleteAccountMutation,
+  useDeleteContactMutation,
+  useGetAccountActivitiesQuery,
+  useGetAccountContactsQuery,
+  useGetAccountQuery,
+  useSetPrimaryContactMutation,
+  useUpdateContactMutation,
+} from '../../api/crmApi';
+import {
   MOCK_OPPORTUNITIES,
-  MOCK_ACTIVITIES,
 } from '../../mocks';
 import type {
   Customer,
+  Contact,
   Opportunity,
   Activity as ActivityType,
 } from '../../types';
@@ -273,7 +284,6 @@ export const CustomerDetailPageEnhanced: React.FC<
   const [activeTab, setActiveTab] = useState('overview');
   const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [activityForm, setActivityForm] = useState({
@@ -283,10 +293,22 @@ export const CustomerDetailPageEnhanced: React.FC<
     scheduledDate: '',
   });
 
-  // Find customer from mock data
-  const customer = useMemo(() => {
-    return MOCK_CUSTOMERS.find((c) => c.id === customerId);
-  }, [customerId]);
+  const { data: accountResponse, isLoading: isAccountLoading } =
+    useGetAccountQuery(customerId);
+  const { data: contactsResponse } = useGetAccountContactsQuery(customerId);
+  const { data: activitiesResponse } = useGetAccountActivitiesQuery({
+    accountId: customerId,
+    page: 1,
+    size: 20,
+  });
+  const [createContact] = useCreateAccountContactMutation();
+  const [updateContact] = useUpdateContactMutation();
+  const [deleteContact] = useDeleteContactMutation();
+  const [setPrimaryContact] = useSetPrimaryContactMutation();
+  const [deleteAccount] = useDeleteAccountMutation();
+
+  const customer = accountResponse?.data;
+  const accountContacts = contactsResponse?.data || [];
 
   // Get related opportunities
   const relatedOpportunities = useMemo(() => {
@@ -297,13 +319,9 @@ export const CustomerDetailPageEnhanced: React.FC<
   }, [customerId]);
 
   // Get related activities
-  const relatedActivities = useMemo(() => {
-    return MOCK_ACTIVITIES.filter(
-      (a) => a.relatedTo.type === 'CUSTOMER' && a.relatedTo.id === customerId
-    ).slice(0, 5);
-  }, [customerId]);
+  const relatedActivities = activitiesResponse?.data?.data || [];
 
-  if (!customer) {
+  if (!isAccountLoading && !customer) {
     return (
       <div className={cn('p-6', className)}>
         <Card>
@@ -313,13 +331,17 @@ export const CustomerDetailPageEnhanced: React.FC<
             <p className='text-muted-foreground mb-4'>
               The customer you're looking for doesn't exist or has been deleted.
             </p>
-            <Button onClick={() => router.push('/crm/customers')}>
+            <Button onClick={() => router.push('/crm/accounts')}>
               Back to Customers
             </Button>
           </CardContent>
         </Card>
       </div>
     );
+  }
+
+  if (!customer) {
+    return null;
   }
 
   const statusConfig = STATUS_CONFIG[customer.status];
@@ -356,8 +378,45 @@ export const CustomerDetailPageEnhanced: React.FC<
   };
 
   const handleDelete = () => {
-    console.log('Deleting customer');
-    router.push('/crm/customers');
+    deleteAccount(customerId);
+    router.push('/crm/accounts');
+  };
+
+  const handleAddContact = async (data: ContactFormData) => {
+    await createContact({
+      accountId: customerId,
+      data: {
+        name: `${data.lastName} ${data.firstName}`.trim(),
+        email: data.email,
+        phone: data.phone,
+        jobPosition: data.jobTitle,
+        isPrimary: data.isPrimary,
+        linkedInUrl: data.linkedInUrl,
+        notes: data.notes,
+      },
+    }).unwrap();
+  };
+
+  const handleEditContact = async (contact: Contact, data: ContactFormData) => {
+    await updateContact({
+      id: contact.id,
+      data: {
+        name: `${data.lastName} ${data.firstName}`.trim(),
+        email: data.email,
+        phone: data.phone,
+        jobPosition: data.jobTitle,
+        linkedInUrl: data.linkedInUrl,
+        notes: data.notes,
+      },
+    }).unwrap();
+  };
+
+  const handleDeleteContact = async (contact: Contact) => {
+    await deleteContact(contact.id).unwrap();
+  };
+
+  const handleSetPrimaryContact = async (contact: Contact) => {
+    await setPrimaryContact(contact.id).unwrap();
   };
 
   const formatCurrency = (value: number) => {
@@ -423,7 +482,7 @@ export const CustomerDetailPageEnhanced: React.FC<
           <Button
             variant='outline'
             size='icon'
-            onClick={() => router.push('/crm/customers')}
+            onClick={() => router.push('/crm/accounts')}
           >
             <ArrowLeft className='w-4 h-4' />
           </Button>
@@ -477,7 +536,7 @@ export const CustomerDetailPageEnhanced: React.FC<
         <div className='flex items-center gap-2'>
           <Button
             variant='outline'
-            onClick={() => router.push(`/crm/customers/${customerId}/edit`)}
+            onClick={() => router.push(`/crm/accounts/${customerId}/edit`)}
           >
             <Edit className='w-4 h-4 mr-2' />
             Edit
@@ -891,63 +950,15 @@ export const CustomerDetailPageEnhanced: React.FC<
 
         {/* Contacts Tab */}
         <TabsContent value='contacts' className='mt-6'>
-          <Card>
-            <CardHeader className='flex flex-row items-center justify-between'>
-              <h3 className='font-semibold'>Customer Contacts</h3>
-              <Button onClick={() => setIsContactDialogOpen(true)}>
-                <Plus className='w-4 h-4 mr-2' />
-                Add Contact
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                {MOCK_CONTACTS.map((contact) => (
-                  <div key={contact.id} className='p-4 bg-muted rounded-lg'>
-                    <div className='flex items-start justify-between'>
-                      <div className='flex items-start gap-3'>
-                        <Avatar>
-                          <AvatarFallback>
-                            {contact.name
-                              .split(' ')
-                              .map((n) => n[0])
-                              .join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className='flex items-center gap-2'>
-                            <p className='font-medium'>{contact.name}</p>
-                            {contact.isPrimary && (
-                              <Badge variant='secondary' className='text-xs'>
-                                Primary
-                              </Badge>
-                            )}
-                          </div>
-                          <p className='text-sm text-muted-foreground'>
-                            {contact.role}
-                          </p>
-                        </div>
-                      </div>
-                      <Button variant='ghost' size='icon' className='h-8 w-8'>
-                        <MoreHorizontal className='w-4 h-4' />
-                      </Button>
-                    </div>
-                    <div className='mt-3 space-y-1'>
-                      <p className='text-sm flex items-center gap-2'>
-                        <Mail className='w-4 h-4 text-muted-foreground' />
-                        {contact.email}
-                      </p>
-                      {contact.phone && (
-                        <p className='text-sm flex items-center gap-2'>
-                          <Phone className='w-4 h-4 text-muted-foreground' />
-                          {contact.phone}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <ContactList
+            contacts={accountContacts}
+            title='Account Contacts'
+            emptyMessage='No contacts found for this account'
+            onAddContact={handleAddContact}
+            onEditContact={handleEditContact}
+            onDeleteContact={handleDeleteContact}
+            onSetPrimary={handleSetPrimaryContact}
+          />
         </TabsContent>
 
         {/* Orders Tab */}

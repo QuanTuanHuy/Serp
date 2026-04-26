@@ -301,7 +301,7 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
   const handleConvert = () => {
     console.log('Converting lead:', convertForm);
     setShowConvertDialog(false);
-    router.push('/crm/customers');
+    router.push('/crm/accounts');
   };
 
   const handleDelete = () => {

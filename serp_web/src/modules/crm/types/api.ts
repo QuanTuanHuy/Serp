@@ -1,6 +1,7 @@
 // API Response Types (authors: QuanTuanHuy, Description: Part of Serp Project)
 
 import type {
+  Account,
   Customer,
   Lead,
   Opportunity,
@@ -36,6 +37,12 @@ export type CustomersResponse = APIResponse<PaginatedResponse<Customer>>;
 export type CreateCustomerResponse = APIResponse<Customer>;
 export type UpdateCustomerResponse = APIResponse<Customer>;
 export type DeleteCustomerResponse = APIResponse<{ deleted: boolean }>;
+
+export type AccountResponse = APIResponse<Account>;
+export type AccountsResponse = APIResponse<PaginatedResponse<Account>>;
+export type CreateAccountResponse = APIResponse<Account>;
+export type UpdateAccountResponse = APIResponse<Account>;
+export type DeleteAccountResponse = APIResponse<{ deleted: boolean }>;
 
 export type LeadResponse = APIResponse<Lead>;
 export type LeadsResponse = APIResponse<PaginatedResponse<Lead>>;

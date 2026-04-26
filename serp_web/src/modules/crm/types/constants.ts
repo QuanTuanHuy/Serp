@@ -14,8 +14,8 @@ import type {
 
 // Customer constants
 export const CUSTOMER_TYPES: { value: CustomerType; label: string }[] = [
-  { value: 'INDIVIDUAL', label: 'Individual' },
-  { value: 'COMPANY', label: 'Company' },
+  { value: 'PROSPECT', label: 'Prospect' },
+  { value: 'CUSTOMER', label: 'Customer' },
 ];
 
 export const CUSTOMER_STATUSES: {
@@ -25,8 +25,6 @@ export const CUSTOMER_STATUSES: {
 }[] = [
   { value: 'ACTIVE', label: 'Active', color: 'green' },
   { value: 'INACTIVE', label: 'Inactive', color: 'gray' },
-  { value: 'POTENTIAL', label: 'Potential', color: 'blue' },
-  { value: 'BLOCKED', label: 'Blocked', color: 'red' },
 ];
 
 // Lead constants
@@ -197,8 +195,8 @@ export const CRM_CONFIG = {
 // Default values for forms
 export const DEFAULT_VALUES = {
   customer: {
-    customerType: 'INDIVIDUAL' as CustomerType,
-    status: 'POTENTIAL' as CustomerStatus,
+    customerType: 'PROSPECT' as CustomerType,
+    status: 'ACTIVE' as CustomerStatus,
     tags: [],
     customFields: {},
     isActive: true,

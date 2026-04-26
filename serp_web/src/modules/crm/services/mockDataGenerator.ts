@@ -104,12 +104,10 @@ export const generateMockCustomers = (count: number = 50): Customer[] => {
       address: randomBool()
         ? `${randomNumber(100, 999)} Main St, City, State ${randomNumber(10000, 99999)}`
         : undefined,
-      customerType: isCompany ? 'COMPANY' : 'INDIVIDUAL',
+      customerType: isCompany ? 'CUSTOMER' : 'PROSPECT',
       status: randomElement([
         'ACTIVE',
         'INACTIVE',
-        'POTENTIAL',
-        'BLOCKED',
       ] as CustomerStatus[]),
       companyName: isCompany ? company : undefined,
       taxNumber:
