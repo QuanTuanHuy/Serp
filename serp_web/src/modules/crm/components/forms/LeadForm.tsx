@@ -2,77 +2,55 @@
 
 'use client';
 
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useState } from 'react';
 import {
   Button,
-  Input,
-  Label,
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
-  Textarea,
-  Badge,
+  Input,
+  Label,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Textarea,
 } from '@/shared/components/ui';
-import { X } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import type {
-  Lead,
   CreateLeadRequest,
-  UpdateLeadRequest,
+  Lead,
   LeadSource,
   LeadStatus,
-  Priority,
+  UpdateLeadRequest,
 } from '../../types';
 
-// Validation schema
-const leadSchema = z.object({
-  firstName: z
-    .string()
-    .min(1, 'First name is required')
-    .max(255, 'First name is too long'),
-  lastName: z
-    .string()
-    .min(1, 'Last name is required')
-    .max(255, 'Last name is too long'),
-  email: z.string().email('Invalid email address'),
-  phone: z.string().optional(),
-  company: z.string().optional(),
-  jobTitle: z.string().optional(),
-  source: z.enum([
-    'WEBSITE',
-    'REFERRAL',
-    'COLD_CALL',
-    'EMAIL_CAMPAIGN',
-    'EMAIL',
-    'PHONE',
-    'SOCIAL_MEDIA',
-    'TRADE_SHOW',
-    'OTHER',
-  ]),
-  status: z.enum([
-    'NEW',
-    'CONTACTED',
-    'NURTURING',
-    'QUALIFIED',
-    'DISQUALIFIED',
-    'CONVERTED',
-    'LOST',
-  ]),
-  priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']),
-  assignedTo: z.string().optional(),
-  notes: z.string().optional(),
-  tags: z.array(z.string()),
-});
+type FormLeadSource = 'WEBSITE' | 'SOCIAL_MEDIA' | 'REFERRAL' | 'COLD_CALL' | 'EMAIL_CAMPAIGN';
+type FormLeadStatus = 'NEW' | 'CONTACTED' | 'NURTURING' | 'QUALIFIED' | 'DISQUALIFIED' | 'CONVERTED';
 
-type LeadFormData = z.infer<typeof leadSchema>;
+type LeadFormData = {
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+  industry: string;
+  companySize: string;
+  website: string;
+  jobTitle: string;
+  street: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  leadSource: FormLeadSource;
+  leadStatus: FormLeadStatus;
+  assignedTo: string;
+  estimatedValue: string;
+  leadScore: string;
+  followUpDate: string;
+  notes: string;
+};
 
 interface LeadFormProps {
   lead?: Lead;
@@ -82,6 +60,55 @@ interface LeadFormProps {
   className?: string;
 }
 
+const normalizeLeadSource = (value?: LeadSource): FormLeadSource => {
+  switch (value) {
+    case 'SOCIAL_MEDIA':
+    case 'REFERRAL':
+    case 'COLD_CALL':
+    case 'EMAIL_CAMPAIGN':
+      return value;
+    default:
+      return 'WEBSITE';
+  }
+};
+
+const normalizeLeadStatus = (value?: LeadStatus): FormLeadStatus => {
+  switch (value) {
+    case 'CONTACTED':
+    case 'NURTURING':
+    case 'QUALIFIED':
+    case 'DISQUALIFIED':
+    case 'CONVERTED':
+      return value;
+    default:
+      return 'NEW';
+  }
+};
+
+const getDefaultValues = (lead?: Lead): LeadFormData => ({
+  name: lead?.name || '',
+  email: lead?.email || '',
+  phone: lead?.phone || '',
+  company: lead?.company || '',
+  industry: lead?.industry || '',
+  companySize: lead?.companySize || '',
+  website: lead?.website || '',
+  jobTitle: lead?.jobTitle || '',
+  street: lead?.address?.street || '',
+  city: lead?.address?.city || '',
+  state: lead?.address?.state || '',
+  postalCode: lead?.address?.postalCode || '',
+  country: lead?.address?.country || '',
+  leadSource: normalizeLeadSource(lead?.leadSource),
+  leadStatus: normalizeLeadStatus(lead?.leadStatus),
+  assignedTo: lead?.assignedTo || '',
+  estimatedValue:
+    lead?.estimatedValue === undefined ? '' : String(lead.estimatedValue),
+  leadScore: lead?.leadScore === undefined ? '' : String(lead.leadScore),
+  followUpDate: lead?.followUpDate || '',
+  notes: lead?.notes || '',
+});
+
 export const LeadForm: React.FC<LeadFormProps> = ({
   lead,
   onSubmit,
@@ -90,311 +117,193 @@ export const LeadForm: React.FC<LeadFormProps> = ({
   className,
 }) => {
   const isEditing = !!lead;
+  const [formData, setFormData] = useState<LeadFormData>(getDefaultValues(lead));
+  const [error, setError] = useState<string>('');
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors, isSubmitting },
-    setValue,
-    getValues,
-  } = useForm<LeadFormData>({
-    resolver: zodResolver(leadSchema),
-    defaultValues: lead
-      ? {
-          firstName: lead.firstName,
-          lastName: lead.lastName,
-          email: lead.email,
-          phone: lead.phone || '',
-          company: lead.company || '',
-          jobTitle: lead.jobTitle || '',
-          source: lead.source,
-          status: lead.status,
-          priority: lead.priority,
-          assignedTo: lead.assignedTo || '',
-          notes: lead.notes || '',
-          tags: lead.tags || [],
-        }
-      : {
-          firstName: '',
-          lastName: '',
-          email: '',
-          phone: '',
-          company: '',
-          jobTitle: '',
-          source: 'WEBSITE' as LeadSource,
-          status: 'NEW' as LeadStatus,
-          priority: 'MEDIUM' as Priority,
-          assignedTo: '',
-          notes: '',
-          tags: [],
-        },
-  });
-
-  // Handle form submission
-  const onFormSubmit = handleSubmit(async (data: LeadFormData) => {
-    try {
-      await onSubmit(data);
-    } catch (error) {
-      console.error('Form submission error:', error);
-    }
-  });
-
-  // Handle tag management
-  const handleTagAdd = (tag: string) => {
-    if (tag.trim()) {
-      const currentTags = getValues('tags');
-      if (!currentTags.includes(tag.trim())) {
-        setValue('tags', [...currentTags, tag.trim()]);
-      }
-    }
+  const updateField = <K extends keyof LeadFormData>(
+    field: K,
+    value: LeadFormData[K]
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleTagRemove = (tagToRemove: string) => {
-    const currentTags = getValues('tags');
-    setValue(
-      'tags',
-      currentTags.filter((tag) => tag !== tagToRemove)
-    );
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.name.trim()) {
+      setError('Contact name is required');
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      setError('Email is required');
+      return;
+    }
+
+    setError('');
+
+    const nameParts = formData.name.trim().split(/\s+/);
+    const firstName = nameParts[0] || formData.name.trim();
+    const lastName = nameParts.slice(1).join(' ');
+
+    await onSubmit({
+      firstName,
+      lastName,
+      source: formData.leadSource,
+      status: formData.leadStatus,
+      priority: lead?.priority || 'MEDIUM',
+      tags: lead?.tags || [],
+      customFields: lead?.customFields || {},
+      isActive: lead?.isActive ?? true,
+      name: formData.name.trim(),
+      email: formData.email.trim(),
+      phone: formData.phone || undefined,
+      company: formData.company || undefined,
+      industry: formData.industry || undefined,
+      companySize: formData.companySize || undefined,
+      website: formData.website || undefined,
+      jobTitle: formData.jobTitle || undefined,
+      street: formData.street || undefined,
+      city: formData.city || undefined,
+      state: formData.state || undefined,
+      postalCode: formData.postalCode || undefined,
+      country: formData.country || undefined,
+      leadSource: formData.leadSource,
+      assignedTo: formData.assignedTo || undefined,
+      estimatedValue: formData.estimatedValue ? Number(formData.estimatedValue) : undefined,
+      leadScore: formData.leadScore ? Number(formData.leadScore) : undefined,
+      followUpDate: formData.followUpDate || undefined,
+      notes: formData.notes || undefined,
+    });
   };
 
   return (
-    <Card className={cn('w-full max-w-2xl mx-auto', className)}>
+    <Card className={cn('w-full', className)}>
       <CardHeader>
         <h2 className='text-xl font-semibold'>
           {isEditing ? 'Edit Lead' : 'Create Lead'}
         </h2>
       </CardHeader>
       <CardContent>
-        <form onSubmit={onFormSubmit} className='space-y-6'>
-          {/* Personal Information */}
-          <div className='space-y-4'>
-            <h3 className='text-lg font-medium'>Personal Information</h3>
+        <form onSubmit={handleSubmit} className='space-y-6'>
+          {error && <p className='text-sm text-destructive'>{error}</p>}
 
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-              <div className='space-y-2'>
-                <Label htmlFor='firstName'>First Name *</Label>
-                <Input
-                  id='firstName'
-                  {...register('firstName')}
-                  className={errors.firstName ? 'border-destructive' : ''}
-                  disabled={isLoading}
-                />
-                {errors.firstName && (
-                  <p className='text-sm text-destructive'>
-                    {errors.firstName.message}
-                  </p>
-                )}
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='lastName'>Last Name *</Label>
-                <Input
-                  id='lastName'
-                  {...register('lastName')}
-                  className={errors.lastName ? 'border-destructive' : ''}
-                  disabled={isLoading}
-                />
-                {errors.lastName && (
-                  <p className='text-sm text-destructive'>
-                    {errors.lastName.message}
-                  </p>
-                )}
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='email'>Email *</Label>
-                <Input
-                  id='email'
-                  type='email'
-                  {...register('email')}
-                  className={errors.email ? 'border-destructive' : ''}
-                  disabled={isLoading}
-                />
-                {errors.email && (
-                  <p className='text-sm text-destructive'>
-                    {errors.email.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor='phone'>Phone</Label>
-                <Input id='phone' {...register('phone')} disabled={isLoading} />
-              </div>
-
-              <div>
-                <Label htmlFor='company'>Company</Label>
-                <Input
-                  id='company'
-                  {...register('company')}
-                  disabled={isLoading}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor='jobTitle'>Job Title</Label>
-                <Input
-                  id='jobTitle'
-                  {...register('jobTitle')}
-                  disabled={isLoading}
-                />
-              </div>
+          <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+            <div className='space-y-2 md:col-span-2'>
+              <Label htmlFor='name'>Contact Name *</Label>
+              <Input id='name' value={formData.name} onChange={(e) => updateField('name', e.target.value)} disabled={isLoading} />
             </div>
-          </div>
-
-          {/* Lead Information */}
-          <div className='space-y-4'>
-            <CardTitle className='text-lg'>Lead Information</CardTitle>
-
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-              <div className='space-y-2'>
-                <Label htmlFor='source'>Source *</Label>
-                <Select
-                  value={watch('source')}
-                  onValueChange={(value) =>
-                    setValue('source', value as LeadSource)
-                  }
-                  disabled={isLoading}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder='Select source' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='WEBSITE'>Website</SelectItem>
-                    <SelectItem value='REFERRAL'>Referral</SelectItem>
-                    <SelectItem value='EMAIL'>Email</SelectItem>
-                    <SelectItem value='PHONE'>Phone</SelectItem>
-                    <SelectItem value='SOCIAL_MEDIA'>Social Media</SelectItem>
-                    <SelectItem value='TRADE_SHOW'>Trade Show</SelectItem>
-                    <SelectItem value='OTHER'>Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='status'>Status *</Label>
-                <Select
-                  value={watch('status')}
-                  onValueChange={(value) =>
-                    setValue('status', value as LeadStatus)
-                  }
-                  disabled={isLoading}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder='Select status' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='NEW'>New</SelectItem>
-                    <SelectItem value='CONTACTED'>Contacted</SelectItem>
-                    <SelectItem value='QUALIFIED'>Qualified</SelectItem>
-                    <SelectItem value='CONVERTED'>Converted</SelectItem>
-                    <SelectItem value='LOST'>Lost</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='priority'>Priority *</Label>
-                <Select
-                  value={watch('priority')}
-                  onValueChange={(value) =>
-                    setValue('priority', value as Priority)
-                  }
-                  disabled={isLoading}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder='Select priority' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='LOW'>Low</SelectItem>
-                    <SelectItem value='MEDIUM'>Medium</SelectItem>
-                    <SelectItem value='HIGH'>High</SelectItem>
-                    <SelectItem value='URGENT'>Urgent</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='assignedTo'>Assigned To</Label>
-                <Input
-                  id='assignedTo'
-                  {...register('assignedTo')}
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Additional Information */}
-          <div className='space-y-4'>
-            <CardTitle className='text-lg'>Additional Information</CardTitle>
-
             <div className='space-y-2'>
+              <Label htmlFor='email'>Email *</Label>
+              <Input id='email' type='email' value={formData.email} onChange={(e) => updateField('email', e.target.value)} disabled={isLoading} />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='phone'>Phone</Label>
+              <Input id='phone' value={formData.phone} onChange={(e) => updateField('phone', e.target.value)} disabled={isLoading} />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='company'>Company</Label>
+              <Input id='company' value={formData.company} onChange={(e) => updateField('company', e.target.value)} disabled={isLoading} />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='jobTitle'>Job Title</Label>
+              <Input id='jobTitle' value={formData.jobTitle} onChange={(e) => updateField('jobTitle', e.target.value)} disabled={isLoading} />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='industry'>Industry</Label>
+              <Input id='industry' value={formData.industry} onChange={(e) => updateField('industry', e.target.value)} disabled={isLoading} />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='companySize'>Company Size</Label>
+              <Input id='companySize' value={formData.companySize} onChange={(e) => updateField('companySize', e.target.value)} disabled={isLoading} />
+            </div>
+            <div className='space-y-2 md:col-span-2'>
+              <Label htmlFor='website'>Website</Label>
+              <Input id='website' value={formData.website} onChange={(e) => updateField('website', e.target.value)} disabled={isLoading} />
+            </div>
+          </div>
+
+          <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+            <div className='space-y-2'>
+              <Label>Lead Source</Label>
+              <Select value={formData.leadSource} onValueChange={(value) => updateField('leadSource', value as FormLeadSource)} disabled={isLoading}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='WEBSITE'>Website</SelectItem>
+                  <SelectItem value='SOCIAL_MEDIA'>Social Media</SelectItem>
+                  <SelectItem value='REFERRAL'>Referral</SelectItem>
+                  <SelectItem value='COLD_CALL'>Cold Call</SelectItem>
+                  <SelectItem value='EMAIL_CAMPAIGN'>Email Campaign</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className='space-y-2'>
+              <Label>Lead Status</Label>
+              <Select value={formData.leadStatus} onValueChange={(value) => updateField('leadStatus', value as FormLeadStatus)} disabled={isLoading}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='NEW'>New</SelectItem>
+                  <SelectItem value='CONTACTED'>Contacted</SelectItem>
+                  <SelectItem value='NURTURING'>Nurturing</SelectItem>
+                  <SelectItem value='QUALIFIED'>Qualified</SelectItem>
+                  <SelectItem value='DISQUALIFIED'>Disqualified</SelectItem>
+                  <SelectItem value='CONVERTED'>Converted</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='assignedTo'>Assigned User ID</Label>
+              <Input id='assignedTo' value={formData.assignedTo} onChange={(e) => updateField('assignedTo', e.target.value)} disabled={isLoading} />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='followUpDate'>Follow Up Date</Label>
+              <Input id='followUpDate' type='date' value={formData.followUpDate} onChange={(e) => updateField('followUpDate', e.target.value)} disabled={isLoading} />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='estimatedValue'>Estimated Value</Label>
+              <Input id='estimatedValue' type='number' value={formData.estimatedValue} onChange={(e) => updateField('estimatedValue', e.target.value)} disabled={isLoading} />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='leadScore'>Lead Score</Label>
+              <Input id='leadScore' type='number' value={formData.leadScore} onChange={(e) => updateField('leadScore', e.target.value)} disabled={isLoading} />
+            </div>
+          </div>
+
+          <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+            <div className='space-y-2 md:col-span-2'>
+              <Label htmlFor='street'>Street</Label>
+              <Input id='street' value={formData.street} onChange={(e) => updateField('street', e.target.value)} disabled={isLoading} />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='city'>City</Label>
+              <Input id='city' value={formData.city} onChange={(e) => updateField('city', e.target.value)} disabled={isLoading} />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='state'>State</Label>
+              <Input id='state' value={formData.state} onChange={(e) => updateField('state', e.target.value)} disabled={isLoading} />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='postalCode'>Postal Code</Label>
+              <Input id='postalCode' value={formData.postalCode} onChange={(e) => updateField('postalCode', e.target.value)} disabled={isLoading} />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='country'>Country</Label>
+              <Input id='country' value={formData.country} onChange={(e) => updateField('country', e.target.value)} disabled={isLoading} />
+            </div>
+            <div className='space-y-2 md:col-span-2'>
               <Label htmlFor='notes'>Notes</Label>
-              <Textarea
-                id='notes'
-                {...register('notes')}
-                rows={3}
-                placeholder='Enter any additional notes about this lead...'
-                disabled={isLoading}
-              />
-            </div>
-
-            {/* Tags */}
-            <div className='space-y-2'>
-              <Label>Tags</Label>
-              <div className='flex flex-wrap gap-2'>
-                {watch('tags').map((tag, index) => (
-                  <Badge
-                    key={index}
-                    variant='secondary'
-                    className='flex items-center gap-1'
-                  >
-                    {tag}
-                    <button
-                      type='button'
-                      onClick={() => handleTagRemove(tag)}
-                      className='hover:text-destructive'
-                      disabled={isLoading}
-                    >
-                      <X className='h-3 w-3' />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-              <Input
-                placeholder='Add tag and press Enter'
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleTagAdd(e.currentTarget.value);
-                    e.currentTarget.value = '';
-                  }
-                }}
-                disabled={isLoading}
-              />
+              <Textarea id='notes' rows={4} value={formData.notes} onChange={(e) => updateField('notes', e.target.value)} disabled={isLoading} />
             </div>
           </div>
 
-          {/* Actions */}
-          <div className='flex justify-end space-x-3 pt-6 border-t'>
+          <div className='flex justify-end gap-3 border-t pt-6'>
             {onCancel && (
-              <Button
-                type='button'
-                variant='outline'
-                onClick={onCancel}
-                disabled={isLoading || isSubmitting}
-              >
+              <Button type='button' variant='outline' onClick={onCancel} disabled={isLoading}>
                 Cancel
               </Button>
             )}
-            <Button type='submit' disabled={isLoading || isSubmitting}>
-              {isSubmitting
-                ? 'Saving...'
-                : isEditing
-                  ? 'Update Lead'
-                  : 'Create Lead'}
+            <Button type='submit' disabled={isLoading}>
+              {isEditing ? 'Update Lead' : 'Create Lead'}
             </Button>
           </div>
         </form>
