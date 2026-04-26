@@ -5,8 +5,12 @@ import type {
   Contact,
   CreateAccountRequest,
   CreateLeadRequest,
+  CreateOpportunityRequest,
+  Opportunity,
+  OpportunityFilters,
   UpdateAccountRequest,
   UpdateLeadRequest,
+  UpdateOpportunityRequest,
   CustomerFilters,
   Lead,
   LeadFilters,
@@ -139,6 +143,49 @@ type BackendLeadConversion = {
   opportunityId?: number | string | null;
   contactId?: number | string | null;
   message?: string | null;
+};
+
+type BackendOpportunity = {
+  id: number | string;
+  name?: string | null;
+  description?: string | null;
+  leadId?: number | string | null;
+  accountId?: number | string | null;
+  stage?: string | null;
+  estimatedValue?: number | string | null;
+  actualValue?: number | string | null;
+  probability?: number | null;
+  expectedCloseDate?: string | null;
+  actualCloseDate?: string | null;
+  assignedTo?: number | string | null;
+  notes?: string | null;
+  lossReason?: string | null;
+  reopenReason?: string | null;
+  tenantId?: number | string | null;
+  createdAt?: number | string | null;
+  updatedAt?: number | string | null;
+  createdBy?: number | string | null;
+  updatedBy?: number | string | null;
+};
+
+type BackendOpportunityPipelineStage = {
+  stage?: string | null;
+  count?: number | null;
+  totalValue?: number | string | null;
+  weightedValue?: number | string | null;
+  opportunities?: BackendOpportunity[] | null;
+};
+
+type BackendOpportunityPipelineSummary = {
+  totalOpportunities?: number | null;
+  totalPipelineValue?: number | string | null;
+  weightedPipelineValue?: number | string | null;
+  averageDealSize?: number | string | null;
+};
+
+type BackendOpportunityPipeline = {
+  stages?: BackendOpportunityPipelineStage[] | null;
+  summary?: BackendOpportunityPipelineSummary | null;
 };
 
 const toIsoString = (value?: number | string | null): string => {
@@ -347,6 +394,84 @@ export const mapBackendLeadToLead = (lead: BackendLead): Lead => {
   };
 };
 
+const mapBackendOpportunityAssignedToName = (
+  assignedTo?: number | string | null
+) => {
+  if (assignedTo === null || assignedTo === undefined || assignedTo === '') {
+    return 'Unassigned';
+  }
+
+  return `User #${assignedTo}`;
+};
+
+export const mapBackendOpportunityToOpportunity = (
+  opportunity: BackendOpportunity
+): Opportunity => {
+  const accountId =
+    opportunity.accountId === null || opportunity.accountId === undefined
+      ? ''
+      : String(opportunity.accountId);
+  const assignedTo =
+    opportunity.assignedTo === null || opportunity.assignedTo === undefined
+      ? undefined
+      : String(opportunity.assignedTo);
+  const estimatedValue = Number(opportunity.estimatedValue || 0);
+  const probability = opportunity.probability ?? 0;
+
+  return {
+    id: String(opportunity.id),
+    createdAt: toIsoString(opportunity.createdAt),
+    updatedAt: toIsoString(opportunity.updatedAt),
+    isActive:
+      opportunity.stage !== 'CLOSED_WON' && opportunity.stage !== 'CLOSED_LOST',
+    name: opportunity.name || '',
+    accountId,
+    leadId:
+      opportunity.leadId === null || opportunity.leadId === undefined
+        ? undefined
+        : String(opportunity.leadId),
+    customerId: accountId,
+    customerName: accountId ? `Account #${accountId}` : undefined,
+    stage: (opportunity.stage as Opportunity['stage']) || 'PROSPECTING',
+    type: 'NEW_BUSINESS',
+    estimatedValue,
+    value: estimatedValue,
+    actualValue:
+      opportunity.actualValue === null || opportunity.actualValue === undefined
+        ? undefined
+        : Number(opportunity.actualValue),
+    probability,
+    expectedCloseDate:
+      opportunity.expectedCloseDate || toIsoString(opportunity.createdAt),
+    actualCloseDate: opportunity.actualCloseDate || undefined,
+    assignedTo,
+    assignedToName: mapBackendOpportunityAssignedToName(opportunity.assignedTo),
+    description: opportunity.description || undefined,
+    tags: [],
+    products: [],
+    notes: opportunity.notes || undefined,
+    competitors: [],
+    nextAction: undefined,
+    nextActionDate: undefined,
+    lostReason: opportunity.lossReason || undefined,
+    reopenReason: opportunity.reopenReason || undefined,
+    customFields: {
+      tenantId:
+        opportunity.tenantId === null || opportunity.tenantId === undefined
+          ? undefined
+          : String(opportunity.tenantId),
+      createdBy:
+        opportunity.createdBy === null || opportunity.createdBy === undefined
+          ? undefined
+          : String(opportunity.createdBy),
+      updatedBy:
+        opportunity.updatedBy === null || opportunity.updatedBy === undefined
+          ? undefined
+          : String(opportunity.updatedBy),
+    },
+  };
+};
+
 export const mapAccountFormToBackendPayload = (
   data: CreateAccountRequest | UpdateAccountRequest
 ) => {
@@ -396,6 +521,30 @@ export const mapLeadFormToBackendPayload = (
   estimatedValue: data.estimatedValue,
   leadScore: data.leadScore,
   followUpDate: data.followUpDate || undefined,
+  notes: data.notes || undefined,
+});
+
+export const mapOpportunityFormToBackendPayload = (
+  data: CreateOpportunityRequest | UpdateOpportunityRequest
+) => ({
+  name: data.name || undefined,
+  description: data.description || undefined,
+  accountId:
+    'accountId' in data && data.accountId && data.accountId.trim() !== ''
+      ? Number(data.accountId)
+      : undefined,
+  leadId:
+    'leadId' in data && data.leadId && data.leadId.trim() !== ''
+      ? Number(data.leadId)
+      : undefined,
+  stage: data.stage || undefined,
+  estimatedValue:
+    data.estimatedValue !== undefined ? data.estimatedValue : data.value,
+  expectedCloseDate: data.expectedCloseDate || undefined,
+  assignedTo:
+    data.assignedTo && data.assignedTo.trim() !== ''
+      ? Number(data.assignedTo)
+      : undefined,
   notes: data.notes || undefined,
 });
 
@@ -464,6 +613,42 @@ export const mapLeadFiltersToSearchRequest = (
   sortDirection: pagination.sortOrder?.toUpperCase(),
 });
 
+export const mapOpportunityFiltersToSearchRequest = (
+  filters: OpportunityFilters = {},
+  pagination: PaginationParams
+) => ({
+  keyword: filters.search || undefined,
+  stages: filters.stage,
+  accountId:
+    filters.customerId && filters.customerId[0]
+      ? Number(filters.customerId[0])
+      : undefined,
+  leadId:
+    filters.leadId && filters.leadId[0]
+      ? Number(filters.leadId[0])
+      : undefined,
+  assignedTo:
+    filters.assignedTo && filters.assignedTo[0]
+      ? Number(filters.assignedTo[0])
+      : undefined,
+  unassignedOnly: filters.unassignedOnly,
+  estimatedValueMin: filters.minValue,
+  estimatedValueMax: filters.maxValue,
+  probabilityMin: filters.probability?.min,
+  probabilityMax: filters.probability?.max,
+  expectedCloseDateFrom: filters.expectedCloseDateFrom || undefined,
+  expectedCloseDateTo: filters.expectedCloseDateTo || undefined,
+  actualCloseDateFrom: filters.actualCloseDateFrom || undefined,
+  actualCloseDateTo: filters.actualCloseDateTo || undefined,
+  createdFrom: filters.createdDateFrom || undefined,
+  createdTo: filters.createdDateTo || undefined,
+  hasNotes: filters.hasNotes,
+  page: pagination.page,
+  size: pagination.limit,
+  sortBy: pagination.sortBy,
+  sortDirection: pagination.sortOrder?.toUpperCase(),
+});
+
 export const mapLeadListResponse = (
   response: GeneralResponse<PageResponse<BackendLead>>
 ): APIResponse<{
@@ -498,6 +683,71 @@ export const mapSingleLeadResponse = (response: GeneralResponse<BackendLead>) =>
   message: response.message,
   timestamp: new Date().toISOString(),
   data: mapBackendLeadToLead(response.data),
+});
+
+export const mapOpportunityListResponse = (
+  response: GeneralResponse<PageResponse<BackendOpportunity>>
+): APIResponse<{
+  data: Opportunity[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrevious: boolean;
+  };
+}> => ({
+  success: response.code >= 200 && response.code < 300,
+  message: response.message,
+  timestamp: new Date().toISOString(),
+  data: {
+    data: (response.data?.items || []).map(mapBackendOpportunityToOpportunity),
+    pagination: {
+      page: response.data?.pagination?.page || 1,
+      limit: response.data?.pagination?.size || 20,
+      total: Number(response.data?.pagination?.totalItems || 0),
+      totalPages: response.data?.pagination?.totalPages || 1,
+      hasNext: !!response.data?.pagination?.hasNext,
+      hasPrevious: !!response.data?.pagination?.hasPrevious,
+    },
+  },
+});
+
+export const mapSingleOpportunityResponse = (
+  response: GeneralResponse<BackendOpportunity>
+) => ({
+  success: response.code >= 200 && response.code < 300,
+  message: response.message,
+  timestamp: new Date().toISOString(),
+  data: mapBackendOpportunityToOpportunity(response.data),
+});
+
+export const mapOpportunityPipelineResponse = (
+  response: GeneralResponse<BackendOpportunityPipeline>
+) => ({
+  success: response.code >= 200 && response.code < 300,
+  message: response.message,
+  timestamp: new Date().toISOString(),
+  data: {
+    stages: (response.data?.stages || []).map((stage) => ({
+      stage: (stage.stage as Opportunity['stage']) || 'PROSPECTING',
+      count: stage.count || 0,
+      totalValue: Number(stage.totalValue || 0),
+      weightedValue: Number(stage.weightedValue || 0),
+      opportunities: (stage.opportunities || []).map(
+        mapBackendOpportunityToOpportunity
+      ),
+    })),
+    summary: {
+      totalOpportunities: response.data?.summary?.totalOpportunities || 0,
+      totalPipelineValue: Number(response.data?.summary?.totalPipelineValue || 0),
+      weightedPipelineValue: Number(
+        response.data?.summary?.weightedPipelineValue || 0
+      ),
+      averageDealSize: Number(response.data?.summary?.averageDealSize || 0),
+    },
+  },
 });
 
 export const mapLeadConversionResponse = (
