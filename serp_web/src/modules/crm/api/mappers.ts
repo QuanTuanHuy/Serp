@@ -4,8 +4,11 @@ import type {
   APIResponse,
   Contact,
   CreateAccountRequest,
+  CreateLeadRequest,
   UpdateAccountRequest,
   CustomerFilters,
+  Lead,
+  LeadFilters,
   PaginationParams,
 } from '../types';
 
@@ -92,6 +95,49 @@ type BackendActivity = {
   notes?: string | null;
   createdAt?: number | string | null;
   updatedAt?: number | string | null;
+};
+
+type BackendLeadAddress = {
+  street?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postalCode?: string | null;
+  country?: string | null;
+};
+
+type BackendLead = {
+  id: number | string;
+  company?: string | null;
+  industry?: string | null;
+  companySize?: string | null;
+  website?: string | null;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  jobTitle?: string | null;
+  address?: BackendLeadAddress | null;
+  leadSource?: string | null;
+  leadStatus?: string | null;
+  assignedTo?: number | string | null;
+  estimatedValue?: number | string | null;
+  leadScore?: number | null;
+  followUpDate?: string | null;
+  notes?: string | null;
+  convertedOpportunityId?: number | string | null;
+  convertedAccountId?: number | string | null;
+  tenantId?: number | string | null;
+  createdAt?: number | string | null;
+  updatedAt?: number | string | null;
+  createdBy?: number | string | null;
+  updatedBy?: number | string | null;
+};
+
+type BackendLeadConversion = {
+  leadId: number | string;
+  accountId?: number | string | null;
+  opportunityId?: number | string | null;
+  contactId?: number | string | null;
+  message?: string | null;
 };
 
 const toIsoString = (value?: number | string | null): string => {
@@ -192,6 +238,114 @@ export const mapBackendActivityToActivity = (activity: BackendActivity): Activit
   customFields: { notes: activity.notes || undefined },
 });
 
+const splitLeadName = (name?: string | null) => {
+  const normalized = (name || '').trim();
+  const parts = normalized.split(/\s+/).filter(Boolean);
+
+  if (parts.length === 0) {
+    return { firstName: '', lastName: '' };
+  }
+
+  if (parts.length === 1) {
+    return { firstName: parts[0], lastName: '' };
+  }
+
+  return {
+    firstName: parts.slice(0, -1).join(' '),
+    lastName: parts[parts.length - 1],
+  };
+};
+
+export const mapBackendLeadToLead = (lead: BackendLead): Lead => {
+  const name = (lead.name || '').trim();
+  const { firstName, lastName } = splitLeadName(name);
+  const leadSource =
+    (lead.leadSource as Lead['leadSource']) || 'WEBSITE';
+  const leadStatus =
+    (lead.leadStatus as Lead['leadStatus']) || 'NEW';
+
+  return {
+    id: String(lead.id),
+    createdAt: toIsoString(lead.createdAt),
+    updatedAt: toIsoString(lead.updatedAt),
+    isActive: leadStatus !== 'DISQUALIFIED' && leadStatus !== 'CONVERTED',
+    name,
+    email: lead.email || '',
+    phone: lead.phone || undefined,
+    company: lead.company || undefined,
+    industry: lead.industry || undefined,
+    companySize: lead.companySize || undefined,
+    website: lead.website || undefined,
+    jobTitle: lead.jobTitle || undefined,
+    address: lead.address
+      ? {
+          street: lead.address.street || undefined,
+          city: lead.address.city || undefined,
+          state: lead.address.state || undefined,
+          postalCode: lead.address.postalCode || undefined,
+          country: lead.address.country || undefined,
+        }
+      : undefined,
+    leadSource,
+    leadStatus,
+    assignedTo:
+      lead.assignedTo === null || lead.assignedTo === undefined
+        ? undefined
+        : String(lead.assignedTo),
+    estimatedValue:
+      lead.estimatedValue === null || lead.estimatedValue === undefined
+        ? undefined
+        : Number(lead.estimatedValue),
+    leadScore: lead.leadScore || undefined,
+    followUpDate: lead.followUpDate || undefined,
+    notes: lead.notes || undefined,
+    convertedOpportunityId:
+      lead.convertedOpportunityId === null ||
+      lead.convertedOpportunityId === undefined
+        ? undefined
+        : String(lead.convertedOpportunityId),
+    convertedAccountId:
+      lead.convertedAccountId === null || lead.convertedAccountId === undefined
+        ? undefined
+        : String(lead.convertedAccountId),
+    tenantId:
+      lead.tenantId === null || lead.tenantId === undefined
+        ? undefined
+        : String(lead.tenantId),
+    createdBy:
+      lead.createdBy === null || lead.createdBy === undefined
+        ? undefined
+        : String(lead.createdBy),
+    updatedBy:
+      lead.updatedBy === null || lead.updatedBy === undefined
+        ? undefined
+        : String(lead.updatedBy),
+    firstName,
+    lastName,
+    source: leadSource,
+    status: leadStatus,
+    priority: 'MEDIUM',
+    expectedCloseDate: lead.followUpDate || undefined,
+    tags: [],
+    customFields: {
+      industry: lead.industry || undefined,
+      companySize: lead.companySize || undefined,
+      street: lead.address?.street || undefined,
+      city: lead.address?.city || undefined,
+      state: lead.address?.state || undefined,
+      postalCode: lead.address?.postalCode || undefined,
+      country: lead.address?.country || undefined,
+    },
+    conversionDate:
+      leadStatus === 'CONVERTED' ? toIsoString(lead.updatedAt) : undefined,
+    convertedToCustomerId:
+      lead.convertedAccountId === null || lead.convertedAccountId === undefined
+        ? undefined
+        : String(lead.convertedAccountId),
+    lastActivityDate: undefined,
+  };
+};
+
 export const mapAccountFormToBackendPayload = (
   data: CreateAccountRequest | UpdateAccountRequest
 ) => {
@@ -216,6 +370,31 @@ export const mapAccountFormToBackendPayload = (
     country: data.country || address[3],
   };
 };
+
+export const mapLeadFormToBackendPayload = (data: CreateLeadRequest) => ({
+  company: data.company || undefined,
+  industry: data.industry || undefined,
+  companySize: data.companySize || undefined,
+  website: data.website || undefined,
+  name: data.name,
+  email: data.email || undefined,
+  phone: data.phone || undefined,
+  jobTitle: data.jobTitle || undefined,
+  street: data.street || undefined,
+  city: data.city || undefined,
+  state: data.state || undefined,
+  postalCode: data.postalCode || undefined,
+  country: data.country || undefined,
+  leadSource: data.leadSource || 'WEBSITE',
+  assignedTo:
+    data.assignedTo && data.assignedTo.trim() !== ''
+      ? Number(data.assignedTo)
+      : undefined,
+  estimatedValue: data.estimatedValue,
+  leadScore: data.leadScore,
+  followUpDate: data.followUpDate || undefined,
+  notes: data.notes || undefined,
+});
 
 export const mapCustomerFiltersToAccountSearch = (
   filters: CustomerFilters = {},
@@ -246,6 +425,100 @@ export const mapAccountListResponse = (
       hasNext: !!response.data?.pagination?.hasNext,
       hasPrevious: !!response.data?.pagination?.hasPrevious,
     },
+  },
+});
+
+export const mapLeadFiltersToSearchRequest = (
+  filters: LeadFilters = {},
+  pagination: PaginationParams
+) => ({
+  keyword: filters.search || undefined,
+  statuses: filters.status,
+  sources: filters.source,
+  industries: filters.industries,
+  assignedTo:
+    filters.assignedTo && filters.assignedTo[0]
+      ? Number(filters.assignedTo[0])
+      : undefined,
+  unassignedOnly: filters.unassignedOnly,
+  estimatedValueMin: filters.minValue,
+  estimatedValueMax: filters.maxValue,
+  leadScoreMin: filters.minScore,
+  leadScoreMax: filters.maxScore,
+  followUpDateFrom: filters.followUpDateFrom || undefined,
+  followUpDateTo: filters.followUpDateTo || undefined,
+  createdFrom: filters.createdDateFrom || undefined,
+  createdTo: filters.createdDateTo || undefined,
+  qualifiedOnly: filters.qualifiedOnly,
+  convertedOnly: filters.convertedOnly,
+  country: filters.country || undefined,
+  city: filters.city || undefined,
+  hasEmail: filters.hasEmail,
+  hasPhone: filters.hasPhone,
+  page: pagination.page,
+  size: pagination.limit,
+  sortBy: pagination.sortBy,
+  sortDirection: pagination.sortOrder?.toUpperCase(),
+});
+
+export const mapLeadListResponse = (
+  response: GeneralResponse<PageResponse<BackendLead>>
+): APIResponse<{
+  data: Lead[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrevious: boolean;
+  };
+}> => ({
+  success: response.code >= 200 && response.code < 300,
+  message: response.message,
+  timestamp: new Date().toISOString(),
+  data: {
+    data: (response.data?.items || []).map(mapBackendLeadToLead),
+    pagination: {
+      page: response.data?.pagination?.page || 1,
+      limit: response.data?.pagination?.size || 20,
+      total: Number(response.data?.pagination?.totalItems || 0),
+      totalPages: response.data?.pagination?.totalPages || 1,
+      hasNext: !!response.data?.pagination?.hasNext,
+      hasPrevious: !!response.data?.pagination?.hasPrevious,
+    },
+  },
+});
+
+export const mapSingleLeadResponse = (response: GeneralResponse<BackendLead>) => ({
+  success: response.code >= 200 && response.code < 300,
+  message: response.message,
+  timestamp: new Date().toISOString(),
+  data: mapBackendLeadToLead(response.data),
+});
+
+export const mapLeadConversionResponse = (
+  response: GeneralResponse<BackendLeadConversion>
+) => ({
+  success: response.code >= 200 && response.code < 300,
+  message: response.message,
+  timestamp: new Date().toISOString(),
+  data: {
+    leadId: String(response.data.leadId),
+    accountId:
+      response.data.accountId === null || response.data.accountId === undefined
+        ? undefined
+        : String(response.data.accountId),
+    opportunityId:
+      response.data.opportunityId === null ||
+      response.data.opportunityId === undefined
+        ? undefined
+        : String(response.data.opportunityId),
+    contactId:
+      response.data.contactId === null || response.data.contactId === undefined
+        ? undefined
+        : String(response.data.contactId),
+    message: response.data.message || response.message || undefined,
   },
 });
 

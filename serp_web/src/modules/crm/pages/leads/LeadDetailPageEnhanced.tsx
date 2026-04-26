@@ -121,12 +121,26 @@ const LEAD_STATUS_CONFIG: Record<
     icon: Phone,
     step: 2,
   },
+  NURTURING: {
+    label: 'Nuôi dưỡng',
+    color: 'text-indigo-700',
+    bgColor: 'bg-indigo-100',
+    icon: Clock,
+    step: 2,
+  },
   QUALIFIED: {
     label: 'Đủ điều kiện',
     color: 'text-green-700',
     bgColor: 'bg-green-100',
     icon: CheckCircle,
     step: 3,
+  },
+  DISQUALIFIED: {
+    label: 'Loại bỏ',
+    color: 'text-red-700',
+    bgColor: 'bg-red-100',
+    icon: AlertCircle,
+    step: 0,
   },
   CONVERTED: {
     label: 'Đã chuyển đổi',
@@ -151,6 +165,8 @@ const LEAD_SOURCE_CONFIG: Record<
 > = {
   WEBSITE: { label: 'Website', icon: Globe },
   REFERRAL: { label: 'Giới thiệu', icon: Users },
+  COLD_CALL: { label: 'Cold Call', icon: Phone },
+  EMAIL_CAMPAIGN: { label: 'Email Campaign', icon: Mail },
   EMAIL: { label: 'Email', icon: Mail },
   PHONE: { label: 'Điện thoại', icon: Phone },
   SOCIAL_MEDIA: { label: 'Mạng xã hội', icon: MessageSquare },

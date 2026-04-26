@@ -62,10 +62,20 @@ const statusStyles: Record<
     text: 'text-amber-700 dark:text-amber-400',
     dot: 'bg-amber-500',
   },
+  NURTURING: {
+    bg: 'bg-indigo-100 dark:bg-indigo-900/30',
+    text: 'text-indigo-700 dark:text-indigo-400',
+    dot: 'bg-indigo-500',
+  },
   QUALIFIED: {
     bg: 'bg-emerald-100 dark:bg-emerald-900/30',
     text: 'text-emerald-700 dark:text-emerald-400',
     dot: 'bg-emerald-500',
+  },
+  DISQUALIFIED: {
+    bg: 'bg-rose-100 dark:bg-rose-900/30',
+    text: 'text-rose-700 dark:text-rose-400',
+    dot: 'bg-rose-500',
   },
   CONVERTED: {
     bg: 'bg-purple-100 dark:bg-purple-900/30',
@@ -85,6 +95,8 @@ const sourceConfig: Record<
 > = {
   WEBSITE: { icon: Globe, label: 'Website', color: 'text-blue-500' },
   REFERRAL: { icon: Users, label: 'Referral', color: 'text-emerald-500' },
+  COLD_CALL: { icon: Phone, label: 'Cold Call', color: 'text-green-500' },
+  EMAIL_CAMPAIGN: { icon: Mail, label: 'Email Campaign', color: 'text-indigo-500' },
   EMAIL: { icon: Mail, label: 'Email', color: 'text-indigo-500' },
   PHONE: { icon: Phone, label: 'Phone', color: 'text-green-500' },
   SOCIAL_MEDIA: {

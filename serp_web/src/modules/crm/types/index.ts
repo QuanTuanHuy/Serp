@@ -40,33 +40,64 @@ export type Account = Customer;
 // Lead related types
 export type LeadSource =
   | 'WEBSITE'
+  | 'SOCIAL_MEDIA'
   | 'REFERRAL'
+  | 'COLD_CALL'
+  | 'EMAIL_CAMPAIGN'
+  // Temporary compatibility values for legacy lead UI/mock code.
   | 'EMAIL'
   | 'PHONE'
-  | 'SOCIAL_MEDIA'
   | 'TRADE_SHOW'
   | 'OTHER';
 export type LeadStatus =
   | 'NEW'
   | 'CONTACTED'
+  | 'NURTURING'
   | 'QUALIFIED'
+  | 'DISQUALIFIED'
   | 'CONVERTED'
+  // Temporary compatibility value for legacy lead UI/mock code.
   | 'LOST';
 
+export interface LeadAddress {
+  street?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+}
+
 export interface Lead extends BaseEntity {
-  firstName: string;
-  lastName: string;
+  name?: string;
   email: string;
   phone?: string;
   company?: string;
+  industry?: string;
+  companySize?: string;
+  website?: string;
   jobTitle?: string;
+  address?: LeadAddress;
+  leadSource?: LeadSource;
+  leadStatus?: LeadStatus;
+  assignedTo?: string;
+  estimatedValue?: number;
+  leadScore?: number;
+  followUpDate?: string;
+  notes?: string;
+
+  convertedOpportunityId?: string;
+  convertedAccountId?: string;
+  tenantId?: string;
+  createdBy?: string;
+  updatedBy?: string;
+
+  // Temporary compatibility fields for legacy CRM lead UI.
+  firstName: string;
+  lastName: string;
   source: LeadSource;
   status: LeadStatus;
   priority: Priority;
-  assignedTo?: string;
-  estimatedValue?: number;
   expectedCloseDate?: string;
-  notes?: string;
   tags: string[];
   customFields: Record<string, any>;
   conversionDate?: string;
@@ -219,15 +250,23 @@ export interface LeadFilters {
   search?: string;
   status?: LeadStatus[];
   source?: LeadSource[];
-  priority?: Priority[];
   assignedTo?: string[];
-  tags?: string[];
+  industries?: string[];
   createdDateFrom?: string;
   createdDateTo?: string;
-  expectedCloseDateFrom?: string;
-  expectedCloseDateTo?: string;
+  followUpDateFrom?: string;
+  followUpDateTo?: string;
   minValue?: number;
   maxValue?: number;
+  minScore?: number;
+  maxScore?: number;
+  country?: string;
+  city?: string;
+  qualifiedOnly?: boolean;
+  convertedOnly?: boolean;
+  unassignedOnly?: boolean;
+  hasEmail?: boolean;
+  hasPhone?: boolean;
 }
 
 export interface OpportunityFilters {
@@ -298,15 +337,36 @@ export type UpdateCustomerRequest = Partial<CreateCustomerRequest>;
 export type CreateAccountRequest = CreateCustomerRequest;
 export type UpdateAccountRequest = UpdateCustomerRequest;
 
-export type CreateLeadRequest = Omit<
-  Lead,
-  | 'id'
-  | 'createdAt'
-  | 'updatedAt'
-  | 'conversionDate'
-  | 'convertedToCustomerId'
-  | 'lastActivityDate'
->;
+export type CreateLeadRequest = {
+  firstName: string;
+  lastName: string;
+  company?: string;
+  industry?: string;
+  companySize?: string;
+  website?: string;
+  name: string;
+  email: string;
+  phone?: string;
+  jobTitle?: string;
+  street?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  leadSource?: LeadSource;
+  assignedTo?: string;
+  estimatedValue?: number;
+  leadScore?: number;
+  followUpDate?: string;
+  notes?: string;
+  source: LeadSource;
+  status: LeadStatus;
+  priority: Priority;
+  expectedCloseDate?: string;
+  tags: string[];
+  customFields: Record<string, any>;
+  isActive: boolean;
+};
 export type UpdateLeadRequest = Partial<CreateLeadRequest>;
 
 export type CreateOpportunityRequest = Omit<

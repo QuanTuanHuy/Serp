@@ -34,12 +34,10 @@ export const LEAD_SOURCES: {
   icon: string;
 }[] = [
   { value: 'WEBSITE', label: 'Website', icon: 'Globe' },
-  { value: 'REFERRAL', label: 'Referral', icon: 'Users' },
-  { value: 'EMAIL', label: 'Email', icon: 'Mail' },
-  { value: 'PHONE', label: 'Phone', icon: 'Phone' },
   { value: 'SOCIAL_MEDIA', label: 'Social Media', icon: 'Share' },
-  { value: 'TRADE_SHOW', label: 'Trade Show', icon: 'Calendar' },
-  { value: 'OTHER', label: 'Other', icon: 'MoreHorizontal' },
+  { value: 'REFERRAL', label: 'Referral', icon: 'Users' },
+  { value: 'COLD_CALL', label: 'Cold Call', icon: 'Phone' },
+  { value: 'EMAIL_CAMPAIGN', label: 'Email Campaign', icon: 'Mail' },
 ];
 
 export const LEAD_STATUSES: {
@@ -49,9 +47,10 @@ export const LEAD_STATUSES: {
 }[] = [
   { value: 'NEW', label: 'New', color: 'blue' },
   { value: 'CONTACTED', label: 'Contacted', color: 'yellow' },
+  { value: 'NURTURING', label: 'Nurturing', color: 'indigo' },
   { value: 'QUALIFIED', label: 'Qualified', color: 'purple' },
+  { value: 'DISQUALIFIED', label: 'Disqualified', color: 'red' },
   { value: 'CONVERTED', label: 'Converted', color: 'green' },
-  { value: 'LOST', label: 'Lost', color: 'red' },
 ];
 
 // Opportunity constants

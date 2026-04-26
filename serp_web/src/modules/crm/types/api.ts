@@ -11,6 +11,7 @@ import type {
   SalesMetrics,
   LeadSourceMetrics,
   PaginatedResponse,
+  Account as LeadConvertedAccount,
 } from './index';
 
 // Standard API Response wrapper
@@ -49,8 +50,11 @@ export type LeadsResponse = APIResponse<PaginatedResponse<Lead>>;
 export type CreateLeadResponse = APIResponse<Lead>;
 export type UpdateLeadResponse = APIResponse<Lead>;
 export type ConvertLeadResponse = APIResponse<{
-  customer: Customer;
-  opportunity?: Opportunity;
+  leadId: string;
+  accountId?: string;
+  opportunityId?: string;
+  contactId?: string;
+  message?: string;
 }>;
 export type DeleteLeadResponse = APIResponse<{ deleted: boolean }>;
 

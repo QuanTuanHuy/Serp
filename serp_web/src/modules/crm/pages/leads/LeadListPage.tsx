@@ -35,7 +35,9 @@ import type { Lead, LeadFilters, LeadStatus, LeadSource } from '../../types';
 const LEAD_STATUSES: { status: LeadStatus; label: string; color: string }[] = [
   { status: 'NEW', label: 'New', color: 'bg-blue-500' },
   { status: 'CONTACTED', label: 'Contacted', color: 'bg-yellow-500' },
+  { status: 'NURTURING', label: 'Nurturing', color: 'bg-indigo-500' },
   { status: 'QUALIFIED', label: 'Qualified', color: 'bg-green-500' },
+  { status: 'DISQUALIFIED', label: 'Disqualified', color: 'bg-red-500' },
   { status: 'CONVERTED', label: 'Converted', color: 'bg-purple-500' },
   { status: 'LOST', label: 'Lost', color: 'bg-red-500' },
 ];
@@ -74,7 +76,7 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
       result = result.filter(
         (l) =>
           `${l.firstName} ${l.lastName}`.toLowerCase().includes(query) ||
-          l.email.toLowerCase().includes(query) ||
+          l.email?.toLowerCase().includes(query) ||
           l.company?.toLowerCase().includes(query)
       );
     }
@@ -143,7 +145,9 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
     const grouped: Record<LeadStatus, Lead[]> = {
       NEW: [],
       CONTACTED: [],
+      NURTURING: [],
       QUALIFIED: [],
+      DISQUALIFIED: [],
       CONVERTED: [],
       LOST: [],
     };
