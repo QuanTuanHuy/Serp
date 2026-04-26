@@ -6,13 +6,25 @@ Description: Part of Serp Project - Contact Form Component for CRM
 'use client';
 
 import { useState } from 'react';
-import { Button, Input, Label, Textarea, Switch } from '@/shared/components/ui';
+import {
+  Button,
+  Input,
+  Label,
+  Textarea,
+  Switch,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/components/ui';
 import {
   User,
   Mail,
   Phone,
   Briefcase,
   Building2,
+  MapPin,
   Link,
   FileText,
   Loader2,
@@ -20,14 +32,20 @@ import {
 import { cn } from '@/shared/utils';
 
 export interface ContactFormData {
-  firstName: string;
-  lastName: string;
+  name: string;
   email: string;
   phone?: string;
-  jobTitle?: string;
-  department?: string;
+  jobPosition?: string;
   isPrimary?: boolean;
+  street?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
+  contactType?: 'PRIMARY' | 'SECONDARY' | 'BILLING' | 'TECHNICAL';
+  activeStatus?: 'ACTIVE' | 'INACTIVE';
   linkedInUrl?: string;
+  twitterHandle?: string;
   notes?: string;
 }
 
@@ -49,14 +67,20 @@ export const ContactForm: React.FC<ContactFormProps> = ({
   className,
 }) => {
   const [formData, setFormData] = useState<ContactFormData>({
-    firstName: initialData.firstName || '',
-    lastName: initialData.lastName || '',
+    name: initialData.name || '',
     email: initialData.email || '',
     phone: initialData.phone || '',
-    jobTitle: initialData.jobTitle || '',
-    department: initialData.department || '',
+    jobPosition: initialData.jobPosition || '',
     isPrimary: initialData.isPrimary || false,
+    street: initialData.street || '',
+    city: initialData.city || '',
+    state: initialData.state || '',
+    zipCode: initialData.zipCode || '',
+    country: initialData.country || '',
+    contactType: initialData.contactType || 'SECONDARY',
+    activeStatus: initialData.activeStatus || 'ACTIVE',
     linkedInUrl: initialData.linkedInUrl || '',
+    twitterHandle: initialData.twitterHandle || '',
     notes: initialData.notes || '',
   });
 
@@ -67,12 +91,8 @@ export const ContactForm: React.FC<ContactFormProps> = ({
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof ContactFormData, string>> = {};
 
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = 'Please enter first name';
-    }
-
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Please enter last name';
+    if (!formData.name.trim()) {
+      newErrors.name = 'Please enter contact name';
     }
 
     if (!formData.email.trim()) {
@@ -111,41 +131,20 @@ export const ContactForm: React.FC<ContactFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className={cn('space-y-4', className)}>
-      {/* Name Fields */}
-      <div className='grid grid-cols-2 gap-4'>
-        <div className='space-y-2'>
-          <Label htmlFor='firstName' className='flex items-center gap-2'>
-            <User className='h-4 w-4 text-muted-foreground' />
-            First Name <span className='text-red-500'>*</span>
-          </Label>
-          <Input
-            id='firstName'
-            value={formData.firstName}
-            onChange={(e) => handleChange('firstName', e.target.value)}
-            placeholder='Nhập tên'
-            className={cn(errors.firstName && 'border-red-500')}
-          />
-          {errors.firstName && (
-            <p className='text-xs text-red-500'>{errors.firstName}</p>
-          )}
-        </div>
-
-        <div className='space-y-2'>
-          <Label htmlFor='lastName' className='flex items-center gap-2'>
-            <User className='h-4 w-4 text-muted-foreground' />
-            Họ <span className='text-red-500'>*</span>
-          </Label>
-          <Input
-            id='lastName'
-            value={formData.lastName}
-            onChange={(e) => handleChange('lastName', e.target.value)}
-            placeholder='Nhập họ'
-            className={cn(errors.lastName && 'border-red-500')}
-          />
-          {errors.lastName && (
-            <p className='text-xs text-red-500'>{errors.lastName}</p>
-          )}
-        </div>
+      {/* Name */}
+      <div className='space-y-2'>
+        <Label htmlFor='name' className='flex items-center gap-2'>
+          <User className='h-4 w-4 text-muted-foreground' />
+          Contact Name <span className='text-red-500'>*</span>
+        </Label>
+        <Input
+          id='name'
+          value={formData.name}
+          onChange={(e) => handleChange('name', e.target.value)}
+          placeholder='Enter full contact name'
+          className={cn(errors.name && 'border-red-500')}
+        />
+        {errors.name && <p className='text-xs text-red-500'>{errors.name}</p>}
       </div>
 
       {/* Email */}
@@ -169,7 +168,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
       <div className='space-y-2'>
         <Label htmlFor='phone' className='flex items-center gap-2'>
           <Phone className='h-4 w-4 text-muted-foreground' />
-          Số điện thoại
+          Phone Number
         </Label>
         <Input
           id='phone'
@@ -180,33 +179,108 @@ export const ContactForm: React.FC<ContactFormProps> = ({
         />
       </div>
 
-      {/* Job Title & Department */}
+      {/* Job Position & Type */}
       <div className='grid grid-cols-2 gap-4'>
         <div className='space-y-2'>
-          <Label htmlFor='jobTitle' className='flex items-center gap-2'>
+          <Label htmlFor='jobPosition' className='flex items-center gap-2'>
             <Briefcase className='h-4 w-4 text-muted-foreground' />
-            Chức vụ
+            Job Position
           </Label>
           <Input
-            id='jobTitle'
-            value={formData.jobTitle}
-            onChange={(e) => handleChange('jobTitle', e.target.value)}
-            placeholder='VD: Giám đốc'
+            id='jobPosition'
+            value={formData.jobPosition}
+            onChange={(e) => handleChange('jobPosition', e.target.value)}
+            placeholder='e.g. Director'
           />
         </div>
 
         <div className='space-y-2'>
-          <Label htmlFor='department' className='flex items-center gap-2'>
+          <Label htmlFor='contactType' className='flex items-center gap-2'>
             <Building2 className='h-4 w-4 text-muted-foreground' />
-            Phòng ban
+            Contact Type
           </Label>
-          <Input
-            id='department'
-            value={formData.department}
-            onChange={(e) => handleChange('department', e.target.value)}
-            placeholder='VD: Kinh doanh'
-          />
+          <Select
+            value={formData.contactType}
+            onValueChange={(value) => handleChange('contactType', value)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='PRIMARY'>Primary</SelectItem>
+              <SelectItem value='SECONDARY'>Secondary</SelectItem>
+              <SelectItem value='BILLING'>Billing</SelectItem>
+              <SelectItem value='TECHNICAL'>Technical</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
+      </div>
+
+      {/* Address */}
+      <div className='space-y-4'>
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+          <div className='space-y-2 md:col-span-2'>
+            <Label htmlFor='street' className='flex items-center gap-2'>
+              <MapPin className='h-4 w-4 text-muted-foreground' />
+              Street
+            </Label>
+            <Input
+              id='street'
+              value={formData.street}
+              onChange={(e) => handleChange('street', e.target.value)}
+              placeholder='Street address'
+            />
+          </div>
+          <div className='space-y-2'>
+            <Label htmlFor='city'>City</Label>
+            <Input
+              id='city'
+              value={formData.city}
+              onChange={(e) => handleChange('city', e.target.value)}
+            />
+          </div>
+          <div className='space-y-2'>
+            <Label htmlFor='state'>State</Label>
+            <Input
+              id='state'
+              value={formData.state}
+              onChange={(e) => handleChange('state', e.target.value)}
+            />
+          </div>
+          <div className='space-y-2'>
+            <Label htmlFor='zipCode'>Zip Code</Label>
+            <Input
+              id='zipCode'
+              value={formData.zipCode}
+              onChange={(e) => handleChange('zipCode', e.target.value)}
+            />
+          </div>
+          <div className='space-y-2'>
+            <Label htmlFor='country'>Country</Label>
+            <Input
+              id='country'
+              value={formData.country}
+              onChange={(e) => handleChange('country', e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Status */}
+      <div className='space-y-2'>
+        <Label>Active Status</Label>
+        <Select
+          value={formData.activeStatus}
+          onValueChange={(value) => handleChange('activeStatus', value)}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value='ACTIVE'>Active</SelectItem>
+            <SelectItem value='INACTIVE'>Inactive</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* LinkedIn URL */}
@@ -226,6 +300,19 @@ export const ContactForm: React.FC<ContactFormProps> = ({
         {errors.linkedInUrl && (
           <p className='text-xs text-red-500'>{errors.linkedInUrl}</p>
         )}
+      </div>
+
+      <div className='space-y-2'>
+        <Label htmlFor='twitterHandle' className='flex items-center gap-2'>
+          <Link className='h-4 w-4 text-muted-foreground' />
+          Twitter Handle
+        </Label>
+        <Input
+          id='twitterHandle'
+          value={formData.twitterHandle}
+          onChange={(e) => handleChange('twitterHandle', e.target.value)}
+          placeholder='@username'
+        />
       </div>
 
       {/* Notes */}
@@ -250,7 +337,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
             Primary Contact
           </Label>
           <p className='text-xs text-muted-foreground'>
-            Set as primary contact for this customer
+            Set as primary contact for this account
           </p>
         </div>
         <Switch

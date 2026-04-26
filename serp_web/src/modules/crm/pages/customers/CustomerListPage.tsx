@@ -4,6 +4,7 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { useDebounce } from '@/shared/hooks/use-debounce';
 import { Button, Card, CardContent, Input } from '@/shared/components/ui';
 import {
   Search,
@@ -62,6 +63,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const debouncedSearchQuery = useDebounce(searchQuery, 400);
 
   const pageSize = 12;
   const [createAccount] = useCreateAccountMutation();
@@ -69,7 +71,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
   const [deleteAccount] = useDeleteAccountMutation();
   const { data, isLoading, error } = useGetAccountsQuery({
     filters: {
-      search: searchQuery || undefined,
+      search: debouncedSearchQuery || undefined,
       status: statusFilter ? [statusFilter] : undefined,
       type: typeFilter ? [typeFilter] : undefined,
     },

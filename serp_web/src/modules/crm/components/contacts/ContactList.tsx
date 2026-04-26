@@ -220,12 +220,10 @@ export const ContactList: React.FC<ContactListProps> = ({
           {selectedContact && (
             <ContactForm
               initialData={{
-                firstName: selectedContact.firstName,
-                lastName: selectedContact.lastName,
+                name: `${selectedContact.firstName} ${selectedContact.lastName}`.trim(),
                 email: selectedContact.email,
                 phone: selectedContact.phone,
-                jobTitle: selectedContact.jobTitle,
-                department: selectedContact.department,
+                jobPosition: selectedContact.jobTitle,
                 isPrimary: selectedContact.isPrimary,
                 linkedInUrl: selectedContact.linkedInUrl,
                 notes: selectedContact.notes,
