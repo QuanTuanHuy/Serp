@@ -89,7 +89,7 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
     const newErrors: Partial<Record<keyof QuickCustomerFormData, string>> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Please enter customer name';
+      newErrors.name = 'Please enter account name';
     }
 
     if (!formData.email.trim()) {
@@ -136,9 +136,9 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='!max-w-3xl max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
-          <DialogTitle>Add New Customer</DialogTitle>
+          <DialogTitle>Add New Account</DialogTitle>
           <DialogDescription>
-            Enter basic information to create a new customer
+            Enter basic information to create a new account
           </DialogDescription>
         </DialogHeader>
 
@@ -176,13 +176,13 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
           <div className='space-y-2'>
             <Label htmlFor='name' className='flex items-center gap-2'>
               <User className='h-4 w-4 text-muted-foreground' />
-              Customer Name <span className='text-red-500'>*</span>
+              Account Name <span className='text-red-500'>*</span>
             </Label>
             <Input
               id='name'
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
-              placeholder='Enter customer name'
+              placeholder='Enter account name'
               className={cn(errors.name && 'border-red-500')}
             />
             {errors.name && (

@@ -85,7 +85,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
     },
   });
 
-  const customers = data?.data?.data || [];
+  const accounts = data?.data?.data || [];
   const total = data?.data?.pagination?.total || 0;
   const totalPages = data?.data?.pagination?.totalPages || 1;
 
@@ -93,14 +93,14 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
   const stats = useMemo(() => {
     return {
       total,
-      active: customers.filter((c) => c.status === 'ACTIVE').length,
-      companies: customers.filter((c) => c.customerType === 'CUSTOMER').length,
-      totalValue: customers.reduce(
-        (sum, c) => sum + (c.totalValue || 0),
-        0
-      ),
-    };
-  }, [customers, total]);
+        active: accounts.filter((c) => c.status === 'ACTIVE').length,
+        companies: accounts.filter((c) => c.customerType === 'CUSTOMER').length,
+        totalValue: accounts.reduce(
+          (sum, c) => sum + (c.totalValue || 0),
+          0
+        ),
+      };
+  }, [accounts, total]);
 
   // Handle actions
   const handleCreateCustomer = async (
@@ -229,18 +229,18 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
       {/* Page Header */}
       <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
         <div>
-          <h1 className='text-2xl font-bold tracking-tight'>Customers</h1>
+          <h1 className='text-2xl font-bold tracking-tight'>Accounts</h1>
           <p className='text-muted-foreground'>
-            Manage your customer relationships
+            Manage your account relationships
           </p>
         </div>
         <div className='flex items-center gap-2'>
           <ExportDropdown
-            data={customers}
+            data={accounts}
             columns={CUSTOMER_EXPORT_COLUMNS}
-            filename='customers'
+            filename='accounts'
             onExportComplete={(format, count) => {
-              console.log(`Exported ${count} customers as ${format}`);
+              console.log(`Exported ${count} accounts as ${format}`);
             }}
           />
           <Button onClick={() => setShowQuickAdd(true)} className='gap-2'>
@@ -253,7 +253,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
       {/* Quick Stats */}
       <div className='grid grid-cols-2 sm:grid-cols-4 gap-4'>
         <StatsCard
-          title='Total Customers'
+          title='Total Accounts'
           value={stats.total}
           icon={Users}
           variant='primary'
@@ -284,7 +284,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
         <div className='relative flex-1'>
           <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
           <Input
-            placeholder='Search customers by name, email, or company...'
+            placeholder='Search accounts by name, email, or company...'
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -424,7 +424,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
         <Card className='border-destructive/50 bg-destructive/5'>
           <CardContent className='p-4'>
             <p className='text-destructive'>
-              Error loading customers. Please try again.
+              Error loading accounts. Please try again.
             </p>
           </CardContent>
         </Card>
@@ -460,8 +460,8 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
         </div>
       )}
 
-      {/* Customer Grid/List */}
-      {!isLoading && customers.length > 0 && (
+      {/* Account Grid/List */}
+      {!isLoading && accounts.length > 0 && (
         <div
           className={cn(
             'gap-4',
@@ -470,7 +470,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
               : 'flex flex-col'
           )}
         >
-          {customers.map((customer) => (
+          {accounts.map((customer) => (
              <AccountCard
               key={customer.id}
               customer={customer}
@@ -486,17 +486,17 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
       )}
 
       {/* Empty State */}
-      {!isLoading && customers.length === 0 && !error && (
+      {!isLoading && accounts.length === 0 && !error && (
         <Card>
           <CardContent className='py-16 text-center'>
             <div className='mx-auto w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4'>
               <Users className='w-10 h-10 text-muted-foreground' />
             </div>
-            <h3 className='text-lg font-semibold mb-2'>No customers found</h3>
+            <h3 className='text-lg font-semibold mb-2'>No accounts found</h3>
             <p className='text-muted-foreground mb-6 max-w-sm mx-auto'>
               {hasActiveFilters
                 ? 'Try adjusting your filters to see more results.'
-                : 'Get started by adding your first customer.'}
+                : 'Get started by adding your first account.'}
             </p>
             {hasActiveFilters ? (
               <Button variant='outline' onClick={clearFilters}>
@@ -517,7 +517,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
         <div className='flex items-center justify-between pt-4'>
           <p className='text-sm text-muted-foreground'>
             Showing {(currentPage - 1) * pageSize + 1} to{' '}
-            {Math.min(currentPage * pageSize, total)} of {total} customers
+            {Math.min(currentPage * pageSize, total)} of {total} accounts
           </p>
           <div className='flex items-center gap-2'>
             <Button
