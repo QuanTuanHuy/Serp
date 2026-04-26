@@ -3,6 +3,8 @@ package serp.project.logistics2.orchestrator;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -246,6 +248,18 @@ public class RoutingOrchestrator {
                 }
             }
         });
+    }
+
+    public RouteStopEntity getNextRouteStop(String vehicleShipperId) {
+        Pageable pageable = PageRequest.of(0, 1);
+        List<RouteStopEntity> routeStops = routeStopRepository.findNextRouteStop(vehicleShipperId, pageable);
+        if (routeStops.isEmpty()) {
+            log.info("[RoutingOrchestrator] Không tìm thấy route stop nào đang chờ để giao hàng cho Vehicle Shipper ID: {}", vehicleShipperId);
+            return null;
+        }
+        var routeStop = routeStops.getFirst();
+        routeStop.setDeliverySlip(deliverySlipService.getSlip(routeStop.getDeliverySlipId(), routeStop.getTenantId()));
+        return routeStop;
     }
 
 }
