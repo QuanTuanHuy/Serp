@@ -75,7 +75,7 @@ export const QuickAddLeadDialog: React.FC<QuickAddLeadDialogProps> = ({
       <DialogContent className='w-[95vw] max-w-2xl'>
         <DialogHeader>
           <DialogTitle>Add New Lead</DialogTitle>
-          <DialogDescription>Enter core lead information.</DialogDescription>
+          <DialogDescription>Enter the core lead information.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className='space-y-4'>
@@ -118,7 +118,7 @@ export const QuickAddLeadDialog: React.FC<QuickAddLeadDialogProps> = ({
               <Input id='quick-estimatedValue' type='number' value={formData.estimatedValue ?? ''} onChange={(e) => setFormData((prev) => ({ ...prev, estimatedValue: e.target.value ? Number(e.target.value) : undefined }))} />
             </div>
             <div className='space-y-2 md:col-span-2'>
-              <Label htmlFor='quick-followUpDate'>Follow Up Date</Label>
+              <Label htmlFor='quick-followUpDate'>Follow-up Date</Label>
               <Input id='quick-followUpDate' type='date' value={formData.followUpDate} onChange={(e) => setFormData((prev) => ({ ...prev, followUpDate: e.target.value }))} />
             </div>
             <div className='space-y-2 md:col-span-2'>

@@ -131,12 +131,12 @@ export const LeadForm: React.FC<LeadFormProps> = ({
     e.preventDefault();
 
     if (!formData.name.trim()) {
-      setError('Contact name is required');
+      setError('Contact name is required.');
       return;
     }
 
     if (!formData.email.trim()) {
-      setError('Email is required');
+      setError('Email is required.');
       return;
     }
 
@@ -256,7 +256,7 @@ export const LeadForm: React.FC<LeadFormProps> = ({
               <Input id='assignedTo' value={formData.assignedTo} onChange={(e) => updateField('assignedTo', e.target.value)} disabled={isLoading} />
             </div>
             <div className='space-y-2'>
-              <Label htmlFor='followUpDate'>Follow Up Date</Label>
+              <Label htmlFor='followUpDate'>Follow-up Date</Label>
               <Input id='followUpDate' type='date' value={formData.followUpDate} onChange={(e) => updateField('followUpDate', e.target.value)} disabled={isLoading} />
             </div>
             <div className='space-y-2'>

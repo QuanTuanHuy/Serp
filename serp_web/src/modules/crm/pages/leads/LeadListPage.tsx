@@ -120,8 +120,8 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
     };
 
     leads.forEach((lead) => {
-      const status = lead.leadStatus || lead.status;
-      if (grouped[status]) {
+      const status = lead.leadStatus;
+      if (status && grouped[status]) {
         grouped[status].push(lead);
       }
     });
@@ -451,7 +451,7 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
               onEdit={() => router.push(`/crm/leads/${lead.id}/edit`)}
               onDelete={() => handleDeleteLead(lead.id)}
               onConvert={
-                (lead.leadStatus || lead.status) === 'QUALIFIED'
+                lead.leadStatus === 'QUALIFIED'
                   ? () => handleConvertLead(lead.id)
                   : undefined
               }

@@ -138,6 +138,10 @@ const getDisplayName = (lead: Lead): string => {
   return lead.name?.trim() || fullName || 'Unnamed Lead';
 };
 
+const getLegacyStatus = (lead: Lead): LeadStatus => lead.status || 'NEW';
+
+const getLegacySource = (lead: Lead): LeadSource => lead.source || 'WEBSITE';
+
 const getInitials = (firstName: string, lastName: string): string => {
   const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   return initials || 'L';
@@ -165,15 +169,15 @@ const getLeadScore = (lead: Lead): number => {
   if (lead.phone) score += 15;
   if (lead.company) score += 20;
   if (lead.estimatedValue && lead.estimatedValue > 0) score += 20;
-  if (lead.leadStatus === 'QUALIFIED' || lead.status === 'QUALIFIED') score += 25;
+  const effectiveStatus = lead.leadStatus || getLegacyStatus(lead);
+
+  if (effectiveStatus === 'QUALIFIED') score += 25;
   else if (
-    lead.leadStatus === 'CONTACTED' ||
-    lead.leadStatus === 'NURTURING' ||
-    lead.status === 'CONTACTED' ||
-    lead.status === 'NURTURING'
+    effectiveStatus === 'CONTACTED' ||
+    effectiveStatus === 'NURTURING'
   ) {
     score += 15;
-  } else if (lead.leadStatus === 'NEW' || lead.status === 'NEW') {
+  } else if (effectiveStatus === 'NEW') {
     score += 5;
   }
 
@@ -237,8 +241,8 @@ export const LeadCard: React.FC<LeadCardProps> = ({
   className,
   variant = 'default',
 }) => {
-  const currentStatus = lead.leadStatus || lead.status || 'NEW';
-  const currentSource = lead.leadSource || lead.source || 'WEBSITE';
+  const currentStatus = lead.leadStatus || getLegacyStatus(lead);
+  const currentSource = lead.leadSource || getLegacySource(lead);
   const status = statusStyles[currentStatus] || statusStyles.NEW;
   const source = sourceConfig[currentSource] || sourceConfig.OTHER;
   const priority = priorityStyles[lead.priority] || priorityStyles.MEDIUM;
