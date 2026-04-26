@@ -32,6 +32,7 @@ public class TeamDtoMapper {
         return TeamEntity.builder()
                 .name(request.getName())
                 .description(request.getDescription())
+                .managerUserId(request.getManagerUserId())
                 .notes(request.getNotes())
                 .build();
     }
@@ -44,7 +45,8 @@ public class TeamDtoMapper {
         return TeamEntity.builder()
                 .name(request.getName())
                 .description(request.getDescription())
-                .leaderId(request.getLeaderId())
+                .managerUserId(request.getManagerUserId())
+                .status(request.getStatus())
                 .notes(request.getNotes())
                 .build();
     }
@@ -65,8 +67,9 @@ public class TeamDtoMapper {
                 .id(entity.getId())
                 .name(entity.getName())
                 .description(entity.getDescription())
-                .leaderId(entity.getLeaderId())
+                .managerUserId(entity.getManagerUserId())
                 .notes(entity.getNotes())
+                .status(entity.getStatus())
                 .members(memberResponses)
                 .tenantId(entity.getTenantId())
                 .createdAt(entity.getCreatedAt())

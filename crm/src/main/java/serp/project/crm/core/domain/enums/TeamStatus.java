@@ -8,13 +8,13 @@ package serp.project.crm.core.domain.enums;
 import lombok.Getter;
 
 @Getter
-public enum TeamMemberStatus {
+public enum TeamStatus {
     ACTIVE("Active"),
     INACTIVE("Inactive");
 
     private final String status;
 
-    TeamMemberStatus(String status) {
+    TeamStatus(String status) {
         this.status = status;
     }
 }

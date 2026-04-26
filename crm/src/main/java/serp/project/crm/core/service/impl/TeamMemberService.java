@@ -36,7 +36,13 @@ public class TeamMemberService implements ITeamMemberService {
 
     private final ITeamService teamService;
 
-    private static final List<String> ALLOWED_ROLES = List.of("LEADER", "MEMBER", "VIEWER");
+    private static final List<String> ALLOWED_ROLES = List.of("MANAGER", "SALES_REP", "VIEWER");
+
+    private void validateTeamRole(String role) {
+        if (role == null || !ALLOWED_ROLES.contains(role)) {
+            throw new AppException(ErrorMessage.INVALID_TEAM_MEMBER_ROLE);
+        }
+    }
 
     @Override
     @Transactional
@@ -48,6 +54,8 @@ public class TeamMemberService implements ITeamMemberService {
         teamService.getTeamById(teamMember.getTeamId(), tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.TEAM_NOT_FOUND));
 
+        validateTeamRole(teamMember.getRole());
+
         teamMemberPort.findByUserId(teamMember.getUserId(), tenantId)
                 .ifPresent(existing -> {
                     throw new AppException(ErrorMessage.MEMBER_ALREADY_IN_TEAM);
@@ -55,9 +63,6 @@ public class TeamMemberService implements ITeamMemberService {
 
         teamMember.setTenantId(tenantId);
         teamMember.setDefaults();
-        if (teamMember.getRole() == null) {
-            teamMember.setRole("MEMBER");
-        }
 
         TeamMemberEntity saved = teamMemberPort.save(teamMember);
 
@@ -71,6 +76,10 @@ public class TeamMemberService implements ITeamMemberService {
     public TeamMemberEntity updateTeamMember(Long id, TeamMemberEntity updates, Long tenantId) {
         TeamMemberEntity existing = teamMemberPort.findById(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND));
+
+        if (updates.getRole() != null) {
+            validateTeamRole(updates.getRole());
+        }
 
         existing.updateFrom(updates);
 
@@ -107,7 +116,7 @@ public class TeamMemberService implements ITeamMemberService {
             PageRequest pageRequest) {
         pageRequest.validate();
         if (!ALLOWED_ROLES.contains(role)) {
-            throw new AppException("Invalid role. Must be LEADER, MEMBER, or VIEWER");
+            throw new AppException(ErrorMessage.INVALID_TEAM_MEMBER_ROLE);
         }
 
         return teamMemberPort.findByRole(role, tenantId, pageRequest);
@@ -129,11 +138,16 @@ public class TeamMemberService implements ITeamMemberService {
 
     @Override
     @Transactional
-    public void removeTeamMember(Long id, Long tenantId) {
+    public void removeTeamMember(Long teamId, Long id, Long tenantId) {
         TeamMemberEntity teamMember = teamMemberPort.findById(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND));
 
-        teamMemberPort.deleteById(id, tenantId);
+        if (!teamId.equals(teamMember.getTeamId())) {
+            throw new AppException(ErrorMessage.TEAM_MEMBER_DOES_NOT_BELONG_TO_TEAM);
+        }
+
+        teamMember.inactivate(tenantId);
+        teamMemberPort.save(teamMember);
 
         publishTeamMemberRemovedEvent(teamMember);
 

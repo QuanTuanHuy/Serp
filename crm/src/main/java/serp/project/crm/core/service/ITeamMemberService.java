@@ -27,7 +27,7 @@ public interface ITeamMemberService {
             PageRequest pageRequest);
     Optional<TeamMemberEntity> getTeamMemberByTeamAndUser(Long teamId, Long userId, Long tenantId);
 
-    void removeTeamMember(Long id, Long tenantId);
+    void removeTeamMember(Long teamId, Long id, Long tenantId);
 
     List<UserProfileResponse> getAndValidateUserProfiles(List<Long> userIds, Long tenantId);
 }

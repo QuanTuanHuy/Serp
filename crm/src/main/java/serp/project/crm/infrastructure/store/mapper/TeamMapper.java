@@ -11,6 +11,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Component;
 import serp.project.crm.core.domain.entity.TeamEntity;
+import serp.project.crm.core.domain.enums.TeamStatus;
 import serp.project.crm.infrastructure.store.model.TeamModel;
 
 @Component
@@ -27,8 +28,9 @@ public class TeamMapper extends BaseMapper {
                 .tenantId(model.getTenantId())
                 .name(model.getName())
                 .description(model.getDescription())
-                .leaderId(model.getLeaderId())
+                .managerUserId(model.getLeaderId())
                 .notes(model.getNotes())
+                .status(TeamStatus.ACTIVE)
                 .createdAt(toTimestamp(model.getCreatedAt()))
                 .updatedAt(toTimestamp(model.getUpdatedAt()))
                 .createdBy(model.getCreatedBy())
@@ -46,7 +48,7 @@ public class TeamMapper extends BaseMapper {
                 .tenantId(entity.getTenantId())
                 .name(entity.getName())
                 .description(entity.getDescription())
-                .leaderId(entity.getLeaderId())
+                .leaderId(entity.getManagerUserId())
                 .notes(entity.getNotes())
                 .createdAt(toLocalDateTime(entity.getCreatedAt()))
                 .updatedAt(toLocalDateTime(entity.getUpdatedAt()))

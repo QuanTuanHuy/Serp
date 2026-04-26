@@ -47,9 +47,9 @@ public class TeamAdapter implements ITeamPort {
     }
 
     @Override
-    public Pair<List<TeamEntity>, Long> findByLeaderId(Long leaderId, Long tenantId, PageRequest pageRequest) {
+    public Pair<List<TeamEntity>, Long> findByManagerUserId(Long managerUserId, Long tenantId, PageRequest pageRequest) {
         var pageable = teamMapper.toPageable(pageRequest);
-        var page = teamRepository.findByTenantIdAndLeaderId(tenantId, leaderId, pageable)
+        var page = teamRepository.findByTenantIdAndLeaderId(tenantId, managerUserId, pageable)
                 .map(teamMapper::toEntity);
         return teamMapper.pageToPair(page);
     }

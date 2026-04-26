@@ -48,9 +48,9 @@ public class TeamUseCase {
             }
 
             var leaderProfile = teamMemberService.getAndValidateUserProfiles(
-                    List.of(request.getLeaderId()), tenantId).stream().findFirst().orElse(null);
+                    List.of(request.getManagerUserId()), tenantId).stream().findFirst().orElse(null);
             if (leaderProfile == null) {
-                return null; // throw exception in getAndValidateUserProfiles
+                throw new AppException(ErrorMessage.TEAM_MANAGER_NOT_FOUND);
             }
             teamMemberService.getTeamMemberByUserId(leaderProfile.getId(), tenantId)
                     .ifPresent(existing -> {
@@ -63,7 +63,7 @@ public class TeamUseCase {
             TeamMemberEntity leaderMember = memberDtoMapper.toEntity(leaderProfile, createdTeam.getId());
             leaderMember = teamMemberService.addTeamMember(leaderMember, tenantId);
 
-            createdTeam.setLeaderId(leaderMember.getId());
+            createdTeam.setManagerUserId(leaderProfile.getId());
             createdTeam = teamService.updateTeam(createdTeam.getId(), createdTeam, tenantId);
             TeamResponse response = teamDtoMapper.toResponse(createdTeam);
 

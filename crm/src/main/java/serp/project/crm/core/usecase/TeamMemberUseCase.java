@@ -40,7 +40,7 @@ public class TeamMemberUseCase {
             var userProfile = teamMemberService.getAndValidateUserProfiles(List.of(request.getUserId()), tenantId)
                     .stream().findFirst().orElse(null);
             if (userProfile == null) {
-                return null; // throw exception in getAndValidateUserProfiles
+                throw new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND);
             }
             if (teamMemberService.getTeamMemberByUserId(userProfile.getId(), tenantId).isPresent()) {
                 throw new AppException(ErrorMessage.MEMBER_ALREADY_IN_TEAM);
@@ -63,8 +63,14 @@ public class TeamMemberUseCase {
     }
 
     @Transactional
-    public GeneralResponse<?> updateTeamMember(Long id, UpdateTeamMemberRequest request, Long tenantId) {
+    public GeneralResponse<?> updateTeamMember(Long teamId, Long id, UpdateTeamMemberRequest request, Long tenantId) {
         try {
+            TeamMemberEntity existing = teamMemberService.getTeamMemberById(id, tenantId)
+                    .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND));
+            if (!teamId.equals(existing.getTeamId())) {
+                throw new AppException(ErrorMessage.TEAM_MEMBER_DOES_NOT_BELONG_TO_TEAM);
+            }
+
             TeamMemberEntity updates = teamMemberDtoMapper.toEntity(request);
             TeamMemberEntity updatedMember = teamMemberService.updateTeamMember(id, updates, tenantId);
             TeamMemberResponse response = teamMemberDtoMapper.toResponse(updatedMember);
@@ -120,9 +126,9 @@ public class TeamMemberUseCase {
     }
 
     @Transactional
-    public GeneralResponse<?> removeTeamMember(Long id, Long tenantId) {
+    public GeneralResponse<?> removeTeamMember(Long teamId, Long id, Long tenantId) {
         try {
-            teamMemberService.removeTeamMember(id, tenantId);
+            teamMemberService.removeTeamMember(teamId, id, tenantId);
 
             log.info("[TeamMemberUseCase] Team member removed successfully: {}", id);
             return responseUtils.status("Team member removed successfully");

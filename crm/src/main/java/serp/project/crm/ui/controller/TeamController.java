@@ -18,6 +18,7 @@ import serp.project.crm.core.domain.dto.request.UpdateTeamRequest;
 import serp.project.crm.core.usecase.TeamMemberUseCase;
 import serp.project.crm.core.usecase.TeamUseCase;
 import serp.project.crm.kernel.utils.AuthUtils;
+import serp.project.crm.kernel.utils.ResponseUtils;
 
 @RestController
 @RequestMapping("/api/v1/teams")
@@ -28,13 +29,19 @@ public class TeamController {
     private final TeamUseCase teamUseCase;
     private final TeamMemberUseCase teamMemberUseCase;
     private final AuthUtils authUtils;
+    private final ResponseUtils responseUtils;
+
+    private ResponseEntity<?> unauthorizedResponse() {
+        var response = responseUtils.unauthorized("Authentication context is required");
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
 
     @PostMapping
     public ResponseEntity<?> createTeam(@Valid @RequestBody CreateTeamRequest request) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
         Long userId = authUtils.getCurrentUserId().orElse(null);
         if (tenantId == null || userId == null) {
-            return null;
+            return unauthorizedResponse();
         }
 
         log.info("[TeamController] POST /api/v1/teams - Creating team for tenant: {}", tenantId);
@@ -48,7 +55,7 @@ public class TeamController {
             @Valid @RequestBody UpdateTeamRequest request) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
         if (tenantId == null) {
-            return null;
+            return unauthorizedResponse();
         }
 
         log.info("PUT /api/v1/teams/{} - Updating team for tenant: {}", id, tenantId);
@@ -60,7 +67,7 @@ public class TeamController {
     public ResponseEntity<?> getTeamById(@PathVariable Long id) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
         if (tenantId == null) {
-            return null;
+            return unauthorizedResponse();
         }
 
         log.info("GET /api/v1/teams/{} - Fetching team for tenant: {}", id, tenantId);
@@ -75,7 +82,7 @@ public class TeamController {
             @RequestParam(defaultValue = "20") Integer size) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
         if (tenantId == null) {
-            return null;
+            return unauthorizedResponse();
         }
 
         var pageRequest = PageRequest.builder()
@@ -93,6 +100,9 @@ public class TeamController {
             @PathVariable Long id,
             @Valid @RequestBody CreateTeamMemberRequest request) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        if (tenantId == null) {
+            return unauthorizedResponse();
+        }
 
         request.setTeamId(id);
 
@@ -107,9 +117,12 @@ public class TeamController {
             @PathVariable Long memberId,
             @Valid @RequestBody UpdateTeamMemberRequest request) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        if (tenantId == null) {
+            return unauthorizedResponse();
+        }
 
         log.info("PUT /api/v1/teams/{}/members/{} - Updating team member for tenant: {}", id, memberId, tenantId);
-        var response = teamMemberUseCase.updateTeamMember(memberId, request, tenantId);
+        var response = teamMemberUseCase.updateTeamMember(id, memberId, request, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
@@ -118,9 +131,12 @@ public class TeamController {
             @PathVariable Long id,
             @PathVariable Long memberId) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        if (tenantId == null) {
+            return unauthorizedResponse();
+        }
 
         log.info("DELETE /api/v1/teams/{}/members/{} - Removing team member for tenant: {}", id, memberId, tenantId);
-        var response = teamMemberUseCase.removeTeamMember(memberId, tenantId);
+        var response = teamMemberUseCase.removeTeamMember(id, memberId, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
@@ -130,7 +146,7 @@ public class TeamController {
             @RequestParam(defaultValue = "20") Integer size) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
         if (tenantId == null) {
-            return null;
+            return unauthorizedResponse();
         }
 
         log.info("GET /api/v1/teams - Fetching all teams for tenant: {}, page: {}, size: {}", tenantId, page,
@@ -149,7 +165,7 @@ public class TeamController {
     public ResponseEntity<?> deleteTeam(@PathVariable Long id) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
         if (tenantId == null) {
-            return null;
+            return unauthorizedResponse();
         }
 
         log.info("DELETE /api/v1/teams/{} - Deleting team for tenant: {}", id, tenantId);

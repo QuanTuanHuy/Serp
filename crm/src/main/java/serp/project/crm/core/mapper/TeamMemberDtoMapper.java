@@ -15,6 +15,8 @@ import serp.project.crm.core.domain.entity.TeamMemberEntity;
 @Component
 public class TeamMemberDtoMapper {
 
+    public static final String ROLE_MANAGER = "MANAGER";
+
     public TeamMemberEntity toEntity(CreateTeamMemberRequest request, UserProfileResponse user) {
         if (request == null) {
             return null;
@@ -26,7 +28,7 @@ public class TeamMemberDtoMapper {
                 .phone(user.getPhoneNumber())
                 .teamId(request.getTeamId())
                 .userId(request.getUserId())
-                .role(user.getRolesInCrm())
+                .role(request.getRole())
                 .build();
     }
 
@@ -73,7 +75,7 @@ public class TeamMemberDtoMapper {
                 .name(userProfile.getFullName())
                 .email(userProfile.getEmail())
                 .phone(userProfile.getPhoneNumber())
-                .role(userProfile.getRolesInCrm())
+                .role(ROLE_MANAGER)
                 .build();
     }
 }

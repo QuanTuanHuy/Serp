@@ -22,7 +22,7 @@ public interface TeamRepository extends JpaRepository<TeamModel, Long> {
 
     Page<TeamModel> findByTenantId(Long tenantId, Pageable pageable);
 
-    Page<TeamModel> findByTenantIdAndLeaderId(Long tenantId, Long leaderId, Pageable pageable);
+    Page<TeamModel> findByTenantIdAndLeaderId(Long tenantId, Long managerUserId, Pageable pageable);
 
     @Query("SELECT t FROM TeamModel t WHERE t.tenantId = :tenantId " +
             "AND (LOWER(t.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
