@@ -7,7 +7,6 @@ import {
   Polyline,
   Popup,
   TileLayer,
-  Tooltip as LeafletTooltip,
 } from 'react-leaflet';
 import L from 'leaflet';
 import {
@@ -194,16 +193,18 @@ export default function RouteMap({
     <div className='relative z-0 h-[500px] w-full overflow-hidden rounded-xl border border-slate-200'>
       <MapContainer bounds={bounds} className='h-full w-full'>
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url='https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
         />
 
         {/* Marker Kho (Warehouse) */}
         <Marker position={mapData.warehouseLocation} icon={ICONS.WAREHOUSE}>
           <Popup>
             <div className='p-1'>
-              <p className='font-semibold text-sm'>Kho xuất phát</p>
-              <p className='text-xs text-muted-foreground'>
+              <p className='text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-700'>
+                Kho xuất phát
+              </p>
+              <p className='text-sm font-semibold text-slate-900'>
                 Điểm bắt đầu lộ trình
               </p>
             </div>
@@ -229,19 +230,26 @@ export default function RouteMap({
             segment.stop.status === 'WAITING' &&
             segment.isNextStop &&
             !isSubmittingAnotherStop;
+          const stopZIndexOffset = segment.isNextStop
+            ? 1000
+            : segment.stop.status === 'WAITING'
+              ? 500
+              : 100;
 
           return (
             <Fragment key={segment.stop.id}>
               <Polyline
                 positions={segment.path}
                 color={
-                  segment.stop.status === 'ARRIVED'
-                    ? '#10b981'
-                    : segment.stop.status === 'FAILED'
-                      ? '#f43f5e'
-                      : '#94a3b8'
+                  segment.isNextStop
+                    ? '#3b82f6'
+                    : segment.stop.status === 'ARRIVED'
+                      ? '#10b981'
+                      : segment.stop.status === 'FAILED'
+                        ? '#f43f5e'
+                        : '#94a3b8'
                 }
-                weight={segment.isNextStop ? 5 : 4}
+                weight={segment.isNextStop ? 6 : 4}
                 opacity={0.85}
                 dashArray={
                   segment.stop.status === 'WAITING' ? '6, 10' : undefined
@@ -254,14 +262,13 @@ export default function RouteMap({
                   ICONS[segment.stop.status as keyof typeof ICONS] ||
                   ICONS.WAITING
                 }
+                zIndexOffset={stopZIndexOffset}
               >
-                <LeafletTooltip
-                  direction='top'
-                  offset={[0, -20]}
-                  opacity={1}
-                  sticky
-                  interactive
-                  className='route-stop-tooltip !rounded-2xl !border-none !bg-transparent !p-0 !shadow-none'
+                <Popup
+                  closeButton={false}
+                  autoClose={false}
+                  closeOnClick={false}
+                  className='route-stop-tooltip'
                 >
                   <div className='w-[280px] rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-2xl backdrop-blur'>
                     <div className='mb-2 flex items-center justify-between gap-2'>
@@ -374,7 +381,7 @@ export default function RouteMap({
                       </div>
                     )}
                   </div>
-                </LeafletTooltip>
+                </Popup>
               </Marker>
             </Fragment>
           );
@@ -385,7 +392,7 @@ export default function RouteMap({
           <Marker
             position={mapData.currentTruckLocation}
             icon={ICONS.TRUCK}
-            zIndexOffset={1000}
+            zIndexOffset={900}
           >
             <Popup>
               <p className='font-semibold text-sm'>Vị trí hiện tại</p>
