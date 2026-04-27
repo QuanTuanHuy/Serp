@@ -1,9 +1,4 @@
-/*
- * Author: Nguyen The Anh
- * Description: Optimized Geocode Caller using RestClient - Part of Serp Project
- */
-
-package serp.project.first_mile.caller;
+package serp.project.second_mile.caller;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,9 +9,9 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-import serp.project.first_mile.caller.dto.GeoPoint;
-import serp.project.first_mile.exception.AppException;
-import serp.project.first_mile.exception.ErrorCode;
+import serp.project.second_mile.caller.dto.GeoPoint;
+import serp.project.second_mile.exception.AppException;
+import serp.project.second_mile.exception.ErrorCode;
 
 import java.text.Normalizer;
 import java.util.List;
@@ -26,9 +21,8 @@ import java.util.Optional;
 @Component
 @Slf4j
 public class MapsCoGeocodeCaller implements GeocodeCaller {
-
     private static final int MAX_LOG_BODY_LENGTH = 500;
-    private static final String CLIENT_USER_AGENT = "first-mile-geocode-client/1.0";
+    private static final String CLIENT_USER_AGENT = "second-mile-geocode-client/1.0";
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;

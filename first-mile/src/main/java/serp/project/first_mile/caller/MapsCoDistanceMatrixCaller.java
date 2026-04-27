@@ -13,6 +13,9 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import serp.project.first_mile.caller.dto.DistanceMatrixElement;
+import serp.project.first_mile.caller.dto.DistanceMatrixResult;
+import serp.project.first_mile.caller.dto.GeoPoint;
 import serp.project.first_mile.enums.RoutingVehicle;
 
 import java.util.ArrayList;
