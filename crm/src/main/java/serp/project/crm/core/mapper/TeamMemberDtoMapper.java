@@ -6,6 +6,7 @@
 package serp.project.crm.core.mapper;
 
 import org.springframework.stereotype.Component;
+import serp.project.crm.core.domain.constant.TeamMemberRole;
 import serp.project.crm.core.domain.dto.request.CreateTeamMemberRequest;
 import serp.project.crm.core.domain.dto.request.UpdateTeamMemberRequest;
 import serp.project.crm.core.domain.dto.response.TeamMemberResponse;
@@ -14,8 +15,6 @@ import serp.project.crm.core.domain.entity.TeamMemberEntity;
 
 @Component
 public class TeamMemberDtoMapper {
-
-    public static final String ROLE_MANAGER = "MANAGER";
 
     public TeamMemberEntity toEntity(CreateTeamMemberRequest request, UserProfileResponse user) {
         if (request == null) {
@@ -75,7 +74,7 @@ public class TeamMemberDtoMapper {
                 .name(userProfile.getFullName())
                 .email(userProfile.getEmail())
                 .phone(userProfile.getPhoneNumber())
-                .role(ROLE_MANAGER)
+                .role(TeamMemberRole.MANAGER)
                 .build();
     }
 }

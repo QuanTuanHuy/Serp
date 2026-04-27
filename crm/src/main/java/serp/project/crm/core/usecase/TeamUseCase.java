@@ -11,14 +11,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import serp.project.crm.core.domain.constant.ErrorMessage;
+import serp.project.crm.core.domain.constant.TeamMemberRole;
 import serp.project.crm.core.domain.dto.GeneralResponse;
 import serp.project.crm.core.domain.dto.PageRequest;
 import serp.project.crm.core.domain.dto.PageResponse;
+import serp.project.crm.core.domain.dto.request.ChangeTeamManagerRequest;
 import serp.project.crm.core.domain.dto.request.CreateTeamRequest;
 import serp.project.crm.core.domain.dto.request.UpdateTeamRequest;
 import serp.project.crm.core.domain.dto.response.TeamResponse;
+import serp.project.crm.core.domain.dto.response.TeamSummaryResponse;
 import serp.project.crm.core.domain.entity.TeamEntity;
 import serp.project.crm.core.domain.entity.TeamMemberEntity;
+import serp.project.crm.core.domain.enums.TeamStatus;
 import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.mapper.TeamDtoMapper;
 import serp.project.crm.core.mapper.TeamMemberDtoMapper;
@@ -65,6 +69,7 @@ public class TeamUseCase {
 
             createdTeam.setManagerUserId(leaderProfile.getId());
             createdTeam = teamService.updateTeam(createdTeam.getId(), createdTeam, tenantId);
+            createdTeam.setMembers(List.of(leaderMember));
             TeamResponse response = teamDtoMapper.toResponse(createdTeam);
 
             log.info("[TeamUseCase] Team created successfully with ID: {}", createdTeam.getId());
@@ -108,6 +113,8 @@ public class TeamUseCase {
                 return responseUtils.notFound(ErrorMessage.TEAM_NOT_FOUND);
             }
 
+            team.setMembers(teamMemberService.getAllMembersByTeam(id, tenantId));
+
             TeamResponse response = teamDtoMapper.toResponse(team);
             return responseUtils.success(response);
 
@@ -118,16 +125,20 @@ public class TeamUseCase {
     }
 
     @Transactional(readOnly = true)
-    public GeneralResponse<?> getAllTeams(Long tenantId, PageRequest pageRequest) {
+    public GeneralResponse<?> getAllTeams(Long tenantId, PageRequest pageRequest, String status) {
         try {
             var result = teamService.getAllTeams(tenantId, pageRequest);
 
-            List<TeamResponse> teamResponses = result.getFirst().stream()
-                    .map(teamDtoMapper::toResponse)
+            List<TeamSummaryResponse> teamResponses = result.getFirst().stream()
+                    .filter(team -> status == null || team.getStatus() == TeamStatus.valueOf(status.toUpperCase()))
+                    .map(team -> {
+                        team.setMembers(teamMemberService.getAllMembersByTeam(team.getId(), tenantId));
+                        return teamDtoMapper.toSummaryResponse(team);
+                    })
                     .toList();
 
-            PageResponse<TeamResponse> pageResponse = PageResponse.of(
-                    teamResponses, pageRequest, result.getSecond());
+            PageResponse<TeamSummaryResponse> pageResponse = PageResponse.of(
+                    teamResponses, pageRequest, (long) teamResponses.size());
 
             return responseUtils.success(pageResponse);
 
@@ -151,6 +162,48 @@ public class TeamUseCase {
         } catch (Exception e) {
             log.error("[TeamUseCase] Unexpected error deleting team: {}", e.getMessage(), e);
             return responseUtils.internalServerError("Failed to delete team");
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> changeManager(Long teamId, ChangeTeamManagerRequest request, Long tenantId) {
+        try {
+            if (!TeamMemberRole.MANAGER_DEMOTION_TARGETS
+                    .contains(request.getPreviousManagerRole())) {
+                throw new AppException(ErrorMessage.TEAM_MANAGER_ROLE_CHANGE_INVALID);
+            }
+
+            TeamEntity team = teamService.getTeamById(teamId, tenantId)
+                    .orElseThrow(() -> new AppException(ErrorMessage.TEAM_NOT_FOUND));
+
+            TeamMemberEntity newManager = teamMemberService
+                    .getTeamMemberByTeamAndUser(teamId, request.getNewManagerUserId(), tenantId)
+                    .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MANAGER_MUST_BELONG_TO_TEAM));
+
+            TeamMemberEntity previousManager = teamMemberService
+                    .getTeamMemberByTeamAndUser(teamId, team.getManagerUserId(), tenantId)
+                    .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MANAGER_NOT_FOUND));
+
+            teamMemberService.updateTeamMember(previousManager.getId(), TeamMemberEntity.builder()
+                    .role(request.getPreviousManagerRole())
+                    .build(), tenantId);
+
+            teamMemberService.updateTeamMember(newManager.getId(), TeamMemberEntity.builder()
+                    .role(TeamMemberRole.MANAGER)
+                    .build(), tenantId);
+
+            TeamEntity updatedTeam = teamService.updateTeam(teamId, TeamEntity.builder()
+                    .managerUserId(request.getNewManagerUserId())
+                    .build(), tenantId);
+            updatedTeam.setMembers(teamMemberService.getAllMembersByTeam(teamId, tenantId));
+
+            return responseUtils.success(teamDtoMapper.toResponse(updatedTeam), "Team manager changed successfully");
+        } catch (AppException e) {
+            log.error("[TeamUseCase] Error changing team manager: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("[TeamUseCase] Unexpected error changing team manager: {}", e.getMessage(), e);
+            throw e;
         }
     }
 }

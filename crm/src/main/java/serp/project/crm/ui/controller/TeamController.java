@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import serp.project.crm.core.domain.dto.PageRequest;
+import serp.project.crm.core.domain.dto.request.ChangeTeamManagerRequest;
 import serp.project.crm.core.domain.dto.request.CreateTeamMemberRequest;
 import serp.project.crm.core.domain.dto.request.CreateTeamRequest;
 import serp.project.crm.core.domain.dto.request.UpdateTeamMemberRequest;
@@ -143,7 +144,8 @@ public class TeamController {
     @GetMapping
     public ResponseEntity<?> getAllTeams(
             @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "20") Integer size) {
+            @RequestParam(defaultValue = "20") Integer size,
+            @RequestParam(required = false) String status) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
         if (tenantId == null) {
             return unauthorizedResponse();
@@ -157,7 +159,21 @@ public class TeamController {
                 .size(size)
                 .build();
 
-        var response = teamUseCase.getAllTeams(tenantId, pageRequest);
+        var response = teamUseCase.getAllTeams(tenantId, pageRequest, status);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PutMapping("/{id}/manager")
+    public ResponseEntity<?> changeManager(
+            @PathVariable Long id,
+            @Valid @RequestBody ChangeTeamManagerRequest request) {
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        if (tenantId == null) {
+            return unauthorizedResponse();
+        }
+
+        log.info("PUT /api/v1/teams/{}/manager - Changing team manager for tenant: {}", id, tenantId);
+        var response = teamUseCase.changeManager(id, request, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 

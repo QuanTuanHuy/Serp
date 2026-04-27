@@ -84,6 +84,8 @@ public class ErrorMessage {
     public static final String TEAM_INACTIVE = "Team is inactive";
     public static final String TEAM_MEMBER_DOES_NOT_BELONG_TO_TEAM = "Team member does not belong to the specified team";
     public static final String AUTH_CONTEXT_REQUIRED = "Authentication context is required";
+    public static final String TEAM_MANAGER_MUST_BELONG_TO_TEAM = "New manager must be an active member of the specified team";
+    public static final String TEAM_MANAGER_ROLE_CHANGE_INVALID = "Previous manager role must be SALES_REP or VIEWER";
 
     // Team member errors
     public static final String MEMBER_NOT_BELONG_TO_ORGANIZATION = "Member does not belong to the organization";

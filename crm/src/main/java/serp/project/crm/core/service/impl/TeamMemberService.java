@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.crm.core.domain.constant.Constants;
 import serp.project.crm.core.domain.constant.ErrorMessage;
+import serp.project.crm.core.domain.constant.TeamMemberRole;
 import serp.project.crm.core.domain.dto.PageRequest;
 import serp.project.crm.core.domain.dto.response.user.UserProfileResponse;
 import serp.project.crm.core.domain.entity.TeamMemberEntity;
@@ -36,10 +37,8 @@ public class TeamMemberService implements ITeamMemberService {
 
     private final ITeamService teamService;
 
-    private static final List<String> ALLOWED_ROLES = List.of("MANAGER", "SALES_REP", "VIEWER");
-
     private void validateTeamRole(String role) {
-        if (role == null || !ALLOWED_ROLES.contains(role)) {
+        if (role == null || !TeamMemberRole.ALL.contains(role)) {
             throw new AppException(ErrorMessage.INVALID_TEAM_MEMBER_ROLE);
         }
     }
@@ -115,7 +114,7 @@ public class TeamMemberService implements ITeamMemberService {
     public Pair<List<TeamMemberEntity>, Long> getTeamMembersByRole(String role, Long tenantId,
             PageRequest pageRequest) {
         pageRequest.validate();
-        if (!ALLOWED_ROLES.contains(role)) {
+        if (!TeamMemberRole.ALL.contains(role)) {
             throw new AppException(ErrorMessage.INVALID_TEAM_MEMBER_ROLE);
         }
 
@@ -134,6 +133,12 @@ public class TeamMemberService implements ITeamMemberService {
     @Transactional(readOnly = true)
     public Optional<TeamMemberEntity> getTeamMemberByTeamAndUser(Long teamId, Long userId, Long tenantId) {
         return teamMemberPort.findByTeamIdAndUserId(teamId, userId, tenantId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TeamMemberEntity> getAllMembersByTeam(Long teamId, Long tenantId) {
+        return teamMemberPort.findAllByTeamId(teamId, tenantId);
     }
 
     @Override
