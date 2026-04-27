@@ -28,16 +28,18 @@ public class OpportunityResponse {
     private String description;
     
     private Long leadId;
-    private Long customerId;
+    private Long accountId;
     
     private OpportunityStage stage;
     private BigDecimal estimatedValue;
+    private BigDecimal actualValue;
     private Integer probability;
     private LocalDate expectedCloseDate;
     private LocalDate actualCloseDate;
     private Long assignedTo;
     private String notes;
     private String lossReason;
+    private String reopenReason;
     
     // Metadata
     private Long tenantId;

@@ -63,16 +63,16 @@ public class ContactAdapter implements IContactPort {
     }
 
     @Override
-    public List<ContactEntity> findByCustomerId(Long customerId, Long tenantId) {
-        return contactRepository.findByTenantIdAndCustomerId(tenantId, customerId)
+    public List<ContactEntity> findByAccountId(Long accountId, Long tenantId) {
+        return contactRepository.findByTenantIdAndAccountId(tenantId, accountId)
                 .stream()
                 .map(contactMapper::toEntity)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public Optional<ContactEntity> findPrimaryContact(Long customerId, Long tenantId) {
-        return contactRepository.findByTenantIdAndCustomerIdAndIsPrimary(tenantId, customerId, true)
+    public Optional<ContactEntity> findPrimaryContact(Long accountId, Long tenantId) {
+        return contactRepository.findByTenantIdAndAccountIdAndIsPrimary(tenantId, accountId, true)
                 .map(contactMapper::toEntity);
     }
 
@@ -95,8 +95,8 @@ public class ContactAdapter implements IContactPort {
     }
 
     @Override
-    public Long countByCustomerId(Long customerId, Long tenantId) {
-        return contactRepository.countByTenantIdAndCustomerId(tenantId, customerId);
+    public Long countByAccountId(Long accountId, Long tenantId) {
+        return contactRepository.countByTenantIdAndAccountId(tenantId, accountId);
     }
 
     @Override

@@ -11,10 +11,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import serp.project.crm.core.domain.dto.PageRequest;
+import serp.project.crm.core.domain.dto.request.AssignOpportunityRequest;
+import serp.project.crm.core.domain.dto.request.ChangeOpportunityStageRequest;
+import serp.project.crm.core.domain.dto.request.CloseOpportunityLostRequest;
+import serp.project.crm.core.domain.dto.request.CloseOpportunityWonRequest;
 import serp.project.crm.core.domain.dto.request.CreateOpportunityRequest;
 import serp.project.crm.core.domain.dto.request.OpportunityFilterRequest;
+import serp.project.crm.core.domain.dto.request.PipelineFilterRequest;
+import serp.project.crm.core.domain.dto.request.ReopenOpportunityRequest;
 import serp.project.crm.core.domain.dto.request.UpdateOpportunityRequest;
-import serp.project.crm.core.domain.enums.OpportunityStage;
 import serp.project.crm.core.usecase.ActivityUseCase;
 import serp.project.crm.core.usecase.OpportunityUseCase;
 import serp.project.crm.kernel.utils.AuthUtils;
@@ -43,7 +48,7 @@ public class OpportunityController {
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
-    @PatchMapping("/{id}")
+    @PutMapping("/{id}")
     public ResponseEntity<?> updateOpportunity(
             @PathVariable Long id,
             @Valid @RequestBody UpdateOpportunityRequest request) {
@@ -94,23 +99,28 @@ public class OpportunityController {
 
     @GetMapping
     public ResponseEntity<?> getAllOpportunities(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "20") Integer size) {
+            @ModelAttribute OpportunityFilterRequest request) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
         Long userId = authUtils.getCurrentUserId().orElse(null);
         if (tenantId == null || userId == null) {
             return null;
         }
 
-        log.info("GET /api/v1/opportunities - Fetching all opportunities for tenant: {}, page: {}, size: {}",
-                tenantId, page, size);
+        OpportunityFilterRequest safeRequest = request != null ? request : OpportunityFilterRequest.builder().build();
+        log.info("GET /api/v1/opportunities - Filtering opportunities for tenant: {}", tenantId);
+        var response = opportunityUseCase.filterOpportunities(safeRequest, tenantId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
 
-        PageRequest pageRequest = PageRequest.builder()
-                .page(page)
-                .size(size)
-                .build();
+    @GetMapping("/pipeline")
+    public ResponseEntity<?> getPipeline(@ModelAttribute PipelineFilterRequest request) {
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        if (tenantId == null || userId == null) {
+            return null;
+        }
 
-        var response = opportunityUseCase.getAllOpportunities(tenantId, pageRequest);
+        var response = opportunityUseCase.getPipeline(request, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
@@ -129,46 +139,76 @@ public class OpportunityController {
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
-    @PatchMapping("/{id}/stage")
+    @PutMapping("/{id}/stage")
     public ResponseEntity<?> changeStage(
             @PathVariable Long id,
-            @RequestParam OpportunityStage newStage) {
+            @Valid @RequestBody ChangeOpportunityStageRequest request) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
         Long userId = authUtils.getCurrentUserId().orElse(null);
         if (tenantId == null || userId == null) {
             return null;
         }
 
-        log.info("PATCH /api/v1/opportunities/{}/stage - Changing stage to {} for tenant: {}", id, newStage,
+        log.info("PUT /api/v1/opportunities/{}/stage - Changing stage to {} for tenant: {}", id, request.getStage(),
                 tenantId);
-        var response = opportunityUseCase.changeOpportunityStage(id, newStage, tenantId);
+        var response = opportunityUseCase.changeOpportunityStage(id, request, userId, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
-    @PostMapping("/{id}/close-won")
-    public ResponseEntity<?> closeAsWon(@PathVariable Long id) {
+    @PutMapping("/{id}/close-won")
+    public ResponseEntity<?> closeAsWon(
+            @PathVariable Long id,
+            @Valid @RequestBody(required = false) CloseOpportunityWonRequest request) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
         Long userId = authUtils.getCurrentUserId().orElse(null);
         if (tenantId == null || userId == null) {
             return null;
         }
-        log.info("POST /api/v1/opportunities/{}/close-won - Closing as won for tenant: {}", id, tenantId);
-        var response = opportunityUseCase.closeOpportunityAsWon(id, tenantId);
+        log.info("PUT /api/v1/opportunities/{}/close-won - Closing as won for tenant: {}", id, tenantId);
+        var response = opportunityUseCase.closeOpportunityAsWon(id, request, userId, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
-    @PostMapping("/{id}/close-lost")
+    @PutMapping("/{id}/close-lost")
     public ResponseEntity<?> closeAsLost(
             @PathVariable Long id,
-            @RequestParam String lostReason) {
+            @Valid @RequestBody CloseOpportunityLostRequest request) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
         Long userId = authUtils.getCurrentUserId().orElse(null);
         if (tenantId == null || userId == null) {
             return null;
         }
 
-        log.info("POST /api/v1/opportunities/{}/close-lost - Closing as lost for tenant: {}", id, tenantId);
-        var response = opportunityUseCase.closeOpportunityAsLost(id, lostReason, tenantId);
+        log.info("PUT /api/v1/opportunities/{}/close-lost - Closing as lost for tenant: {}", id, tenantId);
+        var response = opportunityUseCase.closeOpportunityAsLost(id, request, userId, tenantId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PutMapping("/{id}/assign")
+    public ResponseEntity<?> assignOpportunity(
+            @PathVariable Long id,
+            @Valid @RequestBody AssignOpportunityRequest request) {
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        if (tenantId == null || userId == null) {
+            return null;
+        }
+
+        var response = opportunityUseCase.assignOpportunity(id, request, userId, tenantId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PutMapping("/{id}/reopen")
+    public ResponseEntity<?> reopenOpportunity(
+            @PathVariable Long id,
+            @Valid @RequestBody ReopenOpportunityRequest request) {
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        if (tenantId == null || userId == null) {
+            return null;
+        }
+
+        var response = opportunityUseCase.reopenOpportunity(id, request, userId, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 

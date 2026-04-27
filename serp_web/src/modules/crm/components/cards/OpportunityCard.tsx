@@ -101,6 +101,22 @@ const formatCurrency = (value: number): string => {
   return `$${value.toLocaleString()}`;
 };
 
+const getDisplayAccountName = (opportunity: Opportunity): string => {
+  return opportunity.customerName?.trim() ||
+    (opportunity.accountId ? `Account #${opportunity.accountId}` : 'Unlinked Account');
+};
+
+const getDisplayValue = (opportunity: Opportunity): number => {
+  return opportunity.estimatedValue ?? opportunity.value ?? 0;
+};
+
+const getDisplayOwner = (opportunity: Opportunity): string => {
+  return (
+    opportunity.assignedToName ||
+    (opportunity.assignedTo ? `User #${opportunity.assignedTo}` : 'Unassigned')
+  );
+};
+
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -200,9 +216,14 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
   variant = 'default',
 }) => {
   const stage = stageStyles[opportunity.stage] || stageStyles.PROSPECTING;
-  const type = typeStyles[opportunity.type] || typeStyles.NEW_BUSINESS;
+  const type =
+    typeStyles[opportunity.type || 'NEW_BUSINESS'] || typeStyles.NEW_BUSINESS;
   const StageIcon = stage.icon;
   const closeDateInfo = getDaysUntil(opportunity.expectedCloseDate);
+  const probability = opportunity.probability ?? 0;
+  const accountName = getDisplayAccountName(opportunity);
+  const displayValue = getDisplayValue(opportunity);
+  const ownerName = getDisplayOwner(opportunity);
 
   // Pipeline card variant (for Kanban/Pipeline view)
   if (variant === 'pipeline') {
@@ -221,17 +242,17 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
             {opportunity.name}
           </h4>
           <span className='text-sm font-bold ml-2'>
-            {formatCurrency(opportunity.value)}
+            {formatCurrency(displayValue)}
           </span>
         </div>
 
         {/* Customer */}
         <p className='text-xs text-muted-foreground truncate mb-2'>
-          {opportunity.customerName}
+          {accountName}
         </p>
 
         {/* Probability */}
-        <ProbabilityBar probability={opportunity.probability} />
+        <ProbabilityBar probability={probability} />
 
         {/* Footer */}
         <div className='flex items-center justify-between mt-3 pt-2 border-t'>
@@ -241,9 +262,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
           </div>
           <div className='flex items-center gap-1 text-xs'>
             <User className='h-3 w-3 text-muted-foreground' />
-            <span className='truncate max-w-16'>
-              {opportunity.assignedToName}
-            </span>
+            <span className='truncate max-w-16'>{ownerName}</span>
           </div>
         </div>
       </Card>
@@ -274,18 +293,16 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
         {/* Info */}
         <div className='flex-1 min-w-0'>
           <p className='font-medium text-sm truncate'>{opportunity.name}</p>
-          <p className='text-xs text-muted-foreground truncate'>
-            {opportunity.customerName}
-          </p>
+          <p className='text-xs text-muted-foreground truncate'>{accountName}</p>
         </div>
 
         {/* Value */}
         <div className='text-right shrink-0'>
           <p className='font-bold text-sm'>
-            {formatCurrency(opportunity.value)}
+            {formatCurrency(displayValue)}
           </p>
           <p className='text-xs text-muted-foreground'>
-            {opportunity.probability}%
+            {probability}%
           </p>
         </div>
       </Card>
@@ -321,9 +338,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
               <h3 className='font-semibold text-foreground truncate'>
                 {opportunity.name}
               </h3>
-              <p className='text-sm text-muted-foreground truncate'>
-                {opportunity.customerName}
-              </p>
+              <p className='text-sm text-muted-foreground truncate'>{accountName}</p>
             </div>
           </div>
 
@@ -395,7 +410,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
 
         {/* Probability */}
         <div className='mb-4'>
-          <ProbabilityBar probability={opportunity.probability} />
+          <ProbabilityBar probability={probability} />
         </div>
 
         {/* Value */}
@@ -404,15 +419,13 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
             <div>
               <p className='text-xs text-muted-foreground'>Deal Value</p>
               <p className='text-xl font-bold'>
-                {formatCurrency(opportunity.value)}
+                {formatCurrency(displayValue)}
               </p>
             </div>
             <div className='text-right'>
               <p className='text-xs text-muted-foreground'>Weighted</p>
               <p className='text-lg font-semibold text-muted-foreground'>
-                {formatCurrency(
-                  (opportunity.value * opportunity.probability) / 100
-                )}
+                {formatCurrency((displayValue * probability) / 100)}
               </p>
             </div>
           </div>
@@ -443,9 +456,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
             <User className='h-4 w-4 text-muted-foreground' />
             <div>
               <p className='text-xs text-muted-foreground'>Owner</p>
-              <p className='font-medium truncate'>
-                {opportunity.assignedToName}
-              </p>
+              <p className='font-medium truncate'>{ownerName}</p>
             </div>
           </div>
         </div>

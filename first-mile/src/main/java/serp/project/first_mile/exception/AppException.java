@@ -1,14 +1,20 @@
 package serp.project.first_mile.exception;
 
 import lombok.Getter;
-import lombok.Setter;
 
 @Getter
-@Setter
-public class AppException extends RuntimeException{
+public class AppException extends RuntimeException {
+
+    private final ErrorCode errorCode;
+    private final String detail;
+
     public AppException(ErrorCode errorCode) {
+        this(errorCode, null);
+    }
+
+    public AppException(ErrorCode errorCode, String detail) {
         super(errorCode.getMessageKey());
         this.errorCode = errorCode;
+        this.detail = detail;
     }
-    private ErrorCode errorCode;
 }

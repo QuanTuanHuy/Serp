@@ -55,6 +55,34 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
     }
 
     @Override
+    public List<WorkItemEntity> getWorkItemsByPriorityId(Long priorityId, Long tenantId) {
+        return workItemMapper.toEntities(
+                workItemRepository.findAllByTenantIdAndPriorityId(tenantId, priorityId)
+        );
+    }
+
+    @Override
+    public boolean existsActiveWorkItemByStatusId(Long statusId, Long tenantId) {
+        return workItemRepository.existsByTenantIdAndStatusId(tenantId, statusId);
+    }
+
+    @Override
+    public List<Long> getActiveIssueTypeIdsInUseByProjectIds(Long tenantId, List<Long> projectIds, List<Long> issueTypeIds) {
+        if (projectIds == null || projectIds.isEmpty() || issueTypeIds == null || issueTypeIds.isEmpty()) {
+            return List.of();
+        }
+        return workItemRepository.findDistinctIssueTypeIdsInUseByProjectIds(tenantId, projectIds, issueTypeIds);
+    }
+
+    @Override
+    public List<Long> getActivePriorityIdsInUseByProjectIds(Long tenantId, List<Long> projectIds, List<Long> priorityIds) {
+        if (projectIds == null || projectIds.isEmpty() || priorityIds == null || priorityIds.isEmpty()) {
+            return List.of();
+        }
+        return workItemRepository.findDistinctPriorityIdsInUseByProjectIds(tenantId, projectIds, priorityIds);
+    }
+
+    @Override
     public Optional<String> getLastRankByProjectId(Long projectId, Long tenantId) {
         return workItemRepository.findFirstByTenantIdAndProjectIdOrderByRankDescIdDesc(tenantId, projectId)
                 .map(WorkItemModel::getRank);

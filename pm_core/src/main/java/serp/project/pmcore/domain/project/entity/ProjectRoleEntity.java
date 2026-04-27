@@ -22,4 +22,5 @@ public class ProjectRoleEntity extends BaseEntity {
     private String name;
     private String description;
     private Boolean isSystem;
+    private Long deletedAt;
 }

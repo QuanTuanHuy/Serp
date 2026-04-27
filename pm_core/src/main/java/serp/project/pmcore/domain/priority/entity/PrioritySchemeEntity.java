@@ -24,6 +24,11 @@ public class PrioritySchemeEntity extends BaseEntity {
     private String name;
     private String description;
     private Long defaultPriorityId;
+    private Long deletedAt;
 
     private List<PrioritySchemeItemEntity> items;
+
+    public boolean isSystem() {
+        return tenantId != null && tenantId == 0L;
+    }
 }

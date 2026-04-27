@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import serp.project.pmcore.domain.permission.entity.PermissionSchemeEntryEntity;
 import serp.project.pmcore.domain.permission.port.IPermissionSchemeEntryPort;
+import serp.project.pmcore.domain.shared.enums.ProjectPermissionGranteeType;
 import serp.project.pmcore.infrastructure.store.mapper.PermissionSchemeEntryMapper;
 import serp.project.pmcore.infrastructure.store.repository.IPermissionSchemeEntryRepository;
 
@@ -44,6 +45,15 @@ public class PermissionSchemeEntryAdapter implements IPermissionSchemeEntryPort 
     public List<PermissionSchemeEntryEntity> getPermissionSchemeEntriesBySchemeId(Long schemeId, Long tenantId) {
         return permissionSchemeEntryMapper.toEntities(
                 permissionSchemeEntryRepository.findAllBySchemeIdAndTenantId(schemeId, tenantId)
+        );
+    }
+
+    @Override
+    public boolean existsByProjectRoleId(Long tenantId, Long roleId) {
+        return permissionSchemeEntryRepository.existsByTenantIdAndGranteeTypeAndGranteeRef(
+                tenantId,
+                ProjectPermissionGranteeType.PROJECT_ROLE.name(),
+                String.valueOf(roleId)
         );
     }
 }

@@ -58,9 +58,9 @@ public class ActivityAdapter implements IActivityPort {
     }
 
     @Override
-    public Pair<List<ActivityEntity>, Long> findByCustomerId(Long customerId, Long tenantId, PageRequest pageRequest) {
+    public Pair<List<ActivityEntity>, Long> findByAccountId(Long accountId, Long tenantId, PageRequest pageRequest) {
         var pageable = activityMapper.toPageable(pageRequest);
-        var page = activityRepository.findByTenantIdAndCustomerId(tenantId, customerId, pageable)
+        var page = activityRepository.findByTenantIdAndAccountId(tenantId, accountId, pageable)
                 .map(activityMapper::toEntity);
         return activityMapper.pageToPair(page);
     }

@@ -264,11 +264,10 @@ export const leadApi = {
       name: `${lead.firstName} ${lead.lastName}`,
       email: lead.email,
       phone: lead.phone,
-      customerType: lead.company ? 'COMPANY' : 'INDIVIDUAL',
+      customerType: lead.company ? 'CUSTOMER' : 'PROSPECT',
       status: 'ACTIVE',
       companyName: lead.company,
       notes: lead.notes,
-      assignedSalesRep: lead.assignedTo,
       tags: lead.tags,
       customFields: lead.customFields,
       isActive: true,
@@ -290,11 +289,27 @@ export const leadApi = {
     // Create opportunity if provided
     let opportunity: Opportunity | undefined;
     if (opportunityData) {
+      const assignedToName = opportunityData.assignedTo
+        ? getUserNameById(opportunityData.assignedTo)
+        : 'Unassigned';
+
       opportunity = opportunityService.create({
         ...opportunityData,
+        accountId: opportunityData.accountId || customer.id,
+        stage: opportunityData.stage || 'PROSPECTING',
+        estimatedValue: opportunityData.estimatedValue ?? opportunityData.value ?? 0,
+        value: opportunityData.value ?? opportunityData.estimatedValue ?? 0,
+        probability: 10,
+        isActive: true,
+        expectedCloseDate:
+          opportunityData.expectedCloseDate || new Date().toISOString(),
         customerId: customer.id,
         customerName: customer.name,
-        assignedToName: getUserNameById(opportunityData.assignedTo),
+        assignedToName,
+        tags: opportunityData.tags || [],
+        products: opportunityData.products || [],
+        competitors: opportunityData.competitors || [],
+        customFields: opportunityData.customFields || {},
       });
     }
 
@@ -342,7 +357,9 @@ export const opportunityApi = {
       throw createErrorResponse('Failed to create opportunity', 'CREATE_ERROR');
     }
 
-    if (!data.name || !data.customerId) {
+    const customerId = data.customerId || data.accountId;
+
+    if (!data.name || !customerId) {
       throw createErrorResponse(
         'Name and customer ID are required',
         'VALIDATION_ERROR'
@@ -350,15 +367,31 @@ export const opportunityApi = {
     }
 
     // Get customer name
-    const customer = customerService.getById(data.customerId);
+    const customer = customerService.getById(customerId);
     if (!customer) {
       throw createErrorResponse('Customer not found', 'VALIDATION_ERROR');
     }
 
+    const assignedToName = data.assignedTo
+      ? getUserNameById(data.assignedTo)
+      : 'Unassigned';
+
     const opportunity = opportunityService.create({
       ...data,
+      accountId: data.accountId || customer.id,
+      customerId,
+      stage: data.stage || 'PROSPECTING',
+      estimatedValue: data.estimatedValue ?? data.value ?? 0,
+      value: data.value ?? data.estimatedValue ?? 0,
+      probability: 10,
+      isActive: true,
+      expectedCloseDate: data.expectedCloseDate || new Date().toISOString(),
       customerName: customer.name,
-      assignedToName: getUserNameById(data.assignedTo),
+      assignedToName,
+      tags: data.tags || [],
+      products: data.products || [],
+      competitors: data.competitors || [],
+      customFields: data.customFields || {},
     });
 
     return createApiResponse(opportunity);

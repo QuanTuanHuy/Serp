@@ -8,6 +8,7 @@ package serp.project.pmcore.domain.project.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import serp.project.pmcore.domain.project.dto.ProjectUpdateData;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.port.read.IProjectReadPort;
 import serp.project.pmcore.domain.project.port.write.IProjectWritePort;
@@ -44,30 +45,33 @@ public class ProjectService implements IProjectService {
     }
 
     @Override
-    public ProjectEntity updateProject(Long projectId, ProjectEntity updateData, Long tenantId, Long userId) {
+    public ProjectEntity updateProject(Long projectId, ProjectUpdateData updateData, Long tenantId, Long userId) {
         ProjectEntity existing = getProjectById(projectId, tenantId);
 
         if (Boolean.TRUE.equals(existing.getIsArchived())) {
             throw new BusinessRuleViolationException(DomainErrorCode.PROJECT_ARCHIVED);
         }
 
-        if (updateData.getName() != null) {
-            existing.setName(updateData.getName());
+        if (updateData.nameProvided()) {
+            existing.setName(updateData.name());
         }
-        if (updateData.getDescription() != null) {
-            existing.setDescription(updateData.getDescription());
+        if (updateData.keyProvided()) {
+            existing.setKey(updateData.key());
         }
-        if (updateData.getLeadUserId() != null) {
-            existing.setLeadUserId(updateData.getLeadUserId());
+        if (updateData.descriptionProvided()) {
+            existing.setDescription(updateData.description());
         }
-        if (updateData.getCategoryId() != null) {
-            existing.setCategoryId(updateData.getCategoryId());
+        if (updateData.leadUserIdProvided()) {
+            existing.setLeadUserId(updateData.leadUserId());
         }
-        if (updateData.getUrl() != null) {
-            existing.setUrl(updateData.getUrl());
+        if (updateData.categoryIdProvided()) {
+            existing.setCategoryId(updateData.categoryId());
         }
-        if (updateData.getAvatarId() != null) {
-            existing.setAvatarId(updateData.getAvatarId());
+        if (updateData.urlProvided()) {
+            existing.setUrl(updateData.url());
+        }
+        if (updateData.avatarIdProvided()) {
+            existing.setAvatarId(updateData.avatarId());
         }
 
         existing.setUpdatedBy(userId);

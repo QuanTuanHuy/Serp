@@ -5,10 +5,16 @@
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
+import { getErrorMessage } from '@/lib/store/api';
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
+import { toast } from 'sonner';
 import { OpportunityForm } from '../../components/forms';
-import { MOCK_OPPORTUNITIES } from '../../mocks';
+import {
+  useGetOpportunityQuery,
+  useUpdateOpportunityMutation,
+} from '../../api/crmApi';
+import type { CreateOpportunityRequest, UpdateOpportunityRequest } from '../../types';
 
 interface EditOpportunityPageProps {
   opportunityId: string;
@@ -20,22 +26,34 @@ export const EditOpportunityPage: React.FC<EditOpportunityPageProps> = ({
   className,
 }) => {
   const router = useRouter();
+  const { data, isLoading } = useGetOpportunityQuery(opportunityId);
+  const [updateOpportunity, { isLoading: isUpdating }] =
+    useUpdateOpportunityMutation();
 
-  // Find opportunity from mock data
-  const opportunity = MOCK_OPPORTUNITIES.find((o) => o.id === opportunityId);
+  const opportunity = data?.data;
 
-  const handleSubmit = async (data: any) => {
-    console.log('Updating opportunity:', { id: opportunityId, ...data });
-    // In real app, call API here
-    router.push(`/crm/opportunities/${opportunityId}`);
+  const handleSubmit = async (
+    data: CreateOpportunityRequest | UpdateOpportunityRequest
+  ) => {
+    try {
+      await updateOpportunity({
+        id: opportunityId,
+        data: data as UpdateOpportunityRequest,
+      }).unwrap();
+      toast.success('Update opportunity successfully');
+      router.push(`/crm/opportunities/${opportunityId}`);
+    } catch (error) {
+      toast.error('Failed to update opportunity', {
+        description: getErrorMessage(error),
+      });
+    }
   };
 
   const handleCancel = () => {
     router.push(`/crm/opportunities/${opportunityId}`);
   };
 
-  // Error state - opportunity not found
-  if (!opportunity) {
+  if (!isLoading && !opportunity) {
     return (
       <div className={cn('p-6', className)}>
         <div className='flex h-[60vh] flex-col items-center justify-center'>
@@ -60,8 +78,7 @@ export const EditOpportunityPage: React.FC<EditOpportunityPageProps> = ({
 
   return (
     <div className={cn('p-6', className)}>
-      {/* Header */}
-      <div className='flex items-center justify-between mb-6'>
+      <div className='mb-6 flex items-center justify-between'>
         <div className='flex items-center space-x-4'>
           <Button variant='outline' asChild>
             <Link href={`/crm/opportunities/${opportunityId}`}>
@@ -73,17 +90,19 @@ export const EditOpportunityPage: React.FC<EditOpportunityPageProps> = ({
             <h1 className='text-2xl font-bold text-foreground'>
               Edit Opportunity
             </h1>
-            <p className='text-muted-foreground'>Update {opportunity.name}</p>
+            <p className='text-muted-foreground'>
+              Update {opportunity?.name || 'opportunity'}
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Form */}
-      <div className='max-w-4xl'>
+      <div className='mx-auto max-w-5xl'>
         <OpportunityForm
           opportunity={opportunity}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
+          isLoading={isLoading || isUpdating}
         />
       </div>
     </div>

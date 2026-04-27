@@ -42,9 +42,13 @@ export interface QuickCustomerFormData {
   phone?: string;
   customerType: CustomerType;
   status: CustomerStatus;
-  companyName?: string;
+  companySize?: string;
   website?: string;
   address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
   notes?: string;
 }
 
@@ -62,16 +66,20 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
   isLoading = false,
 }) => {
   const [formData, setFormData] = useState<QuickCustomerFormData>({
-    name: '',
-    email: '',
-    phone: '',
-    customerType: 'INDIVIDUAL',
-    status: 'ACTIVE',
-    companyName: '',
-    website: '',
-    address: '',
-    notes: '',
-  });
+      name: '',
+      email: '',
+      phone: '',
+      customerType: 'PROSPECT',
+      status: 'ACTIVE',
+      companySize: '',
+      website: '',
+      address: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      country: '',
+      notes: '',
+    });
 
   const [errors, setErrors] = useState<
     Partial<Record<keyof QuickCustomerFormData, string>>
@@ -81,7 +89,7 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
     const newErrors: Partial<Record<keyof QuickCustomerFormData, string>> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Please enter customer name';
+      newErrors.name = 'Please enter account name';
     }
 
     if (!formData.email.trim()) {
@@ -103,11 +111,15 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
         name: '',
         email: '',
         phone: '',
-        customerType: 'INDIVIDUAL',
+        customerType: 'PROSPECT',
         status: 'ACTIVE',
-        companyName: '',
+        companySize: '',
         website: '',
         address: '',
+        city: '',
+        state: '',
+        zipCode: '',
+        country: '',
         notes: '',
       });
     }
@@ -124,16 +136,16 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='!max-w-3xl max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
-          <DialogTitle>Add New Customer</DialogTitle>
+          <DialogTitle>Add New Account</DialogTitle>
           <DialogDescription>
-            Enter basic information to create a new customer
+            Enter basic information to create a new account
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className='space-y-4 py-4'>
           {/* Customer Type */}
           <div className='space-y-2'>
-            <Label>Customer Type</Label>
+            <Label>Account Type</Label>
             <Select
               value={formData.customerType}
               onValueChange={(value: CustomerType) =>
@@ -144,16 +156,16 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value='INDIVIDUAL'>
+                <SelectItem value='PROSPECT'>
                   <div className='flex items-center gap-2'>
                     <User className='h-4 w-4' />
-                    Individual
+                    Prospect
                   </div>
                 </SelectItem>
-                <SelectItem value='COMPANY'>
+                <SelectItem value='CUSTOMER'>
                   <div className='flex items-center gap-2'>
                     <Building2 className='h-4 w-4' />
-                    Company
+                    Customer
                   </div>
                 </SelectItem>
               </SelectContent>
@@ -164,13 +176,13 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
           <div className='space-y-2'>
             <Label htmlFor='name' className='flex items-center gap-2'>
               <User className='h-4 w-4 text-muted-foreground' />
-              Customer Name <span className='text-red-500'>*</span>
+              Account Name <span className='text-red-500'>*</span>
             </Label>
             <Input
               id='name'
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
-              placeholder='Enter customer name'
+              placeholder='Enter account name'
               className={cn(errors.name && 'border-red-500')}
             />
             {errors.name && (
@@ -213,17 +225,17 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
           </div>
 
           {/* Company Name (conditional) */}
-          {formData.customerType === 'COMPANY' && (
+          {formData.customerType === 'CUSTOMER' && (
             <div className='space-y-2'>
-              <Label htmlFor='companyName' className='flex items-center gap-2'>
+              <Label htmlFor='companySize' className='flex items-center gap-2'>
                 <Building2 className='h-4 w-4 text-muted-foreground' />
-                Company Name
+                Company Size
               </Label>
               <Input
-                id='companyName'
-                value={formData.companyName}
-                onChange={(e) => handleChange('companyName', e.target.value)}
-                placeholder='Enter company name'
+                id='companySize'
+                value={formData.companySize}
+                onChange={(e) => handleChange('companySize', e.target.value)}
+                placeholder='Enter company size'
               />
             </div>
           )}
@@ -271,7 +283,6 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value='ACTIVE'>Active</SelectItem>
-                <SelectItem value='POTENTIAL'>Potential</SelectItem>
                 <SelectItem value='INACTIVE'>Inactive</SelectItem>
               </SelectContent>
             </Select>
@@ -307,9 +318,9 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
                   Creating...
                 </>
               ) : (
-                'Create Customer'
-              )}
-            </Button>
+                  'Create Account'
+                )}
+              </Button>
           </DialogFooter>
         </form>
       </DialogContent>

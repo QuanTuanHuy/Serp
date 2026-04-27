@@ -131,11 +131,26 @@ public class GlobalExceptionHandler {
         return switch (code) {
             case PROJECT_KEY_ALREADY_EXISTS,
                  CATEGORY_NAME_ALREADY_EXISTS,
+                 CATEGORY_IN_USE,
+                 BLUEPRINT_NAME_ALREADY_EXISTS,
                  COMPONENT_NAME_ALREADY_EXISTS,
                  VERSION_NAME_ALREADY_EXISTS,
                  ROLE_NAME_ALREADY_EXISTS,
+                 ROLE_IN_USE_BY_PERMISSION,
                  ISSUE_TYPE_KEY_ALREADY_EXISTS,
+                 ISSUE_TYPE_SCHEME_NAME_ALREADY_EXISTS,
+                 ISSUE_TYPE_SCHEME_IN_USE,
+                 ISSUE_TYPE_SCHEME_BOUND_TO_PROJECT,
+                 PRIORITY_NAME_ALREADY_EXISTS,
+                 PRIORITY_IN_USE,
+                 PRIORITY_SCHEME_NAME_ALREADY_EXISTS,
+                 PRIORITY_SCHEME_IN_USE,
+                 PRIORITY_SCHEME_BOUND_TO_PROJECT,
                  STATUS_KEY_ALREADY_EXISTS,
+                 STATUS_IN_USE_BY_WORKFLOW,
+                 STATUS_IN_USE_BY_WORK_ITEMS,
+                 STATUS_CATEGORY_KEY_ALREADY_EXISTS,
+                 STATUS_CATEGORY_IN_USE,
                  DUPLICATE_ISSUE_LINK,
                  DUPLICATE_PERMISSION_ENTRY,
                  DUPLICATE_SECURITY_MEMBER,
@@ -146,15 +161,21 @@ public class GlobalExceptionHandler {
                  SERVICE_ACCOUNT_NOT_FOUND -> HttpStatus.NOT_FOUND;
 
             case PROJECT_PERMISSION_DENIED,
+                 WORKLOG_NOT_OWNER,
                  WORK_ITEM_SECURITY_ACCESS_DENIED,
                  TRANSITION_CONDITION_FAILED -> HttpStatus.FORBIDDEN;
 
-            case PROJECT_ARCHIVED -> HttpStatus.CONFLICT;
+            case PROJECT_ARCHIVED,
+                 BLUEPRINT_IS_SYSTEM,
+                 ROLE_IS_SYSTEM,
+                 ISSUE_TYPE_SCHEME_IS_SYSTEM,
+                 WORKFLOW_DRAFT_NOT_FOUND -> HttpStatus.CONFLICT;
 
             case SCHEME_INCOMPATIBLE,
-                  WORKFLOW_VALIDATION_FAILED,
-                  TRANSITION_VALIDATION_FAILED,
-                  FIELD_NOT_WRITABLE_ON_UPDATE,
+                  ISSUE_TYPE_SCHEME_DEFAULT_NOT_IN_ITEMS,
+                   WORKFLOW_VALIDATION_FAILED,
+                   TRANSITION_VALIDATION_FAILED,
+                   FIELD_NOT_WRITABLE_ON_UPDATE,
                    FIELD_CANNOT_BE_REQUIRED_AND_HIDDEN,
                   SUMMARY_FIELD_CANNOT_BE_HIDDEN -> HttpStatus.UNPROCESSABLE_ENTITY;
 

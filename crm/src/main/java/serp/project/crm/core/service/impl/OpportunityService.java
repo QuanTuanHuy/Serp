@@ -52,19 +52,19 @@ public class OpportunityService implements IOpportunityService {
         OpportunityEntity existing = opportunityPort.findById(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.OPPORTUNITY_NOT_FOUND));
         if (updates.getName() != null && !updates.getName().equals(existing.getName())) {
-            if (opportunityPort.existsByCustomerIdAndName(
-                    existing.getCustomerId(), updates.getName(), tenantId)) {
+            if (opportunityPort.existsByAccountIdAndName(
+                    existing.getAccountId(), updates.getName(), tenantId)) {
                 throw new AppException(ErrorMessage.OPPORTUNITY_ALREADY_EXISTS);
             }
         }
         if (updates.getAssignedTo() != null && !updates.getAssignedTo().equals(existing.getAssignedTo())) {
-            teamMemberPort.findById(updates.getAssignedTo(), tenantId)
+            teamMemberPort.findByUserId(updates.getAssignedTo(), tenantId)
                     .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND));
         }
 
         try {
             existing.updateFrom(updates);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             throw new AppException(e.getMessage());
         }
 
@@ -90,10 +90,10 @@ public class OpportunityService implements IOpportunityService {
 
     @Override
     @Transactional(readOnly = true)
-    public Pair<List<OpportunityEntity>, Long> getOpportunitiesByCustomer(Long customerId, Long tenantId,
+    public Pair<List<OpportunityEntity>, Long> getOpportunitiesByAccount(Long accountId, Long tenantId,
             PageRequest pageRequest) {
         pageRequest.validate();
-        return opportunityPort.findByCustomerId(customerId, tenantId, pageRequest);
+        return opportunityPort.findByAccountId(accountId, tenantId, pageRequest);
     }
 
     @Override
@@ -126,20 +126,20 @@ public class OpportunityService implements IOpportunityService {
 
     @Override
     @Transactional(readOnly = true)
-    public boolean existByCustomerIdAndName(Long customerId, String name, Long tenantId) {
-        return opportunityPort.existsByCustomerIdAndName(customerId, name, tenantId);
+    public boolean existByAccountIdAndName(Long accountId, String name, Long tenantId) {
+        return opportunityPort.existsByAccountIdAndName(accountId, name, tenantId);
     }
 
     @Override
     @Transactional
-    public OpportunityEntity changeStage(Long id, OpportunityStage newStage, Long tenantId) {
+    public OpportunityEntity changeStage(Long id, OpportunityStage newStage, Long updatedBy, Long tenantId) {
         OpportunityEntity opportunity = opportunityPort.findById(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.OPPORTUNITY_NOT_FOUND));
 
         OpportunityStage oldStage = opportunity.getStage();
         try {
-            opportunity.advanceToStage(newStage, tenantId);
-        } catch (AppException e) {
+            opportunity.advanceToStage(newStage, updatedBy);
+        } catch (IllegalArgumentException | IllegalStateException e) {
             throw new AppException(e.getMessage());
         }
 
@@ -152,13 +152,13 @@ public class OpportunityService implements IOpportunityService {
 
     @Override
     @Transactional
-    public OpportunityEntity closeAsWon(Long id, Long tenantId) {
+    public OpportunityEntity closeAsWon(Long id, BigDecimal actualValue, String notes, Long updatedBy, Long tenantId) {
         OpportunityEntity opportunity = opportunityPort.findById(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.OPPORTUNITY_NOT_FOUND));
 
         try {
-            opportunity.closeAsWon();
-        } catch (Exception e) {
+            opportunity.closeAsWon(actualValue, notes, updatedBy);
+        } catch (IllegalArgumentException | IllegalStateException e) {
             throw new AppException(e.getMessage());
         }
 
@@ -171,13 +171,13 @@ public class OpportunityService implements IOpportunityService {
 
     @Override
     @Transactional
-    public OpportunityEntity closeAsLost(Long id, String lostReason, Long tenantId) {
+    public OpportunityEntity closeAsLost(Long id, String lostReason, Long updatedBy, Long tenantId) {
         OpportunityEntity opportunity = opportunityPort.findById(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.OPPORTUNITY_NOT_FOUND));
 
         try {
-            opportunity.closeAsLost(lostReason);
-        } catch (Exception e) {
+            opportunity.closeAsLost(lostReason, updatedBy);
+        } catch (IllegalArgumentException | IllegalStateException e) {
             throw new AppException(e.getMessage());
         }
 
@@ -186,6 +186,44 @@ public class OpportunityService implements IOpportunityService {
         publishOpportunityLostEvent(closed);
 
         return closed;
+    }
+
+    @Override
+    @Transactional
+    public OpportunityEntity assignOpportunity(Long id, Long assignedTo, Long updatedBy, Long tenantId) {
+        OpportunityEntity opportunity = opportunityPort.findById(id, tenantId)
+                .orElseThrow(() -> new AppException(ErrorMessage.OPPORTUNITY_NOT_FOUND));
+        teamMemberPort.findByUserId(assignedTo, tenantId)
+                .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND));
+
+        try {
+            opportunity.assignTo(assignedTo, updatedBy);
+        } catch (IllegalStateException e) {
+            throw new AppException(e.getMessage());
+        }
+
+        OpportunityEntity updated = opportunityPort.save(opportunity);
+        publishOpportunityUpdatedEvent(updated);
+        return updated;
+    }
+
+    @Override
+    @Transactional
+    public OpportunityEntity reopenOpportunity(Long id, OpportunityStage stage, String reopenReason, Long updatedBy,
+            Long tenantId) {
+        OpportunityEntity opportunity = opportunityPort.findById(id, tenantId)
+                .orElseThrow(() -> new AppException(ErrorMessage.OPPORTUNITY_NOT_FOUND));
+        OpportunityStage oldStage = opportunity.getStage();
+
+        try {
+            opportunity.reopen(stage, reopenReason, updatedBy);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            throw new AppException(e.getMessage());
+        }
+
+        OpportunityEntity reopened = opportunityPort.save(opportunity);
+        publishOpportunityStageChangedEvent(reopened, oldStage, stage);
+        return reopened;
     }
 
     @Override
@@ -209,6 +247,12 @@ public class OpportunityService implements IOpportunityService {
             PageRequest pageRequest) {
         pageRequest.validate();
         return opportunityPort.filter(filter, pageRequest, tenantId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<OpportunityEntity> filterAllOpportunities(OpportunityFilterRequest filter, Long tenantId) {
+        return opportunityPort.filterAll(filter, tenantId);
     }
 
     private void publishOpportunityCreatedEvent(OpportunityEntity opportunity) {

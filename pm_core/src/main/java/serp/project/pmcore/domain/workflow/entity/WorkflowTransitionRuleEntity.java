@@ -26,4 +26,5 @@ public class WorkflowTransitionRuleEntity extends BaseEntity {
     private String configJson;
     private Integer sequence;
     private Boolean isEnabled;
+    private Long deletedAt;
 }

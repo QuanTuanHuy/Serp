@@ -5,27 +5,46 @@
 
 import { api } from '@/lib/store/api';
 import type {
+  AutoAssignPickupPlanRequest,
+  CancelOrderRequest,
+  CreateOrderRequest,
+  CreateVehicleRequest,
   CreatePostOfficeRequest,
   CreateProductTypeRequest,
+  FirstMileOrderDetail,
+  FirstMileOrderListFilters,
   FirstMilePaginatedData,
   GeocodeAddressRequest,
   GeocodeAddressResponse,
   ImportHistory,
   ImportType,
+  ManualAssignPickupOrdersRequest,
+  OptimizePickupPlanRequest,
+  OrderConfirmationResponse,
   OrderImportItem,
   PostOffice,
   PostOfficeGeocodeBatchResponse,
+  PostOfficeStaff,
   PostOfficeImportItem,
   PostOfficeListFilters,
+  PickupAssignmentResponse,
+  PickupCheckinResponse,
+  PickupTrackingOverviewResponse,
+  PickupOptimizationResponse,
   ProductType,
   Province,
+  UpdateOrderRequest,
   UpdatePostOfficeRequest,
   UpdateProductTypeRequest,
   ValidateImportFileResponse,
+  Vehicle,
+  VehicleImportItem,
+  UpdateVehicleRequest,
   Ward,
 } from '../types';
 import {
   unwrapFirstMilePageResult,
+  unwrapFirstMilePageResultOrRaw,
   unwrapFirstMileResult,
   unwrapFirstMileResultOrRaw,
 } from './transforms';
@@ -193,6 +212,99 @@ export const firstMileApi = api.injectEndpoints({
       transformResponse: unwrapFirstMileResultOrRaw<ImportHistory>,
     }),
 
+    getVehicles: builder.query<
+      FirstMilePaginatedData<Vehicle>,
+      { page?: number; size?: number; keyword?: string }
+    >({
+      query: ({ page = 0, size = 20, keyword }) => ({
+        url: '/vehicles',
+        method: 'GET',
+        params: {
+          page,
+          size,
+          ...(keyword ? { keyword } : {}),
+        },
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMilePageResult<Vehicle>,
+    }),
+
+    getVehicleById: builder.query<Vehicle, number>({
+      query: (id) => ({
+        url: `/vehicles/${id}`,
+        method: 'GET',
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResult<Vehicle>,
+    }),
+
+    createVehicle: builder.mutation<Vehicle, CreateVehicleRequest>({
+      query: (body) => ({
+        url: '/vehicles',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResult<Vehicle>,
+    }),
+
+    updateVehicle: builder.mutation<
+      Vehicle,
+      { id: number; body: UpdateVehicleRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/vehicles/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResult<Vehicle>,
+    }),
+
+    deleteVehicle: builder.mutation<string, number>({
+      query: (id) => ({
+        url: `/vehicles/${id}`,
+        method: 'DELETE',
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: (response: { message?: string }) =>
+        response?.message || 'Deleted successfully',
+    }),
+
+    exportVehicleTemplate: builder.query<Blob, void>({
+      query: () => ({
+        url: '/vehicles/template',
+        method: 'GET',
+        responseHandler: (response) => response.blob(),
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+    }),
+
+    validateVehicleImport: builder.mutation<
+      ValidateImportFileResponse<VehicleImportItem>,
+      FormData
+    >({
+      query: (formData) => ({
+        url: '/vehicles/validate',
+        method: 'POST',
+        body: formData,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<
+        ValidateImportFileResponse<VehicleImportItem>
+      >,
+    }),
+
+    importVehicles: builder.mutation<ImportHistory, FormData>({
+      query: (formData) => ({
+        url: '/vehicles/import',
+        method: 'POST',
+        body: formData,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<ImportHistory>,
+    }),
+
     getProductTypes: builder.query<
       FirstMilePaginatedData<ProductType>,
       { page?: number; size?: number; keyword?: string }
@@ -317,6 +429,199 @@ export const firstMileApi = api.injectEndpoints({
       transformResponse: unwrapFirstMileResult<GeocodeAddressResponse>,
     }),
 
+    getOrders: builder.query<
+      FirstMilePaginatedData<FirstMileOrderDetail>,
+      { page?: number; size?: number } & FirstMileOrderListFilters
+    >({
+      query: ({
+        page = 0,
+        size = 20,
+        keyword,
+        orderCode,
+        customerOrderCode,
+        senderPhone,
+        receiverPhone,
+        originPostOfficeCode,
+        destinationPostOfficeCode,
+        status,
+        isConfirm,
+        createdFrom,
+        createdTo,
+        pickupFrom,
+        pickupTo,
+      }) => ({
+        url: '/orders',
+        method: 'GET',
+        params: {
+          page,
+          size,
+          ...(keyword ? { keyword } : {}),
+          ...(orderCode ? { order_code: orderCode } : {}),
+          ...(customerOrderCode
+            ? { customer_order_code: customerOrderCode }
+            : {}),
+          ...(senderPhone ? { sender_phone: senderPhone } : {}),
+          ...(receiverPhone ? { receiver_phone: receiverPhone } : {}),
+          ...(originPostOfficeCode
+            ? { origin_post_office_code: originPostOfficeCode }
+            : {}),
+          ...(destinationPostOfficeCode
+            ? { destination_post_office_code: destinationPostOfficeCode }
+            : {}),
+          ...(status ? { status } : {}),
+          ...(isConfirm !== undefined ? { is_confirm: isConfirm } : {}),
+          ...(createdFrom ? { created_from: createdFrom } : {}),
+          ...(createdTo ? { created_to: createdTo } : {}),
+          ...(pickupFrom ? { pickup_from: pickupFrom } : {}),
+          ...(pickupTo ? { pickup_to: pickupTo } : {}),
+        },
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMilePageResultOrRaw<FirstMileOrderDetail>,
+    }),
+
+    getOrderById: builder.query<FirstMileOrderDetail, number>({
+      query: (orderId) => ({
+        url: `/orders/${orderId}`,
+        method: 'GET',
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<FirstMileOrderDetail>,
+    }),
+
+    createOrder: builder.mutation<FirstMileOrderDetail, CreateOrderRequest>({
+      query: (body) => ({
+        url: '/orders',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<FirstMileOrderDetail>,
+    }),
+
+    updateOrder: builder.mutation<
+      FirstMileOrderDetail,
+      { id: number; body: UpdateOrderRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/orders/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<FirstMileOrderDetail>,
+    }),
+
+    cancelOrder: builder.mutation<
+      FirstMileOrderDetail,
+      { id: number; body: CancelOrderRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/orders/${id}/cancel`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<FirstMileOrderDetail>,
+    }),
+
+    confirmOrder: builder.mutation<OrderConfirmationResponse, number>({
+      query: (orderId) => ({
+        url: `/orders/${orderId}/confirm`,
+        method: 'POST',
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<OrderConfirmationResponse>,
+    }),
+
+    getActiveCouriersByPostOffice: builder.query<PostOfficeStaff[], number>({
+      query: (postOfficeId) => ({
+        url: `/post-office-staffs/post-offices/${postOfficeId}/couriers`,
+        method: 'GET',
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<PostOfficeStaff[]>,
+    }),
+
+    getPostOfficeStaffById: builder.query<PostOfficeStaff, number>({
+      query: (id) => ({
+        url: `/post-office-staffs/${id}`,
+        method: 'GET',
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<PostOfficeStaff>,
+    }),
+
+    optimizePickupPlan: builder.mutation<
+      PickupOptimizationResponse,
+      OptimizePickupPlanRequest
+    >({
+      query: (body) => ({
+        url: '/pickup-optimization/plan',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<PickupOptimizationResponse>,
+    }),
+
+    autoAssignPickupPlan: builder.mutation<
+      PickupAssignmentResponse,
+      AutoAssignPickupPlanRequest
+    >({
+      query: (body) => ({
+        url: '/pickup-optimization/auto-assign',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<PickupAssignmentResponse>,
+    }),
+
+    manualAssignPickupOrders: builder.mutation<
+      PickupAssignmentResponse,
+      ManualAssignPickupOrdersRequest
+    >({
+      query: (body) => ({
+        url: '/pickup-optimization/manual-assign',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<PickupAssignmentResponse>,
+    }),
+
+    getPickupTrackingOverview: builder.query<
+      PickupTrackingOverviewResponse,
+      { tripDate?: string; postOfficeId?: number; courierStaffId?: number }
+    >({
+      query: ({ tripDate, postOfficeId, courierStaffId }) => ({
+        url: '/pickup-tracking/overview',
+        method: 'GET',
+        params: {
+          ...(tripDate ? { trip_date: tripDate } : {}),
+          ...(postOfficeId ? { post_office_id: postOfficeId } : {}),
+          ...(courierStaffId ? { courier_staff_id: courierStaffId } : {}),
+        },
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse:
+        unwrapFirstMileResultOrRaw<PickupTrackingOverviewResponse>,
+    }),
+
+    pickupCheckinOrder: builder.mutation<
+      PickupCheckinResponse,
+      { orderId: number; formData: FormData }
+    >({
+      query: ({ orderId, formData }) => ({
+        url: `/orders/${orderId}/pickup-checkin`,
+        method: 'POST',
+        body: formData,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<PickupCheckinResponse>,
+    }),
+
     exportOrderTemplate: builder.query<Blob, void>({
       query: () => ({
         url: '/orders/template',
@@ -365,6 +670,14 @@ export const {
   useLazyExportPostOfficeTemplateQuery,
   useValidatePostOfficeImportMutation,
   useImportPostOfficesMutation,
+  useGetVehiclesQuery,
+  useGetVehicleByIdQuery,
+  useCreateVehicleMutation,
+  useUpdateVehicleMutation,
+  useDeleteVehicleMutation,
+  useLazyExportVehicleTemplateQuery,
+  useValidateVehicleImportMutation,
+  useImportVehiclesMutation,
   useGetProductTypesQuery,
   useGetProductTypeByIdQuery,
   useCreateProductTypeMutation,
@@ -376,6 +689,20 @@ export const {
   useGetWardsByProvinceCodeQuery,
   useLazyGetWardsByProvinceCodeQuery,
   useGeocodeAddressMutation,
+  useGetOrdersQuery,
+  useGetOrderByIdQuery,
+  useLazyGetOrderByIdQuery,
+  useCreateOrderMutation,
+  useUpdateOrderMutation,
+  useCancelOrderMutation,
+  useConfirmOrderMutation,
+  useGetActiveCouriersByPostOfficeQuery,
+  useGetPostOfficeStaffByIdQuery,
+  useOptimizePickupPlanMutation,
+  useAutoAssignPickupPlanMutation,
+  useManualAssignPickupOrdersMutation,
+  useGetPickupTrackingOverviewQuery,
+  usePickupCheckinOrderMutation,
   useLazyExportOrderTemplateQuery,
   useValidateOrderImportMutation,
   useImportOrdersMutation,

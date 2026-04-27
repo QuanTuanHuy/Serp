@@ -257,7 +257,7 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
   const getRelatedLink = () => {
     switch (activity.relatedTo.type) {
       case 'CUSTOMER':
-        return `/crm/customers/${activity.relatedTo.id}`;
+        return `/crm/accounts/${activity.relatedTo.id}`;
       case 'LEAD':
         return `/crm/leads/${activity.relatedTo.id}`;
       case 'OPPORTUNITY':

@@ -15,10 +15,8 @@ import serp.project.pmcore.application.workitem.command.update.internal.UpdateWo
 import serp.project.pmcore.application.workitem.command.update.support.UpdateWorkItemConfigurationResolver;
 import serp.project.pmcore.application.workitem.command.update.support.UpdateWorkItemFieldRulesResolver;
 import serp.project.pmcore.application.workitem.command.update.support.UpdateWorkItemFieldWriteValidator;
-import serp.project.pmcore.domain.customfield.dto.ResolvedCustomFields;
-import serp.project.pmcore.domain.customfield.entity.CustomFieldEntity;
-import serp.project.pmcore.domain.customfield.port.ICustomFieldPort;
-import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldResolver;
+import serp.project.pmcore.domain.customfield.dto.WorkItemCustomFieldMutationPlan;
+import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldMutationService;
 import serp.project.pmcore.domain.issuesecurity.dto.IssueSecurityAccessContext;
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
 import serp.project.pmcore.domain.issuetype.port.IIssueTypePort;
@@ -40,15 +38,12 @@ import serp.project.pmcore.domain.shared.service.IOutboxEventService;
 import serp.project.pmcore.domain.shared.util.WorkItemFieldValueUtils;
 import serp.project.pmcore.domain.workitem.dto.WorkItemFieldPolicy;
 import serp.project.pmcore.domain.workitem.dto.WorkItemFieldRules;
-import serp.project.pmcore.domain.workitem.entity.WorkItemCustomFieldValueEntity;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
-import serp.project.pmcore.domain.workitem.port.IWorkItemCustomFieldValuePort;
 import serp.project.pmcore.domain.workitem.service.IWorkItemAuthorizationSupportService;
 import serp.project.pmcore.domain.workitem.service.IWorkItemService;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -72,10 +67,8 @@ public class UpdateWorkItemCommandHandler
     private final UpdateWorkItemFieldRulesResolver updateWorkItemFieldRulesResolver;
     private final UpdateWorkItemFieldWriteValidator updateWorkItemFieldWriteValidator;
     private final UpdateWorkItemConfigurationResolver updateWorkItemConfigurationResolver;
-    private final IWorkItemCustomFieldResolver workItemCustomFieldResolver;
-    private final ICustomFieldPort customFieldPort;
+    private final IWorkItemCustomFieldMutationService workItemCustomFieldMutationService;
     private final IIssueTypePort issueTypePort;
-    private final IWorkItemCustomFieldValuePort workItemCustomFieldValuePort;
     private final IOutboxEventService outboxEventService;
     private final JsonUtils jsonUtils;
 
@@ -133,11 +126,16 @@ public class UpdateWorkItemCommandHandler
                 tenantId
         );
 
-        List<WorkItemCustomFieldValueEntity> existingCustomFieldValues = workItemCustomFieldValuePort
-                .getActiveValuesByWorkItemId(workItem.getId(), tenantId);
-        Map<String, CustomFieldEntity> customFieldsByKey = loadCustomFieldsByKey(collectRelevantCustomFieldKeys(fieldRules, data));
-        Map<String, Object> existingCustomFieldValuesByKey = mapExistingCustomFieldValues(customFieldsByKey, existingCustomFieldValues);
-        ResolvedCustomFields resolvedCustomFields = resolveCustomFields(workItem, data, fieldRules);
+        String issueTypeKey = issueTypePort.getIssueTypeById(workItem.getIssueTypeId(), workItem.getTenantId())
+                .orElseThrow(() -> ResourceNotFoundException.issueType(workItem.getIssueTypeId()))
+                .getTypeKey();
+        WorkItemCustomFieldMutationPlan customFieldPlan = workItemCustomFieldMutationService.planUpdate(
+                issueTypeKey,
+                workItem.getId(),
+                tenantId,
+                data.customFields(),
+                toRequiredCustomFieldMap(fieldRules)
+        );
 
         validateRequiredFields(
                 workItem,
@@ -146,25 +144,16 @@ public class UpdateWorkItemCommandHandler
                 resolvedPriorityId,
                 resolvedAssigneeId,
                 resolvedSecurityLevelId,
-                customFieldsByKey,
-                existingCustomFieldValuesByKey,
-                resolvedCustomFields.values()
+                customFieldPlan.missingRequiredFields()
         );
 
         Map<String, Object> originalSnapshot = snapshotTrackedFields(workItem);
 
         applySystemFieldUpdates(workItem, data, resolvedPriorityId, resolvedAssigneeId, resolvedSecurityLevelId);
         WorkItemEntity updatedWorkItem = workItemService.updateWorkItem(workItem, userId);
-        persistCustomFieldValues(
-                updatedWorkItem.getId(),
-                data.customFields().keySet(),
-                customFieldsByKey,
-                resolvedCustomFields.values(),
-                tenantId,
-                userId
-        );
+        workItemCustomFieldMutationService.applyPlan(updatedWorkItem.getId(), tenantId, userId, customFieldPlan);
 
-        List<String> changedFields = buildChangedFields(originalSnapshot, updatedWorkItem, data.customFields().keySet());
+        List<String> changedFields = buildChangedFields(originalSnapshot, updatedWorkItem, customFieldPlan.changedFieldKeys());
         persistUpdatedOutboxEvent(updatedWorkItem, changedFields, tenantId);
 
         log.info("Updated work item id={} projectId={} changedFields={}",
@@ -222,93 +211,13 @@ public class UpdateWorkItemCommandHandler
                 : workItemAuthorizationSupportService.resolveAssigneeId(permissionSubject, requestedAssigneeId, actorContext);
     }
 
-    private Map<String, CustomFieldEntity> loadCustomFieldsByKey(Collection<String> fieldKeys) {
-        if (fieldKeys == null || fieldKeys.isEmpty()) {
-            return Map.of();
-        }
-
-        return customFieldPort.getCustomFieldsByFieldKeys(new ArrayList<>(new LinkedHashSet<>(fieldKeys)))
-                .stream()
-                .collect(Collectors.toMap(
-                        CustomFieldEntity::getFieldKey,
-                        field -> field,
-                        (left, right) -> left,
-                        LinkedHashMap::new
-                ));
-    }
-
-    private Set<String> collectRelevantCustomFieldKeys(WorkItemFieldRules fieldRules, UpdateWorkItemData data) {
-        LinkedHashSet<String> fieldKeys = new LinkedHashSet<>(fieldRules.customPolicies().keySet());
-        fieldKeys.addAll(data.customFields().keySet());
-        return fieldKeys;
-    }
-
-    private Map<String, Object> mapExistingCustomFieldValues(Map<String, CustomFieldEntity> customFieldsByKey,
-                                                             List<WorkItemCustomFieldValueEntity> existingValues) {
-        if (customFieldsByKey.isEmpty() || existingValues == null || existingValues.isEmpty()) {
-            return Map.of();
-        }
-
-        Set<Long> activeCustomFieldIds = existingValues.stream()
-                .map(WorkItemCustomFieldValueEntity::getCustomFieldId)
-                .collect(Collectors.toSet());
-
-        Map<String, Object> result = new LinkedHashMap<>();
-        for (Map.Entry<String, CustomFieldEntity> entry : customFieldsByKey.entrySet()) {
-            if (activeCustomFieldIds.contains(entry.getValue().getId())) {
-                result.put(entry.getKey(), Boolean.TRUE);
-            }
-        }
-        return result;
-    }
-
-    private ResolvedCustomFields resolveCustomFields(WorkItemEntity workItem,
-                                                     UpdateWorkItemData data,
-                                                     WorkItemFieldRules fieldRules) {
-        if (data.customFields().isEmpty()) {
-            return ResolvedCustomFields.empty();
-        }
-
-        Map<String, Object> nonNullCustomFields = data.customFields().entrySet().stream()
-                .filter(entry -> entry.getValue() != null)
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue,
-                        (left, right) -> right,
-                        LinkedHashMap::new
-                ));
-        if (nonNullCustomFields.isEmpty()) {
-            return ResolvedCustomFields.empty();
-        }
-
-        Map<String, Boolean> requestedFieldMap = nonNullCustomFields.keySet().stream()
-                .collect(Collectors.toMap(
-                        key -> key,
-                        key -> fieldRules.getCustomFieldPolicy(key) != null && fieldRules.getCustomFieldPolicy(key).required(),
-                        (left, right) -> left,
-                        LinkedHashMap::new
-                ));
-
-        String issueTypeKey = issueTypePort.getIssueTypeById(workItem.getIssueTypeId(), workItem.getTenantId())
-                .orElseThrow(() -> ResourceNotFoundException.issueType(workItem.getIssueTypeId()))
-                .getTypeKey();
-
-        return workItemCustomFieldResolver.resolveCustomFields(
-                issueTypeKey,
-                nonNullCustomFields,
-                requestedFieldMap
-        );
-    }
-
     private void validateRequiredFields(WorkItemEntity workItem,
                                         UpdateWorkItemData data,
                                         WorkItemFieldRules fieldRules,
                                         Long resolvedPriorityId,
                                         Long resolvedAssigneeId,
                                         Long resolvedSecurityLevelId,
-                                        Map<String, CustomFieldEntity> customFieldsByKey,
-                                        Map<String, Object> existingCustomFieldValuesByKey,
-                                        List<WorkItemCustomFieldValueEntity> resolvedCustomFieldValues) {
+                                        List<String> missingCustomFields) {
         List<String> missingFields = new ArrayList<>();
 
         Map<String, Object> effectiveSystemValues = new LinkedHashMap<>();
@@ -357,28 +266,8 @@ public class UpdateWorkItemCommandHandler
             }
         }
 
-        Set<String> effectiveCustomFieldKeys = new LinkedHashSet<>(existingCustomFieldValuesByKey.keySet());
-        effectiveCustomFieldKeys.removeAll(data.customFields().keySet());
-        if (resolvedCustomFieldValues != null && !resolvedCustomFieldValues.isEmpty()) {
-            Map<Long, String> fieldKeyByCustomFieldId = customFieldsByKey.values().stream()
-                    .collect(Collectors.toMap(
-                            CustomFieldEntity::getId,
-                            CustomFieldEntity::getFieldKey,
-                            (left, right) -> left,
-                            LinkedHashMap::new
-                    ));
-            for (WorkItemCustomFieldValueEntity value : resolvedCustomFieldValues) {
-                String fieldKey = fieldKeyByCustomFieldId.get(value.getCustomFieldId());
-                if (fieldKey != null) {
-                    effectiveCustomFieldKeys.add(fieldKey);
-                }
-            }
-        }
-
-        for (WorkItemFieldPolicy policy : fieldRules.customPolicies().values()) {
-            if (policy.required() && !effectiveCustomFieldKeys.contains(policy.fieldRef())) {
-                missingFields.add(policy.fieldRef());
-            }
+        if (missingCustomFields != null && !missingCustomFields.isEmpty()) {
+            missingFields.addAll(missingCustomFields);
         }
 
         if (!missingFields.isEmpty()) {
@@ -437,40 +326,9 @@ public class UpdateWorkItemCommandHandler
         }
     }
 
-    private void persistCustomFieldValues(Long workItemId,
-                                          Set<String> requestedCustomFieldKeys,
-                                          Map<String, CustomFieldEntity> customFieldsByKey,
-                                          List<WorkItemCustomFieldValueEntity> values,
-                                          Long tenantId,
-                                          Long userId) {
-        if (requestedCustomFieldKeys == null || requestedCustomFieldKeys.isEmpty()) {
-            return;
-        }
-
-        List<Long> requestedCustomFieldIds = requestedCustomFieldKeys.stream()
-                .map(customFieldsByKey::get)
-                .filter(Objects::nonNull)
-                .map(CustomFieldEntity::getId)
-                .distinct()
-                .toList();
-        long now = System.currentTimeMillis();
-        workItemCustomFieldValuePort.softDeleteByWorkItemIdAndCustomFieldIds(workItemId, requestedCustomFieldIds, userId, now);
-
-        if (values == null || values.isEmpty()) {
-            return;
-        }
-
-        for (WorkItemCustomFieldValueEntity value : values) {
-            value.setWorkItemId(workItemId);
-            value.setTenantId(tenantId);
-            value.applyCreate(userId, now);
-        }
-        workItemCustomFieldValuePort.saveAll(values);
-    }
-
     private List<String> buildChangedFields(Map<String, Object> originalSnapshot,
                                             WorkItemEntity updatedWorkItem,
-                                            Set<String> requestedCustomFields) {
+                                            List<String> changedCustomFields) {
         List<String> changedFields = new ArrayList<>();
         addIfChanged(changedFields, originalSnapshot, WorkItemFieldConstants.SUMMARY, updatedWorkItem.getSummary());
         addIfChanged(changedFields, originalSnapshot, WorkItemFieldConstants.DESCRIPTION, updatedWorkItem.getDescription());
@@ -480,10 +338,20 @@ public class UpdateWorkItemCommandHandler
         addIfChanged(changedFields, originalSnapshot, WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE, updatedWorkItem.getTimeOriginalEstimate());
         addIfChanged(changedFields, originalSnapshot, WorkItemFieldConstants.SECURITY_LEVEL_ID, updatedWorkItem.getSecurityLevelId());
 
-        if (requestedCustomFields != null && !requestedCustomFields.isEmpty()) {
-            changedFields.addAll(requestedCustomFields.stream().sorted().toList());
+        if (changedCustomFields != null && !changedCustomFields.isEmpty()) {
+            changedFields.addAll(changedCustomFields);
         }
         return changedFields;
+    }
+
+    private Map<String, Boolean> toRequiredCustomFieldMap(WorkItemFieldRules fieldRules) {
+        return fieldRules.customPolicies().entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().required(),
+                        (left, right) -> left,
+                        LinkedHashMap::new
+                ));
     }
 
     private void addIfChanged(List<String> changedFields,

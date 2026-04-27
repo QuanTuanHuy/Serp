@@ -29,7 +29,8 @@ import serp.project.first_mile.enums.PostOfficeStaffRole;
 import serp.project.first_mile.enums.PostOfficeStaffStatus;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
-import serp.project.first_mile.kernel.utils.AuthUtils;
+import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
+import serp.project.first_mile.kernel.utils.ImageContentTypeUtils;
 import serp.project.first_mile.mapper.VehicleMapper;
 import serp.project.first_mile.repository.PostOfficeRepository;
 import serp.project.first_mile.repository.PostOfficeStaffAssignmentRepository;
@@ -48,8 +49,6 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class VehicleServiceImpl implements VehicleService {
-    private static final String ROLE_TMS_ADMIN = "TMS_ADMIN";
-    private static final String ROLE_TMS_POSTOFFICER_MANAGER = "TMS_POSTOFFICER_MANAGER";
     private static final String STORAGE_SERVICE_NAME = "first-mile";
     private static final String VEHICLE_IMAGE_FOLDER = "vehicle-image";
 
@@ -59,7 +58,7 @@ public class VehicleServiceImpl implements VehicleService {
     private final PostOfficeStaffRepository postOfficeStaffRepository;
     private final FileStorageService fileStorageService;
     private final VehicleImportExcelService vehicleImportExcelService;
-    private final AuthUtils authUtils;
+    private final FirstMileAccessUtils firstMileAccessUtils;
 
     @Override
     @Transactional(readOnly = true)
@@ -204,7 +203,7 @@ public class VehicleServiceImpl implements VehicleService {
             throw new AppException(ErrorCode.FILE_UPLOAD_EMPTY);
         }
 
-        String contentType = normalizeImageContentType(file.getContentType());
+        String contentType = ImageContentTypeUtils.normalizeImageContentType(file.getContentType());
 
         try {
             FileUploadResponse uploadResponse = fileStorageService.upload(FileUploadRequest.builder()
@@ -214,7 +213,7 @@ public class VehicleServiceImpl implements VehicleService {
                     .serviceName(STORAGE_SERVICE_NAME)
                     .folder(VEHICLE_IMAGE_FOLDER)
                     .tenantId(vehicle.getTenantId())
-                    .uploaderId(authUtils.getCurrentUserId().orElse(null))
+                    .uploaderId(firstMileAccessUtils.getCurrentUserIdOrNull())
                     .publicFile(true)
                     .build());
 
@@ -410,21 +409,7 @@ public class VehicleServiceImpl implements VehicleService {
     }
 
     private Set<Long> getManagedPostOfficeIdsOrThrow(Long tenantId) {
-        Long currentUserId = authUtils.getCurrentUserId().orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
-        String managerCode = buildStaffCode(currentUserId, PostOfficeStaffRole.MANAGER);
-
-        PostOfficeStaff managerStaff = postOfficeStaffRepository.findByCodeAndTenantId(managerCode, tenantId)
-                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
-
-        return postOfficeStaffAssignmentRepository.findActivePostOfficeIdsByStaffIdAndTenantId(
-                managerStaff.getId(),
-                tenantId,
-                LocalDate.now()
-        );
-    }
-
-    private String buildStaffCode(Long userId, PostOfficeStaffRole role) {
-        return "USR_" + userId + "_" + role.name();
+        return firstMileAccessUtils.getManagedPostOfficeIdsOrThrow(tenantId);
     }
 
     private PostOffice resolvePostOfficeOrNull(Long postOfficeId, Long tenantId) {
@@ -451,30 +436,11 @@ public class VehicleServiceImpl implements VehicleService {
     }
 
     private Long getCurrentTenantIdOrThrow() {
-        return authUtils.getCurrentTenantId().orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
+        return firstMileAccessUtils.getCurrentTenantIdOrThrow();
     }
 
     private boolean isManagerScopedAccess() {
-        return isPostOfficerManager() && !isAdmin();
-    }
-
-    private boolean isAdmin() {
-        return authUtils.hasAnyRole(ROLE_TMS_ADMIN);
-    }
-
-    private boolean isPostOfficerManager() {
-        return authUtils.hasAnyRole(ROLE_TMS_POSTOFFICER_MANAGER);
-    }
-
-    private String normalizeImageContentType(String contentType) {
-        String normalized = contentType == null
-                ? ""
-                : contentType.trim().toLowerCase(Locale.ROOT);
-
-        if (!normalized.startsWith("image/")) {
-            throw new AppException(ErrorCode.FILE_IMAGE_TYPE_INVALID);
-        }
-        return normalized;
+        return firstMileAccessUtils.isManagerScopedAccess();
     }
 
     private String normalizeLicensePlate(String licensePlate) {

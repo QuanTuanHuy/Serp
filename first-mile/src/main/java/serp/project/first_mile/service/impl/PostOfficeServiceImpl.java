@@ -7,8 +7,6 @@ package serp.project.first_mile.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -54,7 +52,9 @@ import serp.project.first_mile.repository.ProvinceRepository;
 import serp.project.first_mile.repository.WardRepository;
 import serp.project.first_mile.repository.projection.CodeNameProjection;
 import serp.project.first_mile.repository.specification.PostOfficeSpecification;
-import serp.project.first_mile.kernel.utils.AuthUtils;
+import serp.project.first_mile.kernel.utils.ExcelTemplateUtils;
+import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
+import serp.project.first_mile.kernel.utils.ImageContentTypeUtils;
 import serp.project.first_mile.service.FileStorageService;
 import serp.project.first_mile.service.PostOfficeImportExcelService;
 import serp.project.first_mile.service.PostOfficeService;
@@ -78,7 +78,7 @@ public class PostOfficeServiceImpl implements PostOfficeService {
     private final PostOfficeRepository postOfficeRepository;
     private final ProvinceRepository provinceRepository;
     private final WardRepository wardRepository;
-    private final AuthUtils authUtils;
+    private final FirstMileAccessUtils firstMileAccessUtils;
     private final GeocodeCaller geocodeCaller;
     private final FileStorageService fileStorageService;
     private final PostOfficeImportExcelService postOfficeImportExcelService;
@@ -86,7 +86,7 @@ public class PostOfficeServiceImpl implements PostOfficeService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<PostOfficeResponse> getPostOffices(int page, int size, PostOfficeFilterRequest filterRequest) {
-        Long tenantId = getCurrentTenantIdOrThrow();
+        Long tenantId = firstMileAccessUtils.getCurrentTenantIdOrThrow();
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
         PostOfficeFilterRequest normalizedFilterRequest = normalizeFilterRequest(filterRequest);
         validateFilterRanges(normalizedFilterRequest);
@@ -172,7 +172,7 @@ public class PostOfficeServiceImpl implements PostOfficeService {
             request.getOperationalEndDate(),
             request.getWorkingStartTime(),
             request.getWorkingEndTime());
-        Long tenantId = getCurrentTenantIdOrThrow();
+        Long tenantId = firstMileAccessUtils.getCurrentTenantIdOrThrow();
 
         if (postOfficeRepository.existsByCode(request.getCode())) {
             throw new AppException(ErrorCode.POST_OFFICE_CODE_EXISTED);
@@ -203,7 +203,7 @@ public class PostOfficeServiceImpl implements PostOfficeService {
         }
 
         PostOfficeMapper.mapForUpdate(request, postOffice);
-        postOffice.setTenantId(getCurrentTenantIdOrThrow());
+        postOffice.setTenantId(firstMileAccessUtils.getCurrentTenantIdOrThrow());
         PostOffice updatedPostOffice = postOfficeRepository.save(postOffice);
         return PostOfficeMapper.toResponse(updatedPostOffice);
     }
@@ -218,7 +218,7 @@ public class PostOfficeServiceImpl implements PostOfficeService {
             throw new AppException(ErrorCode.FILE_UPLOAD_EMPTY);
         }
 
-        String contentType = normalizeImageContentType(file.getContentType());
+        String contentType = ImageContentTypeUtils.normalizeImageContentType(file.getContentType());
 
         try {
             FileUploadResponse uploadResponse = fileStorageService.upload(FileUploadRequest.builder()
@@ -228,7 +228,7 @@ public class PostOfficeServiceImpl implements PostOfficeService {
                     .serviceName(STORAGE_SERVICE_NAME)
                     .folder(POST_OFFICE_IMAGE_FOLDER)
                     .tenantId(postOffice.getTenantId())
-                    .uploaderId(authUtils.getCurrentUserId().orElse(null))
+                    .uploaderId(firstMileAccessUtils.getCurrentUserIdOrNull())
                     .publicFile(true)
                     .build());
 
@@ -284,7 +284,7 @@ public class PostOfficeServiceImpl implements PostOfficeService {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
-        Long currentTenantId = getCurrentTenantIdOrThrow();
+        Long currentTenantId = firstMileAccessUtils.getCurrentTenantIdOrThrow();
         Pageable pageable = PageRequest.of(0, batch, Sort.by(Sort.Direction.ASC, "id"));
         List<PostOffice> postOffices = postOfficeRepository.findByLocationIsNull(pageable).getContent();
         log.info(
@@ -357,7 +357,7 @@ public class PostOfficeServiceImpl implements PostOfficeService {
 
     @Override
     public byte[] exportTemplate() {
-        getCurrentTenantIdOrThrow();
+        firstMileAccessUtils.getCurrentTenantIdOrThrow();
 
         List<CodeNameProjection> provinces = provinceRepository.findTemplateCodeNameList();
         List<CodeNameProjection> wards = wardRepository.findTemplateCodeNameList();
@@ -399,11 +399,11 @@ public class PostOfficeServiceImpl implements PostOfficeService {
     private void populateProvinceColumn(Sheet sheet, List<CodeNameProjection> provinces) {
         for (int i = 0; i < provinces.size(); i++) {
             CodeNameProjection province = provinces.get(i);
-            setTextCellValue(
+            ExcelTemplateUtils.setTextCellValue(
                     sheet,
                     START_ROW_INDEX + i,
                     PROVINCE_COLUMN_INDEX,
-                    formatCodeAndName(province.getCode(), province.getName())
+                    ExcelTemplateUtils.formatCodeAndName(province.getCode(), province.getName())
             );
         }
     }
@@ -411,31 +411,13 @@ public class PostOfficeServiceImpl implements PostOfficeService {
     private void populateWardColumn(Sheet sheet, List<CodeNameProjection> wards) {
         for (int i = 0; i < wards.size(); i++) {
             CodeNameProjection ward = wards.get(i);
-            setTextCellValue(
+            ExcelTemplateUtils.setTextCellValue(
                     sheet,
                     START_ROW_INDEX + i,
                     WARD_COLUMN_INDEX,
-                    formatCodeAndName(ward.getCode(), ward.getName())
+                    ExcelTemplateUtils.formatCodeAndName(ward.getCode(), ward.getName())
             );
         }
-    }
-
-    private void setTextCellValue(Sheet sheet, int rowIndex, int columnIndex, String value) {
-        Row row = sheet.getRow(rowIndex);
-        if (row == null) {
-            row = sheet.createRow(rowIndex);
-        }
-        Cell cell = row.getCell(columnIndex);
-        if (cell == null) {
-            cell = row.createCell(columnIndex);
-        }
-        cell.setCellValue(value);
-    }
-
-    private String formatCodeAndName(String code, String name) {
-        String safeCode = code == null ? "" : code.trim();
-        String safeName = name == null ? "" : name.trim();
-        return safeCode + " - " + safeName;
     }
 
     private void validateAddress(String provinceCode, String wardCode) {
@@ -475,23 +457,8 @@ public class PostOfficeServiceImpl implements PostOfficeService {
         }
     }
 
-    private String normalizeImageContentType(String contentType) {
-        String normalized = contentType == null
-                ? ""
-                : contentType.trim().toLowerCase(Locale.ROOT);
-
-        if (!normalized.startsWith("image/")) {
-            throw new AppException(ErrorCode.FILE_IMAGE_TYPE_INVALID);
-        }
-        return normalized;
-    }
-
-    private Long getCurrentTenantIdOrThrow() {
-        return authUtils.getCurrentTenantId().orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
-    }
-
     private boolean isCurrentTenant(PostOffice postOffice) {
-        Long currentTenantId = getCurrentTenantIdOrThrow();
+        Long currentTenantId = firstMileAccessUtils.getCurrentTenantIdOrThrow();
         return postOffice.getTenantId() != null && postOffice.getTenantId().equals(currentTenantId);
     }
 

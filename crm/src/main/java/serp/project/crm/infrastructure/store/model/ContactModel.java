@@ -15,7 +15,7 @@ import lombok.experimental.SuperBuilder;
 @Entity
 @Table(name = "contacts", indexes = {
         @Index(name = "idx_contacts_tenant_id", columnList = "tenant_id"),
-        @Index(name = "idx_contacts_customer_id", columnList = "customer_id"),
+        @Index(name = "idx_contacts_account_id", columnList = "account_id"),
         @Index(name = "idx_contacts_email", columnList = "email"),
 })
 @NoArgsConstructor
@@ -28,8 +28,8 @@ public class ContactModel extends BaseModel {
     @Column(name = "tenant_id", nullable = false)
     private Long tenantId;
 
-    @Column(name = "customer_id")
-    private Long customerId;
+    @Column(name = "account_id")
+    private Long accountId;
 
     @Column(name = "name", nullable = false, length = 255)
     private String name;

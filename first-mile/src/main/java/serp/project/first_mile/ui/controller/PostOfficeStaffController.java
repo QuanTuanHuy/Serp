@@ -3,6 +3,7 @@ package serp.project.first_mile.ui.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -19,6 +20,8 @@ import serp.project.first_mile.dto.response.PostOfficeStaffResponse;
 import serp.project.first_mile.exception.MessageService;
 import serp.project.first_mile.service.PostOfficeStaffService;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/post-office-staffs")
 @RequiredArgsConstructor
@@ -26,6 +29,28 @@ public class PostOfficeStaffController {
 
     private final PostOfficeStaffService postOfficeStaffService;
     private final MessageService messageService;
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_POSTOFFICER_MANAGER', 'TMS_POSTOFFICER')")
+    public ApiResponse<PostOfficeStaffResponse> getPostOfficeStaffById(
+            @PathVariable Long id
+    ) {
+        return ApiResponse.<PostOfficeStaffResponse>builder()
+                .message(messageService.getMessage("success.post_office_staffs.by_id"))
+                .result(postOfficeStaffService.getPostOfficeStaffById(id))
+                .build();
+    }
+
+    @GetMapping("/post-offices/{postOfficeId}/couriers")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_POSTOFFICER_MANAGER')")
+    public ApiResponse<List<PostOfficeStaffResponse>> getActiveCouriersByPostOffice(
+            @PathVariable Long postOfficeId
+    ) {
+        return ApiResponse.<List<PostOfficeStaffResponse>>builder()
+                .message(messageService.getMessage("success.post_office_staffs.couriers.by_post_office"))
+                .result(postOfficeStaffService.getActiveCouriersByPostOffice(postOfficeId))
+                .build();
+    }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_POSTOFFICER_MANAGER')")

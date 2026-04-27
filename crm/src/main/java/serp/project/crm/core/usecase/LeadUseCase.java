@@ -14,17 +14,22 @@ import serp.project.crm.core.domain.constant.ErrorMessage;
 import serp.project.crm.core.domain.dto.GeneralResponse;
 import serp.project.crm.core.domain.dto.PageRequest;
 import serp.project.crm.core.domain.dto.PageResponse;
+import serp.project.crm.core.domain.dto.request.AssignLeadRequest;
+import serp.project.crm.core.domain.dto.request.BulkAssignLeadRequest;
 import serp.project.crm.core.domain.dto.request.ConvertLeadRequest;
 import serp.project.crm.core.domain.dto.request.CreateLeadRequest;
+import serp.project.crm.core.domain.dto.request.DisqualifyLeadRequest;
 import serp.project.crm.core.domain.dto.request.LeadFilterRequest;
 import serp.project.crm.core.domain.dto.request.QualifyLeadRequest;
 import serp.project.crm.core.domain.dto.request.UpdateLeadRequest;
+import serp.project.crm.core.domain.dto.response.LeadAssignResponse;
 import serp.project.crm.core.domain.dto.response.LeadConversionResponse;
 import serp.project.crm.core.domain.dto.response.LeadResponse;
 import serp.project.crm.core.domain.entity.ContactEntity;
-import serp.project.crm.core.domain.entity.CustomerEntity;
+import serp.project.crm.core.domain.entity.AccountEntity;
 import serp.project.crm.core.domain.entity.LeadEntity;
 import serp.project.crm.core.domain.entity.OpportunityEntity;
+import serp.project.crm.core.domain.enums.LeadStatus;
 import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.mapper.LeadDtoMapper;
 import serp.project.crm.core.service.*;
@@ -38,7 +43,7 @@ import java.util.List;
 public class LeadUseCase {
 
     private final ILeadService leadService;
-    private final ICustomerService customerService;
+    private final IAccountService accountService;
     private final IOpportunityService opportunityService;
     private final IContactService contactService;
 
@@ -84,65 +89,105 @@ public class LeadUseCase {
 
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> qualifyLead(QualifyLeadRequest request, Long tenantId) {
+        return qualifyLead(request, null, tenantId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> qualifyLead(QualifyLeadRequest request, Long userId, Long tenantId) {
         try {
-            LeadEntity qualifiedLead = leadService.qualifyLead(request.getLeadId(),
-                    tenantId);
+            LeadEntity qualifiedLead = leadService.qualifyLead(request.getLeadId(), request.getNotes(), userId, tenantId);
 
             LeadResponse response = leadDtoMapper.toResponse(qualifiedLead);
 
             log.info("Lead qualified successfully: {}", request.getLeadId());
             return responseUtils.success(response, "Lead qualified successfully");
 
-        } catch (IllegalArgumentException e) {
-            log.error("Validation error qualifying lead: {}", e.getMessage());
-            return responseUtils.badRequest(e.getMessage());
-        } catch (IllegalStateException e) {
-            log.error("State error qualifying lead: {}", e.getMessage());
-            return responseUtils.badRequest(e.getMessage());
+        } catch (AppException e) {
+            log.error("Error qualifying lead: {}", e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Unexpected error qualifying lead: {}", e.getMessage(), e);
-            return responseUtils.internalServerError("Failed to qualify lead");
+            throw e;
         }
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public GeneralResponse<?> convertLead(ConvertLeadRequest request, Long tenantId) {
+    public GeneralResponse<?> disqualifyLead(Long id, DisqualifyLeadRequest request, Long userId, Long tenantId) {
+        LeadEntity disqualifiedLead = leadService.disqualifyLead(id, request.getNotes(), userId, tenantId);
+        LeadResponse response = leadDtoMapper.toResponse(disqualifiedLead);
+        return responseUtils.success(response, "Lead disqualified successfully");
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> convertLead(ConvertLeadRequest request, Long userId, Long tenantId) {
         try {
             LeadEntity lead = leadService.getLeadById(request.getLeadId(), tenantId)
                     .orElseThrow(() -> new AppException(ErrorMessage.LEAD_NOT_FOUND));
-            if (!lead.canBeConverted()) {
+            if (lead.getLeadStatus() != LeadStatus.QUALIFIED) {
                 return responseUtils.badRequest(ErrorMessage.LEAD_CANNOT_BE_CONVERTED);
             }
 
-            Long customerId;
-            if (Boolean.TRUE.equals(request.getCreateNewCustomer())) {
-                CustomerEntity customer = leadDtoMapper.toCustomerEntity(lead);
-
-                CustomerEntity createdCustomer = customerService.createCustomer(customer, tenantId);
-                customerId = createdCustomer.getId();
-                log.info("Created new customer ID: {} from lead", customerId);
-            } else {
-                customerId = request.getExistingCustomerId();
-                if (customerId == null) {
-                    return responseUtils
-                            .badRequest("Either createNewCustomer must be true or existingCustomerId must be provided");
-                }
-                customerService.getCustomerById(customerId, tenantId)
-                        .orElseThrow(() -> new AppException(ErrorMessage.CUSTOMER_NOT_FOUND));
-                log.info("Using existing customer ID: {}", customerId);
+            boolean createOpportunity = !Boolean.FALSE.equals(request.getCreateOpportunity());
+            boolean createAccount = !Boolean.FALSE.equals(request.getCreateAccount());
+            if (!createOpportunity && !createAccount && request.getExistingAccountId() == null) {
+                return responseUtils.badRequest("Conversion must create or link an account, or create an opportunity");
             }
 
-            ContactEntity contact = leadDtoMapper.toContactEntity(lead, customerId);
-            ContactEntity createdContact = contactService.createContact(contact, tenantId, tenantId); // TODO: fix userId
-            log.info("Created contact ID: {} from lead", createdContact.getId());
+            if (createOpportunity && !createAccount && request.getExistingAccountId() == null) {
+                return responseUtils.badRequest("Account is required when creating opportunity from lead");
+            }
 
-            OpportunityEntity opportunity = leadDtoMapper.toOpportunityEntity(lead, customerId, request);
-            OpportunityEntity createdOpportunity = opportunityService.createOpportunity(opportunity, tenantId);
+            if (createOpportunity) {
+                var opportunityData = request.getOpportunityData();
+                boolean hasOpportunityAmount = opportunityData != null && opportunityData.getAmount() != null
+                        && opportunityData.getAmount().signum() > 0;
+                boolean hasLeadEstimatedValue = lead.getEstimatedValue() != null && lead.getEstimatedValue().signum() > 0;
+                if (!hasOpportunityAmount && !hasLeadEstimatedValue) {
+                    return responseUtils.badRequest(
+                            "Lead must have estimated value > 0 to create an opportunity. To create account only, estimated value is not required");
+                }
+            }
 
-            leadService.convertLead(request.getLeadId(), customerId, createdOpportunity.getId(), tenantId);
+            Long accountId;
+            if (createAccount) {
+                AccountEntity account = leadDtoMapper.toAccountEntity(lead, request.getAccountData());
+                if (account.getName() == null || account.getName().isBlank()) {
+                    return responseUtils.badRequest("Account name is required when creating account from lead");
+                }
+
+                AccountEntity createdAccount = accountService.createAccount(account, tenantId);
+                accountId = createdAccount.getId();
+                log.info("Created new Account ID: {} from lead", accountId);
+            } else if (request.getExistingAccountId() != null) {
+                accountId = request.getExistingAccountId();
+                accountService.getAccountById(accountId, tenantId)
+                        .orElseThrow(() -> new AppException(ErrorMessage.ACCOUNT_NOT_FOUND));
+                log.info("Using existing Account ID: {}", accountId);
+            } else {
+                accountId = null;
+            }
+
+            ContactEntity createdContact = null;
+            if (accountId != null) {
+                ContactEntity contact = leadDtoMapper.toContactEntity(lead, accountId);
+                createdContact = contactService.createContact(contact, userId, tenantId);
+                log.info("Created contact ID: {} from lead", createdContact.getId());
+            }
+
+            OpportunityEntity createdOpportunity = null;
+            if (createOpportunity) {
+                OpportunityEntity opportunity = leadDtoMapper.toOpportunityEntity(lead, accountId, request);
+                OpportunityEntity created = opportunityService.createOpportunity(opportunity, tenantId);
+                createdOpportunity = created;
+            }
+
+            leadService.convertLead(request.getLeadId(), accountId,
+                    createdOpportunity != null ? createdOpportunity.getId() : null, userId, tenantId);
 
             LeadConversionResponse response = leadDtoMapper.toConversionResponse(
-                    request.getLeadId(), customerId, createdOpportunity.getId(), createdContact.getId());
+                    request.getLeadId(), accountId,
+                    createdOpportunity != null ? createdOpportunity.getId() : null,
+                    createdContact != null ? createdContact.getId() : null);
 
             log.info("Lead conversion completed successfully");
             return responseUtils.success(response, "Lead converted successfully");
@@ -152,8 +197,29 @@ public class LeadUseCase {
             throw e;
         } catch (Exception e) {
             log.error("Unexpected error converting lead: {}", e.getMessage(), e);
-            return responseUtils.internalServerError("Failed to convert lead");
+            throw e;
         }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> assignLead(Long id, AssignLeadRequest request, Long userId, Long tenantId) {
+        LeadEntity assignedLead = leadService.assignLead(id, request.getAssignedTo(), userId, tenantId);
+        LeadResponse response = leadDtoMapper.toResponse(assignedLead);
+        return responseUtils.success(response, "Lead assigned successfully");
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> bulkAssignLeads(BulkAssignLeadRequest request, Long userId, Long tenantId) {
+        int assignedCount = 0;
+        for (Long leadId : request.getLeadIds()) {
+            leadService.assignLead(leadId, request.getAssignedTo(), userId, tenantId);
+            assignedCount++;
+        }
+        LeadAssignResponse response = LeadAssignResponse.builder()
+                .assignedCount(assignedCount)
+                .assignedTo(request.getAssignedTo())
+                .build();
+        return responseUtils.success(response, "Lead(s) assigned successfully");
     }
 
     @Transactional(readOnly = true)
@@ -224,12 +290,12 @@ public class LeadUseCase {
             log.info("Lead deleted successfully: {}", id);
             return responseUtils.status("Lead deleted successfully");
 
-        } catch (IllegalArgumentException e) {
-            log.error("Validation error deleting lead: {}", e.getMessage());
-            return responseUtils.badRequest(e.getMessage());
+        } catch (AppException e) {
+            log.error("Error deleting lead: {}", e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Unexpected error deleting lead: {}", e.getMessage(), e);
-            return responseUtils.internalServerError("Failed to delete lead");
+            throw e;
         }
     }
 

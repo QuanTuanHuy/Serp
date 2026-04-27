@@ -33,7 +33,7 @@ public class GlobalExceptionHandler {
                 getExceptionDetail(exception),
                 request
         );
-        return ResponseEntity.badRequest().body(apiResponse);
+        return ResponseEntity.status(errorCode.getStatusCode()).body(apiResponse);
     }
 
     @ExceptionHandler(value = AppException.class)
@@ -42,7 +42,7 @@ public class GlobalExceptionHandler {
         ApiResponse<Void> apiResponse = buildErrorResponse(
                 errorCode,
                 messageService.getMessage(errorCode.getMessageKey()),
-                getExceptionDetail(exception),
+                                resolveAppExceptionDetail(exception),
                 request
         );
         return ResponseEntity.status(errorCode.getStatusCode()).body(apiResponse);
@@ -136,4 +136,12 @@ public class GlobalExceptionHandler {
                 ? root.getClass().getSimpleName()
                 : String.format("%s: %s", root.getClass().getSimpleName(), message);
     }
+
+        private String resolveAppExceptionDetail(AppException exception) {
+                if (exception.getDetail() != null && !exception.getDetail().isBlank()) {
+                        return exception.getDetail();
+                }
+
+                return getExceptionDetail(exception);
+        }
 }

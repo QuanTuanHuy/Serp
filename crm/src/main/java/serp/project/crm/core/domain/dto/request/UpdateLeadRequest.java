@@ -69,15 +69,14 @@ public class UpdateLeadRequest {
     private LeadStatus leadStatus;
     private Long assignedTo;
     
-    @DecimalMin(value = "0.0", inclusive = false, message = "Estimated value must be greater than 0")
+    @DecimalMin(value = "0.0", message = "Estimated value must be greater than or equal to 0")
     private BigDecimal estimatedValue;
     
-    @Min(value = 0, message = "Probability must be at least 0")
-    @Max(value = 100, message = "Probability must not exceed 100")
-    private Integer probability;
+    @Min(value = 0, message = "Lead score must be at least 0")
+    @Max(value = 100, message = "Lead score must not exceed 100")
+    private Integer leadScore;
     
-    @Future(message = "Expected close date must be in the future")
-    private LocalDate expectedCloseDate;
+    private LocalDate followUpDate;
     
     @Size(max = 1000, message = "Notes must not exceed 1000 characters")
     private String notes;

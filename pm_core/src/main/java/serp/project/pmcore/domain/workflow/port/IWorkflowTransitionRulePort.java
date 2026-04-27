@@ -12,5 +12,9 @@ import serp.project.pmcore.domain.workflow.entity.WorkflowTransitionRuleEntity;
 public interface IWorkflowTransitionRulePort {
     List<WorkflowTransitionRuleEntity> createWorkflowTransitionRules(List<WorkflowTransitionRuleEntity> rules);
 
+    List<WorkflowTransitionRuleEntity> updateWorkflowTransitionRules(List<WorkflowTransitionRuleEntity> rules);
+
+    List<WorkflowTransitionRuleEntity> getWorkflowTransitionRulesByTransitionId(Long transitionId, Long tenantId);
+
     List<WorkflowTransitionRuleEntity> getWorkflowTransitionRulesByTransitionIdIncludingSystem(Long transitionId, Long tenantId);
 }

@@ -6,6 +6,7 @@
 package serp.project.pmcore.domain.project.service;
 
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
+import serp.project.pmcore.domain.project.dto.ProjectUpdateData;
 
 public interface IProjectService {
 
@@ -13,7 +14,7 @@ public interface IProjectService {
 
     ProjectEntity saveProject(ProjectEntity entity, Long userId);
 
-    ProjectEntity updateProject(Long projectId, ProjectEntity updateData, Long tenantId, Long userId);
+    ProjectEntity updateProject(Long projectId, ProjectUpdateData updateData, Long tenantId, Long userId);
 
     ProjectEntity getProjectById(Long id, Long tenantId);
 

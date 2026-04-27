@@ -71,11 +71,11 @@ const variantStyles = {
 const DEFAULT_ACTIONS: QuickActionItem[] = [
   {
     id: 'add-customer',
-    label: 'Add Customer',
-    description: 'Create new customer record',
+    label: 'Add Account',
+    description: 'Create new account record',
     icon: UserPlus,
     variant: 'primary',
-    href: '/crm/customers/create',
+    href: '/crm/accounts/create',
   },
   {
     id: 'add-lead',

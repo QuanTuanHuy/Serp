@@ -15,6 +15,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import serp.project.first_mile.enums.OrderStatus;
+import serp.project.first_mile.enums.PickupOptimizationEffort;
+import serp.project.first_mile.enums.PickupOptimizationGoal;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -47,6 +49,12 @@ public class OptimizePickupPlanRequest {
     @JsonProperty("order_limit")
     @Min(1)
     private Integer orderLimit;
+
+    @JsonProperty("optimization_goal")
+    private PickupOptimizationGoal optimizationGoal;
+
+    @JsonProperty("optimization_effort")
+    private PickupOptimizationEffort optimizationEffort;
 
     @JsonProperty("average_speed_kmph")
     @DecimalMin(value = "1.0")
