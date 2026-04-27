@@ -36,4 +36,30 @@ public class TerritoryEntity extends BaseEntity {
             this.active = true;
         }
     }
+
+    public boolean isGlobal() {
+        return Long.valueOf(0L).equals(this.getTenantId());
+    }
+
+    public boolean isTenantOwned() {
+        return this.getTenantId() != null && this.getTenantId() > 0;
+    }
+
+    public void updateFrom(TerritoryEntity updates) {
+        if (updates.getTerritoryName() != null) {
+            this.territoryName = updates.getTerritoryName();
+        }
+        if (updates.getTerritoryLevel() != null) {
+            this.territoryLevel = updates.getTerritoryLevel();
+        }
+        if (updates.getCountryCode() != null) {
+            this.countryCode = updates.getCountryCode();
+        }
+        if (updates.getParentTerritoryCode() != null) {
+            this.parentTerritoryCode = updates.getParentTerritoryCode();
+        }
+        if (updates.getActive() != null) {
+            this.active = updates.getActive();
+        }
+    }
 }

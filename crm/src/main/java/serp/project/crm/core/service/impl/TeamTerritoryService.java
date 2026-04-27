@@ -9,10 +9,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.crm.core.domain.constant.ErrorMessage;
+import serp.project.crm.core.domain.dto.response.TerritoryOwnerResponse;
 import serp.project.crm.core.domain.entity.TeamEntity;
 import serp.project.crm.core.domain.entity.TeamTerritoryEntity;
 import serp.project.crm.core.domain.entity.TerritoryEntity;
 import serp.project.crm.core.exception.AppException;
+import serp.project.crm.core.mapper.TerritoryDtoMapper;
 import serp.project.crm.core.port.store.ITeamTerritoryPort;
 import serp.project.crm.core.service.ITeamService;
 import serp.project.crm.core.service.ITeamTerritoryService;
@@ -20,6 +22,7 @@ import serp.project.crm.core.service.ITerritoryService;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +30,7 @@ public class TeamTerritoryService implements ITeamTerritoryService {
     private final ITeamService teamService;
     private final ITerritoryService territoryService;
     private final ITeamTerritoryPort teamTerritoryPort;
+    private final TerritoryDtoMapper territoryDtoMapper;
 
     @Override
     @Transactional
@@ -74,5 +78,13 @@ public class TeamTerritoryService implements ITeamTerritoryService {
         }
 
         return territoryService.getTerritoriesByCodes(territoryCodes, tenantId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<TerritoryOwnerResponse> getTerritoryOwner(String territoryCode, Long tenantId) {
+        return teamTerritoryPort.findActiveByTerritoryCode(territoryCode, tenantId)
+                .flatMap(mapping -> teamService.getTeamById(mapping.getTeamId(), tenantId)
+                        .map(team -> territoryDtoMapper.toOwnerResponse(territoryCode, mapping, team)));
     }
 }

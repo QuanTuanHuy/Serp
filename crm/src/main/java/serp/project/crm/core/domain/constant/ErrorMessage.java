@@ -88,6 +88,8 @@ public class ErrorMessage {
     public static final String TEAM_MANAGER_ROLE_CHANGE_INVALID = "Previous manager role must be SALES_REP or VIEWER";
     public static final String TERRITORY_NOT_FOUND = "Territory not found";
     public static final String TERRITORY_ALREADY_ASSIGNED = "Territory already assigned to another active team";
+    public static final String TERRITORY_GLOBAL_RECORD_READ_ONLY = "Global territory records cannot be modified directly";
+    public static final String TERRITORY_CODE_ALREADY_EXISTS = "Territory code already exists in this tenant";
 
     // Team member errors
     public static final String MEMBER_NOT_BELONG_TO_ORGANIZATION = "Member does not belong to the organization";
