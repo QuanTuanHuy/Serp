@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.CancelOrderRequest;
+import serp.project.first_mile.dto.request.ConfirmDropOffOrderRequest;
 import serp.project.first_mile.dto.request.CreateOrderRequest;
 import serp.project.first_mile.dto.request.OrderFilterRequest;
 import serp.project.first_mile.dto.request.OrderImportDTO;
@@ -19,6 +20,7 @@ import serp.project.first_mile.dto.request.UpdateOrderRequest;
 import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.OrderConfirmationResponse;
 import serp.project.first_mile.dto.response.OrderDetailResponse;
+import serp.project.first_mile.dto.response.OrderDropOffPostOfficeSuggestionResponse;
 import serp.project.first_mile.dto.response.PickupCheckinResponse;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
 import serp.project.first_mile.enums.OrderStatus;
@@ -28,6 +30,7 @@ import serp.project.first_mile.kernel.utils.AuthUtils;
 import serp.project.first_mile.service.OrderService;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/orders")
@@ -130,6 +133,33 @@ public class OrderController {
         );
         log.info("REST request to confirm Order {} for tenant {}", orderId, tenantId);
         return orderService.confirmOrder(orderId, tenantId);
+    }
+
+    @GetMapping("/{orderId}/drop-off-post-office-suggestions")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_CUSTOMER')")
+    public List<OrderDropOffPostOfficeSuggestionResponse> getDropOffPostOfficeSuggestions(
+            @PathVariable Long orderId,
+            @RequestParam(name = "limit", defaultValue = "5") Integer limit
+    ) {
+        Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
+                () -> new AppException(ErrorCode.UNAUTHORIZED)
+        );
+        log.info("REST request to get drop-off post office suggestions for Order {} tenant {}", orderId, tenantId);
+        return orderService.getDropOffPostOfficeSuggestions(orderId, limit, tenantId);
+    }
+
+    @PostMapping("/{orderId}/drop-off-confirm")
+    @PreAuthorize("hasRole('TMS_POSTOFFICER_MANAGER')")
+    public OrderConfirmationResponse confirmDropOffOrderAtPostOffice(
+            @PathVariable Long orderId,
+            @Valid @RequestBody ConfirmDropOffOrderRequest request
+    ) {
+        Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
+                () -> new AppException(ErrorCode.UNAUTHORIZED)
+        );
+        log.info("REST request to confirm drop-off Order {} at post office {} tenant {}",
+                orderId, request.getPostOfficeId(), tenantId);
+        return orderService.confirmDropOffOrderAtPostOffice(orderId, request.getPostOfficeId(), tenantId);
     }
 
     @PostMapping

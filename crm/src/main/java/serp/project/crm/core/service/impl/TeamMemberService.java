@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.crm.core.domain.constant.Constants;
 import serp.project.crm.core.domain.constant.ErrorMessage;
+import serp.project.crm.core.domain.constant.TeamMemberRole;
 import serp.project.crm.core.domain.dto.PageRequest;
 import serp.project.crm.core.domain.dto.response.user.UserProfileResponse;
 import serp.project.crm.core.domain.entity.TeamMemberEntity;
@@ -36,7 +37,11 @@ public class TeamMemberService implements ITeamMemberService {
 
     private final ITeamService teamService;
 
-    private static final List<String> ALLOWED_ROLES = List.of("LEADER", "MEMBER", "VIEWER");
+    private void validateTeamRole(String role) {
+        if (role == null || !TeamMemberRole.ALL.contains(role)) {
+            throw new AppException(ErrorMessage.INVALID_TEAM_MEMBER_ROLE);
+        }
+    }
 
     @Override
     @Transactional
@@ -48,6 +53,8 @@ public class TeamMemberService implements ITeamMemberService {
         teamService.getTeamById(teamMember.getTeamId(), tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.TEAM_NOT_FOUND));
 
+        validateTeamRole(teamMember.getRole());
+
         teamMemberPort.findByUserId(teamMember.getUserId(), tenantId)
                 .ifPresent(existing -> {
                     throw new AppException(ErrorMessage.MEMBER_ALREADY_IN_TEAM);
@@ -55,9 +62,6 @@ public class TeamMemberService implements ITeamMemberService {
 
         teamMember.setTenantId(tenantId);
         teamMember.setDefaults();
-        if (teamMember.getRole() == null) {
-            teamMember.setRole("MEMBER");
-        }
 
         TeamMemberEntity saved = teamMemberPort.save(teamMember);
 
@@ -71,6 +75,10 @@ public class TeamMemberService implements ITeamMemberService {
     public TeamMemberEntity updateTeamMember(Long id, TeamMemberEntity updates, Long tenantId) {
         TeamMemberEntity existing = teamMemberPort.findById(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND));
+
+        if (updates.getRole() != null) {
+            validateTeamRole(updates.getRole());
+        }
 
         existing.updateFrom(updates);
 
@@ -106,8 +114,8 @@ public class TeamMemberService implements ITeamMemberService {
     public Pair<List<TeamMemberEntity>, Long> getTeamMembersByRole(String role, Long tenantId,
             PageRequest pageRequest) {
         pageRequest.validate();
-        if (!ALLOWED_ROLES.contains(role)) {
-            throw new AppException("Invalid role. Must be LEADER, MEMBER, or VIEWER");
+        if (!TeamMemberRole.ALL.contains(role)) {
+            throw new AppException(ErrorMessage.INVALID_TEAM_MEMBER_ROLE);
         }
 
         return teamMemberPort.findByRole(role, tenantId, pageRequest);
@@ -128,12 +136,23 @@ public class TeamMemberService implements ITeamMemberService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<TeamMemberEntity> getAllMembersByTeam(Long teamId, Long tenantId) {
+        return teamMemberPort.findAllByTeamId(teamId, tenantId);
+    }
+
+    @Override
     @Transactional
-    public void removeTeamMember(Long id, Long tenantId) {
+    public void removeTeamMember(Long teamId, Long id, Long tenantId) {
         TeamMemberEntity teamMember = teamMemberPort.findById(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND));
 
-        teamMemberPort.deleteById(id, tenantId);
+        if (!teamId.equals(teamMember.getTeamId())) {
+            throw new AppException(ErrorMessage.TEAM_MEMBER_DOES_NOT_BELONG_TO_TEAM);
+        }
+
+        teamMember.inactivate(tenantId);
+        teamMemberPort.save(teamMember);
 
         publishTeamMemberRemovedEvent(teamMember);
 
@@ -156,6 +175,16 @@ public class TeamMemberService implements ITeamMemberService {
             profiles.add(userProfile);
         }
         return profiles;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TeamMemberEntity getActiveEligibleMember(Long teamId, Long userId, Long tenantId) {
+        return teamMemberPort.findByTeamIdAndUserId(teamId, userId, tenantId)
+                .filter(member -> TeamMemberStatus.ACTIVE.equals(member.getStatus()))
+                .filter(member -> TeamMemberRole.MANAGER.equals(member.getRole())
+                        || TeamMemberRole.SALES_REP.equals(member.getRole()))
+                .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND));
     }
 
     private void publishTeamMemberAddedEvent(TeamMemberEntity teamMember) {

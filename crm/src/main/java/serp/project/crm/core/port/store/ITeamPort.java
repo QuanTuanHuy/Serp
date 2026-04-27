@@ -20,7 +20,7 @@ public interface ITeamPort {
 
     Pair<List<TeamEntity>, Long> findAll(Long tenantId, PageRequest pageRequest);
 
-    Pair<List<TeamEntity>, Long> findByLeaderId(Long leaderId, Long tenantId, PageRequest pageRequest);
+    Pair<List<TeamEntity>, Long> findByManagerUserId(Long managerUserId, Long tenantId, PageRequest pageRequest);
 
     Boolean existsByName(String name, Long tenantId);
 

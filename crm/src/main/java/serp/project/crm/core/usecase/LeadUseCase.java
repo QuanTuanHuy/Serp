@@ -46,6 +46,7 @@ public class LeadUseCase {
     private final IAccountService accountService;
     private final IOpportunityService opportunityService;
     private final IContactService contactService;
+    private final ITerritoryService territoryService;
 
     private final LeadDtoMapper leadDtoMapper;
     private final ResponseUtils responseUtils;
@@ -54,6 +55,8 @@ public class LeadUseCase {
     public GeneralResponse<?> createLead(CreateLeadRequest request, Long tenantId) {
         try {
             LeadEntity leadEntity = leadDtoMapper.toEntity(request);
+            territoryService.resolveTerritory(request.getTerritoryCode(), request.getState(), request.getCity(), tenantId)
+                    .ifPresent(territory -> leadEntity.setTerritoryCode(territory.getTerritoryCode()));
             LeadEntity createdLead = leadService.createLead(leadEntity, tenantId);
             LeadResponse response = leadDtoMapper.toResponse(createdLead);
 
@@ -72,6 +75,8 @@ public class LeadUseCase {
     public GeneralResponse<?> updateLead(Long id, Long userId, UpdateLeadRequest request, Long tenantId) {
         try {
             LeadEntity updates = leadDtoMapper.toEntity(request);
+            territoryService.resolveTerritory(request.getTerritoryCode(), request.getState(), request.getCity(), tenantId)
+                    .ifPresent(territory -> updates.setTerritoryCode(territory.getTerritoryCode()));
             updates.setUpdatedBy(userId);
             LeadEntity updatedLead = leadService.updateLead(id, updates, tenantId);
             LeadResponse response = leadDtoMapper.toResponse(updatedLead);

@@ -27,6 +27,7 @@ import type { Province, Ward } from '../../../types';
 import {
   DELIVERY_REQUEST_TIME_OPTIONS,
   FEE_PAYER_OPTIONS,
+  ORDER_PICKUP_METHOD_OPTIONS,
   ORDER_PRODUCT_CATEGORY_OPTIONS,
   ORDER_TYPE_OPTIONS,
   type CreateOrderFormState,
@@ -441,6 +442,30 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
           <div className='space-y-3 rounded-md border p-3'>
             <h3 className='text-sm font-semibold'>Order options</h3>
             <div className='grid gap-3 md:grid-cols-2'>
+              <div className='space-y-2'>
+                <Label>Pickup method *</Label>
+                <Select
+                  value={createForm.pickupMethod}
+                  onValueChange={(value) =>
+                    onFormChange(
+                      'pickupMethod',
+                      value as CreateOrderFormState['pickupMethod']
+                    )
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ORDER_PICKUP_METHOD_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className='space-y-2'>
                 <Label>Delivery request time *</Label>
                 <Select

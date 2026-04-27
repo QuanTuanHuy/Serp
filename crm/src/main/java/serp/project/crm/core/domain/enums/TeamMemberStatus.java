@@ -9,9 +9,8 @@ import lombok.Getter;
 
 @Getter
 public enum TeamMemberStatus {
-    INVITED("Invited"),
-    CONFIRMED("Confirmed"),
-    ARCHIVED("Archived");
+    ACTIVE("Active"),
+    INACTIVE("Inactive");
 
     private final String status;
 

@@ -29,6 +29,8 @@ public interface ILeadPort {
 
     Pair<List<LeadEntity>, Long> findByAssignedTo(Long assignedTo, Long tenantId, PageRequest pageRequest);
 
+    List<LeadEntity> findAllByAssignedTo(Long assignedTo, Long tenantId);
+
     Pair<List<LeadEntity>, Long> findByLeadSource(LeadSource leadSource, Long tenantId, PageRequest pageRequest);
 
     Pair<List<LeadEntity>, Long> findByLeadStatus(LeadStatus leadStatus, Long tenantId, PageRequest pageRequest);

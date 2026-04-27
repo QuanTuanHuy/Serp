@@ -10,6 +10,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import serp.project.crm.core.domain.constant.ErrorMessage;
+import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.domain.enums.TeamMemberStatus;
 
 @NoArgsConstructor
@@ -41,23 +43,23 @@ public class TeamMemberEntity extends BaseEntity {
 
     public void setDefaults() {
         if (this.status == null) {
-            this.status = TeamMemberStatus.INVITED;
+            this.status = TeamMemberStatus.ACTIVE;
         }
     }
 
-    public void confirmMember(Long tenantId) {
-        if (TeamMemberStatus.CONFIRMED.equals(this.status)) {
-            throw new IllegalStateException("Team member is already confirmed");
+    public void activate(Long tenantId) {
+        if (TeamMemberStatus.ACTIVE.equals(this.status)) {
+            throw new AppException(ErrorMessage.MEMBER_ALREADY_ACTIVE);
         }
-        this.status = TeamMemberStatus.CONFIRMED;
+        this.status = TeamMemberStatus.ACTIVE;
         this.setTenantId(tenantId);
     }
 
-    public void archiveMember(Long tenantId) {
-        if (TeamMemberStatus.ARCHIVED.equals(this.status)) {
-            throw new IllegalStateException("Team member is already archived");
+    public void inactivate(Long tenantId) {
+        if (TeamMemberStatus.INACTIVE.equals(this.status)) {
+            throw new AppException(ErrorMessage.MEMBER_ALREADY_INACTIVE);
         }
-        this.status = TeamMemberStatus.ARCHIVED;
+        this.status = TeamMemberStatus.INACTIVE;
         this.setTenantId(tenantId);
     }
 

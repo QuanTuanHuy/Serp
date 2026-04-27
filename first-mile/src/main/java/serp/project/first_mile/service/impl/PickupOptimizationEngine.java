@@ -10,6 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Point;
 import org.springframework.stereotype.Service;
 import serp.project.first_mile.caller.DistanceMatrixCaller;
+import serp.project.first_mile.caller.dto.DistanceMatrixElement;
+import serp.project.first_mile.caller.dto.DistanceMatrixResult;
+import serp.project.first_mile.caller.dto.GeoPoint;
 import serp.project.first_mile.domain.Order;
 import serp.project.first_mile.enums.PickupDestroyOperator;
 import serp.project.first_mile.enums.PickupRepairOperator;
@@ -847,19 +850,19 @@ class PickupOptimizationEngine {
         }
 
         int batchSize = Math.max(1, config.distanceMatrixBatchSize());
-        List<DistanceMatrixCaller.GeoPoint> points = metricProvider.nodes().stream()
-                .map(node -> new DistanceMatrixCaller.GeoPoint(node.latitude(), node.longitude()))
+        List<GeoPoint> points = metricProvider.nodes().stream()
+                .map(node -> new GeoPoint(node.latitude(), node.longitude()))
                 .toList();
 
         for (int originStart = 0; originStart < nodeCount; originStart += batchSize) {
             int originEnd = Math.min(originStart + batchSize, nodeCount);
-            List<DistanceMatrixCaller.GeoPoint> originBatch = points.subList(originStart, originEnd);
+            List<GeoPoint> originBatch = points.subList(originStart, originEnd);
 
             for (int destinationStart = 0; destinationStart < nodeCount; destinationStart += batchSize) {
                 int destinationEnd = Math.min(destinationStart + batchSize, nodeCount);
-                List<DistanceMatrixCaller.GeoPoint> destinationBatch = points.subList(destinationStart, destinationEnd);
+                List<GeoPoint> destinationBatch = points.subList(destinationStart, destinationEnd);
 
-                DistanceMatrixCaller.DistanceMatrixResult matrixResult = distanceMatrixCaller.calculateDistanceMatrix(
+                DistanceMatrixResult matrixResult = distanceMatrixCaller.calculateDistanceMatrix(
                         originBatch,
                         destinationBatch,
                         config.routingVehicle()
@@ -875,9 +878,9 @@ class PickupOptimizationEngine {
                 }
 
                 for (int originOffset = 0; originOffset < originBatch.size(); originOffset++) {
-                    List<DistanceMatrixCaller.DistanceMatrixElement> row = matrixResult.rows().get(originOffset);
+                    List<DistanceMatrixElement> row = matrixResult.rows().get(originOffset);
                     for (int destinationOffset = 0; destinationOffset < destinationBatch.size(); destinationOffset++) {
-                        DistanceMatrixCaller.DistanceMatrixElement element = row.get(destinationOffset);
+                        DistanceMatrixElement element = row.get(destinationOffset);
                         if (element == null || !element.isOk()) {
                             continue;
                         }
@@ -898,7 +901,7 @@ class PickupOptimizationEngine {
     }
 
     private boolean hasValidMatrixShape(
-            DistanceMatrixCaller.DistanceMatrixResult matrixResult,
+            DistanceMatrixResult matrixResult,
             int expectedRows,
             int expectedColumns
     ) {
@@ -906,7 +909,7 @@ class PickupOptimizationEngine {
             return false;
         }
 
-        for (List<DistanceMatrixCaller.DistanceMatrixElement> row : matrixResult.rows()) {
+        for (List<DistanceMatrixElement> row : matrixResult.rows()) {
             if (row == null || row.size() != expectedColumns) {
                 return false;
             }

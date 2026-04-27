@@ -16,6 +16,7 @@ import serp.project.crm.core.domain.dto.PageRequest;
 import serp.project.crm.core.domain.dto.request.OpportunityFilterRequest;
 import serp.project.crm.core.domain.entity.OpportunityEntity;
 import serp.project.crm.core.domain.enums.OpportunityStage;
+import serp.project.crm.core.domain.enums.TeamMemberStatus;
 import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.port.store.IOpportunityPort;
 import serp.project.crm.core.port.store.ITeamMemberPort;
@@ -59,6 +60,7 @@ public class OpportunityService implements IOpportunityService {
         }
         if (updates.getAssignedTo() != null && !updates.getAssignedTo().equals(existing.getAssignedTo())) {
             teamMemberPort.findByUserId(updates.getAssignedTo(), tenantId)
+                    .filter(member -> TeamMemberStatus.ACTIVE.equals(member.getStatus()))
                     .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND));
         }
 
@@ -194,6 +196,7 @@ public class OpportunityService implements IOpportunityService {
         OpportunityEntity opportunity = opportunityPort.findById(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.OPPORTUNITY_NOT_FOUND));
         teamMemberPort.findByUserId(assignedTo, tenantId)
+                .filter(member -> TeamMemberStatus.ACTIVE.equals(member.getStatus()))
                 .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND));
 
         try {

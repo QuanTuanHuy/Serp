@@ -34,6 +34,8 @@ public interface OpportunityRepository
 
     Page<OpportunityModel> findByTenantIdAndAssignedTo(Long tenantId, Long assignedTo, Pageable pageable);
 
+    List<OpportunityModel> findAllByTenantIdAndAssignedTo(Long tenantId, Long assignedTo);
+
     @Query("SELECT o FROM OpportunityModel o WHERE o.tenantId = :tenantId " +
             "AND (LOWER(o.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
             "OR LOWER(o.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")

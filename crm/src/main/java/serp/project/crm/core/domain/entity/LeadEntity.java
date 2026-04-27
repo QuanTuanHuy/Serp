@@ -36,6 +36,7 @@ public class LeadEntity extends BaseEntity {
     private String jobTitle;
 
     private AddressEntity address;
+    private String territoryCode;
 
     private LeadSource leadSource;
     private LeadStatus leadStatus;
@@ -164,6 +165,8 @@ public class LeadEntity extends BaseEntity {
             this.website = updates.getWebsite();
         if (updates.getAddress() != null)
             this.address = updates.getAddress();
+        if (updates.getTerritoryCode() != null)
+            this.territoryCode = updates.getTerritoryCode();
         if (updates.getNotes() != null)
             this.notes = updates.getNotes();
         if (updates.getFollowUpDate() != null)

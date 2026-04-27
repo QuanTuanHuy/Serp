@@ -91,6 +91,14 @@ public class OpportunityAdapter implements IOpportunityPort {
     }
 
     @Override
+    public List<OpportunityEntity> findAllByAssignedTo(Long assignedTo, Long tenantId) {
+        return opportunityRepository.findAllByTenantIdAndAssignedTo(tenantId, assignedTo)
+                .stream()
+                .map(opportunityMapper::toEntity)
+                .toList();
+    }
+
+    @Override
     public Long countByStage(OpportunityStage stage, Long tenantId) {
         return opportunityRepository.countByTenantIdAndStage(tenantId, stage.name());
     }

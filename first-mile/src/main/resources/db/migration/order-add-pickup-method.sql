@@ -1,0 +1,6 @@
+ALTER TABLE orders
+    ADD COLUMN IF NOT EXISTS pickup_method VARCHAR(50) DEFAULT 'COURIER_PICKUP';
+
+UPDATE orders
+SET pickup_method = 'COURIER_PICKUP'
+WHERE pickup_method IS NULL;

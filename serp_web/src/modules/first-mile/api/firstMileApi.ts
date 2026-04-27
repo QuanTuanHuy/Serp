@@ -21,6 +21,7 @@ import type {
   ManualAssignPickupOrdersRequest,
   OptimizePickupPlanRequest,
   OrderConfirmationResponse,
+  OrderDropOffPostOfficeSuggestion,
   OrderImportItem,
   PostOffice,
   PostOfficeGeocodeBatchResponse,
@@ -534,6 +535,38 @@ export const firstMileApi = api.injectEndpoints({
       transformResponse: unwrapFirstMileResultOrRaw<OrderConfirmationResponse>,
     }),
 
+    getDropOffPostOfficeSuggestions: builder.query<
+      OrderDropOffPostOfficeSuggestion[],
+      { orderId: number; limit?: number }
+    >({
+      query: ({ orderId, limit = 5 }) => ({
+        url: `/orders/${orderId}/drop-off-post-office-suggestions`,
+        method: 'GET',
+        params: {
+          limit,
+        },
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<
+        OrderDropOffPostOfficeSuggestion[]
+      >,
+    }),
+
+    confirmDropOffOrderAtPostOffice: builder.mutation<
+      OrderConfirmationResponse,
+      { orderId: number; postOfficeId: number }
+    >({
+      query: ({ orderId, postOfficeId }) => ({
+        url: `/orders/${orderId}/drop-off-confirm`,
+        method: 'POST',
+        body: {
+          post_office_id: postOfficeId,
+        },
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<OrderConfirmationResponse>,
+    }),
+
     getActiveCouriersByPostOffice: builder.query<PostOfficeStaff[], number>({
       query: (postOfficeId) => ({
         url: `/post-office-staffs/post-offices/${postOfficeId}/couriers`,
@@ -696,6 +729,9 @@ export const {
   useUpdateOrderMutation,
   useCancelOrderMutation,
   useConfirmOrderMutation,
+  useGetDropOffPostOfficeSuggestionsQuery,
+  useLazyGetDropOffPostOfficeSuggestionsQuery,
+  useConfirmDropOffOrderAtPostOfficeMutation,
   useGetActiveCouriersByPostOfficeQuery,
   useGetPostOfficeStaffByIdQuery,
   useOptimizePickupPlanMutation,

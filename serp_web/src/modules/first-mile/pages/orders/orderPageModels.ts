@@ -8,6 +8,7 @@ import type {
   FirstMileDeliveryRequestTime,
   FirstMileFeePayer,
   FirstMileOrderDetail,
+  FirstMileOrderPickupMethod,
   FirstMileOrderProductCategory,
   FirstMileOrderProductItem,
   FirstMileOrderStatus,
@@ -90,6 +91,7 @@ export interface CreateOrderFormState {
   pickupTimeStart: string;
   pickupTimeEnd: string;
   deliveryRequestTime: FirstMileDeliveryRequestTime;
+  pickupMethod: FirstMileOrderPickupMethod;
   orderProductCategory: 'NONE' | FirstMileOrderProductCategory;
   orderType: FirstMileOrderType;
   feePayer: FirstMileFeePayer;
@@ -125,6 +127,7 @@ export const DEFAULT_CREATE_ORDER_FORM: CreateOrderFormState = {
   pickupTimeStart: '',
   pickupTimeEnd: '',
   deliveryRequestTime: 'BUSINESS_HOURS',
+  pickupMethod: 'COURIER_PICKUP',
   orderProductCategory: 'NONE',
   orderType: 'STANDARD_ORDER',
   feePayer: 'SENDER',
@@ -154,6 +157,17 @@ export const ORDER_TYPE_OPTIONS: Array<{
 }> = [
   { value: 'STANDARD_ORDER', label: 'Standard' },
   { value: 'EXPRESS_ORDER', label: 'Express' },
+];
+
+export const ORDER_PICKUP_METHOD_OPTIONS: Array<{
+  value: FirstMileOrderPickupMethod;
+  label: string;
+}> = [
+  { value: 'COURIER_PICKUP', label: 'Courier pickup at sender address' },
+  {
+    value: 'DROP_OFF_AT_POST_OFFICE',
+    label: 'Customer drop-off at post office',
+  },
 ];
 
 export const FEE_PAYER_OPTIONS: Array<{
@@ -228,6 +242,16 @@ export const getScopeDescription = (scope: OrderAccessScope): string => {
 
 export const formatStatusLabel = (status: FirstMileOrderStatus): string =>
   status.replaceAll('_', ' ');
+
+export const formatPickupMethodLabel = (
+  pickupMethod?: FirstMileOrderPickupMethod
+): string => {
+  if (pickupMethod === 'DROP_OFF_AT_POST_OFFICE') {
+    return 'Drop-off at post office';
+  }
+
+  return 'Courier pickup';
+};
 
 export const getStatusBadgeVariant = (
   status: FirstMileOrderStatus
@@ -327,6 +351,10 @@ export const isDraftOrder = (order: FirstMileOrderDetail): boolean => {
   return order.status === 'CREATED' && !order.isConfirm;
 };
 
+export const isDropOffOrder = (order: FirstMileOrderDetail): boolean => {
+  return order.pickupMethod === 'DROP_OFF_AT_POST_OFFICE';
+};
+
 export const mapOrderToFormState = (
   order: FirstMileOrderDetail
 ): CreateOrderFormState => {
@@ -361,6 +389,7 @@ export const mapOrderToFormState = (
     pickupTimeStart: toDateTimeLocalValue(order.pickupTimeStart),
     pickupTimeEnd: toDateTimeLocalValue(order.pickupTimeEnd),
     deliveryRequestTime: order.deliveryRequestTime || 'BUSINESS_HOURS',
+    pickupMethod: order.pickupMethod || 'COURIER_PICKUP',
     orderProductCategory: order.orderProductCategory || 'NONE',
     orderType: order.orderType || 'STANDARD_ORDER',
     feePayer: order.feePayer || 'SENDER',

@@ -39,6 +39,7 @@ public class LeadResponse {
 
     // Address
     private AddressResponse address;
+    private String territoryCode;
 
     // Lead details
     private LeadSource leadSource;

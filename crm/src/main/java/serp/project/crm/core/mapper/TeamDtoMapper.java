@@ -10,6 +10,7 @@ import serp.project.crm.core.domain.dto.request.CreateTeamRequest;
 import serp.project.crm.core.domain.dto.request.UpdateTeamRequest;
 import serp.project.crm.core.domain.dto.response.TeamMemberResponse;
 import serp.project.crm.core.domain.dto.response.TeamResponse;
+import serp.project.crm.core.domain.dto.response.TeamSummaryResponse;
 import serp.project.crm.core.domain.entity.TeamEntity;
 
 import java.util.Collections;
@@ -32,6 +33,7 @@ public class TeamDtoMapper {
         return TeamEntity.builder()
                 .name(request.getName())
                 .description(request.getDescription())
+                .managerUserId(request.getManagerUserId())
                 .notes(request.getNotes())
                 .build();
     }
@@ -44,7 +46,8 @@ public class TeamDtoMapper {
         return TeamEntity.builder()
                 .name(request.getName())
                 .description(request.getDescription())
-                .leaderId(request.getLeaderId())
+                .managerUserId(request.getManagerUserId())
+                .status(request.getStatus())
                 .notes(request.getNotes())
                 .build();
     }
@@ -65,8 +68,11 @@ public class TeamDtoMapper {
                 .id(entity.getId())
                 .name(entity.getName())
                 .description(entity.getDescription())
-                .leaderId(entity.getLeaderId())
+                .managerUserId(entity.getManagerUserId())
                 .notes(entity.getNotes())
+                .status(entity.getStatus())
+                .manager(findManager(memberResponses, entity.getManagerUserId()))
+                .memberCount((long) memberResponses.size())
                 .members(memberResponses)
                 .tenantId(entity.getTenantId())
                 .createdAt(entity.getCreatedAt())
@@ -74,5 +80,33 @@ public class TeamDtoMapper {
                 .createdBy(entity.getCreatedBy())
                 .updatedBy(entity.getUpdatedBy())
                 .build();
+    }
+
+    public TeamSummaryResponse toSummaryResponse(TeamEntity entity) {
+        if (entity == null) {
+            return null;
+        }
+
+        long memberCount = entity.getMembers() == null ? 0L : entity.getMembers().size();
+
+        return TeamSummaryResponse.builder()
+                .id(entity.getId())
+                .name(entity.getName())
+                .description(entity.getDescription())
+                .managerUserId(entity.getManagerUserId())
+                .status(entity.getStatus())
+                .memberCount(memberCount)
+                .build();
+    }
+
+    private TeamMemberResponse findManager(List<TeamMemberResponse> members, Long managerUserId) {
+        if (managerUserId == null || members == null) {
+            return null;
+        }
+
+        return members.stream()
+                .filter(member -> managerUserId.equals(member.getUserId()))
+                .findFirst()
+                .orElse(null);
     }
 }

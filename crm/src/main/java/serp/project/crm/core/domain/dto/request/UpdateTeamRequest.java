@@ -10,6 +10,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.crm.core.domain.enums.TeamStatus;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -22,7 +23,9 @@ public class UpdateTeamRequest {
     @Size(max = 1000, message = "Description must not exceed 1000 characters")
     private String description;
     
-    private Long leaderId;
+    private Long managerUserId;
+
+    private TeamStatus status;
     
     @Size(max = 1000, message = "Notes must not exceed 1000 characters")
     private String notes;

@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import serp.project.first_mile.caller.dto.GeoPoint;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
 
