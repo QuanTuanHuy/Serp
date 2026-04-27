@@ -3,20 +3,39 @@
 import { Fragment, useMemo } from 'react';
 import {
   MapContainer,
-  TileLayer,
-  Polyline,
   Marker,
+  Polyline,
   Popup,
+  TileLayer,
+  Tooltip as LeafletTooltip,
 } from 'react-leaflet';
 import L from 'leaflet';
-import { decodePolyline } from '@/shared/utils/polyline';
-import { Truck, MapPin, Warehouse, XCircle } from 'lucide-react';
+import {
+  CheckCircle2,
+  MapPin,
+  Phone,
+  SkipForward,
+  Truck,
+  Warehouse,
+  XCircle,
+} from 'lucide-react';
 import { renderToString } from 'react-dom/server';
+import { Button } from '@/shared/components/ui';
+import { cn } from '@/shared/utils';
+import { decodePolyline } from '@/shared/utils/polyline';
 import type { Route, RouteStop } from '../../types';
 
-// Định nghĩa giao diện từ API của bạn
+interface RouteStopActionState {
+  id: string;
+  type: 'complete' | 'abort';
+}
+
 interface RouteMapProps {
   route: Route;
+  canOperateStops?: boolean;
+  onCompleteRouteStop?: (routeStopId: string) => Promise<void> | void;
+  onAbortRouteStop?: (routeStopId: string) => Promise<void> | void;
+  routeStopAction?: RouteStopActionState | null;
 }
 
 type RouteMapSegment = {
@@ -24,6 +43,30 @@ type RouteMapSegment = {
   path: [number, number][];
   location: [number, number];
   isPassed: boolean;
+  isNextStop: boolean;
+};
+
+const ROUTE_STOP_CONFIG = {
+  WAITING: {
+    label: 'Đang chờ giao',
+    badgeClass: 'border-amber-200 bg-amber-50 text-amber-700',
+  },
+  ARRIVED: {
+    label: 'Đã giao',
+    badgeClass: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  },
+  FAILED: {
+    label: 'Đã bỏ qua',
+    badgeClass: 'border-rose-200 bg-rose-50 text-rose-700',
+  },
+} as const;
+
+const formatNumber = (value?: number | null, suffix?: string) => {
+  const safeValue = value ?? 0;
+
+  return `${new Intl.NumberFormat('vi-VN').format(safeValue)}${
+    suffix ? ` ${suffix}` : ''
+  }`;
 };
 
 // Helper tạo custom icon từ Lucide
@@ -57,12 +100,25 @@ const ICONS = {
   TRUCK: createCustomIcon(Truck, 'text-blue-700', 'bg-blue-100'),
 };
 
-export default function RouteMap({ route }: RouteMapProps) {
-  // Xử lý dữ liệu polylines và vị trí
+export default function RouteMap({
+  route,
+  canOperateStops = false,
+  onCompleteRouteStop,
+  onAbortRouteStop,
+  routeStopAction = null,
+}: RouteMapProps) {
+  const canShowStopActions = Boolean(
+    canOperateStops && onCompleteRouteStop && onAbortRouteStop
+  );
+
   const mapData = useMemo(() => {
-    if (!route?.routeStops?.length) return null;
+    if (!route?.routeStops?.length) {
+      return null;
+    }
 
     const stops = [...route.routeStops].sort((a, b) => a.sequence - b.sequence);
+    const nextWaitingStopId =
+      stops.find((stop) => stop.status === 'WAITING')?.id ?? null;
 
     let allPoints: [number, number][] = [];
     let warehouseLocation: [number, number] | null = null;
@@ -94,6 +150,7 @@ export default function RouteMap({ route }: RouteMapProps) {
         // Điểm cuối của polyline là vị trí điểm giao hàng
         location,
         isPassed,
+        isNextStop: stop.id === nextWaitingStopId,
       });
 
       if (isPassed) {
@@ -101,7 +158,9 @@ export default function RouteMap({ route }: RouteMapProps) {
       }
     });
 
-    if (!warehouseLocation) return null;
+    if (!warehouseLocation) {
+      return null;
+    }
 
     if (allPoints.length === 0) {
       allPoints = [warehouseLocation];
@@ -120,14 +179,19 @@ export default function RouteMap({ route }: RouteMapProps) {
     return { segments, warehouseLocation, currentTruckLocation, allPoints };
   }, [route]);
 
-  if (!mapData || !mapData.warehouseLocation)
-    return <div>Không có dữ liệu bản đồ</div>;
+  if (!mapData || !mapData.warehouseLocation) {
+    return (
+      <div className='flex h-[500px] w-full items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500'>
+        Không có dữ liệu bản đồ cho lộ trình này
+      </div>
+    );
+  }
 
   // Tính toán bounds để tự động zoom vừa vặn tất cả các điểm
   const bounds = L.latLngBounds(mapData.allPoints);
 
   return (
-    <div className='h-[500px] w-full overflow-hidden rounded-xl border z-0 relative'>
+    <div className='relative z-0 h-[500px] w-full overflow-hidden rounded-xl border border-slate-200'>
       <MapContainer bounds={bounds} className='h-full w-full'>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -147,50 +211,174 @@ export default function RouteMap({ route }: RouteMapProps) {
         </Marker>
 
         {/* Vẽ Polylines và Markers cho từng điểm giao */}
-        {mapData.segments.map((segment) => (
-          <Fragment key={segment.stop.id}>
-            <Polyline
-              positions={segment.path}
-              color={segment.isPassed ? '#10b981' : '#94a3b8'} // Xanh ngọc nếu đã đi qua, Xám nếu chưa
-              weight={4}
-              opacity={0.8}
-              dashArray={segment.isPassed ? undefined : '5, 10'} // Nét đứt nếu chưa đi qua
-            />
+        {mapData.segments.map((segment) => {
+          const stopStatusConfig =
+            ROUTE_STOP_CONFIG[
+              segment.stop.status as keyof typeof ROUTE_STOP_CONFIG
+            ] || ROUTE_STOP_CONFIG.WAITING;
+          const isCompletingStop =
+            routeStopAction?.id === segment.stop.id &&
+            routeStopAction.type === 'complete';
+          const isAbortingStop =
+            routeStopAction?.id === segment.stop.id &&
+            routeStopAction.type === 'abort';
+          const isSubmittingAnotherStop =
+            Boolean(routeStopAction) && routeStopAction?.id !== segment.stop.id;
+          const canHandleStop =
+            canShowStopActions &&
+            segment.stop.status === 'WAITING' &&
+            segment.isNextStop &&
+            !isSubmittingAnotherStop;
 
-            <Marker
-              position={segment.location}
-              icon={
-                ICONS[segment.stop.status as keyof typeof ICONS] ||
-                ICONS.WAITING
-              }
-            >
-              <Popup>
-                <div className='flex flex-col gap-1 min-w-[200px] p-1'>
-                  <span className='text-xs font-semibold uppercase text-blue-600'>
-                    Điểm giao #{segment.stop.sequence}
-                  </span>
-                  <p className='font-bold'>
-                    {segment.stop.deliverySlip?.customerName ||
-                      'Khách hàng chưa xác định'}
-                  </p>
-                  <p className='text-xs text-muted-foreground'>
-                    {segment.stop.deliverySlip?.customerAddress?.fullAddress ||
-                      'Chưa có địa chỉ'}
-                  </p>
-                  <div className='mt-2 text-xs border-t pt-2'>
-                    <p>
-                      Mã đơn:{' '}
-                      <strong>{segment.stop.deliverySlip?.code || '--'}</strong>
+          return (
+            <Fragment key={segment.stop.id}>
+              <Polyline
+                positions={segment.path}
+                color={
+                  segment.stop.status === 'ARRIVED'
+                    ? '#10b981'
+                    : segment.stop.status === 'FAILED'
+                      ? '#f43f5e'
+                      : '#94a3b8'
+                }
+                weight={segment.isNextStop ? 5 : 4}
+                opacity={0.85}
+                dashArray={
+                  segment.stop.status === 'WAITING' ? '6, 10' : undefined
+                }
+              />
+
+              <Marker
+                position={segment.location}
+                icon={
+                  ICONS[segment.stop.status as keyof typeof ICONS] ||
+                  ICONS.WAITING
+                }
+              >
+                <LeafletTooltip
+                  direction='top'
+                  offset={[0, -20]}
+                  opacity={1}
+                  sticky
+                  interactive
+                  className='route-stop-tooltip !rounded-2xl !border-none !bg-transparent !p-0 !shadow-none'
+                >
+                  <div className='w-[280px] rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-2xl backdrop-blur'>
+                    <div className='mb-2 flex items-center justify-between gap-2'>
+                      <p className='text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-700'>
+                        Điểm giao #{segment.stop.sequence}
+                      </p>
+                      <span
+                        className={cn(
+                          'rounded-full border px-2 py-0.5 text-[11px] font-medium',
+                          stopStatusConfig.badgeClass
+                        )}
+                      >
+                        {stopStatusConfig.label}
+                      </span>
+                    </div>
+
+                    <p className='text-sm font-semibold text-slate-900'>
+                      {segment.stop.deliverySlip?.customerName ||
+                        'Khách hàng chưa xác định'}
                     </p>
-                    <p>
-                      Trạng thái: <strong>{segment.stop.status}</strong>
+
+                    <p className='mt-1 line-clamp-2 text-xs leading-5 text-slate-600'>
+                      {segment.stop.deliverySlip?.customerAddress
+                        ?.fullAddress || 'Chưa có địa chỉ giao hàng'}
                     </p>
+
+                    <div className='mt-2 space-y-1 text-xs text-slate-600'>
+                      <p>
+                        Mã phiếu:{' '}
+                        <span className='font-medium text-slate-900'>
+                          {segment.stop.deliverySlip?.code || '--'}
+                        </span>
+                      </p>
+                      <p>
+                        Khối lượng:{' '}
+                        <span className='font-medium text-slate-900'>
+                          {formatNumber(
+                            segment.stop.deliverySlip?.totalWeightKg,
+                            'kg'
+                          )}
+                        </span>
+                      </p>
+                      <p>
+                        Thể tích:{' '}
+                        <span className='font-medium text-slate-900'>
+                          {formatNumber(
+                            segment.stop.deliverySlip?.totalVolumeCbm,
+                            'cbm'
+                          )}
+                        </span>
+                      </p>
+                      <p className='flex items-center gap-1'>
+                        <Phone className='h-3.5 w-3.5 text-slate-400' />
+                        <span className='font-medium text-slate-700'>
+                          {segment.stop.deliverySlip?.customerPhone ||
+                            'Chưa có số điện thoại'}
+                        </span>
+                      </p>
+                    </div>
+
+                    {canShowStopActions && (
+                      <div className='mt-3 space-y-2 border-t border-slate-100 pt-3'>
+                        {segment.stop.status === 'WAITING' &&
+                          !segment.isNextStop && (
+                            <p className='rounded-md bg-amber-50 px-2 py-1 text-[11px] text-amber-700'>
+                              Điểm này chưa phải điểm giao kế tiếp.
+                            </p>
+                          )}
+
+                        <div className='grid grid-cols-2 gap-2'>
+                          <Button
+                            size='sm'
+                            className='h-8 bg-emerald-600 text-white hover:bg-emerald-700'
+                            disabled={
+                              !canHandleStop ||
+                              isCompletingStop ||
+                              isAbortingStop
+                            }
+                            onMouseDown={(event) => event.stopPropagation()}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              void onCompleteRouteStop?.(segment.stop.id);
+                            }}
+                          >
+                            <CheckCircle2 className='h-3.5 w-3.5' />
+                            {isCompletingStop ? 'Đang xử lý' : 'Đã giao'}
+                          </Button>
+
+                          <Button
+                            size='sm'
+                            variant='outline'
+                            className='h-8 border-rose-300 text-rose-700 hover:bg-rose-50'
+                            disabled={
+                              !canHandleStop ||
+                              isCompletingStop ||
+                              isAbortingStop
+                            }
+                            onMouseDown={(event) => event.stopPropagation()}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              void onAbortRouteStop?.(segment.stop.id);
+                            }}
+                          >
+                            <SkipForward className='h-3.5 w-3.5' />
+                            {isAbortingStop ? 'Đang xử lý' : 'Bỏ qua'}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              </Popup>
-            </Marker>
-          </Fragment>
-        ))}
+                </LeafletTooltip>
+              </Marker>
+            </Fragment>
+          );
+        })}
 
         {/* Marker Xe tải (Nếu lộ trình đang chạy) */}
         {mapData.currentTruckLocation && (
