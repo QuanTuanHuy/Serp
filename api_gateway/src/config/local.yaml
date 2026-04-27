@@ -99,6 +99,10 @@ external:
       host: localhost
       port: "8093"
       timeout: 15s
+    secondMileService:
+      host: localhost
+      port: "8095"
+      timeout: 15s
     crmService:
       host: localhost
       port: "8086"

@@ -131,6 +131,13 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		p.RateLimitMiddleware,
 	)
 
+	RegisterSecondMileRoutes(
+		group,
+		p.GenericProxyController,
+		p.JWTMiddleware,
+		p.RateLimitMiddleware,
+	)
+
 	RegisterNotificationRoutes(
 		group,
 		p.WebSocketProxyController,
