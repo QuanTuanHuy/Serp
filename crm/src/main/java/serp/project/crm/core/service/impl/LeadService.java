@@ -21,6 +21,8 @@ import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.port.store.ILeadPort;
 import serp.project.crm.core.service.ILeadScoringService;
 import serp.project.crm.core.service.ILeadService;
+import serp.project.crm.core.service.ITeamMemberService;
+import serp.project.crm.core.service.ITeamRoutingService;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -33,6 +35,8 @@ public class LeadService implements ILeadService {
 
     private final ILeadPort leadPort;
     private final ILeadScoringService leadScoringService;
+    private final ITeamRoutingService teamRoutingService;
+    private final ITeamMemberService teamMemberService;
 
     @Transactional
     public LeadEntity createLead(LeadEntity lead, Long tenantId) {
@@ -45,6 +49,7 @@ public class LeadService implements ILeadService {
 
         lead.setTenantId(tenantId);
         lead.setDefaults();
+        applyAutoAssignment(lead, tenantId);
         if (lead.getLeadScore() == null) {
             lead.setLeadScore(leadScoringService.calculateSmartScore(lead));
         }
@@ -74,6 +79,7 @@ public class LeadService implements ILeadService {
         } catch (IllegalStateException e) {
             throw new AppException(e.getMessage());
         }
+        applyAutoAssignment(existing, tenantId);
         if (updates.getLeadScore() == null && (updates.getLeadSource() != null || updates.getIndustry() != null ||
                 updates.getCompanySize() != null || updates.getEstimatedValue() != null)) {
             existing.setLeadScore(leadScoringService.calculateSmartScore(existing));
@@ -163,7 +169,11 @@ public class LeadService implements ILeadService {
             throw new AppException("Cannot assign converted or disqualified lead");
         }
 
-        // TODO: Validate user exists in account service
+        if (assignedTo != null) {
+            teamMemberService.getTeamMemberByUserId(assignedTo, tenantId)
+                    .filter(member -> member.getStatus() != null && member.getStatus().name().equals("ACTIVE"))
+                    .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND));
+        }
 
         lead.assignTo(assignedTo, assignedBy);
         LeadEntity updated = leadPort.save(lead);
@@ -247,5 +257,14 @@ public class LeadService implements ILeadService {
 
     private void publishLeadDeletedEvent(LeadEntity lead) {
         log.debug("Event: Lead deleted - ID: {}, Topic: {}", lead.getId(), Constants.KafkaTopic.LEAD);
+    }
+
+    private void applyAutoAssignment(LeadEntity lead, Long tenantId) {
+        if (lead.getAssignedTo() != null) {
+            return;
+        }
+
+        teamRoutingService.routeLeadAssignee(lead.getTerritoryCode(), tenantId)
+                .ifPresent(lead::setAssignedTo);
     }
 }

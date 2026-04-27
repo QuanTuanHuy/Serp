@@ -26,8 +26,11 @@ public interface ITeamMemberService {
     Pair<List<TeamMemberEntity>, Long> getTeamMembersByStatus(TeamMemberStatus status, Long tenantId,
             PageRequest pageRequest);
     Optional<TeamMemberEntity> getTeamMemberByTeamAndUser(Long teamId, Long userId, Long tenantId);
+    List<TeamMemberEntity> getAllMembersByTeam(Long teamId, Long tenantId);
 
-    void removeTeamMember(Long id, Long tenantId);
+    void removeTeamMember(Long teamId, Long id, Long tenantId);
 
     List<UserProfileResponse> getAndValidateUserProfiles(List<Long> userIds, Long tenantId);
+
+    TeamMemberEntity getActiveEligibleMember(Long teamId, Long userId, Long tenantId);
 }

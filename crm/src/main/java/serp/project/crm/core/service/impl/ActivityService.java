@@ -18,6 +18,7 @@ import serp.project.crm.core.domain.entity.ActivityEntity;
 import serp.project.crm.core.domain.enums.ActivityOutcome;
 import serp.project.crm.core.domain.enums.ActivityStatus;
 import serp.project.crm.core.domain.enums.ActivityType;
+import serp.project.crm.core.domain.enums.TeamMemberStatus;
 import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.port.store.IActivityPort;
 import serp.project.crm.core.port.store.IContactPort;
@@ -324,7 +325,8 @@ public class ActivityService implements IActivityService {
     }
 
     private void validateAssignedUser(ActivityEntity activity, Long tenantId) {
-        if (activity.getAssignedTo() != null && teamMemberPort.findByUserId(activity.getAssignedTo(), tenantId).isEmpty()) {
+        if (activity.getAssignedTo() != null && teamMemberPort.findByUserId(activity.getAssignedTo(), tenantId)
+                .filter(member -> TeamMemberStatus.ACTIVE.equals(member.getStatus())).isEmpty()) {
             throw new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND);
         }
     }
