@@ -103,6 +103,14 @@ public class RouteService {
                 .collect(Collectors.toMap(DeliverySlipEntity::getId, ds -> ds));
         routeStops.forEach(rs -> rs.setDeliverySlip(deliverySlipMap.get(rs.getDeliverySlipId())));
         route.setRouteStops(routeStops);
+
+        VehicleShipperEntity vehicleShipper = vehicleShipperRepository.findById(route.getVehicleShipperId()).orElse(null);
+        if (vehicleShipper != null) {
+            VehicleEntity vehicle = vehicleRepository.findById(vehicleShipper.getVehicleId()).orElse(null);
+            vehicleShipper.setVehicle(vehicle);
+        }
+        route.setVehicleShipper(vehicleShipper);
+
         return route;
     }
 
