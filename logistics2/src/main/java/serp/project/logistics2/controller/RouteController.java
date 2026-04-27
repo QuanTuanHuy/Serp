@@ -95,14 +95,21 @@ public class RouteController {
         return ResponseEntity.ok(GeneralResponse.success("Chọn chuyến hàng để bắt đầu giao thành công"));
     }
 
-    @PutMapping("/complete/{routeStopId}")
+    @PutMapping("/cancel/{routeId}")
+    public ResponseEntity<GeneralResponse<?>> cancelRoute(@PathVariable String routeId) {
+        log.info("[RouteController] Cancel route id {} for delivery", routeId);
+        routingOrchestrator.cancelRoute(routeId);
+        return ResponseEntity.ok(GeneralResponse.success("Hủy chuyến giao thành công"));
+    }
+
+    @PutMapping("/complete-stop/{routeStopId}")
     public ResponseEntity<GeneralResponse<?>> completeRouteStop(@PathVariable String routeStopId) {
         log.info("[RouteController] Complete route stop id {}", routeStopId);
         routingOrchestrator.arriveAtStop(routeStopId);
         return ResponseEntity.ok(GeneralResponse.success("Hoàn thành giao hàng thành công tại điểm " + routeStopId));
     }
 
-    @PutMapping("/abort/{routeStopId}")
+    @PutMapping("/abort-stop/{routeStopId}")
     public ResponseEntity<GeneralResponse<?>> abortRouteStop(@PathVariable String routeStopId) {
         log.info("[RouteController] Abort route stop id {}", routeStopId);
         routingOrchestrator.failAtStop(routeStopId);

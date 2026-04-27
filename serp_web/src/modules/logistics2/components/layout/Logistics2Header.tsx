@@ -31,6 +31,8 @@ const PATH_LABELS: Record<string, string> = {
   'delivery-slips': 'Delivery Slips',
   'outbound-shipments': 'Outbound Shipments',
   routes: 'Routes',
+  'next-route': 'Next Route',
+  'my-routes': 'My Routes',
   vehicles: 'Vehicles',
   'vehicle-shippers': 'Vehicle Shippers',
   'vehicle-registration': 'Vehicle Registration',

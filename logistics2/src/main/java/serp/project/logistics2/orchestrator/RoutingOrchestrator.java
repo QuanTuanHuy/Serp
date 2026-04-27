@@ -214,7 +214,8 @@ public class RoutingOrchestrator {
         inProgressRoutes.forEach(routeId -> cancelRoute(routeId));
     }
 
-    private void cancelRoute(String routeId) {
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelRoute(String routeId) {
         RouteEntity route = routeRepository.findById(routeId)
                 .orElseThrow(() -> new AppException((AppErrorCode.NOT_FOUND)));
         if (RouteStatus.valueOf(route.getStatus()).ordinal() >= RouteStatus.COMPLETED.ordinal()) {

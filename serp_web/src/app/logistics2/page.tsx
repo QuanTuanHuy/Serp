@@ -12,15 +12,15 @@ export default function Logistics2RootPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/logistics2/delivery-plans');
+    router.replace('/logistics2/routes');
   }, [router]);
 
   return (
     <div className='flex h-full items-center justify-center'>
       <div className='text-center'>
-        <div className='text-lg font-semibold'>Loading Logistics2...</div>
+        <div className='text-lg font-semibold'>Loading Logistics Module</div>
         <div className='mt-2 text-sm text-muted-foreground'>
-          Redirecting to delivery plans
+          Chuyển hướng đến trang bắt đầu...
         </div>
       </div>
     </div>

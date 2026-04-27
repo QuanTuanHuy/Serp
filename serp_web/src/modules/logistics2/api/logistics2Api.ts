@@ -554,9 +554,21 @@ export const logistics2Api = api.injectEndpoints({
       ],
     }),
 
+    cancelRoute: builder.mutation<GeneralResponse<null>, string>({
+      query: (routeId) => ({
+        url: `/routes/cancel/${routeId}`,
+        method: 'PUT',
+      }),
+      extraOptions: LOGISTICS2_SERVICE,
+      invalidatesTags: (result, error, routeId) => [
+        { type: 'logistics2/Route', id: routeId },
+        { type: 'logistics2/Route', id: 'LIST' },
+      ],
+    }),
+
     completeRouteStop: builder.mutation<GeneralResponse<null>, string>({
       query: (routeStopId) => ({
-        url: `/routes/complete/${routeStopId}`,
+        url: `/routes/complete-stop/${routeStopId}`,
         method: 'PUT',
       }),
       extraOptions: LOGISTICS2_SERVICE,
@@ -565,7 +577,7 @@ export const logistics2Api = api.injectEndpoints({
 
     abortRouteStop: builder.mutation<GeneralResponse<null>, string>({
       query: (routeStopId) => ({
-        url: `/routes/abort/${routeStopId}`,
+        url: `/routes/abort-stop/${routeStopId}`,
         method: 'PUT',
       }),
       extraOptions: LOGISTICS2_SERVICE,
@@ -804,6 +816,7 @@ export const {
   useGetRouteDetailQuery,
   useGetNextRouteStopQuery,
   useSelectRouteForDeliveryMutation,
+  useCancelRouteMutation,
   useCompleteRouteStopMutation,
   useAbortRouteStopMutation,
   useGetVehiclesQuery,
