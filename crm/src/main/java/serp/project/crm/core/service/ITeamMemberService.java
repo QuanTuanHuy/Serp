@@ -31,4 +31,6 @@ public interface ITeamMemberService {
     void removeTeamMember(Long teamId, Long id, Long tenantId);
 
     List<UserProfileResponse> getAndValidateUserProfiles(List<Long> userIds, Long tenantId);
+
+    TeamMemberEntity getActiveEligibleMember(Long teamId, Long userId, Long tenantId);
 }

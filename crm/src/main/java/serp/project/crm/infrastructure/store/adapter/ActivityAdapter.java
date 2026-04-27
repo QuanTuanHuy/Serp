@@ -91,6 +91,14 @@ public class ActivityAdapter implements IActivityPort {
     }
 
     @Override
+    public List<ActivityEntity> findAllByAssignedTo(Long assignedTo, Long tenantId) {
+        return activityRepository.findAllByTenantIdAndAssignedTo(tenantId, assignedTo)
+                .stream()
+                .map(activityMapper::toEntity)
+                .toList();
+    }
+
+    @Override
     public Pair<List<ActivityEntity>, Long> findByActivityType(ActivityType activityType, Long tenantId,
             PageRequest pageRequest) {
         var pageable = activityMapper.toPageable(pageRequest);

@@ -25,6 +25,7 @@ public class TeamEntity extends BaseEntity {
     private Long managerUserId;
     private String notes;
     private TeamStatus status;
+    private Long lastAssignedMemberUserId;
 
     private List<TeamMemberEntity> members;
 
@@ -39,6 +40,8 @@ public class TeamEntity extends BaseEntity {
             this.notes = updates.getNotes();
         if (updates.getStatus() != null)
             this.status = updates.getStatus();
+        if (updates.getLastAssignedMemberUserId() != null)
+            this.lastAssignedMemberUserId = updates.getLastAssignedMemberUserId();
     }
 
     public void setDefaults() {

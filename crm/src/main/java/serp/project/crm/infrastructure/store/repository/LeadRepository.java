@@ -14,6 +14,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import serp.project.crm.infrastructure.store.model.LeadModel;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -26,6 +27,8 @@ public interface LeadRepository extends JpaRepository<LeadModel, Long>, JpaSpeci
     Page<LeadModel> findByTenantIdAndLeadStatus(Long tenantId, String leadStatus, Pageable pageable);
 
     Page<LeadModel> findByTenantIdAndAssignedTo(Long tenantId, Long assignedTo, Pageable pageable);
+
+    List<LeadModel> findAllByTenantIdAndAssignedTo(Long tenantId, Long assignedTo);
 
     Optional<LeadModel> findByEmailAndTenantId(String email, Long tenantId);
 

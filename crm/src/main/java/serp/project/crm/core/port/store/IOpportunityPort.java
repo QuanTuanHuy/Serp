@@ -31,6 +31,8 @@ public interface IOpportunityPort {
 
     Pair<List<OpportunityEntity>, Long> findByAssignedTo(Long assignedTo, Long tenantId, PageRequest pageRequest);
 
+    List<OpportunityEntity> findAllByAssignedTo(Long assignedTo, Long tenantId);
+
     Long countByStage(OpportunityStage stage, Long tenantId);
 
     BigDecimal sumEstimatedValueByStage(OpportunityStage stage, Long tenantId);

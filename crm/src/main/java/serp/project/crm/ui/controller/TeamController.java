@@ -15,6 +15,7 @@ import serp.project.crm.core.domain.dto.request.AssignTeamTerritoriesRequest;
 import serp.project.crm.core.domain.dto.request.ChangeTeamManagerRequest;
 import serp.project.crm.core.domain.dto.request.CreateTeamMemberRequest;
 import serp.project.crm.core.domain.dto.request.CreateTeamRequest;
+import serp.project.crm.core.domain.dto.request.ReassignInactiveMemberRecordsRequest;
 import serp.project.crm.core.domain.dto.request.UpdateTeamMemberRequest;
 import serp.project.crm.core.domain.dto.request.UpdateTeamRequest;
 import serp.project.crm.core.usecase.TeamMemberUseCase;
@@ -139,6 +140,22 @@ public class TeamController {
 
         log.info("DELETE /api/v1/teams/{}/members/{} - Removing team member for tenant: {}", id, memberId, tenantId);
         var response = teamMemberUseCase.removeTeamMember(id, memberId, tenantId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PostMapping("/{id}/members/{memberId}/reassign")
+    public ResponseEntity<?> removeAndReassignTeamMember(
+            @PathVariable Long id,
+            @PathVariable Long memberId,
+            @Valid @RequestBody ReassignInactiveMemberRecordsRequest request) {
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        if (tenantId == null) {
+            return unauthorizedResponse();
+        }
+
+        log.info("POST /api/v1/teams/{}/members/{}/reassign - Removing member and reassigning records for tenant: {}",
+                id, memberId, tenantId);
+        var response = teamMemberUseCase.removeAndReassignTeamMember(id, memberId, request, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 

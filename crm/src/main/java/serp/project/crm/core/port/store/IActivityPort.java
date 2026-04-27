@@ -27,6 +27,8 @@ public interface IActivityPort {
     Pair<List<ActivityEntity>, Long> findByOpportunityId(Long opportunityId, Long tenantId, PageRequest pageRequest);
     Pair<List<ActivityEntity>, Long> findByContactId(Long contactId, Long tenantId, PageRequest pageRequest);
     Pair<List<ActivityEntity>, Long> findByAssignedTo(Long assignedTo, Long tenantId, PageRequest pageRequest);
+
+    List<ActivityEntity> findAllByAssignedTo(Long assignedTo, Long tenantId);
     Pair<List<ActivityEntity>, Long> findByActivityType(ActivityType activityType, Long tenantId,
             PageRequest pageRequest);
     Pair<List<ActivityEntity>, Long> findByStatus(ActivityStatus status, Long tenantId, PageRequest pageRequest);

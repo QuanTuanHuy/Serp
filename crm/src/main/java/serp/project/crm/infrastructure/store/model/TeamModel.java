@@ -40,4 +40,7 @@ public class TeamModel extends BaseModel {
 
     @Column(name = "status", nullable = false, length = 20)
     private String status;
+
+    @Column(name = "last_assigned_member_user_id")
+    private Long lastAssignedMemberUserId;
 }

@@ -25,6 +25,8 @@ public interface ActivityRepository extends JpaRepository<ActivityModel, Long> {
     Page<ActivityModel> findByTenantIdAndStatus(Long tenantId, String status, Pageable pageable);
     Page<ActivityModel> findByTenantIdAndActivityType(Long tenantId, String activityType, Pageable pageable);
     Page<ActivityModel> findByTenantIdAndAssignedTo(Long tenantId, Long assignedTo, Pageable pageable);
+
+    List<ActivityModel> findAllByTenantIdAndAssignedTo(Long tenantId, Long assignedTo);
     Page<ActivityModel> findByTenantIdAndLeadId(Long tenantId, Long leadId, Pageable pageable);
     Page<ActivityModel> findByTenantIdAndAccountId(Long tenantId, Long accountId, Pageable pageable);
     Page<ActivityModel> findByTenantIdAndOpportunityId(Long tenantId, Long opportunityId, Pageable pageable);

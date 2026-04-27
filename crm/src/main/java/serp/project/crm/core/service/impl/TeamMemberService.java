@@ -177,6 +177,16 @@ public class TeamMemberService implements ITeamMemberService {
         return profiles;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public TeamMemberEntity getActiveEligibleMember(Long teamId, Long userId, Long tenantId) {
+        return teamMemberPort.findByTeamIdAndUserId(teamId, userId, tenantId)
+                .filter(member -> TeamMemberStatus.ACTIVE.equals(member.getStatus()))
+                .filter(member -> TeamMemberRole.MANAGER.equals(member.getRole())
+                        || TeamMemberRole.SALES_REP.equals(member.getRole()))
+                .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND));
+    }
+
     private void publishTeamMemberAddedEvent(TeamMemberEntity teamMember) {
         log.debug("Event: Team member added - ID: {}, Topic: {}", teamMember.getId(), Constants.KafkaTopic.TEAM);
     }

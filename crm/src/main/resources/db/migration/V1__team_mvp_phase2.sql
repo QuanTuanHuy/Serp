@@ -4,6 +4,9 @@ ALTER TABLE IF EXISTS teams
 ALTER TABLE IF EXISTS teams
     ADD COLUMN IF NOT EXISTS status VARCHAR(20);
 
+ALTER TABLE IF EXISTS teams
+    ADD COLUMN IF NOT EXISTS last_assigned_member_user_id BIGINT;
+
 UPDATE teams
 SET status = 'ACTIVE'
 WHERE status IS NULL;
@@ -16,6 +19,9 @@ CREATE INDEX IF NOT EXISTS idx_teams_tenant_manager_user_id
 
 CREATE INDEX IF NOT EXISTS idx_teams_tenant_status
     ON teams (tenant_id, status);
+
+CREATE INDEX IF NOT EXISTS idx_teams_tenant_last_assigned_member_user_id
+    ON teams (tenant_id, last_assigned_member_user_id);
 
 CREATE UNIQUE INDEX IF NOT EXISTS uk_teams_tenant_name_active
     ON teams (tenant_id, LOWER(name), status);
