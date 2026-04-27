@@ -29,7 +29,7 @@ public interface DeliveryPlanRepository extends JpaRepository<DeliveryPlanEntity
     @Query("SELECT p FROM DeliveryPlanEntity p " +
             "WHERE (:query IS NULL OR p.planCode LIKE %:query%) " +
             "AND (:facilityId IS NULL OR p.facilityId = :facilityId) " +
-            "AND (:deliveryDate IS NULL OR p.deliveryDate = :deliveryDate) " +
+            "AND (CAST(:deliveryDate AS date) IS NULL OR p.deliveryDate = :deliveryDate) " +
             "AND (:optimizationStatus IS NULL OR p.optimizationStatus = :optimizationStatus) " +
             "AND p.tenantId = :tenantId")
     Page<DeliveryPlanEntity> search(

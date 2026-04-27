@@ -21,7 +21,7 @@ public interface RouteRepository extends JpaRepository<RouteEntity, String> {
             "WHERE (:deliveryPlanId IS NULL OR r.deliveryPlanId = :deliveryPlanId) " +
             "AND (:vehicleShipperId IS NULL OR r.vehicleShipperId = :vehicleShipperId) " +
             "AND (:status IS NULL OR r.status = :status) " +
-            "AND (:deliveryDate IS NULL OR r.deliveryDate = :deliveryDate) " +
+            "AND (CAST(:deliveryDate AS date) IS NULL OR r.deliveryDate = :deliveryDate) " +
             "AND r.tenantId = :tenantId")
     Page<RouteEntity> search(
             @Param("deliveryPlanId") String deliveryPlanId,
