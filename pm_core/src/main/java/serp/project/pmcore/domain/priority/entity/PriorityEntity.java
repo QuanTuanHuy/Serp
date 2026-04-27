@@ -26,4 +26,5 @@ public class PriorityEntity extends BaseEntity {
     private String color;
     private Integer sequence;
     private boolean isSystem;
+    private Long deletedAt;
 }

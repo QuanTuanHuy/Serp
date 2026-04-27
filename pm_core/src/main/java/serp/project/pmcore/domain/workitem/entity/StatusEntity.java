@@ -25,4 +25,5 @@ public class StatusEntity extends BaseEntity {
     private String iconUrl;
     private Long categoryId;
     private Boolean isSystem;
+    private Long deletedAt;
 }

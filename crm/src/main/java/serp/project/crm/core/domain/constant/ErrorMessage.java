@@ -23,13 +23,16 @@ public class ErrorMessage {
     
     // ==================== CRM SPECIFIC ERROR MESSAGES ====================
     
-    // Customer errors
-    public static final String CUSTOMER_NOT_FOUND = "Customer not found";
-    public static final String CUSTOMER_ALREADY_EXISTS = "Customer with this email already exists";
-    public static final String CUSTOMER_INACTIVE = "Customer is inactive";
-    public static final String CUSTOMER_HAS_ACTIVE_OPPORTUNITIES = "Cannot delete customer with active opportunities";
-    public static final String CUSTOMER_CANNOT_BE_OWN_PARENT = "Customer cannot be its own parent";
-    public static final String CANNOT_DELETE_CUSTOMER_WITH_CHILDREN = "Cannot delete customer with child customers";
+    // Account errors
+    public static final String ACCOUNT_NOT_FOUND = "Account not found";
+    public static final String ACCOUNT_ALREADY_EXISTS = "Account with this email already exists";
+    public static final String ACCOUNT_INACTIVE = "Account is inactive";
+    public static final String ACCOUNT_ALREADY_ACTIVE = "Account is already active";
+    public static final String ACCOUNT_ALREADY_INACTIVE = "Account is already inactive";
+    public static final String ACCOUNT_HAS_ACTIVE_OPPORTUNITIES = "Cannot delete Account with active opportunities";
+    public static final String ACCOUNT_CANNOT_BE_OWN_PARENT = "Account cannot be its own parent";
+    public static final String CANNOT_DELETE_ACCOUNT_WITH_CHILDREN = "Cannot delete Account with child Accounts";
+    public static final String CREDIT_LIMIT_NEGATIVE = "Credit limit cannot be negative";
     
     // Lead errors
     public static final String LEAD_NOT_FOUND = "Lead not found";
@@ -48,15 +51,15 @@ public class ErrorMessage {
     public static final String OPPORTUNITY_INVALID_STAGE = "Invalid opportunity stage";
     public static final String OPPORTUNITY_INVALID_STAGE_TRANSITION = "Cannot transition to this stage from current stage";
     public static final String OPPORTUNITY_MISSING_REQUIRED_FIELDS = "Missing required fields for opportunity";
-    public static final String OPPORTUNITY_ALREADY_EXISTS = "Opportunity with this name already exists for the customer";
+    public static final String OPPORTUNITY_ALREADY_EXISTS = "Opportunity with this name already exists for the Account";
     public static final String CANNOT_DELETE_WON_OPPORTUNITY = "Cannot delete an opportunity that has been won";
     
     // Contact errors
     public static final String CONTACT_NOT_FOUND = "Contact not found";
-    public static final String CONTACT_ALREADY_EXISTS = "Contact with this email already exists for this customer";
-    public static final String CONTACT_CUSTOMER_REQUIRED = "Customer ID is required for contact";
-    public static final String CONTACT_ALREADY_PRIMARY = "A primary contact already exists for this customer";
-    public static final String CONTACT_CANNOT_BE_PRIMARY = "Contact cannot be set as primary without a customer";
+    public static final String CONTACT_ALREADY_EXISTS = "Contact with this email already exists for this Account";
+    public static final String CONTACT_ACCOUNT_REQUIRED = "Account ID is required for contact";
+    public static final String CONTACT_ALREADY_PRIMARY = "A primary contact already exists for this Account";
+    public static final String CONTACT_CANNOT_BE_PRIMARY = "Contact cannot be set as primary without an Account";
     
     // Activity errors
     public static final String ACTIVITY_DUE_DATE_PAST = "Due date cannot be in the past";
@@ -64,7 +67,7 @@ public class ErrorMessage {
     public static final String ACTIVITY_ALREADY_COMPLETED = "Activity is already completed";
     public static final String ACTIVITY_ALREADY_CANCELLED = "Activity is already cancelled";
     public static final String ACTIVITY_INVALID_STATUS = "Invalid activity status";
-    public static final String ACTIVITY_MISSING_ENTITY_REFERENCE = "Activity must be linked to at least one of lead, contact, customer, or opportunity";
+    public static final String ACTIVITY_MISSING_ENTITY_REFERENCE = "Activity must be linked to at least one of lead, contact, Account, or opportunity";
     public static final String ACTIVITY_TYPE_REQUIRED = "Activity type is required";
     public static final String ACTIVITY_SUBJECT_REQUIRED = "Activity subject is required";
     public static final String ACTIVITY_PROGRESS_INVALID = "Activity progressPercent must be between 0 and 100";
@@ -76,7 +79,17 @@ public class ErrorMessage {
     public static final String TEAM_MEMBER_NOT_FOUND = "Team member not found";
     public static final String TEAM_MEMBER_ALREADY_EXISTS = "User is already a member of this team";
     public static final String TEAM_LEADER_NOT_FOUND = "Team leader not found";
+    public static final String TEAM_MANAGER_NOT_FOUND = "Team manager not found";
     public static final String TEAM_NAME_ALREADY_EXISTS = "Team with this name already exists";
+    public static final String TEAM_INACTIVE = "Team is inactive";
+    public static final String TEAM_MEMBER_DOES_NOT_BELONG_TO_TEAM = "Team member does not belong to the specified team";
+    public static final String AUTH_CONTEXT_REQUIRED = "Authentication context is required";
+    public static final String TEAM_MANAGER_MUST_BELONG_TO_TEAM = "New manager must be an active member of the specified team";
+    public static final String TEAM_MANAGER_ROLE_CHANGE_INVALID = "Previous manager role must be SALES_REP or VIEWER";
+    public static final String TERRITORY_NOT_FOUND = "Territory not found";
+    public static final String TERRITORY_ALREADY_ASSIGNED = "Territory already assigned to another active team";
+    public static final String TERRITORY_GLOBAL_RECORD_READ_ONLY = "Global territory records cannot be modified directly";
+    public static final String TERRITORY_CODE_ALREADY_EXISTS = "Territory code already exists in this tenant";
 
     // Team member errors
     public static final String MEMBER_NOT_BELONG_TO_ORGANIZATION = "Member does not belong to the organization";
@@ -84,6 +97,10 @@ public class ErrorMessage {
     public static final String MEMBER_ALREADY_IN_ANOTHER_TEAM = "Member is already in another team";
     public static final String MEMBER_IS_NOT_ACTIVE = "Member is not active";
     public static final String MEMBER_NOT_HAS_CRM_ROLE = "Member does not have permission to be assigned to CRM";
+    public static final String MEMBER_ALREADY_ACTIVE = "Member is already active";
+    public static final String MEMBER_ALREADY_INACTIVE = "Member is already inactive";
+    public static final String INVALID_TEAM_MEMBER_ROLE = "Invalid team member role. Must be MANAGER, SALES_REP, or VIEWER";
+    public static final String INVALID_TERRITORY_CODE = "One or more territory codes do not exist";
     
     // Validation errors
     public static final String INVALID_EMAIL_FORMAT = "Invalid email format";

@@ -116,56 +116,30 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
 
   // Fetch order data
   const { data: orderResponse, isLoading, isError } = useGetOrderQuery(orderId);
-
   const order = orderResponse?.data;
-
-  // Fetch supplier data
-  const { data: supplierResponse } = useGetSupplierQuery(
-    order?.fromSupplierId || '',
-    { skip: !order?.fromSupplierId }
-  );
-
-  const supplier = supplierResponse?.data;
 
   // Fetch shipments related to this order
   const {
     data: shipmentsResponse,
     isLoading: isLoadingShipments,
     error: shipmentsError,
-  } = useGetShipmentsQuery({
-    filters: { orderId: orderId },
-    pagination: { page: 0, size: 100 },
-  });
+  } = useGetShipmentsQuery(
+    {
+      filters: { orderId: orderId },
+      pagination: { page: 0, size: 100 },
+    },
+    { skip: !orderId }
+  );
 
   const shipments = shipmentsResponse?.data?.items || [];
 
-  // Collect unique supplier and customer IDs from shipments
-  const supplierIds = Array.from(
-    new Set(
-      shipments.map((s) => s.fromSupplierId).filter((id): id is string => !!id)
-    )
-  );
-  const customerIds = Array.from(
-    new Set(
-      shipments.map((s) => s.toCustomerId).filter((id): id is string => !!id)
-    )
-  );
+  // Fetch supplier data
+  const supplierId = order?.fromSupplierId || '';
+  const { data: supplierResponse } = useGetSupplierQuery(supplierId, {
+    skip: !supplierId,
+  });
 
-  // Fetch suppliers for shipments (we already have the order supplier)
-  const { data: suppliersResponse } = useGetSupplierQuery(
-    supplierIds[0] || '',
-    {
-      skip: supplierIds.length === 0 || !supplierIds[0],
-    }
-  );
-
-  // Fetch customers for shipments
-  const { data: customersResponse } = useGetCustomerQuery(
-    customerIds[0] || '',
-    {
-      skip: customerIds.length === 0 || !customerIds[0],
-    }
-  );
+  const supplier = supplierResponse?.data;
 
   // Collect unique user IDs from order
   const userIds = [
@@ -611,7 +585,7 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
             <Card className='border-destructive/50 bg-destructive/5'>
               <CardContent className='p-6 text-center'>
                 <p className='text-destructive'>
-                  Đã xảy ra lỗi khi tải phiếu kho. Vui lòng thử lại sau.
+                  Đã xảy ra lỗi khi tải phiếu nhập. Vui lòng thử lại sau.
                 </p>
               </CardContent>
             </Card>
@@ -622,9 +596,11 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
             <div className='space-y-4'>
               <div className='flex items-center justify-between'>
                 <div>
-                  <h3 className='text-lg font-semibold'>Danh sách phiếu kho</h3>
+                  <h3 className='text-lg font-semibold'>
+                    Danh sách phiếu nhập
+                  </h3>
                   <p className='text-sm text-muted-foreground'>
-                    {shipments.length} phiếu kho
+                    {shipments.length} phiếu nhập
                   </p>
                 </div>
                 <Button
@@ -633,7 +609,7 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
                   }
                 >
                   <Truck className='h-4 w-4 mr-2' />
-                  Tạo phiếu kho mới
+                  Tạo phiếu nhập mới
                 </Button>
               </div>
 
@@ -643,12 +619,7 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
                     key={shipment.id}
                     shipment={shipment}
                     order={order}
-                    supplier={
-                      shipment.fromSupplierId === supplier?.id
-                        ? supplier
-                        : suppliersResponse?.data
-                    }
-                    customer={customersResponse?.data}
+                    supplier={supplier}
                     onClick={() =>
                       router.push(`/logistics/shipments/${shipment.id}`)
                     }
@@ -669,10 +640,10 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
                     <Truck className='w-10 h-10 text-muted-foreground' />
                   </div>
                   <h3 className='text-lg font-semibold mb-2'>
-                    Chưa có phiếu kho
+                    Chưa có phiếu nhập nào
                   </h3>
                   <p className='text-muted-foreground mb-6 max-w-sm mx-auto'>
-                    Tạo phiếu kho đầu tiên ngay bây giờ.
+                    Tạo phiếu nhập đầu tiên ngay bây giờ.
                   </p>
                   <Button
                     onClick={() =>
@@ -680,7 +651,7 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
                     }
                   >
                     <Truck className='h-4 w-4 mr-2' />
-                    Tạo phiếu kho đầu tiên
+                    Tạo phiếu nhập đầu tiên
                   </Button>
                 </CardContent>
               </Card>
@@ -696,10 +667,10 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
                     <Truck className='w-10 h-10 text-muted-foreground' />
                   </div>
                   <h3 className='text-lg font-semibold mb-2'>
-                    Chưa có phiếu kho
+                    Chưa có phiếu nhập
                   </h3>
                   <p className='text-muted-foreground mb-6 max-w-sm mx-auto'>
-                    Cần phê duyệt đơn hàng trước khi tạo phiếu kho.
+                    Cần phê duyệt đơn hàng trước khi tạo phiếu nhập.
                   </p>
                 </CardContent>
               </Card>

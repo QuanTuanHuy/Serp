@@ -2,10 +2,14 @@
 
 'use client';
 
+import { useRouter } from 'next/navigation';
+import { getErrorMessage } from '@/lib/store/api';
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
+import { toast } from 'sonner';
 import { LeadForm } from '../../components/forms';
 import { useCreateLeadMutation } from '../../api/crmApi';
+import type { CreateLeadRequest } from '../../types';
 
 interface CreateLeadPageProps {
   className?: string;
@@ -18,39 +22,40 @@ export const CreateLeadPage: React.FC<CreateLeadPageProps> = ({
   onSuccess,
   onCancel,
 }) => {
+  const router = useRouter();
   const [createLead, { isLoading }] = useCreateLeadMutation();
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: CreateLeadRequest | Partial<CreateLeadRequest>) => {
     try {
-      const result = await createLead(data).unwrap();
+      const result = await createLead(data as CreateLeadRequest).unwrap();
+      toast.success('Create lead successfully');
       onSuccess?.(result.data.id);
+      router.push(`/crm/leads/${result.data.id}`);
     } catch (error) {
-      console.error('Failed to create lead:', error);
+      toast.error('Failed to create lead', {
+        description: getErrorMessage(error),
+      });
     }
   };
 
   return (
     <div className={cn('p-6', className)}>
-      {/* Header */}
-      <div className='flex items-center justify-between mb-6'>
+      <div className='mb-6 flex items-center justify-between'>
         <div className='flex items-center space-x-4'>
-          <Button variant='outline' onClick={onCancel}>
+          <Button variant='outline' onClick={onCancel ?? (() => router.push('/crm/leads'))}>
             ← Back
           </Button>
           <div>
-            <h1 className='text-2xl font-bold text-foreground'>
-              Create New Lead
-            </h1>
-            <p className='text-muted-foreground'>Add a new sales prospect</p>
+            <h1 className='text-2xl font-bold text-foreground'>Create New Lead</h1>
+            <p className='text-muted-foreground'>Add a new sales prospect to your pipeline.</p>
           </div>
         </div>
       </div>
 
-      {/* Form */}
-      <div className='max-w-4xl'>
+      <div className='max-w-5xl'>
         <LeadForm
           onSubmit={handleSubmit}
-          onCancel={onCancel}
+          onCancel={onCancel ?? (() => router.push('/crm/leads'))}
           isLoading={isLoading}
         />
       </div>

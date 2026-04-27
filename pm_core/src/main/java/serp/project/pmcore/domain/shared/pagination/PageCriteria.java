@@ -39,4 +39,12 @@ public class PageCriteria {
         }
         return "desc";
     }
+
+    protected String getRawSortBy() {
+        return sortBy;
+    }
+
+    protected String getRawSortDirection() {
+        return sortDirection;
+    }
 }

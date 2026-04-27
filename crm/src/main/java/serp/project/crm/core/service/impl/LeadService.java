@@ -21,6 +21,8 @@ import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.port.store.ILeadPort;
 import serp.project.crm.core.service.ILeadScoringService;
 import serp.project.crm.core.service.ILeadService;
+import serp.project.crm.core.service.ITeamMemberService;
+import serp.project.crm.core.service.ITeamRoutingService;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -33,18 +35,24 @@ public class LeadService implements ILeadService {
 
     private final ILeadPort leadPort;
     private final ILeadScoringService leadScoringService;
-
-    private static final int QUALIFICATION_SCORE_THRESHOLD = 70;
+    private final ITeamRoutingService teamRoutingService;
+    private final ITeamMemberService teamMemberService;
 
     @Transactional
     public LeadEntity createLead(LeadEntity lead, Long tenantId) {
-        if (leadPort.existsByEmail(lead.getEmail(), tenantId)) {
+        if (lead.getEmail() == null && lead.getPhone() == null) {
+            throw new AppException("Either email or phone is required");
+        }
+        if (lead.getEmail() != null && leadPort.existsByEmail(lead.getEmail(), tenantId)) {
             throw new AppException(String.format(ErrorMessage.LEAD_ALREADY_EXISTS, lead.getEmail()));
         }
 
         lead.setTenantId(tenantId);
         lead.setDefaults();
-        lead.setProbability(leadScoringService.calculateSmartScore(lead));
+        applyAutoAssignment(lead, tenantId);
+        if (lead.getLeadScore() == null) {
+            lead.setLeadScore(leadScoringService.calculateSmartScore(lead));
+        }
 
         LeadEntity saved = leadPort.save(lead);
 
@@ -57,6 +65,9 @@ public class LeadService implements ILeadService {
     public LeadEntity updateLead(Long id, LeadEntity updates, Long tenantId) {
         LeadEntity existing = leadPort.findById(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.LEAD_NOT_FOUND));
+        if (existing.getLeadStatus() == LeadStatus.CONVERTED) {
+            throw new AppException("Cannot update converted lead");
+        }
         if (updates.getEmail() != null && !updates.getEmail().equals(existing.getEmail())) {
             if (leadPort.existsByEmail(updates.getEmail(), tenantId)) {
                 throw new AppException(String.format(ErrorMessage.LEAD_ALREADY_EXISTS, updates.getEmail()));
@@ -68,9 +79,10 @@ public class LeadService implements ILeadService {
         } catch (IllegalStateException e) {
             throw new AppException(e.getMessage());
         }
-        if (updates.getLeadSource() != null || updates.getIndustry() != null ||
-                updates.getCompanySize() != null || updates.getEstimatedValue() != null) {
-            existing.setProbability(leadScoringService.calculateSmartScore(existing));
+        applyAutoAssignment(existing, tenantId);
+        if (updates.getLeadScore() == null && (updates.getLeadSource() != null || updates.getIndustry() != null ||
+                updates.getCompanySize() != null || updates.getEstimatedValue() != null)) {
+            existing.setLeadScore(leadScoringService.calculateSmartScore(existing));
         }
 
         LeadEntity updated = leadPort.save(existing);
@@ -150,13 +162,20 @@ public class LeadService implements ILeadService {
     }
 
     @Transactional
-    public LeadEntity assignLead(Long leadId, Long userId, Long tenantId) {
+    public LeadEntity assignLead(Long leadId, Long assignedTo, Long assignedBy, Long tenantId) {
         LeadEntity lead = leadPort.findById(leadId, tenantId)
-                .orElseThrow(() -> new IllegalArgumentException("Lead not found"));
+                .orElseThrow(() -> new AppException(ErrorMessage.LEAD_NOT_FOUND));
+        if (lead.getLeadStatus() == LeadStatus.CONVERTED || lead.getLeadStatus() == LeadStatus.DISQUALIFIED) {
+            throw new AppException("Cannot assign converted or disqualified lead");
+        }
 
-        // TODO: Validate user exists in account service
+        if (assignedTo != null) {
+            teamMemberService.getTeamMemberByUserId(assignedTo, tenantId)
+                    .filter(member -> member.getStatus() != null && member.getStatus().name().equals("ACTIVE"))
+                    .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND));
+        }
 
-        lead.setAssignedTo(userId);
+        lead.assignTo(assignedTo, assignedBy);
         LeadEntity updated = leadPort.save(lead);
 
         publishLeadUpdatedEvent(updated);
@@ -165,18 +184,11 @@ public class LeadService implements ILeadService {
     }
 
     @Transactional
-    public LeadEntity qualifyLead(Long id, Long tenantId) {
+    public LeadEntity qualifyLead(Long id, String notes, Long userId, Long tenantId) {
         LeadEntity lead = leadPort.findById(id, tenantId)
-                .orElseThrow(() -> new IllegalArgumentException("Lead not found"));
+                .orElseThrow(() -> new AppException(ErrorMessage.LEAD_NOT_FOUND));
 
-        Integer leadScore = lead.getProbability() != null ? lead.getProbability() : 0;
-        if (leadScore < QUALIFICATION_SCORE_THRESHOLD) {
-            throw new IllegalStateException(
-                    String.format("Lead score %d is below qualification threshold %d",
-                            leadScore, QUALIFICATION_SCORE_THRESHOLD));
-        }
-
-        lead.qualify(tenantId, "Qualified based on score");
+        lead.qualify(userId, notes);
         LeadEntity qualified = leadPort.save(lead);
 
         publishLeadQualifiedEvent(qualified);
@@ -185,12 +197,27 @@ public class LeadService implements ILeadService {
     }
 
     @Transactional
-    public LeadEntity convertLead(Long id, Long customerId, Long opportunityId, Long tenantId) {
+    public LeadEntity disqualifyLead(Long id, String notes, Long userId, Long tenantId) {
+        LeadEntity lead = leadPort.findById(id, tenantId)
+                .orElseThrow(() -> new AppException(ErrorMessage.LEAD_NOT_FOUND));
+        if (lead.getLeadStatus() == LeadStatus.CONVERTED) {
+            throw new AppException("Cannot disqualify converted lead");
+        }
+        lead.disqualify(userId, notes);
+        LeadEntity disqualified = leadPort.save(lead);
+        publishLeadUpdatedEvent(disqualified);
+        return disqualified;
+    }
+
+    @Transactional
+    public LeadEntity convertLead(Long id, Long accountId, Long opportunityId, Long convertedBy, Long tenantId) {
         LeadEntity lead = leadPort.findById(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.LEAD_NOT_FOUND));
 
-        lead.markAsConverted(tenantId, opportunityId, customerId);
+        lead.markAsConverted(convertedBy, opportunityId, accountId);
         LeadEntity converted = leadPort.save(lead);
+
+        publishLeadConvertedEvent(converted);
 
         return converted;
     }
@@ -230,5 +257,14 @@ public class LeadService implements ILeadService {
 
     private void publishLeadDeletedEvent(LeadEntity lead) {
         log.debug("Event: Lead deleted - ID: {}, Topic: {}", lead.getId(), Constants.KafkaTopic.LEAD);
+    }
+
+    private void applyAutoAssignment(LeadEntity lead, Long tenantId) {
+        if (lead.getAssignedTo() != null) {
+            return;
+        }
+
+        teamRoutingService.routeLeadAssignee(lead.getTerritoryCode(), tenantId)
+                .ifPresent(lead::setAssignedTo);
     }
 }

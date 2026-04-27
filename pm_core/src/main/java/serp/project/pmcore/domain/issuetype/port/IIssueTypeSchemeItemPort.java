@@ -21,4 +21,6 @@ public interface IIssueTypeSchemeItemPort {
     void deleteIssueTypeSchemeItemsBySchemeId(Long schemeId, Long tenantId);
 
     boolean existsIssueTypeInScheme(Long schemeId, Long issueTypeId, Long tenantId);
+
+    boolean existsByIssueTypeId(Long issueTypeId, Long tenantId);
 }

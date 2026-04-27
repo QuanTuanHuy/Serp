@@ -18,7 +18,7 @@ import serp.project.crm.core.domain.entity.AddressEntity;
 public class ContactEventData {
     private Long contactId;
     private Long tenantId;
-    private Long customerId;
+    private Long accountId;
     private String name;
     private String email;
     private String phone;

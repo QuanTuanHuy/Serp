@@ -23,10 +23,12 @@ public interface IActivityPort {
 
     Pair<List<ActivityEntity>, Long> findAll(Long tenantId, PageRequest pageRequest);
     Pair<List<ActivityEntity>, Long> findByLeadId(Long leadId, Long tenantId, PageRequest pageRequest);
-    Pair<List<ActivityEntity>, Long> findByCustomerId(Long customerId, Long tenantId, PageRequest pageRequest);
+    Pair<List<ActivityEntity>, Long> findByAccountId(Long accountId, Long tenantId, PageRequest pageRequest);
     Pair<List<ActivityEntity>, Long> findByOpportunityId(Long opportunityId, Long tenantId, PageRequest pageRequest);
     Pair<List<ActivityEntity>, Long> findByContactId(Long contactId, Long tenantId, PageRequest pageRequest);
     Pair<List<ActivityEntity>, Long> findByAssignedTo(Long assignedTo, Long tenantId, PageRequest pageRequest);
+
+    List<ActivityEntity> findAllByAssignedTo(Long assignedTo, Long tenantId);
     Pair<List<ActivityEntity>, Long> findByActivityType(ActivityType activityType, Long tenantId,
             PageRequest pageRequest);
     Pair<List<ActivityEntity>, Long> findByStatus(ActivityStatus status, Long tenantId, PageRequest pageRequest);

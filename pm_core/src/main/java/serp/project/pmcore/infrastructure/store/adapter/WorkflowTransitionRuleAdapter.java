@@ -34,6 +34,23 @@ public class WorkflowTransitionRuleAdapter implements IWorkflowTransitionRulePor
     }
 
     @Override
+    public List<WorkflowTransitionRuleEntity> updateWorkflowTransitionRules(List<WorkflowTransitionRuleEntity> rules) {
+        if (rules == null || rules.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return workflowTransitionRuleMapper.toEntities(
+                workflowTransitionRuleRepository.saveAll(workflowTransitionRuleMapper.toModels(rules))
+        );
+    }
+
+    @Override
+    public List<WorkflowTransitionRuleEntity> getWorkflowTransitionRulesByTransitionId(Long transitionId, Long tenantId) {
+        return  workflowTransitionRuleMapper.toEntities(
+                workflowTransitionRuleRepository.findByTransitionIdAndTenantId(transitionId, tenantId)
+        );
+    }
+
+    @Override
     public List<WorkflowTransitionRuleEntity> getWorkflowTransitionRulesByTransitionIdIncludingSystem(Long transitionId, Long tenantId) {
         return workflowTransitionRuleMapper.toEntities(
                 workflowTransitionRuleRepository.findByTransitionIdAndTenantIdOrSystemTenant(transitionId, tenantId)

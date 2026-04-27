@@ -12,6 +12,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.dto.ProjectProvisioningRequest;
 import serp.project.pmcore.domain.project.dto.ProjectProvisioningResult;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
@@ -144,7 +145,7 @@ class CreateProjectCommandHandlerTest {
                 TENANT_ID
         )).thenReturn(Optional.of(ProjectRoleEntity.builder().id(ROLE_ID).build()));
         when(projectPermissionEvaluationService.hasPermission(
-                eq(finalProject),
+                eq(ProjectPermissionSubject.from(finalProject)),
                 any(),
                 eq(ProjectPermissionKeys.ADMINISTER_PROJECTS)
         )).thenReturn(true);
@@ -182,7 +183,7 @@ class CreateProjectCommandHandlerTest {
                 USER_ID
         );
         verify(projectPermissionEvaluationService).hasPermission(
-                eq(finalProject),
+                eq(ProjectPermissionSubject.from(finalProject)),
                 any(),
                 eq(ProjectPermissionKeys.ADMINISTER_PROJECTS)
         );
@@ -243,7 +244,7 @@ class CreateProjectCommandHandlerTest {
                 TENANT_ID
         )).thenReturn(Optional.of(ProjectRoleEntity.builder().id(ROLE_ID).build()));
         when(projectPermissionEvaluationService.hasPermission(
-                eq(finalProject),
+                eq(ProjectPermissionSubject.from(finalProject)),
                 any(),
                 eq(ProjectPermissionKeys.ADMINISTER_PROJECTS)
         )).thenReturn(false);

@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import serp.project.pmcore.infrastructure.store.model.ScreenTabFieldModel;
 
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -22,4 +23,7 @@ public interface IScreenTabFieldRepository extends JpaRepository<ScreenTabFieldM
     @Query("SELECT f FROM ScreenTabFieldModel f WHERE f.screenTabId = :screenTabId AND f.tenantId = :tenantId ORDER BY f.sequence ASC, f.id ASC")
     List<ScreenTabFieldModel> findAllByScreenTabIdAndTenantId(@Param("screenTabId") Long screenTabId,
                                                               @Param("tenantId") Long tenantId);
+
+    @Query("SELECT f FROM ScreenTabFieldModel f WHERE f.tenantId = :tenantId AND f.screenTabId IN :screenTabIds ORDER BY f.sequence ASC, f.id ASC")
+    List<ScreenTabFieldModel> findAllByScreenTabIdsAndTenantId(Collection<Long> screenTabIds, Long tenantId);
 }

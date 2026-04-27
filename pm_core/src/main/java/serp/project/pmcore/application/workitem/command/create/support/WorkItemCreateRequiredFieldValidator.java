@@ -7,13 +7,12 @@ package serp.project.pmcore.application.workitem.command.create.support;
 
 import org.springframework.stereotype.Component;
 
+import serp.project.pmcore.application.workitem.command.create.internal.CreateWorkItemData;
 import serp.project.pmcore.domain.shared.constant.WorkItemFieldConstants;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
-import serp.project.pmcore.application.workitem.command.create.internal.CreateFieldRules;
-import serp.project.pmcore.application.workitem.command.create.internal.CreateWorkItemData;
-import serp.project.pmcore.application.workitem.command.create.internal.FieldPolicy;
-import serp.project.pmcore.application.workitem.command.create.internal.ResolvedCustomFields;
+import serp.project.pmcore.domain.workitem.dto.WorkItemFieldPolicy;
+import serp.project.pmcore.domain.workitem.dto.WorkItemFieldRules;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -27,8 +26,8 @@ public class WorkItemCreateRequiredFieldValidator {
                          Long priorityId,
                          Long assigneeId,
                          Long securityLevelId,
-                         CreateFieldRules createFieldRules,
-                         ResolvedCustomFields resolvedCustomFields) {
+                         WorkItemFieldRules fieldRules,
+                         List<String> missingCustomFields) {
         List<String> missingFields = new ArrayList<>();
 
         Map<String, Object> effectiveSystemValues = new LinkedHashMap<>();
@@ -42,7 +41,7 @@ public class WorkItemCreateRequiredFieldValidator {
         effectiveSystemValues.put(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE, request.getTimeOriginalEstimate());
         effectiveSystemValues.put(WorkItemFieldConstants.SECURITY_LEVEL_ID, securityLevelId);
 
-        for (FieldPolicy systemPolicy : createFieldRules.systemPolicies().values()) {
+        for (WorkItemFieldPolicy systemPolicy : fieldRules.systemPolicies().values()) {
             if (!systemPolicy.required()
                     || !WorkItemFieldConstants.SUPPORTED_CREATE_SYSTEM_FIELDS.contains(systemPolicy.fieldRef())) {
                 continue;
@@ -53,7 +52,9 @@ public class WorkItemCreateRequiredFieldValidator {
             }
         }
 
-        missingFields.addAll(resolvedCustomFields.missingFields());
+        if (missingCustomFields != null && !missingCustomFields.isEmpty()) {
+            missingFields.addAll(missingCustomFields);
+        }
 
         if (!missingFields.isEmpty()) {
             throw new BusinessRuleViolationException(

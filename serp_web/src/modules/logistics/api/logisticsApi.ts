@@ -33,6 +33,12 @@ import type {
   ShipmentUpdateForm,
   ShipmentFilters,
   ShipmentItemForm,
+  OutboundShipment,
+  OutboundShipmentCreationForm,
+  OutboundShipmentUpdateForm,
+  OutboundShipmentItemForm,
+  OutboundShipmentItemUpdateForm,
+  OutboundShipmentFilters,
   Supplier,
   SupplierFilters,
   PaginationParams,
@@ -377,7 +383,10 @@ export const logisticsApi = api.injectEndpoints({
         method: 'GET',
       }),
       extraOptions: { service: 'logistics' },
-      providesTags: (result, error, id) => [{ type: 'logistics/Order', id }],
+      providesTags: (result, error, id) => [
+        { type: 'logistics/Order', id },
+        { type: 'logistics/Order', id: 'LIST' },
+      ],
     }),
 
     // Product endpoints
@@ -538,11 +547,18 @@ export const logisticsApi = api.injectEndpoints({
         body: data,
       }),
       extraOptions: { service: 'logistics' },
-      invalidatesTags: (result, error, { shipmentId }) => [
-        { type: 'logistics/Shipment', id: shipmentId },
-        { type: 'logistics/Shipment', id: 'LIST' },
-        { type: 'logistics/Order', id: result?.data?.orderId || 'LIST' },
-      ],
+      invalidatesTags: (result, error, { shipmentId }) => {
+        const orderId = result?.data?.orderId;
+
+        return [
+          { type: 'logistics/Shipment', id: shipmentId },
+          { type: 'logistics/Shipment', id: 'LIST' },
+          { type: 'logistics/Order', id: 'LIST' },
+          ...(orderId
+            ? [{ type: 'logistics/Order' as const, id: orderId }]
+            : []),
+        ];
+      },
     }),
 
     updateItemInShipment: builder.mutation<
@@ -555,11 +571,18 @@ export const logisticsApi = api.injectEndpoints({
         body: data,
       }),
       extraOptions: { service: 'logistics' },
-      invalidatesTags: (result, error, { shipmentId }) => [
-        { type: 'logistics/Shipment', id: shipmentId },
-        { type: 'logistics/Shipment', id: 'LIST' },
-        { type: 'logistics/Order', id: result?.data?.orderId || 'LIST' },
-      ],
+      invalidatesTags: (result, error, { shipmentId }) => {
+        const orderId = result?.data?.orderId;
+
+        return [
+          { type: 'logistics/Shipment', id: shipmentId },
+          { type: 'logistics/Shipment', id: 'LIST' },
+          { type: 'logistics/Order', id: 'LIST' },
+          ...(orderId
+            ? [{ type: 'logistics/Order' as const, id: orderId }]
+            : []),
+        ];
+      },
     }),
 
     deleteItemFromShipment: builder.mutation<
@@ -571,11 +594,18 @@ export const logisticsApi = api.injectEndpoints({
         method: 'PATCH',
       }),
       extraOptions: { service: 'logistics' },
-      invalidatesTags: (result, error, { shipmentId }) => [
-        { type: 'logistics/Shipment', id: shipmentId },
-        { type: 'logistics/Shipment', id: 'LIST' },
-        { type: 'logistics/Order', id: result?.data?.orderId || 'LIST' },
-      ],
+      invalidatesTags: (result, error, { shipmentId }) => {
+        const orderId = result?.data?.orderId;
+
+        return [
+          { type: 'logistics/Shipment', id: shipmentId },
+          { type: 'logistics/Shipment', id: 'LIST' },
+          { type: 'logistics/Order', id: 'LIST' },
+          ...(orderId
+            ? [{ type: 'logistics/Order' as const, id: orderId }]
+            : []),
+        ];
+      },
     }),
 
     importShipment: builder.mutation<
@@ -592,6 +622,155 @@ export const logisticsApi = api.injectEndpoints({
         { type: 'logistics/Shipment', id: 'LIST' },
         { type: 'logistics/InventoryItem', id: 'LIST' },
         { type: 'logistics/Order', id: result?.data?.orderId || 'LIST' },
+      ],
+    }),
+
+    // Outbound Shipment (WMS2) endpoints
+    getOutboundShipments: builder.query<
+      APIResponse<PaginatedResponse<OutboundShipment>>,
+      { filters?: OutboundShipmentFilters; pagination: PaginationParams }
+    >({
+      query: ({ filters = {}, pagination }) => ({
+        url: '/outbound-shipment/search',
+        method: 'GET',
+        params: { ...filters, ...pagination },
+      }),
+      extraOptions: { service: 'logistics' },
+      providesTags: (result) =>
+        result?.data?.items
+          ? [
+              ...result.data.items.map(({ id }) => ({
+                type: 'logistics/OutboundShipment' as const,
+                id,
+              })),
+              { type: 'logistics/OutboundShipment', id: 'LIST' },
+            ]
+          : [{ type: 'logistics/OutboundShipment', id: 'LIST' }],
+    }),
+
+    getOutboundShipment: builder.query<APIResponse<OutboundShipment>, string>({
+      query: (shipmentId) => ({
+        url: `/outbound-shipment/search/${shipmentId}`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'logistics' },
+      providesTags: (result, error, id) => [
+        { type: 'logistics/OutboundShipment', id },
+      ],
+    }),
+
+    createOutboundShipment: builder.mutation<
+      APIResponse<null>,
+      OutboundShipmentCreationForm
+    >({
+      query: (data) => ({
+        url: '/outbound-shipment/create',
+        method: 'POST',
+        body: data,
+      }),
+      extraOptions: { service: 'logistics' },
+      invalidatesTags: (result, error, arg) => [
+        { type: 'logistics/OutboundShipment', id: 'LIST' },
+        { type: 'logistics/Order', id: arg.orderId || 'LIST' },
+      ],
+    }),
+
+    updateOutboundShipment: builder.mutation<
+      APIResponse<null>,
+      { shipmentId: string; data: OutboundShipmentUpdateForm }
+    >({
+      query: ({ shipmentId, data }) => ({
+        url: `/outbound-shipment/update/${shipmentId}`,
+        method: 'PATCH',
+        body: data,
+      }),
+      extraOptions: { service: 'logistics' },
+      invalidatesTags: (result, error, { shipmentId }) => [
+        { type: 'logistics/OutboundShipment', id: shipmentId },
+        { type: 'logistics/OutboundShipment', id: 'LIST' },
+      ],
+    }),
+
+    deleteOutboundShipment: builder.mutation<APIResponse<null>, string>({
+      query: (shipmentId) => ({
+        url: `/outbound-shipment/delete/${shipmentId}`,
+        method: 'DELETE',
+      }),
+      extraOptions: { service: 'logistics' },
+      invalidatesTags: (result, error, shipmentId) => [
+        { type: 'logistics/OutboundShipment', id: shipmentId },
+        { type: 'logistics/OutboundShipment', id: 'LIST' },
+      ],
+    }),
+
+    addItemToOutboundShipment: builder.mutation<
+      APIResponse<null>,
+      { shipmentId: string; data: OutboundShipmentItemForm }
+    >({
+      query: ({ shipmentId, data }) => ({
+        url: `/outbound-shipment/create/${shipmentId}/add`,
+        method: 'POST',
+        body: data,
+      }),
+      extraOptions: { service: 'logistics' },
+      invalidatesTags: (result, error, { shipmentId }) => [
+        { type: 'logistics/OutboundShipment', id: shipmentId },
+        { type: 'logistics/OutboundShipment', id: 'LIST' },
+        { type: 'logistics/Order', id: 'LIST' },
+      ],
+    }),
+
+    updateItemInOutboundShipment: builder.mutation<
+      APIResponse<null>,
+      {
+        shipmentId: string;
+        itemId: string;
+        data: OutboundShipmentItemUpdateForm;
+      }
+    >({
+      query: ({ shipmentId, itemId, data }) => ({
+        url: `/outbound-shipment/update/${shipmentId}/update/${itemId}`,
+        method: 'PATCH',
+        body: data,
+      }),
+      extraOptions: { service: 'logistics' },
+      invalidatesTags: (result, error, { shipmentId }) => [
+        { type: 'logistics/OutboundShipment', id: shipmentId },
+        { type: 'logistics/OutboundShipment', id: 'LIST' },
+        { type: 'logistics/Order', id: 'LIST' },
+      ],
+    }),
+
+    deleteItemFromOutboundShipment: builder.mutation<
+      APIResponse<null>,
+      { shipmentId: string; itemId: string }
+    >({
+      query: ({ shipmentId, itemId }) => ({
+        url: `/outbound-shipment/update/${shipmentId}/delete/${itemId}`,
+        method: 'PATCH',
+      }),
+      extraOptions: { service: 'logistics' },
+      invalidatesTags: (result, error, { shipmentId }) => [
+        { type: 'logistics/OutboundShipment', id: shipmentId },
+        { type: 'logistics/OutboundShipment', id: 'LIST' },
+        { type: 'logistics/Order', id: 'LIST' },
+      ],
+    }),
+
+    readyToExportOutboundShipment: builder.mutation<
+      APIResponse<null>,
+      { shipmentId: string }
+    >({
+      query: ({ shipmentId }) => ({
+        url: `/outbound-shipment/manage/${shipmentId}/ready`,
+        method: 'PATCH',
+      }),
+      extraOptions: { service: 'logistics' },
+      invalidatesTags: (result, error, { shipmentId }) => [
+        { type: 'logistics/OutboundShipment', id: shipmentId },
+        { type: 'logistics/OutboundShipment', id: 'LIST' },
+        { type: 'logistics/InventoryItem', id: 'LIST' },
+        { type: 'logistics/Order', id: 'LIST' },
       ],
     }),
 
@@ -682,6 +861,17 @@ export const {
   useUpdateItemInShipmentMutation,
   useDeleteItemFromShipmentMutation,
   useImportShipmentMutation,
+
+  // Outbound shipment hooks
+  useGetOutboundShipmentsQuery,
+  useGetOutboundShipmentQuery,
+  useCreateOutboundShipmentMutation,
+  useUpdateOutboundShipmentMutation,
+  useDeleteOutboundShipmentMutation,
+  useAddItemToOutboundShipmentMutation,
+  useUpdateItemInOutboundShipmentMutation,
+  useDeleteItemFromOutboundShipmentMutation,
+  useReadyToExportOutboundShipmentMutation,
 
   // Supplier hooks
   useGetSuppliersQuery,

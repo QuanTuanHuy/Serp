@@ -146,6 +146,24 @@ public enum RoleEnum {
      */
     PTM_USER("PTM_USER", RoleScope.MODULE, RoleType.USER, 7, false, "PTM User", true),
 
+    // TMS (First-mile) Module
+    /**
+     * TMS Admin - First-mile module administrator
+     */
+    TMS_ADMIN("TMS_ADMIN", RoleScope.MODULE, RoleType.ADMIN, 4, false, "TMS Administrator"),
+
+    /**
+     * TMS Post Officer Manager
+     */
+    TMS_POSTOFFICER_MANAGER("TMS_POSTOFFICER_MANAGER", RoleScope.MODULE, RoleType.MANAGER, 6, false,
+            "TMS Post Officer Manager"),
+
+    /**
+     * TMS Post Officer
+     */
+    TMS_POSTOFFICER("TMS_POSTOFFICER", RoleScope.MODULE, RoleType.USER, 7, false,
+            "TMS Post Officer", true),
+
     // Accounting Module (future)
     /**
      * Accounting Admin

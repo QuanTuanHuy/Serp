@@ -25,6 +25,7 @@ import serp.project.pmcore.application.project.query.roleactor.list.ListProjectR
 import serp.project.pmcore.application.project.query.roleactor.list.ProjectRoleActorView;
 import serp.project.pmcore.application.shared.cqrs.Unit;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.entity.ProjectRoleActorEntity;
 import serp.project.pmcore.domain.project.entity.ProjectRoleEntity;
@@ -131,7 +132,7 @@ class ProjectRoleActorHandlersTest {
         ArgumentCaptor<ProjectPermissionEvaluationContext> contextCaptor =
                 ArgumentCaptor.forClass(ProjectPermissionEvaluationContext.class);
         verify(projectPermissionEvaluationService).checkPermission(
-                eq(project),
+                eq(ProjectPermissionSubject.from(project)),
                 contextCaptor.capture(),
                 eq(ProjectPermissionKeys.ADMINISTER_PROJECTS)
         );
@@ -206,7 +207,7 @@ class ProjectRoleActorHandlersTest {
         ));
 
         verify(projectPermissionEvaluationService).checkPermission(
-                eq(project),
+                eq(ProjectPermissionSubject.from(project)),
                 any(ProjectPermissionEvaluationContext.class),
                 eq(ProjectPermissionKeys.ADMINISTER_PROJECTS)
         );
@@ -282,7 +283,7 @@ class ProjectRoleActorHandlersTest {
         ));
 
         verify(projectPermissionEvaluationService).checkPermission(
-                eq(archivedProject),
+                eq(ProjectPermissionSubject.from(archivedProject)),
                 any(ProjectPermissionEvaluationContext.class),
                 eq(ProjectPermissionKeys.ADMINISTER_PROJECTS)
         );

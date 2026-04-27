@@ -39,8 +39,8 @@ public final class OpportunitySpecification {
             spec = spec.and(BaseSpecification.in("stage", stages));
         }
 
-        if (safeFilter.getCustomerId() != null) {
-            spec = spec.and(BaseSpecification.equal("customerId", safeFilter.getCustomerId()));
+        if (safeFilter.getAccountId() != null) {
+            spec = spec.and(BaseSpecification.equal("accountId", safeFilter.getAccountId()));
         }
 
         if (safeFilter.getLeadId() != null) {

@@ -68,6 +68,15 @@ public class RoleEnumUtils {
     }
 
     /**
+     * Get all TMS-specific roles
+     */
+    public static List<RoleEnum> getTmsRoles() {
+        return Arrays.stream(RoleEnum.values())
+                .filter(role -> role.getRoleName().startsWith("TMS_"))
+                .toList();
+    }
+
+    /**
      * Get all Accounting-specific roles
      */
     public static List<RoleEnum> getAccountingRoles() {
@@ -290,6 +299,8 @@ public class RoleEnumUtils {
                 return RoleEnum.CRM_SALES_PERSON;
             case "PTM":
                 return RoleEnum.PTM_USER;
+            case "TMS":
+                return RoleEnum.TMS_POSTOFFICER;
             case "ACCOUNTING":
                 return RoleEnum.ACCOUNTANT;
             case "SCHOOL_BUS":
@@ -311,7 +322,13 @@ public class RoleEnumUtils {
             return Optional.of(RoleEnum.CRM_ADMIN);
         }
 
-        // PTM promotions
+        // TMS promotions
+        if (currentRole == RoleEnum.TMS_POSTOFFICER) {
+            return Optional.of(RoleEnum.TMS_POSTOFFICER_MANAGER);
+        }
+        if (currentRole == RoleEnum.TMS_POSTOFFICER_MANAGER) {
+            return Optional.of(RoleEnum.TMS_ADMIN);
+        }
 
         // Organization promotions
         if (currentRole == RoleEnum.ORG_USER) {
@@ -344,7 +361,13 @@ public class RoleEnumUtils {
             return Optional.of(RoleEnum.CRM_SALES_PERSON);
         }
 
-        // PTM demotions
+        // TMS demotions
+        if (currentRole == RoleEnum.TMS_ADMIN) {
+            return Optional.of(RoleEnum.TMS_POSTOFFICER_MANAGER);
+        }
+        if (currentRole == RoleEnum.TMS_POSTOFFICER_MANAGER) {
+            return Optional.of(RoleEnum.TMS_POSTOFFICER);
+        }
 
         // Organization demotions
         if (currentRole == RoleEnum.ORG_ADMIN) {

@@ -36,8 +36,10 @@ type ExternalServiceProperties struct {
 	PTMSchedule         ServiceProperty
 	PurchaseService     ServiceProperty
 	LogisticsService    ServiceProperty
+	Logistics2Service   ServiceProperty
 	SchoolBusService    ServiceProperty
 	FirstMileService    ServiceProperty
+	SecondMileService   ServiceProperty
 	CrmService          ServiceProperty
 	NotificationService ServiceProperty
 	SalesService        ServiceProperty

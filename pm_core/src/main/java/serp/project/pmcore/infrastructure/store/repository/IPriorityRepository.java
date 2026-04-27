@@ -5,6 +5,8 @@
 
 package serp.project.pmcore.infrastructure.store.repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -27,7 +29,41 @@ public interface IPriorityRepository extends JpaRepository<PriorityModel, Long> 
 
     List<PriorityModel> findAllByTenantIdOrderBySequenceAsc(Long tenantId);
 
-    boolean existsByTenantIdAndName(Long tenantId, String name);
+    @Query("SELECT p FROM PriorityModel p WHERE p.tenantId = :tenantId OR p.tenantId = 0 ORDER BY CASE WHEN p.tenantId = :tenantId THEN 0 ELSE 1 END, p.sequence ASC, p.name ASC, p.id ASC")
+    List<PriorityModel> findAllByTenantIdOrSystemTenant(@Param("tenantId") Long tenantId);
+
+    @Query("SELECT p FROM PriorityModel p WHERE p.id IN :priorityIds AND (p.tenantId = :tenantId OR p.tenantId = 0)")
+    List<PriorityModel> findAllByIdInAndTenantIdOrSystemTenant(@Param("priorityIds") List<Long> priorityIds,
+                                                               @Param("tenantId") Long tenantId);
+
+    @Query(value = """
+            SELECT p
+            FROM PriorityModel p
+            WHERE (p.tenantId = :tenantId OR p.tenantId = 0)
+              AND (:isSystem IS NULL OR p.isSystem = :isSystem)
+              AND (
+                    :search IS NULL
+                    OR LOWER(p.priorityKey) LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%'))
+              )
+            """,
+            countQuery = """
+            SELECT COUNT(p)
+            FROM PriorityModel p
+            WHERE (p.tenantId = :tenantId OR p.tenantId = 0)
+              AND (:isSystem IS NULL OR p.isSystem = :isSystem)
+              AND (
+                    :search IS NULL
+                    OR LOWER(p.priorityKey) LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%'))
+              )
+            """)
+    Page<PriorityModel> findAllVisibleWithFilters(@Param("tenantId") Long tenantId,
+                                                  @Param("search") String search,
+                                                  @Param("isSystem") Boolean isSystem,
+                                                  Pageable pageable);
+
+    boolean existsByTenantIdAndNameIgnoreCase(Long tenantId, String name);
 
     @Modifying
     @Query("UPDATE PriorityModel p SET p.deletedAt = CURRENT_TIMESTAMP WHERE p.id = :id AND p.tenantId = :tenantId AND p.deletedAt IS NULL")

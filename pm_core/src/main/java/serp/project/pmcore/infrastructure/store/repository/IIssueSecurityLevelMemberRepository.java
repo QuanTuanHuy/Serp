@@ -18,4 +18,6 @@ public interface IIssueSecurityLevelMemberRepository extends JpaRepository<Issue
     @Query("SELECT m FROM IssueSecurityLevelMemberModel m WHERE m.levelId = :levelId AND (m.tenantId = :tenantId OR m.tenantId = 0) ORDER BY m.id ASC")
     List<IssueSecurityLevelMemberModel> findAllByLevelIdAndTenantIdOrSystemTenant(@Param("levelId") Long levelId,
                                                                                    @Param("tenantId") Long tenantId);
+
+    List<IssueSecurityLevelMemberModel> findAllByLevelIdAndTenantId(Long levelId, Long tenantId);
 }

@@ -20,6 +20,7 @@ CREATE TABLE orders (
 
     -- Khung giờ giao hàng
                         delivery_request_time VARCHAR(255),
+                        pickup_method VARCHAR(50) DEFAULT 'COURIER_PICKUP',
 
     -- Thông tin người nhận
                         receiver_name VARCHAR(255),
@@ -35,6 +36,7 @@ CREATE TABLE orders (
 
     -- Thông tin hàng hóa và trạng thái
                         status VARCHAR(255),
+                        is_confirm BOOLEAN NOT NULL DEFAULT FALSE,
                         total_weight DOUBLE PRECISION,
                         total_value DOUBLE PRECISION,
                         dimensions jsonb,

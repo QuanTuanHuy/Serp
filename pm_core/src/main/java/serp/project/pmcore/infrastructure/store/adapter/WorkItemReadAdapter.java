@@ -12,8 +12,8 @@ import org.springframework.stereotype.Component;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
-import serp.project.pmcore.domain.workitem.projection.WorkItemDetailProjection;
-import serp.project.pmcore.domain.workitem.query.WorkItemSearchCriteria;
+import serp.project.pmcore.domain.workitem.dto.WorkItemDetailProjection;
+import serp.project.pmcore.domain.workitem.dto.WorkItemSearchCriteria;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemMapper;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemRowMapper;
 import serp.project.pmcore.infrastructure.store.model.WorkItemModel;
@@ -55,6 +55,34 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
     }
 
     @Override
+    public List<WorkItemEntity> getWorkItemsByPriorityId(Long priorityId, Long tenantId) {
+        return workItemMapper.toEntities(
+                workItemRepository.findAllByTenantIdAndPriorityId(tenantId, priorityId)
+        );
+    }
+
+    @Override
+    public boolean existsActiveWorkItemByStatusId(Long statusId, Long tenantId) {
+        return workItemRepository.existsByTenantIdAndStatusId(tenantId, statusId);
+    }
+
+    @Override
+    public List<Long> getActiveIssueTypeIdsInUseByProjectIds(Long tenantId, List<Long> projectIds, List<Long> issueTypeIds) {
+        if (projectIds == null || projectIds.isEmpty() || issueTypeIds == null || issueTypeIds.isEmpty()) {
+            return List.of();
+        }
+        return workItemRepository.findDistinctIssueTypeIdsInUseByProjectIds(tenantId, projectIds, issueTypeIds);
+    }
+
+    @Override
+    public List<Long> getActivePriorityIdsInUseByProjectIds(Long tenantId, List<Long> projectIds, List<Long> priorityIds) {
+        if (projectIds == null || projectIds.isEmpty() || priorityIds == null || priorityIds.isEmpty()) {
+            return List.of();
+        }
+        return workItemRepository.findDistinctPriorityIdsInUseByProjectIds(tenantId, projectIds, priorityIds);
+    }
+
+    @Override
     public Optional<String> getLastRankByProjectId(Long projectId, Long tenantId) {
         return workItemRepository.findFirstByTenantIdAndProjectIdOrderByRankDescIdDesc(tenantId, projectId)
                 .map(WorkItemModel::getRank);
@@ -74,5 +102,12 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
     @Override
     public Optional<WorkItemDetailProjection> getWorkItemDetailById(Long id, Long tenantId) {
         return workItemRepository.findWorkItemDetailById(id, tenantId);
+    }
+
+    @Override
+    public List<WorkItemEntity> getActiveChildrenByParentId(Long parentId, Long tenantId) {
+        return workItemMapper.toEntities(
+                workItemRepository.findAllByTenantIdAndParentId(tenantId, parentId)
+        );
     }
 }

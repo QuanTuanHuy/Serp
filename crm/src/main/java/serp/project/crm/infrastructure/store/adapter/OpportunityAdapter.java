@@ -55,10 +55,10 @@ public class OpportunityAdapter implements IOpportunityPort {
     }
 
     @Override
-    public Pair<List<OpportunityEntity>, Long> findByCustomerId(Long customerId, Long tenantId,
+    public Pair<List<OpportunityEntity>, Long> findByAccountId(Long accountId, Long tenantId,
             PageRequest pageRequest) {
         var pageable = opportunityMapper.toPageable(pageRequest);
-        var page = opportunityRepository.findByTenantIdAndCustomerId(tenantId, customerId, pageable)
+        var page = opportunityRepository.findByTenantIdAndAccountId(tenantId, accountId, pageable)
                 .map(opportunityMapper::toEntity);
         return opportunityMapper.pageToPair(page);
     }
@@ -91,6 +91,14 @@ public class OpportunityAdapter implements IOpportunityPort {
     }
 
     @Override
+    public List<OpportunityEntity> findAllByAssignedTo(Long assignedTo, Long tenantId) {
+        return opportunityRepository.findAllByTenantIdAndAssignedTo(tenantId, assignedTo)
+                .stream()
+                .map(opportunityMapper::toEntity)
+                .toList();
+    }
+
+    @Override
     public Long countByStage(OpportunityStage stage, Long tenantId) {
         return opportunityRepository.countByTenantIdAndStage(tenantId, stage.name());
     }
@@ -113,7 +121,7 @@ public class OpportunityAdapter implements IOpportunityPort {
     }
 
     @Override
-    public List<OpportunityEntity> findWonOpportunitiesByCustomerId(Long customerId, Long tenantId) {
+    public List<OpportunityEntity> findWonOpportunitiesByAccountId(Long accountId, Long tenantId) {
         return List.of();
     }
 
@@ -149,7 +157,15 @@ public class OpportunityAdapter implements IOpportunityPort {
     }
 
     @Override
-    public boolean existsByCustomerIdAndName(Long customerId, String name, Long tenantId) {
-        return opportunityRepository.existsByTenantIdAndCustomerIdAndName(tenantId, customerId, name);
+    public List<OpportunityEntity> filterAll(OpportunityFilterRequest filter, Long tenantId) {
+        Specification<OpportunityModel> spec = OpportunitySpecification.build(filter, tenantId);
+        return opportunityRepository.findAll(spec).stream()
+                .map(opportunityMapper::toEntity)
+                .toList();
+    }
+
+    @Override
+    public boolean existsByAccountIdAndName(Long accountId, String name, Long tenantId) {
+        return opportunityRepository.existsByTenantIdAndAccountIdAndName(tenantId, accountId, name);
     }
 }

@@ -1,10 +1,11 @@
 package serp.project.logistics.repository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.*;
+import org.springframework.data.repository.query.Param;
 import serp.project.logistics.entity.OrderEntity;
+
+import java.util.Optional;
 
 public interface OrderRepository extends JpaRepository<OrderEntity, String>, JpaSpecificationExecutor<OrderEntity> {
 
@@ -22,5 +23,9 @@ public interface OrderRepository extends JpaRepository<OrderEntity, String>, Jpa
             "o.cancellationNote = '' " +
             "WHERE o.tenantId = :tenantId AND o.id = :orderId")
     public void resetOrderStatus(String orderId, Long tenantId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT o FROM OrderEntity o WHERE o.id = :id AND o.tenantId = :tenantId")
+    Optional<OrderEntity> findByIdAndTenantIdWithLock(@Param("id") Long id,  @Param("tenantId") Long tenantId);
 
 }

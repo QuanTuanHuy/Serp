@@ -20,7 +20,6 @@ import java.time.LocalDate;
 @Data
 @Builder
 public class CreateLeadRequest {
-    @NotBlank(message = "Company name is required")
     @Size(max = 255, message = "Company name must not exceed 255 characters")
     private String company;
 
@@ -37,7 +36,6 @@ public class CreateLeadRequest {
     @Size(max = 255, message = "Name must not exceed 255 characters")
     private String name;
 
-    @NotBlank(message = "Email is required")
     @Email(message = "Email must be valid")
     @Size(max = 255, message = "Email must not exceed 255 characters")
     private String email;
@@ -63,16 +61,21 @@ public class CreateLeadRequest {
     @Size(max = 100, message = "Country must not exceed 100 characters")
     private String country;
 
-    @NotNull(message = "Lead source is required")
+    @Size(max = 50, message = "Territory code must not exceed 50 characters")
+    private String territoryCode;
+
     private LeadSource leadSource;
 
     private Long assignedTo;
 
-    @DecimalMin(value = "0.0", inclusive = false, message = "Estimated value must be greater than 0")
+    @DecimalMin(value = "0.0", message = "Estimated value must be greater than or equal to 0")
     private BigDecimal estimatedValue;
 
-    @Future(message = "Expected close date must be in the future")
-    private LocalDate expectedCloseDate;
+    @Min(value = 0, message = "Lead score must be at least 0")
+    @Max(value = 100, message = "Lead score must not exceed 100")
+    private Integer leadScore;
+
+    private LocalDate followUpDate;
 
     @Size(max = 1000, message = "Notes must not exceed 1000 characters")
     private String notes;

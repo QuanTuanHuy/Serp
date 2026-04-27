@@ -11,7 +11,7 @@ spring:
           issuer-uri: ${KEYCLOAK_URL}/realms/serp
 
 server:
-  port: ${SERVER_PORT:8089}
+  port: ${SERVER_PORT:9003}
 
 security:
   role-prefix: ROLE_

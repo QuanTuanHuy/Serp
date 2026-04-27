@@ -92,6 +92,9 @@ external:
       host: localhost
       port: "8089"
       timeout: 15s
+    logistics2Service:
+      host: localhost
+      port: "9004"
     schoolBusService:
       host: localhost
       port: "8094"
@@ -99,6 +102,10 @@ external:
     firstMileService:
       host: localhost
       port: "8093"
+      timeout: 15s
+    secondMileService:
+      host: localhost
+      port: "8095"
       timeout: 15s
     crmService:
       host: localhost

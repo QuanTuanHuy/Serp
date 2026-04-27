@@ -23,9 +23,9 @@ public interface ContactRepository extends JpaRepository<ContactModel, Long> {
 
     Page<ContactModel> findByTenantId(Long tenantId, Pageable pageable);
 
-    List<ContactModel> findByTenantIdAndCustomerId(Long tenantId, Long customerId);
+    List<ContactModel> findByTenantIdAndAccountId(Long tenantId, Long accountId);
 
-    Optional<ContactModel> findByTenantIdAndCustomerIdAndIsPrimary(Long tenantId, Long customerId,
+    Optional<ContactModel> findByTenantIdAndAccountIdAndIsPrimary(Long tenantId, Long accountId,
             Boolean isPrimary);
 
     Page<ContactModel> findByTenantIdAndActiveStatus(Long tenantId, String activeStatus, Pageable pageable);
@@ -45,7 +45,7 @@ public interface ContactRepository extends JpaRepository<ContactModel, Long> {
 
     long countByTenantId(Long tenantId);
 
-    long countByTenantIdAndCustomerId(Long tenantId, Long customerId);
+    long countByTenantIdAndAccountId(Long tenantId, Long accountId);
 
     long countByTenantIdAndActiveStatus(Long tenantId, String activeStatus);
 }

@@ -12,6 +12,7 @@ import serp.project.pmcore.application.project.command.roleactor.RoleActorEventP
 import serp.project.pmcore.application.project.command.roleactor.RoleActorOutboxPublisher;
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.entity.ProjectRoleActorEntity;
 import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
@@ -48,7 +49,7 @@ public class AddProjectRoleActorCommandHandler
                 .groupKeys(command.groupKeys())
                 .build();
         projectPermissionEvaluationService.checkPermission(
-                project,
+                ProjectPermissionSubject.from(project),
                 evaluationContext,
                 ProjectPermissionKeys.ADMINISTER_PROJECTS
         );

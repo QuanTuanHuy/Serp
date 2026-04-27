@@ -63,14 +63,14 @@ public final class LeadSpecification {
                     safeFilter.getEstimatedValueMin(), safeFilter.getEstimatedValueMax()));
         }
 
-        if (safeFilter.getProbabilityMin() != null || safeFilter.getProbabilityMax() != null) {
-            spec = spec.and(BaseSpecification.between("probability",
-                    safeFilter.getProbabilityMin(), safeFilter.getProbabilityMax()));
+        if (safeFilter.getLeadScoreMin() != null || safeFilter.getLeadScoreMax() != null) {
+            spec = spec.and(BaseSpecification.between("leadScore",
+                    safeFilter.getLeadScoreMin(), safeFilter.getLeadScoreMax()));
         }
 
-        if (safeFilter.getExpectedCloseDateFrom() != null || safeFilter.getExpectedCloseDateTo() != null) {
-            spec = spec.and(BaseSpecification.between("expectedCloseDate",
-                    safeFilter.getExpectedCloseDateFrom(), safeFilter.getExpectedCloseDateTo()));
+        if (safeFilter.getFollowUpDateFrom() != null || safeFilter.getFollowUpDateTo() != null) {
+            spec = spec.and(BaseSpecification.between("followUpDate",
+                    safeFilter.getFollowUpDateFrom(), safeFilter.getFollowUpDateTo()));
         }
 
         if (safeFilter.getCreatedFrom() != null || safeFilter.getCreatedTo() != null) {
@@ -100,7 +100,7 @@ public final class LeadSpecification {
         }
 
         if (Boolean.TRUE.equals(safeFilter.getConvertedOnly())) {
-            spec = spec.and(BaseSpecification.isNotNull("convertedCustomerId"));
+            spec = spec.and(BaseSpecification.isNotNull("convertedAccountId"));
         }
 
         return spec;

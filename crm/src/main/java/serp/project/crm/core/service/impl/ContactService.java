@@ -18,7 +18,7 @@ import serp.project.crm.core.domain.enums.ActiveStatus;
 import serp.project.crm.core.domain.enums.ContactType;
 import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.port.store.IContactPort;
-import serp.project.crm.core.port.store.ICustomerPort;
+import serp.project.crm.core.port.store.IAccountPort;
 import serp.project.crm.core.service.IContactService;
 
 import java.util.List;
@@ -30,14 +30,14 @@ import java.util.Optional;
 public class ContactService implements IContactService {
 
     private final IContactPort contactPort;
-    private final ICustomerPort customerPort;
+    private final IAccountPort accountPort;
 
     @Override
     @Transactional
     public ContactEntity createContact(ContactEntity contact, Long userId, Long tenantId) {
-        if (contact.getCustomerId() != null) {
-            customerPort.findById(contact.getCustomerId(), tenantId)
-                    .orElseThrow(() -> new AppException(ErrorMessage.CUSTOMER_NOT_FOUND));
+        if (contact.getAccountId() != null) {
+            accountPort.findById(contact.getAccountId(), tenantId)
+                    .orElseThrow(() -> new AppException(ErrorMessage.ACCOUNT_NOT_FOUND));
         }
 
         contact.setTenantId(tenantId);
@@ -70,14 +70,28 @@ public class ContactService implements IContactService {
         return updated;
     }
 
+    @Override
+    @Transactional
+    public ContactEntity setPrimaryContact(Long id, Long userId, Long tenantId) {
+        ContactEntity contact = contactPort.findById(id, tenantId)
+                .orElseThrow(() -> new AppException(ErrorMessage.CONTACT_NOT_FOUND));
+        setPrimaryContact(contact, userId, tenantId);
+        ContactEntity updated = contactPort.save(contact);
+        publishContactUpdatedEvent(updated);
+        return updated;
+    }
+
     private void setPrimaryContact(ContactEntity contact, Long userId, Long tenantId) {
-        if (contact.getCustomerId() == null) {
+        if (contact.getAccountId() == null) {
             throw new AppException(ErrorMessage.CONTACT_CANNOT_BE_PRIMARY);
         }
+        if (!contact.isActive()) {
+            throw new AppException("Cannot set inactive contact as primary");
+        }
 
-        contactPort.findPrimaryContact(contact.getCustomerId(), tenantId)
+        contactPort.findPrimaryContact(contact.getAccountId(), tenantId)
                 .ifPresent(existing -> {
-                    existing.removePrimaryStatus(tenantId);
+                    existing.removePrimaryStatus(userId);
                     contactPort.save(existing);
                 });
 
@@ -99,8 +113,8 @@ public class ContactService implements IContactService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ContactEntity> getContactsByCustomerId(Long customerId, Long tenantId) {
-        return contactPort.findByCustomerId(customerId, tenantId);
+    public List<ContactEntity> getContactsByAccountId(Long accountId, Long tenantId) {
+        return contactPort.findByAccountId(accountId, tenantId);
     }
 
     @Override
@@ -127,21 +141,22 @@ public class ContactService implements IContactService {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<ContactEntity> getPrimaryContact(Long customerId, Long tenantId) {
-        return contactPort.findPrimaryContact(customerId, tenantId);
+    public Optional<ContactEntity> getPrimaryContact(Long accountId, Long tenantId) {
+        return contactPort.findPrimaryContact(accountId, tenantId);
     }
 
     @Override
     @Transactional
-    public void deactivateContact(Long id, Long tenantId) {
+    public ContactEntity deactivateContact(Long id, Long userId, Long tenantId) {
 
         ContactEntity contact = contactPort.findById(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.CONTACT_NOT_FOUND));
 
-        contact.deactivate(tenantId);
-        contactPort.save(contact);
+        contact.deactivate(userId);
+        ContactEntity updated = contactPort.save(contact);
 
-        publishContactDeletedEvent(contact);
+        publishContactUpdatedEvent(updated);
+        return updated;
 
     }
 

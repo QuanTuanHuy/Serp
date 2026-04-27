@@ -61,4 +61,9 @@ public class PrioritySchemeItemAdapter implements IPrioritySchemeItemPort {
     public boolean existsPriorityInScheme(Long schemeId, Long priorityId, Long tenantId) {
         return prioritySchemeItemRepository.existsByTenantIdAndSchemeIdAndPriorityId(tenantId, schemeId, priorityId);
     }
+
+    @Override
+    public boolean existsByPriorityId(Long priorityId, Long tenantId) {
+        return prioritySchemeItemRepository.existsByPriorityIdAndTenantId(priorityId, tenantId);
+    }
 }

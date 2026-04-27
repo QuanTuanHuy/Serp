@@ -4,7 +4,10 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { getErrorMessage } from '@/lib/store/api';
+import { useDebounce } from '@/shared/hooks/use-debounce';
 import { Button, Card, CardContent, Input } from '@/shared/components/ui';
+import { toast } from 'sonner';
 import {
   Search,
   Plus,
@@ -18,14 +21,24 @@ import {
   X,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
-import { CustomerCard } from '../../components/cards';
-import { CustomerForm } from '../../components/forms';
+import { AccountCard } from '../../components/cards';
+import { AccountForm } from '../../components/forms';
 import { StatsCard } from '../../components/dashboard';
 import { ExportDropdown } from '../../components/shared';
-import { QuickAddCustomerDialog } from '../../components/dialogs';
+import { QuickAddAccountDialog } from '../../components/dialogs';
 import { CUSTOMER_EXPORT_COLUMNS } from '../../utils/export';
-import { MOCK_CUSTOMERS } from '../../mocks';
-import type { Customer, CustomerFilters, CustomerStatus } from '../../types';
+import {
+  useCreateAccountMutation,
+  useDeleteAccountMutation,
+  useGetAccountsQuery,
+  useUpdateAccountMutation,
+} from '../../api/crmApi';
+import type {
+  Account,
+  AccountStatus,
+  CreateAccountRequest,
+  UpdateAccountRequest,
+} from '../../types';
 
 interface CustomerListPageProps {
   className?: string;
@@ -38,8 +51,8 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
 
   // State management
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<CustomerStatus | ''>('');
-  const [typeFilter, setTypeFilter] = useState<'INDIVIDUAL' | 'COMPANY' | ''>(
+  const [statusFilter, setStatusFilter] = useState<AccountStatus | ''>('');
+  const [typeFilter, setTypeFilter] = useState<'PROSPECT' | 'CUSTOMER' | ''>(
     ''
   );
   const [sortBy, setSortBy] = useState<'name' | 'createdAt' | 'totalValue'>(
@@ -48,105 +61,140 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [editingCustomer, setEditingCustomer] = useState<Account | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const debouncedSearchQuery = useDebounce(searchQuery, 400);
 
   const pageSize = 12;
+  const [createAccount] = useCreateAccountMutation();
+  const [updateAccount] = useUpdateAccountMutation();
+  const [deleteAccount] = useDeleteAccountMutation();
+  const { data, isLoading, error } = useGetAccountsQuery({
+    filters: {
+      search: debouncedSearchQuery || undefined,
+      status: statusFilter ? [statusFilter] : undefined,
+      type: typeFilter ? [typeFilter] : undefined,
+    },
+    pagination: {
+      page: currentPage,
+      limit: pageSize,
+      sortBy,
+      sortOrder,
+    },
+  });
 
-  // Filter and sort mock data
-  const filteredCustomers = useMemo(() => {
-    let result = [...MOCK_CUSTOMERS];
-
-    // Apply search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(
-        (c) =>
-          c.name.toLowerCase().includes(query) ||
-          c.email.toLowerCase().includes(query) ||
-          c.companyName?.toLowerCase().includes(query)
-      );
-    }
-
-    // Apply status filter
-    if (statusFilter) {
-      result = result.filter((c) => c.status === statusFilter);
-    }
-
-    // Apply type filter
-    if (typeFilter) {
-      result = result.filter((c) => c.customerType === typeFilter);
-    }
-
-    // Apply sorting
-    result.sort((a, b) => {
-      let comparison = 0;
-      if (sortBy === 'name') {
-        comparison = a.name.localeCompare(b.name);
-      } else if (sortBy === 'createdAt') {
-        comparison =
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      } else if (sortBy === 'totalValue') {
-        comparison = a.totalValue - b.totalValue;
-      }
-      return sortOrder === 'asc' ? comparison : -comparison;
-    });
-
-    return result;
-  }, [searchQuery, statusFilter, typeFilter, sortBy, sortOrder]);
-
-  // Pagination
-  const total = filteredCustomers.length;
-  const totalPages = Math.ceil(total / pageSize);
-  const customers = filteredCustomers.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
-  const isLoading = false;
-  const error = null;
+  const accounts = data?.data?.data || [];
+  const total = data?.data?.pagination?.total || 0;
+  const totalPages = data?.data?.pagination?.totalPages || 1;
 
   // Calculate stats
   const stats = useMemo(() => {
     return {
       total,
-      active: MOCK_CUSTOMERS.filter((c) => c.status === 'ACTIVE').length,
-      companies: MOCK_CUSTOMERS.filter((c) => c.customerType === 'COMPANY')
-        .length,
-      totalValue: MOCK_CUSTOMERS.reduce(
-        (sum, c) => sum + (c.totalValue || 0),
-        0
-      ),
-    };
-  }, [total]);
+        active: accounts.filter((c) => c.status === 'ACTIVE').length,
+        companies: accounts.filter((c) => c.customerType === 'CUSTOMER').length,
+        totalValue: accounts.reduce(
+          (sum, c) => sum + (c.totalValue || 0),
+          0
+        ),
+      };
+  }, [accounts, total]);
 
   // Handle actions
-  const handleCreateCustomer = async (data: any) => {
-    console.log('Creating customer:', data);
-    setShowCreateForm(false);
+  const handleCreateCustomer = async (
+    data: CreateAccountRequest | Partial<CreateAccountRequest>
+  ) => {
+    try {
+      await createAccount(data as CreateAccountRequest).unwrap();
+      toast.success('Create account successfully');
+      setShowCreateForm(false);
+    } catch (error) {
+      toast.error('Failed to create account', {
+        description: getErrorMessage(error),
+      });
+    }
   };
 
-  const handleQuickAddCustomer = async (data: any) => {
-    console.log('Quick adding customer:', data);
-    setShowQuickAdd(false);
+  const handleQuickAddCustomer = async (data: {
+    name: string;
+    email: string;
+    phone?: string;
+    companySize?: string;
+    customerType: 'PROSPECT' | 'CUSTOMER';
+    status: 'ACTIVE' | 'INACTIVE';
+    address?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
+    website?: string;
+    notes?: string;
+  }) => {
+    try {
+      await createAccount({
+        isActive: true,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        companySize: data.companySize,
+        notes: data.notes,
+        address: data.address || '',
+        city: data.city || '',
+        state: data.state || '',
+        zipCode: data.zipCode || '',
+        country: data.country || '',
+        website: data.website || '',
+        customerType: data.customerType,
+        status: data.status,
+        paymentTerms: '',
+        creditLimit: undefined,
+        tags: [],
+        customFields: {},
+        totalValue: 0,
+      } as CreateAccountRequest).unwrap();
+      toast.success('Create account successfully');
+      setShowQuickAdd(false);
+    } catch (error) {
+      toast.error('Failed to create account', {
+        description: getErrorMessage(error),
+      });
+    }
   };
 
-  const handleEditCustomer = (customer: Customer) => {
+  const handleEditCustomer = (customer: Account) => {
     setEditingCustomer(customer);
   };
 
-  const handleUpdateCustomer = async (data: any) => {
-    console.log('Updating customer:', data);
-    setEditingCustomer(null);
+  const handleUpdateCustomer = async (
+    data: CreateAccountRequest | UpdateAccountRequest
+  ) => {
+    if (!editingCustomer) return;
+    try {
+      await updateAccount({ id: editingCustomer.id, data }).unwrap();
+      toast.success('Update account successfully');
+      setEditingCustomer(null);
+    } catch (error) {
+      toast.error('Failed to update account', {
+        description: getErrorMessage(error),
+      });
+    }
   };
 
   const handleDeleteCustomer = async (customerId: string) => {
-    console.log('Deleting customer:', customerId);
+    try {
+      await deleteAccount(customerId).unwrap();
+      toast.success('Delete account successfully');
+    } catch (error) {
+      toast.error('Failed to delete account', {
+        description: getErrorMessage(error),
+      });
+    }
   };
 
   const handleViewCustomer = (customerId: string) => {
-    router.push(`/crm/customers/${customerId}`);
+    router.push(`/crm/accounts/${customerId}`);
   };
 
   const clearFilters = () => {
@@ -162,7 +210,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
   if (showCreateForm || editingCustomer) {
     return (
       <div className={cn('', className)}>
-        <CustomerForm
+        <AccountForm
           customer={editingCustomer || undefined}
           onSubmit={
             editingCustomer ? handleUpdateCustomer : handleCreateCustomer
@@ -181,23 +229,23 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
       {/* Page Header */}
       <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
         <div>
-          <h1 className='text-2xl font-bold tracking-tight'>Customers</h1>
+          <h1 className='text-2xl font-bold tracking-tight'>Accounts</h1>
           <p className='text-muted-foreground'>
-            Manage your customer relationships
+            Manage your account relationships
           </p>
         </div>
         <div className='flex items-center gap-2'>
           <ExportDropdown
-            data={filteredCustomers}
+            data={accounts}
             columns={CUSTOMER_EXPORT_COLUMNS}
-            filename='customers'
+            filename='accounts'
             onExportComplete={(format, count) => {
-              console.log(`Exported ${count} customers as ${format}`);
+              console.log(`Exported ${count} accounts as ${format}`);
             }}
           />
           <Button onClick={() => setShowQuickAdd(true)} className='gap-2'>
             <Plus className='h-4 w-4' />
-            Add Customer
+            Add Account
           </Button>
         </div>
       </div>
@@ -205,7 +253,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
       {/* Quick Stats */}
       <div className='grid grid-cols-2 sm:grid-cols-4 gap-4'>
         <StatsCard
-          title='Total Customers'
+          title='Total Accounts'
           value={stats.total}
           icon={Users}
           variant='primary'
@@ -236,7 +284,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
         <div className='relative flex-1'>
           <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
           <Input
-            placeholder='Search customers by name, email, or company...'
+            placeholder='Search accounts by name, email, or company...'
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -306,7 +354,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
                 <select
                   value={statusFilter}
                   onChange={(e) => {
-                    setStatusFilter(e.target.value as CustomerStatus | '');
+                     setStatusFilter(e.target.value as AccountStatus | '');
                     setCurrentPage(1);
                   }}
                   className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
@@ -314,8 +362,6 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
                   <option value=''>All Statuses</option>
                   <option value='ACTIVE'>Active</option>
                   <option value='INACTIVE'>Inactive</option>
-                  <option value='POTENTIAL'>Potential</option>
-                  <option value='BLOCKED'>Blocked</option>
                 </select>
               </div>
 
@@ -324,16 +370,14 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
                 <select
                   value={typeFilter}
                   onChange={(e) => {
-                    setTypeFilter(
-                      e.target.value as 'INDIVIDUAL' | 'COMPANY' | ''
-                    );
+                     setTypeFilter(e.target.value as 'PROSPECT' | 'CUSTOMER' | '');
                     setCurrentPage(1);
                   }}
                   className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
                 >
                   <option value=''>All Types</option>
-                  <option value='INDIVIDUAL'>Individual</option>
-                  <option value='COMPANY'>Company</option>
+                  <option value='PROSPECT'>Prospect</option>
+                  <option value='CUSTOMER'>Customer</option>
                 </select>
               </div>
 
@@ -380,7 +424,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
         <Card className='border-destructive/50 bg-destructive/5'>
           <CardContent className='p-4'>
             <p className='text-destructive'>
-              Error loading customers. Please try again.
+              Error loading accounts. Please try again.
             </p>
           </CardContent>
         </Card>
@@ -416,8 +460,8 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
         </div>
       )}
 
-      {/* Customer Grid/List */}
-      {!isLoading && customers.length > 0 && (
+      {/* Account Grid/List */}
+      {!isLoading && accounts.length > 0 && (
         <div
           className={cn(
             'gap-4',
@@ -426,8 +470,8 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
               : 'flex flex-col'
           )}
         >
-          {customers.map((customer) => (
-            <CustomerCard
+          {accounts.map((customer) => (
+             <AccountCard
               key={customer.id}
               customer={customer}
               variant={viewMode === 'list' ? 'compact' : 'default'}
@@ -442,17 +486,17 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
       )}
 
       {/* Empty State */}
-      {!isLoading && customers.length === 0 && !error && (
+      {!isLoading && accounts.length === 0 && !error && (
         <Card>
           <CardContent className='py-16 text-center'>
             <div className='mx-auto w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4'>
               <Users className='w-10 h-10 text-muted-foreground' />
             </div>
-            <h3 className='text-lg font-semibold mb-2'>No customers found</h3>
+            <h3 className='text-lg font-semibold mb-2'>No accounts found</h3>
             <p className='text-muted-foreground mb-6 max-w-sm mx-auto'>
               {hasActiveFilters
                 ? 'Try adjusting your filters to see more results.'
-                : 'Get started by adding your first customer.'}
+                : 'Get started by adding your first account.'}
             </p>
             {hasActiveFilters ? (
               <Button variant='outline' onClick={clearFilters}>
@@ -461,7 +505,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
             ) : (
               <Button onClick={() => setShowCreateForm(true)}>
                 <Plus className='h-4 w-4 mr-2' />
-                Add First Customer
+                Add First Account
               </Button>
             )}
           </CardContent>
@@ -473,7 +517,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
         <div className='flex items-center justify-between pt-4'>
           <p className='text-sm text-muted-foreground'>
             Showing {(currentPage - 1) * pageSize + 1} to{' '}
-            {Math.min(currentPage * pageSize, total)} of {total} customers
+            {Math.min(currentPage * pageSize, total)} of {total} accounts
           </p>
           <div className='flex items-center gap-2'>
             <Button
@@ -518,7 +562,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
       )}
 
       {/* Quick Add Dialog */}
-      <QuickAddCustomerDialog
+      <QuickAddAccountDialog
         open={showQuickAdd}
         onOpenChange={setShowQuickAdd}
         onSubmit={handleQuickAddCustomer}

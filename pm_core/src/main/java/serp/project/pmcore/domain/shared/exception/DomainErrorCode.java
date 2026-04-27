@@ -59,6 +59,7 @@ public enum DomainErrorCode {
     CATEGORY_NAME_ALREADY_EXISTS("Category name already exists in this tenant"),
     CATEGORY_IN_USE("Cannot delete category that has projects assigned"),
     BLUEPRINT_NOT_FOUND("Project blueprint not found"),
+    BLUEPRINT_NAME_ALREADY_EXISTS("Blueprint name already exists in this tenant"),
     BLUEPRINT_IS_SYSTEM("Cannot modify a system blueprint"),
 
     // Project configuration catalogs
@@ -93,6 +94,11 @@ public enum DomainErrorCode {
     WORK_ITEM_NOT_FOUND("Work item not found"),
     INVALID_PARENT_HIERARCHY("Invalid parent-child hierarchy: child level must be lower than parent level"),
     PARENT_NOT_IN_SAME_PROJECT("Parent work item must belong to the same project"),
+    WORK_ITEM_DELETE_SCOPE_INVALID("Work item delete scope is invalid"),
+    WORK_ITEM_SECURITY_ACCESS_DENIED("Insufficient issue security level to transition this work item"),
+    WORKFLOW_NOT_RESOLVABLE("Effective workflow cannot be resolved for this work item"),
+    WORK_ITEM_WORKFLOW_STATE_INVALID("Work item workflow_step_id/status_id is inconsistent with the effective workflow"),
+    TRANSITION_FIELD_INVALID("Transition field payload is invalid"),
 
     // Issue types & issue type schemes
     ISSUE_TYPE_NOT_FOUND("Issue type not found"),
@@ -101,18 +107,26 @@ public enum DomainErrorCode {
     ISSUE_TYPE_IS_SYSTEM("Cannot modify a system issue type"),
     ISSUE_TYPE_IN_USE("Cannot delete issue type that has work items"),
     ISSUE_TYPE_SCHEME_NOT_FOUND("Issue type scheme not found"),
+    ISSUE_TYPE_SCHEME_NAME_ALREADY_EXISTS("Issue type scheme name already exists in this tenant"),
+    ISSUE_TYPE_SCHEME_IS_SYSTEM("Cannot modify a system issue type scheme"),
     ISSUE_TYPE_SCHEME_DEFAULT_NOT_IN_ITEMS(
             "Default issue type must be included in the scheme items"),
     ISSUE_TYPE_SCHEME_IN_USE("Cannot remove issue type from scheme: work items of this type exist"),
+    ISSUE_TYPE_SCHEME_BOUND_TO_PROJECT("Cannot delete issue type scheme that is assigned to active projects"),
 
     // Priority management
     PRIORITY_NOT_FOUND("Priority not found"),
+    PRIORITY_NAME_ALREADY_EXISTS("Priority name already exists in this tenant"),
     PRIORITY_NOT_IN_SCHEME("Priority is not valid for this project's scheme"),
     DEFAULT_PRIORITY_NOT_CONFIGURED("Default priority is not configured for this project"),
     PRIORITY_IS_SYSTEM("Cannot modify a system priority"),
+    PRIORITY_IN_USE("Cannot delete priority that has work items"),
     PRIORITY_SCHEME_NOT_FOUND("Priority scheme not found"),
+    PRIORITY_SCHEME_NAME_ALREADY_EXISTS("Priority scheme name already exists in this tenant"),
     PRIORITY_SCHEME_DEFAULT_NOT_IN_ITEMS(
             "Default priority must be included in the scheme items"),
+    PRIORITY_SCHEME_IN_USE("Cannot remove priority from scheme: work items of this priority exist"),
+    PRIORITY_SCHEME_BOUND_TO_PROJECT("Cannot delete priority scheme that is assigned to active projects"),
 
     // Resolution rules
     RESOLUTION_NOT_FOUND("Resolution not found"),
@@ -138,6 +152,7 @@ public enum DomainErrorCode {
     WORKFLOW_IN_USE("Cannot delete workflow that is referenced by a workflow scheme"),
     WORKFLOW_NOT_ACTIVE("Workflow has not been published/activated"),
     WORKFLOW_ALREADY_ACTIVE("Workflow is already active — create a new draft to edit"),
+    WORKFLOW_DRAFT_NOT_FOUND("Workflow has no editable draft version"),
     CLONE_WORKFLOW_FAILED("Failed to clone workflow"),
 
     // Workflow structure validation
@@ -165,6 +180,7 @@ public enum DomainErrorCode {
     STATUS_CATEGORY_NOT_FOUND("Status category not found"),
     STATUS_CATEGORY_KEY_ALREADY_EXISTS("Status category key already exists in this tenant"),
     STATUS_CATEGORY_IS_SYSTEM("Cannot modify a system status category"),
+    STATUS_CATEGORY_IN_USE("Cannot delete status category that is assigned to statuses"),
 
     // ----------------------------------------------------------------
     // Fields, Screens & Issue Presentation
@@ -174,6 +190,7 @@ public enum DomainErrorCode {
     CUSTOM_FIELD_NOT_FOUND("Custom field not found"),
     CUSTOM_FIELD_TYPE_IMMUTABLE("Custom field type cannot be changed after creation"),
     FIELD_NOT_WRITABLE_ON_CREATE("Field is not writable on create"),
+    FIELD_NOT_WRITABLE_ON_UPDATE("Field is not writable on update"),
     REQUIRED_FIELDS_MISSING("Required fields are missing"),
     CUSTOM_FIELD_CONTEXT_UNRESOLVABLE("Custom field context could not be resolved"),
     CUSTOM_FIELD_VALUE_INVALID("Custom field value is invalid"),

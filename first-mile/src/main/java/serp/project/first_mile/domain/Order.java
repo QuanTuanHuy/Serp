@@ -80,6 +80,10 @@ public class Order extends AbstractAudit{
     @Column(name = "status")
     private OrderStatus status;
 
+    @Column(name = "is_confirm")
+    @Builder.Default
+    private Boolean isConfirm = false;
+
     @Column(name = "total_weight")
     private Double totalWeight;
 
@@ -100,6 +104,10 @@ public class Order extends AbstractAudit{
     @Column(name = "pickup_attempts")
     @Builder.Default
     private Integer pickupAttempts = 0;
+
+    @Column(name = "pickup_method")
+    @Enumerated(EnumType.STRING)
+    private OrderPickupMethod pickupMethod;
 
     @Column(name = "order_product_category")
     @Enumerated(EnumType.STRING)
@@ -134,6 +142,12 @@ public class Order extends AbstractAudit{
 
     @Column(name = "note")
     private String note;
+
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
+
+    @Column(name = "cancel_reason")
+    private String cancelReason;
 
     public void addProduct(Product product) {
         if (products == null) {

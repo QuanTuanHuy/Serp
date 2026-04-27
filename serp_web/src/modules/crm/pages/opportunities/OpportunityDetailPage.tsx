@@ -5,40 +5,9 @@ Description: Part of Serp Project
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  Button,
-  Badge,
-  Input,
-  Textarea,
-  Progress,
-  Avatar,
-  AvatarFallback,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/shared/components/ui';
 import {
   ArrowLeft,
   MoreHorizontal,
@@ -51,36 +20,65 @@ import {
   Building2,
   Clock,
   Target,
-  Award,
   AlertCircle,
   CheckCircle2,
   XCircle,
-  Phone,
-  Mail,
   MessageSquare,
   FileText,
-  Plus,
-  ChevronRight,
-  ExternalLink,
   Trophy,
   Percent,
   Package,
-  Users,
   History,
-  Sparkles,
-  ArrowUpRight,
-  ArrowDownRight,
+  ExternalLink,
+  RefreshCw,
 } from 'lucide-react';
+import { getErrorMessage } from '@/lib/store/api';
+import {
+  Avatar,
+  AvatarFallback,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  Input,
+  Label,
+  Progress,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  Textarea,
+} from '@/shared/components/ui';
+import { toast } from 'sonner';
 import { cn } from '@/shared/utils';
-import { MOCK_OPPORTUNITIES, MOCK_ACTIVITIES } from '../../mocks';
-import type {
-  Opportunity,
-  OpportunityStage,
-  OpportunityProduct,
-  Activity,
-} from '../../types';
+import {
+  useChangeOpportunityStageMutation,
+  useCloseOpportunityLostMutation,
+  useCloseOpportunityWonMutation,
+  useDeleteOpportunityMutation,
+  useGetOpportunityActivitiesQuery,
+  useGetOpportunityQuery,
+  useReopenOpportunityMutation,
+} from '../../api/crmApi';
+import type { OpportunityStage } from '../../types';
 
-// Pipeline stage configuration
 const PIPELINE_STAGES: {
   stage: OpportunityStage;
   label: string;
@@ -149,122 +147,6 @@ const OPPORTUNITY_TYPES = {
   },
 };
 
-// Mock products for the opportunity
-const MOCK_PRODUCTS: OpportunityProduct[] = [
-  {
-    id: '1',
-    productId: 'prod-001',
-    productName: 'Enterprise CRM License',
-    quantity: 50,
-    unitPrice: 99,
-    discount: 10,
-    totalPrice: 4455,
-  },
-  {
-    id: '2',
-    productId: 'prod-002',
-    productName: 'Implementation Services',
-    quantity: 1,
-    unitPrice: 15000,
-    discount: 0,
-    totalPrice: 15000,
-  },
-  {
-    id: '3',
-    productId: 'prod-003',
-    productName: 'Training Package',
-    quantity: 2,
-    unitPrice: 2500,
-    discount: 5,
-    totalPrice: 4750,
-  },
-  {
-    id: '4',
-    productId: 'prod-004',
-    productName: 'Premium Support (Annual)',
-    quantity: 1,
-    unitPrice: 5000,
-    discount: 0,
-    totalPrice: 5000,
-  },
-];
-
-// Mock timeline/history
-interface TimelineEvent {
-  id: string;
-  type: 'stage_change' | 'note' | 'activity' | 'value_change' | 'created';
-  title: string;
-  description?: string;
-  timestamp: string;
-  user: string;
-  metadata?: Record<string, any>;
-}
-
-const MOCK_TIMELINE: TimelineEvent[] = [
-  {
-    id: '1',
-    type: 'stage_change',
-    title: 'Stage changed to Negotiation',
-    description: 'Moved from Proposal to Negotiation after contract review',
-    timestamp: '2024-01-20T14:30:00Z',
-    user: 'John Smith',
-    metadata: { from: 'PROPOSAL', to: 'NEGOTIATION' },
-  },
-  {
-    id: '2',
-    type: 'activity',
-    title: 'Meeting scheduled',
-    description: 'Final contract negotiation meeting with CFO',
-    timestamp: '2024-01-18T10:00:00Z',
-    user: 'John Smith',
-  },
-  {
-    id: '3',
-    type: 'value_change',
-    title: 'Deal value updated',
-    description: 'Value increased from $45,000 to $50,000',
-    timestamp: '2024-01-15T16:45:00Z',
-    user: 'John Smith',
-    metadata: { from: 45000, to: 50000 },
-  },
-  {
-    id: '4',
-    type: 'note',
-    title: 'Added note',
-    description: 'Client expressed interest in additional training modules',
-    timestamp: '2024-01-12T09:15:00Z',
-    user: 'Sarah Johnson',
-  },
-  {
-    id: '5',
-    type: 'stage_change',
-    title: 'Stage changed to Proposal',
-    description: 'Sent detailed proposal with pricing',
-    timestamp: '2024-01-10T11:00:00Z',
-    user: 'John Smith',
-    metadata: { from: 'QUALIFICATION', to: 'PROPOSAL' },
-  },
-  {
-    id: '6',
-    type: 'created',
-    title: 'Opportunity created',
-    description: 'New opportunity from qualified lead',
-    timestamp: '2024-01-05T08:30:00Z',
-    user: 'John Smith',
-  },
-];
-
-// Mock competitors
-const MOCK_COMPETITORS = [
-  { name: 'Salesforce', strength: 'Brand recognition', weakness: 'High cost' },
-  {
-    name: 'HubSpot',
-    strength: 'Easy to use',
-    weakness: 'Limited customization',
-  },
-  { name: 'Zoho CRM', strength: 'Affordable', weakness: 'Less features' },
-];
-
 interface OpportunityDetailPageProps {
   opportunityId: string;
   className?: string;
@@ -277,119 +159,62 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
   const [isStageDialogOpen, setIsStageDialogOpen] = useState(false);
-  const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isLostDialogOpen, setIsLostDialogOpen] = useState(false);
-  const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
+  const [isWonDialogOpen, setIsWonDialogOpen] = useState(false);
+  const [isReopenDialogOpen, setIsReopenDialogOpen] = useState(false);
   const [selectedStage, setSelectedStage] = useState<OpportunityStage | ''>('');
-  const [noteText, setNoteText] = useState('');
+  const [stageNotes, setStageNotes] = useState('');
   const [lostReason, setLostReason] = useState('');
-  const [activityForm, setActivityForm] = useState({
-    type: 'CALL',
-    subject: '',
-    description: '',
-    scheduledDate: '',
-  });
+  const [wonActualValue, setWonActualValue] = useState('');
+  const [wonNotes, setWonNotes] = useState('');
+  const [reopenReason, setReopenReason] = useState('');
+  const [reopenStage, setReopenStage] = useState<OpportunityStage>('PROSPECTING');
 
-  // Find opportunity from mock data
-  const opportunity = useMemo(() => {
-    return MOCK_OPPORTUNITIES.find((o) => o.id === opportunityId);
-  }, [opportunityId]);
+  const { data, isLoading } = useGetOpportunityQuery(opportunityId);
+  const { data: activitiesData, isLoading: isActivitiesLoading } =
+    useGetOpportunityActivitiesQuery({ opportunityId, page: 1, size: 20 });
+  const [changeOpportunityStage] = useChangeOpportunityStageMutation();
+  const [closeOpportunityWon] = useCloseOpportunityWonMutation();
+  const [closeOpportunityLost] = useCloseOpportunityLostMutation();
+  const [reopenOpportunity] = useReopenOpportunityMutation();
+  const [deleteOpportunity] = useDeleteOpportunityMutation();
 
-  // Get related activities
-  const relatedActivities = useMemo(() => {
-    return MOCK_ACTIVITIES.filter(
-      (a) =>
-        a.relatedTo.type === 'OPPORTUNITY' && a.relatedTo.id === opportunityId
-    ).slice(0, 5);
-  }, [opportunityId]);
-
-  if (!opportunity) {
-    return (
-      <div className={cn('p-6', className)}>
-        <Card>
-          <CardContent className='py-16 text-center'>
-            <AlertCircle className='w-12 h-12 mx-auto mb-4 text-muted-foreground' />
-            <h2 className='text-xl font-semibold mb-2'>
-              Opportunity Not Found
-            </h2>
-            <p className='text-muted-foreground mb-4'>
-              The opportunity you're looking for doesn't exist or has been
-              deleted.
-            </p>
-            <Button onClick={() => router.push('/crm/opportunities')}>
-              Back to Opportunities
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const opportunity = data?.data;
+  const activities = activitiesData?.data?.data || [];
 
   const stageConfig = PIPELINE_STAGES.find(
-    (s) => s.stage === opportunity.stage
+    (stage) => stage.stage === opportunity?.stage
   );
-  const typeConfig = OPPORTUNITY_TYPES[opportunity.type];
+  const typeConfig =
+    OPPORTUNITY_TYPES[opportunity?.type || 'NEW_BUSINESS'];
   const currentStageIndex = PIPELINE_STAGES.findIndex(
-    (s) => s.stage === opportunity.stage
+    (stage) => stage.stage === opportunity?.stage
   );
   const isClosed =
-    opportunity.stage === 'CLOSED_WON' || opportunity.stage === 'CLOSED_LOST';
+    opportunity?.stage === 'CLOSED_WON' || opportunity?.stage === 'CLOSED_LOST';
+  const probability = opportunity?.probability ?? stageConfig?.probability ?? 0;
+  const estimatedValue = opportunity?.estimatedValue ?? opportunity?.value ?? 0;
+  const weightedValue = (estimatedValue * probability) / 100;
 
-  // Calculate weighted value
-  const weightedValue = (opportunity.value * opportunity.probability) / 100;
+  const daysInPipeline = useMemo(() => {
+    if (!opportunity?.createdAt) return 0;
+    return Math.floor(
+      (new Date().getTime() - new Date(opportunity.createdAt).getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+  }, [opportunity?.createdAt]);
 
-  // Calculate days in pipeline
-  const daysInPipeline = Math.floor(
-    (new Date().getTime() - new Date(opportunity.createdAt).getTime()) /
-      (1000 * 60 * 60 * 24)
-  );
+  const daysUntilClose = useMemo(() => {
+    if (!opportunity?.expectedCloseDate) return 0;
+    return Math.floor(
+      (new Date(opportunity.expectedCloseDate).getTime() - new Date().getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+  }, [opportunity?.expectedCloseDate]);
 
-  // Calculate days until expected close
-  const daysUntilClose = Math.floor(
-    (new Date(opportunity.expectedCloseDate).getTime() - new Date().getTime()) /
-      (1000 * 60 * 60 * 24)
-  );
-
-  const handleStageChange = () => {
-    if (selectedStage) {
-      console.log('Changing stage to:', selectedStage);
-      // API call would go here
-      setIsStageDialogOpen(false);
-      setSelectedStage('');
-    }
-  };
-
-  const handleMarkAsWon = () => {
-    console.log('Marking as won');
-    // API call would go here
-  };
-
-  const handleMarkAsLost = () => {
-    if (lostReason) {
-      console.log('Marking as lost with reason:', lostReason);
-      // API call would go here
-      setIsLostDialogOpen(false);
-      setLostReason('');
-    }
-  };
-
-  const handleAddNote = () => {
-    if (noteText.trim()) {
-      console.log('Adding note:', noteText);
-      // API call would go here
-      setIsNoteDialogOpen(false);
-      setNoteText('');
-    }
-  };
-
-  const handleDelete = () => {
-    console.log('Deleting opportunity');
-    // API call would go here
-    router.push('/crm/opportunities');
-  };
-
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value?: number) => {
+    if (value === undefined) return 'Not available';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
@@ -398,7 +223,8 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
     }).format(value);
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Not available';
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -406,7 +232,8 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
     });
   };
 
-  const formatDateTime = (dateString: string) => {
+  const formatDateTime = (dateString?: string) => {
+    if (!dateString) return 'Not available';
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -416,40 +243,166 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
     });
   };
 
+  const getActivityBadgeClass = (status?: string) => {
+    switch (status) {
+      case 'COMPLETED':
+        return 'bg-green-100 text-green-700';
+      case 'IN_PROGRESS':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'CANCELLED':
+        return 'bg-red-100 text-red-700';
+      default:
+        return 'bg-blue-100 text-blue-700';
+    }
+  };
+
+  const handleStageChange = async () => {
+    if (!selectedStage) return;
+
+    try {
+      await changeOpportunityStage({
+        id: opportunityId,
+        data: {
+          stage: selectedStage,
+          notes: stageNotes || undefined,
+          lossReason:
+            selectedStage === 'CLOSED_LOST' ? lostReason || undefined : undefined,
+        },
+      }).unwrap();
+      toast.success('Update opportunity stage successfully');
+      setIsStageDialogOpen(false);
+      setSelectedStage('');
+      setStageNotes('');
+      setLostReason('');
+    } catch (error) {
+      toast.error('Failed to update opportunity stage', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleMarkAsWon = async () => {
+    try {
+      await closeOpportunityWon({
+        id: opportunityId,
+        data: {
+          actualValue: wonActualValue ? Number(wonActualValue) : undefined,
+          notes: wonNotes || undefined,
+        },
+      }).unwrap();
+      toast.success('Close opportunity as won successfully');
+      setIsWonDialogOpen(false);
+      setWonActualValue('');
+      setWonNotes('');
+    } catch (error) {
+      toast.error('Failed to close opportunity as won', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleMarkAsLost = async () => {
+    if (!lostReason.trim()) return;
+
+    try {
+      await closeOpportunityLost({
+        id: opportunityId,
+        data: { lossReason: lostReason.trim() },
+      }).unwrap();
+      toast.success('Close opportunity as lost successfully');
+      setIsLostDialogOpen(false);
+      setLostReason('');
+    } catch (error) {
+      toast.error('Failed to close opportunity as lost', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleReopen = async () => {
+    if (!reopenReason.trim()) return;
+
+    try {
+      await reopenOpportunity({
+        id: opportunityId,
+        data: {
+          stage: reopenStage,
+          reopenReason: reopenReason.trim(),
+        },
+      }).unwrap();
+      toast.success('Reopen opportunity successfully');
+      setIsReopenDialogOpen(false);
+      setReopenReason('');
+      setReopenStage('PROSPECTING');
+    } catch (error) {
+      toast.error('Failed to reopen opportunity', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await deleteOpportunity(opportunityId).unwrap();
+      toast.success('Delete opportunity successfully');
+      router.push('/crm/opportunities');
+    } catch (error) {
+      toast.error('Failed to delete opportunity', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  if (!isLoading && !opportunity) {
+    return (
+      <div className={cn('p-6', className)}>
+        <Card>
+          <CardContent className='py-16 text-center'>
+            <AlertCircle className='mx-auto mb-4 h-12 w-12 text-muted-foreground' />
+            <h2 className='mb-2 text-xl font-semibold'>Opportunity Not Found</h2>
+            <p className='mb-4 text-muted-foreground'>
+              The opportunity you're looking for doesn't exist or has been deleted.
+            </p>
+            <Button asChild>
+              <Link href='/crm/opportunities'>Back to Opportunities</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className={cn('p-6 space-y-6', className)}>
-      {/* Header */}
+    <div className={cn('space-y-6 p-6', className)}>
       <div className='flex items-start justify-between'>
         <div className='flex items-start gap-4'>
-          <Button
-            variant='outline'
-            size='icon'
-            onClick={() => router.push('/crm/opportunities')}
-          >
-            <ArrowLeft className='w-4 h-4' />
+          <Button variant='outline' size='icon' onClick={() => router.push('/crm/opportunities')}>
+            <ArrowLeft className='h-4 w-4' />
           </Button>
           <div>
-            <div className='flex items-center gap-3 mb-2'>
+            <div className='mb-2 flex items-center gap-3'>
               <h1 className='text-2xl font-bold text-foreground'>
-                {opportunity.name}
+                {opportunity?.name || 'Opportunity'}
               </h1>
-              <Badge className={cn(stageConfig?.bgColor, stageConfig?.color)}>
-                {stageConfig?.label}
-              </Badge>
+              {stageConfig && (
+                <Badge className={cn(stageConfig.bgColor, stageConfig.color)}>
+                  {stageConfig.label}
+                </Badge>
+              )}
               <Badge className={typeConfig.color}>{typeConfig.label}</Badge>
             </div>
-            <div className='flex items-center gap-4 text-sm text-muted-foreground'>
+            <div className='flex flex-wrap items-center gap-4 text-sm text-muted-foreground'>
               <span className='flex items-center gap-1'>
-                <Building2 className='w-4 h-4' />
-                {opportunity.customerName}
+                <Building2 className='h-4 w-4' />
+                {opportunity?.customerName || `Account #${opportunity?.accountId || ''}`}
               </span>
               <span className='flex items-center gap-1'>
-                <User className='w-4 h-4' />
-                {opportunity.assignedToName}
+                <User className='h-4 w-4' />
+                {opportunity?.assignedToName || 'Unassigned'}
               </span>
               <span className='flex items-center gap-1'>
-                <Calendar className='w-4 h-4' />
-                Close: {formatDate(opportunity.expectedCloseDate)}
+                <Calendar className='h-4 w-4' />
+                Close: {formatDate(opportunity?.expectedCloseDate)}
               </span>
             </div>
           </div>
@@ -461,9 +414,9 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
               <Button
                 variant='outline'
                 className='text-green-600 border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-950'
-                onClick={handleMarkAsWon}
+                onClick={() => setIsWonDialogOpen(true)}
               >
-                <Trophy className='w-4 h-4 mr-2' />
+                <Trophy className='mr-2 h-4 w-4' />
                 Mark as Won
               </Button>
               <Button
@@ -471,77 +424,77 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
                 className='text-red-600 border-red-200 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950'
                 onClick={() => setIsLostDialogOpen(true)}
               >
-                <XCircle className='w-4 h-4 mr-2' />
+                <XCircle className='mr-2 h-4 w-4' />
                 Mark as Lost
               </Button>
             </>
           )}
+          {isClosed && (
+            <Button variant='outline' onClick={() => setIsReopenDialogOpen(true)}>
+              <RefreshCw className='mr-2 h-4 w-4' />
+              Reopen
+            </Button>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant='outline' size='icon'>
-                <MoreHorizontal className='w-4 h-4' />
+                <MoreHorizontal className='h-4 w-4' />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align='end'>
               <DropdownMenuItem
-                onClick={() =>
-                  router.push(`/crm/opportunities/${opportunityId}/edit`)
-                }
+                onClick={() => router.push(`/crm/opportunities/${opportunityId}/edit`)}
               >
-                <Edit className='w-4 h-4 mr-2' />
+                <Edit className='mr-2 h-4 w-4' />
                 Edit Opportunity
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsStageDialogOpen(true)}>
-                <TrendingUp className='w-4 h-4 mr-2' />
-                Change Stage
+              {!isClosed && (
+                <DropdownMenuItem onClick={() => setIsStageDialogOpen(true)}>
+                  <TrendingUp className='mr-2 h-4 w-4' />
+                  Change Stage
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem disabled>
+                <MessageSquare className='mr-2 h-4 w-4' />
+                Notes are currently read-only
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsNoteDialogOpen(true)}>
-                <MessageSquare className='w-4 h-4 mr-2' />
-                Add Note
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsActivityDialogOpen(true)}>
-                <Plus className='w-4 h-4 mr-2' />
-                Add Activity
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled>
+                <ExternalLink className='mr-2 h-4 w-4' />
+                Export PDF
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className='text-red-600'
                 onClick={() => setIsDeleteDialogOpen(true)}
               >
-                <Trash2 className='w-4 h-4 mr-2' />
-                Delete
+                <Trash2 className='mr-2 h-4 w-4' />
+                Delete Opportunity
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
 
-      {/* Pipeline Progress */}
       <Card>
         <CardContent className='py-4'>
-          <div className='flex items-center justify-between mb-4'>
+          <div className='mb-4 flex items-center justify-between'>
             <h3 className='font-semibold'>Pipeline Progress</h3>
             {!isClosed && (
-              <Button
-                variant='outline'
-                size='sm'
-                onClick={() => setIsStageDialogOpen(true)}
-              >
+              <Button variant='outline' size='sm' onClick={() => setIsStageDialogOpen(true)}>
                 Change Stage
               </Button>
             )}
           </div>
-          <div className='flex items-center gap-2'>
-            {PIPELINE_STAGES.filter((s) => s.stage !== 'CLOSED_LOST').map(
+          <div className='mb-4 flex items-center gap-2'>
+            {PIPELINE_STAGES.filter((stage) => stage.stage !== 'CLOSED_LOST').map(
               (stage, index) => {
-                const isActive = stage.stage === opportunity.stage;
-                const isPast =
-                  index < currentStageIndex &&
-                  opportunity.stage !== 'CLOSED_LOST';
-                const isWon = opportunity.stage === 'CLOSED_WON';
+                const isActive = stage.stage === opportunity?.stage;
+                const isPast = index < currentStageIndex && opportunity?.stage !== 'CLOSED_LOST';
+                const isWon = opportunity?.stage === 'CLOSED_WON';
 
                 return (
-                  <div key={stage.stage} className='flex-1 relative'>
+                  <div key={stage.stage} className='relative flex-1'>
                     <div
                       className={cn(
                         'h-2 rounded-full transition-colors',
@@ -554,57 +507,39 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
                     />
                     <div
                       className={cn(
-                        'text-xs mt-2 text-center',
-                        isActive
-                          ? 'font-semibold text-foreground'
-                          : 'text-muted-foreground'
+                        'mt-2 text-center text-xs',
+                        isActive ? 'font-semibold text-foreground' : 'text-muted-foreground'
                       )}
                     >
                       {stage.label}
                     </div>
-                    {isActive && (
-                      <div className='absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-background' />
-                    )}
                   </div>
                 );
               }
             )}
           </div>
-          {opportunity.stage === 'CLOSED_LOST' && (
-            <div className='mt-4 p-3 bg-red-50 dark:bg-red-950/50 rounded-lg border border-red-200 dark:border-red-800'>
-              <div className='flex items-center gap-2 text-red-700 dark:text-red-300'>
-                <XCircle className='w-4 h-4' />
-                <span className='font-medium'>Deal Lost</span>
-              </div>
-              {opportunity.lostReason && (
-                <p className='text-sm text-red-600 dark:text-red-400 mt-1'>
-                  Reason: {opportunity.lostReason}
-                </p>
-              )}
-            </div>
-          )}
+          <Progress value={probability} className='h-2' />
         </CardContent>
       </Card>
 
-      {/* Stats Cards */}
-      <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
-        <Card className='bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950 dark:to-green-900/50 border-green-200 dark:border-green-800/50'>
+      <div className='grid grid-cols-1 gap-4 md:grid-cols-4'>
+        <Card className='border-green-200 bg-gradient-to-br from-green-50 to-green-100/50 dark:border-green-800/50 dark:from-green-950 dark:to-green-900/50'>
           <CardContent className='py-4'>
             <div className='flex items-center justify-between'>
               <div>
                 <p className='text-sm text-muted-foreground'>Deal Value</p>
                 <p className='text-2xl font-bold text-green-700 dark:text-green-300'>
-                  {formatCurrency(opportunity.value)}
+                  {formatCurrency(estimatedValue)}
                 </p>
               </div>
-              <div className='p-3 bg-green-500/20 rounded-full'>
-                <DollarSign className='w-6 h-6 text-green-600 dark:text-green-400' />
+              <div className='rounded-full bg-green-500/20 p-3'>
+                <DollarSign className='h-6 w-6 text-green-600 dark:text-green-400' />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className='bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950 dark:to-blue-900/50 border-blue-200 dark:border-blue-800/50'>
+        <Card className='border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100/50 dark:border-blue-800/50 dark:from-blue-950 dark:to-blue-900/50'>
           <CardContent className='py-4'>
             <div className='flex items-center justify-between'>
               <div>
@@ -613,30 +548,30 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
                   {formatCurrency(weightedValue)}
                 </p>
               </div>
-              <div className='p-3 bg-blue-500/20 rounded-full'>
-                <Target className='w-6 h-6 text-blue-600 dark:text-blue-400' />
+              <div className='rounded-full bg-blue-500/20 p-3'>
+                <Target className='h-6 w-6 text-blue-600 dark:text-blue-400' />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className='bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950 dark:to-purple-900/50 border-purple-200 dark:border-purple-800/50'>
+        <Card className='border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100/50 dark:border-purple-800/50 dark:from-purple-950 dark:to-purple-900/50'>
           <CardContent className='py-4'>
             <div className='flex items-center justify-between'>
               <div>
                 <p className='text-sm text-muted-foreground'>Probability</p>
                 <p className='text-2xl font-bold text-purple-700 dark:text-purple-300'>
-                  {opportunity.probability}%
+                  {probability}%
                 </p>
               </div>
-              <div className='p-3 bg-purple-500/20 rounded-full'>
-                <Percent className='w-6 h-6 text-purple-600 dark:text-purple-400' />
+              <div className='rounded-full bg-purple-500/20 p-3'>
+                <Percent className='h-6 w-6 text-purple-600 dark:text-purple-400' />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className='bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-950 dark:to-orange-900/50 border-orange-200 dark:border-orange-800/50'>
+        <Card className='border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100/50 dark:border-orange-800/50 dark:from-orange-950 dark:to-orange-900/50'>
           <CardContent className='py-4'>
             <div className='flex items-center justify-between'>
               <div>
@@ -646,568 +581,305 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
                     'text-2xl font-bold',
                     daysUntilClose < 0
                       ? 'text-red-700 dark:text-red-300'
-                      : daysUntilClose < 7
-                        ? 'text-orange-700 dark:text-orange-300'
-                        : 'text-orange-700 dark:text-orange-300'
+                      : 'text-orange-700 dark:text-orange-300'
                   )}
                 >
-                  {daysUntilClose < 0
-                    ? `${Math.abs(daysUntilClose)} overdue`
-                    : daysUntilClose}
+                  {daysUntilClose < 0 ? `${Math.abs(daysUntilClose)} overdue` : daysUntilClose}
                 </p>
               </div>
-              <div className='p-3 bg-orange-500/20 rounded-full'>
-                <Clock className='w-6 h-6 text-orange-600 dark:text-orange-400' />
+              <div className='rounded-full bg-orange-500/20 p-3'>
+                <Clock className='h-6 w-6 text-orange-600 dark:text-orange-400' />
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value='overview'>Overview</TabsTrigger>
-          <TabsTrigger value='products'>
-            Products ({MOCK_PRODUCTS.length})
-          </TabsTrigger>
           <TabsTrigger value='activities'>Activities</TabsTrigger>
+          <TabsTrigger value='products'>Products</TabsTrigger>
           <TabsTrigger value='timeline'>Timeline</TabsTrigger>
-          <TabsTrigger value='competitors'>Competitors</TabsTrigger>
         </TabsList>
 
-        {/* Overview Tab */}
         <TabsContent value='overview' className='mt-6'>
-          <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
-            {/* Main Info */}
-            <div className='lg:col-span-2 space-y-6'>
-              {/* Description */}
+          <div className='grid grid-cols-1 gap-6 lg:grid-cols-3'>
+            <div className='space-y-6 lg:col-span-2'>
               <Card>
                 <CardHeader>
                   <h3 className='font-semibold'>Description</h3>
                 </CardHeader>
                 <CardContent>
                   <p className='text-muted-foreground'>
-                    {opportunity.description || 'No description provided.'}
+                    {opportunity?.description || 'No description provided.'}
                   </p>
                 </CardContent>
               </Card>
 
-              {/* Key Details */}
               <Card>
                 <CardHeader>
                   <h3 className='font-semibold'>Key Details</h3>
                 </CardHeader>
                 <CardContent>
-                  <div className='grid grid-cols-2 gap-4'>
+                  <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
                     <div>
-                      <label className='text-sm font-medium text-muted-foreground'>
-                        Customer
-                      </label>
-                      <p className='font-medium flex items-center gap-2'>
-                        <Building2 className='w-4 h-4 text-muted-foreground' />
-                        {opportunity.customerName}
-                        <Button variant='ghost' size='sm' className='h-6 px-2'>
-                          <ExternalLink className='w-3 h-3' />
-                        </Button>
+                      <label className='text-sm font-medium text-muted-foreground'>Account</label>
+                      <p className='flex items-center gap-2 font-medium'>
+                        <Building2 className='h-4 w-4 text-muted-foreground' />
+                        {opportunity?.customerName || `Account #${opportunity?.accountId || ''}`}
                       </p>
                     </div>
                     <div>
-                      <label className='text-sm font-medium text-muted-foreground'>
-                        Assigned To
-                      </label>
-                      <p className='font-medium flex items-center gap-2'>
-                        <Avatar className='w-5 h-5'>
+                      <label className='text-sm font-medium text-muted-foreground'>Assigned To</label>
+                      <p className='flex items-center gap-2 font-medium'>
+                        <Avatar className='h-5 w-5 w-5'>
                           <AvatarFallback className='text-xs'>
-                            {opportunity.assignedToName
+                            {(opportunity?.assignedToName || 'Unassigned')
                               .split(' ')
-                              .map((n) => n[0])
+                              .map((part) => part[0])
                               .join('')}
                           </AvatarFallback>
                         </Avatar>
-                        {opportunity.assignedToName}
+                        {opportunity?.assignedToName || 'Unassigned'}
                       </p>
                     </div>
                     <div>
-                      <label className='text-sm font-medium text-muted-foreground'>
-                        Expected Close Date
-                      </label>
-                      <p className='font-medium'>
-                        {formatDate(opportunity.expectedCloseDate)}
-                      </p>
+                      <label className='text-sm font-medium text-muted-foreground'>Expected Close Date</label>
+                      <p className='font-medium'>{formatDate(opportunity?.expectedCloseDate)}</p>
                     </div>
                     <div>
-                      <label className='text-sm font-medium text-muted-foreground'>
-                        Days in Pipeline
-                      </label>
-                      <p className='font-medium'>{daysInPipeline} days</p>
+                      <label className='text-sm font-medium text-muted-foreground'>Actual Close Date</label>
+                      <p className='font-medium'>{formatDate(opportunity?.actualCloseDate)}</p>
                     </div>
                     <div>
-                      <label className='text-sm font-medium text-muted-foreground'>
-                        Created
-                      </label>
-                      <p className='font-medium'>
-                        {formatDate(opportunity.createdAt)}
-                      </p>
+                      <label className='text-sm font-medium text-muted-foreground'>Lead ID</label>
+                      <p className='font-medium'>{opportunity?.leadId || 'No linked lead'}</p>
                     </div>
                     <div>
-                      <label className='text-sm font-medium text-muted-foreground'>
-                        Last Updated
-                      </label>
-                      <p className='font-medium'>
-                        {formatDate(opportunity.updatedAt)}
-                      </p>
+                      <label className='text-sm font-medium text-muted-foreground'>Days in Pipeline</label>
+                      <p className='font-medium'>{daysInPipeline}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Next Steps */}
               <Card>
-                <CardHeader className='flex flex-row items-center justify-between'>
-                  <h3 className='font-semibold'>Next Steps</h3>
-                  <Button variant='outline' size='sm'>
-                    <Plus className='w-4 h-4 mr-2' />
-                    Add Action
-                  </Button>
+                <CardHeader>
+                  <h3 className='font-semibold'>Notes</h3>
                 </CardHeader>
                 <CardContent>
-                  {opportunity.nextAction ? (
-                    <div className='p-4 bg-muted rounded-lg'>
-                      <div className='flex items-start justify-between'>
-                        <div>
-                          <p className='font-medium'>
-                            {opportunity.nextAction}
-                          </p>
-                          {opportunity.nextActionDate && (
-                            <p className='text-sm text-muted-foreground mt-1'>
-                              Due: {formatDate(opportunity.nextActionDate)}
-                            </p>
-                          )}
-                        </div>
-                        <Button variant='outline' size='sm'>
-                          Complete
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className='text-muted-foreground'>
-                      No next action defined.
-                    </p>
-                  )}
+                  <p className='text-muted-foreground'>
+                    {opportunity?.notes || 'No notes available.'}
+                  </p>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Sidebar */}
             <div className='space-y-6'>
-              {/* Quick Actions */}
               <Card>
                 <CardHeader>
-                  <h3 className='font-semibold'>Quick Actions</h3>
+                  <h3 className='font-semibold'>Opportunity Summary</h3>
                 </CardHeader>
-                <CardContent className='space-y-2'>
-                  <Button variant='outline' className='w-full justify-start'>
-                    <Phone className='w-4 h-4 mr-2' />
-                    Log Call
-                  </Button>
-                  <Button variant='outline' className='w-full justify-start'>
-                    <Mail className='w-4 h-4 mr-2' />
-                    Send Email
-                  </Button>
-                  <Button variant='outline' className='w-full justify-start'>
-                    <Calendar className='w-4 h-4 mr-2' />
-                    Schedule Meeting
-                  </Button>
-                  <Button variant='outline' className='w-full justify-start'>
-                    <FileText className='w-4 h-4 mr-2' />
-                    Create Proposal
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Tags */}
-              <Card>
-                <CardHeader>
-                  <h3 className='font-semibold'>Tags</h3>
-                </CardHeader>
-                <CardContent>
-                  <div className='flex flex-wrap gap-2'>
-                    {opportunity.tags.length > 0 ? (
-                      opportunity.tags.map((tag) => (
-                        <Badge key={tag} variant='secondary'>
-                          {tag}
-                        </Badge>
-                      ))
-                    ) : (
-                      <p className='text-sm text-muted-foreground'>No tags</p>
-                    )}
+                <CardContent className='space-y-4'>
+                  <div className='flex items-center justify-between'>
+                    <span className='text-sm text-muted-foreground'>Stage</span>
+                    <span className='font-medium'>{stageConfig?.label || 'Unknown'}</span>
                   </div>
+                  <div className='flex items-center justify-between'>
+                    <span className='text-sm text-muted-foreground'>Estimated Value</span>
+                    <span className='font-medium'>{formatCurrency(estimatedValue)}</span>
+                  </div>
+                  <div className='flex items-center justify-between'>
+                    <span className='text-sm text-muted-foreground'>Actual Value</span>
+                    <span className='font-medium'>
+                      {formatCurrency(opportunity?.actualValue)}
+                    </span>
+                  </div>
+                  <div className='flex items-center justify-between'>
+                    <span className='text-sm text-muted-foreground'>Probability</span>
+                    <span className='font-medium'>{probability}%</span>
+                  </div>
+                  {opportunity?.lostReason && (
+                    <div>
+                      <span className='text-sm text-muted-foreground'>Loss Reason</span>
+                      <p className='mt-1 text-sm font-medium'>{opportunity.lostReason}</p>
+                    </div>
+                  )}
+                  {opportunity?.reopenReason && (
+                    <div>
+                      <span className='text-sm text-muted-foreground'>Reopen Reason</span>
+                      <p className='mt-1 text-sm font-medium'>{opportunity.reopenReason}</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
-              {/* Notes */}
               <Card>
-                <CardHeader className='flex flex-row items-center justify-between'>
-                  <h3 className='font-semibold'>Notes</h3>
-                  <Button
-                    variant='ghost'
-                    size='sm'
-                    onClick={() => setIsNoteDialogOpen(true)}
-                  >
-                    <Plus className='w-4 h-4' />
-                  </Button>
+                <CardHeader>
+                  <h3 className='font-semibold'>System Metadata</h3>
                 </CardHeader>
-                <CardContent>
-                  <p className='text-muted-foreground text-sm'>
-                    {opportunity.notes || 'No notes yet.'}
-                  </p>
+                <CardContent className='space-y-3'>
+                  <div>
+                    <span className='text-sm text-muted-foreground'>Created</span>
+                    <p className='text-sm font-medium'>{formatDateTime(opportunity?.createdAt)}</p>
+                  </div>
+                  <div>
+                    <span className='text-sm text-muted-foreground'>Last Updated</span>
+                    <p className='text-sm font-medium'>{formatDateTime(opportunity?.updatedAt)}</p>
+                  </div>
+                  <div>
+                    <span className='text-sm text-muted-foreground'>Created By</span>
+                    <p className='text-sm font-medium'>
+                      {String(opportunity?.customFields?.createdBy || 'Not available')}
+                    </p>
+                  </div>
+                  <div>
+                    <span className='text-sm text-muted-foreground'>Updated By</span>
+                    <p className='text-sm font-medium'>
+                      {String(opportunity?.customFields?.updatedBy || 'Not available')}
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             </div>
           </div>
         </TabsContent>
 
-        {/* Products Tab */}
-        <TabsContent value='products' className='mt-6'>
-          <Card>
-            <CardHeader className='flex flex-row items-center justify-between'>
-              <h3 className='font-semibold'>Products & Services</h3>
-              <Button>
-                <Plus className='w-4 h-4 mr-2' />
-                Add Product
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className='overflow-x-auto'>
-                <table className='w-full'>
-                  <thead>
-                    <tr className='border-b'>
-                      <th className='text-left py-3 px-4 font-medium text-muted-foreground'>
-                        Product
-                      </th>
-                      <th className='text-right py-3 px-4 font-medium text-muted-foreground'>
-                        Qty
-                      </th>
-                      <th className='text-right py-3 px-4 font-medium text-muted-foreground'>
-                        Unit Price
-                      </th>
-                      <th className='text-right py-3 px-4 font-medium text-muted-foreground'>
-                        Discount
-                      </th>
-                      <th className='text-right py-3 px-4 font-medium text-muted-foreground'>
-                        Total
-                      </th>
-                      <th className='w-10'></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {MOCK_PRODUCTS.map((product) => (
-                      <tr key={product.id} className='border-b last:border-0'>
-                        <td className='py-3 px-4'>
-                          <div className='flex items-center gap-3'>
-                            <div className='p-2 bg-muted rounded'>
-                              <Package className='w-4 h-4 text-muted-foreground' />
-                            </div>
-                            <span className='font-medium'>
-                              {product.productName}
-                            </span>
-                          </div>
-                        </td>
-                        <td className='py-3 px-4 text-right'>
-                          {product.quantity}
-                        </td>
-                        <td className='py-3 px-4 text-right'>
-                          {formatCurrency(product.unitPrice)}
-                        </td>
-                        <td className='py-3 px-4 text-right'>
-                          {product.discount > 0 ? (
-                            <Badge variant='secondary'>
-                              {product.discount}%
-                            </Badge>
-                          ) : (
-                            '-'
-                          )}
-                        </td>
-                        <td className='py-3 px-4 text-right font-medium'>
-                          {formatCurrency(product.totalPrice)}
-                        </td>
-                        <td className='py-3 px-4'>
-                          <Button
-                            variant='ghost'
-                            size='icon'
-                            className='h-8 w-8'
-                          >
-                            <MoreHorizontal className='w-4 h-4' />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className='bg-muted/50'>
-                      <td
-                        colSpan={4}
-                        className='py-3 px-4 font-semibold text-right'
-                      >
-                        Total Deal Value
-                      </td>
-                      <td className='py-3 px-4 text-right font-bold text-lg'>
-                        {formatCurrency(
-                          MOCK_PRODUCTS.reduce(
-                            (sum, p) => sum + p.totalPrice,
-                            0
-                          )
-                        )}
-                      </td>
-                      <td></td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Activities Tab */}
         <TabsContent value='activities' className='mt-6'>
           <Card>
-            <CardHeader className='flex flex-row items-center justify-between'>
+            <CardHeader>
               <h3 className='font-semibold'>Recent Activities</h3>
-              <Button>
-                <Plus className='w-4 h-4 mr-2' />
-                Log Activity
-              </Button>
             </CardHeader>
             <CardContent>
-              {relatedActivities.length > 0 ? (
+              {isActivitiesLoading ? (
+                <p className='text-sm text-muted-foreground'>Loading activities...</p>
+              ) : activities.length > 0 ? (
                 <div className='space-y-4'>
-                  {relatedActivities.map((activity) => (
-                    <div
-                      key={activity.id}
-                      className='flex items-start gap-4 p-4 bg-muted rounded-lg hover:bg-muted/80 transition-colors cursor-pointer'
-                    >
-                      <div
-                        className={cn(
-                          'p-2 rounded-full',
-                          activity.status === 'COMPLETED'
-                            ? 'bg-green-100 dark:bg-green-900/50'
-                            : 'bg-blue-100 dark:bg-blue-900/50'
-                        )}
-                      >
-                        {activity.type === 'CALL' && (
-                          <Phone className='w-4 h-4 text-blue-600 dark:text-blue-400' />
-                        )}
-                        {activity.type === 'EMAIL' && (
-                          <Mail className='w-4 h-4 text-blue-600 dark:text-blue-400' />
-                        )}
-                        {activity.type === 'MEETING' && (
-                          <Users className='w-4 h-4 text-purple-600 dark:text-purple-400' />
-                        )}
-                        {activity.type === 'TASK' && (
-                          <CheckCircle2 className='w-4 h-4 text-green-600 dark:text-green-400' />
-                        )}
+                  {activities.map((activity) => (
+                    <div key={activity.id} className='rounded-lg border p-4'>
+                      <div className='mb-2 flex items-start justify-between gap-3'>
+                        <div>
+                          <p className='font-medium'>{activity.subject}</p>
+                          <p className='text-sm text-muted-foreground'>
+                            {activity.description || 'No description provided.'}
+                          </p>
+                        </div>
+                        <Badge className={getActivityBadgeClass(activity.status)}>
+                          {activity.status}
+                        </Badge>
                       </div>
-                      <div className='flex-1'>
-                        <div className='flex items-center justify-between'>
-                          <h4 className='font-medium'>{activity.subject}</h4>
-                          <Badge
-                            variant={
-                              activity.status === 'COMPLETED'
-                                ? 'default'
-                                : 'secondary'
-                            }
-                          >
-                            {activity.status}
-                          </Badge>
-                        </div>
-                        <p className='text-sm text-muted-foreground mt-1'>
-                          {activity.description || 'No description'}
-                        </p>
-                        <div className='flex items-center gap-4 mt-2 text-xs text-muted-foreground'>
-                          <span>{activity.assignedToName}</span>
-                          <span>•</span>
-                          <span>
-                            {formatDateTime(
-                              activity.scheduledDate || activity.createdAt
-                            )}
-                          </span>
-                        </div>
+                      <div className='flex flex-wrap gap-4 text-sm text-muted-foreground'>
+                        <span className='flex items-center gap-1'>
+                          <Clock className='h-4 w-4' />
+                          {formatDateTime(activity.scheduledDate || activity.createdAt)}
+                        </span>
+                        <span className='flex items-center gap-1'>
+                          <User className='h-4 w-4' />
+                          {activity.assignedToName || 'Unassigned'}
+                        </span>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className='text-center py-8'>
-                  <Calendar className='w-12 h-12 mx-auto mb-4 text-muted-foreground' />
-                  <p className='text-muted-foreground mb-4'>
-                    No activities recorded yet.
-                  </p>
-                  <Button>Log First Activity</Button>
-                </div>
+                <p className='text-sm text-muted-foreground'>
+                  No activities available for this opportunity.
+                </p>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Timeline Tab */}
+        <TabsContent value='products' className='mt-6'>
+          <Card>
+            <CardHeader>
+              <h3 className='font-semibold'>Products</h3>
+            </CardHeader>
+            <CardContent className='text-sm text-muted-foreground'>
+              <div className='flex items-start gap-3 rounded-lg border border-dashed p-4'>
+                <Package className='mt-0.5 h-4 w-4' />
+                <div>
+                  <p className='font-medium text-foreground'>Products are not integrated yet</p>
+                  <p>
+                    This section is currently read-only and waiting for backend product line support.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value='timeline' className='mt-6'>
           <Card>
             <CardHeader>
-              <h3 className='font-semibold'>Opportunity History</h3>
+              <h3 className='font-semibold'>Timeline</h3>
             </CardHeader>
-            <CardContent>
-              <div className='relative'>
-                <div className='absolute left-4 top-0 bottom-0 w-0.5 bg-muted' />
-                <div className='space-y-6'>
-                  {MOCK_TIMELINE.map((event, index) => (
-                    <div key={event.id} className='relative pl-10'>
-                      <div
-                        className={cn(
-                          'absolute left-2 w-5 h-5 rounded-full border-2 border-background flex items-center justify-center',
-                          event.type === 'stage_change'
-                            ? 'bg-blue-500'
-                            : event.type === 'value_change'
-                              ? 'bg-green-500'
-                              : event.type === 'created'
-                                ? 'bg-purple-500'
-                                : 'bg-muted'
-                        )}
-                      >
-                        {event.type === 'stage_change' && (
-                          <TrendingUp className='w-3 h-3 text-white' />
-                        )}
-                        {event.type === 'value_change' && (
-                          <DollarSign className='w-3 h-3 text-white' />
-                        )}
-                        {event.type === 'activity' && (
-                          <Calendar className='w-3 h-3 text-muted-foreground' />
-                        )}
-                        {event.type === 'note' && (
-                          <MessageSquare className='w-3 h-3 text-muted-foreground' />
-                        )}
-                        {event.type === 'created' && (
-                          <Sparkles className='w-3 h-3 text-white' />
-                        )}
-                      </div>
-                      <div className='bg-muted rounded-lg p-4'>
-                        <div className='flex items-center justify-between mb-1'>
-                          <h4 className='font-medium'>{event.title}</h4>
-                          <span className='text-xs text-muted-foreground'>
-                            {formatDateTime(event.timestamp)}
-                          </span>
-                        </div>
-                        {event.description && (
-                          <p className='text-sm text-muted-foreground'>
-                            {event.description}
-                          </p>
-                        )}
-                        <p className='text-xs text-muted-foreground mt-2'>
-                          by {event.user}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+            <CardContent className='text-sm text-muted-foreground'>
+              <div className='flex items-start gap-3 rounded-lg border border-dashed p-4'>
+                <History className='mt-0.5 h-4 w-4' />
+                <div>
+                  <p className='font-medium text-foreground'>Timeline is not integrated yet</p>
+                  <p>
+                    Opportunity change history is currently shown only through the available activity feed.
+                  </p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Competitors Tab */}
-        <TabsContent value='competitors' className='mt-6'>
-          <Card>
-            <CardHeader className='flex flex-row items-center justify-between'>
-              <h3 className='font-semibold'>Competitive Analysis</h3>
-              <Button>
-                <Plus className='w-4 h-4 mr-2' />
-                Add Competitor
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {MOCK_COMPETITORS.length > 0 ? (
-                <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                  {MOCK_COMPETITORS.map((competitor, index) => (
-                    <div key={index} className='p-4 bg-muted rounded-lg'>
-                      <h4 className='font-semibold mb-3'>{competitor.name}</h4>
-                      <div className='space-y-2'>
-                        <div>
-                          <div className='flex items-center gap-2 text-sm font-medium text-green-600 dark:text-green-400'>
-                            <ArrowUpRight className='w-4 h-4' />
-                            Strength
-                          </div>
-                          <p className='text-sm text-muted-foreground'>
-                            {competitor.strength}
-                          </p>
-                        </div>
-                        <div>
-                          <div className='flex items-center gap-2 text-sm font-medium text-red-600 dark:text-red-400'>
-                            <ArrowDownRight className='w-4 h-4' />
-                            Weakness
-                          </div>
-                          <p className='text-sm text-muted-foreground'>
-                            {competitor.weakness}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className='text-center py-8'>
-                  <Users className='w-12 h-12 mx-auto mb-4 text-muted-foreground' />
-                  <p className='text-muted-foreground mb-4'>
-                    No competitors added yet.
-                  </p>
-                  <Button>Add Competitor</Button>
-                </div>
-              )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
 
-      {/* Change Stage Dialog */}
       <Dialog open={isStageDialogOpen} onOpenChange={setIsStageDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Change Pipeline Stage</DialogTitle>
             <DialogDescription>
-              Move this opportunity to a different stage in the pipeline.
+              Update the current stage of this opportunity.
             </DialogDescription>
           </DialogHeader>
-          <div className='py-4'>
-            <Select
-              value={selectedStage}
-              onValueChange={(v) => setSelectedStage(v as OpportunityStage)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder='Select new stage' />
-              </SelectTrigger>
-              <SelectContent>
-                {PIPELINE_STAGES.map((stage) => (
-                  <SelectItem
-                    key={stage.stage}
-                    value={stage.stage}
-                    disabled={stage.stage === opportunity.stage}
-                  >
-                    <div className='flex items-center gap-2'>
-                      <div
-                        className={cn('w-3 h-3 rounded-full', stage.bgColor)}
-                      />
+          <div className='space-y-4'>
+            <div className='space-y-2'>
+              <Label>Stage</Label>
+              <Select
+                value={selectedStage}
+                onValueChange={(value) => setSelectedStage(value as OpportunityStage)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder='Select stage' />
+                </SelectTrigger>
+                <SelectContent>
+                  {PIPELINE_STAGES.map((stage) => (
+                    <SelectItem key={stage.stage} value={stage.stage}>
                       {stage.label}
-                      {stage.stage === opportunity.stage && ' (Current)'}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='stageNotes'>Notes</Label>
+              <Textarea
+                id='stageNotes'
+                value={stageNotes}
+                onChange={(e) => setStageNotes(e.target.value)}
+                placeholder='Optional stage update notes'
+              />
+            </div>
+            {selectedStage === 'CLOSED_LOST' && (
+              <div className='space-y-2'>
+                <Label htmlFor='stageLossReason'>Loss Reason</Label>
+                <Textarea
+                  id='stageLossReason'
+                  value={lostReason}
+                  onChange={(e) => setLostReason(e.target.value)}
+                  placeholder='Required when closing as lost'
+                />
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button
-              variant='outline'
-              onClick={() => setIsStageDialogOpen(false)}
-            >
+            <Button variant='outline' onClick={() => setIsStageDialogOpen(false)}>
               Cancel
             </Button>
             <Button onClick={handleStageChange} disabled={!selectedStage}>
@@ -1217,234 +889,142 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Add Note Dialog */}
-      <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
+      <Dialog open={isWonDialogOpen} onOpenChange={setIsWonDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Note</DialogTitle>
+            <DialogTitle>Mark as Won</DialogTitle>
             <DialogDescription>
-              Add a note to this opportunity for future reference.
+              Close this opportunity as won and optionally set the actual value.
             </DialogDescription>
           </DialogHeader>
-          <div className='py-4'>
-            <Textarea
-              placeholder='Enter your note...'
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value)}
-              rows={4}
-            />
+          <div className='space-y-4'>
+            <div className='space-y-2'>
+              <Label htmlFor='wonActualValue'>Actual Value</Label>
+              <Input
+                id='wonActualValue'
+                type='number'
+                min={0}
+                value={wonActualValue}
+                onChange={(e) => setWonActualValue(e.target.value)}
+                placeholder='Optional final deal value'
+              />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='wonNotes'>Notes</Label>
+              <Textarea
+                id='wonNotes'
+                value={wonNotes}
+                onChange={(e) => setWonNotes(e.target.value)}
+                placeholder='Optional closing notes'
+              />
+            </div>
           </div>
           <DialogFooter>
-            <Button
-              variant='outline'
-              onClick={() => setIsNoteDialogOpen(false)}
-            >
+            <Button variant='outline' onClick={() => setIsWonDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddNote} disabled={!noteText.trim()}>
-              Add Note
-            </Button>
+            <Button onClick={handleMarkAsWon}>Close as Won</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Mark as Lost Dialog */}
       <Dialog open={isLostDialogOpen} onOpenChange={setIsLostDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Mark as Lost</DialogTitle>
             <DialogDescription>
-              Please provide a reason for losing this deal. This helps improve
-              future sales strategies.
+              Provide the reason for closing this opportunity as lost.
             </DialogDescription>
           </DialogHeader>
-          <div className='py-4'>
-            <Select value={lostReason} onValueChange={setLostReason}>
-              <SelectTrigger>
-                <SelectValue placeholder='Select reason' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='price'>Price too high</SelectItem>
-                <SelectItem value='competitor'>Lost to competitor</SelectItem>
-                <SelectItem value='no_budget'>No budget</SelectItem>
-                <SelectItem value='no_decision'>No decision made</SelectItem>
-                <SelectItem value='timing'>Bad timing</SelectItem>
-                <SelectItem value='requirements'>
-                  Requirements changed
-                </SelectItem>
-                <SelectItem value='other'>Other</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className='space-y-2'>
+            <Label htmlFor='lostReason'>Loss Reason</Label>
+            <Textarea
+              id='lostReason'
+              value={lostReason}
+              onChange={(e) => setLostReason(e.target.value)}
+              placeholder='Required loss reason'
+            />
           </div>
           <DialogFooter>
-            <Button
-              variant='outline'
-              onClick={() => setIsLostDialogOpen(false)}
-            >
+            <Button variant='outline' onClick={() => setIsLostDialogOpen(false)}>
               Cancel
             </Button>
             <Button
               variant='destructive'
               onClick={handleMarkAsLost}
-              disabled={!lostReason}
+              disabled={!lostReason.trim()}
             >
-              Mark as Lost
+              Close as Lost
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      <Dialog open={isReopenDialogOpen} onOpenChange={setIsReopenDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reopen Opportunity</DialogTitle>
+            <DialogDescription>
+              Select the stage to move this opportunity back into and explain why.
+            </DialogDescription>
+          </DialogHeader>
+          <div className='space-y-4'>
+            <div className='space-y-2'>
+              <Label>Stage</Label>
+              <Select
+                value={reopenStage}
+                onValueChange={(value) => setReopenStage(value as OpportunityStage)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder='Select stage' />
+                </SelectTrigger>
+                <SelectContent>
+                  {PIPELINE_STAGES.filter(
+                    (stage) =>
+                      stage.stage !== 'CLOSED_WON' && stage.stage !== 'CLOSED_LOST'
+                  ).map((stage) => (
+                    <SelectItem key={stage.stage} value={stage.stage}>
+                      {stage.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='reopenReason'>Reopen Reason</Label>
+              <Textarea
+                id='reopenReason'
+                value={reopenReason}
+                onChange={(e) => setReopenReason(e.target.value)}
+                placeholder='Required reopen reason'
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant='outline' onClick={() => setIsReopenDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleReopen} disabled={!reopenReason.trim()}>
+              Reopen Opportunity
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Opportunity</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this opportunity? This action
-              cannot be undone.
+              This action cannot be undone. This opportunity will be permanently deleted.
             </DialogDescription>
           </DialogHeader>
-          <div className='py-4'>
-            <div className='p-4 bg-red-50 dark:bg-red-950/50 rounded-lg border border-red-200 dark:border-red-800'>
-              <p className='font-medium text-red-700 dark:text-red-300'>
-                {opportunity.name}
-              </p>
-              <p className='text-sm text-red-600 dark:text-red-400'>
-                Value: {formatCurrency(opportunity.value)}
-              </p>
-            </div>
-          </div>
           <DialogFooter>
-            <Button
-              variant='outline'
-              onClick={() => setIsDeleteDialogOpen(false)}
-            >
+            <Button variant='outline' onClick={() => setIsDeleteDialogOpen(false)}>
               Cancel
             </Button>
             <Button variant='destructive' onClick={handleDelete}>
               Delete Opportunity
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Activity Dialog */}
-      <Dialog
-        open={isActivityDialogOpen}
-        onOpenChange={setIsActivityDialogOpen}
-      >
-        <DialogContent className='sm:max-w-md'>
-          <DialogHeader>
-            <DialogTitle>Add Activity</DialogTitle>
-            <DialogDescription>
-              Log a new activity for {opportunity.name}
-            </DialogDescription>
-          </DialogHeader>
-          <div className='space-y-4 py-4'>
-            <div className='space-y-2'>
-              <label className='text-sm font-medium'>Activity Type</label>
-              <Select
-                value={activityForm.type}
-                onValueChange={(value) =>
-                  setActivityForm({ ...activityForm, type: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder='Select type' />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='CALL'>
-                    <div className='flex items-center gap-2'>
-                      <Phone className='h-4 w-4' />
-                      Call
-                    </div>
-                  </SelectItem>
-                  <SelectItem value='EMAIL'>
-                    <div className='flex items-center gap-2'>
-                      <Mail className='h-4 w-4' />
-                      Email
-                    </div>
-                  </SelectItem>
-                  <SelectItem value='MEETING'>
-                    <div className='flex items-center gap-2'>
-                      <Calendar className='h-4 w-4' />
-                      Meeting
-                    </div>
-                  </SelectItem>
-                  <SelectItem value='DEMO'>
-                    <div className='flex items-center gap-2'>
-                      <Target className='h-4 w-4' />
-                      Demo
-                    </div>
-                  </SelectItem>
-                  <SelectItem value='NOTE'>
-                    <div className='flex items-center gap-2'>
-                      <FileText className='h-4 w-4' />
-                      Note
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className='space-y-2'>
-              <label className='text-sm font-medium'>Subject</label>
-              <Input
-                placeholder='Enter activity subject...'
-                value={activityForm.subject}
-                onChange={(e) =>
-                  setActivityForm({ ...activityForm, subject: e.target.value })
-                }
-              />
-            </div>
-            <div className='space-y-2'>
-              <label className='text-sm font-medium'>Description</label>
-              <Textarea
-                placeholder='Enter description...'
-                value={activityForm.description}
-                onChange={(e) =>
-                  setActivityForm({
-                    ...activityForm,
-                    description: e.target.value,
-                  })
-                }
-                rows={3}
-              />
-            </div>
-            <div className='space-y-2'>
-              <label className='text-sm font-medium'>Scheduled Date</label>
-              <Input
-                type='datetime-local'
-                value={activityForm.scheduledDate}
-                onChange={(e) =>
-                  setActivityForm({
-                    ...activityForm,
-                    scheduledDate: e.target.value,
-                  })
-                }
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant='outline'
-              onClick={() => setIsActivityDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                console.log('Adding activity:', activityForm);
-                setIsActivityDialogOpen(false);
-                setActivityForm({
-                  type: 'CALL',
-                  subject: '',
-                  description: '',
-                  scheduledDate: '',
-                });
-              }}
-              disabled={!activityForm.subject.trim()}
-            >
-              Add Activity
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -22,4 +22,5 @@ public class ProjectCategoryEntity extends BaseEntity {
     private String name;
     private String description;
     private Boolean isSystem;
+    private Long deletedAt;
 }

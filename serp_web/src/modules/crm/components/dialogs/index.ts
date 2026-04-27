@@ -5,6 +5,8 @@ Description: Part of Serp Project - Dialog Components Barrel Export
 
 export { QuickAddCustomerDialog } from './QuickAddCustomerDialog';
 export type { QuickCustomerFormData } from './QuickAddCustomerDialog';
+export { QuickAddCustomerDialog as QuickAddAccountDialog } from './QuickAddCustomerDialog';
+export type { QuickCustomerFormData as QuickAccountFormData } from './QuickAddCustomerDialog';
 
 export { QuickAddLeadDialog } from './QuickAddLeadDialog';
 export type { QuickLeadFormData } from './QuickAddLeadDialog';

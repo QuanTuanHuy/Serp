@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.dto.ProjectProvisioningRequest;
 import serp.project.pmcore.domain.project.dto.ProjectProvisioningResult;
 import serp.project.pmcore.domain.project.dto.ProjectSchemeBindings;
@@ -136,7 +137,7 @@ public class CreateProjectCommandHandler implements ICommandHandler<CreateProjec
                 .build();
 
         boolean hasAdminPermission = projectPermissionEvaluationService.hasPermission(
-                project,
+                ProjectPermissionSubject.from(project),
                 leadContext,
                 ProjectPermissionKeys.ADMINISTER_PROJECTS
         );

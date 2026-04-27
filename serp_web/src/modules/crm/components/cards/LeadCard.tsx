@@ -62,10 +62,20 @@ const statusStyles: Record<
     text: 'text-amber-700 dark:text-amber-400',
     dot: 'bg-amber-500',
   },
+  NURTURING: {
+    bg: 'bg-indigo-100 dark:bg-indigo-900/30',
+    text: 'text-indigo-700 dark:text-indigo-400',
+    dot: 'bg-indigo-500',
+  },
   QUALIFIED: {
     bg: 'bg-emerald-100 dark:bg-emerald-900/30',
     text: 'text-emerald-700 dark:text-emerald-400',
     dot: 'bg-emerald-500',
+  },
+  DISQUALIFIED: {
+    bg: 'bg-rose-100 dark:bg-rose-900/30',
+    text: 'text-rose-700 dark:text-rose-400',
+    dot: 'bg-rose-500',
   },
   CONVERTED: {
     bg: 'bg-purple-100 dark:bg-purple-900/30',
@@ -85,6 +95,8 @@ const sourceConfig: Record<
 > = {
   WEBSITE: { icon: Globe, label: 'Website', color: 'text-blue-500' },
   REFERRAL: { icon: Users, label: 'Referral', color: 'text-emerald-500' },
+  COLD_CALL: { icon: Phone, label: 'Cold Call', color: 'text-green-500' },
+  EMAIL_CAMPAIGN: { icon: Mail, label: 'Email Campaign', color: 'text-indigo-500' },
   EMAIL: { icon: Mail, label: 'Email', color: 'text-indigo-500' },
   PHONE: { icon: Phone, label: 'Phone', color: 'text-green-500' },
   SOCIAL_MEDIA: {
@@ -121,8 +133,55 @@ const formatCurrency = (value: number): string => {
   return `$${value.toLocaleString()}`;
 };
 
+const getDisplayName = (lead: Lead): string => {
+  const fullName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim();
+  return lead.name?.trim() || fullName || 'Unnamed Lead';
+};
+
+const getLegacyStatus = (lead: Lead): LeadStatus => lead.status || 'NEW';
+
+const getLegacySource = (lead: Lead): LeadSource => lead.source || 'WEBSITE';
+
 const getInitials = (firstName: string, lastName: string): string => {
-  return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  return initials || 'L';
+};
+
+const getLeadInitials = (lead: Lead): string => {
+  if (lead.firstName || lead.lastName) {
+    return getInitials(lead.firstName || '', lead.lastName || '');
+  }
+
+  const name = getDisplayName(lead);
+  const parts = name.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'L';
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
+};
+
+const getLeadScore = (lead: Lead): number => {
+  if (typeof lead.leadScore === 'number') {
+    return Math.min(Math.max(lead.leadScore, 0), 100);
+  }
+
+  let score = 0;
+  if (lead.email) score += 20;
+  if (lead.phone) score += 15;
+  if (lead.company) score += 20;
+  if (lead.estimatedValue && lead.estimatedValue > 0) score += 20;
+  const effectiveStatus = lead.leadStatus || getLegacyStatus(lead);
+
+  if (effectiveStatus === 'QUALIFIED') score += 25;
+  else if (
+    effectiveStatus === 'CONTACTED' ||
+    effectiveStatus === 'NURTURING'
+  ) {
+    score += 15;
+  } else if (effectiveStatus === 'NEW') {
+    score += 5;
+  }
+
+  return Math.min(score, 100);
 };
 
 // Lead Score Component
@@ -182,11 +241,18 @@ export const LeadCard: React.FC<LeadCardProps> = ({
   className,
   variant = 'default',
 }) => {
-  const status = statusStyles[lead.status] || statusStyles.NEW;
-  const source = sourceConfig[lead.source] || sourceConfig.OTHER;
+  const currentStatus = lead.leadStatus || getLegacyStatus(lead);
+  const currentSource = lead.leadSource || getLegacySource(lead);
+  const status = statusStyles[currentStatus] || statusStyles.NEW;
+  const source = sourceConfig[currentSource] || sourceConfig.OTHER;
   const priority = priorityStyles[lead.priority] || priorityStyles.MEDIUM;
   const SourceIcon = source.icon;
-  const fullName = `${lead.firstName} ${lead.lastName}`;
+  const fullName = getDisplayName(lead);
+  const leadInitials = getLeadInitials(lead);
+  const leadScore = getLeadScore(lead);
+  const leadIndustry = lead.industry || (lead.customFields?.industry as string | undefined);
+  const leadCompanySize =
+    lead.companySize || (lead.customFields?.companySize as string | undefined);
 
   // Kanban card variant
   if (variant === 'kanban') {
@@ -202,7 +268,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
         <div className='flex items-start justify-between mb-2'>
           <div className='flex items-center gap-2'>
             <div className='flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-semibold text-xs'>
-              {getInitials(lead.firstName, lead.lastName)}
+              {leadInitials}
             </div>
             <div className='min-w-0'>
               <p className='font-medium text-sm truncate'>{fullName}</p>
@@ -213,7 +279,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
               )}
             </div>
           </div>
-          <LeadScoreIndicator score={50} />
+          <LeadScoreIndicator score={leadScore} />
         </div>
 
         <div className='flex items-center justify-between'>
@@ -243,7 +309,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
         onClick={onClick}
       >
         <div className='flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-semibold text-sm'>
-          {getInitials(lead.firstName, lead.lastName)}
+          {leadInitials}
         </div>
 
         <div className='flex-1 min-w-0'>
@@ -252,7 +318,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
         </div>
 
         <Badge variant='secondary' className={cn(status.bg, status.text)}>
-          {lead.status}
+          {currentStatus}
         </Badge>
       </Card>
     );
@@ -288,7 +354,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
           <div className='flex items-center gap-3'>
             <div className='relative'>
               <div className='flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-semibold text-lg shadow-sm'>
-                {getInitials(lead.firstName, lead.lastName)}
+                {leadInitials}
               </div>
               <div
                 className={cn(
@@ -311,7 +377,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
 
           {/* Score & Menu */}
           <div className='flex items-center gap-2'>
-            <LeadScoreIndicator score={50} />
+            <LeadScoreIndicator score={leadScore} />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -335,7 +401,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                     View Details
                   </DropdownMenuItem>
                 )}
-                {onConvert && lead.status !== 'CONVERTED' && (
+                {onConvert && currentStatus !== 'CONVERTED' && (
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation();
@@ -382,7 +448,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
             className={cn('gap-1', status.bg, status.text)}
           >
             <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
-            {lead.status.charAt(0) + lead.status.slice(1).toLowerCase()}
+            {currentStatus.charAt(0) + currentStatus.slice(1).toLowerCase()}
           </Badge>
           <Badge variant='outline' className='gap-1'>
             <SourceIcon className={cn('h-3 w-3', source.color)} />
@@ -416,8 +482,18 @@ export const LeadCard: React.FC<LeadCardProps> = ({
         </div>
 
         {/* Tags */}
-        {lead.tags && lead.tags.length > 0 && (
+        {(lead.tags.length > 0 || leadIndustry || leadCompanySize) && (
           <div className='flex flex-wrap gap-1 mb-4'>
+            {leadIndustry && (
+              <span className='px-2 py-0.5 rounded-md bg-secondary text-secondary-foreground text-xs'>
+                {leadIndustry}
+              </span>
+            )}
+            {leadCompanySize && (
+              <span className='px-2 py-0.5 rounded-md bg-secondary text-secondary-foreground text-xs'>
+                {leadCompanySize}
+              </span>
+            )}
             {lead.tags.slice(0, 3).map((tag) => (
               <span
                 key={tag}

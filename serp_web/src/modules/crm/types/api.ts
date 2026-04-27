@@ -1,15 +1,18 @@
 // API Response Types (authors: QuanTuanHuy, Description: Part of Serp Project)
 
 import type {
+  Account,
   Customer,
   Lead,
   Opportunity,
+  OpportunityStage,
   Activity,
   CRMMetrics,
   PipelineMetrics,
   SalesMetrics,
   LeadSourceMetrics,
   PaginatedResponse,
+  Account as LeadConvertedAccount,
 } from './index';
 
 // Standard API Response wrapper
@@ -37,13 +40,22 @@ export type CreateCustomerResponse = APIResponse<Customer>;
 export type UpdateCustomerResponse = APIResponse<Customer>;
 export type DeleteCustomerResponse = APIResponse<{ deleted: boolean }>;
 
+export type AccountResponse = APIResponse<Account>;
+export type AccountsResponse = APIResponse<PaginatedResponse<Account>>;
+export type CreateAccountResponse = APIResponse<Account>;
+export type UpdateAccountResponse = APIResponse<Account>;
+export type DeleteAccountResponse = APIResponse<{ deleted: boolean }>;
+
 export type LeadResponse = APIResponse<Lead>;
 export type LeadsResponse = APIResponse<PaginatedResponse<Lead>>;
 export type CreateLeadResponse = APIResponse<Lead>;
 export type UpdateLeadResponse = APIResponse<Lead>;
 export type ConvertLeadResponse = APIResponse<{
-  customer: Customer;
-  opportunity?: Opportunity;
+  leadId: string;
+  accountId?: string;
+  opportunityId?: string;
+  contactId?: string;
+  message?: string;
 }>;
 export type DeleteLeadResponse = APIResponse<{ deleted: boolean }>;
 
@@ -52,6 +64,34 @@ export type OpportunitiesResponse = APIResponse<PaginatedResponse<Opportunity>>;
 export type CreateOpportunityResponse = APIResponse<Opportunity>;
 export type UpdateOpportunityResponse = APIResponse<Opportunity>;
 export type DeleteOpportunityResponse = APIResponse<{ deleted: boolean }>;
+
+export interface OpportunityPipelineStage {
+  stage: OpportunityStage;
+  count: number;
+  totalValue: number;
+  weightedValue: number;
+  opportunities: Opportunity[];
+}
+
+export interface OpportunityPipelineSummary {
+  totalOpportunities: number;
+  totalPipelineValue: number;
+  weightedPipelineValue: number;
+  averageDealSize: number;
+}
+
+export interface OpportunityPipeline {
+  stages: OpportunityPipelineStage[];
+  summary: OpportunityPipelineSummary;
+}
+
+export type OpportunityPipelineResponse = APIResponse<OpportunityPipeline>;
+export type OpportunityActivitiesResponse = APIResponse<PaginatedResponse<Activity>>;
+export type ChangeOpportunityStageResponse = APIResponse<Opportunity>;
+export type CloseOpportunityWonResponse = APIResponse<Opportunity>;
+export type CloseOpportunityLostResponse = APIResponse<Opportunity>;
+export type AssignOpportunityResponse = APIResponse<Opportunity>;
+export type ReopenOpportunityResponse = APIResponse<Opportunity>;
 
 export type ActivityResponse = APIResponse<Activity>;
 export type ActivitiesResponse = APIResponse<PaginatedResponse<Activity>>;

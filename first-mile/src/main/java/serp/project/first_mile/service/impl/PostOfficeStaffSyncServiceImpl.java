@@ -13,6 +13,7 @@ import serp.project.first_mile.domain.PostOfficeStaff;
 import serp.project.first_mile.dto.message.SyncUserFirstMileEvent;
 import serp.project.first_mile.enums.PostOfficeStaffRole;
 import serp.project.first_mile.enums.PostOfficeStaffStatus;
+import serp.project.first_mile.kernel.utils.PostOfficeStaffCodeUtils;
 import serp.project.first_mile.repository.PostOfficeStaffRepository;
 import serp.project.first_mile.service.PostOfficeStaffSyncService;
 
@@ -46,7 +47,7 @@ public class PostOfficeStaffSyncServiceImpl implements PostOfficeStaffSyncServic
             return;
         }
 
-        String staffCode = buildStaffCode(event.getUserId(), staffRole);
+        String staffCode = PostOfficeStaffCodeUtils.buildStaffCode(event.getUserId(), staffRole);
         Long tenantId = resolveTenantId(event);
         PostOfficeStaff staff = postOfficeStaffRepository.findByCode(staffCode)
                 .orElseGet(() -> PostOfficeStaff.builder().code(staffCode).build());
@@ -57,6 +58,7 @@ public class PostOfficeStaffSyncServiceImpl implements PostOfficeStaffSyncServic
         staff.setRole(staffRole);
         staff.setStatus(PostOfficeStaffStatus.ACTIVE);
         staff.setTenantId(tenantId);
+        staff.setUserId(event.getUserId());
 
         if (staff.getHireDate() == null) {
             staff.setHireDate(LocalDate.now());
@@ -89,10 +91,6 @@ public class PostOfficeStaffSyncServiceImpl implements PostOfficeStaffSyncServic
             return null;
         }
         return event.getTenantId() != null ? event.getTenantId() : event.getOrganizationId();
-    }
-
-    private String buildStaffCode(Long userId, PostOfficeStaffRole role) {
-        return "USR_" + userId + "_" + role.name();
     }
 
     private PostOfficeStaffRole mapRole(List<String> normalizedRoleNames) {

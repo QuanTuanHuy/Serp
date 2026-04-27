@@ -13,6 +13,8 @@ import lombok.experimental.SuperBuilder;
 import serp.project.pmcore.domain.shared.constant.TenantConstants;
 import serp.project.pmcore.domain.shared.entity.BaseEntity;
 
+import java.util.Objects;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -25,8 +27,9 @@ public class ProjectBlueprintEntity extends BaseEntity {
     private String typeKey;
     private String avatarUrl;
     private Boolean isSystem;
+    private Long deletedAt;
 
     public boolean isSystem() {
-        return tenantId == TenantConstants.SYSTEM_TENANT_ID && Boolean.TRUE.equals(isSystem);
+        return Objects.equals(tenantId, TenantConstants.SYSTEM_TENANT_ID) && Boolean.TRUE.equals(isSystem);
     }
 }

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 import serp.project.pmcore.infrastructure.store.model.IssueTypeScreenSchemeItemModel;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface IIssueTypeScreenSchemeItemRepository extends JpaRepository<IssueTypeScreenSchemeItemModel, Long> {
@@ -21,5 +22,9 @@ public interface IIssueTypeScreenSchemeItemRepository extends JpaRepository<Issu
 
     @Query("SELECT i FROM IssueTypeScreenSchemeItemModel i WHERE i.schemeId = :schemeId AND i.tenantId = :tenantId ORDER BY i.id ASC")
     List<IssueTypeScreenSchemeItemModel> findAllBySchemeIdAndTenantId(@Param("schemeId") Long schemeId,
-                                                                      @Param("tenantId") Long tenantId);
+                                                                       @Param("tenantId") Long tenantId);
+
+    Optional<IssueTypeScreenSchemeItemModel> findBySchemeIdAndIssueTypeIdAndTenantId(Long schemeId, Long issueTypeId, Long tenantId);
+
+    boolean existsByIssueTypeIdAndTenantId(Long issueTypeId, Long tenantId);
 }

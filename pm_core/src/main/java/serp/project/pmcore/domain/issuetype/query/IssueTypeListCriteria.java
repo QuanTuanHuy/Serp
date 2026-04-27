@@ -1,0 +1,39 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
+package serp.project.pmcore.domain.issuetype.query;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
+import serp.project.pmcore.domain.shared.pagination.SearchPageCriteria;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@SuperBuilder
+public class IssueTypeListCriteria extends SearchPageCriteria {
+    private Integer hierarchyLevel;
+    private Boolean isSystem;
+
+    public String getSortBy() {
+        String sortBy = getRawSortBy();
+        if (sortBy == null || sortBy.isBlank()) {
+            return "hierarchy_level";
+        }
+        return sortBy.trim();
+    }
+
+    public String getSortDirection() {
+        String sortDirection = getRawSortDirection();
+        if (sortDirection == null || sortDirection.isBlank()) {
+            return "ASC";
+        }
+        return sortDirection.trim();
+    }
+}

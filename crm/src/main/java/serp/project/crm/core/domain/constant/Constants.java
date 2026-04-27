@@ -75,7 +75,7 @@ public class Constants {
 
     @UtilityClass
     public static class CacheKey {
-        public static final String CUSTOMER_PREFIX = "crm:customer:";
+        public static final String ACCOUNT_PREFIX = "crm:account:";
         public static final String LEAD_PREFIX = "crm:lead:";
         public static final String OPPORTUNITY_PREFIX = "crm:opportunity:";
         public static final String CONTACT_PREFIX = "crm:contact:";
@@ -87,26 +87,26 @@ public class Constants {
 
     @UtilityClass
     public static class KafkaTopic {
-        public static final String CUSTOMER = "crm.customer";
+        public static final String ACCOUNT = "crm.account";
         public static final String LEAD = "crm.lead";
         public static final String OPPORTUNITY = "crm.opportunity";
         public static final String CONTACT = "crm.contact";
         public static final String ACTIVITY = "crm.activity";
         public static final String TEAM = "crm.team";
 
-        public static final String CUSTOMER_DLQ = "crm.customer.dlq";
+        public static final String ACCOUNT_DLQ = "crm.account.dlq";
         public static final String LEAD_DLQ = "crm.lead.dlq";
         public static final String OPPORTUNITY_DLQ = "crm.opportunity.dlq";
     }
 
     @UtilityClass
     public static class KafkaCommand {
-        // Customer commands
-        public static final String CUSTOMER_CREATED = "CUSTOMER_CREATED";
-        public static final String CUSTOMER_UPDATED = "CUSTOMER_UPDATED";
-        public static final String CUSTOMER_DELETED = "CUSTOMER_DELETED";
-        public static final String CUSTOMER_ACTIVATED = "CUSTOMER_ACTIVATED";
-        public static final String CUSTOMER_DEACTIVATED = "CUSTOMER_DEACTIVATED";
+        // Account commands
+        public static final String ACCOUNT_CREATED = "ACCOUNT_CREATED";
+        public static final String ACCOUNT_UPDATED = "ACCOUNT_UPDATED";
+        public static final String ACCOUNT_DELETED = "ACCOUNT_DELETED";
+        public static final String ACCOUNT_ACTIVATED = "ACCOUNT_ACTIVATED";
+        public static final String ACCOUNT_DEACTIVATED = "ACCOUNT_DEACTIVATED";
 
         // Lead commands
         public static final String LEAD_CREATED = "LEAD_CREATED";
@@ -163,12 +163,12 @@ public class Constants {
 
     @UtilityClass
     public static class SuccessMessage {
-        // Customer messages
-        public static final String CUSTOMER_CREATED = "Customer created successfully";
-        public static final String CUSTOMER_UPDATED = "Customer updated successfully";
-        public static final String CUSTOMER_DELETED = "Customer deleted successfully";
-        public static final String CUSTOMER_ACTIVATED = "Customer activated successfully";
-        public static final String CUSTOMER_DEACTIVATED = "Customer deactivated successfully";
+        // Account messages
+        public static final String ACCOUNT_CREATED = "Account created successfully";
+        public static final String ACCOUNT_UPDATED = "Account updated successfully";
+        public static final String ACCOUNT_DELETED = "Account deleted successfully";
+        public static final String ACCOUNT_ACTIVATED = "Account activated successfully";
+        public static final String ACCOUNT_DEACTIVATED = "Account deactivated successfully";
 
         // Lead messages
         public static final String LEAD_CREATED = "Lead created successfully";

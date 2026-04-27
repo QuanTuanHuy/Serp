@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.shared.cqrs.query.IQueryHandler;
+import serp.project.pmcore.application.shared.pagination.PageViews;
 import serp.project.pmcore.application.shared.pagination.PageView;
 import serp.project.pmcore.domain.project.port.read.IProjectReadPort;
 import serp.project.pmcore.domain.project.query.ProjectListCriteria;
@@ -37,16 +38,6 @@ public class ListProjectsQueryHandler implements IQueryHandler<ListProjectsQuery
                 )
                 .map(ProjectSummaryView::from);
 
-        int pageSize = criteria.getPageSize();
-        int currentPage = criteria.getPage();
-        int totalPages = pageSize <= 0 ? 0 : (int) Math.ceil((double) result.total() / pageSize);
-
-        return new PageView<>(
-                result.items(),
-                result.total(),
-                totalPages,
-                currentPage,
-                pageSize
-        );
+        return PageViews.from(result, criteria);
     }
 }

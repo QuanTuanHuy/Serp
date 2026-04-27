@@ -294,11 +294,18 @@ export const LEAD_EXPORT_COLUMNS: ExportColumn<Lead>[] = [
 export const OPPORTUNITY_EXPORT_COLUMNS: ExportColumn<Opportunity>[] = [
   { key: 'id', header: 'ID' },
   { key: 'name', header: 'Opportunity Name' },
-  { key: 'customerName', header: 'Customer' },
   {
-    key: 'value',
-    header: 'Value',
-    formatter: (v) => formatCurrencyForExport(v as number),
+    key: 'accountId',
+    header: 'Account',
+    formatter: (_value, row) =>
+      row.customerName ||
+      (row.accountId ? `Account #${row.accountId}` : 'Unlinked Account'),
+  },
+  {
+    key: 'estimatedValue',
+    header: 'Estimated Value',
+    formatter: (v, row) =>
+      formatCurrencyForExport((v as number) ?? row.value ?? 0),
   },
   { key: 'stage', header: 'Stage' },
   {
@@ -311,7 +318,13 @@ export const OPPORTUNITY_EXPORT_COLUMNS: ExportColumn<Opportunity>[] = [
     header: 'Expected Close Date',
     formatter: (v) => formatDateForExport(v as string),
   },
-  { key: 'type', header: 'Type' },
+  {
+    key: 'assignedTo',
+    header: 'Owner',
+    formatter: (_value, row) =>
+      row.assignedToName ||
+      (row.assignedTo ? `User #${row.assignedTo}` : 'Unassigned'),
+  },
   {
     key: 'createdAt',
     header: 'Created Date',
@@ -320,6 +333,11 @@ export const OPPORTUNITY_EXPORT_COLUMNS: ExportColumn<Opportunity>[] = [
   {
     key: 'updatedAt',
     header: 'Last Updated',
+    formatter: (v) => formatDateForExport(v as string),
+  },
+  {
+    key: 'actualCloseDate',
+    header: 'Actual Close Date',
     formatter: (v) => formatDateForExport(v as string),
   },
 ];

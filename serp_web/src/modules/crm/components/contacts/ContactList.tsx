@@ -198,7 +198,7 @@ export const ContactList: React.FC<ContactListProps> = ({
 
       {/* Add Contact Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className='max-w-lg'>
+        <DialogContent className='w-[95vw] max-w-2xl max-h-[90vh] overflow-hidden'>
           <DialogHeader>
             <DialogTitle>Add New Contact</DialogTitle>
             <DialogDescription>Enter new contact information</DialogDescription>
@@ -212,7 +212,7 @@ export const ContactList: React.FC<ContactListProps> = ({
 
       {/* Edit Contact Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className='max-w-lg'>
+        <DialogContent className='w-[95vw] max-w-2xl max-h-[90vh] overflow-hidden'>
           <DialogHeader>
             <DialogTitle>Edit Contact</DialogTitle>
             <DialogDescription>Update contact information</DialogDescription>
@@ -220,12 +220,10 @@ export const ContactList: React.FC<ContactListProps> = ({
           {selectedContact && (
             <ContactForm
               initialData={{
-                firstName: selectedContact.firstName,
-                lastName: selectedContact.lastName,
+                name: `${selectedContact.firstName} ${selectedContact.lastName}`.trim(),
                 email: selectedContact.email,
                 phone: selectedContact.phone,
-                jobTitle: selectedContact.jobTitle,
-                department: selectedContact.department,
+                jobPosition: selectedContact.jobTitle,
                 isPrimary: selectedContact.isPrimary,
                 linkedInUrl: selectedContact.linkedInUrl,
                 notes: selectedContact.notes,

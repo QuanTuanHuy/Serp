@@ -21,9 +21,13 @@ jobs:
       ptm-optimization: ${{ steps.changes.outputs.ptm-optimization }}
       serp-web: ${{ steps.changes.outputs.serp-web }}
       crm: ${{ steps.changes.outputs.crm }}
+      first-mile: ${{ steps.changes.outputs.first-mile }}
+      second-mile: ${{ steps.changes.outputs.second-mile }}
       purchase: ${{ steps.changes.outputs.purchase }}
       logistics: ${{ steps.changes.outputs.logistics }}
       sales: ${{ steps.changes.outputs.sales }}
+      logistics2: ${{ steps.changes.outputs.logistics2 }}
+      routing: ${{ steps.changes.outputs.routing }}
       notification: ${{ steps.changes.outputs.notification }}
       discuss-service: ${{ steps.changes.outputs.discuss-service }}
     steps:
@@ -49,10 +53,16 @@ jobs:
               - 'serp_web/**'
             crm:
               - 'crm/**'
+            first-mile:
+              - 'first-mile/**'
+            second-mile:
+              - 'second-mile/**'
             purchase:
               - 'purchase_service/**'
             logistics:
               - 'logistics/**'
+            logistics2:
+              - 'logistics2/**'
             sales:
               - 'sales/**'
             notification:
@@ -60,6 +70,8 @@ jobs:
             discuss-service:
               - 'discuss_service/**'
               - 'serp_java_platform/**'
+            routing:
+              - 'routing-service/**'
 
       - name: Create changes file
 
@@ -72,13 +84,16 @@ jobs:
             "ptm-optimization": "${{ steps.changes.outputs.ptm-optimization }}",
             "serp-web": "${{ steps.changes.outputs.serp-web }}",
             "crm": "${{ steps.changes.outputs.crm }}",
+            "first-mile": "${{ steps.changes.outputs.first-mile }}",
+            "second-mile": "${{ steps.changes.outputs.second-mile }}",
             "purchase": "${{ steps.changes.outputs.purchase }}",
             "logistics": "${{ steps.changes.outputs.logistics }}",
+            "logistics2": "${{ steps.changes.outputs.logistics2 }}",
+            "routing": "${{ steps.changes.outputs.routing }}",
             "sales": "${{ steps.changes.outputs.sales }}",
             "notification": "${{ steps.changes.outputs.notification }}",
             "discuss-service": "${{ steps.changes.outputs.discuss-service }}"
           }' > changes.json
-
 
       - name: Upload changes artifact
         uses: actions/upload-artifact@v4
@@ -392,6 +407,90 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  build-first-mile:
+    needs: changes
+    if: ${{ needs.changes.outputs.first-mile == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: "maven"
+
+      - name: Build First Mile Service
+        run: |
+          cd first-mile
+          chmod +x ./mvnw
+          ./mvnw clean package -DskipTests
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./first-mile
+          file: ./first-mile/Dockerfile
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY }}/serp-first-mile:${{ env.IMAGE_TAG }}
+            ${{ env.DOCKER_REGISTRY }}/serp-first-mile:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-second-mile:
+    needs: changes
+    if: ${{ needs.changes.outputs.second-mile == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: "maven"
+
+      - name: Build Second Mile Service
+        run: |
+          cd second-mile
+          chmod +x ./mvnw
+          ./mvnw clean package -DskipTests
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./second-mile
+          file: ./second-mile/Dockerfile
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY }}/serp-second-mile:${{ env.IMAGE_TAG }}
+            ${{ env.DOCKER_REGISTRY }}/serp-second-mile:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   build-purchase:
     needs: changes
     if: ${{ needs.changes.outputs.purchase == 'true' }}
@@ -518,6 +617,77 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  build-logistics2:
+    needs: changes
+    if: ${{ needs.changes.outputs.logistics2 == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: "maven"
+
+      - name: Build Logistics 2
+        run: |
+          cd logistics2
+          chmod +x ./mvnw
+          ./mvnw clean package -DskipTests
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./logistics2
+          file: ./logistics2/Dockerfile
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY }}/serp-logistics2:${{ env.IMAGE_TAG }}
+            ${{ env.DOCKER_REGISTRY }}/serp-logistics2:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-routing:
+    needs: changes
+    if: ${{ needs.changes.outputs.routing == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./routing-service
+          file: ./routing-service/Dockerfile
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY }}/serp-routing:${{ env.IMAGE_TAG }}
+            ${{ env.DOCKER_REGISTRY }}/serp-routing:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   build-notification:
     needs: changes
     if: ${{ needs.changes.outputs.notification == 'true' }}
@@ -605,4 +775,3 @@ jobs:
             ${{ env.DOCKER_REGISTRY }}/serp-discuss-service:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-

@@ -22,12 +22,16 @@ import {
   LucideIcon,
   MessageSquare,
 } from 'lucide-react';
+import { toCanonicalModuleCode } from '@/shared/utils';
 
 export type ModuleCode =
   | 'CRM'
   | 'PURCHASE'
   | 'SALES'
   | 'LOGISTICS'
+  | 'LOGISTICS2'
+  | 'TMS'
+  | 'FIRST_MILE'
   | 'SCHOOL_BUS'
   | 'MARKETING'
   | 'PTM'
@@ -116,6 +120,21 @@ export const MODULE_ICONS: Record<ModuleCode, ModuleIconConfig> = {
     color: 'text-green-600',
     bgColor: 'bg-green-50 dark:bg-green-950',
   },
+  LOGISTICS2: {
+    icon: MapPin,
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-50 dark:bg-emerald-950',
+  },
+  TMS: {
+    icon: MapPin,
+    color: 'text-cyan-600',
+    bgColor: 'bg-cyan-50 dark:bg-cyan-950',
+  },
+  FIRST_MILE: {
+    icon: MapPin,
+    color: 'text-cyan-600',
+    bgColor: 'bg-cyan-50 dark:bg-cyan-950',
+  },
   SCHOOL_BUS: {
     icon: Bus,
     color: 'text-yellow-700',
@@ -175,13 +194,35 @@ export const MODULE_ICONS: Record<ModuleCode, ModuleIconConfig> = {
  * Get icon configuration for a module
  */
 export const getModuleIcon = (moduleCode: string): ModuleIconConfig | null => {
-  return MODULE_ICONS[moduleCode as ModuleCode] || null;
+  const normalizedCode = moduleCode.replace(/-/g, '_').toUpperCase();
+
+  if (toCanonicalModuleCode(normalizedCode) === 'TMS') {
+    return MODULE_ICONS.TMS;
+  }
+
+  if (normalizedCode in MODULE_ICONS) {
+    return MODULE_ICONS[normalizedCode as ModuleCode];
+  }
+
+  return null;
 };
 
 /**
  * Get module route path
  */
 export const getModuleRoute = (moduleCode: string): string => {
+  const canonicalCode = toCanonicalModuleCode(moduleCode);
+
+  if (canonicalCode === 'ADMIN') return '/admin';
+  if (canonicalCode === 'SETTINGS') return '/settings';
+  if (canonicalCode === 'PTM') return '/ptm/dashboard';
+  if (canonicalCode === 'CRM') return '/crm/dashboard';
+  if (canonicalCode === 'TMS') {
+    return '/first-mile';
+  }
+
+  const normalizedCode = moduleCode.replace(/-/g, '_').toLowerCase();
+  return `/${normalizedCode.replace(/_/g, '-')}`;
   if (moduleCode === 'ADMIN') return '/admin';
   if (moduleCode === 'SETTINGS') return '/settings';
   if (moduleCode === 'PTM') return '/ptm/dashboard';

@@ -12,6 +12,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import serp.project.crm.core.domain.enums.TeamStatus;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -21,8 +22,10 @@ import lombok.experimental.SuperBuilder;
 public class TeamEntity extends BaseEntity {
     private String name;
     private String description;
-    private Long leaderId;
+    private Long managerUserId;
     private String notes;
+    private TeamStatus status;
+    private Long lastAssignedMemberUserId;
 
     private List<TeamMemberEntity> members;
 
@@ -31,12 +34,19 @@ public class TeamEntity extends BaseEntity {
             this.name = updates.getName();
         if (updates.getDescription() != null)
             this.description = updates.getDescription();
-        if (updates.getLeaderId() != null)
-            this.leaderId = updates.getLeaderId();
+        if (updates.getManagerUserId() != null)
+            this.managerUserId = updates.getManagerUserId();
         if (updates.getNotes() != null)
             this.notes = updates.getNotes();
+        if (updates.getStatus() != null)
+            this.status = updates.getStatus();
+        if (updates.getLastAssignedMemberUserId() != null)
+            this.lastAssignedMemberUserId = updates.getLastAssignedMemberUserId();
     }
 
     public void setDefaults() {
+        if (this.status == null) {
+            this.status = TeamStatus.ACTIVE;
+        }
     }
 }

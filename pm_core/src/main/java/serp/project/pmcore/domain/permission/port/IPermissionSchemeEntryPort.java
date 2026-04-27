@@ -15,4 +15,6 @@ public interface IPermissionSchemeEntryPort {
     List<PermissionSchemeEntryEntity> getPermissionSchemeEntriesBySchemeIdIncludingSystem(Long schemeId, Long tenantId);
 
     List<PermissionSchemeEntryEntity> getPermissionSchemeEntriesBySchemeId(Long schemeId, Long tenantId);
+
+    boolean existsByProjectRoleId(Long tenantId, Long roleId);
 }

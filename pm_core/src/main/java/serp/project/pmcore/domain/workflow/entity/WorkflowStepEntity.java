@@ -26,4 +26,5 @@ public class WorkflowStepEntity extends BaseEntity {
     private Integer stepOrder;
     private Boolean isInitial;
     private Boolean isTerminal;
+    private Long deletedAt;
 }

@@ -29,16 +29,14 @@ import serp.project.first_mile.domain.Ward;
 import serp.project.first_mile.dto.request.OrderImportDTO;
 import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
-import serp.project.first_mile.enums.DeliveryRequestTime;
-import serp.project.first_mile.enums.FeePayer;
-import serp.project.first_mile.enums.ImportHistoryStatus;
-import serp.project.first_mile.enums.OrderProductCategory;
-import serp.project.first_mile.enums.OrderStatus;
-import serp.project.first_mile.enums.OrderType;
-import serp.project.first_mile.enums.PaymentStatus;
+import serp.project.first_mile.enums.*;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.exception.MessageService;
+import serp.project.first_mile.kernel.utils.ExcelImportUtils;
+import serp.project.first_mile.kernel.utils.ImportErrorUtils;
+import serp.project.first_mile.kernel.utils.ImportHistoryFailureUtils;
+import serp.project.first_mile.kernel.utils.ImportHistoryResponseUtils;
 import serp.project.first_mile.repository.ImportHistoryRepository;
 import serp.project.first_mile.repository.OrderRepository;
 import serp.project.first_mile.repository.ProductTypeRepository;
@@ -46,6 +44,7 @@ import serp.project.first_mile.repository.ProvinceRepository;
 import serp.project.first_mile.repository.WardRepository;
 import serp.project.first_mile.repository.projection.CodeNameProjection;
 import serp.project.first_mile.service.OrderImportExcelService;
+import serp.project.first_mile.service.dto.import_record.ImportExecutionResult;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -65,9 +64,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import static serp.project.first_mile.kernel.utils.ExcelImportUtils.*;
 
 @Service
 @RequiredArgsConstructor
@@ -223,6 +223,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
     private final ProvinceRepository provinceRepository;
     private final WardRepository wardRepository;
     private final ImportHistoryRepository importHistoryRepository;
+    private final ImportHistoryFailureUtils importHistoryFailureUtils;
     private final MessageService messageService;
 
     @Qualifier("orderImportTaskExecutor")
@@ -278,18 +279,16 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                 orderImportTaskExecutor
         ).exceptionally(exception -> {
             log.error("Order import async execution failed for importHistoryId={}", importHistoryId, exception);
-            markImportFailed(importHistoryId, tenantId, resolveExceptionMessage(exception));
+            importHistoryFailureUtils.markImportFailed(
+                importHistoryId,
+                tenantId,
+                ImportErrorUtils.resolveExceptionMessage(exception, key -> message(key)),
+                MAX_ERROR_MESSAGE_LENGTH
+            );
             return null;
         });
 
-        return toImportHistoryResponse(savedImportHistory);
-    }
-
-    @Override
-    public ImportHistoryResponse getImportHistory(Long importHistoryId, Long tenantId) {
-        ImportHistory importHistory = importHistoryRepository.findByIdAndTenantId(importHistoryId, tenantId)
-                .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST));
-        return toImportHistoryResponse(importHistory);
+        return ImportHistoryResponseUtils.toResponse(savedImportHistory);
     }
 
     private ValidateImportFileDTO<OrderImportDTO> validateImportFileBytes(byte[] fileBytes, Long tenantId) {
@@ -355,6 +354,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
 
         importHistory.setStatus(ImportHistoryStatus.PROCESSING);
         importHistory.setStartedAt(LocalDateTime.now());
+        importHistory.setType(ImportType.ORDER);
         importHistoryRepository.save(importHistory);
 
         try {
@@ -369,7 +369,9 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                 importHistory.setStatus(ImportHistoryStatus.FAILED);
                 importHistory.setSuccessRecords(0);
                 importHistory.setFailedRecords(validOrders.size());
-                importHistory.setErrorMessage(truncateErrorMessage(validationResult.getErrorMessage()));
+                importHistory.setErrorMessage(
+                        ImportErrorUtils.truncateErrorMessage(validationResult.getErrorMessage(), MAX_ERROR_MESSAGE_LENGTH)
+                );
                 importHistory.setFinishedAt(LocalDateTime.now());
                 importHistoryRepository.save(importHistory);
                 return;
@@ -378,7 +380,9 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
             ImportExecutionResult executionResult = saveImportedOrders(validOrders, tenantId);
             importHistory.setSuccessRecords(executionResult.successRecords());
             importHistory.setFailedRecords(executionResult.failedRecords());
-            importHistory.setErrorMessage(truncateErrorMessage(executionResult.errorMessage()));
+            importHistory.setErrorMessage(
+                    ImportErrorUtils.truncateErrorMessage(executionResult.errorMessage(), MAX_ERROR_MESSAGE_LENGTH)
+            );
             importHistory.setStatus(
                     executionResult.failedRecords() > 0
                             ? ImportHistoryStatus.PARTIAL_SUCCESS
@@ -388,7 +392,12 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
             importHistoryRepository.save(importHistory);
         } catch (Exception exception) {
             log.error("Process order import failed for importHistoryId={}", importHistoryId, exception);
-            markImportFailed(importHistoryId, tenantId, resolveExceptionMessage(exception));
+            importHistoryFailureUtils.markImportFailed(
+                    importHistoryId,
+                    tenantId,
+                    ImportErrorUtils.resolveExceptionMessage(exception, key -> message(key)),
+                    MAX_ERROR_MESSAGE_LENGTH
+            );
         }
     }
 
@@ -467,6 +476,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                 .receiverWardCode(orderImport.getReceiverWardCode())
                 .receiverAddressDetail(orderImport.getReceiverAddressDetail())
                 .status(OrderStatus.CREATED)
+                .isConfirm(false)
                 .totalWeight(calculateTotalWeight(orderImport))
                 .totalValue((double) totalValueAmount)
                 .dimensions(dimensions)
@@ -561,42 +571,6 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
         return String.format(Locale.ROOT, "%s%0" + ORDER_CODE_SEQUENCE_LENGTH + "d", orderCodePrefix, sequence);
     }
 
-    private void markImportFailed(Long importHistoryId, Long tenantId, String errorMessage) {
-        importHistoryRepository.findByIdAndTenantId(importHistoryId, tenantId).ifPresent(importHistory -> {
-            importHistory.setStatus(ImportHistoryStatus.FAILED);
-            if (importHistory.getStartedAt() == null) {
-                importHistory.setStartedAt(LocalDateTime.now());
-            }
-            if (importHistory.getTotalRecords() == null) {
-                importHistory.setTotalRecords(0);
-            }
-            if (importHistory.getSuccessRecords() == null) {
-                importHistory.setSuccessRecords(0);
-            }
-            if (importHistory.getFailedRecords() == null) {
-                importHistory.setFailedRecords(importHistory.getTotalRecords());
-            }
-            importHistory.setErrorMessage(truncateErrorMessage(errorMessage));
-            importHistory.setFinishedAt(LocalDateTime.now());
-            importHistoryRepository.save(importHistory);
-        });
-    }
-
-    private ImportHistoryResponse toImportHistoryResponse(ImportHistory importHistory) {
-        return ImportHistoryResponse.builder()
-                .id(importHistory.getId())
-                .fileId(importHistory.getFileId())
-                .fileName(importHistory.getFileName())
-                .status(importHistory.getStatus())
-                .totalRecords(importHistory.getTotalRecords())
-                .successRecords(importHistory.getSuccessRecords())
-                .failedRecords(importHistory.getFailedRecords())
-                .errorMessage(importHistory.getErrorMessage())
-                .startedAt(importHistory.getStartedAt())
-                .finishedAt(importHistory.getFinishedAt())
-                .build();
-    }
-
     private String buildImportPersistError(OrderImportDTO orderImport, Exception exception) {
         String customerOrderCode = hasText(orderImport.getCustomerOrderCode())
                 ? orderImport.getCustomerOrderCode()
@@ -604,45 +578,8 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
         return message(
                 "order.import.import_job.persist_error",
                 customerOrderCode,
-                resolveExceptionMessage(exception)
+                ImportErrorUtils.resolveExceptionMessage(exception, key -> message(key))
         );
-    }
-
-    private String resolveExceptionMessage(Throwable throwable) {
-        if (throwable == null) {
-            return message(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessageKey());
-        }
-
-        Throwable rootCause = throwable;
-        while (rootCause.getCause() != null) {
-            rootCause = rootCause.getCause();
-        }
-
-        if (rootCause instanceof AppException appException) {
-            return message(appException.getErrorCode().getMessageKey());
-        }
-
-        String rootMessage = rootCause.getMessage();
-        if (!hasText(rootMessage)) {
-            return message(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessageKey());
-        }
-
-        if (rootMessage.startsWith("error.")) {
-            return message(rootMessage);
-        }
-        return rootMessage;
-    }
-
-    private String truncateErrorMessage(String errorMessage) {
-        if (!hasText(errorMessage)) {
-            return null;
-        }
-
-        if (errorMessage.length() <= MAX_ERROR_MESSAGE_LENGTH) {
-            return errorMessage;
-        }
-
-        return errorMessage.substring(0, MAX_ERROR_MESSAGE_LENGTH);
     }
 
     private double safeDouble(Double value) {
@@ -658,27 +595,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
     }
 
     private ValidateImportFileDTO<OrderImportDTO> buildBaseValidateResponse() {
-        ValidateImportFileDTO<OrderImportDTO> response = new ValidateImportFileDTO<>();
-        response.setFileId(UUID.randomUUID());
-        response.setHeader(buildHeaderMap());
-        response.setData(new ArrayList<>());
-        response.setSuccess(false);
-        response.setType(0);
-        return response;
-    }
-
-    private LinkedHashMap<String, String> buildHeaderMap() {
-        LinkedHashMap<String, String> headerMap = new LinkedHashMap<>();
-        for (int i = 0; i <= LAST_COLUMN_INDEX; i++) {
-            headerMap.put(HEADER_KEYS.get(i), EXPECTED_HEADERS.get(i));
-        }
-        return headerMap;
-    }
-
-    private void setValidationFailed(ValidateImportFileDTO<OrderImportDTO> response, List<String> errors) {
-        response.setSuccess(false);
-        response.setType(0);
-        response.setErrorMessage(String.join("\n", errors));
+        return ExcelImportUtils.buildBaseValidateResponse(HEADER_KEYS, EXPECTED_HEADERS);
     }
 
     private List<String> validateHeader(Sheet orderSheet, DataFormatter formatter, FormulaEvaluator evaluator) {
@@ -718,7 +635,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
         OrderImportDTO currentOrder = null;
         for (int rowIndex = DATA_START_ROW_INDEX; rowIndex <= orderSheet.getLastRowNum(); rowIndex++) {
             Row row = orderSheet.getRow(rowIndex);
-            if (isBlankRow(row, formatter, evaluator)) {
+            if (isBlankRow(row, LAST_COLUMN_INDEX, formatter, evaluator)) {
                 continue;
             }
 
@@ -1527,40 +1444,9 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
         return value;
     }
 
-    private Double parseNumber(String rawValue) {
-        if (!hasText(rawValue)) {
-            return null;
-        }
-
-        String value = rawValue.trim().replace(" ", "");
-        if (value.matches("[-+]?\\d+(\\.\\d+)?")) {
-            return Double.parseDouble(value);
-        }
-
-        if (value.matches("[-+]?\\d+(,\\d+)?")) {
-            return Double.parseDouble(value.replace(",", "."));
-        }
-
-        if (value.matches("[-+]?\\d{1,3}(,\\d{3})+(\\.\\d+)?")) {
-            return Double.parseDouble(value.replace(",", ""));
-        }
-
-        if (value.matches("[-+]?\\d{1,3}(\\.\\d{3})+(,\\d+)?")) {
-            String normalized = value.replace(".", "").replace(",", ".");
-            return Double.parseDouble(normalized);
-        }
-
-        return null;
-    }
-
-    private boolean isWholeNumber(Double value) {
-        return Math.abs(value - Math.rint(value)) < 0.0000001;
-    }
-
     private CodeNameValue parseCodeAndName(String value, int excelRowNumber, int columnIndex, List<String> errors) {
-        String normalizedValue = normalizeWhitespace(value);
-        Matcher matcher = CODE_NAME_PATTERN.matcher(normalizedValue);
-        if (!matcher.matches()) {
+        ExcelImportUtils.CodeNameValue parsedValue = ExcelImportUtils.parseCodeAndName(value, CODE_NAME_PATTERN);
+        if (parsedValue == null) {
             errors.add(message(
                     "order.import.validation.code_name.invalid_format",
                     buildCellRef(excelRowNumber, columnIndex)
@@ -1568,17 +1454,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
             return null;
         }
 
-        String code = matcher.group(1).trim();
-        String name = matcher.group(2).trim();
-        if (!hasText(code) || !hasText(name)) {
-            errors.add(message(
-                    "order.import.validation.code_name.invalid_format",
-                    buildCellRef(excelRowNumber, columnIndex)
-            ));
-            return null;
-        }
-
-        return new CodeNameValue(code, name);
+        return new CodeNameValue(parsedValue.code(), parsedValue.name());
     }
 
     private MasterDataLookup loadMasterData(Long tenantId) {
@@ -1624,18 +1500,6 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
         );
     }
 
-    private boolean isBlankRow(Row row, DataFormatter formatter, FormulaEvaluator evaluator) {
-        if (row == null) {
-            return true;
-        }
-        for (int columnIndex = 0; columnIndex <= LAST_COLUMN_INDEX; columnIndex++) {
-            if (hasText(getCellText(row, columnIndex, formatter, evaluator))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     private boolean hasAnyDataInRange(
             Row row,
             int startColumn,
@@ -1655,21 +1519,6 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
         return false;
     }
 
-    private String getCellText(Row row, int columnIndex, DataFormatter formatter, FormulaEvaluator evaluator) {
-        Cell cell = getCell(row, columnIndex);
-        if (cell == null) {
-            return "";
-        }
-        return formatter.formatCellValue(cell, evaluator);
-    }
-
-    private Cell getCell(Row row, int columnIndex) {
-        if (row == null) {
-            return null;
-        }
-        return row.getCell(columnIndex, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
-    }
-
     private String buildCellRef(int excelRowNumber, int columnIndex) {
         return message(
                 "order.import.validation.cell_ref",
@@ -1679,35 +1528,9 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
         );
     }
 
-    private String toColumnName(int columnIndex) {
-        int current = columnIndex + 1;
-        StringBuilder columnName = new StringBuilder();
-        while (current > 0) {
-            int remainder = (current - 1) % 26;
-            columnName.insert(0, (char) ('A' + remainder));
-            current = (current - 1) / 26;
-        }
-        return columnName.toString();
-    }
-
-    private String normalizeWhitespace(String value) {
-        if (value == null) {
-            return "";
-        }
-        return value.replace('\n', ' ').replaceAll("\\s+", " ").trim();
-    }
-
     private String normalizeLookupKey(String value) {
         String normalized = normalizeWhitespace(value).replaceAll("\\s*/\\s*", "/");
         return normalized.toLowerCase(Locale.ROOT);
-    }
-
-    private String normalizeCodeKey(String code) {
-        return normalizeWhitespace(code).toUpperCase(Locale.ROOT);
-    }
-
-    private boolean hasText(String value) {
-        return value != null && !value.trim().isEmpty();
     }
 
     private String message(String key, Object... args) {
@@ -1731,14 +1554,6 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
             Map<String, String> wardNameByCode,
             Map<String, String> wardProvinceByCode,
             Map<String, ProductType> productTypeByCode
-    ) {
-    }
-
-    private record ImportExecutionResult(
-            int totalRecords,
-            int successRecords,
-            int failedRecords,
-            String errorMessage
     ) {
     }
 }

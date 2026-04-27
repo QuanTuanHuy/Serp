@@ -11,7 +11,18 @@ import {
   useGetMenuDisplaysByModuleAndUserQuery,
   useGetMyModulesQuery,
 } from '@/modules/account/services';
-import { getModuleRootRoute } from '@/shared/constants/moduleIcons';
+import {
+  getModuleRootPath,
+  isSameModuleCode,
+  normalizeMenuPathForModule,
+  normalizePath,
+  toCanonicalModuleCode,
+} from '@/shared/utils';
+
+const LOGISTICS2_ROUTE_ALIASES: Record<string, string> = {
+  '/logistics2/next-route': '/logistics2/routes',
+  '/logistics2/my-routes': '/logistics2/routes',
+};
 
 interface RouteGuardResult {
   hasAccess: boolean;
@@ -48,13 +59,25 @@ interface RouteGuardResult {
  */
 export const useModuleRouteGuard = (moduleCode: string): RouteGuardResult => {
   const pathname = usePathname();
-  const moduleRootPath = getModuleRootRoute(moduleCode);
+  const moduleRootPath = useMemo(
+    () => getModuleRootPath(moduleCode),
+    [moduleCode]
+  );
+  const currentPath = useMemo(() => {
+    const normalizedPath = normalizeMenuPathForModule(pathname, moduleCode);
+
+    if (toCanonicalModuleCode(moduleCode) !== 'LOGISTICS2') {
+      return normalizedPath;
+    }
+
+    return LOGISTICS2_ROUTE_ALIASES[normalizedPath] || normalizedPath;
+  }, [pathname, moduleCode]);
 
   const { data: userModules, isLoading: modulesLoading } =
     useGetMyModulesQuery();
 
   const currentModule = useMemo(() => {
-    return userModules?.find((m) => m.moduleCode === moduleCode);
+    return userModules?.find((m) => isSameModuleCode(m.moduleCode, moduleCode));
   }, [userModules, moduleCode]);
 
   const {
@@ -70,61 +93,42 @@ export const useModuleRouteGuard = (moduleCode: string): RouteGuardResult => {
       return false;
     }
 
-    const normalizePath = (path: string) => {
-      return path.replace(/\/+$/, ''); // Remove trailing slashes
-    };
-
-    const buildEquivalentPaths = (path: string) => {
-      const normalizedPath = normalizePath(path);
-      const equivalentPaths = new Set([normalizedPath]);
-
-      if (moduleCode === 'SCHOOL_BUS') {
-        if (normalizedPath === '/bds' || normalizedPath.startsWith('/bds/')) {
-          equivalentPaths.add(normalizedPath.replace(/^\/bds/, '/school-bus'));
-        }
-
-        if (
-          normalizedPath === '/school-bus' ||
-          normalizedPath.startsWith('/school-bus/')
-        ) {
-          equivalentPaths.add(normalizedPath.replace(/^\/school-bus/, '/bds'));
-        }
-      }
-
-      return Array.from(equivalentPaths);
-    };
-
-    const currentPaths = buildEquivalentPaths(pathname);
+    const normalizedModuleRootPath = normalizePath(moduleRootPath);
 
     const hasMatch = menuDisplays.some((menu) => {
       if (!menu.path) return false;
 
-      const menuPaths = buildEquivalentPaths(menu.path);
+      const menuPath = normalizeMenuPathForModule(menu.path, moduleCode);
 
-      return currentPaths.some((currentPath) =>
-        menuPaths.some((menuPath) => {
-          if (currentPath === menuPath) return true;
-          if (currentPath.startsWith(menuPath + '/')) return true;
-          return false;
-        })
-      );
+      if (currentPath === menuPath) return true;
+
+      // Parent path match (e.g., /ptm/tasks/123 matches /ptm/tasks)
+      if (currentPath.startsWith(menuPath + '/')) return true;
+
+      return false;
     });
 
     if (hasMatch) {
       return true;
     }
 
-    if (currentPaths.includes(normalizePath(moduleRootPath))) {
+    // Allow module root path (e.g., /sales) if user has any accessible child path
+    // (e.g., /sales/dashboard). This prevents root redirects from being blocked.
+    if (currentPath === normalizedModuleRootPath) {
       return menuDisplays.some((menu) => {
         if (!menu.path) return false;
-        return buildEquivalentPaths(menu.path).some((menuPath) =>
-          menuPath.startsWith(normalizePath(moduleRootPath) + '/')
-        );
+        const menuPath = normalizeMenuPathForModule(menu.path, moduleCode);
+
+        if (menuPath === normalizedModuleRootPath) {
+          return true;
+        }
+
+        return menuPath.startsWith(normalizedModuleRootPath + '/');
       });
     }
 
     return false;
-  }, [menuDisplays, pathname, moduleRootPath]);
+  }, [currentPath, menuDisplays, moduleCode, moduleRootPath]);
 
   const isLoading = modulesLoading || menusLoading;
 

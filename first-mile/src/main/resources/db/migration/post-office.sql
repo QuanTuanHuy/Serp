@@ -6,6 +6,7 @@ CREATE TABLE post_offices (
                               ward_code VARCHAR(255) NOT NULL,
                               address_detail TEXT NOT NULL,
                               phone_number VARCHAR(15),
+                              image_url TEXT,
                               operational_start_date DATE,
                               operational_end_date DATE,
                               working_start_time TIME,

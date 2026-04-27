@@ -110,6 +110,15 @@ public class TeamMemberAdapter implements ITeamMemberPort {
     }
 
     @Override
+    public List<TeamMemberEntity> findActiveMembersByTeamIdAndRoles(Long teamId, List<String> roles, Long tenantId) {
+        return teamMemberRepository.findByTenantIdAndTeamIdAndStatusAndRoleIn(tenantId, teamId,
+                        TeamMemberStatus.ACTIVE.name(), roles)
+                .stream()
+                .map(teamMemberMapper::toEntity)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public void deleteAllByTeamId(Long teamId, Long tenantId) {
         teamMemberRepository.deleteByTeamIdAndTenantId(teamId, tenantId);
     }

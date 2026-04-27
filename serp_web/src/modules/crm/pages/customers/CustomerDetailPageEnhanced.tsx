@@ -7,6 +7,7 @@ Description: Part of Serp Project - Enhanced Customer Detail Page with mock data
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { getErrorMessage } from '@/lib/store/api';
 import {
   Card,
   CardContent,
@@ -68,14 +69,26 @@ import {
   Download,
   Upload,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/shared/utils';
+import { ContactList } from '../../components/contacts';
+import type { ContactFormData } from '../../components/contacts';
 import {
-  MOCK_CUSTOMERS,
+  useCreateAccountContactMutation,
+  useDeleteAccountMutation,
+  useDeleteContactMutation,
+  useGetAccountActivitiesQuery,
+  useGetAccountContactsQuery,
+  useGetAccountQuery,
+  useSetPrimaryContactMutation,
+  useUpdateContactMutation,
+} from '../../api/crmApi';
+import {
   MOCK_OPPORTUNITIES,
-  MOCK_ACTIVITIES,
 } from '../../mocks';
 import type {
   Customer,
+  Contact,
   Opportunity,
   Activity as ActivityType,
 } from '../../types';
@@ -273,7 +286,6 @@ export const CustomerDetailPageEnhanced: React.FC<
   const [activeTab, setActiveTab] = useState('overview');
   const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [activityForm, setActivityForm] = useState({
@@ -283,10 +295,22 @@ export const CustomerDetailPageEnhanced: React.FC<
     scheduledDate: '',
   });
 
-  // Find customer from mock data
-  const customer = useMemo(() => {
-    return MOCK_CUSTOMERS.find((c) => c.id === customerId);
-  }, [customerId]);
+  const { data: accountResponse, isLoading: isAccountLoading } =
+    useGetAccountQuery(customerId);
+  const { data: contactsResponse } = useGetAccountContactsQuery(customerId);
+  const { data: activitiesResponse } = useGetAccountActivitiesQuery({
+    accountId: customerId,
+    page: 1,
+    size: 20,
+  });
+  const [createContact] = useCreateAccountContactMutation();
+  const [updateContact] = useUpdateContactMutation();
+  const [deleteContact] = useDeleteContactMutation();
+  const [setPrimaryContact] = useSetPrimaryContactMutation();
+  const [deleteAccount] = useDeleteAccountMutation();
+
+  const customer = accountResponse?.data;
+  const accountContacts = contactsResponse?.data || [];
 
   // Get related opportunities
   const relatedOpportunities = useMemo(() => {
@@ -297,29 +321,29 @@ export const CustomerDetailPageEnhanced: React.FC<
   }, [customerId]);
 
   // Get related activities
-  const relatedActivities = useMemo(() => {
-    return MOCK_ACTIVITIES.filter(
-      (a) => a.relatedTo.type === 'CUSTOMER' && a.relatedTo.id === customerId
-    ).slice(0, 5);
-  }, [customerId]);
+  const relatedActivities = activitiesResponse?.data?.data || [];
 
-  if (!customer) {
+  if (!isAccountLoading && !customer) {
     return (
       <div className={cn('p-6', className)}>
         <Card>
           <CardContent className='py-16 text-center'>
             <AlertCircle className='w-12 h-12 mx-auto mb-4 text-muted-foreground' />
-            <h2 className='text-xl font-semibold mb-2'>Customer Not Found</h2>
+            <h2 className='text-xl font-semibold mb-2'>Account Not Found</h2>
             <p className='text-muted-foreground mb-4'>
-              The customer you're looking for doesn't exist or has been deleted.
+              The account you're looking for doesn't exist or has been deleted.
             </p>
-            <Button onClick={() => router.push('/crm/customers')}>
-              Back to Customers
+            <Button onClick={() => router.push('/crm/accounts')}>
+              Back to Accounts
             </Button>
           </CardContent>
         </Card>
       </div>
     );
+  }
+
+  if (!customer) {
+    return null;
   }
 
   const statusConfig = STATUS_CONFIG[customer.status];
@@ -356,8 +380,98 @@ export const CustomerDetailPageEnhanced: React.FC<
   };
 
   const handleDelete = () => {
-    console.log('Deleting customer');
-    router.push('/crm/customers');
+    deleteAccount(customerId)
+      .unwrap()
+      .then(() => {
+        toast.success('Delete account successfully');
+        router.push('/crm/accounts');
+      })
+      .catch((error) => {
+        toast.error('Failed to delete account', {
+          description: getErrorMessage(error),
+        });
+      });
+  };
+
+  const handleAddContact = async (data: ContactFormData) => {
+    try {
+      await createContact({
+        accountId: customerId,
+        data: {
+          name: data.name.trim(),
+          email: data.email,
+          phone: data.phone,
+          jobPosition: data.jobPosition,
+          isPrimary: data.isPrimary,
+          street: data.street,
+          city: data.city,
+          state: data.state,
+          zipCode: data.zipCode,
+          country: data.country,
+          contactType: data.contactType,
+          activeStatus: data.activeStatus,
+          linkedInUrl: data.linkedInUrl,
+          twitterHandle: data.twitterHandle,
+          notes: data.notes,
+        },
+      }).unwrap();
+      toast.success('Create contact successfully');
+    } catch (error) {
+      toast.error('Failed to create contact', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleEditContact = async (contact: Contact, data: ContactFormData) => {
+    try {
+      await updateContact({
+        id: contact.id,
+        data: {
+          name: data.name.trim(),
+          email: data.email,
+          phone: data.phone,
+          jobPosition: data.jobPosition,
+          street: data.street,
+          city: data.city,
+          state: data.state,
+          zipCode: data.zipCode,
+          country: data.country,
+          contactType: data.contactType,
+          activeStatus: data.activeStatus,
+          linkedInUrl: data.linkedInUrl,
+          twitterHandle: data.twitterHandle,
+          notes: data.notes,
+        },
+      }).unwrap();
+      toast.success('Update contact successfully');
+    } catch (error) {
+      toast.error('Failed to update contact', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleDeleteContact = async (contact: Contact) => {
+    try {
+      await deleteContact(contact.id).unwrap();
+      toast.success('Delete contact successfully');
+    } catch (error) {
+      toast.error('Failed to delete contact', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleSetPrimaryContact = async (contact: Contact) => {
+    try {
+      await setPrimaryContact(contact.id).unwrap();
+      toast.success('Primary contact updated successfully');
+    } catch (error) {
+      toast.error('Failed to update primary contact', {
+        description: getErrorMessage(error),
+      });
+    }
   };
 
   const formatCurrency = (value: number) => {
@@ -423,7 +537,7 @@ export const CustomerDetailPageEnhanced: React.FC<
           <Button
             variant='outline'
             size='icon'
-            onClick={() => router.push('/crm/customers')}
+            onClick={() => router.push('/crm/accounts')}
           >
             <ArrowLeft className='w-4 h-4' />
           </Button>
@@ -477,7 +591,7 @@ export const CustomerDetailPageEnhanced: React.FC<
         <div className='flex items-center gap-2'>
           <Button
             variant='outline'
-            onClick={() => router.push(`/crm/customers/${customerId}/edit`)}
+            onClick={() => router.push(`/crm/accounts/${customerId}/edit`)}
           >
             <Edit className='w-4 h-4 mr-2' />
             Edit
@@ -507,7 +621,7 @@ export const CustomerDetailPageEnhanced: React.FC<
                 onClick={() => setIsDeleteDialogOpen(true)}
               >
                 <Trash2 className='w-4 h-4 mr-2' />
-                Delete Customer
+                Delete Account
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -604,16 +718,16 @@ export const CustomerDetailPageEnhanced: React.FC<
           <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
             {/* Main Info */}
             <div className='lg:col-span-2 space-y-6'>
-              {/* Customer Information */}
+              {/* Account Information */}
               <Card>
                 <CardHeader>
-                  <h3 className='font-semibold'>Customer Information</h3>
+                  <h3 className='font-semibold'>Account Information</h3>
                 </CardHeader>
                 <CardContent>
                   <div className='grid grid-cols-2 gap-4'>
                     <div>
                       <label className='text-sm font-medium text-muted-foreground'>
-                        Customer Type
+                        Account Type
                       </label>
                       <p className='font-medium capitalize'>
                         {customer.customerType.toLowerCase()}
@@ -702,7 +816,7 @@ export const CustomerDetailPageEnhanced: React.FC<
                     )}
                     <div>
                       <label className='text-sm font-medium text-muted-foreground'>
-                        Customer Since
+                        Account Since
                       </label>
                       <p className='font-medium'>
                         {formatDate(customer.createdAt)}
@@ -800,7 +914,7 @@ export const CustomerDetailPageEnhanced: React.FC<
                 <CardContent className='space-y-2'>
                   <Button variant='outline' className='w-full justify-start'>
                     <Phone className='w-4 h-4 mr-2' />
-                    Call Customer
+                    Call Account
                   </Button>
                   <Button variant='outline' className='w-full justify-start'>
                     <Mail className='w-4 h-4 mr-2' />
@@ -891,63 +1005,15 @@ export const CustomerDetailPageEnhanced: React.FC<
 
         {/* Contacts Tab */}
         <TabsContent value='contacts' className='mt-6'>
-          <Card>
-            <CardHeader className='flex flex-row items-center justify-between'>
-              <h3 className='font-semibold'>Customer Contacts</h3>
-              <Button onClick={() => setIsContactDialogOpen(true)}>
-                <Plus className='w-4 h-4 mr-2' />
-                Add Contact
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                {MOCK_CONTACTS.map((contact) => (
-                  <div key={contact.id} className='p-4 bg-muted rounded-lg'>
-                    <div className='flex items-start justify-between'>
-                      <div className='flex items-start gap-3'>
-                        <Avatar>
-                          <AvatarFallback>
-                            {contact.name
-                              .split(' ')
-                              .map((n) => n[0])
-                              .join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className='flex items-center gap-2'>
-                            <p className='font-medium'>{contact.name}</p>
-                            {contact.isPrimary && (
-                              <Badge variant='secondary' className='text-xs'>
-                                Primary
-                              </Badge>
-                            )}
-                          </div>
-                          <p className='text-sm text-muted-foreground'>
-                            {contact.role}
-                          </p>
-                        </div>
-                      </div>
-                      <Button variant='ghost' size='icon' className='h-8 w-8'>
-                        <MoreHorizontal className='w-4 h-4' />
-                      </Button>
-                    </div>
-                    <div className='mt-3 space-y-1'>
-                      <p className='text-sm flex items-center gap-2'>
-                        <Mail className='w-4 h-4 text-muted-foreground' />
-                        {contact.email}
-                      </p>
-                      {contact.phone && (
-                        <p className='text-sm flex items-center gap-2'>
-                          <Phone className='w-4 h-4 text-muted-foreground' />
-                          {contact.phone}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <ContactList
+            contacts={accountContacts}
+            title='Account Contacts'
+            emptyMessage='No contacts found for this account'
+            onAddContact={handleAddContact}
+            onEditContact={handleEditContact}
+            onDeleteContact={handleDeleteContact}
+            onSetPrimary={handleSetPrimaryContact}
+          />
         </TabsContent>
 
         {/* Orders Tab */}
@@ -1216,7 +1282,7 @@ export const CustomerDetailPageEnhanced: React.FC<
           <DialogHeader>
             <DialogTitle>Add Note</DialogTitle>
             <DialogDescription>
-              Add a note about this customer for future reference.
+              Add a note about this account for future reference.
             </DialogDescription>
           </DialogHeader>
           <div className='py-4'>
@@ -1245,9 +1311,9 @@ export const CustomerDetailPageEnhanced: React.FC<
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Customer</DialogTitle>
+            <DialogTitle>Delete Account</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this customer? This action cannot
+              Are you sure you want to delete this account? This action cannot
               be undone and will also delete all related data.
             </DialogDescription>
           </DialogHeader>
@@ -1282,7 +1348,7 @@ export const CustomerDetailPageEnhanced: React.FC<
               Cancel
             </Button>
             <Button variant='destructive' onClick={handleDelete}>
-              Delete Customer
+              Delete Account
             </Button>
           </DialogFooter>
         </DialogContent>

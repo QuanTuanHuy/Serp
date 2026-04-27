@@ -26,7 +26,7 @@ public class OpportunityFilterRequest extends BaseFilterRequest {
 
     private String keyword;
     private List<OpportunityStage> stages;
-    private Long customerId;
+    private Long accountId;
     private Long leadId;
     private Long assignedTo;
     private Boolean unassignedOnly;

@@ -2,14 +2,17 @@
 
 'use client';
 
+import { getErrorMessage } from '@/lib/store/api';
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
-import { CustomerForm } from '../../components/forms';
-import { useCreateCustomerMutation } from '../../api/crmApi';
+import { toast } from 'sonner';
+import { AccountForm } from '../../components/forms';
+import { useCreateAccountMutation } from '../../api/crmApi';
+import type { CreateAccountRequest } from '../../types';
 
 interface CreateCustomerPageProps {
   className?: string;
-  onSuccess?: (customerId: string) => void;
+  onSuccess?: (accountId: string) => void;
   onCancel?: () => void;
 }
 
@@ -18,14 +21,19 @@ export const CreateCustomerPage: React.FC<CreateCustomerPageProps> = ({
   onSuccess,
   onCancel,
 }) => {
-  const [createCustomer, { isLoading }] = useCreateCustomerMutation();
+  const [createAccount, { isLoading }] = useCreateAccountMutation();
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (
+    data: CreateAccountRequest | Partial<CreateAccountRequest>
+  ) => {
     try {
-      const result = await createCustomer(data).unwrap();
+      const result = await createAccount(data as CreateAccountRequest).unwrap();
+      toast.success('Create account successfully');
       onSuccess?.(result.data.id);
     } catch (error) {
-      console.error('Failed to create customer:', error);
+      toast.error('Failed to create account', {
+        description: getErrorMessage(error),
+      });
     }
   };
 
@@ -39,10 +47,10 @@ export const CreateCustomerPage: React.FC<CreateCustomerPageProps> = ({
           </Button>
           <div>
             <h1 className='text-2xl font-bold text-foreground'>
-              Create New Customer
+              Create New Account
             </h1>
             <p className='text-muted-foreground'>
-              Add a new customer to your CRM
+              Add a new account to your CRM
             </p>
           </div>
         </div>
@@ -50,7 +58,7 @@ export const CreateCustomerPage: React.FC<CreateCustomerPageProps> = ({
 
       {/* Form */}
       <div className='max-w-4xl'>
-        <CustomerForm
+        <AccountForm
           onSubmit={handleSubmit}
           onCancel={onCancel}
           isLoading={isLoading}

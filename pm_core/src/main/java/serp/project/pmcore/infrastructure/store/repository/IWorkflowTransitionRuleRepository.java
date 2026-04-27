@@ -16,6 +16,8 @@ import java.util.List;
 @Repository
 public interface IWorkflowTransitionRuleRepository extends JpaRepository<WorkflowTransitionRuleModel, Long> {
 
+    List<WorkflowTransitionRuleModel> findByTransitionIdAndTenantId(Long transitionId, Long tenantId);
+
     @Query("SELECT r FROM WorkflowTransitionRuleModel r WHERE r.transitionId = :transitionId " +
            "AND (r.tenantId = :tenantId OR r.tenantId = 0) ORDER BY r.sequence ASC, r.id ASC")
     List<WorkflowTransitionRuleModel> findByTransitionIdAndTenantIdOrSystemTenant(

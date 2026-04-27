@@ -231,6 +231,25 @@ public enum ModuleEnum {
             List.of("INVENTORY")),
 
     /**
+     * TMS - First Mile Transportation Management
+     * Quản lý first-mile operations, post office và pickup planning
+     */
+    TMS(
+            "TMS",
+            "First Mile Transportation Management",
+            "serp-first-mile",
+            "Operations",
+            "truck",
+            12,
+            ModuleType.SYSTEM,
+            true,
+            false,
+            PricingModel.PER_USER,
+            ModuleStatus.ACTIVE,
+            "1.0.0",
+            List.of()),
+
+    /**
      * SCHOOL_BUS - School Bus Operations
      * Quản lý điều phối xe bus trường học, đưa đón, tuyến, điểm danh
      */

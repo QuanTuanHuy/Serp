@@ -92,9 +92,9 @@ public class ContactUseCase {
     }
 
     @Transactional(readOnly = true)
-    public GeneralResponse<?> getContactsByCustomerId(Long customerId, Long tenantId) {
+    public GeneralResponse<?> getContactsByAccountId(Long accountId, Long tenantId) {
         try {
-            List<ContactEntity> contacts = contactService.getContactsByCustomerId(customerId, tenantId);
+            List<ContactEntity> contacts = contactService.getContactsByAccountId(accountId, tenantId);
 
             List<ContactResponse> contactResponses = contacts.stream()
                     .map(contactDtoMapper::toResponse)
@@ -103,9 +103,23 @@ public class ContactUseCase {
             return responseUtils.success(contactResponses);
 
         } catch (Exception e) {
-            log.error("[ContactUseCase] Error fetching contacts by customer ID: {}", e.getMessage(), e);
+            log.error("[ContactUseCase] Error fetching contacts by Account ID: {}", e.getMessage(), e);
             return responseUtils.internalServerError("Failed to fetch contacts");
         }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> setPrimaryContact(Long id, Long userId, Long tenantId) {
+        ContactEntity updatedContact = contactService.setPrimaryContact(id, userId, tenantId);
+        ContactResponse response = contactDtoMapper.toResponse(updatedContact);
+        return responseUtils.success(response, "Primary contact set successfully");
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> deactivateContact(Long id, Long userId, Long tenantId) {
+        ContactEntity updatedContact = contactService.deactivateContact(id, userId, tenantId);
+        ContactResponse response = contactDtoMapper.toResponse(updatedContact);
+        return responseUtils.success(response, "Contact deactivated successfully");
     }
 
     @Transactional(readOnly = true)

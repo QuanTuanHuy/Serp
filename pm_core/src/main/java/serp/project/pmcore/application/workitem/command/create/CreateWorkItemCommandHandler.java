@@ -5,87 +5,60 @@
 
 package serp.project.pmcore.application.workitem.command.create;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
-import serp.project.pmcore.application.workitem.command.create.internal.CreateFieldRules;
 import serp.project.pmcore.application.workitem.command.create.internal.CreateWorkItemData;
-import serp.project.pmcore.application.workitem.command.create.internal.ResolvedCustomFields;
 import serp.project.pmcore.application.workitem.command.create.internal.ResolvedWorkItemCreateConfiguration;
-import serp.project.pmcore.application.workitem.command.create.support.WorkItemCreateAuthorizationService;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemCreateConfigurationResolver;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemCreateRequiredFieldValidator;
-import serp.project.pmcore.application.workitem.command.create.support.WorkItemCustomFieldResolver;
+import serp.project.pmcore.application.workitem.command.create.support.CreateWorkItemFieldRulesResolver;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemDraftFactory;
-import serp.project.pmcore.application.workitem.command.create.support.WorkItemFieldPolicyResolver;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemFieldWriteValidator;
+import serp.project.pmcore.domain.customfield.dto.WorkItemCustomFieldMutationPlan;
+import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldMutationService;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
+import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.shared.service.IOutboxEventService;
 import serp.project.pmcore.domain.project.service.IProjectService;
 import serp.project.pmcore.domain.shared.constant.EventConstants;
+import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.shared.dto.message.WorkItemEventPayload;
 import serp.project.pmcore.domain.shared.entity.OutboxEventEntity;
 import serp.project.pmcore.domain.shared.enums.OutboxEventStatus;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
-import serp.project.pmcore.domain.workitem.entity.WorkItemCustomFieldValueEntity;
+import serp.project.pmcore.domain.workitem.dto.WorkItemFieldRules;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
-import serp.project.pmcore.domain.workitem.port.IWorkItemCustomFieldValuePort;
+import serp.project.pmcore.domain.workitem.service.IWorkItemAuthorizationSupportService;
 import serp.project.pmcore.domain.workitem.service.IWorkItemService;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class CreateWorkItemCommandHandler
         implements ICommandHandler<CreateWorkItemCommand, CreateWorkItemResult> {
-
-    private static final Logger log = LoggerFactory.getLogger(CreateWorkItemCommandHandler.class);
 
     private final CreateWorkItemValidator createWorkItemValidator;
     private final IProjectService projectService;
     private final IWorkItemService workItemService;
     private final WorkItemCreateConfigurationResolver workItemCreateConfigurationResolver;
-    private final WorkItemCreateAuthorizationService workItemCreateAuthorizationService;
-    private final WorkItemCustomFieldResolver workItemCustomFieldResolver;
+    private final IWorkItemAuthorizationSupportService workItemAuthorizationSupportService;
+    private final IWorkItemCustomFieldMutationService workItemCustomFieldMutationService;
     private final WorkItemCreateRequiredFieldValidator workItemCreateRequiredFieldValidator;
     private final WorkItemDraftFactory workItemDraftFactory;
-    private final WorkItemFieldPolicyResolver workItemFieldPolicyResolver;
+    private final CreateWorkItemFieldRulesResolver createWorkItemFieldRulesResolver;
     private final WorkItemFieldWriteValidator workItemFieldWriteValidator;
-    private final IWorkItemCustomFieldValuePort workItemCustomFieldValuePort;
     private final IOutboxEventService outboxEventService;
     private final JsonUtils jsonUtils;
-
-    public CreateWorkItemCommandHandler(CreateWorkItemValidator createWorkItemValidator,
-                                        IProjectService projectService,
-                                        IWorkItemService workItemService,
-                                        WorkItemCreateConfigurationResolver workItemCreateConfigurationResolver,
-                                        WorkItemCreateAuthorizationService workItemCreateAuthorizationService,
-                                        WorkItemCustomFieldResolver workItemCustomFieldResolver,
-                                        WorkItemCreateRequiredFieldValidator workItemCreateRequiredFieldValidator,
-                                        WorkItemDraftFactory workItemDraftFactory,
-                                        WorkItemFieldPolicyResolver workItemFieldPolicyResolver,
-                                        WorkItemFieldWriteValidator workItemFieldWriteValidator,
-                                        IWorkItemCustomFieldValuePort workItemCustomFieldValuePort,
-                                        IOutboxEventService outboxEventService,
-                                        JsonUtils jsonUtils) {
-        this.createWorkItemValidator = createWorkItemValidator;
-        this.projectService = projectService;
-        this.workItemService = workItemService;
-        this.workItemCreateConfigurationResolver = workItemCreateConfigurationResolver;
-        this.workItemCreateAuthorizationService = workItemCreateAuthorizationService;
-        this.workItemCustomFieldResolver = workItemCustomFieldResolver;
-        this.workItemCreateRequiredFieldValidator = workItemCreateRequiredFieldValidator;
-        this.workItemDraftFactory = workItemDraftFactory;
-        this.workItemFieldPolicyResolver = workItemFieldPolicyResolver;
-        this.workItemFieldWriteValidator = workItemFieldWriteValidator;
-        this.workItemCustomFieldValuePort = workItemCustomFieldValuePort;
-        this.outboxEventService = outboxEventService;
-        this.jsonUtils = jsonUtils;
-    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -99,22 +72,28 @@ public class CreateWorkItemCommandHandler
 
         ProjectEntity project = projectService.getProjectById(projectId, tenantId);
         ensureProjectWritable(project);
-        ProjectPermissionEvaluationContext actorContext = workItemCreateAuthorizationService
+        ProjectPermissionSubject permissionSubject = ProjectPermissionSubject.from(project);
+        ProjectPermissionEvaluationContext actorContext = workItemAuthorizationSupportService
                 .buildActorContext(userId, command.groupKeys());
-        workItemCreateAuthorizationService.checkCreatePermissions(project, actorContext);
+        workItemAuthorizationSupportService.checkRequiredPermissions(
+                permissionSubject,
+                actorContext,
+                ProjectPermissionKeys.BROWSE_PROJECTS,
+                ProjectPermissionKeys.CREATE_ISSUES
+        );
 
         ResolvedWorkItemCreateConfiguration resolvedConfiguration = workItemCreateConfigurationResolver
                 .resolve(project, createWorkItemData, tenantId);
-        CreateFieldRules createFieldRules = workItemFieldPolicyResolver.resolveCreateFieldRules(
+        WorkItemFieldRules fieldRules = createWorkItemFieldRulesResolver.resolveCreateFieldRules(
                 project,
                 resolvedConfiguration.issueType().getId(),
                 tenantId
         );
-        workItemFieldWriteValidator.validateClientSuppliedWritableFields(createWorkItemData, createFieldRules);
+        workItemFieldWriteValidator.validateClientSuppliedWritableFields(createWorkItemData, fieldRules);
 
-        workItemCreateAuthorizationService.checkScheduleIssuesPermissionIfNeeded(project, actorContext, createWorkItemData.getDueDate());
-        Long assigneeId = workItemCreateAuthorizationService.resolveAssigneeId(project, createWorkItemData.getAssigneeId(), actorContext);
-        workItemCreateAuthorizationService.checkSetIssueSecurityPermissionIfNeeded(project, actorContext, createWorkItemData.getSecurityLevelId());
+        workItemAuthorizationSupportService.checkScheduleIssuesPermissionIfNeeded(permissionSubject, actorContext, createWorkItemData.getDueDate());
+        Long assigneeId = workItemAuthorizationSupportService.resolveAssigneeId(permissionSubject, createWorkItemData.getAssigneeId(), actorContext);
+        workItemAuthorizationSupportService.checkSetIssueSecurityPermissionIfNeeded(permissionSubject, actorContext, createWorkItemData.getSecurityLevelId());
         Long securityLevelId = workItemCreateConfigurationResolver.resolveSecurityLevelId(
                 project,
                 createWorkItemData.getSecurityLevelId(),
@@ -130,18 +109,18 @@ public class CreateWorkItemCommandHandler
             );
         }
 
-        ResolvedCustomFields resolvedCustomFields = workItemCustomFieldResolver.resolveCustomFields(
+        WorkItemCustomFieldMutationPlan customFieldPlan = workItemCustomFieldMutationService.planCreate(
                 resolvedConfiguration.issueType().getTypeKey(),
                 createWorkItemData.getCustomFields(),
-                createFieldRules
+                toRequiredCustomFieldMap(fieldRules)
         );
         workItemCreateRequiredFieldValidator.validate(
                 createWorkItemData,
                 resolvedConfiguration.priorityId(),
                 assigneeId,
                 securityLevelId,
-                createFieldRules,
-                resolvedCustomFields
+                fieldRules,
+                customFieldPlan.missingRequiredFields()
         );
 
         long issueNo = workItemService.getNextIssueNumber(projectId, tenantId);
@@ -161,7 +140,7 @@ public class CreateWorkItemCommandHandler
         );
 
         WorkItemEntity savedWorkItem = workItemService.createWorkItem(workItem, tenantId, userId);
-        persistCustomFieldValues(savedWorkItem.getId(), resolvedCustomFields.values(), tenantId, userId);
+        workItemCustomFieldMutationService.applyPlan(savedWorkItem.getId(), tenantId, userId, customFieldPlan);
         persistCreatedOutboxEvent(savedWorkItem, tenantId, projectId);
 
         log.info("Created work item id={} key={} projectId={} tenantId={}",
@@ -174,24 +153,6 @@ public class CreateWorkItemCommandHandler
         if (Boolean.TRUE.equals(project.getIsArchived())) {
             throw new BusinessRuleViolationException(DomainErrorCode.PROJECT_ARCHIVED);
         }
-    }
-
-    private void persistCustomFieldValues(Long workItemId,
-                                          List<WorkItemCustomFieldValueEntity> values,
-                                          Long tenantId,
-                                          Long userId) {
-        if (values == null || values.isEmpty()) {
-            return;
-        }
-
-        long now = System.currentTimeMillis();
-        for (WorkItemCustomFieldValueEntity value : values) {
-            value.setWorkItemId(workItemId);
-            value.setTenantId(tenantId);
-            value.applyCreate(userId, now);
-        }
-
-        workItemCustomFieldValuePort.saveAll(values);
     }
 
     private void persistCreatedOutboxEvent(WorkItemEntity workItem,
@@ -220,5 +181,15 @@ public class CreateWorkItemCommandHandler
                 .build();
 
         outboxEventService.saveEvent(outboxEvent);
+    }
+
+    private Map<String, Boolean> toRequiredCustomFieldMap(WorkItemFieldRules fieldRules) {
+        return fieldRules.customPolicies().entrySet().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().required(),
+                        (left, right) -> left,
+                        java.util.LinkedHashMap::new
+                ));
     }
 }

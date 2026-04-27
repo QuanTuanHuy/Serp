@@ -31,7 +31,7 @@ public class LeadModel extends BaseModel {
     @Column(name = "tenant_id", nullable = false)
     private Long tenantId;
 
-    @Column(name = "company", nullable = false, length = 255)
+    @Column(name = "company", length = 255)
     private String company;
 
     @Column(name = "industry", length = 100)
@@ -70,6 +70,9 @@ public class LeadModel extends BaseModel {
     @Column(name = "address_country", length = 100)
     private String addressCountry;
 
+    @Column(name = "territory_code", length = 50)
+    private String territoryCode;
+
     @Column(name = "lead_source", nullable = false, length = 50)
     private String leadSource;
 
@@ -82,11 +85,11 @@ public class LeadModel extends BaseModel {
     @Column(name = "estimated_value", precision = 15, scale = 2)
     private BigDecimal estimatedValue;
 
-    @Column(name = "probability")
-    private Integer probability;
+    @Column(name = "lead_score")
+    private Integer leadScore;
 
-    @Column(name = "expected_close_date")
-    private LocalDate expectedCloseDate;
+    @Column(name = "follow_up_date")
+    private LocalDate followUpDate;
 
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
@@ -94,6 +97,6 @@ public class LeadModel extends BaseModel {
     @Column(name = "converted_opportunity_id")
     private Long convertedOpportunityId;
 
-    @Column(name = "converted_customer_id")
-    private Long convertedCustomerId;
+    @Column(name = "converted_account_id")
+    private Long convertedAccountId;
 }

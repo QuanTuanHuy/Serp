@@ -39,4 +39,11 @@ public class IssueSecurityLevelMemberAdapter implements IIssueSecurityLevelMembe
                 issueSecurityLevelMemberRepository.findAllByLevelIdAndTenantIdOrSystemTenant(levelId, tenantId)
         );
     }
+
+    @Override
+    public List<IssueSecurityLevelMemberEntity> getIssueSecurityLevelMembersByLevelId(Long levelId, Long tenantId) {
+        return issueSecurityLevelMemberMapper.toEntities(
+                issueSecurityLevelMemberRepository.findAllByLevelIdAndTenantId(levelId, tenantId)
+        );
+    }
 }
