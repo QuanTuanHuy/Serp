@@ -210,6 +210,17 @@ public class TeamController {
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
+    @GetMapping("/{id}/territories")
+    public ResponseEntity<?> getTeamTerritories(@PathVariable Long id) {
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        if (tenantId == null) {
+            return unauthorizedResponse();
+        }
+
+        var response = teamUseCase.getTeamTerritories(id, tenantId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteTeam(@PathVariable Long id) {
         Long tenantId = authUtils.getCurrentTenantId().orElse(null);
