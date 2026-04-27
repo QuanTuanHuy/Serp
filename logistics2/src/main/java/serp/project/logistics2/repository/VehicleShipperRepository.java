@@ -18,7 +18,7 @@ public interface VehicleShipperRepository extends JpaRepository<VehicleShipperEn
     @Query("SELECT v FROM VehicleShipperEntity v " +
             "WHERE (:shipperId IS NULL OR v.shipperId = :shipperId) " +
             "AND (:vehicleId IS NULL OR v.vehicleId = :vehicleId) " +
-            "AND (:workingDate IS NULL OR v.workingDate = :workingDate) " +
+            "AND (CAST(:workingDate AS date) IS NULL OR v.workingDate = :workingDate) " +
             "AND v.tenantId = :tenantId")
     Page<VehicleShipperEntity> search(
             @Param("shipperId") Long shipperId,
